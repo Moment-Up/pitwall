@@ -71,3 +71,25 @@ def test_the_real_changelog_has_unreleased_and_v010() -> None:
     assert cs.section_for(text, "v0.2.0-rc.1")  # Unreleased exists
     notes = extract_notes("## What changed\n" + (cs.section_for(text, "v0.1.0") or ""))
     assert notes and all(len(n) <= 200 for n in notes)
+
+
+def test_bullets_match_the_dashboard_and_long_ones_fail(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    from pitwall.install import github
+
+    assert cs.MAX_NOTE_CHARS == github.MAX_NOTE_CHARS
+    body = "- **Bold** with a [link](https://x) and `code`\n- Wrapped over\n  two lines\n- " + "long words " * 25 + "\n"
+    assert cs.bullets(body)[:2] == extract_notes("## What changed\n" + body)[:2]
+    assert len(cs.too_long(body)) == 1
+    path = tmp_path / "CHANGELOG.md"
+    path.write_text("# Changelog\n\n## v0.2.0 - 2026-10-20\n\n" + body, encoding="utf-8")
+    assert cs.main(["--version", "v0.2.0", "--changelog", str(path), "--require"]) == 1
+    assert "over 200" in capsys.readouterr().err
+    assert cs.main(["--version", "v0.2.0", "--changelog", str(path)]) == 0  # without --require: a warning only
+    assert "warning:" in capsys.readouterr().err
+
+
+def test_the_real_unreleased_bullets_fit_without_a_cut() -> None:
+    text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+    body = cs.section_for(text, "v0.2.0-rc.1") or ""
+    assert cs.too_long(body) == []
+    assert not any(n.endswith("…") for n in extract_notes("## What changed\n" + body))

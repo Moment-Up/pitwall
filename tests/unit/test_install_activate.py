@@ -31,6 +31,11 @@ class FakeSystem(System):
         self.free = 500 * 10**9
         self.service: ServiceInfo | None = None
         self.health_fn: Callable[[FakeSystem], dict[str, Any] | None] = lambda s: None
+        # The tag that /api/update/version answers with; default: the folder whose service was installed last,
+        # while health answers (an old server still running answers health, but not as the new version).
+        self.version_fn: Callable[[FakeSystem], str | None] | None = None
+        self.install_codes: list[int] = []  # exit codes of service_install, in order (default 0)
+        self.stop_codes: list[int] = []
         self.same_fs = True
         self.private: list[Path] = []
 
@@ -46,6 +51,14 @@ class FakeSystem(System):
 
     def health(self, port: int) -> dict[str, Any] | None:
         return self.health_fn(self)
+
+    def running_version(self, port: int) -> str | None:
+        if self.version_fn is not None:
+            return self.version_fn(self)
+        if self.health_fn(self) is None:
+            return None
+        installed = [c[1].split("|")[0] for c in self.calls if c[0] == "install"]
+        return installed[-1].removeprefix("pitwall-") if installed else None
 
     def sleep(self, s: float) -> None:
         self.clock += s
@@ -66,8 +79,12 @@ class FakeSystem(System):
         return self.service
 
     def service_install(self, app_dir: Path, data_dir: Path) -> int:
-        self.calls.append(("install", f"{app_dir.name}|{data_dir}"))
-        return 0
+        code = self.install_codes.pop(0) if self.install_codes else 0
+        if code != 3:  # 3: the script refused (telemetry live) and changed nothing
+            self.calls.append(("install", f"{app_dir.name}|{data_dir}"))
+        else:
+            self.calls.append(("install-refused", app_dir.name))
+        return code
 
     def service_uninstall(self, app_dir: Path) -> int:
         self.calls.append(("uninstall", app_dir.name))
@@ -75,7 +92,7 @@ class FakeSystem(System):
 
     def service_stop(self, app_dir: Path) -> int:
         self.calls.append(("stop", app_dir.name))
-        return 0
+        return self.stop_codes.pop(0) if self.stop_codes else 0
 
     def make_private(self, path: Path) -> None:
         self.private.append(path)
@@ -141,7 +158,8 @@ def test_fresh_install(tmp_path: Path) -> None:
     assert env.startswith("# Written by the Pitwall installer on ") and f"PITWALL_DATA_DIR={home / 'data'}\n" in env
     if sys.platform != "win32":
         assert (new / ".env").stat().st_mode & 0o777 == 0o600
-    assert "run /setup-pitwall" in s.text and "UDP 192.168.1.20:20777" in s.text
+    assert "Next: open http://127.0.0.1:8770/ and go to Setup › Connect" in s.text and "/setup-pitwall" in s.text
+    assert "UDP 192.168.1.20:20777" in s.text
     assert s.calls == [] and not (home / ".install.lock").exists()
     assert s.questions == []  # no service question without a terminal ("keep")
 
@@ -309,6 +327,12 @@ def test_our_service_is_repointed(tmp_path: Path) -> None:
     assert st is not None and st.service == "launchd" and st.current == "v0.3.0"
 
 
+def _down_after_stop(fs: FakeSystem) -> dict[str, Any] | None:
+    """A server that answers until its service is stopped or uninstalled, and again once one is installed."""
+    last = fs.calls[-1][0] if fs.calls else None
+    return None if last in ("stop", "uninstall") else IDLE
+
+
 def test_windows_repoint_stops_the_old_task_first(tmp_path: Path) -> None:
     home = tmp_path / "Pitwall"
     old = version(home, "v0.2.0")
@@ -316,10 +340,32 @@ def test_windows_repoint_stops_the_old_task_first(tmp_path: Path) -> None:
     managed(home, "v0.2.0", service="task")
     s = FakeSystem("win32")
     s.service = ServiceInfo("task", old, None, "task")
-    s.health_fn = lambda _s: IDLE
+    s.health_fn = _down_after_stop
     assert finish(opts(home, new), s) == 0, s.text
     assert s.calls == [("stop", "pitwall-v0.2.0"), ("install", f"pitwall-v0.3.0|{home / 'data'}")]
     assert "firewall.ps1" in s.text and 'cd "' in s.text and "; uv run pitwall token" in s.text
+
+
+@pytest.mark.parametrize("case", ["refused while live", "still answering", "script failed"])
+def test_windows_old_task_that_does_not_stop(tmp_path: Path, case: str) -> None:
+    """service.ps1 stop exits 3 while live (nothing stopped: exit 3, only staged); an old server that still answers
+    after the stop, or a stop that failed, puts the old task back instead of starting a second server."""
+    home = tmp_path / "Pitwall"
+    old = version(home, "v0.2.0")
+    new = version(home, "v0.3.0")
+    before = managed(home, "v0.2.0", service="task")
+    s = FakeSystem("win32")
+    s.service = ServiceInfo("task", old, None, "task")
+    s.health_fn = _down_after_stop if case == "script failed" else (lambda _s: IDLE)
+    s.stop_codes = [3] if case == "refused while live" else [1] if case == "script failed" else [0]
+    code = finish(opts(home, new), s)
+    st = load_state(home)
+    assert st is not None and st.current == "v0.2.0" and st.versions == before.versions
+    if case == "refused while live":
+        assert code == 3 and s.calls == [("stop", "pitwall-v0.2.0")] and st.staged == "v0.3.0", s.text
+    else:
+        assert code == 1 and "did not stop" in s.text and "put back" in s.text, s.text
+        assert s.calls == [("stop", "pitwall-v0.2.0"), ("install", f"pitwall-v0.2.0|{home / 'data'}")]
 
 
 def test_failed_health_rolls_back(tmp_path: Path) -> None:
@@ -463,3 +509,268 @@ def test_rollback_option_accepts_an_unmarked_old_folder(tmp_path: Path) -> None:
     assert finish(opts(home, old, from_dir=current, rollback=True), s) == 0, s.text
     st = load_state(home)
     assert st is not None and st.current == "v0.1.0" and st.previous == "v0.2.0"
+
+
+# ------------------------------------------------------------------------------------------------ review fixes
+def test_a_service_script_that_refuses_switches_nothing(tmp_path: Path) -> None:
+    """pitwall-service.sh / service.ps1 exit 3 and change nothing when telemetry went live after the first check:
+    install-finish exits 3 too (only staged), never claims the new version is up."""
+    home = tmp_path / "Pitwall"
+    old = version(home, "v0.2.0", env=b"PITWALL_DATA_DIR=" + str(home / "data").encode() + b"\n")
+    make_db(home / "data")
+    before = managed(home, "v0.2.0", service="launchd")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    s.service = ServiceInfo("launchd", old, home / "data", "plist")
+    s.health_fn = lambda _s: IDLE
+    s.install_codes = [3]
+    assert finish(opts(home, new), s) == 3, s.text
+    st = load_state(home)
+    assert st is not None and st.current == "v0.2.0" and st.service == "launchd" and st.staged == "v0.3.0"
+    assert st.versions == before.versions and " is up" not in s.text and "someone is driving" in s.text
+    assert s.calls == [("install-refused", "pitwall-v0.3.0")]
+
+
+def test_the_old_server_still_answering_is_not_success(tmp_path: Path) -> None:
+    """Only the new version's own tag counts: an old server that keeps answering /api/health is a failure, rolled
+    back, and install.json stays as it was."""
+    home = tmp_path / "Pitwall"
+    old = version(home, "v0.2.0", env=b"PITWALL_DATA_DIR=" + str(home / "data").encode() + b"\n")
+    before = managed(home, "v0.2.0", service="launchd")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    s.service = ServiceInfo("launchd", old, home / "data", "plist")
+    s.health_fn = lambda _s: IDLE
+    s.version_fn = lambda _s: "v0.2.0"  # the old one answers, whatever the script said
+    s.install_codes = [1]
+    assert finish(opts(home, new), s) == 1, s.text
+    assert "exited with code 1" in s.text and "did not answer" in s.text and "put back" in s.text
+    assert s.calls == [
+        ("install", f"pitwall-v0.3.0|{home / 'data'}"),
+        ("uninstall", "pitwall-v0.3.0"),
+        ("install", f"pitwall-v0.2.0|{home / 'data'}"),
+    ]
+    assert load_state(home) == before
+
+
+def test_a_slow_script_is_fine_when_the_new_version_answers(tmp_path: Path) -> None:
+    """The macOS script returns 1 when the server is not up on 8770 within 20 s; the new version answering on
+    its own port within 90 s is what counts."""
+    home = tmp_path / "Pitwall"
+    old = version(home, "v0.2.0", env=b"PITWALL_HTTP_PORT=8833\nPITWALL_DATA_DIR=" + str(home / "data").encode())
+    managed(home, "v0.2.0", service="launchd")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    s.service = ServiceInfo("launchd", old, home / "data", "plist")
+    s.health_fn = lambda _s: IDLE
+    s.install_codes = [1]
+    assert finish(opts(home, new), s) == 0, s.text
+    st = load_state(home)
+    assert st is not None and st.current == "v0.3.0" and "Pitwall v0.3.0 is up: http://127.0.0.1:8833/" in s.text
+
+
+def test_driving_again_before_the_switch_stops_it(tmp_path: Path) -> None:
+    """A session that starts during the backup: the check right before the service step refuses (exit 3)."""
+    home = tmp_path / "Pitwall"
+    old = version(home, "v0.2.0", env=b"PITWALL_DATA_DIR=" + str(home / "data").encode() + b"\n")
+    make_db(home / "data")
+    managed(home, "v0.2.0", service="launchd")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    s.service = ServiceInfo("launchd", old, home / "data", "plist")
+    s.health_fn = lambda _s: LIVE if (new / ".env").exists() else IDLE  # live from the moment .env is carried
+    assert finish(opts(home, new), s) == 3, s.text
+    st = load_state(home)
+    assert st is not None and st.current == "v0.2.0" and st.staged == "v0.3.0" and s.calls == []
+
+
+@pytest.mark.parametrize(("age", "code"), [(30.0, 3), (119.0, 3), (130.0, 0)])
+def test_a_paused_game_counts_as_driving(tmp_path: Path, age: float, code: int) -> None:
+    """No packet for 2 s reads "stale" (a paused game sends nothing): under 2 minutes it still counts as driving."""
+    home = tmp_path / "Pitwall"
+    new = version(home, "v0.2.0")
+    s = FakeSystem()
+    s.health_fn = lambda _s: {"connection": {"status": "stale", "last_packet_age_s": age}}
+    assert finish(opts(home, new), s) == code, s.text
+    if code == 3:
+        assert "paused less than 2 minutes ago" in s.text and "--wait-idle 120 to wait up to 2 hours" in s.text
+
+
+def test_a_failed_move_back_does_not_restart_the_old_service(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The new version never answers, and moving the data back fails every time (a file held open on Windows): the
+    old service is not started on an empty folder, and the message says where the sessions are (exit 4)."""
+    home = tmp_path / "Pitwall"
+    legacy = version(home, "v0.1.5", ready=False, data=True)
+    new = version(home, "v0.3.0")
+    s = FakeSystem("win32")
+    s.service = ServiceInfo("task", legacy, None, "task")
+    s.health_fn = _down_after_stop
+    s.version_fn = lambda _s: None  # the new version never answers
+    real_rename = Path.rename
+
+    def rename(self: Path, target: Any) -> Path:
+        if Path(target) == legacy / "data":
+            raise PermissionError(13, "The process cannot access the file", str(self))
+        return real_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", rename)
+    assert finish(opts(home, new, yes=True), s) == 4, s.text
+    assert s.calls == [
+        ("uninstall", "pitwall-v0.1.5"),
+        ("install", f"pitwall-v0.3.0|{home / 'data'}"),
+        ("uninstall", "pitwall-v0.3.0"),
+    ]  # no ("install", "pitwall-v0.1.5|...")
+    assert f"your sessions are in {home / 'data'}" in s.text and str(legacy / "data") in s.text
+    assert "were put back" not in s.text and (home / "data" / "pitwall.sqlite3").is_file()
+    assert load_state(home) is None
+
+
+def test_a_failed_move_back_is_retried(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    home = tmp_path / "Pitwall"
+    legacy = version(home, "v0.1.5", ready=False, data=True)
+    new = version(home, "v0.3.0")
+    s = FakeSystem("win32")
+    s.service = ServiceInfo("task", legacy, None, "task")
+    s.health_fn = _down_after_stop
+    s.version_fn = lambda _s: None
+    real_rename = Path.rename
+    refusals = [1, 1]
+
+    def rename(self: Path, target: Any) -> Path:
+        if Path(target) == legacy / "data" and refusals:
+            refusals.pop()
+            raise PermissionError(13, "The process cannot access the file", str(self))
+        return real_rename(self, target)
+
+    monkeypatch.setattr(Path, "rename", rename)
+    assert finish(opts(home, new, yes=True), s) == 1, s.text
+    assert (legacy / "data" / "pitwall.sqlite3").is_file() and "were put back" in s.text
+    assert s.calls[-1] == ("install", f"pitwall-v0.1.5|{legacy / 'data'}")
+
+
+def test_pitwall_update_keeps_no_service_as_no_service(tmp_path: Path) -> None:
+    """`pitwall update --yes` without --service ("keep"): nobody who never had a login service gets one."""
+    from pitwall.install.commands import _service_mode
+
+    home = tmp_path / "Pitwall"
+    old = version(home, "v0.2.0", env=b"PITWALL_DATA_DIR=" + str(home / "data").encode() + b"\n")
+    managed(home, "v0.2.0", service="none")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    assert finish(opts(home, new, from_dir=old, service=_service_mode(None), yes=True), s) == 0, s.text
+    st = load_state(home)
+    assert st is not None and st.service == "none" and s.calls == [] and s.questions == []
+    assert _service_mode(True) == "yes" and _service_mode(False) == "no"
+
+
+def test_a_renamed_hand_installed_release_keeps_its_sessions(tmp_path: Path) -> None:
+    """A release folder renamed by hand (not pitwall-<version>) whose data/ holds sessions: its data is adopted
+    (asked first) instead of starting from an empty data folder."""
+    home = tmp_path / "Downloads"
+    old = home / "Pitwall"
+    (old / ".venv" / "bin").mkdir(parents=True)
+    (old / "RELEASE.txt").write_text("Pitwall v0.2.0\n", encoding="utf-8")
+    (old / ".env").write_text("PITWALL_LLM_ENABLED=false\n", encoding="utf-8")
+    make_db(old / "data")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    assert finish(opts(home, new, from_dir=old, service="no"), s) == 4  # no terminal, no --yes: asks first
+    assert (old / "data" / "pitwall.sqlite3").is_file() and load_state(home) is None
+    s = FakeSystem()
+    assert finish(opts(home, new, from_dir=old, service="no", yes=True), s) == 0, s.text
+    st = load_state(home)
+    assert st is not None and st.data_dir == str(home / "data") and (home / "data" / "pitwall.sqlite3").is_file()
+    assert not (old / "data").exists() and (old / "data-moved-to.txt").is_file()
+    assert "PITWALL_LLM_ENABLED=false" in (new / ".env").read_text()
+
+
+def test_a_renamed_folder_with_a_relative_data_dir(tmp_path: Path) -> None:
+    home = tmp_path / "Downloads"
+    old = home / "my-pitwall"
+    (old / ".venv" / "bin").mkdir(parents=True)
+    (old / "RELEASE.txt").write_text("Pitwall v0.2.0\n", encoding="utf-8")
+    (old / ".env").write_text("PITWALL_DATA_DIR=data\n", encoding="utf-8")
+    make_db(old / "data")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    assert finish(opts(home, new, from_dir=old, service="no", yes=True), s) == 0, s.text
+    assert (home / "data" / "pitwall.sqlite3").is_file()
+    assert f"PITWALL_DATA_DIR={home / 'data'}" in (new / ".env").read_text()
+
+
+@pytest.mark.parametrize("value", ["~/racing", "~"])
+def test_a_tilde_data_dir_stops_and_changes_nothing(tmp_path: Path, value: str) -> None:
+    """The server does not expand ~ (it would be a folder named "~" where Pitwall starts): ask for the full path."""
+    home = tmp_path / "Pitwall"
+    old = version(home, "v0.2.0", env=f"PITWALL_DATA_DIR={value}\n".encode())
+    managed(home, "v0.2.0")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    assert finish(opts(home, new, from_dir=old), s) == 4
+    assert "starts with ~" in s.text and "write the full path" in s.text
+    assert not (new / ".env").exists() and load_state(home) is not None and s.calls == []
+
+
+def test_install_json_and_env_naming_different_data_folders_stop(tmp_path: Path) -> None:
+    home = tmp_path / "Pitwall"
+    other = tmp_path / "elsewhere"
+    make_db(other)
+    version(home, "v0.2.0", env=b"PITWALL_DATA_DIR=" + str(other).encode() + b"\n")
+    before = managed(home, "v0.2.0")
+    new = version(home, "v0.3.0")
+    s = FakeSystem()
+    assert finish(opts(home, new, service="no"), s) == 4
+    assert "two data folders" in s.text and str(other) in s.text and str(home / "data") in s.text
+    assert load_state(home) == before and not (new / ".env").exists() and not (other / "backups").exists()
+    # the same folder written differently (a trailing slash) is not a conflict
+    version(home, "v0.2.1", env=b"PITWALL_DATA_DIR=" + str(home / "data").encode() + b"/\n")
+    assert finish(opts(home, new, from_dir=home / "pitwall-v0.2.1", service="no"), FakeSystem()) == 0
+
+
+def test_a_newer_env_replaces_one_from_an_earlier_attempt(tmp_path: Path) -> None:
+    """After a rolled-back attempt (or --rollback), edits made in the older folder's .env reach the new folder;
+    the file that was there is kept as .env.before-<date>, never deleted."""
+    import os
+
+    home = tmp_path / "Pitwall"
+    line = b"PITWALL_DATA_DIR=" + str(home / "data").encode() + b"\n"
+    old = version(home, "v0.2.0", env=line)
+    managed(home, "v0.2.0")
+    new = version(home, "v0.3.0", env=line + b"# from the earlier attempt\n")
+    os.utime(new / ".env", ns=(1_000_000_000_000, 1_000_000_000_000))
+    (old / ".env").write_bytes(line + b"PITWALL_HTTP_PORT=8771\n")  # edited since
+    s = FakeSystem()
+    assert finish(opts(home, new, from_dir=old, service="no"), s) == 0, s.text
+    assert (new / ".env").read_bytes() == line + b"PITWALL_HTTP_PORT=8771\n"
+    (kept,) = new.glob(".env.before-*")
+    assert kept.read_bytes() == line + b"# from the earlier attempt\n" and "is kept as .env.before-" in s.text
+    # an older .env in the folder we leave does not overwrite the new folder's
+    os.utime(old / ".env", ns=(1_000_000_000_000, 1_000_000_000_000))
+    (new / ".env").write_bytes(line + b"PITWALL_HTTP_PORT=8772\n")
+    assert finish(opts(home, new, from_dir=old, service="no"), FakeSystem()) == 0
+    assert b"8772" in (new / ".env").read_bytes()
+
+
+def test_going_to_an_older_version_asks_first(tmp_path: Path) -> None:
+    home = tmp_path / "Pitwall"
+    version(home, "v0.3.0", env=b"PITWALL_DATA_DIR=" + str(home / "data").encode() + b"\n")
+    before = managed(home, "v0.3.0")
+    older = version(home, "v0.2.5")
+    s = FakeSystem()
+    assert finish(opts(home, older, installer="install.sh"), s) == 4  # no terminal: asks for --yes
+    assert "older than the installed v0.3.0" in s.text and load_state(home) == before
+    s = FakeSystem()
+    s.answers = [False]
+    assert finish(opts(home, older), s) == 4 and "Go back to v0.2.5?" in s.questions[0]
+    assert load_state(home) == before
+    s = FakeSystem()
+    s.answers = [True]
+    assert finish(opts(home, older), s) == 0, s.text
+    st = load_state(home)
+    assert st is not None and st.current == "v0.2.5" and st.previous == "v0.3.0"
+    # --yes, `pitwall update`'s own confirmation (--allow-older) and --rollback do not ask
+    for kw in ({"yes": True}, {"allow_older": True}, {"rollback": True}):
+        managed(home, "v0.3.0")
+        s = FakeSystem()
+        assert finish(opts(home, older, **kw), s) == 0, (kw, s.text)
+        assert s.questions == []

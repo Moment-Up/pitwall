@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
+  AUTO_NEVER_LINE,
   DOCS_URL,
+  GIT_DOCS_URL,
   GIT_LINE,
+  HOW_HELP,
+  HOW_HELP_WINDOWS,
   LABELS,
   NOTES_SHOWN,
+  OFF_LINE,
   UNKNOWN_KIND_LINE,
+  checkSkipped,
   checkedAgo,
   releaseDate,
   safeReleaseUrl,
@@ -12,6 +18,8 @@ import {
   shownNotes,
   stateOf,
   updateView,
+  updatedTo,
+  versionText,
 } from "./update-model";
 import { parseUpdateStatus } from "../../../lib/endpoints/update";
 import { NOW, rawUpdateFixture, updateFixture, updateFixtureBlocks } from "./update-testkit";
@@ -45,6 +53,7 @@ describe("fixtures", () => {
     expect(v.notes[0]).toBe("One-line installers for macOS, Linux and Windows (docs)");
     expect(v.releaseUrl).toBe("https://github.com/Moment-Up/pitwall/releases/tag/v0.2.0");
     expect(v.howNote).toBe(GIT_LINE);
+    expect(v.docsUrl).toBe(GIT_DOCS_URL); // the git steps, not `pitwall update`
     expect(v.checked).toBe("Last checked 2 min ago");
   });
 });
@@ -86,6 +95,7 @@ describe("safe links", () => {
     const v = updateView(updateFixture("contract-git", { how: { command: "git pull", folder: null, docs_url: "https://evil.example/" } }), NOW);
     expect(v.docsUrl).toBe(DOCS_URL);
     expect(updateView(updateFixture("contract-available"), NOW).docsUrl).toBe(DOCS_URL);
+    expect(updateView(updateFixture("contract-git"), NOW).docsUrl).toBe(GIT_DOCS_URL);
   });
 });
 
@@ -104,6 +114,9 @@ describe("updateView: every state", () => {
     expect(v.releases.map((r) => r.version)).toEqual(["v0.2.0"]);
     expect(v.command).toBe('cd "/Users/you/Pitwall/pitwall-v0.1.0" && uv run pitwall update');
     expect(v.commandIntro).toBe("How to update");
+    expect(v.commandHelp).toBe(HOW_HELP);
+    expect(v.commandHelp).toContain("Terminal");
+    expect(v.commandHelp).not.toContain("PowerShell");
     expect(v.howNote).toBeNull();
     expect(v.isGit).toBe(false);
     expect(v.releaseUrl).toBe("https://github.com/Moment-Up/pitwall/releases/tag/v0.2.0");
@@ -136,6 +149,8 @@ describe("updateView: every state", () => {
     const cmd = 'cd "C:\\Users\\you\\AppData\\Local\\Pitwall\\pitwall-v0.1.0"; uv run pitwall update';
     const v = updateView(updateFixture("contract-available", { how: { command: cmd, folder: null, docs_url: DOCS_URL } }), NOW);
     expect(v.command).toBe(cmd);
+    expect(v.commandHelp).toBe(HOW_HELP_WINDOWS); // PowerShell, not Terminal
+    expect(v.commandHelp).not.toContain("Terminal");
   });
 
   it("up to date: green, no releases, no command", () => {
@@ -155,7 +170,8 @@ describe("updateView: every state", () => {
   it("never checked: auto says when it will look; manual says how to look", () => {
     const auto = updateView(updateFixture("contract-never-auto"), NOW);
     expect([auto.state, auto.tone, auto.label]).toEqual(["never", "default", "Not checked yet"]);
-    expect(auto.line).toBe("Pitwall looks for a new version once a day, while no game is sending telemetry. You have v0.1.0.");
+    expect(auto.line).toBe(`${AUTO_NEVER_LINE} You have v0.1.0.`);
+    expect(auto.line).toContain("While this page is open"); // it only checks when this page asks
     expect(auto.checked).toBeNull();
     expect(auto.canCheck).toBe(true);
     const manual = updateView(updateFixture("contract-never-auto", { mode: "manual" }), NOW);
@@ -176,7 +192,7 @@ describe("updateView: every state", () => {
     const v = updateView(updateFixture("contract-failed"), NOW);
     expect([v.state, v.tone, v.label]).toEqual(["failed", "default", "Couldn't check"]);
     expect(v.line).toBe("Couldn't reach GitHub (timed out). You have v0.1.0.");
-    expect(v.checked).toBe("Last checked 10 min ago");
+    expect(v.checked).toBe("Last tried 10 min ago");
     expect(v.canCheck).toBe(true);
     expect(updateView(updateFixture("contract-failed", { error: "No internet connection" }), NOW).line).toBe(
       "No internet connection. You have v0.1.0.",
@@ -186,7 +202,8 @@ describe("updateView: every state", () => {
   it("checks off: no Check now; the command to check by hand", () => {
     const v = updateView(updateFixture("contract-off"), NOW);
     expect([v.state, v.label, v.canCheck]).toEqual(["off", "Checks off", false]);
-    expect(v.line).toBe("Pitwall doesn't look for new versions: checks are turned off (PITWALL_UPDATE_CHECK=off). You have v0.1.0.");
+    expect(v.line).toBe(`${OFF_LINE} You have v0.1.0.`);
+    expect(v.line).toBe("Update checks are turned off in Pitwall's settings file (.env, PITWALL_UPDATE_CHECK). You have v0.1.0.");
     expect(v.command).toBe('cd "/Users/you/Pitwall/pitwall-v0.1.0" && uv run pitwall update');
     expect(v.commandIntro).toBe("To check and update by hand");
   });
@@ -221,10 +238,24 @@ describe("updateView: every state", () => {
     expect(updateView(updateFixture("contract-up-to-date", { current: "" }), NOW).line).toBe("There is no newer release.");
   });
 
-  it("stateOf precedence: checking > available > up to date > failed > off > never", () => {
+  it("stateOf precedence: checking > available > failed > up to date > off > never", () => {
     expect(stateOf(updateFixture("contract-failed", { checking: true }))).toBe("checking");
     expect(stateOf(updateFixture("contract-available", { error: "x" }))).toBe("available");
     expect(stateOf(updateFixture("contract-off", { error: "x" }))).toBe("failed");
+    // a failed check after a good "up to date" one does not claim up to date
+    expect(stateOf(updateFixture("contract-up-to-date", { error: "Couldn't reach GitHub (timed out)." }))).toBe("failed");
+  });
+
+  it("a failed check keeps an update already known: still available, the failure said, the chip stays", () => {
+    const s = updateFixture("contract-available", { error: "GitHub answered with an error (HTTP 500)." });
+    const v = updateView(s, NOW);
+    expect([v.state, v.label]).toEqual(["available", "Update available"]);
+    expect(v.line).toBe(
+      "v0.2.0 (released 12 Oct 2026). You have v0.1.0. The last check failed: GitHub answered with an error (HTTP 500).",
+    );
+    expect(v.command).not.toBeNull();
+    expect(v.checked).toBe("Last tried 3 h ago");
+    expect(showUpdateChip(s)).toBe(true);
   });
 });
 
@@ -251,6 +282,29 @@ describe("plain wording (beginners read this page too)", () => {
 });
 
 describe("helpers", () => {
+  it("version text: the update status's tag, else v + the health version, else nothing", () => {
+    expect(versionText(updateFixture("contract-up-to-date"), "0.1.0")).toBe("v0.2.0");
+    expect(versionText(undefined, "0.1.0")).toBe("v0.1.0");
+    expect(versionText(updateFixture("contract-up-to-date", { current: "" }), "0.1.0")).toBe("v0.1.0");
+    expect(versionText(undefined, null)).toBeNull();
+  });
+
+  it("updated to: only when the server now reports another version than the page first saw", () => {
+    expect(updatedTo(null, updateFixture("contract-up-to-date"))).toBeNull();
+    expect(updatedTo("v0.2.0", updateFixture("contract-up-to-date"))).toBeNull();
+    expect(updatedTo("v0.1.0", updateFixture("contract-up-to-date"))).toBe("v0.2.0");
+    expect(updatedTo("v0.1.0", undefined)).toBeNull();
+  });
+
+  it("check skipped: same attempt time and idle (one finished less than a minute ago)", () => {
+    const before = updateFixture("contract-up-to-date");
+    expect(checkSkipped(before, before)).toBe(true);
+    expect(checkSkipped(before, { ...before, checking: true })).toBe(false);
+    expect(checkSkipped(before, { ...before, checked_unix: (before.checked_unix ?? 0) + 5 })).toBe(false);
+    expect(checkSkipped(undefined, before)).toBe(false);
+    expect(checkSkipped(updateFixture("contract-never-auto"), updateFixture("contract-never-auto"))).toBe(false);
+  });
+
   it("the Version row chip shows only when the server says an update is out", () => {
     expect(showUpdateChip(undefined)).toBe(false);
     expect(showUpdateChip(updateFixture("contract-available"))).toBe(true);

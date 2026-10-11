@@ -114,8 +114,9 @@ The one-line installers (`scripts/install/install.sh`, `install.ps1`) download, 
 unpack a release into `<home>/pitwall-<version>/`, run `uv sync`, and hand over to that version's own
 `pitwall install-finish` (`install/activate.py`): data folder (`<home>/data`, or a hand-installed release's adopted
 `data/`), SQLite online backup, `.env` carried forward with an absolute `PITWALL_DATA_DIR`, the launchd agent or the
-"Pitwall" task repointed (a service running from elsewhere is never touched; a failed health check puts everything
-back), then `install.json` (`install/layout.py`). `pitwall update` (`install/commands.py`) does the same in Python
+"Pitwall" task repointed (a service running from elsewhere is never touched; unless the new version answers with
+its own tag on `GET /api/update/version` within 90 s, everything is put back), then `install.json`
+(`install/layout.py`). `pitwall update` (`install/commands.py`) does the same in Python
 (`install/stage.py`). `install/check.py` keeps the update status (`<data>/update_check.json`) behind `/api/update`
 (`api/routes_update.py`: one GitHub request in a worker thread, never while telemetry is live) and doctor's
 offline "Updates" check. None of it touches ingest, analysis or the language model, and nothing installs from the

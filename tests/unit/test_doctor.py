@@ -802,6 +802,11 @@ def test_update_check_reads_only_the_cache(repo: Path) -> None:
     _cache(repo, error="Couldn't reach GitHub (timed out).", checked_unix=1_000_000.0)
     c = check_update(ctx, now=1_000_000.0 + 5)
     assert c.status == "info" and c.detail.startswith("last check failed: Couldn't reach GitHub (timed out).")
+    # a failed check after a good one that found an update: the update stays reported
+    _cache(repo, error="Couldn't reach GitHub (timed out).", releases=[rel])
+    c = check_update(ctx, now=1_000_000.0 + 5)
+    assert c.detail.startswith("Pitwall v0.3.0 is available (you have v0.2.0); last check failed: Couldn't reach")
+    assert c.fix == f'cd "{repo}" && uv run pitwall update'
     format_text(run(repo, fake)).encode("ascii")
 
 

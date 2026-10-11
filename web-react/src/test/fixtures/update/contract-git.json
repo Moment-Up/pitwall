@@ -51,7 +51,7 @@
   "how": {
    "command": "git pull",
    "folder": "/Users/you/Projects/pitwall",
-   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating"
+   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#a-git-clone"
   }
  }
 }

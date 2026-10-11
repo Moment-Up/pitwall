@@ -8,11 +8,13 @@ Opt-in (``PITWALL_INSTALL_E2E=1``; macOS or Linux; needs ``web-react/dist`` buil
    installs the first (real ``uv sync``), then Pitwall runs from it on spare ports with the LLM and voice off;
 3. the real F1 25 PS5 Austria excerpt is streamed over loopback UDP: ``/api/sessions`` must show the race with the
    game's own lap times (88.524, 78.351 and 88.352 s);
-4. with the server stopped, ``pitwall update --yes --no-service --pre`` moves to test.2: the sessions come back from
-   the new folder, the database backup exists and install.json says current=test.2, previous=test.1;
+4. with the server stopped, ``pitwall update --yes --no-service`` moves to test.2 (no ``--pre``: someone on a
+   pre-release follows pre-releases): the sessions come back from the new folder, the database backup exists and
+   install.json says current=test.2, previous=test.1;
 5. while the excerpt streams again (live), ``pitwall update``, ``pitwall update --rollback`` and
    ``pitwall install-finish`` exit 3 and switch nothing (install-finish only marks the target as staged);
-6. once the stream stops, ``pitwall update --rollback`` goes back to test.1 without touching the running server.
+6. once nobody drives (the stream stopped and the server restarted: a packet less than 2 minutes old still counts
+   as a paused driver), ``pitwall update --rollback`` goes back to test.1 without touching the running server.
 
 Ports: HTTP 8831 (Pitwall) and 8832 (fake GitHub), UDP 20831. Nothing is sent beyond 127.0.0.1, no background
 service is installed (a launchd agent of another Pitwall on this Mac is only read, never touched).
@@ -258,7 +260,7 @@ def test_install_serve_update_and_live_refusal(workdir: Path) -> None:
 
             # ---- 4. pitwall update to test.2
             r = subprocess.run(
-                [str(v1 / ".venv" / "bin" / "pitwall"), "update", "--yes", "--no-service", "--pre"],
+                [str(v1 / ".venv" / "bin" / "pitwall"), "update", "--yes", "--no-service"],
                 cwd=v1,
                 env=_env(**gh.env()),
                 capture_output=True,
@@ -322,6 +324,20 @@ def test_install_serve_update_and_live_refusal(workdir: Path) -> None:
             senders[-1].terminate()
             senders[-1].wait(timeout=10)
             _wait(lambda: _get("/api/health")["connection"]["status"] != "live", 30, "telemetry to stop being live")
+            # A packet under 2 minutes old counts as a paused driver: still refused...
+            r = subprocess.run(
+                [str(v2 / ".venv" / "bin" / "pitwall"), "update", "--rollback", "--yes", "--no-service"],
+                cwd=v2,
+                env=_env(),
+                capture_output=True,
+                text=True,
+                timeout=120,
+                check=False,
+            )
+            assert r.returncode == 3 and "paused less than 2 minutes ago" in r.stderr, r.stdout + r.stderr
+            # ...so start the server again, without the session (no packet yet: nobody is driving)
+            procs.pop().stop()
+            procs.append(Server(v2, workdir / "server2b.log"))
             r = subprocess.run(
                 [str(v2 / ".venv" / "bin" / "pitwall"), "update", "--rollback", "--yes", "--no-service"],
                 cwd=v2,

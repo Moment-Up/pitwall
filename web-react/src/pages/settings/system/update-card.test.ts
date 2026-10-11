@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import { EndpointError } from "../../../lib/endpoints/settings";
 import type { UpdateStatus } from "../../../lib/endpoints/update";
 import { UpdateCardView, type UpdateCardViewProps } from "./UpdateCard";
-import { CARD_DESCRIPTION, GIT_LINE, HOW_HELP } from "./update-model";
+import { CARD_DESCRIPTION, DOCS_URL, GIT_DOCS_URL, GIT_LINE, HOW_HELP, HOW_HELP_WINDOWS, OLDER_KEY, TOO_SOON_NOTE } from "./update-model";
 import { NOW, updateFixture } from "./update-testkit";
 
 function render(status: UpdateStatus | undefined, over: Partial<UpdateCardViewProps> = {}): string {
@@ -94,6 +94,14 @@ describe("Settings › System › Updates", () => {
     expect(link).toContain('target="_blank"');
     expect(link).toContain('rel="noopener noreferrer"');
     expect(t).toContain("Release notes on GitHub");
+    // What to do comes before what changed (on a phone the command is on the first screen), with the guide next to it.
+    expect(t.indexOf("How to update")).toBeLessThan(t.indexOf("What changed in v0.2.0"));
+    expect(t.indexOf("Install guide")).toBeLessThan(t.indexOf("What changed in v0.2.0"));
+    expect(t).not.toContain("PowerShell");
+    // Links look like links: each ends with the external-link icon (they open GitHub in a new tab).
+    const anchors = m.match(/<a [\s\S]*?<\/a>/g) ?? [];
+    expect(anchors.length).toBe(2);
+    for (const a of anchors) expect(a).toContain('data-slot="link-icon"');
     // Check now: 44 px, secondary, large.
     const check = buttons(m, "Check now")[0] ?? "";
     expect(check).toContain("min-h-11");
@@ -108,9 +116,22 @@ describe("Settings › System › Updates", () => {
     expect(m).toMatch(/aria-expanded="true"/);
   });
 
-  it("several releases: one section each, newest first; an empty list is said in words", () => {
+  it("several releases: the newest one's notes; older ones folded under Also new", () => {
     const m = render(updateFixture("contract-available-several"));
     const t = text(m);
+    expect(t).toContain("What changed in v0.3.0 Track maps");
+    expect(t).not.toContain("What changed in v0.2.1");
+    expect(t).not.toContain("What changed in v0.2.0");
+    const also = buttons(m, "Also new: v0.2.1, v0.2.0");
+    expect(also).toHaveLength(1);
+    expect(also[0]).toMatch(/aria-expanded="false"/);
+    expect(also[0]).toContain("min-h-11");
+  });
+
+  it("several releases, older ones open: one section each, newest first; an empty list is said in words", () => {
+    const m = render(updateFixture("contract-available-several"), { expanded: new Set([OLDER_KEY]) });
+    const t = text(m);
+    expect(buttons(m, "Hide older releases")[0]).toMatch(/aria-expanded="true"/);
     const order = ["What changed in v0.3.0", "What changed in v0.2.1", "What changed in v0.2.0"].map((h) => t.indexOf(h));
     expect(order.every((i) => i >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
@@ -157,7 +178,7 @@ describe("Settings › System › Updates", () => {
   it("never checked (no data yet): says when Pitwall will look; Check now offered", () => {
     const t = text(render(updateFixture("contract-never-auto")));
     expect(t).toContain("Not checked yet");
-    expect(t).toContain("once a day, while no game is sending telemetry");
+    expect(t).toContain("While this page is open, Pitwall looks for a new version at most once a day");
     expect(t).toContain("Check now");
     expect(t).not.toContain("Last checked");
   });
@@ -175,7 +196,7 @@ describe("Settings › System › Updates", () => {
     const t = text(render(updateFixture("contract-failed")));
     expect(t).toContain("Couldn't check");
     expect(t).toContain("Couldn't reach GitHub (timed out). You have v0.1.0.");
-    expect(t).toContain("Last checked 10 min ago");
+    expect(t).toContain("Last tried 10 min ago");
     expect(t).toContain("Check now");
   });
 
@@ -195,11 +216,34 @@ describe("Settings › System › Updates", () => {
     expect(m).toContain('href="https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating"');
   });
 
-  it("git checkout: git pull, not the uv command", () => {
-    const t = text(render(updateFixture("contract-git")));
+  it("git checkout: git pull and the rest, not the uv command; the guide's git section", () => {
+    const m = render(updateFixture("contract-git"));
+    const t = text(m);
     expect(t).toContain(GIT_LINE);
+    expect(t).toContain("git pull, then update its packages, rebuild the dashboard and restart Pitwall");
     expect(t).not.toContain("uv run pitwall update");
     expect(t).toContain("What changed in v0.2.0");
+    expect(m).toContain(`href="${GIT_DOCS_URL}"`);
+    expect(m).not.toContain(`href="${DOCS_URL}"`);
+  });
+
+  it("Windows: PowerShell in the help, not Terminal", () => {
+    const cmd = 'cd "C:\\Users\\you\\AppData\\Local\\Pitwall\\pitwall-v0.1.0"; uv run pitwall update';
+    const t = text(render(updateFixture("contract-available", { how: { command: cmd, folder: null, docs_url: DOCS_URL } })));
+    expect(t).toContain(HOW_HELP_WINDOWS);
+    expect(t).not.toContain("Terminal");
+  });
+
+  it("Check now within a minute of the last check: says so instead of doing nothing", () => {
+    expect(text(render(updateFixture("contract-up-to-date"), { tooSoon: true }))).toContain(TOO_SOON_NOTE);
+    expect(text(render(updateFixture("contract-up-to-date")))).not.toContain(TOO_SOON_NOTE);
+  });
+
+  it("after an update restarted the server: a prompt to reload, with a Reload button", () => {
+    const m = render(updateFixture("contract-up-to-date"), { updatedTo: "v0.2.0", onReload: vi.fn() });
+    expect(text(m)).toContain("Pitwall was updated to v0.2.0 Reload this page to use it.");
+    expect(buttons(m, "Reload")[0]).toContain("min-h-11");
+    expect(text(render(updateFixture("contract-up-to-date")))).not.toContain("was updated to");
   });
 
   it("phone layout (390 px): rows wrap, long values break, nothing has a fixed width", () => {

@@ -13,6 +13,7 @@ dashboard's TypeScript contract is ``web-react/src/lib/endpoints/update.ts`` (``
 
 from __future__ import annotations
 
+import logging
 import sys
 import threading
 import time
@@ -21,9 +22,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pitwall.install.github import CACHED_RELEASES, DOCS_URL, ReleaseError, ReleaseInfo, fetch_releases
+from pitwall.install.github import CACHED_RELEASES, DOCS_URL, GIT_DOCS_URL, ReleaseError, ReleaseInfo, fetch_releases
 from pitwall.install.layout import write_json_atomic
 from pitwall.install.versions import InstallKind, current_version, install_kind, parse_version
+
+log = logging.getLogger(__name__)
 
 CACHE_NAME = "update_check.json"
 STALE_S = 24 * 3600.0
@@ -99,7 +102,7 @@ def run_check(data_dir: Path, fetcher: Callable[[], list[ReleaseInfo]], now: flo
 
 def how_to_update(kind: InstallKind, root: Path, platform: str = sys.platform) -> dict[str, Any] | None:
     if kind == "git":
-        return {"command": "git pull", "folder": str(root), "docs_url": DOCS_URL}
+        return {"command": "git pull", "folder": str(root), "docs_url": GIT_DOCS_URL}
     if kind in ("managed", "release"):
         sep = "; " if platform == "win32" else " && "
         return {"command": f'cd "{root}"{sep}uv run pitwall update', "folder": str(root), "docs_url": DOCS_URL}
@@ -118,14 +121,14 @@ def compute_status(
     platform: str = sys.platform,
 ) -> dict[str, Any]:
     """The ``UpdateStatus`` JSON (web-react/src/lib/endpoints/update.ts). Pre-releases count only when the running
-    version is itself a pre-release."""
+    version is itself a pre-release. A failed check keeps what the last good one found (``error`` says it failed),
+    so one dropped connection does not hide an update that was already known."""
     cur = parse_version(current)
     off = mode == "off" and hide_when_off
-    failed = cache.error is not None
     allow_pre = cur is not None and cur.is_pre
     rs = [r for r in cache.releases if allow_pre or not r.prerelease]
     rs.sort(key=lambda r: r.parsed.key(), reverse=True)
-    known = not off and not failed and cache.ok_unix is not None
+    known = not off and cache.ok_unix is not None
     latest = rs[0] if known and rs else None
     newer = [r for r in rs if cur is None or r.parsed > cur] if known else []
     update_available: bool | None = None
@@ -177,16 +180,19 @@ class UpdateChecker:
         return self._running
 
     def cache(self) -> CheckCache:
-        """The cache file, re-read only when it changed (``pitwall update --check`` may write it)."""
+        """The cache file, re-read only when it changed (``pitwall update --check`` may write it). The worker thread
+        may drop ``self._cache`` at any moment, so it is read once into a local."""
         p = cache_path(self.data_dir)
         try:
             mtime: float | None = p.stat().st_mtime
         except OSError:
             mtime = None
-        if self._cache is None or mtime != self._cache_mtime:
-            self._cache = read_cache(self.data_dir) if mtime is not None else CheckCache()
+        c = self._cache
+        if c is None or mtime != self._cache_mtime:
+            c = read_cache(self.data_dir) if mtime is not None else CheckCache()
+            self._cache = c
             self._cache_mtime = mtime
-        return self._cache
+        return c
 
     def status(self) -> dict[str, Any]:
         return compute_status(
@@ -196,8 +202,10 @@ class UpdateChecker:
     def wants_auto_refresh(self, live: bool) -> bool:
         if self.mode != "auto" or live or self._running:
             return False
-        c = self.cache()
         now = self.clock()
+        if self._finished is not None and now - self._finished < RETRY_S:
+            return False  # also when the cache file could not be written (it would look never checked)
+        c = self.cache()
         stale = c.ok_unix is None or now - c.ok_unix > STALE_S
         retry_ok = c.checked_unix is None or now - c.checked_unix > RETRY_S
         return stale and retry_ok
@@ -217,6 +225,8 @@ class UpdateChecker:
         """Run the check claimed with ``try_begin`` (blocking: call it in a worker thread)."""
         try:
             run_check(self.data_dir, self.fetcher, self.clock())
+        except OSError as e:  # the cache could not be written (permissions, a full disk, a reader on Windows)
+            log.warning("update check: could not write %s: %s", cache_path(self.data_dir), e)
         finally:
             with self._lock:
                 self._running = False

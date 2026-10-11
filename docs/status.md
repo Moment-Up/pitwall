@@ -210,7 +210,10 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
 - **Release workflow steps:** not yet run on GitHub until the first tag (installer assets, "What changed" from
   CHANGELOG.md, the `--from-zip` install in verify, the `installer-smoke` job).
 - **Service repoint (launchd / Task Scheduler) and legacy adoption:** unit-tested with fakes only, not run on a real
-  service.
+  service. The review fixes (service script exit codes, the new version's own tag before success, a second "nobody
+  drives" check just before the switch, a paused game counting as driving for 2 minutes, a failed move-back that
+  leaves the old service stopped, renamed release folders, `~` and conflicting data folders, downgrades) are
+  unit-tested with the same fakes.
 - **Windows and Linux:** CI only.
 - **README GIF:** recorded tier (real PS5 capture streamed over loopback UDP), not live.
 - Community files: issue forms, PR template, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md. Capability statuses in

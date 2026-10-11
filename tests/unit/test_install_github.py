@@ -94,7 +94,15 @@ Not a list item, ends the list
     assert extract_notes("## Changes\n- x\n") == []
     assert extract_notes(None) == [] and extract_notes("") == []
     long = extract_notes("## What changed\n- " + "word " * 100 + "\n")
-    assert len(long[0]) == 200 and long[0].endswith("…")
+    assert len(long[0]) <= 200 and long[0].endswith("word…")  # cut at a word boundary
+    url = extract_notes(
+        "## What changed\n- "
+        + "Install with one command " * 7
+        + "https://github.com/Moment-Up/pitwall/releases/latest/x\n"
+    )
+    assert url[0].endswith("command…") and "https" not in url[0]  # never mid-URL
+    (one,) = extract_notes("## What changed\n- " + "x" * 300 + "\n")
+    assert len(one) == 200 and one.endswith("…")  # a single unbroken word: cut where it must be
     many = extract_notes("## What changed\n" + "".join(f"- item {i}\n" for i in range(30)))
     assert len(many) == 20 and many[-1] == "item 19"
 

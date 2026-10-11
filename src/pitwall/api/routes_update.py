@@ -6,6 +6,9 @@ Endpoints
                             ago, last attempt over 10 min ago, telemetry not live.
     POST /api/update/check  body ``{}``: start a check now. 409 when checks are off; the current status (no new
                             check) while one runs or one finished less than 60 s ago.
+    GET  /api/update/version  ``{"current": "v0.2.0", "install_kind": "managed"}``: which version is running. Never
+                            contacts GitHub; ``pitwall install-finish`` polls it after a switch to tell the new
+                            version from the old one still answering.
 
 There is no endpoint that installs anything: updating replaces the server's own files and restarts it, so it is
 done from a terminal on the computer (``uv run pitwall update``), never by a device on the network.
@@ -74,6 +77,12 @@ async def update_status(request: Request) -> dict[str, Any]:
     if c.wants_auto_refresh(_live(request)):
         _start(request, c)
     return c.status()
+
+
+@router.get("/version")
+async def running_version(request: Request) -> dict[str, Any]:
+    c = checker(request)
+    return {"current": c.current, "install_kind": c.kind}
 
 
 @router.post("/check", dependencies=[Depends(require_json)])

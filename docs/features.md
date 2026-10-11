@@ -203,8 +203,9 @@ with its evidence, and the version.
 
 <!-- --- lane install --- -->
 **Updates.** Whether a newer Pitwall is out, what changed in it, and the one command that updates this computer
-(`uv run pitwall update`, or `git pull` in a git checkout), with a "Check now" button. Pitwall asks GitHub at most once
-a day, never while someone is driving (`PITWALL_UPDATE_CHECK=auto`; `manual` or `off` in `.env`). The page never
+(`uv run pitwall update`, or the git steps in a git checkout), with a "Check now" button. While the page is open,
+Pitwall asks GitHub at most once a day, never while someone is driving (`PITWALL_UPDATE_CHECK=auto`; `manual` or `off`
+in `.env`). The page never
 updates anything itself: updating replaces the server's own files, so it is always done in a terminal on the computer
 running Pitwall. Drive never shows any of this.
 <!-- --- end lane install --- -->

@@ -88,6 +88,27 @@ jobs:
           case "$VERSION" in *-*) ;; *) require="--require" ;; esac
           python3 scripts/changelog_section.py --version "$VERSION" $require > "$RUNNER_TEMP/release/changes.md"
           echo "What changed in $VERSION:"; cat "$RUNNER_TEMP/release/changes.md"
+      # A stable tag needs version = "X.Y.Z" in pyproject.toml and __version__ = "X.Y.Z" in src/pitwall/__init__.py:
+      # /api/health and the dashboard show __version__, and a git checkout compares it with the latest release.
+      - name: Package version matches the tag
+        run: |
+          set -euo pipefail
+          case "$VERSION" in *-*) echo "pre-release $VERSION: package version not checked"; exit 0 ;; esac
+          python3 - <<'PY'
+          import os, re, sys, tomllib
+          tag = os.environ["VERSION"]
+          want = tag[1:]
+          with open("pyproject.toml", "rb") as f:
+              py = tomllib.load(f)["project"]["version"]
+          with open("src/pitwall/__init__.py", encoding="utf-8") as f:
+              m = re.search(r'^__version__ = "([^"]+)"', f.read(), re.M)
+          init = m.group(1) if m else None
+          if py != want or init != want:
+              print(f"::error title=Version mismatch::{tag} needs version = {want} in pyproject.toml (it has {py}) "
+                    f"and __version__ = {want} in src/pitwall/__init__.py (it has {init}). See docs/releasing.md.")
+              sys.exit(1)
+          print(f"pyproject.toml and __version__: {want}")
+          PY
       # --- end lane install ---
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0

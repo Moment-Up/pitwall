@@ -60,8 +60,9 @@ been run with a game (release zips are checked on a Linux CI runner with synthet
 ## Install with one command
 
 <!-- --- lane install --- -->
-From v0.2.0, each release also has two installers. They download the latest release, check it, install it into a
-folder of its own and keep your sessions in one data folder that every later version uses.
+From v0.2.0 (not released yet: until then, [install from a release](#install-from-a-release)), each release also
+has two installers. They download the latest release, check it, install it into a folder of its own and keep your
+sessions in one data folder that every later version uses.
 
 macOS and Linux (in Terminal):
 
@@ -667,11 +668,20 @@ cd ~/Pitwall/pitwall-v0.2.0 && uv run pitwall update        # Windows: cd "$env:
 It lists what changed in each newer release, asks before it does anything, then installs the new version next to
 the current one exactly as the installer does: download, SHA-256, `uv sync`, a database backup in
 `<data>/backups/`, your `.env` carried forward, and the background service moved to the new version (it waits up to
-90 s for the new version to answer and puts everything back if it does not). Your data folder stays where it is. It
-refuses while someone is driving (exit code 3; `--wait-idle 120` waits instead).
+90 s until the new version itself answers, not the old one, and puts everything back if it does not). Your data
+folder stays where it is. It refuses while someone is driving: telemetry live, or a game that sent some less than 2
+minutes ago (a paused game sends nothing) (exit code 3; `--wait-idle 120` waits up to 2 hours instead). It checks
+again just before the switch, and the service scripts refuse too if a session starts in between.
+
+On macOS, starting or moving the background service stops every `pitwall serve` this account runs (from any folder,
+on any port), so the service can use its ports. Without the service, a Pitwall you started by hand is never stopped:
+the summary tells you to restart it.
 
 - `uv run pitwall update --check` only looks: it asks GitHub for the latest release and prints it.
-- `--version v0.2.1` installs a specific release (an older one asks first); `--pre` includes pre-releases.
+- `--version v0.2.1` installs a specific release (an older one asks first, in the installers too); `--pre` includes
+  pre-releases (automatic when you run a pre-release).
+- The background service stays as you have it: one you use moves to the new version, and none is added.
+  `--service` also installs one (start at login); `--no-service` leaves it on the old version.
 - `--rollback` goes back to the previous version (its folder is kept). The database may already have columns the
   newer version added; older versions ignore them, and the backup from before the update is in `<data>/backups/`.
 - A release folder you installed by hand is adopted on its first update: its `data` folder moves to `~/Pitwall/data`

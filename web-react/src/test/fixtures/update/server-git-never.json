@@ -4,7 +4,7 @@
   "recorded": "2026-10-11T18:41:40+01:00",
   "what": "Never checked, manual mode, git checkout.",
   "tier": "server",
-  "edited": "how.folder replaced with /Users/you/Projects/pitwall (the test machine's path)"
+  "edited": "how.folder replaced with /Users/you/Projects/pitwall (the test machine's path); how.docs_url changed from #updating to #a-git-clone, as the server sends it for a git checkout since the review fixes (2026-10-11)"
  },
  "response": {
   "schema": 1,
@@ -20,7 +20,7 @@
   "how": {
    "command": "git pull",
    "folder": "/Users/you/Projects/pitwall",
-   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating"
+   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#a-git-clone"
   }
  }
 }

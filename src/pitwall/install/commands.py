@@ -21,14 +21,24 @@ if TYPE_CHECKING:
     from pitwall.install.github import ReleaseInfo
 
 DOCS = "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating"
+GIT_DOCS = "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#a-git-clone"
 
 
-def _service_mode(service: bool | None, has_terminal: bool) -> str:
+def _service_mode(service: bool | None) -> str:
+    """``pitwall update`` keeps the background service as it is (moves ours to the new version, adds none) unless
+    ``--service`` / ``--no-service`` says otherwise. Only the installers ask whether to add one."""
     if service is True:
         return "yes"
     if service is False:
         return "no"
-    return "ask" if has_terminal else "keep"
+    return "keep"
+
+
+def _here(root: Path) -> bool:
+    try:
+        return Path.cwd().resolve() == root.resolve()
+    except OSError:
+        return False
 
 
 def _date(published: str | None) -> str:
@@ -58,9 +68,16 @@ def register(app: typer.Typer) -> None:
         as_json: Annotated[bool, typer.Option("--json", help="With --check: print the status as JSON")] = False,
         yes: Annotated[bool, typer.Option("--yes", "-y", help="Answer yes to every question")] = False,
         version: Annotated[str | None, typer.Option("--version", help="Install this release (e.g. v0.2.0)")] = None,
-        pre: Annotated[bool, typer.Option("--pre", help="Include pre-releases")] = False,
+        pre: Annotated[
+            bool, typer.Option("--pre", help="Include pre-releases (automatic when this version is one)")
+        ] = False,
         service: Annotated[
-            bool | None, typer.Option("--service/--no-service", help="Install or leave out the background service")
+            bool | None,
+            typer.Option(
+                "--service/--no-service",
+                help="Also start Pitwall at login if it does not yet, or leave the background service on this "
+                "version. Default: a background service you use moves to the new version; none is added",
+            ),
         ] = None,
         wait_idle: Annotated[
             float, typer.Option("--wait-idle", metavar="MIN", help="Wait up to MIN minutes for telemetry to stop")
@@ -98,6 +115,7 @@ def register(app: typer.Typer) -> None:
         no_backup: Annotated[bool, typer.Option("--no-backup")] = False,
         installer: Annotated[str, typer.Option("--installer")] = "pitwall update",
         rollback: Annotated[bool, typer.Option("--rollback", hidden=True)] = False,
+        allow_older: Annotated[bool, typer.Option("--allow-older", hidden=True)] = False,
     ) -> None:
         """Switch the install folder to a staged version (run by install.sh, install.ps1 and pitwall update)."""
         from pitwall.install.activate import FinishOptions, System, finish
@@ -118,6 +136,7 @@ def register(app: typer.Typer) -> None:
             no_backup=no_backup,
             installer=installer,
             rollback=rollback,
+            allow_older=allow_older,
         )
         raise typer.Exit(finish(opts, system))
 
@@ -169,11 +188,14 @@ def run_update(
         load_state,
         version_dir,
     )
-    from pitwall.install.versions import code_root, current_version, install_kind, supports_managed
+    from pitwall.install.versions import code_root, current_version, install_kind, parse_version, supports_managed
 
     root = code_root()
     kind = install_kind(root)
     current = current_version(root)
+    # Someone on a pre-release follows pre-releases (the same rule as Settings > System's card).
+    cur = parse_version(current)
+    pre = pre or (cur is not None and cur.is_pre)
 
     if check:
         s = get_settings()
@@ -187,13 +209,20 @@ def run_update(
             latest = st["latest"]
             typer.echo(f"Pitwall {current}. Latest release: {latest['version']} ({_date(latest['published_at'])})")
             if st["how"]:
-                typer.echo(f"To update: {st['how']['command']}")
+                command = st["how"]["command"]
+                if kind != "git" and _here(root):  # already in this folder: no `cd` needed
+                    command = "uv run pitwall update"
+                typer.echo(f"To update: {command}")
         else:
             typer.echo(f"Pitwall {current} is up to date.")
         return EXIT_ERROR if cache.error else EXIT_OK
 
     if kind == "git":
-        typer.echo(f"This copy is a git checkout ({root}): update it with git pull. See {DOCS}", err=True)
+        typer.echo(
+            f"This copy is a git checkout ({root}), so pitwall update doesn't apply: git pull, then uv sync "
+            f"--all-extras, rebuild the dashboard and restart Pitwall. See {GIT_DOCS}",
+            err=True,
+        )
         return EXIT_USAGE
     if kind == "unknown":
         typer.echo(f"{root} is not a Pitwall release folder, so it cannot update itself. See {DOCS}", err=True)
@@ -206,15 +235,16 @@ def run_update(
     system = System()
     home = root.parent
     state = load_state(home)
-    mode = _service_mode(service, system.has_terminal())
+    mode = _service_mode(service)
 
     typer.echo(f"Pitwall {current} (installed in {home})")
     probe = Finisher(FinishOptions(home=home, version_dir=root, wait_idle_min=wait_idle), system)
     port = env_port(root / ".env")
-    if probe.is_live(port) and wait_idle <= 0:
+    if probe.is_busy(port) and wait_idle <= 0:
         typer.echo(
-            f"Telemetry is live on http://127.0.0.1:{port}/ (someone is driving): not updating now. "
-            "Run this again between sessions, or add --wait-idle 120.",
+            f"A game is sending telemetry to http://127.0.0.1:{port}/, or paused less than 2 minutes ago (someone is "
+            "driving): not updating now. Run this again between sessions, or add --wait-idle 120 to wait up to "
+            "2 hours.",
             err=True,
         )
         return EXIT_LIVE
@@ -302,6 +332,8 @@ def run_update(
     ]
     if yes:
         cmd.append("--yes")
+    if target.downgrade:
+        cmd.append("--allow-older")  # asked above (or --yes): install-finish does not ask again
     if wait_idle > 0:
         cmd += ["--wait-idle", f"{wait_idle:g}"]
     if no_backup:

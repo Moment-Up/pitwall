@@ -2,11 +2,14 @@
 // one command that updates it. Read-only: there is no "Update now" (the server cannot safely replace itself, and a
 // device on the network must never trigger a code change). "Check now" asks the server to look again.
 //
+// Order: the status, then what to do (the command, or how a git checkout updates), then what changed in the newest
+// release (older ones folded under "Also new"), then Check now. So the command is on the first screen, also on a phone.
+//
 // UpdateCardView is pure (render-tested in update-card.test.ts); UpdateCard binds it to GET /api/update, polling
 // every 60 s and every 2 s while a check runs. An older server without /api/update renders nothing.
 
 import { Alert, Button, Card, Chip, Link, Skeleton } from "@heroui/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CopyField } from "../../../components/ui";
 import { useApi } from "../../../hooks/useApi";
 import { cache } from "../../../lib/cache";
@@ -14,14 +17,21 @@ import { messageOf } from "../../../lib/endpoints/settings";
 import { UPDATE_KEY, isNotFound, updateApi, type UpdateStatus } from "../../../lib/endpoints/update";
 import {
   CARD_DESCRIPTION,
-  HOW_HELP,
   NOTES_SHOWN,
+  OLDER_KEY,
+  TOO_SOON_NOTE,
+  checkSkipped,
   shownNotes,
   showUpdateChip,
   updateView,
+  updatedTo,
+  versionText,
   type ReleaseView,
   type UpdateTone,
 } from "./update-model";
+
+/** Links read as links: HeroUI's external-link icon after the text (the Link's colour is close to body text here). */
+const LINK_CLASS = "inline-flex min-h-11 items-center gap-1 text-sm";
 
 function StatusChip({ tone, children }: { tone: UpdateTone; children: string }) {
   return (
@@ -29,6 +39,21 @@ function StatusChip({ tone, children }: { tone: UpdateTone; children: string }) 
       <span aria-hidden="true" className="size-2 rounded-full bg-current" />
       <Chip.Label>{children}</Chip.Label>
     </Chip>
+  );
+}
+
+function GuideLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={LINK_CLASS}
+      aria-label="Updating Pitwall, in the install guide on GitHub (opens in a new tab)"
+    >
+      Install guide
+      <Link.Icon />
+    </Link>
   );
 }
 
@@ -71,10 +96,11 @@ function ReleaseNotes(p: { r: ReleaseView; showDate: boolean; expanded: boolean;
               href={r.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center text-sm"
+              className={LINK_CLASS}
               aria-label={`Release notes for ${r.version} on GitHub (opens in a new tab)`}
             >
               Release notes on GitHub
+              <Link.Icon />
             </Link>
           )}
         </div>
@@ -91,13 +117,18 @@ export interface UpdateCardViewProps {
   busy: boolean;
   /** "Check now" failed: the server's words. */
   actionError: string | null;
+  /** "Check now" answered without a new check (one finished less than a minute ago). */
+  tooSoon?: boolean;
+  /** The server now runs this version, not the one this page was loaded with (after `pitwall update`). */
+  updatedTo?: string | null;
   /** Browser clock, seconds. */
   nowUnix: number;
-  /** Releases whose full "What changed" list is open. */
+  /** Releases whose full "What changed" list is open (and OLDER_KEY: the older releases are shown). */
   expanded: ReadonlySet<string>;
   onToggle: (version: string) => void;
   onCheck: () => void;
   onRetry: () => void;
+  onReload?: () => void;
 }
 
 export function UpdateCardView(p: UpdateCardViewProps) {
@@ -105,6 +136,8 @@ export function UpdateCardView(p: UpdateCardViewProps) {
   if (isNotFound(p.loadError)) return null;
   const v = p.status ? updateView(p.status, p.nowUnix) : null;
   const checking = p.busy || v?.state === "checking";
+  const [newest, ...older] = v?.releases ?? [];
+  const olderOpen = p.expanded.has(OLDER_KEY);
 
   return (
     <Card className="min-w-0">
@@ -113,6 +146,20 @@ export function UpdateCardView(p: UpdateCardViewProps) {
         <Card.Description>{CARD_DESCRIPTION}</Card.Description>
       </Card.Header>
       <Card.Content className="grid min-w-0 grid-cols-1 gap-3">
+        {p.updatedTo && (
+          <Alert status="success">
+            <Alert.Indicator />
+            <Alert.Content>
+              <Alert.Title>Pitwall was updated to {p.updatedTo}</Alert.Title>
+              <Alert.Description>Reload this page to use it.</Alert.Description>
+            </Alert.Content>
+            {p.onReload && (
+              <Button className="min-h-11" size="lg" variant="secondary" onPress={p.onReload}>
+                Reload
+              </Button>
+            )}
+          </Alert>
+        )}
         {!v ? (
           p.loadError ? (
             <div className="grid gap-2">
@@ -135,24 +182,57 @@ export function UpdateCardView(p: UpdateCardViewProps) {
               <p className="m-0 min-w-0 text-sm break-words">{v.line}</p>
             </div>
 
-            {v.releases.map((r, i) => (
-              <ReleaseNotes
-                key={r.version}
-                r={r}
-                showDate={i > 0 /* the newest one's date is in the line above */}
-                expanded={p.expanded.has(r.version)}
-                onToggle={() => p.onToggle(r.version)}
-              />
-            ))}
-
             {v.command && (
               <div className="grid min-w-0 gap-2">
                 <h4 className="m-0 text-sm font-semibold">{v.commandIntro}</h4>
                 <CopyField value={v.command} label="Update command" labelHidden />
-                <p className="m-0 text-xs text-muted">{HOW_HELP}</p>
+                <p className="m-0 text-xs text-muted">{v.commandHelp}</p>
+                <div>
+                  <GuideLink href={v.docsUrl} />
+                </div>
               </div>
             )}
-            {v.howNote && <p className="m-0 text-sm text-muted">{v.howNote}</p>}
+            {v.howNote && (
+              <div className="grid min-w-0 gap-1">
+                <p className="m-0 text-sm text-muted">{v.howNote}</p>
+                <div>
+                  <GuideLink href={v.docsUrl} />
+                </div>
+              </div>
+            )}
+
+            {newest && (
+              <ReleaseNotes
+                r={newest}
+                showDate={false /* the newest one's date is in the line above */}
+                expanded={p.expanded.has(newest.version)}
+                onToggle={() => p.onToggle(newest.version)}
+              />
+            )}
+            {older.length > 0 && (
+              <div className="grid min-w-0 gap-3">
+                <div>
+                  <Button
+                    className="min-h-11"
+                    variant="ghost"
+                    onPress={() => p.onToggle(OLDER_KEY)}
+                    aria-expanded={olderOpen}
+                  >
+                    {olderOpen ? "Hide older releases" : `Also new: ${older.map((r) => r.version).join(", ")}`}
+                  </Button>
+                </div>
+                {olderOpen &&
+                  older.map((r) => (
+                    <ReleaseNotes
+                      key={r.version}
+                      r={r}
+                      showDate
+                      expanded={p.expanded.has(r.version)}
+                      onToggle={() => p.onToggle(r.version)}
+                    />
+                  ))}
+              </div>
+            )}
 
             {p.actionError && (
               <Alert status="danger">
@@ -172,17 +252,7 @@ export function UpdateCardView(p: UpdateCardViewProps) {
                 </Button>
               )}
               {v.checked && <span className="text-xs text-muted">{v.checked}</span>}
-              {(v.howNote || v.command) && (
-                <Link
-                  href={v.docsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-11 items-center text-sm"
-                  aria-label="Updating Pitwall, in the install guide on GitHub (opens in a new tab)"
-                >
-                  Install guide
-                </Link>
-              )}
+              {p.tooSoon && !checking && <span className="text-xs text-muted">{TOO_SOON_NOTE}</span>}
             </div>
           </>
         )}
@@ -191,7 +261,7 @@ export function UpdateCardView(p: UpdateCardViewProps) {
   );
 }
 
-/** The update status for this page (one cache key, shared with the Version row's chip). */
+/** The update status for this page (one cache key, shared with the Version row and the Server tile). */
 function useUpdateStatus(intervalMs?: number) {
   return useApi(UPDATE_KEY, updateApi.status, intervalMs ? { intervalMs } : {});
 }
@@ -202,13 +272,23 @@ export function UpdateCard() {
   useApi(st.data?.checking ? UPDATE_KEY : null, updateApi.status, { intervalMs: 2_000, maxAgeMs: 0 });
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [tooSoon, setTooSoon] = useState(false);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  // The version this page was loaded with: a different one later means `pitwall update` restarted the server.
+  const firstSeen = useRef<string | null>(null);
+  useEffect(() => {
+    if (firstSeen.current === null && st.data?.current) firstSeen.current = st.data.current;
+  }, [st.data?.current]);
 
   async function check() {
+    const before = st.data;
     setBusy(true);
     setActionError(null);
+    setTooSoon(false);
     try {
-      cache.set(UPDATE_KEY, await updateApi.check());
+      const after = await updateApi.check();
+      cache.set(UPDATE_KEY, after);
+      setTooSoon(checkSkipped(before, after));
     } catch (e) {
       setActionError(messageOf(e));
     } finally {
@@ -222,6 +302,8 @@ export function UpdateCard() {
       loadError={st.error}
       busy={busy}
       actionError={actionError}
+      tooSoon={tooSoon}
+      updatedTo={updatedTo(firstSeen.current, st.data)}
       nowUnix={Date.now() / 1000}
       expanded={expanded}
       onToggle={(version) =>
@@ -234,6 +316,7 @@ export function UpdateCard() {
       }
       onCheck={() => void check()}
       onRetry={() => void st.refresh()}
+      onReload={() => window.location.reload()}
     />
   );
 }
@@ -247,4 +330,11 @@ export function UpdateChip() {
       <Chip.Label>Update available</Chip.Label>
     </Chip>
   );
+}
+
+/** The running version for the Server card and tile: the update status's tag (RELEASE.txt in a release), else
+ * "v" + /api/health's version (an older server, or before the status loads). */
+export function VersionText({ fallback }: { fallback: string | null | undefined }) {
+  const st = useUpdateStatus();
+  return <>{versionText(st.data, fallback) ?? ""}</>;
 }

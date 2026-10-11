@@ -122,7 +122,7 @@ def test_how_to_update_per_kind(tmp_path: Path) -> None:
     posix = compute_status(cache, current="v0.2.0", kind="release", mode="auto", root=root, platform="darwin")
     assert posix["how"]["command"] == f'cd "{root}" && uv run pitwall update'
     git = compute_status(cache, current="v0.1.0", kind="git", mode="auto", root=tmp_path)
-    assert git["how"]["command"] == "git pull"
+    assert git["how"]["command"] == "git pull" and git["how"]["docs_url"].endswith("install.md#a-git-clone")
     assert compute_status(cache, current="v0.1.0", kind="unknown", mode="auto", root=tmp_path)["how"] is None
 
 
@@ -203,3 +203,52 @@ def test_pitwall_update_refreshes_the_cache(tmp_path: Path, monkeypatch: pytest.
     monkeypatch.setattr(github, "fetch_releases", lambda: list(many))
     missing = tmp_path / "nowhere"
     assert len(commands.fetch_and_remember(missing)) == 14 and not missing.exists()
+
+
+def test_a_failed_check_does_not_hide_a_known_update(tmp_path: Path) -> None:
+    """One dropped connection after a good check: the update found then is still reported, with the error."""
+    c = checker(tmp_path)
+    run_check(c.data_dir, c.fetcher, 1000.0)
+    run_check(c.data_dir, lambda: (_ for _ in ()).throw(ReleaseError("Couldn't reach GitHub (timed out).")), 2000.0)
+    st = c.status()
+    assert st["update_available"] is True and st["latest"]["version"] == "v0.3.0"
+    assert [r["version"] for r in st["newer"]] == ["v0.3.0"]
+    assert st["error"] == "Couldn't reach GitHub (timed out)." and st["checked_unix"] == 2000.0
+
+
+def test_cache_is_never_none_when_the_worker_drops_it(tmp_path: Path) -> None:
+    """The worker sets ``_cache = None`` when a check ends; a status read at that moment still gets a cache."""
+    c = checker(tmp_path)
+    run_check(c.data_dir, c.fetcher, 1000.0)
+
+    class Racing(UpdateChecker):
+        @property  # type: ignore[override]
+        def _cache(self) -> CheckCache | None:  # every read after the first sees None (the worker cleared it)
+            n = self.__dict__.setdefault("_reads", 0)
+            self.__dict__["_reads"] = n + 1
+            return self.__dict__.get("_c") if n == 0 else None
+
+        @_cache.setter
+        def _cache(self, v: CheckCache | None) -> None:
+            self.__dict__["_c"] = v
+
+    r = Racing.__new__(Racing)
+    r.__dict__.update({k: getattr(c, k) for k in ("data_dir", "mode", "root", "fetcher", "clock", "kind", "current")})
+    r.__dict__.update(_lock=c._lock, _running=False, _finished=None, _cache_mtime=None, _c=None)
+    assert isinstance(r.cache(), CheckCache) and r.status()["update_available"] is True
+
+
+def test_an_unwritable_cache_does_not_retry_every_minute(tmp_path: Path) -> None:
+    """When the cache file cannot be written the check is logged, not raised, and the automatic retry still waits
+    10 minutes (it would otherwise look never checked and ask GitHub on every 60 s poll)."""
+    clock = Clock()
+    c = checker(tmp_path, clock=clock)
+    c.data_dir.parent.mkdir(parents=True, exist_ok=True)
+    c.data_dir.write_text("not a folder", encoding="utf-8")  # mkdir and the write fail with OSError
+    assert c.try_begin()
+    c.run_claimed()  # no exception
+    assert c.calls == [1] and not c.checking  # type: ignore[attr-defined]
+    assert c.status()["checked_unix"] is None  # nothing was saved
+    assert not c.wants_auto_refresh(live=False)
+    clock.t += 601
+    assert c.wants_auto_refresh(live=False)

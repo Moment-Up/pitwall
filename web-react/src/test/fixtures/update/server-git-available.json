@@ -4,7 +4,7 @@
   "recorded": "2026-10-11T18:42:00+01:00",
   "what": "A git checkout (v0.1.0) one release behind: the server skipped the pre-release, the draft and the release without assets; notes extracted from the release body's What changed section (a markdown link became its text, ** dropped).",
   "tier": "server",
-  "edited": "how.folder replaced with /Users/you/Projects/pitwall (the test machine's path)"
+  "edited": "how.folder replaced with /Users/you/Projects/pitwall (the test machine's path); how.docs_url changed from #updating to #a-git-clone, as the server sends it for a git checkout since the review fixes (2026-10-11)"
  },
  "response": {
   "schema": 1,
@@ -52,7 +52,7 @@
   "how": {
    "command": "git pull",
    "folder": "/Users/you/Projects/pitwall",
-   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating"
+   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#a-git-clone"
   }
  }
 }

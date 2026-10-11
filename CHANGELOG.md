@@ -9,12 +9,11 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
-- Install with one command: `curl -fsSL https://github.com/Moment-Up/pitwall/releases/latest/download/install.sh | sh`
-  on macOS and Linux, or `irm https://github.com/Moment-Up/pitwall/releases/latest/download/install.ps1 | iex` in
-  Windows PowerShell. It checks the download, keeps your sessions in one data folder and can start Pitwall at login.
-- `uv run pitwall update` moves an installed release to the latest one: it shows what changed, checks the download,
-  backs up the database, keeps your data and settings, and restarts the background service. It never runs while
-  someone is driving, and `--rollback` goes back to the previous version.
+- Install with one command on macOS, Linux or Windows: it checks the download, keeps your sessions in one data
+  folder and can start Pitwall at login.
+- Update with `uv run pitwall update`: it shows what changed, backs up the database, keeps your settings and never
+  runs while someone is driving.
+- `uv run pitwall update --rollback` goes back to the previous version if the new one gives you trouble.
 - Settings › System shows whether a newer version is out, what changed in it and the command to update
   (`PITWALL_UPDATE_CHECK` in `.env`: auto, manual or off).
 - `pitwall doctor` reports the last update check (it never contacts GitHub itself).

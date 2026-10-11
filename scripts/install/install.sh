@@ -408,7 +408,7 @@ check_live() {
     return 0
   fi
   if [ -z "$OPT_WAIT_IDLE" ] || [ "$OPT_WAIT_IDLE" = 0 ]; then
-    die 3 "telemetry is live on http://127.0.0.1:$pw_hp/ (someone is driving): not installing now. Run this again between sessions, or add --wait-idle 120."
+    die 3 "telemetry is live on http://127.0.0.1:$pw_hp/ (someone is driving): not installing now. Run this again between sessions, or add --wait-idle 120 to wait up to 2 hours."
   fi
   say "Telemetry is live: waiting up to $OPT_WAIT_IDLE min for the session to end..."
   pw_deadline=$(( $(date +%s) + OPT_WAIT_IDLE * 60 ))
@@ -569,7 +569,6 @@ stage() {
     mv "$STAGING/pitwall-$TAG" "$VDIR"
     rm -rf "$STAGING"
     STAGING=""
-DL_DIR=""
     if [ -n "$pw_dl" ]; then
       rm -f "$pw_zip" "$pw_sha"
       rmdir "$pw_dl" 2>/dev/null || true

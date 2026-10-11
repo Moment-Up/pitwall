@@ -3,7 +3,7 @@
 Dev-time only (needs Playwright's Chromium and Pillow, which are not Pitwall dependencies)::
 
     uv run --with playwright==1.61.0 --with pillow python scripts/demo/record_drive_gif.py \\
-        --capture <capture.pwcap> --segment 0:1790:8 --segment 1790:1822:1 --record 1804.8:1818.8 \\
+        --capture <capture.pwcap> --segment 0:1790:8 --segment 1790:1828:1 --record 1809.8:1823.8 \\
         --dist <a web-react/dist built for "/"> --out docs/screenshots/00-drive-coach-live.gif
 
 Without ``--capture`` it uses the committed F1 25 Austria excerpt (``--segment 0:270:1 --record 95:110``), whose
@@ -17,13 +17,15 @@ How it works:
    captures are refused.
 2. The capture is streamed over loopback UDP: packets inside each ``--segment START:END:SPEED`` (capture seconds)
    at that speed, gaps over 2 s shortened to 0.5 s, packets outside every segment skipped.
-3. Headless Chromium (1180x820, dark) shows ``#/drive/coach``; screenshots are taken only while capture time is
-   inside ``--record START:END``, at ``--fps``.
+3. Headless Chromium (1180x820, dark) shows ``#/drive/coach`` with the screen wake lock granted (as a tablet that
+   keeps its screen on; without it the page shows "Screen may sleep"); screenshots are taken only while capture time
+   is inside ``--record START:END``, at ``--fps``.
 4. Gates, checked on the page text once a second; any failure means no GIF:
    - none of the capture's participant names (``scripts/scrub_capture.py`` collects them from every packet; whole
      words of 3 or more characters, case-sensitive), no IPv4 address but 127.0.0.1, no ``token=``, no "SYNTHETIC";
    - ``--strict`` (default): in at least 80 % of the samples a live delta (``+0.12``), a next corner (``T3``) and a
-     reference lap chip (``Lap 64 · 1:10.549``).
+     reference lap chip (``Lap 64 · 1:10.549``), and in at least 60 % a coaching point (``T3: braked later…``,
+     not "No note for T1").
 5. Pillow: one 128-colour palette (median cut over the first, middle and last frames), no dithering, 125 ms per
    frame on average (GIF delays are in 10 ms steps, so 120 and 130 ms alternate: real time at 8 fps), looping;
    refused above 6 MB or outside 10-15 s.
@@ -63,6 +65,7 @@ IPV4 = re.compile(r"(?<![\d.])\d{1,3}(?:\.\d{1,3}){3}(?![\d.])")
 DELTA = re.compile(r"(?m)^\s*[+−-]\d+\.\d\d\s*$")
 NEXT_CORNER = re.compile(r"(?is)next corner.{0,120}?\bT\d+\b")
 REF_CHIP = re.compile(r"Lap \d+ · \d:\d\d\.\d{3}")
+COACH_NOTE = re.compile(r"(?m)\bT\d+: \S")  # "T3: braked later, 4 km/h slower out"
 
 
 class GateError(Exception):
@@ -157,6 +160,7 @@ def check_text(text: str, words: set[str], strict_hits: dict[str, int]) -> None:
     strict_hits["delta"] += bool(DELTA.search(text))
     strict_hits["next_corner"] += bool(NEXT_CORNER.search(text))
     strict_hits["ref_chip"] += bool(REF_CHIP.search(text))
+    strict_hits["coach_note"] += bool(COACH_NOTE.search(text))
 
 
 # ------------------------------------------------------------------------------------------------ sender
@@ -262,7 +266,7 @@ def record(args: argparse.Namespace) -> int:
     )
     run = Run()
     frames: list[Path] = []
-    hits = {"samples": 0, "delta": 0, "next_corner": 0, "ref_chip": 0}
+    hits = {"samples": 0, "delta": 0, "next_corner": 0, "ref_chip": 0, "coach_note": 0}
     try:
         deadline = time.monotonic() + 60
         while health(args.http_port) is None:
@@ -276,6 +280,9 @@ def record(args: argparse.Namespace) -> int:
         with sync_playwright() as p:
             browser = p.chromium.launch()
             ctx = browser.new_context(viewport=VIEWPORT, device_scale_factor=args.scale, color_scheme="dark")
+            # Headless Chromium refuses the screen wake lock unless it is granted (the page then says "Screen may
+            # sleep", which a tablet on a stand would not).
+            ctx.grant_permissions(["screen-wake-lock"], origin=f"http://127.0.0.1:{args.http_port}")
             page = ctx.new_page()
             page.goto(f"http://127.0.0.1:{args.http_port}/#/drive/coach")
             page.wait_for_timeout(1500)
@@ -313,6 +320,8 @@ def record(args: argparse.Namespace) -> int:
         if args.strict:
             n = max(1, hits["samples"])
             weak = [k for k in ("delta", "next_corner", "ref_chip") if hits[k] / n < 0.8]
+            if hits["coach_note"] / n < 0.6:
+                weak.append("coach_note (60 %)")
             if weak:
                 raise GateError(f"--strict: under 80 % of samples show {', '.join(weak)} ({hits})")
         duration = len(frames) * FRAME_MS / 1000

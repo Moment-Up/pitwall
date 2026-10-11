@@ -325,7 +325,7 @@ function Install-Pitwall {
     if ($portText -match '^[0-9]{1,5}$') { $port = [int]$portText }
     if (Test-Live $port) {
         if ($Opt.WaitIdle -le 0) {
-            Stop-Install 3 "telemetry is live on http://127.0.0.1:$port/ (someone is driving): not installing now. Run this again between sessions, or set PITWALL_INSTALL_WAIT_IDLE=120."
+            Stop-Install 3 "telemetry is live on http://127.0.0.1:$port/ (someone is driving): not installing now. Run this again between sessions, or set PITWALL_INSTALL_WAIT_IDLE=120 to wait up to 2 hours."
         }
         Say "Telemetry is live: waiting up to $($Opt.WaitIdle) min for the session to end..."
         $deadline = (Get-Date).AddMinutes($Opt.WaitIdle)

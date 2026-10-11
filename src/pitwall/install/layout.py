@@ -284,7 +284,7 @@ def ensure_data_dir_line(text: str, data_dir: Path, *, base: Path | None, rewrit
         m = _ENV_LINE_RE.match(lines[i])
         assert m is not None
         value = _unquote(m.group(5))
-        if not is_anchored(Path(value).expanduser()) and rewrite_relative:
+        if not is_anchored(Path(value)) and rewrite_relative:  # no ~ expansion: the server does not expand it
             where = f" (relative to {base})" if base is not None else ""
             lines[i : i + 1] = [
                 f"# Rewritten by the Pitwall installer on {date}: this line said {value!r}{where}; the data folder "

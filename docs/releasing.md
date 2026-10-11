@@ -71,16 +71,23 @@ Then, before the first tag:
    is active at the time of development and distribution (see [HeroUI Pro conditions](#heroui-pro-conditions)).
 3. The `HEROUI_AUTH_TOKEN` repository secret is set (above). Without it the workflow stops at its first step with
    "HEROUI_AUTH_TOKEN is not set".
-4. `version` in `pyproject.toml` matches the tag without the `v` (it says `0.1.0` for `v0.1.0`; it is shown by
-   `/api/health` and in `RELEASE.txt`), and [status.md](status.md) is up to date.
+4. `version` in `pyproject.toml` **and** `__version__` in `src/pitwall/__init__.py` both match the tag without the
+   `v` (`0.1.0` for `v0.1.0`). `/api/health`, the dashboard's Server card and the update check of a git checkout
+   show `__version__`; `RELEASE.txt` records the pyproject one. `tests/unit/test_version_matches.py` keeps the two
+   equal, and the release workflow stops a stable tag that does not match them. [status.md](status.md) is up to
+   date.
 5. `docs/install.md` still has its `## Install from a release` section: `RELEASE.txt` and the release notes link to
    it, and `package_release.py` refuses to package without it.
 6. **CHANGELOG.md has the release's section.** Rename `## Unreleased` to `## v0.2.0 - 2026-10-20` (the tag and the
    date), add a new empty `## Unreleased` above it, and commit. A stable tag without its section stops the workflow
    at its first steps (`scripts/changelog_section.py --require`); a pre-release (`v0.2.0-rc.1`) uses `## Unreleased`.
    Write the bullet points for drivers: the release notes show them under "What changed", and so do
-   `pitwall update` and Settings › System before someone updates. Check the text with
-   `python3 scripts/changelog_section.py --version v0.2.0 --require`.
+   `pitwall update` and Settings › System before someone updates. Keep each under 200 characters once links and
+   backticks are dropped (about 140 reads best; no URLs): longer ones would be cut, so `--require` refuses them.
+   Check the text with `python3 scripts/changelog_section.py --version v0.2.0 --require`.
+7. **Only for v0.2.0, the first release with the one-line installers:** in the release commit, remove the "not
+   released yet" note from the one-command install in `README.md` and `docs/install.md`. Until v0.2.0 is published,
+   `releases/latest/download/install.sh` does not exist (the latest release, v0.1.0, has no installers).
 
 ## Cut a release
 

@@ -4,9 +4,9 @@
     "title": "Drive › Coach on track (animated)",
     "caption": "A recorded session streamed to Pitwall over UDP, captured in a desktop browser at iPad size; radio and language model off.",
     "area": "Drive › Coach",
-    "state": "on track (lap 67 of 71, race), 14 s from T1 to T3: brake calls for T1 and T3, delta to lap 64 (1:10.549) from +0.02 behind to -0.03 ahead, previous lap's point T3",
+    "state": "on track (lap 67 of 71, race), 14 s from T1 to the T3 hairpin: the brake call for T3, delta to lap 64 (1:10.549) from +0.11 behind to -0.10 ahead, then +0.36 behind in T3, previous lap's point T3 (in 13 of 14 page samples)",
     "data_source": "recorded F1 25 PS5 capture",
-    "viewport": "1180x820 @1x (iPad landscape size, desktop browser), dark; 113 frames at 8 fps, 128 colours (scripts/demo/record_drive_gif.py)"
+    "viewport": "1180x820 @1x (iPad landscape size, desktop browser, screen wake lock granted), dark; 112 frames at 8 fps, 128 colours (scripts/demo/record_drive_gif.py)"
   },
   {
     "file": "01-drive-coach.png",

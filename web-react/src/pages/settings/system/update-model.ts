@@ -12,16 +12,29 @@ import type { ReleaseInfo, UpdateStatus } from "../../../lib/endpoints/update";
 export const RELEASES_URL_PREFIX = "https://github.com/Moment-Up/pitwall/releases/";
 /** The install guide's "Updating" section (also the fallback when the server sends no usable docs link). */
 export const DOCS_URL = "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating";
+/** The install guide's "A git clone" section (the server sends it for a git checkout). */
+export const GIT_DOCS_URL = "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#a-git-clone";
 const DOCS_URL_PREFIX = "https://github.com/Moment-Up/pitwall/";
 /** "What changed" items shown before "Show all n". */
 export const NOTES_SHOWN = 6;
 
-export const HOW_HELP =
-  "Run it in Terminal (PowerShell on Windows) on the computer running Pitwall, between sessions. It checks the " +
-  "download, keeps your data and settings, and restarts the background service if you use one.";
-export const GIT_LINE = "This copy is a git checkout: update it with git pull.";
+const HOW_HELP_REST =
+  "on the computer running Pitwall, between sessions. It checks the download, keeps your data and settings, and " +
+  "restarts the background service if you use one.";
+export const HOW_HELP = `Run it in Terminal ${HOW_HELP_REST}`;
+export const HOW_HELP_WINDOWS = `Run it in PowerShell ${HOW_HELP_REST}`;
+export const GIT_LINE =
+  "This copy is a git checkout, so pitwall update doesn't apply: git pull, then update its packages, rebuild the " +
+  "dashboard and restart Pitwall. The install guide's “A git clone” has the commands.";
 export const UNKNOWN_KIND_LINE = "Pitwall can't tell how this copy was installed, so it can't update it for you. The install guide explains how.";
-export const CARD_DESCRIPTION = "New versions of Pitwall from GitHub. Updating never touches your sessions or settings.";
+export const CARD_DESCRIPTION = "New versions of Pitwall from GitHub. Updating keeps your sessions and settings.";
+export const AUTO_NEVER_LINE =
+  "While this page is open, Pitwall looks for a new version at most once a day, never while a game is sending telemetry.";
+export const OFF_LINE = "Update checks are turned off in Pitwall's settings file (.env, PITWALL_UPDATE_CHECK).";
+/** "Check now" pressed within a minute of the last check: the server does not ask GitHub again. */
+export const TOO_SOON_NOTE = "Pitwall checked moments ago, so it didn't ask GitHub again. Try again in a minute.";
+/** The key in the card's `expanded` set for the older releases' notes. */
+export const OLDER_KEY = "older-releases";
 
 export type UpdateState = "checking" | "available" | "up-to-date" | "failed" | "off" | "never";
 export type UpdateTone = "success" | "warning" | "default";
@@ -71,6 +84,8 @@ export interface UpdateView {
   command: string | null;
   /** The heading above the command. */
   commandIntro: string | null;
+  /** Where and when to run the command (PowerShell for a Windows command, else Terminal); null without a command. */
+  commandHelp: string | null;
   /** How this copy updates when there is no command: a git checkout, or a copy Pitwall cannot place. */
   howNote: string | null;
   isGit: boolean;
@@ -127,11 +142,13 @@ const sentence = (s: string): string => {
   return /[.!?…]$/.test(t) ? t : `${t}.`;
 };
 
+/** checking > available > failed > up to date > off > never. An update the last good check found stays shown when a
+ * later check fails (the line says it failed); "up to date" after a failed check is not claimed. */
 export function stateOf(s: UpdateStatus): UpdateState {
   if (s.checking) return "checking";
   if (s.update_available === true) return "available";
-  if (s.update_available === false) return "up-to-date";
   if (s.error) return "failed";
+  if (s.update_available === false) return "up-to-date";
   if (s.mode === "off") return "off";
   return "never";
 }
@@ -151,6 +168,7 @@ export function updateView(s: UpdateStatus, nowUnix: number): UpdateView {
   switch (state) {
     case "available":
       line = top ? `${top.title}.${youHave}` : `A newer release is out.${youHave}`;
+      if (s.error) line += ` The last check failed: ${sentence(s.error)}`;
       break;
     case "up-to-date":
       if (s.current && s.latest?.version === s.current) line = `You have ${s.current}, the latest release.`;
@@ -163,13 +181,10 @@ export function updateView(s: UpdateStatus, nowUnix: number): UpdateView {
       line = `${sentence(s.error ?? "The last check failed")}${youHave}`;
       break;
     case "off":
-      line = `Pitwall doesn't look for new versions: checks are turned off (PITWALL_UPDATE_CHECK=off).${youHave}`;
+      line = `${OFF_LINE}${youHave}`;
       break;
     case "never":
-      line =
-        s.mode === "auto"
-          ? `Pitwall looks for a new version once a day, while no game is sending telemetry.${youHave}`
-          : `Press Check now to look for a new version on GitHub.${youHave}`;
+      line = s.mode === "auto" ? `${AUTO_NEVER_LINE}${youHave}` : `Press Check now to look for a new version on GitHub.${youHave}`;
       break;
   }
 
@@ -195,13 +210,34 @@ export function updateView(s: UpdateStatus, nowUnix: number): UpdateView {
     releases,
     command,
     commandIntro,
+    commandHelp: command === null ? null : command.includes("; uv run") ? HOW_HELP_WINDOWS : HOW_HELP,
     howNote,
     isGit,
     releaseUrl: top?.url ?? null,
     docsUrl: safeDocsUrl(s.how?.docs_url),
-    checked: s.checked_unix !== null ? `Last checked ${checkedAgo(s.checked_unix, nowUnix)}` : null,
+    // A failed attempt is not a check: "tried".
+    checked: s.checked_unix !== null ? `Last ${s.error ? "tried" : "checked"} ${checkedAgo(s.checked_unix, nowUnix)}` : null,
     canCheck: s.mode !== "off",
   };
+}
+
+/** The running version as the Server card shows it: the update status's tag (RELEASE.txt in a release, so a
+ * pre-release reads v0.2.0-rc.1), else "v" + /api/health's package version; null when neither is known. */
+export function versionText(status: UpdateStatus | undefined, healthVersion: string | null | undefined): string | null {
+  if (status?.current) return status.current;
+  return healthVersion ? `v${healthVersion}` : null;
+}
+
+/** After `pitwall update` restarted the server, the page still runs the old dashboard: the new version's tag when the
+ * server now reports a different one from the first this page saw, else null. */
+export function updatedTo(firstSeen: string | null, status: UpdateStatus | undefined): string | null {
+  const now = status?.current;
+  return firstSeen && now && now !== firstSeen ? now : null;
+}
+
+/** "Check now" answered without starting a check (one finished less than a minute ago): same attempt time, idle. */
+export function checkSkipped(before: UpdateStatus | undefined, after: UpdateStatus): boolean {
+  return before !== undefined && !after.checking && after.checked_unix !== null && after.checked_unix === before.checked_unix;
 }
 
 /** The Version row's "Update available" chip. */

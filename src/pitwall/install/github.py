@@ -22,6 +22,7 @@ API_DEFAULT = "https://api.github.com"
 DOWNLOAD_DEFAULT = f"https://github.com/{REPO}/releases/download"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases/"
 DOCS_URL = f"https://github.com/{REPO}/blob/main/docs/install.md#updating"
+GIT_DOCS_URL = f"https://github.com/{REPO}/blob/main/docs/install.md#a-git-clone"
 CONNECT_TIMEOUT_S = 10.0
 READ_TIMEOUT_S = 60.0
 MAX_NOTES = 20
@@ -139,8 +140,10 @@ def _clean_item(text: str) -> str:
     text = _LINK_RE.sub(r"\1", text)
     text = text.replace("**", "").replace("__", "").replace("`", "")  # plain text: no inline-code ticks either
     text = " ".join(text.split())
-    if len(text) > MAX_NOTE_CHARS:
-        text = text[: MAX_NOTE_CHARS - 1].rstrip() + "…"
+    if len(text) > MAX_NOTE_CHARS:  # cut at a word boundary (never mid-word or mid-URL)
+        head = text[: MAX_NOTE_CHARS - 1]
+        cut = head.rsplit(" ", 1)[0] if " " in head else head
+        text = cut.rstrip(",;:.-– ") + "…"
     return text
 
 

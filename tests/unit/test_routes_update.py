@@ -10,7 +10,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 import pitwall.api.app as app_module
-import pitwall.api.routes_update as routes
 from pitwall.config import Settings
 from pitwall.install.check import UpdateChecker
 from pitwall.install.github import ReleaseInfo
@@ -100,12 +99,28 @@ def test_off_mode_never_contacts_github(tmp_path: Path, calls: list[int]) -> Non
     assert calls == []
 
 
-def test_no_auto_check_while_telemetry_is_live(
-    tmp_path: Path, calls: list[int], monkeypatch: pytest.MonkeyPatch
-) -> None:
-    monkeypatch.setattr(routes, "_live", lambda _r: True)
+def test_no_auto_check_while_telemetry_is_live(tmp_path: Path, calls: list[int]) -> None:
+    """The real runtime: a packet just arrived (connection "live"), so the automatic check waits."""
     with client(tmp_path, "auto") as c:
+        live = c.app.state.runtime.live  # type: ignore[attr-defined]
+        live.last_packet_mono = time.monotonic()
+        assert c.get("/api/health").json()["connection"]["status"] == "live"
         assert c.get("/api/update").json()["checking"] is False
+        time.sleep(0.05)
+        assert calls == []
+        live.last_packet_mono = time.monotonic() - 10  # stale: the check may run now
+        c.get("/api/update")
+        wait_checked(c)
+    assert calls == [1]
+
+
+def test_running_version_never_contacts_github(tmp_path: Path, calls: list[int]) -> None:
+    """``pitwall install-finish`` polls this after a switch: the running version, no check started."""
+    with client(tmp_path, "auto") as c:
+        r = c.get("/api/update/version")
+        assert r.status_code == 200
+        body = r.json()
+        assert set(body) == {"current", "install_kind"} and body["current"].startswith("v")
         time.sleep(0.05)
     assert calls == []
 

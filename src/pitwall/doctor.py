@@ -1350,11 +1350,16 @@ def check_update(ctx: _Ctx, now: float | None = None) -> Check:
     if cache.checked_unix is None:
         return _check("update", "Updates", "info", "not checked yet", "uv run pitwall update --check")
     ago = _ago((time.time() if now is None else now) - cache.checked_unix)
-    if cache.error:
-        return _check(
-            "update", "Updates", "info", f"last check failed: {cache.error} ({ago})", "uv run pitwall update --check"
-        )
     latest = st["latest"]
+    if cache.error:
+        known = f"Pitwall {latest['version']} is available (you have {current}); " if st["update_available"] else ""
+        return _check(
+            "update",
+            "Updates",
+            "info",
+            f"{known}last check failed: {cache.error} ({ago})",
+            how if known else "uv run pitwall update --check",
+        )
     if st["update_available"] and latest:
         return _check(
             "update",
