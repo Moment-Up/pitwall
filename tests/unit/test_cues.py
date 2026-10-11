@@ -1548,7 +1548,9 @@ async def test_proactive_message_synthesised_while_a_cue_plays_is_held_not_cut_o
     assert not [m for m in says(sent) if m["id"] == "p7"]
     assert hub._held is not None and hub._held[0].id == "p7"
     synth_s = hub._held[2]
-    assert synth_s is not None and synth_s >= 0.15  # latency feedback will be synthesis, not time held
+    # latency feedback will be synthesis, not time held; Windows' monotonic clock ticks every ~15.6 ms, so a 0.15 s
+    # sleep can read as 0.141 there
+    assert synth_s is not None and synth_s >= 0.15 - 0.02
 
 
 class SlowTts(CountingTts):
