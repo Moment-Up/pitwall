@@ -120,7 +120,7 @@ def check_state(s: dict[str, Any]) -> None:
     assert set(s) == STATE_KEYS
     assert s["first_run"] is (s["selected"] is None)
     if s["selected"] is not None:
-        assert set(s["selected"]) == {"id", "since_unix", "source"}
+        assert set(s["selected"]) == {"id", "since_unix", "source", "by_driver_id", "by_driver_name"}
         check_entry(s["entry"])
     if s["input"] is not None:
         assert set(s["input"]) == INPUT_KEYS
@@ -343,11 +343,14 @@ def test_a_drivers_usual_game_is_selected_on_a_seat_change(client: TestClient) -
     client.put("/api/drivers/active", json={"driver_id": sam["id"]})
     sel = client.get("/api/game").json()["selected"]
     assert sel["id"] == "gt7:ps5" and sel["source"] == "driver_default"
+    # who it was for, so Setup › Game can say "Selected because Sam usually plays GT7" (plan 1.3)
+    assert sel["by_driver_id"] == sam["id"] and sel["by_driver_name"] == "Sam"
     assert integration(client, "gt7")["enabled"] is False  # selection only: inputs are untouched
     # editing the seated driver's profile is not a seat change
     client.put("/api/game", json={"id": "ac:ps5", "ensure_input": False})
     client.patch(f"/api/drivers/{sam['id']}", json={"skill_level": "beginner"})
-    assert client.get("/api/game").json()["selected"]["id"] == "ac:ps5"
+    chosen = client.get("/api/game").json()["selected"]
+    assert chosen["id"] == "ac:ps5" and chosen["by_driver_id"] is None and chosen["by_driver_name"] is None
     # an explicit null clears the usual game; omitting it keeps it
     client.patch(f"/api/drivers/{sam['id']}", json={"coaching_intensity": "quiet"})
     assert client.get(f"/api/drivers/{sam['id']}").json()["preferences"]["default_game"] == "gt7:ps5"

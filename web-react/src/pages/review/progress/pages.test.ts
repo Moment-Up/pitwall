@@ -10,6 +10,8 @@ import { ApiError } from "../../../lib/api";
 import type { Driver } from "../../../lib/drivers";
 import type { DriverProgress } from "../../../lib/endpoints/review";
 import { parseHash } from "../../../lib/route-parse";
+import { mfx } from "../../../lib/motivation/testkit";
+import { workOnItems } from "../../../lib/review/coaching";
 import { resolveScope, scopeChoices, scopeQuery } from "../../../lib/review/progress";
 import { driver, fixtures } from "../../../lib/review/testkit";
 import { stubBrowser } from "../../../test/fakes";
@@ -30,6 +32,7 @@ let ProgressPage: ComponentType<PageProps>;
 let CoachingPage: ComponentType<PageProps>;
 let cache: typeof import("../../../lib/cache").cache;
 let keys: typeof import("../../../lib/endpoints/review").reviewKeys;
+let mkeys: typeof import("../../../lib/endpoints/motivation").motivationKeys;
 let drivers: typeof import("../../../lib/drivers").drivers;
 let live: typeof import("../../../lib/live").live;
 
@@ -39,6 +42,7 @@ beforeAll(async () => {
   CoachingPage = (await import("../CoachingPage")).CoachingPage;
   cache = (await import("../../../lib/cache")).cache;
   keys = (await import("../../../lib/endpoints/review")).reviewKeys;
+  mkeys = (await import("../../../lib/endpoints/motivation")).motivationKeys;
   drivers = (await import("../../../lib/drivers")).drivers;
   live = (await import("../../../lib/live")).live;
   vi.unstubAllGlobals();
@@ -200,25 +204,51 @@ describe("Progress (6.9) before D5", () => {
 });
 
 describe("Coaching plan (6.8)", () => {
-  it("Working on now from the newest compared session, verbatim, with trends; habits; radio and fixed", async () => {
+  it("This session's focus from the newest compared session, verbatim, with trends; repeats; radio and fixed", async () => {
     await seed({ d5: fixtures.progressAustriaHaas() });
     setDrivers([james()]);
     const html = renderToStaticMarkup(createElement(CoachingPage, route("coaching")));
     const text = visible(html);
     honest(text, "coaching");
     expect(text).toContain("From your last session here, with trends over the sessions before it:");
-    expect(text).toContain("Working on now");
+    // the labels say which question each answers (integration plan 1.3, 5.1)
+    expect(text).toContain("This session's focus");
+    expect(text).not.toContain("Working on now");
     expect(text).toContain("Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h), losing 0.23 s through the corner.");
     expect(text).toContain("better");
     expect(text).toContain("worse");
     expect(text).toContain("Session average here: 0.40 s lost a lap, against 0.79 s lost the session before.");
     expect(text).toContain("See it");
-    expect(text).toContain("Habits");
+    expect(text).toContain("Repeats lap after lap");
+    expect(text).not.toContain("Habits");
     expect(text).toContain("6 of your last 6 laps");
+    expect(text).toContain("Radio calls next run");
     // the dashboard's live socket is down in this test: nothing live is claimed
     expect(text).toContain("The live connection is down, so the radio's plan is not known.");
     expect(text).toContain("Recently fixed");
     expect(text).toContain("Nothing yet: a corner shows here once its loss stays under 0.02 s a lap for 2 sessions in a row.");
+  });
+
+  it("the session's own 'One to work on' leads the focus, as on its Summary (integration plan 5.1, acceptance D3)", async () => {
+    await seed({ d5: fixtures.progressAustriaHaas() });
+    setDrivers([james()]);
+    const items = workOnItems(fixtures.austriaAnalysis());
+    const coachFirst = items[0]!;
+    const recapPick = items[1]!; // a corner the coach ranks second
+    const recap = mfx.recap();
+    recap.things!.work_on = { ...recap.things!.work_on!, observation_key: recapPick.key, corner: recapPick.corner };
+    cache.set(mkeys.recap("332904dbe3de"), recap);
+    const text = visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching"))));
+    const focus = text.slice(text.indexOf("This session's focus"), text.indexOf("Repeats lap after lap"));
+    expect(focus).toContain("One to work on (this session)");
+    expect(focus.split("One to work on (this session)").length - 1).toBe(1);
+    expect(focus.indexOf(recapPick.latest.text)).toBeLessThan(focus.indexOf(coachFirst.latest.text));
+    expect(focus.indexOf("One to work on (this session)")).toBeLessThan(focus.indexOf(recapPick.latest.text));
+    // without a recap (an older server, or still loading) the coach's own order
+    await seed({ d5: fixtures.progressAustriaHaas() });
+    const plain = visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching"))));
+    expect(plain).not.toContain("One to work on (this session)");
+    expect(plain.indexOf(coachFirst.latest.text)).toBeLessThan(plain.indexOf(recapPick.latest.text));
   });
 
   it("the radio's focus corners from the live plan when this driver is in the seat at this track", async () => {

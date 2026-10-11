@@ -16,24 +16,49 @@ describe("the week (spec 4.9, section 12.7: 17 sessions, 60 laps, 47 clean)", ()
     expect(v.markdown.startsWith("# Sam's week: 5 to 11 October 2026")).toBe(true);
   });
 
-  it("sessions oldest first, all of them (the card shows 7, then Show all)", () => {
+  it("sessions newest first, all of them (the card shows 7, then Show all; integration plan 1.3)", () => {
     const v = weekView(mfx.digest());
     expect(v.sessions).toHaveLength(WEEK_SESSIONS_SHOWN + 10);
     expect(v.moreSessions).toBe(10);
-    expect(v.sessions[0]).toMatchObject({ day: "Sat 10 Oct", title: "Suzuka · Race", car: "F1 Generic", laps: "3 of 3 laps clean", bestMs: 96_360, pb: true });
+    const starts = mfx.digest().sessions.map((s) => s.started_unix).sort((a, b) => b - a);
+    expect(v.sessions.map((s) => s.id)).toEqual(
+      starts.map((t) => mfx.digest().sessions.find((s) => s.started_unix === t)!.session_id),
+    );
+    const suzuka = v.sessions.find((s) => s.title === "Suzuka · Race" && s.pb)!;
+    expect(suzuka).toMatchObject({ day: "Sat 10 Oct", car: "F1 Generic", laps: "3 of 3 laps clean", bestMs: 96_360 });
     // a session without a clean lap keeps its unknown best as unknown
-    expect(v.sessions[3]).toMatchObject({ title: "Melbourne · Race", laps: "0 of 1 lap clean", bestMs: null, pb: false });
+    expect(v.sessions.find((s) => s.title === "Melbourne · Race")).toMatchObject({ laps: "0 of 1 lap clean", bestMs: null, pb: false });
   });
 
-  it("best improvements: gains first, then new tracks, 3 at most (every scope new this week, so no gains)", () => {
+  it("two groups, 3 at most each: improvements (gains) and new tracks (every scope new this week, so no gains)", () => {
     const v = weekView(mfx.digest());
-    expect(v.improvements.map((i) => i.scopeText)).toEqual(["Suzuka · F1 Generic", "Austria · Haas", "Montreal · F1 Generic"]);
-    expect(v.improvements[1]!.text).toBe("First clean laps here: 1:10.549");
+    expect(v.improvements).toEqual([]);
+    expect(v.newTracks.map((i) => i.scopeText)).toEqual(["Suzuka · F1 Generic", "Austria · Haas", "Montreal · F1 Generic"]);
+    // an older server: no sentence, no first lap
+    expect(v.newTracks[1]!.text).toBe("First clean laps here: 1:10.549");
     const d = mfx.digest();
     d.improvements.push({ ...d.improvements[1]!, before_ms: 71_745, best_ms: 70_549, gain_ms: 1196, new_track: false, lap_id: 99 });
     const g = weekView(d).improvements[0]!;
     expect(g.text).toBe("1:10.549 · 1.2 s faster than 1:11.745");
     expect(g.newTrack).toBe(false);
+  });
+
+  it("a new track: the first clean lap there, then how much that car gained by the end of the week (plan 5.8)", () => {
+    const d = mfx.digest();
+    const austria = d.improvements[1]! as (typeof d.improvements)[number] & { first_ms?: number; week_gain_ms?: number | null; text?: string };
+    Object.assign(austria, { first_ms: 71_745, best_ms: 70_549, week_gain_ms: 1196 });
+    expect(weekView(d).newTracks[1]!.text).toBe("New this week: 1:11.745 → 1:10.549 (1.2 s faster)");
+    Object.assign(austria, { best_ms: 71_745, week_gain_ms: null });
+    expect(weekView(d).newTracks[1]!.text).toBe("New this week: 1:11.745");
+    // the server's own sentence wins (motivation/digest.py new_track_text)
+    austria.text = "New this week: 1:11.745 → 1:10.549 (1.2 s faster)";
+    expect(weekView(d).newTracks[1]!.text).toBe("New this week: 1:11.745 → 1:10.549 (1.2 s faster)");
+  });
+
+  it("the week before says its counting rule (plan 5.7)", () => {
+    const d = mfx.digest();
+    d.previous_week = { sessions: 1, laps: 12, clean_laps: 9 };
+    expect(weekView(d).previous).toBe("Week before: 1 session with a timed lap, 12 laps, 9 clean");
   });
 
   it("goals: reached first, then how each active goal moved", () => {

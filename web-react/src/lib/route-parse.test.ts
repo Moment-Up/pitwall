@@ -36,7 +36,7 @@ describe("splitHash", () => {
 
 describe("defaults (spec 12.2)", () => {
   it("each area's default page is one of its pages", () => {
-    expect(DEFAULT_PAGE).toEqual({ drive: "coach", review: "sessions", setup: "rig", settings: "drivers" });
+    expect(DEFAULT_PAGE).toEqual({ drive: "coach", review: "sessions", setup: "game", settings: "drivers" });
     for (const a of AREA_IDS) expect(AREA_PAGES[a]).toContain(DEFAULT_PAGE[a]);
   });
 
@@ -180,8 +180,8 @@ describe("landing rules (spec 2.5)", () => {
   it("Setup opens on Connect until a real session exists", () => {
     expect(landingPage("setup", { setup: "car" }, false)).toBe("connect");
     expect(landingPage("setup", { setup: "car" }, true)).toBe("car");
-    expect(landingPage("setup", {}, true)).toBe("rig");
-    expect(landingPage("setup", {}, null)).toBe("rig"); // unknown yet: no change
+    expect(landingPage("setup", {}, true)).toBe("game"); // nothing remembered: the default, Game (integration plan 1.1)
+    expect(landingPage("setup", {}, null)).toBe("game"); // unknown yet: no change
     expect(landingPage("review", {}, false)).toBe("sessions"); // only Setup has the rule
   });
 
@@ -190,7 +190,7 @@ describe("landing rules (spec 2.5)", () => {
     expect(landingPage("setup", { setup: "car" }, true, false)).toBe("game");
     expect(landingPage("setup", { setup: "car" }, false, true)).toBe("connect");
     expect(landingPage("setup", { setup: "car" }, true, true)).toBe("car");
-    expect(landingPage("setup", {}, null, null)).toBe("rig"); // unknown (or a server without game selection): no change
+    expect(landingPage("setup", {}, null, null)).toBe("game"); // unknown (or a server without game selection): the default
     expect(landingPage("setup", { setup: "game" }, true, true)).toBe("game"); // a remembered Game page is kept
     expect(landingPage("review", {}, null, false)).toBe("sessions"); // only Setup has the rule
     expect(areaPath("setup", {}, true, false)).toBe("/setup/game");
@@ -337,11 +337,11 @@ describe("router store", () => {
   it("Setup's link follows the real-session flag", async () => {
     stubBrowser("http://127.0.0.1:8770/next/#/drive/coach");
     const { router } = await import("./router");
-    expect(router.areaPath("setup")).toBe("/setup/rig");
+    expect(router.areaPath("setup")).toBe("/setup/game");
     router.setHasRealSession(false);
     expect(router.areaPath("setup")).toBe("/setup/connect");
     router.setHasRealSession(true);
-    expect(router.areaPath("setup")).toBe("/setup/rig");
+    expect(router.areaPath("setup")).toBe("/setup/game");
   });
 
   it("Setup's link follows the game-selected flag first (game selection)", async () => {
@@ -354,7 +354,7 @@ describe("router store", () => {
     expect(router.areaPath("setup")).toBe("/setup/connect");
     router.setGameSelected(null);
     router.setHasRealSession(true);
-    expect(router.areaPath("setup")).toBe("/setup/rig");
+    expect(router.areaPath("setup")).toBe("/setup/game");
   });
 
   it("replace() updates the route without a history entry", async () => {

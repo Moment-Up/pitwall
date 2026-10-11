@@ -1,6 +1,8 @@
 // One driver's card on Settings › Drivers (spec 8, mockup "Drivers"): avatar, name, skill and coaching, the In the
 // seat chip, stats, what the radio does for them, their best laps, then Put in the seat and Edit. A Pro ItemCard in
-// the page's ItemCardGroup grid; the actions sit on their own row under the content (44 px targets, P12).
+// the page's ItemCardGroup grid; the actions sit on their own row under the content (44 px targets, P12). The stats
+// count everything on record, timed or not, and say so: the week and the streaks count sessions with a timed lap, so
+// their numbers differ under their own label (integration plan 5.7).
 
 import { Button, Chip, Disclosure } from "@heroui/react";
 import { ItemCard } from "@heroui-pro/react";
@@ -54,12 +56,15 @@ export function DriverCard({ driver: d, radioFollows, switching, busy, onSeat, o
         )}
       </div>
 
-      <dl className="m-0 flex justify-between gap-3 rounded-2xl bg-surface-secondary px-4 py-3">
-        <Stat label="Sessions" value={d.stats.sessions} />
-        <Stat label="Laps" value={d.stats.laps} />
-        <Stat label="Clean laps" value={d.stats.clean_laps} />
-        <Stat label="Tracks" value={d.stats.tracks} />
-      </dl>
+      <div className="grid gap-1">
+        <dl className="m-0 flex justify-between gap-3 rounded-2xl bg-surface-secondary px-4 py-3" aria-label="On record">
+          <Stat label="Sessions" value={d.stats.sessions} />
+          <Stat label="Laps" value={d.stats.laps} />
+          <Stat label="Clean laps" value={d.stats.clean_laps} />
+          <Stat label="Tracks" value={d.stats.tracks} />
+        </dl>
+        <p className="m-0 px-1 text-xs text-muted">Everything on record, timed or not.</p>
+      </div>
 
       <p className="m-0 text-sm leading-snug text-muted">{coachingLine(d, radioFollows)}</p>
 

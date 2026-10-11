@@ -33,6 +33,7 @@ const PAGE_FILES: Record<string, string> = {
   "review/sessions": "./pages/review/SessionsPage.tsx",
   "review/coaching": "./pages/review/CoachingPage.tsx",
   "review/progress": "./pages/review/ProgressPage.tsx",
+  "review/goals": "./pages/review/GoalsPage.tsx", // integration plan 1.1: goals, the week, streaks and badges
   "review/ask": "./pages/review/AskPage.tsx",
   "setup/game": "./pages/setup/GamePage.tsx",
   "setup/connect": "./pages/setup/ConnectPage.tsx",

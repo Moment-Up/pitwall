@@ -228,7 +228,7 @@ def test_digest(api: tuple[TestClient, SimpleNamespace], driving: dict[str, Any]
     sam = driving["sam"]
     week = date.fromtimestamp(SAT).isoformat()
     d = client.get(f"/api/drivers/{sam}/digest", params={"week": week}).json()
-    assert d["driver"] == {"id": sam, "name": "Sam", "skill_level": "advanced"}
+    assert d["driver"] == {"id": sam, "name": "Sam", "skill_level": "intermediate"}  # the first profile (decision 5)
     assert d["totals"]["sessions"] == 2 and d["totals"]["laps"] == 6
     assert d["markdown"].startswith("# Sam's week: ")
     future = (date.today() + timedelta(days=8)).isoformat()

@@ -1,6 +1,6 @@
-// "The radio will focus on" and "Recently fixed" (spec 6.8): the live cue plan's focus corners with their reasons
-// (only while this driver is in the seat at this track; otherwise "-" and why), then the corners whose average loss
-// fell below the coaching threshold (D5).
+// "Radio calls next run" (was "The radio will focus on"; integration plan 1.3, 5.1) and "Recently fixed" (spec 6.8):
+// the live cue plan's focus corners with their reasons (only while this driver is in the seat at this track;
+// otherwise "-" and why), then the corners whose average loss fell below the coaching threshold (D5).
 
 import { Card } from "@heroui/react";
 import { CornerTag, Glossary, Unknown } from "../../../components/ui";
@@ -23,7 +23,7 @@ export function RadioFocusCard({
   return (
     <Card className="gap-3 p-5">
       <Card.Header className="flex-row items-center justify-between gap-2">
-        <Card.Title className="text-base font-semibold">The radio will focus on</Card.Title>
+        <Card.Title className="text-base font-semibold">Radio calls next run</Card.Title>
         {glossary && <Glossary term="focus_corner" className="-my-2 -mr-2" />}
       </Card.Header>
       {focus.state === "focus" ? (

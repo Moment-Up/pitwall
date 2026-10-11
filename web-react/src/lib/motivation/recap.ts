@@ -41,6 +41,11 @@ export interface ThingsView {
   workOnKey: string | null;
 }
 
+/** The work-on item's label where other "what to work on" answers sit beside it (Review's Summary and Coaching): it
+ * says which question it answers, so a different corner elsewhere (the last lap, the radio's plan) is not a
+ * contradiction (integration plan 5.1). */
+export const WORK_ON_SESSION_HEADING = "One to work on (this session)";
+
 const BASE: Readonly<Record<ThingKind, { heading: string; tone: ThingTone; icon: ThingIcon }>> = {
   went_well: { heading: "Went well", tone: "success", icon: "check" },
   work_on: { heading: "One to work on", tone: "warning", icon: "warning" },
@@ -90,14 +95,14 @@ function thingView(kind: ThingKind, item: ThingItem | null, why: string | null, 
 }
 
 /** The three items of a recap, in the order went well, work on, progress (a goal reached: progress first). `simple`
- * = the reader's wording (Review: the viewed driver's density; Drive: the recap's own `simple`). */
-export function thingsView(r: SessionRecap, simple: boolean): ThingsView {
+ * = the reader's wording (Review: the viewed driver's density; Drive: the recap's own `simple`). `sessionLabel`: the
+ * work-on item reads WORK_ON_SESSION_HEADING (Review's Summary). */
+export function thingsView(r: SessionRecap, simple: boolean, opts: { sessionLabel?: boolean } = {}): ThingsView {
   const order = r.things?.progress?.source === "goal_reached" ? CELEBRATION_ORDER : ORDER;
-  const items = order.map((k) => thingView(k, r.things?.[k] ?? null, r.why_empty?.[k] ?? null, simple)) as [
-    ThingView,
-    ThingView,
-    ThingView,
-  ];
+  const items = order.map((k) => {
+    const v = thingView(k, r.things?.[k] ?? null, r.why_empty?.[k] ?? null, simple);
+    return k === "work_on" && opts.sessionLabel ? { ...v, heading: WORK_ON_SESSION_HEADING } : v;
+  }) as [ThingView, ThingView, ThingView];
   return {
     items,
     synthetic: r.synthetic,

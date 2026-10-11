@@ -40,6 +40,16 @@ export function coachingPath(q: { driver?: number | null; track?: string | null;
   });
 }
 
+/** Goals for a driver (`/review/goals?driver=&track=&car=`): goals, the week, streaks and badges are the driver's
+ * everywhere; the track and car only say where a new lap-time goal is set (the same scope bar as Progress). */
+export function goalsPath(q: { driver?: number | null; track?: string | null; car?: string | null }): string {
+  return withQuery(pathOf("review", "goals"), {
+    driver: q.driver ?? undefined,
+    track: q.track || undefined,
+    car: q.car || undefined,
+  });
+}
+
 /** A session tab path. */
 export function tabPath(sessionId: string, tab: SessionTab): string {
   return sessionPath(sessionId, tab);

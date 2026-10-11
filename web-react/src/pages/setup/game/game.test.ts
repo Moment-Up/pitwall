@@ -103,6 +103,17 @@ describe("Setup › Game picker", () => {
     expect(html).toContain('id="pw-game-result"'); // scrolled into view after a choice
   });
 
+  it("the selected card says why when a seat change chose it (integration plan 1.3); nothing on other cards", () => {
+    const render = (reason: string | null) =>
+      renderToStaticMarkup(
+        createElement(GamePicker, { catalogue: CAT, selectedId: "gt7:ps5", pending: null, onChoose: noop, result: null, error: null, reason }),
+      );
+    const html = render("Selected because Thomas usually plays GT7");
+    expect(text(html)).toContain("Selected because Thomas usually plays GT7. Choose another platform or game to change it.");
+    expect(html.split("data-game-reason").length - 1).toBe(1);
+    expect(render(null)).not.toContain("data-game-reason");
+  });
+
   it("after a choice, an idle input left on by an earlier choice is offered for switching off", () => {
     const res = putResponse();
     const t = text(

@@ -22,6 +22,8 @@ let cache: typeof import("../../../lib/cache").cache;
 let reviewKeys: typeof import("../../../lib/endpoints/review").reviewKeys;
 let strategyKeys: typeof import("../../../lib/endpoints/strategy").strategyKeys;
 let drivers: typeof import("../../../lib/drivers").drivers;
+let raceTabState: typeof import("../SessionPage").raceTabState;
+let sessionTabs: typeof import("../SessionPage").sessionTabs;
 
 beforeAll(async () => {
   const { win } = stubBrowser("http://127.0.0.1:8770/next/#/review/sessions/332904dbe3de/strategy");
@@ -33,6 +35,7 @@ beforeAll(async () => {
     matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} }),
   });
   StrategyTabView = (await import("./StrategyTab")).StrategyTabView;
+  ({ raceTabState, sessionTabs } = await import("../SessionPage"));
   SessionPage = (await import("../SessionPage")).SessionPage as never;
   cache = (await import("../../../lib/cache")).cache;
   reviewKeys = (await import("../../../lib/endpoints/review")).reviewKeys;
@@ -241,7 +244,7 @@ describe("Strategy tab: a race", () => {
   });
 });
 
-describe("Session page: the Strategy tab is listed for races only", () => {
+describe("Session page: the Race tab, for races with strategy records only (integration plan 1.4)", () => {
   function page(session: SessionDetail, tab: "summary" | "strategy"): string {
     setDrivers([]);
     cache.set(reviewKeys.session(session.id), session);
@@ -250,18 +253,46 @@ describe("Session page: the Strategy tab is listed for races only", () => {
     return renderToStaticMarkup(createElement(SessionPage, { id: session.id, tab, route }));
   }
 
-  it("a race lists Strategy between Corners and Ask", () => {
-    const html = page(austria(), "summary");
-    expect(visible(html)).toMatch(/Summary Laps Compare Corners Strategy Ask/);
-    // six tabs do not fit a 390 px phone: Ask leaves the strip there (the "Ask the engineer" button opens it)
-    expect(html).toMatch(/max-sm:hidden[^>]*>Ask|data-key="ask"[^>]*max-sm:hidden/);
+  it("a race with records lists Race between Corners and Ask; on a phone Ask leaves the strip", () => {
+    const s = austria();
+    cache.set(strategyKeys.session(s.id), timeline("edited-timeline-austria"));
+    const html = page(s, "summary");
+    expect(visible(html)).toMatch(/Summary Laps Compare Corners Race Ask/);
+    expect(visible(html)).not.toMatch(/Corners Strategy/);
+    // six tabs do not fit a phone (< 768 px): Ask leaves the strip there (the "Ask the engineer" button opens it)
+    expect(html).toMatch(/max-md:hidden[^>]*>Ask|data-key="ask"[^>]*max-md:hidden/);
+    expect(visible(html)).toContain("Ask the engineer");
   });
 
-  it("a practice session does not; a direct link still opens the tab with the reason", () => {
-    const demo = fixtures.demo();
-    expect(visible(page(demo, "summary"))).toMatch(/Summary Laps Compare Corners Ask/);
-    const text = visible(page(demo, "strategy"));
-    expect(text).toContain("Strategy is shown for races only.");
+  it("a race whose records are not known yet: five tabs (Race appears once they are)", () => {
+    const s = austria();
+    cache.invalidate(strategyKeys.session(s.id));
+    cache.clear();
+    expect(visible(page(s, "summary"))).toMatch(/Summary Laps Compare Corners Ask/);
+  });
+
+  it("which sessions get Race: records, not a race, no records, an older server, a failed request", () => {
+    const race = austria();
+    const practice = fixtures.demo();
+    const ok = timeline("edited-timeline-austria");
+    expect(raceTabState(race, ok, null)).toBe(true);
+    expect(raceTabState(race, undefined, null)).toBeNull(); // loading
+    expect(raceTabState(practice, undefined, null)).toBe(false); // never asked: not a race
+    expect(raceTabState({ ...race, game: "gt7" }, undefined, null)).toBe(false); // a game the engine does not read
+    expect(raceTabState(race, { ...ok, available: false, reason: "recorded before strategy tracking", laps: [] }, null)).toBe(false);
+    expect(raceTabState(race, { ...ok, laps: [] }, null)).toBe(false);
+    expect(raceTabState(race, undefined, new ApiError(404, "Not Found"))).toBe(false); // a server without strategy
+    expect(raceTabState(race, undefined, new ApiError(500, "boom"))).toBeNull(); // the tab says what went wrong
+  });
+
+  it("the tabs: Race only with records; a link to it is kept while unknown and goes to Summary once known", () => {
+    expect(sessionTabs(true, "summary")).toEqual(["summary", "laps", "compare", "corners", "strategy", "ask"]);
+    expect(sessionTabs(false, "summary")).toEqual(["summary", "laps", "compare", "corners", "ask"]);
+    expect(sessionTabs(null, "summary")).toEqual(["summary", "laps", "compare", "corners", "ask"]);
+    expect(sessionTabs(null, "strategy")).toContain("strategy");
+    expect(sessionTabs(false, "strategy")).not.toContain("strategy"); // SessionPage replaces the route with Summary
+    // a practice session's link to Race does not render the tab
+    expect(visible(page(fixtures.demo(), "strategy"))).toMatch(/Summary Laps Compare Corners Ask/);
   });
 
   it("the race's tab reads the timeline from the cache key under the session prefix", () => {

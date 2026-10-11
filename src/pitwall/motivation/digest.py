@@ -1,9 +1,11 @@
 """The weekly digest: one driver's week (Monday 00:00 to the next Monday, server local time), pure.
 
-Sessions with at least one timed lap; totals against the week before; the best improvements (per game + track + car:
-this week's best against the best before the week, faster only; then tracks driven for the first time); goals
-reached this week and how far the active ones moved; badges earned this week; streaks as at the end of the week. The
-same content as Markdown (``markdown``) and as a printable page (``motivation.html``).
+Sessions with at least one timed lap (the counting rule, said wherever a count is shown: "2 sessions with a timed
+lap"); totals against the week before; the best improvements (per game + track + car: this week's best against the
+best before the week, faster only); new tracks (a first clean lap this week at an identified track, as the first
+clean lap badge: the session that first set one there, in its own car, and how much faster that car got there by the
+end of the week); goals reached this week and how far the active ones moved; badges earned this week; streaks as at
+the end of the week. The same content as Markdown (``markdown``) and as a printable page (``motivation.html``).
 """
 
 from __future__ import annotations
@@ -81,10 +83,9 @@ def _duration(ms: int) -> str:
 
 
 def improvements(history: History, start: float, end: float) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """``(gains, first_tracks)``: per game + track + car, this week's best against the best before the week (faster
-    only, biggest gain first); and every track with a first clean lap this week (in the order first driven)."""
+    """``(gains, new_tracks)``: per game + track + car, this week's best against the best before the week (faster
+    only, biggest gain first); and every new track this week, in the order first driven (``_new_tracks``)."""
     before: dict[tuple[str, str, str | None], int] = {}
-    tracks_before: set[tuple[str, str]] = set()
     week: dict[tuple[str, str, str | None], tuple[SessionRow, LapRow]] = {}
     for s in history.sessions:
         key = s.pb_key
@@ -95,7 +96,6 @@ def improvements(history: History, start: float, end: float) -> tuple[list[dict[
             continue
         if s.started_unix < start:
             before[key] = min(before.get(key, best.lap_time_ms), best.lap_time_ms)
-            tracks_before.add((key[0], key[1]))
             continue
         have = week.get(key)
         if have is None or best.lap_time_ms < (have[1].lap_time_ms or 0):
@@ -105,28 +105,70 @@ def improvements(history: History, start: float, end: float) -> tuple[list[dict[
         assert lap.lap_time_ms is not None
         prev = before.get(key)
         if prev is not None and lap.lap_time_ms < prev:
-            gains.append({**_item(s, lap, prev), "gain_ms": prev - lap.lap_time_ms})
+            item = {**_item(s, lap, prev), "gain_ms": prev - lap.lap_time_ms}
+            item["text"] = gain_text(item)
+            gains.append(item)
     gains.sort(key=lambda d: (-d["gain_ms"], d["scope_text"]))
-    # A track driven for the first time: the first session there with a clean lap, its own best, in its own car
-    # (another car's faster lap later in the week is not "the first clean laps").
+    return gains, _new_tracks(history, start, end)
+
+
+def _new_tracks(history: History, start: float, end: float) -> list[dict[str, Any]]:
+    """A track with its first clean lap this week (none there before, in any car; identified tracks and laps of 30 s
+    or more only, as the first clean lap badge). The item is the session that first set a clean lap there, its own
+    best in its own car (another car's faster lap that week is not "the first clean laps"); ``best_ms`` is that car's
+    best there by the end of the week, so "New this week: 1:11.745 -> 1:10.549 (1.2 s faster)"."""
+    seen_before: set[tuple[str, str]] = set()
     firsts: dict[tuple[str, str], dict[str, Any]] = {}
     for s in history.sessions:
-        if s.track_id is None or not start <= s.started_unix < end:
+        if s.started_unix >= end or s.track_id is None or not B.track_badges_allowed(s):
+            continue
+        best = rules.fastest_clean(B.badge_laps(history.laps_of(s.id)))
+        if best is None or best.lap_time_ms is None:
             continue
         track = (s.game, s.track_id)
-        if track in tracks_before or track in firsts:
+        if s.started_unix < start:
+            seen_before.add(track)
             continue
-        best = rules.fastest_clean(history.laps_of(s.id))
-        if best is not None and best.lap_time_ms is not None:
-            firsts[track] = {**_item(s, best, None), "new_track": True}
-    return gains, list(firsts.values())
+        if track in seen_before:
+            continue
+        item = firsts.get(track)
+        if item is None:
+            item = {**_item(s, best, None), "new_track": True, "first_ms": best.lap_time_ms}
+            item.update(best_session_id=s.id, best_lap_id=best.id, week_gain_ms=None)
+            firsts[track] = item
+        elif s.pb_key == (item["scope"]["game"], item["scope"]["track_id"], item["scope"]["car_id"]):
+            if best.lap_time_ms < item["best_ms"]:
+                item.update(best_ms=best.lap_time_ms, best_session_id=s.id, best_lap_id=best.id)
+                item["week_gain_ms"] = item["first_ms"] - best.lap_time_ms
+    out = list(firsts.values())
+    for item in out:
+        item["text"] = new_track_text(item)
+    return out
+
+
+def _gap_words(ms: int) -> str:
+    """A gain in seconds: a tenth from 0.1 s (``1.2``), three decimals below (``0.040``)."""
+    return f"{ms / 1000:.1f}" if ms >= 100 else f"{ms / 1000:.3f}"
+
+
+def gain_text(i: dict[str, Any]) -> str:
+    """``1:10.549, 1.196 s faster than before``."""
+    return f"{lap_time(i['best_ms'])}, {gap_s(i['gain_ms'])} s faster than before"
+
+
+def new_track_text(i: dict[str, Any]) -> str:
+    """``New this week: 1:11.745 → 1:10.549 (1.2 s faster)``, or ``New this week: 1:11.745``."""
+    first, best, gain = i["first_ms"], i["best_ms"], i.get("week_gain_ms")
+    if gain:
+        return f"New this week: {lap_time(first)} → {lap_time(best)} ({_gap_words(gain)} s faster)"
+    return f"New this week: {lap_time(first)}"
 
 
 def _item(s: SessionRow, lap: LapRow, before_ms: int | None) -> dict[str, Any]:
     scope = Scope(game=s.game, track_id=s.track_id, track_name=s.track_name, car_id=s.car_id, car_name=s.car_name)
     return {
         "scope": scope.to_dict(),
-        "scope_text": scope.text() or s.track_id or "",
+        "scope_text": scope.text() or s.track_name or "this track",
         "before_ms": before_ms,
         "best_ms": lap.lap_time_ms,
         "gain_ms": None,
@@ -136,21 +178,33 @@ def _item(s: SessionRow, lap: LapRow, before_ms: int | None) -> dict[str, Any]:
     }
 
 
+def sessions_words(n: int) -> str:
+    """The counting rule in the words (plan 5.7): ``1 session with a timed lap`` / ``3 sessions with a timed lap``."""
+    return f"{count_words(n, 'session')} with a timed lap"
+
+
+def _track_names(items: Sequence[dict[str, Any]]) -> list[str]:
+    names: list[str] = []
+    for i in items:
+        name = str(i["scope"]["track_name"] or i["scope_text"])
+        if name not in names:
+            names.append(name)
+    return names
+
+
 def _headline(counts: _Counts, gains: Sequence[dict[str, Any]], firsts: Sequence[dict[str, Any]]) -> tuple[str, str]:
     if counts.sessions == 0:
         return "No driving this week.", "No driving this week."
-    parts = [
-        f"{counts.sessions} session{'s' if counts.sessions != 1 else ''}",
-        f"{counts.laps} lap{'s' if counts.laps != 1 else ''}",
-    ]
-    if len(gains) == 1:
-        parts.append(f"a new best at {gains[0]['scope']['track_name'] or gains[0]['scope_text']}")
-    elif gains:
-        parts.append(f"new bests at {len(gains)} tracks")
-    elif len(firsts) == 1:
-        parts.append(f"first laps at {firsts[0]['scope']['track_name'] or firsts[0]['scope_text']}")
-    elif firsts:
-        parts.append(f"first laps at {len(firsts)} tracks")
+    parts = [sessions_words(counts.sessions), count_words(counts.laps, "lap")]
+    gain_tracks, new_tracks = _track_names(gains), _track_names(firsts)
+    if len(gain_tracks) == 1:  # two cars at one track are one track
+        parts.append(f"a new best at {gain_tracks[0]}")
+    elif gain_tracks:
+        parts.append(f"new bests at {len(gain_tracks)} tracks")
+    elif len(new_tracks) == 1:
+        parts.append(f"first laps at {new_tracks[0]}")
+    elif new_tracks:
+        parts.append(f"first laps at {len(new_tracks)} tracks")
     n = counts.sessions
     return ", ".join(parts), f"You drove {n} time{'s' if n != 1 else ''} this week"
 
@@ -240,7 +294,8 @@ def build_digest(
 
 
 # ---------------------------------------------------------------------------------------------- markdown
-IMPROVEMENTS_TITLE = "New tracks and improvements"
+IMPROVEMENTS_TITLE = "Improvements"
+NEW_TRACKS_TITLE = "New tracks"
 
 
 def possessive(name: str) -> str:
@@ -267,12 +322,11 @@ def totals_line(d: dict[str, Any]) -> str | None:
 
 
 def previous_line(d: dict[str, Any]) -> str | None:
-    """``Week before: 3 sessions, 12 laps, 9 clean``; None when it had no driving."""
+    """``Week before: 3 sessions with a timed lap, 12 laps, 9 clean``; None when it had no driving."""
     p = d["previous_week"]
     if not p["sessions"]:
         return None
-    sessions, laps = count_words(p["sessions"], "session"), count_words(p["laps"], "lap")
-    return f"Week before: {sessions}, {laps}, {p['clean_laps']} clean"
+    return f"Week before: {sessions_words(p['sessions'])}, {count_words(p['laps'], 'lap')}, {p['clean_laps']} clean"
 
 
 def session_line(r: dict[str, Any]) -> str:
@@ -290,9 +344,18 @@ def session_line(r: dict[str, Any]) -> str:
 
 
 def improvement_line(i: dict[str, Any]) -> str:
-    if i["gain_ms"] is not None:
-        return f"{i['scope_text']}: {lap_time(i['best_ms'])}, {gap_s(i['gain_ms'])} s faster than before"
-    return f"First clean laps at {i['scope_text']}: {lap_time(i['best_ms'])}"
+    """``Austria · Haas: 1:10.549, 1.196 s faster than before`` / ``Suzuka · F1 Generic: New this week: 1:36.360``."""
+    text = i.get("text") or (new_track_text(i) if i.get("new_track") else gain_text(i))
+    return f"{i['scope_text']}: {text}"
+
+
+def improvement_groups(d: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """(improvements, new tracks) as lines, each group in the digest's order."""
+    items = d["improvements"]
+    return (
+        [improvement_line(i) for i in items if not i.get("new_track")],
+        [improvement_line(i) for i in items if i.get("new_track")],
+    )
 
 
 def goal_line(goal: dict[str, Any], simple: bool, frm: float | None = None, to: float | None = None) -> str:
@@ -319,8 +382,11 @@ def markdown(d: dict[str, Any]) -> str:
             lines += [md_escape(x), ""]  # one paragraph each
     lines += ["## Sessions"]
     lines += [f"- {md_escape(session_line(r))}" for r in d["sessions"]] or ["- None this week."]
+    gains, new_tracks = improvement_groups(d)
     lines += ["", f"## {IMPROVEMENTS_TITLE}"]
-    lines += [f"- {md_escape(improvement_line(i))}" for i in d["improvements"]] or ["- None this week."]
+    lines += [f"- {md_escape(x)}" for x in gains] or ["- None this week."]
+    lines += ["", f"## {NEW_TRACKS_TITLE}"]
+    lines += [f"- {md_escape(x)}" for x in new_tracks] or ["- None this week."]
     lines += ["", "## Goals"]
     goal_lines = [f"- {md_escape(goal_line(g, simple))}" for g in d["goals"]["achieved"]]
     goal_lines += [
@@ -342,7 +408,7 @@ def streak_lines(st: dict[str, Any]) -> list[str]:
     w = st["weekly"]
     c = st["clean_laps"]
     out = [
-        f"Weeks in a row with a session: {w['current_weeks']} (best {w['best_weeks']})",
+        f"Weeks in a row with a timed lap: {w['current_weeks']} (best {w['best_weeks']})",
         f"Best run of clean laps: {c['best']}",
     ]
     for p in st["pb"]:

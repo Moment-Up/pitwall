@@ -1,6 +1,7 @@
-// Review › Coaching plan (spec 6.8): per driver and track + car, what they are working on now (with a trend once D5
-// sends corner means per session), their habits (observations carrying the coach's consistency string), corners
-// recently fixed (D5), and what the radio will focus on (the live cue plan, only when this driver is in the seat at
+// Review › Coaching plan (spec 6.8): per driver and track + car, this session's focus (led by the corner the session's
+// "One to work on" names, so Coaching and the Summary agree; integration plan 5.1; with a trend once D5 sends corner
+// means per session), what repeats lap after lap (observations carrying the coach's consistency string), corners
+// recently fixed (D5), and what the radio calls next run (the live cue plan, only when this driver is in the seat at
 // this track). Pure; tested in node.
 //
 // Every coaching text is the coach's own (analysis/coaching.py), verbatim; this module only picks, orders and adds
@@ -24,7 +25,7 @@ import {
 import type { ProgressCornerText } from "../endpoints/review";
 import { consistencyWords, finite, plural } from "./words";
 
-/** Corners shown under "Working on now". */
+/** Corners shown under "This session's focus". */
 export const WORKING_ON_MAX = 3;
 /** Sessions a trend looks back over (the plan session and up to 4 before it: "the last 3-5 sessions"). */
 export const TREND_WINDOW = 5;
@@ -86,8 +87,11 @@ export interface WorkingOn {
 }
 
 /**
- * "Working on now" (spec 6.8): the plan session's corrections, ranked by the coach (as the Summary's Work on), one per
- * corner, at most 3; each with its trend over the last sessions when D5 is there.
+ * "This session's focus" (spec 6.8, was "Working on now"): the plan session's corrections, ranked by the coach (as the
+ * Summary's Work on), one per corner, at most 3; each with its trend over the last sessions when D5 is there.
+ * `focusKey` is the observation the session's recap names as its "One to work on" (`recap.work_on`, `corner:kind`):
+ * that one leads, so Coaching and the Summary show the same corner (integration plan 5.1, acceptance D3). Unknown
+ * (no recap, an older server, a recap item that is not an observation): the coach's own order.
  */
 export function workingOnNow(
   analysis: Pick<SessionAnalysis, "observations" | "comparisons" | "track_model"> | null | undefined,
@@ -95,8 +99,9 @@ export function workingOnNow(
   planSessionId: string | null,
   thresholdS = DEFAULT_THRESHOLD_S,
   max = WORKING_ON_MAX,
+  focusKey: string | null = null,
 ): WorkingOn[] {
-  return workOnItems(analysis)
+  return focusFirst(analysis, focusKey)
     .slice(0, max)
     .map((item) => {
       const id = cornerIdentity(analysis?.track_model, item.corner, item.latest.corner_label);
@@ -109,6 +114,22 @@ export function workingOnNow(
         trend: planSessionId ? cornerTrendAt(points, planSessionId, item.corner, thresholdS) : null,
       };
     });
+}
+
+/** The Work on items with the recap's own item first. It may be a kind the one-per-corner list left out at its corner
+ * (another kind ranked higher there): it then takes that corner's place. */
+function focusFirst(
+  analysis: Pick<SessionAnalysis, "observations" | "comparisons"> | null | undefined,
+  focusKey: string | null,
+): CoachingItem[] {
+  const items = workOnItems(analysis);
+  if (!focusKey) return items;
+  const hit =
+    items.find((i) => i.key === focusKey) ??
+    groupObservations(analysis).find((i) => !i.positive && i.key === focusKey) ??
+    null;
+  if (!hit) return items;
+  return [hit, ...items.filter((i) => i.key !== hit.key && i.corner !== hit.corner)];
 }
 
 export interface Habit {
@@ -201,8 +222,8 @@ export type RadioFocus =
   | { state: "none"; reason: string };
 
 /**
- * "The radio will focus on" (spec 6.8): the live cue plan's focus corners with their reasons, only when this driver is
- * in the seat and the live session is at this track; otherwise why not, in words.
+ * "Radio calls next run" (spec 6.8, was "The radio will focus on"): the live cue plan's focus corners with their
+ * reasons, only when this driver is in the seat and the live session is at this track; otherwise why not, in words.
  */
 export function radioFocus(
   input: LiveFocusInput,

@@ -28,7 +28,7 @@ import type {
 } from "../endpoints/review";
 import { lapTime } from "../format";
 import { isReplaySource } from "./kpis";
-import { dayInSentence, dayTitle, finite, plural, sessionLabels, spreadSeconds } from "./words";
+import { dayInSentence, dayTitle, finite, plural, readableCar, sessionLabels, spreadSeconds, trackLabel } from "./words";
 
 /** `?car=any`: every car at the track. */
 export const ANY_CAR = "any";
@@ -45,9 +45,10 @@ export const DEFAULT_THRESHOLD_S = 0.02;
 export interface CarChoice {
   /** Car id ("f1:team:7"). */
   id: string;
-  /** The car's name as stored ("Haas"), else its id. */
+  /** The car's name ("Haas"), else "Unnamed car" (numbered when a track has more than one): never a raw id ("team_214",
+   * "gt7:car:919"; words.ts readableCar, integration plan 5.8). */
   label: string;
-  /** The game named the car (else `label` is the id). */
+  /** The game named the car (else `label` is "Unnamed car"). */
   named: boolean;
   sessions: number;
   newest: number;
@@ -92,7 +93,7 @@ export function scopeChoices(rows: readonly ScopeRow[], opts: { includeSynthetic
       t = {
         game: r.game,
         trackId: r.track_id as string,
-        label: r.track_name?.trim() || (r.track_id as string),
+        label: trackLabel(r),
         synthetic: false,
         sessions: 0,
         newest: -Infinity,
@@ -109,7 +110,7 @@ export function scopeChoices(rows: readonly ScopeRow[], opts: { includeSynthetic
       t._newestRow = r.started_unix;
       t.newest = r.started_unix;
       t.newestCarId = r.car_id ?? null;
-      if (r.track_name?.trim()) t.label = r.track_name.trim();
+      if (r.track_name?.trim()) t.label = trackLabel(r);
     }
     const carId = r.car_id ?? null;
     if (carId == null) {
@@ -117,21 +118,28 @@ export function scopeChoices(rows: readonly ScopeRow[], opts: { includeSynthetic
       continue;
     }
     const c = t.cars.find((x) => x.id === carId);
+    const name = readableCar(r.car_name);
     if (c) {
       c.sessions += 1;
       if (r.started_unix > c.newest) c.newest = r.started_unix;
-      if (r.car_name?.trim() && !c.named) {
-        c.label = r.car_name.trim();
+      if (name && !c.named) {
+        c.label = name;
         c.named = true;
       }
     } else {
-      const name = r.car_name?.trim();
-      t.cars.push({ id: carId, label: name || carId, named: !!name, sessions: 1, newest: r.started_unix });
+      t.cars.push({ id: carId, label: name ?? "", named: !!name, sessions: 1, newest: r.started_unix });
     }
   }
   return [...by.values()]
-    .map(({ _newestRow: _, ...t }) => ({ ...t, cars: [...t.cars].sort((a, b) => b.newest - a.newest) }))
+    .map(({ _newestRow: _, ...t }) => ({ ...t, cars: unnamedLabels([...t.cars].sort((a, b) => b.newest - a.newest)) }))
     .sort((a, b) => b.newest - a.newest || a.label.localeCompare(b.label));
+}
+
+/** Cars the game did not name read "Unnamed car", numbered newest first when a track has more than one. */
+function unnamedLabels(cars: CarChoice[]): CarChoice[] {
+  const unnamed = cars.filter((c) => !c.named).length;
+  let n = 0;
+  return cars.map((c) => (c.named ? c : { ...c, label: unnamed > 1 ? `Unnamed car ${++n}` : "Unnamed car" }));
 }
 
 export interface Scope {
@@ -229,7 +237,7 @@ export function pointsFromRows(
       startedUnix: r.started_unix,
       synthetic: r.synthetic,
       carId: r.car_id ?? null,
-      carName: r.car_name ?? null,
+      carName: readableCar(r.car_name),
       sessionType: r.session_type_raw ?? r.session_type ?? null,
       laps: r.lap_count,
       cleanLaps: finite(r.clean_lap_count) ? r.clean_lap_count : null,
@@ -249,7 +257,7 @@ export function pointsFromProgress(p: Pick<DriverProgress, "sessions">): Session
     startedUnix: s.started_unix,
     synthetic: s.synthetic,
     carId: s.car_id,
-    carName: s.car_name,
+    carName: readableCar(s.car_name),
     sessionType: s.session_type,
     laps: s.laps,
     cleanLaps: finite(s.clean_laps) ? s.clean_laps : null,
@@ -337,7 +345,7 @@ export function bestSteps(points: readonly SessionPoint[], pbHistory: readonly P
           sessionId: head.session_id,
           unix: last.set_unix,
           carId: last.car_id,
-          carName: last.car_name,
+          carName: readableCar(last.car_name),
           ms: last.lap_ms,
           lapNumber: last.lap_number,
           previousMs: prev,
@@ -762,12 +770,12 @@ export function familyBoard(
   const entries = drivers.map((d) => {
     if (fromD5) {
       const e = bestOfHistory(family!.get(d.id));
-      return { driver: d, ms: e?.lap_ms ?? null, carName: e?.car_name ?? null, sessionId: e?.session_id ?? null };
+      return { driver: d, ms: e?.lap_ms ?? null, carName: readableCar(e?.car_name), sessionId: e?.session_id ?? null };
     }
     const b: DriverBestLap | undefined = (d.stats?.best_laps ?? []).find(
       (x) => x.game === t.game && x.track_id === t.trackId && x.synthetic === t.synthetic,
     );
-    return { driver: d, ms: posMs(b?.lap_time_ms), carName: b?.car_name ?? null, sessionId: b?.session_id ?? null };
+    return { driver: d, ms: posMs(b?.lap_time_ms), carName: readableCar(b?.car_name), sessionId: b?.session_id ?? null };
   });
   const timed = entries.filter((e): e is typeof e & { ms: number } => e.ms != null).sort((a, b) => a.ms - b.ms);
   const leader = timed[0] ?? null;

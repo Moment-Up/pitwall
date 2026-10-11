@@ -19,8 +19,10 @@ export type PageComponent = ComponentType<PageProps> | LazyExoticComponent<Compo
 export interface PageDef {
   id: string;
   label: string;
-  /** One line: what the page answers. */
+  /** One line: what the page answers (shown in ⌘K beside the label). */
   summary: string;
+  /** Other words people search ⌘K with ("badge" finds Goals, "strategy" finds Car). Lower case. */
+  keywords: readonly string[];
   component: PageComponent;
 }
 
@@ -48,23 +50,32 @@ export const AREAS: AreaDef[] = [
     icon: Speedometer,
     question: "What do I do next?",
     pages: [
-      { id: "coach", label: "Coach", summary: "What to do next", component: CoachPage },
+      {
+        id: "coach",
+        label: "Coach",
+        summary: "What to do next",
+        keywords: ["focus", "drill", "delta", "reference"],
+        component: CoachPage,
+      },
       {
         id: "car",
         label: "Car",
-        summary: "The pit wall: car, map, tyres, inputs, laps",
+        summary: "The pit wall: car, map, tyres, inputs, strategy",
+        keywords: ["strategy", "fuel", "tyres", "gaps", "pit"],
         component: lazyPage(() => import("./pages/drive/CarPage"), "CarPage"),
       },
       {
         id: "track",
         label: "Track",
         summary: "The track map and its corners",
+        keywords: ["corners"],
         component: lazyPage(() => import("./pages/drive/TrackPage"), "TrackPage"),
       },
       {
         id: "radio",
         label: "Radio",
         summary: "Talk to the race engineer",
+        keywords: ["radio", "voice", "quiet"],
         component: lazyPage(() => import("./pages/drive/RadioPage"), "RadioPage"),
       },
     ],
@@ -79,24 +90,35 @@ export const AREAS: AreaDef[] = [
         id: "sessions",
         label: "Sessions",
         summary: "Every session, newest first",
+        keywords: ["session", "history", "game"],
         component: lazyPage(() => import("./pages/review/SessionsPage"), "SessionsPage"),
       },
       {
         id: "coaching",
         label: "Coaching",
-        summary: "What to work on next",
+        summary: "What to work on next: focus, drills, AI level",
+        keywords: ["drill", "habits", "ai level", "difficulty", "focus"],
         component: lazyPage(() => import("./pages/review/CoachingPage"), "CoachingPage"),
       },
       {
         id: "progress",
         label: "Progress",
-        summary: "Getting faster?",
+        summary: "Getting faster here? This track and car, and pace against the AI",
+        keywords: ["trend", "ai pace", "milestones"],
         component: lazyPage(() => import("./pages/review/ProgressPage"), "ProgressPage"),
+      },
+      {
+        id: "goals",
+        label: "Goals",
+        summary: "Goals, streaks, badges and your week",
+        keywords: ["goal", "badge", "streak", "week", "digest", "printable"],
+        component: lazyPage(() => import("./pages/review/GoalsPage"), "GoalsPage"),
       },
       {
         id: "ask",
         label: "Ask",
         summary: "Ask the race engineer about a session",
+        keywords: ["question", "engineer"],
         component: lazyPage(() => import("./pages/review/AskPage"), "AskPage"),
       },
     ],
@@ -111,31 +133,36 @@ export const AREAS: AreaDef[] = [
         id: "game",
         label: "Game",
         summary: "What you're playing and what it sends",
+        keywords: ["game", "platform", "f1", "gt7", "ac", "forza"],
         component: lazyPage(() => import("./pages/setup/GamePage"), "GamePage"),
       },
       {
         id: "connect",
         label: "Connect",
         summary: "Point the game at Pitwall",
+        keywords: ["udp", "ip", "port"],
         component: lazyPage(() => import("./pages/setup/ConnectPage"), "ConnectPage"),
       },
       {
         id: "rig",
         label: "Rig",
         summary: "Wheel, pedals and game settings, one at a time",
+        keywords: ["wheel", "pedals", "ffb"],
         component: lazyPage(() => import("./pages/setup/RigPage"), "RigPage"),
       },
       {
         id: "car",
         label: "Car setup",
-        summary: "A car setup for this track and how you drive",
+        summary: "Car setup, how the car handled, and the next experiment",
+        keywords: ["balance", "understeer", "setup", "experiment"],
         component: lazyPage(() => import("./pages/setup/CarSetupPage"), "CarSetupPage"),
       },
       // validation kit (lane validate)
       {
         id: "validation",
         label: "Validation",
-        summary: "Live tests on your rig, with evidence",
+        summary: "Test your rig live, with evidence",
+        keywords: ["test", "validate", "check"],
         component: lazyPage(() => import("./pages/setup/ValidationPage"), "ValidationPage"),
       },
     ],
@@ -149,31 +176,36 @@ export const AREAS: AreaDef[] = [
       {
         id: "drivers",
         label: "Drivers",
-        summary: "The family's profiles",
+        summary: "The family's profiles: level, usual game, AI level",
+        keywords: ["driver", "family", "level"],
         component: lazyPage(() => import("./pages/settings/DriversPage"), "DriversPage"),
       },
       {
         id: "radio",
         label: "Radio & voice",
-        summary: "How the engineer sounds",
+        summary: "How the engineer sounds and how much it says",
+        keywords: ["intensity", "quiet", "budget"],
         component: lazyPage(() => import("./pages/settings/RadioVoicePage"), "RadioVoicePage"),
       },
       {
         id: "ai",
         label: "AI engineer",
         summary: "Which model explains the facts",
+        keywords: ["llm", "qwen"],
         component: lazyPage(() => import("./pages/settings/AiEnginePage"), "AiEnginePage"),
       },
       {
         id: "display",
         label: "Display",
         summary: "Theme, text size, night dim and the Drive lock on this device",
+        keywords: ["theme"],
         component: lazyPage(() => import("./pages/settings/DisplayPage"), "DisplayPage"),
       },
       {
         id: "system",
         label: "System",
-        summary: "Health, captures and what works",
+        summary: "Health, updates and what works",
+        keywords: ["update", "version", "capabilities"],
         component: lazyPage(() => import("./pages/settings/SystemPage"), "SystemPage"),
       },
     ],
@@ -188,6 +220,12 @@ export function areaById(id: AreaId): AreaDef {
 
 export function pageById(area: AreaId, page: string): PageDef | null {
   return areaById(area).pages.find((p) => p.id === page) ?? null;
+}
+
+/** What ⌘K searches for a page (components/shell/CommandPalette.tsx): area, label, summary and keywords. Pro Command
+ * filters with a case-insensitive "contains", so "badge" finds Goals and "AI level" finds Coaching. */
+export function pageSearchText(area: Pick<AreaDef, "label">, page: Pick<PageDef, "label" | "summary" | "keywords">): string {
+  return [area.label, page.label, page.summary, ...page.keywords].join(" ");
 }
 
 /** The ids registered here, per area (routes.test.ts compares them with AREA_PAGES). */

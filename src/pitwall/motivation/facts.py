@@ -171,11 +171,11 @@ def _add(sheet: FactSheet, db: Database, sa: SessionAnalysis, now: float) -> Non
     clean = sum(1 for lap in laps if lap.clean)
     n_s, n_l = len(this_week), len(laps)
     sessions_w, laps_w = count_words(n_s, "session"), count_words(n_l, "lap")
-    if n_s:
-        week_text = f"This week (from Monday): {sessions_w}, {laps_w}, {clean} clean."
+    if n_s:  # the counting rule is said in the text (plan 5.7); the radio keeps it short
+        week_text = f"This week (from Monday): {sessions_w} with a timed lap, {laps_w}, {clean} clean."
         week_say = f"This week: {sessions_w} and {laps_w}, {clean} of them clean."
     else:
-        week_text, week_say = "This week (from Monday): no sessions yet.", "No sessions yet this week."
+        week_text, week_say = "This week (from Monday): no session with a timed lap yet.", "No sessions yet this week."
     sheet.add(
         "progress",
         week_text,
@@ -198,7 +198,7 @@ def _add(sheet: FactSheet, db: Database, sa: SessionAnalysis, now: float) -> Non
     sheet.add(
         "progress",
         f"Clean laps in a row: best this session {this_session}, best ever {best_ever}; "
-        f"weeks in a row with a session: {weeks}.",
+        f"weeks in a row with a timed lap: {weeks}.",
         {"run_this_session": this_session, "run_best": best_ever, "weeks_in_row": weeks},
         say=f"Your best run of clean laps this session was {this_session}; your best ever is {best_ever}.",
     )

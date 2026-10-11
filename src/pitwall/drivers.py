@@ -440,7 +440,11 @@ class Driver:
         }
 
 
-def default_preferences(name: str, skill_level: SkillLevel = "advanced") -> DriverPreferences:
+FIRST_RUN_LEVEL: SkillLevel = "intermediate"  # a fresh install's first profile (v0.2.0 decision 5); never applied to
+# an existing database: ``repo.ensure_default_driver`` creates the profile only when there is no driver at all
+
+
+def default_preferences(name: str, skill_level: SkillLevel = FIRST_RUN_LEVEL) -> DriverPreferences:
     return DriverPreferences(colour=PALETTE[0], initials=default_initials(name), skill_level=skill_level)
 
 

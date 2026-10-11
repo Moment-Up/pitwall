@@ -1,17 +1,19 @@
-// The week on Review › Progress (lane motivation, spec 9 WeekCard): one Monday-to-Sunday week of the viewed driver's
-// real driving. ‹ › move a week (44 px; › is off on the current week), the headline and totals, the sessions (7, then
-// "Show all"), new tracks and improvements (3), how each goal moved, the badges earned. Printable page opens the server's
-// own HTML page (no JavaScript, no external requests; the cookie or Tailscale identity lets it in) and Copy as text
-// copies the same week as markdown. No external services.
+// The week on Review › Goals (lane motivation, spec 9 WeekCard; moved from Progress, integration plan 1.3): one
+// Monday-to-Sunday week of the viewed driver's real driving. ‹ › move a week (44 px; › is off on the current week),
+// the headline and totals (counts say their rule: "sessions with a timed lap"), the sessions newest first (7, then
+// "Show all"), improvements and new tracks (3 each), how each goal moved. The week's badges are on the badges card
+// (the one full list) and in the printable page. Printable page opens the server's own HTML page (no JavaScript, no
+// external requests; the cookie or Tailscale identity lets it in) and Copy as text copies the same week as markdown.
+// No external services.
 
-import { ChevronLeft, ChevronRight, Copy, Medal, Printer } from "@gravity-ui/icons";
+import { ChevronLeft, ChevronRight, Copy, Printer } from "@gravity-ui/icons";
 import { Button, Card, Chip, ProgressBar, Skeleton } from "@heroui/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { copyText, EvidenceChips, TimingValue } from "../../../components/ui";
 import { useApi } from "../../../hooks/useApi";
 import { motivationApi, motivationKeys, motivationPaths } from "../../../lib/endpoints/motivation";
 import { isMissingRoute } from "../../../lib/endpoints/review";
-import { fractionChange, WEEK_BADGES_SHOWN, WEEK_SESSIONS_SHOWN, weekView } from "../../../lib/motivation/digest";
+import { fractionChange, WEEK_SESSIONS_SHOWN, weekView, type WeekImprovementRow } from "../../../lib/motivation/digest";
 import { shiftWeek } from "../../../lib/motivation/format";
 import { router } from "../../../lib/router";
 import { sessionPath } from "../../../lib/review/links";
@@ -53,6 +55,19 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h3 className="m-0 text-sm font-semibold text-muted">{title}</h3>
       {children}
     </div>
+  );
+}
+
+function ImprovementList({ rows }: { rows: readonly WeekImprovementRow[] }) {
+  return (
+    <ul className="m-0 grid list-none gap-1.5 p-0">
+      {rows.map((i) => (
+        <li key={i.key} className="grid gap-0">
+          <span className="text-[15px] font-medium">{i.scopeText}</span>
+          <span className="text-[13px] text-muted">{i.text}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -160,15 +175,14 @@ export function WeekCard({ driverId, simple }: { driverId: number; simple: boole
           )}
 
           {v.improvements.length > 0 && (
-            <Section title="New tracks and improvements">
-              <ul className="m-0 grid list-none gap-1.5 p-0">
-                {v.improvements.map((i) => (
-                  <li key={i.key} className="grid gap-0">
-                    <span className="text-[15px] font-medium">{i.scopeText}</span>
-                    <span className="text-[13px] text-muted">{i.text}</span>
-                  </li>
-                ))}
-              </ul>
+            <Section title="Improvements">
+              <ImprovementList rows={v.improvements} />
+            </Section>
+          )}
+
+          {v.newTracks.length > 0 && (
+            <Section title="New tracks">
+              <ImprovementList rows={v.newTracks} />
             </Section>
           )}
 
@@ -195,24 +209,6 @@ export function WeekCard({ driverId, simple }: { driverId: number; simple: boole
             </Section>
           )}
 
-          {v.badges.length > 0 && (
-            <Section title="Badges this week">
-              <div className="flex flex-wrap gap-2">
-                {v.badges.slice(0, WEEK_BADGES_SHOWN).map((b) => (
-                  <Chip key={b} size="md" variant="soft">
-                    <Medal aria-hidden="true" />
-                    <Chip.Label>{b}</Chip.Label>
-                  </Chip>
-                ))}
-                {v.badges.length > WEEK_BADGES_SHOWN && (
-                  <Chip size="md" variant="soft">
-                    <Chip.Label>+{v.badges.length - WEEK_BADGES_SHOWN} more</Chip.Label>
-                  </Chip>
-                )}
-              </div>
-            </Section>
-          )}
-
           {!v.empty && (
             <div className="flex flex-wrap items-center gap-2 border-t border-separator pt-3">
               <Button
@@ -226,7 +222,9 @@ export function WeekCard({ driverId, simple }: { driverId: number; simple: boole
               <CopyMarkdown text={v.markdown} />
             </div>
           )}
-          <p className="m-0 text-[13px] text-muted">Real driving only: synthetic and replayed sessions are left out.</p>
+          <p className="m-0 text-[13px] text-muted">
+            Real driving only: a session counts once it has a timed lap; synthetic and replayed sessions are left out.
+          </p>
         </>
       )}
     </Card>

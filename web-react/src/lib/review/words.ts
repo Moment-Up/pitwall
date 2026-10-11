@@ -211,10 +211,26 @@ export function sessionTypeLabel(row: { session_type_raw?: string | null; sessio
   return sentence(t.replace(/_/g, " "));
 }
 
-/** The track as stored, or "Unknown track" (a title, so words rather than "-"). */
+/** A raw id stored as a name by older adapters or other games ("team_214", "car_12", "unknown_-1", "gt7:car:123",
+ * "f1:team:7"): never shown to a driver (integration plan 5.8; motivation/model.py `_RAW_CAR_ID`). */
+const RAW_ID = /^(?:(?:team|car)_\d+|unknown_-?\d+|[a-z0-9_]+(?::[a-z0-9_.-]+)+)$/i;
+
+/** F1's neutral label for a team its spec does not name ("Unknown team (id 214)"): it names no car. */
+const UNKNOWN_TEAM = "Unknown team";
+
+/** A car name a driver can read, or null: a raw id or F1's "Unknown team (id 214)" is left out, never shown (the same
+ * rule as the server's `display_car`, so a sentence never says "in the team_214"). */
+export function readableCar(name: string | null | undefined): string | null {
+  const t = name?.trim();
+  if (!t || RAW_ID.test(t) || t.startsWith(UNKNOWN_TEAM)) return null;
+  return t;
+}
+
+/** The track as stored, or "Unknown track" (a title, so words rather than "-"); a raw id ("unknown_-1") is never
+ * shown (integration plan 5.8). */
 export function trackLabel(row: { track_name?: string | null }): string {
   const t = row.track_name?.trim();
-  return t ? t : "Unknown track";
+  return t && !RAW_ID.test(t) ? t : "Unknown track";
 }
 
 /** "Silverstone · Practice" (the type is left out when unknown). */

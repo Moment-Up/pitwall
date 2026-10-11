@@ -105,10 +105,10 @@ async def test_goal_facts_and_a_grounded_answer(store: tuple[Database, DbWriter,
     )
     assert goals[1].say == "Your goal is a lap under 1:09.5 at Austria: 0.2 s to go."
     progress = [f for f in sheet.facts if f.topic == "progress"]
-    assert progress[0].text == "This week (from Monday): 3 sessions, 4 laps, 4 clean."
+    assert progress[0].text == "This week (from Monday): 3 sessions with a timed lap, 4 laps, 4 clean."
     assert progress[1].text.startswith("Badges: ") and progress[1].say is not None
     assert (
-        progress[2].text == "Clean laps in a row: best this session 2, best ever 2; weeks in a row with a session: 1."
+        progress[2].text == "Clean laps in a row: best this session 2, best ever 2; weeks in a row with a timed lap: 1."
     )
     ans = await RaceEngineer(None).answer("How am I doing on my goal?", sheet)
     assert ans.intent == "goals" and ans.fallback and ans.grounded
@@ -130,7 +130,7 @@ async def test_one_session_and_one_lap_this_week(store: tuple[Database, DbWriter
     db, w, drivers = store
     seed(w, SeedSession("s1", drivers.default_id, T, seed_laps([71_000])))
     (week,) = [f for f in sheet_for(db, "s1").facts if f.topic == "progress" and "This week" in f.text]
-    assert week.text == "This week (from Monday): 1 session, 1 lap, 1 clean."
+    assert week.text == "This week (from Monday): 1 session with a timed lap, 1 lap, 1 clean."
     assert week.say == "This week: 1 session and 1 lap, 1 of them clean."
 
 
@@ -143,7 +143,8 @@ def test_facts_use_the_given_clock_on_a_monday_morning(store: tuple[Database, Db
     sheet = build_fact_sheet(sa)
     add_motivation_facts(sheet, db, sa, now=T - 3 * 3600)  # Monday 09:00, the session at noon
     (week,) = [f for f in sheet.facts if f.topic == "progress" and "This week" in f.text]
-    assert week.text == "This week (from Monday): no sessions yet." and week.say == "No sessions yet this week."
+    assert week.text == "This week (from Monday): no session with a timed lap yet."
+    assert week.say == "No sessions yet this week."
 
 
 async def test_no_goals(store: tuple[Database, DbWriter, DriverService]) -> None:

@@ -190,6 +190,10 @@ export interface GameSelection {
   id: string;
   since_unix: number;
   source: "dashboard" | "cli" | "driver_default";
+  /** source "driver_default": the driver whose usual game it is (absent from servers before v0.2.0). */
+  by_driver_id?: number | null;
+  /** That driver's name (GET /api/game only); null when the profile is gone. */
+  by_driver_name?: string | null;
 }
 export interface GameInput {
   key: GameIntegrationKey;

@@ -10,8 +10,11 @@
 //     On a phone the corners are chips right under the map, and picking one scrolls its detail into view.
 // Everything compares the driver's own two laps: descriptions, never advice (P9). A server without feat/technique
 // answers 404 and the card stays hidden; the API's reasons are shown for parts that are not available.
+// Under the card's header the detail sits in a "Line, inputs and balance" Disclosure that starts collapsed on a phone
+// (any level) and for beginners, by the same rule as the Corners cards (lib/technique/density.ts cornerCollapsed;
+// integration plan 1.3, walk finding 17).
 
-import { Alert, Button, Card, Skeleton } from "@heroui/react";
+import { Alert, Button, Card, Disclosure, Skeleton } from "@heroui/react";
 import { DataGrid, type DataGridColumn } from "@heroui-pro/react";
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CornerTag, EvidenceChips, Unknown } from "../../../../components/ui";
@@ -335,7 +338,7 @@ function PanelForPair({
   density,
   phone,
 }: TechniqueComparePanelProps & { refLapId: number; lapId: number }) {
-  const td = useMemo(() => techniqueDensity(density), [density]);
+  const td = useMemo(() => techniqueDensity(density, phone), [density, phone]);
   const words = refWordFor(density.level);
   const q = useTechniqueCompare(refLapId, lapId);
   const data = q.data;
@@ -473,22 +476,32 @@ function PanelForPair({
   return (
     <Card className="gap-4 p-4 md:p-5" aria-label="Line and technique">
       {header}
-      {notes.length > 0 && (
-        <p className="m-0 text-xs text-muted">{notes.join(" · ")}</p>
-      )}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="min-w-0 lg:col-span-6">{map}</div>
-        {/* phone: the corner chips right under the map and its markers, before the (long) detail */}
-        {phone && every}
-        <div ref={detailRef} className="min-w-0 scroll-mt-4 lg:col-span-6">
-          {c ? (
-            <Detail c={c} data={data} td={td} sync={sync} refTitle={words.picker} refWord={words.sentence} phone={phone} />
-          ) : (
-            <p className="m-0 text-sm text-muted">No corners measured on these laps yet.</p>
-          )}
-        </div>
-      </div>
-      {!phone && every}
+      <Disclosure defaultExpanded={!td.cornerCollapsed} className="border-t border-separator">
+        <Disclosure.Heading className="m-0">
+          <Disclosure.Trigger className="flex min-h-11 w-full items-center justify-between gap-2 text-left text-sm font-semibold">
+            Line, inputs and balance
+            <Disclosure.Indicator className="size-4" />
+          </Disclosure.Trigger>
+        </Disclosure.Heading>
+        <Disclosure.Content>
+          <Disclosure.Body style={{ padding: 0 }} className="grid gap-4 pt-1">
+            {notes.length > 0 && <p className="m-0 text-xs text-muted">{notes.join(" · ")}</p>}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+              <div className="min-w-0 lg:col-span-6">{map}</div>
+              {/* phone: the corner chips right under the map and its markers, before the (long) detail */}
+              {phone && every}
+              <div ref={detailRef} className="min-w-0 scroll-mt-4 lg:col-span-6">
+                {c ? (
+                  <Detail c={c} data={data} td={td} sync={sync} refTitle={words.picker} refWord={words.sentence} phone={phone} />
+                ) : (
+                  <p className="m-0 text-sm text-muted">No corners measured on these laps yet.</p>
+                )}
+              </div>
+            </div>
+            {!phone && every}
+          </Disclosure.Body>
+        </Disclosure.Content>
+      </Disclosure>
     </Card>
   );
 }

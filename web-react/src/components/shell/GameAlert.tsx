@@ -3,12 +3,15 @@
 //   another game's real data is arriving   [Switch to F1 25 · PS5]  [Keep GT7]   (Keep: this session, this device)
 //   nothing selected, Pitwall sees a game  [Yes, F1 25 · PS5]       [Choose another] (Setup › Game)
 // The words are the server's (snapshot.game). Renders nothing until the catalogue loads, or with an older server.
+// A mismatch also says why the selected game is selected when a seat change or the command line chose it
+// ("Selected because Thomas usually plays GT7", the same sentence as Setup › Game; integration plan 1.3): GET /api/game
+// is asked only while a mismatch is shown.
 
 import { Alert, Button } from "@heroui/react";
-import { useState } from "react";
-import { useLive } from "../../hooks/stores";
-import { selectGame, useGameCatalog, useSnapshotGame } from "../../hooks/useGame";
-import { gameAlertView } from "../../lib/game";
+import { useMemo, useState } from "react";
+import { useDrivers, useLive } from "../../hooks/stores";
+import { selectGame, useGameCatalog, useGameState, useSnapshotGame } from "../../hooks/useGame";
+import { entryById, gameAlertView, selectionReason } from "../../lib/game";
 import { router } from "../../lib/router";
 
 const KEEP_KEY = "pitwall-game-keep";
@@ -38,6 +41,14 @@ export function GameAlert() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const view = gameAlertView(game, catalogue, sessionId, (k) => keptHere.includes(k) || keptKeys().includes(k));
+  const state = useGameState(view?.kind === "mismatch");
+  const drivers = useDrivers((s) => s.drivers);
+  const names = useMemo(() => new Map(drivers.map((d) => [d.id, d.name])), [drivers]);
+  const selected = state.data?.selected ?? null;
+  const reason =
+    view?.kind === "mismatch" && selected && selected.id === game?.selected_id
+      ? selectionReason(selected, entryById(catalogue, selected.id), names)
+      : null;
   if (!view) return null;
 
   async function choose(id: string) {
@@ -57,6 +68,7 @@ export function GameAlert() {
       <Alert.Indicator />
       <Alert.Content>
         <Alert.Title>{view.text}</Alert.Title>
+        {reason && <Alert.Description>{reason}.</Alert.Description>}
         {error && <Alert.Description className="text-danger">Could not change the game: {error}</Alert.Description>}
         {/* under the words (not beside them): on a phone the text keeps the full width */}
         <div className="mt-2 flex flex-wrap gap-2">

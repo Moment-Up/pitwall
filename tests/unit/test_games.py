@@ -478,6 +478,22 @@ def test_parse_selection_is_lenient(caplog: pytest.LogCaptureFixture) -> None:
     assert "fm7:xbox" in caplog.text
     odd = games.parse_selection({"selected": "ac:ps5", "since_unix": "x", "source": "hacker"})
     assert odd == games.Selection("ac:ps5", 0.0, "dashboard")
+    # a driver's usual game names the driver (plan 1.3); only that source keeps an id, and an older file has none
+    seat = games.parse_selection(
+        {"selected": "gt7:ps5", "since_unix": 3.0, "source": "driver_default", "by_driver_id": 2}
+    )
+    assert seat == games.Selection("gt7:ps5", 3.0, "driver_default", 2)
+    assert games.parse_selection(seat.section()) == seat
+    assert games.parse_selection(
+        {"selected": "gt7:ps5", "since_unix": 3.0, "source": "driver_default"}
+    ) == games.Selection("gt7:ps5", 3.0, "driver_default", None)
+    for bad in (True, "2", 2.5):
+        got = games.parse_selection({"selected": "gt7:ps5", "source": "driver_default", "by_driver_id": bad})
+        assert got is not None and got.by_driver_id is None
+    cli = games.parse_selection({"selected": "gt7:ps5", "source": "cli", "by_driver_id": 2})
+    assert cli is not None and cli.by_driver_id is None
+    assert games.new_selection("gt7:ps5", "dashboard", by_driver_id=2).by_driver_id is None
+    assert "by_driver_id" not in games.new_selection("gt7:ps5", "cli").section()
 
 
 # ---------------------------------------------------------------------------------------------- capability sentences

@@ -137,8 +137,23 @@ def test_went_well_order() -> None:
     assert w is not None and w.source == "pb"
     assert w.text == "New personal best at Austria in the Haas: 1:10.549 on lap 2, 1.196 s faster than before."
     assert w.text_simple == "Your fastest lap ever at Austria in the Haas: 1:10.549."
-    # 2. the top positive point (the first session at a track is not a personal best)
-    w2 = build(inp(sa, a, h, observations={a[0].id: pos[b[1].id]}, compared=1)).went_well
+    # 2. the first clean laps here in this car: a first-ever best counts as a best and comes first too (plan 2.6)
+    first = build(inp(sa, a, h, observations={a[0].id: pos[b[1].id]}, compared=1))
+    w1 = first.went_well
+    assert w1 is not None and w1.source == "first_clean" and w1.fact_key == "first_clean:f1_25:f1:17:f1:team:7"
+    assert w1.text == "First clean laps here in the Haas: best 1:11.745 on lap 1."
+    assert w1.text_simple == "Your first clean laps here in the Haas: best 1:11.745."
+    assert first.progress is not None and first.progress.source == "sessions_week"  # said once, not twice
+    one = [lap(1, 84_528, sid="one"), lap(2, 85_000, sid="one", flags=["invalid"])]
+    so = sess("one", T0, car_id="f1:team:1", car_name="McLaren")
+    w1b = build(inp(so, one, history((so, one)))).went_well
+    assert w1b is not None and w1b.text == "First clean lap here in the McLaren: 1:24.528."
+    #    ... only for real, owned driving (a replay or someone else's session is nobody's first)
+    assert build(inp(so, one, None, counts=False)).went_well is None
+    #    the top positive point (a session that is neither a best nor a first)
+    c0 = laps("c0", [72_000, 72_400])
+    s0 = sess("c0", T0 + 30)
+    w2 = build(inp(s0, c0, history((sa, a), (s0, c0)), observations={c0[0].id: pos[b[1].id]}, compared=1)).went_well
     assert w2 is not None and w2.source == "observation"
     # 3. a run of 3 clean laps
     c = laps("c", [72_000, 72_100, 72_200])
@@ -258,6 +273,7 @@ def test_progress_pb_streak_goal_progress_gap_first_and_week() -> None:
     p = build(inp(s2, l2, h)).progress
     assert p is not None and p.source == "pb_streak"
     assert p.text == "New best at Austria in the Haas in 2 sessions in a row."
+    assert p.fact_key == "pb_streak:f1_25:f1:17:f1:team:7:2"  # the badge's key; Went well's "pb:<lap>" is another
     # a goal this session moved closer (no PB streak: s1's 71.5 is the first gain)
     s1, l1 = pairs[1]
     g = goal("lap_time", 70_000, scope=AUSTRIA_HAAS, after=pairs[0][1][0].id)
@@ -279,14 +295,21 @@ def test_progress_pb_streak_goal_progress_gap_first_and_week() -> None:
     # first clean laps at a track
     suz = [lap(1, 96_360, sid="z")]
     sz = sess("z", T0 + 300, track_id="f1:13", track_name="Suzuka", car_name="F1 Generic", car_id="f1:team:41")
-    p4 = build(inp(sz, suz, history(*pairs, (sz, suz)))).progress
-    assert p4 is not None and p4.source == "first_session"
+    hz = history(*pairs, (sz, suz))
+    bests = R._scope_bests(hz, sz)
+    p4 = R.progress_thing(inp(sz, suz, hz), bests, {})
+    assert p4 is not None and p4.source == "first_session" and p4.fact_key == "first_clean:f1_25:f1:13:f1:team:41"
     assert p4.text == "Your first clean laps at Suzuka in the F1 Generic: 1:36.360 is the time to beat next time."
+    #    ... unless Went well says it already (the recap never says one fact twice)
+    rz = build(inp(sz, suz, hz))
+    assert rz.went_well is not None and rz.went_well.fact_key == p4.fact_key
+    assert rz.progress is not None and rz.progress.source == "sessions_week"
     # otherwise the sessions this week
     none = [lap(1, 80_000, sid="n", flags=["invalid"])]
     sn = sess("n", T0 + 360)
     p5 = build(inp(sn, none, history(*pairs, (sn, none)))).progress
-    assert p5 is not None and p5.source == "sessions_week" and p5.text == "Session 4 this week, 4 laps so far."
+    assert p5 is not None and p5.source == "sessions_week"
+    assert p5.text == "4 sessions with a timed lap this week, 4 laps so far."
 
 
 def test_progress_is_as_at_the_session() -> None:
@@ -332,7 +355,8 @@ def test_the_week_counts_timed_sessions_only() -> None:
     b = [lap(1, 80_000, sid="b", flags=["invalid"])]
     sb = sess("b", T0 + 120)
     p = build(inp(sb, b, history((sess("a"), a), (empty, []), (sb, b)))).progress
-    assert p is not None and p.source == "sessions_week" and p.text == "Session 2 this week, 3 laps so far."
+    assert p is not None and p.source == "sessions_week"
+    assert p.text == "2 sessions with a timed lap this week, 3 laps so far."  # the count says its rule (5.7)
     assert DAY > 0
 
 

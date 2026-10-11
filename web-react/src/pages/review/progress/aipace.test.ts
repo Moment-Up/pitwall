@@ -287,8 +287,8 @@ describe("Coaching: Suggested AI difficulty", () => {
     );
     expect(html).not.toContain('data-ai-basis="level"');
     expect(text).not.toMatch(/Range \d|Measured here/);
-    // first beside the habits and the radio focus, not last on the page
-    expect(text.indexOf("Suggested AI difficulty")).toBeLessThan(text.indexOf("The radio will focus on"));
+    // first beside the repeats and the radio calls, not last on the page
+    expect(text.indexOf("Suggested AI difficulty")).toBeLessThan(text.indexOf("Radio calls next run"));
   });
 
   it("a parent looking at a child's plan reads about the child", async () => {

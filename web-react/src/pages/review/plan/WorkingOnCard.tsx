@@ -1,6 +1,7 @@
-// A "Working on now" card (spec 6.8, 10.4): the corner (official label in a warning chip, then its name), a Pro
-// TrendChip (better / same / worse over the last sessions, D5) at the right, the coach's latest observation verbatim
-// (`text_simple` for simple wording), the evidence line, and See it (Compare at the corner's apex in that session).
+// A "This session's focus" card (spec 6.8, 10.4; was "Working on now"): the corner (official label in a warning chip,
+// then its name), a Pro TrendChip (better / same / worse over the last sessions, D5) at the right, the coach's latest
+// observation verbatim (`text_simple` for simple wording), the evidence line, and See it (Compare at the corner's apex
+// in that session). The session's own "One to work on (this session)" says so above the corner (`eyebrow`).
 
 import { Button, Card, Chip } from "@heroui/react";
 import { TrendChip } from "@heroui-pro/react";
@@ -18,6 +19,7 @@ const CHIP: Record<TrendWord, { trend: "up" | "neutral" | "down"; text: string }
 
 export function WorkingOnCard({
   w,
+  eyebrow = null,
   sessionId,
   refLapId,
   atM,
@@ -25,6 +27,8 @@ export function WorkingOnCard({
   textPx,
 }: {
   w: WorkingOn;
+  /** A line above the corner: the recap's label when this is the session's "One to work on". */
+  eyebrow?: string | null;
   sessionId: string;
   refLapId: number | null;
   /** The corner's apex in game lap metres (Compare's `at=`). */
@@ -35,6 +39,7 @@ export function WorkingOnCard({
   const chip = w.trend ? CHIP[w.trend.trend] : null;
   return (
     <Card className="gap-3 p-5">
+      {eyebrow && <span className="text-[13px] font-semibold text-muted">{eyebrow}</span>}
       <div className="flex flex-wrap items-center gap-2">
         <Chip color="warning" variant="soft" size="md">
           <Chip.Label className="font-bold">{w.label}</Chip.Label>

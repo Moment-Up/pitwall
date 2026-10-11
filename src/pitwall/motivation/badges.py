@@ -4,6 +4,14 @@ Nothing is stored: a badge's date is when the session that earned it started (``
 stable, so the same data always gives the same badges. Replays never count; synthetic sessions only when the caller
 asks (and such a badge says ``synthetic``).
 
+Track badges (first clean lap, under a time, PB streak) need an identified track (``model.track_identified``: no
+``unknown_`` id, no "Unknown track" and no GT7 "Unidentified GT7 circuit (…)" placeholder) and a lap of at least
+30 s; anything else is a glitch or a placeholder, never an achievement. Being computed, badges that older code awarded
+for such tracks simply stop being listed (nothing is deleted). Car names go through ``model.display_car``: a raw id
+("team_214") is never shown. ``fact`` is the key the Session complete card de-duplicates on (``pb:<lap id>``,
+``first_clean:<game>:<track>:<car>``, ``pb_streak:<game>:<track>:<car>:<n>``, ``goal:<id>``; the recap's things
+carry the same keys).
+
 Badges (key, earned when):
 
 * ``first_clean_lap:{game}:{track_id}`` - the first session with a clean lap at a track.
@@ -37,6 +45,7 @@ from pitwall.motivation.model import (
     lap_time,
     lap_time_radio,
     local_date,
+    track_identified,
 )
 
 CLEAN_STREAK_LEVELS = (3, 5, 10, 20)
@@ -46,6 +55,8 @@ BUSY_WEEK_LEVELS = (3, 5)
 GOALS_LEVELS = (1, 3, 10)
 TEN_CLEAN = 10
 PB_SCOPES_SHOWN = 3
+MIN_TRACK_BADGE_LAP_MS = 30_000  # a shorter "lap" is a lap-counter glitch or a test loop, not a lap of a circuit
+TIMED_RULE = "Counting sessions with a timed lap"  # 5.7: the count says which rule it uses
 
 
 @dataclass(slots=True, frozen=True)
@@ -61,6 +72,7 @@ class Badge:
     lap_id: int | None
     scope: Scope | None
     synthetic: bool
+    fact: str | None = None  # de-duplication key shared with the recap (module docstring)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -75,6 +87,7 @@ class Badge:
             "lap_id": self.lap_id,
             "scope": None if self.scope is None else self.scope.to_dict(),
             "synthetic": self.synthetic,
+            "fact_key": self.fact,
         }
 
 
@@ -90,6 +103,22 @@ def _in_car(s: SessionRow) -> str:
     return in_car(s.car_name)
 
 
+def track_badges_allowed(s: SessionRow) -> bool:
+    """A session that may earn track badges: real driving (never a replay) at an identified track."""
+    return not s.replay and track_identified(s.track_id, s.track_name)
+
+
+def badge_laps(laps: Sequence[LapRow]) -> list[LapRow]:
+    """The laps that count for track badges: clean, timed and at least 30 s."""
+    return [
+        lap for lap in laps if lap.clean and lap.lap_time_ms is not None and lap.lap_time_ms >= MIN_TRACK_BADGE_LAP_MS
+    ]
+
+
+def first_clean_fact(s: SessionRow) -> str:
+    return f"first_clean:{s.game}:{s.track_id}:{s.car_id}"
+
+
 def _badge(
     kind: str,
     key: str,
@@ -101,9 +130,10 @@ def _badge(
     *,
     detail: str | None = None,
     scope: Scope | None = None,
+    fact: str | None = None,
 ) -> Badge:
     lap_id = None if lap is None else lap.id
-    return Badge(key, kind, level, title, simple, detail, s.started_unix, s.id, lap_id, scope, s.synthetic)
+    return Badge(key, kind, level, title, simple, detail, s.started_unix, s.id, lap_id, scope, s.synthetic, fact)
 
 
 def _timed_sessions(history: History) -> list[SessionRow]:
@@ -129,7 +159,8 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
         laps = history.laps_of(s.id)
         clean = [lap for lap in laps if lap.clean and lap.lap_time_ms is not None]
         track = _track(s)
-        if s.track_id is not None and clean:
+        tracked = badge_laps(laps) if track_badges_allowed(s) else []
+        if tracked:
             add(
                 _badge(
                     "first_clean_lap",
@@ -138,13 +169,14 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                     f"First clean lap at {track}",
                     f"Your first clean lap at {track}",
                     s,
-                    clean[0],
-                    detail=f"{lap_time(clean[0].lap_time_ms)} on lap {clean[0].lap_number}{_in_car(s)}",
+                    tracked[0],
+                    detail=f"{lap_time(tracked[0].lap_time_ms)} on lap {tracked[0].lap_number}{_in_car(s)}",
                     scope=Scope(game=s.game, track_id=s.track_id, track_name=s.track_name),
+                    fact=first_clean_fact(s),
                 )
             )
         key = s.pb_key
-        best = rules.fastest_clean(laps)
+        best = rules.fastest_clean(tracked)
         if key is not None and best is not None and best.lap_time_ms is not None:
             prev = pb.get(key)
             ms = best.lap_time_ms
@@ -166,6 +198,7 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                             best,
                             detail=f"{lap_time(ms)} on lap {best.lap_number}",
                             scope=_car_scope(s),
+                            fact=f"pb:{best.id}",
                         )
                     )
             streak = pb_streaks.get(key, 0) + 1 if beat else 0
@@ -184,6 +217,7 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                             best,
                             detail=f"{track}{_in_car(s)}",
                             scope=_car_scope(s),
+                            fact=f"pb_streak:{s.game}:{s.track_id}:{s.car_id}:{level}",
                         )
                     )
         run = rules.best_run(laps)
@@ -231,6 +265,7 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                             f"You drove {level} weeks in a row",
                             s,
                             None,
+                            detail=TIMED_RULE,
                         )
                     )
             for level in BUSY_WEEK_LEVELS:
@@ -244,6 +279,7 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                             f"{level} drives in one week",
                             s,
                             None,
+                            detail=TIMED_RULE,
                         )
                     )
         if s.is_race and s.is_f1:
@@ -278,6 +314,7 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                     g.achieved_lap_id,
                     None,
                     False,
+                    f"goal:{g.id}",
                 )
             )
     out.sort(key=lambda b: (-b.earned_unix, b.key))
@@ -315,8 +352,11 @@ def streaks(history: History, now_unix: float) -> dict[str, Any]:
     last = timed[-1] if timed else None
     pbs: list[tuple[int, int, float, dict[str, Any]]] = []
     scoped = History(sessions, history.laps, history.events)
-    for key, group in rules.pb_scopes(scoped).items():
-        bests = rules.session_bests(group, history.laps)
+    for scoped_group in rules.pb_scopes(scoped).values():
+        group = [s for s in scoped_group if track_badges_allowed(s)]
+        if not group:
+            continue
+        bests = rules.session_bests(group, {s.id: badge_laps(history.laps_of(s.id)) for s in group})
         st = rules.pb_streak(bests)
         if st.best < 1:
             continue
@@ -329,7 +369,7 @@ def streaks(history: History, now_unix: float) -> dict[str, Any]:
                 s.started_unix,
                 {
                     "scope": scope.to_dict(),
-                    "scope_text": scope.text() or key[1],
+                    "scope_text": scope.text() or _track(s),
                     "current_sessions": st.current,
                     "best_sessions": st.best,
                 },

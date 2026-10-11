@@ -199,6 +199,17 @@ describe("Compare: line and technique", () => {
     expect(html).toContain("min-w-11");
   });
 
+  it("the detail starts collapsed on a phone at every level and for beginners, as on Corners (integration plan 1.3)", () => {
+    seedCompare();
+    const collapsed = /aria-expanded="false"[^>]*>Line, inputs and balance/;
+    const expanded = /aria-expanded="true"[^>]*>Line, inputs and balance/;
+    expect(renderPanel({ phone: true })).toMatch(collapsed);
+    expect(renderPanel({ phone: true, density: level("intermediate") })).toMatch(collapsed);
+    expect(renderPanel({ density: level("beginner") })).toMatch(collapsed);
+    expect(renderPanel()).toMatch(expanded); // advanced on an iPad: open
+    expect(visible(renderPanel({ phone: true }))).toContain("Line and technique"); // the card and its header stay
+  });
+
   it("line differences under 1 m read 'about the same', the exact value in the tooltip", () => {
     const cmp = techniqueFixtures.austriaCompare();
     const t4 = cmp.corners.find((c) => c.corner === "T3")!;

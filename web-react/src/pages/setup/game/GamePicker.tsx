@@ -4,7 +4,9 @@
 // F1 25 carries a switch for the 2026 Season Pack (UDP format 2026). ACC, iRacing and F1 24 sit under "More games:
 // ACC, iRacing, F1 24". Choosing sends PUT /api/game; the answer's actions (the server's words) are listed under the
 // cards, followed by any other input that is still on but receiving nothing, with a Turn off (after a confirm), so
-// inputs from earlier choices do not pile up.
+// inputs from earlier choices do not pile up. The selected card says why it is selected when someone other than this
+// page chose it: "Selected because Thomas usually plays GT7" (a seat change), "Selected from the command line"
+// (lib/game.ts selectionReason; integration plan 1.3).
 
 import { Check, CircleCheck, CircleInfo, TriangleExclamation } from "@gravity-ui/icons";
 import { Button, Card, Chip, Disclosure, Switch } from "@heroui/react";
@@ -33,6 +35,8 @@ export interface GamePickerProps {
   error: string | null;
   /** GET /api/game other_inputs: the ones still on but idle are offered for switching off after a choice. */
   otherInputs?: readonly OtherInput[];
+  /** Why the selected game is selected (lib/game.ts selectionReason), or null when it was chosen here. */
+  reason?: string | null;
 }
 
 function GameCardView({
@@ -40,11 +44,13 @@ function GameCardView({
   selectedId,
   pending,
   onChoose,
+  reason = null,
 }: {
   card: PickerCard;
   selectedId: string | null;
   pending: string | null;
   onChoose: (id: string) => void;
+  reason?: string | null;
 }) {
   const sel = pickerSelection({ main: [card], more: [] }, selectedId);
   const [season, setSeason] = useState(sel?.season2026 ?? false);
@@ -68,6 +74,11 @@ function GameCardView({
           </span>
         )}
       </div>
+      {selected && reason && (
+        <p className="m-0 text-sm text-muted" data-game-reason="">
+          {reason}. Choose another platform or game to change it.
+        </p>
+      )}
       <div className="flex flex-wrap gap-2" role="group" aria-label={`${card.title} platforms`}>
         {card.platforms.map((p) => {
           const id = pickedId(p, season);
@@ -118,7 +129,16 @@ function GameCardView({
 const ACTION_ICON = { success: CircleCheck, warning: TriangleExclamation, danger: TriangleExclamation, default: CircleInfo };
 const ACTION_CLASS = { success: "text-success", warning: "text-warning", danger: "text-danger", default: "text-muted" };
 
-export function GamePicker({ catalogue, selectedId, pending, onChoose, result, error, otherInputs = [] }: GamePickerProps) {
+export function GamePicker({
+  catalogue,
+  selectedId,
+  pending,
+  onChoose,
+  result,
+  error,
+  otherInputs = [],
+  reason = null,
+}: GamePickerProps) {
   const { main, more } = pickerCards(catalogue);
   const moreSelected = more.some((c) => pickerSelection({ main: [c], more: [] }, selectedId) !== null);
   const lines = result && result.id === selectedId ? actionLines(result.actions) : [];
@@ -137,7 +157,7 @@ export function GamePicker({ catalogue, selectedId, pending, onChoose, result, e
       </Card.Header>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {main.map((c) => (
-          <GameCardView key={c.key} card={c} selectedId={selectedId} pending={pending} onChoose={onChoose} />
+          <GameCardView key={c.key} card={c} selectedId={selectedId} pending={pending} onChoose={onChoose} reason={reason} />
         ))}
       </div>
       {more.length > 0 && (
@@ -151,7 +171,7 @@ export function GamePicker({ catalogue, selectedId, pending, onChoose, result, e
           <Disclosure.Content>
             <Disclosure.Body className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2 xl:grid-cols-3">
               {more.map((c) => (
-                <GameCardView key={c.key} card={c} selectedId={selectedId} pending={pending} onChoose={onChoose} />
+                <GameCardView key={c.key} card={c} selectedId={selectedId} pending={pending} onChoose={onChoose} reason={reason} />
               ))}
             </Disclosure.Body>
           </Disclosure.Content>

@@ -1,6 +1,8 @@
 // ⌘K command palette (spec 3.4, 10.2): a Pro Command over every page, the recent sessions and the two display
-// settings people flip most (theme, night dim). Mac keyboard first (useShellShortcuts opens it); a lazy chunk, loaded
-// on the first ⌘K. Leaving Drive › Coach while the Drive lock applies shows the lock hint instead (as a tap would).
+// settings people flip most (theme, night dim). A page is found by its label, its summary and its keywords
+// (routes.tsx `pageSearchText`: "badge" finds Review › Goals, "strategy" finds Drive › Car). Mac keyboard first
+// (useShellShortcuts opens it); a lazy chunk, loaded on the first ⌘K. Leaving Drive › Coach while the Drive lock
+// applies shows the lock hint instead (as a tap would).
 
 import { ChartLine, Gear, Magnifier, Moon, Sun } from "@gravity-ui/icons";
 import { Command } from "@heroui-pro/react";
@@ -11,7 +13,7 @@ import { api, type SessionRow } from "../../lib/api";
 import { prefs } from "../../lib/prefs";
 import { router, sessionPath, type AreaId } from "../../lib/router";
 import { dayTitle, sessionTitle } from "../../lib/review/words";
-import { AREAS } from "../../routes";
+import { AREAS, pageSearchText } from "../../routes";
 import { EvidenceChips } from "../ui/EvidenceChips";
 import { navLock } from "./navLock";
 import { holdNeeded, useDriveLock } from "./useDriveLock";
@@ -67,7 +69,7 @@ export function CommandPalette({ isOpen, onOpenChange }: { isOpen: boolean; onOp
             {a.label} <span className="text-muted">›</span> {p.label}
           </>
         ),
-        textValue: `${a.label} ${p.label} ${p.summary}`,
+        textValue: pageSearchText(a, p),
         detail: p.summary,
         icon: <a.icon aria-hidden="true" className="size-4" />,
         run: () => go(`/${a.id}/${p.id}`, a.id, p.id),

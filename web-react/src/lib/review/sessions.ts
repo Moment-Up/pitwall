@@ -4,7 +4,7 @@
 
 import type { SessionListRow } from "../endpoints/review";
 import { lapsText } from "./kpis";
-import { dayKey, dayTitle, sessionTypeLabel, timeOfDay } from "./words";
+import { dayKey, dayTitle, readableCar, sessionTypeLabel, timeOfDay } from "./words";
 
 export type SessionFilter = number | "all";
 
@@ -120,7 +120,8 @@ export function groupByDay(rows: readonly SessionListRow[], nowMs: number): DayG
  * AI difficulty, when it reported one, last so a narrow list truncates it before the rest). */
 export function rowSubtitle(row: SessionListRow): string {
   const ai = typeof row.ai_difficulty === "number" && Number.isFinite(row.ai_difficulty) ? `AI ${row.ai_difficulty}` : null;
-  const parts = [sessionTypeLabel(row), row.car_name?.trim() || null, lapsText(row), timeOfDay(row.started_unix), ai];
+  // a raw id stored as the car's name ("team_214") is never shown (integration plan 5.8)
+  const parts = [sessionTypeLabel(row), readableCar(row.car_name), lapsText(row), timeOfDay(row.started_unix), ai];
   return parts.filter((p): p is string => !!p).join(" · ");
 }
 

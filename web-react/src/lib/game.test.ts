@@ -33,6 +33,7 @@ import {
   rigNotice,
   rigPlatformNotice,
   selectedEntry,
+  selectionReason,
   sessionEntry,
   sessionGameLabel,
   stableGameSelector,
@@ -375,6 +376,18 @@ describe("sessions (Review): the session's own game", () => {
     expect(sessionEntry(CAT, { game_entry_id: "ac:ps5" })?.id).toBe("ac:ps5");
   });
 
+  it("with its platform for the session header (plan 5.11): the entry's words, else the row's platform", () => {
+    expect(sessionGameLabel(CAT, { game: "gt7", game_entry_id: "gt7:ps5" }, { platform: true })).toBe(`GT7 · ${GT7.platform_label}`);
+    expect(sessionGameLabel(CAT, { game: "f1_25", game_entry_id: "f1_25:ps5", platform: "ps5" }, { platform: true })).toBe(
+      `F1 25 · ${F1.platform_label}`,
+    );
+    expect(sessionGameLabel(CAT, { game: "f1_25", game_entry_id: null, platform: "ps5" }, { platform: true })).toBe("F1 25 · PS5");
+    expect(sessionGameLabel(null, { game: "f1_25", game_entry_id: null, platform: "xbox" }, { platform: true })).toBe("F1 25 · Xbox");
+    expect(sessionGameLabel(CAT, { game: "f1_25", game_entry_id: null, platform: null }, { platform: true })).toBe("F1 25");
+    expect(sessionGameLabel(CAT, { game: "f1_25", game_entry_id: null, platform: "unknown" }, { platform: true })).toBe("F1 25");
+    expect(sessionGameLabel(CAT, { game: "", game_entry_id: null, platform: "ps5" }, { platform: true })).toBe("-");
+  });
+
   it("drops the sector columns only for a game known not to send them", () => {
     expect(noSectorsCaption(GT7)).toBe("GT7 sends no sector times.");
     expect(noSectorsCaption(AC)).toBe("Assetto Corsa sends no sector times.");
@@ -513,5 +526,31 @@ describe("review fixes (game selection round 1)", () => {
   it("the More games disclosure names what is inside", () => {
     expect(moreGamesLabel(pickerCards(CAT).more)).toBe("More games: ACC, iRacing, F1 24");
     expect(moreGamesLabel([])).toBe("More games");
+  });
+});
+
+describe("why the selected game is selected (integration plan 1.3, walk finding 13)", () => {
+  const names = new Map([[2, "Thomas"]]);
+  it("a seat change: the driver whose usual game it is, by name", () => {
+    expect(selectionReason({ source: "driver_default", by_driver_id: 2 }, GT7, names)).toBe("Selected because Thomas usually plays GT7");
+    // the server's name wins (it knows a driver this device has not loaded yet)
+    expect(selectionReason({ source: "driver_default", by_driver_id: 3, by_driver_name: "Jo" }, GT7, names)).toBe(
+      "Selected because Jo usually plays GT7",
+    );
+    expect(selectionReason({ source: "driver_default", by_driver_id: 2 }, GT7, (id) => (id === 2 ? "Sam" : null))).toBe(
+      "Selected because Sam usually plays GT7",
+    );
+    // an older server (no driver id) or a driver since deleted: still honest, nobody named
+    expect(selectionReason({ source: "driver_default" }, GT7, names)).toBe("Selected because the driver in the seat usually plays GT7");
+    expect(selectionReason({ source: "driver_default", by_driver_id: 9 }, F1, names)).toBe(
+      "Selected because the driver in the seat usually plays F1 25",
+    );
+  });
+
+  it("the command line says so; a choice made on the dashboard needs no reason; unknown is null", () => {
+    expect(selectionReason({ source: "cli" }, GT7)).toBe("Selected from the command line");
+    expect(selectionReason({ source: "dashboard" }, GT7)).toBeNull();
+    expect(selectionReason(null, GT7)).toBeNull();
+    expect(selectionReason({ source: "driver_default", by_driver_id: 2 }, null, names)).toBeNull();
   });
 });

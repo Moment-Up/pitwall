@@ -29,6 +29,7 @@ from pydantic import BaseModel, ConfigDict
 
 from pitwall import games
 from pitwall.core.runtime import Runtime
+from pitwall.drivers import NotFoundError
 from pitwall.storage import repo
 
 router = APIRouter(tags=["game"])
@@ -49,14 +50,24 @@ def _rt(request: Request) -> Runtime:
 
 
 def game_state(rt: Runtime) -> dict[str, Any]:
-    """``GameState`` for the running server (history suggestion only while nothing is selected or detected)."""
+    """``GameState`` for the running server (history suggestion only while nothing is selected or detected). A
+    driver's usual game also names that driver (``selected.by_driver_name``; None when the profile is gone)."""
     sel = rt.live.game_selection
     block = rt.live.game_block()
     history = None
     if sel is None and block.get("suggestion") is None:
         with rt.db.read() as c:
             history = games.history_suggestion(repo.list_sessions(c, HISTORY_SESSIONS))
-    return games.game_state(sel, block, rt.input_status(), rt.integration_configs(), history)
+    out = games.game_state(sel, block, rt.input_status(), rt.integration_configs(), history)
+    if sel is not None and out["selected"] is not None:
+        name = None
+        if sel.by_driver_id is not None:
+            try:
+                name = rt.drivers.get(sel.by_driver_id).name
+            except NotFoundError:
+                name = None
+        out["selected"]["by_driver_name"] = name
+    return out
 
 
 def entry_guide(rt: Runtime, entry: games.GameEntry) -> dict[str, Any] | None:

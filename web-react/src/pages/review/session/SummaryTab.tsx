@@ -80,7 +80,7 @@ export function SummaryTab({ session, analysis, analysisError, density, onOverri
   // lane motivation: the session's 3 things (an older server answers 404: the page stays as it was).
   const recap = useApi(motivationKeys.recap(session.id), () => motivationApi.recap(session.id));
   const things = useMemo(
-    () => (recap.data ? thingsView(recap.data, density.simpleWording) : null),
+    () => (recap.data ? thingsView(recap.data, density.simpleWording, { sessionLabel: true }) : null),
     [recap.data, density.simpleWording],
   );
   const work = useMemo(() => workOnItems(analysis, things?.workOnKey ?? null), [analysis, things?.workOnKey]);

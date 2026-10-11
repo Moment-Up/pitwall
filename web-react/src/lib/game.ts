@@ -513,11 +513,28 @@ export function sessionEntry(cat: Catalogue | null | undefined, row: Pick<Sessio
   return entryById(cat, row?.game_entry_id);
 }
 
-/** The sessions list's game chip: the entry's short label, else the raw game id ("f1_25" -> "F1 25"). */
-export function sessionGameLabel(cat: Catalogue | null | undefined, row: Pick<SessionRow, "game" | "game_entry_id">): string {
+/** The sessions list's game chip: the entry's short label, else the raw game id ("f1_25" -> "F1 25"). With
+ * `platform` (the session header; integration plan 5.11, the same words as the report's `games.display_label`):
+ * "F1 25 · PS5", the row's own platform when the entry is unknown, and just the game when neither is known. */
+export function sessionGameLabel(
+  cat: Catalogue | null | undefined,
+  row: Pick<SessionRow, "game" | "game_entry_id"> & Partial<Pick<SessionRow, "platform">>,
+  opts: { platform?: boolean } = {},
+): string {
   const e = sessionEntry(cat, row);
-  if (e) return e.short_label;
-  return row.game ? row.game.replace(/_/g, " ").toUpperCase() : "-";
+  const game = e ? e.short_label : row.game ? row.game.replace(/_/g, " ").toUpperCase() : "-";
+  if (!opts.platform || game === "-") return game;
+  const platform = e ? e.platform_label : row.platform ? platformWord(row.platform) : null;
+  return platform ? `${game} · ${platform}` : game;
+}
+
+const PLATFORM_WORDS: Readonly<Record<string, string>> = { ps5: "PS5", ps4: "PS4", xbox: "Xbox", pc: "PC" };
+
+/** A stored platform id in words ("ps5" -> "PS5"); an unknown one as sent, upper case. */
+function platformWord(p: string): string | null {
+  const k = p.trim().toLowerCase();
+  if (!k || k === "any" || k === "unknown") return null;
+  return PLATFORM_WORDS[k] ?? p.trim().toUpperCase();
 }
 
 /** Session › Laps: the caption when the session's game has no sector times, else null (columns stay). */
@@ -567,6 +584,38 @@ export function trackEmptyText(entry: GameEntry | null | undefined): string {
   const base = "The corners appear after your first clean lap.";
   const f = featureOf(entry, "track_map");
   return f?.status === "partial" && f.reason ? `${base} ${f.reason}` : base;
+}
+
+// ---------------------------------------------------------------------------------------------- selection reason
+
+/** Who chose the selected game, for "why is this selected?" (integration plan 1.3, walk finding 13): GET /api/game's
+ * `selected` (`source`, and for a driver's usual game `by_driver_id`, plus `by_driver_name` when the server sends it). */
+export interface SelectionWho {
+  source: string;
+  by_driver_id?: number | null;
+  by_driver_name?: string | null;
+}
+
+/**
+ * The sentence under the selected game on Setup › Game and under a mismatch alert:
+ *   driver_default -> "Selected because Thomas usually plays GT7" (the seat changed to a driver whose usual game it is;
+ *                     the driver by name from the server, else from `names`, else "the driver in the seat")
+ *   cli            -> "Selected from the command line"
+ *   dashboard      -> null (someone chose it here: nothing to explain)
+ * Null as well while the selection or its entry is unknown.
+ */
+export function selectionReason(
+  sel: SelectionWho | null | undefined,
+  entry: Pick<GameEntry, "short_label"> | null | undefined,
+  names: ReadonlyMap<number, string> | ((id: number) => string | null | undefined) = new Map(),
+): string | null {
+  if (!sel || !entry) return null;
+  if (sel.source === "cli") return "Selected from the command line";
+  if (sel.source !== "driver_default") return null;
+  const id = sel.by_driver_id ?? null;
+  const looked = id == null ? null : typeof names === "function" ? names(id) : names.get(id);
+  const who = sel.by_driver_name?.trim() || looked?.trim() || null;
+  return who ? `Selected because ${who} usually plays ${entry.short_label}` : `Selected because the driver in the seat usually plays ${entry.short_label}`;
 }
 
 // ---------------------------------------------------------------------------------------------- alerts (not Drive)

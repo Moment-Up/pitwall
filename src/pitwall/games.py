@@ -913,19 +913,31 @@ class Selection:
     id: str
     since_unix: float
     source: str  # "dashboard" | "cli" | "driver_default"
+    # source "driver_default": the driver whose usual game it is, so Setup › Game can say "Selected because Thomas
+    # usually plays GT7" (v0.2.0 plan 1.3). None for any other source, and from a settings.json written before it.
+    by_driver_id: int | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {"id": self.id, "since_unix": round(self.since_unix, 3), "source": self.source}
+        return {
+            "id": self.id,
+            "since_unix": round(self.since_unix, 3),
+            "source": self.source,
+            "by_driver_id": self.by_driver_id,
+        }
 
     def section(self) -> dict[str, Any]:
         """The ``SettingsStore`` section ``"game"``."""
-        return {"selected": self.id, "since_unix": self.since_unix, "source": self.source}
+        out: dict[str, Any] = {"selected": self.id, "since_unix": self.since_unix, "source": self.source}
+        if self.by_driver_id is not None:
+            out["by_driver_id"] = self.by_driver_id
+        return out
 
 
-def new_selection(entry_id: str, source: str) -> Selection:
+def new_selection(entry_id: str, source: str, by_driver_id: int | None = None) -> Selection:
     if entry(entry_id) is None:
         raise ValueError(f"unknown game {entry_id!r}: see GET /api/games (or uv run pitwall game list)")
-    return Selection(entry_id, time.time(), source if source in SOURCES else "dashboard")
+    src = source if source in SOURCES else "dashboard"
+    return Selection(entry_id, time.time(), src, by_driver_id if src == "driver_default" else None)
 
 
 def parse_selection(section: Mapping[str, Any] | None) -> Selection | None:
@@ -941,7 +953,10 @@ def parse_selection(section: Mapping[str, Any] | None) -> Selection | None:
     since = section.get("since_unix")
     since_f = float(since) if isinstance(since, int | float) and not isinstance(since, bool) else 0.0
     src = section.get("source")
-    return Selection(sel, since_f, src if isinstance(src, str) and src in SOURCES else "dashboard")
+    source = src if isinstance(src, str) and src in SOURCES else "dashboard"
+    by = section.get("by_driver_id")
+    by_id = by if isinstance(by, int) and not isinstance(by, bool) and source == "driver_default" else None
+    return Selection(sel, since_f, source, by_id)
 
 
 # ---------------------------------------------------------------------------------------------- detection
@@ -1013,6 +1028,20 @@ def entry_for_session(row: Mapping[str, Any] | None) -> GameEntry | None:
 def session_platform_known(row: Mapping[str, Any] | None) -> bool:
     p = None if not row else row.get("platform")
     return isinstance(p, str) and p in PLATFORM_WORDS
+
+
+def display_label(game: str | None, platform: str | None = None) -> str:
+    """A stored session's game for people: ``F1 25 · PS5`` (game, then the platform the game reported). The game alone
+    when the platform is unknown (GT7 on PS4 and PS5 sends the same packets: never guessed); ``Synthetic data`` for
+    generated telemetry; ``Unknown game`` when there is none. Used by the session report."""
+    if not game or game == Game.UNKNOWN.value:
+        return "Unknown game"
+    if game == Game.SYNTHETIC.value:
+        return "Synthetic data"
+    text = _GAMES.get(game)
+    name = text.text_name if text is not None else game
+    word = PLATFORM_WORDS.get(platform or "")
+    return f"{name} · {word}" if word else name
 
 
 def _platform_phrase(platform: str | None) -> str:

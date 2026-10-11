@@ -3,7 +3,8 @@
 //   - the line at turn-in / apex / track-out over the session ("Apex: 1.2 m wider on 3 of 4 laps");
 //   - how the car handled per phase, with "even on your best lap" (points at the car) or "not on your best lap"
 //     (points at how it was driven);
-//   - the top habits, verbatim from the backend (not the muted ones: brake figures with the braking assist on);
+//   - "Technique patterns" (was "Habits", like two other blocks; integration plan 1.3), the top ones verbatim from the
+//     backend (not the muted ones: brake figures with the braking assist on);
 //   - lock-ups and wheelspin over the laps ("ABS on: no lock-up data");
 //   - a mini line map, reference against the newest compared lap (intermediate and advanced), only when that lap's line
 //     differs by 1 m or more somewhere (smaller differences are invisible at this scale).
@@ -142,7 +143,7 @@ function Body({ corner, data, td }: { corner: string; data: TechniqueSession; td
       </div>
       {habits.length > 0 && (
         <div className="grid gap-1">
-          <span className="text-xs font-semibold text-muted">Habits</span>
+          <span className="text-xs font-semibold text-muted">Technique patterns</span>
           <ul className="m-0 grid list-none gap-1 p-0">
             {habits.map((h) => (
               <li key={`${h.metric}:${h.text}`} className="rounded-2xl bg-surface-secondary px-3 py-2 text-sm leading-snug">

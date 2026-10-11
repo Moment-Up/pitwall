@@ -226,6 +226,19 @@ describe("Ask (6.7)", () => {
     expect(text).not.toContain("The engineer is thinking");
   });
 
+  it("the suggestions follow what the session has (lib/review/ask.ts askSuggestions, integration plan 4.7)", () => {
+    cache.set(keys.history("a100cbc9b5bd"), fixtures.history());
+    const suggestions = (suggest: AskPanelProps["suggest"], aiPace = false) => {
+      const html = renderToStaticMarkup(createElement(AskPanel, { sessionId: "a100cbc9b5bd", aiPace, suggest }));
+      return html.slice(html.indexOf('aria-label="Suggested questions"'));
+    };
+    const plain = visible(suggestions(undefined));
+    const race = visible(suggestions({ strategy: true, technique: false, goals: false }));
+    expect(race).not.toBe(plain);
+    expect(race.length).toBeGreaterThan(plain.length);
+    expect(visible(suggestions({ technique: true }))).not.toBe(plain);
+  });
+
   it("an empty conversation invites a question", () => {
     cache.set(keys.history("empty"), []);
     const text = visible(renderToStaticMarkup(createElement(AskPanel, { sessionId: "empty" })));

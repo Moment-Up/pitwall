@@ -8,13 +8,17 @@
 // Game selection (spec 5.8): the selected game's card comes first and the other games sit under a collapsed "Other
 // games" disclosure; a selected game Pitwall cannot read gets a card saying so at the top, with Change game. Guides
 // are matched by the entry's guide_id. Without a selection (or with an older server) the page is as before.
+//
+// Once a real session exists (the game is connected), one line under the telemetry status points at the rig test:
+// "Test your rig: Setup › Validation" (integration plan 1.3, first-run step 6). It never nags: one line, no badge.
 
 import { Alert, Button, Card, Disclosure, Skeleton } from "@heroui/react";
+import { useRouter } from "../../hooks/stores";
 import { useApi } from "../../hooks/useApi";
 import { useGameCatalog, useSnapshotGame } from "../../hooks/useGame";
 import { CONNECT_KEYS, CONNECT_POLL_MS, connectApi, type GameGuide, type Integration } from "../../lib/endpoints/connect";
 import { entryById, readable, unreadableReason } from "../../lib/game";
-import { router } from "../../lib/router";
+import { href, router } from "../../lib/router";
 import { guideById, guideFor, orderedIntegrations } from "../../lib/setup/connect";
 import type { PageProps } from "../../routes";
 import { LiveSendersCard, OtherDevicesCard, RadioDevicesCard, TelemetryStatusCard } from "./connect/ConnectCards";
@@ -36,6 +40,7 @@ export function ConnectPage(_props: PageProps) {
   const { data: info, error, refresh } = useApi(CONNECT_KEYS.connect, connectApi.get, { intervalMs: CONNECT_POLL_MS, maxAgeMs: 0 });
   const catalogue = useGameCatalog();
   const snapGame = useSnapshotGame();
+  const hasRealSession = useRouter((s) => s.hasRealSession);
 
   if (!info) {
     if (error) {
@@ -85,6 +90,14 @@ export function ConnectPage(_props: PageProps) {
         </Card>
       )}
       <TelemetryStatusCard info={info} />
+      {hasRealSession === true && (
+        <p className="m-0 text-sm text-muted" data-connect-hint="validation">
+          Test your rig:{" "}
+          <a href={href("/setup/validation")} className="inline-flex min-h-11 items-center font-medium text-accent">
+            Setup › Validation
+          </a>
+        </p>
+      )}
       {/* Every grid here sizes its column with minmax(0, 1fr): an implicit `auto` column grows to its widest card's
           min-content (a long copy URL), and the right column's cards then ran ~23 px past the page at 1180 px. */}
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">

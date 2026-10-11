@@ -59,7 +59,10 @@ def test_totals_sessions_and_improvements() -> None:
         False,
     )
     assert (first["scope_text"], first["gain_ms"], first["new_track"]) == ("Suzuka · F1 Generic", None, True)
-    assert d["headline"] == "2 sessions, 4 laps, a new best at Austria"
+    assert (first["first_ms"], first["best_ms"], first["week_gain_ms"]) == (96_360, 96_360, None)
+    assert (gain["text"], first["text"]) == ("1:10.549, 1.196 s faster than before", "New this week: 1:36.360")
+    # the count says which rule it uses (plan 5.7): the session with no timed lap is not one of them
+    assert d["headline"] == "2 sessions with a timed lap, 4 laps, a new best at Austria"
     assert d["headline_simple"] == "You drove 2 times this week"
 
 
@@ -85,19 +88,21 @@ def test_markdown_snapshot() -> None:
     assert md == (
         "# Sam\\_\\*\\[x\\]\\#'s week: 5 to 11 October 2026\n"
         "\n"
-        "2 sessions, 4 laps, a new best at Austria.\n"
+        "2 sessions with a timed lap, 4 laps, a new best at Austria.\n"
         "\n"
         "3 clean laps · 5 min driving · 2 tracks\n"
         "\n"
-        "Week before: 1 session, 2 laps, 2 clean\n"
+        "Week before: 1 session with a timed lap, 2 laps, 2 clean\n"
         "\n"
         "## Sessions\n"
         "- Mon 5 Oct · Austria · Haas · Race · 3 laps (2 clean) · best 1:10.549 (new best)\n"
         "- Tue 6 Oct · Suzuka · F1 Generic · Race · 1 lap (1 clean) · best 1:36.360\n"
         "\n"
-        "## New tracks and improvements\n"
+        "## Improvements\n"
         "- Austria · Haas: 1:10.549, 1.196 s faster than before\n"
-        "- First clean laps at Suzuka · F1 Generic: 1:36.360\n"
+        "\n"
+        "## New tracks\n"
+        "- Suzuka · F1 Generic: New this week: 1:36.360\n"
         "\n"
         "## Goals\n"
         "- No goals set.\n"
@@ -108,7 +113,7 @@ def test_markdown_snapshot() -> None:
         "- 2 weeks in a row (Mon 5 Oct)\n"
         "\n"
         "## Streaks\n"
-        "- Weeks in a row with a session: 2 (best 2)\n"
+        "- Weeks in a row with a timed lap: 2 (best 2)\n"
         "- Best run of clean laps: 2\n"
         "- New best in a row at Austria · Haas: 1 session (best 1)\n"
     )
@@ -132,7 +137,47 @@ def test_first_laps_at_a_track_are_the_first_session_there_in_its_car() -> None:
     d = build(h)
     (first,) = d["improvements"]
     assert (first["scope_text"], first["best_ms"], first["session_id"]) == ("Austria · F1 Generic", 78_351, "g")
-    assert "- First clean laps at Austria · F1 Generic: 1:18.351\n" in d["markdown"]
+    assert "## New tracks\n- Austria · F1 Generic: New this week: 1:18.351\n" in d["markdown"]
+
+
+def test_a_new_track_says_how_much_faster_that_car_got_there_in_the_week() -> None:
+    """Plan 5.8: "New this week: 1:18.351 -> 1:17.155 (1.2 s faster)", from the session that first set a clean lap
+    there to that car's best at the end of the week; another car's lap there changes nothing."""
+    generic = {"car_id": "f1:team:41", "car_name": "F1 Generic"}
+    h = history(
+        (sess("g1", MON, **generic), laps("g1", [78_900, 78_351])),
+        (sess("h", MON + 3600), laps("h", [70_549])),  # the Haas: another car
+        (sess("g2", MON + DAY, **generic), laps("g2", [77_600, 77_155])),
+    )
+    d = build(h)
+    (first,) = d["improvements"]
+    assert (first["session_id"], first["first_ms"], first["best_ms"], first["week_gain_ms"]) == (
+        "g1",
+        78_351,
+        77_155,
+        1196,
+    )
+    assert (first["best_session_id"], first["text"]) == ("g2", "New this week: 1:18.351 → 1:17.155 (1.2 s faster)")
+    assert "- Austria · F1 Generic: New this week: 1:18.351 → 1:17.155 (1.2 s faster)\n" in d["markdown"]
+    page = digest_html(d)
+    assert "<h2>New tracks</h2>" in page and "<h2>Improvements</h2>" in page
+
+
+def test_unidentified_tracks_and_glitch_laps_are_never_new_tracks() -> None:
+    """The same rule as the first clean lap badge (plan 5.8): GT7's placeholder name, an unknown F1 track and a lap
+    under 30 s are not "new tracks"."""
+    gt7 = {"game": "gt7", "car_id": "gt7:car:3361", "car_name": None, "track_length_m": 3800.0}
+    h = history(
+        (
+            sess("u1", MON, track_id="gt7:sf:380", track_name="Unidentified GT7 circuit (3.80 km)", **gt7),
+            laps("u1", [105_151]),
+        ),
+        (sess("u2", MON + 60, track_id="f1:-1", track_name="Unknown track"), laps("u2", [90_000])),
+        (sess("u3", MON + 120, track_id="f1:13", track_name="Suzuka"), laps("u3", [23_222])),
+    )
+    d = build(h)
+    assert [i for i in d["improvements"] if i["new_track"]] == []
+    assert "## New tracks\n- None this week." in d["markdown"]
 
 
 def test_id_only_car_names_are_left_out() -> None:
@@ -148,5 +193,6 @@ def test_empty_week() -> None:
     assert d["totals"]["sessions"] == 0 and d["sessions"] == [] and d["improvements"] == []
     assert d["headline"] == d["headline_simple"] == "No driving this week."
     assert "## Sessions\n- None this week." in d["markdown"]
-    assert D.totals_line(d) is None and D.previous_line(d) == "Week before: 1 session, 1 lap, 1 clean"
+    assert D.totals_line(d) is None
+    assert D.previous_line(d) == "Week before: 1 session with a timed lap, 1 lap, 1 clean"
     assert D.md_escape("a_b*c") == "a\\_b\\*c"

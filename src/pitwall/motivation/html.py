@@ -13,8 +13,9 @@ from typing import Any
 
 from pitwall.motivation.digest import (
     IMPROVEMENTS_TITLE,
+    NEW_TRACKS_TITLE,
     goal_line,
-    improvement_line,
+    improvement_groups,
     possessive,
     previous_line,
     session_line,
@@ -56,6 +57,7 @@ def digest_html(d: dict[str, Any]) -> str:
     goals = [goal_line(g, simple) for g in d["goals"]["achieved"]]
     goals += [goal_line(a["goal"], simple, a["from_fraction"], a["to_fraction"]) for a in d["goals"]["active"]]
     badges = [f"{b['title_simple'] if simple else b['title']} ({short_date(b['earned_unix'])})" for b in d["badges"]]
+    gains, new_tracks = improvement_groups(d)
     included = (
         "Synthetic sessions are included and marked; replayed sessions are not."
         if d.get("include_synthetic")
@@ -72,7 +74,9 @@ def digest_html(d: dict[str, Any]) -> str:
         "<h2>Sessions</h2>",
         _ul([session_line(r) for r in d["sessions"]]),
         f"<h2>{e(IMPROVEMENTS_TITLE)}</h2>",
-        _ul([improvement_line(i) for i in d["improvements"]]),
+        _ul(gains),
+        f"<h2>{e(NEW_TRACKS_TITLE)}</h2>",
+        _ul(new_tracks),
         "<h2>Goals</h2>",
         _ul(goals) if goals else '<ul><li class="empty">No goals set.</li></ul>',
         "<h2>Badges this week</h2>",

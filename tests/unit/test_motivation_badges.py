@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from datetime import datetime
 
 from pitwall.motivation import badges as B
-from pitwall.motivation.model import GoalRow, History
+from pitwall.motivation.model import GoalRow, History, in_car
 from tests.unit.motivation_data import DAY, T0, collision, goal, history, lap, laps, penalty, sess
 
 WEEK = 7 * DAY
@@ -48,6 +48,63 @@ def test_under_time_names_the_car_and_hides_id_only_names() -> None:
     h2 = history((unknown[0], laps("d", [80_400])), (unknown[1], laps("e", [78_900])))
     (u2,) = [b for b in B.badges(h2) if b.kind == "under_time"]
     assert u2.title == "First time under 1:19 at Austria"  # an id-only name is left out, never shown
+
+
+def test_track_badges_need_an_identified_track_and_a_real_lap() -> None:
+    """Plan 5.8: no track badge for GT7's placeholder circuit, an unknown F1 track or a "lap" under 30 s; the other
+    badges (clean laps in a row) still count. Junk badges older code awarded simply stop being listed."""
+    gt7 = {"game": "gt7", "car_id": "gt7:car:3361", "car_name": None, "session_type": "unknown"}
+    h = history(
+        (
+            sess("g", T0, track_id="gt7:sf:380", track_name="Unidentified GT7 circuit (3.80 km)", **gt7),
+            laps("g", [105_151, 104_000, 103_500]),
+        ),
+        (sess("u", T0 + 60, track_id="f1:-1", track_name="Unknown track"), laps("u", [90_000, 89_000])),
+        (sess("x", T0 + 120, track_id="f1:99", track_name="Unknown track (id 99)"), laps("x", [90_000, 89_000])),
+        (sess("n", T0 + 180, track_id="f1:13", track_name=None), laps("n", [90_000])),
+        (sess("t", T0 + 240, track_id="f1:13", track_name="Suzuka"), laps("t", [23_222, 22_000])),
+    )
+    got = keys(h)
+    assert not [k for k in got if k.startswith(("first_clean_lap", "under_time", "pb_streak"))]
+    assert "clean_streak:3" in got
+    assert B.streaks(h, T0 + DAY)["pb"] == []  # no PB streak at a placeholder or a glitch either
+    # a real lap at the same, identified track earns the first clean lap (the glitch did not use it up)
+    h2 = history((sess("t", T0, track_id="f1:13", track_name="Suzuka"), laps("t", [23_222, 96_360])))
+    (first,) = [b for b in B.badges(h2) if b.kind == "first_clean_lap"]
+    assert (first.title, first.detail, first.lap_id) == (
+        "First clean lap at Suzuka",
+        "1:36.360 on lap 2 in the Haas",
+        h2.laps["t"][1].id,
+    )
+
+
+def test_raw_car_ids_are_never_shown() -> None:
+    """An older F1 build stored the team id as the car name ("team_214"); GT7 sends only a car code."""
+    old = sess("o", T0, car_id="f1:team:214", car_name="team_214")
+    h = history(
+        (old, laps("o", [80_400])), (sess("p", T0 + 60, car_id="f1:team:214", car_name="team_214"), laps("p", [78_900]))
+    )
+    texts = [t for b in B.badges(h) for t in (b.title, b.title_simple, b.detail or "")]
+    assert texts and not [t for t in texts if "team_214" in t]
+    for raw in ("team_214", "car_12", "gt7:car:3361", "f1:team:7"):
+        assert in_car(raw) == ""
+    assert in_car("Art GP '24") == " in the Art GP '24" and in_car("McLaren") == " in the McLaren"
+
+
+def test_fact_keys_match_the_recap() -> None:
+    """The Session complete card shows each fact once (plan 2.6): badges carry the recap's keys."""
+    a, b = laps("a", [72_300, 71_800]), laps("b", [71_900, 70_549])
+    h = history((sess("a", T0), a), (sess("b", T0 + 60), b))
+    got = {x.kind: x.to_dict()["fact_key"] for x in B.badges(h)}
+    assert got["first_clean_lap"] == "first_clean:f1_25:f1:17:f1:team:7"
+    assert got["under_time"] == f"pb:{b[1].id}"
+    c = laps("c", [70_400])  # a second new best in a row: the streak is its own fact, as the recap's progress item
+    h3 = history((sess("a", T0), a), (sess("b", T0 + 60), b), (sess("c", T0 + 120), c))
+    (streak,) = [x for x in B.badges(h3) if x.kind == "pb_streak"]
+    assert streak.to_dict()["fact_key"] == "pb_streak:f1_25:f1:17:f1:team:7:2"
+    reached = goal("clean_streak", 2, gid=4, status="achieved", achieved_unix=T0 + 100, achieved_session_id="b")
+    (g,) = [x for x in B.badges(h, [reached]) if x.kind == "goals_reached"]
+    assert g.to_dict()["fact_key"] == "goal:4"
 
 
 def test_clean_streak_levels_and_ten_clean() -> None:

@@ -16,6 +16,7 @@ import {
   signedSeconds,
   spreadSeconds,
   timeOfDay,
+  readableCar,
   trackLabel,
   weatherText,
   whenText,
@@ -197,5 +198,19 @@ describe("engineer answer source chip (spec 6.7)", () => {
       "llm_down",
     );
     expect(ANSWER_SOURCE_LABEL.llm_down).toBe("LLM down · deterministic");
+  });
+});
+
+describe("names a driver can read (integration plan 5.8)", () => {
+  it("a raw id stored as a car or track name is never shown", () => {
+    for (const raw of ["team_214", "car_12", "gt7:car:123", "f1:team:7", "Unknown team (id 214)", "", "  ", null, undefined]) {
+      expect(readableCar(raw), String(raw)).toBeNull();
+    }
+    expect(readableCar(" Haas ")).toBe("Haas");
+    expect(readableCar("Porsche 911 GT3 RS (992) '22")).toBe("Porsche 911 GT3 RS (992) '22");
+    expect(trackLabel({ track_name: "unknown_-1" })).toBe("Unknown track");
+    expect(trackLabel({ track_name: "f1:-1" })).toBe("Unknown track");
+    expect(trackLabel({ track_name: "Unidentified GT7 circuit (0.92 km)" })).toBe("Unidentified GT7 circuit (0.92 km)");
+    expect(trackLabel({ track_name: "Silverstone (Reverse)" })).toBe("Silverstone (Reverse)");
   });
 });

@@ -1,6 +1,7 @@
-// Badges and streaks on Review › Progress (lane motivation, spec 4.7 and 9 BadgesCard): four streak tiles (weeks in
-// a row, sessions this week, best clean run, PB streak) and the badge grid, newest first. The server works them out
-// from stored driving when asked (nothing extra is stored); real driving only. Pure; tested in plain node.
+// Badges and streaks on Review › Goals (lane motivation, spec 4.7 and 9 BadgesCard): four streak tiles (weeks in a
+// row, sessions this week, best clean run, PB streak) and the badge grid, newest first: the one full list of badges
+// (integration plan 5.8). The server works them out from stored driving when asked (nothing extra is stored); real
+// driving only, and a session counts when it has a timed lap (the tiles say so, plan 5.7). Pure; tested in plain node.
 
 import type { Badge, BadgesResponse, Streaks } from "../endpoints/motivation";
 import { count, shortDay } from "./format";
@@ -25,13 +26,13 @@ export function streakTiles(s: Streaks | null | undefined): StreakTile[] {
       key: "weeks",
       title: "Weeks in a row",
       value: w ? w.current_weeks : null,
-      sub: w ? (w.best_weeks > w.current_weeks ? `best ${count(w.best_weeks, "week")}` : "weeks with at least one session") : "-",
+      sub: w ? (w.best_weeks > w.current_weeks ? `best ${count(w.best_weeks, "week")}` : "weeks with a timed lap") : "-",
     },
     {
       key: "week_sessions",
       title: "Sessions this week",
       value: w ? w.this_week_sessions : null,
-      sub: "from Monday",
+      sub: "with a timed lap, from Monday",
     },
     {
       key: "clean_run",

@@ -170,7 +170,7 @@ def test_fresh_database_gets_default_driver_active(svc: DriverService, store: tu
     drivers = svc.list_drivers()
     assert [d.name for d in drivers] == [DEFAULT_DRIVER_NAME]
     james = drivers[0]
-    assert james.preferences.skill_level == "advanced"
+    assert james.preferences.skill_level == "intermediate"  # a fresh install starts in the middle (decision 5)
     assert james.preferences.coaching_intensity == "normal"
     assert james.preferences.initials == "D"
     assert svc.active_id == james.id == svc.default_id
@@ -316,6 +316,18 @@ def test_create_validates_and_picks_distinct_colours(svc: DriverService) -> None
             svc.create(bad_name)
 
 
+def test_the_first_run_level_never_touches_an_existing_profile(store: tuple[Database, DbWriter]) -> None:
+    """Decision 5: only a fresh install's first profile starts at intermediate. A database that already has a
+    driver (an older install's "advanced" one) keeps it as it is on every later start, and gets no second profile."""
+    first = DriverService(*store)
+    james = first.active
+    assert james is not None and james.preferences.skill_level == "intermediate"
+    first.update(james.id, skill_level="advanced")  # as a 0.1.0 install created it
+    again = DriverService(*store)
+    assert [(d.id, d.preferences.skill_level) for d in again.list_drivers()] == [(james.id, "advanced")]
+    assert again.default_id == james.id
+
+
 def test_update_is_partial_and_refreshes_the_active_cache(svc: DriverService) -> None:
     seen: list[str | None] = []
     svc.subscribe(lambda d: seen.append(None if d is None else d.preferences.coaching_intensity))
@@ -323,7 +335,7 @@ def test_update_is_partial_and_refreshes_the_active_cache(svc: DriverService) ->
     assert james is not None
     updated = svc.update(james.id, coaching_intensity="quiet")
     assert updated.preferences.coaching_intensity == "quiet"
-    assert updated.preferences.skill_level == "advanced" and updated.name == DEFAULT_DRIVER_NAME  # untouched
+    assert updated.preferences.skill_level == "intermediate" and updated.name == DEFAULT_DRIVER_NAME  # untouched
     assert svc.active is not None and svc.active.preferences.coaching_intensity == "quiet"
     assert seen == ["quiet"]  # listeners (the radio) hear about the active driver's change
     svc.create("Sam")
@@ -859,7 +871,7 @@ def test_apply_coaching_limits_filters_and_budgets() -> None:
 def test_limits_for_and_to_dict(svc: DriverService) -> None:
     sam = svc.create("Sam", skill_level="beginner")
     active = svc.limits_for()
-    assert isinstance(active, CoachingLimits) and active.skill_level == "advanced"
+    assert isinstance(active, CoachingLimits) and active.skill_level == "intermediate"  # the fresh-install profile
     sam_limits = svc.limits_for(sam.id)
     assert sam_limits is not None and sam_limits.max_per_lap == 1
     assert svc.limits_for(999) is None

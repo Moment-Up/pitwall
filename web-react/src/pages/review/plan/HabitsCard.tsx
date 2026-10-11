@@ -1,5 +1,6 @@
-// Habits (spec 6.8, Pro ListView): the corrections that carry the coach's consistency string ("4 of the last 5
-// laps"), each with the corner and the coach's text verbatim (`text_simple` for simple wording).
+// "Repeats lap after lap" (spec 6.8, was "Habits"; integration plan 1.3, Pro ListView): the corrections that carry the
+// coach's consistency string ("4 of the last 5 laps"), each with the corner and the coach's text verbatim
+// (`text_simple` for simple wording).
 
 import { Card, Chip } from "@heroui/react";
 import { ListView } from "@heroui-pro/react";
@@ -11,15 +12,15 @@ export function HabitsCard({ items, simple, glossary }: { items: readonly Habit[
   return (
     <Card className="gap-3 p-5">
       <Card.Header className="flex-row items-center justify-between gap-2">
-        <Card.Title className="text-base font-semibold">Habits</Card.Title>
+        <Card.Title className="text-base font-semibold">Repeats lap after lap</Card.Title>
         {glossary && <Glossary term="consistency" className="-my-2 -mr-2" />}
       </Card.Header>
       {items.length === 0 ? (
         <p className="m-0 text-sm text-muted">
-          No habits in the last session here: nothing the coach saw lap after lap.
+          Nothing repeated in the last session here: nothing the coach saw lap after lap.
         </p>
       ) : (
-        <ListView aria-label="Habits" items={[...items]} variant="secondary">
+        <ListView aria-label="Repeats lap after lap" items={[...items]} variant="secondary">
           {(h) => (
             <ListView.Item id={h.item.key} textValue={`${h.label} ${itemText(h.item, simple)}`}>
               <ListView.ItemContent className="items-start">

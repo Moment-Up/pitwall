@@ -1,6 +1,7 @@
-// Badges and streaks on Review › Progress (lane motivation, spec 9 BadgesCard): a Pro KPIGroup of four streak tiles
-// (weeks in a row, sessions this week, best clean run, new bests in a row), then the badges, newest first, six shown
-// and Show all. Worked out by the server from the driver's real driving when asked; nothing is stored or invented.
+// Badges and streaks on Review › Goals (lane motivation, spec 9 BadgesCard; moved from Progress, integration plan
+// 1.3): a Pro KPIGroup of four streak tiles (weeks in a row, sessions this week, best clean run, new bests in a row),
+// then the badges, newest first, six shown and Show all: the one full list of badges. Worked out by the server from
+// the driver's real driving when asked; nothing is stored or invented.
 
 import { Medal } from "@gravity-ui/icons";
 import { Button, Card, Skeleton } from "@heroui/react";

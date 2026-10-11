@@ -579,7 +579,7 @@ class Runtime:
         sel = self.live.game_selection
         if game is None or (sel is not None and sel.id == game) or self.live.connection()["status"] == "live":
             return
-        self.store.replace(games.SECTION, games.new_selection(game, "driver_default").section())
+        self.store.replace(games.SECTION, games.new_selection(game, "driver_default", by_driver_id=new_id).section())
         log.info("game %s selected: the usual game of driver %s", game, new_id)
 
     def close(self) -> None:

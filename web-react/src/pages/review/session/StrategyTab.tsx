@@ -1,6 +1,7 @@
-// Session › Strategy (lane "strategy"; strategy spec 10): the race as the strategy engine saw it, from GET
-// /api/sessions/{id}/strategy. Races only (SessionPage shows the tab only for races; a direct link to another
-// session shows the empty state). Top to bottom:
+// Session › Race (route id `strategy`; lane "strategy"; strategy spec 10; labelled Race by integration plan 1.4): the
+// race as the strategy engine saw it, from GET /api/sessions/{id}/strategy. SessionPage lists the tab only for races
+// with strategy records and sends a link to it elsewhere to Summary; the empty states below are for the moment before
+// that is known. Top to bottom:
 //   1. Pro KPIGroup    "P8 → P3" · "Stops 1 (L24)" · "Pit loss 18.9 s (1 measured)" · "Fuel at the flag +0.4 laps"
 //   2. Race timeline   position (↑ better) and gaps, stops, SC / VSC bands, stint bar, weather row
 //   3. Stints          Pro DataGrid (two-line ListView rows below 600 px)

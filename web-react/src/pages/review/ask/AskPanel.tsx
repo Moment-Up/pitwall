@@ -134,9 +134,12 @@ export interface AskPanelProps {
   header?: ReactNode;
   /** The session was raced against the AI (it has an AI difficulty): offer the pace vs AI question. */
   aiPace?: boolean;
+  /** What else the session (and its driver) has, so each suggestion offered can be answered (lib/review/ask.ts
+   * askSuggestions, integration plan 4.7): technique data, a race with strategy records, active goals. */
+  suggest?: { technique?: boolean; strategy?: boolean; goals?: boolean };
 }
 
-export function AskPanel({ sessionId, initialQuestion, header, aiPace = false }: AskPanelProps) {
+export function AskPanel({ sessionId, initialQuestion, header, aiPace = false, suggest }: AskPanelProps) {
   const history = useHistory(sessionId);
   const [asked, setAsked] = useState<ChatEntry[]>([]);
   const [question, setQuestion] = useState(initialQuestion ?? "");
@@ -216,7 +219,7 @@ export function AskPanel({ sessionId, initialQuestion, header, aiPace = false }:
       <PromptSuggestion aria-label="Suggested questions">
         {/* Chips in a row (spec 6.7, mockup), not Pro's default two-column list: Pro's CSS is unlayered, hence the `!`. */}
         <PromptSuggestion.Items className="flex! flex-wrap gap-2">
-          {askSuggestions({ aiPace }).map((s) => (
+          {askSuggestions({ ...suggest, aiPace }).map((s) => (
             <PromptSuggestion.Item
               key={s}
               showEndIcon={false}

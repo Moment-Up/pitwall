@@ -43,7 +43,7 @@ from pitwall.storage.db import Database, DbWriter
 
 if TYPE_CHECKING:
     from pitwall.core.live import LiveState
-    from pitwall.core.session_analysis import SessionAnalyzer
+    from pitwall.core.session_analysis import SessionAnalysis, SessionAnalyzer
 
 log = logging.getLogger(__name__)
 
@@ -466,8 +466,9 @@ class MotivationService:
         )
 
     # ------------------------------------------------------------------ recap
-    def recap(self, session_id: str) -> dict[str, Any] | None:
-        """``SessionRecap`` for a session, or None when it does not exist."""
+    def recap(self, session_id: str, *, analysis: SessionAnalysis | None = None) -> dict[str, Any] | None:
+        """``SessionRecap`` for a session, or None when it does not exist. ``analysis``: the session's analysis when
+        the caller has it already (the session report), so it is not computed twice."""
         with self.db.read() as c:
             row = repo.motivation_session(c, session_id)
             if row is None:
@@ -488,7 +489,9 @@ class MotivationService:
             why = R.WHY_REPLAY
         elif driver is None:
             why = R.WHY_NO_OWNER
-        sa = self.analyzer.analyse(session_id)
+        sa = analysis if analysis is not None and analysis.session.get("id") == session_id else None
+        if sa is None:
+            sa = self.analyzer.analyse(session_id)
         limits = driver.coaching if driver is not None else coaching_limits("advanced")
         inp = R.RecapInput(
             session=s,

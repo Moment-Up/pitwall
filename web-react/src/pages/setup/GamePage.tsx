@@ -3,7 +3,9 @@
 //
 //   [platform / UDP format mismatch, with Switch]          (a game mismatch and a live suggestion: the shell's GameAlert)
 //   [You last drove F1 25 on PS5.  Yes · Choose another]   (history suggestion, nothing selected)
-//   What are you playing?   one card per game, platform buttons with their support words, More games
+//   What are you playing?   one card per game, platform buttons with their support words, More games; the selected
+//                           card says why when a seat change or the command line chose it
+//                           ("Selected because Thomas usually plays GT7", integration plan 1.3)
 //   Telemetry input (state, console IP, Open Connect, other inputs)   │   What GT7 sends (23 features, grouped)
 //
 // Data: GET /api/games (catalogue, once per app load), GET /api/game (refetched when the selection changes and every
@@ -12,11 +14,12 @@
 // the server's (capabilities.py / AdapterInfo), shown verbatim and never upgraded.
 
 import { Alert, Button, Skeleton } from "@heroui/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useDrivers } from "../../hooks/stores";
 import { useApi } from "../../hooks/useApi";
 import { selectGame, useGameState, useSnapshotGame } from "../../hooks/useGame";
 import { GAME_KEYS, GAMES_MAX_AGE_MS, GameApiError, gameApi, type GameAction } from "../../lib/endpoints/game";
-import { entryById, readable } from "../../lib/game";
+import { entryById, readable, selectionReason } from "../../lib/game";
 import type { PageProps } from "../../routes";
 import { useWide } from "../settings/useWide";
 import { FeaturesCard } from "./game/FeaturesCard";
@@ -59,6 +62,8 @@ export function GamePage(_props: PageProps) {
   const state = useGameState(true, STATE_POLL_MS);
   const snapGame = useSnapshotGame();
   const wide = useWide();
+  const drivers = useDrivers((s) => s.drivers);
+  const names = useMemo(() => new Map(drivers.map((d) => [d.id, d.name])), [drivers]);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ id: string; actions: GameAction[] } | null>(null);
@@ -92,6 +97,8 @@ export function GamePage(_props: PageProps) {
 
   const selectedId = state.data ? (state.data.selected?.id ?? null) : (snapGame?.selected_id ?? null);
   const entry = entryById(catalogue, selectedId);
+  // Only while GET /api/game describes the selection on screen (not one just replaced by the snapshot).
+  const reason = state.data?.selected?.id === selectedId ? selectionReason(state.data?.selected, entry, names) : null;
 
   async function choose(id: string, consoleIp?: string | null): Promise<string | null> {
     setPending(id);
@@ -164,6 +171,7 @@ export function GamePage(_props: PageProps) {
         result={result}
         error={error}
         otherInputs={state.data?.other_inputs}
+        reason={reason}
       />
       {state.error && !state.data && (
         <p role="status" className="m-0 text-sm text-warning">

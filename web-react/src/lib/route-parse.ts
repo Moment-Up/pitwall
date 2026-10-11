@@ -31,16 +31,19 @@ export const AREA_IDS: readonly AreaId[] = ["drive", "review", "setup", "setting
  * component for each (a unit test keeps the two in step). */
 export const AREA_PAGES: Readonly<Record<AreaId, readonly string[]>> = {
   drive: ["coach", "car", "track", "radio"],
-  review: ["sessions", "coaching", "progress", "ask"],
+  // "goals": goals, the week, streaks and badges, off Progress (integration plan 1.1, decision 6)
+  review: ["sessions", "coaching", "progress", "goals", "ask"],
   setup: ["game", "connect", "rig", "car", "validation"], // "validation": validation kit (lane validate)
   settings: ["drivers", "radio", "ai", "display", "system"],
 };
 
-/** Default sub-page per area (spec 12.2): where an area lands with nothing remembered. */
+/** Default sub-page per area (spec 12.2): where an area lands with nothing remembered. Setup: Game, first in Setup
+ * (integration plan 1.1); with the server's facts Setup still opens on Game while no game is selected, then on
+ * Connect until a real session exists (`landingPage`). */
 export const DEFAULT_PAGE: Readonly<Record<AreaId, string>> = {
   drive: "coach",
   review: "sessions",
-  setup: "rig",
+  setup: "game",
   settings: "drivers",
 };
 

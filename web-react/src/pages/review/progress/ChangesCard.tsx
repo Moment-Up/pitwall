@@ -1,6 +1,7 @@
 // "What changed?" (spec 6.9, D5): corner trends as small multiples (one Pro LineChart per corner: the mean time lost
 // against the driver's current reference in each compared session, higher = less lost) with a TrendChip, one computed
-// sentence, and the coach's habit counts per session. Before D5: "-" and why.
+// sentence, and what the coach flagged per session (the counts of each kind of point; "Habits" belongs to the Coaching
+// plan's "Repeats lap after lap" only, integration plan 1.3). Before D5: "-" and why.
 
 import { Button, Card } from "@heroui/react";
 import { TrendChip } from "@heroui-pro/react";
@@ -118,7 +119,7 @@ export function ChangesCard({
       )}
       {available && habits.length > 0 && (
         <div className="grid gap-2 pt-1">
-          <h3 className="m-0 text-[15px] font-semibold">Habits the coach counted</h3>
+          <h3 className="m-0 text-[15px] font-semibold">What the coach flagged</h3>
           <ul className="m-0 grid list-none gap-1.5 p-0">
             {habits.map((h) => (
               <li key={h.kind} className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm">

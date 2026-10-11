@@ -21,7 +21,7 @@ describe("page registry (src/routes.tsx)", () => {
   it("labels follow the spec (2.1)", () => {
     expect(Object.fromEntries(AREAS.map((a) => [a.label, a.pages.map((p) => p.label)]))).toEqual({
       Drive: ["Coach", "Car", "Track", "Radio"],
-      Review: ["Sessions", "Coaching", "Progress", "Ask"],
+      Review: ["Sessions", "Coaching", "Progress", "Goals", "Ask"],
       Setup: ["Game", "Connect", "Rig", "Car setup", "Validation"],
       Settings: ["Drivers", "Radio & voice", "AI engineer", "Display", "System"],
     });

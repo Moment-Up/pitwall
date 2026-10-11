@@ -11,6 +11,7 @@ Wording is plain British English. Lap times are ``m:ss.SSS``; a lap-time spread 
 from __future__ import annotations
 
 import math
+import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
@@ -318,13 +319,28 @@ class Scope:
 
 
 UNKNOWN_CAR_PREFIX = "Unknown team"  # F1's label for a team id its spec does not name ("Unknown team (id 214)")
+# Raw ids stored as a car name by older adapters or other games: "team_214", "car_12", "gt7:car:123", "f1:team:7".
+_RAW_CAR_ID = re.compile(r"^(?:(?:team|car)_\d+|[a-z0-9_]+(?::[a-z0-9_.-]+)+)$", re.I)
+# Track names that do not identify a track: F1's "Unknown track" / "Unknown track (id 99)" (adapters/f1/enums.py)
+# and GT7's "Unidentified GT7 circuit (3.80 km)" (adapters/gt7/adapter.py: GT7 sends no track id).
+UNKNOWN_TRACK_NAMES = ("Unknown track", "Unidentified GT7 circuit")
 
 
 def display_car(name: str | None) -> str | None:
-    """A car name a driver can read, or None: an id-only label ("Unknown team (id 214)") is left out."""
-    if not name or name.startswith(UNKNOWN_CAR_PREFIX):
+    """A car name a driver can read, or None: an id-only label ("Unknown team (id 214)") or a raw id ("team_214",
+    "gt7:car:123") is left out, never shown."""
+    if not name or name.startswith(UNKNOWN_CAR_PREFIX) or _RAW_CAR_ID.match(name.strip()):
         return None
     return name
+
+
+def track_identified(track_id: str | None, track_name: str | None) -> bool:
+    """The track is known by id *and* has a readable name: not an ``unknown_…`` / ``…:-1`` id, not F1's "Unknown
+    track (id n)" and not GT7's placeholder "Unidentified GT7 circuit (…)". Badges and the digest's new tracks name
+    only such tracks."""
+    if not track_id or track_id.startswith("unknown") or track_id.endswith(":-1"):
+        return False
+    return bool(track_name) and not str(track_name).startswith(UNKNOWN_TRACK_NAMES)
 
 
 def in_car(name: str | None) -> str:

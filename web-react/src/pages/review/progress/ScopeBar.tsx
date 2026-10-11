@@ -53,7 +53,7 @@ export function ScopeBar({ s, actions }: { s: ReviewScope; actions?: ReactNode }
   const track = scope?.track ?? null;
   const carItems = track
     ? [
-        ...track.cars.map((c) => ({ id: c.id, text: c.named ? c.label : `Unnamed car (${c.label})` })),
+        ...track.cars.map((c) => ({ id: c.id, text: c.label })),
         { id: ANY_CAR, text: "Any car" },
       ]
     : [];
@@ -110,7 +110,7 @@ export function ScopeBar({ s, actions }: { s: ReviewScope; actions?: ReactNode }
         {track && !carChoice && (
           <Chip size="lg" variant="soft" className="min-h-11">
             <Chip.Label>
-              {scope?.carLabel ? (scope.carNamed ? scope.carLabel : `Unnamed car (${scope.carLabel})`) : "Car unknown"}
+              {scope?.carLabel ?? "Car unknown"}
             </Chip.Label>
           </Chip>
         )}

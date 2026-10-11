@@ -99,7 +99,8 @@ describe("3 things from this session (Summary, after the tiles)", () => {
     // right after the KPI tiles, before the Work on list
     expect(text.indexOf("3 things from this session")).toBeLessThan(text.indexOf("More to work on"));
     expect(text).toContain("Went well New personal best at Austria in the Haas: 1:10.549 on lap 64, 1.196 s faster than before.");
-    expect(text).toContain("One to work on Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h)");
+    // the label says which question it answers (integration plan 5.1): this session, not the last lap or the radio's plan
+    expect(text).toContain("One to work on (this session) Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h)");
     expect(text).toContain("Seen on 9 of 9 laps compared with your reference");
     expect(text).toContain("Progress Session 12 this week, 41 laps so far.");
     expect(text).toContain("See it on the lap");

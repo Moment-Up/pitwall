@@ -1,15 +1,18 @@
 // Review › Coaching plan (spec 6.8, `#/review/coaching?driver=&track=&car=`): per driver (Pro Segment with avatars)
-// and track + car (Selects), what they are working on now (up to 3 corners, the coach's latest point verbatim, a
-// TrendChip over the last sessions once D5 sends corner means, See it), their habits (the coach's consistency
-// strings), what the radio will focus on (the live cue plan, only while they are in the seat at this track), and
-// what was recently fixed (D5).
+// and track + car (Selects), top to bottom (integration plan 1.3; the labels say which question each answers):
+//   1. "This session's focus" (was "Working on now"): up to 3 corners from the plan session, led by the corner its
+//      recap names as "One to work on (this session)" so the Summary and this page agree (plan 5.1); the coach's
+//      latest point verbatim, a TrendChip over the last sessions once D5 sends corner means, See it;
+//   2. "Repeats lap after lap" (was "Habits": the coach's consistency strings), "Radio calls next run" (was "The radio
+//      will focus on": the live cue plan, only while they are in the seat at this track) and what was recently fixed
+//      (D5).
 //
 // The plan is read from the newest session here that was compared with the reference (D5), else the newest session.
 // Coaching text is the coach's own (analysis/coaching.py); this page adds neutral words only. Density by the VIEWED
 // driver's profile (6.10): simple wording and 18 px text for beginners.
 //
 // "Suggested AI difficulty" (AI pace spec 8) when the server has a suggestion for this driver at this track (the same
-// request as Progress's "Against the AI"), first beside the habits and the radio focus; left out on a server without
+// request as Progress's "Against the AI"), first beside the repeats and the radio calls; left out on a server without
 // AI pace.
 
 import { ChartLine, Speedometer } from "@gravity-ui/icons";
@@ -17,6 +20,9 @@ import { Alert, Button, Card, Skeleton } from "@heroui/react";
 import { EmptyState } from "@heroui-pro/react";
 import { useMemo } from "react";
 import { useLive } from "../../hooks/stores";
+import { useApi } from "../../hooks/useApi";
+import { motivationApi, motivationKeys } from "../../lib/endpoints/motivation";
+import { WORK_ON_SESSION_HEADING } from "../../lib/motivation/recap";
 import { router } from "../../lib/router";
 import { aiCarNamesByClass, suggestionsFor } from "../../lib/review/aipace";
 import { apexGameM } from "../../lib/review/compare";
@@ -43,8 +49,13 @@ export function CoachingPage({ route }: PageProps) {
   const d5 = tier.kind === "d5" ? tier.data : null;
   const plan = useMemo(() => (tier.kind === "rows" && tier.why === "loading" ? null : planSession(points)), [points, tier]);
   const { data: analysis, error: analysisError } = useAnalysis(plan?.sessionId ?? null);
+  // The plan session's own "One to work on" (lane motivation recap): its corner leads "This session's focus", as on the
+  // session's Summary. An older server (404) or a recap still loading: the coach's own order.
+  const recap = useApi(plan ? motivationKeys.recap(plan.sessionId) : null, () => motivationApi.recap(plan!.sessionId));
+  const workOn = recap.data?.things?.work_on;
+  const focusKey = workOn?.source === "observation" ? (workOn.observation_key ?? null) : null;
   // Only what the radio focus needs, as a string: snapshots arrive 20 times a second.
-  const focusKey = useLive((st) => liveFocusKey(st.snap as Parameters<typeof liveFocusKey>[0], st.connected));
+  const liveKey = useLive((st) => liveFocusKey(st.snap as Parameters<typeof liveFocusKey>[0], st.connected));
   const threshold = viewed?.coaching?.min_impact_s ?? DEFAULT_THRESHOLD_S;
   // The suggested AI level here (the same request as Progress's "Against the AI").
   const ai = useAiPace(viewed?.id ?? null, scope);
@@ -61,16 +72,16 @@ export function CoachingPage({ route }: PageProps) {
     if (!scope || !viewed) return null;
     const planId = plan?.sessionId ?? null;
     return {
-      working: workingOnNow(analysis, points, planId, threshold),
+      working: workingOnNow(analysis, points, planId, threshold, undefined, focusKey),
       habits: habits(analysis),
       fixed: recentlyFixed(points, d5?.corner_text, scope.track.game, scope.track.trackId, threshold),
-      focus: radioFocus(parseLiveFocus(focusKey, s.seatedId), viewed, {
+      focus: radioFocus(parseLiveFocus(liveKey, s.seatedId), viewed, {
         game: scope.track.game,
         trackId: scope.track.trackId,
         trackLabel: scope.track.label,
       }),
     };
-  }, [scope, viewed, plan, analysis, points, d5, threshold, focusKey, s.seatedId]);
+  }, [scope, viewed, plan, analysis, points, d5, threshold, focusKey, liveKey, s.seatedId]);
 
   if (!s.driversLoaded || (s.viewed && !s.rows && !s.rowsError)) return <PlanSkeleton />;
   if (s.rowsError && !s.rows) {
@@ -144,8 +155,8 @@ export function CoachingPage({ route }: PageProps) {
             </p>
           )}
 
-          <section aria-label="Working on now" className="grid gap-3">
-            <h2 className="m-0 text-lg font-semibold">Working on now</h2>
+          <section aria-label="This session's focus" className="grid gap-3">
+            <h2 className="m-0 text-lg font-semibold">This session's focus</h2>
             {!plan ? (
               <p className="m-0 text-sm text-muted">No session here with laps yet.</p>
             ) : !analysis && !analysisError ? (
@@ -174,6 +185,7 @@ export function CoachingPage({ route }: PageProps) {
                 {view.working.map((w) => (
                   <WorkingOnCard
                     key={w.item.key}
+                    eyebrow={w.item.key === focusKey ? WORK_ON_SESSION_HEADING : null}
                     w={w}
                     sessionId={plan.sessionId}
                     refLapId={analysis.ref_lap_id}

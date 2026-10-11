@@ -1,7 +1,7 @@
-// The scope Progress (6.9) and the Coaching plan (6.8) share: who (`?driver=`, default the seated driver), where
-// (`?track=`, default their newest track) and in what (`?car=`, default the newest car there, `any` = every car), plus
-// the data both read: the driver's session rows (lap level, always) and D5's progress (when the server has it).
-// The route is rewritten (no history entry) so it always names what is on screen.
+// The scope Progress (6.9), the Coaching plan (6.8) and Goals share: who (`?driver=`, default the seated driver),
+// where (`?track=`, default their newest track) and in what (`?car=`, default the newest car there, `any` = every
+// car), plus the data they read: the driver's session rows (lap level, always) and D5's progress (when the server has
+// it; Goals does not ask for it). The route is rewritten (no history entry) so it always names what is on screen.
 
 import { useEffect, useMemo, useState } from "react";
 import { useDrivers } from "../../../hooks/stores";
@@ -15,7 +15,7 @@ import {
   type SessionListRow,
 } from "../../../lib/endpoints/review";
 import { queryParams, router, type Route } from "../../../lib/router";
-import { coachingPath, progressPath } from "../../../lib/review/links";
+import { coachingPath, goalsPath, progressPath } from "../../../lib/review/links";
 import {
   ANY_CAR,
   pointsFromProgress,
@@ -30,7 +30,7 @@ import {
   type Who,
 } from "../../../lib/review/progress";
 
-export type ScopePage = "progress" | "coaching";
+export type ScopePage = "progress" | "coaching" | "goals";
 
 /** Where the per-session data came from: D5, or the lap-level fallback (and why). */
 export type ProgressTier =
@@ -65,9 +65,10 @@ function intParam(v: string | null): number | null {
 }
 
 const pathOf = (page: ScopePage, q: { driver?: number | null; track?: string | null; car?: string | null }) =>
-  page === "progress" ? progressPath(q) : coachingPath(q);
+  page === "progress" ? progressPath(q) : page === "goals" ? goalsPath(q) : coachingPath(q);
 
-export function useReviewScope(route: Route, page: ScopePage, opts: { corners: boolean }): ReviewScope {
+/** `corners`: ask D5 for corner means. `progress: false` (Goals): no D5 request at all; the tier stays "loading". */
+export function useReviewScope(route: Route, page: ScopePage, opts: { corners: boolean; progress?: boolean }): ReviewScope {
   const q = queryParams(route);
   const qDriver = intParam(q.get("driver"));
   const qTrack = q.get("track");
@@ -97,7 +98,7 @@ export function useReviewScope(route: Route, page: ScopePage, opts: { corners: b
 
   const pq = useMemo(() => (scope ? scopeQuery(scope, { corners: opts.corners }) : null), [scope, opts.corners]);
   const progress = useApi(
-    driverId != null && pq ? reviewKeys.progress(driverId, pq) : null,
+    opts.progress !== false && driverId != null && pq ? reviewKeys.progress(driverId, pq) : null,
     () => reviewApi.progress(driverId as number, pq ?? {}),
     { maxAgeMs: 60_000 },
   );

@@ -70,7 +70,27 @@ describe("scope (track + car) from the driver's sessions", () => {
 
     const withSyn = scopeChoices(rows(), { includeSynthetic: true });
     const syn = withSyn.filter((t) => t.synthetic);
-    expect(syn.map((t) => t.label)).toEqual(["unknown_-1"]); // the replayed demo stays out: nobody's driving
+    // the replayed demo stays out: nobody's driving; a raw id stored as the name reads "Unknown track" (plan 5.8)
+    expect(syn.map((t) => t.label)).toEqual(["Unknown track"]);
+  });
+
+  it("never a raw id for a car or a track (integration plan 5.8): 'Unnamed car', numbered when there are more", () => {
+    const base = rows().find((r) => r.track_id === AUSTRIA)!;
+    const at = (car_id: string, car_name: string | null, t: number) => ({ ...base, id: `x${t}`, car_id, car_name, started_unix: base.started_unix + t });
+    const c = scopeChoices(
+      [at("f1:team:214", "team_214", 30), at("gt7:car:919", null, 20), at("f1:team:99", "Unknown team (id 99)", 10), at(HAAS, "Haas", 5)],
+      { includeSynthetic: false },
+    );
+    const austria = c.find((t) => t.trackId === AUSTRIA)!;
+    expect(austria.cars.map((x) => [x.label, x.named])).toEqual([
+      ["Unnamed car 1", false],
+      ["Unnamed car 2", false],
+      ["Unnamed car 3", false],
+      ["Haas", true],
+    ]);
+    expect(resolveScope(c, { track: AUSTRIA, car: "f1:team:214" })!.carLabel).toBe("Unnamed car 1");
+    const one = scopeChoices([at("gt7:car:919", null, 20)], { includeSynthetic: false });
+    expect(one[0]!.cars[0]!.label).toBe("Unnamed car");
   });
 
   it("resolves ?track and ?car, defaults to the newest track and its newest car, `any` = every car", () => {

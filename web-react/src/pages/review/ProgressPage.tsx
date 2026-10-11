@@ -1,21 +1,21 @@
 // Review › Progress (spec 6.9, `#/review/progress?driver=&track=&car=`): for one driver at one track (+ car), framed as
 // three questions, each with ONE computed sentence (never an LLM): Getting faster? Getting steadier? What changed?
-// Then milestones and the family board. Headline tiles on top, totals at the foot.
+// Then milestones and the family board. Headline tiles on top, totals at the foot. Everything on the page obeys the
+// scope bar: goals, the week, streaks and badges are the driver's everywhere, so they live on Review › Goals
+// (integration plan 1.3; the scope bar links there).
 //
 // Data: the driver's sessions (lap level, always) and D5's progress (`/api/drivers/{id}/progress`) when the server
 // has it; an older server answers 404 and the page falls back to lap level, saying what is missing. Synthetic tracks
 // are offered only on request and labelled; replays are never anyone's driving. Order by the VIEWED driver's skill
 // (6.10): corner trends first for advanced drivers; Getting faster?, milestones and the family board first otherwise.
 //
-// Lane motivation: Goals and This week in a row under the ScopeBar; Streaks and badges after Getting faster? (after
-// the second row for advanced drivers). Each card loads on its own and says so when the server is older.
-// "Against the AI" (AI pace spec 8) follows Getting faster? in every order (before Streaks and badges): the driver's
-// sessions against the game's AI at this track (`/api/drivers/{id}/ai-pace`), left out on a server without it and for
-// games without AI difficulty.
+// "Against the AI" (AI pace spec 8) follows Getting faster? in every order: the driver's sessions against the game's
+// AI at this track (`/api/drivers/{id}/ai-pace`), left out on a server without it and for games without AI
+// difficulty. The footer's counts are every session on record (the counting rule's wording, plan 5.7).
 
 import { Alert, Button, Skeleton } from "@heroui/react";
 import { EmptyState } from "@heroui-pro/react";
-import { ChartLine, Speedometer } from "@gravity-ui/icons";
+import { ChartLine, Flag, Speedometer } from "@gravity-ui/icons";
 import { useMemo } from "react";
 import { useApi } from "../../hooks/useApi";
 import { sessionBadges, type BestBadge, type ScopeRow } from "../../lib/bests";
@@ -42,11 +42,9 @@ import {
 import { plural } from "../../lib/review/words";
 import type { PageProps } from "../../routes";
 import { AiPaceCard } from "./progress/AiPaceCard";
-import { BadgesCard } from "./progress/BadgesCard";
 import { ChangesCard } from "./progress/ChangesCard";
 import { FamilyBoardCard } from "./progress/FamilyBoardCard";
 import { FasterCard } from "./progress/FasterCard";
-import { GoalsCard } from "./progress/GoalsCard";
 import { MilestonesCard } from "./progress/MilestonesCard";
 import { ProgressTilesView } from "./progress/ProgressTilesView";
 import { ScopeBar } from "./progress/ScopeBar";
@@ -54,7 +52,6 @@ import { SteadierCard } from "./progress/SteadierCard";
 import { TierNotice } from "./progress/TierNotice";
 import { useAiPace } from "./progress/useAiPace";
 import { useReviewScope } from "./progress/useReviewScope";
-import { WeekCard } from "./progress/WeekCard";
 import { useBestsWindow } from "./session/data";
 
 export function ProgressPage({ route }: PageProps) {
@@ -144,21 +141,19 @@ export function ProgressPage({ route }: PageProps) {
                 : "Add a driver in Settings › Drivers."}
             </EmptyState.Description>
           </EmptyState.Header>
-          <EmptyState.Content>
+          <EmptyState.Content className="flex flex-wrap justify-center gap-2">
             <Button variant="primary" size="lg" className="min-h-14" onPress={() => router.navigate("/drive/coach")}>
               Open Drive
             </Button>
+            {/* lane motivation: a first goal can be set before the first drive (clean laps, steady laps, a clean race) */}
+            {viewed && (
+              <Button variant="secondary" size="lg" className="min-h-14" onPress={() => router.navigate(s.pathFor("goals"))}>
+                <Flag aria-hidden="true" />
+                Set a goal
+              </Button>
+            )}
           </EmptyState.Content>
         </EmptyState>
-        {/* lane motivation: a first goal can be set before the first drive (clean laps, steady laps, a clean race) */}
-        {viewed && (
-          <GoalsCard
-            driverId={viewed.id}
-            driverName={viewed.name}
-            simple={!!viewed.coaching?.simple_wording}
-            scope={null}
-          />
-        )}
       </div>
     );
   }
@@ -225,44 +220,23 @@ export function ProgressPage({ route }: PageProps) {
   );
   const st = viewed.stats;
 
-  // lane motivation: goals, the week and badges for the VIEWED driver, in their wording.
-  const simple = density.simpleWording;
-  const goalsRow = (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-      <div className="min-w-0 lg:col-span-7">
-        <GoalsCard
-          driverId={viewed.id}
-          driverName={viewed.name}
-          simple={simple}
-          scope={{
-            game: scope.track.game,
-            trackId: scope.track.trackId,
-            trackLabel: scope.track.label,
-            carId: scope.carId,
-            carLabel: scope.carLabel,
-            synthetic: scope.track.synthetic,
-          }}
-        />
-      </div>
-      <div className="min-w-0 lg:col-span-5">
-        <WeekCard driverId={viewed.id} simple={simple} />
-      </div>
-    </div>
-  );
-  const badgesCard = <BadgesCard driverId={viewed.id} driverName={viewed.name} simple={simple} />;
-
   return (
     <div className="grid grid-cols-1 gap-4">
       <ScopeBar
         s={s}
         actions={
-          <Button variant="ghost" className="min-h-11" onPress={() => router.navigate(s.pathFor("coaching"))}>
-            <ChartLine aria-hidden="true" />
-            Coaching plan
-          </Button>
+          <>
+            <Button variant="ghost" className="min-h-11" onPress={() => router.navigate(s.pathFor("coaching"))}>
+              <ChartLine aria-hidden="true" />
+              Coaching plan
+            </Button>
+            <Button variant="ghost" className="min-h-11" onPress={() => router.navigate(s.pathFor("goals"))}>
+              <Flag aria-hidden="true" />
+              Goals
+            </Button>
+          </>
         }
       />
-      {goalsRow}
       <TierNotice tier={tier} what="Steadiness, corner trends and habit counts" />
       {loading ? (
         <BodySkeleton />
@@ -281,21 +255,11 @@ export function ProgressPage({ route }: PageProps) {
               {faster}
               {aiCard}
               {second}
-              {badgesCard}
-            </>
-          ) : density.progressCornersFirst ? (
-            <>
-              {faster}
-              {aiCard}
-              {second}
-              {badgesCard}
-              {changes}
             </>
           ) : (
             <>
               {faster}
               {aiCard}
-              {badgesCard}
               {second}
               {changes}
             </>
