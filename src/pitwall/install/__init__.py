@@ -19,6 +19,7 @@ Modules:
 - ``check``     the update-status cache behind ``/api/update``, Settings > System and ``pitwall doctor``
 - ``commands``  the Typer commands ``pitwall update`` and the hidden ``pitwall install-finish``
 
-Nothing here runs on the ingest path, and nothing contacts the network unless a person asks (a command, or the
-dashboard's Settings > System with ``PITWALL_UPDATE_CHECK=auto``).
+Nothing here runs on the ingest path, and nothing contacts the network unless a person asks (a command, "Check now"
+in the dashboard's Settings > System, or opening that page with ``PITWALL_UPDATE_CHECK=auto``; the default is
+``manual``).
 """

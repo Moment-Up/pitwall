@@ -65,12 +65,20 @@ def test_cli_require_and_output(tmp_path: Path, capsys: pytest.CaptureFixture[st
     assert cs.main(["--version", "0.3.0", "--changelog", str(path)]) == 2
 
 
-def test_the_real_changelog_has_unreleased_and_v010() -> None:
+def test_the_real_changelog_has_the_running_version_and_v010(capsys: pytest.CaptureFixture[str]) -> None:
+    """A stable tag needs its own section (install D5): the version in pyproject.toml / ``__version__`` has one, and
+    it passes the release workflow's ``--require`` check (no bullet over 200 characters)."""
+    import pitwall
+
     text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
     assert cs.section_for(text, "v0.1.0")
-    assert cs.section_for(text, "v0.2.0-rc.1")  # Unreleased exists
-    notes = extract_notes("## What changed\n" + (cs.section_for(text, "v0.1.0") or ""))
-    assert notes and all(len(n) <= 200 for n in notes)
+    version = f"v{pitwall.__version__}"
+    if "-" not in version:  # a pre-release may use "## Unreleased" instead
+        assert cs.main(["--version", version, "--changelog", str(ROOT / "CHANGELOG.md"), "--require"]) == 0
+        assert capsys.readouterr().out.strip()
+    for v in ("v0.1.0", version):
+        notes = extract_notes("## What changed\n" + (cs.section_for(text, v) or ""))
+        assert notes and all(len(n) <= 200 for n in notes)
 
 
 def test_bullets_match_the_dashboard_and_long_ones_fail(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

@@ -54,9 +54,10 @@ class Settings(BaseSettings):
     live_ws_hz: float = 20.0
 
     # --- lane install ---
-    # Update checks (install/check.py): auto = Settings > System checks GitHub at most once a day while nobody is
-    # driving | manual = only "Check now" or `pitwall update --check` | off = the server never contacts GitHub.
-    update_check: str = Field(default="auto", pattern="^(auto|manual|off)$")
+    # Update checks (install/check.py): manual (default, install decision D2) = only "Check now" or
+    # `pitwall update --check` | auto = Settings > System also checks GitHub at most once a day while nobody is
+    # driving | off = the server never contacts GitHub.
+    update_check: str = Field(default="manual", pattern="^(auto|manual|off)$")
     # --- end lane install ---
 
     # Voice radio (phase 5)

@@ -7,17 +7,35 @@ when a release is cut, that heading becomes the release's own (see [docs/releasi
 The release workflow copies a release's bullet points into its GitHub release notes under "What changed"
 (`scripts/changelog_section.py`), and `pitwall update` and Settings › System show them before you update.
 
-## Unreleased
+## v0.2.0 - 2026-10-12
 
-- Install with one command on macOS, Linux or Windows: it checks the download, keeps your sessions in one data
-  folder and can start Pitwall at login.
-- Update with `uv run pitwall update`: it shows what changed, backs up the database, keeps your settings and never
-  runs while someone is driving.
-- `uv run pitwall update --rollback` goes back to the previous version if the new one gives you trouble.
-- Settings › System shows whether a newer version is out, what changed in it and the command to update
-  (`PITWALL_UPDATE_CHECK` in `.env`: auto, manual or off).
-- `pitwall doctor` reports the last update check (it never contacts GitHub itself).
-- Bug report and feature request forms, a security policy and contribution notes on GitHub.
+Each line ends with how it was tested: on recordings (real captures played back), on synthetic (generated) data, or
+live on the rig. Nothing here has been tested live unless it says so.
+
+- Tell Pitwall which game you play in Setup › Game: it says what that game sends, and each driver can have a usual
+  game. Tested on recordings (F1 25) and synthetic GT7; not live with GT7, Forza or AC.
+- Pace against the AI (F1 25): how your best lap compares with the AI cars, and a suggested AI difficulty for each
+  track. Tested on recordings of PS5 races; not yet tested live.
+- Technique (F1 25): your racing line, braking and throttle, and how the car handled, corner by corner. Tested on
+  recordings; lock-ups only on synthetic data (every real recording had ABS on).
+- A race engineer for F1 25 races: gaps, tyres, fuel, pit stops, safety car and weather, by radio and on Drive ›
+  Car. Tested on recordings (a 71-lap race); safety car, VSC and rain synthetic only.
+- Goals, streaks, badges and a weekly summary for every driver in Review › Goals, and three things after every
+  session (also in the session report). Tested on recordings; not yet tested live.
+- Badges only for tracks Pitwall can name and laps of 30 s or more, cars always by name; counts say what they count
+  ("3 sessions with a timed lap"). Tested on recordings.
+- Test your rig with Setup › Validation and `pitwall validate`. Nothing passes until it is run live, by design.
+- The radio talks less and in better places: at most two messages a lap at normal intensity, plus braking cues,
+  safety alerts and your answers. Checked on recordings over loopback; not yet tested live.
+- Install with one command on macOS, Linux or Windows; it checks the download and keeps your sessions in one data
+  folder. Tested end to end on macOS; Linux and Windows through CI only.
+- Update with `uv run pitwall update`: it shows what changed, backs up the database and never runs while someone is
+  driving; `--rollback` goes back. Tested end to end on macOS; Windows through CI only.
+- Settings › System says whether a newer version is out and how to update; Pitwall asks GitHub only when you press
+  Check now (`PITWALL_UPDATE_CHECK`: manual, auto or off).
+- A fresh install's first driver profile starts at the intermediate level; existing profiles keep theirs.
+- `pitwall doctor` reports the last update check (it never contacts GitHub itself). Bug report and feature request
+  forms, a security policy and contribution notes on GitHub.
 
 ## v0.1.0 - 2026-10-11
 

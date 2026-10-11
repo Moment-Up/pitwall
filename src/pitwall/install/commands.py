@@ -218,9 +218,10 @@ def run_update(
         return EXIT_ERROR if cache.error else EXIT_OK
 
     if kind == "git":
-        typer.echo(
-            f"This copy is a git checkout ({root}), so pitwall update doesn't apply: git pull, then uv sync "
-            f"--all-extras, rebuild the dashboard and restart Pitwall. See {GIT_DOCS}",
+        typer.echo(  # plan F8: the owner's live install is a release worktree (a git checkout too)
+            f"This copy is a git checkout ({root}), so pitwall update doesn't apply. Update it with git pull, then uv "
+            f"sync --all-extras, rebuild the dashboard and restart Pitwall; the owner's release worktree is updated by "
+            f"scripts/release.sh (into a fresh worktree). See {GIT_DOCS}",
             err=True,
         )
         return EXIT_USAGE

@@ -2,9 +2,10 @@
 
 ``PITWALL_UPDATE_CHECK``:
 
-- ``auto`` (default): ``GET /api/update`` refreshes the cache in the background when the last successful check is
-  more than 24 h old, the last attempt more than 10 min ago, and nobody is driving (telemetry not live);
-- ``manual``: only Settings > System's "Check now" (``POST /api/update/check``) or ``pitwall update --check``;
+- ``manual`` (the default from v0.2.0, install decision D2): only Settings > System's "Check now"
+  (``POST /api/update/check``) or ``pitwall update --check``;
+- ``auto``: ``GET /api/update`` also refreshes the cache in the background when the last successful check is more
+  than 24 h old, the last attempt more than 10 min ago, and nobody is driving (telemetry not live);
 - ``off``: the server never contacts GitHub (the CLI still does when someone runs it).
 
 The status is computed when it is read, against the running version, so it is right straight after an update. The

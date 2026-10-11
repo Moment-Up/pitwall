@@ -100,5 +100,7 @@ def test_a_git_checkout_gets_the_whole_git_route(folder: Any, capsys: pytest.Cap
     folder("v0.2.0", ["v0.3.0"], kind="git")
     assert update() == 2
     err = capsys.readouterr().err
-    assert "git pull, then uv sync --all-extras, rebuild the dashboard and restart Pitwall" in err
+    assert "Update it with git pull, then uv sync --all-extras, rebuild the dashboard and restart Pitwall" in err
+    # the owner's live install is a git worktree too: it says where its updates come from (plan F8)
+    assert "the owner's release worktree is updated by scripts/release.sh" in err
     assert err.rstrip().endswith("install.md#a-git-clone")

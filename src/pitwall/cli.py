@@ -181,7 +181,7 @@ def sessions(limit: int = 20) -> None:
 @app.command()
 def report(session_id: Annotated[str | None, typer.Argument()] = None) -> None:
     """Print a Markdown session report (latest session by default)."""
-    from pitwall.core.report import build_report
+    from pitwall.core.report import session_report
     from pitwall.core.session_analysis import SessionAnalyzer
     from pitwall.storage import repo
     from pitwall.storage.db import Database
@@ -192,11 +192,12 @@ def report(session_id: Annotated[str | None, typer.Argument()] = None) -> None:
     if sid is None:
         typer.echo("no sessions recorded", err=True)
         raise typer.Exit(1)
-    sa = SessionAnalyzer(db).analyse(sid)
+    analyzer = SessionAnalyzer(db)
+    sa = analyzer.analyse(sid)
     if sa is None:
         typer.echo(f"session {sid} not found", err=True)
         raise typer.Exit(1)
-    typer.echo(build_report(sa)["markdown"])
+    typer.echo(session_report(db, sa, analyzer=analyzer)["markdown"])
 
 
 @app.command()

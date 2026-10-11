@@ -403,12 +403,14 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
 
     @app.get("/api/sessions/{sid}/report")
     async def session_report(request: Request, sid: str) -> dict[str, Any]:
-        from pitwall.core.report import build_report
+        from pitwall.core.report import session_report as report_with_recap
 
-        sa = await asyncio.to_thread(request.app.state.analyzer.analyse, sid, None)
+        analyzer = request.app.state.analyzer
+        sa = await asyncio.to_thread(analyzer.analyse, sid, None)
         if sa is None:
             raise HTTPException(404, "session not found")
-        return build_report(sa)
+        r = rt(request)  # the recap reads the driver's history: off the event loop
+        return await asyncio.to_thread(report_with_recap, r.db, sa, analyzer=analyzer, live=getattr(r, "live", None))
 
     @app.get("/api/laps/{lap_id}/trace")
     async def lap_trace(request: Request, lap_id: int, step: float = 2.0) -> Response:
