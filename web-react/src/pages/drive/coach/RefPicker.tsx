@@ -8,14 +8,15 @@
 // best (unavailable rows disabled, with the server's reason), then "A saved lap…". "Only at {track}" stores the
 // choice for this track only. A change made now applies at once; one that waits says so in the status slot.
 // Moving: the picker stays shut. If the choice is not "Your best", a one-row popover offers "Back to your best" (the
-// one trivial change allowed on track); otherwise the status slot says "Change the reference when stopped".
+// one trivial change allowed on track; it closes by itself after 5 s, as it covers the delta); otherwise the status
+// slot says "Change the reference when stopped".
 
 import { ChevronDown } from "@gravity-ui/icons";
 import { Avatar, Button, Popover } from "@heroui/react";
 import { lazy, memo, Suspense, useEffect, useState } from "react";
 import { inkOn } from "../../../lib/drivers";
 import { coachrefApi, coachrefErrorText } from "../../../lib/endpoints/coachref";
-import { NOTICE_CHANGE_MS, NOTICE_HINT_MS, driveNotice } from "../../../lib/drive/notice";
+import { NOTICE_CHANGE_MS, NOTICE_HINT_MS, POPOVER_AUTO_CLOSE_MS, driveNotice } from "../../../lib/drive/notice";
 import { BACK_TO_BEST, LOCKED_HINT, appliesNotice, type RefControlView, type RefHolder } from "../../../lib/drive/reference";
 import { useMediaQuery } from "./parts";
 import { sameProps } from "./view";
@@ -95,6 +96,12 @@ export const RefControl = memo(function RefControl({ view, variant }: RefControl
     if (view.locked && popover === "picker") setPopover("none");
     if (view.locked && sheet) setSheet(false);
   }, [view.locked, popover, sheet]);
+  // "Back to your best" covers the delta while driving: it closes by itself (the control opens it again).
+  useEffect(() => {
+    if (popover !== "back") return;
+    const t = setTimeout(() => setPopover("none"), POPOVER_AUTO_CLOSE_MS);
+    return () => clearTimeout(t);
+  }, [popover]);
 
   const onPress = () => {
     // A second tap on the control closes what it opened (the Popover's trigger has already toggled it shut).

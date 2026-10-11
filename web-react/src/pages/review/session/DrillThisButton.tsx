@@ -1,12 +1,15 @@
 // "Drill this" on a Work on card (coachref, spec 10.6): shown while this session's driver is in the seat at the same
-// game and track (and car, when both are known) in a live session, for a point that maps to a drill. It starts the
-// drill (POST /api/coachref/drills, source "work_on"); the server's target sentence confirms it, a refusal shows its
-// sentence inline. Nothing here decides whether a drill may run: the server does.
+// game and track (and car, when both are known) in a running live session, for a point that maps to a drill. It
+// asks the server first (GET /drills/options for the corner, as the Ready card's suggested drill does): when that
+// drill cannot run there, the server's reason shows instead of a button that could only be refused. The button
+// starts the drill (POST /api/coachref/drills, source "work_on"); the server's target sentence replaces it, as does a
+// refusal's sentence, scrolled into view. Nothing here decides whether a drill may run: the server does.
 
 import { Button } from "@heroui/react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDrivers, useLive } from "../../../hooks/stores";
-import { coachrefApi, coachrefErrorText } from "../../../lib/endpoints/coachref";
+import { useApi } from "../../../hooks/useApi";
+import { coachrefApi, coachrefErrorText, coachrefKeys } from "../../../lib/endpoints/coachref";
 import { drillThisKind, liveDrillKey, parseLiveDrill } from "../../../lib/review/drills";
 import { useSession } from "./data";
 
@@ -17,6 +20,7 @@ export function DrillThisButton({ sessionId, corner, observationKind }: { sessio
   const live = useMemo(() => parseLiveDrill(key), [key]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; error: boolean } | null>(null);
+  const msgRef = useRef<HTMLParagraphElement>(null);
   const kind = session
     ? drillThisKind(
         live,
@@ -30,7 +34,20 @@ export function DrillThisButton({ sessionId, corner, observationKind }: { sessio
         observationKind,
       )
     : null;
+  // The live session's own answer for this corner (null key: nothing to ask while no drill could run). The same
+  // cache entry as the Ready card's suggested drill: any coachref change invalidates it.
+  const opts = useApi(kind ? coachrefKeys.drillOptions(corner) : null, () => coachrefApi.drillOptions({ corner }), { maxAgeMs: 10_000 });
+  useEffect(() => {
+    if (msg) msgRef.current?.scrollIntoView({ block: "nearest" });
+  }, [msg]);
   if (!kind) return null;
+
+  const o = opts.data;
+  const row = o?.kinds.find((k) => k.kind === kind);
+  const reason = o ? (!o.available ? o.reason : row && !row.available ? row.reason : null) : null;
+  if (reason && !msg) {
+    return <p className="m-0 basis-full text-[15px] text-muted">{reason}</p>;
+  }
 
   async function start() {
     setBusy(true);
@@ -47,11 +64,23 @@ export function DrillThisButton({ sessionId, corner, observationKind }: { sessio
 
   return (
     <>
-      <Button variant="secondary" className="min-h-11" isPending={busy} onPress={() => void start()}>
-        Drill this
-      </Button>
+      {!msg && (
+        <Button
+          variant="secondary"
+          className="min-h-11"
+          isPending={busy}
+          isDisabled={!o && !opts.error}
+          onPress={() => void start()}
+        >
+          Drill this
+        </Button>
+      )}
       {msg && (
-        <p role={msg.error ? "alert" : "status"} className={`m-0 basis-full text-sm ${msg.error ? "text-bad" : "text-foreground"}`}>
+        <p
+          ref={msgRef}
+          role={msg.error ? "alert" : "status"}
+          className={`m-0 basis-full text-[15px] ${msg.error ? "text-bad" : "text-foreground"}`}
+        >
           {msg.text}
         </p>
       )}

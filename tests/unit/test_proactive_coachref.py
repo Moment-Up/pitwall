@@ -34,13 +34,17 @@ def obs(kind: str, value: float, ref_name: str | None = "Sam", **kw: Any) -> dic
 def test_lap_summary_names_the_reference() -> None:
     assert lap_summary_text(LAP, None, SAM_REF) == "Lap 4, 1:31.204, plus 0.792 to Sam's best."
     assert lap_summary_text(LAP, None, {**SAM_REF, "lap_time_ms": 91_204}) == "Lap 4, 1:31.204, level with Sam's best."
-    own = {"lap_id": 12, "lap_time_ms": 90_412}
-    assert lap_summary_text(LAP, None, own) == "Lap 4, 1:31.204, plus 0.792 to your reference."
+    legacy = {"lap_id": 12, "lap_time_ms": 90_412}  # a reference without a descriptor (no coachref)
+    assert lap_summary_text(LAP, None, legacy) == "Lap 4, 1:31.204, plus 0.792 to your reference."
+    own = {**legacy, "label_to": "your best", "own": True}
+    assert lap_summary_text(LAP, None, own) == "Lap 4, 1:31.204, plus 0.792 to your best."
 
 
 def test_coaching_points_name_the_other_driver() -> None:
     assert coaching_text(obs("brake_early", -12.0)) == "Turn 3, losing 0.12 s: braking 12 m earlier than Sam."
-    assert coaching_text(obs("low_min_speed", -6.0)) == "Turn 3, losing 0.12 s: Sam carries 6 km/h more mid-corner."
+    assert coaching_text(obs("low_min_speed", -6.0)) == (
+        "Turn 3, losing 0.12 s: Sam was 6 km/h faster in the middle of the corner."
+    )
     assert coaching_text(obs("late_throttle", 21.0)) == "Turn 3, losing 0.12 s: full throttle 21 m later than Sam."
     assert coaching_text(obs("coasting", 18.0)) == "Turn 3, losing 0.12 s: 18 m more coasting than Sam."
     assert coaching_text(obs("brake_early", -12.0, None)) == (
@@ -74,7 +78,7 @@ def drill_block() -> tuple[dict[str, Any], dict[str, Any]]:
         started_unix=0.0,
     )
     st = dr.DrillState(spec)
-    a = dr.evaluate_attempt(st, _m(1101.0), None, lap_id=41, lap_number=4)
+    a = dr.evaluate_attempt(st, _m(1099.0), None, lap_id=41, lap_number=4)
     st = st.with_attempt(a, 1.0)
     point = dr.drill_point(st, a)
     block = {"lap_id": 41, "lap_number": 4, "radio_quiet": False, "picked": [], "by_corner": {}}
@@ -92,7 +96,7 @@ def test_drill_lap_is_one_message_the_drill_point_verbatim() -> None:
     msgs = lap_messages(LAP, [obs("brake_early", -12.0)], None, SAM_REF, "normal", 0.0, coach=coach)
     assert len(msgs) == 1
     (m,) = msgs
-    assert m.text == point["text"] == "Turn 3 drill, lap 1 of 5: on the point, 1 m late. 1 hit."
+    assert m.text == point["text"] == "Turn 3 drill, 1 of 5: on the point, 1 m early. 1 hit."
     assert m.kind is MessageKind.COACHING and m.priority is Priority.NORMAL and m.needs_speak_window
     assert m.meta["observation_kind"] == "drill"
     detailed = lap_messages(LAP, [], None, SAM_REF, "detailed", 0.0, coach=coach)

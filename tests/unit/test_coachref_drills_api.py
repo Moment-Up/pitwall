@@ -95,7 +95,7 @@ def test_lifecycle_start_attempts_completed(api: tuple[TestClient, Runtime], liv
     for k in opts["kinds"]:
         keys("DrillOption", k)
     assert by_kind["brake_point"]["available"] is True
-    assert by_kind["brake_point"]["target_text"] == "Brake within 5 m of your reference's braking point"
+    assert by_kind["brake_point"]["target_text"] == "Brake within 5 m of your best lap's braking point"
     assert by_kind["brake_point"]["tolerance_choices"] == [3.0, 5.0, 10.0]
     r = client.post("/api/coachref/drills", json={"corner_ref": "T2", "kind": "brake_point", "laps": 3})
     assert r.status_code == 201, r.text
@@ -110,7 +110,7 @@ def test_lifecycle_start_attempts_completed(api: tuple[TestClient, Runtime], liv
     )
     assert v["reference"]["label"] == "Your best" and v["synthetic"] is False
     again = client.post("/api/coachref/drills", json={"corner_ref": "T4"})
-    assert (again.status_code, again.json()["detail"]) == (409, "A drill on T2 is running: lap 1 of 3. Stop it first.")
+    assert (again.status_code, again.json()["detail"]) == (409, "A T2 drill is running: 0 of 3 done. Stop it first.")
     snap = rt.live.snapshot()
     keys("SnapshotCoachref", snap["coachref"])
     assert snap["coachref"]["drill"]["id"] == v["id"] and snap["cues"]["drill_corner"] == "T2"
@@ -119,7 +119,7 @@ def test_lifecycle_start_attempts_completed(api: tuple[TestClient, Runtime], liv
     active = client.get("/api/coachref/drills/active").json()
     view_keys(active)
     assert len(active["attempts"]) == 1 and active["attempts"][0]["outcome"] == "miss"
-    assert active["attempts"][0]["text"].startswith("T2 drill, lap 1 of 3: ")
+    assert active["attempts"][0]["text"].startswith("T2 drill, 1 of 3: ")
     feed(rt, live_ann["sid"], info, [(laps[0], 69_000, 5), (laps[1], 69_300, 6)])
     done = client.get(f"/api/coachref/drills/{v['id']}").json()
     view_keys(done)
@@ -179,6 +179,20 @@ def test_driver_change_stops_the_drill(api: tuple[TestClient, Runtime], live_ann
     assert row is not None and row["status"] == "abandoned" and row["stop_reason"] == "driver_changed"
 
 
+def test_done_puts_the_result_away(api: tuple[TestClient, Runtime], live_ann: dict[str, Any]) -> None:
+    client, rt = api
+    d = client.post("/api/coachref/drills", json={"corner": "T2", "laps": 3}).json()
+    feed(rt, live_ann["sid"], live_ann["info"], [(live_ann["laps"][0], 69_000, 4)])
+    assert client.post("/api/coachref/drills/active/stop").json()["status"] == "stopped"
+    assert rt.live.snapshot()["coachref"]["drill"]["id"] == d["id"]  # the result shows until Done
+    assert client.post(f"/api/coachref/drills/{d['id'] + 1}/dismiss").status_code == 404
+    r = client.post(f"/api/coachref/drills/{d['id']}/dismiss")
+    assert r.status_code == 204
+    assert rt.live.snapshot()["coachref"]["drill"] is None
+    assert client.post(f"/api/coachref/drills/{d['id']}/dismiss").status_code == 404
+    assert client.get(f"/api/coachref/drills/{d['id']}").json()["status"] == "stopped"  # history keeps it
+
+
 def test_radio_commands(api: tuple[TestClient, Runtime], live_ann: dict[str, Any]) -> None:
     _, rt = api
     svc = rt.coachref
@@ -195,10 +209,10 @@ def test_radio_commands(api: tuple[TestClient, Runtime], live_ann: dict[str, Any
     text, control = say("give me a braking drill at turn 2 for three laps")
     assert (
         text
-        == "Copy. T2 brake point drill, 3 laps: brake within 5 m of your reference's braking point. It starts on your next lap."
+        == "Copy. T2 brake point drill, 3 laps: brake within 5 m of your best lap's braking point. It starts on your next lap."
     )
     assert control["action"] == "drill_start" and isinstance(control["drill_id"], int)
-    assert say("start a drill on turn 4")[0] == "A drill on T2 is running: lap 1 of 3. Stop it first."
+    assert say("start a drill on turn 4")[0] == "A T2 drill is running: 0 of 3 done. Say 'stop the drill' first."
     feed(rt, live_ann["sid"], live_ann["info"], [(live_ann["laps"][0], 69_000, 4)])
     status, _ = say("how am I doing on the drill")
     assert status.startswith("T2 brake point drill: 1 of 3 done, 1 hit. Last one on the point")

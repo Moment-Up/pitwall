@@ -393,6 +393,20 @@ describe("Session complete card: Work on / Went well name their corner (mockup)"
     expect(bare).not.toContain("Work on ·");
   });
 
+  it("coachref: a drill driven in this session takes the empty slot (UX review M4)", () => {
+    const s = fixture("recorded-d246-austria-session-ended");
+    const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: JAMES });
+    const drill = { title: "Drill T12 · Brake point", line: "2 of 2 on the point (2 of 5 laps)" };
+    const noWork = visible(
+      renderToStaticMarkup(createElement(SessionCompleteCard, { ended: { ...m.ended!, workOn: null, drill }, tier: m.tier })),
+    );
+    expect(noWork).toContain("Drill T12 · Brake point 2 of 2 on the point (2 of 5 laps)");
+    expect(noWork).not.toContain("No point to work on");
+    const both = visible(renderToStaticMarkup(createElement(SessionCompleteCard, { ended: { ...m.ended!, drill }, tier: m.tier })));
+    expect(both).toContain("Work on");
+    if (m.ended!.wentWell == null) expect(both).toContain("Drill T12 · Brake point");
+  });
+
   it("cornerTitle: label and official name; the learned key resolves to the official label; null without a corner", () => {
     const tm = fixture("recorded-d246-austria-session-ended").track_model;
     expect(cornerTitle(tm, "T1")).toBe("T1 Niki Lauda Kurve");

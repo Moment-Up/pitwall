@@ -83,7 +83,9 @@ def test_brake_point_targets_and_the_clamp() -> None:
     own = dr.plan_target("brake_point", dr.DrillInputs("T3", ref=cm(brake_start_m=1100.0), ref_zone=True))
     assert isinstance(own, dr.DrillTarget)
     assert (own.target, own.tolerance, own.target_source) == (1100.0, 5.0, "own_reference")
-    assert own.target_text == "Brake within 5 m of your reference's braking point"
+    assert own.target_text == "Brake within 5 m of your best lap's braking point"
+    pinned = dr.plan_target("brake_point", dr.DrillInputs("T3", ref=cm(), ref_zone=True, own_whose="your pinned lap's"))
+    assert isinstance(pinned, dr.DrillTarget) and pinned.target_text.endswith("of your pinned lap's braking point")
     # another driver brakes LATER than the driver ever did: the call is the driver's own point
     later = dr.plan_target(
         "brake_point",
@@ -143,7 +145,9 @@ def test_speed_targets_baseline_cap_and_guard() -> None:
     assert one.target_text == "Exit speed 163 km/h or more (usually 160)"
     assert dr.plan_target("min_speed", dr.DrillInputs("T3")) == dr.Unavailable("Drive a clean lap first.")
     matched = dr.plan_target("min_speed", dr.DrillInputs("T3", ref=cm(min_speed_kph=83.0), recent=recent))
-    assert matched == dr.Unavailable("You already match the best minimum speed here (83 km/h).")
+    assert matched == dr.Unavailable(
+        "You already reach the best minimum speed driven here (83 km/h): pick another skill."
+    )
 
 
 def test_entry_speed_anchors_on_own_laps_only() -> None:
@@ -172,23 +176,42 @@ def attempt(state: dr.DrillState, m: CornerMetrics | None, cd: CornerDelta | Non
 
 
 @pytest.mark.parametrize(
-    ("value", "outcome", "phrase"),
+    ("value", "time_delta", "outcome", "phrase"),
     [
-        (1100.4, "hit", "on the point"),
-        (1103.0, "hit", "on the point, 3 m late"),
-        (1096.0, "hit", "on the point, 4 m early"),
-        (1092.0, "miss", "8 m before the point"),
-        (1111.0, "miss", "11 m past the point"),
-        (None, "unmeasured", "no braking measured"),
+        (1100.4, 0.1, "hit", "on the point"),  # under half a metre: on the point
+        (1099.6, 0.1, "hit", "on the point"),
+        (1096.0, 0.1, "hit", "on the point, 4 m early"),
+        (1095.0, 0.1, "hit", "on the point, 5 m early"),  # the tolerance itself
+        (1092.0, -0.2, "miss", "8 m before the point"),  # too early, even when faster
+        # past the point: a hit only when the corner got faster (later braking praised only when it paid off)
+        (1103.0, 0.1, "miss", "3 m past the point"),
+        (1100.6, 0.0, "miss", "1 m past the point"),
+        (1103.0, None, "miss", "3 m past the point"),  # no usable comparison: not known to be faster
+        (1103.0, -0.05, "hit", "on the point, 3 m late but faster"),
+        (1105.0, -0.05, "hit", "on the point, 5 m late but faster"),
+        (1111.0, -0.3, "miss", "11 m past the point"),  # beyond the tolerance: never a hit
+        (None, 0.1, "unmeasured", "no braking measured"),
     ],
 )
-def test_brake_point_evaluation(value: float | None, outcome: str, phrase: str) -> None:
+def test_brake_point_evaluation(value: float | None, time_delta: float | None, outcome: str, phrase: str) -> None:
     st = dr.DrillState(spec())
-    a = attempt(st, cm(brake_start_m=value))
+    cd = None if time_delta is None else cdelta(time_delta=time_delta)
+    a = attempt(st, cm(brake_start_m=value), cd)
     assert a.outcome == outcome
-    assert a.text.startswith(f"Turn 3 drill, lap 1 of 5: {phrase}.")
+    assert a.text.startswith(f"Turn 3 drill, 1 of 5: {phrase}.")
+    assert a.text.endswith("1 hit." if outcome == "hit" else "No hits yet.")
     assert len(a.short) <= SHORT_MAX_CHARS and a.short.startswith("Drill 1/5: ")
     assert not FORBIDDEN.search(a.text)
+
+
+def test_a_late_brake_point_against_another_drivers_lap_needs_a_faster_corner() -> None:
+    """Review finding: Ann's own point is the target (Ben brakes 15 m later); braking 9 m later than her point,
+    towards Ben's, within a 10 m tolerance is no hit unless the corner got faster."""
+    s = spec(target=1140.9, tol=10.0, target_source="own_point", ref_name="Ben")
+    slower = attempt(dr.DrillState(s), cm(brake_start_m=1150.0), cdelta(time_delta=0.04))
+    assert (slower.outcome, slower.text.split(": ")[1].split(".")[0]) == ("miss", "9 m past the point")
+    faster = attempt(dr.DrillState(s), cm(brake_start_m=1150.0), cdelta(time_delta=-0.04))
+    assert faster.outcome == "hit" and "9 m late but faster" in faster.text
 
 
 def test_incident_min_speed_guard_and_entry_both_sides() -> None:
@@ -202,7 +225,7 @@ def test_incident_min_speed_guard_and_entry_both_sides() -> None:
     assert (guard.outcome, guard.reason) == ("miss", "exit 6 km/h down")
     assert "minimum 88 km/h but exit 6 km/h down" in guard.text
     short = attempt(dr.DrillState(s), cm(min_speed_kph=84.0))
-    assert short.outcome == "miss" and "minimum 84 km/h, 2 short" in short.text
+    assert short.outcome == "miss" and "minimum 84 km/h, 2 km/h short" in short.text
     e = spec("entry_speed", target=240.0, tol=5.0, baseline=240.0)
     assert attempt(dr.DrillState(e), cm(entry_speed_kph=244.0)).outcome == "hit"
     fast = attempt(dr.DrillState(e), cm(entry_speed_kph=247.0))
@@ -225,7 +248,7 @@ def run(s: dr.DrillSpec, values: list[float | None], attr: str = "brake_start_m"
 def test_summary_best_and_trend_thresholds() -> None:
     st = run(spec(laps=5), [1110.0, 1108.0, 1101.0, 1099.0, 1100.0])
     s = st.summary
-    assert st.status == "completed" and (s.hits, s.scored) == (3, 5)
+    assert st.status == "completed" and (s.hits, s.scored) == (2, 5)  # 1 m past the point is no hit here
     assert s.best == 1100.0 and s.best_delta == 0.0
     assert s.trend == "closer"  # first half |9|,|8| vs second half |1|,|0|: -8 <= -2.5
     assert run(spec(laps=4), [1101.0, 1102.0, 1101.0, 1103.0]).summary.trend == "steady"
@@ -242,23 +265,31 @@ def test_summary_best_and_trend_thresholds() -> None:
 
 
 def test_result_texts_and_last_attempt() -> None:
-    st = run(spec(laps=3), [1092.0, 1101.0, 1100.0])
+    st = run(spec(laps=3), [1092.0, 1099.0, 1100.0])
     last = st.attempts[-1]
-    assert last.text == "Turn 3 drill done: 2 of 3 on the point. Best 0 m."
-    assert last.short == "Drill done: 2/3 · best 0 m"
+    assert last.text == "Turn 3 drill done: 2 of 3 on the point. Best: right on the point."
+    assert last.short == "Drill done: 2/3 · best right on the point"
     assert last.text_simple == "Turn 3 drill done: 2 of 3 on the point."
-    stopped = run(spec(laps=5), [1092.0, 1101.0]).stopped("driver", 3000.0)
+    stopped = run(spec(laps=5), [1092.0, 1099.0]).stopped("driver", 3000.0)
     assert stopped.status == "stopped"
     assert (
         dr.drill_view(stopped)["summary_text"]
-        == "Turn 3 drill stopped after 2 of 5 laps: 1 of 2 on the point. Best 1 m."
+        == "Turn 3 drill stopped after 2 of 5 laps: 1 of 2 on the point. Best: 1 m from the point."
     )
     assert dr.stop_text(stopped) == "Copy, Turn 3 drill stopped: 1 of 2 on the point."
     assert dr.DrillState(spec()).stopped("driver", 1.0).status == "abandoned"
     active = run(spec(laps=5), [1092.0])
-    assert dr.status_text(active) == "Turn 3 brake point drill: 1 of 5 done, 0 hits. Last one 8 m before the point."
+    assert dr.status_text(active) == (
+        "Turn 3 brake point drill: 1 of 5 done, no hits yet. Last one 8 m before the point."
+    )
     sp = run(spec("min_speed", target=86.0, tol=3.0, laps=3), [84.0, 87.0, 88.0], "min_speed_kph")
-    assert sp.attempts[-1].text == "Turn 3 drill done: 2 of 3 on target. Best 88 km/h."
+    assert sp.attempts[-1].text == "Turn 3 drill done: 2 of 3 on target. Best: 88 km/h."
+    e = run(spec("entry_speed", target=240.0, tol=5.0, laps=3), [236.0, 243.0, 240.2], "entry_speed_kph")
+    assert e.attempts[-1].text == "Turn 3 drill done: 3 of 3 on target. Best: on target."
+    e2 = run(spec("entry_speed", target=240.0, tol=5.0, laps=3), [236.0, 243.0, 248.0], "entry_speed_kph")
+    assert e2.attempts[-1].text == "Turn 3 drill done: 2 of 3 on target. Best: 3 km/h from the target."
+    for t in (last.text, last.short, dr.drill_view(stopped)["summary_text"]):
+        assert "0 m" not in t
 
 
 def test_texts_are_british_short_and_never_instructions() -> None:
@@ -275,7 +306,7 @@ def test_texts_are_british_short_and_never_instructions() -> None:
 
 
 def test_drill_point_and_with_drill() -> None:
-    st = run(spec(laps=5, ref_name="Sam"), [1101.0])
+    st = run(spec(laps=5, ref_name="Sam"), [1099.0])
     point = dr.drill_point(st, st.attempts[0])
     assert set(COACH_FIELDS) <= set(point)
     assert point["kind"] == "drill" and point["positive"] is False and point["confidence"] == 1.0
@@ -296,15 +327,22 @@ def test_attempt_laps() -> None:
     s = spec(start_lap_number=4)
     assert not dr.is_attempt_lap(s, "s1", 4, set())  # the lap the drill started on
     assert dr.is_attempt_lap(s, "s1", 5, {"invalid"})  # track limits count
-    for flag in ("incomplete", "pit_in", "pit_out", "flashback"):
+    # not driven to the line, pit laps, rewound, the grid start, a reset to the track, stale data: no attempt
+    for flag in ("incomplete", "pit_in", "pit_out", "flashback", "standing_start", "distance_jump", "stale_data"):
         assert not dr.is_attempt_lap(s, "s1", 6, {flag})
+        assert not dr.is_attempt_lap(s, "s2", 1, {flag})  # also in a later session (race lap 1)
     assert dr.is_attempt_lap(s, "s2", 1, set())  # a later session: every lap
 
 
 def test_rows_round_trip() -> None:
-    st = run(spec(laps=5, ref_name="Sam", clamp={"T3": 1100.0}, ref_desc={"lap_id": 4, "own": False}), [1092.0, 1101.0])
+    context = {"game": "f1_25", "track_id": "f1:17", "weather": "clear", "assists": {"braking": 0}, "formula": "f1"}
+    st = run(
+        spec(laps=5, ref_name="Sam", clamp={"T3": 1100.0}, ref_desc={"lap_id": 4, "own": False}, context=context),
+        [1092.0, 1101.0],
+    )
     row = {"id": 7, **dr.spec_row(st.spec, st)}
     back = dr.state_from_row(row)
     assert dr.drill_view(back) == dr.drill_view(st)
     assert back.spec.clamp == {"T3": 1100.0} and back.spec.ref_desc == {"lap_id": 4, "own": False}
+    assert back.spec.context == context
     assert dataclasses.replace(back.spec, ref_desc=None).ref_name == "Sam"

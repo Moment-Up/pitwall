@@ -93,14 +93,22 @@ pipeline at four points, all on the `lap-analysis` thread:
 3. **Drill hook.** After every stored lap `CoachRef.after_lap` evaluates an active drill (`coach/drills.py`, pure):
    the attempt becomes the lap's single coaching point (`kind: "drill"`, `coach.drills.with_drill`), live
    observations are filtered to the drill corner (all are stored), the cue plan holds only that corner
-   (`CueEngine.set_drill_corner`) and the reference and clamp are frozen until the drill ends.
+   (`CueEngine.set_drill_corner`) and the reference and clamp are frozen until the drill ends. A lap in other
+   conditions than the drill's start (`DrillSpec.context`: car, layout, wet/dry, assists) stops it and never uses
+   the frozen reference; grid starts, resets, stale data and safety-car laps are no attempts.
 4. **`AnalysisWorker.submit_task`.** API and radio changes (choice, drill start / stop) run as tasks in the same
-   queue as the laps, so drill and reference state need no lock; callers wait at most 5 s (HTTP 503 after).
+   queue as the laps, so drill and reference state need no lock; callers wait at most 5 s for a task to start (HTTP
+   503 after, and the task is withdrawn), and one already running is waited for.
+5. **Before the first lap.** The live session's context request (`LiveState` -> `AnalysisWorker.request_bests`,
+   also sent when the session's wet/dry or assists change: F1's first packets carry default assists) reaches
+   `CoachRef.on_context`, which resolves and publishes the seated driver's chosen reference while no lap of the
+   session is in yet (`LapProcessor.refresh_reference`), so the delta runs from the first lap.
 
 Storage (schema v3, new tables only): `reference_choices` (per driver, `game`/`track_id` `''` = every track; cascade
 on driver delete) and `drills` (one row per drill, attempts as JSON; kept with a NULL driver when the driver is
 deleted). API: `api/routes_coachref.py` (`/api/coachref/...`). Radio: drill intents in `ai/engineer.py` answered by
-`CoachRef.radio_command` without the LLM.
+`CoachRef.radio_command` without the LLM (only an imperative starts or stops a drill; "who am I compared with?"
+is a deterministic `reference` answer from `ai/facts.py`).
 
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw

@@ -149,11 +149,12 @@ def test_descriptor_labels() -> None:
     t = 1_759_500_000.0  # 3 Oct 2025 (local dates differ by at most a day)
     date = lap_date(t)
     assert date is not None and date.endswith("Oct")
-    assert descriptor_labels("own_best", True, False, "Ann", 3, t) == ("Your best", "your reference", None)
-    assert descriptor_labels("own_best", True, True, "Ann", 3, t) == ("Your pinned lap", "your reference", None)
+    # one name for the driver's own reference on screen and on the radio ("plus 0.792 to your best")
+    assert descriptor_labels("own_best", True, False, "Ann", 3, t) == ("Your best", "your best", None)
+    assert descriptor_labels("own_best", True, True, "Ann", 3, t) == ("Your pinned lap", "your pinned lap", None)
     assert descriptor_labels("household_best", True, False, "Ann", 3, t) == (
         "Family record (you)",
-        "your reference",
+        "the family record",
         None,
     )
     assert descriptor_labels("household_best", False, False, "Sam", 3, t) == (

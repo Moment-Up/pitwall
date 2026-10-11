@@ -87,7 +87,9 @@ export function RefPickerBody({
   onClose: () => void;
 }) {
   const drivers = useDrivers((s) => s.drivers);
-  const opts = useApi(coachrefKeys.options(driverId), () => coachrefApi.options(driverId), { maxAgeMs: 0 });
+  // Refreshed while open: in a session's first seconds the game's car, assists and temperatures arrive, and rows
+  // that were unavailable then become available.
+  const opts = useApi(coachrefKeys.options(driverId), () => coachrefApi.options(driverId), { maxAgeMs: 0, intervalMs: 2000 });
   const data: RefOptionsResponse | undefined = opts.data;
   const rows = useMemo(() => (data ? pickerRows(data, Date.now() / 1000, drivers) : null), [data, drivers]);
   const [onlyHere, setOnlyHere] = useState<boolean | null>(null);

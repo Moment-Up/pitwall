@@ -103,7 +103,7 @@ describe("the delta reference control (spec 10.1)", () => {
   it("a choice that could not be used: one muted line saying why, and that your best is used", () => {
     const top = visible(deltaCard(render(model(withLive(fixture(ON_TRACK), "live-fallback")))));
     expect(top).toContain("Delta to · Your best");
-    expect(top).toContain("Jo's laps here used a different braking assist: using your best");
+    expect(top).toContain("Using your best: Jo's laps here used a different braking assist");
   });
 
   it("held for a drill / waiting for the next lap is said after the chip", () => {
@@ -118,7 +118,7 @@ describe("the delta reference control (spec 10.1)", () => {
     s.coachref!.choice = crFixture<{ coachref: { choice: NonNullable<SnapshotNext["coachref"]>["choice"] } }>("live-sam").coachref.choice;
     s.coachref!.reason = "replays and synthetic sessions use their own laps";
     const html = render(model(s));
-    expect(visible(deltaCard(html))).toContain("Replays and synthetic sessions use their own laps: using your best");
+    expect(visible(deltaCard(html))).toContain("Using your best: replays and synthetic sessions use their own laps");
     expect(visible(slot(html))).toContain("SYNTHETIC");
   });
 
@@ -136,7 +136,7 @@ describe("drills while driving (spec 10.3)", () => {
     expect(visible(hero)).toContain("DRILL");
     expect(visible(hero)).not.toContain("FOCUS");
     const coach = html.slice(html.indexOf("pwc-coach"), html.indexOf("pwc-delta"));
-    expect(visible(coach)).toContain("Drill · 2/5 Drill 2/5: 11 m past the point · 1 hit");
+    expect(visible(coach)).toContain("Drill Drill 2/5: 11 m past the point · 1 hit"); // the count once (UX review L1)
   });
 
   it("a band (pit lane, flags) hides the drill chip with the rest of the left part", () => {
@@ -192,7 +192,7 @@ describe("the Ready card (spec 10.2)", () => {
     s.coachref!.drill = crFixture<DrillView>("drill-completed");
     const html = render(model(s));
     const text = visible(html);
-    expect(text).toContain("Drill result T11 · Brake point Closer 3 of 4 on the point best 1 m from the point");
+    expect(text).toContain("Drill result T11 · Brake point Closer 3 of 4 on the point Best: 1 m from the point");
     expect(text).toContain("vs Sam's best");
     expect(text).toMatch(/Again Done/);
     expect(html.match(/class="pwc-dot"/g)).toHaveLength(5);
@@ -235,9 +235,9 @@ describe("the picker and the drill settings (overlay content)", () => {
     );
     const text = visible(html);
     expect(text).toContain("Brake within 5 m of Sam's braking point");
-    expect(text).toContain("Minimum speed: You already match the best minimum speed here (71 km/h).");
+    expect(text).toContain("Minimum speed: You already reach the best minimum speed driven here (71 km/h): pick another skill.");
     expect(text).toMatch(/Laps 3 5 8 10/);
-    expect(text).toMatch(/Window ±3 m ±5 m ±10 m/);
+    expect(text).toMatch(/Window before the point 3 m 5 m 10 m/);
     expect(text).toContain("Start drill");
   });
 
@@ -276,17 +276,21 @@ describe("coach.css: the coachref rules keep Drive's sizes", () => {
     return new RegExp(`(?:^|\\n)${esc} \\{([^}]*)\\}`).exec(CSS)?.[1] ?? "";
   };
 
-  it("the control is a Drive action (56 px; 64 px on the Ready card) and its words ellipsize", () => {
+  it("the control is a Drive action (56 px; 64 px on the Ready card); its words ellipsize, the reason wraps to two lines", () => {
     expect(rule(".pwc-refctl")).toMatch(/min-height:\s*var\(--pw-touch-drive,\s*56px\)/);
     expect(rule(".pwc-refctl--ready")).toMatch(/min-height:\s*var\(--pw-touch-glove,\s*64px\)/);
     expect(rule(".pwc-refctl__text")).toMatch(/text-overflow:\s*ellipsis/);
-    expect(rule(".pwc-refreason")).toMatch(/text-overflow:\s*ellipsis/);
+    const reason = rule(".pwc-refreason");
+    expect(reason).toMatch(/white-space:\s*normal/);
+    expect(reason).toMatch(/-webkit-line-clamp:\s*2/);
   });
 
-  it("the drill chip is fixed (never wraps the slot) and at most 220 px, 22 px / 600", () => {
+  it("the drill chip is fixed (never wraps the slot), at most 220 px, 22 px / 600, and a 44 px target (phone too)", () => {
     const chip = rule(".pwc-drillchip");
     expect(chip).toMatch(/flex:\s*none/);
     expect(chip).toMatch(/max-width:\s*220px/);
     expect(chip).toMatch(/font:\s*600 22px/);
+    expect(chip).toMatch(/min-height:\s*44px/);
+    expect(CSS).toMatch(/\.pwc-drillchip \{ height: 44px; min-height: 44px;/); // the phone rule
   });
 });

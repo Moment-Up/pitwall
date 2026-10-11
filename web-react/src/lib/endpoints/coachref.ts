@@ -384,7 +384,8 @@ function qs(params: Record<string, string | number | boolean | null | undefined>
   return s ? `?${s}` : "";
 }
 
-/** After any change: every coachref answer is stale (options, drill options, history, compare's "Use for my delta"). */
+/** After any change: every coachref answer is stale (options, drill options, history, and Review › Compare's
+ * "Drive against this lap"). */
 function changed(): void {
   cache.invalidate(coachrefKeys.all);
 }
@@ -419,6 +420,11 @@ export const coachrefApi = {
     const r = await send<DrillView>(`${BASE}/drills/active/stop`, { method: "POST" });
     changed();
     return r;
+  },
+  /** Done on a drill result: the seated driver's last result is no longer published (204; 404 when not showing). */
+  dismissDrill: async (id: number) => {
+    await send<null>(`${BASE}/drills/${id}/dismiss`, { method: "POST" });
+    changed();
   },
   drills: (q: DrillsQuery = {}) =>
     send<DrillView[]>(

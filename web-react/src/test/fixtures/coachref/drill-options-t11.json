@@ -40,7 +40,7 @@
       "kind": "min_speed",
       "skill_label": "Minimum speed",
       "available": false,
-      "reason": "You already match the best minimum speed here (71 km/h).",
+      "reason": "You already reach the best minimum speed driven here (71 km/h): pick another skill.",
       "target": null,
       "unit": "km/h",
       "tolerance": 3.0,

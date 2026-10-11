@@ -6,6 +6,7 @@ import {
   bestText,
   cornersOf,
   defaultKind,
+  defaultLaps,
   drillBlock,
   drillChip,
   drillCoach,
@@ -13,10 +14,14 @@ import {
   drillResult,
   drillSuggestion,
   drillTrack,
+  endedDrill,
   kindChoices,
   lapsChoices,
+  raceLapsLeft,
   sheetCorners,
+  stoppedText,
   toleranceText,
+  toleranceTitle,
   trendWord,
 } from "./drill";
 import { workOnWentWell } from "./coach";
@@ -93,10 +98,11 @@ describe("the coach card while a drill runs (spec 10.3)", () => {
   it("the drill corner shows the radio's words: short while moving, the full text stationary", () => {
     const s = withLive(fixture(ON_TRACK), "live-drill");
     const moving = drillCoach(s, "T7", false, true)!;
-    expect(moving).toMatchObject({ tag: "drill", tagText: "Drill · 2/5", text: "Drill 2/5: 11 m past the point · 1 hit", source: "d6" });
-    expect(drillCoach(s, "T7", false, false)?.text).toBe("Turn 11 drill, lap 2 of 5: 11 m past the point. One hit.");
-    expect(drillCoach(s, "T7", true, false)?.text).toBe("Turn 11 drill, lap 2 of 5: past the point."); // simple wording
-    expect(model(s).coach).toMatchObject({ tag: "drill", tagText: "Drill · 2/5" });
+    // The tag says what it is; the point's own words count the attempt ("Drill 2/5: …"), never twice.
+    expect(moving).toMatchObject({ tag: "drill", tagText: "Drill", text: "Drill 2/5: 11 m past the point · 1 hit", source: "d6" });
+    expect(drillCoach(s, "T7", false, false)?.text).toBe("Turn 11 drill, 2 of 5: 11 m past the point. 1 hit.");
+    expect(drillCoach(s, "T7", true, false)?.text).toBe("Turn 11 drill, 2 of 5: past the point."); // simple wording
+    expect(model(s).coach).toMatchObject({ tag: "drill", tagText: "Drill" });
   });
 
   it("other corners are quiet; before the first attempt the drill corner says so", () => {
@@ -125,7 +131,7 @@ describe("the coach card while a drill runs (spec 10.3)", () => {
   it("in the pit lane the running drill's last point shows in full", () => {
     const m = model(withLive(fixture("edited-pit-lane"), "live-drill"));
     expect(m.state).toBe("pit_lane");
-    expect(m.coach).toMatchObject({ tag: "drill", tagText: "Drill · 2/5", text: "Turn 11 drill, lap 2 of 5: 11 m past the point. One hit.", full: true });
+    expect(m.coach).toMatchObject({ tag: "drill", tagText: "Drill", text: "Turn 11 drill, 2 of 5: 11 m past the point. 1 hit.", full: true });
   });
 
   it("no drill: the normal coaching point", () => {
@@ -192,7 +198,7 @@ describe("the Ready card's Drill block (spec 10.2)", () => {
       trend: "Closer",
       stopped: null,
       reference: "vs Sam's best",
-      summary: "Turn 11 drill done: 3 of 4 on the point. Best 1 m. Closer each lap.",
+      summary: "Turn 11 drill done: 3 of 4 on the point. Best: 1 m from the point. Closer each lap.",
       again: { corner: "T7", kind: "brake_point", laps: 5, tolerance: 5, source: "work_on" },
     });
     expect(b.result.dots.map((d) => d.outcome)).toEqual(["hit", "miss", "hit", "unmeasured", "hit"]);
@@ -209,7 +215,10 @@ describe("the Ready card's Drill block (spec 10.2)", () => {
   });
 
   it("best and trend words", () => {
-    expect(bestText({ kind: "brake_point", best: 2787.8, best_delta: 0.3, unit: "m" })).toBe("on the point");
+    // As the server says it (coach/drills.py _best_text): never "best 0 m"
+    expect(bestText({ kind: "brake_point", best: 2787.8, best_delta: 0.3, unit: "m" })).toBe("right on the point");
+    expect(bestText({ kind: "brake_point", best: 2788.4, best_delta: 0.6, unit: "m" })).toBe("1 m from the point");
+    expect(bestText({ kind: "entry_speed", best: 240.2, best_delta: 0.2, unit: "km/h" })).toBe("on target");
     expect(bestText({ kind: "entry_speed", best: 241, best_delta: -2.4, unit: "km/h" })).toBe("2 km/h from the target");
     expect(bestText({ kind: "exit_speed", best: null, best_delta: null, unit: "km/h" })).toBeNull();
     expect([trendWord("closer"), trendWord("steady"), trendWord("further"), trendWord("rising"), trendWord("falling"), trendWord(null)]).toEqual([
@@ -257,10 +266,13 @@ describe("the drill sheet's choices (spec 10.2)", () => {
       ["exit_speed", false],
       ["entry_speed", false],
     ]);
-    expect(k[1]?.reason).toBe("You already match the best minimum speed here (71 km/h).");
+    expect(k[1]?.reason).toBe("You already reach the best minimum speed driven here (71 km/h): pick another skill.");
     expect(defaultKind(k)).toBe("brake_point");
     expect(lapsChoices(o)).toEqual([3, 5, 8, 10]);
-    expect(toleranceText("brake_point", 5, "m")).toBe("±5 m");
+    // A brake-point window is before the point (past it counts only when the corner was faster)
+    expect(toleranceText("brake_point", 5, "m")).toBe("5 m");
+    expect(toleranceTitle("brake_point")).toBe("Window before the point");
+    expect(toleranceTitle("entry_speed")).toBe("Window");
     expect(toleranceText("entry_speed", 8, "km/h")).toBe("±8 km/h");
     expect(toleranceText("min_speed", 3, "km/h")).toBe("+3 km/h");
   });
@@ -298,5 +310,57 @@ describe("the Session complete card (spec 4.9)", () => {
     const { workOn, wentWell } = workOnWentWell(s, false);
     expect(workOn).toBeNull();
     expect(wentWell).toBeNull();
+  });
+});
+
+describe("review fixes (UX review)", () => {
+  it("M4: in a race the laps default fits the laps left (at least 3); elsewhere the server's default", () => {
+    const s = withLive(fixture(BETWEEN), "live-drill");
+    s.session = { ...s.session!, session_type: "race", total_laps: 3 };
+    s.frame = { ...s.frame!, lap_number: 1 };
+    expect(raceLapsLeft(s)).toBe(2);
+    expect(defaultLaps([3, 5, 8, 10], 5, raceLapsLeft(s))).toBe(3); // a 3-lap race: the smallest choice
+    s.session = { ...s.session!, total_laps: 12 };
+    s.frame = { ...s.frame!, lap_number: 5 };
+    expect(defaultLaps([3, 5, 8, 10], 5, raceLapsLeft(s))).toBe(5); // the default fits
+    s.frame = { ...s.frame!, lap_number: 6 };
+    expect(defaultLaps([3, 5, 8, 10], 5, raceLapsLeft(s))).toBe(5);
+    s.frame = { ...s.frame!, lap_number: 8 };
+    expect(defaultLaps([3, 5, 8, 10], 5, raceLapsLeft(s))).toBe(3); // 4 left
+    s.session = { ...s.session!, session_type: "practice_1" };
+    expect(raceLapsLeft(s)).toBeNull();
+    expect(defaultLaps([3, 5, 8, 10], 5, null)).toBe(5);
+  });
+
+  it("M4: the Session complete card names the drill driven in this session", () => {
+    const s = withLive(fixture(BETWEEN), "live-drill");
+    const d = s.coachref!.drill!;
+    s.laps = [...s.laps, { ...s.laps[0]!, lap_id: d.attempts[0]!.lap_id!, lap_number: 6 }];
+    expect(endedDrill(s)).toEqual({ title: "Drill T11 · Brake point", line: "1 of 2 on the point (2 of 5 laps)" });
+    s.laps = s.laps.filter((l) => !d.attempts.some((a) => a.lap_id === l.lap_id)); // another session's drill
+    expect(endedDrill(s)).toBeNull();
+  });
+
+  it("L6: a drill stopped early says after how many laps and why", () => {
+    const d = crFixture<DrillView>("drill-completed");
+    expect(stoppedText({ ...d, status: "stopped", stop_reason: "driver_changed", attempts: d.attempts.slice(0, 2) })).toBe(
+      "Stopped after 2 of 5 laps: the driver changed",
+    );
+    expect(stoppedText({ ...d, status: "stopped", stop_reason: "driver" })).toBe("Stopped after 5 of 5 laps");
+    expect(stoppedText(d)).toBeNull();
+  });
+
+  it("M7: a corner without an official name is said in words, not only as a code", () => {
+    const m = structuredClone(fixture(BETWEEN).track_model!);
+    const c = m.corners[0]!;
+    m.corner_text = { ...m.corner_text, [c.name]: { short: "T6-9 (2)", long: "Turns 6-9, part 2", voice: "Turns 6 to 9, second part" } };
+    m.corners = m.corners.map((x) => (x.name === c.name ? { ...x, display_name: null } : x));
+    const row = cornersOf(m).find((x) => x.name === c.name)!;
+    expect(row).toMatchObject({ label: "T6-9 (2)", officialName: "Turns 6-9, part 2" });
+    m.corners = m.corners.map((x) => (x.name === c.name ? { ...x, display_name: "Hairpin" } : x));
+    expect(cornersOf(m).find((x) => x.name === c.name)?.officialName).toBe("Hairpin"); // an official name wins
+    m.corner_text = { ...m.corner_text, [c.name]: { short: "T5", long: "T5", voice: "Turn 5" } };
+    m.corners = m.corners.map((x) => (x.name === c.name ? { ...x, display_name: null } : x));
+    expect(cornersOf(m).find((x) => x.name === c.name)?.officialName).toBeNull(); // nothing more than the label
   });
 });

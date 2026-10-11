@@ -34,6 +34,8 @@ from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Any, TypeVar
 
+from pitwall.compat import is_windows
+
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
@@ -295,25 +297,43 @@ def _json_default(o: Any) -> Any:
     raise TypeError(f"not JSON serialisable: {type(o)}")
 
 
-_OPEN_RETRY_S = (0.1, 0.2, 0.4, 0.8, 1.6)  # see Database.__init__
+_OPEN_RETRY_S = (0.1, 0.2, 0.4, 0.8, 1.6)  # Windows only, see Database.__init__
+_WAL_SWITCH_TIMEOUT_S = 30.0  # same as the connections' busy timeout
+
+
+def _set_wal(conn: sqlite3.Connection) -> None:
+    """``PRAGMA journal_mode=WAL``. Switching a database that is not in WAL mode yet (a file made by another tool)
+    needs exclusive access, and SQLite reports "database is locked" at once, without its busy wait, while another
+    opener holds a lock: retry briefly. A database already in WAL mode (every one pitwall made) never waits here."""
+    deadline = time.monotonic() + _WAL_SWITCH_TIMEOUT_S
+    while True:
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+            return
+        except sqlite3.OperationalError as e:
+            if "locked" not in str(e) or time.monotonic() >= deadline:
+                raise
+            time.sleep(0.01)
 
 
 class Database:
     def __init__(self, path: Path) -> None:
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
-        for delay in (*_OPEN_RETRY_S, None):
+        for delay in (*(_OPEN_RETRY_S if is_windows() else ()), None):
             try:
                 with closing(self.connect()) as conn:
-                    conn.executescript(SCHEMA)
+                    # One write transaction taken up front: creating a table that an older database lacks (v3:
+                    # coachref) is a write, and as autocommit statements concurrent openers could get "database is
+                    # locked" at once (a read upgraded to a write is not retried); BEGIN IMMEDIATE waits.
+                    conn.executescript(f"BEGIN IMMEDIATE;\n{SCHEMA}\nCOMMIT;")
                     _migrate(conn)
                 return
             except sqlite3.OperationalError as e:
-                # Openers racing on one file (two processes, or the threads of the concurrent-openers tests) can
-                # get "database is locked" at once, without the 30 s busy wait - SQLite skips it where waiting could
-                # deadlock (a schema statement whose read snapshot went stale). Seen on Windows runners and, more
-                # rarely, on macOS (a few in a hundred races of four openers). Opening is idempotent (IF NOT EXISTS,
-                # BEGIN IMMEDIATE migration), so try again.
+                # Windows: openers racing on one file (two processes, or the threads of the concurrent-openers
+                # test on the CI runner) can get "database is locked" at once, without the 30 s busy wait - SQLite
+                # skips it where waiting could deadlock. Opening is idempotent (IF NOT EXISTS, BEGIN IMMEDIATE
+                # migration), so try again. macOS raises at once, as before.
                 if delay is None or "locked" not in str(e):
                     raise
                 log.info("database %s is locked while opening; retrying in %.1f s", path, delay)
@@ -322,7 +342,7 @@ class Database:
     def connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.path, timeout=30, check_same_thread=False)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA journal_mode=WAL")
+        _set_wal(conn)
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.execute("PRAGMA foreign_keys=ON")
         return conn

@@ -47,6 +47,54 @@ def test_drill_rules_take_precedence(question: str) -> None:
     assert detect_intent(question).name.startswith("drill_")
 
 
+@pytest.mark.parametrize(
+    ("question", "intent"),
+    [
+        # questions that mention a drill ask for its status: they never start or stop one (adversarial review)
+        ("How did the drill on T1-4 (1) go?", "drill_status"),
+        ("did I hit the drill at T3", "drill_status"),
+        ("what was my best drill at turn 3", "drill_status"),
+        ("should I do a drill at turn 4", "drill_status"),
+        ("what happens at the end of the drill", "drill_status"),
+        ("is the drill still running?", "drill_status"),
+        # negations do nothing with a drill
+        ("don't start a drill on T1-4 (1)", "corner"),
+        ("do not start a drill on turn 3", "corner"),
+        ("don't stop the drill", "general"),
+        ("please don't stop the drill", "general"),
+        ("never mind the drill", "general"),
+        # another rule's question that mentions a drill
+        ("compare my drill at turn 3 with Sam", "compare"),
+        # imperatives with a lead-in still act
+        ("No, stop the drill", "drill_stop"),
+        ("please stop the drill", "drill_stop"),
+        ("stop the drill, I'm not enjoying it", "drill_stop"),
+        ("can you start a drill on turn 5", "drill_start"),
+        ("let's do a drill at turn 2", "drill_start"),
+        ("I want to do a drill at turn 4", "drill_start"),
+    ],
+)
+def test_only_an_imperative_starts_or_stops_a_drill(question: str, intent: str) -> None:
+    assert detect_intent(question).name == intent
+
+
+@pytest.mark.parametrize(
+    ("question", "intent"),
+    [
+        ("who am I compared with?", "reference"),
+        ("what am I comparing against", "reference"),
+        ("who am I racing against", "reference"),
+        ("what's the reference", "reference"),
+        ("what did I lose against the reference", "compare"),  # a time question stays a comparison
+        ("what did I lose against the reference at turn 3", "compare"),
+        ("what's my delta to the reference", "compare"),
+        ("who am I racing against, the AI?", "general"),
+    ],
+)
+def test_who_am_i_compared_with(question: str, intent: str) -> None:
+    assert detect_intent(question).name == intent
+
+
 def test_other_questions_are_unchanged() -> None:
     assert detect_intent("turn 3").name == "corner"
     assert detect_intent("stop talking for two laps").name == "control_quiet"
@@ -55,7 +103,7 @@ def test_other_questions_are_unchanged() -> None:
 
 
 def test_drill_intents_are_fast() -> None:
-    assert {"drill_start", "drill_status", "drill_stop"} <= FAST_INTENTS
+    assert {"drill_start", "drill_status", "drill_stop", "reference"} <= FAST_INTENTS
 
 
 class _NoLLM(LLMProvider):

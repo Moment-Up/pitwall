@@ -5,6 +5,7 @@
 // state without a live delta: "-" with one reason line. A frozen delta must never look current.
 
 import type { DriveOverlays, DriveState } from "./state";
+import { waitingText } from "./reference";
 import type { SnapshotNext } from "./types";
 import { MINUS, UNKNOWN, ageText, dayText, finite, lapTime, lapTimeHundredths } from "./text";
 
@@ -89,9 +90,9 @@ function unknownReason(s: SnapshotNext | null, state: DriveState): string | null
       return null;
     default: {
       if (!s?.reference) {
-        // coachref: another driver's lap is chosen; it becomes the reference when this lap is in.
-        const c = s?.coachref?.choice;
-        return c && c.kind !== "own_best" ? `No reference yet: ${c.label} from your next lap` : NO_REFERENCE;
+        // coachref: another driver's lap is chosen and not in place yet: the Ready card's words (waitingText).
+        const waiting = waitingText(s?.coachref?.choice);
+        return waiting ? `No reference yet: ${waiting}` : NO_REFERENCE;
       }
       const ds = s.frame?.driver_status;
       if (ds === "out_lap") return "Out lap";

@@ -4,7 +4,7 @@
 //
 //   status slot   [DRILL · T3 · 3/5 · 2 ✓]                 accent-soft, left of the Segment, tap: target + Stop drill
 //   hero          T3 Copse                       [DRILL]    replaces FOCUS when the shown corner is the drill corner
-//   coach card    [Drill · 3/5] Turn 3 drill, lap 3 of 5: on the point. Two hits.     (the radio's words, verbatim)
+//   coach card    [Drill] Turn 3 drill, 3 of 5: on the point. 2 hits.     (the radio's words, verbatim)
 //                 other corners: "Drill on T3: other corners are quiet"
 //
 // One message, two channels (P7): drill progress arrives as the lap's coach point (kind "drill"), so the card shows
@@ -102,13 +102,12 @@ function emptyPoint(text: string, corner: string | null): CoachPoint {
 
 function drillPoint(o: ObservationNext, simple: boolean, moving: boolean): CoachPoint {
   const text = pointText(o, simple, moving);
-  const k = o.drill?.attempt;
-  const n = o.drill?.of;
   const lap = finite(o.lap_number) ? o.lap_number : null;
   return {
     tag: "drill",
     lap,
-    tagText: finite(k) && finite(n) ? `Drill · ${k}/${n}` : "Drill",
+    // The point's own text counts the attempt ("Drill 1/5: …"): the tag only says what it is.
+    tagText: "Drill",
     text,
     size: textSize(text, moving),
     clamp: needsClamp(text, moving),
@@ -197,12 +196,15 @@ export function trendWord(t: DrillTrend | null | undefined): DrillTrendWord | nu
   return t ? (TREND_WORD[t] ?? null) : null;
 }
 
-/** The best attempt in words: how close to the point / target (brake, entry), or the speed reached (min, exit). */
+/** The best attempt in words, as the server says it (coach/drills.py _best_text): "right on the point", "3 m from the
+ * point", "on target", "4 km/h from the target", or the speed reached (min, exit): "98 km/h". */
 export function bestText(d: Pick<DrillView, "kind" | "best" | "best_delta" | "unit">): string | null {
   if (isBrakeLike(d.kind)) {
     if (!finite(d.best_delta)) return null;
-    const n = Math.round(Math.abs(d.best_delta));
-    return n === 0 ? hitWords(d.kind) : `${n} ${d.unit} ${d.kind === "brake_point" ? "from the point" : "from the target"}`;
+    const a = Math.abs(d.best_delta);
+    if (d.kind === "brake_point") return a < 0.5 ? "right on the point" : `${Math.max(1, Math.round(a))} m from the point`;
+    const n = Math.round(a);
+    return n === 0 ? "on target" : `${n} km/h from the target`;
   }
   return finite(d.best) ? `${Math.round(d.best)} km/h` : null;
 }
@@ -226,14 +228,21 @@ export function againRequest(d: Pick<DrillView, "corner" | "kind" | "laps_target
   return { corner: d.corner, kind: d.kind, laps: d.laps_target, tolerance: d.tolerance, source: d.source === "work_on" ? "work_on" : "manual" };
 }
 
-const STOP_WORDS: Readonly<Record<string, string>> = {
-  driver: "Stopped",
-  driver_changed: "Stopped: the driver changed",
-  context_changed: "Stopped: the track, car or layout changed",
-  model_changed: "Stopped: the track map changed",
-  timed_out: "Stopped: no lap for 30 minutes",
-  service_restart: "Stopped: Pitwall restarted",
+/** Why a drill stopped early, in words (coach/drills.py STOP_REASONS); the driver's own Stop says nothing more. */
+const STOP_WHY: Readonly<Record<string, string>> = {
+  driver_changed: "the driver changed",
+  context_changed: "the car, track or conditions changed",
+  model_changed: "the track map changed",
+  timed_out: "no lap for 30 minutes",
+  service_restart: "Pitwall restarted",
 };
+
+/** "Stopped after 2 of 5 laps: the driver changed" (null unless it stopped with laps counted). */
+export function stoppedText(d: Pick<DrillView, "status" | "stop_reason" | "attempts" | "laps_target">): string | null {
+  if (d.status !== "stopped") return null;
+  const why = STOP_WHY[d.stop_reason ?? ""];
+  return `Stopped after ${d.attempts.length} of ${d.laps_target} laps${why ? `: ${why}` : ""}`;
+}
 
 export interface DrillResultView {
   id: number;
@@ -246,7 +255,7 @@ export interface DrillResultView {
   dots: AttemptDot[];
   /** The server's summary sentence, verbatim. */
   summary: string | null;
-  /** "Stopped after 2 of 5 laps", or null when it ran its laps. */
+  /** "Stopped after 2 of 5 laps: the driver changed", or null when it ran its laps. */
   stopped: string | null;
   /** "vs Sam's best". */
   reference: string | null;
@@ -254,8 +263,6 @@ export interface DrillResultView {
 }
 
 export function drillResult(s: SnapshotNext | null | undefined, d: DrillView): DrillResultView {
-  const done = d.attempts.length;
-  const stop = d.status === "stopped" ? (STOP_WORDS[d.stop_reason ?? ""] ?? "Stopped") : null;
   return {
     id: d.id,
     title: `${drillLabel(s, d)} · ${skillOf(d)}`,
@@ -264,7 +271,7 @@ export function drillResult(s: SnapshotNext | null | undefined, d: DrillView): D
     trend: trendWord(d.trend),
     dots: attemptDots(d),
     summary: d.summary_text,
-    stopped: stop ? `${stop} after ${done} of ${d.laps_target} laps` : null,
+    stopped: stoppedText(d),
     reference: d.reference?.label ? `vs ${d.reference.label}` : null,
     again: againRequest(d),
   };
@@ -305,6 +312,28 @@ export function drillBlock(s: SnapshotNext | null | undefined): DrillBlockView |
   return { kind: "none", suggestion: drillSuggestion(s) };
 }
 
+// ------------------------------------------------------------------------------------------ Session complete
+
+export interface EndedDrillView {
+  /** "Drill T12 · Brake point". */
+  title: string;
+  /** "2 of 2 on the point (2 of 5 laps)". */
+  line: string;
+}
+
+/** The drill driven in this session (running or ended, with an attempt on one of this session's laps) for the
+ * Session complete card; null otherwise. */
+export function endedDrill(s: SnapshotNext | null | undefined): EndedDrillView | null {
+  const d = drillOf(s);
+  if (!s || !d || d.status === "abandoned" || d.attempts.length === 0) return null;
+  const laps = new Set(s.laps.map((l) => l.lap_id));
+  if (!d.attempts.some((a) => a.lap_id != null && laps.has(a.lap_id))) return null;
+  return {
+    title: `Drill ${drillLabel(s, d)} · ${skillOf(d)}`,
+    line: `${d.hits} of ${d.scored} ${hitWords(d.kind)} (${d.attempts.length} of ${d.laps_target} laps)`,
+  };
+}
+
 // ------------------------------------------------------------------------------------------------- drill sheet
 
 export interface SheetCorner {
@@ -334,14 +363,19 @@ export function cornersOf(
   const m = model as TrackModelNext;
   return [...model.corners]
     .sort((a, b) => a.apex_m - b.apex_m)
-    .map((c) => ({
-      name: c.name,
+    .map((c) => {
       // The sheet's short text names the part ("T1-4 (1)", "T1-4 (2)"): two learned corners can share a label.
-      label: m.corner_text?.[c.name]?.short || cornerLabelOf(m, c.name),
-      officialName: officialNameOf(m, c.name),
-      focus: focus(c.name),
-      workOn: workOn(c.name),
-    }));
+      const label = m.corner_text?.[c.name]?.short || cornerLabelOf(m, c.name);
+      // Without an official name, the long form says it in words ("Turns 6-9, part 2"): "T6-9 (2)" alone is a code.
+      const long = m.corner_text?.[c.name]?.long ?? null;
+      return {
+        name: c.name,
+        label,
+        officialName: officialNameOf(m, c.name) ?? (long && long !== label ? long : null),
+        focus: focus(c.name),
+        workOn: workOn(c.name),
+      };
+    });
 }
 
 /** Where the drill sheet finds the corners when the live snapshot has no track model yet (a session's first lap):
@@ -386,17 +420,38 @@ export function defaultKind(choices: readonly KindChoice[]): DrillKind | null {
   return (choices.find((c) => c.suggested && !c.disabled) ?? choices.find((c) => !c.disabled))?.kind ?? null;
 }
 
-/** "±5 m" (brake point, entry speed: a window around the target) or "+3 km/h" (speed drills: the step up). */
+/** "5 m" (brake point: a window before the point; past it counts only when the corner was faster), "±5 km/h" (entry
+ * speed: around the target) or "+3 km/h" (speed drills: the step up). */
 export function toleranceText(kind: DrillKind, value: number, unit: DrillUnit): string {
   const v = Number.isInteger(value) ? String(value) : value.toFixed(1);
-  return isBrakeLike(kind) ? `±${v} ${unit}` : `+${v} ${unit}`;
+  if (kind === "brake_point") return `${v} ${unit}`;
+  return kind === "entry_speed" ? `±${v} ${unit}` : `+${v} ${unit}`;
 }
 
 /** What the tolerance Segment is called for this kind. */
 export function toleranceTitle(kind: DrillKind): string {
+  if (kind === "brake_point") return "Window before the point";
   return isBrakeLike(kind) ? "Window" : "Step up";
 }
 
 export function lapsChoices(o: Pick<DrillOptionsResponse, "laps_choices"> | null | undefined): readonly number[] {
   return o?.laps_choices?.length ? o.laps_choices : DRILL_LAPS_CHOICES;
+}
+
+/** A race's laps a drill can still use: the total less the lap being driven (or about to start: the grid start is no
+ * attempt). Null outside a race or while the total is unknown. */
+export function raceLapsLeft(s: SnapshotNext | null | undefined): number | null {
+  const se = s?.session;
+  const total = se?.total_laps;
+  if (!se || !finite(total) || total <= 0 || !/race/i.test(se.session_type ?? "")) return null;
+  const lap = s?.frame?.lap_number;
+  return Math.max(0, total - (finite(lap) && lap > 0 ? lap : 1));
+}
+
+/** The laps the drill sheet starts on: the server's default when it fits the race's laps left, else the largest
+ * choice that fits, never below the smallest choice (a 3-lap race: 3). */
+export function defaultLaps(choices: readonly number[], fallback: number, lapsLeft: number | null | undefined): number {
+  if (lapsLeft == null || fallback <= lapsLeft || !choices.length) return fallback;
+  const fit = choices.filter((n) => n <= lapsLeft);
+  return fit.length ? Math.max(...fit) : Math.min(...choices);
 }

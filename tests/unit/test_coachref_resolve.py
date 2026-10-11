@@ -3,6 +3,7 @@ on a temporary database with several drivers. Laps are stored rows (no analysis 
 
 from __future__ import annotations
 
+import dataclasses
 import sqlite3
 from collections.abc import Iterator
 from pathlib import Path
@@ -284,3 +285,53 @@ def test_frozen_reference(env: Env, family: dict[str, Any]) -> None:
         res = cr.resolve_reference(c, ann, ctx_of(info), None, frozen=cr.FrozenRef(family["a"][1], desc, {"T1": 500.0}))
     assert (res.lap_id, res.frozen, res.own, res.kind) == (family["a"][1], True, True, "own_best")
     assert res.clamp == {"T1": 500.0} and res.to_dict()["frozen"] is True
+
+
+CAP_CASES = [
+    ("braking", {"assists": {"braking": 2}}, {}),
+    ("wet", {"condition": "heavy_rain"}, {}),
+    ("formula", {"formula": "F2"}, {"formula": "F1 World"}),
+]
+
+
+@pytest.mark.parametrize(("case", "other", "ctx_extra"), CAP_CASES, ids=[c[0] for c in CAP_CASES])
+def test_faster_laps_in_other_conditions_never_hide_a_comparable_one(
+    env: Env, clean_session: DecodedSession, case: str, other: dict[str, Any], ctx_extra: dict[str, Any]
+) -> None:
+    """Adversarial review S4: each driver was cut to their ten fastest laps before the compatibility check, so ten
+    faster laps on another assist hid Sam's comparable lap ("Sam's laps here used a different braking assist")."""
+    info, base = clean_session.info, clean_session.laps[0]
+    if ctx_extra.get("formula"):
+        info = session_info(info, formula=ctx_extra["formula"])
+    ann, sam = env.drivers.default_id, env.drivers.create("Sam").id
+    add(env, ann, "s-ann", info, base, [70_000])
+    ok = add(env, sam, "s-sam", info, base, [66_000])
+    add(env, sam, "s-sam-other", session_info(info, **other), base, [60_000 + i for i in range(12)])
+    ctx = ctx_of(info)
+    choose(env, ann, "driver_best", target_driver_id=sam)
+    res = resolve(env, ann, ctx)
+    assert (res.lap_id, res.kind, res.reason) == (ok[0], "driver_best", None)
+    choose(env, ann, "household_best")
+    assert resolve(env, ann, ctx).lap_id == ok[0]
+    with env.db.read() as c:
+        opts = cr.reference_options(c, ann, ctx)
+        rows = repo.reference_candidates(
+            c, ctx["game"], ctx["track_id"], ctx["car_id"], ctx["track_length_m"], driver_id=sam, match=ctx
+        )
+    assert ok[0] in [o["lap_id"] for o in opts if o["kind"] == "lap"]
+    assert [r["lap_id"] for r in rows] == ok  # the other conditions' laps are filtered before the cap
+
+
+def test_the_conditions_filter_never_drops_a_lap_with_unknown_values(env: Env, clean_session: DecodedSession) -> None:
+    info, base = clean_session.info, clean_session.laps[0]
+    sam = env.drivers.create("Sam").id
+    unknown = dataclasses.replace(
+        info, assists={}, formula=None, weather=dataclasses.replace(info.weather, condition=None)
+    )
+    ids = add(env, sam, "s-sam", unknown, base, [66_000])
+    ctx = {**ctx_of(info), "weather": "heavy_rain", "assists": {"braking": 2, "gearbox": 1, "abs": 0, "tc": 1}}
+    with env.db.read() as c:
+        rows = repo.reference_candidates(
+            c, ctx["game"], ctx["track_id"], ctx["car_id"], ctx["track_length_m"], match={**ctx, "formula": "F2"}
+        )
+    assert [r["lap_id"] for r in rows] == ids  # unknown never excludes (as analysis.compare)

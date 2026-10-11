@@ -22,12 +22,20 @@ Practice drills
 ``coach.drills`` holds the pure rules; this service runs them: one active drill per driver, only in a live session
 of the seated driver at a track whose model is frozen, evaluated after every stored lap (``after_lap``), stored in
 ``repo.drills``. While a drill runs the reference and its clamp are frozen (``frozen_for``), the cue plan holds the
-drill corner only and the lap's coaching is the drill point.
+drill corner only and the lap's coaching is the drill point. A lap in other conditions than the drill's start (another
+car or layout, wet/dry, a different assist: ``DrillSpec.context``) stops the drill (``context_changed``), and the
+frozen reference is never used for such a lap. Safety-car laps are no attempts. The last drill a driver finished (or
+that stopped with attempts) stays published for them until they put it away (``dismiss_result``).
 
 Threads (D8): every change of choice or drill state runs on the lap-analysis thread (``run_task``, i.e.
 ``AnalysisWorker.submit_task``), so nothing here needs a lock with the lap pipeline; API threads wait at most
-``TASK_TIMEOUT_S`` (``Busy`` -> HTTP 503). The ingest thread is never involved. ``live.coachref`` is published with
-one attribute swap after every change.
+``TASK_TIMEOUT_S`` for a task to start (``Busy`` -> HTTP 503, and the task is withdrawn); one already running is
+waited for, so a refused request never takes effect later. The ingest thread is never involved. ``live.coachref`` is
+published with one attribute swap after every change.
+
+Early reference: when the seated driver's live session has a complete context (game, track, layout, car) and no lap
+of it is in yet, the chosen reference is resolved and published at once (``on_context``), so the delta runs from the
+first lap; braking calls still wait for a lap's comparison.
 
 Evidence tier: unit + synthetic + recorded-tested (``scripts/coachref_check.py`` on the owner's F1 25 captures); not
 live-validated.
@@ -88,6 +96,7 @@ LAST_RESOLVED_KEPT = 16  # sessions whose latest resolution is remembered (used_
 _WET = frozenset({"light_rain", "heavy_rain", "storm"})  # analysis.compare.check_compatibility's wet set
 _NOT_DRIVING = FrameQuality.PAUSED | FrameQuality.NOT_RACING | FrameQuality.REPLAY_OR_SPECTATING
 _IN_PITS = (1, 2)
+_NO_SAFETY_CAR = frozenset({"none"})  # coach.cues: a safety_car_status meaning no safety car
 
 # ---------------------------------------------------------------------------------------------- sentences
 LEGACY_REASON = "replays and synthetic sessions use their own laps"
@@ -473,7 +482,7 @@ def household_best(
     game, track, car, length = _ctx_keys(ctx)
     if car is None:
         return None, UNKNOWN_CAR, []
-    for r in repo.reference_candidates(conn, game, track, car, length, exclude_lap_id=exclude):
+    for r in repo.reference_candidates(conn, game, track, car, length, exclude_lap_id=exclude, match=dict(ctx)):
         ok, warns, _ = comparable(r, ctx)
         if ok:
             return r, None, warns
@@ -488,11 +497,15 @@ def driver_best(
     game, track, car, length = _ctx_keys(ctx)
     if car is None:
         return None, UNKNOWN_CAR, []
-    rows = repo.reference_candidates(conn, game, track, car, length, exclude_lap_id=exclude, driver_id=driver_id)
-    for r in rows:
+    usable = repo.reference_candidates(
+        conn, game, track, car, length, exclude_lap_id=exclude, driver_id=driver_id, match=dict(ctx)
+    )
+    for r in usable:
         ok, warns, _ = comparable(r, ctx)
         if ok:
             return r, None, warns
+    # none usable: the reason is the first blocking difference of their best lap in this car and layout
+    rows = repo.reference_candidates(conn, game, track, car, length, exclude_lap_id=exclude, driver_id=driver_id)
     if rows:
         return None, _driver_reason(comparable(rows[0], ctx)[2], name), []
     anywhere = repo.reference_candidates(conn, game, track, None, None, exclude_lap_id=exclude, driver_id=driver_id)
@@ -691,7 +704,9 @@ def reference_options(
         )
     if car is not None:
         n = 0
-        for r in repo.reference_candidates(conn, game, track, car, length, exclude_lap_id=exclude_lap_id):
+        for r in repo.reference_candidates(
+            conn, game, track, car, length, exclude_lap_id=exclude_lap_id, match=dict(ctx)
+        ):
             ok, warns, _ = comparable(r, ctx)
             if not ok:
                 continue
@@ -812,8 +827,7 @@ class CoachRef:
         self._clock = clock
         # analysis-thread state (tasks and lap hooks only)
         self._drills: dict[int, dr.DrillState] = {}  # active drill per driver
-        self._ended: dr.DrillState | None = None  # the drill that just ended (the Ready card's result)
-        self._ended_session: str | None = None  # live session when it ended
+        self._ended: dict[int, dr.DrillState] = {}  # per driver: the last drill that ended with attempts (until Done)
         self._pending: set[int] = set()  # drivers whose new choice waits for the next lap / the drill's end
         self._last: dict[str, ResolvedReference] = {}  # session -> latest resolution (used_kind, reason)
         self._publish_lock = threading.Lock()
@@ -839,7 +853,9 @@ class CoachRef:
         try:
             return cast(T, fut.result(TASK_TIMEOUT_S))
         except TimeoutError as e:
-            raise Busy("The analysis is busy: try again in a moment.") from e
+            if fut.cancel():  # still queued: withdrawn, so it never takes effect after the refusal
+                raise Busy("The analysis is busy: try again in a moment.") from e
+        return cast(T, fut.result())  # already running: its change happens, so answer with it
 
     def _driver(self, driver_id: int | None) -> int:
         did = driver_id if driver_id is not None else self.drivers.active_id
@@ -914,7 +930,7 @@ class CoachRef:
                 if res is not None and res.owner != driver:
                     res = None
                 st = self._drills.get(driver) if driver is not None else None
-                ended = self._ended if self._ended is not None and self._ended.spec.driver_id == driver else None
+                ended = self._ended.get(driver) if driver is not None else None
                 drill = dr.drill_view(st) if st is not None else (dr.drill_view(ended) if ended else None)
                 live.coachref = {
                     "driver_id": driver,
@@ -1169,6 +1185,22 @@ class CoachRef:
         st = self._task(lambda: self._active(did))
         return None if st is None else dr.drill_view(st)
 
+    def dismiss_result(self, drill_id: int, driver_id: int | None = None) -> bool:
+        """Put away a finished drill's result (the Ready card's Done): it is no longer published. False when it is
+        not the driver's last result."""
+        did = driver_id if driver_id is not None else self.drivers.active_id
+        if did is None:
+            return False
+        return self._task(lambda: self._dismiss(did, drill_id))
+
+    def _dismiss(self, driver_id: int, drill_id: int) -> bool:
+        st = self._ended.get(driver_id)
+        if st is None or st.spec.id != drill_id:
+            return False
+        del self._ended[driver_id]
+        self._publish()
+        return True
+
     def drills(
         self,
         driver_id: int | None = None,
@@ -1237,13 +1269,8 @@ class CoachRef:
         st = self._active(did) if did is not None else None
         if st is not None:
             return dr.status_text(st), st.spec.id
-        ended = self._ended
-        if (
-            ended is not None
-            and ended.spec.driver_id == did
-            and self._ended_session == self.live.session_id
-            and ended.attempts
-        ):
+        ended = self._ended.get(did) if did is not None else None
+        if ended is not None and ended.attempts:
             text = dr.drill_view(ended)["summary_text"]
             return str(text), ended.spec.id
         return NO_DRILL_HINT, None
@@ -1309,14 +1336,32 @@ class CoachRef:
             return None
         if (str(ctx.get("game") or ""), str(ctx.get("track_id") or "")) != (st.spec.game, st.spec.track_id):
             return None
+        start = st.spec.context
+        if start is not None and not comparable(start, ctx)[0]:
+            return None  # other conditions (car, wet/dry, assists): the lap pipeline's own choice; after_lap stops it
         return FrozenRef(st.spec.ref_lap_id, dict(st.spec.ref_desc or {}), st.spec.clamp)
 
     def on_context(self, session_id: str) -> None:
-        """The live session or the seat changed (``LapProcessor.refresh_bests``): the last drill's result belongs to
-        the session it ended in."""
-        if self._ended is not None and self._ended_session != session_id:
-            self._ended = None
+        """The live session's context or the seat changed (``LapProcessor.refresh_bests``, analysis thread): resolve
+        and publish the chosen reference before the session's first lap (see the module docstring), then the
+        choice."""
+        try:
+            self._early_reference(session_id)
+        except Exception:
+            log.exception("coachref: early reference failed")
         self._publish()
+
+    def _early_reference(self, session_id: str) -> None:
+        """The seated driver's own live driving with a complete context (game, track, layout, car) and no lap of the
+        session in yet: publish the chosen reference now (the lap pipeline owns it from the first lap)."""
+        proc, driver, info = self.processor, self.drivers.active_id, self.live.session
+        if proc is None or driver is None or info is None or self.live.session_id != session_id:
+            return
+        if not info.track_id or not info.car_id or not info.track_length_m or info.track_length_m <= 0:
+            return
+        if proc.has_lap(session_id) or self._live_session_of(driver) is None:
+            return
+        proc.refresh_reference(session_id, load_model=True)
 
     def on_driver(self, driver: Driver | None) -> None:
         """The seated driver changed or edited their profile (``DriverService`` listener, API thread): a different
@@ -1325,9 +1370,7 @@ class CoachRef:
 
         def task() -> None:
             for owner in [o for o in self._drills if o != new]:
-                self._stop(owner, "driver_changed")
-            if self._ended is not None and self._ended.spec.driver_id != new:
-                self._ended = None
+                self._stop(owner, "driver_changed")  # its result waits for that driver (``_ended``)
             self._publish()
 
         try:
@@ -1364,6 +1407,7 @@ class CoachRef:
             (ctx.get("game"), ctx.get("track_id")) != (spec.game, spec.track_id)
             or (car is not None and spec.car_id is not None and car != spec.car_id)
             or not lengths_compatible(ctx.get("track_length_m"), spec.track_length_m)
+            or (spec.context is not None and _block_code(spec.context, ctx) is not None)  # wet/dry, assists
         ):
             self._stop(owner, "context_changed")
             return None
@@ -1375,7 +1419,11 @@ class CoachRef:
             return None
         lap = job.lap
         busy = {"active": True, "corner": spec.corner, "point": None}
-        if model is None or not dr.is_attempt_lap(spec, job.session_id, lap.lap_number, lap.flags):
+        if (
+            model is None
+            or not dr.is_attempt_lap(spec, job.session_id, lap.lap_number, lap.flags)
+            or self._safety_car(job.session_id)
+        ):
             return busy
         an = cur if cur is not None else analyse_lap(lap, model)
         m: CornerMetrics | None = an.corners.get(spec.corner)
@@ -1389,7 +1437,7 @@ class CoachRef:
         self.writer.submit(lambda c: repo.update_drill(c, spec.id, **fields))
         if done:
             self._drills.pop(owner, None)
-            self._ended, self._ended_session = st, job.session_id
+            self._ended[owner] = st
             if not self._drills:
                 self.live.cues.set_drill_corner(None)
         else:
@@ -1413,12 +1461,21 @@ class CoachRef:
         fields = dr.state_fields(st)
         drill_id = st.spec.id
         self.writer.submit(lambda c: repo.update_drill(c, drill_id, **fields))
-        self._ended = st if st.attempts else None
-        self._ended_session = self.live.session_id
+        if st.attempts:
+            self._ended[driver_id] = st
+        else:
+            self._ended.pop(driver_id, None)
         if not self._drills:
             self.live.cues.set_drill_corner(None)
         self._publish()
         return st
+
+    def _safety_car(self, session_id: str) -> bool:
+        """A safety car (or VSC, formation lap) is out in the live session ``session_id`` at the lap's end: the lap
+        says nothing about the driver's braking or speed there."""
+        info = self.live.session if self.live.session_id == session_id else None
+        sc = info.safety_car_status if info is not None else None
+        return sc is not None and sc not in _NO_SAFETY_CAR
 
     def _drill_env(self) -> _DrillEnv | str:
         """The live driving a drill needs (spec 3.4.2 #1-2), or the refusal sentence."""
@@ -1482,6 +1539,12 @@ class CoachRef:
                     shares = env.texts[name].short if name in env.texts else name
                     break
         assist = _assists(env.ctx).get("braking")
+        own_whose = "your best lap's"
+        if desc is not None and not other:
+            if desc.pinned:
+                own_whose = "your pinned lap's"
+            elif desc.kind == "lap":
+                own_whose = "your saved lap's"
         return dr.DrillInputs(
             corner_label=label,
             ref=ref_m,
@@ -1495,6 +1558,7 @@ class CoachRef:
             tolerance=tolerance,
             braking_assist=assist if isinstance(assist, int) and not isinstance(assist, bool) else None,
             shares_with=shares,
+            own_whose=own_whose,
         )
 
     def _suggested(self, corner: str) -> dr.DrillKind | None:
@@ -1503,9 +1567,12 @@ class CoachRef:
         point = by_corner.get(corner) if isinstance(by_corner, Mapping) else None
         return dr.kind_for_observation(point.get("kind")) if isinstance(point, Mapping) else None
 
-    def _running_reason(self, st: dr.DrillState) -> str:
-        k = min(len(st.attempts) + 1, st.spec.laps_target)
-        return f"A drill on {st.spec.corner_label} is running: lap {k} of {st.spec.laps_target}. Stop it first."
+    def _running_reason(self, st: dr.DrillState, *, radio: bool = False) -> str:
+        """Why another drill cannot start: "A Turn 3 drill is running: 1 of 3 done. Stop it first." (the radio says
+        what to say instead)."""
+        spec = st.spec
+        head = f"A {spec.corner_voice} drill is running: {len(st.attempts)} of {spec.laps_target} done."
+        return f"{head} Say 'stop the drill' first." if radio else f"{head} Stop it first."
 
     def _drill_options(self, corner: str | None, corner_ref: str | None) -> dict[str, Any]:
         ref = corner if corner is not None else (corner_ref or "")
@@ -1573,6 +1640,16 @@ class CoachRef:
             )
         return rows
 
+    def _start_context(self, ctx: Mapping[str, Any]) -> dict[str, Any]:
+        """The conditions a drill starts in (``DrillSpec.context``): the session's lap context plus F1's formula."""
+        keys = ("game", "track_id", "track_length_m", "car_id", "weather", "assists", "formula")
+        out = {k: ctx.get(k) for k in keys}
+        out["assists"] = dict(_assists(ctx))
+        info = self.live.session
+        if out["formula"] is None and info is not None:
+            out["formula"] = info.formula
+        return out
+
     def _start_drill(self, req: DrillRequest) -> dict[str, Any]:
         env = self._drill_env()
         if isinstance(env, str):
@@ -1588,7 +1665,7 @@ class CoachRef:
             raise Conflict(f"I can't find {ref} on this track.")
         running = self._active(env.driver_id)
         if running is not None:
-            raise Conflict(self._running_reason(running))
+            raise Conflict(self._running_reason(running, radio=req.source == "radio"))
         first_reason: str | None = None
         picked: tuple[str, dr.DrillTarget] | None = None
         for corner in corners:
@@ -1659,6 +1736,7 @@ class CoachRef:
             ref_name=desc.ref_name if other and desc is not None else None,
             ref_desc=desc.to_dict() if desc is not None and desc.lap_id is not None else None,
             clamp=dict(env.cx.clamp or {}) if other else None,
+            context=self._start_context(env.ctx),
         )
         state = dr.DrillState(spec=spec, last_activity_unix=now)
         row = dr.spec_row(spec, state)
@@ -1666,7 +1744,7 @@ class CoachRef:
         spec = replace(spec, id=drill_id)
         state = replace(state, spec=spec)
         self._drills[env.driver_id] = state
-        self._ended = None
+        self._ended.pop(env.driver_id, None)
         self.live.cues.set_drill_corner(corner)
         self._publish()
         return dr.drill_view(state)

@@ -5,25 +5,29 @@
 //               [ Choose a corner… ]        (56 px: the drill sheet)        a refusal replaces the first button
 //   running     Drill · T3 · Brake point · 2 of 5 done · 1 hit
 //               Brake within 5 m of Sam's braking point          [ Stop drill ]
-//   just ended  Drill result · T3 · Brake point   2 of 3 on the point · best 1 m from the point  [Closer]
+//   just ended  Drill result · T3 · Brake point   2 of 3 on the point · Best: 1 m from the point  [Closer]
 //               ● ○ ●  (filled = hit, ring = miss, dash = not measured)       [ Again ]  [ Done ]
+//               (it stays, also after a driver change or in a later session, until Done puts it away)
 //
-// Status slot while driving: [DRILL · T3 · 3/5 · 2 ✓] (accent-soft, at most 220 px); a tap shows the target and
-// Stop drill (56 px; allowed while moving: one tap, and it only makes the radio say less).
+// Status slot while driving: [DRILL · T3 · 3/5 · 2 ✓] (accent-soft, 44 px tall, at most 220 px); a tap shows the
+// target and Stop drill (56 px; allowed while moving: one tap, and it only makes the radio say less). The popover
+// closes by itself after 5 s: it covers the delta.
 
 import { Button, Chip, Popover } from "@heroui/react";
-import { lazy, memo, Suspense, useState } from "react";
+import { lazy, memo, Suspense, useEffect, useState } from "react";
 import { useStore } from "../../../hooks/stores";
 import { useApi } from "../../../hooks/useApi";
 import { coachrefApi, coachrefErrorText, coachrefKeys, type DrillStartRequest } from "../../../lib/endpoints/coachref";
 import type { AttemptDot, DrillBlockView, DrillChipView, DrillResultView, DrillSuggestion, SheetCorner } from "../../../lib/drive/drill";
+import { POPOVER_AUTO_CLOSE_MS } from "../../../lib/drive/notice";
 import { Store } from "../../../lib/store";
 import { sameProps } from "./view";
 
 // The drill sheet (Modal / Pro Sheet, Segments, the corner list) is its own chunk: loaded when it first opens (4.11).
 const DrillSheet = lazy(async () => ({ default: (await import("./DrillSheet")).DrillSheet }));
 
-/** Results the driver put away with Done (this device, until reload). */
+/** Results the driver put away with Done: hidden at once on this device while the server forgets them too
+ * (POST /drills/{id}/dismiss). */
 class DismissedDrills extends Store<{ ids: readonly number[] }> {
   constructor() {
     super({ ids: [] });
@@ -84,7 +88,7 @@ export function DrillResultCard({ result, onAgain, onDone, busy = false }: { res
       </div>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-[22px] font-bold">{result.score}</span>
-        {result.best && <span className="text-[15px] text-muted">best {result.best}</span>}
+        {result.best && <span className="text-[15px] text-muted">Best: {result.best}</span>}
       </div>
       <AttemptDots dots={result.dots} />
       {result.stopped && <p className="m-0 text-[15px] text-muted">{result.stopped}</p>}
@@ -131,12 +135,22 @@ export interface DrillBlockProps {
   corners: readonly SheetCorner[];
   /** The live game and track (the sheet finds a stored model's corners before the first lap). */
   track?: { game: string; trackId: string } | null;
+  /** A race's laps left: the drill sheet's laps default fits them. */
+  lapsLeft?: number | null;
   beginner: boolean;
+}
+
+/** Done: hide the result here at once, and ask the server to stop publishing it (a refusal just leaves it hidden). */
+function dismiss(id: number): void {
+  dismissedDrills.dismiss(id);
+  void coachrefApi.dismissDrill(id).catch(() => {
+    /* not showing any more (another device's Done, a restart): nothing to undo */
+  });
 }
 
 /** The Ready card's Drill block (Today column): start buttons, the running drill, or the result. The column
  * heading is the Ready card's ("Drill" while one runs or has just ended). */
-export const DrillBlock = memo(function DrillBlock({ block, corners, track = null, beginner }: DrillBlockProps) {
+export const DrillBlock = memo(function DrillBlock({ block, corners, track = null, lapsLeft = null, beginner }: DrillBlockProps) {
   const [sheet, setSheet] = useState(false);
   const dismissed = useStore(dismissedDrills, (st) => st.ids);
   const act = useAction();
@@ -165,7 +179,7 @@ export const DrillBlock = memo(function DrillBlock({ block, corners, track = nul
         result={r}
         busy={act.busy}
         onAgain={() => void act.run(() => coachrefApi.startDrill(r.again))}
-        onDone={() => dismissedDrills.dismiss(r.id)}
+        onDone={() => dismiss(r.id)}
       />
     );
   } else {
@@ -195,6 +209,7 @@ export const DrillBlock = memo(function DrillBlock({ block, corners, track = nul
             track={track}
             initialCorner={initial}
             beginner={beginner}
+            lapsLeft={lapsLeft}
           />
         </Suspense>
       )}
@@ -206,6 +221,11 @@ export const DrillBlock = memo(function DrillBlock({ block, corners, track = nul
 export const DrillStatusChip = memo(function DrillStatusChip({ chip }: { chip: DrillChipView }) {
   const [open, setOpen] = useState(false);
   const act = useAction();
+  useEffect(() => {
+    if (!open || act.busy) return;
+    const t = setTimeout(() => setOpen(false), POPOVER_AUTO_CLOSE_MS);
+    return () => clearTimeout(t);
+  }, [open, act.busy]);
   return (
     <Popover isOpen={open} onOpenChange={setOpen}>
       <Button variant="ghost" className="pwc-drillchip" aria-label={chip.aria}>

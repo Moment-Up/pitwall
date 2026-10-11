@@ -75,7 +75,9 @@ describe("Review › Coaching: Drills (spec 10.7)", () => {
   it("lists the drills here, newest first, with score, best, trend and whose lap they were against", () => {
     cache.set(coachrefKeys.drills(Q), crFixture<DrillView[]>("drills-history-suzuka"));
     const text = visible(renderCard());
-    expect(text).toMatch(/^Drills T11 Hairpin Brake point 3\/4 .*best 1 m from the point · vs Sam's best Closer T9 Degner 2 Minimum speed 1\/2 .*best 99 km\/h · vs Your best · Stopped$/);
+    expect(text).toMatch(
+      /^Drills T11 Hairpin Brake point 3 of 4 on the point .*Best: 1 m from the point · vs Sam's best Closer T9 Degner 2 Minimum speed 1 of 2 on target .*Best: 99 km\/h · vs Your best · Stopped after 2 of 5 laps$/,
+    );
     for (const bad of ["undefined", "null", "NaN"]) expect(text).not.toContain(bad);
   });
 
@@ -188,6 +190,26 @@ describe("Work on: Drill this (spec 10.6)", () => {
   it("shows while this session's driver is live at this track", () => {
     goLive();
     expect(visible(renderWorkOn())).toContain("Drill this");
+  });
+
+  it("asks the server first: a drill that cannot run there shows the reason, not a button (UX review H1)", () => {
+    goLive();
+    const opts = crFixture<import("../../../lib/endpoints/coachref").DrillOptionsResponse>("drill-options-t11");
+    cache.set(coachrefKeys.drillOptions("T6"), { ...opts, corner: "T6" }); // min_speed: unavailable there
+    const text = visible(renderWorkOn());
+    expect(text).not.toContain("Drill this");
+    expect(text).toContain("You already reach the best minimum speed driven here (71 km/h): pick another skill.");
+    cache.set(coachrefKeys.drillOptions("T6"), { ...opts, corner: "T6", available: false, reason: "Drills run on your own live driving." });
+    expect(visible(renderWorkOn())).toContain("Drills run on your own live driving.");
+  });
+
+  it("hidden once the session is over (stale telemetry or ended): a tap could only be refused", () => {
+    goLive();
+    const snap = (live as unknown as { get(): { snap: Record<string, unknown> } }).get().snap;
+    (live as unknown as { set(p: object): void }).set({ snap: { ...snap, session_state: "ended" }, connected: true });
+    expect(visible(renderWorkOn())).not.toContain("Drill this");
+    (live as unknown as { set(p: object): void }).set({ snap: { ...snap, connection: { ...(snap.connection as object), status: "stale" } }, connected: true });
+    expect(visible(renderWorkOn())).not.toContain("Drill this");
   });
 
   it("hidden with nobody live, at another track, or with another driver in the seat", () => {

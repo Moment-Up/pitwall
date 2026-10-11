@@ -29,20 +29,29 @@ describe("Review › Coaching: Drills (spec 10.7)", () => {
     expect(drillsQuery(1, null)).toBeNull();
   });
 
-  it("rows: date · corner (official label and name) · skill · hits/scored · best · trend · vs reference, newest first", () => {
+  it("rows: date · corner (official label and name) · skill · hits of scored · best · trend · vs reference, newest first", () => {
     const rows = drillRows(crFixture<DrillView[]>("drills-history-suzuka"), SUZUKA, NOW_MS);
     expect(rows.map((r) => r.id)).toEqual([14, 11]);
     expect(rows[0]).toMatchObject({
       corner: "T11 Hairpin",
       skill: "Brake point",
-      score: "3/4",
-      best: "best 1 m from the point",
+      score: "3 of 4 on the point",
+      best: "Best: 1 m from the point",
       trend: "Closer",
       vs: "vs Sam's best",
       status: null,
       synthetic: false,
     });
-    expect(rows[1]).toMatchObject({ corner: "T9 Degner 2", skill: "Minimum speed", score: "1/2", best: "best 99 km/h", trend: null, vs: "vs Your best", status: "Stopped" });
+    // A 5-lap drill stopped after 2 says so: "2 of 2" alone would read as finished (UX review L6)
+    expect(rows[1]).toMatchObject({
+      corner: "T9 Degner 2",
+      skill: "Minimum speed",
+      score: "1 of 2 on target",
+      best: "Best: 99 km/h",
+      trend: null,
+      vs: "vs Your best",
+      status: "Stopped after 2 of 5 laps",
+    });
     expect(rows[0]?.text).toContain("3 of 4 on the point");
     expect(rows[1]?.text).toContain("1 of 2 on target");
   });
@@ -58,11 +67,12 @@ describe("Review › Coaching: Drills (spec 10.7)", () => {
   it("each lap of a drill: lap, where or how fast, against the target in words, outcome", () => {
     const rows = attemptRows(crFixture<DrillView>("drill-completed"));
     expect(rows.map((r) => [r.lap, r.value, r.delta, r.outcomeText])).toEqual([
-      ["L6", "2 789 m", "1 m past the point", "Hit"],
-      ["L7", "2 799 m", "11 m past the point", "Miss"],
-      ["L8", "2 791 m", "3 m past the point", "Hit"],
-      ["L9", "-", "-", "Not measured: no braking measured"],
-      ["L10", "2 787 m", "1 m before the point", "Hit"],
+      // a brake point's lap distance says nothing to the driver: the words against the point do
+      ["L6", null, "1 m before the point", "Hit"],
+      ["L7", null, "11 m past the point", "Miss"],
+      ["L8", null, "3 m before the point", "Hit"],
+      ["L9", null, "-", "Not measured: no braking measured"],
+      ["L10", null, "1 m before the point", "Hit"],
     ]);
     const [, speed] = crFixture<DrillView[]>("drills-history-suzuka");
     expect(attemptRows(speed!).map((r) => [r.value, r.delta, r.outcomeText])).toEqual([
@@ -109,6 +119,10 @@ describe("Work on: Drill this (spec 10.6)", () => {
     expect(drillThisKind(parseLiveDrill(liveDrillKey({ ...snap, connection: { status: "live", synthetic: true } }, true, 1)), session, "brake_early")).toBeNull();
     expect(liveDrillKey(snap, false, 1)).toBe("");
     expect(liveDrillKey({ ...snap, connection: { status: "no_data" } }, true, 1)).toBe("");
+    // UX review H1: a session that is over (stale telemetry, or the game ended it) can only refuse a drill
+    expect(liveDrillKey({ ...snap, connection: { status: "stale" } }, true, 1)).toBe("");
+    expect(liveDrillKey({ ...snap, session_state: "ended" }, true, 1)).toBe("");
+    expect(liveDrillKey({ ...snap, session_state: "running" }, true, 1)).not.toBe("");
     expect(drillThisKind(parseLiveDrill(""), session, "brake_early")).toBeNull();
     // A server without coachref: the seated driver stands in for the owner.
     expect(parseLiveDrill(liveDrillKey({ ...snap, coachref: null }, true, 1))?.driverId).toBe(1);

@@ -1,8 +1,10 @@
 // Drills (coachref, spec 10.7): the viewed driver's practice drills at this track (+ car), newest first, from
-// GET /api/coachref/drills. A row (56 px): date · corner · skill · hits/scored · best · trend chip · vs reference.
+// GET /api/coachref/drills. A row (56 px): corner · skill · hits of scored, then date · best · vs reference · status,
+// the trend chip and a chevron (it opens).
 // A tap opens a Pro Sheet with the target and note (verbatim), each lap of the drill (lap, value, against the
 // target, outcome) and "See it on the lap" (Compare at the corner, the best attempt's lap against the reference).
 
+import { ChevronRight } from "@gravity-ui/icons";
 import { Alert, Button, Card, Chip, Skeleton } from "@heroui/react";
 import { ListView, Sheet } from "@heroui-pro/react";
 import { useMemo, useState, type Key } from "react";
@@ -74,7 +76,7 @@ function DrillSheet({
                           <span className="pw-num text-[15px] text-muted">{a.lap}</span>
                           <span className="grid min-w-0">
                             <span className="text-[15px]">{a.delta}</span>
-                            <span className="pw-num text-[13px] text-muted">{a.value}</span>
+                            {a.value && <span className="pw-num text-[13px] text-muted">{a.value}</span>}
                           </span>
                           <Chip size="sm" variant="soft" color={a.outcome === "hit" ? "success" : "default"}>
                             <Chip.Label>{a.outcomeText}</Chip.Label>
@@ -159,6 +161,7 @@ export function DrillsCard({ query, model, gameLengthM, simple = false }: Drills
               </span>
               {r.synthetic && <EvidenceChips synthetic size="sm" />}
               <TrendChip word={r.trend} />
+              <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted" />
             </ListView.ItemContent>
           </ListView.Item>
         ))}

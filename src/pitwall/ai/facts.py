@@ -271,6 +271,25 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
             f"({'this session' if same else 'an earlier session'}) in {fmt_lap(r.get('lap_time_ms'))}.",
             {"lap": r["lap_number"], "lap_time_s": (r.get("lap_time_ms") or 0) / 1000},
         )
+    # --- coachref --- the live reference when it is the driver's own lap (chosen with core.coachref: it carries a
+    # descriptor): after the session's reference fact, so only "who am I compared with?" answers with it
+    if isinstance(live_ref, dict) and live_ref.get("own") is True and isinstance(live_ref.get("lap_time_ms"), int):
+        own_ms = int(live_ref["lap_time_ms"])
+        to = str(live_ref.get("label_to") or "your best")
+        n_own = live_ref.get("lap_number")
+        when = lap_date(live_ref.get("set_unix"))
+        fs.add(
+            "reference",
+            f"Live delta and coaching reference: {live_ref.get('label') or 'Your best'}"
+            + (f" ({driver_name}'s own lap)" if driver_name else "")
+            + f", {fmt_lap(own_ms)}"
+            + (f", lap {n_own}" if isinstance(n_own, int) else "")
+            + (f", set {when}" if when else "")
+            + ".",
+            {"lap": n_own, "lap_time_s": own_ms / 1000},
+            say=f"You're being compared with {to}, a {fmt_lap(own_ms)}.",
+        )
+    # --- coachref ---
 
     # ---------------------------------------------------------------- corners (session aggregate)
     summary = [c for c in sa.corner_summary if c.laps]

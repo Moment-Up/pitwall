@@ -1,29 +1,36 @@
-// "Use for my delta" (coachref, spec 10.5): next to picker A when A is another driver's lap. One tap asks inline, a
-// second stores that lap as the driver's live reference at this track (PUT /api/coachref/choice, kind "lap"); the
-// delta, the braking calls (never later than the driver's own braking point) and the lap coaching then measure
-// against it. Other tracks keep their own choice.
+// "Drive against this lap" (coachref, spec 10.5): next to picker A when A is another driver's lap. One tap asks inline
+// (whose lap, which lap, its time, where: a saved lap stays that lap, it does not follow the driver's best), a second
+// stores it as the driver's live reference at this track (PUT /api/coachref/choice, kind "lap"); the delta, the
+// braking calls (never later than the driver's own braking point) and the lap coaching then measure against it.
+// Other tracks keep their own choice.
 
 import { Button } from "@heroui/react";
 import { useState } from "react";
 import { coachrefApi, coachrefErrorText } from "../../../../lib/endpoints/coachref";
+import { savedLapWords } from "../../../../lib/drive/reference";
 
 export interface UseForDeltaProps {
   lapId: number;
   driverId: number;
-  /** The driver is the one in the seat: "my delta"; else "Sam's delta". */
+  /** The driver is the one in the seat: "Drive against this lap"; else "Sam: drive against this lap". */
   self: boolean;
   driverName: string | null;
   trackName: string | null;
-  /** "Sam's best". */
+  /** "Sam's best": used when the lap's holder is unknown. */
   refLabel: string;
+  /** Whose lap it is ("Alex"), its number and time (the confirm names the one lap it stays on). */
+  holder?: string | null;
+  lapNumber?: number | null;
+  lapTimeMs?: number | null;
 }
 
-export function UseForDelta({ lapId, driverId, self, driverName, trackName, refLabel }: UseForDeltaProps) {
+export function UseForDelta({ lapId, driverId, self, driverName, trackName, refLabel, holder, lapNumber, lapTimeMs }: UseForDeltaProps) {
   const [step, setStep] = useState<"idle" | "confirm" | "saved">("idle");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const whose = self || !driverName ? "your" : `${driverName}'s`;
+  const mine = self || !driverName;
   const where = trackName ?? "this track";
+  const lap = savedLapWords(holder, lapNumber, lapTimeMs, refLabel);
 
   async function save() {
     setBusy(true);
@@ -41,7 +48,7 @@ export function UseForDelta({ lapId, driverId, self, driverName, trackName, refL
   if (step === "saved") {
     return (
       <span role="status" className="text-sm">
-        Saved: {whose} delta at {where} is now against this lap
+        Saved: {mine ? "you drive" : `${driverName} drives`} against {lap} at {where}
       </span>
     );
   }
@@ -49,7 +56,8 @@ export function UseForDelta({ lapId, driverId, self, driverName, trackName, refL
     return (
       <span className="flex flex-wrap items-center gap-2 text-sm">
         <span>
-          Measure {whose} live delta at {where} against {refLabel}?
+          {mine ? `Drive against ${lap} at ${where}?` : `Should ${driverName} drive against ${lap} at ${where}?`} It stays on
+          this lap.
         </span>
         <Button variant="primary" size="sm" className="min-h-11" isPending={busy} onPress={() => void save()}>
           Use this lap
@@ -67,7 +75,7 @@ export function UseForDelta({ lapId, driverId, self, driverName, trackName, refL
   }
   return (
     <Button variant="ghost" size="sm" className="min-h-11" onPress={() => setStep("confirm")}>
-      {self || !driverName ? "Use for my delta" : `Use for ${driverName}'s delta`}
+      {mine ? "Drive against this lap" : `${driverName}: drive against this lap`}
     </Button>
   );
 }

@@ -13,6 +13,8 @@ import {
   pickerRows,
   refControlView,
   refPickerLocked,
+  savedLapWords,
+  warningText,
 } from "./reference";
 import { NO_OVERLAYS } from "./state";
 import { driver, fixture, frame, snap } from "./testkit";
@@ -75,9 +77,11 @@ describe("the reference control (spec 10.1, 10.2)", () => {
     expect(v.holder).toEqual({ name: "Sam", initials: "SA", colour: null });
   });
 
-  it("beginners: 'vs your target lap' for their own lap, else 'vs Sam's best lap'", () => {
+  it("beginners: one name each, as the radio says it: 'vs your best lap' for their own lap, else 'vs Sam's best lap'", () => {
     const own = refControlView(withLive(fixture("recorded-d246-suzuka-on-track-brake-ahead"), "live-own"), { beginner: true });
-    expect(own.text).toBe("vs your target lap");
+    expect(own.text).toBe("vs your best lap");
+    expect(beginnerText("own_best", true, "your pinned lap", "Your pinned lap")).toBe("vs your pinned lap");
+    expect(beginnerText("own_best", true, null, "Your best")).toBe("vs your best lap"); // an older server: no label_to
     const sam = refControlView(withLive(fixture("recorded-d246-suzuka-on-track-brake-ahead"), "live-sam"), { beginner: true });
     expect(sam.text).toBe("vs Sam's best lap");
     expect(beginnerText("household_best", false, "the family record", "Family record · Sam")).toBe("vs the family record lap");
@@ -88,7 +92,8 @@ describe("the reference control (spec 10.1, 10.2)", () => {
     const v = refControlView(withLive(fixture("recorded-d246-suzuka-on-track-brake-ahead"), "live-fallback"), { beginner: false });
     expect(v.text).toBe("Delta to · Your best");
     expect(v.own).toBe(true);
-    expect(v.reason).toBe("Jo's laps here used a different braking assist: using your best");
+    // The fallback first: a line cut short still says the delta is not against Jo (UX review H2)
+    expect(v.reason).toBe("Using your best: Jo's laps here used a different braking assist");
     expect(v.brakeNote).toBeNull();
   });
 
@@ -100,7 +105,7 @@ describe("the reference control (spec 10.1, 10.2)", () => {
     // Not "your first clean lap becomes the reference": Sam's lap is used once the first lap is in.
     expect(v.waiting).toBe("Sam's best from the end of your first lap");
     const d = deltaView(s, "on_track", NO_OVERLAYS, false, { nowS: NOW });
-    expect(d.reason).toBe("No reference yet: Sam's best from your next lap");
+    expect(d.reason).toBe("No reference yet: Sam's best from the end of your first lap"); // the Ready card's words
     // Your own best (the default) keeps today's words.
     const own = withLive(fixture("recorded-d246-suzuka-grid-before-start"), "live-own");
     own.reference = null;
@@ -184,11 +189,30 @@ describe("picker rows (spec 10.1)", () => {
     expect(choiceRequest(main[0]!, false, r)).toEqual({ driver_id: 1, kind: "own_best", scope: "all_tracks" });
   });
 
-  it("what the status slot says after a change (spec 10.8 copy)", () => {
+  it("what the status slot says after a change: short, it shares the header with the session's name", () => {
     expect(appliesNotice("now", "driver_best", "Sam's best")).toBeNull();
-    expect(appliesNotice("next_lap", "driver_best", "Sam's best")).toBe("Delta to Sam's best from the next lap");
-    expect(appliesNotice("after_drill", "driver_best", "Sam's best")).toBe("Delta to Sam's best after the drill");
-    expect(appliesNotice("next_lap", "own_best", "Your best")).toBe("Delta to your best from the next lap");
-    expect(appliesNotice("next_session", "household_best", "Family record")).toBe("Delta to the family record from your next session");
+    expect(appliesNotice("next_lap", "driver_best", "Sam's best")).toBe("Sam's best from next lap");
+    expect(appliesNotice("after_drill", "driver_best", "Sam's best")).toBe("Sam's best after the drill");
+    expect(appliesNotice("next_lap", "own_best", "Your best")).toBe("Your best from next lap");
+    expect(appliesNotice("next_session", "household_best", "Family record")).toBe("Family record from next session");
+  });
+
+  it("Review › Compare's Drive against this lap names the one lap it stays on (UX review M6)", () => {
+    expect(savedLapWords("Alex", 3, 96_953, "Alex's best")).toBe("Alex's lap 3 (1:36.953)");
+    expect(savedLapWords("Alex", 3, null, "Alex's best")).toBe("Alex's lap 3");
+    expect(savedLapWords(null, 3, 96_953, "Family record · Alex")).toBe("Family record · Alex");
+  });
+
+  it("compatibility warnings read as sentences", () => {
+    expect(warningText("track temperature differs by 18 C")).toBe("Track temperature differs by 18 °C");
+    expect(warningText("car setup differs from the reference lap")).toBe("Car setup differs from the reference lap");
+  });
+
+  it("'Held for the drill' only while the drill runs (the descriptor keeps frozen until the next lap)", () => {
+    const s = withLive(fixture("recorded-d246-suzuka-on-track-brake-ahead"), "live-drill");
+    s.reference = { ...s.reference!, frozen: true };
+    expect(refControlView(s, { beginner: false }).frozen).toBe(true);
+    s.coachref!.drill = { ...s.coachref!.drill!, status: "completed" };
+    expect(refControlView(s, { beginner: false }).frozen).toBe(false);
   });
 });

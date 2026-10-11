@@ -169,6 +169,9 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
             driverName={drivers.find((d) => d.id === session.driver_id)?.name ?? session.driver_name ?? null}
             trackName={session.track_name}
             refLabel={otherRef.label}
+            holder={otherRef.driver_name}
+            lapNumber={otherRef.lap_number}
+            lapTimeMs={otherRef.lap_time_ms}
           />
         )}
       </div>

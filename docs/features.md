@@ -50,17 +50,21 @@ coaching measure against. *Your best* (the default), the *Family record*, anothe
 a saved lap. Only compatible laps are offered (same game, track, layout, car, wet or dry, and assists); a choice
 that is not available says why, for example "Sam's laps here used a different braking assist". The choice is kept
 per driver, for every track or for one track. It changes while the car is stopped; on track only *Back to your
-best* is offered, and it applies from the next lap. Against another driver's lap the coaching names them ("Sam
-carries 6 km/h more through the slowest point"), and braking calls never go later than your own braking point at
-that corner; a corner where you have no braking point of your own gets no call.
+best* is offered, and it applies from the next lap. A choice made before the session is in place from the first
+lap when Pitwall knows the track and the car. Against another driver's lap the coaching names them ("Sam carries 6
+km/h more through the slowest point"), and braking calls never go later than your own braking point at that corner;
+a corner where you have no braking point of your own gets no call. Ask the radio "who am I compared with?" to hear
+it.
 
 **Practice drills.** From the Ready card (or a Work on point in Review, or the radio) pick a corner and a skill:
-brake point (within 5 m of the point), minimum speed (3 km/h more than usual, never above the best speed driven
-there), exit speed, or entry speed (consistency, measured against your own laps). For the next laps (5 by default)
-the radio and the braking calls talk only about that corner, Drive shows a `DRILL · T3 · 3/5 · 2 ✓` chip, and each
-lap gives one line ("Turn 3 drill, lap 2 of 5: on the point. 2 hits."). The Ready card then shows the result: hits,
-the best attempt and the trend. Drills run in your own live session at a track Pitwall has learnt (three clean
-laps). The tolerances and steps are heuristics from recorded F1 25 laps.
+brake point (within 5 m before the point; past it counts only when the corner was faster), minimum speed (3 km/h
+more than usual, never above the best speed driven there), exit speed, or entry speed (consistency, measured
+against your own laps). For the next laps (5 by default) the radio and the braking calls talk only about that
+corner, Drive shows a `DRILL · T3 · 3/5 · 2 ✓` chip, and each lap gives one line ("Turn 3 drill, 2 of 5: on the
+point. 2 hits."). Race starts from the grid, resets to the track, pit laps and safety-car laps are not counted, and
+a change of car, wet or dry, or assists ends the drill. The Ready card then shows the result (hits, the best attempt
+and the trend) until you press Done, also after a driver change. Drills run in your own live session at a track
+Pitwall has learnt (three clean laps). The tolerances and steps are heuristics from recorded F1 25 laps.
 
 Reference choice and drills are tested on synthetic data and on recorded F1 25 laps replayed through the pipeline;
 they are **not yet validated live**.

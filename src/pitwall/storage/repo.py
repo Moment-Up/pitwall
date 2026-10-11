@@ -1140,6 +1140,44 @@ def delete_reference_choice(conn: sqlite3.Connection, driver_id: int, game: str,
     return cur.rowcount > 0
 
 
+_WET_CONDITIONS = ("light_rain", "heavy_rain", "storm")  # analysis.compare.check_compatibility's wet set
+_MATCHED_ASSISTS = ("braking", "gearbox", "abs", "tc")  # check_compatibility + core.coachref.extra_blocking
+
+
+def _scalar(v: object) -> bool:
+    return isinstance(v, str | int | float) and v == v  # bool is an int; NaN != NaN
+
+
+def _compat_sql(match: dict[str, Any] | None) -> tuple[str, list[Any]]:
+    """SQL predicates (each with a leading AND) dropping the laps ``core.coachref.comparable`` would block for the
+    live context ``match``: wet/dry, the braking / gearbox / ABS / TC assists and F1's formula. Only known values on
+    both sides block (unknown never excludes a lap), exactly as the Python check, which still runs on every row."""
+    if not match:
+        return "", []
+    sql: list[str] = []
+    args: list[Any] = []
+    weather = match.get("weather")
+    if isinstance(weather, dict):
+        weather = weather.get("condition")
+    if isinstance(weather, str) and weather:
+        cond = "json_extract(s.weather, '$.condition')"
+        sql.append(f" AND (COALESCE({cond}, '') = '' OR ({cond} IN ({', '.join('?' * len(_WET_CONDITIONS))})) = ?)")
+        args += [*_WET_CONDITIONS, int(weather in _WET_CONDITIONS)]
+    assists = match.get("assists")
+    if isinstance(assists, dict):
+        for key in _MATCHED_ASSISTS:
+            v = assists.get(key)
+            if v is not None and _scalar(v):
+                path = f"json_extract(s.assists, '$.{key}')"
+                sql.append(f" AND ({path} IS NULL OR {path} = ?)")
+                args.append(v)
+    formula = match.get("formula")
+    if formula is not None and _scalar(formula):
+        sql.append(" AND (json_extract(s.info, '$.formula') IS NULL OR json_extract(s.info, '$.formula') = ?)")
+        args.append(formula)
+    return "".join(sql), args
+
+
 def reference_candidates(
     conn: sqlite3.Connection,
     game: str,
@@ -1150,13 +1188,16 @@ def reference_candidates(
     per_driver: int = 10,
     exclude_lap_id: int | None = None,
     driver_id: int | None = None,
+    match: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Clean laps of real driving by any driver (or ``driver_id``) at a game + track (+ car) + layout, the fastest
     ``per_driver`` per driver, fastest first (ties: lower lap id). Never synthetic, never replays, never unowned.
     ``car_id=None`` lists every car and ``track_length_m=None`` every layout (``core.coachref`` uses that only to
-    say *why* a driver has no comparable lap). Rows: ``lap_id, lap_number, lap_time_ms, s1_ms..s3_ms, session_id,
-    created_unix, meta, setup_fp, driver_id, driver_name, game, track_id, car_id, car_name, track_length_m, weather,
-    assists, formula, started_unix``."""
+    say *why* a driver has no comparable lap). ``match`` (a live lap context): laps in other conditions (wet/dry,
+    assists, formula: ``_compat_sql``) are left out *before* the per-driver limit, so a driver's ten fastest laps in
+    other conditions never hide a slower comparable one. Rows: ``lap_id, lap_number, lap_time_ms, s1_ms..s3_ms,
+    session_id, created_unix, meta, setup_fp, driver_id, driver_name, game, track_id, car_id, car_name,
+    track_length_m, weather, assists, formula, started_unix``."""
     where = [
         "l.clean=1",
         "l.lap_time_ms IS NOT NULL",
@@ -1178,6 +1219,7 @@ def reference_candidates(
         where.append("s.driver_id=?")
         args.append(driver_id)
     layout, layout_args = _layout_sql(track_length_m)
+    conds, cond_args = _compat_sql(match)
     rows = conn.execute(
         f"""SELECT * FROM (
               SELECT l.id AS lap_id, l.lap_number, l.lap_time_ms, l.s1_ms, l.s2_ms, l.s3_ms, l.session_id,
@@ -1186,9 +1228,9 @@ def reference_candidates(
                      json_extract(s.info, '$.formula') AS formula, s.started_unix,
                      ROW_NUMBER() OVER (PARTITION BY s.driver_id ORDER BY l.lap_time_ms ASC, l.id ASC) AS rn
               FROM laps l JOIN sessions s ON s.id = l.session_id JOIN drivers d ON d.id = s.driver_id
-              WHERE {" AND ".join(where)}{layout})
+              WHERE {" AND ".join(where)}{layout}{conds})
            WHERE rn <= ? ORDER BY lap_time_ms ASC, lap_id ASC""",
-        [*args, *layout_args, per_driver],
+        [*args, *layout_args, *cond_args, per_driver],
     ).fetchall()
     out = []
     for r in rows:

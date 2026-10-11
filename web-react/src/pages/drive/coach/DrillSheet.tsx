@@ -4,9 +4,10 @@
 //   1  Corner      T1 Abbey · T3 Village [FOCUS] · T7 Copse [Work on] …        56 px rows, lap order
 //   2  Skill       [Brake point | Minimum speed | Exit speed | Entry speed]   from GET /drills/options?corner=
 //                  "Brake within 5 m of Sam's braking point"                  the server's target, verbatim
-//   3  Laps        [3 | 5 | 8 | 10]
-//   4  Window      [±3 m | ±5 m | ±10 m]                                       (hidden for beginners: the default)
-//                  [ Start drill ]                                             64 px primary; a refusal inline
+//   3  Laps        [3 | 5 | 8 | 10]                                            in a race: the default fits the laps left
+//   4  Window      [3 m | 5 m | 10 m] before the point                         (hidden for beginners: the default)
+//                  [ Start drill ]                                             64 px primary; a refusal inline; on a
+//                                                                              phone it stays in view at the bottom
 //
 // Kinds the server cannot run here stay listed, disabled, with its reason. Nothing is computed here: targets,
 // notes and refusals are the server's sentences (P9).
@@ -28,6 +29,7 @@ import {
 import {
   cornersOf,
   defaultKind,
+  defaultLaps,
   kindChoices,
   lapsChoices,
   toleranceText,
@@ -71,7 +73,8 @@ function CornerList({ corners, value, onChange }: { corners: readonly SheetCorne
         const [k] = [...keys] as Key[];
         if (k != null) onChange(String(k));
       }}
-      className="max-h-[min(46dvh,420px)] gap-1 overflow-y-auto p-0"
+      /* iPad: the list scrolls beside the settings; a phone sheet scrolls as a whole (no list inside a scroller) */
+      className="gap-1 p-0 md:max-h-[min(46dvh,420px)] md:overflow-y-auto"
     >
       {corners.map((c) => (
         <ListBox.Item
@@ -142,14 +145,17 @@ export function DrillSettings({
   opts,
   beginner,
   onStarted,
+  lapsLeft = null,
 }: {
   opts: DrillOptionsResponse;
   beginner: boolean;
   onStarted: () => void;
+  /** A race's laps left after the one being driven (null: not a race, or unknown). */
+  lapsLeft?: number | null;
 }) {
   const choices = useMemo(() => kindChoices(opts), [opts]);
   const [kind, setKind] = useState<DrillKind | null>(() => defaultKind(choices));
-  const [laps, setLaps] = useState<number>(opts.default_laps || DRILL_DEFAULT_LAPS);
+  const [laps, setLaps] = useState<number>(() => defaultLaps(lapsChoices(opts), opts.default_laps || DRILL_DEFAULT_LAPS, lapsLeft));
   const chosen: KindChoice | null = choices.find((c) => c.kind === kind) ?? null;
   const [tolerance, setTolerance] = useState<number | null>(chosen?.tolerance ?? null);
   const [busy, setBusy] = useState(false);
@@ -230,20 +236,33 @@ export function DrillSettings({
           </Alert.Content>
         </Alert>
       )}
-      <Button
-        variant="primary"
-        className="pwc-glove w-full"
-        isDisabled={!chosen || chosen.disabled}
-        isPending={busy}
-        onPress={() => void start()}
-      >
-        Start drill
-      </Button>
+      {/* Phone: stays in view at the bottom of the scrolling sheet. */}
+      <div className="sticky bottom-0 z-10 bg-overlay pt-2 pb-1 md:static md:z-auto md:bg-transparent md:p-0">
+        <Button
+          variant="primary"
+          className="pwc-glove w-full"
+          isDisabled={!chosen || chosen.disabled}
+          isPending={busy}
+          onPress={() => void start()}
+        >
+          Start drill
+        </Button>
+      </div>
     </div>
   );
 }
 
-function DrillOptionsPane({ corner, beginner, onStarted }: { corner: string | null; beginner: boolean; onStarted: () => void }) {
+function DrillOptionsPane({
+  corner,
+  beginner,
+  onStarted,
+  lapsLeft,
+}: {
+  corner: string | null;
+  beginner: boolean;
+  onStarted: () => void;
+  lapsLeft: number | null;
+}) {
   const opts = useApi(corner ? coachrefKeys.drillOptions(corner) : null, () => coachrefApi.drillOptions({ corner: corner as string }), {
     maxAgeMs: 0,
   });
@@ -264,7 +283,7 @@ function DrillOptionsPane({ corner, beginner, onStarted }: { corner: string | nu
       </div>
     );
   }
-  return <DrillSettings key={corner} opts={opts.data} beginner={beginner} onStarted={onStarted} />;
+  return <DrillSettings key={corner} opts={opts.data} beginner={beginner} onStarted={onStarted} lapsLeft={lapsLeft} />;
 }
 
 /**
@@ -297,6 +316,8 @@ export interface DrillSheetProps {
   /** The corner to start on (the coaching point's); else the first Work on / focus corner. */
   initialCorner?: string | null;
   beginner: boolean;
+  /** A race's laps left (the laps default fits them); null otherwise. */
+  lapsLeft?: number | null;
 }
 
 function startCorner(corners: readonly SheetCorner[], initial: string | null | undefined): string | null {
@@ -304,7 +325,15 @@ function startCorner(corners: readonly SheetCorner[], initial: string | null | u
   return (corners.find((c) => c.workOn) ?? corners.find((c) => c.focus))?.name ?? null;
 }
 
-export function DrillSheet({ isOpen, onClose, corners: live, track = null, initialCorner = null, beginner }: DrillSheetProps) {
+export function DrillSheet({
+  isOpen,
+  onClose,
+  corners: live,
+  track = null,
+  initialCorner = null,
+  beginner,
+  lapsLeft = null,
+}: DrillSheetProps) {
   const phone = useMediaQuery(PHONE);
   const stored = useStoredCorners(isOpen && !live.length ? track : null);
   const corners = live.length ? live : (stored.corners ?? []);
@@ -334,7 +363,7 @@ export function DrillSheet({ isOpen, onClose, corners: live, track = null, initi
           <CornerList corners={corners} value={corner} onChange={setCorner} />
         )}
       </Step>
-      <DrillOptionsPane corner={corner} beginner={beginner} onStarted={onClose} />
+      <DrillOptionsPane corner={corner} beginner={beginner} onStarted={onClose} lapsLeft={lapsLeft} />
     </div>
   );
   const intro = "Several laps on one corner with one measurable target. The radio and the calls talk only about that corner.";
@@ -346,7 +375,7 @@ export function DrillSheet({ isOpen, onClose, corners: live, track = null, initi
           <Sheet.Content className="max-h-[92dvh]">
             <Sheet.Dialog aria-label="Practice drill">
               <Sheet.Handle />
-              <Sheet.CloseTrigger />
+              <Sheet.CloseTrigger className="size-11" />
               <Sheet.Header>
                 <Sheet.Heading className="pr-10 text-lg font-semibold">Practice drill</Sheet.Heading>
                 <p className="m-0 text-sm text-muted">{intro}</p>
@@ -363,7 +392,7 @@ export function DrillSheet({ isOpen, onClose, corners: live, track = null, initi
       <Modal.Backdrop>
         <Modal.Container size="lg" scroll="inside">
           <Modal.Dialog aria-label="Practice drill" className="w-[min(880px,94vw)] max-w-[min(880px,94vw)]">
-            <Modal.CloseTrigger />
+            <Modal.CloseTrigger className="size-11" />
             <Modal.Header>
               <Modal.Heading>Practice drill</Modal.Heading>
               <p className="m-0 text-sm text-muted">{intro}</p>

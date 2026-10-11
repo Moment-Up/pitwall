@@ -436,7 +436,21 @@ class LiveState:
         if fn is None or req is None:
             return
         # the length only decides the layout: an estimate refining every packet (AC, GT7) is not a new context
-        key = (req.session_id, req.game, req.track_id, req.car_id, req.track_length_m is not None, req.driver_id)
+        key: tuple[Any, ...] = (
+            req.session_id,
+            req.game,
+            req.track_id,
+            req.car_id,
+            req.track_length_m is not None,
+            req.driver_id,
+        )
+        # --- coachref --- and the conditions that decide which reference laps compare (wet/dry, assists): F1 sends
+        # default assists (0) in a session's first packets, and a reference chosen before the first lap
+        # (core.coachref.CoachRef.on_context) must be resolved again when the real ones arrive. Session packets only.
+        s = self.session
+        if s is not None:
+            key += (s.weather.condition, tuple(sorted((str(k), repr(v)) for k, v in s.assists.items())))
+        # --- coachref ---
         if key == self._bests_requested:
             return
         self._bests_requested = key

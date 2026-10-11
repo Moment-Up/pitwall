@@ -2,7 +2,7 @@
 // and the picker's rows. Pure; tested in plain node.
 //
 //   Delta to · Sam's best ▾   [Lap 3 · 1:36.953 · 3 Oct]      the delta panel's label row becomes the control
-//   Sam's laps here used a different braking assist: using your best      (coachref.reason, when set)
+//   Using your best: Sam's laps here used a different braking assist      (coachref.reason, when set; 2 lines max)
 //
 // Words come from the server (labels, reasons) verbatim; this module only joins them. A server without coachref
 // sends no `coachref` block: the control is then unavailable and the panel keeps today's plain label.
@@ -12,7 +12,7 @@
 import type { Driver } from "../drivers";
 import type { Applies, ChoiceRequest, RefKind, RefOption, RefOptionsResponse } from "../endpoints/coachref";
 import type { SnapshotNext } from "./types";
-import { dayText, finite, lapTime, sentence } from "./text";
+import { dayText, finite, lapTime } from "./text";
 
 /** At or above this speed the car counts as moving (spec 3.4.8 MOVING_KPH). */
 export const MOVING_KPH = 30;
@@ -35,7 +35,7 @@ export interface RefHolder {
 export interface RefControlView {
   /** The server sends coachref: the label row is a control. False = today's plain label. */
   available: boolean;
-  /** Button words: "Delta to · Sam's best"; beginners "vs Sam's best lap", own "vs your target lap". */
+  /** Button words: "Delta to · Sam's best"; beginners "vs Sam's best lap", own "vs your best lap". */
   text: string;
   /** The reference's own label ("Sam's best", "Your best"): the Ready card's control. */
   label: string;
@@ -43,7 +43,8 @@ export interface RefControlView {
   own: boolean;
   /** Whose lap it is, when it is not the driver's own (a 20 px initials avatar). */
   holder: RefHolder | null;
-  /** "Sam's laps here used a different braking assist: using your best", or null. */
+  /** "Using your best: Sam's laps here used a different braking assist", or null (the fallback first: a cut line
+   * still says the delta is not against Sam). */
   reason: string | null;
   /** A change waits for the next lap or the end of the drill: "From next lap". */
   pending: boolean;
@@ -52,7 +53,7 @@ export interface RefControlView {
   /** "Braking calls use your own braking points where Sam brakes later" (another driver's lap). */
   brakeNote: string | null;
   /** No reference lap yet while another driver's lap is chosen: "Ben's best from the end of your first lap" (the
-   * Ready card says this instead of "your first clean lap becomes the reference"); null otherwise. */
+   * Ready card says this, and the delta panel "No reference yet: " + this); null otherwise. */
   waiting: string | null;
   /** The car may be moving: the picker stays shut. */
   locked: boolean;
@@ -95,19 +96,28 @@ export function holderOf(id: number | null | undefined, name: string | null | un
   return { name, initials: initialsOf(name), colour: null };
 }
 
-/** Beginners' words (spec 10.1): "vs your target lap" for an own reference, else "vs Sam's best lap" /
- * "vs the family record lap" / "vs Sam's lap". */
+/** Beginners' words (spec 10.1), one name for each reference as the radio says it (`label_to`): "vs your best lap"
+ * for an own reference, "vs your pinned lap", else "vs Sam's best lap" / "vs the family record lap" / "vs Sam's lap". */
 export function beginnerText(kind: RefKind | null | undefined, own: boolean, labelTo: string | null | undefined, label: string): string {
-  if (own) return "vs your target lap";
-  const words = labelTo || label;
-  return kind === "lap" ? `vs ${words}` : `vs ${words} lap`;
+  const words = own ? labelTo || "your best" : labelTo || label;
+  return kind === "lap" || /\blap$/.test(words) ? `vs ${words}` : `vs ${words} lap`;
 }
 
-/** Words for the choice in a sentence ("Delta to Sam's best from the next lap"). */
-export function noticeLabel(kind: RefKind, label: string): string {
-  if (kind === "own_best") return "your best";
-  if (kind === "household_best") return "the family record";
-  return label;
+/** One saved lap in words, for Review › Compare's "Drive against this lap": "Alex's lap 3 (1:36.953)" (it stays on
+ * that lap; it does not follow Alex's best), else the reference's label. */
+export function savedLapWords(
+  holder: string | null | undefined,
+  lapNumber: number | null | undefined,
+  lapTimeMs: number | null | undefined,
+  label: string,
+): string {
+  if (!holder || !finite(lapNumber)) return label;
+  return `${holder}'s lap ${lapNumber}${finite(lapTimeMs) ? ` (${lapTime(lapTimeMs)})` : ""}`;
+}
+
+/** What the Ready card and the delta panel say while another driver's chosen lap is not the reference yet. */
+export function waitingText(choice: { kind: RefKind; label: string } | null | undefined): string | null {
+  return choice && choice.kind !== "own_best" ? `${choice.label} from the end of your first lap` : null;
 }
 
 export function refControlView(
@@ -122,7 +132,7 @@ export function refControlView(
   const kind = r?.kind ?? choice?.kind ?? "own_best";
   const holder = !own && r ? holderOf(r.driver_id, r.driver_name ?? r.ref_name, opts.drivers ?? []) : null;
   const text = opts.beginner ? beginnerText(kind, own, r?.label_to, label) : `Delta to · ${label}`;
-  const reason = cr?.reason ? `${sentence(cr.reason)}: using your best` : null;
+  const reason = cr?.reason ? `Using your best: ${cr.reason}` : null;
   const name = !own && r ? (r.ref_name ?? r.driver_name ?? null) : null;
   const locked = refPickerLocked(s);
   const notOwnChoice = !!choice && choice.kind !== "own_best";
@@ -136,7 +146,8 @@ export function refControlView(
         }
       : null;
   const pending = cr?.pending === true;
-  const frozen = r?.frozen === true;
+  // Held only while the drill runs: the snapshot's descriptor keeps "frozen" until the next lap after it ends.
+  const frozen = r?.frozen === true && cr?.drill?.status === "active";
   const extras = [reason, pending ? FROM_NEXT_LAP.toLowerCase() : null, frozen ? HELD_FOR_DRILL.toLowerCase() : null].filter(Boolean);
   return {
     available: cr != null,
@@ -148,7 +159,7 @@ export function refControlView(
     pending,
     frozen,
     brakeNote: name ? `Braking calls use your own braking points where ${name} brakes later` : null,
-    waiting: !r && choice && choice.kind !== "own_best" ? `${label} from the end of your first lap` : null,
+    waiting: r ? null : waitingText(choice),
     locked,
     backToBest,
     driverId: cr?.driver_id ?? choice?.driver_id ?? null,
@@ -175,6 +186,12 @@ export interface PickerRow {
   holder: RefHolder | null;
   /** What a PUT /choice sends for this row (the scope is added by choiceRequest). */
   request: Pick<ChoiceRequest, "kind" | "target_driver_id" | "lap_id">;
+}
+
+/** A compatibility warning as a sentence ("Track temperature differs by 18 °C"): the server's words, cased. */
+export function warningText(w: string): string {
+  const t = w.trim().replace(/(\d) C\b/g, "$1 °C");
+  return t ? `${t.slice(0, 1).toUpperCase()}${t.slice(1)}` : t;
 }
 
 function rowKey(o: RefOption): string {
@@ -205,7 +222,7 @@ function rowOf(o: RefOption, nowS: number, drivers: readonly Driver[], driverId:
     title: o.label,
     detail,
     reason: disabled ? (o.reason ?? "Not available here") : null,
-    warnings: o.warnings ?? [],
+    warnings: (o.warnings ?? []).map(warningText),
     disabled,
     selected: o.selected,
     holder,
@@ -242,16 +259,17 @@ export function onlyHereDefault(r: Pick<RefOptionsResponse, "choice" | "has_trac
   return r.choice.scope === "track" || r.has_track_override;
 }
 
-/** What the status slot says after a change (null = it applies now: the snapshot shows it). */
+/** What the status slot says after a change (null = it applies now: the snapshot shows it). Short: it shares the
+ * header with the session's name ("Sam's best from next lap"). */
 export function appliesNotice(applies: Applies, kind: RefKind, label: string): string | null {
-  const what = noticeLabel(kind, label);
+  const what = kind === "own_best" ? DEFAULT_LABEL : kind === "household_best" ? "Family record" : label;
   switch (applies) {
     case "next_lap":
-      return `Delta to ${what} from the next lap`;
+      return `${what} from next lap`;
     case "after_drill":
-      return `Delta to ${what} after the drill`;
+      return `${what} after the drill`;
     case "next_session":
-      return `Delta to ${what} from your next session`;
+      return `${what} from next session`;
     default:
       return null;
   }

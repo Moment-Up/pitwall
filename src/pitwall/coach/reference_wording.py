@@ -69,7 +69,7 @@ def descriptor_labels(
     lap_txt = f"lap {lap_number}" if lap_number is not None else "a lap"
     if kind == "household_best":
         if own:
-            return "Family record (you)", "your reference", None
+            return "Family record (you)", "the family record", None
         return f"Family record · {name}", "the family record", name
     if kind == "driver_best" and not own:
         return f"{name}'s best", f"{name}'s best", name
@@ -80,8 +80,8 @@ def descriptor_labels(
         bits = [name, lap_txt, *([date] if date else [])]
         return " · ".join(bits), f"{name}'s lap", name
     if pinned:
-        return "Your pinned lap", "your reference", None
-    return "Your best", "your reference", None
+        return "Your pinned lap", "your pinned lap", None
+    return "Your best", "your best", None
 
 
 def _short(cshort: str, primary: str, fallback: str) -> str:

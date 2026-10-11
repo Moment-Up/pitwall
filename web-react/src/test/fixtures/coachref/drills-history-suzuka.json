@@ -34,15 +34,15 @@
         "attempt": 1,
         "lap_id": 901,
         "lap_number": 6,
-        "value": 2788.9,
+        "value": 2786.7,
         "target": 2787.8,
-        "delta": 1.1,
+        "delta": -1.1,
         "outcome": "hit",
         "reason": null,
         "corner_time_s": 4.21,
         "corner_time_delta_s": 0.03,
-        "text": "Turn 11 drill, lap 1 of 5: on the point, 1 m late. One hit.",
-        "short": "Drill 1/5: on the point, 1 m late \u00b7 1 hit"
+        "text": "Turn 11 drill, 1 of 5: on the point, 1 m early. 1 hit.",
+        "short": "Drill 1/5: on the point, 1 m early \u00b7 1 hit"
       },
       {
         "attempt": 2,
@@ -55,22 +55,22 @@
         "reason": null,
         "corner_time_s": 4.21,
         "corner_time_delta_s": 0.03,
-        "text": "Turn 11 drill, lap 2 of 5: 11 m past the point. One hit.",
+        "text": "Turn 11 drill, 2 of 5: 11 m past the point. 1 hit.",
         "short": "Drill 2/5: 11 m past the point \u00b7 1 hit"
       },
       {
         "attempt": 3,
         "lap_id": 903,
         "lap_number": 8,
-        "value": 2791.0,
+        "value": 2784.6,
         "target": 2787.8,
-        "delta": 3.2,
+        "delta": -3.2,
         "outcome": "hit",
         "reason": null,
         "corner_time_s": 4.21,
         "corner_time_delta_s": 0.03,
-        "text": "Turn 11 drill, lap 3 of 5: on the point, 3 m late. Two hits.",
-        "short": "Drill 3/5: on the point, 3 m late \u00b7 2 hits"
+        "text": "Turn 11 drill, 3 of 5: on the point, 3 m early. 2 hits.",
+        "short": "Drill 3/5: on the point, 3 m early \u00b7 2 hits"
       },
       {
         "attempt": 4,
@@ -83,7 +83,7 @@
         "reason": "no braking measured",
         "corner_time_s": null,
         "corner_time_delta_s": null,
-        "text": "Turn 11 drill, lap 4 of 5: no braking measured. Two hits.",
+        "text": "Turn 11 drill, 4 of 5: no braking measured. 2 hits.",
         "short": "Drill 4/5: no braking measured \u00b7 2 hits"
       },
       {
@@ -97,8 +97,8 @@
         "reason": null,
         "corner_time_s": 4.21,
         "corner_time_delta_s": 0.03,
-        "text": "Turn 11 drill done: 3 of 4 on the point. Best 1 m. Closer each lap.",
-        "short": "Drill done: 3/4 \u00b7 best 1 m"
+        "text": "Turn 11 drill done: 3 of 4 on the point. Best: 1 m from the point. Closer each lap.",
+        "short": "Drill done: 3/4 \u00b7 best 1 m from the point"
       }
     ],
     "hits": 3,
@@ -106,7 +106,7 @@
     "best": 2787.2,
     "best_delta": -0.6,
     "trend": "closer",
-    "summary_text": "Turn 11 drill done: 3 of 4 on the point. Best 1 m. Closer each lap.",
+    "summary_text": "Turn 11 drill done: 3 of 4 on the point. Best: 1 m from the point. Closer each lap.",
     "synthetic": false
   },
   {
@@ -151,7 +151,7 @@
         "reason": null,
         "corner_time_s": 4.21,
         "corner_time_delta_s": 0.03,
-        "text": "Turn 9 drill, lap 1 of 5: minimum 99 km/h, on target. One hit.",
+        "text": "Turn 9 drill, 1 of 5: minimum 99 km/h, on target. 1 hit.",
         "short": "Drill 1/5: minimum 99 km/h, on target \u00b7 1 hit"
       },
       {
@@ -165,8 +165,8 @@
         "reason": "exit 4 km/h down",
         "corner_time_s": 4.21,
         "corner_time_delta_s": 0.03,
-        "text": "Turn 9 drill, lap 2 of 5: minimum 95 km/h, 3 short. One hit.",
-        "short": "Drill 2/5: minimum 95 km/h, 3 short \u00b7 1 hit"
+        "text": "Turn 9 drill, 2 of 5: minimum 95 km/h, 3 km/h short. 1 hit.",
+        "short": "Drill 2/5: minimum 95 km/h, 3 km/h short \u00b7 1 hit"
       }
     ],
     "hits": 1,
@@ -174,7 +174,7 @@
     "best": 99.0,
     "best_delta": 1.0,
     "trend": null,
-    "summary_text": "Turn 9 drill stopped: 1 of 2 on target. Best 99 km/h.",
+    "summary_text": "Turn 9 drill stopped: 1 of 2 on target. Best: 99 km/h.",
     "synthetic": false
   }
 ]

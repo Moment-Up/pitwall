@@ -765,6 +765,7 @@
 }
 .pwc-item[data-tone="warning"] { --pwc-k: var(--warning); }
 .pwc-item[data-tone="success"] { --pwc-k: var(--success); }
+.pwc-item[data-tone="accent"] { --pwc-k: var(--accent); } /* coachref: the session's drill */
 .pwc-item__icon {
   background: color-mix(in oklab, var(--pwc-k) 16%, transparent);
   color: var(--pwc-k);
@@ -892,8 +893,8 @@
 
 /* ======================================================================== coachref: reference control and drills */
 /* The delta panel's label row as the reference control (spec 10.1): a 56 px ghost button, 22 px text, then the
- * reference chip; "From next lap" and the fallback reason after them. Text ellipsizes; the row never grows taller
- * than the button plus one reason line. */
+ * reference chip; "From next lap" and the fallback reason after them. The label ellipsizes; the reason ("Using your
+ * best: …") wraps to at most two lines, so its point is never cut off. */
 .pwc-delta__top[data-ref] {
   flex-wrap: wrap;
   justify-content: flex-start;
@@ -939,12 +940,15 @@
 }
 .pwc-refreason {
   flex: 1 0 100%;
+  display: -webkit-box;
   min-width: 0;
   overflow: hidden;
   font: 500 18px/1.25 var(--pw-font-sans);
   color: var(--muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .pwc-refready {
   display: flex;
@@ -958,7 +962,8 @@
   color: var(--muted);
 }
 
-/* Status slot: a reference notice, and the drill chip (accent-soft like FOCUS, at most 220 px, 22 px / 600). */
+/* Status slot: a reference notice, and the drill chip (accent-soft like FOCUS, at most 220 px, 22 px / 600; 44 px
+ * tall: the one tap target used while driving). */
 .pwc-notice {
   display: inline-block;
   max-width: 380px;
@@ -973,8 +978,8 @@
   flex: none;
   gap: 0.25em;
   max-width: 220px;
-  min-height: 40px;
-  height: 40px;
+  min-height: 44px;
+  height: 44px;
   padding-inline: 14px;
   border-radius: 999px;
   background: color-mix(in oklab, var(--accent) 16%, transparent);
@@ -992,6 +997,10 @@
 .pwc-drillchip__n {
   flex: none;
   white-space: nowrap;
+}
+/* Light theme: accent text on the accent-soft fill is under 4.5:1 at the phone's 17 px; a darker accent reads. */
+:root:is(.light, [data-theme="light"]) .pwc-drillchip {
+  color: color-mix(in oklab, var(--accent) 82%, var(--foreground));
 }
 .pwc-drillhero {
   --chip-bg: color-mix(in oklab, var(--accent) 16%, transparent);
@@ -1035,8 +1044,17 @@
 @media (max-width: 767px) {
   .pwc-refctl { font-size: 18px; }
   .pwc-refreason { font-size: 15px; }
-  .pwc-drillchip { height: 34px; min-height: 34px; max-width: 180px; padding-inline: 10px; font-size: 17px; }
-  .pwc-notice { max-width: 220px; font-size: 14px; }
+  .pwc-drillchip { height: 44px; min-height: 44px; max-width: 180px; padding-inline: 10px; font-size: 17px; }
+  /* two short lines rather than a cut one (the slot is 44 px) */
+  .pwc-notice {
+    display: -webkit-box;
+    max-width: 220px;
+    font-size: 14px;
+    white-space: normal;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
 }
 
 /* coachref: between runs the reference control, its lap and the braking note can make a Ready column taller than

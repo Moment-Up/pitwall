@@ -12,6 +12,7 @@ Endpoints
     POST   /api/coachref/drills                            DrillStartRequest -> 201 DrillView; 409 {detail}
     GET    /api/coachref/drills/active?driver_id           DrillView | null
     POST   /api/coachref/drills/active/stop                DrillView / 404
+    POST   /api/coachref/drills/{id}/dismiss               204 (the seated driver's last result put away: Done) / 404
     GET    /api/coachref/drills?driver_id&game&track_id&car_id&limit&include_empty   DrillView[] newest first
     GET    /api/coachref/drills/{id}                       DrillView / 404
 
@@ -193,6 +194,18 @@ def stop_drill(request: Request) -> dict[str, Any]:
     if view is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "No drill running.")
     return view
+
+
+@router.post("/drills/{drill_id}/dismiss", status_code=status.HTTP_204_NO_CONTENT)
+def dismiss_drill(request: Request, drill_id: int) -> Response:
+    """The Ready card's Done: the seated driver's last drill result is no longer published."""
+    try:
+        gone = _svc(request).dismiss_result(drill_id)
+    except CoachRefError as e:
+        raise _http(e) from e
+    if not gone:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "That drill result is not showing.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.get("/drills")

@@ -22,9 +22,12 @@ import {
   drillCoach,
   drillCorner,
   drillTrack,
+  endedDrill,
+  raceLapsLeft,
   sheetCorners,
   type DrillBlockView,
   type DrillChipView,
+  type EndedDrillView,
   type SheetCorner,
 } from "./drill";
 import { refControlView, type RefControlView } from "./reference";
@@ -192,6 +195,8 @@ export interface EndedCard {
   toRecord: EndedChange | null;
   workOn: CoachPoint | null;
   wentWell: CoachPoint | null;
+  /** coachref: the drill driven in this session ("Drill T12 · Brake point: 2 of 2 on the point (2 of 5 laps)"). */
+  drill?: EndedDrillView | null;
 }
 
 /** coachref: the drill on Drive (status chip, Ready card block, the drill sheet's corners). */
@@ -203,6 +208,8 @@ export interface DriveDrillView {
   corners: SheetCorner[];
   /** The live game and track (Ready card only): the sheet lists a stored model's corners when `corners` is empty. */
   track: { game: string; trackId: string } | null;
+  /** A race's laps left (Ready card only): the drill sheet's laps default fits them. */
+  lapsLeft: number | null;
 }
 
 export interface DriveModel {
@@ -502,6 +509,7 @@ function endedCard(s: SnapshotNext, drivers: readonly Driver[], simple: boolean)
         : gap(hh.lap_ms, [holder?.name, finite(hh.lap_ms) ? lapTime(hh.lap_ms) : null].filter(Boolean).join(" · ") || null),
     workOn,
     wentWell,
+    drill: endedDrill(s), // coachref
   };
 }
 
@@ -558,10 +566,15 @@ export function driveModel(input: DriveModelInput): DriveModel {
     state === "red_flag" ? "red_flag" : state === "pit_lane" ? "pit_lane" : overlays.safetyCar ? "safety_car" : null;
   const cue: CueBandView = card
     ? { next: null, note: null, muted: true, radioOff: false, ai: false }
-    : cueView(s?.cues, corner?.name ?? null, s?.track_model, pause, dim, {
-        toApexM: live?.toApexM ?? null,
-        lapLengthM: gameLength(s),
-      });
+    : cueView(
+        s?.cues,
+        corner?.name ?? null,
+        s?.track_model,
+        pause,
+        dim,
+        { toApexM: live?.toApexM ?? null, lapLengthM: gameLength(s) },
+        s?.reference != null, // coachref: a reference before the first lap
+      );
 
   let coach: CoachView = EMPTY_COACH;
   if (s && !card) {
@@ -616,6 +629,7 @@ export function driveModel(input: DriveModelInput): DriveModel {
       block: state === "garage" ? drillBlock(s) : null,
       corners: state === "garage" ? sheetCorners(s) : [],
       track: state === "garage" ? drillTrack(s) : null,
+      lapsLeft: state === "garage" ? raceLapsLeft(s) : null,
     },
   };
 }

@@ -7,6 +7,8 @@ import { Store } from "../store";
 
 export const NOTICE_CHANGE_MS = 6000;
 export const NOTICE_HINT_MS = 2000;
+/** A popover opened while driving ("Back to your best", the drill chip's) covers the delta: it closes by itself. */
+export const POPOVER_AUTO_CLOSE_MS = 5000;
 
 export interface DriveNoticeState {
   text: string | null;

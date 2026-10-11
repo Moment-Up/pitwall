@@ -261,7 +261,9 @@ export const ReadyCard = memo(function ReadyCard({ ready, refControl = null, dri
             {nextRun.evidence && <p className="m-0 text-[15px] text-muted">{nextRun.evidence}</p>}
           </div>
         )}
-        {block && drill && <DrillBlock block={block} corners={drill.corners} track={drill.track} beginner={beginner} />}
+        {block && drill && (
+          <DrillBlock block={block} corners={drill.corners} track={drill.track} lapsLeft={drill.lapsLeft} beginner={beginner} />
+        )}
         <div className="pwc-focusrow">
           {today.focus.slice(0, focusRows(between, drill)).map((f) => (
             <div key={f.name} className="pwc-focusrow__f">

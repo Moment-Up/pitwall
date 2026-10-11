@@ -241,7 +241,7 @@ describe("Drive and Review views on the recorded bodies", () => {
     expect(refControlView(live("live-lv-lap1"), { beginner: false }).text).toBe("Delta to · Ben's best");
     const fb = refControlView(live("live-austria-fallback"), { beginner: false });
     expect(fb.text).toBe("Delta to · Your best");
-    expect(fb.reason).toBe("Ben's laps here used a different braking assist: using your best");
+    expect(fb.reason).toBe("Using your best: Ben's laps here used a different braking assist");
   });
 
   it("a running drill (chip, Ready block, coach card) and a stopped one (result)", () => {

@@ -64,18 +64,28 @@ losing 0.12 s"). Recorded tier: `tests/fixtures/recorded/f1_25_2025_ps5_austria_
   live-validated**. Braking clamp verified on real laps: Silverstone (Reverse) T5 Maggotts and Becketts call at
   1960.8 m instead of the other lap's 1982.1 m (a call 21.3 m later than the driver had braked, prevented); Austria
   (Reverse) 1140.9 m instead of 1155.8 m; Melbourne F2 T9 4030.2 m; Las Vegas T12 3108.7 m. Brake-point drill at
-  Austria (Reverse) 2929 m against the other lap's earlier point (2787.8 m): +1.1 m hit, +11.5 m miss (an incident
-  there), +1.1 m hit. Drill tolerances and steps are heuristics (`coach/drills.py`). No committed recorded fixture
-  has a complete lap, so `tests/recorded/test_coachref_real.py` skips today. Tests: 103 new (2614 passed, 23
-  skipped without live/llm/voice). End to end on an isolated scratch server (real F1 25 captures streamed over
-  loopback UDP, demo drivers, headless browser at iPad and phone sizes): Drive's `Delta to` control and picker, the
-  moving lock, no braking calls on a first lap against another driver, a drill started from the drill sheet, the
-  radio (start, status, stop, refusals) and the Work on suggestion, the drill chip / hero / coach card, a drill
-  carried into the next session of the same race and stopped in the pit (result card, Again, Done), the
-  braking-assist fallback with its reason, Review › Coaching's Drills, Review › Compare "vs Ben's best" and Use for
-  my delta, and the classic dashboard unaffected. The dashboard's contract test runs on bodies recorded from that
-  server (`web-react/src/test/fixtures/coachref-recorded/`). Follow-up: AC's ABS/TC and F1's formula are checked
-  for other drivers' laps only; own references keep the older rule.
+  Austria (Reverse) 2929 m against the other lap's earlier point (2787.8 m), on copies of two recorded laps re-fed
+  as attempts (`scripts/coachref_check.py`, not laps driven for a drill): +1.1 m past the point with the corner
+  0.2 s slower (a miss: an attempt past the point is a hit only when the corner was faster), +11.5 m (an incident
+  there), +1.1 m again; Las Vegas T1 +0.5 m and 0.01 s faster, a hit. Drill tolerances and steps are heuristics
+  (`coach/drills.py`). Review fixes (unit-tested; the conditions and candidate ones also on the Las Vegas capture):
+  radio drill commands act only on an imperative (a question asks for the status, a negation does nothing); a lap
+  in other conditions (car, layout, wet/dry, assists) stops the drill and never uses its frozen reference; grid
+  starts, resets, stale data and safety-car laps are no attempts and no baselines; another driver's ten fastest
+  laps in other conditions no longer hide a comparable one; a request refused as busy never takes effect later; the
+  chosen reference is published before the first lap (and again when F1's real assists replace the defaults of
+  the first packets); the last result waits for its driver until Done; "who am I compared with?" names the
+  reference. No committed recorded fixture has a complete lap, so `tests/recorded/test_coachref_real.py` skips
+  today. End to end on an isolated scratch server (real F1 25 captures streamed over loopback UDP, demo drivers,
+  headless browser at iPad and phone sizes): Drive's `Delta to` control and picker, the moving lock, the reference
+  before the first lap, no braking calls on a first lap against another driver, the fallback reason, drills from
+  the drill sheet and the radio, the drill chip / hero / coach card, the Session complete drill line, a drill
+  carried into the next session and stopped by a driver change (result kept until Done), Review › Coaching's
+  Drills, Review › Session "Drill this" and Review › Compare "Drive against this lap". The dashboard's contract
+  test runs on bodies recorded from an earlier build of that server
+  (`web-react/src/test/fixtures/coachref-recorded/`: key sets and values; some sentences have since been reworded).
+  Follow-up: AC's ABS/TC and F1's formula are checked for other drivers' laps only; own references keep the older
+  rule.
 - **Track knowledge**: game-native skeleton (sectors, marshal zones; DRS/aero for 2026) verified on the real
   Austria capture; official corner identity verified for Austria only (other sheets seeded, not shown). Field model
   (AI cars), outline and physics prior: planned (research doc section 8).
@@ -159,9 +169,9 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
   Scheduler service, smoke test; `scripts/windows/README.md`), `pitwall doctor` (read-only setup check, `--json`)
   and the `/setup-pitwall` Claude Code skill (`.claude/skills/setup-pitwall/`) for macOS and Windows. CLAUDE.md is
   now contributor-neutral (with generic safety rules); the owner's machine notes live in the gitignored
-  `CLAUDE.local.md`, which has to be copied into each checkout. Opening the database retries a transient "database
-  is locked" (up to ~3 s; seen on the Windows CI runner when four threads open a legacy database together, and on
-  macOS in a few of a hundred such races once schema v3 added its tables; before that macOS raised at once).
+  `CLAUDE.local.md`, which has to be copied into each checkout. On Windows only, opening the database retries a
+  transient "database is locked" (up to ~3 s; seen once on the CI runner when four threads open a legacy database
+  together); macOS raises at once, as before.
 - **Evidence tier: CI-tested on Windows**, NOT live-validated with a game on a Windows PC. The `windows` CI job
   (GitHub `windows-latest`) runs the unit suite (default tiers, as on macOS) and mypy, `install.ps1 -NonInteractive`
   (Svelte dashboard, private data-folder ACL checked by doctor), the smoke test (a recorded F1 25 capture and a

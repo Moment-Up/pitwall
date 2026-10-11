@@ -16,10 +16,11 @@ exits non-zero when an invariant fails:
 * Observations against Ben name him and never say "your reference"; incidents keep their text; no text says
   "brake later"; every ``short`` is at most 48 characters.
 * A synthetic copy of Ann's session never sees Ben's lap (synthetic sessions use the driver's own laps).
-* A brake-point drill (``--drill`` corner, else the first corner with one available) on copies of Ann's laps: the
-  target is never later than Ann's own point, the drill completes after ``--laps`` attempts, and its texts follow
-  the same wording rules. Only with 3 or more clean laps (drills need a learnt track model); captures with 2 clean
-  laps run the other checks.
+* A brake-point drill (``--drill`` corner, else the first corner with one available) on copies of Ann's recorded laps
+  re-fed as attempts (not laps driven for the drill): the target is never later than Ann's own point, an attempt
+  past the point is a hit only when the corner was faster, the drill completes after ``--laps`` attempts, and its
+  texts follow the same wording rules. Only with 3 or more clean laps (drills need a learnt track model); captures
+  with 2 clean laps run the other checks.
 * With Ben's braking assist changed in the database, "Ben's best" is unavailable with the reason
   "Ben's laps here used a different braking assist", and Ann's next lap falls back to her own lap with that reason.
 
@@ -316,7 +317,13 @@ def _drill(
         proc.process(LapJob(sid, _copy(lap, number), ctx))
     done = (live.coachref or {}).get("drill") or {}
     for a in done.get("attempts") or ():
-        rep.say(f"    attempt {a['attempt']}: {a['outcome']:>10} delta {a['delta']}  {a['text']}")
+        rep.say(
+            f"    attempt {a['attempt']}: {a['outcome']:>10} delta {a['delta']}  corner time "
+            f"{a['corner_time_delta_s']}  {a['text']}"
+        )
+        late = isinstance(a["delta"], float) and a["delta"] >= 0.5
+        faster = isinstance(a["corner_time_delta_s"], float) and a["corner_time_delta_s"] < 0
+        rep.check(not (late and a["outcome"] == "hit") or faster, f"attempt {a['attempt']}: a late hit, not faster")
     rep.say(f"  drill result: {done.get('summary_text')!r}")
     rep.numbers["drill"] = {
         "corner": view["corner_label"],

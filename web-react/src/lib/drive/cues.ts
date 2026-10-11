@@ -105,6 +105,15 @@ export function wrappedCall(
 /** Track-side pauses the band states itself (the spec's red flag and pit copy). */
 export type CuePause = "red_flag" | "pit_lane" | "safety_car" | null;
 
+/** coach/cues.py NO_REFERENCE, NO_DRIVER_REFERENCE, NEW_DRIVER: the plan has no comparison for this driver yet. */
+const NO_REFERENCE_REASONS: ReadonlySet<string> = new Set([
+  "no reference lap yet",
+  "no reference lap for this driver",
+  "new driver: waiting for a lap against their reference",
+]);
+/** coachref: what the band says when the delta has its reference before the first lap (calls need a lap). */
+export const CALLS_AFTER_FIRST_LAP = "Braking calls start after your first lap";
+
 /**
  * The cue band. `pause` is the Drive state's own pause; `frozen` = the position is not current (stale, offline):
  * the call's distance reads "-" and the text stays (a fact). `pass` (live position) drops a call the car has just
@@ -117,6 +126,8 @@ export function cueView(
   pause: CuePause = null,
   frozen = false,
   pass: CuePass | null = null,
+  /** coachref: the delta already has a reference (published before the first lap): calls wait for a lap. */
+  hasReference = false,
 ): CueBandView {
   const band = (note: string | null, muted = true): CueBandView => ({ next: null, note, muted, radioOff: false, ai: false });
   if (pause === "red_flag") return band("Calls paused");
@@ -156,6 +167,7 @@ export function cueView(
     const why = fieldPlanWhy(c.reason);
     return { ...band(why ? `${AI_REFERENCE}: ${why}` : `${AI_REFERENCE}: no call ahead`), radioOff, ai };
   }
+  if (hasReference && c.reason && NO_REFERENCE_REASONS.has(c.reason)) return { ...band(CALLS_AFTER_FIRST_LAP), radioOff };
   if (c.reason) return { ...band(sentence(c.reason)), radioOff };
   return { ...band("No call ahead"), radioOff };
 }

@@ -190,7 +190,7 @@ def coaching_text(obs: Mapping[str, Any], detailed: bool = False, with_impact: b
             core = f"braking {abs(v):.0f} m later{slower}"
         elif kind == "low_min_speed":
             if ref_name:
-                core = f"{ref_name} carries {abs(v):.0f} km/h more mid-corner"
+                core = f"{ref_name} was {abs(v):.0f} km/h faster in the middle of the corner"
             else:
                 core = f"minimum speed {abs(v):.0f} km/h down"
         elif kind == "overspeed_apex":

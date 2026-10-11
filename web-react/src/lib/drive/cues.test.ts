@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CUE_LAST_SHOWN_S, JUST_PASSED_M, callsModeText, cueText, cueView, isRadioOff, justPassedM, lastCueOutcome, wrappedCall } from "./cues";
+import { CALLS_AFTER_FIRST_LAP, CUE_LAST_SHOWN_S, JUST_PASSED_M, callsModeText, cueText, cueView, isRadioOff, justPassedM, lastCueOutcome, wrappedCall } from "./cues";
 import { AI_REFERENCE, driverFocus, isFieldPlan } from "./plan";
 import { fixture } from "./testkit";
 import { MINUS } from "./text";
@@ -82,6 +82,16 @@ describe("cue band", () => {
     });
     expect(cueView(cues({ next: null }), "T15").note).toBe("No call ahead");
     expect(cueView(undefined, "T15")).toEqual({ next: null, note: null, muted: true, radioOff: false, ai: false });
+    // coachref: the delta already has its reference (published before the first lap): calls wait for a lap
+    const early = cueView(cues({ next: null, reason: "no reference lap yet" }), "T15", null, null, false, null, true);
+    expect(early.note).toBe(CALLS_AFTER_FIRST_LAP);
+    for (const reason of ["no reference lap for this driver", "new driver: waiting for a lap against their reference"]) {
+      expect(cueView(cues({ next: null, reason }), "T15", null, null, false, null, true).note, reason).toBe(CALLS_AFTER_FIRST_LAP);
+    }
+    expect(cueView(cues({ next: null, reason: "no braking points of your own yet" }), "T15", null, null, false, null, true).note).toBe(
+      "No braking points of your own yet",
+    );
+    expect(CALLS_AFTER_FIRST_LAP).toBe("Braking calls start after your first lap");
   });
 
   it("keeps the look-ahead with a Radio off chip when nobody is listening", () => {

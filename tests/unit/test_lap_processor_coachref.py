@@ -143,7 +143,7 @@ def test_drill_filters_live_observations_and_freezes_the_reference(
     view = env.svc.start_drill(DrillRequest(corner="T2", kind="brake_point", laps=3))
     assert view["status"] == "active" and env.live.cues.drill_corner == "T2"
     assert view["reference"]["lap_id"] == own_ref["lap_id"] and view["target_text"].endswith(
-        "your reference's braking point"
+        "your best lap's braking point"
     )
     set_moving(env.live, 250.0, lap=3)
     choice, applies = env.svc.set_choice(ChoiceRequest(kind="driver_best", target_driver_id=sam))

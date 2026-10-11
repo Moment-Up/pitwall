@@ -61,26 +61,47 @@ _WORDS_TO_NUM = {
 }
 _CORNER_RE = re.compile(r"\b(?:(?:turn|corner)\s*(\d{1,2}|" + "|".join(_WORDS_TO_NUM) + r")|t\s?(\d{1,2}))\b", re.I)
 
+# --- coachref --- radio drill commands (``RaceEngineer.drill_handler``) and "who am I compared with?".
+# Only an imperative starts or stops a drill ("start a drill on turn 3", "please stop the drill", "drill turn 3",
+# "no, stop the drill"); a question that mentions a drill ("how did the drill go?", "should I do a drill at turn 4?")
+# asks for its status, and a negation ("don't start a drill", "do not stop the drill") does neither.
+_DRILL_LEAD = (
+    r"^\s*(?:(?:no|nope|yes|yeah|ok(?:ay)?|right|copy)\s*[,.!]+\s*)?"  # "No, stop the drill"
+    r"(?!.*?\b(?:don[\u2019']?t|do\s+not|not|never|no)\b.*?\bdrill\b)"  # no negation before "drill"
+    r"(?:(?:please|ok(?:ay)?|right|now|can\s+you|could\s+you|will\s+you|would\s+you|let[\u2019']?s|let\s+me|"
+    r"i\s+want\s+to|i[\u2019']?d\s+like\s+to|i\s+would\s+like\s+to|can\s+i|could\s+i)\s+)*"
+)
+_DRILL_STATUS = re.compile(
+    r"^\s*(?:how|what|when|why|was|were|did|does|is|are|should|which|who|where|has|have)\b.*\bdrill"
+    r"|\b(?:how[\u2019']?s|how is|how am i doing (?:on|with|in)|status of|progress (?:on|of))\b"
+    r"(?:\s+\w+){0,2}\s+drill\b"
+    r"|\bdrill (?:status|progress)\b",
+    re.I,
+)
+_DRILL_STOP = re.compile(_DRILL_LEAD + r"(?:stop|end|cancel|finish|abort|quit)\b(?:\s+\w+){0,2}\s+drill\b", re.I)
+_DRILL_START = re.compile(
+    _DRILL_LEAD + r"(?:(?:start|begin|run|do|set\s+up|give\s+me)\b(?:\s+\w+){0,3}\s+drill\b"
+    r"|drill\s+(?:on|at|for|turn|corner|t\s?\d))",
+    re.I,
+)
+# "who am I compared with?", "what's the reference?": names the live reference (facts: "Live delta ... reference").
+# Questions about time, a corner or the AI stay with their own rules ("what did I lose against the reference").
+_REFERENCE_WHO = re.compile(
+    r"^(?!.*\b(?:los[et]|losing|gain\w*|faster|slower|quicker|time|gap|delta|turn|corner|t\s?\d{1,2}|ai|computer|"
+    r"bots?|fuel|tyres?|tires?|setup|pit)\b)"
+    r".*\b(?:who|what|which)\S*(?:\s+\S+){0,4}?\s+(?:compared|comparing|racing|against|reference)\b",
+    re.I,
+)
+# --- coachref ---
+
 _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("radio_check", re.compile(r"\b(radio check|can you hear me|do you (?:read|copy)(?: me)?|mic check)\b", re.I)),
-    # --- coachref --- practice drills, before "quiet", "focus" and a bare corner (they name corners and stop)
-    ("drill_stop", re.compile(r"\b(stop|end|cancel|finish|abort|quit)\b(?:\s+\w+){0,2}\s+drill\b", re.I)),
-    (
-        "drill_status",
-        re.compile(
-            r"\b(how[\u2019']?s|how is|how am i doing (?:on|with|in)|status of|progress (?:on|of))\b"
-            r"(?:\s+\w+){0,2}\s+drill\b|\bdrill (?:status|progress)\b",
-            re.I,
-        ),
-    ),
-    (
-        "drill_start",
-        re.compile(
-            r"\b(start|begin|run|do|set up|give me)\b(?:\s+\w+){0,3}\s+drill\b|\bdrill\b\s+"
-            r"(?:(?:on|at|for)\s+\w+|(?:turn|corner)\s+\w+|t\s?\d{1,2}\b)",
-            re.I,
-        ),
-    ),
+    # --- coachref --- practice drills and the live reference, before "quiet", "focus" and a bare corner (they name
+    # corners and stop). A question that mentions a drill asks for its status; only an imperative starts or stops one.
+    ("drill_status", _DRILL_STATUS),
+    ("drill_stop", _DRILL_STOP),
+    ("drill_start", _DRILL_START),
+    ("reference", _REFERENCE_WHO),
     # --- coachref ---
     (
         "control_quiet",
@@ -125,6 +146,7 @@ _TOPICS: dict[str, set[str]] = {
     "summary": {"session", "laps", "corners", "observations", "fuel", "tyres"},
     "losing_time": {"session", "corners", "compare", "observations", "reference"},
     "corner": {"session", "reference"},
+    "reference": {"session", "reference", "laps"},  # --- coachref --- "who am I compared with?"
     "general": {"session", "laps", "corners", "observations", "reference", "fuel", "tyres"},
 }
 
@@ -385,6 +407,8 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         return say(obs) if obs else say(first("corners", contains="Biggest"))
     if n == "compare":
         return say(first("compare"), first("reference"))
+    if n == "reference":  # --- coachref --- the live delta's reference (ai.facts "Live delta ..."), else the session's
+        return say(first("reference", contains="Live delta") or first("reference"))
     if n == "last_lap":
         last = first("laps", contains=LAST_LAP_PREFIX)
         lap = last.data.get("lap") if last is not None else None

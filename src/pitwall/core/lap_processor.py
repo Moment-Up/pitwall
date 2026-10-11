@@ -93,8 +93,19 @@ class _SessionCache:
     # --- coachref ---
 
 
-# --- coachref ---
-_NOT_RECENT = frozenset({LapFlag.INCOMPLETE, LapFlag.PIT_IN, LapFlag.PIT_OUT, LapFlag.FLASHBACK})
+# --- coachref --- laps kept out of the drill baselines (coach.drills.NON_ATTEMPT_FLAGS: the same laps are no
+# drill attempts), as are safety-car laps
+_NOT_RECENT = frozenset(
+    {
+        LapFlag.INCOMPLETE,
+        LapFlag.PIT_IN,
+        LapFlag.PIT_OUT,
+        LapFlag.FLASHBACK,
+        LapFlag.STANDING_START,
+        LapFlag.DISTANCE_JUMP,
+        LapFlag.STALE_DATA,
+    }
+)
 
 
 @dataclass(slots=True)
@@ -193,6 +204,7 @@ class LapProcessor:
             obs = reword_observations(obs, desc.ref_name, texts)
             clamp = self._brake_clamp(desc, driver_id, ctx, lap_id, model)
         sc.clamp = clamp
+        under_sc = self._under_safety_car(sid)
         # --- coachref ---
         for cd in comp.corners:
             if is_incident(cd):
@@ -200,7 +212,7 @@ class LapProcessor:
             h = sc.history.setdefault(cd.corner, [])
             h.append(cd)
             del h[:-HISTORY_LAPS]
-            if not (lap.flags & _NOT_RECENT):  # --- coachref --- drill baselines: this driver's recent laps
+            if not (lap.flags & _NOT_RECENT) and not under_sc:  # --- coachref --- drill baselines: recent laps
                 r = sc.recent.setdefault(cd.corner, [])
                 r.append(cd.cmp)
                 del r[:-HISTORY_LAPS]
@@ -243,10 +255,17 @@ class LapProcessor:
                 log.exception("coachref context refresh failed")
 
     # --- coachref ---
-    def refresh_reference(self, session_id: str) -> None:
-        """Re-resolve ``session_id``'s reference now (a choice changed while the car was stopped): when the
-        reference lap or its descriptor changed, the history is cleared and the new reference published. Without a
-        lap of this session yet, the live session's context is used. Analysis thread only."""
+    def has_lap(self, session_id: str) -> bool:
+        """A lap of ``session_id`` went through the pipeline (it then owns the session's reference)."""
+        sc = self._sessions.get(session_id)
+        return sc is not None and sc.last_ctx is not None
+
+    def refresh_reference(self, session_id: str, *, load_model: bool = False) -> None:
+        """Re-resolve ``session_id``'s reference now (a choice changed while the car was stopped, or the session's
+        context is complete before its first lap): when the reference lap or its descriptor changed, the history is
+        cleared and the new reference published. Without a lap of this session yet, the live session's context is
+        used. ``load_model``: use the stored track model when none is in memory (a layout of another length never).
+        Analysis thread only."""
         sc = self._sessions.get(session_id)
         ctx = dict(sc.last_ctx) if sc is not None and sc.last_ctx else self._live_ctx(session_id)
         if ctx is None:
@@ -254,7 +273,17 @@ class LapProcessor:
         game, track_id, length = ctx.get("game"), ctx.get("track_id"), ctx.get("track_length_m")
         if not (game and track_id and isinstance(length, int | float) and length > 0):
             return
-        model = self._models.get((str(game), str(track_id)))
+        key = (str(game), str(track_id))
+        model = self._models.get(key)
+        if model is None and load_model:
+            with self.db.read() as c:
+                model = repo.load_track_model(c, key[0], key[1])
+            if model is not None and not lengths_compatible(model.length_m, float(length)):
+                model = None
+            if model is not None and model.corners:
+                if all(c.identity_tier is None for c in model.corners):  # stored models are learned-only
+                    model, _ = identify(model)
+                self._models[key] = model  # as LapProcessor._track_model would cache it
         if model is None or not model.corners:
             return
         driver_id, ref_id, desc = self._choose_reference(
@@ -316,6 +345,13 @@ class LapProcessor:
             clamp = self._brake_clamp(desc, driver_id, ctx, None, model)
         recent = {k: list(v) for k, v in sc.recent.items()} if sc is not None else {}
         return CoachrefContext(session_id, ctx, model, ref, desc, clamp, own, recent)
+
+    def _under_safety_car(self, session_id: str) -> bool:
+        """A safety car (or VSC, formation lap) is out in the live session ``session_id`` now (the lap just ended)."""
+        live = self.live
+        info = live.session if live is not None and live.session_id == session_id else None
+        status = info.safety_car_status if info is not None else None
+        return status is not None and status != "none"
 
     def _live_ctx(self, session_id: str) -> dict[str, Any] | None:
         """A lap context built from the live session (no lap of ``session_id`` processed yet)."""

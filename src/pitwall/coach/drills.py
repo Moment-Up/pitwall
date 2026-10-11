@@ -18,7 +18,13 @@ Evidence and safety (CLAUDE.md):
   driver's usual speed and never above the best speed demonstrated at the corner (``cap``); entry-speed drills are
   anchored on the driver's own laps only (arriving at another driver's speed would mean braking later).
 * No text contains an instruction ("brake later" or any other): every sentence describes the attempt relative to the
-  target ("3 m before the point", "minimum 84 km/h, 2 short").
+  target ("3 m before the point", "minimum 84 km/h, 2 km/h short").
+* A brake-point attempt past the target is a hit only when the corner got faster (``corner_time_delta_s`` < 0
+  against the reference): braking later than the point is praised only when it paid off. Within the tolerance before
+  the point is a hit; within half a metre either side is "on the point" (below the measurement's resolution).
+* Laps that say nothing about the driver's habit at the corner are no attempts (``NON_ATTEMPT_FLAGS``: not driven
+  to the line, pit laps, rewound, the grid start, a distance jump, stale data) and neither are safety-car laps (the
+  service checks the live session).
 
 Heuristics (named constants below, flagged in docs/features.md): the brake-point tolerance (5 m, at least twice the
 reference lap's 90th-percentile sample spacing - the rule of ``analysis.coaching._mag_conf``), the speed step
@@ -124,8 +130,21 @@ DEFAULT_TOLERANCE: dict[str, float] = {
     "exit_speed": SPEED_STEP_KPH,
     "entry_speed": ENTRY_TOLERANCE_KPH,
 }
-# laps that are no attempt: not driven to the line, pit laps, rewound (track-limit laps do count)
-NON_ATTEMPT_FLAGS = frozenset({LapFlag.INCOMPLETE, LapFlag.PIT_IN, LapFlag.PIT_OUT, LapFlag.FLASHBACK})
+# laps that are no attempt: not driven to the line, pit laps, rewound, the grid start (race lap 1), a reset to the
+# track (distance jump), stale data (track-limit laps do count). core.lap_processor keeps the same laps out of the
+# drill baselines.
+NON_ATTEMPT_FLAGS = frozenset(
+    {
+        LapFlag.INCOMPLETE,
+        LapFlag.PIT_IN,
+        LapFlag.PIT_OUT,
+        LapFlag.FLASHBACK,
+        LapFlag.STANDING_START,
+        LapFlag.DISTANCE_JUMP,
+        LapFlag.STALE_DATA,
+    }
+)
+ON_POINT_M = 0.5  # |delta| below this is "on the point" (it rounds to 0 m): under the sample spacing
 STOP_REASONS = ("driver", "driver_changed", "context_changed", "model_changed", "timed_out", "service_restart")
 _TREND_SENTENCES = {
     "closer": "Closer each lap.",
@@ -196,6 +215,7 @@ class DrillInputs:
     tolerance: float | None = None  # requested; None = the kind's default
     braking_assist: int | None = None  # F1 braking assist level of the live session
     shares_with: str | None = None  # another corner's label with the same reference braking onset
+    own_whose: str = "your best lap's"  # the driver's own reference in a sentence ("your pinned lap's")
 
 
 def _recent_values(inputs: DrillInputs, attr: str) -> list[float]:
@@ -232,7 +252,7 @@ def plan_target(kind: DrillKind, inputs: DrillInputs) -> DrillTarget | Unavailab
         spacing = _num(inputs.spacing_p90_m)
         if spacing is not None and spacing > 0:
             tol = max(tol, float(math.ceil(BRAKE_SPACING_FACTOR * spacing)))
-        whose = {"own_reference": "your reference's", "own_point": "your own"}.get(
+        whose = {"own_reference": inputs.own_whose, "own_point": "your own"}.get(
             source, f"{inputs.ref_name}'s" if inputs.ref_name else "the reference's"
         )
         notes = []
@@ -261,7 +281,7 @@ def plan_target(kind: DrillKind, inputs: DrillInputs) -> DrillTarget | Unavailab
         cap = max(known) if known else max(_recent_values(inputs, attr), default=baseline)
         word = "minimum speed" if kind == "min_speed" else "exit speed"
         if baseline >= cap:
-            return Unavailable(f"You already match the best {word} here ({cap:.0f} km/h).")
+            return Unavailable(f"You already reach the best {word} driven here ({cap:.0f} km/h): pick another skill.")
         step = inputs.tolerance if inputs.tolerance is not None else SPEED_STEP_KPH
         target = min(baseline + step, cap)
         guard = None
@@ -386,6 +406,9 @@ class DrillSpec:
     ref_name: str | None = None  # the other driver's name (None = the driver's own lap)
     ref_desc: Mapping[str, Any] | None = None  # the reference descriptor frozen for the drill
     clamp: Mapping[str, float] | None = None  # the braking clamp frozen for the drill (another driver's lap)
+    # the conditions at the start (game, track, layout, car, weather, assists, formula): a lap in other conditions
+    # (wet/dry, another assist) stops the drill, and the frozen reference is not used for it (core.coachref)
+    context: Mapping[str, Any] | None = None
 
     @property
     def skill_label(self) -> str:
@@ -446,10 +469,12 @@ def is_attempt_lap(spec: DrillSpec, session_id: str, lap_number: int, flags: Seq
 def _brake_phrase(outcome: str, delta: float) -> tuple[str, str]:
     a = abs(delta)
     if outcome == "hit":
-        if round(delta) == 0:
+        if a < ON_POINT_M:
             return "on the point", "on the point"
-        return f"on the point, {a:.0f} m {'early' if delta < 0 else 'late'}", "on the point"
-    txt = f"{a:.0f} m before the point" if delta < 0 else f"{a:.0f} m past the point"
+        if delta > 0:  # past the point and the corner was faster
+            return f"on the point, {max(a, 1.0):.0f} m late but faster", "on the point"
+        return f"on the point, {max(a, 1.0):.0f} m early", "on the point"
+    txt = f"{a:.0f} m before the point" if delta < 0 else f"{max(a, 1.0):.0f} m past the point"
     return txt, txt
 
 
@@ -475,8 +500,8 @@ def _attempt_phrase(spec: DrillSpec, a: DrillAttempt, exit_kph: float | None = N
     if a.outcome == "hit":
         return f"{word} {v:.0f} km/h, on target", "on target"
     short_by = spec.target - v
-    gap = f"{short_by:.0f} short" if round(short_by) > 0 else "just short"
-    return f"{word} {v:.0f} km/h, {gap}", (f"{short_by:.0f} km/h short" if round(short_by) > 0 else "just short")
+    gap = f"{short_by:.0f} km/h short" if round(short_by) > 0 else "just short"
+    return f"{word} {v:.0f} km/h, {gap}", gap
 
 
 def evaluate_attempt(
@@ -501,7 +526,13 @@ def evaluate_attempt(
         outcome, reason = "miss", "incident"
     elif value is None or delta is None:
         outcome, reason = "unmeasured", ("no braking measured" if spec.kind == "brake_point" else "not measured")
-    elif spec.kind == "brake_point" or spec.kind == "entry_speed":
+    elif spec.kind == "brake_point":
+        # before the point within the tolerance; past it only when the corner got faster (later braking is praised
+        # only when it paid off)
+        faster = corner_dt is not None and corner_dt < 0
+        if -spec.tolerance <= delta < ON_POINT_M or (ON_POINT_M <= delta <= spec.tolerance and faster):
+            outcome = "hit"
+    elif spec.kind == "entry_speed":
         outcome = "hit" if abs(delta) <= spec.tolerance else "miss"
     elif spec.kind == "min_speed":
         exit_v = _num(m.exit_speed_kph) if m is not None else None
@@ -517,13 +548,19 @@ def evaluate_attempt(
     if k >= spec.laps_target:
         text, simple, short = result_texts(replace(state, attempts=(*state.attempts, draft)), ended="done")
     else:
+        # "2 of 5", never "lap 2 of 5": the drill's laps are not the race's
         phrase, simple_phrase = _attempt_phrase(spec, draft)
-        text = f"{spec.corner_voice} drill, lap {k} of {spec.laps_target}: {phrase}. {hits} hit{_plural(hits)}."
-        simple = f"{spec.corner_voice} drill, lap {k} of {spec.laps_target}: {simple_phrase}."
-        short = f"Drill {k}/{spec.laps_target}: {phrase} · {hits} hit{_plural(hits)}"
+        text = f"{spec.corner_voice} drill, {k} of {spec.laps_target}: {phrase}. {_hits_text(hits).capitalize()}."
+        simple = f"{spec.corner_voice} drill, {k} of {spec.laps_target}: {simple_phrase}."
+        short = f"Drill {k}/{spec.laps_target}: {phrase} · {_hits_text(hits)}"
         if len(short) > SHORT_MAX_CHARS:
-            short = _cut(f"Drill {k}/{spec.laps_target}: {phrase.split(',')[0]} · {hits} hit{_plural(hits)}")
+            short = _cut(f"Drill {k}/{spec.laps_target}: {phrase.split(',')[0]} · {_hits_text(hits)}")
     return replace(draft, text=text, short=short, text_simple=simple)
+
+
+def _hits_text(hits: int) -> str:
+    """ "no hits yet", "1 hit", "3 hits" (a running drill)."""
+    return "no hits yet" if hits == 0 else f"{hits} hit{_plural(hits)}"
 
 
 def summarise(spec: DrillSpec, attempts: Sequence[DrillAttempt]) -> DrillSummary:
@@ -560,12 +597,15 @@ def summarise(spec: DrillSpec, attempts: Sequence[DrillAttempt]) -> DrillSummary
 
 
 def _best_text(spec: DrillSpec, s: DrillSummary) -> str | None:
+    """The best attempt in words: "right on the point", "3 m from the point", "on target", "4 km/h from the target",
+    "88 km/h"."""
     if s.best is None or s.best_delta is None:
         return None
+    d = abs(s.best_delta)
     if spec.kind == "brake_point":
-        return f"{abs(s.best_delta):.0f} m"
+        return "right on the point" if d < ON_POINT_M else f"{max(d, 1.0):.0f} m from the point"
     if spec.kind == "entry_speed":
-        return f"within {abs(s.best_delta):.0f} km/h"
+        return "on target" if round(d) == 0 else f"{d:.0f} km/h from the target"
     return f"{s.best:.0f} km/h"
 
 
@@ -584,7 +624,7 @@ def result_texts(state: DrillState, *, ended: str = "done") -> tuple[str, str, s
     trend = _TREND_SENTENCES.get(s.trend or "")
     if trend is not None and spec.kind == "entry_speed" and s.trend == "further":
         trend = "Drifting off the target."
-    text = " ".join([head, *([f"Best {best}."] if best else []), *([trend] if trend else [])])
+    text = " ".join([head, *([f"Best: {best}."] if best else []), *([trend] if trend else [])])
     simple = " ".join([head, *([trend] if trend else [])])
     short = _cut(f"{short_head} · best {best}" if best else short_head)
     return text, simple, short
@@ -594,10 +634,8 @@ def status_text(state: DrillState) -> str:
     """The radio's answer to "how's my drill going" for an active drill."""
     spec, s = state.spec, state.summary
     done = len(state.attempts)
-    line = (
-        f"{spec.corner_voice} {spec.skill_label.lower()} drill: {done} of {spec.laps_target} done, "
-        f"{s.hits} hit{_plural(s.hits)}."
-    )
+    line = f"{spec.corner_voice} {spec.skill_label.lower()} drill: {done} of {spec.laps_target} done, "
+    line += f"{_hits_text(s.hits)}."
     if state.attempts:
         phrase, _ = _attempt_phrase(spec, state.attempts[-1])
         line += f" Last one {phrase}."
@@ -778,6 +816,7 @@ def state_fields(state: DrillState) -> dict[str, Any]:
             "ref_name": spec.ref_name,
             "ref_desc": dict(spec.ref_desc) if spec.ref_desc is not None else None,
             "clamp": dict(spec.clamp) if spec.clamp is not None else None,
+            "context": dict(spec.context) if spec.context is not None else None,
             "last_activity_unix": state.last_activity_unix,
         },
     }
@@ -796,6 +835,7 @@ def state_from_row(row: Mapping[str, Any]) -> DrillState:
         else None
     )
     ref_desc = detail.get("ref_desc")
+    context = detail.get("context")
     kind = str(row.get("kind") or "brake_point")
 
     def opt_int(v: object) -> int | None:
@@ -840,6 +880,7 @@ def state_from_row(row: Mapping[str, Any]) -> DrillState:
         ref_name=opt_str(detail.get("ref_name")),
         ref_desc=dict(ref_desc) if isinstance(ref_desc, Mapping) else None,
         clamp=clamp,
+        context=dict(context) if isinstance(context, Mapping) else None,
     )
     return DrillState(
         spec=spec,

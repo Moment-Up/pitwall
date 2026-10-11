@@ -1,7 +1,8 @@
 // Drills in Review (coachref, spec 10.6, 10.7): the Coaching page's Drills list and its detail sheet, the Work on
 // card's "Drill this" button, and the way back to the lap in Compare. Pure; tested in plain node.
 //
-//   3 Oct · T3 Copse · Brake point · 2/3 · best 1 m from the point · [Closer] · vs Sam's best
+//   T3 Copse · Brake point · 2 of 3 on the point      [Closer] ›
+//   3 Oct · Best: 1 m from the point · vs Sam's best · Stopped after 2 of 5 laps: the driver changed
 //
 // Words are counts and neutral descriptions of what happened against the target (P9); the server's own sentences
 // (target, note, summary) are shown verbatim. History counts real driving only: drills refuse synthetic and replayed
@@ -16,7 +17,7 @@ import {
   type DrillsQuery,
 } from "../endpoints/coachref";
 import type { ReviewTrackModel } from "../endpoints/review";
-import { bestText, hitWords, trendWord, type DrillTrendWord } from "../drive/drill";
+import { bestText, hitWords, stoppedText, trendWord, type DrillTrendWord } from "../drive/drill";
 import { apexGameM } from "./compare";
 import { cornerIdentity } from "./corners";
 import { comparePath } from "./links";
@@ -42,23 +43,23 @@ export interface DrillHistoryRow {
   /** "T3 Copse": the label stored at the start (it names the part, "T1-4 (1)") and the official name when known. */
   corner: string;
   skill: string;
-  /** "2/3" (hits / scored laps). */
+  /** "2 of 3 on the point" (hits of scored laps). */
   score: string;
-  /** "best 1 m from the point" / "best 98 km/h". */
+  /** "Best: 1 m from the point" / "Best: 98 km/h". */
   best: string | null;
   trend: DrillTrendWord | null;
   /** "vs Sam's best". */
   vs: string | null;
-  /** "Running" / "Stopped"; null when it ran its laps. */
+  /** "Running" / "Stopped after 2 of 5 laps: the driver changed"; null when it ran its laps. */
   status: string | null;
   synthetic: boolean;
   /** The row in one line (list text value, screen readers). */
   text: string;
 }
 
-function statusWord(d: Pick<DrillView, "status">): string | null {
+function statusWord(d: Pick<DrillView, "status" | "stop_reason" | "attempts" | "laps_target">): string | null {
   if (d.status === "active") return "Running";
-  if (d.status === "stopped") return "Stopped";
+  if (d.status === "stopped") return stoppedText(d);
   if (d.status === "abandoned") return "Not started";
   return null;
 }
@@ -73,14 +74,14 @@ export function drillRow(d: DrillView, model: ReviewTrackModel | null | undefine
     date: dayTitle(d.started_unix, nowMs),
     corner: id.name ? `${label} ${id.name}` : label,
     skill: d.skill_label || DRILL_SKILL_LABEL[d.kind],
-    score: `${d.hits}/${d.scored}`,
-    best: best ? `best ${best}` : null,
+    score: `${d.hits} of ${d.scored} ${hitWords(d.kind)}`,
+    best: best ? `Best: ${best}` : null,
     trend: trendWord(d.trend),
     vs: d.reference?.label ? `vs ${d.reference.label}` : null,
     status: statusWord(d),
     synthetic: d.synthetic === true,
   };
-  const text = [row.date, row.corner, row.skill, `${d.hits} of ${d.scored} ${hitWords(d.kind)}`, row.best, row.trend, row.vs, row.status]
+  const text = [row.date, row.corner, row.skill, row.score, row.best, row.trend, row.vs, row.status]
     .filter(Boolean)
     .join(" · ");
   return { ...row, text };
@@ -96,8 +97,8 @@ export interface AttemptRow {
   attempt: number;
   /** "L4", or "-" when the lap is unknown. */
   lap: string;
-  /** Where or how fast: "1 961 m" (brake point: lap distance), "98 km/h". */
-  value: string;
+  /** How fast: "98 km/h"; null for a brake point (a lap distance says nothing: the delta says where). */
+  value: string | null;
   /** Against the target in words: "1 m past the point", "3 km/h short", "on target". */
   delta: string;
   outcome: DrillAttempt["outcome"];
@@ -105,13 +106,9 @@ export interface AttemptRow {
   outcomeText: string;
 }
 
-function thousands(n: number): string {
-  return String(Math.round(Math.abs(n))).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-}
-
-function valueText(kind: DrillKind, v: number | null): string {
-  if (!finite(v)) return "-";
-  return kind === "brake_point" ? `${thousands(v)} m` : `${Math.round(v)} km/h`;
+function valueText(kind: DrillKind, v: number | null): string | null {
+  if (kind === "brake_point") return null;
+  return finite(v) ? `${Math.round(v)} km/h` : "-";
 }
 
 function deltaText(kind: DrillKind, delta: number | null): string {
@@ -182,13 +179,17 @@ export interface LiveDrillContext {
 interface LiveDrillSnap {
   connection?: { status?: string; synthetic?: boolean } | null;
   session?: { game?: string; track_id?: string | null; car_name?: string | null } | null;
+  /** D4: "ended" once the game ends the session (it stays until the next session starts). */
+  session_state?: string | null;
   coachref?: { driver_id?: number | null } | null;
 }
 
-/** "" when there is no live session; else the context as JSON. `seatedId` stands in when the server sends no owner. */
+/** "" when there is no running live session (telemetry not live, or the session ended: a drill could only be
+ * refused); else the context as JSON. `seatedId` stands in when the server sends no owner. */
 export function liveDrillKey(snap: LiveDrillSnap | null | undefined, connected: boolean, seatedId: number | null): string {
   const s = snap?.session;
-  if (!connected || !snap || !s?.game || !s.track_id || snap.connection?.status === "no_data") return "";
+  if (!connected || !snap || !s?.game || !s.track_id) return "";
+  if (snap.connection?.status !== "live" || snap.session_state === "ended") return "";
   const ctx: LiveDrillContext = {
     game: s.game,
     trackId: s.track_id,
