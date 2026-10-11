@@ -10,11 +10,16 @@
 //
 // Unknown: "-" with one reason line ("No reference yet: …", "No signal · 6 s", "No delta in the pit lane").
 // Safety car / invalid lap: muted with an SC / INV chip. Beginners read "vs your target lap" and no projected lap.
+// coachref: with a server that sends `coachref`, the label is the reference control ("Delta to · Sam's best ⌄",
+// RefPicker.tsx), the chip carries the holder's initials when the lap is another driver's, "From next lap" when a
+// change waits, and one muted line says why a choice could not be used ("…: using your best").
 
 import { Card, Chip } from "@heroui/react";
 import { memo } from "react";
 import { NumText } from "../../../components/ui";
 import { DELTA_SCALE_S, DELTA_TICKS_S, type DeltaView } from "../../../lib/drive/delta";
+import { FROM_NEXT_LAP, HELD_FOR_DRILL, type RefControlView } from "../../../lib/drive/reference";
+import { HolderAvatar, RefControl } from "./RefPicker";
 import { deltaFills, deltaScale, pct, sameProps } from "./view";
 
 const DeltaBar = memo(function DeltaBar({ d }: { d: Pick<DeltaView, "bar" | "clamped" | "tone"> }) {
@@ -41,17 +46,21 @@ const DeltaBar = memo(function DeltaBar({ d }: { d: Pick<DeltaView, "bar" | "cla
   );
 }, sameProps);
 
-export const DeltaPanel = memo(function DeltaPanel({ delta: d }: { delta: DeltaView }) {
+export const DeltaPanel = memo(function DeltaPanel({ delta: d, refControl = null }: { delta: DeltaView; refControl?: RefControlView | null }) {
   const unknown = d.tone === "unknown";
+  const ctl = refControl?.available ? refControl : null;
   return (
     <Card className="pwc-delta" role="group" aria-label={d.aria}>
-      <div className="pwc-delta__top">
-        <span>{d.label}</span>
+      <div className="pwc-delta__top" data-ref={ctl ? "" : undefined}>
+        {ctl ? <RefControl view={ctl} variant="delta" /> : <span>{d.label}</span>}
         {d.refLabel && (
           <Chip size="lg" className="pwc-refchip">
+            {ctl?.holder && <HolderAvatar holder={ctl.holder} size={20} />}
             <Chip.Label className="truncate">{d.refLabel}</Chip.Label>
           </Chip>
         )}
+        {ctl && (ctl.pending || ctl.frozen) && <span className="pwc-reftag">{ctl.pending ? FROM_NEXT_LAP : HELD_FOR_DRILL}</span>}
+        {ctl?.reason && <span className="pwc-refreason">{ctl.reason}</span>}
       </div>
       <div className="pwc-dv" data-tone={d.tone} aria-hidden="true">
         {unknown ? "-" : <NumText text={d.text} />}

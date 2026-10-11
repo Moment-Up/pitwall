@@ -13,6 +13,7 @@
 import type { LapTrace } from "../api";
 import type { TimingStatus } from "../../components/ui/types";
 import type { Driver } from "../drivers";
+import type { CandidatesResponse, RefOption } from "../endpoints/coachref";
 import type { RefLap, ReviewCornerDelta, ReviewObservation, ReviewTrackModel } from "../endpoints/review";
 import { UNKNOWN, lapTime, MINUS } from "../format";
 import { cornerIdentity, type CornerIdentity } from "./corners";
@@ -87,6 +88,9 @@ export interface LapOption {
   group: "session" | "reference" | "family";
   /** Can be the reference (A): clean laps only. */
   canBeRef: boolean;
+  /** coachref: listed but not selectable (another driver's lap that cannot be compared); `reason` says why. */
+  disabled?: boolean;
+  reason?: string | null;
 }
 
 function fromRow(r: LapsRow): LapOption {
@@ -122,6 +126,52 @@ export interface RefOptionsInput {
   drivers: readonly Driver[];
   /** The selected A when it is none of the above (an old link): described from its trace. */
   selectedTrace?: Pick<LapTrace, "lap_id" | "lap_number" | "lap_time_ms"> | null;
+  /** coachref: GET /api/coachref/candidates for lap B (compatible family laps, the others with a reason). When
+   * present it replaces the `stats.best_laps` family group (any car, so often blocked). */
+  candidates?: CandidatesResponse | null;
+}
+
+// --- coachref: picker A's family group from /api/coachref/candidates ---
+const DAY_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function shortDay(unix: number | null | undefined): string | null {
+  if (!finite(unix)) return null;
+  const d = new Date(unix * 1000);
+  return `${d.getDate()} ${DAY_MONTHS[d.getMonth()] ?? ""}`;
+}
+
+/** Family options for picker A from the candidates (spec 10.5): each compatible lap selectable; the unavailable ones
+ * listed, disabled, with the server's reason ("Sam's laps here used a different braking assist"). */
+export function candidateOptions(c: CandidatesResponse, seen: ReadonlySet<number>): LapOption[] {
+  const out: LapOption[] = [];
+  const listed = new Set(seen);
+  let missing = 0;
+  for (const g of c.groups) {
+    for (const o of g.options as RefOption[]) {
+      const lap = o.lap;
+      const off = o.available === false;
+      // One row a lap (the family record is often someone's best too): the first label wins.
+      if (lap && listed.has(lap.lap_id)) continue;
+      if (lap) listed.add(lap.lap_id);
+      if (!lap && !off) continue;
+      const who = g.id === "own" ? null : (lap?.driver_name ?? null);
+      out.push({
+        // A row with no lap gets a negative id: never a lap, never selectable.
+        id: lap ? lap.lap_id : -(++missing),
+        title: o.label,
+        detail: off ? (o.reason ?? "Not comparable") : [who && !o.label.includes(who) ? who : null, lap?.car_name, shortDay(lap?.set_unix)].filter(Boolean).join(" · ") || null,
+        ms: lap && finite(lap.lap_time_ms) ? lap.lap_time_ms : null,
+        status: "neutral",
+        sectors: NO_SECTORS,
+        words: "Clean",
+        group: "family",
+        canBeRef: !off && !!lap,
+        disabled: off || !lap,
+        reason: off ? (o.reason ?? null) : null,
+      });
+    }
+  }
+  return out;
 }
 
 /**
@@ -148,7 +198,12 @@ export function refOptions(input: RefOptionsInput): LapOption[] {
     seen.add(ref.id);
   }
   const s = input.session;
-  if (timingEligible(s) && s.track_id) {
+  if (input.candidates) {
+    for (const o of candidateOptions(input.candidates, seen)) {
+      out.push(o);
+      if (o.id > 0) seen.add(o.id);
+    }
+  } else if (timingEligible(s) && s.track_id) {
     for (const d of input.drivers) {
       const best = d.stats.best_laps.find((b) => !b.synthetic && b.game === s.game && b.track_id === s.track_id);
       if (!best || seen.has(best.lap_id)) continue;
@@ -325,7 +380,18 @@ export function cornerSentence(c: Pick<CompareCorner, "words">): string {
 
 /** The explainer's sentence (spec 6.5): "At Stowe you braked 12 m earlier, your slowest speed was 4 km/h lower and
  * the corner took 0.11 s longer (lap 66 against your reference, lap 64)." */
-export function explainerText(c: CompareCorner, lapNumber?: number | null, refLapNumber?: number | null): string {
+export function explainerText(
+  c: CompareCorner,
+  lapNumber?: number | null,
+  refLapNumber?: number | null,
+  /** coachref: another driver's lap ("Sam's best"): named instead of its lap number (it is their session's). */
+  refLabel?: string | null,
+): string {
+  if (refLabel) {
+    const base = explainerText(c);
+    const lap = finite(lapNumber) ? `lap ${lapNumber}` : "your lap";
+    return `${base.replace(/\.$/, "")} (${lap} against ${refLabel}).`;
+  }
   return (
     whyText({
       where: c.spoken,
@@ -406,6 +472,19 @@ export function chartWords(chart: CompareChart, refWord: string): ChartWords {
     case "steering":
       return { title: "Steering", caption: null };
   }
+}
+
+/** coachref: the A picker's name and the sentences' word when A is another driver's lap (the descriptor of
+ * /api/coachref/compare): "Sam's lap" for the picker (its option already says "Sam's best" / "Family record") and the
+ * descriptor's sentence words ("Sam's best", "the family record") instead of "the reference"; else refWordFor. */
+export function refWordsFor(
+  level: Density["level"],
+  ref: { own?: boolean | null; label?: string | null; label_to?: string | null; driver_name?: string | null } | null | undefined,
+): { picker: string; sentence: string } {
+  if (ref && ref.own === false && ref.label) {
+    return { picker: ref.driver_name ? `${ref.driver_name}'s lap` : ref.label, sentence: ref.label_to || ref.label };
+  }
+  return refWordFor(level);
 }
 
 /** The A picker's name (9.6): "Your target lap" for beginners, "Reference" for everyone else. */

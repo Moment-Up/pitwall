@@ -23,6 +23,7 @@ from pitwall.analysis.strategy import fuel_estimate, pit_window, tyre_estimate
 from pitwall.analysis.track import TrackModel
 from pitwall.analysis.track_identity import corner_texts, resolve_corner_ref
 from pitwall.carsetup.facts import session_setup_facts
+from pitwall.coach.reference_wording import lap_date
 from pitwall.core.session_analysis import SessionAnalysis
 
 
@@ -238,6 +239,28 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
             txt += f"; this session's best clean lap is {gap_s:.3f}s off it"
             data["gap_s"] = gap_s
         fs.add("laps", txt + ".", data)
+    # --- coachref --- the live delta's reference when it is another driver's lap (snapshot.reference, chosen with
+    # core.coachref). Before the session's own reference fact, so a deterministic "reference" answer names it.
+    live_ref = (live or {}).get("reference")
+    if isinstance(live_ref, dict) and live_ref.get("own") is False and isinstance(live_ref.get("lap_time_ms"), int):
+        ref_ms = int(live_ref["lap_time_ms"])
+        label = str(live_ref.get("label") or "another driver's lap")
+        holder = live_ref.get("driver_name")
+        when = lap_date(live_ref.get("set_unix"))
+        n_ref = live_ref.get("lap_number")
+        who = driver_name or "the driver"
+        fs.add(
+            "reference",
+            f"Live delta and coaching reference: {label}"
+            + (f" ({holder})" if holder else "")
+            + f", {fmt_lap(ref_ms)}"
+            + (f", lap {n_ref}" if isinstance(n_ref, int) else "")
+            + (f", set {when}" if when else "")
+            + f". Braking calls never go later than {who}'s own braking point.",
+            {"lap": n_ref, "lap_time_s": ref_ms / 1000},
+            say=f"You're being compared with {label}, a {fmt_lap(ref_ms)}.",
+        )
+    # --- coachref ---
     if sa.ref_lap:
         r = sa.ref_lap
         same = r.get("session_id") == s.get("id")

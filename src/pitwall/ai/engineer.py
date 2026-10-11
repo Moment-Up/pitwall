@@ -8,13 +8,18 @@
 * Citations are bookkeeping: grounding checks the cited text (``EngineerAnswer.cited_text``), and the facts used
   are returned in ``EngineerAnswer.facts``. What the driver sees and hears (``text`` / ``speech``) never carries
   fact ids, observation labels or confidence scores (``grounding.display_text``).
+* Practice drills (coachref): "start a drill on turn 3", "how's my drill going", "stop the drill" are control
+  intents answered by ``RaceEngineer.drill_handler`` (``core.coachref.CoachRef.radio_command``) at once, never by
+  the LLM; without a handler the engineer says drills are not available.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -58,6 +63,25 @@ _CORNER_RE = re.compile(r"\b(?:(?:turn|corner)\s*(\d{1,2}|" + "|".join(_WORDS_TO
 
 _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("radio_check", re.compile(r"\b(radio check|can you hear me|do you (?:read|copy)(?: me)?|mic check)\b", re.I)),
+    # --- coachref --- practice drills, before "quiet", "focus" and a bare corner (they name corners and stop)
+    ("drill_stop", re.compile(r"\b(stop|end|cancel|finish|abort|quit)\b(?:\s+\w+){0,2}\s+drill\b", re.I)),
+    (
+        "drill_status",
+        re.compile(
+            r"\b(how[\u2019']?s|how is|how am i doing (?:on|with|in)|status of|progress (?:on|of))\b"
+            r"(?:\s+\w+){0,2}\s+drill\b|\bdrill (?:status|progress)\b",
+            re.I,
+        ),
+    ),
+    (
+        "drill_start",
+        re.compile(
+            r"\b(start|begin|run|do|set up|give me)\b(?:\s+\w+){0,3}\s+drill\b|\bdrill\b\s+"
+            r"(?:(?:on|at|for)\s+\w+|(?:turn|corner)\s+\w+|t\s?\d{1,2}\b)",
+            re.I,
+        ),
+    ),
+    # --- coachref ---
     (
         "control_quiet",
         re.compile(
@@ -164,11 +188,17 @@ class EngineerAnswer:
     cited_text: str = ""  # the answer as grounded, with its [F12] citations (internal: audits, debugging)
 
 
+DRILL_INTENTS = frozenset({"drill_start", "drill_status", "drill_stop"})  # --- coachref ---
+DrillHandler = Callable[[Intent, str], tuple[str, dict[str, Any]]]
+
+
 class RaceEngineer:
     def __init__(self, provider: LLMProvider | None, max_tokens: int = 350, temperature: float = 0.2) -> None:
         self.provider = provider
         self.max_tokens = max_tokens
         self.temperature = temperature
+        # --- coachref --- drill intents go here (blocking: run in a worker thread), never to the LLM
+        self.drill_handler: DrillHandler | None = None
 
     async def answer(
         self, question: str, sheet: FactSheet, history: list[dict[str, str]] | None = None, use_llm: bool = True
@@ -177,6 +207,8 @@ class RaceEngineer:
         intent = detect_intent(question)
         if intent.name in ("control_quiet", "control_resume"):
             return self._control(intent, t0)
+        if intent.name in DRILL_INTENTS:  # --- coachref ---
+            return await self._drill(intent, question, t0)
         if intent.name == "radio_check":
             text = "Loud and clear. Radio check OK."
             return EngineerAnswer(
@@ -231,6 +263,32 @@ class RaceEngineer:
     def _select(intent: Intent, sheet: FactSheet) -> list[Fact]:
         topics = _TOPICS.get(intent.name, _TOPICS["general"])
         return sheet.select(topics, corner=intent.corner)
+
+    # --- coachref ---
+    async def _drill(self, intent: Intent, question: str, t0: float) -> EngineerAnswer:
+        """A practice-drill command: answered by the deterministic handler, never the LLM (no facts used)."""
+        handler = self.drill_handler
+        if handler is None:
+            text, control = "Drills aren't available right now.", {"action": intent.name, "drill_id": None}
+        else:
+            try:
+                text, control = await asyncio.to_thread(handler, intent, question)
+            except Exception:
+                log.exception("drill command failed")
+                text, control = "I couldn't do that with the drill just now.", {"action": intent.name, "drill_id": None}
+        return EngineerAnswer(
+            text=text,
+            speech=text,
+            intent=intent.name,
+            corner=intent.corner,
+            facts=[],
+            grounded=True,
+            fallback=False,
+            latency_ms=int((time.perf_counter() - t0) * 1000),
+            control=control,
+        )
+
+    # --- coachref ---
 
     def _control(self, intent: Intent, t0: float) -> EngineerAnswer:
         if intent.name == "control_quiet":

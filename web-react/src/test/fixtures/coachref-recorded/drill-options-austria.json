@@ -1,0 +1,95 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "real F1 25 PS5 captures (the owner's, not committed) streamed over loopback UDP into an isolated scratch Pitwall server (integrator e2e, coachref lane); demo drivers Ann and Ben stand in for the household",
+  "moment": "GET /api/coachref/drills/options?corner_ref=T3 in the Austria pit, no drill running"
+ },
+ "body": {
+  "corner": "T2",
+  "corner_label": "T3",
+  "corner_voice": "Turn 3",
+  "available": true,
+  "reason": null,
+  "laps_choices": [
+   3,
+   5,
+   8,
+   10
+  ],
+  "default_laps": 5,
+  "kinds": [
+   {
+    "kind": "brake_point",
+    "skill_label": "Brake point",
+    "available": true,
+    "reason": null,
+    "target": 1280.2804046950666,
+    "unit": "m",
+    "tolerance": 5.0,
+    "baseline": null,
+    "target_text": "Brake within 5 m of Ben's braking point",
+    "note": "Braking assist is on, so the game helps with braking: these brake points are partly the assist's.",
+    "tolerance_choices": [
+     3.0,
+     5.0,
+     10.0
+    ],
+    "suggested": false
+   },
+   {
+    "kind": "min_speed",
+    "skill_label": "Minimum speed",
+    "available": true,
+    "reason": null,
+    "target": 58.0,
+    "unit": "km/h",
+    "tolerance": 3.0,
+    "baseline": 55.0,
+    "target_text": "Minimum speed 58 km/h or more (usually 55)",
+    "note": null,
+    "tolerance_choices": [
+     2.0,
+     3.0,
+     5.0
+    ],
+    "suggested": false
+   },
+   {
+    "kind": "exit_speed",
+    "skill_label": "Exit speed",
+    "available": false,
+    "reason": "You already match the best exit speed here (59 km/h).",
+    "target": null,
+    "unit": "km/h",
+    "tolerance": 3.0,
+    "baseline": null,
+    "target_text": null,
+    "note": null,
+    "tolerance_choices": [
+     2.0,
+     3.0,
+     5.0
+    ],
+    "suggested": false
+   },
+   {
+    "kind": "entry_speed",
+    "skill_label": "Entry speed",
+    "available": true,
+    "reason": null,
+    "target": 299.2073863636364,
+    "unit": "km/h",
+    "tolerance": 5.0,
+    "baseline": 299.21,
+    "target_text": "Arrive at 299 km/h, within 5 km/h",
+    "note": null,
+    "tolerance_choices": [
+     3.0,
+     5.0,
+     8.0
+    ],
+    "suggested": false
+   }
+  ]
+ }
+}

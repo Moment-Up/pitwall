@@ -19,6 +19,16 @@ Bests (dashboard D2): after every stored lap, and whenever the live session's co
 (``LiveState.set_bests_requester``, served by ``AnalysisWorker``), the live session's session / driver / household
 bests are recomputed (``repo.lap_bests``) on this thread and published with ``LiveState.set_bests``. A
 synthetic or replayed live session gets no driver or household bests.
+
+Reference choice and practice drills (coachref, ``core/coachref.py``): with a ``CoachRef`` attached (the runtime
+attaches one; tests and tools usually do not), the reference comes from the driver's chosen reference (their best,
+the family record, another driver's best or a saved lap; compatible laps only) instead of the own-lap rule above,
+which stays the default and the fallback. Against another driver's lap the observations are worded with that
+driver's name (``coach.reference_wording``) and the comparison carries ``brake_clamp_m``: the driver's own braking
+point per corner, so braking calls never go later than the driver has braked there (``coach.cues``). After every
+stored lap the service evaluates an active drill (``CoachRef.after_lap``); while one runs, only the drill corner's
+observations are published live (all are stored) and the lap's coaching is the drill's point. ``AnalysisWorker
+.submit_task`` runs the service's own changes on this thread, so drill and reference state never needs a lock.
 """
 
 from __future__ import annotations
@@ -27,12 +37,15 @@ import logging
 import queue
 import threading
 import time
+from collections.abc import Callable
+from concurrent.futures import Future
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from pitwall.analysis.coaching import is_incident, observations_for_comparison
 from pitwall.analysis.compare import (
     CornerDelta,
+    CornerMetrics,
     LapAnalysis,
     analyse_lap,
     check_compatibility,
@@ -44,11 +57,16 @@ from pitwall.analysis.distance import to_distance_domain
 from pitwall.analysis.laps import LapFlag, LapTrace
 from pitwall.analysis.track import TrackModel, build_track_model
 from pitwall.analysis.track_identity import corner_texts, identify, track_model_payload
+from pitwall.coach.reference_wording import reword_observations
 from pitwall.core.live import BestsRequest, LiveState
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
 
+if TYPE_CHECKING:
+    from pitwall.core.coachref import CoachRef, ResolvedReference
+
 log = logging.getLogger(__name__)
+T = TypeVar("T")
 
 TRACK_MODEL_TARGET_LAPS = 3  # rebuild the model until it is based on this many clean laps, then freeze
 HISTORY_LAPS = 5
@@ -67,13 +85,45 @@ class _SessionCache:
     history: dict[str, list[CornerDelta]] = field(default_factory=dict)
     ref_lap_id: int | None = None
     driver_id: int | None = None
+    # --- coachref ---
+    last_ctx: dict[str, Any] | None = None  # the last lap's context (lap meta + session context)
+    ref_desc: ResolvedReference | None = None  # how the current reference was chosen (None without coachref)
+    clamp: dict[str, float] | None = None  # the braking clamp of the last comparison (another driver's lap)
+    recent: dict[str, list[CornerMetrics]] = field(default_factory=dict)  # last laps per corner, no incidents
+    # --- coachref ---
+
+
+# --- coachref ---
+_NOT_RECENT = frozenset({LapFlag.INCOMPLETE, LapFlag.PIT_IN, LapFlag.PIT_OUT, LapFlag.FLASHBACK})
+
+
+@dataclass(slots=True)
+class CoachrefContext:
+    """What the coachref service's tasks need about a session (``LapProcessor.coachref_context``): the context of
+    its last lap (else of the live session), the shared track model, the current reference and its analysis, how
+    it was chosen, the braking clamp, the driver's own reference analysis and the recent corner metrics."""
+
+    session_id: str
+    ctx: dict[str, Any] | None
+    model: TrackModel | None
+    ref: LapAnalysis | None
+    desc: ResolvedReference | None
+    clamp: dict[str, float] | None
+    own: LapAnalysis | None
+    recent: dict[str, list[CornerMetrics]]
+
+
+# --- coachref ---
 
 
 class LapProcessor:
-    def __init__(self, db: Database, writer: DbWriter, live: LiveState | None = None) -> None:
+    def __init__(
+        self, db: Database, writer: DbWriter, live: LiveState | None = None, coachref: CoachRef | None = None
+    ) -> None:
         self.db = db
         self.writer = writer
         self.live = live
+        self.coachref = coachref  # --- coachref --- reference choice + drills (None: the own-lap rule only)
         self._models: dict[tuple[str, str], TrackModel] = {}
         self._ref_cache: dict[int, LapAnalysis] = {}
         self._sessions: dict[str, _SessionCache] = {}
@@ -95,34 +145,41 @@ class LapProcessor:
         if game and track_id:
             self._publish_bests(sid, str(game), str(track_id), ctx.get("car_id"), length)
         if not (game and track_id and length) or LapFlag.INCOMPLETE in lap.flags:
-            self._publish(sid, summary, [], None)
+            self._publish(sid, summary, [], None, self._after_lap(job, lap_id, None, None, None))
             return result
 
         model = self._track_model(sid, game, track_id, ctx, job.ground_plane, lap)
         if model is None or not model.corners:
-            self._publish(sid, summary, [], None)
+            self._publish(sid, summary, [], None, self._after_lap(job, lap_id, None, None, None))
             return result
 
-        driver_id, ref_id = self._choose_reference(
-            job.session_id, game, track_id, ctx.get("car_id"), exclude=lap_id, track_length_m=float(length)
+        driver_id, ref_id, desc = self._choose_reference(
+            job.session_id, game, track_id, ctx.get("car_id"), exclude=lap_id, track_length_m=float(length), ctx=ctx
         )
         sc = self._sessions.setdefault(job.session_id, _SessionCache(driver_id=driver_id))
         if driver_id != sc.driver_id:
             sc.history.clear()  # the session changed hands: the previous owner's habits are not this driver's
+            sc.recent.clear()  # --- coachref ---
             sc.driver_id = driver_id
+        sc.last_ctx = {**lap.meta, **ctx}  # --- coachref ---
         ref_changed = ref_id != sc.ref_lap_id
         if ref_changed:
             sc.history.clear()  # deltas against a different reference are not comparable
             sc.ref_lap_id = ref_id
+        # --- coachref --- a new descriptor for the same lap (another kind or label, frozen for a drill) is
+        # republished too, without clearing the history (the deltas are still against the same lap)
+        desc_changed = desc is not None and (sc.ref_desc is None or sc.ref_desc.to_dict() != desc.to_dict())
+        sc.ref_desc = desc
+        # --- coachref ---
         if ref_id is None:
             if ref_changed and self.live is not None and self._is_live(sid):
                 self.live.set_reference(None, None)  # never leave another driver's lap as the live delta reference
-            self._publish(sid, summary, [], None)
+            self._publish(sid, summary, [], None, self._after_lap(job, lap_id, model, None, None))
             return result
 
-        ref = self._reference_analysis(ref_id, model, sid, ref_changed)
+        ref = self._reference_analysis(ref_id, model, sid, ref_changed or desc_changed, desc)
         if ref is None:
-            self._publish(sid, summary, [], None)
+            self._publish(sid, summary, [], None, self._after_lap(job, lap_id, model, None, None))
             return result
         cur = analyse_lap(lap, model)
         ref_ctx = {**ref.lap.meta}
@@ -130,12 +187,23 @@ class LapProcessor:
         comp = compare(ref, cur, compat)
         texts = corner_texts(model)  # official numbers/names (track sheets); join keys stay the learned names
         obs = observations_for_comparison(comp, history=sc.history, resolution_m=_resolution_m(lap), corner_text=texts)
+        # --- coachref --- another driver's lap: their name in the texts, and their braking points clamped
+        clamp: dict[str, float] | None = None
+        if desc is not None and not desc.own:
+            obs = reword_observations(obs, desc.ref_name, texts)
+            clamp = self._brake_clamp(desc, driver_id, ctx, lap_id, model)
+        sc.clamp = clamp
+        # --- coachref ---
         for cd in comp.corners:
             if is_incident(cd):
                 continue  # a spin or contact says nothing about the driver's habits at this corner
             h = sc.history.setdefault(cd.corner, [])
             h.append(cd)
             del h[:-HISTORY_LAPS]
+            if not (lap.flags & _NOT_RECENT):  # --- coachref --- drill baselines: this driver's recent laps
+                r = sc.recent.setdefault(cd.corner, [])
+                r.append(cd.cmp)
+                del r[:-HISTORY_LAPS]
         if obs:
             self.writer.submit(
                 lambda c: repo.insert_observations(c, job.session_id, lap_id, ref_id, obs, model.version)
@@ -144,9 +212,17 @@ class LapProcessor:
         comp_dict["ref_lap_id"] = ref_id
         comp_dict["cmp_lap_id"] = lap_id
         comp_dict["corner_text"] = {k: {"short": t.short, "long": t.long, "voice": t.voice} for k, t in texts.items()}
+        # --- coachref ---
+        if desc is not None:
+            comp_dict["reference"] = desc.to_dict()
+        if clamp is not None:
+            comp_dict["brake_clamp_m"] = clamp
+        # --- coachref ---
         obs_dicts = [o.to_dict() for o in obs]
         result.update(observations=obs_dicts, comparison=comp_dict)
-        self._publish(sid, summary, obs_dicts, comp_dict)
+        drill = self._after_lap(job, lap_id, model, cur, comp)  # --- coachref ---
+        live_obs = obs_dicts if drill is None else [o for o in obs_dicts if o.get("corner") == drill.get("corner")]
+        self._publish(sid, summary, live_obs, comp_dict, drill)
         self.processed += 1
         log.info(
             "lap %s processed in %.0f ms: %d observations vs ref lap id %s",
@@ -160,6 +236,135 @@ class LapProcessor:
     def refresh_bests(self, req: BestsRequest) -> None:
         """The live session's context changed (``LiveState.set_bests_requester``): recompute its bests."""
         self._publish_bests(req.session_id, req.game, req.track_id, req.car_id, req.track_length_m)
+        if self.coachref is not None:  # --- coachref --- the live session / seat changed: republish the choice
+            try:
+                self.coachref.on_context(req.session_id)
+            except Exception:
+                log.exception("coachref context refresh failed")
+
+    # --- coachref ---
+    def refresh_reference(self, session_id: str) -> None:
+        """Re-resolve ``session_id``'s reference now (a choice changed while the car was stopped): when the
+        reference lap or its descriptor changed, the history is cleared and the new reference published. Without a
+        lap of this session yet, the live session's context is used. Analysis thread only."""
+        sc = self._sessions.get(session_id)
+        ctx = dict(sc.last_ctx) if sc is not None and sc.last_ctx else self._live_ctx(session_id)
+        if ctx is None:
+            return
+        game, track_id, length = ctx.get("game"), ctx.get("track_id"), ctx.get("track_length_m")
+        if not (game and track_id and isinstance(length, int | float) and length > 0):
+            return
+        model = self._models.get((str(game), str(track_id)))
+        if model is None or not model.corners:
+            return
+        driver_id, ref_id, desc = self._choose_reference(
+            session_id, str(game), str(track_id), ctx.get("car_id"), None, float(length), ctx=ctx
+        )
+        if sc is None:
+            sc = self._sessions.setdefault(session_id, _SessionCache(driver_id=driver_id))
+        changed = ref_id != sc.ref_lap_id
+        same_desc = (sc.ref_desc is not None and desc is not None and sc.ref_desc.to_dict() == desc.to_dict()) or (
+            sc.ref_desc is None and desc is None
+        )
+        if changed:
+            sc.history.clear()
+            sc.ref_lap_id = ref_id
+        sc.ref_desc = desc
+        if not changed and same_desc:
+            return
+        if ref_id is None:
+            if self.live is not None and self._is_live(session_id):
+                self.live.set_reference(None, None)
+            return
+        self._reference_analysis(ref_id, model, session_id, True, desc)
+
+    def coachref_context(self, session_id: str) -> CoachrefContext:
+        """The session's coaching context for the coachref service (drill options and targets). Analysis thread."""
+        sc = self._sessions.get(session_id)
+        ctx = dict(sc.last_ctx) if sc is not None and sc.last_ctx else self._live_ctx(session_id)
+        empty = CoachrefContext(session_id, ctx, None, None, None, None, None, {})
+        if ctx is None:
+            return empty
+        game, track_id, length = ctx.get("game"), ctx.get("track_id"), ctx.get("track_length_m")
+        if not (game and track_id):
+            return empty
+        key = (str(game), str(track_id))
+        model = self._models.get(key)
+        if model is None:
+            with self.db.read() as c:
+                model = repo.load_track_model(c, key[0], key[1])
+            if model is not None and all(c.identity_tier is None for c in model.corners):
+                model, _ = identify(model)
+        if model is None or not model.corners:
+            return CoachrefContext(session_id, ctx, model, None, None, None, None, {})
+        len_f = float(length) if isinstance(length, int | float) and length > 0 else None
+        desc = sc.ref_desc if sc is not None else None
+        ref_id = sc.ref_lap_id if sc is not None else None
+        driver_id = sc.driver_id if sc is not None else None
+        if desc is None and self.coachref is not None:  # no lap of this session yet: resolve as the next lap will
+            driver_id, ref_id, desc = self._choose_reference(
+                session_id, key[0], key[1], ctx.get("car_id"), None, len_f, ctx=ctx, record=False
+            )
+        ref = self._analysis_for(ref_id, model) if ref_id is not None else None
+        clamp: dict[str, float] | None = None
+        own = ref
+        if desc is not None and not desc.own and self.coachref is not None:
+            with self.db.read() as c:
+                own_id = self.coachref.own_reference(c, key[0], key[1], ctx.get("car_id"), driver_id, None, len_f)
+            own = self._analysis_for(own_id, model) if own_id is not None else None
+            # what the next lap's clamp will be: the last lap is now one of the driver's own laps too
+            clamp = self._brake_clamp(desc, driver_id, ctx, None, model)
+        recent = {k: list(v) for k, v in sc.recent.items()} if sc is not None else {}
+        return CoachrefContext(session_id, ctx, model, ref, desc, clamp, own, recent)
+
+    def _live_ctx(self, session_id: str) -> dict[str, Any] | None:
+        """A lap context built from the live session (no lap of ``session_id`` processed yet)."""
+        live = self.live
+        if live is None or live.session_id != session_id or live.session is None:
+            return None
+        from pitwall.core.coachref import ctx_from_session_info
+
+        return ctx_from_session_info(live.session)
+
+    def _brake_clamp(
+        self,
+        desc: ResolvedReference,
+        driver_id: int | None,
+        ctx: dict[str, Any],
+        exclude: int | None,
+        model: TrackModel,
+    ) -> dict[str, float]:
+        """The braking clamp against another driver's lap: the driver's own braking point per corner (their own
+        reference by the own-lap rule, excluding the lap just driven); empty when they have no lap of their own.
+        Frozen for a drill (``desc.clamp``)."""
+        if desc.clamp is not None:
+            return dict(desc.clamp)
+        if self.coachref is None or driver_id is None:
+            return {}
+        length = ctx.get("track_length_m")
+        len_f = float(length) if isinstance(length, int | float) and length > 0 else None
+        with self.db.read() as c:
+            own_id = self.coachref.own_reference(
+                c, str(ctx.get("game")), str(ctx.get("track_id")), ctx.get("car_id"), driver_id, exclude, len_f
+            )
+        own = self._analysis_for(own_id, model) if own_id is not None else None
+        if own is None:
+            return {}
+        return {k: float(m.brake_start_m) for k, m in own.corners.items() if m.brake_start_m is not None}
+
+    def _after_lap(
+        self, job: LapJob, lap_id: int, model: TrackModel | None, cur: LapAnalysis | None, comp: Any
+    ) -> dict[str, Any] | None:
+        """The coachref drill hook (``CoachRef.after_lap``); never raises into the lap pipeline."""
+        if self.coachref is None:
+            return None
+        try:
+            return self.coachref.after_lap(job, lap_id, model, cur, comp)
+        except Exception:
+            log.exception("drill evaluation failed")
+            return None
+
+    # --- coachref ---
 
     # ------------------------------------------------------------------ internals
     def _publish_bests(
@@ -185,10 +390,18 @@ class LapProcessor:
         return self.live is not None and self.live.session_id == session_id
 
     def _publish(
-        self, session_id: str, summary: dict[str, Any], obs: list[dict[str, Any]], comp: dict[str, Any] | None
+        self,
+        session_id: str,
+        summary: dict[str, Any],
+        obs: list[dict[str, Any]],
+        comp: dict[str, Any] | None,
+        drill: dict[str, Any] | None = None,  # --- coachref --- an active drill (CoachRef.after_lap)
     ) -> None:
         if self.live is not None and self._is_live(session_id):
-            self.live.on_lap_result(summary, obs, comp)
+            if drill is None:
+                self.live.on_lap_result(summary, obs, comp)
+            else:
+                self.live.on_lap_result(summary, obs, comp, drill=drill)
 
     def _track_model(
         self, session_id: str, game: str, track_id: str, ctx: dict[str, Any], plane: tuple[str, str], lap: LapTrace
@@ -257,27 +470,41 @@ class LapProcessor:
         game: str,
         track_id: str,
         car_id: str | None,
-        exclude: int,
+        exclude: int | None,
         track_length_m: float | None = None,
-    ) -> tuple[int | None, int | None]:
-        """(session owner, reference lap id). An unowned session (a replay, or one recorded before profiles or by a
-        tool without a driver) keeps the pre-profile behaviour: references from all laps at the track. The fastest
-        clean lap is taken from sessions of a compatible track length only (another layout under the same id is
-        never a reference); a pinned reference is kept, and ``check_compatibility`` blocks it if it is not."""
+        ctx: dict[str, Any] | None = None,  # --- coachref --- the lap's context (the chosen reference's filter)
+        record: bool = True,  # --- coachref --- False: look only (nothing published, a pending choice stays)
+    ) -> tuple[int | None, int | None, ResolvedReference | None]:
+        """(session owner, reference lap id, how it was chosen). An unowned session (a replay, or one recorded before
+        profiles or by a tool without a driver) keeps the pre-profile behaviour: references from all laps at the
+        track. The fastest clean lap is taken from sessions of a compatible track length only (another layout under
+        the same id is never a reference); a pinned reference is kept, and ``check_compatibility`` blocks it if it
+        is not. With a coachref service the driver's chosen reference decides (``CoachRef.resolve``); this rule is
+        its default and its fallback."""
         with self.db.read() as c:
             driver_id = repo.session_driver_id(c, session_id)
+            if self.coachref is not None:  # --- coachref ---
+                full = {**(ctx or {}), "game": game, "track_id": track_id, "car_id": car_id}
+                full["track_length_m"] = track_length_m
+                desc = self.coachref.resolve(c, session_id, driver_id, full, exclude, record=record)
+                return driver_id, desc.lap_id, desc
             pinned = repo.pinned_reference(c, game, track_id, car_id, driver_id=driver_id)
             if pinned is not None and pinned != exclude:
-                return driver_id, pinned
+                return driver_id, pinned, None
             for r in repo.clean_laps_for(
                 c, game, track_id, car_id, limit=5, driver_id=driver_id, track_length_m=track_length_m
             ):
                 if r["id"] != exclude:
-                    return driver_id, int(r["id"])
-        return driver_id, None
+                    return driver_id, int(r["id"]), None
+        return driver_id, None, None
 
     def _reference_analysis(
-        self, ref_id: int, model: TrackModel, session_id: str, ref_changed: bool = False
+        self,
+        ref_id: int,
+        model: TrackModel,
+        session_id: str,
+        ref_changed: bool = False,
+        desc: ResolvedReference | None = None,
     ) -> LapAnalysis | None:
         """Analysis of the reference lap (cached per lap id). The live reference (delta bar, map trace) is
         published on a cache miss (e.g. re-analysed against a rebuilt track model) and whenever the session's
@@ -285,7 +512,17 @@ class LapProcessor:
         cached = self._ref_cache.get(ref_id)
         if cached is not None:
             if ref_changed:
-                self._publish_reference(session_id, ref_id, cached)
+                self._publish_reference(session_id, ref_id, cached, desc)
+            return cached
+        an = self._analysis_for(ref_id, model)
+        if an is not None:
+            self._publish_reference(session_id, ref_id, an, desc)
+        return an
+
+    def _analysis_for(self, ref_id: int, model: TrackModel) -> LapAnalysis | None:
+        """A stored lap analysed against ``model`` (cached per lap id; never published)."""
+        cached = self._ref_cache.get(ref_id)
+        if cached is not None:
             return cached
         with self.db.read() as c:
             trace = repo.load_lap_trace(c, ref_id)
@@ -306,21 +543,22 @@ class LapProcessor:
         )
         an = analyse_lap(trace, model)
         self._ref_cache[ref_id] = an
-        self._publish_reference(session_id, ref_id, an)
         return an
 
-    def _publish_reference(self, session_id: str, ref_id: int, an: LapAnalysis) -> None:
+    def _publish_reference(
+        self, session_id: str, ref_id: int, an: LapAnalysis, desc: ResolvedReference | None = None
+    ) -> None:
         if self.live is None or not self._is_live(session_id):
             return
-        self.live.set_reference(
-            {
-                "lap_id": ref_id,
-                "lap_number": an.lap.lap_number,
-                "lap_time_ms": an.lap.lap_time_ms,
-                "session_id": an.lap.meta.get("session_id"),
-            },
-            an.dtrace,
-        )
+        summary: dict[str, Any] = {
+            "lap_id": ref_id,
+            "lap_number": an.lap.lap_number,
+            "lap_time_ms": an.lap.lap_time_ms,
+            "session_id": an.lap.meta.get("session_id"),
+        }
+        if desc is not None:  # --- coachref --- the descriptor (kind, holder, labels, clamp, frozen)
+            summary = {**desc.to_dict(), **summary}
+        self.live.set_reference(summary, an.dtrace)
 
 
 def _resolution_m(lap: LapTrace) -> float:
@@ -352,12 +590,33 @@ def _lap_summary(lap: LapTrace, lap_id: int) -> dict[str, Any]:
     }
 
 
+# --- coachref ---
+@dataclass(slots=True)
+class _Task:
+    """A callable run on the analysis thread (``AnalysisWorker.submit_task``); its result or error goes to ``fut``."""
+
+    fn: Callable[[], Any]
+    fut: Future[Any]
+
+    def run(self) -> None:
+        if not self.fut.set_running_or_notify_cancel():
+            return
+        try:
+            self.fut.set_result(self.fn())
+        except BaseException as e:
+            self.fut.set_exception(e)
+
+
+TASK_PUT_TIMEOUT_S = 2.0
+# --- coachref ---
+
+
 class AnalysisWorker:
     """Runs ``LapProcessor`` on a background thread with a bounded queue (laps are never dropped)."""
 
     def __init__(self, processor: LapProcessor) -> None:
         self.processor = processor
-        self._q: queue.Queue[LapJob | BestsRequest | None] = queue.Queue(maxsize=1000)
+        self._q: queue.Queue[LapJob | BestsRequest | _Task | None] = queue.Queue(maxsize=1000)
         self._thread = threading.Thread(target=self._run, name="lap-analysis", daemon=True)
         self.errors = 0
         self._thread.start()
@@ -366,6 +625,16 @@ class AnalysisWorker:
 
     def submit(self, job: LapJob) -> None:
         self._q.put(job)
+
+    # --- coachref ---
+    def submit_task(self, fn: Callable[[], T]) -> Future[T]:
+        """Run ``fn`` on the analysis thread, in order with the laps (the coachref service's changes). Never call it
+        from the ingest thread: it waits up to ``TASK_PUT_TIMEOUT_S`` for queue space (``queue.Full`` after)."""
+        fut: Future[T] = Future()
+        self._q.put(_Task(fn, fut), timeout=TASK_PUT_TIMEOUT_S)
+        return fut
+
+    # --- coachref ---
 
     def request_bests(self, req: BestsRequest) -> None:
         """Called on the ingest thread: queue a bests refresh, never blocking (a full queue drops it; the next
@@ -383,6 +652,8 @@ class AnalysisWorker:
                     return
                 if isinstance(job, BestsRequest):
                     self.processor.refresh_bests(job)
+                elif isinstance(job, _Task):  # --- coachref ---
+                    job.run()
                 else:
                     self.processor.process(job)
             except Exception:

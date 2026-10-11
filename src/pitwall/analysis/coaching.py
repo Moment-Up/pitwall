@@ -64,6 +64,8 @@ class Observation:
     corner_voice: str | None = None  # radio form ("Turn 10, Red Bull Mobile"); None = speak ``corner``
     text_simple: str | None = None  # one idea, plain words (simple-wording profiles)
     short: str | None = None  # <= SHORT_MAX_CHARS characters, for glance use
+    # --- coachref --- the other driver the texts name when the reference is their lap (coach.reference_wording)
+    ref_name: str | None = None
 
     @property
     def priority(self) -> float:

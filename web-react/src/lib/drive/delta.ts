@@ -48,8 +48,9 @@ export function deltaTone(v: number): "ahead" | "behind" | "level" {
   return v < -DELTA_NEUTRAL_S ? "ahead" : v > DELTA_NEUTRAL_S ? "behind" : "level";
 }
 
-/** The reference chip text. The date of a reference from another session comes from the seated driver's best
- * laps when one of them is that lap (`refDates`: lap id -> unix time); otherwise it says "another session". */
+/** The reference chip text. The date of a reference from another session is the descriptor's `set_unix` (coachref),
+ * else the seated driver's best laps when one of them is that lap (`refDates`: lap id -> unix time); otherwise it
+ * says "another session". */
 export function referenceLabel(
   s: SnapshotNext | null,
   nowS: number,
@@ -61,7 +62,7 @@ export function referenceLabel(
   if (finite(r.lap_time_ms)) parts.push(lapTime(r.lap_time_ms));
   if (r.session_id === s?.session_id) parts.push("today");
   else {
-    const set = refDates?.get(r.lap_id);
+    const set = r.set_unix ?? refDates?.get(r.lap_id);
     parts.push(dayText(set, nowS) ?? "another session");
   }
   return parts.join(" · ");
@@ -87,7 +88,11 @@ function unknownReason(s: SnapshotNext | null, state: DriveState): string | null
     case "ended":
       return null;
     default: {
-      if (!s?.reference) return NO_REFERENCE;
+      if (!s?.reference) {
+        // coachref: another driver's lap is chosen; it becomes the reference when this lap is in.
+        const c = s?.coachref?.choice;
+        return c && c.kind !== "own_best" ? `No reference yet: ${c.label} from your next lap` : NO_REFERENCE;
+      }
       const ds = s.frame?.driver_status;
       if (ds === "out_lap") return "Out lap";
       if (ds === "in_lap") return "In lap";

@@ -18,8 +18,11 @@ import { micChipView, shallowEqual, useRadio } from "../../../components/radio";
 import { usePrefs } from "../../../hooks/stores";
 import { inkOn } from "../../../lib/drivers";
 import { prefs } from "../../../lib/prefs";
-import type { ReadyCard as ReadyCardView } from "../../../lib/drive/model";
+import type { DriveDrillView, ReadyCard as ReadyCardView } from "../../../lib/drive/model";
+import type { RefControlView } from "../../../lib/drive/reference";
+import { DrillBlock } from "./DrillResult";
 import { TimeText, useMediaQuery } from "./parts";
+import { RefControl } from "./RefPicker";
 import { SeatSwitcher } from "./SeatSwitcher";
 import { radioSeat, sameProps } from "./view";
 
@@ -106,9 +109,50 @@ function LargeTextHint() {
   );
 }
 
-export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardView }) {
+/** coachref: "Delta reference" as the control (Sam's best ⌄) with the lap it resolves to and the braking note;
+ * on a server without coachref, today's line. */
+function ReferenceKv({ refControl, text }: { refControl: RefControlView | null | undefined; text: string }) {
+  if (!refControl?.available) {
+    return (
+      <Kv k="Delta reference" text>
+        {text}
+      </Kv>
+    );
+  }
+  return (
+    <div className="pwc-refready">
+      <div className="pwc-kv__k">Delta reference</div>
+      <RefControl view={refControl} variant="ready" />
+      <span className="pwc-kv__note">{refControl.waiting ?? text}</span>
+      {refControl.reason && <span className="pwc-refready__note">{refControl.reason}</span>}
+      {refControl.brakeNote && <span className="pwc-refready__note">{refControl.brakeNote}</span>}
+    </div>
+  );
+}
+
+export interface ReadyCardProps {
+  ready: ReadyCardView;
+  /** coachref: the delta reference control (Target / Last run column). */
+  refControl?: RefControlView | null;
+  /** coachref: the Drill block (Today column). */
+  drill?: DriveDrillView | null;
+  beginner?: boolean;
+}
+
+/** How many focus rows the Today column has room for (the card never grows: 4.9). */
+function focusRows(between: boolean, drill: DriveDrillView | null | undefined): number {
+  const b = drill?.block;
+  if (!b) return between ? 2 : 3;
+  if (b.kind !== "none") return 0; // the plan is the drill corner only
+  if (b.suggestion) return between ? 0 : 1;
+  return between ? 1 : 2;
+}
+
+export const ReadyCard = memo(function ReadyCard({ ready, refControl = null, drill = null, beginner = false }: ReadyCardProps) {
   const { seat, target, lastRun, today, nextRun } = ready;
   const between = ready.phase === "between_runs";
+  const block = drill?.block ?? null;
+  const drilling = block != null && block.kind !== "none";
   return (
     <Card className="pwc-ready pw-chamfer pwc-span3">
       <section className="pwc-ready__col" aria-label="Seat">
@@ -161,15 +205,14 @@ export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardVi
                 <Unknown />
               )}
             </Kv>
-            <Kv k="Delta reference" text>
-              {target.reference}
-            </Kv>
+            <ReferenceKv refControl={refControl} text={target.reference} />
           </div>
         </section>
       ) : (
         <section className="pwc-ready__col" aria-label="Target">
           <h3 className="pwc-ready__h">Target</h3>
           <div className="pwc-kv">
+            {refControl?.available && <ReferenceKv refControl={refControl} text={target.reference} />}
             <Kv k="Your best here">
               {target.yourBest ? (
                 <>
@@ -198,16 +241,14 @@ export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardVi
                 <Unknown />
               )}
             </Kv>
-            <Kv k="Delta reference" text>
-              {target.reference}
-            </Kv>
+            {!refControl?.available && <ReferenceKv refControl={refControl} text={target.reference} />}
           </div>
         </section>
       )}
 
       <section className="pwc-ready__col" aria-label="Today">
-        <h3 className="pwc-ready__h">{between && nextRun ? "One thing for the next run" : "Today"}</h3>
-        {between && nextRun?.text && (
+        <h3 className="pwc-ready__h">{drilling ? "Drill" : between && nextRun ? "One thing for the next run" : "Today"}</h3>
+        {!drilling && between && nextRun?.text && (
           <div className="mb-3.5">
             <p className="pwc-ready__next">
               {nextRun.tagText && (
@@ -220,8 +261,9 @@ export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardVi
             {nextRun.evidence && <p className="m-0 text-[15px] text-muted">{nextRun.evidence}</p>}
           </div>
         )}
+        {block && drill && <DrillBlock block={block} corners={drill.corners} track={drill.track} beginner={beginner} />}
         <div className="pwc-focusrow">
-          {today.focus.slice(0, between ? 2 : 3).map((f) => (
+          {today.focus.slice(0, focusRows(between, drill)).map((f) => (
             <div key={f.name} className="pwc-focusrow__f">
               <b>
                 <Chip size="md" className="pwc-focus">

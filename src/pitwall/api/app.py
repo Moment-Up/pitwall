@@ -131,6 +131,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         app.state.engineer = RaceEngineer(provider, settings.llm_max_tokens, settings.llm_temperature)
         # The radio answers with the fast "radio" model (same provider object, so it hot-swaps too).
         radio_engineer = RaceEngineer(provider.for_purpose("radio"), settings.llm_max_tokens, settings.llm_temperature)
+        # --- coachref --- drill intents ("start a drill on turn 3") are answered by core.coachref, never the LLM
+        app.state.engineer.drill_handler = rt.coachref.radio_command
+        radio_engineer.drill_handler = rt.coachref.radio_command
         app.state.hub = None
         app.state.radio_detach = None
 
@@ -741,6 +744,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_track import router as track_router
 
     app.include_router(track_router)
+    from pitwall.api.routes_coachref import router as coachref_router  # --- coachref ---
+
+    app.include_router(coachref_router)
 
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias

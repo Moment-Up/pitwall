@@ -16,6 +16,8 @@ Schema history:
 * v1 - initial schema.
 * v2 - driver profiles: ``reference_laps.driver_id`` (pinned references are per driver) and indexes for the
   per-driver queries (sessions by driver, reference lookup, a covering index for lap counts and best laps).
+* v3 - coachref: reference_choices (per driver, optionally per track) and drills. New tables only (``CREATE ... IF
+  NOT EXISTS`` in ``SCHEMA``), so an existing database gains them when it is opened; ``_migrate`` needs no ALTER.
 """
 
 from __future__ import annotations
@@ -32,12 +34,10 @@ from contextlib import closing, contextmanager
 from pathlib import Path
 from typing import Any, TypeVar
 
-from pitwall.compat import is_windows
-
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3  # --- coachref --- (v3)
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -187,6 +187,57 @@ CREATE TABLE IF NOT EXISTS setup_experiments (
     after_metrics TEXT,
     conclusion TEXT
 );
+
+-- --- coachref --- (v3): what each driver's live delta measures against, and practice drills (core/coachref.py)
+CREATE TABLE IF NOT EXISTS reference_choices (
+    driver_id INTEGER NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
+    game TEXT NOT NULL DEFAULT '',          -- '' + '' = every track (the driver's default)
+    track_id TEXT NOT NULL DEFAULT '',
+    kind TEXT NOT NULL,                     -- own_best | household_best | driver_best | lap
+    target_driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
+    lap_id INTEGER REFERENCES laps(id) ON DELETE SET NULL,
+    updated_unix REAL NOT NULL,
+    PRIMARY KEY (driver_id, game, track_id)
+);
+CREATE TABLE IF NOT EXISTS drills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
+    session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,   -- session it started in
+    game TEXT NOT NULL,
+    track_id TEXT NOT NULL,
+    track_length_m REAL,
+    car_id TEXT,
+    track_model_version INTEGER,
+    corner TEXT NOT NULL,                   -- learned corner key (join key)
+    corner_label TEXT,                      -- official short label at start ("T3"), display only
+    corner_voice TEXT,                      -- radio form at start ("Turn 3")
+    apex_m REAL,
+    kind TEXT NOT NULL,                     -- brake_point | min_speed | exit_speed | entry_speed
+    source TEXT NOT NULL,                   -- work_on | manual | radio
+    observation_kind TEXT,
+    laps_target INTEGER NOT NULL,
+    target REAL,                            -- m (brake_point) or km/h
+    tolerance REAL NOT NULL,                -- m or km/h (speed drills: the step)
+    unit TEXT NOT NULL,                     -- 'm' | 'km/h'
+    baseline REAL,
+    ref_lap_id INTEGER REFERENCES laps(id) ON DELETE SET NULL,
+    ref_kind TEXT,
+    ref_driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
+    status TEXT NOT NULL,                   -- active | completed | stopped | abandoned
+    stop_reason TEXT,
+    started_unix REAL NOT NULL,
+    ended_unix REAL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    scored INTEGER NOT NULL DEFAULT 0,
+    hits INTEGER NOT NULL DEFAULT 0,
+    best_value REAL,
+    best_delta REAL,
+    trend TEXT,
+    laps TEXT NOT NULL DEFAULT '[]',        -- JSON DrillAttempt[] (<= 10)
+    detail TEXT NOT NULL DEFAULT '{}'       -- JSON: target_source, frozen reference and clamp, texts, note
+);
+CREATE INDEX IF NOT EXISTS ix_drills_driver ON drills(driver_id, started_unix);
+-- --- coachref ---
 """
 
 # Columns added after v1: (table, column, declaration). ADD COLUMN with a REFERENCES clause is allowed because the
@@ -244,24 +295,25 @@ def _json_default(o: Any) -> Any:
     raise TypeError(f"not JSON serialisable: {type(o)}")
 
 
-_OPEN_RETRY_S = (0.1, 0.2, 0.4, 0.8, 1.6)  # Windows only, see Database.__init__
+_OPEN_RETRY_S = (0.1, 0.2, 0.4, 0.8, 1.6)  # see Database.__init__
 
 
 class Database:
     def __init__(self, path: Path) -> None:
         self.path = path
         path.parent.mkdir(parents=True, exist_ok=True)
-        for delay in (*(_OPEN_RETRY_S if is_windows() else ()), None):
+        for delay in (*_OPEN_RETRY_S, None):
             try:
                 with closing(self.connect()) as conn:
                     conn.executescript(SCHEMA)
                     _migrate(conn)
                 return
             except sqlite3.OperationalError as e:
-                # Windows: openers racing on one file (two processes, or the threads of the concurrent-openers
-                # test on the CI runner) can get "database is locked" at once, without the 30 s busy wait - SQLite
-                # skips it where waiting could deadlock. Opening is idempotent (IF NOT EXISTS, BEGIN IMMEDIATE
-                # migration), so try again. macOS raises at once, as before.
+                # Openers racing on one file (two processes, or the threads of the concurrent-openers tests) can
+                # get "database is locked" at once, without the 30 s busy wait - SQLite skips it where waiting could
+                # deadlock (a schema statement whose read snapshot went stale). Seen on Windows runners and, more
+                # rarely, on macOS (a few in a hundred races of four openers). Opening is idempotent (IF NOT EXISTS,
+                # BEGIN IMMEDIATE migration), so try again.
                 if delay is None or "locked" not in str(e):
                     raise
                 log.info("database %s is locked while opening; retrying in %.1f s", path, delay)

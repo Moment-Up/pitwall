@@ -59,6 +59,7 @@ COACH_FIELDS = (
     "text_simple",
     "short",
     "corner_voice",
+    "ref_name",  # --- coachref --- the other driver a point is measured against (None = the driver's own lap)
 )
 
 
@@ -241,6 +242,14 @@ class CoachSelection:
         with self._lock:
             self._last_coached.clear()
             self._current = None
+
+    # --- coachref ---
+    def set_current(self, block: dict[str, Any]) -> None:
+        """Show ``block`` as the current coaching (a practice drill's point, ``coach.drills.with_drill``)."""
+        with self._lock:
+            self._current = block
+
+    # --- coachref ---
 
     def select(
         self, lap: Mapping[str, Any], observations: Sequence[Mapping[str, Any]], compared: bool

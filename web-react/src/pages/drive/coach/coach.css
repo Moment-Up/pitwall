@@ -889,3 +889,160 @@
 /* iPad home-indicator area (Home Screen web app): keep the bottom row clear of it. */
 @media (min-width: 768px) { .pwc { padding-bottom: max(12px, env(safe-area-inset-bottom)); } }
 @media (max-height: 760px) and (min-width: 768px) { .pwc { padding-bottom: max(8px, env(safe-area-inset-bottom)); } }
+
+/* ======================================================================== coachref: reference control and drills */
+/* The delta panel's label row as the reference control (spec 10.1): a 56 px ghost button, 22 px text, then the
+ * reference chip; "From next lap" and the fallback reason after them. Text ellipsizes; the row never grows taller
+ * than the button plus one reason line. */
+.pwc-delta__top[data-ref] {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  row-gap: 2px;
+}
+.pwc-delta__top[data-ref] .pwc-refchip { margin-left: auto; }
+.pwc-refctl {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--pw-touch-drive, 56px);
+  margin-left: -10px;
+  padding-inline: 10px;
+  border-radius: 14px;
+  font: 600 22px/1.1 var(--pw-font-sans);
+  color: var(--foreground);
+}
+.pwc-refctl__text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pwc-refctl__chev {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
+.pwc-refctl--ready {
+  min-height: var(--pw-touch-glove, 64px);
+  margin-left: 0;
+  padding-inline: 18px;
+  font-size: 20px;
+}
+.pwc-reftag {
+  flex: none;
+  font: 600 15px/1 var(--pw-font-sans);
+  color: var(--accent);
+}
+.pwc-refreason {
+  flex: 1 0 100%;
+  min-width: 0;
+  overflow: hidden;
+  font: 500 18px/1.25 var(--pw-font-sans);
+  color: var(--muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pwc-refready {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+.pwc-refready__note {
+  font: 500 15px/1.3 var(--pw-font-sans);
+  color: var(--muted);
+}
+
+/* Status slot: a reference notice, and the drill chip (accent-soft like FOCUS, at most 220 px, 22 px / 600). */
+.pwc-notice {
+  display: inline-block;
+  max-width: 380px;
+  overflow: hidden;
+  font: 600 16px/1.2 var(--pw-font-sans);
+  color: var(--accent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwc-drillchip {
+  display: inline-flex;
+  flex: none;
+  gap: 0.25em;
+  max-width: 220px;
+  min-height: 40px;
+  height: 40px;
+  padding-inline: 14px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--accent) 16%, transparent);
+  color: var(--accent);
+  font: 600 22px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+.pwc-drillchip__label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pwc-drillchip__n {
+  flex: none;
+  white-space: nowrap;
+}
+.pwc-drillhero {
+  --chip-bg: color-mix(in oklab, var(--accent) 16%, transparent);
+}
+
+/* Ready card: the Drill block and its result. */
+.pwc-drillblock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pwc-drillres {
+  display: grid;
+  gap: 8px;
+  align-self: stretch;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--surface-secondary);
+}
+.pwc-dots {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pwc-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.pwc-dot[data-outcome="hit"] { background: var(--foreground); }
+.pwc-dot[data-outcome="miss"] { box-shadow: inset 0 0 0 2px var(--muted); }
+.pwc-dot[data-outcome="unmeasured"] {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--muted);
+}
+
+@media (max-width: 767px) {
+  .pwc-refctl { font-size: 18px; }
+  .pwc-refreason { font-size: 15px; }
+  .pwc-drillchip { height: 34px; min-height: 34px; max-width: 180px; padding-inline: 10px; font-size: 17px; }
+  .pwc-notice { max-width: 220px; font-size: 14px; }
+}
+
+/* coachref: between runs the reference control, its lap and the braking note can make a Ready column taller than
+   the card (which never grows, 4.9): the column scrolls inside the card instead of running into the footer. */
+.pwc-ready__col {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}

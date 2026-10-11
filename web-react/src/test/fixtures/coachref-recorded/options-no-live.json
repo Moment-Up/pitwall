@@ -1,0 +1,184 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "real F1 25 PS5 captures (the owner's, not committed) streamed over loopback UDP into an isolated scratch Pitwall server (integrator e2e, coachref lane); demo drivers Ann and Ben stand in for the household",
+  "moment": "GET /api/coachref/options for Ann with no live session of hers (availability unknown)"
+ },
+ "body": {
+  "driver_id": 1,
+  "context": {
+   "game": "f1_25",
+   "track_id": "f1:17",
+   "track_name": "Austria",
+   "car_id": "f1:team:7",
+   "car_name": "Haas",
+   "track_length_m": 4323.0
+  },
+  "choice": {
+   "driver_id": 1,
+   "kind": "own_best",
+   "target_driver_id": null,
+   "lap_id": null,
+   "scope": "all_tracks",
+   "game": null,
+   "track_id": null,
+   "label": "Your best",
+   "updated_unix": null
+  },
+  "has_track_override": false,
+  "options": [
+   {
+    "kind": "own_best",
+    "target_driver_id": null,
+    "lap_id": null,
+    "label": "Your best",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": null,
+    "selected": true
+   },
+   {
+    "kind": "household_best",
+    "target_driver_id": null,
+    "lap_id": null,
+    "label": "Family record",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 7,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791744165.059377,
+     "driver_id": 2,
+     "driver_name": "Ben",
+     "session_id": "c382f9a08999",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "driver_best",
+    "target_driver_id": 2,
+    "lap_id": null,
+    "label": "Ben's best",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 7,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791744165.059377,
+     "driver_id": 2,
+     "driver_name": "Ben",
+     "session_id": "c382f9a08999",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 7,
+    "label": "Lap 65 · Ben",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 7,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791744165.059377,
+     "driver_id": 2,
+     "driver_name": "Ben",
+     "session_id": "c382f9a08999",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 9,
+    "label": "Lap 67 · Ben",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 9,
+     "lap_number": 67,
+     "lap_time_ms": 76268,
+     "set_unix": 1791744177.820031,
+     "driver_id": 2,
+     "driver_name": "Ben",
+     "session_id": "c382f9a08999",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 8,
+    "label": "Lap 66 · Ben",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 8,
+     "lap_number": 66,
+     "lap_time_ms": 76893,
+     "set_unix": 1791744171.458375,
+     "driver_id": 2,
+     "driver_name": "Ben",
+     "session_id": "c382f9a08999",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 5,
+    "label": "Lap 63 · Ben",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 5,
+     "lap_number": 63,
+     "lap_time_ms": 78111,
+     "set_unix": 1791744152.406639,
+     "driver_id": 2,
+     "driver_name": "Ben",
+     "session_id": "c382f9a08999",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 6,
+    "label": "Lap 64 · Ben",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 6,
+     "lap_number": 64,
+     "lap_time_ms": 78246,
+     "set_unix": 1791744158.9146519,
+     "driver_id": 2,
+     "driver_name": "Ben",
+     "session_id": "c382f9a08999",
+     "car_name": "Haas"
+    },
+    "selected": false
+   }
+  ],
+  "applies": "next_session"
+ }
+}

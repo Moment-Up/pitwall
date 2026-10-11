@@ -10,6 +10,7 @@
 //  * skeleton.marshal_zones[].flag is the flag at the last static push (every 5 s): live flags are marshal_flags.
 
 import type { Corner, Frame, LapSummary, Observation, Snapshot, TrackModel } from "../api";
+import type { CoachrefBlock, ReferenceDescriptor } from "../endpoints/coachref";
 
 /** One timing scope's bests (D2, storage/repo.py lap_bests): lap and the three sectors, clean laps only, each
  * sector best on its own. The ids say which lap set each best. */
@@ -62,6 +63,8 @@ export interface CueSnapshot {
   timing: { latency_ms: number; path: string; margin_m: number };
   focus_limits?: Record<string, unknown>;
   stats?: Record<string, number>;
+  /** coachref: the drill corner (learned name) while a drill runs: the plan holds only that corner. */
+  drill_corner?: string | null;
 }
 
 /** Official identity of a learned corner (analysis/track_identity.py via track_model_payload). */
@@ -94,6 +97,10 @@ export type ObservationNext = Observation & {
   corner_voice?: string | null;
   metric?: string;
   consistency_ratio?: number | null;
+  /** coachref: the other driver's name when the point compares with their lap; null / absent = your own. */
+  ref_name?: string | null;
+  /** coachref: a drill attempt's point (kind "drill"). */
+  drill?: { id: number; attempt: number; of: number; hits: number; outcome: string; done: boolean } | null;
 };
 
 /** One game event as /ws/live sends it. `player` is a proposed addition (INTEGRATION NEEDED): whether the event
@@ -115,6 +122,8 @@ export type FrameNext = Frame & {
   current_lap_sector_ms?: [number | null, number | null] | null;
   /** D3 */
   driver_status?: DriverStatus | null;
+  /** model/telemetry.py FrameQuality bits (PAUSED 1<<2, REPLAY_OR_SPECTATING 1<<3, NOT_RACING 1<<6). */
+  quality?: number | null;
 };
 
 /** D6 (coach/selection.py coach_block): what the radio picks for the latest compared lap under the seated
@@ -130,6 +139,8 @@ export interface CoachBlock {
   radio_quiet?: boolean;
   picked: ObservationNext[];
   by_corner: Record<string, ObservationNext>;
+  /** coachref: a drill is running: the radio and the coach card talk about the drill corner only. */
+  drill_only?: boolean;
 }
 
 /** D2 (storage/repo.py lap_bests): this game + track + car + layout; driver / household are null in synthetic
@@ -165,7 +176,15 @@ export interface SnapshotNext extends Snapshot {
   session_state_info?: SessionStateInfo | null;
   /** D6 */
   coach?: CoachBlock | null;
+  /** coachref: the reference with its descriptor (who, which kind, labels); the four legacy keys are unchanged. */
+  reference: LiveReference | null;
+  /** coachref: the seated driver's reference choice and drill. Absent = a server without coachref. */
+  coachref?: CoachrefBlock | null;
 }
+
+/** snapshot.reference: the legacy summary plus the coachref descriptor (every addition optional: older servers). */
+export type LiveReference = NonNullable<Snapshot["reference"]> &
+  Partial<Omit<ReferenceDescriptor, "lap_id" | "lap_number" | "lap_time_ms" | "session_id">>;
 
 /** Drive lock setting (Settings > Display; lib/prefs.ts DriveLock, lane S). */
 export type DriveLockSetting = "off" | "beginners" | "everyone";

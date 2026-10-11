@@ -21,7 +21,10 @@ import { navLock } from "../../../components/shell/navLock";
 import { EvidenceChips } from "../../../components/ui";
 import { useStore } from "../../../hooks/stores";
 import type { StatusView } from "../../../lib/drive/model";
+import type { DrillChipView } from "../../../lib/drive/drill";
+import { driveNotice } from "../../../lib/drive/notice";
 import { SCREEN_MAY_SLEEP } from "../../../lib/wake";
+import { DrillStatusChip } from "./DrillResult";
 import { useMediaQuery } from "./parts";
 import { sameProps } from "./view";
 
@@ -33,6 +36,8 @@ export interface StatusContentProps {
   maySleep: boolean;
   /** "Listening on UDP 20777" (no telemetry), when /api/connect has said so. */
   listening?: string | null;
+  /** coachref: the running drill's chip (the transient-chip position; an incident chip replaces it for its 6 s). */
+  drill?: DrillChipView | null;
 }
 
 function Pill({ status }: { status: StatusView }) {
@@ -62,7 +67,17 @@ function WakeChip({ compact, size }: { compact: boolean; size: ChipSize }) {
   );
 }
 
-function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boolean; onBand: boolean }) {
+function Chips({
+  status,
+  maySleep,
+  onBand,
+  drill = null,
+}: {
+  status: StatusView;
+  maySleep: boolean;
+  onBand: boolean;
+  drill?: DrillChipView | null;
+}) {
   // Band words (fill or outline) and the 2 s lock hint (~260 px, DriveStatusSlot, lane S) need the room: the wake
   // chip shrinks to its icon.
   const hint = useStore(navLock, (s) => s.hint);
@@ -72,8 +87,12 @@ function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boo
   const compactWake = band || hint || phone;
   // On a band the chips step down one size (md): the band words and the flag detail ("380 m ahead") come first.
   const size: ChipSize = band || phone ? "md" : "lg";
+  // coachref: "Delta to Sam's best from the next lap" / "Change the reference when stopped" (a few seconds).
+  const notice = useStore(driveNotice, (s) => s.text);
   const ev = status.evidence;
-  const any = ev.synthetic || ev.replay || status.chip || maySleep;
+  // The drill chip shows on the normal line only: bands hide it with the rest of the left part (spec 10.3).
+  const drillChip = !status.chip && !notice && status.kind === "normal" ? drill : null;
+  const any = ev.synthetic || ev.replay || status.chip || maySleep || notice || drillChip;
   if (!any) return null;
   const wrap = (node: ReactNode) => (onBand ? <span className="pwc-onband">{node}</span> : node);
   return (
@@ -86,12 +105,14 @@ function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boo
             <Chip.Label>{status.chip.text}</Chip.Label>
           </Chip>,
         )}
+      {!status.chip && notice && wrap(<span className="pwc-notice">{notice}</span>)}
+      {drillChip && <DrillStatusChip chip={drillChip} />}
       {maySleep && wrap(<WakeChip compact={compactWake} size={size} />)}
     </span>
   );
 }
 
-export const StatusContent = memo(function StatusContent({ status, maySleep, listening }: StatusContentProps) {
+export const StatusContent = memo(function StatusContent({ status, maySleep, listening, drill = null }: StatusContentProps) {
   if (status.kind === "normal") {
     const l = status.line;
     if (status.band === "no_data") {
@@ -123,7 +144,7 @@ export const StatusContent = memo(function StatusContent({ status, maySleep, lis
           {l.lap} <span className="pwc-lapno__total">/ {l.lapTotal ?? "-"}</span>
         </span>
         {l.position && <span className="pwc-lapno">{l.position}</span>}
-        <Chips status={status} maySleep={maySleep} onBand={false} />
+        <Chips status={status} maySleep={maySleep} onBand={false} drill={drill} />
       </>
     );
   }

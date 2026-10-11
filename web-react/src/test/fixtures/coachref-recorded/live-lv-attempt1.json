@@ -1,0 +1,186 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "real F1 25 PS5 captures (the owner's, not committed) streamed over loopback UDP into an isolated scratch Pitwall server (integrator e2e, coachref lane); demo drivers Ann and Ben stand in for the household",
+  "moment": "Live snapshot after the first attempt of a 5-lap T12 brake-point drill at Las Vegas",
+  "edited": "cues reduced to drill_corner"
+ },
+ "body": {
+  "reference": {
+   "lap_id": 3,
+   "lap_number": 3,
+   "lap_time_ms": 96953,
+   "session_id": "022b53eac214",
+   "kind": "driver_best",
+   "own": false,
+   "pinned": false,
+   "driver_id": 2,
+   "driver_name": "Ben",
+   "set_unix": 1791744124.248426,
+   "label": "Ben's best",
+   "label_to": "Ben's best",
+   "ref_name": "Ben",
+   "brake_clamped": true,
+   "frozen": true
+  },
+  "coachref": {
+   "driver_id": 1,
+   "choice": {
+    "driver_id": 1,
+    "kind": "driver_best",
+    "target_driver_id": 2,
+    "lap_id": null,
+    "scope": "all_tracks",
+    "game": null,
+    "track_id": null,
+    "label": "Ben's best",
+    "updated_unix": 1791744185.084076
+   },
+   "used_kind": "driver_best",
+   "reason": null,
+   "pending": false,
+   "drill": {
+    "id": 1,
+    "driver_id": 1,
+    "session_id": "c6a33a3fff36",
+    "game": "f1_25",
+    "track_id": "f1:31",
+    "car_id": "f1:team:41",
+    "corner": "T6",
+    "corner_label": "T12",
+    "corner_voice": "Turn 12",
+    "kind": "brake_point",
+    "skill_label": "Brake point",
+    "source": "manual",
+    "laps_target": 5,
+    "target": 3110.078486540241,
+    "tolerance": 5.0,
+    "unit": "m",
+    "baseline": null,
+    "target_text": "Brake within 5 m of Ben's braking point",
+    "note": "Braking assist is on, so the game helps with braking: these brake points are partly the assist's.",
+    "reference": {
+     "lap_id": 3,
+     "kind": "driver_best",
+     "driver_name": "Ben",
+     "label": "Ben's best"
+    },
+    "status": "active",
+    "stop_reason": null,
+    "started_unix": 1791744509.883459,
+    "ended_unix": null,
+    "attempts": [
+     {
+      "attempt": 1,
+      "lap_id": 15,
+      "lap_number": 2,
+      "value": 3110.4,
+      "target": 3110.078486540241,
+      "delta": 0.32,
+      "outcome": "hit",
+      "reason": null,
+      "corner_time_s": 21.568,
+      "corner_time_delta_s": 0.158,
+      "text": "Turn 12 drill, lap 1 of 5: on the point. 1 hit.",
+      "short": "Drill 1/5: on the point · 1 hit"
+     }
+    ],
+    "hits": 1,
+    "scored": 1,
+    "best": 3110.4,
+    "best_delta": 0.32,
+    "trend": null,
+    "summary_text": null,
+    "synthetic": false
+   }
+  },
+  "coach": {
+   "lap_number": 2,
+   "lap_id": 15,
+   "ref_lap_number": null,
+   "skill_level": "advanced",
+   "simple_wording": false,
+   "radio_quiet": false,
+   "picked": [
+    {
+     "id": "drill1:a1",
+     "kind": "drill",
+     "corner": "T6",
+     "corner_label": "T12",
+     "lap_number": 2,
+     "ref_lap_number": 3,
+     "metric": "brake_start_m",
+     "value": 3110.4,
+     "unit": "m",
+     "impact_s": 0.15803609217340409,
+     "confidence": 1.0,
+     "priority": 1000000.0,
+     "positive": false,
+     "consistency": null,
+     "consistency_ratio": null,
+     "text": "Turn 12 drill, lap 1 of 5: on the point. 1 hit.",
+     "text_simple": "Turn 12 drill, lap 1 of 5: on the point.",
+     "short": "Drill 1/5: on the point · 1 hit",
+     "corner_voice": "Turn 12",
+     "ref_name": "Ben",
+     "evidence": {
+      "target": 3110.078486540241,
+      "tolerance": 5.0,
+      "delta": 0.32,
+      "corner_time_delta_s": 0.15803609217340409
+     },
+     "picked": true,
+     "drill": {
+      "id": 1,
+      "attempt": 1,
+      "of": 5,
+      "hits": 1,
+      "outcome": "hit",
+      "done": false
+     }
+    }
+   ],
+   "by_corner": {
+    "T6": {
+     "id": "drill1:a1",
+     "kind": "drill",
+     "corner": "T6",
+     "corner_label": "T12",
+     "lap_number": 2,
+     "ref_lap_number": 3,
+     "metric": "brake_start_m",
+     "value": 3110.4,
+     "unit": "m",
+     "impact_s": 0.15803609217340409,
+     "confidence": 1.0,
+     "priority": 1000000.0,
+     "positive": false,
+     "consistency": null,
+     "consistency_ratio": null,
+     "text": "Turn 12 drill, lap 1 of 5: on the point. 1 hit.",
+     "text_simple": "Turn 12 drill, lap 1 of 5: on the point.",
+     "short": "Drill 1/5: on the point · 1 hit",
+     "corner_voice": "Turn 12",
+     "ref_name": "Ben",
+     "evidence": {
+      "target": 3110.078486540241,
+      "tolerance": 5.0,
+      "delta": 0.32,
+      "corner_time_delta_s": 0.15803609217340409
+     },
+     "picked": true,
+     "drill": {
+      "id": 1,
+      "attempt": 1,
+      "of": 5,
+      "hits": 1,
+      "outcome": "hit",
+      "done": false
+     }
+    }
+   },
+   "drill_only": true
+  },
+  "cues_drill_corner": "T6"
+ }
+}

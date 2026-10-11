@@ -67,10 +67,16 @@ const HeroBody = memo(function HeroBody({ hero }: { hero: HeroView }) {
             {hero.direction}
           </span>
         )}
-        {hero.focus && (
-          <Chip size="lg" className="pwc-focus" aria-label={hero.focusReason ? `Focus corner: ${hero.focusReason}` : "Focus corner"}>
-            <Chip.Label>FOCUS</Chip.Label>
+        {hero.drill ? (
+          <Chip size="lg" className="pwc-focus pwc-drillhero" aria-label="Drill corner">
+            <Chip.Label>DRILL</Chip.Label>
           </Chip>
+        ) : (
+          hero.focus && (
+            <Chip size="lg" className="pwc-focus" aria-label={hero.focusReason ? `Focus corner: ${hero.focusReason}` : "Focus corner"}>
+              <Chip.Label>FOCUS</Chip.Label>
+            </Chip>
+          )
         )}
       </div>
       <div className="pwc-corner" data-layout={hero.layout} role="group" aria-label={hero.aria}>

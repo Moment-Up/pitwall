@@ -116,6 +116,7 @@ DELIVERY_LEAD_S = 0.2  # audio already synthesised: transport + device start-up 
 # Intents whose deterministic answer is already good radio material: answered instantly, no LLM.
 FAST_INTENTS = frozenset(
     {"fuel", "tyres", "lap_times", "last_lap", "strategy", "control_quiet", "control_resume", "radio_check"}
+    | {"drill_start", "drill_status", "drill_stop"}  # --- coachref --- practice drills (core.coachref)
 )
 
 UDP_ACTION_BASE = 0x00100000  # UDP Action 1; Action n = base << (n - 1)  (EA spec appendix: button flags)

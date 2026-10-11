@@ -95,9 +95,11 @@ export interface ExplainerProps {
   /** Signed badge (non-beginners); beginners read the amount in words. */
   signed: boolean;
   simple: boolean;
+  /** coachref: A is another driver's lap ("Sam's best"): the sentence names it instead of its lap number. */
+  refLabel?: string | null;
 }
 
-export const CornerExplainer = memo(function CornerExplainer({ corner, observations, lapNumber, refLapNumber, signed, simple }: ExplainerProps) {
+export const CornerExplainer = memo(function CornerExplainer({ corner, observations, lapNumber, refLapNumber, signed, simple, refLabel = null }: ExplainerProps) {
   if (!corner) {
     return (
       <Card className="p-5">
@@ -115,7 +117,7 @@ export const CornerExplainer = memo(function CornerExplainer({ corner, observati
           {signed ? timeSigned(corner.timeS) : timeWords(corner.timeS)}
         </span>
       </div>
-      <p className="m-0 text-[15px] leading-relaxed">{explainerText(corner, lapNumber, refLapNumber)}</p>
+      <p className="m-0 text-[15px] leading-relaxed">{explainerText(corner, lapNumber, refLapNumber, refLabel)}</p>
       <p className="m-0 text-xs text-faint">A description of the two laps, not advice.</p>
       {coach && (
         <div className="grid gap-1 rounded-2xl bg-surface-secondary px-4 py-3">

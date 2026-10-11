@@ -1,0 +1,58 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "hand-written from the coachref spec 6.2 / 6.3 (no backend yet)",
+    "moment": "No live session: nothing to check the options against (available null), applies next_session",
+    "notes": "Replace with a dump from a scratch server (spec 13 A7) once the backend lands. Demo names only."
+  },
+  "driver_id": 1,
+  "context": null,
+  "choice": {
+    "driver_id": 1,
+    "kind": "own_best",
+    "target_driver_id": null,
+    "lap_id": null,
+    "scope": "all_tracks",
+    "game": null,
+    "track_id": null,
+    "label": "Your best",
+    "updated_unix": null
+  },
+  "has_track_override": false,
+  "applies": "next_session",
+  "options": [
+    {
+      "kind": "own_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "label": "Your best",
+      "available": null,
+      "reason": null,
+      "warnings": [],
+      "lap": null,
+      "selected": true
+    },
+    {
+      "kind": "household_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "label": "Family record",
+      "available": null,
+      "reason": null,
+      "warnings": [],
+      "lap": null,
+      "selected": false
+    },
+    {
+      "kind": "driver_best",
+      "target_driver_id": 2,
+      "lap_id": null,
+      "label": "Sam's best",
+      "available": null,
+      "reason": null,
+      "warnings": [],
+      "lap": null,
+      "selected": false
+    }
+  ]
+}

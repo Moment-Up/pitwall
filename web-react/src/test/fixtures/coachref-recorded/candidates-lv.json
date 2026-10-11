@@ -1,0 +1,85 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "real F1 25 PS5 captures (the owner's, not committed) streamed over loopback UDP into an isolated scratch Pitwall server (integrator e2e, coachref lane); demo drivers Ann and Ben stand in for the household",
+  "moment": "GET /api/coachref/candidates for Ann's Las Vegas lap 3"
+ },
+ "body": {
+  "lap_id": 13,
+  "driver_id": 1,
+  "groups": [
+   {
+    "id": "own",
+    "title": "Your best here",
+    "options": [
+     {
+      "kind": "own_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "label": "Your best",
+      "available": true,
+      "reason": null,
+      "warnings": [],
+      "lap": {
+       "lap_id": 16,
+       "lap_number": 3,
+       "lap_time_ms": 96953,
+       "set_unix": 1791744627.915804,
+       "driver_id": 1,
+       "driver_name": "Ann",
+       "session_id": "c6a33a3fff36",
+       "car_name": "F1 Generic"
+      },
+      "selected": false
+     }
+    ]
+   },
+   {
+    "id": "family",
+    "title": "Family",
+    "options": [
+     {
+      "kind": "household_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "label": "Family record",
+      "available": true,
+      "reason": null,
+      "warnings": [],
+      "lap": {
+       "lap_id": 3,
+       "lap_number": 3,
+       "lap_time_ms": 96953,
+       "set_unix": 1791744124.248426,
+       "driver_id": 2,
+       "driver_name": "Ben",
+       "session_id": "022b53eac214",
+       "car_name": "F1 Generic"
+      },
+      "selected": false
+     },
+     {
+      "kind": "driver_best",
+      "target_driver_id": 2,
+      "lap_id": null,
+      "label": "Ben's best",
+      "available": true,
+      "reason": null,
+      "warnings": [],
+      "lap": {
+       "lap_id": 3,
+       "lap_number": 3,
+       "lap_time_ms": 96953,
+       "set_unix": 1791744124.248426,
+       "driver_id": 2,
+       "driver_name": "Ben",
+       "session_id": "022b53eac214",
+       "car_name": "F1 Generic"
+      },
+      "selected": false
+     }
+    ]
+   }
+  ]
+ }
+}

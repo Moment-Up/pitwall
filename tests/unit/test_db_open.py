@@ -1,5 +1,5 @@
-"""Opening the database: Windows retries a transient "database is locked" (openers racing on one file); macOS keeps
-raising at once, as before."""
+"""Opening the database retries a transient "database is locked" (openers racing on one file: seen on Windows
+runners and, more rarely, on macOS), then gives up; other errors are raised at once."""
 
 from __future__ import annotations
 
@@ -26,8 +26,7 @@ def _flaky_connect(monkeypatch: pytest.MonkeyPatch, error: str, failures: int) -
     return calls
 
 
-def test_windows_retries_a_locked_database_while_opening(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(db_mod, "is_windows", lambda: True)
+def test_retries_a_locked_database_while_opening(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _flaky_connect(monkeypatch, "database is locked", failures=2)
     db = db_mod.Database(tmp_path / "pitwall.sqlite3")
     assert len(calls) == 3
@@ -37,8 +36,7 @@ def test_windows_retries_a_locked_database_while_opening(tmp_path: Path, monkeyp
         )
 
 
-def test_windows_gives_up_after_the_retries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(db_mod, "is_windows", lambda: True)
+def test_gives_up_after_the_retries(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     calls = _flaky_connect(monkeypatch, "database is locked", failures=99)
     with pytest.raises(sqlite3.OperationalError, match="locked"):
         db_mod.Database(tmp_path / "pitwall.sqlite3")
@@ -46,16 +44,7 @@ def test_windows_gives_up_after_the_retries(tmp_path: Path, monkeypatch: pytest.
 
 
 def test_other_errors_are_not_retried(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(db_mod, "is_windows", lambda: True)
     calls = _flaky_connect(monkeypatch, "disk I/O error", failures=1)
     with pytest.raises(sqlite3.OperationalError, match="disk I/O"):
         db_mod.Database(tmp_path / "pitwall.sqlite3")
     assert len(calls) == 1
-
-
-def test_macos_raises_a_locked_database_at_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(db_mod, "is_windows", lambda: False)
-    calls = _flaky_connect(monkeypatch, "database is locked", failures=1)
-    with pytest.raises(sqlite3.OperationalError, match="locked"):
-        db_mod.Database(tmp_path / "pitwall.sqlite3")
-    assert len(calls) == 1  # unchanged behaviour: no retry

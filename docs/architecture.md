@@ -31,8 +31,10 @@
                           |  learn TrackModel|    |  events, setups,       |
                           |  pick reference  |    |  track_models (vers.), |
                           |  compare (dist.) |    |  reference_laps,       |
-                          |  observations    |    |  observations, convos  |
-                          +------------------+    +------------------------+
+                          |  observations    |    |  observations, convos, |
+                          |  drills          |    |  reference_choices,    |
+                          +------------------+    |  drills                |
+                                                  +------------------------+
 ```
 
 ## Threads and the critical path
@@ -75,6 +77,30 @@ ground plane declared by the adapter (`AdapterInfo.ground_plane`). Field provena
    confidence vs habit consistency reported separately; later braking never suggested on its own.
 7. **Strategy** (`analysis/strategy.py`): fuel/lap median over green laps, wear-rate regression, tyre-limited
    pit window.
+
+### Reference choice and practice drills (coachref)
+`core/coachref.py` (`CoachRef`, created by the runtime and attached to the `LapProcessor`) plugs into the lap
+pipeline at four points, all on the `lap-analysis` thread:
+1. **Resolver before compare.** `LapProcessor._choose_reference` asks `CoachRef.resolve` for the session driver's
+   chosen reference (`reference_choices`: own best by default, family record, another driver's best or a saved
+   lap; compatible laps only, real driving only). No stored choice, an unowned, synthetic or replayed session ->
+   the own-lap rule, unchanged. The descriptor (kind, holder, labels, `brake_clamped`, `frozen`) is merged into
+   `snapshot.reference` and the comparison (`reference`).
+2. **Reword and clamp.** Against another driver's lap the observations are reworded with their name
+   (`coach/reference_wording.py`, stored that way too) and the comparison carries `brake_clamp_m` (the driver's own
+   braking point per corner); `coach/cues.reference_braking_zones` calls `min(their point, own point)` and skips a
+   corner with no own point. Review analyses are never re-based on another driver.
+3. **Drill hook.** After every stored lap `CoachRef.after_lap` evaluates an active drill (`coach/drills.py`, pure):
+   the attempt becomes the lap's single coaching point (`kind: "drill"`, `coach.drills.with_drill`), live
+   observations are filtered to the drill corner (all are stored), the cue plan holds only that corner
+   (`CueEngine.set_drill_corner`) and the reference and clamp are frozen until the drill ends.
+4. **`AnalysisWorker.submit_task`.** API and radio changes (choice, drill start / stop) run as tasks in the same
+   queue as the laps, so drill and reference state need no lock; callers wait at most 5 s (HTTP 503 after).
+
+Storage (schema v3, new tables only): `reference_choices` (per driver, `game`/`track_id` `''` = every track; cascade
+on driver delete) and `drills` (one row per drill, attempts as JSON; kept with a NULL driver when the driver is
+deleted). API: `api/routes_coachref.py` (`/api/coachref/...`). Radio: drill intents in `ai/engineer.py` answered by
+`CoachRef.radio_command` without the LLM.
 
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw

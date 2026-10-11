@@ -30,6 +30,10 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   the lap processor after each lap and when the session's context changes (``set_bests_requester``). A few hundred
   bytes, so it rides every snapshot: a lap that sets a record is coloured as set on the next frame, not up to
   5 s later with the static payload.
+* ``coachref`` (every snapshot, small): the seated driver's reference choice, what the analysis used for the last
+  lap (``used_kind``, ``reason`` when the choice could not be honoured), whether a change waits for the next lap
+  (``pending``) and the practice drill (``drill``: running, or the result of the one that just ended). Published by
+  ``core.coachref.CoachRef`` with one attribute swap. ``reference`` gains the descriptor of how it was chosen.
 """
 
 from __future__ import annotations
@@ -47,6 +51,7 @@ import numpy as np
 from pitwall.analysis.distance import DistanceTrace
 from pitwall.analysis.track_skeleton import build_track_skeleton
 from pitwall.coach.cues import CoachingProfile, CueEngine, CuePlan, cue_labels
+from pitwall.coach.drills import with_drill
 from pitwall.coach.selection import CoachSelection
 from pitwall.core.track_knowledge import TrackKnowledge, TrackKnowledgeResolver, heads_up_cue_plan
 from pitwall.drivers import CoachingLimits
@@ -221,6 +226,7 @@ class LiveState:
         self.track_knowledge: dict[str, Any] | None = None
         self._heads_up_key: tuple[tuple[str, int], ...] | None = None
         self.cues = CueEngine()
+        self.coachref: dict[str, Any] | None = None  # --- coachref --- (core.coachref.CoachRef publishes it)
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -334,10 +340,20 @@ class LiveState:
         lap: dict[str, Any],
         observations: list[dict[str, Any]],
         comparison: dict[str, Any] | None,
+        drill: dict[str, Any] | None = None,
     ) -> None:
         compat = (comparison or {}).get("compatibility")
         compared = isinstance(compat, dict) and bool(compat.get("ok"))
-        coach = self.coach.select(lap, observations, compared)  # once per lap: the radio speaks this pick
+        # once per lap: the radio speaks this pick. --- coachref --- while a drill runs (``drill``, from
+        # CoachRef.after_lap) the lap's one point is the drill's: shown on the coach card when the lap was an attempt,
+        # the previous card kept when it was not (an out lap)
+        coach = self.coach.select(lap, observations, compared and drill is None)
+        if drill is not None:
+            point = drill.get("point")
+            coach = with_drill(coach, point if isinstance(point, dict) else None, str(drill.get("corner") or ""))
+            if isinstance(point, dict):
+                self.coach.set_current(coach)
+        # --- coachref ---
         with self._lock:
             self.laps.appendleft(lap)
             self.observations = observations
@@ -513,6 +529,7 @@ class LiveState:
             out["session_state_info"] = None if st is None else st.to_dict()
             out["coach"] = self.coach.current
             out["bests"] = self.bests  # D2: small, so every snapshot (a record shows as set, not 5 s later)
+            out["coachref"] = self.coachref  # --- coachref --- reference choice + drill (small, every snapshot)
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

@@ -1,0 +1,65 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "hand-written from the coachref spec 6.2 / 6.3 (no backend yet)",
+    "moment": "GT7 session whose car is unknown: other drivers' laps cannot be matched (not supported for this game today)",
+    "notes": "Replace with a dump from a scratch server (spec 13 A7) once the backend lands. Demo names only."
+  },
+  "driver_id": 1,
+  "context": {
+    "game": "gt7",
+    "track_id": "gt7:351",
+    "track_name": null,
+    "car_id": null,
+    "car_name": null,
+    "track_length_m": 4011.0
+  },
+  "choice": {
+    "driver_id": 1,
+    "kind": "own_best",
+    "target_driver_id": null,
+    "lap_id": null,
+    "scope": "all_tracks",
+    "game": null,
+    "track_id": null,
+    "label": "Your best",
+    "updated_unix": null
+  },
+  "has_track_override": false,
+  "applies": "now",
+  "options": [
+    {
+      "kind": "own_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "label": "Your best",
+      "available": true,
+      "reason": null,
+      "warnings": [],
+      "lap": null,
+      "selected": true
+    },
+    {
+      "kind": "household_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "label": "Family record",
+      "available": false,
+      "reason": "the car is unknown, so other drivers' laps can't be matched",
+      "warnings": [],
+      "lap": null,
+      "selected": false
+    },
+    {
+      "kind": "driver_best",
+      "target_driver_id": 2,
+      "lap_id": null,
+      "label": "Sam's best",
+      "available": false,
+      "reason": "the car is unknown, so other drivers' laps can't be matched",
+      "warnings": [],
+      "lap": null,
+      "selected": false
+    }
+  ]
+}

@@ -14,6 +14,21 @@ import { callsModeText, cueView, lastCueOutcome, type CueBandView, type CuePause
 import { deltaView, referenceLabel, type DeltaView } from "./delta";
 import { gameLength } from "./geometry";
 import { driverFocus } from "./plan";
+// --- coachref ---
+import {
+  activeDrill,
+  drillBlock,
+  drillChip,
+  drillCoach,
+  drillCorner,
+  drillTrack,
+  sheetCorners,
+  type DrillBlockView,
+  type DrillChipView,
+  type SheetCorner,
+} from "./drill";
+import { refControlView, type RefControlView } from "./reference";
+// --- /coachref ---
 import { ribbon, type RibbonView } from "./ribbon";
 import {
   EMPTY_MEMO,
@@ -80,6 +95,8 @@ export type HeroView =
       approach: number | null;
       focus: boolean;
       focusReason: string | null;
+      /** coachref: the corner is the running drill's (a DRILL chip replaces FOCUS). */
+      drill?: boolean;
       /** The live position is not current (stale, offline): last content, dimmed. */
       frozen: boolean;
       corner: CornerView;
@@ -177,6 +194,17 @@ export interface EndedCard {
   wentWell: CoachPoint | null;
 }
 
+/** coachref: the drill on Drive (status chip, Ready card block, the drill sheet's corners). */
+export interface DriveDrillView {
+  chip: DrillChipView | null;
+  /** null on a server without coachref. */
+  block: DrillBlockView | null;
+  /** The drill sheet's corners (Ready card only; empty elsewhere). */
+  corners: SheetCorner[];
+  /** The live game and track (Ready card only): the sheet lists a stored model's corners when `corners` is empty. */
+  track: { game: string; trackId: string } | null;
+}
+
 export interface DriveModel {
   state: DriveState;
   overlays: DriveOverlays;
@@ -211,6 +239,10 @@ export interface DriveModel {
   dim: boolean;
   beginner: boolean;
   simpleWording: boolean;
+  /** coachref: the delta reference control (available false on a server without coachref). */
+  ref: RefControlView;
+  /** coachref: the drill. */
+  drill: DriveDrillView;
 }
 
 const NO_MODEL = "Corners appear after your first clean lap";
@@ -517,7 +549,10 @@ export function driveModel(input: DriveModelInput): DriveModel {
     chip: overlays.chip ? { kind: overlays.chip.kind, text: chipText(overlays.chip.kind) } : null,
   };
   const card = state === "garage" ? "ready" : state === "ended" ? "ended" : state === "no_data" ? "no_data" : null;
-  const hero = heroOf(s, state, corner, dim);
+  let hero = heroOf(s, state, corner, dim);
+  // --- coachref: the running drill's corner wears a DRILL chip instead of FOCUS ---
+  const dCorner = drillCorner(s);
+  if (hero.kind === "corner" && dCorner != null && hero.corner.name === dCorner) hero = { ...hero, drill: true };
 
   const pause: CuePause =
     state === "red_flag" ? "red_flag" : state === "pit_lane" ? "pit_lane" : overlays.safetyCar ? "safety_car" : null;
@@ -535,8 +570,15 @@ export function driveModel(input: DriveModelInput): DriveModel {
       coach = top
         ? { ...top, heading: `Next run${top.lap != null ? ` · from L${top.lap}` : ""}`, full: true }
         : { ...coachPoint(s, null, simple, false), heading: null, full: true };
+      // --- coachref: a running drill's last point, in full ---
+      const running = activeDrill(s);
+      const dc = running ? drillCoach(s, running.corner, simpleWording(s, simple), false) : null;
+      if (dc) coach = { ...dc, heading: null, full: true };
     } else {
       coach = { ...coachPoint(s, corner?.name ?? null, simple, true), heading: null, full: false };
+      // --- coachref: while a drill runs the card talks about the drill corner only ---
+      const dc = drillCoach(s, corner?.name ?? null, simpleWording(s, simple), true);
+      if (dc) coach = { ...dc, heading: null, full: false };
     }
   }
 
@@ -567,5 +609,13 @@ export function driveModel(input: DriveModelInput): DriveModel {
     dim,
     beginner,
     simpleWording: s ? simpleWording(s, simple) : simple,
+    ref: refControlView(s, { beginner, drivers }),
+    drill: {
+      chip: card ? null : drillChip(s),
+      // The Ready card's (garage only: nothing to compute per snapshot on track).
+      block: state === "garage" ? drillBlock(s) : null,
+      corners: state === "garage" ? sheetCorners(s) : [],
+      track: state === "garage" ? drillTrack(s) : null,
+    },
   };
 }

@@ -2,7 +2,7 @@
 // and track + car (Selects), what they are working on now (up to 3 corners, the coach's latest point verbatim, a
 // TrendChip over the last sessions once D5 sends corner means, See it), their habits (the coach's consistency
 // strings), what the radio will focus on (the live cue plan, only while they are in the seat at this track), and
-// what was recently fixed (D5).
+// what was recently fixed (D5), and its practice drills here (coachref, plan/DrillsCard.tsx).
 //
 // The plan is read from the newest session here that was compared with the reference (D5), else the newest session.
 // Coaching text is the coach's own (analysis/coaching.py); this page adds neutral words only. Density by the VIEWED
@@ -22,6 +22,8 @@ import { DEFAULT_THRESHOLD_S } from "../../lib/review/progress";
 import { lapsText } from "../../lib/review/kpis";
 import { sessionTypeLabel, whenText } from "../../lib/review/words";
 import type { PageProps } from "../../routes";
+import { drillsQuery } from "../../lib/review/drills";
+import { DrillsCard } from "./plan/DrillsCard";
 import { HabitsCard } from "./plan/HabitsCard";
 import { RadioFocusCard } from "./plan/RadioFocusCard";
 import { WorkingOnCard } from "./plan/WorkingOnCard";
@@ -179,6 +181,14 @@ export function CoachingPage({ route }: PageProps) {
               glossary={density.glossary}
             />
           </div>
+
+          {/* --- coachref: practice drills at this track (+ car) --- */}
+          <DrillsCard
+            query={drillsQuery(viewed.id, scope)}
+            model={model}
+            gameLengthM={row?.track_length_m ?? null}
+            simple={density.simpleWording}
+          />
         </>
       )}
     </div>
