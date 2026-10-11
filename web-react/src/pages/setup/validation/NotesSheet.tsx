@@ -28,15 +28,15 @@ export function NotesSheet({ isOpen, title, notes, verdict, wide, busy, onSave, 
   return (
     <Sheet isOpen={isOpen} onOpenChange={(o) => (o ? undefined : onClose())} placement={wide ? "right" : "bottom"}>
       <Sheet.Backdrop>
-        <Sheet.Content className={wide ? "w-[min(480px,96vw)]" : "max-h-[88dvh]"}>
+        <Sheet.Content className={wide ? "w-[min(480px,96vw)]" : "flex max-h-[calc(100dvh-4rem)] flex-col"}>
           <Sheet.Dialog aria-label={`Note: ${title}`}>
             {wide ? null : <Sheet.Handle />}
-            <Sheet.CloseTrigger />
+            <Sheet.CloseTrigger className="size-11" />
             <Sheet.Header className="pt-5">
               <Sheet.Heading className="pr-10 text-xl">Note</Sheet.Heading>
               <p className="m-0 text-sm text-muted">{title}</p>
             </Sheet.Header>
-            <Sheet.Body className="grid content-start gap-3 pb-4">
+            <Sheet.Body className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto pb-4">
               <TextField value={text} onChange={(v) => setText(v.slice(0, NOTES_MAX))} maxLength={NOTES_MAX}>
                 <Label>What happened</Label>
                 <TextArea variant="secondary" rows={6} className="text-base" placeholder="What you saw or heard, in your words" />

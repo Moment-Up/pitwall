@@ -33,17 +33,17 @@ export function FinishSheet({ isOpen, run, wide, busy, error, onFinish, onAbort,
   return (
     <Sheet isOpen={isOpen} onOpenChange={(o) => (o ? undefined : onClose())} placement={wide ? "right" : "bottom"}>
       <Sheet.Backdrop>
-        <Sheet.Content className={wide ? "w-[min(480px,96vw)]" : "max-h-[88dvh]"}>
+        <Sheet.Content className={wide ? "w-[min(480px,96vw)]" : "flex max-h-[calc(100dvh-4rem)] flex-col"}>
           <Sheet.Dialog aria-label="Finish validation">
             {wide ? null : <Sheet.Handle />}
-            <Sheet.CloseTrigger />
+            <Sheet.CloseTrigger className="size-11" />
             <Sheet.Header className="pt-5">
               <Sheet.Heading className="pr-10 text-xl">Finish validation</Sheet.Heading>
               <p className="m-0 text-sm text-muted">
                 {p.text}. The report is saved on the Mac. It never changes what Pitwall says works: that stays a manual step.
               </p>
             </Sheet.Header>
-            <Sheet.Body className="grid content-start gap-4 pb-4">
+            <Sheet.Body className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto pb-4">
               <div className="flex flex-wrap gap-2" aria-label="Results so far">
                 {countChips(run.counts).map((c) => (
                   <StatusChip key={c.key} chip={{ label: c.label, tone: c.tone }} />

@@ -88,6 +88,7 @@ GAME_MIN_CLEAN_LAPS = 2  # H
 AC_MIN_CORNERS = 3
 AC_FAIL_STREAM_S = 300.0  # five minutes streaming on a known line with no timed lap fails AC
 STEER_SIGN_MIN = 0.5  # input check: full lock reads beyond +/-0.5 in the CarFrame convention (-1 left, +1 right)
+INPUT_CHECK_IDS = ("steer_sign", "steer_raw", "reverse", "pedals")  # input check: for the maintainer, never gating
 
 # ------------------------------------------------------------------------------------------------ drivers
 SWITCH_SETTLE_S = 2.0  # the new session / cue plan is read this long after a switch
@@ -686,17 +687,19 @@ def home_screen_verdict(f: ScreenFacts, did_not_touch: bool | None, now: float) 
 
 
 def glance_verdict(laps_by_driver: Mapping[int | None, int], coach_report: bool, now: float) -> AutoState:
+    """Only the driver can judge a glance; both checks are ``review_*``: a "worked" without the laps or without the
+    iPad on Drive › Coach in this test needs review, so the test cannot pass without live evidence."""
     best = max(laps_by_driver.values(), default=0)
     checks = [
         check(
-            "laps",
+            "review_laps",
             "Laps driven in this test (per driver)",
             best >= GLANCE_MIN_LAPS,
             str(best),
             f">= {GLANCE_MIN_LAPS}",
             True,
         ),
-        check("coach_page", "iPad on Drive › Coach", coach_report, "yes" if coach_report else "no", "yes"),
+        check("review_coach_page", "iPad on Drive › Coach", coach_report, "yes" if coach_report else "no", "yes"),
     ]
     metrics: dict[str, float | int | str | None] = {
         f"laps_driver_{'none' if k is None else k}": v
@@ -856,12 +859,12 @@ def _decode_checks(f: GameFacts) -> list[Check]:
 
 
 def _lap_checks(f: GameFacts) -> list[Check]:
-    track = f.track_name or f.track_id or "-"
+    track = f.track_name or f.track_id
     times = ", ".join(_fmt_lap(x) for x in f.timed_laps[:6]) if f.timed_laps else "none"
     return [
         check(
             "timed_laps",
-            f"Laps timed on one circuit ({track})",
+            f"Laps timed on one circuit ({track})" if track else "Laps timed on one circuit",
             len(f.timed_laps) >= GAME_MIN_TIMED_LAPS,
             f"{len(f.timed_laps)}: {times}",
             f">= {GAME_MIN_TIMED_LAPS}",
@@ -883,23 +886,16 @@ _TRACK_LENGTH_WORDS = {"full_lap": "measured from a full lap", "estimate": "esti
 
 
 def ac_verdict(f: GameFacts, times_match: bool | None, phases: Sequence[InputPhaseRecord], now: float) -> AutoState:
+    """The handshake's status and encoding stay in the metrics (for the maintainer), not in the check's value."""
+    seen = (f.handshakes or 0) >= 1 or f.handshake_status is not None
+    answered = True if seen else (None if f.handshakes is None else False)
     checks = [
         check(
             "handshake",
             "Handshake answered",
-            True
-            if (f.handshakes or 0) >= 1 or f.handshake_status is not None
-            else (None if f.handshakes is None else False),
-            ", ".join(
-                x
-                for x in (
-                    None if f.handshakes is None else f"{f.handshakes} answered",
-                    None if f.handshake_status is None else f"status {f.handshake_status} ({f.handshake_encoding})",
-                )
-                if x
-            )
-            or None,
-            ">= 1",
+            answered,
+            None if answered is None else ("answered" if answered else "not answered"),
+            "answered",
         ),
         *_decode_checks(f),
         *_lap_checks(f),
@@ -942,13 +938,13 @@ def ac_verdict(f: GameFacts, times_match: bool | None, phases: Sequence[InputPha
         return state(
             "fail", [f"{f.streaming_s / 60:.0f} minutes on a known line and no lap timed"], checks, metrics, now
         )
-    gating = [c for c in checks if c.id not in ("steer_sign", "reverse", "steer_raw")]
+    # the optional input check has no verdict of its own (the steer unit is the maintainer's call)
+    gating = [c for c in checks if c.id not in INPUT_CHECK_IDS]
     if all(c.status == "met" for c in gating):
         return state("pass", [f"{len(f.timed_laps)} laps timed and coached"], checks, metrics, now)
+    # the checks list what is not met: the reasons only count them and say what to do next
     reasons = [] if f.timed_laps else ["No timed lap yet"]
-    reasons += [
-        f"{c.label}: {c.value or '-'} ({c.target})" for c in gating if c.status == "not_met" and c.id != "times_match"
-    ]
+    reasons.append(f"{sum(1 for c in gating if c.status == 'met')} of {len(gating)} checks met")
     if times_match is not True:
         reasons.append("Tick 'lap times match the game's' when you have compared them")
     return state("inconclusive", reasons, checks, metrics, now)
@@ -1020,18 +1016,33 @@ def gt7_verdict(f: GameFacts, times_match: bool | None, phases: Sequence[InputPh
     if f.menu_sessions:
         menus = n_of(f.menu_sessions, "session")
         reasons.append(f"{menus} streamed from menus or loading screens: not counted as driving")
-    gating = [c for c in checks if c.id not in ("best_lap", "menus", "steer_sign", "pedals")]
+    gating = [c for c in checks if c.id not in ("best_lap", "menus", *INPUT_CHECK_IDS)]
     if all(c.status == "met" for c in gating):
-        return state(
-            "pass", [f"{len(f.timed_laps)} laps timed at {f.track_name or f.track_id}", *reasons], checks, metrics, now
-        )
+        where = f.track_name or f.track_id
+        laps = f"{len(f.timed_laps)} laps timed" + (f" at {where}" if where else "")
+        return state("pass", [laps, *reasons], checks, metrics, now)
     missing = [] if f.timed_laps else ["No timed lap yet"]
-    missing += [
-        f"{c.label}: {c.value or '-'} ({c.target})" for c in gating if c.status == "not_met" and c.id != "times_match"
-    ]
+    missing.append(f"{sum(1 for c in gating if c.status == 'met')} of {len(gating)} checks met")
     if times_match is not True:
         missing.append("Tick 'lap times match the game's' when you have compared them")
     return state("inconclusive", missing + reasons, checks, metrics, now)
+
+
+def steer_sign(left: InputPhaseRecord, right: InputPhaseRecord) -> tuple[bool | None, str] | None:
+    """(sign as expected, value) from the left and right phases, or None without their readings.
+
+    Full lock, not the phase's mean: the right phase starts from full left lock, so its mean can sit near 0. The
+    left phase starts from the centre: as expected its minimum is beyond -0.5 and the right phase's maximum beyond
+    +0.5; inverted the other way round. Both or neither: unknown."""
+    if None in (left.steer_min, left.steer_max, right.steer_min, right.steer_max):
+        return None
+    assert left.steer_min is not None and left.steer_max is not None
+    assert right.steer_min is not None and right.steer_max is not None
+    ok = left.steer_min < -STEER_SIGN_MIN and right.steer_max > STEER_SIGN_MIN
+    inverted = left.steer_max > STEER_SIGN_MIN and right.steer_min < -STEER_SIGN_MIN
+    if inverted and not ok:
+        return False, f"left {left.steer_max:+.2f}, right {right.steer_min:+.2f} (steering sign looks inverted)"
+    return (True if ok and not inverted else None), f"left {left.steer_min:+.2f}, right {right.steer_max:+.2f}"
 
 
 def input_check_checks(phases: Sequence[InputPhaseRecord], game: str) -> list[Check]:
@@ -1039,20 +1050,10 @@ def input_check_checks(phases: Sequence[InputPhaseRecord], game: str) -> list[Ch
     by = {p.phase: p for p in phases if p.samples > 0}
     out: list[Check] = []
     left, right = by.get("left"), by.get("right")
-    if left is not None and right is not None and left.steer_mean is not None and right.steer_mean is not None:
-        ok = left.steer_mean < -STEER_SIGN_MIN and right.steer_mean > STEER_SIGN_MIN
-        inverted = left.steer_mean > STEER_SIGN_MIN and right.steer_mean < -STEER_SIGN_MIN
-        value = f"left {left.steer_mean:+.2f}, right {right.steer_mean:+.2f}" + (
-            " (steering sign looks inverted)" if inverted else ""
-        )
+    sign = None if left is None or right is None else steer_sign(left, right)
+    if sign is not None:
         out.append(
-            check(
-                "steer_sign",
-                "Steering sign (left negative, right positive)",
-                ok if (ok or inverted) else None,
-                value,
-                "< -0.5 / > +0.5",
-            )
+            check("steer_sign", "Steering sign (left negative, right positive)", sign[0], sign[1], "< -0.5 / > +0.5")
         )
     if game == "ac":
         rng = next((p.steer_raw_range for p in (right, left) if p is not None and p.steer_raw_range), None)
@@ -1096,12 +1097,14 @@ def input_check_checks(phases: Sequence[InputPhaseRecord], game: str) -> list[Ch
 
 # ================================================================================================ game choice, drivers
 def game_selection_verdict(transitions: Sequence[GameTransition], now: float) -> AutoState:
+    """Cleared means the banner went because the chosen game became the detected one (clearing the choice, or the
+    game stopping, also hides the banner: that does not count)."""
     on_then_off = False
     seen_on = False
     for t in transitions:
         if t.mismatch:
             seen_on = True
-        elif seen_on:
+        elif seen_on and t.detected_id is not None and t.selected_id == t.detected_id:
             on_then_off = True
     metrics: dict[str, float | int | str | None] = {
         "samples": len(transitions),
@@ -1163,7 +1166,8 @@ def switch_verdict(switches: Sequence[SwitchRecord], now: float) -> AutoState:
     if bad:
         return state("fail", [p for _, ps in bad for p in ps][:4], checks, metrics, now)
     if good:
-        return state("pass", [f"{len(good)} switch(es): each driver's laps under their own name"], checks, metrics, now)
+        why = f"{n_of(len(good), 'switch', 'switches')}: each driver's laps under their own name"
+        return state("pass", [why], checks, metrics, now)
     return state("inconclusive", ["Waiting for laps on both sides of the switch"], checks, metrics, now)
 
 
@@ -1171,7 +1175,8 @@ def switch_verdict(switches: Sequence[SwitchRecord], now: float) -> AutoState:
 def item_result(auto: AutoState, marks: Sequence[DriverMark], per_driver: bool, skipped: bool) -> ItemResult:
     """The one table that combines the automatic verdict with the driver's (spec 5.13).
 
-    Not in the spec's table: no driver verdict on a ``driver_only`` item is ``not_run`` (nothing to review)."""
+    Not in the spec's table: with no driver verdict a ``driver_only`` item is ``not_run`` (nothing to review), and so
+    is a ``not_live`` one (replays never count, so there is nothing to check either)."""
     if skipped:
         return "skipped"
     verdicts = [m.verdict for m in marks]
@@ -1181,7 +1186,7 @@ def item_result(auto: AutoState, marks: Sequence[DriverMark], per_driver: bool, 
         driver = verdicts[-1] if verdicts else None
     a = auto.verdict
     if driver is None:
-        if a in ("no_evidence", "unavailable", "driver_only"):
+        if a in ("no_evidence", "unavailable", "driver_only", "not_live"):
             return "not_run"
         if a == "fail":
             return "fail"

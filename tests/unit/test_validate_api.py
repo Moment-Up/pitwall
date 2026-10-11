@@ -92,7 +92,10 @@ def test_catalog_and_empty_state(api: tuple[TestClient, Any]) -> None:
     c, _app = api
     cat = c.get(f"{V}/catalog").json()
     by = {i["id"]: i for i in cat["items"]}
-    assert by["radio_ptt"]["available"] is False and "speech recognition" in by["radio_ptt"]["unavailable_reason"]
+    assert (
+        by["radio_ptt"]["available"] is False
+        and by["radio_ptt"]["unavailable_reason"] == "Speech recognition is off on this Mac."
+    )
     assert by["cues_timing"]["available"] is True  # the radio hub runs (null engines)
     assert by["radio_kokoro"]["available"] is False
     assert by["driver_switch"]["unavailable_reason"] == "Add a second driver in Settings › Drivers first."
@@ -215,20 +218,26 @@ def test_radio_commands_and_transcripts(api: tuple[TestClient, Any]) -> None:
     hub = app.state.hub
     assert hub is not None and hub.command_handler == app.state.validation.voice_command
     hub.stt = ScriptedStt()  # a speech engine makes the push-to-talk test available (typed questions skip it)
-    assert c.post("/api/voice/ask", json={"text": "next test"}).json() == {"queued": True}
-    wait_for(lambda: hub.history and hub.history[0]["text"] == "No validation running. Say start validation.")
+    # with no run active only "start validation" is a command: "next test" or "passed" reach the engineer
+    for said in ("next test", "passed", "it worked"):
+        n = len(hub.history)
+        assert c.post("/api/voice/ask", json={"text": said}).json() == {"queued": True}
+        wait_for(lambda n=n: len(hub.history) > n and hub.history[0]["role"] == "engineer")
+        assert "validation" not in hub.history[0]["text"].lower(), hub.history[0]
+    assert c.get(f"{V}/active").json()["run"] is None
     c.post("/api/voice/ask", json={"text": "start validation"})
     run_id = wait_for(lambda: (c.get(f"{V}/active").json()["run"] or {}).get("id"))
     first = c.get(f"{V}/runs/{run_id}").json()["current_item"]
     assert first == "ipad_home_screen"
     wait_for(lambda: hub.history and hub.history[0]["text"].startswith("Validation started. First test: screen test."))
     c.post("/api/voice/ask", json={"text": "it worked"})
-    wait_for(lambda: hub.history and hub.history[0]["text"] == "Marked screen test as worked.")
+    wait_for(lambda: hub.history and hub.history[0]["text"] == "Screen test: noted as worked.")
     run = c.get(f"{V}/runs/{run_id}?detail=full").json()
     mark = run["items"][0]["marks"][0]
     assert mark["verdict"] == "worked" and mark["source"] == "voice"
     c.post("/api/voice/ask", json={"text": "What's the test?"})
     wait_for(lambda: hub.history and hub.history[0]["text"].startswith("Test 1 of"))
+    assert "Drive five minutes without touching the iPad" in hub.history[0]["text"]  # the test's instructions
     c.post("/api/voice/ask", json={"text": "how are my tyres"})  # an ordinary question reaches the engineer
     wait_for(lambda: hub.history and hub.history[0]["text"].startswith("No session data yet"))
     ptt = c.get(f"{V}/runs/{run_id}?detail=full").json()["evidence"]["ptt"]
@@ -240,13 +249,19 @@ def test_radio_commands_and_transcripts(api: tuple[TestClient, Any]) -> None:
     red = c.get(f"{V}/runs/{run_id}/report.md?redact_transcripts=true")
     assert red.headers["content-type"] == "text/markdown; charset=utf-8"
     assert "| how are my tyres |" not in red.text and "[transcript removed]" in red.text
+    # Download JSON honours "Leave out transcripts" too
+    js = c.get(f"{V}/runs/{run_id}/report?redact_transcripts=true").text
+    assert "how are my tyres" not in js and "[transcript removed]" in js
+    assert "how are my tyres" in c.get(f"{V}/runs/{run_id}/report").text
     c.post("/api/voice/ask", json={"text": "finish validation"})
     wait_for(lambda: c.get(f"{V}/active").json()["run"] is None)
-    wait_for(lambda: hub.history and hub.history[0]["text"].startswith("Validation finished."))
+    wait_for(lambda: hub.history and hub.history[0]["text"] == "Finishing validation.")
     assert c.get(f"{V}/runs/{run_id}").json()["status"] == "finished"
     md = c.get(f"{V}/runs/{run_id}/report.md").text
     assert md.startswith(f"# Pitwall validation run {run_id}") and "How are my tyres" not in md.split("\n")[0]
     assert "[transcript removed]" in c.get(f"{V}/runs/{run_id}/report.md?redact_transcripts=true").text
+    js = c.get(f"{V}/runs/{run_id}/report?redact_transcripts=true").text  # a finished run: built again, redacted
+    assert "how are my tyres" not in js and "[transcript removed]" in js
 
 
 def test_driver_switch_is_recorded_and_settled(api: tuple[TestClient, Any]) -> None:
@@ -266,4 +281,4 @@ def test_driver_switch_is_recorded_and_settled(api: tuple[TestClient, Any]) -> N
     assert sw["from_driver_id"] == first and sw["to_driver_id"] == second and sw["settled"] is True
     assert sw["session_before"] is None and sw["ok"] is None  # no telemetry: nothing to check yet
     item = full["items"][0]
-    assert item["auto"]["verdict"] == "not_live" and item["result"] == "needs_review"
+    assert item["auto"]["verdict"] == "not_live" and item["result"] == "not_run"  # no answer, nothing live

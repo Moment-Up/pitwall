@@ -142,3 +142,10 @@ async def test_a_sender_heard_this_instant_is_fresh(tmp_path: Path) -> None:
         assert kit.collector.sender == "loopback" and kit.collector.tier_now() == "loopback"
     finally:
         await kit.close()
+
+
+def test_fast_save_writes_the_same_json(tmp_path: Path) -> None:
+    """``Run.json_obj`` (orjson serialises the dataclasses itself) gives exactly the JSON of ``to_dict``."""
+    run = run_from_dict(example_run())
+    assert orjson.loads(dumps(run.json_obj())) == orjson.loads(dumps(run.to_dict()))
+    assert dumps(run.json_obj()) == dumps(run.to_dict())  # same key order too

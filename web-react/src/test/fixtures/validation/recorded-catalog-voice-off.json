@@ -1,6 +1,6 @@
 {
  "_fixture": {
-  "source": "isolated scratch server on the lane's ports (cwd and PITWALL_DATA_DIR in scratch, LLM and voice off), feat/validate work in progress, 2026-10-11",
+  "source": "isolated scratch server on the lane's ports (cwd and PITWALL_DATA_DIR in scratch, LLM and voice off), feat/validate after the review fixes, 2026-10-11",
   "status": 200,
   "note": "GET /api/validation/catalog with voice off and one driver profile: radio tests, game_selection and driver_switch unavailable"
  },
@@ -38,7 +38,7 @@
     "est_minutes": 10,
     "optional": false,
     "per_driver": false,
-    "scope": "run",
+    "scope": "window",
     "prerequisites": [
      "Open Pitwall on the iPad from its Home Screen icon (added from the Tailscale address in Safari: Share › Add to Home Screen)."
     ],
@@ -83,7 +83,7 @@
       "capability_row": null
      }
     ],
-    "rule_text": "The iPad reports every 15 seconds. This passes when the page stayed visible on a Drive page with the wake lock on and telemetry live from the console for at least 5 minutes (heuristic), opened from the Home Screen icon over HTTPS, with no report more than 45 seconds late. It fails when the page was hidden or went quiet while you were driving and you say you did not touch the iPad.",
+    "rule_text": "While this test is current the iPad reports every 15 seconds. This passes when the page stayed visible on a Drive page with the wake lock on and telemetry live from the console for at least 5 minutes (heuristic), opened from the Home Screen icon over HTTPS, with no report more than 45 seconds late. It fails when the page was hidden or went quiet while you were driving and you say you did not touch the iPad.",
     "available": true,
     "unavailable_reason": null
    },
@@ -110,7 +110,7 @@
       "detail": null
      },
      {
-      "text": "Say the delta's sign and first digit.",
+      "text": "Say whether the time gap (delta) shows plus or minus, and its first number.",
       "detail": null
      },
      {
@@ -129,7 +129,7 @@
      },
      {
       "key": "read_delta",
-      "text": "I could read the delta's sign and first digit"
+      "text": "I could read whether the delta was plus or minus, and its first number"
      },
      {
       "key": "read_point",
@@ -154,7 +154,7 @@
     "group": "dashboard",
     "title": "Screen and radio give the same coaching point",
     "summary": "Five laps with the radio live: the coach card and the engineer must give the same point.",
-    "why": "The shared coaching pick (D6) has not been seen live.",
+    "why": "The coach card and the engineer should pick the same coaching point; that has not been seen live.",
     "est_minutes": 10,
     "optional": false,
     "per_driver": false,
@@ -274,7 +274,7 @@
     ],
     "rule_text": "A round trip is a question heard, answered and starting to play on the iPad. This passes after 2 round trips (heuristic) on the iPad opened over Tailscale HTTPS, with an AirPod as the microphone (from its name, or your tick) and at most 1 in 3 questions not heard (heuristic). Three attempts with no round trip fail. Quick answers should start within 4 s and engineer answers within 20 s (heuristic): shown as warnings.",
     "available": false,
-    "unavailable_reason": "Voice is off on this server."
+    "unavailable_reason": "Voice is off on this Mac."
    },
    {
     "id": "radio_speak_windows",
@@ -311,7 +311,7 @@
     ],
     "rule_text": "For each lap summary or coaching point Pitwall reads your brake and steering while it played, from the stored lap. Brake at 0.10 or more or steering beyond 0.25 (heuristic) is an overlap; ending less than 0.5 s (heuristic) before the next braking is tight. This passes with 6 messages measured on track over 3 laps (heuristic), no overlap and at most 1 tight. Two overlaps, or one into braking of 0.5 or more (heuristic), fail.",
     "available": false,
-    "unavailable_reason": "Voice is off on this server."
+    "unavailable_reason": "Voice is off on this Mac."
    },
    {
     "id": "radio_kokoro",
@@ -361,7 +361,7 @@
     ],
     "rule_text": "Pitwall counts messages the natural voice rendered that reached the iPad as audio and started playing. This passes with 5 such messages (heuristic), at most 20 % (heuristic) in the fallback voice, no restart of the voice worker, and the iPad set to the Mac's voice.",
     "available": false,
-    "unavailable_reason": "Voice is off on this server."
+    "unavailable_reason": "Voice is off on this Mac."
    },
    {
     "id": "cues_timing",
@@ -402,7 +402,7 @@
      }
     ],
     "prompt": "Did the calls land at or just before your braking points?",
-    "radio_brief": "Validation: braking calls. Three laps with calls off, then calls on all.",
+    "radio_brief": "Validation: braking calls. Three laps with braking calls off, then three with them on.",
     "input_check": null,
     "informs": [
      {
@@ -410,9 +410,9 @@
       "capability_row": null
      }
     ],
-    "rule_text": "Each call's key word is measured where the iPad started playing it; more than 5 m past its aim (the engine's own margin) is late. Your braking is read from the stored lap: the nearest onset within 100 m (heuristic) of the call's point, by distance, never by corner name. This passes with 8 calls measured (heuristic) over 3 braking zones (heuristic), none late, at most 10 % more than 0.6 s early (heuristic) and at most 20 % lost in delivery (heuristic). Two late calls fail. If you brake 10 m or more later (heuristic) with calls on than with them off (8 points each), the result needs review: calls must never delay braking. AI-field heads-ups are counted apart.",
+    "rule_text": "Each call's key word is measured where the iPad started playing it; more than 5 m past its aim (the engine's own margin) is late. Your braking is read from the stored lap: the nearest onset within 100 m (heuristic) of the call's point, by distance, never by corner name. This passes with 8 calls measured (heuristic) over 3 braking zones (heuristic), none late, at most 10 % more than 0.6 s early (heuristic) and at most 20 % lost in delivery (heuristic). Two late calls, or more than 10 % of the calls measured, fail. If you brake 10 m or more later (heuristic) with calls on than with them off (8 points each), the result is left for you to check: calls must never delay braking. AI-field heads-ups are counted apart.",
     "available": false,
-    "unavailable_reason": "Voice is off on this server."
+    "unavailable_reason": "Voice is off on this Mac."
    },
    {
     "id": "ac_ps5",
@@ -567,7 +567,7 @@
     ],
     "rule_text": "While this test is current Pitwall reads the chosen and the detected game every second. It passes when a mismatch came on and later went.",
     "available": false,
-    "unavailable_reason": "This server has no game choice yet."
+    "unavailable_reason": "This Mac has no game choice yet."
    },
    {
     "id": "driver_switch",
@@ -643,7 +643,7 @@
    },
    {
     "phrase": "what's the test",
-    "does": "Says the current test and what is still missing"
+    "does": "Says the current test and what it asks"
    },
    {
     "phrase": "finish validation",

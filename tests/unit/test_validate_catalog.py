@@ -43,7 +43,13 @@ def test_availability_per_requirement() -> None:
     assert all(availability(it, FULL)[0] for it in CATALOG)
     none = Availability()
     reasons = {it.id: availability(it, none)[1] for it in CATALOG}
-    assert reasons["radio_ptt"] == reasons["cues_timing"] == "Voice is off on this server."
+    assert reasons["radio_ptt"] == reasons["cues_timing"] == "Voice is off on this Mac."
+    off = Availability(hub=True, stt="none", stt_reason="speech recognition is switched off on the server", tts="none")
+    assert availability(BY_ID["radio_ptt"], off)[1] == "Speech recognition is off on this Mac."
+    assert availability(BY_ID["radio_kokoro"], off)[1] == (
+        "The engineer voice on this Mac is off, not the natural voice (Kokoro)."
+    )
+    assert availability(BY_ID["game_selection"], none)[1] == "This Mac has no game choice yet."
     assert reasons["driver_switch"] == "Add a second driver in Settings › Drivers first."
     assert reasons["ipad_home_screen"] is None and reasons["gt7_ps5"] is None
     no_stt = Availability(hub=True, stt="none", stt_reason="Parakeet needs Apple silicon", tts="say")

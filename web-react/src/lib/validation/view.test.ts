@@ -9,6 +9,9 @@ import { runWith, vfix } from "./testkit";
 import {
   AUTO_CHIP,
   CHECK_CHIP,
+  NO_INPUT_DATA,
+  REPORT_AUTO_CHIP,
+  REPORT_RESULT_CHIP,
   RESULT_CHIP,
   cellText,
   checkView,
@@ -35,8 +38,10 @@ import {
   radioLine,
   selectedIds,
   serverLine,
+  shownReasons,
   signedMetres,
   summaryRows,
+  telemetryChip,
   tierNotice,
   tiersLine,
   validationPath,
@@ -77,7 +82,7 @@ describe("the checklist", () => {
     const rows = groups.flatMap((g) => g.rows);
     expect(rows.find((r) => r.id === "cues_timing")).toMatchObject({ current: true, chip: { label: "Now" } });
     expect(rows.find((r) => r.id === "ipad_home_screen")?.chip.label).toBe("Pass");
-    expect(rows.find((r) => r.id === "radio_ptt")?.chip.label).toBe("Review");
+    expect(rows.find((r) => r.id === "radio_ptt")?.chip.label).toBe("To check"); // not "Review": that is a tab
     expect(rows.find((r) => r.id === "gt7_ps5")?.chip.label).toBe("Not yet");
   });
 
@@ -193,6 +198,36 @@ describe("numbers", () => {
     expect(headlineMetrics("gt7_ps5", {})).toEqual([]);
   });
 
+  it("checks on a test still going: not met is 'Not yet' (grey), red only once Pitwall sees a problem", () => {
+    const c = { id: "review_laps", label: "Laps", status: "not_met" as const, value: "0", target: ">= 3", heuristic: true };
+    expect(checkView(c).chip).toEqual(CHECK_CHIP.not_met); // the report: as measured
+    expect(checkView(c, "driver_only").chip).toMatchObject({ label: "Not yet", tone: "default" });
+    expect(checkView(c, "inconclusive").chip).toMatchObject({ label: "Not yet", tone: "default" });
+    expect(checkView(c, "fail").chip).toEqual(CHECK_CHIP.not_met);
+    expect(checkView({ ...c, id: "review_delay" }, "pass").chip).toMatchObject({ label: "To check", tone: "warning" });
+  });
+
+  it("the reasons under a not-live warning leave out the warning's own words", () => {
+    const auto = { verdict: "not_live" as const, reasons: ["This data is from a replay: it is shown but does not count", "No timed lap yet"] };
+    expect(shownReasons(auto)).toEqual(["No timed lap yet"]);
+    expect(shownReasons({ ...auto, verdict: "inconclusive" })).toEqual(auto.reasons);
+  });
+
+  it("the telemetry chip is never a green Live for data that does not count", () => {
+    expect(telemetryChip("live", "live")).toMatchObject({ label: "Live", tone: "success" });
+    expect(telemetryChip("live", "loopback")).toMatchObject({ label: "Data arriving · not counted", tone: "warning" });
+    expect(telemetryChip("live", "recorded").tone).toBe("warning");
+    expect(telemetryChip("stale", "recorded").label).toBe("Stale");
+  });
+
+  it("driver switch numbers read in words", () => {
+    expect(headlineMetrics("driver_switch", { switches: 2, ok: 1, problems: 1 }).map((m) => m.label)).toEqual([
+      "Switches",
+      "Clean switches",
+      "Problems",
+    ]);
+  });
+
   it("checks: '-' for unknown values, heuristic kept", () => {
     expect(checkView({ id: "x", label: "L", status: "unknown", value: null, target: ">= 8", heuristic: true })).toMatchObject({
       value: "-",
@@ -243,16 +278,31 @@ describe("input check facts", () => {
     rotation_deg: null,
     ...over,
   });
-  it("GT7: steering sign as expected or inverted, pedals in %", () => {
-    const ok = [rec("centre", { steer_mean: 0.01 }), rec("left", { steer_mean: -0.98 }), rec("right", { steer_mean: 0.97 }), rec("pedals", { throttle_max: 1, brake_max: 0.98 })];
+  it("GT7: steering sign as expected or inverted (full lock, not the mean), pedals in %", () => {
+    // the right phase starts from full left lock: its mean (−0.01) says nothing, its maximum does
+    const ok = [
+      rec("centre", { steer_mean: 0.01 }),
+      rec("left", { steer_mean: -0.6, steer_min: -0.98, steer_max: 0 }),
+      rec("right", { steer_mean: -0.01, steer_min: -0.98, steer_max: 0.97 }),
+      rec("pedals", { throttle_max: 1, brake_max: 0.98 }),
+    ];
     expect(inputCheckFacts(ok, "gt7_ps5")).toEqual([
       "Hands off: +0.01",
       "Full lock left: −0.98 · right: +0.97 · sign as expected",
       "Throttle at most 100 % · brake at most 98 %",
     ]);
-    const inv = [rec("left", { steer_mean: 0.9 }), rec("right", { steer_mean: -0.9 })];
-    expect(inputCheckFacts(inv, "gt7_ps5")[0]).toContain("steering sign looks inverted");
+    const inv = [rec("left", { steer_min: 0, steer_max: 0.9 }), rec("right", { steer_min: -0.9, steer_max: 0.9 })];
+    expect(inputCheckFacts(inv, "gt7_ps5")[0]).toBe("Full lock left: +0.90 · right: −0.90 · steering sign looks inverted");
+    const short = [rec("left", { steer_min: -0.3, steer_max: 0 }), rec("right", { steer_min: -0.3, steer_max: 0.4 })];
+    expect(inputCheckFacts(short, "gt7_ps5")[0]).toContain("full lock not reached");
     expect(inputCheckFacts(ok, "ac_ps5")).toEqual([]); // another test's records
+  });
+  it("nothing came from the car: one sentence, no row of dashes or a session's figures", () => {
+    const none = [
+      rec("left", { item_id: "ac_ps5", samples: 0, steer_raw_range: [-4.29, 39.68], rotation_deg: 900 }),
+      rec("right", { item_id: "ac_ps5", samples: 0 }),
+    ];
+    expect(inputCheckFacts(none, "ac_ps5")).toEqual([NO_INPUT_DATA]);
   });
   it("AC: the raw range with the rotation entered, reverse seen or not, unknown as '-'", () => {
     const ac = [
@@ -273,7 +323,7 @@ describe("reports", () => {
   it("count chips: non-zero only, in a fixed order, status colours", () => {
     expect(countChips(vfix.run().counts)).toEqual([
       { key: "pass", label: "1 passed", tone: "success" },
-      { key: "needs_review", label: "2 to review", tone: "warning" },
+      { key: "needs_review", label: "2 to check", tone: "warning" },
       { key: "not_run", label: "1 not run", tone: "default" },
     ]);
   });
@@ -284,6 +334,15 @@ describe("reports", () => {
     expect(serverLine({ ...rep.run.server, stt: "none" })).toBe("pitwall 0.1.0 (a1b2c3d) · macOS · voice on (Kokoro) · LLM on");
     expect(serverLine({ ...rep.run.server, voice_enabled: false, llm_enabled: false, git_commit: null })).toBe("pitwall 0.1.0 · macOS · voice off · LLM off");
     expect(tiersLine(rep.tiers)).toBe("412 live records · 3 from replays, generated data or unknown sources");
+  });
+  it("a finished report says Not run / Nothing seen, not Not yet; a run still going keeps Not yet", () => {
+    const going = vfix.report();
+    const done = { ...going, in_progress: false, items: going.items.map((i) => ({ ...i, result: "not_run" as const, auto: { ...i.auto, verdict: "no_evidence" as const, reasons: ["No braking calls yet"] } })) };
+    expect(summaryRows(done)[0]).toMatchObject({ result: { label: "Not run" }, saw: { label: "Nothing seen" }, key: "No braking calls" });
+    const still = { ...done, in_progress: true };
+    expect(summaryRows(still)[0]).toMatchObject({ result: { label: "Not yet" }, saw: { label: "Not seen yet" }, key: "No braking calls yet" });
+    expect(REPORT_RESULT_CHIP.not_run.label).toBe("Not run");
+    expect(REPORT_AUTO_CHIP.no_evidence.label).toBe("Nothing seen");
   });
   it("summary rows: plain words, the first reason as the key evidence", () => {
     const rows = summaryRows(vfix.report());

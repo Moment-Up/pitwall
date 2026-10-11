@@ -435,7 +435,9 @@ class Evidence:
         return counts
 
 
-# Buffer limits (oldest dropped; ``Run.dropped_records`` counts them). A full run.json stays below ~2 MB.
+# Buffer limits (oldest dropped; ``Run.dropped_records`` counts them). Measured: a 3-hour session's run.json is about
+# 1.7 MB, and every buffer full about 7.3 MB; ``Run.json_obj`` serialises the latter in about 14 ms on the loop (at most
+# every 2 s while the run changes), the former in about 3 ms.
 LIMITS: dict[str, int] = {
     "cues": 2000,
     "ptt": 500,
@@ -481,8 +483,37 @@ class Run:
     def item(self, item_id: str) -> ItemState | None:
         return next((it for it in self.items if it.id == item_id), None)
 
+    def json_obj(self) -> dict[str, Any]:
+        """``to_dict`` for orjson: the same JSON, but the dataclasses are left for orjson to serialise natively (about
+        4x faster than ``dataclasses.asdict``, which deep-copies every record on the event loop)."""
+        ev = self.evidence
+        return {
+            "format": self.format,
+            "id": self.id,
+            "label": self.label,
+            "status": self.status,
+            "version": self.version,
+            "started_unix": self.started_unix,
+            "ended_unix": self.ended_unix,
+            "current_item": self.current_item,
+            "selected_items": self.selected_items,
+            "radio_prompts": self.radio_prompts,
+            "server": self.server,
+            "items": self.items,
+            "evidence": {f.name: getattr(ev, f.name) for f in dataclasses.fields(ev)},
+            "client_states": self.client_states,
+            "timeline": self.timeline,
+            "context": self.context,
+            "notes": self.notes,
+            "dropped_records": self.dropped_records,
+            "last_saved_unix": self.last_saved_unix,
+            "session_tiers": self.session_tiers,
+            "session_extra": self.session_extra,
+            "prompted": self.prompted,
+        }
+
     def to_dict(self) -> dict[str, Any]:
-        """Everything (``run.json``)."""
+        """Everything (``run.json``), as plain dicts and lists."""
         return {
             "format": self.format,
             "id": self.id,

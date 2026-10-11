@@ -67,15 +67,23 @@ def test_replies_are_short_british_and_use_digits() -> None:
         V.next_test(None),
         V.marked("braking calls", True),
         V.marked("braking calls", False),
-        V.status(3, 9, "braking calls", "6 calls measured, 8 needed"),
+        V.status(3, 9, "braking calls", BY_ID["cues_timing"].radio_brief),
         V.finished(5, 1, 3),
         V.verdict_prompt("braking calls", "pass"),
-        V.NO_RUN,
+        V.back_to(BY_ID["ipad_one_message"].radio_brief),
+        V.marked("glance test", False, "Sam"),
+        V.FINISHING,
+        V.FINISH_FAILED,
     ]
-    assert texts[0] == "Validation started. First test: braking calls. Three laps with calls off, then calls on all."
-    assert texts[5] == "Test 3 of 9: braking calls. 6 calls measured, 8 needed."
-    assert texts[6] == "Validation finished. 5 worked, 1 didn't, 3 to review. Report saved."
+    assert texts[0] == (
+        "Validation started. First test: braking calls. Three laps with braking calls off, then three with them on."
+    )
+    assert texts[3] == "Braking calls: noted as worked."
+    assert texts[5] == "Test 3 of 9: braking calls. Three laps with braking calls off, then three with them on."
+    assert texts[6] == "Validation finished. 5 passed, 1 failed, 3 to check. Report saved."
+    assert texts[8] == "Back to the one message test. Five laps; check the coach card matches what I say."
+    assert texts[9] == "Glance test: noted as didn't work for Sam. Add a note on the iPad when you stop."
     for t in texts:
         assert len(t.split()) <= 25 and not AMERICAN.search(t)
-    long = V.status(1, 9, "braking calls", " ".join(["word"] * 40))
-    assert len(long.split()) <= 25
+    long = V.status(1, 9, "braking calls", "Validation: braking calls. " + " ".join(["word"] * 40))
+    assert len(long.split()) <= 25 and long.endswith(".")

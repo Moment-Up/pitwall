@@ -77,3 +77,13 @@ def test_empty_data_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
         assert CliRunner().invoke(app, ["validate", "show"]).exit_code == 1
     finally:
         get_settings.cache_clear()
+
+
+def test_show_says_when_there_is_no_evidence(data_dir: Path) -> None:
+    run = json.loads(EXAMPLE.read_text(encoding="utf-8"))["run"]
+    bare = {**run, "id": "20261013-100000-0001", "evidence": {}}
+    ValidationStore(data_dir).save_run(bare["id"], json.dumps(bare).encode())
+    r = CliRunner().invoke(app, ["validate", "show", bare["id"]])
+    assert r.exit_code == 0 and "Evidence: none" in r.output
+    r = CliRunner().invoke(app, ["validate", "show", RUN_ID])
+    assert "Evidence: live " in r.output

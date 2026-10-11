@@ -2,7 +2,8 @@
 // with the accent edge, the title at 28 px, the catalogue's "why", what to have ready, the numbered steps at 20 px,
 // the optional input check, "What Pitwall saw", the driver's confirmations and Worked / Didn't work / Add a note
 // (64 px), then ‹ Previous · Skip for now · Next › at the bottom where a thumb reaches them (sticky from 768 px, 96 px
-// up while the shell's mini radio bar shows). Every instruction is the catalogue's text: the UI adds no advice.
+// up while the shell's mini radio bar shows; on a phone Skip gets its own row above the two). The iPad tests that are
+// driven on Drive › Coach link there. Every instruction is the catalogue's text: the UI adds no advice.
 
 import { Alert, Button, Card } from "@heroui/react";
 import { useEffect, useRef, useState } from "react";
@@ -44,7 +45,12 @@ export interface StepCardProps {
   onInputDone: () => void;
   /** The input check was opened or closed (its results are loaded only while it is open). */
   onInputOpen?: (open: boolean) => void;
+  /** Open Drive › Coach (shown on the tests driven there). */
+  onOpenDrive?: () => void;
 }
+
+/** Tests whose steps say "Open Drive › Coach" (or keep it open). */
+const ON_DRIVE = new Set(["ipad_home_screen", "ipad_glance", "ipad_endurance"]);
 
 const STEP_TEXT = "text-[20px] leading-[1.5]";
 
@@ -119,6 +125,11 @@ export function StepCard(p: StepCardProps) {
             </li>
           ))}
         </ol>
+        {ON_DRIVE.has(item.id) && p.onOpenDrive ? (
+          <Button variant="secondary" className="mt-1 min-h-14 justify-self-start px-5 text-base" onPress={p.onOpenDrive}>
+            Open Drive › Coach
+          </Button>
+        ) : null}
       </section>
 
       {item.input_check?.length ? (
@@ -172,16 +183,16 @@ export function StepCard(p: StepCardProps) {
 
       <div
         data-validation-nav
-        className={`z-10 -mx-1 -mb-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-t border-separator bg-surface px-1 pt-3 pb-2 sm:gap-3 md:sticky ${
+        className={`z-10 -mx-1 -mb-2 grid grid-cols-2 items-center gap-2 border-t border-separator bg-surface px-1 pt-3 pb-2 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-3 md:sticky ${
           p.radioBar ? "md:bottom-[96px]" : "md:bottom-0"
         }`}
       >
-        <Button variant="secondary" className="min-h-16 px-4 text-base sm:px-6 sm:text-lg" isDisabled={p.isFirst || busy} onPress={p.onPrev}>
+        <Button variant="secondary" className="min-h-16 w-full px-4 text-base sm:w-auto sm:px-6 sm:text-lg" isDisabled={p.isFirst || busy} onPress={p.onPrev}>
           ‹ Previous
         </Button>
-        <span className="flex min-w-0 justify-end">
+        <span className="order-first col-span-2 flex min-w-0 justify-center empty:hidden sm:order-none sm:col-span-1 sm:justify-end sm:empty:flex">
           {isCurrent && state.status !== "skipped" && !mark ? (
-            // wraps onto two lines in a narrow card (iPad portrait) instead of running under ‹ Previous
+            // a phone gives it a row of its own above ‹ Previous / Next ›; wraps in a narrow card (iPad portrait)
             <Button
               variant="ghost"
               className="h-auto min-h-11 max-w-full px-2 text-center leading-tight whitespace-normal sm:px-4"
@@ -193,15 +204,15 @@ export function StepCard(p: StepCardProps) {
           ) : null}
         </span>
         {!isCurrent ? (
-          <Button className="min-h-16 px-4 text-base sm:px-8 sm:text-lg" isDisabled={busy || unavailable} onPress={p.onMakeCurrent}>
+          <Button className="min-h-16 w-full px-4 text-base sm:w-auto sm:px-8 sm:text-lg" isDisabled={busy || unavailable} onPress={p.onMakeCurrent}>
             Start this test
           </Button>
         ) : p.isLast ? (
-          <Button className="min-h-16 px-4 text-base sm:px-8 sm:text-lg" isDisabled={busy} onPress={p.onFinish}>
+          <Button className="min-h-16 w-full px-4 text-base sm:w-auto sm:px-8 sm:text-lg" isDisabled={busy} onPress={p.onFinish}>
             Finish and save
           </Button>
         ) : (
-          <Button className="min-h-16 px-5 text-base sm:px-8 sm:text-lg" isDisabled={busy} onPress={p.onNext}>
+          <Button className="min-h-16 w-full px-5 text-base sm:w-auto sm:px-8 sm:text-lg" isDisabled={busy} onPress={p.onNext}>
             Next ›
           </Button>
         )}

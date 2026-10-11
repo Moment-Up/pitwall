@@ -467,17 +467,41 @@ def test_ac_verdict() -> None:
     st = R.ac_verdict(recorded, None, [], NOW)
     assert st.verdict == "inconclusive" and st.reasons[0] == "No timed lap yet"
     by = {c.id: c for c in st.checks}
-    assert by["handshake"].status == "met" and "4242" in (by["handshake"].value or "")
+    assert by["handshake"].status == "met" and by["handshake"].value == "answered"
+    assert st.metrics["handshake_status"] == 4242 and st.metrics["handshake_encoding"] == "utf-16le"  # maintainer
+    # the checks list what is missing; the reasons only count them and say what to do (no repeated check rows)
+    gating = [c for c in st.checks if c.id not in R.INPUT_CHECK_IDS]
+    met = sum(1 for c in gating if c.status == "met")
+    assert st.reasons == [
+        "No timed lap yet",
+        f"{met} of {len(gating)} checks met",
+        "Tick 'lap times match the game's' when you have compared them",
+    ]
+    unnamed = R.ac_verdict(ac(track_id=None, track_name=None, timed_laps=[]), None, [], NOW)
+    assert {c.id: c.label for c in unnamed.checks}["timed_laps"] == "Laps timed on one circuit"  # no "(-)"
+
+
+def test_ac_optional_pedal_check_never_gates() -> None:
+    """The input check has no verdict of its own: soft pedals (0.94) leave AC passing, as GT7."""
+    pedals = [InputPhaseRecord("ac_ps5", "pedals", NOW, NOW + 6, samples=40, throttle_max=0.94, brake_max=1.0)]
+    st = R.ac_verdict(ac(), True, pedals, NOW)
+    assert st.verdict == "pass" and {c.id: c.status for c in st.checks}["pedals"] == "not_met"
 
 
 def test_input_check_evidence() -> None:
-    def ph(phase: str, mean: float | None = None, **kw: Any) -> InputPhaseRecord:
-        return InputPhaseRecord("gt7_ps5", phase, NOW, NOW + 3, samples=30, steer_mean=mean, **kw)
+    def ph(phase: str, lo: float | None = None, hi: float | None = None, **kw: Any) -> InputPhaseRecord:
+        mean = None if lo is None or hi is None else (lo + hi) / 2
+        return InputPhaseRecord(
+            "gt7_ps5", phase, NOW, NOW + 3, samples=30, steer_mean=mean, steer_min=lo, steer_max=hi, **kw
+        )
 
-    ok = {c.id: c for c in R.input_check_checks([ph("left", -0.9), ph("right", 0.92)], "gt7")}
-    assert ok["steer_sign"].status == "met"
-    inv = {c.id: c for c in R.input_check_checks([ph("left", 0.9), ph("right", -0.92)], "gt7")}
+    # the left phase starts from the centre; the right phase from full left lock (its mean can sit near 0)
+    ok = {c.id: c for c in R.input_check_checks([ph("left", -0.98, 0.0), ph("right", -0.98, 0.97)], "gt7")}
+    assert ok["steer_sign"].status == "met" and ok["steer_sign"].value == "left -0.98, right +0.97"
+    inv = {c.id: c for c in R.input_check_checks([ph("left", 0.0, 0.9), ph("right", -0.92, 0.9)], "gt7")}
     assert inv["steer_sign"].status == "not_met" and "inverted" in (inv["steer_sign"].value or "")
+    short = {c.id: c for c in R.input_check_checks([ph("left", -0.3, 0.0), ph("right", -0.3, 0.4)], "gt7")}
+    assert short["steer_sign"].status == "unknown"  # full lock not reached: no verdict either way
     acs = {
         c.id: c
         for c in R.input_check_checks(
@@ -491,9 +515,15 @@ def test_input_check_evidence() -> None:
 
 # ------------------------------------------------------------------------------------------------ game choice, switches
 def test_game_selection_verdict() -> None:
-    g = lambda m: GameTransition(NOW, "f1_25_ps5", "gt7", m)  # noqa: E731
-    assert R.game_selection_verdict([g(False), g(True), g(False)], NOW).verdict == "pass"
+    g = lambda m: GameTransition(NOW, "f1_25_ps5", "gt7_ps5", m)  # noqa: E731
+    chosen = GameTransition(NOW, "gt7_ps5", "gt7_ps5", False)
+    assert R.game_selection_verdict([g(False), g(True), chosen], NOW).verdict == "pass"
     assert R.game_selection_verdict([g(False), g(True)], NOW).verdict == "inconclusive"
+    # the banner going because the choice was cleared, or the game stopped, is not "chose that game"
+    cleared = GameTransition(NOW, None, "gt7_ps5", False)
+    stopped = GameTransition(NOW, "f1_25_ps5", None, False)
+    assert R.game_selection_verdict([g(True), cleared], NOW).verdict == "inconclusive"
+    assert R.game_selection_verdict([g(True), stopped], NOW).verdict == "inconclusive"
     assert R.game_selection_verdict([], NOW).verdict == "no_evidence"
 
 
@@ -521,6 +551,8 @@ def sw(**kw: Any) -> SwitchRecord:
 def test_switch_rules() -> None:
     assert R.switch_ok(sw()) == (True, [])
     assert R.switch_verdict([sw()], NOW).verdict == "pass"
+    assert R.switch_verdict([sw(), sw()], NOW).reasons == ["2 switches: each driver's laps under their own name"]
+    assert R.switch_verdict([sw()], NOW).reasons == ["1 switch: each driver's laps under their own name"]
     assert R.switch_verdict([sw(laps_after=0)], NOW).verdict == "inconclusive"
     assert R.switch_verdict([sw(laps_before_after_switch=1)], NOW).verdict == "fail"
     assert R.switch_verdict([sw(after_driver_id=1)], NOW).verdict == "fail"
@@ -539,7 +571,7 @@ def expected(driver: str | None, auto: str, skipped: bool) -> str:
     if skipped:
         return "skipped"
     if driver is None:
-        if auto in ("no_evidence", "unavailable", "driver_only"):
+        if auto in ("no_evidence", "unavailable", "driver_only", "not_live"):
             return "not_run"
         return "fail" if auto == "fail" else "needs_review"
     if driver == "didnt" or auto == "fail":

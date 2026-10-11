@@ -456,7 +456,7 @@ export interface ValidationReport {
 // POST /api/validation/runs/{id}/records/ptt/{record_id}   { heard_right: boolean | null } -> Run
 // POST /api/validation/runs/{id}/finish         { notes?: string | null } -> Run
 // POST /api/validation/runs/{id}/abort          {}               -> Run
-// GET  /api/validation/runs/{id}/report                          -> ValidationReport
+// GET  /api/validation/runs/{id}/report?redact_transcripts=      -> ValidationReport
 // GET  /api/validation/runs/{id}/report.md?redact_transcripts=   -> text/markdown
 // POST /api/validation/client                   ClientReport     -> 204 | 409 { detail: "no active run" }
 // ---------------------------------------------------------------------------------------------- /CONTRACT
@@ -546,7 +546,7 @@ export const validationPaths = {
   ptt: (id: string, record: string) => `${BASE}/runs/${enc(id)}/records/ptt/${enc(record)}`,
   finish: (id: string) => `${BASE}/runs/${enc(id)}/finish`,
   abort: (id: string) => `${BASE}/runs/${enc(id)}/abort`,
-  report: (id: string) => `${BASE}/runs/${enc(id)}/report`,
+  report: (id: string, redactTranscripts = false) => `${BASE}/runs/${enc(id)}/report${redactTranscripts ? "?redact_transcripts=true" : ""}`,
   reportMd: (id: string, redactTranscripts = false) =>
     `${BASE}/runs/${enc(id)}/report.md${redactTranscripts ? "?redact_transcripts=true" : ""}`,
   client: () => `${BASE}/client`,
@@ -596,7 +596,8 @@ export const validationApi = {
   markPtt: (id: string, record: string, heardRight: boolean | null) => post<Run>(validationPaths.ptt(id, record), { heard_right: heardRight }),
   finish: (id: string, notes: string | null) => post<Run>(validationPaths.finish(id), { notes: notes?.trim() ? notes.trim().slice(0, NOTES_MAX) : null }),
   abort: (id: string) => post<Run>(validationPaths.abort(id), {}),
-  report: (id: string) => req<ValidationReport>(validationPaths.report(id)),
+  /** The report; with `redactTranscripts` the driver's transcripts are replaced (Download JSON honours the switch). */
+  report: (id: string, redactTranscripts = false) => req<ValidationReport>(validationPaths.report(id, redactTranscripts)),
   /** The Markdown report as text (fetched with the tab's credentials). */
   reportMarkdown: async (id: string, redactTranscripts = false): Promise<string> => {
     const r = await authFetch(validationPaths.reportMd(id, redactTranscripts));

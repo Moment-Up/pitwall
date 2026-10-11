@@ -345,3 +345,161 @@ def test_compute_auto_live_only_and_not_live() -> None:
     un = E.compute_auto("radio_ptt", vs, E.AutoContext(NOW, [], {}, False, "Voice is off on this server."))
     assert un.verdict == "unavailable" and un.reasons == ["Voice is off on this server."]
     assert E.compute_auto("cues_timing", vs, ctx).verdict == "no_evidence"
+
+
+# ------------------------------------------------------------------------------------------------ review fixes
+def _ipad(samples: list[ClientSample]) -> ClientState:
+    return ClientState("c1", "ipad", NOW, {"standalone": True, "origin_kind": "tailscale_https"}, NOW, samples=samples)
+
+
+def _samples(start: float, parts: list[tuple[str, str, int]], **kw: Any) -> list[ClientSample]:
+    """Reports every 15 s: (tier, telemetry, count) per stretch, visible on Drive › Coach with the wake lock on."""
+    out: list[ClientSample] = []
+    t, seq = start, 0
+    for tier, telemetry, n in parts:
+        for _ in range(n):
+            visible = kw.get("visible", True)
+            out.append(ClientSample(t, seq, visible, "drive/coach", True, "on", telemetry, tier, True, True))  # type: ignore[arg-type]
+            t += 15.0
+            seq += 1
+    return out
+
+
+def _home_auto(run: Run, attest: dict[str, bool], now: float) -> Any:
+    it = run.item("ipad_home_screen")
+    assert it is not None
+    return E.compute_auto("ipad_home_screen", E.views(run), E.AutoContext(now, it.windows, attest))
+
+
+def test_home_screen_a_telemetry_pause_is_not_a_missing_report() -> None:
+    """3 min live, 2 min in the menus (telemetry stopped), 7 min live, the iPad visible on Drive and untouched: the
+    pause is not a gap, and the 7-minute stretch passes (it was an automatic fail with 1 gap)."""
+    run = _run(Evidence(), ["ipad_home_screen"])
+    run.items[0].windows = [Window(NOW - 1.0)]
+    run.client_states = [_ipad(_samples(NOW, [("live", "live", 12), ("unknown", "stale", 8), ("live", "live", 28)]))]
+    st = _home_auto(run, {"did_not_touch": True}, NOW + 3600)
+    assert st.verdict == "pass" and st.tier == "live", st.reasons
+    assert st.metrics["gaps"] == 0 and st.metrics["hidden_transitions"] == 0
+    assert st.metrics["wake_on_streak_s"] == pytest.approx(27 * 15.0)
+    assert E.client_summary(run.client_states[0], NOW + 3600)["gaps"] == 0  # the same as the device summary
+
+
+def test_home_screen_reads_only_its_own_window() -> None:
+    """A page hidden during another test (a note, a driver switch) is not this test's evidence."""
+    run = _run(Evidence(), ["ipad_home_screen"])
+    before = _samples(NOW - 1000, [("live", "live", 4)])
+    before[-1].visible = False  # hidden while driving, before the test was current
+    during = _samples(NOW, [("live", "live", 24)])
+    for s in during:
+        s.seq += 10
+    run.client_states = [_ipad(before + during)]
+    run.items[0].windows = [Window(NOW - 1.0)]
+    st = _home_auto(run, {"did_not_touch": True}, NOW + 3600)
+    assert st.verdict == "pass" and st.metrics["hidden_transitions"] == 0
+    run.items[0].windows = [Window(NOW - 2000.0)]  # the whole run: the hidden page counts
+    assert _home_auto(run, {"did_not_touch": True}, NOW + 3600).verdict == "fail"
+
+
+def test_glance_needs_live_evidence_to_pass() -> None:
+    """'Worked' with no laps and no iPad on Drive › Coach needs review; laps seen only in a replay are not live."""
+    run = _run(Evidence(), ["ipad_glance"])
+    it = run.items[0]
+    it.windows = [Window(NOW - 10.0)]
+    ctx = E.AutoContext(NOW + 600, it.windows, {})
+    st = E.compute_auto("ipad_glance", E.views(run), ctx)
+    assert st.verdict == "driver_only" and R.forces_review(st)
+    from pitwall.validate.model import DriverMark
+
+    assert R.item_result(st, [DriverMark(1, "worked")], True, False) == "needs_review"
+    for i in range(3):
+        run.evidence.laps.append(
+            LapRecord(NOW + i, "recorded", "r", 1, 10 + i, i + 1, 90000, True, [], "f1_25", "t", "T", "all", 1, [])
+        )
+    st = E.compute_auto("ipad_glance", E.views(run), ctx)
+    assert st.verdict == "not_live" and st.tier == "recorded"
+    assert R.item_result(st, [], True, False) == "not_run"  # replays never count: nothing to check either
+    assert R.item_result(st, [DriverMark(1, "worked")], True, False) == "needs_review"
+    for i in range(3):
+        run.evidence.laps.append(
+            LapRecord(NOW + 9 + i, "live", "l", 1, 20 + i, i + 1, 90000, True, [], "f1_25", "t", "T", "all", 1, [])
+        )
+    run.client_states = [_ipad(_samples(NOW, [("live", "live", 4)]))]
+    st = E.compute_auto("ipad_glance", E.views(run), ctx)
+    assert st.verdict == "driver_only" and not R.forces_review(st)
+    assert R.item_result(st, [DriverMark(1, "worked")], True, False) == "pass"
+
+
+def test_decode_tally_subtracts_what_the_adapter_counted_before_the_run() -> None:
+    """Adapters live as long as the service: 5 rejects from this morning must not fail this evening's run."""
+    store: dict[str, dict[str, Any]] = {}
+    base = E.decode_counts({"packets": 90000, "rejected": 5, "errors": 1, "by_type": {"variant_C": 90000}})
+    E.tally_decode(
+        store, "live|gt7", {"packets": 90200, "rejected": 5, "errors": 1, "by_type": {"variant_C": 90200}}, base
+    )
+    assert E.decode_totals(store, "gt7", lambda t: t == "live") == {
+        "packets": 200,
+        "rejected": 0,
+        "errors": 0,
+        "variants": {"C": 200},
+    }
+    E.tally_decode(
+        store, "live|gt7", {"packets": 90400, "rejected": 6, "errors": 1, "by_type": {"variant_C": 90400}}, base
+    )
+    assert E.decode_totals(store, "gt7", lambda t: True)["rejected"] == 1  # a reject during the run still counts
+    # the input restarted: a new adapter instance counts from 0 and the old instance's run share is banked
+    E.tally_decode(store, "live|gt7", {"packets": 200, "rejected": 2, "errors": 0, "by_type": {"variant_C": 200}}, base)
+    tot = E.decode_totals(store, "gt7", lambda t: True)
+    assert tot is not None and tot["rejected"] == 3 and tot["packets"] == 600
+    # an adapter that started during the run (fewer packets than the base) keeps every count
+    fresh: dict[str, dict[str, Any]] = {}
+    E.tally_decode(fresh, "live|ac", {"packets": 200, "rejected": 1, "errors": 0}, E.decode_counts({"packets": 5000}))
+    assert E.decode_totals(fresh, "ac", lambda t: True)["rejected"] == 1  # type: ignore[index]
+
+
+def test_endurance_counts_only_reloads_while_it_was_current() -> None:
+    early = _samples(NOW, [("live", "live", 3)])
+    early[-1].seq = 0  # a reload an hour before the test
+    late = _samples(NOW + 3600, [("live", "live", 3)])
+    for k, s in enumerate(late):
+        s.endurance = True
+        s.fps_10s = 60.0
+        s.seq = 10 + k
+    assert E.endurance_reloads(early + late) == 0
+    late[2].seq = 1  # reloaded during the test
+    assert E.endurance_reloads(early + late) == 1
+
+
+def test_no_matched_onset_for_calls_on_flashback_or_pit_laps() -> None:
+    """The calls-off baseline leaves flashback and pit laps out, so their calls get no onset either (like laps)."""
+    ev = Evidence()
+    for lap_id, number, flags in ((1, 2, []), (2, 3, ["flashback"]), (3, 4, ["pit_in"])):
+        ev.laps.append(
+            LapRecord(NOW, "live", "s1", 1, lap_id, number, 90000, True, flags, "f1_25", "t", "T", "all", 1, [])
+        )
+        ev.lap_onsets[str(lap_id)] = [1003.0]
+    for seq, number in ((1, 2), (2, 3), (3, 4)):
+        ev.cues.append(
+            CueRecord(
+                NOW,
+                "live",
+                "s1",
+                1,
+                seq,
+                "m",
+                number,
+                "T1",
+                "brake",
+                False,
+                False,
+                1000.0,
+                995.0,
+                900.0,
+                250.0,
+                1.0,
+                "pcm",
+                "sent",
+                error_m=1.0,
+            )
+        )
+    E.enrich_cues(ev)
+    assert [c.onset_m for c in ev.cues] == [1003.0, None, None]

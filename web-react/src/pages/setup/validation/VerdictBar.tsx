@@ -109,9 +109,10 @@ export function VerdictBar({ prompt, mark, others, perDriver, driver, driverId, 
         </p>
       ) : null}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto]">
+        {/* Both answers look the same until one is given: nothing nudges the driver (or a child) towards Worked. */}
         <Button
           size="lg"
-          variant={mark?.verdict === "didnt" ? "secondary" : "primary"}
+          variant={mark?.verdict === "worked" ? "primary" : "secondary"}
           className="min-h-16 w-full text-lg"
           aria-pressed={mark?.verdict === "worked"}
           isDisabled={busy}

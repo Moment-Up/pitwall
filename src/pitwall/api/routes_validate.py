@@ -14,7 +14,7 @@ Endpoints (contract: the dashboard's ``lib/endpoints/validation.ts``)
     POST /runs/{id}/records/ptt/{record_id}         {heard_right} -> Run
     POST /runs/{id}/finish                          {notes?} -> Run
     POST /runs/{id}/abort                           {} -> Run
-    GET  /runs/{id}/report                          ValidationReport
+    GET  /runs/{id}/report?redact_transcripts=      ValidationReport
     GET  /runs/{id}/report.md?redact_transcripts=   text/markdown
     POST /client                                    ClientReport -> 204 | 409 {detail: "no active run"}
 
@@ -258,9 +258,11 @@ async def abort(request: Request, run_id: RunId, body: EmptyBody | None = None) 
 
 
 @router.get("/runs/{run_id}/report")
-async def report(request: Request, run_id: RunId) -> dict[str, Any]:
+async def report(
+    request: Request, run_id: RunId, redact_transcripts: Annotated[bool, Query()] = False
+) -> dict[str, Any]:
     try:
-        rep, _run = await kit(request).report(run_id)
+        rep, _run = await kit(request).report(run_id, redact_transcripts)
     except KitError as e:
         raise _fail(e) from e
     return rep

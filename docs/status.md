@@ -117,7 +117,7 @@ wake lock, glance test (each driver), one coaching message, one hour on Drive (o
 with an AirPod, speak windows, the natural voice, braking-call timing, AC on the PS5, GT7 on the PS5, the game-choice
 banner (only when the game-selection feature is present) and driver switching. Each test gets an automatic verdict
 from fixed rules (thresholds that are first guesses are labelled heuristic) plus the driver's Worked / Didn't work;
-disagreement is "needs review". Reports are files only: `<data_dir>/validation/<run_id>/{run.json, report.json,
+disagreement is "to check". Reports are files only: `<data_dir>/validation/<run_id>/{run.json, report.json,
 report.md}` (no database change).
 - **Evidence tiers are kept apart:** every record is tagged live / recorded / synthetic / loopback (a recording sent
   with `pitwall send`) / unknown, and only live evidence can pass. **The kit never changes a capability status:** the
@@ -140,6 +140,11 @@ report.md}` (no database change).
   still reach the engineer), and Setup › Validation in headless Chromium at 1180 × 820, 820 × 1180 and 390 × 844 in
   both themes (start, verdicts, a confirmation, a note, next, skip, finish, reports, Open report, Download JSON; no
   sideways scroll, no console errors; device reports arrive as `browser` / `localhost` and stop after finish).
+- **Review fixes (2026-10-11, unit + synthetic + recorded, not live):** a telemetry pause no longer reads as a missing
+  iPad report and the screen test reads only its own window; radio prompts only for the current test, and with no run
+  only "start validation" is a command; adapter counters from before the run never fail AC / GT7; the glance test
+  cannot pass without live laps; JSON reports honour "Leave out transcripts" (on by default). Re-checked on the
+  isolated scratch server (replays, a loopback stream, headless Chromium at 1180 × 820 and 390 × 844).
 <!-- end validation kit -->
 
 ## Known limitations

@@ -1,15 +1,14 @@
-// One run's report (spec 9 and 12.3): the summary (Pro DataGrid: Test · Result · Driver · Pitwall saw · Key evidence),
-// one Disclosure per test with its checks, numbers, reasons and evidence tables, then what the run can support for the
-// maintainer and the fixed disclaimer. Open report shows report.md in a new tab; Download JSON saves report.json.
-// The report never changes a capability status.
+// One run's report (spec 9 and 12.3): the summary (Pro DataGrid: Test · Result · Driver · Pitwall saw · Key evidence;
+// from 768 px, a phone reads the same chips in the per-test sections), one Disclosure per test with its checks,
+// numbers, reasons and evidence tables, then what the run can support for the maintainer (folded when nothing was met)
+// and the fixed disclaimer. Open report shows report.md in a new tab; Download JSON saves report.json; both leave the
+// driver's transcripts out unless "Leave out transcripts" is switched off. The report never changes a capability status.
 
 import { Alert, Button, Card, Chip } from "@heroui/react";
 import { CellSwitch, DataGrid, type DataGridColumn } from "@heroui-pro/react";
 import { useState } from "react";
 import type { ReportItem, ValidationReport } from "../../../lib/endpoints/validation";
 import {
-  AUTO_CHIP,
-  RESULT_CHIP,
   RUN_STATUS_WORD,
   allMetrics,
   cellText,
@@ -17,7 +16,8 @@ import {
   dateTime,
   driverLabel,
   markLine,
-  reasonText,
+  reportChips,
+  reportReason,
   runTitle,
   serverLine,
   summaryRows,
@@ -78,20 +78,21 @@ function EvidenceTable({ title, columns, rows }: ReportItem["evidence_tables"][n
   );
 }
 
-function ItemDetail({ item, names }: { item: ReportItem; names: ReadonlyMap<number, string> }) {
-  const checks = item.auto.checks.map(checkView);
+function ItemDetail({ item, names, inProgress }: { item: ReportItem; names: ReadonlyMap<number, string>; inProgress: boolean }) {
+  const checks = item.auto.checks.map((c) => checkView(c));
   const metrics = allMetrics(item.auto.metrics);
+  const chips = reportChips(inProgress);
   return (
     <Fold
       title={
         <span className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-2 pr-2">
           <span className="min-w-0">{item.title}</span>
-          <StatusChip chip={RESULT_CHIP[item.result] ?? RESULT_CHIP.not_run} size="sm" />
+          <StatusChip chip={chips.result[item.result] ?? chips.result.not_run} size="sm" />
         </span>
       }
     >
       <p className="m-0 flex flex-wrap items-center gap-2 text-sm text-muted">
-        Pitwall saw: <StatusChip chip={AUTO_CHIP[item.auto.verdict] ?? AUTO_CHIP.no_evidence} size="sm" />
+        Pitwall saw: <StatusChip chip={chips.saw[item.auto.verdict] ?? chips.saw.no_evidence} size="sm" />
       </p>
       {item.marks.length ? (
         <ul className="m-0 grid list-disc gap-1 pl-5">
@@ -108,7 +109,7 @@ function ItemDetail({ item, names }: { item: ReportItem; names: ReadonlyMap<numb
       {item.auto.reasons.length ? (
         <ul className="m-0 grid list-disc gap-1 pl-5 text-muted">
           {item.auto.reasons.map((r) => (
-            <li key={r}>{reasonText(r)}</li>
+            <li key={r}>{reportReason(r, inProgress)}</li>
           ))}
         </ul>
       ) : null}
@@ -150,12 +151,49 @@ export interface ReportDetailProps {
   names: ReadonlyMap<number, string>;
   error: string | null;
   onOpenMarkdown: (redactTranscripts: boolean) => void;
-  onDownloadJson: () => void;
+  onDownloadJson: (redactTranscripts: boolean) => void;
   onBack: () => void;
 }
 
+function Candidates({ report }: { report: ValidationReport }) {
+  const list = (
+    <ul className="m-0 grid list-none gap-3 p-0">
+      {report.candidates.map((c) => (
+        <li key={`${c.item_id}:${c.status_md}`} className="grid gap-1 rounded-2xl bg-surface-secondary px-4 py-3">
+          <span className="flex flex-wrap items-center gap-2">
+            <Chip size="sm" variant="soft" color={c.met ? "success" : "default"}>
+              <Chip.Label>{c.met ? "Met in this run" : "Not met in this run"}</Chip.Label>
+            </Chip>
+            <span className="text-sm text-muted">
+              {c.status_md}
+              {c.capability_row ? ` · ${c.capability_row}` : ""}
+            </span>
+          </span>
+          <span className="text-[15px]">{c.suggestion}</span>
+        </li>
+      ))}
+    </ul>
+  );
+  const met = report.candidates.filter((c) => c.met).length;
+  const title = "What this run can support (for the maintainer)";
+  return (
+    <Card className="gap-3 p-5">
+      {met ? (
+        <>
+          <h3 className="m-0 text-base font-semibold">{title}</h3>
+          {list}
+        </>
+      ) : (
+        // nothing met: one line, the cards behind a fold (not a column of "Not met in this run")
+        <Fold title={<span className="min-w-0">{`${title}: ${report.in_progress ? "nothing yet" : "nothing"}`}</span>}>{list}</Fold>
+      )}
+    </Card>
+  );
+}
+
 export function ReportDetail({ report, names, error, onOpenMarkdown, onDownloadJson, onBack }: ReportDetailProps) {
-  const [redact, setRedact] = useState(false);
+  // on by default: the driver's (often a child's) spoken words stay out unless asked for
+  const [redact, setRedact] = useState(true);
   const r = report.run;
   const ended = r.ended_unix ? ` – ${dateTime(r.ended_unix)}` : "";
   return (
@@ -187,7 +225,7 @@ export function ReportDetail({ report, names, error, onOpenMarkdown, onDownloadJ
           <Button className="min-h-12 px-5" onPress={() => onOpenMarkdown(redact)}>
             Open report
           </Button>
-          <Button variant="secondary" className="min-h-12 px-5" onPress={onDownloadJson}>
+          <Button variant="secondary" className="min-h-12 px-5" onPress={() => onDownloadJson(redact)}>
             Download JSON
           </Button>
           <CellSwitch isSelected={redact} onChange={setRedact} className="min-w-0">
@@ -205,37 +243,18 @@ export function ReportDetail({ report, names, error, onOpenMarkdown, onDownloadJ
         {r.notes ? <p className="m-0 text-[15px]">Notes: {r.notes}</p> : null}
       </Card>
 
-      <Card className="gap-3 p-2 md:p-3">
+      {/* a phone reads the same chips in the per-test sections below (the grid would need a sideways scroll) */}
+      <Card className="hidden gap-3 p-2 md:flex md:p-3" data-summary-grid>
         <SummaryGrid rows={summaryRows(report, names)} />
       </Card>
 
       <Card className="gap-0 px-5 py-2 [&>*+*]:border-t [&>*+*]:border-separator">
         {report.items.map((i) => (
-          <ItemDetail key={i.id} item={i} names={names} />
+          <ItemDetail key={i.id} item={i} names={names} inProgress={report.in_progress} />
         ))}
       </Card>
 
-      {report.candidates.length ? (
-        <Card className="gap-3 p-5">
-          <h3 className="m-0 text-base font-semibold">What this run can support (for the maintainer)</h3>
-          <ul className="m-0 grid list-none gap-3 p-0">
-            {report.candidates.map((c) => (
-              <li key={`${c.item_id}:${c.status_md}`} className="grid gap-1 rounded-2xl bg-surface-secondary px-4 py-3">
-                <span className="flex flex-wrap items-center gap-2">
-                  <Chip size="sm" variant="soft" color={c.met ? "success" : "default"}>
-                    <Chip.Label>{c.met ? "Met in this run" : "Not met in this run"}</Chip.Label>
-                  </Chip>
-                  <span className="text-sm text-muted">
-                    {c.status_md}
-                    {c.capability_row ? ` · ${c.capability_row}` : ""}
-                  </span>
-                </span>
-                <span className="text-[15px]">{c.suggestion}</span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
+      {report.candidates.length ? <Candidates report={report} /> : null}
 
       <Alert status="default">
         <Alert.Indicator />

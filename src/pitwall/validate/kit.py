@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import secrets
 import subprocess
 import sys
 import time
@@ -95,6 +96,7 @@ class ValidationKit:
         self._prompt_ids = 0
         self._closed = False
         self._finishing = False
+        self.boot_tag = secrets.token_hex(2)  # prefixes question record ids (message ids restart with the service)
         if hub is not None and getattr(hub, "command_handler", "missing") is None:
             hub.command_handler = self.voice_command
         rid = self.store.find_active()
@@ -197,7 +199,7 @@ class ValidationKit:
             return
         async with self._lock():
             run.last_saved_unix = time.time()
-            data = dumps(run.to_dict())
+            data = dumps(run.json_obj())
             self._dirty = False
             self._last_save = time.monotonic()
             await asyncio.to_thread(self.store.save_run, run.id, data)
@@ -256,7 +258,10 @@ class ValidationKit:
                 it.auto = auto
                 it.result = result
                 changed = True
-                if run is self.run and auto.verdict in ("pass", "fail") and old != auto.verdict and not it.marks:
+                # only the current test is prompted: "worked" / "didn't work" on the radio always mark that one
+                current = it.id == run.current_item
+                turned = auto.verdict in ("pass", "fail") and old != auto.verdict
+                if run is self.run and current and turned and not it.marks:
                     self._verdict_prompt(it.id, auto.verdict)
         if changed and run is self.run:
             self.touch()
@@ -277,6 +282,33 @@ class ValidationKit:
             return
         self._pending_prompt = (text, why, time.monotonic())
         self.flush_prompt(time.time())
+
+    def _announce(self, text: str) -> None:
+        """A follow-up reply to the driver's own radio command (e.g. the counts once the report is saved): queued at
+        once for the next speak window, whatever the prompt setting and the rate limit."""
+        hub = self.hub
+        if hub is None:
+            return
+        from pitwall.voice.types import MessageKind, Priority, RadioMessage
+
+        mono = time.monotonic()
+        self._prompt_ids += 1
+        msg = RadioMessage(
+            id=f"v{self._prompt_ids}",
+            kind=MessageKind.CONTROL,
+            priority=Priority.NORMAL,
+            text=text,
+            speech=hub.to_speech(text),
+            created_mono=mono,
+            expires_mono=mono + PROMPT_TTL_S,
+            bypass_quiet=True,
+            needs_speak_window=True,
+            meta={"topic": "validation"},
+        )
+        try:
+            hub.scheduler.enqueue(msg)
+        except Exception:
+            log.exception("validation reply could not be queued")
 
     def flush_prompt(self, _now: float) -> None:
         hub = self.hub
@@ -328,7 +360,7 @@ class ValidationKit:
     def start_run(
         self, items: list[str] | None, label: str | None, radio_prompts: bool | None, brief: bool = True
     ) -> Run:
-        if self.run is not None:
+        if self.run is not None or self._finishing:
             raise KitError(409, "a validation run is already active")
         avail = self.availability()
         if items is None:
@@ -516,7 +548,7 @@ class ValidationKit:
 
     def mark_ptt(self, run_id: str, record_id: str, heard_right: bool | None) -> Run:
         run = self._active(run_id)
-        rec = next((p for p in run.evidence.ptt if p.id == record_id and record_id), None)
+        rec = next((p for p in reversed(run.evidence.ptt) if p.id == record_id and record_id), None)
         if rec is None:
             raise KitError(404, "unknown question")
         rec.heard_right = heard_right
@@ -549,11 +581,23 @@ class ValidationKit:
         run.status = "finished" if status == "finished" else "aborted"
         run.ended_unix = now
         self.timeline("item", "Validation finished" if status == "finished" else "Validation aborted")
-        self.run = None
-        report = Rep.build_report(run, now)
-        md = Rep.render_markdown(report, run)
-        await self.save_now(run)
-        await asyncio.to_thread(self.store.save_report, run.id, report, md)
+        try:
+            report = Rep.build_report(run, now)
+            md = Rep.render_markdown(report, run)
+            self.run = None  # from here every other request sees no active run (start waits for _finishing)
+            await self.save_now(run)
+            await asyncio.to_thread(self.store.save_report, run.id, report, md)
+        except Exception:
+            # the run stays active in memory and on disk, so Finish can be tried again
+            log.exception("validation run %s could not be finished", run.id)
+            run.status = "active"
+            run.ended_unix = None
+            self.run = run
+            self.timeline("note", "Saving the report failed: the run is still active")
+            self._attach()
+            with contextlib.suppress(Exception):
+                await self.save_now(run)
+            raise
         return run
 
     # ------------------------------------------------------------------ device reports (spec 6.4)
@@ -684,6 +728,8 @@ class ValidationKit:
 
     # ------------------------------------------------------------------ radio commands (spec 7; loop)
     def voice_command(self, text: str) -> str | None:
+        """A validation command's reply, or None for the engineer. With no run active only "start validation" is a
+        command: "passed", "it worked" or "next test" said in an ordinary session reach the engineer as usual."""
         cmd = V.parse_command(text)
         if cmd is None:
             return None
@@ -699,30 +745,48 @@ class ValidationKit:
             self._spawn(self.save_now())
             first = BY_ID.get(run.current_item or "")
             return V.started(None if first is None else first.radio_brief)
-        if run is None:
-            return V.NO_RUN
+        if run is None or self._finishing:
+            return None
         if cmd == "next":
+            order = run.selected_items
+            before = order.index(run.current_item) if run.current_item in order else len(order)
             self.next_item(run.id, brief=False)
             self._spawn(self.save_now())
             nxt = BY_ID.get(run.current_item or "")
+            if nxt is not None and order.index(nxt.id) < before:
+                return V.back_to(nxt.radio_brief)  # after the last test: an earlier one still to do
             return V.next_test(None if nxt is None else nxt.radio_brief)
         cur_state = run.item(run.current_item) if run.current_item else None
         if cmd in ("worked", "didnt"):
             if cur_state is None:
                 return "No test is current. Say next test."
+            cat = BY_ID[cur_state.id]
             self.verdict(run.id, cur_state.id, cmd, source="voice")
             self._spawn(self.save_now())
-            return V.marked(BY_ID[cur_state.id].short, cmd == "worked")
+            return V.marked(cat.short, cmd == "worked", self._driver_name() if cat.per_driver else None)
         if cmd == "status":
             if cur_state is None:
                 return "No test is current. Say next test, or finish validation."
             idx = run.selected_items.index(cur_state.id) + 1
-            reason = cur_state.auto.reasons[0] if cur_state.auto.reasons else None
-            return V.status(idx, len(run.selected_items), BY_ID[cur_state.id].short, reason)
-        # finish
+            cat = BY_ID[cur_state.id]
+            return V.status(idx, len(run.selected_items), cat.short, cat.radio_brief)
+        # finish: the counts are said once the report is saved (the final recompute can change them)
+        self._spawn(self._finish_by_voice(run.id))
+        return V.FINISHING
+
+    def _driver_name(self) -> str | None:
+        drv = getattr(self.rt.drivers, "active", None)
+        name = getattr(drv, "name", None)
+        return str(name) if name else None
+
+    async def _finish_by_voice(self, run_id: str) -> None:
+        try:
+            run = await self.finish(run_id, None)
+        except Exception:
+            self._announce(V.FINISH_FAILED)
+            raise
         counts = {k: 0 for k in ("pass", "fail", "needs_review")}
         for it in run.items:
             if it.result in counts:
                 counts[it.result] += 1
-        self._spawn(self.finish(run.id, None))
-        return V.finished(counts["pass"], counts["fail"], counts["needs_review"])
+        self._announce(V.finished(counts["pass"], counts["fail"], counts["needs_review"]))

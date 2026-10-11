@@ -43,10 +43,14 @@ export interface ChipSpec {
 export const RESULT_CHIP: Record<ItemResult, ChipSpec> = {
   pass: { label: "Pass", tone: "success" },
   fail: { label: "Fail", tone: "danger" },
-  needs_review: { label: "Review", tone: "warning", title: "needs a look before it counts" },
+  // "To check", not "Review": Review is a tab of the app
+  needs_review: { label: "To check", tone: "warning", title: "needs a look before it counts" },
   not_run: { label: "Not yet", tone: "default" },
   skipped: { label: "Skipped", tone: "default" },
 };
+
+/** A finished run's report: a test without a result was not run (not "not yet"). */
+export const REPORT_RESULT_CHIP: Record<ItemResult, ChipSpec> = { ...RESULT_CHIP, not_run: { label: "Not run", tone: "default" } };
 
 /** What Pitwall saw, in plain words (never the API's enum). */
 export const AUTO_CHIP: Record<AutoVerdict, ChipSpec> = {
@@ -59,11 +63,19 @@ export const AUTO_CHIP: Record<AutoVerdict, ChipSpec> = {
   driver_only: { label: "Your call", tone: "default", title: "only the driver can judge this one" },
 };
 
+/** The report's words for what Pitwall saw: a finished run saw nothing (not "not seen yet"). */
+export const REPORT_AUTO_CHIP: Record<AutoVerdict, ChipSpec> = { ...AUTO_CHIP, no_evidence: { label: "Nothing seen", tone: "default" } };
+
 export const CHECK_CHIP: Record<CheckStatus, ChipSpec> = {
   met: { label: "Met", tone: "success" },
   not_met: { label: "Not met", tone: "danger" },
   unknown: { label: UNKNOWN, tone: "default", title: "not measured yet" },
 };
+
+/** A check not met while the test is going: not a failure yet (red only once Pitwall sees a problem). */
+const CHECK_NOT_YET: ChipSpec = { label: "Not yet", tone: "default", title: "not met so far" };
+/** A check not met on a test that otherwise passes (e.g. calls may delay braking): a warning to look at. */
+const CHECK_TO_CHECK: ChipSpec = { label: "To check", tone: "warning", title: "the test passes, but this needs a look" };
 
 export const CURRENT_CHIP: ChipSpec = { label: "Now", tone: "accent", title: "the test you are on" };
 
@@ -236,6 +248,10 @@ const METRIC_LABEL: Record<string, string> = {
   hidden_transitions: "Page hidden",
   reloads: "Page reloads",
   safari_version: "Safari",
+  // driver switch
+  switches: "Switches",
+  ok: "Clean switches",
+  problems: "Problems",
   // speak windows
   overlap: "Over braking or a corner",
   tight: "Close to braking",
@@ -354,15 +370,26 @@ export function valueWords(v: string): string {
     .replace(/(^|[\s([])-(?=\d)/g, `$1${MINUS}`);
 }
 
-export function checkView(c: Check): CheckView {
+/** A check in words. ``verdict``: the live test's verdict (the step card); the report passes none and keeps "Not met". */
+export function checkView(c: Check, verdict: AutoVerdict | null = null): CheckView {
+  let chip = CHECK_CHIP[c.status] ?? CHECK_CHIP.unknown;
+  if (c.status === "not_met" && verdict !== null && verdict !== "fail") chip = verdict === "pass" ? CHECK_TO_CHECK : CHECK_NOT_YET;
   return {
     id: c.id,
     label: c.label,
     value: c.value === null || c.value === "" ? UNKNOWN : valueWords(c.value),
     target: c.target ? valueWords(c.target) : null,
     heuristic: c.heuristic,
-    chip: CHECK_CHIP[c.status] ?? CHECK_CHIP.unknown,
+    chip,
   };
+}
+
+/** The backend's "this data is from a replay…" reason, said by the warning above the checks instead. */
+const TIER_REASON = /^(This data is from a replay|This data is synthetic|This data came from a recording|Telemetry was not live)/;
+
+/** The reasons to list under the checks: without the not-live reason when its warning already shows. */
+export function shownReasons(auto: Pick<ItemState["auto"], "verdict" | "reasons">): string[] {
+  return auto.verdict === "not_live" ? auto.reasons.filter((r) => !TIER_REASON.test(r)) : auto.reasons;
 }
 
 // ------------------------------------------------------------------------------------------------ the checklist
@@ -468,7 +495,10 @@ export function minutesText(catalog: Catalog, ids: string[]): string {
 }
 
 // ------------------------------------------------------------------------------------------------ run context
-export function telemetryChip(t: RunContext["telemetry"]): ChipSpec {
+/** The run bar's telemetry chip. Data arriving that is not live from a console (a replay, generated, sent from this Mac)
+ * is never a green "Live": it sits next to a warning that it does not count. */
+export function telemetryChip(t: RunContext["telemetry"], tier: EvidenceTier = "live"): ChipSpec {
+  if (t === "live" && tier !== "live") return { label: "Data arriving · not counted", tone: "warning", title: "telemetry arrives, but not live from a console" };
   if (t === "live") return { label: "Live", tone: "success", title: "telemetry is arriving" };
   if (t === "stale") return { label: "Stale", tone: "warning", title: "telemetry stopped a moment ago" };
   return { label: "No telemetry", tone: "default" };
@@ -565,7 +595,11 @@ function latestPhase(records: InputPhaseRecord[], itemId: string, phase: InputPh
   return r.at(-1) ?? null;
 }
 
-/** The input check's results as facts ("Full lock left: −0.98 · right: +0.97 · sign as expected"). */
+export const NO_INPUT_DATA = "No data came from the car during the check. Is the game running?";
+
+/** The input check's results as facts ("Full lock left: −0.98 · right: +0.97 · sign as expected"). Full lock is read
+ * as the left phase's minimum and the right phase's maximum (the right phase starts from full left lock, so its mean
+ * can sit near 0), as the backend's steering-sign check does. Nothing measured: one sentence, never a row of dashes. */
 export function inputCheckFacts(records: InputPhaseRecord[], itemId: string): string[] {
   const out: string[] = [];
   const centre = latestPhase(records, itemId, "centre");
@@ -573,15 +607,24 @@ export function inputCheckFacts(records: InputPhaseRecord[], itemId: string): st
   const right = latestPhase(records, itemId, "right");
   const pedals = latestPhase(records, itemId, "pedals");
   const reverse = latestPhase(records, itemId, "reverse");
+  const phases = [centre, left, right, pedals, reverse].filter((x): x is InputPhaseRecord => x !== null);
+  if (phases.length && phases.every((x) => !x.samples)) return [NO_INPUT_DATA];
   const sgn = (v: number | null | undefined) => (finite(v) ? fixed(v, 2, true) : UNKNOWN);
   if (centre) out.push(`Hands off: ${sgn(centre.steer_mean)}`);
   if (left || right) {
-    const l = left?.steer_mean;
-    const r = right?.steer_mean;
+    let l = left?.steer_min;
+    let r = right?.steer_max;
     let sign = "";
-    if (finite(l) && finite(r)) {
-      if (l < -0.5 && r > 0.5) sign = " · sign as expected";
-      else if (l > 0.5 && r < -0.5) sign = " · steering sign looks inverted";
+    const lMax = left?.steer_max;
+    const rMin = right?.steer_min;
+    if (finite(l) && finite(r) && finite(lMax) && finite(rMin)) {
+      const ok = l < -0.5 && r > 0.5;
+      const inverted = lMax > 0.5 && rMin < -0.5;
+      if (inverted && !ok) {
+        sign = " · steering sign looks inverted";
+        l = lMax;
+        r = rMin;
+      } else if (ok && !inverted) sign = " · sign as expected";
       else sign = " · full lock not reached";
     }
     out.push(`Full lock left: ${sgn(l)} · right: ${sgn(r)}${sign}`);
@@ -606,7 +649,7 @@ export interface CountChip {
 const COUNT_WORD: Record<ItemResult, string> = {
   pass: "passed",
   fail: "failed",
-  needs_review: "to review",
+  needs_review: "to check",
   not_run: "not run",
   skipped: "skipped",
 };
@@ -662,14 +705,29 @@ export function driverColumn(marks: DriverMark[], names?: ReadonlyMap<number, st
   return [...latest.values()].map((m) => `${driverLabel(m.driver_id, names)}: ${VERDICT_WORD[m.verdict]}`).join(" · ");
 }
 
-export function summaryRows(report: Pick<ValidationReport, "items">, names?: ReadonlyMap<number, string>): SummaryRow[] {
+/** The report's words for a result and for what Pitwall saw: a run still going keeps "Not yet" / "Not seen yet". */
+export function reportChips(inProgress: boolean): { result: Record<ItemResult, ChipSpec>; saw: Record<AutoVerdict, ChipSpec> } {
+  return inProgress ? { result: RESULT_CHIP, saw: AUTO_CHIP } : { result: REPORT_RESULT_CHIP, saw: REPORT_AUTO_CHIP };
+}
+
+/** "No braking calls yet" in a finished report reads "No braking calls". */
+export function reportReason(r: string, inProgress: boolean): string {
+  return reasonText(inProgress ? r : r.replace(/ yet(?=\b|$)/, ""));
+}
+
+export function summaryRows(
+  report: Pick<ValidationReport, "items"> & Partial<Pick<ValidationReport, "in_progress">>,
+  names?: ReadonlyMap<number, string>,
+): SummaryRow[] {
+  const going = report.in_progress ?? true;
+  const chips = reportChips(going);
   return report.items.map((i: ReportItem) => ({
     id: i.id,
     title: i.title,
-    result: RESULT_CHIP[i.result] ?? RESULT_CHIP.not_run,
+    result: chips.result[i.result] ?? chips.result.not_run,
     driver: driverColumn(i.marks, names),
-    saw: AUTO_CHIP[i.auto.verdict] ?? AUTO_CHIP.no_evidence,
-    key: i.auto.reasons[0] ? reasonText(i.auto.reasons[0]) : UNKNOWN,
+    saw: chips.saw[i.auto.verdict] ?? chips.saw.no_evidence,
+    key: i.auto.reasons[0] ? reportReason(i.auto.reasons[0], going) : UNKNOWN,
   }));
 }
 

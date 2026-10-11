@@ -1,12 +1,10 @@
 // The run's tests beside the step card (spec 12.3): one Pro ListView per group (rows >= 56 px, the status chip on the
 // right, the current test highlighted). Tapping a test makes it the current one. On a phone (< 768 px) the list
-// becomes a sideways-scrolling Segment of the groups and a Select of that group's tests, above the one-column card.
+// becomes one Select of every test with a section per group, above the one-column card.
 
-import { Label, ListBox, Select } from "@heroui/react";
-import { ListView, Segment } from "@heroui-pro/react";
-import { useState, type Key } from "react";
-import { ScrollRow } from "../../../components/ScrollRow";
-import type { ItemGroup } from "../../../lib/endpoints/validation";
+import { Header, Label, ListBox, Select } from "@heroui/react";
+import { ListView } from "@heroui-pro/react";
+import type { Key } from "react";
 import type { ListGroup, ListRow } from "../../../lib/validation/view";
 import { StatusChip } from "./parts";
 
@@ -60,52 +58,42 @@ export function ItemList({ groups, shownId, onPick, disabled }: ItemListProps) {
   );
 }
 
-/** Phone: a Segment of groups and a Select of the group's tests. */
+/** Phone: one Select of every test, a section per group (the chip says where each test is; no tick, the value shows
+ * the test on the card). */
 export function ItemPicker({ groups, shownId, onPick, disabled }: ItemListProps) {
-  const shownGroup = groups.find((g) => g.rows.some((r) => r.id === shownId))?.id ?? groups[0]?.id ?? "dashboard";
-  const [group, setGroup] = useState<ItemGroup>(shownGroup);
-  const g = groups.find((x) => x.id === group) ?? groups[0];
-  if (!g) return null;
-  const selected = g.rows.some((r) => r.id === shownId) ? shownId : null;
+  if (!groups.length) return null;
   return (
-    <div className="grid gap-2">
-      <ScrollRow className="-mx-4 px-4 pb-1">
-        <Segment aria-label="Test groups" size="lg" selectedKey={g.id} onSelectionChange={(k: Key) => setGroup(String(k) as ItemGroup)} className="w-max">
-          {groups.map((x) => (
-            <Segment.Item key={x.id} id={x.id} className="h-11 px-4">
-              {x.title}
-            </Segment.Item>
+    <Select
+      aria-label="Test on screen"
+      selectedKey={shownId}
+      placeholder="Choose a test"
+      isDisabled={disabled}
+      onSelectionChange={(k) => {
+        if (k !== null && String(k) !== shownId) onPick(String(k));
+      }}
+    >
+      <Label className="sr-only">Test</Label>
+      <Select.Trigger className="min-h-12">
+        <Select.Value />
+        <Select.Indicator />
+      </Select.Trigger>
+      <Select.Popover>
+        <ListBox aria-label="Tests in this run by group">
+          {groups.map((g) => (
+            <ListBox.Section key={g.id} aria-label={g.title}>
+              <Header className="px-2 pt-2 pb-1 text-sm font-semibold text-muted">{g.title}</Header>
+              {g.rows.map((r) => (
+                <ListBox.Item key={r.id} id={r.id} textValue={r.title} className="min-h-12">
+                  <span className="flex w-full min-w-0 items-center justify-between gap-2">
+                    <span className="min-w-0">{r.title}</span>
+                    <StatusChip chip={r.chip} size="sm" />
+                  </span>
+                </ListBox.Item>
+              ))}
+            </ListBox.Section>
           ))}
-        </Segment>
-      </ScrollRow>
-      <Select
-        aria-label={`${g.title}: tests`}
-        selectedKey={selected}
-        placeholder="Choose a test"
-        isDisabled={disabled}
-        onSelectionChange={(k) => {
-          if (k !== null && String(k) !== shownId) onPick(String(k));
-        }}
-      >
-        <Label className="sr-only">Test</Label>
-        <Select.Trigger className="min-h-12">
-          <Select.Value />
-          <Select.Indicator />
-        </Select.Trigger>
-        <Select.Popover>
-          <ListBox>
-            {g.rows.map((r) => (
-              <ListBox.Item key={r.id} id={r.id} textValue={r.title} className="min-h-12">
-                <span className="flex w-full items-center justify-between gap-2">
-                  <span>{r.title}</span>
-                  <StatusChip chip={r.chip} size="sm" />
-                </span>
-                <ListBox.ItemIndicator />
-              </ListBox.Item>
-            ))}
-          </ListBox>
-        </Select.Popover>
-      </Select>
-    </div>
+        </ListBox>
+      </Select.Popover>
+    </Select>
   );
 }

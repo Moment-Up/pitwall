@@ -1,15 +1,15 @@
 {
  "_fixture": {
-  "source": "isolated scratch server on the lane's ports (cwd and PITWALL_DATA_DIR in scratch, LLM and voice off), feat/validate work in progress, 2026-10-11",
+  "source": "isolated scratch server on the lane's ports (cwd and PITWALL_DATA_DIR in scratch, LLM and voice off), feat/validate after the review fixes, 2026-10-11",
   "status": 200,
   "note": "GET /api/validation/runs/<id> (compact) after a run in which the committed recorded F1 Austria and AC Silverstone excerpts were replayed (tier recorded), the AC test marked Didn't work, then finished; device reports from headless Chromium on localhost"
  },
  "body": {
-  "id": "20261011-185203-db90",
+  "id": "20261011-205511-f387",
   "label": "Scratch replay check",
   "status": "finished",
-  "started_unix": 1791741123.063941,
-  "ended_unix": 1791741144.4528131,
+  "started_unix": 1791748511.811736,
+  "ended_unix": 1791748536.499213,
   "current_item": null,
   "counts": {
    "pass": 0,
@@ -22,7 +22,7 @@
    "recorded"
   ],
   "format": 1,
-  "version": 56,
+  "version": 39,
   "selected_items": [
    "ipad_home_screen",
    "ipad_glance",
@@ -30,10 +30,10 @@
    "ac_ps5",
    "gt7_ps5"
   ],
-  "radio_prompts": true,
+  "radio_prompts": false,
   "server": {
    "pitwall_version": "0.1.0",
-   "git_commit": "181d85c",
+   "git_commit": "3ce5b65",
    "os": "darwin",
    "voice_enabled": false,
    "llm_enabled": false,
@@ -46,8 +46,8 @@
     "status": "pending",
     "windows": [
      {
-      "start_unix": 1791741123.063941,
-      "end_unix": 1791741132.6532202
+      "start_unix": 1791748511.811736,
+      "end_unix": 1791748520.9734662
      }
     ],
     "marks": [],
@@ -65,7 +65,7 @@
       "safari_version": null
      },
      "tier": null,
-     "updated_unix": 1791741123.063941
+     "updated_unix": 1791748511.811736
     },
     "result": "not_run"
    },
@@ -82,7 +82,7 @@
      ],
      "checks": [
       {
-       "id": "laps",
+       "id": "review_laps",
        "label": "Laps driven in this test (per driver)",
        "status": "not_met",
        "value": "0",
@@ -90,7 +90,7 @@
        "heuristic": true
       },
       {
-       "id": "coach_page",
+       "id": "review_coach_page",
        "label": "iPad on Drive › Coach",
        "status": "not_met",
        "value": "no",
@@ -100,7 +100,7 @@
      ],
      "metrics": {},
      "tier": null,
-     "updated_unix": 1791741123.063941
+     "updated_unix": 1791748511.811736
     },
     "result": "not_run"
    },
@@ -122,7 +122,7 @@
       "different": 0
      },
      "tier": null,
-     "updated_unix": 1791741123.063941
+     "updated_unix": 1791748511.811736
     },
     "result": "not_run"
    },
@@ -131,18 +131,18 @@
     "status": "done",
     "windows": [
      {
-      "start_unix": 1791741132.6532202,
-      "end_unix": 1791741144.4528131
+      "start_unix": 1791748520.9734662,
+      "end_unix": 1791748536.499213
      }
     ],
     "marks": [
      {
       "driver_id": 1,
       "verdict": "didnt",
-      "notes": "",
+      "notes": "Replay only: lap times not compared.",
       "attestations": {},
       "extra": {},
-      "at_unix": 1791741143.512956,
+      "at_unix": 1791748534.493912,
       "source": "screen"
      }
     ],
@@ -152,12 +152,7 @@
      "reasons": [
       "This data is from a replay: it is shown but does not count",
       "No timed lap yet",
-      "Packets a second: - (>= 50)",
-      "Laps timed on one circuit (-): 0: none (>= 3)",
-      "Clean laps: 0 (>= 2)",
-      "Coaching point produced: 0 (>= 1)",
-      "Track length from a full lap: estimate (full_lap)",
-      "Corners learned: - (>= 3)",
+      "2 of 9 checks met",
       "Tick 'lap times match the game's' when you have compared them"
      ],
      "checks": [
@@ -165,8 +160,8 @@
        "id": "handshake",
        "label": "Handshake answered",
        "status": "met",
-       "value": " (status 4242, utf-16le)",
-       "target": ">= 1",
+       "value": "answered",
+       "target": "answered",
        "heuristic": false
       },
       {
@@ -187,7 +182,7 @@
       },
       {
        "id": "timed_laps",
-       "label": "Laps timed on one circuit (-)",
+       "label": "Laps timed on one circuit",
        "status": "not_met",
        "value": "0: none",
        "target": ">= 3",
@@ -211,10 +206,10 @@
       },
       {
        "id": "track_length",
-       "label": "Track length from a full lap",
+       "label": "Track length",
        "status": "not_met",
-       "value": "estimate",
-       "target": "full_lap",
+       "value": "estimated",
+       "target": "measured from a full lap",
        "heuristic": false
       },
       {
@@ -243,11 +238,11 @@
       "handshake_encoding": "utf-16le",
       "rtcarinfo_size": 328,
       "track_length_quality": "estimate",
-      "steer_raw_range": "-2.6 .. -2.6",
+      "steer_raw_range": "-144.9 .. 211.9",
       "platform": "ps5"
      },
      "tier": "recorded",
-     "updated_unix": 1791741143.512962
+     "updated_unix": 1791748534.493917
     },
     "result": "fail"
    },
@@ -276,7 +271,7 @@
       "variants": null
      },
      "tier": null,
-     "updated_unix": 1791741123.063941
+     "updated_unix": 1791748511.811736
     },
     "result": "not_run"
    }
@@ -287,7 +282,7 @@
    "game": "ac",
    "platform": "ps5",
    "track": "ks_silverstone (ks_silverstone)",
-   "session_id": "f7c1fc03f2f3",
+   "session_id": "4d2aaa1c71cd",
    "packet_format": null,
    "game_version": null,
    "driver_id": 1,
@@ -296,50 +291,18 @@
   },
   "clients": [
    {
-    "client_id": "f1f94ce1-7712-4a87-a8bd-caf7b1c42bb7",
+    "client_id": "fffeed06-b3b3-4c9b-90c9-c9175f777559",
     "device": "browser",
     "standalone": false,
     "secure_context": true,
     "origin_kind": "localhost",
     "safari_version": null,
-    "last_seen_s": 6.3,
-    "route": "setup/validation",
+    "last_seen_s": 7.9,
+    "route": "drive/coach",
     "visibility": "visible",
     "wake": {
-     "wanted": false,
-     "state": "off"
-    },
-    "radio": {
-     "phase": "idle",
-     "conn": "offline",
-     "mic": "off",
-     "mic_silent": false,
-     "wake": "off",
-     "audio": "none",
-     "audio_session": "unset",
-     "tts_mode": "device",
-     "rtt_ms": null
-    },
-    "audio_input_kind": null,
-    "gaps": 0,
-    "hidden_transitions": 0,
-    "reloads": 0,
-    "wake_on_streak_s": 0.0,
-    "fps": null
-   },
-   {
-    "client_id": "f933a7fe-5d76-48a4-9b1e-3cfc7631c5cf",
-    "device": "browser",
-    "standalone": false,
-    "secure_context": true,
-    "origin_kind": "localhost",
-    "safari_version": null,
-    "last_seen_s": 3.6,
-    "route": "setup/validation",
-    "visibility": "visible",
-    "wake": {
-     "wanted": false,
-     "state": "off"
+     "wanted": true,
+     "state": "refused"
     },
     "radio": {
      "phase": "idle",
@@ -362,117 +325,112 @@
   ],
   "timeline": [
    {
-    "t_unix": 1791741144.453789,
+    "t_unix": 1791748536.500136,
     "kind": "item",
     "text": "Validation finished"
    },
    {
-    "t_unix": 1791741144.453672,
+    "t_unix": 1791748536.500012,
     "kind": "item",
     "text": "Assetto Corsa on the PS5: laps timed and coached: left"
    },
    {
-    "t_unix": 1791741143.51296,
+    "t_unix": 1791748534.4939148,
     "kind": "item",
     "text": "Assetto Corsa on the PS5: laps timed and coached: didn't work (screen)"
    },
    {
-    "t_unix": 1791741140.810219,
-    "kind": "client",
-    "text": "New device: browser (localhost)"
-   },
-   {
-    "t_unix": 1791741135.0871968,
+    "t_unix": 1791748523.3403351,
     "kind": "telemetry",
     "text": "Telemetry stopped (recorded)"
    },
    {
-    "t_unix": 1791741133.0848682,
+    "t_unix": 1791748521.3359082,
     "kind": "session",
     "text": "New session (Assetto Corsa, recorded)"
    },
    {
-    "t_unix": 1791741133.084865,
+    "t_unix": 1791748521.335905,
     "kind": "telemetry",
     "text": "Telemetry live: Assetto Corsa on PS5, ks_silverstone (ks_silverstone) (recorded)"
    },
    {
-    "t_unix": 1791741132.749897,
+    "t_unix": 1791748521.025534,
     "kind": "session",
     "text": "Session started"
    },
    {
-    "t_unix": 1791741132.741365,
+    "t_unix": 1791748521.018891,
     "kind": "session",
     "text": "Session ended"
    },
    {
-    "t_unix": 1791741132.704471,
+    "t_unix": 1791748520.9880981,
     "kind": "session",
     "text": "Session started"
    },
    {
-    "t_unix": 1791741132.6532428,
+    "t_unix": 1791748520.9734788,
     "kind": "item",
     "text": "Assetto Corsa on the PS5: laps timed and coached: started"
    },
    {
-    "t_unix": 1791741132.653227,
+    "t_unix": 1791748520.973472,
     "kind": "item",
     "text": "Home Screen app keeps the screen on: left"
    },
    {
-    "t_unix": 1791741127.070297,
+    "t_unix": 1791748518.828012,
     "kind": "telemetry",
     "text": "Telemetry stopped (recorded)"
    },
    {
-    "t_unix": 1791741125.067081,
+    "t_unix": 1791748516.822675,
     "kind": "session",
     "text": "New session (F1 25, recorded)"
    },
    {
-    "t_unix": 1791741125.0670779,
+    "t_unix": 1791748516.8226728,
     "kind": "telemetry",
     "text": "Telemetry live: F1 25 on PS5, Austria (recorded)"
    },
    {
-    "t_unix": 1791741124.7672179,
+    "t_unix": 1791748516.544926,
     "kind": "session",
     "text": "Session ended"
    },
    {
-    "t_unix": 1791741124.6968598,
+    "t_unix": 1791748516.475008,
     "kind": "session",
     "text": "Lights out"
    },
    {
-    "t_unix": 1791741124.6809862,
+    "t_unix": 1791748516.460238,
     "kind": "session",
     "text": "Session started"
    },
    {
-    "t_unix": 1791741123.565144,
-    "kind": "cue_mode",
-    "text": "Braking calls: focus"
-   },
-   {
-    "t_unix": 1791741123.565141,
-    "kind": "telemetry",
-    "text": "No telemetry"
-   },
-   {
-    "t_unix": 1791741123.105856,
+    "t_unix": 1791748512.514424,
     "kind": "client",
     "text": "New device: browser (localhost)"
    },
    {
-    "t_unix": 1791741123.0640872,
+    "t_unix": 1791748512.312289,
+    "kind": "cue_mode",
+    "text": "Braking calls: focus"
+   },
+   {
+    "t_unix": 1791748512.312287,
+    "kind": "telemetry",
+    "text": "No telemetry"
+   },
+   {
+    "t_unix": 1791748511.811775,
     "kind": "item",
     "text": "Home Screen app keeps the screen on: started"
    },
    {
-    "t_unix": 1791741123.064066,
+    "t_unix": 1791748511.811767,
     "kind": "item",
     "text": "Validation started"
    }

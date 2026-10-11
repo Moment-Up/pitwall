@@ -66,15 +66,15 @@ export function PttSheet({ isOpen, wide, records, error, busy, onMark, onClose }
   return (
     <Sheet isOpen={isOpen} onOpenChange={(o) => (o ? undefined : onClose())} placement={wide ? "right" : "bottom"}>
       <Sheet.Backdrop>
-        <Sheet.Content className={wide ? "w-[min(520px,96vw)]" : "max-h-[88dvh]"}>
+        <Sheet.Content className={wide ? "w-[min(520px,96vw)]" : "flex max-h-[calc(100dvh-4rem)] flex-col"}>
           <Sheet.Dialog aria-label="What the engineer heard">
             {wide ? null : <Sheet.Handle />}
-            <Sheet.CloseTrigger />
+            <Sheet.CloseTrigger className="size-11" />
             <Sheet.Header className="pt-5">
               <Sheet.Heading className="pr-10 text-xl">What the engineer heard</Sheet.Heading>
               <p className="m-0 text-sm text-muted">Mark each question as heard right or wrong.</p>
             </Sheet.Header>
-            <Sheet.Body className="grid content-start gap-3 overflow-y-auto pb-8">
+            <Sheet.Body className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto pb-8">
               {error ? (
                 <Alert status="danger">
                   <Alert.Indicator />

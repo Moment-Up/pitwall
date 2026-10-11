@@ -92,7 +92,8 @@ def show(run: Annotated[str, typer.Argument(help="Run id or 'latest'")] = "lates
         f"voice {'on' if r.server.voice_enabled else 'off'}  LLM {'on' if r.server.llm_enabled else 'off'}"
     )
     counts = r.evidence.tier_counts()
-    typer.echo("Evidence: " + ", ".join(f"{k} {v}" for k, v in counts.items() if v) or "Evidence: none")
+    parts = ", ".join(f"{k} {v}" for k, v in counts.items() if v)
+    typer.echo(f"Evidence: {parts}" if parts else "Evidence: none")
     for it in r.items:
         cat = BY_ID.get(it.id)
         title = cat.title if cat else it.id

@@ -177,15 +177,16 @@ sessions of each game); you then tap **Worked** or **Didn't work**, tick what yo
 
 - **Evidence tiers:** a test can only pass on live data from the console. Replays, synthetic streams and recordings
   sent from the Mac itself are shown but never count.
-- **Results:** each test combines Pitwall's verdict with yours; when they disagree it says "needs review". The
+- **Results:** each test combines Pitwall's verdict with yours; when they disagree it says "to check". The
   thresholds that are first guesses are marked heuristic.
-- **Radio commands** (optional): "start validation", "next test", "worked", "didn't work", "what's the test",
-  "finish validation". The radio can also say each test's brief in a calm moment (on by default, never into a
-  braking zone, never in quiet mode).
+- **Radio commands** (optional): "start validation", then during a run "next test", "worked", "didn't work",
+  "what's the test" and "finish validation" (with no run active the radio answers those words as usual). The radio
+  can also say each test's brief in a calm moment (on by default, never into a braking zone, never in quiet mode).
 - **Reports** are saved on the Mac (`data/validation/`) as JSON and Markdown; review them with `pitwall validate list`,
   `show` or `report`. They never change what Pitwall claims to support: the maintainer updates that by hand.
 - **Privacy:** reports keep device facts only (no IP addresses, no microphone names, no driver names: "Driver #2").
-  Your push-to-talk transcripts are included; `--redact-transcripts` (or `?redact_transcripts=true`) removes them.
+  Your push-to-talk transcripts are included; "Leave out transcripts" on the report (on by default),
+  `--redact-transcripts` or `?redact_transcripts=true` removes them.
 <!-- end validation kit -->
 
 ## Settings

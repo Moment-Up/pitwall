@@ -10,6 +10,7 @@ records so the page can show what was seen, and the verdict becomes ``not_live``
 
 from __future__ import annotations
 
+import itertools
 import math
 import statistics
 from collections.abc import Callable, Mapping, Sequence
@@ -81,11 +82,13 @@ def lap_index(laps: Sequence[LapRecord]) -> dict[tuple[str | None, int], LapReco
 
 
 def enrich_cues(ev: Evidence) -> None:
-    """Recompute every call's derived fields from the stored onsets (cheap; idempotent)."""
+    """Recompute every call's derived fields from the stored onsets (cheap; idempotent). Calls on a flashback or pit
+    lap get no matched onset: the calls-off baseline leaves those laps out, so the delay check compares like laps."""
     idx = lap_index(ev.laps)
     for c in ev.cues:
         lap = idx.get((c.session_id, c.lap))
-        onsets = None if lap is None else ev.lap_onsets.get(str(lap.lap_id))
+        excluded = lap is None or bool(set(lap.flags) & R.BASELINE_EXCLUDED_FLAGS)
+        onsets = None if excluded or lap is None else ev.lap_onsets.get(str(lap.lap_id))
         enrich_cue(c, onsets)
 
 
@@ -281,11 +284,13 @@ def client_streaks(samples: Sequence[ClientSample], tiers: TierPred) -> tuple[fl
 
 
 def screen_facts(clients: Sequence[ClientState], tiers: TierPred) -> R.ScreenFacts:
+    """``clients`` carry every sample (all tiers): a telemetry pause between two live stretches is then a stretch of
+    non-driving reports, never a missing report. Only samples of an allowed tier count as reports."""
     f = R.ScreenFacts()
     for c in clients:
         if c.device != "ipad":
             continue
-        f.n_reports += len(c.samples)
+        f.n_reports += sum(1 for s in c.samples if tiers(s.tier))
         best, inst, hidden, gaps = client_streaks(c.samples, tiers)
         f.best_streak_s = max(f.best_streak_s, best)
         f.installed_streak_s = max(f.installed_streak_s, inst)
@@ -347,27 +352,64 @@ def adapter_game(name: str | None) -> str | None:
     return None
 
 
-def tally_decode(store: dict[str, dict[str, Any]], key: str, stats: Mapping[str, Any]) -> bool:
-    """Fold an adapter's cumulative ``DecodeStats`` (published every 200 packets) into the run's tally for ``key``
-    (``tier|game``). A new adapter instance (a new replay, a restarted input) restarts its counters: the previous
-    instance's last values are banked. Returns True when something changed."""
-    packets = int(stats.get("packets") or 0)
-    rejected = int(stats.get("rejected") or 0)
-    errors = int(stats.get("errors") or 0)
-    variants = {
-        k[len("variant_") :]: int(v) for k, v in (stats.get("by_type") or {}).items() if str(k).startswith("variant_")
+def decode_counts(stats: Mapping[str, Any]) -> dict[str, Any]:
+    """The counters the kit keeps of an adapter's cumulative ``DecodeStats``."""
+    return {
+        "packets": int(stats.get("packets") or 0),
+        "rejected": int(stats.get("rejected") or 0),
+        "errors": int(stats.get("errors") or 0),
+        "variants": {
+            k[len("variant_") :]: int(v)
+            for k, v in (stats.get("by_type") or {}).items()
+            if str(k).startswith("variant_")
+        },
     }
+
+
+def _minus(cur: Mapping[str, Any], base: Mapping[str, Any] | None) -> dict[str, Any]:
+    """``cur`` less what the same adapter instance had counted before the run (``base``)."""
+    b = base or {}
+    variants = {
+        k: n
+        for k, v in (cur.get("variants") or {}).items()
+        if (n := int(v) - int((b.get("variants") or {}).get(k, 0))) > 0
+    }
+    out: dict[str, Any] = {k: max(0, int(cur.get(k, 0)) - int(b.get(k, 0))) for k in ("packets", "rejected", "errors")}
+    out["variants"] = variants
+    return out
+
+
+def tally_decode(
+    store: dict[str, dict[str, Any]], key: str, stats: Mapping[str, Any], base: Mapping[str, Any] | None = None
+) -> bool:
+    """Fold an adapter's cumulative ``DecodeStats`` (published every 200 packets) into the run's tally for ``key``
+    (``tier|game``). Adapters live as long as the service, so their counters include packets from before the run:
+    ``base`` is what this adapter instance had counted when the run started (``decode_counts`` of it, read by the
+    collector), kept on the key's first sample and subtracted in ``decode_totals``; a stale rejected packet from
+    earlier in the day never fails a test. A new adapter instance (a new replay, a restarted input) restarts its
+    counters: the previous instance's run share is banked and the base no longer applies. True when something
+    changed."""
+    new = decode_counts(stats)
     t = store.get(key)
     if t is None:
-        t = store[key] = {"packets": 0, "rejected": 0, "errors": 0, "variants": {}, "cur": None}
+        keep = base is not None and new["packets"] >= int(base.get("packets", 0))
+        t = store[key] = {
+            "packets": 0,
+            "rejected": 0,
+            "errors": 0,
+            "variants": {},
+            "cur": None,
+            "base": dict(base) if keep and base is not None else None,
+        }
     cur = t.get("cur")
-    if cur is not None and packets < int(cur.get("packets", 0)):
+    if cur is not None and new["packets"] < int(cur.get("packets", 0)):
+        banked = _minus(cur, t.get("base"))
         for k in ("packets", "rejected", "errors"):
-            t[k] = int(t[k]) + int(cur.get(k, 0))
-        for k, v in (cur.get("variants") or {}).items():
+            t[k] = int(t[k]) + int(banked[k])
+        for k, v in banked["variants"].items():
             t["variants"][k] = int(t["variants"].get(k, 0)) + int(v)
+        t["base"] = None
         cur = None
-    new = {"packets": packets, "rejected": rejected, "errors": errors, "variants": variants}
     if new == cur:
         return False
     t["cur"] = new
@@ -381,7 +423,7 @@ def decode_totals(store: Mapping[str, Mapping[str, Any]], game: str, tiers: Tier
         if g != game or not tiers(tier):
             continue
         out = out or {"packets": 0, "rejected": 0, "errors": 0, "variants": {}}
-        cur = t.get("cur") or {}
+        cur = _minus(t.get("cur") or {}, t.get("base"))
         for k in ("packets", "rejected", "errors"):
             out[k] += int(t.get(k, 0)) + int(cur.get(k, 0))
         for src in (t.get("variants") or {}, cur.get("variants") or {}):
@@ -502,7 +544,9 @@ def make_view(ev: Evidence, clients: Sequence[ClientState], tiers: TierPred, liv
         sessions=[r for r in ev.sessions if tiers(r.tier)],
         game=[r for r in ev.game if tiers(r.tier)],
         phases=[r for r in ev.input_phases if tiers(r.tier)],
-        clients=[replace(c, samples=[s for s in c.samples if tiers(s.tier)]) for c in clients],
+        # every device sample, whatever its tier: the rules test ``tiers`` per sample (removing the other tiers here
+        # would turn a telemetry pause into a missing report)
+        clients=list(clients),
         lap_onsets=ev.lap_onsets,
         decode=ev.decode,
         inputs=ev.inputs if live else None,
@@ -528,6 +572,22 @@ def in_windows(t: float, windows: Sequence[Window], now: float) -> bool:
 
 def _ipad_reports(clients: Sequence[ClientState]) -> list[dict[str, Any]]:
     return [c.last for c in clients if c.device == "ipad" and c.last]
+
+
+def clients_in_windows(clients: Sequence[ClientState], windows: Sequence[Window], now: float) -> list[ClientState]:
+    """The devices with only the samples that arrived while the test was current."""
+    return [replace(c, samples=[s for s in c.samples if in_windows(s.t_unix, windows, now)]) for c in clients]
+
+
+def _ipad_samples(v: View, ctx: AutoContext) -> int:
+    """iPad reports of the view's tiers while the test was current (the Home Screen test's evidence)."""
+    return sum(
+        1
+        for c in v.clients
+        if c.device == "ipad"
+        for s in c.samples
+        if v.tiers(s.tier) and in_windows(s.t_unix, ctx.windows, ctx.now)
+    )
 
 
 # --------------------------------------------------------------------------------------------- per item
@@ -564,7 +624,10 @@ def _kokoro(v: View, ctx: AutoContext) -> AutoState:
 
 
 def _home(v: View, ctx: AutoContext) -> AutoState:
-    return R.home_screen_verdict(screen_facts(v.clients, v.tiers), ctx.attest.get("did_not_touch"), ctx.now)
+    """Only the reports that arrived while this test was current: a page hidden during another test (a driver
+    switch, a note) is not this test's evidence."""
+    clients = clients_in_windows(v.clients, ctx.windows, ctx.now)
+    return R.home_screen_verdict(screen_facts(clients, v.tiers), ctx.attest.get("did_not_touch"), ctx.now)
 
 
 def _glance(v: View, ctx: AutoContext) -> AutoState:
@@ -573,7 +636,7 @@ def _glance(v: View, ctx: AutoContext) -> AutoState:
         if in_windows(lap.t_unix, ctx.windows, ctx.now):
             laps[lap.driver_id] = laps.get(lap.driver_id, 0) + 1
     coach = any(
-        s.route == "drive/coach" and in_windows(s.t_unix, ctx.windows, ctx.now)
+        s.route == "drive/coach" and v.tiers(s.tier) and in_windows(s.t_unix, ctx.windows, ctx.now)
         for c in v.clients
         if c.device == "ipad"
         for s in c.samples
@@ -591,15 +654,20 @@ def _one_message(v: View, ctx: AutoContext) -> AutoState:
     return R.one_message_verdict(spoken, ctx.now)
 
 
+def endurance_reloads(samples: Sequence[ClientSample]) -> int:
+    """Page reloads seen while the endurance test was current: the report counter went back."""
+    return sum(1 for a, b in itertools.pairwise(samples) if b.endurance and b.seq < a.seq)
+
+
 def _endurance(v: View, ctx: AutoContext) -> AutoState:
     fps = [
         s.fps_10s
         for c in v.clients
         if c.device == "ipad"
         for s in c.samples
-        if s.endurance and s.fps_10s is not None and s.route.startswith("drive/")
+        if s.endurance and s.fps_10s is not None and s.route.startswith("drive/") and v.tiers(s.tier)
     ]
-    reloads = sum(c.reloads for c in v.clients if c.device == "ipad")
+    reloads = sum(endurance_reloads(c.samples) for c in v.clients if c.device == "ipad")
     return R.endurance_verdict(fps, reloads, ctx.now)
 
 
@@ -630,12 +698,18 @@ RULES: dict[str, tuple[Rule, Count]] = {
     "radio_ptt": (_ptt, lambda v, _c: len(v.ptt)),
     "radio_speak_windows": (_speak, lambda v, _c: len(v.proactive)),
     "radio_kokoro": (_kokoro, lambda v, _c: len(v.synth) + sum(1 for c in v.cues if c.engine)),
-    "ipad_home_screen": (_home, lambda v, _c: sum(len(c.samples) for c in v.clients if c.device == "ipad")),
+    "ipad_home_screen": (_home, _ipad_samples),
     "ipad_glance": (_glance, lambda v, c: sum(1 for lap in v.laps if in_windows(lap.t_unix, c.windows, c.now))),
     "ipad_one_message": (_one_message, lambda v, _c: sum(1 for p in v.proactive if p.kind == "coaching")),
     "ipad_endurance": (
         _endurance,
-        lambda v, _c: sum(1 for c in v.clients for s in c.samples if s.endurance and s.fps_10s is not None),
+        lambda v, _c: sum(
+            1
+            for c in v.clients
+            if c.device == "ipad"
+            for s in c.samples
+            if s.endurance and s.fps_10s is not None and v.tiers(s.tier)
+        ),
     ),
     "ac_ps5": (_ac, _n_game("ac")),
     "gt7_ps5": (_gt7, _n_game("gt7")),
@@ -656,7 +730,7 @@ def _tiers_of(v: View) -> list[Tier]:
     out: list[Tier] = []
     for group in (v.cues, v.ptt, v.proactive, v.laps, v.switches, v.synth, v.sessions, v.game, v.phases):
         out += [r.tier for r in group]
-    out += [s.tier for c in v.clients for s in c.samples]
+    out += [s.tier for c in v.clients for s in c.samples if v.tiers(s.tier)]
     return out
 
 
@@ -694,8 +768,8 @@ def compute_auto(item_id: str, vs: Views, ctx: AutoContext) -> AutoState:
     if n_other:
         st = rule(vs.other, ctx)
         tier = R.dominant_tier(_tiers_of(vs.other)) or "unknown"
-        if st.verdict not in ("unavailable", "driver_only"):
-            st.verdict = "not_live"
+        if st.verdict != "unavailable":
+            st.verdict = "not_live"  # a "your call" test seen only in replays is not live either
         st.tier = tier
         st.reasons.insert(0, R.NOT_LIVE_TEXT[tier])
         return st

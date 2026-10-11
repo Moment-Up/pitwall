@@ -134,3 +134,17 @@ def test_api_shapes_match_the_shared_fixture() -> None:
     assert "voice on (Kokoro, Parakeet)" in md
     text_only = {**rep, "run": {**rep["run"], "server": {**rep["run"]["server"], "stt": "none", "tts": "none"}}}
     assert "voice on (text only)" in render_markdown(text_only, run)  # never "voice on (None, None)"
+
+
+def test_one_candidate_per_test() -> None:
+    """A test that informs two status lines is one suggestion (listing both), not the same text twice."""
+    ex = json.loads(EXAMPLE.read_text(encoding="utf-8"))
+    run = run_from_dict(ex["run"])
+    rep = build_report(run, 1791834625.0)
+    ids = [c["item_id"] for c in rep["candidates"]]
+    assert len(ids) == len(set(ids)) == len(run.items)
+    from pitwall.validate.catalog import BY_ID
+
+    for c in rep["candidates"]:
+        lines = [i.status_md for i in BY_ID[c["item_id"]].informs]
+        assert c["status_md"] == "; ".join(lines)

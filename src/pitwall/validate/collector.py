@@ -75,6 +75,7 @@ RATE_SAMPLES = 500
 SESSION_SCAN = 300  # most recent sessions read when collecting game sessions
 PROACTIVE_MAX_LAPS = 2  # a message still unmeasured this many laps after it started is finalised with what exists
 PTT_JOIN_S = 120.0  # an answer is joined to a transcript at most this long after it
+SPEAK_KINDS = frozenset({"lap_summary", "coaching"})  # voice.types.MessageKind values the speak-window test judges
 
 
 def _num(v: Any) -> float | None:
@@ -126,6 +127,8 @@ class Collector:
         self._last_conn: str | None = None
         self._last_sid: str | None = None
         self._last_mode: str | None = None
+        self._mode_changed = False  # the braking-call mode changed since the last lap was stored
+        self._decode0: dict[str, dict[str, Any]] = {}  # adapter name -> its counters when the run started
 
     # ------------------------------------------------------------------ lifecycle
     def attach(self) -> None:
@@ -133,6 +136,7 @@ class Collector:
             return
         self._attached = True
         self._seated = self.rt.drivers.active_id
+        self._decode0 = _adapter_counts(self.rt, self.live)
         self.live.subscribe(self._on_live)
         self.rt.drivers.subscribe(self._on_driver_thread)
         if self.hub is not None and callable(getattr(self.hub, "add_observer", None)):
@@ -220,6 +224,9 @@ class Collector:
         if run is None or lap_id is None or number is None:
             return
         tier = R.tier_of(bool(snap["synthetic"]), snap["source"], self.sender, "live")
+        # the mode is read when the lap is processed: a lap during which it changed was driven partly in each
+        mode = "mixed" if self._mode_changed else snap["cue_mode"]
+        self._mode_changed = False
         rec = LapRecord(
             t_unix=time.time(),
             tier=tier,
@@ -233,7 +240,7 @@ class Collector:
             game=snap["game"],
             track_id=snap["track_id"],
             track_name=snap["track_name"],
-            cue_mode=snap["cue_mode"],
+            cue_mode=mode,
             n_observations=int(snap["n_obs"]),
             picked_ids=list(snap["picked"]),
         )
@@ -319,25 +326,32 @@ class Collector:
         self._append("ptt", self.kit.run_or_raise().evidence.ptt, rec)
         return rec
 
+    def _record_id(self, msg_id: str) -> str:
+        """A question's record id: the answer's message id, prefixed with this service start's tag (message ids
+        restart at m1 when the service restarts, and a resumed run keeps the earlier questions)."""
+        return f"{self.kit.boot_tag}-{msg_id}" if msg_id else ""
+
     def _radio_answer(self, p: dict[str, Any]) -> None:
         rec = self._join_ptt(p)
-        rec.id = str(p.get("msg_id") or "")
+        mid = str(p.get("msg_id") or "")
+        rec.id = self._record_id(mid)
         rec.intent = p.get("intent")
         rec.answer = p.get("text")
         rec.grounded = p.get("grounded")
         rec.engineer_ms = _int(p.get("engineer_ms"))
         rec.answer_source = "llm" if p.get("llm") else ("fallback" if p.get("use_llm") else "deterministic")
-        self._ptt_by_msg[rec.id] = rec
+        self._ptt_by_msg[mid] = rec
         self.kit.dirty()
 
     def _radio_command(self, p: dict[str, Any]) -> None:
         rec = self._join_ptt(p)
-        rec.id = str(p.get("msg_id") or "")
+        mid = str(p.get("msg_id") or "")
+        rec.id = self._record_id(mid)
         rec.intent = "validation"
         rec.answer = p.get("text")
         rec.grounded = True
         rec.answer_source = "command"
-        self._ptt_by_msg[rec.id] = rec
+        self._ptt_by_msg[mid] = rec
         self.kit.dirty()
 
     def _radio_synth(self, p: dict[str, Any]) -> None:
@@ -359,6 +373,8 @@ class Collector:
     def _radio_proactive(self, p: dict[str, Any]) -> None:
         if not p.get("needs_speak_window") or int(p.get("priority") or 0) >= 100:
             return  # urgent calls and messages without a speak window are not judged by the speak-window rule
+        if p.get("kind") not in SPEAK_KINDS:
+            return  # the speak-window test judges lap summaries and coaching (not alerts, not the kit's own prompts)
         t, tier, sid, did = self._common()
         meta = p.get("meta") or {}
         st = p.get("state") or {}
@@ -447,10 +463,13 @@ class Collector:
         self.kit.dirty()
 
     def _radio_cue(self, p: dict[str, Any]) -> None:
-        t, tier, sid, did = self._common()
         seq = _int(p.get("seq"))
-        if seq is None:
-            return
+        lap = _int(p.get("lap"))
+        nums = [_num(p.get(k)) for k in ("target_m", "aim_m", "d_m", "speed_kph", "ttg_s")]
+        if seq is None or lap is None or any(x is None for x in nums):
+            return  # a call without its position or speed cannot be measured, and is never stored as zeros
+        target_m, aim_m, d_m, speed_kph, ttg_s = (float(x or 0.0) for x in nums)
+        t, tier, sid, did = self._common()
         rec = CueRecord(
             t_unix=t,
             tier=tier,
@@ -458,16 +477,16 @@ class Collector:
             driver_id=did,
             seq=seq,
             msg_id=p.get("msg_id"),
-            lap=int(_int(p.get("lap")) or 0),
+            lap=lap,
             corner=str(p.get("corner") or ""),
             kind=str(p.get("kind") or "brake"),
             heads_up=p.get("ref_lap_id") is None,
             focus=bool(p.get("focus")),
-            target_m=round(float(_num(p.get("target_m")) or 0.0), 1),
-            aim_m=round(float(_num(p.get("aim_m")) or 0.0), 1),
-            d_m=round(float(_num(p.get("d_m")) or 0.0), 1),
-            speed_kph=round(float(_num(p.get("speed_kph")) or 0.0), 1),
-            ttg_s=round(float(_num(p.get("ttg_s")) or 0.0), 2),
+            target_m=round(target_m, 1),
+            aim_m=round(aim_m, 1),
+            d_m=round(d_m, 1),
+            speed_kph=round(speed_kph, 1),
+            ttg_s=round(ttg_s, 2),
             path=str(p.get("path") or "pcm"),
             outcome="dropped" if p.get("status") == "dropped" else "sent",
             drop_reason=p.get("reason") if p.get("status") == "dropped" else None,
@@ -565,6 +584,7 @@ class Collector:
             self._last_sid = sid
             self.kit.timeline("session", f"New session ({GAME_NAMES.get(game or '', game or '-')}, {tier})")
         if live.cues.mode != self._last_mode:
+            self._mode_changed = self._last_mode is not None
             self._last_mode = live.cues.mode
             self.kit.timeline("cue_mode", f"Braking calls: {live.cues.mode}")
         if sid is not None and s is not None and status == "live":
@@ -581,7 +601,8 @@ class Collector:
         stats = conn.get("decode")
         if isinstance(stats, dict) and stats and tier != "unknown":
             g = E.adapter_game(stats.get("adapter"))
-            if g is not None and E.tally_decode(run.evidence.decode, f"{tier}|{g}", stats):
+            base = self._decode0.get(str(stats.get("adapter")))
+            if g is not None and E.tally_decode(run.evidence.decode, f"{tier}|{g}", stats, base):
                 self.kit.dirty()
 
     def _sample_inputs(self) -> None:
@@ -909,7 +930,8 @@ class Collector:
         rec.brake_max = None if not vals.get("brake") else round(max(vals["brake"]), 3)
         rec.gear_min = None if not vals.get("gear") else int(min(vals["gear"]))
         s = self.live.session
-        rng = None if s is None else s.extra.get("steer_raw_range")
+        # the session's raw range is only this check's reading when the car sent inputs during it
+        rng = None if s is None or rec.samples == 0 else s.extra.get("steer_raw_range")
         rec.steer_raw_range = [float(x) for x in rng] if isinstance(rng, list | tuple) and len(rng) == 2 else None
         self._phase_values = {}
         if self.kit.run is not None:
@@ -928,6 +950,38 @@ _EXTRA_KEYS = (
     "packet_format",
     "game_version",
 )
+
+
+def _adapter_counts(rt: Any, live: Any) -> dict[str, dict[str, Any]]:
+    """Every decoding adapter's counters now, by adapter name (the base the run's decode tally subtracts). Read on the
+    loop from the runtime's inputs: plain integers the ingest threads only ever increase."""
+    out: dict[str, dict[str, Any]] = {}
+    routers = [getattr(i, "router", None) for i in dict(getattr(rt, "inputs", None) or {}).values()]
+    ac = getattr(rt, "ac", None)
+    routers.append(getattr(ac, "router", None) if ac is not None else None)
+    for router in routers:
+        for adapter in list(getattr(router, "adapters", None) or []):
+            stats = getattr(adapter, "stats", None)
+            info = getattr(adapter, "info", None)
+            if stats is None or info is None:
+                continue
+            for _attempt in range(3):  # by_type can grow under the copy (ingest thread): try again
+                try:
+                    out[str(info.name)] = E.decode_counts(
+                        {
+                            "packets": stats.packets,
+                            "rejected": stats.rejected,
+                            "errors": stats.errors,
+                            "by_type": dict(stats.by_type),
+                        }
+                    )
+                    break
+                except Exception:
+                    continue
+    pub = getattr(live, "decode_stats", None)  # the last published counters (an adapter not reached above)
+    if isinstance(pub, dict) and pub.get("adapter") and str(pub["adapter"]) not in out:
+        out[str(pub["adapter"])] = E.decode_counts(pub)
+    return out
 
 
 def _push(lst: list[Any], v: Any) -> None:

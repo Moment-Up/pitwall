@@ -92,6 +92,7 @@ CATALOG: tuple[ValidationItem, ...] = (
         why="The Home Screen app and its wake lock have only been tried on a desk. A screen that sleeps mid-lap "
         "loses the coach card.",
         est_minutes=10,
+        scope="window",
         prerequisites=(
             "Open Pitwall on the iPad from its Home Screen icon (added from the Tailscale address in Safari: "
             "Share › Add to Home Screen).",
@@ -109,7 +110,8 @@ CATALOG: tuple[ValidationItem, ...] = (
         ),
         prompt="Did the screen stay on the whole time?",
         radio_brief="Validation: screen test. Drive five minutes without touching the iPad.",
-        rule_text="The iPad reports every 15 seconds. This passes when the page stayed visible on a Drive page with "
+        rule_text="While this test is current the iPad reports every 15 seconds. This passes when the page stayed "
+        "visible on a Drive page with "
         "the wake lock on and telemetry live from the console for at least 5 minutes" + _H + ", opened from the "
         "Home Screen icon over HTTPS, with no report more than 45 seconds late. It fails when the page was hidden "
         "or went quiet while you were driving and you say you did not touch the iPad.",
@@ -131,13 +133,13 @@ CATALOG: tuple[ValidationItem, ...] = (
         steps=(
             Step("Drive 3 laps on Drive › Coach."),
             Step("From quick glances, say the next corner and whether a braking call is coming."),
-            Step("Say the delta's sign and first digit."),
+            Step("Say whether the time gap (delta) shows plus or minus, and its first number."),
             Step("Read the coaching point on a straight."),
             Step("Answer: what did you look at first?", "Corner, delta or something else."),
         ),
         attestations=(
             Attest("read_corner", "I could read the next corner and whether a call was coming"),
-            Attest("read_delta", "I could read the delta's sign and first digit"),
+            Attest("read_delta", "I could read whether the delta was plus or minus, and its first number"),
             Attest("read_point", "I could read the coaching point on a straight"),
         ),
         prompt="Could you read everything you needed at a glance?",
@@ -154,7 +156,7 @@ CATALOG: tuple[ValidationItem, ...] = (
         title="Screen and radio give the same coaching point",
         short="one message test",
         summary="Five laps with the radio live: the coach card and the engineer must give the same point.",
-        why="The shared coaching pick (D6) has not been seen live.",
+        why="The coach card and the engineer should pick the same coaching point; that has not been seen live.",
         est_minutes=10,
         prerequisites=("Radio live (Drive › Radio › Go live), coaching Normal.",),
         steps=(
@@ -304,7 +306,7 @@ CATALOG: tuple[ValidationItem, ...] = (
         ),
         attestations=(Attest("never_after_point", "No call came after my braking point"),),
         prompt="Did the calls land at or just before your braking points?",
-        radio_brief="Validation: braking calls. Three laps with calls off, then calls on all.",
+        radio_brief="Validation: braking calls. Three laps with braking calls off, then three with them on.",
         rule_text="Each call's key word is measured where the iPad started playing it; more than 5 m past its aim "
         "(the engine's own margin) is late. Your braking is read from the stored lap: the nearest onset within "
         "100 m"
@@ -316,9 +318,9 @@ CATALOG: tuple[ValidationItem, ...] = (
         + ", none late, at most 10 % more than 0.6 s early"
         + _H
         + " and at "
-        "most 20 % lost in delivery" + _H + ". Two late calls fail. If you brake 10 m or more later" + _H + " with "
-        "calls on than with them off (8 points each), the result needs review: calls must never delay braking. "
-        "AI-field heads-ups are counted apart.",
+        "most 20 % lost in delivery" + _H + ". Two late calls, or more than 10 % of the calls measured, fail. If you "
+        "brake 10 m or more later" + _H + " with calls on than with them off (8 points each), the result is left for "
+        "you to check: calls must never delay braking. AI-field heads-ups are counted apart.",
         informs=(Informs("Verified vs unverified › Live braking cues: not yet validated live"),),
         candidate="If you agree with this run, the line may say: validated live on the PS5 (F1 25), with the date "
         "and this run id.",
@@ -464,7 +466,7 @@ VOICE_COMMANDS: tuple[tuple[str, str], ...] = (
     ("next test", "Moves to the next test (the current one keeps its state)"),
     ("worked", "Marks the current test as worked"),
     ("didn't work", "Marks the current test as didn't work"),
-    ("what's the test", "Says the current test and what is still missing"),
+    ("what's the test", "Says the current test and what it asks"),
     ("finish validation", "Finishes the run and saves the report"),
 )
 
@@ -473,13 +475,17 @@ def availability(item: ValidationItem, a: Availability) -> tuple[bool, str | Non
     """(available, reason). Only the item's own ``requires`` are checked."""
     for req in item.requires:
         if req == "hub" and not a.hub:
-            return False, "Voice is off on this server."
+            return False, "Voice is off on this Mac."
         if req == "stt" and (not a.hub or a.stt in (None, "none")):
-            return False, f"No speech recognition on this server: {a.stt_reason or 'switched off'}."
+            why = (a.stt_reason or "").strip()
+            if not why or "switched off" in why or why.startswith("no speech recognition"):
+                return False, "Speech recognition is off on this Mac."
+            return False, f"Speech recognition is not available on this Mac: {why}."
         if req == "kokoro" and a.tts != "kokoro":
-            return False, f"The engineer voice on this server is {a.tts or 'off'}, not the natural voice (Kokoro)."
+            voice = a.tts if a.tts not in (None, "none") else "off"
+            return False, f"The engineer voice on this Mac is {voice}, not the natural voice (Kokoro)."
         if req == "game_block" and not a.game_block:
-            return False, "This server has no game choice yet."
+            return False, "This Mac has no game choice yet."
         if req == "two_drivers" and a.drivers < 2:
             return False, "Add a second driver in Settings › Drivers first."
     return True, None

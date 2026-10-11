@@ -29,6 +29,8 @@ export interface ChecklistActions {
   inputDone: () => void;
   inputOpen: (open: boolean) => void;
   showReports: () => void;
+  /** Open Drive › Coach (the iPad tests are driven there). */
+  openDrive: () => void;
 }
 
 export interface ChecklistViewProps {
@@ -95,7 +97,7 @@ export function ChecklistView(p: ChecklistViewProps) {
 
   return (
     <div className="grid min-w-0 gap-4 [&>*]:min-w-0">
-      <RunBar run={run} names={p.names} busy={p.busy} onFinish={actions.openFinish} />
+      <RunBar run={run} names={p.names} busy={p.busy} wide={p.wide} onFinish={actions.openFinish} />
       {p.refreshError ? (
         <p role="status" className="m-0 text-sm text-warning">
           The last refresh failed ({p.refreshError}); showing the previous answer.
@@ -147,6 +149,7 @@ export function ChecklistView(p: ChecklistViewProps) {
             onInputPhase={(phase, rot) => actions.inputPhase(item.id, phase, rot)}
             onInputDone={actions.inputDone}
             onInputOpen={actions.inputOpen}
+            onOpenDrive={actions.openDrive}
           />
         ) : (
           <Card className="p-6">

@@ -24,7 +24,7 @@ MINUS = "\u2212"
 RESULT_WORDS = {
     "pass": "pass",
     "fail": "fail",
-    "needs_review": "needs review",
+    "needs_review": "to check",
     "not_run": "not run",
     "skipped": "skipped",
 }
@@ -401,17 +401,18 @@ def build_report(run: Run, now: float, redact: bool = False) -> dict[str, Any]:
                 "evidence_tables": evidence_tables(run, st.id, redact),
             }
         )
-        if cat is not None:
-            for inf in cat.informs:
-                candidates.append(
-                    {
-                        "item_id": st.id,
-                        "status_md": inf.status_md,
-                        "capability_row": inf.capability_row,
-                        "suggestion": cat.candidate,
-                        "met": st.result == "pass",
-                    }
-                )
+        if cat is not None and cat.informs:
+            # one candidate per test (its suggestion once), naming every status line it informs
+            rows = [i.capability_row for i in cat.informs if i.capability_row]
+            candidates.append(
+                {
+                    "item_id": st.id,
+                    "status_md": "; ".join(i.status_md for i in cat.informs),
+                    "capability_row": "; ".join(rows) if rows else None,
+                    "suggestion": cat.candidate,
+                    "met": st.result == "pass",
+                }
+            )
     return {
         "format": FORMAT,
         "generated_unix": now,

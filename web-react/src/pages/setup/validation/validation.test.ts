@@ -56,6 +56,7 @@ const actions: ChecklistActions = {
   inputDone: noop,
   inputOpen: noop,
   showReports: noop,
+  openDrive: noop,
 };
 
 function driver(id: number, name: string, initials: string): Driver {
@@ -241,6 +242,9 @@ describe("states", () => {
     expect(t).toContain("This session is a replay: it is shown but does not count.");
     expect(t).toContain("Pitwall only saw this test in a replay: it is shown but does not count.");
     expect(t).toContain("Not live data");
+    // never a green "Live" next to "does not count"
+    expect(t).toContain("Data arriving · not counted");
+    expect(html).not.toMatch(/data-tone="success"[^>]*>(<[^>]+>)*Live</);
   });
 
   it("generated (synthetic) data is excluded the same way", () => {
@@ -289,15 +293,75 @@ describe("states", () => {
     expect(asThird).not.toContain("You said");
   });
 
-  it("phone: a Segment of groups and a Select of tests instead of the list; one column", () => {
+  it("phone: one Select of every test instead of the list; one column; a quieter Finish and Skip on its own row", () => {
     const html = checklist({ wide: false });
     honest(html);
-    expect(html).toContain('aria-label="Test groups"');
+    expect(html).toContain('aria-label="Test on screen"');
+    expect(html).not.toContain('aria-label="Test groups"');
     expect(html).not.toContain('aria-label="Tests in this run"');
     expect(text(html)).toContain("Braking calls land on time");
+    // the run bar's Finish is a 48 px secondary button on a phone (the test stays the main thing on screen)
+    const finish = html.match(/<button[^>]*>Finish and save<\/button>/)?.[0] ?? "";
+    expect(finish).toContain("min-h-12");
+    expect(finish).not.toContain("min-h-16");
+    // the bottom row: two columns, Skip on a row of its own above ‹ Previous / Next ›
+    const nav = /<div[^>]*data-validation-nav[^>]*>/.exec(html)?.[0] ?? "";
+    expect(nav).toContain("grid-cols-2");
+    expect(html).toMatch(/order-first col-span-2[^"]*"><button[^>]*>Skip for now/);
     const wide = checklist({ wide: true });
     expect(wide).toContain('aria-label="Tests in this run"');
-    expect(wide).not.toContain('aria-label="Test groups"');
+    expect(wide).not.toContain('aria-label="Test on screen"');
+  });
+
+  it("the iPad tests driven on Drive › Coach link there", () => {
+    let opened = 0;
+    const run = runWith(["ipad_home_screen", "cues_timing"], { current_item: "ipad_home_screen" });
+    const html = checklist({ run, actions: { ...actions, openDrive: () => (opened += 1) } });
+    expect(text(html)).toContain("Open Drive › Coach");
+    expect(text(checklist())).not.toContain("Open Drive › Coach"); // braking calls: not a Drive test
+    expect(opened).toBe(0);
+  });
+
+  it("nothing seen yet: no big zeros; a check not met on a test just started is 'Not yet', not red", () => {
+    const run = runWith(["ipad_glance"], {
+      current_item: "ipad_glance",
+      items: [
+        pendingState("ipad_glance", {
+          status: "current",
+          auto: {
+            verdict: "driver_only",
+            reasons: ["Only you can judge what you read at a glance"],
+            checks: [
+              { id: "review_laps", label: "Laps driven in this test (per driver)", status: "not_met", value: "0", target: ">= 3", heuristic: true },
+              { id: "review_coach_page", label: "iPad on Drive › Coach", status: "not_met", value: "no", target: "yes", heuristic: false },
+            ],
+            metrics: {},
+            tier: null,
+            updated_unix: 1791833412,
+          },
+        }),
+      ],
+    });
+    const html = checklist({ run });
+    honest(html);
+    expect(text(html)).toContain("Not yet");
+    expect(text(html)).not.toContain("Not met");
+    const home = runWith(["ipad_home_screen"], {
+      current_item: "ipad_home_screen",
+      items: [pendingState("ipad_home_screen", { status: "current", auto: { verdict: "no_evidence", reasons: ["No reports from an iPad yet"], checks: [], metrics: { wake_on_streak_s: 0, gaps: 0, hidden_transitions: 0 }, tier: null, updated_unix: 1 } })],
+    });
+    const t = text(checklist({ run: home }));
+    expect(t).not.toContain("Screen kept on (longest)");
+    expect(t).toContain("No reports from an iPad yet");
+  });
+
+  it("both answers look the same until one is given", () => {
+    const html = checklist();
+    const worked = html.match(/<button[^>]*>Worked<\/button>/)?.[0] ?? "";
+    const didnt = html.match(/<button[^>]*>Didn&#x27;t work<\/button>/)?.[0] ?? "";
+    const variant = (b: string) => /data-variant="([^"]+)"|button--(primary|secondary|danger-soft)/.exec(b)?.slice(1).find(Boolean);
+    expect(worked).not.toBe("");
+    expect(variant(worked)).toBe(variant(didnt));
   });
 
   it("a test this dashboard does not know: a readable row and a plain card", () => {
@@ -315,7 +379,11 @@ describe("start", () => {
     const html = renderToStaticMarkup(createElement(StartList, { catalog: cat, selection: sel, onToggle: noop }));
     honest(html);
     const t = text(html);
-    expect(t).toContain("Not available: This server has no game selection yet.");
+    // a test this Mac cannot run: a plain row at full contrast with its reason and a chip, not a faded switch
+    expect(t).toContain("This server has no game selection yet.");
+    expect(t).toContain("Not available");
+    expect(html).toMatch(/data-unavailable="game_selection"/);
+    expect(html).not.toMatch(/disabled=""[^>]*>[^<]*Game choice/);
     expect(t).toContain("About 60 min · optional.");
     for (const g of ["Dashboard at the wheel", "Radio", "Coaching", "Games", "Drivers"]) expect(t).toContain(g);
     expect(cat.items.length).toBe(12);
@@ -369,8 +437,8 @@ describe("input check", () => {
       phases: ["centre", "left", "right", "pedals"],
       askRotation: false,
       records: [
-        { item_id: "gt7_ps5", phase: "left", start_unix: 1, end_unix: 4, samples: 30, steer_mean: -0.98, steer_min: -1, steer_max: -0.9, throttle_max: 0, brake_max: 0, gear_min: 1, steer_raw_range: null, rotation_deg: null },
-        { item_id: "gt7_ps5", phase: "right", start_unix: 5, end_unix: 8, samples: 30, steer_mean: 0.97, steer_min: 0.9, steer_max: 1, throttle_max: 0, brake_max: 0, gear_min: 1, steer_raw_range: null, rotation_deg: null },
+        { item_id: "gt7_ps5", phase: "left", start_unix: 1, end_unix: 4, samples: 30, steer_mean: -0.9, steer_min: -0.98, steer_max: 0, throttle_max: 0, brake_max: 0, gear_min: 1, steer_raw_range: null, rotation_deg: null },
+        { item_id: "gt7_ps5", phase: "right", start_unix: 5, end_unix: 8, samples: 30, steer_mean: 0.1, steer_min: -0.98, steer_max: 0.97, throttle_max: 0, brake_max: 0, gear_min: 1, steer_raw_range: null, rotation_deg: null },
       ],
     });
     const t = text(html);
@@ -390,7 +458,7 @@ describe("reports", () => {
     expect(t).toContain("In progress");
     expect(t).toContain("Live");
     expect(t).toContain("1 passed");
-    expect(t).toContain("2 to review");
+    expect(t).toContain("2 to check");
     expect(t).toMatch(/Run of .*2026/);
     expect(t).toContain("No live data");
     expect(t).toContain("Finished");
@@ -408,12 +476,28 @@ describe("reports", () => {
     expect(t).toContain("This run is still going");
     for (const h of ["Test", "Result", "Driver", "Pitwall saw", "Key evidence"]) expect(t).toContain(h);
     expect(t).toContain("Braking calls land on time");
-    expect(t).toContain("Review");
+    expect(t).toContain("To check");
     expect(t).toContain("6 calls measured, 8 needed");
-    expect(t).toContain("What this run can support (for the maintainer)");
-    expect(t).toContain("Not met in this run");
+    expect(t).toContain("What this run can support (for the maintainer): nothing yet"); // folded: nothing met
     expect(t).toContain("This report never changes capability statuses.");
     for (const b of ["Open report", "Download JSON", "Leave out transcripts", "‹ All runs"]) expect(t).toContain(b);
+    // the summary grid is for wide screens; a phone reads the per-test sections
+    expect(html).toMatch(/class="[^"]*hidden[^"]*md:flex[^"]*"[^>]*data-summary-grid/);
+  });
+
+  it("Leave out transcripts is on by default, and Download JSON honours it", () => {
+    const report: ValidationReport = vfix.report();
+    const html = renderToStaticMarkup(createElement(ReportDetail, { report, names: NAMES, error: null, onOpenMarkdown: noop, onDownloadJson: noop, onBack: noop }));
+    expect(html).toMatch(/<label[^>]*data-selected="true"[^>]*>(?:(?!<\/label>)[\s\S])*Leave out transcripts/);
+  });
+
+  it("something met: the maintainer's suggestions are listed, open", () => {
+    const report: ValidationReport = vfix.report();
+    report.candidates = report.candidates.map((c, k) => ({ ...c, met: k === 0 }));
+    const t = text(renderToStaticMarkup(createElement(ReportDetail, { report, names: NAMES, error: null, onOpenMarkdown: noop, onDownloadJson: noop, onBack: noop })));
+    expect(t).toContain("What this run can support (for the maintainer)");
+    expect(t).not.toContain("nothing yet");
+    expect(t).toContain("Met in this run");
   });
 });
 
@@ -425,7 +509,7 @@ describe("recorded answers of the real backend (scratch server, recorded replays
     const html = renderToStaticMarkup(createElement(StartList, { catalog: cat, selection: sel, onToggle: noop }));
     honest(html);
     const t = text(html);
-    expect(t).toContain("Not available: Voice is off on this server.");
+    expect(t).toContain("Voice is off on this Mac.");
     const empty = checklist({ run: null, catalog: cat });
     honest(empty);
     expect(text(empty)).toMatch(/\d+ of 12 tests can run on this Mac/);

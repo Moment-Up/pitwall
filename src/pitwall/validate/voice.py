@@ -2,8 +2,9 @@
 
 The radio hub asks ``ValidationKit.voice_command`` before the engineer; only a full match of one of these patterns
 on the normalised text is a command, so ordinary questions ("where should I brake in turn 3", "start talking",
-"give me a report") always reach the engineer. Replies are British English, at most 25 words, numbers as digits
-(the hub's ``to_speech`` reads them).
+"give me a report") always reach the engineer, and with no run active only "start validation" is taken (so a
+"passed!" after an overtake still reaches the engineer). Replies are British English, at most 25 words, numbers as
+digits (the hub's ``to_speech`` reads them).
 """
 
 from __future__ import annotations
@@ -29,7 +30,9 @@ PATTERNS: tuple[tuple[Command, re.Pattern[str]], ...] = (
     ("finish", re.compile(r"(finish|stop|end) (the )?validation")),
 )
 
-NO_RUN = "No validation running. Say start validation."
+FINISHING = "Finishing validation."
+FINISH_FAILED = "The validation report could not be saved. Tap Finish on the iPad."
+MAX_WORDS = 25
 
 
 def normalise(text: str) -> str:
@@ -54,10 +57,6 @@ def parse_command(text: str) -> Command | None:
     return None
 
 
-def first_sentence(text: str) -> str:
-    return text.split(". ", 1)[0].rstrip(".")
-
-
 def brief_body(radio_brief: str) -> str:
     """'Validation: braking calls. Three laps...' -> 'braking calls. Three laps...' (for 'First test: ...')."""
     return radio_brief.split(": ", 1)[1] if radio_brief.startswith("Validation: ") else radio_brief
@@ -73,29 +72,47 @@ def already_running(short: str | None) -> str:
     return f"Validation is already running. Current test: {short}." if short else "Validation is already running."
 
 
+def _cap(text: str) -> str:
+    return text[:1].upper() + text[1:]
+
+
+def _words(text: str, limit: int = MAX_WORDS) -> str:
+    """At most ``limit`` words, ending on a full stop."""
+    words = text.split()
+    if len(words) <= limit:
+        return text
+    return " ".join(words[:limit]).rstrip(".,;:") + "."
+
+
 def next_test(brief: str | None) -> str:
     if brief is None:
         return "That was the last test. Say finish validation, or tap Finish on the iPad."
     return f"Next test: {brief_body(brief)}"
 
 
-def marked(short: str, worked: bool) -> str:
+def back_to(brief: str) -> str:
+    """'next test' after the last one: an earlier test is still to do ("Back to the one message test. Five laps...")."""
+    return _words(f"Back to the {brief_body(brief)}")
+
+
+def marked(short: str, worked: bool, driver: str | None = None) -> str:
+    """'Glance test: noted as worked for Sam.' (the driver's name on tests each driver answers)."""
+    who = f" for {driver}" if driver else ""
     if worked:
-        return f"Marked {short} as worked."
-    return f"Marked {short} as didn't work. Add a note on the iPad when you stop."
+        return f"{_cap(short)}: noted as worked{who}."
+    return f"{_cap(short)}: noted as didn't work{who}. Add a note on the iPad when you stop."
 
 
-def status(index: int, total: int, short: str, first_reason: str | None) -> str:
-    base = f"Test {index} of {total}: {short}."
-    if not first_reason:
-        return base
-    reason = first_sentence(first_reason)
-    words = (base + " " + reason + ".").split()
-    return " ".join(words[:25]) if len(words) > 25 else f"{base} {reason}."
+def status(index: int, total: int, short: str, radio_brief: str | None) -> str:
+    """'repeat the instructions': where the run is and what the current test asks (its brief)."""
+    if not radio_brief:
+        return f"Test {index} of {total}: {short}."
+    return _words(f"Test {index} of {total}: {brief_body(radio_brief)}")
 
 
-def finished(worked: int, didnt: int, review: int) -> str:
-    return f"Validation finished. {worked} worked, {didnt} didn't, {review} to review. Report saved."
+def finished(passed: int, failed: int, to_check: int) -> str:
+    """Said once the report is saved: the combined results (Pitwall's and the driver's), not the driver's words."""
+    return f"Validation finished. {passed} passed, {failed} failed, {to_check} to check. Report saved."
 
 
 def verdict_prompt(short: str, verdict: str) -> str:

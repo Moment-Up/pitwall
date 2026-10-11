@@ -8,16 +8,18 @@ import { KPIGroup } from "@heroui-pro/react";
 import { KPI } from "@heroui-pro/react/kpi";
 import { Fragment } from "react";
 import type { CatalogItem, ItemState } from "../../../lib/endpoints/validation";
-import { AUTO_CHIP, checkView, headlineMetrics, notLiveNotice, reasonText } from "../../../lib/validation/view";
+import { AUTO_CHIP, checkView, headlineMetrics, notLiveNotice, reasonText, shownReasons } from "../../../lib/validation/view";
 import { Fold, SectionTitle, StatusChip } from "./parts";
 
 export function EvidencePanel({ item, state }: { item: CatalogItem; state: ItemState }) {
   const auto = state.auto;
   const chip = AUTO_CHIP[auto.verdict] ?? AUTO_CHIP.no_evidence;
   const notLive = notLiveNotice(auto);
-  const metrics = headlineMetrics(item.id, auto.metrics);
-  const checks = auto.checks.map(checkView);
-  const empty = !metrics.length && !checks.length && !auto.reasons.length;
+  // nothing seen yet: no big zeros (unknown is never shown as 0)
+  const metrics = auto.verdict === "no_evidence" ? [] : headlineMetrics(item.id, auto.metrics);
+  const checks = auto.checks.map((c) => checkView(c, auto.verdict));
+  const reasons = shownReasons(auto); // the not-live warning above already says where the data came from
+  const empty = !metrics.length && !checks.length && !reasons.length;
   return (
     <section className="grid gap-3" aria-labelledby={`saw-${item.id}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -66,9 +68,9 @@ export function EvidencePanel({ item, state }: { item: CatalogItem; state: ItemS
           ))}
         </ul>
       ) : null}
-      {auto.reasons.length ? (
+      {reasons.length ? (
         <ul className="m-0 grid list-disc gap-1 pl-5 text-[15px] text-muted">
-          {auto.reasons.map((r) => (
+          {reasons.map((r) => (
             <li key={r}>{reasonText(r)}</li>
           ))}
         </ul>

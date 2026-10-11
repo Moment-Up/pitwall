@@ -13,7 +13,6 @@ import { Segment } from "@heroui-pro/react";
 import { useCallback, useMemo, useState, type Key, type ReactNode } from "react";
 import { ScrollRow } from "../../components/ScrollRow";
 import { useRadio } from "../../components/radio";
-import { AreaActions } from "../../components/shell/AreaHeader";
 import { useActiveDriver, useDrivers } from "../../hooks/stores";
 import { useApi } from "../../hooks/useApi";
 import { cache } from "../../lib/cache";
@@ -187,16 +186,8 @@ export function ValidationPage({ route }: PageProps) {
     },
     inputOpen: setInputOpen,
     showReports: () => go("reports"),
+    openDrive: () => router.navigate("/drive/coach"),
   };
-
-  const header =
-    view === "checklist" && catalog.data && active.data && !activeId ? (
-      <AreaActions>
-        <Button size="lg" className="min-h-11" onPress={actions.openStart}>
-          Start validation
-        </Button>
-      </AreaActions>
-    ) : null;
 
   const segment = (
     <ScrollRow className="-mx-4 px-4 pb-1 md:mx-0 md:px-0">
@@ -211,7 +202,6 @@ export function ValidationPage({ route }: PageProps) {
   );
   const frame = (body: ReactNode) => (
     <div className="grid min-w-0 gap-4 [&>*]:min-w-0">
-      {header}
       {segment}
       {body}
     </div>
@@ -248,9 +238,9 @@ export function ValidationPage({ route }: PageProps) {
                 setActionError(validationErrorText(e));
               });
           }}
-          onDownloadJson={() => {
+          onDownloadJson={(redact) => {
             validationApi
-              .report(runId)
+              .report(runId, redact)
               .then((r) => saveFile(`pitwall-validation-${runId}.json`, JSON.stringify(r, null, 2), "application/json"))
               .catch((e: unknown) => setActionError(validationErrorText(e)));
           }}
