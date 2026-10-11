@@ -46,7 +46,9 @@ from pitwall.model.telemetry import (
     FieldSample,
     GameEvent,
     LapCompletion,
+    RaceTiming,
     SessionInfo,
+    TyreSetsInfo,
 )
 from pitwall.storage import repo
 from pitwall.storage.db import DbWriter
@@ -73,6 +75,15 @@ class FieldSink(Protocol):
     def end_session(self) -> None: ...
 
 
+# --- race strategy (pitwall.strategy) ---
+class StrategySink(Protocol):
+    """Where the race strategy inputs go (``pitwall.strategy.worker.StrategyWorker``): O(1), never blocks ingest."""
+
+    def submit(self, session_id: str, item: Emitted) -> bool: ...
+
+    def end_session(self, session_id: str) -> None: ...
+
+
 class SessionManager:
     def __init__(
         self,
@@ -86,10 +97,12 @@ class SessionManager:
         drivers: ActiveDriverSource | None = None,
         resume_candidate: Mapping[str, Any] | None = None,
         field: FieldSink | None = None,
+        strategy: StrategySink | None = None,
     ) -> None:
         self.writer = writer
         self.live = live
         self.field = field  # layer L0b: the field model learns the track from the other cars (off this thread)
+        self.strategy = strategy  # race strategy (pitwall.strategy): runs off this thread
         self.worker = worker
         self.source = source
         self.synthetic = synthetic
@@ -167,6 +180,8 @@ class SessionManager:
         self.writer.submit(lambda c: repo.end_session(c, sid, t_end))
         if self.field is not None:
             self.field.end_session()
+        if self.strategy is not None:  # race strategy (pitwall.strategy)
+            self.strategy.end_session(sid)
         log.info("session %s ended", sid)
         self.session_id = None
         self._game_uid = None
@@ -179,6 +194,12 @@ class SessionManager:
             if self.field is not None:
                 self.field.submit(e)
             return
+        if isinstance(e, RaceTiming | TyreSetsInfo):
+            # race strategy (pitwall.strategy): the field's timing and the player's tyre sets never start or split a
+            # session and are never persisted as such - a lock-free append to the strategy worker, or nowhere
+            if self.strategy is not None and self.session_id is not None:
+                self.strategy.submit(self.session_id, e)
+            return
         self._last_t_ns = e.t_recv_ns
         if self.drivers is not None:
             seat = self.drivers.seat  # one attribute load per item; all decisions below use this snapshot
@@ -186,6 +207,7 @@ class SessionManager:
                 self._sync_driver(seat, e)  # rare: only after a driver change, never per frame
         if isinstance(e, SessionInfo):
             self._on_session(e)
+            self._to_strategy(e)
             return
         if isinstance(e, GameEvent) and self.session_id is None:
             # menus send button events with no session: drive PTT but don't create an empty session
@@ -209,6 +231,18 @@ class SessionManager:
             sid = self.session_id
             assert sid is not None
             self.writer.submit(lambda c: repo.insert_setup(c, sid, e))
+        if not isinstance(e, CarSetup):
+            self._to_strategy(e)
+
+    def _to_strategy(self, e: Emitted) -> None:
+        """Race strategy (pitwall.strategy): the player's frames, laps, events and session info, after the session
+        manager has handled them (one deque append; button events are left out: frequent and not needed)."""
+        sid = self.session_id
+        if self.strategy is None or sid is None:
+            return
+        if isinstance(e, GameEvent) and e.kind == EventKind.BUTTON:
+            return
+        self.strategy.submit(sid, e)
 
     def _on_session(self, info: SessionInfo) -> None:
         uid = info.session_uid

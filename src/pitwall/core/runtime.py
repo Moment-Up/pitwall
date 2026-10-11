@@ -45,6 +45,7 @@ from pitwall.model.telemetry import Game, Platform, SessionInfo
 from pitwall.settings_store import SecretStore, SettingsStore
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
+from pitwall.strategy.worker import StrategyWorker
 
 log = logging.getLogger(__name__)
 
@@ -178,6 +179,9 @@ class Runtime:
         on_snapshot, on_session = knowledge_feeds(self.knowledge)
         self.field = FieldWorker(on_snapshot, on_session=on_session)
         self._replay_field: FieldWorker | None = None
+        # race strategy (pitwall.strategy): one worker for live F1 input, one per replay (calls only when not max speed)
+        self.strategy = StrategyWorker(self.live, self.writer)
+        self._replay_strategy: StrategyWorker | None = None
         self.processor = LapProcessor(self.db, self.writer, self.live)
         self.worker = AnalysisWorker(self.processor)
         self.inputs: dict[int, _Input] = {}
@@ -269,6 +273,7 @@ class Runtime:
             drivers=self.drivers,
             resume_candidate=self._resume_candidate(source),  # a restart mid-race continues the same session
             field=self.field if "f1" in keys else None,  # only F1 reports the whole field (one worker per runtime)
+            strategy=self.strategy if "f1" in keys else None,  # race strategy (pitwall.strategy): F1 timing only
         )
         router = PacketRouter(adapters_for(keys, self._known_tracks()), sessions, self.live)
         last_err: OSError | None = None
@@ -483,6 +488,9 @@ class Runtime:
             on_snapshot, on_session = knowledge_feeds(resolver)
             field = FieldWorker(on_snapshot, on_session=on_session, block_when_full=True)
             self._replay_field = field
+            # race strategy (pitwall.strategy): a max-speed replay makes no radio calls (nobody is driving)
+            strategy = StrategyWorker(self.live, self.writer, publish_calls=speed is not None, block_when_full=True)
+            self._replay_strategy = strategy
             self.live.knowledge = resolver
             sessions = SessionManager(
                 self.writer,
@@ -494,6 +502,7 @@ class Runtime:
                 overrides={"track_name": meta.extra.get("track_name"), "scenario": meta.extra.get("scenario")},
                 drivers=self.drivers,
                 field=field,
+                strategy=strategy,
             )
             adapters = all_adapters(self._known_tracks(), ac_tracks=self._ac_known_tracks(), ac_platform=platform)
             if meta.game_hint != AC_CAPTURE_HINT:
@@ -505,6 +514,7 @@ class Runtime:
             def done() -> None:
                 finish_router(router)
                 field.close(drain=True)  # learn what is still queued, publish the final view
+                strategy.close(timeout=30.0, drain=True)  # race strategy: finish the records and stops
                 if self.live.knowledge is resolver:
                     self.live.knowledge = self.knowledge  # learned (L3) models feed the live resolver again
 
@@ -520,6 +530,9 @@ class Runtime:
         field, self._replay_field = self._replay_field, None
         if field is not None:
             field.close()
+        strategy, self._replay_strategy = self._replay_strategy, None
+        if strategy is not None:
+            strategy.close()
         self.live.knowledge = self.knowledge
 
     def replay_status(self) -> dict[str, Any] | None:
@@ -550,5 +563,6 @@ class Runtime:
         self.worker.join()
         self.worker.close()
         self.field.close()
+        self.strategy.close(drain=True)
         self.writer.flush()
         self.writer.close()

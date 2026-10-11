@@ -24,6 +24,7 @@ from pitwall.analysis.track import TrackModel
 from pitwall.analysis.track_identity import corner_texts, resolve_corner_ref
 from pitwall.carsetup.facts import session_setup_facts
 from pitwall.core.session_analysis import SessionAnalysis
+from pitwall.strategy.facts import add_strategy_facts
 
 
 def fmt_lap(ms: int | None) -> str:
@@ -351,6 +352,10 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
             )
 
     # ---------------------------------------------------------------- fuel / tyres / strategy
+    # --- race strategy (pitwall.strategy): a live race / practice StrategyView gives the fuel, tyre, gap, pit and
+    # weather facts; the per-lap estimates below then go to a throwaway sheet (the surface temperatures still count)
+    legacy = FactSheet() if add_strategy_facts(fs, (live or {}).get("strategy")) else fs
+    # --- end race strategy ---
     frame = (live or {}).get("frame") or {}
     total_laps = (live or {}).get("session", {}) or {}
     total = total_laps.get("total_laps") if isinstance(total_laps, dict) else None
@@ -368,9 +373,9 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
             txt += f"; margin to the finish {fe.margin_laps:+.1f} laps ({fe.margin_kg:+.1f} kg)"
         if fe.game_estimate_laps is not None:
             txt += f"; the game's own fuel figure (in-car display) is {fe.game_estimate_laps:+.1f} laps"
-        fs.add("fuel", txt + ".", asdict(fe))
+        legacy.add("fuel", txt + ".", asdict(fe))
     else:
-        fs.add("fuel", "Fuel usage per lap is not yet known (needs at least one complete green lap).")
+        legacy.add("fuel", "Fuel usage per lap is not yet known (needs at least one complete green lap).")
     te = tyre_estimate(sa.laps)
     if te.wear_now_pct:
         fl, fr, rl, rr = te.wear_now_pct
@@ -383,7 +388,7 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
             txt += f"; wear rate per lap FL {wr[0]:.2f}, FR {wr[1]:.2f}, RL {wr[2]:.2f}, RR {wr[3]:.2f} %"
         if te.laps_to_limit is not None:
             txt += f"; {te.limiting_wheel} reaches {te.limit_pct:.0f}% wear in about {te.laps_to_limit:.1f} laps"
-        fs.add(
+        legacy.add(
             "tyres",
             txt + ".",
             {
@@ -407,16 +412,16 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     pw = pit_window(cur_lap, total if is_race else None, te, fe)
     if pw:
         if pw["stop_needed_for_tyres"]:
-            fs.add(
+            legacy.add(
                 "strategy",
                 f"Pit window (tyre-limited, deterministic estimate): laps {pw['window_open_lap']} "
                 f"to {pw['window_close_lap']}, limited by the {pw['limiting_wheel']} tyre.",
                 pw,
             )
         else:
-            fs.add("strategy", f"No tyre stop needed: {pw['reason']}.", pw)
+            legacy.add("strategy", f"No tyre stop needed: {pw['reason']}.", pw)
     elif not is_race:
-        fs.add("strategy", "This is not a race session, so no pit-window calculation applies.")
+        legacy.add("strategy", "This is not a race session, so no pit-window calculation applies.")
 
     # ---------------------------------------------------------------- car setup (pitwall.carsetup)
     for topic, text, data in session_setup_facts(s, sa.setup, driver.get("skill_level")):

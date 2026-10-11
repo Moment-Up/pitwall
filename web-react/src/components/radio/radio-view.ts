@@ -33,6 +33,7 @@ export const KIND_CHIP: Record<LogKind, KindChip> = {
   lap_summary: { label: "LAP", tone: "accent" },
   coaching: { label: "COACH", tone: "default" },
   info: { label: "INFO", tone: "default" },
+  strategy: { label: "STRATEGY", tone: "ref" }, // race strategy calls (pitwall.strategy)
   transcript: { label: "YOU", tone: "default" },
   you: { label: "YOU", tone: "default" },
   error: { label: "ERROR", tone: "danger" },

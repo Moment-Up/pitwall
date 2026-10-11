@@ -203,8 +203,9 @@ export function pathOf(...segments: (string | number)[]): string {
 
 // ---------------------------------------------------------------------------------------------------- page params
 
-export type SessionTab = "summary" | "laps" | "compare" | "corners" | "ask";
-export const SESSION_TABS: readonly SessionTab[] = ["summary", "laps", "compare", "corners", "ask"];
+// race strategy (pitwall.strategy): "strategy" (Review › Strategy, races only; SessionPage hides the tab otherwise)
+export type SessionTab = "summary" | "laps" | "compare" | "corners" | "strategy" | "ask";
+export const SESSION_TABS: readonly SessionTab[] = ["summary", "laps", "compare", "corners", "strategy", "ask"];
 
 /** `#/review/sessions/<id>[/<tab>]`: param "<id>/<tab>" -> { id, tab }. No id = the list; unknown tab = Summary. */
 export function parseSessionParam(param: string | null): { id: string | null; tab: SessionTab } {

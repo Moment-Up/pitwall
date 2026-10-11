@@ -1,0 +1,134 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "3-lap race, lap 2, P11: not enough laps yet on any estimate",
+  "notes": "Modelled on the strategy spec's recorded figures for the committed fixture tests/fixtures/recorded/f1_25_2025_ps5_austria_race-excerpt.pwcap: total 3 laps; last TyreSets fitted soft wear 11, lifeSpan 22, usableLife 27; unused soft -608 ms; forecast 3 race samples, offsets 0/5/10, rain 7 %; tyres and pit 'not enough laps yet'; no pit, fuel or weather calls. Position and the game's fuel figure are invented. Not produced by the strategy engine."
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "a1b2c3d4e5f6",
+ "synthetic": false,
+ "lap": 2,
+ "total_laps": 3,
+ "laps_remaining": 1.6,
+ "position": 11,
+ "cars": 20,
+ "gaps": {
+  "ahead": {
+   "car_index": 5,
+   "gap_s": 0.9,
+   "settled": true,
+   "trend_s_per_lap": null,
+   "trend_laps": 0,
+   "laps_to_1s": null,
+   "within_1s": true,
+   "drs_range": false,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": null
+  },
+  "behind": {
+   "car_index": 12,
+   "gap_s": 1.4,
+   "settled": true,
+   "trend_s_per_lap": null,
+   "trend_laps": 0,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": false,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": null
+  },
+  "leader_s": 12.6,
+  "note": "not enough laps for a trend yet"
+ },
+ "tyres": {
+  "compound": "soft",
+  "age_laps": 1,
+  "stint_laps": 1,
+  "wear_pct": [
+   9,
+   11,
+   8,
+   9
+  ],
+  "limiting_wheel": null,
+  "rate_pct_per_lap": null,
+  "rate_range": null,
+  "limit_pct": 70,
+  "laps_to_limit": null,
+  "enough_laps": false,
+  "note": "not enough laps on this set yet: 3 green laps needed",
+  "game_laps_left": 22,
+  "game_usable_life": 27,
+  "new_set": {
+   "compound": "soft",
+   "gain_s": 0.61,
+   "deg_s_per_lap": null,
+   "tier": "game"
+  }
+ },
+ "fuel": {
+  "fuel_kg": 4.6,
+  "per_lap_kg": null,
+  "laps_used": 0,
+  "margin_laps": null,
+  "margin_kg": null,
+  "game_margin_laps": 1.9,
+  "status": "unknown",
+  "lift_coast": null,
+  "burn_model": null
+ },
+ "pit": {
+  "stops_done": 0,
+  "stop_needed": null,
+  "two_stops": null,
+  "window": null,
+  "game_window": null,
+  "pit_loss": null,
+  "pit_loss_sc": null,
+  "pit_entry_m": null,
+  "rejoin": null,
+  "undercut_ahead": null,
+  "undercut_threat": null,
+  "neighbour_stop": null,
+  "note": "not enough laps on this set yet: 3 green laps needed"
+ },
+ "safety_car": {
+  "status": "none",
+  "since_lap": null,
+  "box": null
+ },
+ "weather": {
+  "now": "light_cloud",
+  "rain_pct": 7,
+  "track_temp_c": 34,
+  "accuracy": "perfect",
+  "forecast": [
+   {
+    "in_min": 0,
+    "weather": "light_cloud",
+    "rain_pct": 7,
+    "in_laps": 0
+   },
+   {
+    "in_min": 5,
+    "weather": "light_cloud",
+    "rain_pct": 7,
+    "in_laps": 4
+   },
+   {
+    "in_min": 10,
+    "weather": "light_cloud",
+    "rain_pct": 7,
+    "in_laps": 8
+   }
+  ],
+  "next_change": null,
+  "crossover": null
+ },
+ "calls": []
+}

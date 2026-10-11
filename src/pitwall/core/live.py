@@ -30,6 +30,8 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   the lap processor after each lap and when the session's context changes (``set_bests_requester``). A few hundred
   bytes, so it rides every snapshot: a lap that sets a record is coloured as set on the next frame, not up to
   5 s later with the static payload.
+* ``strategy`` (every snapshot): the race strategy engineer's ``StrategyView`` (``pitwall.strategy.view``),
+  published by the strategy worker at most twice a second; ``None`` until it has one for the live session.
 """
 
 from __future__ import annotations
@@ -221,6 +223,7 @@ class LiveState:
         self.track_knowledge: dict[str, Any] | None = None
         self._heads_up_key: tuple[tuple[str, int], ...] | None = None
         self.cues = CueEngine()
+        self.strategy: dict[str, Any] | None = None  # race strategy (pitwall.strategy): StrategyView of this session
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -376,6 +379,13 @@ class LiveState:
             self._heads_up_key = key
             self.cues.set_fallback_plan(plan)
 
+    # --- race strategy (pitwall.strategy) ---
+    def set_strategy(self, session_id: str, view: dict[str, Any] | None) -> None:
+        """Publish the strategy worker's view of ``session_id``; dropped if another session went live meanwhile."""
+        with self._lock:
+            if session_id == self.session_id:
+                self.strategy = view
+
     def set_cue_plan(self, plan: CuePlan | None) -> None:
         """Install a cue plan built outside the engine (normally the engine plans from ``on_lap_result``)."""
         self.cues.set_plan(plan)
@@ -457,6 +467,7 @@ class LiveState:
             self.session_state = None if session_id is None else SessionState(SESSION_RUNNING, None, time.time())
             self._red_flag_pitted = False
             self.bests = None
+            self.strategy = None  # race strategy (pitwall.strategy)
             self._bests_requested = None  # the next session packet asks for the new session's bests
             self._heads_up_key = None  # the cue engine drops its heads-ups on reset; the next knowledge re-installs
         self.coach.reset()
@@ -513,6 +524,7 @@ class LiveState:
             out["session_state_info"] = None if st is None else st.to_dict()
             out["coach"] = self.coach.current
             out["bests"] = self.bests  # D2: small, so every snapshot (a record shows as set, not 5 s later)
+            out["strategy"] = self.strategy  # race strategy (pitwall.strategy): < 2 kB, every snapshot
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

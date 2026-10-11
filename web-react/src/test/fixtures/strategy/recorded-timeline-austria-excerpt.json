@@ -1,0 +1,183 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "scripts/strategy_check.py --json tests/fixtures/recorded/f1_25_2025_ps5_austria_race-excerpt.pwcap -> pitwall.strategy.timeline (stints, safety_car_periods, weather_changes, pit_loss)",
+  "moment": "the 3-lap Austria race excerpt as Review > Strategy would show it",
+  "notes": "The strategy engine's own output (StrategyEngine fed by F1Adapter, no DB, no radio) over a committed PS5 F1 25 race excerpt, generated from the integrated feat/strategy backend (2026-10-11): regenerate with the same command when the engine changes. Recorded tier: real decoding of a real capture, not live-validated."
+ },
+ "session_id": "uid:10376571985058302815",
+ "available": true,
+ "reason": null,
+ "total_laps": 3,
+ "grid_position": null,
+ "finish_position": 20,
+ "laps": [
+  {
+   "v": 1,
+   "lap": 1,
+   "total_laps": 3,
+   "grid_position": null,
+   "position": 14,
+   "cars": 20,
+   "lap_time_ms": 88524,
+   "gap_ahead_ms": null,
+   "ahead_car": 13,
+   "ahead_stops": 0,
+   "gap_behind_ms": 50,
+   "behind_car": 10,
+   "behind_stops": 0,
+   "gap_leader_ms": 13780,
+   "neutralised_gaps": false,
+   "pit": null,
+   "stops": 0,
+   "compound": "soft",
+   "tyre_age_laps": 0,
+   "wear_pct": [
+    2.0,
+    3.0,
+    6.0,
+    6.0
+   ],
+   "fuel_kg": 6.77,
+   "fuel_per_lap_kg": null,
+   "fuel_margin_laps": null,
+   "game_fuel_margin_laps": 2.8,
+   "safety_car": "none",
+   "weather": "light_cloud",
+   "rain_pct": 7,
+   "next_weather": null,
+   "window": null,
+   "undercut_ahead": "unknown",
+   "undercut_threat": "unknown",
+   "tyre_gain_s": 0.12,
+   "laps_to_limit": null,
+   "limiting_wheel": null,
+   "calls": []
+  },
+  {
+   "v": 1,
+   "lap": 2,
+   "total_laps": 3,
+   "grid_position": null,
+   "position": 15,
+   "cars": 20,
+   "lap_time_ms": 78351,
+   "gap_ahead_ms": 968,
+   "ahead_car": 13,
+   "ahead_stops": 0,
+   "gap_behind_ms": 1017,
+   "behind_car": 9,
+   "behind_stops": 0,
+   "gap_leader_ms": 18835,
+   "neutralised_gaps": false,
+   "pit": null,
+   "stops": 0,
+   "compound": "soft",
+   "tyre_age_laps": 1,
+   "wear_pct": [
+    4.0,
+    4.0,
+    8.0,
+    7.0
+   ],
+   "fuel_kg": 5.36,
+   "fuel_per_lap_kg": 1.403,
+   "fuel_margin_laps": 2.83,
+   "game_fuel_margin_laps": 2.79,
+   "safety_car": "none",
+   "weather": "light_cloud",
+   "rain_pct": 7,
+   "next_weather": null,
+   "window": null,
+   "undercut_ahead": "unknown",
+   "undercut_threat": null,
+   "tyre_gain_s": 0.16,
+   "laps_to_limit": null,
+   "limiting_wheel": "RL",
+   "calls": [
+    {
+     "id": "st-gap-2-1",
+     "topic": "gap",
+     "level": "normal",
+     "text": "Car behind is within a second.",
+     "lap": 2,
+     "t_unix": 1791743629.608
+    }
+   ]
+  },
+  {
+   "v": 1,
+   "lap": 3,
+   "total_laps": 3,
+   "grid_position": null,
+   "position": 20,
+   "cars": 20,
+   "lap_time_ms": 88352,
+   "gap_ahead_ms": 6991,
+   "ahead_car": 16,
+   "ahead_stops": 0,
+   "gap_behind_ms": null,
+   "behind_car": null,
+   "behind_stops": null,
+   "gap_leader_ms": 34234,
+   "neutralised_gaps": false,
+   "pit": null,
+   "stops": 0,
+   "compound": "soft",
+   "tyre_age_laps": 2,
+   "wear_pct": [
+    7.0,
+    8.0,
+    16.0,
+    15.0
+   ],
+   "fuel_kg": 4.17,
+   "fuel_per_lap_kg": 1.3,
+   "fuel_margin_laps": 3.2,
+   "game_fuel_margin_laps": 2.92,
+   "safety_car": "none",
+   "weather": "light_cloud",
+   "rain_pct": 7,
+   "next_weather": null,
+   "window": null,
+   "undercut_ahead": "unknown",
+   "undercut_threat": null,
+   "tyre_gain_s": 0.61,
+   "laps_to_limit": null,
+   "limiting_wheel": "RL",
+   "calls": []
+  }
+ ],
+ "stints": [
+  {
+   "compound": "soft",
+   "start_lap": 1,
+   "end_lap": 3,
+   "laps": 3,
+   "wear_end_pct": 16.0,
+   "wear_rate_pct_per_lap": 5.0,
+   "median_lap_ms": 83352
+  }
+ ],
+ "stops": [],
+ "field_stops": [],
+ "pit_loss": null,
+ "safety_car_periods": [],
+ "weather": [
+  {
+   "lap": 1,
+   "weather": "light_cloud",
+   "rain_pct": 7
+  }
+ ],
+ "calls": [
+  {
+   "id": "st-gap-2-1",
+   "topic": "gap",
+   "level": "normal",
+   "text": "Car behind is within a second.",
+   "lap": 2,
+   "t_unix": 1791743629.608
+  }
+ ]
+}

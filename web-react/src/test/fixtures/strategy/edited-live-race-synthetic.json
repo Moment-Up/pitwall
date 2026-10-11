@@ -1,0 +1,135 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "SYNTHETIC session (race-strategy-demo), lap 8 of 12, P4: after the player's stop under the VSC",
+  "notes": "Modelled on the race-strategy-demo scenario's ground truth (strategy spec 12: car ahead pits L5, VSC L7-8, player pits L8). The payload is flagged synthetic as the engine flags synthetic streams. Test data, never game evidence."
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "synthetic0001",
+ "synthetic": true,
+ "lap": 8,
+ "total_laps": 12,
+ "laps_remaining": 4.4,
+ "position": 4,
+ "cars": 6,
+ "gaps": {
+  "ahead": {
+   "car_index": 2,
+   "gap_s": 0.7,
+   "settled": true,
+   "trend_s_per_lap": -0.2,
+   "trend_laps": 3,
+   "laps_to_1s": null,
+   "within_1s": true,
+   "drs_range": null,
+   "stops": 1,
+   "in_pit": false,
+   "tyre": null
+  },
+  "behind": {
+   "car_index": 5,
+   "gap_s": 3.3,
+   "settled": true,
+   "trend_s_per_lap": 0.2,
+   "trend_laps": 3,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": null,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": null
+  },
+  "leader_s": 6.1,
+  "note": null
+ },
+ "tyres": null,
+ "fuel": {
+  "fuel_kg": 6.4,
+  "per_lap_kg": 1.52,
+  "laps_used": 5,
+  "margin_laps": -0.4,
+  "margin_kg": -0.6,
+  "game_margin_laps": -0.3,
+  "status": "short",
+  "lift_coast": {
+   "save_kg_per_lap": 0.15,
+   "seconds_per_lap": 1.8,
+   "feasible": true,
+   "corners": [
+    "T3"
+   ]
+  },
+  "burn_model": {
+   "full_throttle_kg_per_s": 0.024,
+   "r2": 0.97,
+   "windows": 300
+  }
+ },
+ "pit": {
+  "stops_done": 1,
+  "stop_needed": false,
+  "two_stops": null,
+  "window": null,
+  "game_window": null,
+  "pit_loss": null,
+  "pit_loss_sc": null,
+  "pit_entry_m": null,
+  "rejoin": null,
+  "undercut_ahead": null,
+  "undercut_threat": null,
+  "neighbour_stop": null,
+  "note": null
+ },
+ "safety_car": {
+  "status": "virtual",
+  "since_lap": 7,
+  "box": {
+   "pit_loss_s": 11.4,
+   "green_pit_loss_s": 19.0,
+   "stop_needed": false,
+   "this_lap": false,
+   "tier": "measured"
+  }
+ },
+ "weather": {
+  "now": "clear",
+  "rain_pct": 2,
+  "track_temp_c": 32,
+  "accuracy": "perfect",
+  "forecast": [
+   {
+    "in_min": 0,
+    "weather": "clear",
+    "rain_pct": 2,
+    "in_laps": 0
+   },
+   {
+    "in_min": 5,
+    "weather": "clear",
+    "rain_pct": 2,
+    "in_laps": 4
+   },
+   {
+    "in_min": 10,
+    "weather": "light_rain",
+    "rain_pct": 60,
+    "in_laps": 8
+   }
+  ],
+  "next_change": null,
+  "crossover": null
+ },
+ "calls": [
+  {
+   "id": "s8-sc",
+   "topic": "sc_box",
+   "level": "alert",
+   "text": "Virtual safety car. Box this lap is an option: a stop costs about 11 s now, 19 under green.",
+   "lap": 7,
+   "t_unix": 1791702000.0
+  }
+ ]
+}

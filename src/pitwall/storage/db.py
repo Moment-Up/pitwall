@@ -16,6 +16,7 @@ Schema history:
 * v1 - initial schema.
 * v2 - driver profiles: ``reference_laps.driver_id`` (pinned references are per driver) and indexes for the
   per-driver queries (sessions by driver, reference lookup, a covering index for lap counts and best laps).
+* v3 - race strategy: ``strategy_laps``, ``pit_stops`` (new tables only: ``SCHEMA`` creates them on a v2 database).
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ from pitwall.compat import is_windows
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -187,6 +188,31 @@ CREATE TABLE IF NOT EXISTS setup_experiments (
     after_metrics TEXT,
     conclusion TEXT
 );
+
+-- --- race strategy (pitwall.strategy) --- (v3)
+CREATE TABLE IF NOT EXISTS strategy_laps (
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    lap_number INTEGER NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}',          -- StrategyLapRecord JSON (pitwall.strategy.engine)
+    updated_unix REAL NOT NULL,
+    PRIMARY KEY (session_id, lap_number)
+);
+CREATE TABLE IF NOT EXISTS pit_stops (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    car_index INTEGER NOT NULL,
+    is_player INTEGER NOT NULL DEFAULT 0,
+    entry_lap INTEGER NOT NULL, exit_lap INTEGER,
+    entry_lap_distance_m REAL, exit_lap_distance_m REAL,
+    lane_time_ms INTEGER, stationary_ms INTEGER,
+    laps_ms TEXT NOT NULL DEFAULT '[]',
+    pace_before_ms INTEGER, pace_after_ms INTEGER, pit_loss_ms INTEGER,
+    neutralised TEXT, excluded TEXT,
+    compound_before TEXT, compound_after TEXT,
+    session_time_s REAL, created_unix REAL NOT NULL,
+    UNIQUE(session_id, car_index, entry_lap)
+);
+CREATE INDEX IF NOT EXISTS ix_pit_stops_session ON pit_stops(session_id);
 """
 
 # Columns added after v1: (table, column, declaration). ADD COLUMN with a REFERENCES clause is allowed because the

@@ -1,0 +1,92 @@
+/*
+ * Drive › Car: the race strategy tile (lane "strategy"; StrategyTile.tsx). Unlayered like wall.css: every selector
+ * starts with a `pws` class. Every colour is a token (styles/tokens.css). Six fixed rows share the tile's height
+ * (P2: nothing moves). Each row is two lines: the label with its band words, then the value across the whole tile.
+ * Amber = warning only (9.2), always with a word tag (P4). No shadows, blur or transitions inside Drive (4.11).
+ */
+.pws-rows {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-rows: repeat(6, minmax(36px, 1fr));
+  min-height: 0;
+}
+.pws-item { display: contents; }
+.pws-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-content: center;
+  column-gap: 8px;
+  row-gap: 1px;
+  min-width: 0;
+  min-height: 0;
+  border-top: 1px solid var(--separator);
+}
+.pws-item:first-child > .pws-row { border-top: 0; }
+.pws-row__k {
+  grid-row: 1;
+  grid-column: 1;
+  overflow: hidden;
+  font: 600 13px/16px var(--pw-font-sans);
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pws-row__tags {
+  grid-row: 1;
+  grid-column: 2;
+  display: inline-flex;
+  gap: 4px;
+}
+.pws-row__v {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  min-width: 0;
+  overflow: hidden;
+  font: 700 18px/20px var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pws-row[data-tone="warn"] .pws-row__v { color: var(--warning); }
+/* The last settled value while the gap is in doubt (a position change, a car in the pit lane). */
+.pws-row[data-dim] .pws-row__v { opacity: 0.5; }
+.pws-tag {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--surface-tertiary);
+  color: var(--foreground);
+  font: 800 11px/16px var(--pw-font-sans);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+}
+.pws-tag[data-tone="warn"] {
+  background: var(--pw-flag-sc);
+  color: var(--pw-flag-sc-ink);
+}
+.pws-tag[data-tone="info"] {
+  background: var(--pw-pit);
+  color: var(--pw-pit-ink);
+}
+.pws-aside {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.pws-foot[data-level="alert"] { color: var(--warning); }
+
+/* iPad mini, Safari with toolbars: compact rows, as the rest of the wall. */
+@media (max-height: 760px) and (min-width: 1024px) {
+  .pws-rows { grid-template-rows: repeat(6, minmax(34px, 1fr)); }
+  .pws-row__v { font-size: 17px; line-height: 19px; }
+}
+
+/* iPad portrait, split view and phones: the tile grows with its rows (the wall scrolls). */
+@media (max-width: 1023px) {
+  .pws-rows { grid-template-rows: repeat(6, 46px); }
+  /* the wall scrolls here, so the newest call can take its whole text */
+  .pws .pww-foot { white-space: normal; }
+}

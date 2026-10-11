@@ -17,6 +17,7 @@ Where a feature has less evidence than that, this page says so. [status.md](stat
 - [Setup](#setup)
 - [Settings](#settings)
 - [How the coach decides what to say](#how-the-coach-decides-what-to-say)
+- [How the race engineer makes strategy calls](#how-the-race-engineer-makes-strategy-calls)
 - [The AI engineer](#the-ai-engineer)
 - [The classic dashboard](#the-classic-dashboard)
 
@@ -52,6 +53,15 @@ check plus a button to try the synthetic demo.
 The pit wall view: speed, gear, throttle, brake and steering, the track map with the car's position, tyres and
 fuel, the lap table and the last lap's coaching.
 
+In an F1 25 race the inputs tile becomes a **Strategy** tile: the gap to the car ahead and behind (with the trend,
+"within 1 s" and DRS range), the pit window and the best lap to stop, the undercut on the car ahead and the threat
+from behind, the fuel margin to the flag (with how long to lift and coast when you are short), and the weather
+forecast. Under a safety car or VSC the weather row shows what a stop costs now against under green. Numbers that
+come from the game's own tyre model say "(game)", rules of thumb say "(estimate)", and anything not yet known is
+`-`. Race strategy is tested on recorded PS5 races and synthetic ones; **not yet validated live**, and safety car,
+rain and your own pit stop are synthetic only (see [how the race engineer makes strategy
+calls](#how-the-race-engineer-makes-strategy-calls)).
+
 ### Track
 
 ![Drive › Track](screenshots/05-drive-track.png)
@@ -82,6 +92,13 @@ lose the most time under braking. *Markers* says the corner name before every br
 braking zone. *Off* is silent. Braking calls are tested on synthetic and recorded data and **not yet validated
 live on track**.
 
+In a race the engineer also makes **strategy calls**: the safety car or VSC opportunity to box, critical or tight
+fuel, the pit window opening and its last laps, the car behind pitting (cover the undercut), a rain forecast, the
+car behind coming within a second, and, at the detailed setting, the undercut on the car ahead, a car ahead
+pitting and gap trends. They wait for the same calm part of the lap; quiet intensity keeps only the alerts. Ask
+"when should I pit?", "gap to the car ahead?", "is it going to rain?" or "fuel?" for an instant answer from the
+live strategy. How these are decided: [below](#how-the-race-engineer-makes-strategy-calls).
+
 Evidence: a radio check over an iPad and one AirPod through Tailscale has been heard on hardware, using the classic
 dashboard's Radio page. The new dashboard's Go live and push-to-talk over Tailscale have not been tried on an iPad yet.
 The F1 25 wheel button is read live from the game on PS5, but spoken questions from the iPad, by screen or wheel
@@ -96,7 +113,10 @@ and [radio-setup.md](radio-setup.md).
 ![Review › Sessions](screenshots/07-review-sessions.png)
 
 Every session for the selected driver, newest first, with a preview of the selected one and its main thing to
-work on. Each session has Summary, Laps, Compare, Corners and Ask tabs.
+work on. Each session has Summary, Laps, Compare, Corners and Ask tabs, and races also have a **Strategy** tab:
+grid to finish, stops and the measured pit loss, a timeline of position and gaps with your stops, safety-car laps
+and the weather, your stints, every car's measured pit stops (with why a stop was left out of the pit loss), and
+the strategy calls the radio made. Races recorded before strategy tracking say so instead.
 
 ![Review › Session summary](screenshots/08-review-session-summary.png)
 
@@ -232,6 +252,53 @@ Everything here is fixed rules applied to your telemetry. No language model is i
    many points a lap: quiet gives none (the screen still shows them), normal one, detailed up to three.
 9. **One message, two channels.** The point the radio says about a corner is the point the Coach screen shows for
    it. This is tested on synthetic and recorded data; it has not yet been seen in a live session.
+
+## How the race engineer makes strategy calls
+
+Everything here is deterministic (no language model) and runs on its own thread, so it never slows telemetry. It
+uses only F1 25 data: every car's position, gaps and pit status (twice a second), your car's fuel, tyre wear and
+lap times, the game's tyre sets and forecast, and the safety-car state. Other games show no strategy tile and keep
+the per-lap fuel and tyre answers.
+
+- **Gaps.** A gap is shown only once it has *settled*: for 4 s nothing changed (your position, the car next to you,
+  its pit status) and neither car is in the pit lane. The game reports the old car's gap for about two seconds after
+  an overtake and nonsense while a car is in the pit lane, so unsettled values are never shown as new. The trend is
+  the gap at the line over the last three to five laps against the same car.
+- **Tyres and the pit window.** Wear per lap is measured over your current stint only (a stop starts a new one) and
+  shown with a range, because the game reports wear in whole percent. The window closes at the earlier of that
+  projection to 70 % wear and the game's own laps-left figure, opens when a new set reaches the flag, and the
+  best lap comes from the game's tyre model (how much faster a new set is, and how fast that grows).
+- **Pit loss.** Measured from this race's own stops, any car's: the in-lap and out-lap against that car's pace
+  before the stop. A long stop (repair), a penalty, a stop with no clean lap before it, or one with the safety car
+  or VSC on only some of its laps (the other cars' laps are then no fair reference) is left out, with the reason.
+  Under a safety car or VSC a measured stop is used if there is one; otherwise the green loss is halved (VSC 0.6),
+  a rule of thumb shown as an estimate.
+- **Undercut.** A new set's gain per lap (the game's tyre model, else the field's measured stops): the undercut on
+  the car ahead is likely below 70 % of that gain, marginal up to it. Where you rejoin if you box now comes from
+  everyone's gap to the leader plus the pit loss, next to the game's own estimate.
+- **Fuel.** Fuel per lap is the median of your clean laps; the margin is what the tank lasts against the laps left,
+  shown next to the game's own figure. When you are short, lift and coast is worked out from a model of fuel burn
+  against throttle fitted on your own driving: so many seconds of lift a lap, *before* your braking point, braking
+  at the same point. The engineer never tells you to brake later.
+- **Weather.** The game's forecast for this session; a change counts once two forecasts in a row agree, and the
+  rain percentage is the game's number, not a probability.
+
+| Call | When | Level |
+|---|---|---|
+| Safety car / VSC: box this lap is an option | a stop is needed soon or a new set reaches the flag; once per period | alert |
+| Safety car: no stop needed | the tyres reach the flag | normal |
+| Fuel critical / tight | at the line, margin below -0.05 / 0.3 laps after two clean laps | alert / normal |
+| Pit window open, last laps of the window | the window opens; the lap before it closes | normal / alert |
+| Car behind is pitting: cover the undercut | the car behind enters the pit lane while your window is open | normal |
+| Rain forecast / dry forecast | a change to rain (or dry) within 15 minutes | alert / normal |
+| Car behind is within a second (DRS) | it comes within a second; once per car per three laps | normal |
+| Undercut looks on, a car ahead pitting, gap trends | experienced drivers, detailed setting | detailed |
+
+At most one normal and two detailed calls a lap; nothing on lap 1 (except the safety car and critical fuel), on the
+final lap, in the pit lane, on a formation lap or under a red flag. Evidence: gaps, fuel, tyre wear, the game's tyre
+sets, the forecast and other cars' pit stops are checked on real PS5 races (committed excerpts, and a full-distance
+Austria race by `scripts/strategy_check.py`); safety car, VSC, rain, the inters crossover and your own stop are
+synthetic only (`race-strategy-demo`). Nothing is validated live yet.
 
 ## The AI engineer
 

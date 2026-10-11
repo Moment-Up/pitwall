@@ -10,6 +10,7 @@
 //  * skeleton.marshal_zones[].flag is the flag at the last static push (every 5 s): live flags are marshal_flags.
 
 import type { Corner, Frame, LapSummary, Observation, Snapshot, TrackModel } from "../api";
+import type { StrategyView } from "../strategy/types"; // race strategy (pitwall.strategy)
 
 /** One timing scope's bests (D2, storage/repo.py lap_bests): lap and the three sectors, clean laps only, each
  * sector best on its own. The ids say which lap set each best. */
@@ -165,6 +166,11 @@ export interface SnapshotNext extends Snapshot {
   session_state_info?: SessionStateInfo | null;
   /** D6 */
   coach?: CoachBlock | null;
+  // --- race strategy (pitwall.strategy) ---
+  /** strategy/view.py StrategyView (lib/strategy/types.ts); absent on servers without the strategy engine. Read it
+   * through lib/strategy/view.ts snapStrategy(), which ignores unknown versions. */
+  strategy?: StrategyView | null;
+  // --- end race strategy ---
 }
 
 /** Drive lock setting (Settings > Display; lib/prefs.ts DriveLock, lane S). */

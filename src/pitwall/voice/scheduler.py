@@ -85,7 +85,7 @@ SUPERSEDABLE = frozenset({MessageKind.LAP_SUMMARY, MessageKind.COACHING})
 
 # CUE (predictive braking, phase 6) is its own opt-in feature, so coaching intensity does not filter it.
 _QUIET_KINDS = frozenset({MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.ALERT, MessageKind.CUE})
-_NORMAL_KINDS = _QUIET_KINDS | {MessageKind.LAP_SUMMARY, MessageKind.COACHING}
+_NORMAL_KINDS = _QUIET_KINDS | {MessageKind.LAP_SUMMARY, MessageKind.COACHING, MessageKind.STRATEGY}  # + strategy
 _DETAILED_KINDS = _NORMAL_KINDS | {MessageKind.INFO}
 ALLOWED_KINDS: dict[Intensity, frozenset[MessageKind]] = {
     "quiet": _QUIET_KINDS,

@@ -96,5 +96,11 @@ PHRASERS = {"tyres": tyres, "fuel": fuel, "lap_times": lap_times, "last_lap": la
 
 
 def radio_answer(intent: str, sheet: FactSheet) -> str | None:
+    # race strategy (pitwall.strategy): live strategy facts first; None without them (other games, post-session)
+    from pitwall.strategy.phrasing import strategy_radio_answer
+
+    short = strategy_radio_answer(intent, sheet)
+    if short is not None:
+        return short
     fn = PHRASERS.get(intent)
     return fn(sheet) if fn else None

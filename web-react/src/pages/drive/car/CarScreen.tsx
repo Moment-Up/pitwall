@@ -5,6 +5,7 @@
 //   status slot (the same as Coach) ─────────────────────────────────────────────────────────── 52
 //   Car (4)               │ Track map (5)                         │ Tyres & energy (3)          1.25fr
 //   Inputs, last 12 s (4) │ Laps, current standing (5)            │ Coaching · last lap (3)     1fr
+//   (in a race the Inputs slot shows the Strategy tile instead: race strategy, pitwall.strategy)
 
 import { gameLength } from "../../../lib/drive/geometry";
 import type { DriveModel } from "../../../lib/drive/model";
@@ -14,6 +15,8 @@ import type { BrakePrior, TrackOutline } from "../../../lib/viz/outline";
 import { DriveFrame } from "../DriveFrame";
 import { CarTile, CoachingTile, InputsTile, LapsTile, MapTile, TyresTile } from "./CarTiles";
 import { carTile, coachingTile, lapsTile, mapTile, raceControlLine, tyresTile } from "./view";
+import { StrategyTile } from "./StrategyTile"; // race strategy (pitwall.strategy)
+import { strategyTile } from "../../../lib/strategy/view"; // race strategy (pitwall.strategy)
 
 export interface CarScreenProps {
   model: DriveModel;
@@ -31,6 +34,7 @@ export interface CarScreenProps {
 export function CarScreen({ model, snap, history, nowS, maySleep = false, simple = false, outline = null, prior = null }: CarScreenProps) {
   // Every snapshot arrives as fresh JSON, so the views are cheap to rebuild and each tile is memoised on its
   // content instead: the laps and coaching tiles re-render once a lap, not per frame.
+  const strategy = strategyTile(snap, model, { simple }); // race strategy (pitwall.strategy)
   return (
     <DriveFrame status={model.status} maySleep={maySleep} layout="car" dim={model.dim} state={model.state}>
       <CarTile v={carTile(snap, model)} />
@@ -44,7 +48,9 @@ export function CarScreen({ model, snap, history, nowS, maySleep = false, simple
         raceControl={raceControlLine(snap?.events, nowS)}
       />
       <TyresTile v={tyresTile(snap)} />
-      <InputsTile history={history} dim={model.dim} />
+      {/* --- race strategy (pitwall.strategy): in a race the Inputs slot shows the Strategy tile; the mode only
+          changes at a session change, so the slot never swaps while driving (P2) --- */}
+      {strategy.show ? <StrategyTile v={strategy} /> : <InputsTile history={history} dim={model.dim} />}
       <LapsTile v={lapsTile(snap)} />
       <CoachingTile v={coachingTile(snap, simple)} />
     </DriveFrame>

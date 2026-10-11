@@ -116,6 +116,7 @@ DELIVERY_LEAD_S = 0.2  # audio already synthesised: transport + device start-up 
 # Intents whose deterministic answer is already good radio material: answered instantly, no LLM.
 FAST_INTENTS = frozenset(
     {"fuel", "tyres", "lap_times", "last_lap", "strategy", "control_quiet", "control_resume", "radio_check"}
+    | {"gaps", "weather"}  # race strategy (pitwall.strategy)
 )
 
 UDP_ACTION_BASE = 0x00100000  # UDP Action 1; Action n = base << (n - 1)  (EA spec appendix: button flags)
@@ -998,6 +999,23 @@ class RadioHub:
     def _on_live_note(self, kind: str, payload: dict[str, Any]) -> None:
         if kind == "lap" and self._loop is not None:
             self._loop.call_soon_threadsafe(self._enqueue_lap, payload)
+        elif kind == "strategy_call" and self._loop is not None:  # race strategy (pitwall.strategy)
+            self._loop.call_soon_threadsafe(self._enqueue_strategy, payload)
+
+    # --- race strategy (pitwall.strategy) ---
+    def _enqueue_strategy(self, payload: dict[str, Any]) -> None:
+        """A proactive strategy call: queued for the scheduler's speak windows (``strategy.radio``). Calls meant for
+        experienced drivers (undercut, a neighbour pitting, gap trends) are not given to a driver whose profile asks
+        for simple wording."""
+        try:
+            from pitwall.strategy.radio import strategy_message
+
+            limits = self.coaching_limits
+            if payload.get("audience") == "experienced" and limits is not None and limits.simple_wording:
+                return
+            self.scheduler.enqueue(strategy_message(payload, time.monotonic()))
+        except Exception:
+            log.exception("strategy call failed")
 
     def apply_driver(self, driver: Driver | None) -> None:
         """The seated driver changed or edited their profile (``DriverService.attach_radio``; event loop only).

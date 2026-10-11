@@ -7,6 +7,8 @@ Three representations with different update rates:
 * ``GameEvent``     - discrete events (session start, flashback, penalty, ...).
 * ``FieldSample``   - decimated (<= 10 Hz per car) samples of the *other* cars, from games that report the whole
   field (F1); input of the field model (track knowledge layer L0b).
+* ``RaceTiming`` / ``TyreSetsInfo`` - race strategy inputs (F1): every car's position, gaps and pit state at
+  <= 2 Hz, and the player's tyre sets on change; consumed by ``pitwall.strategy`` off the ingest thread.
 
 Conventions (every adapter MUST normalise to these):
 
@@ -436,5 +438,80 @@ class FieldSample:
     safety_car: bool | None = None  # any safety car / VSC / formation lap in the session; None = not yet known
 
 
+# --- race strategy inputs (pitwall.strategy) ---------------------------------------------------------------------
+@dataclass(slots=True, frozen=True, kw_only=True)
+class CarTiming:
+    """One car's race timing as the game reports it (F1: LapData of every car, plus CarStatus tyre fields).
+
+    Values the game marks as "not set" are ``None`` (gap 0, grid 0, lap time 0, a lane time while the lane timer is
+    off). A gap whose milliseconds part is 60000 or more is a negative delta wrapped into the uint16 (real F1 25 Monza:
+    65403 = -133 ms) and is ``None`` too: unknown, never a 65 s gap.
+    """
+
+    car_index: int
+    is_player: bool
+    ai_controlled: bool | None
+    position: int  # LapData.carPosition
+    grid_position: int | None  # gridPosition; 0 -> None (no grid slot)
+    lap_number: int
+    lap_distance_m: float
+    sector: int
+    last_lap_ms: int | None  # lastLapTimeInMS; 0 -> None
+    gap_ahead_ms: int | None  # deltaToCarInFront (minutes*60000 + ms); None if not reported or wrapped negative
+    gap_leader_ms: int | None  # deltaToRaceLeader, same rules
+    pit_status: int  # 0 none, 1 pitting / in the pit lane, 2 in the pit area
+    num_pit_stops: int
+    pit_lane_timer_active: bool
+    pit_lane_time_ms: int | None  # pitLaneTimeInLaneInMS, only while the timer is active
+    pit_stop_timer_ms: int | None  # pitStopTimerInMS; 0 -> None
+    serve_penalty: bool  # pitStopShouldServePen
+    driver_status: str | None  # adapter DRIVER_STATUS labels
+    result_status: str | None  # adapter RESULT_STATUS labels
+    lap_invalid: bool
+    tyre_visual: str | None = None  # CarStatus.visualTyreCompound (enums.VISUAL_COMPOUNDS)
+    tyre_age_laps: int | None = None  # CarStatus.tyresAgeLaps (None before the first CarStatus packet)
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class RaceTiming:
+    """Every racing car's timing at one moment (decimated to <= 2 Hz of game clock). Input of ``pitwall.strategy``,
+    which runs it off the ingest thread; never persisted as such."""
+
+    game: Game
+    t_recv_ns: int
+    session_time_s: float
+    frame_id: int
+    player_index: int
+    cars: tuple[CarTiming, ...]  # every car whose result status is active or later (>= 2), in car-index order
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class TyreSet:
+    """One tyre set of the player's allocation (F1 TyreSets packet). Lap figures are the game's own estimates."""
+
+    index: int
+    actual: str | None
+    visual: str | None
+    wear_pct: int
+    available: bool
+    recommended_session: int
+    life_span_laps: int  # "laps left in this tyre set" (game)
+    usable_life_laps: int  # "max number of laps recommended for this compound" (game)
+    lap_delta_ms: int  # lap time delta versus the fitted set (game estimate)
+    fitted: bool
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class TyreSetsInfo:
+    """The player's tyre sets, emitted only when they change (wear, availability, life or lap deltas)."""
+
+    game: Game
+    t_recv_ns: int
+    session_time_s: float
+    car_index: int
+    sets: tuple[TyreSet, ...]
+    fitted_index: int | None  # m_fittedIdx; an index past the array -> None
+
+
 # Union of everything an adapter can emit after decoding one packet.
-type Emitted = CarFrame | SessionInfo | GameEvent | CarSetup | LapCompletion | FieldSample
+type Emitted = CarFrame | SessionInfo | GameEvent | CarSetup | LapCompletion | FieldSample | RaceTiming | TyreSetsInfo

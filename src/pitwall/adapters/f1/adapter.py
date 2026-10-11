@@ -21,6 +21,7 @@ from pitwall.adapters.structdef import StructDef
 from pitwall.model.telemetry import (
     CarFrame,
     CarSetup,
+    CarTiming,
     Emitted,
     EventKind,
     FieldSample,
@@ -31,10 +32,13 @@ from pitwall.model.telemetry import (
     LapCompletion,
     MarshalZone,
     Platform,
+    RaceTiming,
     SessionInfo,
     SessionType,
     SetupParameter,
     TrackZones,
+    TyreSet,
+    TyreSetsInfo,
     Weather,
     Wheels,
 )
@@ -105,6 +109,16 @@ F1_25_INFO = AdapterInfo(
             "format 2025 races (Austria, Austria Reverse, Silverstone, Silverstone Reverse, Monza, Montreal, Las "
             "Vegas, Miami, Melbourne): 16-19 AI cars with analog brake and full-lap distance; AI pit stops seen in "
             "the pit lane (Austria, 2 stops); format 2026 synthetic only",
+        ),
+        # --- race strategy (pitwall.strategy) ---
+        "race_timing": FieldSupport(
+            _S,
+            "LapData of every car (position, gaps to car in front and leader, pit status/stops, pit-lane timer) + "
+            "CarStatus visual compound/age, <= 2 Hz plus one at every pit-status change (RaceTiming); decoded on "
+            "recorded PS5 races",
+        ),
+        "tyre_sets": FieldSupport(
+            _S, "TyreSets (ID 12), player car: wear, laps left, usable life, lap delta vs fitted (game estimates)"
         ),
     },
     notes=(
@@ -205,6 +219,73 @@ class _FieldStructs:
 
 _FIELD_STRUCTS: dict[int, _FieldStructs] = {fmt: _FieldStructs(layout) for fmt, layout in P.LAYOUTS.items()}
 
+# --- race strategy (pitwall.strategy) ---------------------------------------------------------------------------
+TIMING_HZ = 2.0  # RaceTiming rate (game clock): gaps update every 0.3-2 s on real F1 25, so 2 Hz loses nothing
+MAX_TIMING_HZ = 10.0
+TIMING_GAP_WRAP_MS = 60_000  # a milliseconds part >= this is a negative delta wrapped into the uint16 (Monza: 65403)
+SESSION_TYPE_TIME_TRIAL = 18  # Session.sessionType (spec 8.5)
+
+
+def _field_offset(sd: StructDef, name: str) -> int:
+    """Byte offset of scalar field ``name`` inside one ``sd`` element (packed, as the spec's offset tables)."""
+    fmt = sd.struct.format[0]
+    for fname, f in sd.fields:
+        if fname == name:
+            return struct.calcsize(fmt)
+        fmt += f
+    raise ValueError(f"{sd.name}: no field {name!r}")
+
+
+_PIT_STATUS_OFFSET = _field_offset(P.LAP_DATA, "pitStatus")  # 34 (spec 5.2 offset table)
+_TIMING_LAP = (
+    "lastLapTimeInMS",
+    "deltaToCarInFrontMSPart",
+    "deltaToCarInFrontMinutesPart",
+    "deltaToRaceLeaderMSPart",
+    "deltaToRaceLeaderMinutesPart",
+    "lapDistance",
+    "carPosition",
+    "currentLapNum",
+    "pitStatus",
+    "numPitStops",
+    "sector",
+    "currentLapInvalid",
+    "gridPosition",
+    "driverStatus",
+    "resultStatus",
+    "pitLaneTimerActive",
+    "pitLaneTimeInLaneInMS",
+    "pitStopTimerInMS",
+    "pitStopShouldServePen",
+)
+_TIMING_STATUS = ("visualTyreCompound", "tyresAgeLaps")
+
+
+class _TimingStructs:
+    """Per wire format: subset structs for the all-car LapData / CarStatus arrays the race timing reads."""
+
+    __slots__ = ("lap", "lap_bytes", "max_cars", "status", "status_bytes", "status_packet_size")
+
+    def __init__(self, layout: P.F1Layout) -> None:
+        self.max_cars = layout.max_cars
+        self.lap = subset_struct(P.LAP_DATA, _TIMING_LAP)
+        self.status = subset_struct(layout.car_status, _TIMING_STATUS)
+        self.lap_bytes = layout.max_cars * P.LAP_DATA.size
+        self.status_bytes = layout.max_cars * layout.car_status.size
+        self.status_packet_size = layout.sizes[P.PacketId.CAR_STATUS]
+
+
+_TIMING_STRUCTS: dict[int, _TimingStructs] = {fmt: _TimingStructs(layout) for fmt, layout in P.LAYOUTS.items()}
+
+
+def _timing_gap(minutes: int, ms: int) -> int | None:
+    """A LapData delta in ms; None when not reported (0) or when a negative delta wrapped into the uint16."""
+    if ms >= TIMING_GAP_WRAP_MS:
+        return None
+    v = minutes * 60_000 + ms
+    return v if v > 0 else None
+
+
 # MarshalZone.m_zoneFlag (spec appendix 8.12): -1 = invalid/unknown -> None, like any value the spec does not define.
 MARSHAL_ZONE_FLAGS: dict[int, str] = {0: "none", 1: "green", 2: "blue", 3: "yellow"}
 ACTIVE_AERO_TRACK_STATUS: dict[int, str] = {0: "full", 1: "partial"}  # m_activeAeroTrackStatus (format 2026)
@@ -271,15 +352,22 @@ class F1Adapter:
     list sees the player's frame first.
     """
 
-    def __init__(self, field_hz: float = FIELD_HZ, *, field_include_player: bool = False) -> None:
+    def __init__(
+        self, field_hz: float = FIELD_HZ, *, field_include_player: bool = False, timing_hz: float = TIMING_HZ
+    ) -> None:
         if not (math.isfinite(field_hz) and 0.0 <= field_hz <= MAX_FIELD_HZ):
             raise ValueError(f"field_hz must be 0-{MAX_FIELD_HZ:g} Hz, got {field_hz}")
+        if not (math.isfinite(timing_hz) and 0.0 <= timing_hz <= MAX_TIMING_HZ):
+            raise ValueError(f"timing_hz must be 0-{MAX_TIMING_HZ:g} Hz, got {timing_hz}")
         self.info = F1_25_INFO
         self.stats = DecodeStats()
         self.field_period_s: float | None = 1.0 / field_hz if field_hz > 0 else None
         self.field_include_player = field_include_player
         self.field_samples = 0  # FieldSamples emitted (all sessions)
         self.field_ticks = 0  # field ticks decoded (all sessions)
+        # race strategy (pitwall.strategy): all-car RaceTiming at <= timing_hz of game clock (0 disables)
+        self.timing_period_s: float | None = 1.0 / timing_hz if timing_hz > 0 else None
+        self.timing_ticks = 0  # RaceTiming items emitted (all sessions)
         self.reset()
 
     def reset(self) -> None:
@@ -308,6 +396,12 @@ class F1Adapter:
         self._ai_controlled: tuple[bool | None, ...] = ()
         self._safety_car: bool | None = None
         self._field_last_t: float | None = None
+        # race strategy (pitwall.strategy): CarStatus kept by reference, decoded only on a timing tick
+        self._timing_last_t: float | None = None
+        self._timing_pits: bytes | None = None  # every car's LapData.pitStatus at the last tick
+        self._status_raw: bytes | None = None
+        self._session_type_id: int | None = None
+        self._tyre_sets_key: bytes | None = None
 
     # ------------------------------------------------------------------ structural validation
     def can_decode(self, data: bytes) -> bool:
@@ -367,6 +461,11 @@ class F1Adapter:
             self.stats.ignored += 1
             return out
         uid = h["sessionUID"]
+        if pid in _FOLLOWERS and uid and self._session_uid and uid != self._session_uid:
+            # race strategy (pitwall.strategy): a packet that only follows a session (TyreSets) never starts one,
+            # for the same reason as above (a stale-UID packet must not flush the session's caches)
+            self.stats.ignored += 1
+            return out
         if uid and self._session_uid and uid != self._session_uid:
             # A new session: drop per-session caches so nothing leaks across sessions.
             # (uid 0 is sent from menus and must not flush state.)
@@ -452,6 +551,144 @@ class F1Adapter:
         self._prev_result = lap["resultStatus"]
         if lap["resultStatus"] != RESULT_FINISHED:
             self._prev_lap_snapshot = lap  # keep the last in-race snapshot for the final-lap sectors
+        if self.timing_period_s is not None:  # race strategy (pitwall.strategy)
+            self._timing_tick(data, h, t, out)
+
+    # --- race strategy (pitwall.strategy) ---------------------------------------------------------------------
+    def _timing_tick(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
+        """Emit one ``RaceTiming`` (every racing car) when a timing tick is due, at most once per
+        ``timing_period_s`` of game clock (same cadence rules as ``_field_tick``: replays decimate like live play, a
+        clock that jumps back re-arms at once), and at once on any car's pit-status change, so pit-lane entry and exit
+        are timed to the packet (the pit-lane timer resets at the exit, between two regular ticks). Time trial has no
+        field to race, so nothing is emitted there. Cost on the ingest thread: one strided slice of the pit-status
+        bytes on every LapData packet; on a tick one ``iter_unpack`` over the LapData array (and over the last
+        CarStatus array kept by reference), then one small frozen object per car."""
+        if self._session_type_id == SESSION_TYPE_TIME_TRIAL:
+            return
+        period = self.timing_period_s
+        assert period is not None
+        layout: P.F1Layout = h["layout"]
+        ts = _TIMING_STRUCTS[layout.packet_format]
+        base = P.HEADER.size
+        pits = data[base + _PIT_STATUS_OFFSET : base + ts.lap_bytes : P.LAP_DATA.size]  # one byte per car
+        st = float(h["sessionTime"])
+        last = self._timing_last_t
+        due = not (last is not None and last - FIELD_REWIND_S <= st < last + period - FIELD_TICK_TOLERANCE_S)
+        if not due and pits == self._timing_pits:
+            return  # not due yet
+        self._timing_pits = pits
+        self._timing_last_t = st
+        rows = ts.lap.iter_unpack(memoryview(data)[base : base + ts.lap_bytes])
+        status_raw = self._status_raw
+        status: list[tuple[Any, ...]] | None = None
+        if status_raw is not None and len(status_raw) == ts.status_packet_size:
+            status = list(ts.status.iter_unpack(memoryview(status_raw)[base : base + ts.status_bytes]))
+        player = h["playerCarIndex"]
+        ai = self._ai_controlled
+        cars: list[CarTiming] = []
+        for i, row in enumerate(rows):
+            (
+                last_ms,
+                ahead_ms,
+                ahead_min,
+                leader_ms,
+                leader_min,
+                dist,
+                pos,
+                lap_num,
+                pit,
+                stops,
+                sector,
+                invalid,
+                grid,
+                driver,
+                result,
+                lane_active,
+                lane_ms,
+                stop_ms,
+                serve_pen,
+            ) = row
+            if result < RESULT_ACTIVE:
+                continue  # invalid / inactive slot
+            visual = age = None
+            if status is not None:
+                vis_code, age = status[i]
+                visual = enums.VISUAL_COMPOUNDS.get(vis_code)
+            cars.append(
+                CarTiming(
+                    car_index=i,
+                    is_player=i == player,
+                    ai_controlled=ai[i] if i < len(ai) else None,
+                    position=pos,
+                    grid_position=grid or None,
+                    lap_number=lap_num,
+                    lap_distance_m=dist,
+                    sector=sector,
+                    last_lap_ms=last_ms or None,
+                    gap_ahead_ms=_timing_gap(ahead_min, ahead_ms),
+                    gap_leader_ms=_timing_gap(leader_min, leader_ms),
+                    pit_status=pit,
+                    num_pit_stops=stops,
+                    pit_lane_timer_active=bool(lane_active),
+                    pit_lane_time_ms=lane_ms if lane_active else None,
+                    pit_stop_timer_ms=stop_ms or None,
+                    serve_penalty=bool(serve_pen),
+                    driver_status=DRIVER_STATUS.get(driver),
+                    result_status=RESULT_STATUS.get(result),
+                    lap_invalid=bool(invalid),
+                    tyre_visual=visual,
+                    tyre_age_laps=age,
+                )
+            )
+        self.timing_ticks += 1
+        out.append(
+            RaceTiming(
+                game=Game.F1_25,
+                t_recv_ns=t,
+                session_time_s=st,
+                frame_id=h["frameIdentifier"],
+                player_index=player,
+                cars=tuple(cars),
+            )
+        )
+
+    def _on_tyre_sets(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
+        """The player's tyre sets (the game cycles TyreSets through every car): emitted only when they changed."""
+        if data[P.HEADER.size] != h["playerCarIndex"]:
+            return
+        start = P.HEADER.size + P.TYRE_SETS_HEAD.size
+        key = bytes(data[start:])  # the 20 sets and m_fittedIdx
+        if key == self._tyre_sets_key:
+            return
+        self._tyre_sets_key = key
+        sets: list[TyreSet] = []
+        for k in range(P.NUM_TYRE_SETS):
+            s = P.TYRE_SET.unpack_from(data, start + k * P.TYRE_SET.size)
+            sets.append(
+                TyreSet(
+                    index=k,
+                    actual=enums.ACTUAL_COMPOUNDS.get(s["actualTyreCompound"]),
+                    visual=enums.VISUAL_COMPOUNDS.get(s["visualTyreCompound"]),
+                    wear_pct=s["wear"],
+                    available=bool(s["available"]),
+                    recommended_session=s["recommendedSession"],
+                    life_span_laps=s["lifeSpan"],
+                    usable_life_laps=s["usableLife"],
+                    lap_delta_ms=s["lapDeltaTime"],
+                    fitted=bool(s["fitted"]),
+                )
+            )
+        fitted = P.TYRE_SETS_TAIL.unpack_from(data, start + P.NUM_TYRE_SETS * P.TYRE_SET.size)["fittedIdx"]
+        out.append(
+            TyreSetsInfo(
+                game=Game.F1_25,
+                t_recv_ns=t,
+                session_time_s=float(h["sessionTime"]),
+                car_index=h["playerCarIndex"],
+                sets=tuple(sets),
+                fitted_index=fitted if fitted < P.NUM_TYRE_SETS else None,
+            )
+        )
 
     def _sector_snapshot(self, lap_number: int) -> dict[str, Any] | None:
         s3 = self._sector3
@@ -607,6 +844,7 @@ class F1Adapter:
         idx = h["playerCarIndex"]
         cs = h["layout"].car_status
         self._status = cs.unpack_from(data, P.HEADER.size + idx * cs.size)
+        self._status_raw = data  # all cars, for the next race timing tick: a reference, not a copy
 
     def _on_car_damage(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
         idx = h["playerCarIndex"]
@@ -618,7 +856,7 @@ class F1Adapter:
         part = pd.unpack_from(data, P.HEADER.size + P.PARTICIPANTS_HEAD.size + idx * pd.size)
         self._team_id = part["teamId"]
         self._platform = enums.PLATFORMS.get(part["platform"], Platform.UNKNOWN)
-        if self.field_period_s is not None:
+        if self.field_period_s is not None or self.timing_period_s is not None:
             # Who is AI (every 5 s): the field model learns from AI cars only by default (human opponents' data is a
             # privacy question). Slots past numActiveCars are zero-filled, so their "0" is unknown, not "human".
             fs = _FIELD_STRUCTS[h["layout"].packet_format]
@@ -646,6 +884,7 @@ class F1Adapter:
 
         self._paused = bool(head["gamePaused"])
         self._spectating = bool(head["isSpectating"])
+        self._session_type_id = head["sessionType"]
         track_id = head["trackId"]
         self._track_id = f"f1:{track_id}"
         stype_label, stype = enums.SESSION_TYPES.get(
@@ -711,6 +950,13 @@ class F1Adapter:
                         }
                         for s in forecast
                     ],
+                    # race strategy (pitwall.strategy): raw game values
+                    "session_type_id": head["sessionType"],
+                    "forecast_accuracy": tail["forecastAccuracy"],  # 0 perfect, 1 approximate
+                    "pit_rejoin_position": tail["pitStopRejoinPosition"],  # 0 = not set
+                    "num_safety_car_periods": tail["numSafetyCarPeriods"],
+                    "num_vsc_periods": tail["numVirtualSafetyCarPeriods"],
+                    "num_red_flag_periods": tail["numRedFlagPeriods"],
                 },
             )
         )
@@ -800,4 +1046,7 @@ _HANDLERS = {
     P.PacketId.CAR_TELEMETRY: F1Adapter._on_car_telemetry,
     P.PacketId.CAR_STATUS: F1Adapter._on_car_status,
     P.PacketId.CAR_DAMAGE: F1Adapter._on_car_damage,
+    P.PacketId.TYRE_SETS: F1Adapter._on_tyre_sets,  # race strategy (pitwall.strategy)
 }
+# race strategy (pitwall.strategy): decoded only within the current session; never reset it (see ``decode``)
+_FOLLOWERS = frozenset({P.PacketId.TYRE_SETS})

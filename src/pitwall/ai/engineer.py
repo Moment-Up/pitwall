@@ -68,8 +68,31 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ),
     ("control_resume", re.compile(r"\b(resume|start talking|talk to me again|you can talk|coaching on)\b", re.I)),
     ("fuel", re.compile(r"\b(fuel|petrol|gas|lift and coast)\b", re.I)),
+    # --- race strategy (pitwall.strategy): weather before tyres ("inters"), gaps after strategy ---
+    (
+        "weather",
+        re.compile(
+            r"\b(weather|rain(?:ing)?|wet|forecast|inters?|intermediates?|drying|track temp(?:erature)?)\b", re.I
+        ),
+    ),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
-    ("strategy", re.compile(r"\b(pit|box|strategy|stop window|pit window|undercut|overcut)\b", re.I)),
+    (
+        "strategy",
+        re.compile(
+            r"\b(pit|box|strategy|stop window|pit window|undercut|overcut|safety car|vsc|virtual safety car|"
+            r"stay out|when should i (?:pit|stop|box))\b",
+            re.I,
+        ),
+    ),
+    (
+        "gaps",
+        re.compile(
+            r"\b(gap(?!\s+to\s+(?:my|the)\s+(?:best|reference|pb|personal))s?|interval|car (?:ahead|behind|in front)|"
+            r"behind me|in front of me|how far (?:ahead|behind|back)|catching|drs|within a second|position)\b",
+            re.I,
+        ),
+    ),
+    # --- end race strategy ---
     (
         "setup",
         re.compile(
@@ -91,7 +114,9 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
 _TOPICS: dict[str, set[str]] = {
     "fuel": {"session", "fuel", "strategy"},
     "tyres": {"session", "tyres", "strategy"},
-    "strategy": {"session", "fuel", "tyres", "strategy"},
+    "strategy": {"session", "fuel", "tyres", "strategy", "gaps"},  # + gaps: race strategy (pitwall.strategy)
+    "gaps": {"session", "gaps"},  # race strategy (pitwall.strategy)
+    "weather": {"session", "weather", "tyres"},  # race strategy (pitwall.strategy)
     "setup": {"session", "corners", "observations", "compare", "setup"},
     "focus": {"session", "observations", "corners", "reference"},
     "compare": {"session", "compare", "reference", "laps"},
@@ -317,6 +342,12 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         return say(first("tyres"), first("tyres", contains="surface temps"))
     if n == "strategy":
         return say(first("strategy"), first("fuel"), first("tyres"))
+    if n == "gaps":  # race strategy (pitwall.strategy)
+        return say(
+            first("gaps", contains="ahead") or first("gaps", contains="leading"), first("gaps", contains="behind")
+        )
+    if n == "weather":  # race strategy (pitwall.strategy)
+        return say(first("weather"), first("weather", contains="crossover"))
     if n in ("corner", "braking", "losing_time", "setup") and intent.corner:
         obs = first("observations", corner=intent.corner)
         return say(first("corners", corner=intent.corner), obs or first("compare", corner=intent.corner))

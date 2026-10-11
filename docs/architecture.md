@@ -33,6 +33,12 @@
                           |  compare (dist.) |    |  reference_laps,       |
                           |  observations    |    |  observations, convos  |
                           +------------------+    +------------------------+
+                                            ^ DbWriter (strategy_laps, pit_stops)
+ SessionManager --(deque append)--> +-------+--------------------+
+   RaceTiming (<= 2 Hz, all cars),   | StrategyWorker ("strategy")|--> LiveState.strategy (every snapshot)
+   TyreSetsInfo, player frames,      |  StrategyEngine (pure,     |--> notify("strategy_call") -> RadioHub
+   laps, events, session info        |  game clock, no LLM)       |    -> RadioScheduler speak windows
+                                     +----------------------------+
 ```
 
 ## Threads and the critical path
@@ -42,6 +48,7 @@
 | `capture-writer` | zstd-compress raw packets to `.pwcap` (flush every 1 s) | - |
 | `lap-analysis` | per-lap: persist, track model, reference, compare, coaching | touch live sockets |
 | `db-writer` | all SQLite writes, one transaction per job | - |
+| `strategy` | race strategy engine (`pitwall/strategy`): gaps, pit loss, tyres, fuel, weather, calls; per-lap records | touch sockets, block ingest (fed by one lock-free deque append per item) |
 | asyncio (uvicorn) | REST, WebSocket snapshots (pull model), LLM calls (async HTTP) | block on DB (uses `to_thread`) |
 
 Backpressure: capture queue (200k packets) and lap queue are bounded; overflow is counted and logged, never
@@ -53,7 +60,9 @@ per-lap processing 7-18 ms; decode <30 us/packet.
 
 ## Data model
 `model/telemetry.py`: `CarFrame` (high-rate, player car), `SessionInfo` (slow), `GameEvent` (discrete),
-`CarSetup`, `LapCompletion`. Units in field names; `None` = unknown; `Wheels` always FL, FR, RL, RR; per-game
+`CarSetup`, `LapCompletion`; F1 only: `FieldSample` (the other cars, field model), `RaceTiming` (every car's position,
+gaps and pit state at <= 2 Hz, plus one at each pit-status change) and `TyreSetsInfo` (the player's tyre sets on
+change), both for the race strategy engine. Units in field names; `None` = unknown; `Wheels` always FL, FR, RL, RR; per-game
 ground plane declared by the adapter (`AdapterInfo.ground_plane`). Field provenance per game in
 `AdapterInfo.fields` -> `/api/capabilities`.
 
@@ -74,7 +83,12 @@ ground plane declared by the adapter (`AdapterInfo.ground_plane`). Field provena
 6. **Coaching** (`analysis/coaching.py`): rules with thresholds above measurement resolution; measurement
    confidence vs habit consistency reported separately; later braking never suggested on its own.
 7. **Strategy** (`analysis/strategy.py`): fuel/lap median over green laps, wear-rate regression, tyre-limited
-   pit window.
+   pit window; with ``stint_only`` the current stint's wear with whole-percent bounds, the game's laps-left figure
+   and new-set life, the fuel-burn model and lift and coast (used by `pitwall/strategy`).
+8. **Race strategy** (`pitwall/strategy/`, worker thread, off the ingest path): gaps with a settle rule against the
+   game's own glitches, every car's pit visits and the measured pit loss, undercut / rejoin, safety car / VSC,
+   forecast, and rate-limited proactive calls through the radio scheduler. Per-lap `StrategyLapRecord`s and pit
+   stops are stored (schema v3) for Review › Strategy. Live view in every snapshot (`strategy`, < 2 kB).
 
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw
@@ -105,7 +119,7 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
   Session complete card loads it on demand).
 
 ## Storage
-SQLite WAL (`data/pitwall.sqlite3`). Lap traces stored as compressed float32 npz blobs (~19 channels).
+SQLite WAL (`data/pitwall.sqlite3`), schema v3 (v3 added `strategy_laps` and `pit_stops`). Lap traces stored as compressed float32 npz blobs (~19 channels).
 Raw packets in `data/captures/*.pwcap` (zstd, ~2.5 MB per 7 min at 60 Hz) for reprocessing.
 
 ## Security
