@@ -191,9 +191,13 @@ describe("driveModel: each state", () => {
       aria: "Pit lane: 78 of 80 km/h",
     });
     expect(m.cue.note).toBe("Calls resume on your out lap");
-    expect(m.coach).toMatchObject({ heading: "Next run · from L4", full: true, tag: "work_on", size: 22, clamp: false });
+    // lap 4 is the lap just finished (the header shows lap 5): "from last lap", never "from L4"
+    expect(m.coach).toMatchObject({ heading: "Next run · from last lap", full: true, tag: "work_on", size: 22, clamp: false });
     expect(m.coach.text).toMatch(/^Turn 9 \(Degner 2\)/);
     expect(m.delta.reason).toBe("No delta in the pit lane");
+    const later = fixture("edited-pit-lane");
+    later.frame = { ...later.frame!, lap_number: 6 }; // lap 5's analysis still on its way: lap 4 is an older lap
+    expect(model(later).coach.heading).toBe("Next run · from L4");
     const fast = fixture("edited-pit-lane");
     fast.frame = { ...fast.frame!, speed_kph: 84.4 };
     expect(model(fast).hero).toMatchObject({ kind: "pit", speedText: "84", over: true });

@@ -133,7 +133,7 @@ describe("Drive › Car (5.1)", () => {
   it("the six tiles of the pit wall", () => {
     const html = car("recorded-d246-suzuka-on-track-brake-ahead");
     const text = visible(html);
-    for (const t of ["Car", "Track", "Tyres & energy", "Inputs · last 12 s", "Laps", "Coaching · lap 4"]) expect(text).toContain(t);
+    for (const t of ["Car", "Track", "Tyres & energy", "Inputs · last 12 s", "Laps", "Coaching · last lap"]) expect(text).toContain(t);
     expect(html).toContain('data-layout="car"');
     expect(text).toMatch(/122 km\/h 3 gear/);
     expect(text).toContain("RPM");

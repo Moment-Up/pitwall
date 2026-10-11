@@ -7,7 +7,8 @@
 // progress, so "L6" under "Lap 7" would read as one lap out), "L6" for an older lap.
 //
 // Length rule: 30 px up to 60 characters, else 26 px clamped to 3 lines while moving (never smaller); stationary
-// (pit lane) the full text at 22 px with its evidence line under a "Next run · from L6" chip.
+// (pit lane) the full text at 22 px with its evidence line under a "Next run · from last lap" chip ("from L6" for
+// an older lap).
 
 import { Card, Chip } from "@heroui/react";
 import { memo } from "react";

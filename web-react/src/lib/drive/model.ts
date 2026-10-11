@@ -11,7 +11,7 @@ import { endedMotivation, readyGoal, type DriveMotivation, type ReadyGoalView } 
 import type { ThingsView } from "../motivation/recap";
 import { INTENSITIES, SKILL_LEVELS } from "../drivers";
 import { aiEndLine } from "../review/aipace";
-import { coachPoint, simpleWording, topPoint, workOnWentWell, type CoachPoint } from "./coach";
+import { coachPoint, lastLapNumber, simpleWording, topPoint, workOnWentWell, type CoachPoint } from "./coach";
 import { cornerAhead, cornerLabelOf, cornerLayout, focusReasonOf, isFocus, officialNameOf, type CornerView } from "./corner";
 import { callsModeText, cueView, lastCueOutcome, type CueBandView, type CuePause, type LastCueOutcome } from "./cues";
 import { deltaView, referenceLabel, type DeltaView } from "./delta";
@@ -108,7 +108,7 @@ export interface StatusView extends StatusSlot {
 }
 
 export interface CoachView extends CoachPoint {
-  /** Overrides tagText in the pit lane ("Next run · from L6"). */
+  /** Overrides tagText in the pit lane: "Next run · from last lap" (the lap just finished), "Next run · from L6". */
   heading: string | null;
   /** The full text is shown (stationary): no glance texts. */
   full: boolean;
@@ -562,8 +562,10 @@ export function driveModel(input: DriveModelInput): DriveModel {
   if (s && !card) {
     if (state === "pit_lane") {
       const top = topPoint(s, simple);
+      // the lap just finished is "last lap", never its bare number: the header already shows the lap after it
+      const from = top?.lap == null ? "" : top.lap === lastLapNumber(s) ? " · from last lap" : ` · from L${top.lap}`;
       coach = top
-        ? { ...top, heading: `Next run${top.lap != null ? ` · from L${top.lap}` : ""}`, full: true }
+        ? { ...top, heading: `Next run${from}`, full: true }
         : { ...coachPoint(s, null, simple, false), heading: null, full: true };
     } else {
       coach = { ...coachPoint(s, corner?.name ?? null, simple, true), heading: null, full: false };
