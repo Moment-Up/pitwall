@@ -49,7 +49,9 @@ def run_file(box: dict[str, Path], *args: str) -> subprocess.CompletedProcess[st
     env["PITWALL_RELEASES_API"] = "http://127.0.0.1:9/api"
     cmd = [POWERSHELL, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(SCRIPT)]
     cmd += ["-InstallHome", str(box["install"]), *args]
-    return subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300, check=False)
+    r = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=300, check=False)
+    print(r.stdout, r.stderr)  # shown in full when a test fails (assertion messages are shortened)
+    return r
 
 
 def write_zip(box: dict[str, Path], tag: str, *, sha: str | None = None, **kw: object) -> Path:

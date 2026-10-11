@@ -116,10 +116,11 @@ def test_status_is_recomputed_after_an_update(tmp_path: Path) -> None:
 
 def test_how_to_update_per_kind(tmp_path: Path) -> None:
     cache = CheckCache()
-    win = compute_status(
-        cache, current="v0.2.0", kind="managed", mode="auto", root=Path("C:/P/pitwall-v0.2.0"), platform="win32"
-    )
-    assert win["how"]["command"] == 'cd "C:/P/pitwall-v0.2.0"; uv run pitwall update'
+    root = tmp_path / "pitwall-v0.2.0"
+    win = compute_status(cache, current="v0.2.0", kind="managed", mode="auto", root=root, platform="win32")
+    assert win["how"]["command"] == f'cd "{root}"; uv run pitwall update'
+    posix = compute_status(cache, current="v0.2.0", kind="release", mode="auto", root=root, platform="darwin")
+    assert posix["how"]["command"] == f'cd "{root}" && uv run pitwall update'
     git = compute_status(cache, current="v0.1.0", kind="git", mode="auto", root=tmp_path)
     assert git["how"]["command"] == "git pull"
     assert compute_status(cache, current="v0.1.0", kind="unknown", mode="auto", root=tmp_path)["how"] is None

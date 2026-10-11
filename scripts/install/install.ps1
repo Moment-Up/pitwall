@@ -90,6 +90,20 @@ function Install-Pitwall {
         return [math]::Sign($x.Length - $y.Length)
     }
 
+    # SHA-256 with .NET, not Get-FileHash: Windows PowerShell 5.1 started from PowerShell 7 inherits a PSModulePath
+    # that can hide Get-FileHash (a script function that has to be loaded from a module), and .NET is always there.
+    function Get-Sha256([string]$Path) {
+        $hasher = [Security.Cryptography.SHA256]::Create()
+        $stream = [IO.File]::OpenRead($Path)
+        try {
+            $bytes = $hasher.ComputeHash($stream)
+        } finally {
+            $stream.Dispose()
+            $hasher.Dispose()
+        }
+        return ([BitConverter]::ToString($bytes) -replace '-', '').ToLowerInvariant()
+    }
+
     function Get-CheckedBase([string]$Name, [string]$Url) {
         if ($Url -match '^https://[^\s/]+') { return $Url.TrimEnd('/') }
         if ($Url -match '^http://(127\.[0-9]+\.[0-9]+\.[0-9]+|localhost|\[::1\])(:[0-9]+)?(/\S*)?$') { return $Url.TrimEnd('/') }
@@ -410,7 +424,7 @@ function Install-Pitwall {
                 if ($parts.Count -ne 2 -or $parts[1].TrimStart('*') -ne $zipName -or $parts[0].Length -ne 64) {
                     Stop-Install 5 "$zipName.sha256 does not name $zipName`: refusing to install it"
                 }
-                $digest = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+                $digest = Get-Sha256 $zip
                 if ($digest -ne $parts[0].ToLowerInvariant()) {
                     Stop-Install 5 "SHA-256 mismatch for $zipName`: the download is damaged or is not the release"
                 }

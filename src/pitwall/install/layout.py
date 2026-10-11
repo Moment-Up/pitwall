@@ -16,7 +16,7 @@ import sys
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from pathlib import Path
+from pathlib import Path, PurePath
 from typing import Any, Literal
 
 from pitwall.install.versions import is_valid_tag, parse_version
@@ -231,6 +231,12 @@ def env_port(path: Path, default: int = 8770) -> int:
     return port if 0 < port < 65536 else default
 
 
+def is_anchored(path: PurePath) -> bool:
+    """Absolute, or rooted on Windows (``\\data`` or ``/data``: on the current drive). Either way it does not
+    depend on the folder Pitwall starts in, so an update must keep it rather than rewrite it."""
+    return path.is_absolute() or bool(path.root)
+
+
 def managed_env_text(data_dir: Path, date: str) -> str:
     return (
         f"# Written by the Pitwall installer on {date}. Add your settings below (see .env.example).\n"
@@ -278,7 +284,7 @@ def ensure_data_dir_line(text: str, data_dir: Path, *, base: Path | None, rewrit
         m = _ENV_LINE_RE.match(lines[i])
         assert m is not None
         value = _unquote(m.group(5))
-        if not Path(value).expanduser().is_absolute() and rewrite_relative:
+        if not is_anchored(Path(value).expanduser()) and rewrite_relative:
             where = f" (relative to {base})" if base is not None else ""
             lines[i : i + 1] = [
                 f"# Rewritten by the Pitwall installer on {date}: this line said {value!r}{where}; the data folder "
@@ -293,12 +299,15 @@ def ensure_data_dir_line(text: str, data_dir: Path, *, base: Path | None, rewrit
 
 
 def write_private_text(path: Path, data: bytes) -> None:
-    """Write ``data`` with mode 0600 (POSIX), atomically."""
+    """Write ``data`` byte for byte with mode 0600 (POSIX), atomically. ``O_BINARY`` on Windows: ``os.open`` is in
+    text mode there by default, which would turn every LF into CRLF (and CRLF into CR CR LF)."""
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_BINARY", 0)
     fd = os.open(tmp, flags, 0o600)
     try:
-        os.write(fd, data)
+        view = memoryview(data)
+        while view:  # os.write may write less than asked
+            view = view[os.write(fd, view) :]
         os.fsync(fd)
     finally:
         os.close(fd)

@@ -7,7 +7,7 @@ import os
 import stat
 import sys
 import time
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 import pytest
 
@@ -18,6 +18,7 @@ from pitwall.install.layout import (
     ensure_data_dir_line,
     env_port,
     install_lock,
+    is_anchored,
     load_state,
     read_env_value,
     save_state,
@@ -138,3 +139,18 @@ def test_private_write_is_0600(tmp_path: Path) -> None:
     p = tmp_path / ".env"
     write_private_text(p, b"A=1\n")
     assert stat.S_IMODE(p.stat().st_mode) == 0o600 and p.read_bytes() == b"A=1\n"
+
+
+def test_rooted_windows_paths_are_kept() -> None:
+    """``\\data`` or ``/data`` on Windows is on the current drive, not inside the version folder: never rewritten."""
+    assert is_anchored(PureWindowsPath("C:/Pitwall/data")) and is_anchored(PureWindowsPath("/Pitwall/data"))
+    assert is_anchored(PureWindowsPath("\\\\server\\share\\data")) and is_anchored(PurePosixPath("/srv/data"))
+    assert not is_anchored(PureWindowsPath("data")) and not is_anchored(PurePosixPath("data"))
+
+
+def test_private_write_is_byte_for_byte(tmp_path: Path) -> None:
+    """No newline translation (``os.open`` is in text mode on Windows unless asked for binary)."""
+    p = tmp_path / ".env"
+    data = b"# mine\r\nA=1\r\nB=2\n" + "C=caf\u00e9\n".encode()
+    write_private_text(p, data)
+    assert p.read_bytes() == data

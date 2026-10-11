@@ -50,6 +50,7 @@ from pitwall.install.layout import (
     env_port,
     free_bytes,
     install_lock,
+    is_anchored,
     load_state,
     managed_env_text,
     read_env_value,
@@ -67,6 +68,7 @@ HEALTHY_TIMEOUT_S = 90.0
 STOP_TIMEOUT_S = 20.0
 IDLE_POLL_S = 5.0
 IDLE_CHECKS = 3
+MOVE_ATTEMPTS = 5
 PITWALL_FILES = ("pitwall.sqlite3", "access_token")
 
 
@@ -343,8 +345,8 @@ class Finisher:
         legacy_rel: Path | None = None
         if raw:
             p = Path(raw).expanduser()
-            if p.is_absolute():
-                return DataPlan(p, f"{DATA_KEY} in {env_dir / '.env'}")
+            if is_anchored(p):  # absolute (or, on Windows, rooted on the current drive)
+                return DataPlan(p if p.is_absolute() else p.resolve(), f"{DATA_KEY} in {env_dir / '.env'}")
             resolved = (env_dir / p).resolve()
             if any(_inside(resolved, d) for d in self.home.glob("pitwall-v*")):
                 legacy_rel = resolved  # data inside a version folder: adopted below
@@ -662,12 +664,25 @@ class Finisher:
         return self.from_dir is not None and wd.resolve() == self.from_dir.resolve()
 
     def _move_data(self, src: Path, dest: Path) -> bool:
+        """Rename (same filesystem: nothing is copied). A failure rolls back: the old service comes back as it was.
+        Windows refuses to rename a folder while a file in it is open, for example for a moment after the old
+        server stopped, so it is tried a few times."""
         if dest.exists():
             try:
                 dest.rmdir()  # an empty folder only (checked by plan_data)
             except OSError as e:
-                raise InstallError(EXIT_NEEDS_USER, f"{dest} is not empty: not moving {src} onto it") from e
-        src.rename(dest)
+                raise _RollBack(f"{dest} is not empty: not moving {src} onto it") from e
+        for attempt in range(MOVE_ATTEMPTS):
+            try:
+                src.rename(dest)
+                break
+            except OSError as e:
+                if attempt == MOVE_ATTEMPTS - 1:
+                    raise _RollBack(
+                        f"could not move {src} to {dest} ({e.strerror or e}): close anything that uses it (a "
+                        "running Pitwall, a window showing that folder) and run this again"
+                    ) from e
+                self.sys.sleep(1.0)
         with contextlib.suppress(OSError):
             (src.parent / "data-moved-to.txt").write_text(
                 f"Pitwall moved this folder's data to {dest} on {time.strftime('%Y-%m-%d %H:%M')}.\n", encoding="utf-8"

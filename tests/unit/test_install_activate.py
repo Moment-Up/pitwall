@@ -3,6 +3,7 @@ scripted; files are real (tmp_path), and so is the SQLite backup."""
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sqlite3
 import sys
@@ -100,7 +101,8 @@ def version(home: Path, tag: str, *, ready: bool = True, env: bytes | None = Non
 def make_db(data: Path) -> Path:
     data.mkdir(parents=True, exist_ok=True)
     db = data / "pitwall.sqlite3"
-    with sqlite3.connect(db) as c:
+    # closed explicitly: `with sqlite3.connect()` only commits, and an open file on Windows blocks moving its folder
+    with contextlib.closing(sqlite3.connect(db)) as c, c:
         c.execute("PRAGMA journal_mode=WAL")
         c.execute("CREATE TABLE sessions (id TEXT PRIMARY KEY, laps INTEGER)")
         c.executemany("INSERT INTO sessions VALUES (?, ?)", [(f"s{i}", i) for i in range(50)])
@@ -159,7 +161,7 @@ def test_update_carries_env_backs_up_and_records_previous(tmp_path: Path) -> Non
     assert st is not None and st.current == "v0.3.0" and st.previous == "v0.2.0"
     assert set(st.versions) == {"v0.2.0", "v0.3.0"}
     (backup,) = (home / "data" / "backups").glob("pitwall-before-v0.3.0-*.sqlite3")
-    with sqlite3.connect(backup) as c:
+    with contextlib.closing(sqlite3.connect(backup)) as c:
         assert c.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
         assert c.execute("SELECT count(*) FROM sessions").fetchone()[0] == 50
     assert "http://127.0.0.1:8831/" in s.text  # the port from the carried .env
@@ -367,6 +369,33 @@ def test_adoption_with_our_service_moves_data_between_uninstall_and_install(tmp_
     assert (home / "data" / "pitwall.sqlite3").is_file() and not (legacy / "data").exists()
 
 
+def test_a_data_folder_that_cannot_move_rolls_back(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Windows refuses to rename a folder with an open file in it: after a few tries the old service comes back
+    with its data where it was, and install.json is not written."""
+    home = tmp_path / "Pitwall"
+    legacy = version(home, "v0.1.0", ready=False, data=True)
+    new = version(home, "v0.2.0")
+    s = FakeSystem()
+    s.service = ServiceInfo("launchd", legacy, legacy / "data", "plist")
+    up = {"v": True}
+
+    def health(fs: FakeSystem) -> dict[str, Any] | None:
+        if fs.calls:
+            up["v"] = fs.calls[-1][0] == "install"
+        return IDLE if up["v"] else None
+
+    def refuse(self: Path, target: Any) -> Path:
+        raise PermissionError(13, "Access is denied", str(self))
+
+    s.health_fn = health
+    monkeypatch.setattr(Path, "rename", refuse)
+    assert finish(opts(home, new, yes=True), s) == 1, s.text
+    assert s.calls == [("uninstall", "pitwall-v0.1.0"), ("install", f"pitwall-v0.1.0|{legacy / 'data'}")]
+    assert "could not move" in s.text and "put back" in s.text
+    assert (legacy / "data" / "pitwall.sqlite3").is_file() and not (home / "data").exists()
+    assert load_state(home) is None
+
+
 def test_service_question_and_a_running_server(tmp_path: Path) -> None:
     home = tmp_path / "Pitwall"
     new = version(home, "v0.2.0")
@@ -417,7 +446,7 @@ def test_backup_sqlite_is_consistent_while_open(tmp_path: Path) -> None:
     dest = tmp_path / "b.sqlite3"
     backup_sqlite(db, dest)
     writer.close()
-    with sqlite3.connect(dest) as c:
+    with contextlib.closing(sqlite3.connect(dest)) as c:
         assert c.execute("SELECT count(*) FROM sessions").fetchone()[0] == 51
     assert not (tmp_path / "b.sqlite3.part").exists()
 
