@@ -1,6 +1,6 @@
 // The week on Review › Progress (lane motivation, spec 9 WeekCard): one Monday-to-Sunday week of the viewed driver's
 // real driving. ‹ › move a week (44 px; › is off on the current week), the headline and totals, the sessions (7, then
-// "+N more"), the best improvements (3), how each goal moved, the badges earned. Printable page opens the server's
+// "Show all"), new tracks and improvements (3), how each goal moved, the badges earned. Printable page opens the server's
 // own HTML page (no JavaScript, no external requests; the cookie or Tailscale identity lets it in) and Copy as text
 // copies the same week as markdown. No external services.
 
@@ -11,7 +11,7 @@ import { copyText, EvidenceChips, TimingValue } from "../../../components/ui";
 import { useApi } from "../../../hooks/useApi";
 import { motivationApi, motivationKeys, motivationPaths } from "../../../lib/endpoints/motivation";
 import { isMissingRoute } from "../../../lib/endpoints/review";
-import { fractionChange, WEEK_BADGES_SHOWN, weekView } from "../../../lib/motivation/digest";
+import { fractionChange, WEEK_BADGES_SHOWN, WEEK_SESSIONS_SHOWN, weekView } from "../../../lib/motivation/digest";
 import { shiftWeek } from "../../../lib/motivation/format";
 import { router } from "../../../lib/router";
 import { sessionPath } from "../../../lib/review/links";
@@ -59,7 +59,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export function WeekCard({ driverId, simple }: { driverId: number; simple: boolean }) {
   // null = this week (the server's default); else the Monday of the week shown.
   const [week, setWeek] = useState<string | null>(null);
+  const [allSessions, setAllSessions] = useState(false);
   useEffect(() => setWeek(null), [driverId]);
+  useEffect(() => setAllSessions(false), [driverId, week]);
   const d = useApi(motivationKeys.digest(driverId, week), () => motivationApi.digest(driverId, week), { maxAgeMs: 60_000 });
   const v = useMemo(() => (d.data ? weekView(d.data, simple) : null), [d.data, simple]);
   const missing = d.error && isMissingRoute(d.error);
@@ -118,7 +120,7 @@ export function WeekCard({ driverId, simple }: { driverId: number; simple: boole
           {v.sessions.length > 0 && (
             <Section title="Sessions">
               <ul className="m-0 grid list-none gap-0 p-0">
-                {v.sessions.map((s) => (
+                {(allSessions ? v.sessions : v.sessions.slice(0, WEEK_SESSIONS_SHOWN)).map((s) => (
                   <li key={s.id}>
                     <button
                       type="button"
@@ -147,12 +149,18 @@ export function WeekCard({ driverId, simple }: { driverId: number; simple: boole
                   </li>
                 ))}
               </ul>
-              {v.moreSessions > 0 && <p className="m-0 px-1 text-[13px] text-muted">+{v.moreSessions} more</p>}
+              {v.moreSessions > 0 && (
+                <div>
+                  <Button variant="ghost" className="min-h-11" onPress={() => setAllSessions((x) => !x)}>
+                    {allSessions ? "Show fewer" : `Show all ${v.sessions.length}`}
+                  </Button>
+                </div>
+              )}
             </Section>
           )}
 
           {v.improvements.length > 0 && (
-            <Section title="Best improvements">
+            <Section title="New tracks and improvements">
               <ul className="m-0 grid list-none gap-1.5 p-0">
                 {v.improvements.map((i) => (
                   <li key={i.key} className="grid gap-0">
@@ -205,17 +213,19 @@ export function WeekCard({ driverId, simple }: { driverId: number; simple: boole
             </Section>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-separator pt-3">
-            <Button
-              variant="secondary"
-              className="min-h-11"
-              onPress={() => window.open(motivationPaths.digestHtmlTab(driverId, v.weekStart), "_blank", "noopener")}
-            >
-              <Printer aria-hidden="true" />
-              Printable page
-            </Button>
-            <CopyMarkdown text={v.markdown} />
-          </div>
+          {!v.empty && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-separator pt-3">
+              <Button
+                variant="secondary"
+                className="min-h-11"
+                onPress={() => window.open(motivationPaths.digestHtmlTab(driverId, v.weekStart), "_blank", "noopener")}
+              >
+                <Printer aria-hidden="true" />
+                Printable page
+              </Button>
+              <CopyMarkdown text={v.markdown} />
+            </div>
+          )}
           <p className="m-0 text-[13px] text-muted">Real driving only: synthetic and replayed sessions are left out.</p>
         </>
       )}

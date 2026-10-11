@@ -83,10 +83,12 @@ two laps" and "You can talk again" work as you would expect. This timing is test
 not yet been heard in a live session.
 
 When you reach a goal the engineer says one short line after that lap's summary and before its coaching point:
-"Goal reached: a lap under 1:10 at Austria." (beginners hear "You did it: ..."). It follows the same rules as a
-lap summary: never at quiet intensity, during "stop talking" or with the radio off, only in a calm part of the lap,
-and a newer lap's summary replaces it if it was not said in time. At most two goal lines per session; a race goal
-is said after the flag. "How am I doing on my goal?" is answered from the facts, with or without a language model.
+"Goal reached: a lap under 1:10 at Austria." (beginners hear "You did it: ..."; several goals at once name two and
+count the rest). It follows the same rules as a lap summary: never at quiet intensity, during "stop talking" or with
+the radio off, only in a calm part of the lap, and a newer lap's summary replaces it if it was not said in time. At
+most two goal lines per session; a race goal is said after the flag. "How am I doing on my goal?", "How many laps
+this week?" and "What badges have I got?" are answered from the facts, with or without a language model; questions
+about a braking target, the target lap or a best lap "this week" keep their usual answers.
 
 **Braking calls** have four modes. *Focus* (the default) calls "brake" only for the one to three corners where you
 lose the most time under braking. *Markers* says the corner name before every braking zone. *All* calls every
@@ -143,14 +145,18 @@ Every session's Summary (and Drive's Session complete card) starts with three sh
 well**, **one to work on** and **one piece of progress**. They are picked by fixed rules, never by a language model:
 
 - *Went well*: a new personal best, else the strongest positive coaching point, a run of 3 or more clean laps, getting
-  0.1 s or more faster from your first clean lap to your best, or every lap clean.
+  0.1 s or more faster from your first clean lap to your best (race lap 1, from the grid, is left out), or every lap
+  clean; for a beginner, otherwise, how many laps they drove.
 - *One to work on*: the coaching point that cost the most over the session (the coach's own words, simpler for
   beginners), else laps that did not count, no clean lap, or a single clean lap.
-- *Progress*: a goal reached, new bests in two or more sessions in a row, a goal you moved closer to, the gap to
-  your best here, your first clean laps at a track, or how many sessions you have driven this week.
+- *Progress*: the goals reached (the celebration comes first), new bests in two or more sessions in a row, a goal you
+  moved closer to, the gap to your best here, your first clean laps at a track, or how many sessions you have driven
+  this week.
 
-Progress is worked out as it was at the end of that session, so a later session never changes it. Synthetic
-sessions, replays and sessions with no driver profile get no progress point. Terminal: `uv run pitwall recap`.
+Personal bests are per track and car, and say which car. Progress is worked out as it was at the end of that
+session, so a later session never changes it. Synthetic sessions, replays and sessions with no driver profile get no
+progress point; a session with no timed lap gets no points at all. If the seat has changed since, Drive's Session
+complete card says whose session it was. Terminal: `uv run pitwall recap`.
 
 ### Goals
 
@@ -161,14 +167,26 @@ without touching another car either). Only laps driven after the goal was set co
 replays and synthetic sessions never do.
 
 Pitwall suggests goals from your own history, with the reason shown: the best sectors you have driven added
-together, your recent improvement, your best run of clean laps, your steadiest laps and your recent races. Nothing
-is invented. A goal is marked reached once, after the lap that reached it, and stays reached; if that session is
-later moved to another driver, the goal can be reopened.
+together, your recent improvement, your best run of clean laps, your steadiest laps at a track (a steady-laps
+suggestion is for the track it was learned at) and your recent races. Nothing is invented. A goal is marked reached
+once, after the lap that reached it, and stays reached; if that session is later moved to another driver, the goal
+can be reopened (a goal your own laps still reach cannot: add it again to go for it again). Goals can be set before a
+driver's first session, so a parent can set a first one. On Progress, the goals for the chosen track and car come
+first.
 
-Limits, shown in the dashboard: race goals work in F1 only (other games send no session type or penalties) and only
-for races recorded from this version on (the race length is stored from schema v3). GT7, Assetto Corsa and Forza do
-not report track limits, so there "clean" means no pit lap, reset or flashback. Terminal: `uv run pitwall goals
---suggest`.
+How the rules count, shown in the dashboard where it matters:
+
+- A race is finished when its last lap is recorded, or - a lapped car, a race shortened by a red flag - when F1's
+  chequered flag was recorded and your last lap ended after it. Race goals work in F1 only (other games send no
+  session type or penalties) and only for races recorded from lap 1 with this version (the race length is stored
+  from schema v3).
+- Steady laps leave out race lap 1 (from the grid) and laps behind the safety car or the virtual safety car (F1 says
+  when it comes out and goes in; following it makes laps naturally even). Both are rules of thumb.
+- A run of clean laps ends at a mistake, a reset, a missing lap number, or a lap with lost telemetry in the middle of
+  a session (what happened on it is unknown). Pit laps neither count nor end a run.
+- GT7, Assetto Corsa and Forza do not report track limits, so there "clean" means no pit lap, reset or flashback.
+
+Terminal: `uv run pitwall goals --suggest`.
 
 ### Badges and streaks
 
@@ -181,10 +199,11 @@ laps and your new-best streaks.
 
 ### Weekly digest
 
-One page per driver per week: sessions, laps and clean laps against the week before, the biggest improvements
-and first laps at new tracks, goals reached and how far the others moved, badges and streaks. **Printable page**
-opens a plain A4 page made on this computer, and **Copy as text** copies the same as Markdown for a message.
-Nothing is sent anywhere. Terminal: `uv run pitwall digest [--week 2026-10-05] [--html week.html]`.
+One page per driver per week: sessions, laps and clean laps against the week before, new tracks (the first session
+there, in its car) and the biggest improvements, goals reached and how far the others moved, badges and streaks.
+**Printable page** opens a plain A4 page made on this computer, and **Copy as text** copies the same as Markdown for
+a message (neither is offered for a week without driving). Nothing is sent anywhere. Terminal: `uv run pitwall
+digest [--week 2026-10-05] [--html week.html]`.
 
 Goals, badges, recaps and the digest are tested on synthetic sessions and on real F1 25 PS5 captures replayed in a
 scratch database; they have not been used after a live session yet.

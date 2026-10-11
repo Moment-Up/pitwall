@@ -18,7 +18,7 @@ import threading
 import time
 from collections import OrderedDict
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
@@ -65,8 +65,44 @@ def _refuse(conn: sqlite3.Connection, error: Exception) -> _Refused:
     return _Refused(error)
 
 
+def _needs_timing(evs: list[dict[str, Any]], laps: list[LapRow], total: int | None) -> bool:
+    """A safety car, or a chequered flag in a race whose last lap (``total_laps``) is not stored complete (a lapped
+    finish to judge). Every F1 race has a flag: the full distance needs no lap times."""
+    kinds = {e.get("kind") for e in evs}
+    if rules.SAFETY_CAR in kinds:
+        return True
+    if rules.CHEQUERED_FLAG not in kinds:
+        return False
+    return not any(
+        lap.lap_number == total and lap.lap_time_ms is not None and "incomplete" not in lap.flags for lap in laps
+    )
+
+
+def _race_timing(
+    conn: sqlite3.Connection,
+    laps: dict[str, list[LapRow]],
+    events: Mapping[str, list[dict[str, Any]]],
+    totals: Mapping[str, int | None],
+) -> None:
+    """F1 races with a safety car or a lapped finish to judge: give their laps their receive times (lap meta) and mark
+    the laps behind the safety car (``rules.behind_safety_car``). Other sessions are left as they are."""
+    need = [sid for sid, evs in events.items() if _needs_timing(evs, laps.get(sid, []), totals.get(sid))]
+    if not need:
+        return
+    times = repo.motivation_lap_times(conn, need)
+    for sid in need:
+        spans = rules.safety_car_spans(events[sid])
+        marked: list[LapRow] = []
+        for lap in laps.get(sid, []):
+            start, end = times.get(lap.id, (None, None))
+            timed = replace(lap, t_start_ns=start, t_end_ns=end)
+            marked.append(replace(timed, safety_car=rules.behind_safety_car(timed, spans)))
+        laps[sid] = marked
+
+
 def load_history(conn: sqlite3.Connection, driver_id: int, *, include_synthetic: bool = False) -> History:
-    """A driver's real driving, oldest first, with laps (columns before ``meta``) and F1 race incident events."""
+    """A driver's real driving, oldest first, with laps (columns before ``meta``) and F1 race events (incidents,
+    the chequered flag, the safety car)."""
     sessions = [
         SessionRow.from_row(r) for r in repo.motivation_sessions(conn, driver_id, include_synthetic=include_synthetic)
     ]
@@ -74,6 +110,7 @@ def load_history(conn: sqlite3.Connection, driver_id: int, *, include_synthetic:
     laps = {sid: [LapRow.from_row(d) for d in rows] for sid, rows in raw.items()}
     races = [s.id for s in sessions if s.is_race and s.is_f1]
     events = repo.motivation_events(conn, races) if races else {}
+    _race_timing(conn, laps, events, {s.id: s.total_laps for s in sessions})
     return History(sessions, laps, events)
 
 
@@ -81,7 +118,9 @@ def session_history(conn: sqlite3.Connection, s: SessionRow) -> History:
     """One session on its own (the worker's per-lap view)."""
     raw = repo.motivation_laps(conn, [s.id])
     events = repo.motivation_events(conn, [s.id]) if s.is_race and s.is_f1 else {}
-    return History([s], {s.id: [LapRow.from_row(d) for d in raw.get(s.id, [])]}, events)
+    laps = {s.id: [LapRow.from_row(d) for d in raw.get(s.id, [])]}
+    _race_timing(conn, laps, events, {s.id: s.total_laps})
+    return History([s], laps, events)
 
 
 class MotivationService:
@@ -288,7 +327,11 @@ class MotivationService:
         return self.goal(driver_id, goal_id)
 
     def patch_goal(self, driver_id: int, goal_id: int, status: object) -> dict[str, Any]:
-        """``active`` (unarchive, or reopen a reached goal: its stored achievement is cleared) or ``archived``."""
+        """``active`` (unarchive, or reopen a reached goal: its stored achievement is cleared) or ``archived``.
+
+        Reopening is for a goal reached in a session that now belongs to someone else: when the driver's own driving
+        since the goal was set still reaches it, it is refused (409 ``still_reached``) - reopened, the same lap would
+        reach it again and be celebrated twice. To go again, the driver sets it as a new goal."""
         if status not in ("active", "archived"):
             raise G.invalid("status must be active or archived")
 
@@ -306,6 +349,9 @@ class MotivationService:
             err = G.conflicts(G.NewGoal(g.kind, g.target, g.params, g.scope, g.source, g.basis), active, None)
             if err is not None:
                 return _refuse(c, err)
+            if g.achieved_unix is not None and G.first_hit(g, load_history(c, driver_id)) is not None:
+                msg = "Your own driving still reaches this goal. To go for it again, add it as a new goal."
+                return _refuse(c, G.conflict("still_reached", msg))
             repo.set_goal_status(c, goal_id, "active", clear_achievement=g.achieved_unix is not None)
             return None
 

@@ -34,13 +34,13 @@ describe("badges", () => {
   it("newest first, with the day and what earned it", () => {
     const b = badgeViews(mfx.badges());
     expect(b[0]).toMatchObject({ title: "First clean lap at Brands Hatch", day: "Sun 11 Oct" });
-    expect(b[1]).toMatchObject({ title: "First time under 1:11 at Austria", detail: "1:10.549 in the Haas", sessionId: "332904dbe3de" });
+    expect(b[1]).toMatchObject({ title: "First time under 1:11 at Austria in the Haas", detail: "1:10.549 on lap 64", sessionId: "332904dbe3de" });
     expect(b).toHaveLength(8);
     expect(b.every((x) => !x.synthetic)).toBe(true);
   });
 
   it("simple wording; none yet", () => {
-    expect(badgeViews(mfx.badges(), true)[1]!.title).toBe("You beat 1:11 at Austria for the first time");
+    expect(badgeViews(mfx.badges(), true)[1]!.title).toBe("You beat 1:11 at Austria in the Haas for the first time");
     expect(badgeViews(mfx.badgesEmpty())).toEqual([]);
   });
 });

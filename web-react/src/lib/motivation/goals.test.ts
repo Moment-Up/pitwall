@@ -7,7 +7,10 @@ import {
   goalsFootnote,
   goalsView,
   lapGoalBlocked,
+  lapGoalHere,
+  lapGoalHereText,
   raceGoalBlocked,
+  rowActions,
   suggestionView,
   type DraftScope,
   type GoalDraft,
@@ -49,6 +52,27 @@ describe("goal rows (the server's words, in the reader's wording)", () => {
     expect(lap.why).toContain("Your best sectors here add up to 1:09.962");
     // a manual goal has no "Why this target?"
     expect(v.active[1]!.why).toBeNull();
+  });
+
+  it("the goals for the page's track and car first, then those that count anywhere, then other tracks", () => {
+    const r = mfx.goals();
+    const lap = r.goals.find((g) => g.id === 4)!;
+    const montreal = { ...lap, id: 9, scope: { ...lap.scope, track_id: "f1:6", track_name: "Montreal" } };
+    r.goals = [montreal, ...r.goals];
+    const here = goalsView(r, false, { game: "f1_25", trackId: "f1:17", carId: "f1:team:7" });
+    expect(here.active.map((g) => g.id)).toEqual([4, 5, 6, 9]);
+    const there = goalsView(r, false, { game: "f1_25", trackId: "f1:6", carId: "f1:team:7" });
+    expect(there.active.map((g) => g.id)).toEqual([9, 5, 6, 4]);
+    expect(goalsView(r, false, null).active.map((g) => g.id)).toEqual([9, 4, 5, 6]); // no place: the server's order
+  });
+
+  it("Reopen only for a goal reached in someone else's session", () => {
+    const v = goalsView(mfx.goals());
+    const moved = v.reached.find((g) => g.achieved && !g.achieved.owned)!;
+    const mine = v.reached.find((g) => g.achieved?.owned)!;
+    expect(rowActions(moved).map((a) => a.text)).toEqual(["Reopen", "Archive", "Delete"]);
+    expect(rowActions(mine).map((a) => a.text)).toEqual(["Archive", "Delete"]);
+    expect(rowActions(v.active[0]!).map((a) => a.text)).toEqual(["Archive", "Delete"]);
   });
 
   it("simple wording for simple-wording drivers: titles, progress and the reason", () => {
@@ -130,7 +154,16 @@ describe("make your own: checked like the server checks it", () => {
       ok: false,
       error: "Use tenths of a second, like 1:10.4.",
     });
-    expect(lapGoalBlocked(null)).toContain("Pick a track above first");
+    expect(lapGoalBlocked(null)).toBe("A lap-time goal is for one track: drive there first, then set it.");
+    // one lap-time goal per track and car: said before anything is typed
+    const goals = mfx.goals().goals;
+    const here = lapGoalHere(goals, AUSTRIA, "car");
+    expect(here?.id).toBe(4);
+    expect(lapGoalHereText(here!, false)).toBe(
+      "You already have a lap-time goal here: A lap under 1:10.000. Archive it to set a new time.",
+    );
+    expect(lapGoalHere(goals, AUSTRIA, "class")).toBeNull(); // any F1 World car is another place
+    expect(lapGoalHere(goals, GT7, "car")).toBeNull();
     expect(lapGoalBlocked({ ...AUSTRIA, synthetic: true })).toBe("This is a synthetic track: goals only count real driving.");
     expect(lapGoalBlocked({ ...AUSTRIA, carId: null, carClass: null })).toContain("Pick a car above first");
     expect(draftToCreate(draft({ kind: "lap_time", lapText: "1:10.0" }), { ...AUSTRIA, synthetic: true }).ok).toBe(false);

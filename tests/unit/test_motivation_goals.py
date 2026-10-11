@@ -79,7 +79,9 @@ def test_conflicts() -> None:
     assert G.conflicts(new, other_target, None).code == "duplicate_scope"  # type: ignore[union-attr]
     beaten = G.conflicts(new, [], 69_981)
     assert (
-        beaten is not None and beaten.code == "already_beaten" and beaten.detail == "Your best here is already 1:09.981"
+        beaten is not None
+        and beaten.code == "already_beaten"
+        and beaten.detail == "Your best here is already 1:09.981."
     )
     assert G.conflicts(new, [], 70_549) is None
     assert (
@@ -122,7 +124,9 @@ def test_lap_time_only_scope_laps_after_creation_count() -> None:
     assert p.text == "No clean lap here since you set it"
     assert G.first_hit(g, h) is None
     with_base = goal("lap_time", 70_000, scope=AUSTRIA_HAAS, after=a[-1].id, baseline=70_549)
-    assert G.progress(with_base, h).fraction == 0.0
+    pb = G.progress(with_base, h)
+    assert pb.fraction is None  # nothing measured since it was set: no empty bar
+    assert pb.text == "0.549 s to go from your best 1:10.549" and pb.text_simple == "About 0.5 s to go"
 
 
 def test_unknown_baseline_uses_the_first_measurement() -> None:
@@ -159,7 +163,9 @@ def test_clean_streak_progress_and_hit() -> None:
     g4 = goal("clean_streak", 4, after=a[0].id)
     hit = G.first_hit(g4, h)
     assert hit is not None and (hit.session_id, hit.lap_number, hit.value) == ("b", 7, 4)
-    assert G.progress(goal("clean_streak", 4, after=10**9), h).text == "No clean laps since you set it"
+    none = G.progress(goal("clean_streak", 4, after=10**9), h)
+    assert none.text == "No clean laps since you set it" and none.text_simple == "No clean laps yet"
+    assert none.fraction is None  # nothing since it was set: no empty bar
 
 
 def test_consistency_progress_and_hit() -> None:
@@ -175,6 +181,19 @@ def test_consistency_progress_and_hit() -> None:
     p5 = G.progress(g5, h)
     assert not p5.met and p5.text == "Steadiest 5 laps since you set it: within 0.500 s (target 0.1 s)"
     assert p5.fraction == pytest.approx((1_000 - 500) / 900)
+
+
+def test_consistency_progress_says_race_lap_1_does_not_count() -> None:
+    """Laps 1-3 of a race all clean reach "3 clean laps in a row", but not a 3-lap steady window: say why."""
+    h = history((sess("a", session_type="race"), laps("a", [88_000, 78_000, 78_100])))
+    p = G.progress(goal("consistency", 1_000, params={"window_laps": 3}), h)
+    assert p.current is None and p.fraction is None
+    assert p.text == "No run of 3 clean laps to measure since you set it (race lap 1 does not count)"
+    assert p.text_simple == "No run of 3 clean laps to measure yet (race lap 1 does not count)"
+    practice = history((sess("b", session_type="practice"), laps("b", [78_000, 78_100])))
+    assert G.progress(goal("consistency", 1_000, params={"window_laps": 3}), practice).text == (
+        "No run of 3 clean laps to measure since you set it"
+    )
 
 
 # ---------------------------------------------------------------------------------------------- clean race
@@ -198,7 +217,8 @@ def test_race_clean_progress_and_hit() -> None:
     # a race whose lap 1 was stored before the goal was set does not count
     late = goal("race_clean", 1, params={"rule": "no_penalties"}, after=r2[0].id)
     assert G.first_hit(late, h) is None
-    assert G.progress(late, h).text == "No race finished since you set it"
+    assert G.progress(late, h).text == "No race recorded from lap 1 to the flag since you set it"
+    assert G.progress(late, h).fraction is None  # reached or not: no part-way bar
     one = history((race("r1", T0), r1), events={"r1": [penalty(4), collision()]})
     assert G.progress(g, one).text == "1 race finished since you set it, with a penalty and contact"
 

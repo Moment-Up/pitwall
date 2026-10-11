@@ -1219,14 +1219,18 @@ def motivation_laps(conn: sqlite3.Connection, session_ids: list[str]) -> dict[st
     return out
 
 
+_MOTIVATION_EVENT_KINDS = "('collision', 'penalty', 'flashback', 'chequered_flag', 'safety_car')"
+
+
 def motivation_events(conn: sqlite3.Connection, session_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
-    """Player incident events (collision, penalty, flashback) per session, payload parsed (race sessions only)."""
+    """Race events per session in order, payload parsed (race sessions only): the player's incidents (collision,
+    penalty, flashback), the chequered flag and the safety car, with their receive time."""
     out: dict[str, list[dict[str, Any]]] = {sid: [] for sid in session_ids}
     for i in range(0, len(session_ids), _IN_CHUNK):
         chunk = session_ids[i : i + _IN_CHUNK]
         rows = conn.execute(
-            f"""SELECT session_id, kind, code, payload FROM events
-                WHERE session_id IN ({",".join("?" * len(chunk))}) AND kind IN ('collision', 'penalty', 'flashback')
+            f"""SELECT session_id, t_recv_ns, kind, code, payload FROM events
+                WHERE session_id IN ({",".join("?" * len(chunk))}) AND kind IN {_MOTIVATION_EVENT_KINDS}
                 ORDER BY id""",
             chunk,
         ).fetchall()
@@ -1236,8 +1240,29 @@ def motivation_events(conn: sqlite3.Connection, session_ids: list[str]) -> dict[
             except json.JSONDecodeError:
                 payload = {}
             out.setdefault(r["session_id"], []).append(
-                {"kind": r["kind"], "code": r["code"], "payload": payload if isinstance(payload, dict) else {}}
+                {
+                    "kind": r["kind"],
+                    "code": r["code"],
+                    "t_recv_ns": r["t_recv_ns"],
+                    "payload": payload if isinstance(payload, dict) else {},
+                }
             )
+    return out
+
+
+def motivation_lap_times(conn: sqlite3.Connection, session_ids: list[str]) -> dict[int, tuple[int | None, int | None]]:
+    """Lap id -> (first, last receive time in ns) from the lap meta, for the few race sessions that need it (a
+    chequered flag or a safety car); never the trace."""
+    out: dict[int, tuple[int | None, int | None]] = {}
+    for i in range(0, len(session_ids), _IN_CHUNK):
+        chunk = session_ids[i : i + _IN_CHUNK]
+        for r in conn.execute(
+            f"""SELECT id, json_extract(meta, '$.t_recv_start_ns') AS a, json_extract(meta, '$.t_recv_end_ns') AS b
+                FROM laps WHERE session_id IN ({",".join("?" * len(chunk))})""",
+            chunk,
+        ).fetchall():
+            a, b = r["a"], r["b"]
+            out[int(r["id"])] = (a if isinstance(a, int) else None, b if isinstance(b, int) else None)
     return out
 
 
@@ -1265,11 +1290,25 @@ def lap_numbers(conn: sqlite3.Connection, lap_ids: list[int]) -> dict[int, int]:
     return out
 
 
-def rewrite_session_origin(
+class ScratchOnlyError(RuntimeError):
+    """``scratch_relabel_session`` was asked to change a database that is not a scratch one."""
+
+
+def scratch_relabel_session(
     conn: sqlite3.Connection, session_id: str, *, source: str, started_unix: float, ended_unix: float | None
 ) -> None:
-    """Scratch databases only (``scripts/motivation_acceptance.py``): make a replayed real session look like live
-    driving at the time it was recorded. Never called by the app."""
+    """SCRATCH databases and tests only (``scripts/motivation_acceptance.py``, the motivation tests): make a replayed
+    real session look like live driving at the time it was recorded. Never called by the app: it would turn replays
+    into someone's driving (evidence tiers). It refuses a database file inside a git checkout, which is where the
+    service keeps its data (``./data`` of the checkout or release worktree); in-memory databases are fine."""
+    from pathlib import Path  # (local: the rest of this module needs no paths)
+
+    for row in conn.execute("PRAGMA database_list").fetchall():
+        if row["name"] != "main" or not row["file"]:
+            continue
+        db_file = Path(row["file"]).resolve()
+        if any((p / ".git").exists() for p in db_file.parents):
+            raise ScratchOnlyError(f"refusing to relabel sessions in {db_file}: not a scratch database")
     conn.execute(
         "UPDATE sessions SET source=?, started_unix=?, ended_unix=? WHERE id=?",
         (source, started_unix, ended_unix, session_id),

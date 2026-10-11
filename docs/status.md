@@ -229,6 +229,24 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
   and badge, "Goal reached" in Summary, and the radio question "How am I doing on my goal?" answered from facts.
   Review Progress (goals, the goal sheet with a server refusal, the week, badges) and Summary checked at both sizes on
   the replayed captures. The Svelte dashboard still works with a goal note on the socket. Not validated live.
+- **Fixes after review (2026-10-11):** the `goals` intent no longer takes over braking, target-lap, best-lap or
+  comparison questions (new `week` and `badges` intents answer "how many laps this week?" and "what badges have I
+  got?"); reopening a reached goal is refused while the driver's own laps still reach it (409 `still_reached`, Reopen
+  is offered only for a session now someone else's); best-lap badges and recaps name the car; untimed sessions get no
+  three things and are not counted in the week; race lap 1 left out of in-session gains; mid-session incomplete laps
+  end a clean run; a lapped finish (or a red-flag finish) counts when F1's chequered flag was recorded and the last
+  lap ended after it; laps overlapping the safety car / VSC (F1 `SCAR` events, lap receive times from the lap meta)
+  are left out of steady laps; steady-lap suggestions are tied to one track; the Drive recap is fetched again once
+  the car is known (the Ready card's lap-time goal row); another driver's session is never celebrated as the seated
+  driver's; every goal reached in a session is named, celebration first; no empty progress bars; radio-safe spoken
+  goal facts; id-only F1 car names ("Unknown team (id 214)") are left out; a driver with no sessions can be given a
+  goal; `repo.scratch_relabel_session` (was `rewrite_session_origin`) refuses a database inside a git checkout.
+  **Evidence:** unit and synthetic tests; the 22 owner captures replayed in scratch again (same 9 evaluable races,
+  6 without a penalty, 18 badges; every recorded CHQF comes 3-6 s before the last lap's end, as the lapped-finish
+  rule assumes; the one `SCAR` event, a "resume race" with no deployment, marks no lap); a scratch server fed the
+  Suzuka capture over loopback UDP (Ready card goal row once the car arrived, GOAL REACHED, "2 goals reached" first on
+  Session complete, "Sam's session" after the seat moved). A real lapped finish and a real safety car are not in the
+  captures: those two rules are unit-tested only. Not validated live.
 <!-- end lane motivation -->
 
 ## Next

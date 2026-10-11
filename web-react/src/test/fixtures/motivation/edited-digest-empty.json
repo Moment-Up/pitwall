@@ -59,7 +59,7 @@
       "source": "suggested",
       "basis": {
        "kind": "ideal_lap",
-       "text": "Your best sectors here add up to 1:09.962, 0.587 s quicker than your best lap (1:10.549). Your last new best was 1.196 s quicker than the one before. Target: your best minus the smaller step, rounded to a tenth.",
+       "text": "Your best sectors here add up to 1:09.962, 0.587 s quicker than your best lap (1:10.549). Your last new best was 1.196 s quicker than the one before. Target: your best lap minus 0.587 s, rounded up to a tenth.",
        "text_simple": "Your best bits of the lap add up to 1:09.962, so 1:10.000 is within reach.",
        "values": {
         "pb_ms": 70549,

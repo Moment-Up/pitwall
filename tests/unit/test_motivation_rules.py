@@ -5,13 +5,22 @@ from __future__ import annotations
 import os
 import time
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import date, datetime
 from typing import Any
 
 import pytest
 
 from pitwall.motivation import rules
-from pitwall.motivation.model import Scope, car_class_label, lap_time, lap_time_radio, seconds, short_date
+from pitwall.motivation.model import (
+    Scope,
+    car_class_label,
+    display_car,
+    lap_time,
+    lap_time_radio,
+    seconds,
+    short_date,
+)
 from tests.unit.motivation_data import AUSTRIA_HAAS, T0, collision, lap, laps, penalty, sess
 
 
@@ -71,6 +80,52 @@ def test_windows_skip_race_lap_one() -> None:
     # a window never spans a breaker
     broken = [lap(1, 71_000), lap(2, 71_000), lap(3, 71_000, flags=["flashback"]), lap(4, 71_000)]
     assert rules.windows(broken, 3, "practice") == []
+
+
+def test_incomplete_laps_end_a_run_mid_session_only() -> None:
+    """Lost packets in the middle of a session: nobody knows what happened on that lap, so the run ends there (like
+    a gap in lap numbers). Joined mid-lap (first), ended mid-lap (last) or a pit lap: still neutral."""
+    ls = [
+        lap(1, None, flags=["incomplete"]),  # joined mid-lap: neutral
+        lap(2, 71_000),
+        lap(3, 71_100),
+        lap(4, 71_050, flags=["incomplete"]),  # packets lost mid-session: ends the run
+        lap(5, 71_000),
+        lap(6, 71_000),
+        lap(7, 90_000, flags=["pit_in", "incomplete"]),  # into the garage: a pit lap, neutral
+        lap(8, 71_200),
+        lap(9, None, flags=["incomplete"]),  # the session ended mid-lap: neutral
+    ]
+    assert [[x.lap_number for x in r] for r in rules.runs(ls)] == [[2, 3], [5, 6, 8]]
+    assert rules.windows(ls, 3, "practice")[0].laps[0].lap_number == 5
+
+
+def test_safety_car_laps_end_a_steady_window() -> None:
+    """Laps behind the safety car are naturally even: they never make a steady-lap window (they stay clean laps)."""
+    ls = laps("s1", [71_000, 71_100, 71_050, 71_000, 71_100, 71_050])
+    ls[2] = replace(ls[2], safety_car=True)
+    ws = rules.windows(ls, 3, "practice")
+    assert [tuple(x.lap_number for x in w.laps) for w in ws] == [(4, 5, 6)]
+    assert [x.lap_number for x in rules.best_run(ls)] == [1, 2, 3, 4, 5, 6]  # still 6 clean laps in a row
+
+
+def test_safety_car_spans_and_laps() -> None:
+    def scar(t: int, what: int, kind: int = 1) -> dict[str, Any]:
+        return {"kind": "safety_car", "t_recv_ns": t, "payload": {"safetyCarType": kind, "eventType": what}}
+
+    events = [scar(5, 0, kind=3), scar(6, 2, kind=3), scar(100, 0), scar(150, 1), scar(200, 3), scar(500, 0, kind=2)]
+    spans = rules.safety_car_spans(events)
+    assert spans == [(100, 200), (500, None)]  # the formation lap is ignored; still out at the end = open-ended
+
+    def at(n: int, a: int | None, b: int | None) -> Any:
+        return replace(lap(n, 71_000), t_start_ns=a, t_end_ns=b)
+
+    assert not rules.behind_safety_car(at(1, 0, 90), spans)
+    assert rules.behind_safety_car(at(2, 90, 180), spans)  # deployed during the lap
+    assert rules.behind_safety_car(at(3, 180, 270), spans)  # the restart lap
+    assert not rules.behind_safety_car(at(4, 270, 360), spans)
+    assert rules.behind_safety_car(at(5, 600, 700), spans)  # the VSC never came in: unknown counts as out
+    assert not rules.behind_safety_car(at(6, None, None), spans)  # no receive times: never guessed
 
 
 # ---------------------------------------------------------------------------------------------- scopes
@@ -158,6 +213,26 @@ def test_finished_from_start_and_resets() -> None:
     assert not rules.race_outcome(race(game="gt7"), ls, []).race  # GT7 / AC / Forza: no session type, never judged
 
 
+def test_a_lapped_finisher_takes_the_flag() -> None:
+    """A lapped car (or a race shortened by a red flag) never drives lap ``total_laps``: F1's chequered flag and a
+    complete last lap that ended after it say the race was finished."""
+
+    def timed(n: int, ms: int | None, a: int, b: int, flags: tuple[str, ...] = ()) -> Any:
+        return replace(lap(n, ms, sid="r1", flags=flags), t_start_ns=a, t_end_ns=b)
+
+    flag = [{"kind": "chequered_flag", "t_recv_ns": 250, "payload": {}}]
+    lapped = [timed(1, 88_524, 0, 100), timed(2, 78_351, 100, 200), timed(3, 78_400, 200, 300)]
+    o = rules.race_outcome(race(total=4), lapped, flag)
+    assert o.finished and o.evaluable and (o.final_lap_id, o.final_lap_number) == (lapped[2].id, 3)
+    assert not rules.race_outcome(race(total=4), lapped, []).finished  # no flag recorded: unknown
+    retired = lapped[:2]  # stopped before the flag
+    assert not rules.race_outcome(race(total=4), retired, flag).finished
+    cut = [*lapped[:2], timed(3, None, 200, 260, ("incomplete",))]  # quit after the flag, mid-lap
+    assert not rules.race_outcome(race(total=4), cut, flag).finished
+    full = rules.race_outcome(race(total=3), lapped, [])
+    assert full.finished and full.final_lap_number == 3
+
+
 # ---------------------------------------------------------------------------------------------- bests
 def test_ideal_lap_and_session_bests() -> None:
     a = [
@@ -228,5 +303,7 @@ def test_week_math_across_the_clock_change(london: None) -> None:
 def test_wording_helpers() -> None:
     assert lap_time(70_549) == "1:10.549" and lap_time(23_055) == "0:23.055"
     assert lap_time_radio(70_000) == "1:10" and lap_time_radio(70_300) == "1:10.3"
+    assert lap_time_radio(23_000) == "23 seconds" and lap_time_radio(23_500) == "23.5 seconds"  # never "0:23"
+    assert display_car("Haas") == "Haas" and display_car("Unknown team (id 214)") is None and display_car(None) is None
     assert seconds(1100) == "1.1" and seconds(1230) == "1.230" and seconds(1100, tenths_when_whole=False) == "1.100"
     assert short_date(datetime(2026, 10, 10, 12).timestamp()) == "Sat 10 Oct"

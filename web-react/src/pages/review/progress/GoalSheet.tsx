@@ -25,6 +25,8 @@ import {
   draftToCreate,
   KIND_LABEL,
   lapGoalBlocked,
+  lapGoalHere,
+  lapGoalHereText,
   raceGoalBlocked,
   SPREAD_MAX_S,
   SPREAD_MIN_S,
@@ -122,10 +124,13 @@ export function GoalForm({
   draft,
   onChange,
   scope,
+  existingLapGoal = null,
 }: {
   draft: GoalDraft;
   onChange: (d: GoalDraft) => void;
   scope: DraftScope | null;
+  /** The lap-time goal already set here, in words ("You already have …"), or null. */
+  existingLapGoal?: string | null;
 }) {
   const set = (p: Partial<GoalDraft>) => onChange({ ...draft, ...p });
   const cls = classChoice(scope);
@@ -188,17 +193,23 @@ export function GoalForm({
                 </RadioButtonGroup>
               </div>
             )}
-            <TextField
-              variant="secondary"
-              value={draft.lapText}
-              onChange={(v) => set({ lapText: v })}
-              autoComplete="off"
-              className="max-w-xs"
-            >
-              <Label>A lap under</Label>
-              <Input placeholder="1:10.0" inputMode="decimal" className="h-12 text-base pw-num" />
-              <Description>Minutes and seconds to a tenth, like 1:10.0.</Description>
-            </TextField>
+            {existingLapGoal ? (
+              <p className="m-0 text-sm text-warning" role="status">
+                {existingLapGoal}
+              </p>
+            ) : (
+              <TextField
+                variant="secondary"
+                value={draft.lapText}
+                onChange={(v) => set({ lapText: v })}
+                autoComplete="off"
+                className="max-w-xs"
+              >
+                <Label>A lap under</Label>
+                <Input placeholder="1:10.0" inputMode="decimal" className="h-12 text-base pw-num" />
+                <Description>Minutes and seconds to a tenth, like 1:10.0.</Description>
+              </TextField>
+            )}
           </>
         ))}
 
@@ -215,7 +226,7 @@ export function GoalForm({
           <Label>Clean laps in a row</Label>
           <NumberField.Group className="h-12">
             <NumberField.DecrementButton className="min-w-11" />
-            <NumberField.Input className="text-base" />
+            <NumberField.Input className="h-12 text-base" />
             <NumberField.IncrementButton className="min-w-11" />
           </NumberField.Group>
           <Description>
@@ -257,7 +268,7 @@ export function GoalForm({
             <Label>All within (seconds)</Label>
             <NumberField.Group className="h-12">
               <NumberField.DecrementButton className="min-w-11" />
-              <NumberField.Input className="text-base" />
+              <NumberField.Input className="h-12 text-base" />
               <NumberField.IncrementButton className="min-w-11" />
             </NumberField.Group>
             <Description>The slowest of the laps minus the fastest, clean laps only.</Description>
@@ -289,7 +300,7 @@ export function GoalForm({
             ))}
           </RadioButtonGroup>
           <p className="m-0 text-sm text-muted">
-            {raceBlocked ?? "Pitwall can only check this in F1 races, recorded from the start to the flag."}
+            {raceBlocked ?? "Pitwall can only check this in F1 races recorded from lap 1 to the flag."}
           </p>
         </div>
       )}
@@ -307,6 +318,8 @@ export interface GoalSheetProps {
   scope: DraftScope | null;
   suggestions: SuggestionsResponse | undefined;
   suggestionsError: Error | null;
+  /** The driver's goals (the form says when a lap-time goal is already set here). */
+  activeGoals?: readonly Goal[] | null;
   simple: boolean;
   /** A goal was set (the sheet closes). */
   onCreated: (g: Goal) => void;
@@ -318,12 +331,15 @@ export function GoalSheetBody({
   scope,
   suggestions,
   suggestionsError,
+  activeGoals = null,
   simple,
   onCreated,
   initialTab = "suggested",
 }: Omit<GoalSheetProps, "isOpen" | "onClose" | "driverName">) {
   const [tab, setTab] = useState<GoalSheetTab>(initialTab);
-  const [draft, setDraft] = useState<GoalDraft>(DEFAULT_DRAFT);
+  // No track yet (a driver with no sessions): start on a goal that counts anywhere.
+  const [draft, setDraft] = useState<GoalDraft>(scope?.trackId ? DEFAULT_DRAFT : { ...DEFAULT_DRAFT, kind: "clean_streak" });
+  const existing = draft.kind === "lap_time" ? lapGoalHere(activeGoals, scope, draft.carChoice) : null;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -341,6 +357,7 @@ export function GoalSheetBody({
   }
 
   function submitOwn() {
+    if (existing) return;
     const r = draftToCreate(draft, scope);
     if (!r.ok) {
       setError(r.error);
@@ -399,9 +416,17 @@ export function GoalSheetBody({
                   setError(null);
                 }}
                 scope={scope}
+                existingLapGoal={existing ? lapGoalHereText(existing, simple) : null}
               />
               <div>
-                <Button type="submit" variant="primary" size="lg" className="min-h-14" isPending={busy === "own"}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="lg"
+                  className="min-h-14"
+                  isPending={busy === "own"}
+                  isDisabled={existing != null}
+                >
                   Set this goal
                 </Button>
               </div>
@@ -428,7 +453,7 @@ function Frame({ wide, isOpen, onClose, title, sub, children }: { wide: boolean;
       <Modal.Backdrop isOpen={isOpen} onOpenChange={(o) => !o && onClose()}>
         <Modal.Container size="lg" placement="center" scroll="inside">
           <Modal.Dialog aria-label={title}>
-            <Modal.CloseTrigger />
+            <Modal.CloseTrigger className="size-11" />
             <Modal.Header>
               <Modal.Heading>{title}</Modal.Heading>
               <p className="m-0 text-sm text-muted">{sub}</p>

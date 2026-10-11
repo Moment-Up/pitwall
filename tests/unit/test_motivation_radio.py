@@ -52,6 +52,19 @@ def test_lines() -> None:
     assert (
         goal_line([LAP, STREAK], False) == "Two goals reached: a lap under 1:10 at Austria and 8 clean laps in a row."
     )
+    # a beginner always hears "You did it"; more than two goals: two named and the rest counted (a short line)
+    assert (
+        goal_line([LAP, STREAK], True)
+        == "You did it: two goals, a lap under 1:10 at Austria and 8 clean laps in a row."
+    )
+    assert (
+        goal_line([LAP, STREAK, STEADY], False)
+        == "Three goals reached: a lap under 1:10 at Austria, 8 clean laps in a row and 1 more."
+    )
+    # under a minute: "23 seconds", never "0:23" (spoken "twenty-three")
+    assert goal_line([{**LAP, "target": 23_000, "track_name": "Kart track"}], False) == (
+        "Goal reached: a lap under 23 seconds at Kart track."
+    )
     assert to_speech(goal_line([LAP], False) or "") == "Goal reached: a lap under one ten at Austria."
     for g in (LAP, STREAK, STEADY, RACE, CONTACT):
         for simple in (False, True):

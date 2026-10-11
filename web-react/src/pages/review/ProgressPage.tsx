@@ -140,6 +140,15 @@ export function ProgressPage({ route }: PageProps) {
             </Button>
           </EmptyState.Content>
         </EmptyState>
+        {/* lane motivation: a first goal can be set before the first drive (clean laps, steady laps, a clean race) */}
+        {viewed && (
+          <GoalsCard
+            driverId={viewed.id}
+            driverName={viewed.name}
+            simple={!!viewed.coaching?.simple_wording}
+            scope={null}
+          />
+        )}
       </div>
     );
   }

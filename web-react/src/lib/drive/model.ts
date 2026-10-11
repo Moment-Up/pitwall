@@ -182,11 +182,12 @@ export interface EndedCard {
   toRecord: EndedChange | null;
   workOn: CoachPoint | null;
   wentWell: CoachPoint | null;
-  /** Lane motivation: the session's three things (null: show workOn / wentWell), while they load, and the badges it
-   * earned. */
+  /** Lane motivation: the session's three things (null: show workOn / wentWell), while they load, the badges it
+   * earned, and whose session it was when not the seated driver's. */
   things: ThingsView | null;
   thingsLoading: boolean;
   badges: string[];
+  owner: string | null;
 }
 
 export interface DriveModel {
@@ -432,7 +433,7 @@ function readyCard(
     today: { focus, callsMode: callsModeText(s.cues) },
     nextRun: between ? topPoint(s, simple) : null,
     footer: footerOf(s),
-    goal: readyGoal(motivation, s.session_id),
+    goal: readyGoal(motivation, s.session_id, driver?.id ?? null),
   };
 }
 
@@ -441,6 +442,7 @@ function endedCard(
   drivers: readonly Driver[],
   simple: boolean,
   motivation: DriveMotivation | null | undefined,
+  seatedId: number | null,
 ): EndedCard {
   const bv = bestsOf(s);
   const counts = cleanCounts(s);
@@ -489,7 +491,7 @@ function endedCard(
         : gap(hh.lap_ms, [holder?.name, finite(hh.lap_ms) ? lapTime(hh.lap_ms) : null].filter(Boolean).join(" · ") || null),
     workOn,
     wentWell,
-    ...endedMotivation(motivation, id),
+    ...endedMotivation(motivation, id, seatedId),
   };
 }
 
@@ -576,7 +578,7 @@ export function driveModel(input: DriveModelInput): DriveModel {
     ribbon: ribbon(s, state, live?.name ?? null),
     lastCue: lastCueOutcome(s?.cues, s?.track_model),
     ready: s && state === "garage" ? readyCard(s, driver, nowS, drivers, simple, input.motivation) : null,
-    ended: s && state === "ended" ? endedCard(s, drivers, simple, input.motivation) : null,
+    ended: s && state === "ended" ? endedCard(s, drivers, simple, input.motivation, driver?.id ?? null) : null,
     tier: bv?.tier ?? 1,
     coloured: bv?.coloured ?? true,
     legend: legendOf(s, bv),

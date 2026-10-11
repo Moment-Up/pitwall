@@ -48,6 +48,19 @@ export function goalRow(g: Goal, simple: boolean): GoalRowView {
   };
 }
 
+export type GoalAction = "archive" | "delete" | "reopen";
+
+/** A row's menu: Archive · Delete, and Reopen first for a goal reached in a session that is now someone else's (only
+ * then: reopened, a goal the driver's own lap still reaches would be reached and celebrated again by that lap; the
+ * server refuses it, 409 "still_reached"). */
+export function rowActions(row: Pick<GoalRowView, "status" | "achieved">): { id: GoalAction; text: string }[] {
+  const base: { id: GoalAction; text: string }[] = [
+    { id: "archive", text: "Archive" },
+    { id: "delete", text: "Delete" },
+  ];
+  return row.status === "achieved" && row.achieved && !row.achieved.owned ? [{ id: "reopen", text: "Reopen" }, ...base] : base;
+}
+
 export interface GoalsView {
   active: GoalRowView[];
   reached: GoalRowView[];
@@ -58,11 +71,33 @@ export interface GoalsView {
   simple: boolean;
 }
 
-/** Active goals first (in the server's order), then the ones reached in the last 30 days, newest first. */
-export function goalsView(r: GoalsResponse | null | undefined, simpleOverride?: boolean): GoalsView {
+/** Where the page is looking (the ScopeBar's game, track and car): its goals come first. */
+export interface GoalsPlace {
+  game: string | null;
+  trackId: string | null;
+  carId: string | null;
+}
+
+/** 0: this track (and this car, or any car of a class); 1: anywhere; 2: another track or car. No place: all 0 (the
+ * server's order). */
+function placeRank(g: Goal, place: GoalsPlace | null | undefined): number {
+  if (!place?.trackId) return 0;
+  if (!g.scope.track_id) return 1;
+  const here = g.scope.game === place.game && g.scope.track_id === place.trackId;
+  const car = g.scope.car_id == null || g.scope.car_id === place.carId;
+  return here && car ? 0 : 2;
+}
+
+/** Active goals first, the ones for the page's track and car on top, then those that count anywhere, then other
+ * tracks (the server's order within each); then the ones reached in the last 30 days, newest first. */
+export function goalsView(r: GoalsResponse | null | undefined, simpleOverride?: boolean, place?: GoalsPlace | null): GoalsView {
   const simple = simpleOverride ?? !!r?.simple;
   const goals = r?.goals ?? [];
-  const active = goals.filter((g) => g.status === "active").map((g) => goalRow(g, simple));
+  const active = goals
+    .filter((g) => g.status === "active")
+    .map((g, i) => ({ g, i, rank: placeRank(g, place) }))
+    .sort((a, b) => a.rank - b.rank || a.i - b.i)
+    .map(({ g }) => goalRow(g, simple));
   const reached = goals
     .filter((g) => g.status === "achieved")
     .sort((a, b) => (b.achieved?.unix ?? 0) - (a.achieved?.unix ?? 0))
@@ -157,7 +192,8 @@ export type DraftResult = { ok: true; body: GoalCreate } | { ok: false; error: s
 
 /** Why a lap-time goal cannot be set here, or null. */
 export function lapGoalBlocked(scope: DraftScope | null): string | null {
-  if (!scope || !scope.game || !scope.trackId) return "Pick a track above first: a lap-time goal is for one track.";
+  if (!scope) return "A lap-time goal is for one track: drive there first, then set it.";
+  if (!scope.game || !scope.trackId) return "Pick a track above first: a lap-time goal is for one track.";
   if (scope.synthetic) return "This is a synthetic track: goals only count real driving.";
   if (!scope.carId && !scope.carClass) return "Pick a car above first: a lap-time goal is for one car or class.";
   return null;
@@ -167,6 +203,32 @@ export function lapGoalBlocked(scope: DraftScope | null): string | null {
 export function raceGoalBlocked(scope: DraftScope | null): string | null {
   if (scope?.game && !isF1Game(scope.game)) return "Pitwall can only check this in F1 races: this game does not report races.";
   return null;
+}
+
+/** The active lap-time goal already set for this track and car (or class), or null: the server allows one per place,
+ * so the form says so before anything is typed. */
+export function lapGoalHere(
+  goals: readonly Goal[] | null | undefined,
+  scope: DraftScope | null,
+  carChoice: GoalDraft["carChoice"],
+): Goal | null {
+  if (!scope?.game || !scope.trackId) return null;
+  const byClass = carChoice === "class" && !!scope.carClass;
+  return (
+    goals?.find(
+      (g) =>
+        g.status === "active" &&
+        g.kind === "lap_time" &&
+        g.scope.game === scope.game &&
+        g.scope.track_id === scope.trackId &&
+        (byClass ? g.scope.car_class === scope.carClass : g.scope.car_class == null && g.scope.car_id === scope.carId),
+    ) ?? null
+  );
+}
+
+/** "You already have a lap-time goal here: A lap under 1:10.000. Archive it to set a new time." */
+export function lapGoalHereText(g: Goal, simple: boolean): string {
+  return `You already have a lap-time goal here: ${goalTitle(g, simple)}. Archive it to set a new time.`;
 }
 
 /** The class choice for a lap-time goal ("any F1 World car"), or null when the class is unknown. */

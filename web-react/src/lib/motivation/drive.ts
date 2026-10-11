@@ -5,6 +5,9 @@
 // row (between runs, the after-the-lap celebration) and the Session complete card's three things and badges. Their
 // recap is fetched only in those states (pages/drive/coach/useRecap.ts); without it (loading, an older server, an
 // error) the cards fall back to what they showed before (the D6 Work on / Went well), so Drive never depends on it.
+//
+// The seat can change between runs: another driver's session is never celebrated as the seated driver's. The Ready
+// card then shows no goal row; the Session complete card says whose session it was and shows no badges.
 
 import type { MotivationNote, SessionRecap } from "../endpoints/motivation";
 import { badgeWords, thingsView, type ThingsView } from "./recap";
@@ -28,7 +31,7 @@ export interface ReadyGoalView {
   progressText: string;
   /** 0..1 for the 6 px bar, or null (no bar: nothing measured yet). */
   fraction: number | null;
-  /** Reached this session: "Goal reached · …" with the cup, success tone. */
+  /** Reached this session: "Goal reached · …" with the star, success tone. */
   reached: boolean;
 }
 
@@ -43,12 +46,23 @@ function recapFor(m: DriveMotivation | null | undefined, sessionId: string | nul
   return r && sessionId && r.session_id === sessionId ? r : null;
 }
 
+/** The session belongs to someone other than the seated driver (`seatedId` undefined: not checked). */
+function someoneElses(driverId: number | null | undefined, seatedId: number | null | undefined): boolean {
+  return seatedId !== undefined && driverId != null && driverId !== seatedId;
+}
+
 /**
  * The Ready card's one goal row: a goal reached this session (the recap's, else the socket's note), else the first
- * active goal in this session's scope (the server lists lap-time goals first), else null.
+ * active goal in this session's scope (the server lists lap-time goals first), else null. Null too when the session is
+ * not the seated driver's (`seatedId`).
  */
-export function readyGoal(m: DriveMotivation | null | undefined, sessionId: string | null | undefined): ReadyGoalView | null {
+export function readyGoal(
+  m: DriveMotivation | null | undefined,
+  sessionId: string | null | undefined,
+  seatedId?: number | null,
+): ReadyGoalView | null {
   const r = recapFor(m, sessionId);
+  if (someoneElses(r?.driver_id, seatedId) || someoneElses(noteFor(m, sessionId)?.driver_id, seatedId)) return null;
   const simple = !!r?.simple;
   const won = r?.goals_achieved?.[0];
   if (won) {
@@ -93,14 +107,28 @@ export interface EndedMotivation {
   things: ThingsView | null;
   /** Asked, no answer yet: three same-size skeletons, so nothing jumps. */
   thingsLoading: boolean;
-  /** Badges this session earned (chip words, newest first). */
+  /** Badges this session earned (chip words, newest first); none when it is someone else's session. */
   badges: string[];
+  /** Whose session it was, when that is not the seated driver ("Alex"), else null. */
+  owner: string | null;
 }
 
-export function endedMotivation(m: DriveMotivation | null | undefined, sessionId: string | null | undefined): EndedMotivation {
+export function endedMotivation(
+  m: DriveMotivation | null | undefined,
+  sessionId: string | null | undefined,
+  seatedId?: number | null,
+): EndedMotivation {
   const r = recapFor(m, sessionId);
-  if (r) return { things: thingsView(r, r.simple), thingsLoading: false, badges: badgeWords(r.badges_earned, r.simple) };
+  if (r) {
+    const theirs = someoneElses(r.driver_id, seatedId);
+    return {
+      things: thingsView(r, r.simple),
+      thingsLoading: false,
+      badges: theirs ? [] : badgeWords(r.badges_earned, r.simple),
+      owner: theirs ? (r.driver_name ?? "Another driver") : null,
+    };
+  }
   // "off" in a stopped state = not asked yet (the fetch switches on one render after the state changes): wait for it
   // rather than flash the fallback. No motivation input at all = the card as it was.
-  return { things: null, thingsLoading: !!m && (m.status === "loading" || m.status === "off"), badges: [] };
+  return { things: null, thingsLoading: !!m && (m.status === "loading" || m.status === "off"), badges: [], owner: null };
 }

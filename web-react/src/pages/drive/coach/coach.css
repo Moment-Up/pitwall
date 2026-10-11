@@ -845,16 +845,24 @@
 }
 .pwc-end__thing-skel { min-height: 118px; }
 .pwc-item[data-tone="neutral"] { --pwc-k: var(--pw-ref); }
-/* The evidence line (or why an item is empty) under the clamped text, one line. */
+/* The evidence line (or why an item is empty) under the clamped text: two lines at most, never cut mid-word on one. */
 .pwc-item__ev {
-  display: block;
+  display: -webkit-box;
   overflow: hidden;
   margin-top: 4px;
   font-size: 13px;
   line-height: 1.3;
   color: var(--muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+/* Someone else's session (the seat changed since): whose it was, in the badges' place beside Review this session. */
+.pwc-end__owner {
+  margin-right: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
 }
 .pwc-end__badges {
   display: inline-flex;
@@ -988,7 +996,6 @@
   .pwc-end__v { font-size: 32px; }
   /* lane motivation: the three things stack; badges wrap above Review this session. */
   .pwc-end__things { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .pwc-item__ev { white-space: normal; }
   .pwc-end__thing-skel { min-height: 88px; }
   .pwc-end__actions { flex-wrap: wrap; gap: 10px; }
   .pwc-end__badges { justify-content: flex-start; margin-right: 0; }

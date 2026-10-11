@@ -5,7 +5,7 @@
 // about a goal opens the driver's goals. An empty item is "-" with the server's reason. SYNTHETIC / REPLAY chips on
 // the header (P8): their progress never counts.
 
-import { ChartLine, CircleCheck, Cup, TriangleExclamation } from "@gravity-ui/icons";
+import { ChartLine, ChevronRight, CircleCheck, StarFill, TriangleExclamation } from "@gravity-ui/icons";
 import { Button, Card, Skeleton } from "@heroui/react";
 import { ItemCard, ItemCardGroup } from "@heroui-pro/react";
 import type { ReactNode } from "react";
@@ -19,7 +19,7 @@ const ICON: Record<ThingIcon, ReactNode> = {
   check: <CircleCheck aria-hidden="true" />,
   warning: <TriangleExclamation aria-hidden="true" />,
   chart: <ChartLine aria-hidden="true" />,
-  cup: <Cup aria-hidden="true" />,
+  star: <StarFill aria-hidden="true" />,
 };
 
 const TONE_CLASS: Record<ThingView["tone"], string> = {
@@ -48,6 +48,7 @@ function Action({ t, sessionId, driverId, refLapId, apex }: { t: ThingView; sess
         onPress={() => router.navigate(comparePath(sessionId, { ref: refLapId, lap: t.lapId, at: apex }))}
       >
         See it on the lap
+        <ChevronRight aria-hidden="true" />
       </Button>
     );
   }
@@ -55,6 +56,7 @@ function Action({ t, sessionId, driverId, refLapId, apex }: { t: ThingView; sess
     return (
       <Button variant="ghost" size="sm" className="min-h-11 px-3" onPress={() => router.navigate(progressPath({ driver: driverId }))}>
         Open goals
+        <ChevronRight aria-hidden="true" />
       </Button>
     );
   }

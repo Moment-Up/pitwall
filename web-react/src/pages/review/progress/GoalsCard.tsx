@@ -2,12 +2,14 @@
 // progress (a 6 px bar and the server's sentence), "Why this target?" for one Pitwall suggested, and a row menu
 // (Archive · Delete, Delete asks first); then the goals reached in the last 30 days with the session that did it.
 // Empty: the top two suggestions inline. Add a goal opens GoalSheet. A goal reached in a session that now belongs to
-// someone else says so and offers Reopen.
+// someone else says so and offers Reopen (only then: the driver's own lap would reach a reopened goal again). The
+// goals for the ScopeBar's track and car come first. With no scope (a driver with no sessions yet), goals that count
+// anywhere can still be set, so a parent can set a first one before the first drive.
 //
 // Real driving only (the footer says so); words follow the VIEWED driver's wording (6.10). A goal note on /ws/live
 // for this driver refreshes the list.
 
-import { Cup, Ellipsis, Flag, Plus } from "@gravity-ui/icons";
+import { Ellipsis, Flag, Plus, StarFill } from "@gravity-ui/icons";
 import { AlertDialog, Button, Card, Disclosure, Dropdown, ProgressBar, Skeleton } from "@heroui/react";
 import { useEffect, useMemo, useState } from "react";
 import { useLive } from "../../../hooks/stores";
@@ -21,7 +23,7 @@ import {
 } from "../../../lib/endpoints/motivation";
 import { isMissingRoute } from "../../../lib/endpoints/review";
 import { possessive } from "../../../lib/motivation/format";
-import { goalsFootnote, goalsView, type DraftScope, type GoalRowView } from "../../../lib/motivation/goals";
+import { goalsFootnote, goalsView, rowActions, type DraftScope, type GoalAction, type GoalRowView } from "../../../lib/motivation/goals";
 import { router } from "../../../lib/router";
 import { sessionPath } from "../../../lib/review/links";
 import { createErrorText, GoalSheet, SuggestedList } from "./GoalSheet";
@@ -46,25 +48,15 @@ function GoalBar({ value, reached }: { value: number | null; reached: boolean })
   );
 }
 
-function RowMenu({ row, onAction }: { row: GoalRowView; onAction: (a: "archive" | "delete" | "reopen") => void }) {
-  const items: { id: "archive" | "delete" | "reopen"; text: string }[] =
-    row.status === "achieved"
-      ? [
-          { id: "reopen", text: "Reopen" },
-          { id: "archive", text: "Archive" },
-          { id: "delete", text: "Delete" },
-        ]
-      : [
-          { id: "archive", text: "Archive" },
-          { id: "delete", text: "Delete" },
-        ];
+function RowMenu({ row, onAction }: { row: GoalRowView; onAction: (a: GoalAction) => void }) {
+  const items = rowActions(row);
   return (
     <Dropdown>
       <Button isIconOnly variant="ghost" aria-label={`Actions for ${row.title}`} className="size-11 shrink-0">
         <Ellipsis aria-hidden="true" />
       </Button>
       <Dropdown.Popover placement="bottom end">
-        <Dropdown.Menu aria-label="Goal actions" onAction={(k) => onAction(String(k) as "archive" | "delete" | "reopen")}>
+        <Dropdown.Menu aria-label="Goal actions" onAction={(k) => onAction(String(k) as GoalAction)}>
           {items.map((it) => (
             <Dropdown.Item key={it.id} id={it.id} textValue={it.text} className="min-h-12">
               {it.text}
@@ -76,7 +68,7 @@ function RowMenu({ row, onAction }: { row: GoalRowView; onAction: (a: "archive" 
   );
 }
 
-function ActiveRow({ row, onAction }: { row: GoalRowView; onAction: (a: "archive" | "delete" | "reopen") => void }) {
+function ActiveRow({ row, onAction }: { row: GoalRowView; onAction: (a: GoalAction) => void }) {
   return (
     <li className="grid gap-2 py-3" data-goal={row.kind}>
       <div className="flex items-start gap-3">
@@ -110,13 +102,13 @@ function ActiveRow({ row, onAction }: { row: GoalRowView; onAction: (a: "archive
   );
 }
 
-function ReachedRow({ row, onAction }: { row: GoalRowView; onAction: (a: "archive" | "delete" | "reopen") => void }) {
+function ReachedRow({ row, onAction }: { row: GoalRowView; onAction: (a: GoalAction) => void }) {
   const a = row.achieved;
   return (
     <li className="grid gap-1.5 py-3" data-goal={row.kind} data-reached="">
       <div className="flex items-start gap-3">
         <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl bg-[color-mix(in_oklab,var(--success)_16%,transparent)] text-success">
-          <Cup aria-hidden="true" />
+          <StarFill aria-hidden="true" />
         </span>
         <div className="grid min-w-0 flex-1 gap-0.5">
           <span className="text-[16px] font-semibold leading-snug">{row.title}</span>
@@ -164,7 +156,8 @@ export function GoalsCard({ driverId, driverName, simple, scope }: GoalsCardProp
     if (noteT != null) cache.invalidate(motivationKeys.goals(driverId));
   }, [noteT, driverId]);
 
-  const view = useMemo(() => goalsView(goals.data, simple), [goals.data, simple]);
+  const [game, trackId, carId] = [scope?.game ?? null, scope?.trackId ?? null, scope?.carId ?? null];
+  const view = useMemo(() => goalsView(goals.data, simple, { game, trackId, carId }), [goals.data, simple, game, trackId, carId]);
   // The car class the server knows for this scope ("f1_25:formula:F1 World"), for "any F1 World car".
   const ss = sugg.data?.scope;
   const draftScope: DraftScope | null = scope
@@ -174,7 +167,7 @@ export function GoalsCard({ driverId, driverName, simple, scope }: GoalsCardProp
       }
     : null;
 
-  async function act(row: GoalRowView, a: "archive" | "delete" | "reopen") {
+  async function act(row: GoalRowView, a: GoalAction) {
     if (a === "delete") {
       setConfirm(row);
       return;
@@ -240,6 +233,7 @@ export function GoalsCard({ driverId, driverName, simple, scope }: GoalsCardProp
           </Button>
         )}
       </Card.Header>
+      {view.limitText && goals.data && <p className="m-0 -mt-1 text-sm text-muted">{view.limitText}</p>}
 
       {!goals.data && !goals.error ? (
         <div aria-busy="true" aria-label="Loading goals" className="grid gap-3">
@@ -294,7 +288,6 @@ export function GoalsCard({ driverId, driverName, simple, scope }: GoalsCardProp
         </>
       )}
 
-      {view.limitText && goals.data && <p className="m-0 text-sm text-muted">{view.limitText}</p>}
       {notice && (
         <p role="status" className="m-0 text-sm text-success">
           {notice}
@@ -323,6 +316,7 @@ export function GoalsCard({ driverId, driverName, simple, scope }: GoalsCardProp
         scope={draftScope}
         suggestions={sq ? sugg.data : undefined}
         suggestionsError={sq ? sugg.error : null}
+        activeGoals={goals.data?.goals ?? null}
         simple={simple}
         initialTab={sq && (sugg.data?.suggestions.length ?? 0) > 0 ? "suggested" : "own"}
         onCreated={(g: Goal) => {

@@ -36,7 +36,7 @@ def test_austria_haas_lap_time_from_the_ideal_lap() -> None:
     }
     assert s.basis["text"] == (
         "Your best sectors here add up to 1:09.962, 0.587 s quicker than your best lap (1:10.549). Your last new "
-        "best was 1.196 s quicker than the one before. Target: your best minus the smaller step, rounded to a tenth."
+        "best was 1.196 s quicker than the one before. Target: your best lap minus 0.587 s, rounded up to a tenth."
     )
     d = s.to_dict()
     assert d["title"] == "A lap under 1:10.000" and d["scope_text"] == "Austria · Haas"
@@ -97,7 +97,7 @@ def test_clean_streak_suggestion() -> None:
     assert (
         s is not None
         and s.target == 8
-        and s.basis["text"] == "Your best run is 6 clean laps in a row (Austria, Sat 10 Oct)"
+        and s.basis["text"] == "Your best run is 6 clean laps in a row (Austria, Sat 10 Oct)."
     )
     b = S.clean_streak_suggestion(streak_history(), "beginner", NOW)
     assert b is not None and b.target == 7
@@ -119,6 +119,23 @@ def test_consistency_suggestion() -> None:
     assert fallback is not None and fallback.params == {"window_laps": 3}
     steady = history((sess("q", T0, session_type="practice"), laps("q", [70_000, 70_100, 70_250])))
     assert S.consistency_suggestion(steady, "beginner", NOW) is None  # 0.25 s: already under the 0.3 s floor
+
+
+def test_steady_laps_are_suggested_for_one_track() -> None:
+    """A spread learned on a 23-second lap means nothing on a 95-second one: the suggestion is tied to its track."""
+    gt7 = sess("g", T0, game="gt7", track_id="gt7:circuit:920", track_name="GT7 circuit", track_length_m=920.0)
+    short = laps("g", [23_000, 23_300, 23_100])  # 0.3 s on 23 s laps: 1.3 %
+    mel = sess("m", T0 + 60, track_id="f1:0", track_name="Melbourne", track_length_m=5278.0, session_type="practice")
+    long = laps("m", [95_000, 95_800, 95_400])  # 0.8 s on 95 s laps: 0.8 %, the steadier for its length
+    h = history((gt7, short), (mel, long))
+    s = S.consistency_suggestion(h, "beginner", NOW)
+    assert s is not None and s.scope.track_id == "f1:0" and s.target == 700
+    assert s.to_dict()["scope_text"] == "Melbourne"
+    assert s.to_dict()["create"]["track_id"] == "f1:0" and s.to_dict()["create"]["car_id"] is None
+    at_gt7 = S.consistency_suggestion(h, "beginner", NOW, Scope(game="gt7", track_id="gt7:circuit:920"))
+    assert at_gt7 is None  # 0.3 s there is already at the floor: nothing to suggest, never Melbourne's
+    at_mel = S.consistency_suggestion(h, "beginner", NOW, Scope(game="f1_25", track_id="f1:0"))
+    assert at_mel is not None and at_mel.scope.track_name == "Melbourne"
 
 
 def races(clean: bool) -> History:
@@ -157,6 +174,11 @@ def test_suggestions_order_dedupe_and_reason() -> None:
     assert [s.kind for s in items2] == ["consistency"]  # the others would duplicate an active goal
     items3, reason3 = S.suggestions(history(), None, "intermediate", [], NOW)
     assert reason3 == S.NO_DRIVING and items3 == []
+    steady = items[2]
+    every = [*active, goal("consistency", steady.target, gid=3, params=steady.params, scope=steady.scope)]
+    every[0] = goal("lap_time", 70_000, scope=AUSTRIA_HAAS)
+    items5, reason5 = S.suggestions(h, AUSTRIA_HAAS, "intermediate", every, NOW)
+    assert items5 == [] and reason5 == S.ALL_SET  # not "drive a few clean laps first"
     full = history(
         (sess("a", T0, session_type="practice"), laps("a", [70_000, 71_230, 70_500, 70_400, 70_600, 72_000])),
         (sess("r", T0 + 60, total_laps=3), laps("r", [88_000, 78_000, 78_100])),

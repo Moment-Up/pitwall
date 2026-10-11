@@ -37,8 +37,10 @@ describe("motivation cache keys follow the app's invalidation rules (spec 12.3)"
     c.set(motivationKeys.recap("abc"), {});
     c.invalidate("session:abc");
     expect(c.entry(motivationKeys.recap("abc")).stale).toBe(true);
-    expect(motivationKeys.driveRecap("abc", 7, null)).toBe("motivation:recap:abc:7:");
-    expect(motivationKeys.driveRecap("abc", 7, 1791669000)).toBe("motivation:recap:abc:7:1791669000");
+    expect(motivationKeys.driveRecap("abc", 7, null)).toBe("motivation:recap:abc:7::");
+    expect(motivationKeys.driveRecap("abc", 7, 1791669000)).toBe("motivation:recap:abc:7:1791669000:");
+    // the car arriving (F1 sends it a few seconds in) asks again: a lap-time goal needs it to be in scope
+    expect(motivationKeys.driveRecap("abc", 0, null, "f1:team:7")).toBe("motivation:recap:abc:0::f1:team:7");
   });
 });
 

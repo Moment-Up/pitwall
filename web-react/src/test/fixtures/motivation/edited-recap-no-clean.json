@@ -20,8 +20,8 @@
    "work_on": {
     "kind": "work_on",
     "source": "lap_hygiene",
-    "text": "2 of 2 laps did not count (track limits on 1, a flashback on 1).",
-    "text_simple": "2 laps did not count this time.",
+    "text": "2 of 2 laps did not count: 1 invalidated by the game, 1 with a flashback.",
+    "text_simple": "2 timed laps did not count this time.",
     "evidence": null,
     "corner": null,
     "corner_label": null,

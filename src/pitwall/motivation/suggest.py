@@ -12,9 +12,10 @@ Rules ([H] = heuristic):
 * **Clean laps** - best run in the last 30 days, plus one for beginners, else plus a quarter (at least one) [H];
   2 to 30 laps.
 * **Steady laps** - 3 laps for beginners, else 5 (3 when no 5-lap window exists); 90 % of the best spread in the
-  last 30 days, rounded down to a tenth, at least 0.3 s [H].
-* **Clean race** - F1 only, from races of the last 30 days with their length stored: no penalties until one such
-  finish exists, then no contact.
+  last 30 days, rounded down to a tenth, at least 0.3 s [H]. At one track: the scope's track when one is asked for,
+  else the steadiest session for its lap length (spread / median lap) [H]; the goal is tied to that track.
+* **Clean race** - F1 only, from races of the last 30 days with their length stored or the flag recorded: no
+  penalties until one such finish exists, then no contact.
 """
 
 from __future__ import annotations
@@ -46,10 +47,11 @@ DEFAULT_STEP_CAP_MS = 1000
 STREAK_MAX_SUGGESTED = 30
 SPREAD_FLOOR_MS = 300
 NOT_ENOUGH_HERE = (
-    "Not enough history here yet: Pitwall needs your best sectors or a recent improvement to suggest a target"
+    "Not enough history here yet: Pitwall needs your best sectors or a recent improvement to suggest a target."
 )
-NO_CLEAN_LAP_HERE = "No clean lap here yet: set one and Pitwall can suggest a target"
-NO_DRIVING = "Drive a few clean laps first: Pitwall suggests goals from your own driving"
+NO_CLEAN_LAP_HERE = "No clean lap here yet: set one and Pitwall can suggest a target."
+NO_DRIVING = "Drive a few clean laps first: Pitwall suggests goals from your own driving."
+ALL_SET = "Every goal Pitwall would suggest here is already set."
 
 
 @dataclass(slots=True, frozen=True)
@@ -130,7 +132,8 @@ def lap_time_suggestion(
     clamped = max(STEP_FLOOR_MS, min(cap, step))
     t = pb_ms - clamped
     target = math.ceil(t / 100) * 100
-    if target > pb_ms - 100:
+    floored = target > pb_ms - 100
+    if floored:
         target = math.floor((pb_ms - 100) / 100) * 100
     if target < G.LAP_TIME_MIN_MS:
         return None, NOT_ENOUGH_HERE
@@ -147,13 +150,11 @@ def lap_time_suggestion(
             parts.append(f"Your last new best was {gap_s(gain)} s quicker than the one before.")
         else:
             parts.append(f"Your last {n_gains} new bests here were {gap_s(gain)} s quicker each, as a median.")
-    if len(steps) > 1:
-        rule = "your best minus the smaller step"
+    kept = f" (a step is kept between {STEP_FLOOR_MS / 1000:.1f} and {cap / 1000:.1f} s)" if clamped != step else ""
+    if floored:
+        parts.append(f"Target: at least 0.1 s under your best lap, in tenths of a second{kept}.")
     else:
-        rule = f"your best ({lap_time(pb_ms)}) minus that" if kind == "recent_gain" else "your best minus that"
-    if clamped != step:
-        rule += f" (kept between {STEP_FLOOR_MS / 1000:.1f} and {cap / 1000:.1f} s)"
-    parts.append(f"Target: {rule}, rounded to a tenth.")
+        parts.append(f"Target: your best lap minus {gap_s(clamped)} s{kept}, rounded up to a tenth.")
     simple = (
         f"Your best lap here is {lap_time(pb_ms)}. Your best sectors add up to {lap_time(ideal)}, so "
         f"{lap_time(target)} is within reach."
@@ -190,24 +191,39 @@ def clean_streak_suggestion(history: History, skill: str, now_unix: float) -> Su
         return None
     basis = _basis(
         "best_streak",
-        f"Your best run is {b} clean laps in a row ({_where(s)})",
-        f"Your best is {b} clean laps in a row",
+        f"Your best run is {b} clean laps in a row ({_where(s)}).",
+        f"Your best is {b} clean laps in a row.",
         {"best_run": b},
         [s.id],
     )
     return Suggestion("clean_streak", float(target), {}, Scope(), basis)
 
 
-def consistency_suggestion(history: History, skill: str, now_unix: float) -> Suggestion | None:
-    recent = _recent(history, now_unix)
+def _track_scope(s: SessionRow) -> Scope:
+    return Scope(game=s.game, track_id=s.track_id, track_name=s.track_name, track_length_m=s.track_length_m)
+
+
+def consistency_suggestion(
+    history: History, skill: str, now_unix: float, scope: Scope | None = None
+) -> Suggestion | None:
+    """Steady laps at one track: a spread learned on a 23-second lap means nothing on a 95-second one, so the
+    suggestion is tied to the track it was learned at (the scope's track when one is asked for; else the steadiest
+    session for its lap length, as spread / median lap time)."""
+    recent = [s for s in _recent(history, now_unix) if s.track_id is not None]
+    if scope is not None and scope.track_id is not None:
+        recent = [s for s in recent if rules.scope_matches(_track_scope_of(scope), s)]
 
     def steadiest(k: int) -> tuple[int, SessionRow] | None:
-        best: tuple[int, SessionRow] | None = None
+        best: tuple[float, int, SessionRow] | None = None
         for s in recent:
             w = rules.best_window(history.laps_of(s.id), k, s.session_type)
-            if w is not None and (best is None or w.spread_ms < best[0]):
-                best = (w.spread_ms, s)
-        return best
+            if w is None:
+                continue
+            times = sorted(lap.lap_time_ms for lap in w.laps if lap.lap_time_ms is not None)
+            rel = w.spread_ms / times[len(times) // 2] if times else float(w.spread_ms)
+            if best is None or rel < best[0]:
+                best = (rel, w.spread_ms, s)
+        return None if best is None else (best[1], best[2])
 
     k = 3 if skill == "beginner" else 5
     found = steadiest(k)
@@ -226,19 +242,28 @@ def consistency_suggestion(history: History, skill: str, now_unix: float) -> Sug
     basis = _basis(
         "best_window",
         f"Your steadiest {k} clean laps in a row were within {seconds(spread, tenths_when_whole=False)} s "
-        f"({_where(s)})",
-        f"Your {k} steadiest laps were within {spread / 1000:.1f} s of each other",
+        f"({_where(s)}).",
+        f"Your {k} steadiest laps at {s.track_name or 'this track'} were within {spread / 1000:.1f} s of each other.",
         {"best_spread_ms": spread, "window_laps": k},
         [s.id],
     )
-    return Suggestion("consistency", float(target), {"window_laps": k}, Scope(), basis)
+    return Suggestion("consistency", float(target), {"window_laps": k}, _track_scope(s), basis)
+
+
+def _track_scope_of(scope: Scope) -> Scope:
+    return Scope(game=scope.game, track_id=scope.track_id, track_length_m=scope.track_length_m)
 
 
 # ---------------------------------------------------------------------------------------------- clean race (F1)
+def _judgeable(s: SessionRow, history: History) -> bool:
+    """A race Pitwall could judge: its length is stored (schema v3) or the chequered flag was recorded."""
+    if s.total_laps is not None and s.total_laps > 0:
+        return True
+    return any(e.get("kind") == rules.CHEQUERED_FLAG for e in history.events.get(s.id, ()))
+
+
 def race_suggestion(history: History, now_unix: float) -> Suggestion | None:
-    races = [
-        s for s in _recent(history, now_unix) if s.is_f1 and s.is_race and s.total_laps is not None and s.total_laps > 0
-    ]
+    races = [s for s in _recent(history, now_unix) if s.is_f1 and s.is_race and _judgeable(s, history)]
     if not races:
         return None
     outcomes = [rules.race_outcome(s, history.laps_of(s.id), history.events.get(s.id, ())) for s in races]
@@ -310,7 +335,7 @@ def suggestions(
             out.append(lt)
     for s in (
         clean_streak_suggestion(history, skill, now_unix),
-        consistency_suggestion(history, skill, now_unix),
+        consistency_suggestion(history, skill, now_unix, scope),
         race_suggestion(history, now_unix),
     ):
         if s is not None:
@@ -318,4 +343,6 @@ def suggestions(
     kept = [s for s in out if not _duplicates_active(s, active)]
     if scope is not None and not any(s.kind == "lap_time" for s in out) and reason is None:
         reason = NOT_ENOUGH_HERE
+    if out and not kept:
+        reason = ALL_SET
     return kept[:MAX_SUGGESTIONS], reason

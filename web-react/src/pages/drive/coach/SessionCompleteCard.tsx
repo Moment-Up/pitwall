@@ -11,8 +11,10 @@
 // never KPI.Value (it animates and formats plain numbers). Stationary: full coaching text, no glance texts.
 //
 // Lane motivation: with the session's recap the two points become "Today's 3 things" (went well, one to work on,
-// progress; "Goal reached" with the cup is the celebration), and up to two badges it earned sit beside the legend.
-// While the recap loads, three same-size skeletons; without it (older server, error) the card is as before.
+// progress; "Goal reached" with the star is the celebration), and up to two badges it earned sit beside the legend.
+// While the recap loads, three same-size skeletons; without it (older server, error) the card is as before. When the
+// seat changed since, the card says whose session it was (in the badges' place: the card keeps its size) and shows
+// none of its badges.
 
 import { CircleCheck, Medal, TriangleExclamation } from "@gravity-ui/icons";
 import { ItemCard, KPIGroup } from "@heroui-pro/react";
@@ -138,6 +140,7 @@ export function SessionCompleteCard({ ended, tier, corners }: SessionCompleteCar
       )}
       <div className="pwc-end__actions">
         <TimingLegend tier={tier} className="mr-auto self-center" />
+        {ended.owner && <span className="pwc-end__owner">{ended.owner}'s session</span>}
         <BadgeChips badges={ended.badges ?? []} />
         <Button
           variant="primary"

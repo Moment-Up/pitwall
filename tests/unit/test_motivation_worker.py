@@ -168,6 +168,38 @@ def test_race_last_lap_after_the_end(rig: Rig) -> None:
     assert len(rig.notes) == 1 and rig.notes[0]["goals"][0]["kind"] == "race_clean"
 
 
+def test_a_lapped_finish_is_judged_by_the_chequered_flag(rig: Rig) -> None:
+    """Lapped, the player never drives lap 4 of 4: the flag (CHQF) and their complete last lap after it say they
+    finished. Lap meta and the event share the receive clock."""
+    gid = rig.goal(rig.sam, kind="race_clean", target=1, params={"rule": "no_penalties"})
+    s = 1_000_000_000
+    laps = [SeedLap(n, ms, t_ns=(n * 100 * s, (n + 1) * 100 * s)) for n, ms in ((1, 88_000), (2, 78_000), (3, 78_100))]
+    flag = game_event(EventKind.CHEQUERED_FLAG, {}, t_recv_ns=350 * s)  # the leader took it during the player's lap 3
+    ids = seed(rig.writer, SeedSession("race", rig.sam, T, laps, total_laps=4, events=[flag]))
+    rig.go_live("race")
+    rig.end()
+    (note,) = rig.notes
+    assert note["goals"][0]["kind"] == "race_clean" and rig.status(gid)["achieved_lap_id"] == ids[-1]
+
+
+def test_laps_behind_the_safety_car_are_not_steady_laps(rig: Rig) -> None:
+    s = 1_000_000_000
+    times = [88_000, 80_000, 80_050, 80_020, 78_000, 78_900]  # laps 2-4 behind the safety car: even, but not steady
+    laps = [SeedLap(n, ms, t_ns=(n * 100 * s, (n + 1) * 100 * s)) for n, ms in enumerate(times, start=1)]
+    events = [
+        game_event(EventKind.SAFETY_CAR, {"safetyCarType": 1, "eventType": 0, "player_idx": 19}, t_recv_ns=210 * s),
+        game_event(EventKind.SAFETY_CAR, {"safetyCarType": 1, "eventType": 3, "player_idx": 19}, t_recv_ns=490 * s),
+    ]
+    gid = rig.goal(rig.sam, kind="consistency", target=300, params={"window_laps": 3})
+    ids = seed(rig.writer, SeedSession("race", rig.sam, T, laps, total_laps=10, events=events))
+    rig.go_live("race")
+    for lap_id in ids:
+        rig.lap(lap_id)
+    assert rig.notes == [] and rig.status(gid)["status"] == "active"
+    g = rig.svc.goal(rig.sam, gid)
+    assert g["progress"]["current"] is None  # laps 2-5 overlap the safety car: no 3-lap window left
+
+
 def _trace(n: int, ms: int) -> Any:
     from tests.unit.motivation_data import trace
 
