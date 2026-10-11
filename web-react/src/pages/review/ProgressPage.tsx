@@ -188,7 +188,7 @@ export function ProgressPage({ route }: PageProps) {
       error={ai.error}
       syntheticTrack={scope.track.synthetic}
       syntheticIds={syntheticIds}
-      poss={s.who.poss}
+      who={s.who}
       caption={caption}
       glossary={density.glossary}
     />

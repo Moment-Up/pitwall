@@ -314,3 +314,8 @@ export const ANSWER_SOURCE_LABEL: Readonly<Record<AnswerSource, string>> = {
   deterministic: "Deterministic",
   llm_down: "LLM down · deterministic",
 };
+
+// Pace vs AI words (lib/review/aipace.ts): the game's setting is "AI difficulty" in every label and sentence ("Pace vs
+// AI · AI difficulty 35", "Suggested AI difficulty", the glossary); "AI 35" only as a compact value (session rows, chart
+// dots, list lines, a suggested level). A comparison is the driver's best lap against the typical AI car's best lap,
+// and says so ("than the typical AI car's best lap", "20th of 20 on best laps"), never a bare position.

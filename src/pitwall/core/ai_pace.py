@@ -1,10 +1,10 @@
 """Pace vs AI difficulty: the ingest-side collector and the analysis-worker processor.
 
 ``AiPaceCollector`` holds the in-memory inputs of one *game* session (the game's session UID): every car's latest lap
-list (``CarLapHistory``), the aiDifficulty readings, weather, safety car periods and flashbacks. It runs on the ingest
-thread, so every method is O(1) (a ``job`` copy is bounded by the number of cars) and it never does I/O. The session
-manager hands an ``AiPaceJob`` snapshot to the ``AnalysisWorker`` after every lap of the player and once when the
-session ends; ``AiPaceProcessor`` (analysis thread) summarises it (``analysis.ai_pace``), stores the
+list (``CarLapHistory``), the aiDifficulty readings, weather, safety car and red flag periods and flashbacks. It runs on
+the ingest thread, so every method is O(1) (a ``job`` copy is bounded by the number of cars) and it never does I/O.
+The session manager hands an ``AiPaceJob`` snapshot to the ``AnalysisWorker`` after every lap of the player and once
+when the session ends; ``AiPaceProcessor`` (analysis thread) summarises it (``analysis.ai_pace``), stores the
 ``session_ai_pace`` row through the writer and publishes ``snapshot.ai_pace`` while the session is live.
 
 The collector is reset only when the game session UID changes, not when a pitwall session ends: a driver change splits
@@ -32,7 +32,7 @@ from pitwall.analysis.ai_pace import (
     weather_class,
 )
 from pitwall.core.live import LiveState
-from pitwall.model.telemetry import CarLapHistory, GameEvent, SessionInfo, SessionType
+from pitwall.model.telemetry import CarLapHistory, EventKind, GameEvent, SessionInfo, SessionType
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
 
@@ -75,6 +75,8 @@ class AiPaceCollector:
         self.weather: set[str] = set()
         self.sc_open: tuple[float | None, int] | None = None  # (session time, receive ns) of an open period
         self.sc_periods: list[ScPeriod] = []
+        self.red_open: tuple[float | None, int] | None = None  # a red flag not yet followed by lights out
+        self.red_flags: list[ScPeriod] = []
         self.flashbacks: list[tuple[float, float]] = []
         self.session_type: str = SessionType.UNKNOWN.value
         self.car_class: str | None = None
@@ -130,16 +132,32 @@ class AiPaceCollector:
         if isinstance(target, int | float) and e.session_time_s is not None:
             self.flashbacks.append((float(target), float(e.session_time_s)))
 
+    def on_event(self, e: GameEvent) -> None:
+        """Flashbacks, and red flag periods: from the red flag to the next lights out (the restart's standing start);
+        a red flag never followed by lights out stays open, so every later lap is left out."""
+        if e.kind == EventKind.FLASHBACK:
+            self.on_flashback(e)
+        elif e.kind == EventKind.RED_FLAG and self.red_open is None:
+            self.red_open = (e.session_time_s, e.t_recv_ns)
+        elif e.kind == EventKind.LIGHTS_OUT and self.red_open is not None:
+            start_s, start_ns = self.red_open
+            self.red_flags.append(ScPeriod(start_s, start_ns, e.session_time_s, e.t_recv_ns))
+            self.red_open = None
+
     # ------------------------------------------------------------------ output
     def job(self, session_id: str, *, synthetic: bool, final: bool) -> AiPaceJob:
         periods = list(self.sc_periods)
         if self.sc_open is not None:
             periods.append(ScPeriod(self.sc_open[0], self.sc_open[1]))
+        reds = list(self.red_flags)
+        if self.red_open is not None:
+            reds.append(ScPeriod(self.red_open[0], self.red_open[1]))
         level, status = self._resolved
         return AiPaceJob(
             session_id=session_id,
             histories=tuple(self.histories.values()),
             sc_periods=tuple(periods),
+            red_flags=tuple(reds),
             flashbacks=tuple(self.flashbacks),
             ai_difficulty=level,
             difficulty_status=status,
@@ -204,7 +222,6 @@ def collect_capture(path: Path) -> list[AiPaceJob]:
     from pitwall.adapters.base import PacketRejected
     from pitwall.adapters.f1.adapter import F1Adapter
     from pitwall.ingest.capture import CaptureReader
-    from pitwall.model.telemetry import EventKind
 
     reader = CaptureReader(path)
     if reader.meta.synthetic:
@@ -241,11 +258,11 @@ def collect_capture(path: Path) -> list[AiPaceJob]:
                 continue
             elif isinstance(e, CarLapHistory):
                 col.on_history(e)
-            elif isinstance(e, GameEvent) and e.kind == EventKind.FLASHBACK:
-                col.on_flashback(e)
             elif isinstance(e, GameEvent) and e.kind == EventKind.SESSION_ENDED:
                 ended = col.game_uid
                 finish()
+            elif isinstance(e, GameEvent):
+                col.on_event(e)
     finish()
     return jobs
 

@@ -1,9 +1,10 @@
 // "Against the AI" (AI pace spec 8): the viewed driver's sessions against the game's AI at this track, grouped by car
 // class (default: the class of the newest session; a Segment when there are several) and session category (a toggle
-// only when there is more than one). On top, the server's suggestion sentence for the series on screen (verbatim);
-// then the dot chart (gap to the typical AI car, higher is faster, each dot labelled with its AI difficulty) and the
-// same sessions as an accessible list. Only the game's own telemetry; synthetic sessions never count; a server without
-// AI pace answers 404 and the card is left out.
+// only when there is more than one). On top, the suggestion for the series on screen in words about the viewed driver
+// (built from the server's fields); then, from two sessions on, the dot chart (gap to the typical AI car, higher is
+// faster, each dot labelled with its AI difficulty) and the same sessions as an accessible list. A race here that
+// could not be compared (too few AI laps, the difficulty unknown or changed) is said so, never "no races". Only the
+// game's own telemetry; synthetic sessions never count; a server without AI pace answers 404 and the card is left out.
 
 import { Card, Skeleton } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
@@ -14,9 +15,11 @@ import { href, router } from "../../../lib/router";
 import {
   aiSeries,
   aiSeriesSentence,
+  aiUnusableSentence,
   categoryTab,
   dotWords,
   suggestionForSeries,
+  type AiWho,
 } from "../../../lib/review/aipace";
 import { sessionPath } from "../../../lib/review/links";
 import { AiPaceChart } from "./AiPaceChart";
@@ -32,8 +35,8 @@ export interface AiPaceCardProps {
   syntheticTrack: boolean;
   /** Sessions the page knows are synthetic (left out again, whatever the server sends). */
   syntheticIds: ReadonlySet<string>;
-  /** "your" / "Alex's". */
-  poss: string;
+  /** "your" / "Alex's" (and "Your" / "Alex's" to start a sentence). */
+  who: AiWho;
   caption: boolean;
   glossary: boolean;
 }
@@ -46,10 +49,11 @@ export function AiPaceCard({
   error,
   syntheticTrack,
   syntheticIds,
-  poss,
+  who,
   caption,
   glossary,
 }: AiPaceCardProps) {
+  const poss = who.poss;
   const [classKey, setClassKey] = useState<string | null>(null);
   const [category, setCategory] = useState<SessionCategory | null>(null);
   const view = useMemo(
@@ -60,7 +64,9 @@ export function AiPaceCard({
     () => (data ? suggestionForSeries(data.suggestions, { game, trackId }, view) : null),
     [data, game, trackId, view],
   );
-  const sentence = aiSeriesSentence(view, suggestion, { poss });
+  const sentence = aiSeriesSentence(view, suggestion, who);
+  const unusable = syntheticTrack ? null : aiUnusableSentence(data?.unusable, who);
+  const chart = view.plotted >= 2; // one session is the list line alone (as "Getting faster?" waits for two)
 
   const header = (
     <Card.Header className="flex-row items-center justify-between gap-2">
@@ -88,10 +94,10 @@ export function AiPaceCard({
     <Card className="gap-3 p-5" data-ai-card>
       {header}
       {!sentence ? (
-        <p className="m-0 text-base text-muted">
+        <p className="m-0 text-base text-muted" data-ai-unusable={unusable ? "" : undefined}>
           {syntheticTrack
             ? "Synthetic sessions never count against the AI: only real races here do."
-            : `No races against the AI at ${trackLabel} yet.`}
+            : (unusable ?? `No races against the AI at ${trackLabel} yet.`)}
         </p>
       ) : (
         <>
@@ -129,17 +135,20 @@ export function AiPaceCard({
               )}
             </div>
           )}
-          {caption && view.plotted > 0 && (
+          {caption && chart && (
             <p className="m-0 text-sm text-muted">
               Each dot is one session here: how far {poss} best clean lap was from the typical AI car's best lap. Higher
               is faster; on the dashed line {poss === "your" ? "you were" : "they were"} level.
             </p>
           )}
-          {view.plotted > 0 && <AiPaceChart dots={view.dots} onOpen={(id) => router.navigate(sessionPath(id))} />}
+          {chart && <AiPaceChart dots={view.dots} poss={poss} onOpen={(id) => router.navigate(sessionPath(id))} />}
           <ul className="m-0 grid list-none gap-1.5 p-0" aria-label="Sessions against the AI">
             {[...view.dots].reverse().map((d) => (
               <li key={d.sessionId} className="flex flex-wrap items-baseline gap-x-2 text-sm leading-snug">
-                <a className="min-h-11 shrink-0 py-2.5 font-semibold text-foreground underline-offset-2 hover:underline sm:min-h-0 sm:py-0" href={href(sessionPath(d.sessionId))}>
+                <a
+                  className="inline-flex min-h-11 min-w-11 shrink-0 items-center font-semibold text-foreground underline-offset-2 hover:underline"
+                  href={href(sessionPath(d.sessionId))}
+                >
                   {d.xLabel}
                 </a>
                 <span className="text-muted">{dotWords(d)}</span>

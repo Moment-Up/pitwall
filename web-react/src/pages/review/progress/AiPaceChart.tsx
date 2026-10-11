@@ -1,6 +1,6 @@
 // "Against the AI" chart (AI pace spec 8): one dot per session here, the gap from the driver's best clean lap to the
 // typical AI car's best lap in percent, the y axis REVERSED so faster is up (as on every Review chart), a zero line
-// "level with the typical AI car", each dot labelled with its AI difficulty. Tooltip: date, AI level, typical AI
+// "level with the typical AI car", each dot labelled with its AI difficulty. Tooltip: date, AI difficulty, typical AI
 // best, your best, rank. Every dot has a 44 px target and opens that session (tap, Enter or Space). Sessions without a
 // clean lap have no gap and are not drawn (the list under the chart has them). Lazy page only (Recharts).
 
@@ -62,7 +62,7 @@ function Tip({ active, label, byX }: { active?: boolean; label?: number | string
   const d = byX.get(Number(label));
   if (!d) return null;
   const rows: [string, string, boolean][] = [
-    ["AI level", String(d.level), true],
+    ["AI difficulty", String(d.level), true],
     ["Typical AI best", lapTime(d.aiRefMs), true],
     ["Your best", lapTime(d.driverBestMs), true],
     ["Gap", pctWords(d.gapPct) ?? "-", false],
@@ -85,9 +85,11 @@ export interface AiPaceChartProps {
   dots: readonly AiDot[];
   onOpen: (sessionId: string) => void;
   height?: number;
+  /** Whose best laps ("your" / "Sam's"): the chart's accessible name. */
+  poss?: string;
 }
 
-export const AiPaceChart = memo(function AiPaceChart({ dots, onOpen, height = 220 }: AiPaceChartProps) {
+export const AiPaceChart = memo(function AiPaceChart({ dots, onOpen, height = 220, poss = "your" }: AiPaceChartProps) {
   const openRef = useRef(onOpen);
   useEffect(() => {
     openRef.current = onOpen;
@@ -121,7 +123,7 @@ export const AiPaceChart = memo(function AiPaceChart({ dots, onOpen, height = 22
         height={height}
         margin={MARGIN}
         role="group"
-        aria-label="Your best lap against the typical AI car per session, higher is faster"
+        aria-label={`${poss.charAt(0).toUpperCase()}${poss.slice(1)} best lap against the typical AI car per session, higher is faster`}
       >
         <LineChart.Grid vertical={false} />
         <LineChart.XAxis

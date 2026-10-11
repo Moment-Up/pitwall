@@ -8,8 +8,9 @@
 // Coaching text is the coach's own (analysis/coaching.py); this page adds neutral words only. Density by the VIEWED
 // driver's profile (6.10): simple wording and 18 px text for beginners.
 //
-// "Suggested AI level" (AI pace spec 8) when the server has a suggestion for this driver at this track (the same
-// request as Progress's "Against the AI"); left out on a server without AI pace.
+// "Suggested AI difficulty" (AI pace spec 8) when the server has a suggestion for this driver at this track (the same
+// request as Progress's "Against the AI"), first beside the habits and the radio focus; left out on a server without
+// AI pace.
 
 import { ChartLine, Speedometer } from "@gravity-ui/icons";
 import { Alert, Button, Card, Skeleton } from "@heroui/react";
@@ -17,7 +18,7 @@ import { EmptyState } from "@heroui-pro/react";
 import { useMemo } from "react";
 import { useLive } from "../../hooks/stores";
 import { router } from "../../lib/router";
-import { suggestionsFor } from "../../lib/review/aipace";
+import { aiCarNamesByClass, suggestionsFor } from "../../lib/review/aipace";
 import { apexGameM } from "../../lib/review/compare";
 import { densityFor } from "../../lib/review/density";
 import { sessionPath } from "../../lib/review/links";
@@ -54,6 +55,7 @@ export function CoachingPage({ route }: PageProps) {
         : [],
     [scope, ai.data, ai.missing],
   );
+  const aiCarNames = useMemo(() => aiCarNamesByClass(ai.data?.points ?? []), [ai.data]);
 
   const view = useMemo(() => {
     if (!scope || !viewed) return null;
@@ -185,6 +187,9 @@ export function CoachingPage({ route }: PageProps) {
           </section>
 
           <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+            {aiSuggestions.length > 0 && (
+              <AiLevelCard suggestions={aiSuggestions} glossary={density.glossary} who={s.who} carNames={aiCarNames} />
+            )}
             <HabitsCard items={view.habits} simple={density.simpleWording} glossary={density.glossary} />
             <RadioFocusCard
               focus={view.focus}
@@ -193,7 +198,6 @@ export function CoachingPage({ route }: PageProps) {
               thresholdS={threshold}
               glossary={density.glossary}
             />
-            {aiSuggestions.length > 0 && <AiLevelCard suggestions={aiSuggestions} glossary={density.glossary} />}
           </div>
         </>
       )}

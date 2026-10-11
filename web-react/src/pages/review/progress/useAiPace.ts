@@ -1,5 +1,5 @@
 // Pace vs AI for the viewed driver at the scope's track (any car: the cards group by car class): one request and one
-// cache entry shared by Progress ("Against the AI") and the Coaching plan ("Suggested AI level"). `missing`: the
+// cache entry shared by Progress ("Against the AI") and the Coaching plan ("Suggested AI difficulty"). `missing`: the
 // server predates AI pace (its router answered 404), so the cards are left out.
 
 import { useApi } from "../../../hooks/useApi";

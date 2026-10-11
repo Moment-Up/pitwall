@@ -160,12 +160,41 @@ def test_ai_flag_change_re_emits() -> None:
     a.decode(participants([0] + [1] * 19, 20), 2)
     (h,) = hist(a, history(6, [lap(80_000), lap(0)]))
     assert h.ai_controlled is True
+    assert h.ai_from_lap == 0  # not knowing yet is not a takeover
 
 
-def test_stint_end_laps_zero_and_255_are_ignored() -> None:
+@pytest.mark.parametrize(
+    ("flags", "n_active"),
+    [
+        ([0] + [1] * 18 + [0], 20),  # a human in slot 19
+        ([0] + [1] * 18 + [0], 19),  # real online Suzuka: a 0 flag beyond numActiveCars, laps being driven
+    ],
+)
+def test_ai_takeover_marks_the_laps_before_it(flags: list[int], n_active: int) -> None:
+    a = started(flags=flags, n_active=n_active)
+    (h,) = hist(a, history(19, [lap(105_401), lap(97_657), lap(0)], t=210.0))
+    assert h.ai_controlled is not True and h.ai_from_lap == 0
+    # the AI takes the car over during lap 3: laps 1-3 were (at least partly) the human's
+    a.decode(participants([0] + [1] * 19, n_active), 4)
+    (h,) = hist(a, history(19, [lap(105_401), lap(97_657), lap(0)], t=263.0))
+    assert h.ai_controlled is True and h.ai_from_lap == 3
+    (h,) = hist(a, history(19, [lap(105_401), lap(97_657), lap(101_819), lap(0)], t=306.0))
+    assert h.ai_from_lap == 3  # kept for the rest of the session
+
+
+def test_ai_from_the_start_is_never_a_takeover() -> None:
+    a = started()
+    hist(a, history(5, [lap(0)], t=1.0))
+    (h,) = hist(a, history(5, [lap(80_000), lap(0)], t=81.0))
+    assert h.ai_controlled is True and h.ai_from_lap == 0
+
+
+def test_stint_end_lap_is_the_lap_before_the_in_lap() -> None:
+    # real F1 25 (Austria, LapData pitStatus): endLap 61 = in-lap 62 (pit entry), out-lap 63 (the stop, after the
+    # line in the pit lane); endLap 0 = a stop on lap 1; 255 = the tyre fitted now
     a = started()
     (h,) = hist(a, history(7, [lap(80_000)] * 7 + [lap(0)], stints=(5, 0, 255)))
-    assert h.pit_laps == frozenset({5, 6})
+    assert h.pit_laps == frozenset({6, 7, 1, 2})
 
 
 def test_valid_bit() -> None:
@@ -261,3 +290,83 @@ def test_network_game_game_mode_and_session_time(fmt: int) -> None:
     online = _info(F1Adapter(), session(network=1, game_mode=7, fmt=fmt))
     assert online.network_game is True and online.extra["game_mode"] == 7
     assert _info(F1Adapter(), session(network=2, fmt=fmt)).network_game is None  # not a defined value
+
+
+# ---------------------------------------------------------------------------------------------- all-car LapData
+def lapdata(cars: dict[int, dict[str, Any]], *, t: float = 1.0, player: int = 0, fmt: int = 2025) -> bytes:
+    layout = P.LAYOUTS[fmt]
+    rows = [P.LAP_DATA.pack(cars.get(i, {})) for i in range(layout.max_cars)]
+    tail = P.LAP_DATA_TAIL.pack({"timeTrialPBCarIdx": 255, "timeTrialRivalCarIdx": 255})
+    return hdr(P.PacketId.LAP_DATA, t=t, player=player, fmt=fmt) + b"".join(rows) + tail
+
+
+def car_ld(lap_num: int, dist: float, *, result: int = 2, pit: int = 0) -> dict[str, Any]:
+    return {"currentLapNum": lap_num, "lapDistance": dist, "resultStatus": result, "pitStatus": pit}
+
+
+def test_lap_data_pit_lane_laps_join_the_stints() -> None:
+    a = started()
+    hist(a, history(7, [lap(70_968)] * 61 + [lap(0)], t=4180.0))
+    # car 7 enters the pit lane on lap 62, crosses the line in it (lap 63), stops, leaves on lap 63
+    for t, lap_num, pit in ((4230.0, 62, 0), (4232.2, 62, 1), (4234.9, 63, 1), (4238.7, 63, 2), (4258.0, 63, 0)):
+        assert a.decode(lapdata({7: car_ld(lap_num, 100.0, pit=pit)}, t=t), 5) == []
+    assert a._pit_seen == {7: {62, 63}}
+    # the history of the in-lap re-emits with them (the stint, recorded later as endLap 61, says the same)
+    (h,) = hist(a, history(7, [lap(70_968)] * 61 + [lap(79_296), lap(0)], t=4235.5))
+    assert h.pit_laps == frozenset({62, 63})
+    (h,) = hist(a, history(7, [lap(70_968)] * 61 + [lap(79_296), lap(0)], stints=(61, 255), t=4240.6))
+    assert h.pit_laps == frozenset({62, 63})
+    # a new pit lane lap with an unchanged history still re-emits it
+    a.decode(lapdata({7: car_ld(70, 100.0, pit=1)}, t=4800.0), 6)
+    (h,) = hist(a, history(7, [lap(70_968)] * 61 + [lap(79_296), lap(0)], stints=(61, 255), t=4801.0))
+    assert 70 in h.pit_laps
+
+
+def test_lap_data_results_skip_and_retirement_end_the_lap_in_progress() -> None:
+    a = started()
+    for c in (3, 4, 5, 6):
+        hist(a, history(c, [lap(80_000), lap(79_000), lap(0)], t=200.0))
+    before = {
+        0: car_ld(3, 5276.0),  # the player, about to finish
+        3: car_ld(3, 5164.4),  # 114 m from the line
+        4: car_ld(3, 5270.0),  # about to cross the line itself
+        5: car_ld(3, 1929.6),
+        6: car_ld(3, 900.0, result=3),  # finished earlier, on its cool-down lap
+        8: car_ld(69, 4234.4),  # a lapped car: the game moves it to lap 70 when it fills lap 69 in
+    }
+    assert a.decode(lapdata(before, t=298.18), 5) == []
+    after = {
+        0: car_ld(3, 1.3, result=3),
+        3: car_ld(3, 5164.4, result=3),  # finished where it is: a skip
+        4: car_ld(3, 2.3, result=3),  # crossed the line: a real finish
+        5: car_ld(3, 1929.6, result=7),  # retired out on track
+        6: car_ld(3, 905.0, result=3),
+        8: car_ld(70, 4234.4, result=3),
+    }
+    out = a.decode(lapdata(after, t=298.20), 6)
+    assert a._ended_lap == {3: 3, 5: 3, 8: 69}
+    # cars with a lap list are re-emitted at once (their history may already show the filled-in time)
+    assert sorted(e.car_index for e in out if isinstance(e, CarLapHistory)) == [3, 5]
+    assert all(e.ended_lap == 3 for e in out if isinstance(e, CarLapHistory))
+    (h,) = hist(a, history(3, [lap(80_000), lap(79_000), lap(97_396)], t=298.63))
+    assert h.ended_lap == 3
+    (h,) = hist(a, history(4, [lap(80_000), lap(79_000), lap(97_500)], t=298.70))
+    assert h.ended_lap is None
+    # nothing changes while the statuses stay
+    assert a.decode(lapdata(after, t=298.30), 7) == []
+
+
+def test_lap_data_watch_resets_with_the_session() -> None:
+    a = started()
+    a.decode(lapdata({3: car_ld(2, 3000.0)}, t=10.0), 1)
+    a.decode(lapdata({3: car_ld(2, 3000.0, result=3, pit=1)}, t=10.05), 2)
+    assert a._ended_lap == {3: 2} and a._pit_seen == {3: {2}}
+    a.decode(session(uid=UID + 1), 3)
+    assert a._ended_lap == {} and a._pit_seen == {} and a._ld_prev is None
+
+
+def test_lap_data_watch_format_2026_last_slot() -> None:
+    a = started(fmt=2026, flags=[0] + [1] * 23, n_active=24)
+    a.decode(lapdata({23: car_ld(5, 2000.0)}, t=10.0, fmt=2026), 1)
+    a.decode(lapdata({23: car_ld(5, 2000.0, result=3, pit=1)}, t=10.05, fmt=2026), 2)
+    assert a._ended_lap == {23: 5} and a._pit_seen == {23: {5}}

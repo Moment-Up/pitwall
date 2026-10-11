@@ -1,13 +1,14 @@
 {
   "_fixture": {
     "source": "GET /api/drivers/1/ai-pace?game=f1_25&track_id=f1:17 from a scratch pitwall server (branch ai-pace, data dir in scratch, LLM and voice off) whose database holds only read-only copies of the owner's real PS5 F1 25 captures 20261010-191501 and 20261010-221749 streamed over local UDP with `pitwall send` (the live pitwall service and its data were not touched).",
-    "recorded": "2026-10-11T18:01:04+01:00",
+    "recorded": "2026-10-11T19:53:03+0100",
     "what": "The real backend's DriverAiPace at Austria (the same races as contract-driver-austria, new session ids and times).",
-    "tier": "recorded"
+    "tier": "recorded",
+    "method_2": "Method 2 (2026-10-11 review fixes: results skip from LapData, AI takeover, in-lap = stint end + 1, 1.3 s timing, red flag, fast outlier; suggestion latest_gap_ms / next_level / bound without range; unusable): AI values regenerated from the real backend fed the same capture over loopback UDP (scratch server)."
   },
   "response": {
     "driver_id": 1,
-    "method_version": 1,
+    "method_version": 2,
     "target_gap_pct": 0.0,
     "scope": {
       "game": "f1_25",
@@ -17,8 +18,8 @@
     },
     "points": [
       {
-        "session_id": "42393e6e3919",
-        "started_unix": 1791737415.13782,
+        "session_id": "188dcb5ee3d0",
+        "started_unix": 1791744041.262037,
         "game": "f1_25",
         "track_id": "f1:17",
         "track_name": "Austria",
@@ -40,8 +41,8 @@
         "session_category": "race"
       },
       {
-        "session_id": "836b018fdb94",
-        "started_unix": 1791737708.9957051,
+        "session_id": "172ec60fe003",
+        "started_unix": 1791744330.198111,
         "game": "f1_25",
         "track_id": "f1:17",
         "track_name": "Austria",
@@ -63,8 +64,8 @@
         "session_category": "race"
       },
       {
-        "session_id": "e8f201002cb9",
-        "started_unix": 1791737830.589942,
+        "session_id": "df4a2f12abb7",
+        "started_unix": 1791744492.329739,
         "game": "f1_25",
         "track_id": "f1:17",
         "track_name": "Austria",
@@ -105,6 +106,8 @@
         "note": null,
         "latest_level": 31,
         "latest_gap_pct": -6.51,
+        "latest_gap_ms": -4910,
+        "next_level": 36,
         "target_gap_pct": 0.0,
         "sessions_used": 2,
         "levels_used": [
@@ -112,7 +115,7 @@
         ],
         "slope_pct_per_level": null,
         "slope_sources": [],
-        "text": "At AI 31 your best lap here was 6.5% faster than the typical AI car, so try a higher level. Race at a couple of difficulty levels here and Pitwall can suggest one."
+        "text": "At AI 31 your best lap here was 4.9 s (6.5%) faster than the typical AI car's best lap, so try a higher level. Race here once more at AI 36 or higher and Pitwall can suggest a level."
       },
       {
         "key": {
@@ -132,6 +135,8 @@
         "note": null,
         "latest_level": 35,
         "latest_gap_pct": 5.06,
+        "latest_gap_ms": 3772,
+        "next_level": 30,
         "target_gap_pct": 0.0,
         "sessions_used": 1,
         "levels_used": [
@@ -139,8 +144,9 @@
         ],
         "slope_pct_per_level": null,
         "slope_sources": [],
-        "text": "At AI 35 your best lap here was 5.1% slower than the typical AI car, so a lower level should give closer racing. Race at a couple of difficulty levels here and Pitwall can suggest one."
+        "text": "At AI 35 your best lap here was 3.8 s (5.1%) slower than the typical AI car's best lap, so a lower level should give closer racing. Race here once more at AI 30 or lower and Pitwall can suggest a level."
       }
-    ]
+    ],
+    "unusable": []
   }
 }

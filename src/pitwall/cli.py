@@ -824,7 +824,7 @@ def ai_pace_backfill(
         writer.close()
     for r in results:
         gap = "-" if r.gap_ms is None else f"{r.gap_ms / 1000:+.3f}s"
-        state = "dry run" if dry_run else ("written" if r.written else "kept (stored row has more AI laps)")
+        state = "dry run" if dry_run else ("written" if r.written else "kept (stored row newer or has more AI laps)")
         typer.echo(
             f"{r.session_id}  {r.capture}  {r.status:20} difficulty={r.ai_difficulty} ai_cars={r.ai_cars} "
             f"gap={gap}  {state}"

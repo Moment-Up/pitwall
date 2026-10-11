@@ -59,7 +59,7 @@ export const fixtures = {
 // backend route records real responses. The "recorded-" files are the real backend's answers for the same captures
 // (a scratch server of this branch fed the captures over local UDP), and tests pin the contract fixtures to them.
 interface AiFixtureFile<T> {
-  _fixture: { source: string; recorded: string; what: string; tier: "contract" | "recorded"; edited?: string };
+  _fixture: { source: string; recorded: string; what: string; tier: "contract" | "recorded"; edited?: string; method_2?: string };
   response: T;
 }
 
@@ -78,11 +78,11 @@ export const aiFixtures = {
   austriaScenario: () => loadAi<SessionAiPace>("contract-session-austria-scenario"),
   /** Melbourne F2 race (1e7271f70c5e) at AI 35: 3.2 s faster, 1st of 22. */
   melbourne: () => loadAi<SessionAiPace>("contract-session-melbourne"),
-  /** Monza race (33d6d86134af): too few AI cars seen (3 of 5). */
+  /** Monza race (33d6d86134af): too few AI cars seen (2 of 5; 17 laps the game filled in at the results skip). */
   monza: () => loadAi<SessionAiPace>("contract-session-monza"),
   /** snapshot.ai_pace for the Austria race. */
   live: () => loadAi<LiveAiPace>("contract-live-austria"),
-  /** GET /api/drivers/1/ai-pace (no scope): 5 races, 4 direction-only suggestions. */
+  /** GET /api/drivers/1/ai-pace (no scope): 5 races, 4 direction-only suggestions, Monza unusable (too few AI cars). */
   driverAll: () => loadAi<DriverAiPace>("contract-driver-all"),
   /** GET /api/drivers/1/ai-pace?game=f1_25&track_id=f1:17: Austria in F1 World (AI 35) and F1 Modern (AI 31 twice). */
   driverAustria: () => loadAi<DriverAiPace>("contract-driver-austria"),

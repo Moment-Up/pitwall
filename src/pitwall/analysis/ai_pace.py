@@ -10,14 +10,20 @@ AI laps that count (first failing check names the reason, counted in ``excluded`
 1. ``race_lap_1``           race lap 1 (standing start)
 2. ``not_observed``         ``lap_number <= first_seen_lap``: not seen from its start (joined mid-session, a restart,
                             a scenario's pre-filled laps)
-3. ``invalid``              the game's lap-valid bit is not set
-4. ``pit_in_out``           a lap that ended a tyre stint, or the lap after it
-5. ``safety_car``           the lap's window [done - lap - ``SC_SLACK_S``, done] overlaps a SC / VSC / formation period
-6. ``flashback``            the window overlaps a flashback's rewound span
-7. ``timing_inconsistent``  the time between this lap's completion and the previous one's differs from the lap time by
-                            more than ``TIMING_TOL_S`` (or either completion was not seen). F1 25 fills in the other
-                            cars' final laps at once when the driver skips to the results: on two of four real races
-                            those times appeared 5-12 s earlier than physically possible.
+3. ``not_ai_driven``        ``lap_number <= ai_from_lap``: the car was seen not AI-controlled and the AI took it over
+                            later (a human left a real online lobby): those laps were a human's, at least in part
+4. ``results_skip``         ``lap_number >= ended_lap``: the game ended the car's lap away from the line (LapData) and
+                            filled its time in (the driver skipped to the results; a retirement)
+5. ``invalid``              the game's lap-valid bit is not set
+6. ``pit_in_out``           an in- or out-lap (``CarLapHistory.pit_laps``: tyre stints and LapData's pit lane)
+7. ``safety_car``           the lap's window [done - lap - ``SC_SLACK_S``, done] overlaps a SC / VSC / formation period
+8. ``red_flag``             the window overlaps a red flag (from the red flag event to the next lights out; open
+                            until the end when no restart was seen)
+9. ``flashback``            the window overlaps a flashback's rewound span
+10. ``timing_inconsistent`` the time between this lap's completion and the previous one's differs from the lap time by
+                            more than ``TIMING_TOL_S`` (or either completion was not seen): a backstop for filled-in
+                            times that ``results_skip`` did not see (real F1 25 fills them in 1.7-16 s early)
+11. ``fast_outlier``        faster than ``FAST_OUTLIER`` x the typical AI car's best (a garbage guard; never seen)
 
 Each AI car's best is the fastest of its remaining laps; cars slower than ``SLOW_CAR_CUTOFF`` x the fastest AI best are
 dropped (``slow_car``, counted per car). The reference is the median of the remaining bests ("the typical AI car").
@@ -36,14 +42,23 @@ from typing import Any
 
 from pitwall.model.telemetry import CarLapHistory, SessionType
 
-AI_PACE_METHOD_VERSION = 1
+# 2: takeover / results-skip / red-flag / fast-outlier checks, LapData pit laps, in-lap = stint end + 1, 1.3 s timing
+AI_PACE_METHOD_VERSION = 2
 MIN_AI_CARS = 5  # AI cars with a representative lap needed for a reference
 SLOW_CAR_CUTOFF = 1.10  # a car best slower than 110% of the fastest AI best is not representative (garbage guard)
-TIMING_TOL_S = 2.5  # completion-time delta vs lap time; real driven laps agree within +-1.1 s (the history cycle)
-SC_SLACK_S = 2.0  # an AI lap window is widened by this before checking for safety car periods
+FAST_OUTLIER = 0.90  # a lap faster than 90% of the typical AI car's best is not a lap (garbage guard)
+# Completion-time delta vs lap time. Each completion is seen up to one Session History cycle late (20 packets/s cycling
+# through the cars: 1.1 s for 22 cars), so driven laps agree within +-1.1 s (real F1 25: 9 races, ~560 laps, max 1.10
+# s); laps the game filled in at a results skip were 1.70 s or more early. 24-car fields (format 2026, spec only) get
+# 0.1 s of margin.
+TIMING_TOL_S = 1.3
+SC_SLACK_S = 2.0  # an AI lap window is widened by this before checking for safety car / red flag periods
 MIN_DRIVER_LAPS_FOR_MEDIAN = 3  # clean laps needed for the driver's median (race pace)
 MIN_DIFFICULTY_READINGS = 10  # Session packets with a known aiDifficulty needed to resolve the session's level
-DIFFICULTY_MODE_SHARE = 0.9  # share of those readings the most common value needs ("changed" below it)
+# Share of those readings the level needs. 1.0: a second known value means the level changed during the session (it
+# can be changed from the pause menu), and laps at the old and the new level cannot be told apart. Real F1 25 never
+# needed a tolerance: once the unfilled tail is ignored every session read one value (16 sessions).
+DIFFICULTY_MODE_SHARE = 1.0
 
 STATUS_OK = "ok"
 STATUS_NO_DRIVER_LAP = "no_driver_lap"
@@ -68,11 +83,15 @@ DIFFICULTY_CHANGED = "changed"
 EXCLUSIONS = (
     "race_lap_1",
     "not_observed",
+    "not_ai_driven",
+    "results_skip",
     "invalid",
     "pit_in_out",
     "safety_car",
+    "red_flag",
     "flashback",
     "timing_inconsistent",
+    "fast_outlier",
     "slow_car",
 )
 WET_CONDITIONS = frozenset({"light_rain", "heavy_rain", "storm"})
@@ -96,6 +115,7 @@ class AiPaceJob:
     session_id: str
     histories: tuple[CarLapHistory, ...]
     sc_periods: tuple[ScPeriod, ...] = ()
+    red_flags: tuple[ScPeriod, ...] = ()  # red flag to the next lights out (open = no restart seen)
     flashbacks: tuple[tuple[float, float], ...] = ()  # (target session time, session time of the rewind)
     ai_difficulty: int | None = None  # the session's resolved level (None unless difficulty_status is "known")
     difficulty_status: str = DIFFICULTY_UNKNOWN  # known | unknown | changed
@@ -258,6 +278,12 @@ def _ai_laps(job: AiPaceJob, race: bool) -> tuple[dict[int, list[int]], dict[str
             if n <= h.first_seen_lap:
                 drop("not_observed")
                 continue
+            if n <= h.ai_from_lap:
+                drop("not_ai_driven")
+                continue
+            if h.ended_lap is not None and n >= h.ended_lap:
+                drop("results_skip")
+                continue
             if lap.valid is not True:
                 drop("invalid")
                 continue
@@ -270,6 +296,9 @@ def _ai_laps(job: AiPaceJob, race: bool) -> tuple[dict[int, list[int]], dict[str
             w0, w1 = t_done - lap_s - SC_SLACK_S, t_done
             if any(_overlaps_open(w0, w1, p.start_s, p.end_s) for p in job.sc_periods):
                 drop("safety_car")
+                continue
+            if any(_overlaps_open(w0, w1, p.start_s, p.end_s) for p in job.red_flags):
+                drop("red_flag")
                 continue
             if any(w0 <= hi and lo <= w1 for lo, hi in flashbacks):
                 drop("flashback")
@@ -295,8 +324,8 @@ def _driver_laps(job: AiPaceJob, laps: Sequence[Mapping[str, Any]]) -> list[tupl
             continue
         t0, t1 = lap.get("t_recv_start_ns"), lap.get("t_recv_end_ns")
         if isinstance(t0, int) and isinstance(t1, int):
-            sc = any(t0 < (math.inf if p.end_ns is None else p.end_ns) and p.start_ns < t1 for p in job.sc_periods)
-            if sc:
+            periods = (*job.sc_periods, *job.red_flags)
+            if any(t0 < (math.inf if p.end_ns is None else p.end_ns) and p.start_ns < t1 for p in periods):
                 continue
         out.append((ms, int(lap.get("lap_number") or 0), int(lap["id"])))
     return out
@@ -319,6 +348,16 @@ def summarise(job: AiPaceJob, laps: Sequence[Mapping[str, Any]], *, now: float |
         online=job.network_game,
     )
     per_car, excluded = _ai_laps(job, race)
+    if per_car:
+        floor = FAST_OUTLIER * statistics.median(min(times) for times in per_car.values())
+        for car in list(per_car):
+            keep = [ms for ms in per_car[car] if ms >= floor]
+            if len(keep) < len(per_car[car]):
+                excluded["fast_outlier"] = excluded.get("fast_outlier", 0) + len(per_car[car]) - len(keep)
+                if keep:
+                    per_car[car] = keep
+                else:
+                    del per_car[car]
     bests = {car: min(times) for car, times in per_car.items()}
     if bests:
         fastest = min(bests.values())

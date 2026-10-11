@@ -11,9 +11,11 @@ out lap or drive through the pit lane. Without AI cars the stream is byte-for-by
 Optional pace vs AI inputs (``core.ai_pace`` tests), all off by default (the stream is then unchanged):
 ``ai_difficulty`` (Session.aiDifficulty with a filled tail, except in the first two Session packets, like real F1 25),
 ``session_history`` (one Session History packet every 1/20 s, cycling through the AI cars, from the generated lap
-times: ``GroundTruth.ai_lap_times_ms``), ``safety_car_periods`` (Session.safetyCarStatus "full" in those session-time
-spans) and ``skip_results_after_player_finish`` (when the player finishes, every AI car's lap in progress is filled in
-at once, as F1 25 does when the driver skips to the results: ``GroundTruth.ai_simulated_laps``).
+times: ``GroundTruth.ai_lap_times_ms``; a pit lap p is recorded as a tyre stint ending on lap p - 1, as real F1 25
+does), ``safety_car_periods`` (Session.safetyCarStatus "full" in those session-time spans) and
+``skip_results_after_player_finish`` (when the player finishes, every AI car is marked finished where it is in the next
+LapData frame and its lap in progress is filled in at once, as F1 25 does when the driver skips to the results:
+``GroundTruth.ai_simulated_laps``).
 """
 
 from __future__ import annotations
@@ -598,6 +600,7 @@ def _motion_ex_values(
 
 
 _HISTORY_PERIOD_S = 0.05  # Session History: one packet every 1/20 s, cycling through the cars (EA spec 5.11)
+RESULT_FINISHED_CODE = 3  # LapData.resultStatus "finished"
 _LAP_VALID_ALL = 0x0F  # lap + three sectors valid
 _LAP_INVALID = 0x0E  # sectors valid, lap-valid bit clear
 
@@ -647,7 +650,8 @@ def _history_packet(
             }
         )
     laps += P.LAP_HISTORY.pack({}) * (P.NUM_LAP_HISTORY - n)
-    stint_ends = sorted(p for p in spec.pit_laps if p < n or (p == n and done == n))
+    # real F1 25 records a stint's endLap as the lap before the in-lap (the pit lap p here)
+    stint_ends = sorted(p - 1 for p in spec.pit_laps if p < n or (p == n and done == n))
     stints = [{"endLap": e, "tyreActualCompound": 18, "tyreVisualCompound": 16} for e in stint_ends]
     stints.append({"endLap": 255, "tyreActualCompound": 18, "tyreVisualCompound": 16})
     stints = stints[: P.NUM_TYRE_STINTS]
@@ -932,23 +936,27 @@ def _stream(
 
     # final crossing of the line: one LapData frame on lap N+1 so the last lap completes
     final_lap = len(tl.profiles) + 1
-    lapdata = _cars(
-        P.LAP_DATA,
-        {
-            "lastLapTimeInMS": truth.lap_times_ms[final_lap - 1],
-            "currentLapTimeInMS": 0,
-            "lapDistance": 0.0,
-            "currentLapNum": final_lap,
-            "carPosition": 1,
-            "driverStatus": 1,
-            "resultStatus": 2,
-        },
-        sc.layout.max_cars,
-    ) + P.LAP_DATA_TAIL.pack({"timeTrialPBCarIdx": 255, "timeTrialRivalCarIdx": 255})
+    skip = bool(hist_cars) and sc.skip_results_after_player_finish
+    # with a results skip the AI cars stay in this frame (still racing), so the next one can show them finished
+    ai_final = {car.spec.index: _ai_values(car, t, track, sc.layout)[1] for car in ai} if skip else None
+    player_final: dict[str, object] = {
+        "lastLapTimeInMS": truth.lap_times_ms[final_lap - 1],
+        "currentLapTimeInMS": 0,
+        "lapDistance": 0.0,
+        "currentLapNum": final_lap,
+        "carPosition": 1,
+        "driverStatus": 1,
+        "resultStatus": 2,
+    }
+    lap_tail = P.LAP_DATA_TAIL.pack({"timeTrialPBCarIdx": 255, "timeTrialRivalCarIdx": 255})
+    lapdata = _cars(P.LAP_DATA, player_final, sc.layout.max_cars, ai_final) + lap_tail
     yield pkt(_hdr(P.PacketId.LAP_DATA, sc, t, frame, overall) + lapdata)
-    if hist_cars and sc.skip_results_after_player_finish:
-        # The driver skips to the results: every AI car's lap in progress gets its time at once (F1 25, real
-        # Melbourne / Monza captures), far sooner than the car could have driven it.
+    if skip and ai_final is not None:
+        # The driver skips to the results: one LapData frame later every AI car is "finished" where it is (real F1 25,
+        # 7 races) and its lap in progress gets its time at once (Session History), sooner than it could be driven.
+        done_ai = {i: {**v, "resultStatus": RESULT_FINISHED_CODE} for i, v in ai_final.items()}
+        lapdata = _cars(P.LAP_DATA, player_final, sc.layout.max_cars, done_ai) + lap_tail
+        yield pkt(_hdr(P.PacketId.LAP_DATA, sc, t, frame, overall) + lapdata, 5)
         for k, car in enumerate(hist_cars):
             ends = _ai_lap_ends(car)
             done = sum(1 for e in ends if e <= t)

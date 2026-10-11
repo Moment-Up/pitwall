@@ -3,11 +3,12 @@
 
 import { AskPanel, LlmChip } from "../ask/AskPanel";
 
-export function AskTab({ sessionId, question }: { sessionId: string; question: string | null }) {
+export function AskTab({ sessionId, question, aiPace = false }: { sessionId: string; question: string | null; aiPace?: boolean }) {
   return (
     <AskPanel
       sessionId={sessionId}
       initialQuestion={question}
+      aiPace={aiPace}
       header={
         <div className="flex flex-wrap items-center gap-2">
           <LlmChip />

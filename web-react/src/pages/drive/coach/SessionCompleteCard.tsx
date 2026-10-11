@@ -4,8 +4,9 @@
 //
 //   [Best lap PB 1:30.702 · lap 9] [Clean laps 9 of 12] [Gained today 2.5 s faster] [To the family record 0.29 s slower]
 //   (!) Work on · T15 Stowe …                    (✓) Went well · T9 Copse …   (corner: official label and name)
-//   Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20     [ Review this session ]
-//   (the AI line only when the session has an AI comparison; no live AI widget)
+//   AI difficulty 35: best lap 3.8 s slower than the typical AI car's best lap · 20th of 20 on best laps
+//   REC / PB / SB legend                                                     [ Review this session ]
+//   (the AI line, a row of its own, only when the session has an AI comparison; no live AI widget)
 //
 // LAZY (React.lazy in SessionCompleteSlot.tsx): Pro KPI imports AreaChart and so Recharts at module level, which
 // must stay out of the eager Drive bundle (spec 4.9, 4.11). Values are TimingValue-style numerals in KPI.Content,
@@ -137,16 +138,15 @@ export function SessionCompleteCard({ ended, tier, corners }: SessionCompleteCar
           <Point point={ended.wentWell} kind="good" corner={corners?.wentWell ?? null} />
         </>
       )}
-      <div className="pwc-end__actions flex-wrap gap-3">
-        <div className="mr-auto grid min-w-0 gap-1.5 self-center max-sm:basis-full">
-          {/* Pace vs AI: one line, only for an AI comparison of this session (lib/review/aipace.ts aiEndLine). */}
-          {ended.aiLine && (
-            <p className="m-0 text-[15px] font-medium leading-snug" data-ai-line>
-              {ended.aiLine}
-            </p>
-          )}
-          <TimingLegend tier={tier} />
-        </div>
+      {/* Pace vs AI: one line of its own (not in the REC / PB / SB legend), only for an AI comparison of this session
+          (lib/review/aipace.ts aiEndLine). */}
+      {ended.aiLine && (
+        <p className="col-span-full m-0 text-[15px] font-medium leading-snug" data-ai-line>
+          {ended.aiLine}
+        </p>
+      )}
+      <div className="pwc-end__actions">
+        <TimingLegend tier={tier} className="mr-auto self-center" />
         <BadgeChips badges={ended.badges ?? []} />
         <Button
           variant="primary"

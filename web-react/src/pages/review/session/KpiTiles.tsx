@@ -4,10 +4,11 @@
 // track, car and layout). Gains and gaps read "5.8 s faster" / "0.40 s slower": a positive number and a word, never a
 // bare sign (a minus reads as a loss to a beginner).
 //
-// Pace vs AI (AI pace spec 8): one wide tile under the four (or six), "Pace vs AI (difficulty 35)", when the session
+// Pace vs AI (AI pace spec 8): one wide tile under the four (or six), "Pace vs AI · AI difficulty 35", when the session
 // has an AI comparison (F1 with AI cars; hidden for other games, time trials and sessions from before the feature).
-// The gap to the typical AI car in words, the rank on best laps, and a strip of the AI cars' best laps with yours
-// among them (orange = you). Without a comparison: "-" and the reason. Synthetic sessions carry the SYNTHETIC tag.
+// The gap to the typical AI car's best lap in words, the rank on best laps, and a strip of the AI cars' best laps with
+// yours among them (orange = you; a caption says what the marks are where the page shows chart captions). Without a
+// comparison: "-" and the reason. Synthetic sessions carry the SYNTHETIC tag.
 
 import { KPIGroup } from "@heroui-pro/react";
 import { KPI } from "@heroui-pro/react/kpi";
@@ -15,7 +16,7 @@ import type { ReactNode } from "react";
 import { EvidenceChips, Glossary, TimingLegend, TimingTag, TimingValue, Unknown } from "../../../components/ui";
 import type { ChangeText } from "../../../lib/bests";
 import type { SessionDetail } from "../../../lib/endpoints/review";
-import { aiPaceTile, type AiPaceTileView, type AiStrip } from "../../../lib/review/aipace";
+import { AI_STRIP_CAPTION, aiPaceTile, type AiPaceTileView, type AiStrip } from "../../../lib/review/aipace";
 import type { Density } from "../../../lib/review/density";
 import { lapTime, sector } from "../../../lib/format";
 import { useGameCatalog } from "../../../hooks/useGame";
@@ -83,14 +84,15 @@ function Change({ change, greenFaster = false }: { change: ChangeText | null; gr
   );
 }
 
-/** Where a label sits along the strip: centred, or held at an edge so it never runs off the tile. */
-function anchorAt(x: number): { left?: string; right?: string; transform?: string } {
-  if (x < 0.15) return { left: "0" };
-  if (x > 0.85) return { right: "0" };
-  return { left: `${x * 100}%`, transform: "translateX(-50%)" };
+/** Where a label sits along the strip: at its mark, shifted by the same fraction of its own width (left edge at the
+ * left end, centred in the middle, right edge at the right end), so it never runs off the tile at any width. */
+function anchorAt(x: number): { left: string; transform: string } {
+  const pct = Math.min(1, Math.max(0, x)) * 100;
+  return { left: `${pct}%`, transform: `translateX(-${pct}%)` };
 }
 
-/** The AI cars' best laps as ticks, faster on the left, the typical AI car taller, your best as the orange dot. */
+/** The AI cars' best laps as ticks, faster on the left, the typical AI car taller, your best as the orange dot. The
+ * "typical AI" label has a row of its own above "← faster / slower →", so neither can cover the other on a phone. */
 function AiFieldStrip({ strip, refMs, youMs }: { strip: AiStrip; refMs: number | null; youMs: number | null }) {
   return (
     <div role="img" aria-label={strip.label} className="grid min-w-0 gap-1 text-[12px] leading-none text-muted">
@@ -123,21 +125,33 @@ function AiFieldStrip({ strip, refMs, youMs }: { strip: AiStrip; refMs: number |
           />
         )}
       </div>
-      <div className="relative h-4" aria-hidden="true">
-        <span className="absolute top-0 left-0">← faster</span>
-        <span className="absolute top-0 right-0">slower →</span>
-        {strip.ref != null && refMs != null && strip.ref >= 0.15 && strip.ref <= 0.85 && (
-          <span className="absolute top-0 whitespace-nowrap bg-surface px-1 text-foreground" style={anchorAt(strip.ref)}>
+      {strip.ref != null && refMs != null && (
+        <div className="relative h-4" aria-hidden="true">
+          <span className="absolute top-0 whitespace-nowrap text-foreground" style={anchorAt(strip.ref)}>
             typical AI <span className="pw-num text-[13px]">{lapTime(refMs)}</span>
           </span>
-        )}
+        </div>
+      )}
+      <div className="flex justify-between" aria-hidden="true">
+        <span>← faster</span>
+        <span>slower →</span>
       </div>
     </div>
   );
 }
 
 /** The wide "Pace vs AI" tile (spans the row). */
-function AiTile({ view, session, glossary }: { view: AiPaceTileView; session: SessionDetail; glossary: boolean }) {
+function AiTile({
+  view,
+  session,
+  glossary,
+  caption,
+}: {
+  view: AiPaceTileView;
+  session: SessionDetail;
+  glossary: boolean;
+  caption: boolean;
+}) {
   const p = session.ai_pace;
   return (
     <KPI className="col-span-full min-w-0 gap-1.5 rounded-none bg-surface px-4 py-3.5 shadow-none" data-ai-status={view.status}>
@@ -160,7 +174,8 @@ function AiTile({ view, session, glossary }: { view: AiPaceTileView; session: Se
         {(view.strip || view.evidence) && (
           <div className="grid min-w-0 gap-2">
             {view.strip && <AiFieldStrip strip={view.strip} refMs={p?.ai_ref_ms ?? null} youMs={p?.driver_best_ms ?? null} />}
-            {view.evidence && <p className="m-0 text-[13px] leading-snug text-muted">From {view.evidence}</p>}
+            {view.strip && caption && <p className="m-0 text-[12px] leading-snug text-muted">{AI_STRIP_CAPTION}</p>}
+            {view.evidence && <p className="m-0 text-[13px] leading-snug text-muted">{view.evidence}</p>}
           </div>
         )}
       </div>
@@ -170,7 +185,7 @@ function AiTile({ view, session, glossary }: { view: AiPaceTileView; session: Se
 
 export interface KpiTilesProps {
   session: SessionDetail;
-  density: Pick<Density, "kpiTiles" | "glossary">;
+  density: Pick<Density, "kpiTiles" | "glossary"> & Partial<Pick<Density, "chartCaptions" | "summary">>;
   /** Hide the legend (the Sessions preview shows it once below). */
   legend?: boolean;
   /** The wide "Pace vs AI" tile when the session has an AI comparison (default true; the Sessions preview keeps
@@ -189,7 +204,9 @@ export function KpiTiles({ session, density, legend = true, ai: showAi = true }:
   const gained = gainedView(k);
   const g = density.glossary;
   const six = density.kpiTiles === 6;
-  const ai = showAi ? aiPaceTile(session.ai_pace, { synthetic: session.synthetic, advanced: six }) : null;
+  const ai = showAi
+    ? aiPaceTile(session.ai_pace, { synthetic: session.synthetic, advanced: six, brief: density.summary === "core" })
+    : null;
 
   return (
     <div className="grid gap-2">
@@ -241,7 +258,7 @@ export function KpiTiles({ session, density, legend = true, ai: showAi = true }:
             )}
           </Tile>
         )}
-        {ai && <AiTile view={ai} session={session} glossary={g} />}
+        {ai && <AiTile view={ai} session={session} glossary={g} caption={density.chartCaptions === true} />}
       </KPIGroup>
       {legend && status !== "neutral" && (
         <TimingLegend tier={status === "rec" || status === "pb" ? 2 : 1} scope="session" className="px-1" />

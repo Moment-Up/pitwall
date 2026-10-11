@@ -120,7 +120,9 @@ export const GLOSSARY: Readonly<Record<GlossaryTerm, GlossaryEntry>> = {
     title: "Typical AI car",
     text:
       "The middle of the AI field on pace: the median of the AI cars' best clean laps this session, so half of " +
-      "the AI cars were faster and half slower. Opening race laps, pit laps and laps under a safety car are left out.",
+      "the AI cars were faster and half slower. Opening race laps, pit laps and laps under a safety car are left out. " +
+      "Pace vs AI compares your best lap with its best lap, not race positions. AI difficulty is the game's AI " +
+      "Difficulty setting (0-110) for this session.",
   },
   ai_difficulty: {
     title: "AI difficulty",

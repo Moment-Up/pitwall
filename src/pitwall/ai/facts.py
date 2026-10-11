@@ -27,6 +27,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from pitwall import games
+from pitwall.analysis.ai_level import MIN_SPAN
 from pitwall.analysis.coaching import is_incident
 from pitwall.analysis.laps import LapFlag
 from pitwall.analysis.strategy import fuel_estimate, pit_window, tyre_estimate
@@ -132,6 +133,9 @@ AI_PACE_REASONS = {
     "time_trial": "a time trial has no AI opponents",
 }
 AI_LEVEL_BASIS = {"measured": "measured", "estimate_other_tracks": "estimated from other tracks"}
+NO_AI_COMPARISON = (
+    "This session has no AI comparison: Pitwall compares against the AI only in F1 sessions raced against AI cars."
+)
 _ORDINAL_SUFFIX = {1: "st", 2: "nd", 3: "rd"}
 
 
@@ -232,8 +236,12 @@ def _add_ai_pace(fs: FactSheet, a: dict[str, Any], synthetic: bool) -> None:
         fs.add("ai", text + note, data, say=say)
         return
     reason = AI_PACE_REASONS.get(str(status), "not enough data")
+    if status == "too_few_ai_cars" and isinstance(n, int):
+        reason += f" (saw {n})"
+    if a.get("online") is True and status == "too_few_ai_cars":
+        reason += "; this was an online session with other players"
     text = f"{AI_PACE_PREFIX}: not available ({reason})."
-    fs.add("ai", text + note, data, say=text)
+    fs.add("ai", text + note, data, say=f"No comparison with the AI this session: {reason}.")
 
 
 def _add_ai_level(fs: FactSheet, s: dict[str, Any], sug: dict[str, Any]) -> None:
@@ -243,13 +251,21 @@ def _add_ai_level(fs: FactSheet, s: dict[str, Any], sug: dict[str, Any]) -> None
     track = key.get("track_name") or s.get("track_name") or "this track"
     rng = sug.get("range") or [None, None]
     levels = ", ".join(str(v) for v in sug.get("levels_used") or [])
+    latest = sug.get("latest_level")
+    gap_ms = sug.get("latest_gap_ms")
     data: dict[str, Any] = {
         "level": sug.get("level"),
         "range_lo": rng[0],
         "range_hi": rng[1],
         "sessions_used": sug.get("sessions_used"),
-        "latest_level": sug.get("latest_level"),
+        "latest_level": latest,
         "latest_gap_pct": sug.get("latest_gap_pct"),
+        "latest_gap_s": int(gap_ms) / 1000 if isinstance(gap_ms, int) else None,
+        "next_level": sug.get("next_level"),
+        # the levels the driver-facing sentence may name for the next race here (ai_level.MIN_SPAN either side)
+        "min_span": MIN_SPAN,
+        "level_below": latest - MIN_SPAN if isinstance(latest, int) else None,
+        "level_above": latest + MIN_SPAN if isinstance(latest, int) else None,
         "slope_pct_per_level": sug.get("slope_pct_per_level"),
         "basis": sug.get("basis"),
         "confidence": sug.get("confidence"),
@@ -262,9 +278,10 @@ def _add_ai_level(fs: FactSheet, s: dict[str, Any], sug: dict[str, Any]) -> None
         basis = AI_LEVEL_BASIS.get(str(sug.get("basis")), str(sug.get("basis")))
         bound = {"at_least": " or higher", "at_most": " or lower"}.get(str(sug.get("bound")), "")
         sources = ", ".join(sug.get("slope_sources") or [])
+        span = f"range {rng[0]}-{rng[1]}; " if rng[0] is not None and rng[1] is not None else ""
         text = (
             f"{AI_LEVEL_PREFIX} suggestion at {track} ({key.get('car_class') or 'unknown class'} {category}, "
-            f"{key.get('weather_class') or 'unknown weather'}): {sug['level']}{bound} (range {rng[0]}-{rng[1]}; "
+            f"{key.get('weather_class') or 'unknown weather'}): {sug['level']}{bound} ({span}"
             f"{basis} from {sug.get('sessions_used')} sessions at levels {levels}"
             + (f", slope from {sources}" if sources else "")
             + f"; confidence {sug.get('confidence')})."
@@ -272,6 +289,11 @@ def _add_ai_level(fs: FactSheet, s: dict[str, Any], sug: dict[str, Any]) -> None
     else:
         g = sug.get("latest_gap_pct")
         gap = f"{float(g):+.2f}%" if isinstance(g, int | float) else "unknown"
+        if isinstance(gap_ms, int):
+            gap += f" ({gap_ms / 1000:+.3f}s)"
+        nxt = sug.get("next_level")
+        if nxt is not None:
+            gap += f"; next race here at {nxt} {'or lower' if nxt < (latest or 0) else 'or higher'} allows a fit"
         if len(sug.get("levels_used") or []) > 1:
             text = (
                 f"{AI_LEVEL_PREFIX} suggestion at {track}: none yet; difficulties {levels} raced here show no "

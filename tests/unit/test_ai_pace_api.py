@@ -94,6 +94,8 @@ SUGGESTION_KEYS = {
     "note",
     "latest_level",
     "latest_gap_pct",
+    "latest_gap_ms",
+    "next_level",
     "target_gap_pct",
     "sessions_used",
     "levels_used",
@@ -191,6 +193,13 @@ def test_upsert_guard(store: tuple[Database, DbWriter]) -> None:
     assert set(stored) == SESSION_AI_PACE_KEYS  # exactly the SessionAiPace contract
     assert stored["online"] is False and stored["excluded"] == {"race_lap_1": 7}
     assert stored["ai_bests_ms"] == sorted(BESTS)
+    # a newer method replaces any row (a backfill re-runs the improved lap selection), an older one never does
+    newer = {**row, "ai_laps": 1, "gap_ms": 4, "run_id": "backfill2", "method_version": row["method_version"] + 1}
+    assert writer.call(lambda c: repo.upsert_session_ai_pace(c, sid, newer))
+    older = {**row, "ai_laps": 99, "gap_ms": 5, "run_id": "old-process"}
+    assert not writer.call(lambda c: repo.upsert_session_ai_pace(c, sid, older))
+    with db.read() as c:
+        assert repo.get_session_ai_pace(c, sid)["gap_ms"] == 4  # type: ignore[index]
 
 
 def test_driver_points_scope_and_order(store: tuple[Database, DbWriter]) -> None:
@@ -224,6 +233,24 @@ def test_driver_points_scope_and_order(store: tuple[Database, DbWriter]) -> None
     assert [p["session_id"] for p in austria] == ["old", "nolap", "new"]
     assert [p["session_id"] for p in newest] == ["nolap", "new"]
     assert f2 == [] and quali == []
+    # raced against the AI but not comparable: listed apart, with the reason (never synthetic, replays or others)
+    with db.read() as c:
+        unusable = repo.driver_ai_pace_unusable(c, james, track_id="f1:17")
+        none_in_quali = repo.driver_ai_pace_unusable(c, james, category="qualifying")
+    assert [(u["session_id"], u["status"]) for u in unusable] == [
+        ("few", "too_few_ai_cars"),
+        ("unk", "unknown_difficulty"),
+    ]
+    assert unusable[0] == {
+        "session_id": "few",
+        "started_unix": 4300.0,
+        "session_category": "race",
+        "ai_difficulty": 35,
+        "status": "too_few_ai_cars",
+        "online": False,
+        "ai_cars": 3,
+    }
+    assert none_in_quali == []
 
 
 # ---------------------------------------------------------------------------------------------- API
@@ -247,10 +274,15 @@ def test_driver_ai_pace_endpoint(api: tuple[TestClient, SimpleNamespace]) -> Non
     make_session(rt.writer, "m", james, track="f1:0", name="Melbourne", started=2000.0)
     store_pace(rt.writer, "a")
     store_pace(rt.writer, "m", driver_ms=72_000)
+    make_session(rt.writer, "f", james, started=3000.0)
+    store_pace(rt.writer, "f", bests=BESTS[:2])  # too few AI cars: not a point, but listed as unusable
     body = client.get(f"/api/drivers/{james}/ai-pace").json()
-    assert set(body) == {"driver_id", "method_version", "target_gap_pct", "scope", "points", "suggestions"}
+    assert set(body) == {"driver_id", "method_version", "target_gap_pct", "scope", "points", "suggestions", "unusable"}
     assert body["scope"] == {"game": None, "track_id": None, "car_class": None, "category": None}
-    assert body["method_version"] == 1 and body["target_gap_pct"] == 0
+    assert body["method_version"] == 2 and body["target_gap_pct"] == 0
+    assert [(u["session_id"], u["status"], u["ai_cars"]) for u in body["unusable"]] == [("f", "too_few_ai_cars", 2)]
+    melbourne = client.get(f"/api/drivers/{james}/ai-pace", params={"track_id": "f1:0"}).json()
+    assert melbourne["unusable"] == []
     assert [p["session_id"] for p in body["points"]] == ["a", "m"]
     assert [s["key"]["track_name"] for s in body["suggestions"]] == ["Melbourne", "Austria"]  # newest first
     assert all(set(s) == SUGGESTION_KEYS for s in body["suggestions"])
@@ -339,6 +371,13 @@ def test_worker_drops_ai_jobs_when_full_never_blocking(store: tuple[Database, Db
         ("what AI level should I use?", "ai_level"),
         ("what difficulty should I race at", "ai_level"),
         ("turn the AI up?", "ai_level"),
+        ("is the AI too hard?", "ai_level"),
+        ("is the AI too easy for Sam?", "ai_level"),
+        ("how hard should I set the AI?", "ai_level"),
+        ("should I make the AI harder?", "ai_level"),
+        ("what AI should my son use", "ai_level"),
+        ("what should I set the AI to?", "ai_level"),
+        ("are the bots too slow", "ai_level"),
         ("how's my pace", "lap_times"),
         ("compare to my best", "compare"),
     ],
@@ -397,9 +436,13 @@ async def test_facts_are_grounded_and_radio_phrasing(store: tuple[Database, DbWr
         "8th of 8 on best laps."
     )
     assert level.text == (
-        "AI level suggestion at Austria: none yet; only difficulty 35 raced here, gap to the typical AI car +5.06%."
+        "AI level suggestion at Austria: none yet; only difficulty 35 raced here, gap to the typical AI car +5.06% "
+        "(+3.772s); next race here at 30 or lower allows a fit."
     )
-    assert level.say is not None and level.say.startswith("At AI 35 your best lap here was 5.1% slower")
+    assert level.say == (
+        "At AI 35 your best lap here was 3.8 s (5.1%) slower than the typical AI car's best lap, so a lower level "
+        "should give closer racing. Race here once more at AI 30 or lower and Pitwall can suggest a level."
+    )
     for f in ai:
         assert check_grounding(f"{f.plain} [{f.id}]", [f]).ok, f.plain
     engineer = RaceEngineer(None)
@@ -413,8 +456,15 @@ async def test_facts_are_grounded_and_radio_phrasing(store: tuple[Database, DbWr
     )
     assert radio_answer("ai_level", sheet) == (
         "Not enough levels yet. At 35 you're 5.1 percent slower than the AI here. "
-        "Try a lower level, then I can suggest one."
+        "Try 30 or lower next time, then I can suggest one."
     )
+    assert check_grounding(radio_answer("ai_level", sheet) or "", [level]).ok
+    # parents' words reach the AI level answer, and the AI facts are in every general answer's topics
+    for q in ("is the AI too hard?", "should I make the AI harder?", "how hard should I set the AI?"):
+        ans = await engineer.answer(q, sheet, use_llm=False)
+        assert ans.intent == "ai_level" and ans.text == level.say, q
+    summary = await engineer.answer("give me a debrief", sheet, use_llm=False)
+    assert pace.say in summary.text and summary.grounded
     det = deterministic_answer(detect_intent("am I faster than the AI"), [pace], sheet)
     assert check_grounding(det, [pace]).ok
 
@@ -454,9 +504,13 @@ def test_other_statuses_say_why(store: tuple[Database, DbWriter]) -> None:
     (f,) = [f for f in sheet.facts if f.topic == "ai"]
     assert f.text == (
         "Pace vs AI this session: not available (too few AI laps were seen: Pitwall needs clean laps from at least "
-        "5 AI cars)."
+        "5 AI cars (saw 2))."
     )
-    assert radio_answer("ai_pace", sheet) == f.text and check_grounding(f"{f.plain} [{f.id}]", [f]).ok
+    assert f.say == (
+        "No comparison with the AI this session: too few AI laps were seen: Pitwall needs clean laps from at least "
+        "5 AI cars (saw 2)."
+    )
+    assert radio_answer("ai_pace", sheet) == f.say and check_grounding(f"{f.plain} [{f.id}]", [f]).ok
     store_pace(writer, sid, driver_ms=None, run_id="run1")
     sheet = build_fact_sheet(SessionAnalyzer(db).analyse(sid))  # type: ignore[arg-type]
     (f,) = [f for f in sheet.facts if f.topic == "ai"]
@@ -478,4 +532,29 @@ def test_level_with_the_typical_ai_car_wording(store: tuple[Database, DbWriter])
     assert radio_answer("ai_pace", sheet) == (
         "Against the AI at 35: level with the typical AI car, position 5 of 8 on best laps."
     )
+    assert check_grounding(f"{f.plain} [{f.id}]", [f]).ok
+
+
+async def test_no_ai_comparison_answer_is_honest(store: tuple[Database, DbWriter]) -> None:
+    db, writer = store
+    sid = make_session(writer, "plain", None)  # no AI pace row: not F1 against AI cars, or from before the feature
+    sheet = build_fact_sheet(SessionAnalyzer(db).analyse(sid))  # type: ignore[arg-type]
+    assert not [f for f in sheet.facts if f.topic == "ai"]
+    for q in ("how am I doing against the AI?", "is the AI too hard?"):
+        ans = await RaceEngineer(None).answer(q, sheet, use_llm=False)
+        assert ans.text == (
+            "This session has no AI comparison: Pitwall compares against the AI only in F1 sessions raced against "
+            "AI cars."
+        )
+        assert "laps" not in ans.text and check_grounding(ans.text, sheet.facts).ok
+
+
+def test_online_session_says_so(store: tuple[Database, DbWriter]) -> None:
+    db, writer = store
+    sid = make_session(writer, "on", None)
+    row = store_pace(writer, sid, bests=BESTS[:1])
+    writer.call(lambda c: repo.upsert_session_ai_pace(c, sid, {**row, "online": True}))
+    sheet = build_fact_sheet(SessionAnalyzer(db).analyse(sid))  # type: ignore[arg-type]
+    (f,) = [f for f in sheet.facts if f.topic == "ai"]
+    assert f.say is not None and f.say.endswith("(saw 1); this was an online session with other players.")
     assert check_grounding(f"{f.plain} [{f.id}]", [f]).ok

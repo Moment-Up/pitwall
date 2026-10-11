@@ -2,12 +2,13 @@
   "_fixture": {
     "source": "AI pace design spec section 6 contract shape; values from the spec prototype (spec_algo.py, section 3.5 rules) run on a read-only copy of the owner's real PS5 F1 25 capture 20261010-191501, 20261010-203637, 20261010-221749 (two scenario runs) and 20261011-011513; session id, start time, track and car from the live pitwall service's session list (recorded-sessions-list.json). Not yet an API response: the backend route did not exist when this was written.",
     "recorded": "2026-10-11T17:30:00+01:00",
-    "what": "GET /api/drivers/1/ai-pace (no scope): the driver's 5 races against the AI (Monza 205007 is too_few_ai_cars, so not a point); every key has one level, so every suggestion is direction_only (spec section 5 table).",
-    "tier": "contract"
+    "what": "GET /api/drivers/1/ai-pace (no scope): the driver's 5 races against the AI (Monza 205007 is too_few_ai_cars, so not a point: it is in `unusable`); every key has one level, so every suggestion is direction_only (spec section 5 table).",
+    "tier": "contract",
+    "method_2": "Method 2 (2026-10-11 review fixes: results skip from LapData, AI takeover, in-lap = stint end + 1, 1.3 s timing, red flag, fast outlier; suggestion latest_gap_ms / next_level / bound without range; unusable): AI values regenerated from the real backend fed the same capture over loopback UDP (scratch server)."
   },
   "response": {
     "driver_id": 1,
-    "method_version": 1,
+    "method_version": 2,
     "target_gap_pct": 0,
     "scope": {
       "game": null,
@@ -25,7 +26,6 @@
         "car_id": "f1:team:41",
         "car_name": "F1 Generic",
         "car_class": "F1 World",
-        "session_category": "race",
         "weather_class": "dry",
         "online": false,
         "status": "ok",
@@ -37,7 +37,8 @@
         "gap_ms": 3772,
         "gap_pct": 5.06,
         "field_rank": 20,
-        "field_size": 20
+        "field_size": 20,
+        "session_category": "race"
       },
       {
         "session_id": "d431ac960dae",
@@ -48,7 +49,6 @@
         "car_id": "f1:team:41",
         "car_name": "F1 Generic",
         "car_class": "F1 World",
-        "session_category": "race",
         "weather_class": "dry",
         "online": false,
         "status": "ok",
@@ -60,7 +60,8 @@
         "gap_ms": 7397,
         "gap_pct": 7.67,
         "field_rank": 20,
-        "field_size": 20
+        "field_size": 20,
+        "session_category": "race"
       },
       {
         "session_id": "a100cbc9b5bd",
@@ -71,7 +72,6 @@
         "car_id": "f1:team:7",
         "car_name": "Haas",
         "car_class": "F1 Modern",
-        "session_category": "race",
         "weather_class": "dry",
         "online": false,
         "status": "ok",
@@ -83,7 +83,8 @@
         "gap_ms": -3744,
         "gap_pct": -4.96,
         "field_rank": 1,
-        "field_size": 18
+        "field_size": 18,
+        "session_category": "race"
       },
       {
         "session_id": "332904dbe3de",
@@ -94,7 +95,6 @@
         "car_id": "f1:team:7",
         "car_name": "Haas",
         "car_class": "F1 Modern",
-        "session_category": "race",
         "weather_class": "dry",
         "online": false,
         "status": "ok",
@@ -106,7 +106,8 @@
         "gap_ms": -4910,
         "gap_pct": -6.51,
         "field_rank": 1,
-        "field_size": 18
+        "field_size": 18,
+        "session_category": "race"
       },
       {
         "session_id": "1e7271f70c5e",
@@ -117,19 +118,19 @@
         "car_id": "f1:team:214",
         "car_name": "team_214",
         "car_class": "F2",
-        "session_category": "race",
         "weather_class": "dry",
         "online": false,
         "status": "ok",
         "ai_difficulty": 35,
         "ai_ref_ms": 98807,
-        "ai_best_ms": 97396,
+        "ai_best_ms": 97642,
         "ai_cars": 21,
         "driver_best_ms": 95588,
         "gap_ms": -3219,
         "gap_pct": -3.26,
         "field_rank": 1,
-        "field_size": 22
+        "field_size": 22,
+        "session_category": "race"
       }
     ],
     "suggestions": [
@@ -151,14 +152,16 @@
         "note": null,
         "latest_level": 35,
         "latest_gap_pct": -3.26,
-        "target_gap_pct": 0,
+        "latest_gap_ms": -3219,
+        "next_level": 40,
+        "target_gap_pct": 0.0,
         "sessions_used": 1,
         "levels_used": [
           35
         ],
         "slope_pct_per_level": null,
         "slope_sources": [],
-        "text": "At AI 35 your best lap here was 3.3% faster than the typical AI car, so try a higher level. Race at a couple of difficulty levels here and Pitwall can suggest one."
+        "text": "At AI 35 your best lap here was 3.2 s (3.3%) faster than the typical AI car's best lap, so try a higher level. Race here once more at AI 40 or higher and Pitwall can suggest a level."
       },
       {
         "key": {
@@ -178,14 +181,16 @@
         "note": null,
         "latest_level": 31,
         "latest_gap_pct": -6.51,
-        "target_gap_pct": 0,
+        "latest_gap_ms": -4910,
+        "next_level": 36,
+        "target_gap_pct": 0.0,
         "sessions_used": 2,
         "levels_used": [
           31
         ],
         "slope_pct_per_level": null,
         "slope_sources": [],
-        "text": "At AI 31 your best lap here was 6.5% faster than the typical AI car, so try a higher level. Race at a couple of difficulty levels here and Pitwall can suggest one."
+        "text": "At AI 31 your best lap here was 4.9 s (6.5%) faster than the typical AI car's best lap, so try a higher level. Race here once more at AI 36 or higher and Pitwall can suggest a level."
       },
       {
         "key": {
@@ -205,14 +210,16 @@
         "note": null,
         "latest_level": 35,
         "latest_gap_pct": 7.67,
-        "target_gap_pct": 0,
+        "latest_gap_ms": 7397,
+        "next_level": 30,
+        "target_gap_pct": 0.0,
         "sessions_used": 1,
         "levels_used": [
           35
         ],
         "slope_pct_per_level": null,
         "slope_sources": [],
-        "text": "At AI 35 your best lap here was 7.7% slower than the typical AI car, so a lower level should give closer racing. Race at a couple of difficulty levels here and Pitwall can suggest one."
+        "text": "At AI 35 your best lap here was 7.4 s (7.7%) slower than the typical AI car's best lap, so a lower level should give closer racing. Race here once more at AI 30 or lower and Pitwall can suggest a level."
       },
       {
         "key": {
@@ -232,14 +239,27 @@
         "note": null,
         "latest_level": 35,
         "latest_gap_pct": 5.06,
-        "target_gap_pct": 0,
+        "latest_gap_ms": 3772,
+        "next_level": 30,
+        "target_gap_pct": 0.0,
         "sessions_used": 1,
         "levels_used": [
           35
         ],
         "slope_pct_per_level": null,
         "slope_sources": [],
-        "text": "At AI 35 your best lap here was 5.1% slower than the typical AI car, so a lower level should give closer racing. Race at a couple of difficulty levels here and Pitwall can suggest one."
+        "text": "At AI 35 your best lap here was 3.8 s (5.1%) slower than the typical AI car's best lap, so a lower level should give closer racing. Race here once more at AI 30 or lower and Pitwall can suggest a level."
+      }
+    ],
+    "unusable": [
+      {
+        "session_id": "33d6d86134af",
+        "started_unix": 1791661807.0459762,
+        "ai_difficulty": 35,
+        "status": "too_few_ai_cars",
+        "online": false,
+        "ai_cars": 2,
+        "session_category": "race"
       }
     ]
   }

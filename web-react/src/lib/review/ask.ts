@@ -39,6 +39,14 @@ export const SUGGESTIONS: readonly string[] = [
   "Give me a summary of this session.",
 ];
 
+/** The pace vs AI question ("against the AI" is an ai_pace intent; the answer also names the suggested AI level). */
+export const AI_SUGGESTION = "How am I doing against the AI?";
+
+/** The questions to start with for a session: the AI one only when the session was raced against the AI. */
+export function askSuggestions(opts: { aiPace?: boolean } = {}): readonly string[] {
+  return opts.aiPace ? [...SUGGESTIONS.slice(0, 3), AI_SUGGESTION, ...SUGGESTIONS.slice(3)] : SUGGESTIONS;
+}
+
 /** Where a stored answer came from: the history keeps `fallback` and `model`, not the grounding issues, so an LLM
  * failure and "LLM off" both read as deterministic. */
 export function historySource(row: Pick<EngineerHistoryRow, "fallback" | "model" | "grounded">): AnswerSource {

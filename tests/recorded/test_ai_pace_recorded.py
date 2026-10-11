@@ -124,20 +124,23 @@ EXPECTED: dict[str, tuple[Any, ...]] = {
         None,
         None,
         None,
-        3,
-        3,
-        {"race_lap_1": 19, "not_observed": 19, "timing_inconsistent": 16},
+        2,
+        2,
+        # 17 laps filled in at the results skip (LapData: finished away from the line); car 1's lap 3 was filled in
+        # 150 m from the line and only 2.05 s early, so the old 2.5 s timing check kept it
+        {"race_lap_1": 19, "not_observed": 19, "results_skip": 17},
     ),
-    "1042067171392571216": (  # Melbourne, F2: the results fill-in caught by timing
+    "1042067171392571216": (  # Melbourne, F2: every AI car's last lap was filled in at the results skip
         "ok",
         35,
         98_807,
-        97_396,
+        # the fastest lap an AI car drove; car 0's 1:37.396 was filled in 114 m from the line (1.70 s early)
+        97_642,
         98_651,
         98_915,
         21,
-        22,
-        {"race_lap_1": 21, "timing_inconsistent": 20},
+        21,
+        {"race_lap_1": 21, "results_skip": 21},
     ),
     "10888533858520381703": (  # Austria 71-lap scenario from lap 62
         "ok",
@@ -147,8 +150,9 @@ EXPECTED: dict[str, tuple[Any, ...]] = {
         75_060,
         75_917,
         17,
-        119,
-        {"not_observed": 94, "pit_in_out": 2, "flashback": 19, "timing_inconsistent": 15},
+        117,
+        # pit laps: stint endLap + 1 / + 2 and LapData's pit lane (cars 7 and 14: in-laps 62 / 65, out-laps 63 / 66)
+        {"not_observed": 94, "results_skip": 16, "pit_in_out": 3, "flashback": 19},
     ),
     "5898558813253896417": (  # the same scenario, restarted
         "ok",
@@ -158,11 +162,12 @@ EXPECTED: dict[str, tuple[Any, ...]] = {
         75_011,
         75_903,
         17,
-        117,
-        {"not_observed": 94, "pit_in_out": 2, "flashback": 19, "timing_inconsistent": 16},
+        116,
+        {"not_observed": 94, "results_skip": 16, "pit_in_out": 3, "flashback": 19},
     ),
     "15101521888722876682": ("too_few_ai_cars", 41, None, None, None, None, 0, 0, {}),  # online one-shot quali
-    "7834815583073984766": ("too_few_ai_cars", 41, None, None, None, None, 1, 4, {"race_lap_1": 1}),  # online race
+    # online race: car 19 was a human's (aiControlled 0) until the AI took it over during lap 3 (t=262.6 s)
+    "7834815583073984766": ("too_few_ai_cars", 41, None, None, None, None, 1, 2, {"race_lap_1": 1, "not_ai_driven": 2}),
 }
 CAPTURES = (
     "20261010-191501_udp20777.pwcap",

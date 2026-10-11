@@ -68,7 +68,13 @@ export function AskPage({ route }: PageProps) {
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      <AskPanel key={sessionId ?? "none"} sessionId={sessionId} initialQuestion={question} header={picker} />
+      <AskPanel
+        key={sessionId ?? "none"}
+        sessionId={sessionId}
+        initialQuestion={question}
+        header={picker}
+        aiPace={(rows ?? []).some((r) => r.id === sessionId && r.ai_difficulty != null)}
+      />
     </div>
   );
 }

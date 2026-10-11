@@ -421,19 +421,24 @@ describe("Session complete card: pace vs AI (AI pace spec 8)", () => {
     return driveModel({ snap, connected: true, nowS: newestT(s) + 1, driver: JAMES });
   }
 
-  it("one line when the session has an ok comparison: the gap in words and the rank", () => {
+  it("one line when the session has an ok comparison: the gap in words and the rank, on best laps", () => {
     const m = ended({});
-    expect(m.ended?.aiLine).toBe("Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20");
-    const card = visible(renderToStaticMarkup(createElement(SessionCompleteCard, { ended: m.ended!, tier: m.tier })));
-    expect(card).toContain("Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20");
+    expect(m.ended?.aiLine).toBe("AI difficulty 35: best lap 3.8 s slower than the typical AI car's best lap · 20th of 20 on best laps");
+    const html = renderToStaticMarkup(createElement(SessionCompleteCard, { ended: m.ended!, tier: m.tier }));
+    const card = visible(html);
+    expect(card).toContain("AI difficulty 35: best lap 3.8 s slower than the typical AI car's best lap · 20th of 20 on best laps");
     expect(card).toContain("Review this session");
+    // a row of its own, before the actions (not inside the REC / PB / SB legend's block)
+    const line = html.indexOf("data-ai-line");
+    expect(line).toBeGreaterThan(-1);
+    expect(line).toBeLessThan(html.indexOf("pwc-end__actions"));
   });
 
   it("no line without a comparison, for another session, or for a status other than ok; no live AI widget", () => {
     for (const m of [ended(null), ended({ session_id: "another" }), ended({ status: "too_few_ai_cars" }), ended({ status: "unknown_difficulty", ai_difficulty: null })]) {
       expect(m.ended?.aiLine).toBeNull();
       const card = visible(renderToStaticMarkup(createElement(SessionCompleteCard, { ended: m.ended!, tier: m.tier })));
-      expect(card).not.toContain("Against the AI");
+      expect(card).not.toContain("AI difficulty");
     }
     // on track, Drive shows nothing about the AI
     const onTrack = fixture("recorded-suzuka-on-track-brake-ahead");
@@ -447,9 +452,7 @@ describe("Session complete card: pace vs AI (AI pace spec 8)", () => {
   });
 
   it("synthetic data says so", () => {
-    expect(ended({ synthetic: true }).ended?.aiLine).toBe(
-      "Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20 · synthetic data",
-    );
+    expect(ended({ synthetic: true }).ended?.aiLine).toBe("AI difficulty 35: best lap 3.8 s slower than the typical AI car's best lap · 20th of 20 on best laps · synthetic data");
   });
 });
 

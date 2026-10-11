@@ -306,28 +306,41 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
   sessions). Per driver x track x car class x session category x weather
   over time (`GET /api/drivers/{id}/ai-pace`), a suggested AI level in three tiers (measured fit over at least two
   levels five apart, an estimate from the driver's own slope at other tracks, or direction only), engineer facts and
-  two deterministic radio intents ("how am I doing against the AI?", "what AI level should I use?"), Review ›
-  Session summary tile, Review › Progress "Against the AI", Review › Coaching "Suggested AI level", and one line on
-  Drive's Session complete card. Code: `adapters/f1/adapter.py` (`_on_session_history`), `core/ai_pace.py`
+  two deterministic radio intents ("how am I doing against the AI?", "what AI level should I use?", and parents'
+  words such as "is the AI too hard?"), Review › Session summary tile, Review › Progress "Against the AI" (a race that
+  could not be compared says why), Review › Coaching "Suggested AI difficulty" (a bound has no range; with one level
+  raced, the next level to try, five away), and one line on Drive's Session complete card. Code: `adapters/f1/adapter.py` (`_on_session_history`), `core/ai_pace.py`
   (ingest-side collector, worker processor, backfill), `analysis/ai_pace.py`, `analysis/ai_level.py`.
 - Ingest stays O(1): a Session History packet costs a byte-slice compare; a car's lap list is decoded and emitted
-  about once per lap (about 4 % of history packets). The summary runs on the analysis worker after every lap of the
-  player and at the session's end; a full queue drops the AI job (never a lap).
-- What real data showed (six PS5 F1 25 captures, 2026-10-10/11): the first 2-3 Session packets of every session have
-  an unfilled tail (aiDifficulty 0, gearboxAssist 0), so a reading only counts when gearboxAssist is 1-3, and the
-  session's level needs 10 readings with a 90 % share; F1 25 fills in the other cars' final laps at once when the
-  driver skips to the results (two of four races), which the completion-timing check rejects; scenario modes
-  pre-fill history laps (rejected as not observed); online lobbies report the lobby's level; Session History of the
-  previous session arrives at the start of a new one and is ignored.
+  about once per lap (about 4 % of history packets). A LapData packet adds two strided 22-byte slices (every car's
+  result and pit status) and a compare; cars are looked at one by one only when one changed. The summary runs on the
+  analysis worker after every lap of the player and at the session's end; a full queue drops the AI job (never a
+  lap).
+- What real data showed (PS5 F1 25 captures, 2026-10-10/11): the first 2-3 Session packets of every session have an
+  unfilled tail (aiDifficulty 0, gearboxAssist 0), so a reading only counts when gearboxAssist is 1-3; once ignored,
+  every session read a single level (16 sessions), so a second level marks the session "difficulty changed". When
+  the driver skips to the results, F1 25 marks every remaining car finished where it is, one LapData packet after the
+  player's own finish (7 races; cars up to 3.1 km from the line), and fills in their laps in progress: those laps are
+  left out (`results_skip`: a result leaving "active" more than 50 m past the line; cars that really finish flip
+  1-24 m past it), and the 1.3 s completion-timing check (driven laps agree within 1.1 s) is the backstop. A stint's
+  endLap is the lap before the in-lap (two AI stops checked against LapData's pit status): the in- and out-laps are
+  endLap + 1 and + 2, and every lap LapData shows a car in the pit lane is a pit lap too. In a real online lobby a
+  human's car was taken over by the AI mid-race (its slot read aiControlled 0, then 1): the laps up to the takeover
+  are left out (`not_ai_driven`). Scenario modes pre-fill history laps (rejected as not observed); online lobbies
+  report the lobby's level; Session History of the previous session arrives at the start of a new one and is
+  ignored. Red flags (until the next lights out) and laps faster than 90 % of the typical AI best are left out
+  too (defensive: no real capture had either).
 - **Evidence tier: recorded + synthetic + desktop browser.** Recorded fixtures (Austria excerpt: level 35, 19 AI cars,
   every LapData lap time equals the history time; Monza excerpt: too few AI cars), an opt-in acceptance test on the
   full captures (`PW_AIPACE_REAL_CAPTURES=<dir>`: exact ms for Austria +5.06 % / rank 20 of 20, Silverstone +7.67 %,
-  Melbourne F2 -3.26 % / rank 1 of 22, the Austria scenario -4.96 % / -6.51 %, Monza and the online Suzuka lobby
-  too few AI cars), a synthetic pipeline test with known injected laps, and the captures streamed over loopback UDP
-  into a scratch server and checked in headless Chromium at iPad and phone sizes. **Unverified:** a live session
-  through the service, a real safety car or VSC (the SC exclusion is synthetic-only evidence), time trial, the
-  format 2026 Season Pack (spec-only), and the measured / estimated suggestion tiers on real data (every track and
-  class the owner has raced so far has a single level, so every real suggestion is direction only).
+  Melbourne F2 -3.26 % / rank 1 of 22 (fastest AI 1:37.642, the fastest lap an AI car drove), the Austria scenario
+  -4.96 % / -6.51 %, Monza and the online Suzuka lobby too few AI cars), every accepted AI lap cross-checked against
+  every car's LapData (448 laps: the same time, never in the pit lane, never ended off the line), a synthetic
+  pipeline test with known injected laps, and the captures streamed over loopback UDP into a scratch server and
+  checked in headless Chromium at iPad and phone sizes. **Unverified:** a live session through the service, a real
+  safety car, VSC or red flag (synthetic or unit evidence only), time trial, the format 2026 Season Pack
+  (spec-only), and the measured / estimated suggestion tiers on real data (every track and class the owner has raced
+  so far has a single level, so every real suggestion is direction only).
 - Follow-ups: the field model still treats slots past numActiveCars as unknown (a real scenario had an active AI car
   in slot 18 with numActiveCars 17; the AI pace path uses the slot flag); assists stored from the unfilled Session
   tail at the start of a session should get the same gearboxAssist guard; car-performance mode and career R&D are not

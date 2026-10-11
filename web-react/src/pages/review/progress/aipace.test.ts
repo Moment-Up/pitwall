@@ -1,6 +1,6 @@
 // Pace vs AI difficulty rendered (static markup in plain node, no DOM library) from the AI pace contract fixtures:
 // real values from the owner's PS5 F1 25 captures in the frozen contract's shapes (lib/review/testkit.ts aiFixtures).
-// Summary tile "Pace vs AI (difficulty 31)", Progress "Against the AI", Coaching "Suggested AI level". Data is put in
+// Summary tile "Pace vs AI · AI difficulty 31", Progress "Against the AI", Coaching "Suggested AI difficulty". Data is put in
 // the request cache first, so nothing is fetched. Checks: gaps in words, unknown is "-" with the reason, no number
 // without the driver's own data, synthetic sessions excluded, the cards left out on an older server and for GT7.
 import { createElement, type ComponentType } from "react";
@@ -81,15 +81,16 @@ function route(page: "progress" | "coaching", q = `driver=1&track=${encodeURICom
 }
 
 /** The keys the pages ask for. `ai`: the AI pace answer, a 404 like an older server, or nothing (still loading). */
-async function seed(opts: { ai: DriverAiPace | "missing" | null; track?: string; car?: string }): Promise<void> {
+async function seed(opts: { ai: DriverAiPace | "missing" | null; track?: string; car?: string; driverId?: number }): Promise<void> {
   cache.clear();
+  const id = opts.driverId ?? 1;
   const rows = fixtures.sessions();
-  cache.set(keys.driverSessions(1), rows);
+  cache.set(keys.driverSessions(id), rows);
   cache.set(keys.sessions, rows);
   const scope = resolveScope(scopeChoices(rows, { includeSynthetic: false }), { track: opts.track ?? AUSTRIA, car: opts.car ?? HAAS })!;
-  cache.set(keys.progress(1, scopeQuery(scope, { corners: true })), fixtures.progressAustriaHaas());
+  cache.set(keys.progress(id, scopeQuery(scope, { corners: true })), fixtures.progressAustriaHaas());
   cache.set(keys.analysis("332904dbe3de"), fixtures.austriaAnalysis());
-  const k = keys.aiPace(1, aiPaceQuery({ game: scope.track.game, trackId: scope.track.trackId }));
+  const k = keys.aiPace(id, aiPaceQuery({ game: scope.track.game, trackId: scope.track.trackId }));
   if (opts.ai === "missing") await cache.load(k, () => Promise.reject(new ApiError(404, "Not Found"))).catch(() => {});
   else if (opts.ai) cache.set(k, opts.ai);
 }
@@ -108,13 +109,14 @@ describe("Summary tile: Pace vs AI", () => {
     const html = tiles(withAi(aiFixtures.austriaScenario()));
     const text = visible(html);
     honest(text, "ai tile");
-    expect(text).toContain("Pace vs AI (difficulty 31)");
+    expect(text).toContain("Pace vs AI · AI difficulty 31");
     expect(text).toContain("4.9 s faster");
-    expect(text).toContain("than the typical AI car · 1st of 18 on best laps");
-    // advanced (the recorded James): the fastest AI car's best lap too
+    expect(text).toContain("than the typical AI car's best lap · 1st of 18 on best laps");
+    // advanced (the recorded James): the fastest AI car's best lap too, and no strip caption
     expect(text).toContain("fastest AI 1:13.228");
+    expect(text).not.toContain("Each mark is one AI car's best lap");
     expect(text).toContain(
-      "From 17 AI cars, 117 laps · not used: 94 laps not seen from their start, 2 pit laps, 19 laps around a flashback, 16 laps with inconsistent timing",
+      "From 17 AI cars, 116 laps · not used: 94 laps not seen from their start, 16 laps the game filled in (not driven), 3 pit laps, 19 laps around a flashback",
     );
     expect(html).toContain('aria-label="Your best lap 1:10.549 among 17 AI cars&#x27; best laps, 1:13.228 to 1:17.251: 1st of 18"');
     expect(html).toContain('data-ai-status="ok"');
@@ -129,6 +131,7 @@ describe("Summary tile: Pace vs AI", () => {
     const text = visible(html);
     expect(text).not.toContain("fastest AI");
     expect(html).toContain('aria-label="What is typical ai car?"');
+    expect(text).toContain("Each mark is one AI car's best lap; the tall mark is the typical AI car.");
   });
 
   it("no AI in the session (null, absent on an older server, a time trial): no tile", () => {
@@ -160,21 +163,22 @@ describe("Summary tile: Pace vs AI", () => {
     const text = visible(html);
     honest(text, "unknown difficulty");
     expect(text).toContain("Pace vs AI");
-    expect(text).not.toContain("Pace vs AI (");
-    expect(text).toContain("AI level not reported");
+    expect(text).not.toContain("AI difficulty 3");
+    expect(text).toContain("AI difficulty not reported");
     expect(html).toContain('data-ai-status="unknown_difficulty"');
     expect(html.slice(html.indexOf('data-ai-status="unknown_difficulty"'))).toContain('data-unknown=""');
   });
 
   it("too few AI cars: '-' and the reason", () => {
     const text = visible(tiles(withAi(aiFixtures.monza())));
-    expect(text).toContain("Pace vs AI (difficulty 35)");
-    expect(text).toContain("Too few AI laps seen");
+    expect(text).toContain("Pace vs AI · AI difficulty 35");
+    expect(text).toContain("Too few AI laps: needs clean laps from 5 AI cars, saw 2");
+    expect(text).toContain("Seen: 2 AI cars, 2 laps"); // never "From": nothing was built from them
   });
 
   it("a synthetic session keeps its tile with the SYNTHETIC tag", () => {
     const html = tiles({ ...withAi(aiFixtures.austriaScenario()), synthetic: true });
-    expect(visible(html)).toContain("Pace vs AI (difficulty 31)");
+    expect(visible(html)).toContain("Pace vs AI · AI difficulty 31");
     expect(html).toContain("pw-chip-synthetic");
   });
 
@@ -197,12 +201,13 @@ describe("Progress: Against the AI", () => {
     honest(text, "progress ai");
     expect(text).toContain("Against the AI");
     expect(text).toContain(
-      "At AI 31 your best lap here was 6.5% faster than the typical AI car, so try a higher level. Race at a couple of difficulty levels here and Pitwall can suggest one.",
+      "At AI 31 your best lap here was 4.9 s (6.5%) faster than the typical AI car's best lap, so try a higher level. Race here once more at AI 36 or higher and Pitwall can suggest a level.",
     );
     expect(text).toContain("F1 Modern");
     expect(text).toContain("F1 World");
-    expect(text).toContain("AI 31: 4.9 s faster than the typical AI car (6.5% faster) · 1st of 18");
-    expect(text).toContain("AI 31: 3.7 s faster than the typical AI car (5.0% faster) · 1st of 18");
+    expect(text).toContain("AI 31: 4.9 s faster than the typical AI car's best lap (6.5% faster) · 1st of 18 on best laps");
+    expect(text).toContain("AI 31: 3.7 s faster than the typical AI car's best lap (5.0% faster) · 1st of 18 on best laps");
+    expect(html).toContain("Your best lap against the typical AI car per session"); // two sessions: the chart
     // the F1 World race is on the other tab, not in this list
     expect(text).not.toContain("20th of 20");
     expect(html).toContain('aria-label="Sessions against the AI"');
@@ -211,10 +216,20 @@ describe("Progress: Against the AI", () => {
   });
 
   it("no races against the AI here yet: says so", async () => {
-    await seed({ ai: { ...aiFixtures.driverAustria(), points: [], suggestions: [] } });
+    await seed({ ai: { ...aiFixtures.driverAustria(), points: [], suggestions: [], unusable: [] } });
     setDrivers([james()]);
     const text = visible(renderToStaticMarkup(createElement(ProgressPage, route("progress"))));
     expect(text).toContain("Against the AI No races against the AI at Austria yet.");
+  });
+
+  it("a race here that could not be compared says so, about the viewed driver, never 'no races'", async () => {
+    const monza = aiFixtures.driverAll().unusable![0]!;
+    await seed({ ai: { ...aiFixtures.driverAustria(), points: [], suggestions: [], unusable: [monza] }, driverId: 2 });
+    const sam = { ...driver(2, "Sam", "beginner"), stats: james().stats };
+    setDrivers([james(), sam], 1); // James in the seat, looking at Sam's page
+    const text = visible(renderToStaticMarkup(createElement(ProgressPage, route("progress", `driver=2&track=${encodeURIComponent(AUSTRIA)}&car=${encodeURIComponent(HAAS)}`))));
+    expect(text).not.toContain("No races against the AI");
+    expect(text).toContain("Sam's race here at AI difficulty 35 could not be compared with the AI: too few clean AI laps were seen.");
   });
 
   it("synthetic sessions are excluded even if the server sent one", async () => {
@@ -230,7 +245,7 @@ describe("Progress: Against the AI", () => {
     // control: the same point from a real session is shown
     await seed({ ai: { ...data, points: [...data.points, { ...synth, session_id: "real-one" }] } });
     expect(visible(renderToStaticMarkup(createElement(ProgressPage, route("progress"))))).toContain(
-      "AI 31: 15.0 s faster than the typical AI car (20.0% faster) · 1st of 18",
+      "AI 31: 15.0 s faster than the typical AI car's best lap (20.0% faster) · 1st of 18 on best laps",
     );
   });
 
@@ -256,21 +271,33 @@ describe("Progress: Against the AI", () => {
   });
 });
 
-describe("Coaching: Suggested AI level", () => {
-  it("one level raced per class here: the guidance sentences, never a number", async () => {
+describe("Coaching: Suggested AI difficulty", () => {
+  it("one level raced per class here: which way to go, large, the next level to race, never a level of its own", async () => {
     await seed({ ai: aiFixtures.driverAustria() });
     setDrivers([james()]);
     const html = renderToStaticMarkup(createElement(CoachingPage, route("coaching")));
     const text = visible(html);
     honest(text, "coaching ai");
-    expect(text).toContain("Suggested AI level");
-    expect(text).toContain("Austria · F1 Modern races · dry");
-    expect(text).toContain("Austria · F1 World races · dry");
+    expect(text).toContain("Suggested AI difficulty");
+    expect(text).toContain("Aim: a best lap level with the typical AI car's (mid-pack)");
+    expect(text).toMatch(/Austria · F1 Modern class( \([^)]+\))? · races · dry Higher than AI 31 Not enough levels raced yet/);
+    expect(text).toMatch(/Austria · F1 World class( \([^)]+\))? · races · dry Lower than AI 35 Not enough levels raced yet/);
     expect(text).toContain(
-      "At AI 35 your best lap here was 5.1% slower than the typical AI car, so a lower level should give closer racing. Race at a couple of difficulty levels here and Pitwall can suggest one.",
+      "At AI 35 your best lap here was 3.8 s (5.1%) slower than the typical AI car's best lap, so a lower level should give closer racing. Race here once more at AI 30 or lower and Pitwall can suggest a level.",
     );
     expect(html).not.toContain('data-ai-basis="level"');
-    expect(text).not.toMatch(/\bAI \d+ or higher|Range \d/);
+    expect(text).not.toMatch(/Range \d|Measured here/);
+    // first beside the habits and the radio focus, not last on the page
+    expect(text.indexOf("Suggested AI difficulty")).toBeLessThan(text.indexOf("The radio will focus on"));
+  });
+
+  it("a parent looking at a child's plan reads about the child", async () => {
+    await seed({ ai: aiFixtures.driverAustria(), driverId: 2 });
+    const sam = { ...driver(2, "Sam", "beginner"), stats: james().stats };
+    setDrivers([james(), sam], 1);
+    const text = visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching", `driver=2&track=${encodeURIComponent(AUSTRIA)}&car=${encodeURIComponent(HAAS)}`))));
+    expect(text).toContain("At AI 35 Sam's best lap here was 3.8 s (5.1%) slower than the typical AI car's best lap");
+    expect(text).not.toMatch(/\byour best lap here\b/);
   });
 
   it("a measured suggestion: the level large, its range, confidence and the server's sentence", async () => {
@@ -284,23 +311,23 @@ describe("Coaching: Suggested AI level", () => {
       sessions_used: 3,
       levels_used: [31, 36, 41],
       slope_pct_per_level: 0.4,
-      text: "Try AI 38 here (35-41). Measured from 3 races at levels 31, 36, 41.",
+      text: "Try AI 38 here, between 35 and 41. Measured from 3 races at levels 31, 36 and 41.",
     };
     await seed({ ai: { ...data, suggestions: [m] } });
     setDrivers([james()]);
     const html = renderToStaticMarkup(createElement(CoachingPage, route("coaching")));
     const text = visible(html);
-    expect(text).toContain("Suggested AI level Austria · F1 Modern races · dry AI 38 Range 35–41 Medium confidence");
-    expect(text).toContain("Try AI 38 here (35-41). Measured from 3 races at levels 31, 36, 41.");
+    expect(text).toMatch(/Suggested AI difficulty Austria · F1 Modern class( \([^)]+\))? · races · dry Aim: .* AI 38 Range 35–41 Medium confidence Measured here/);
+    expect(text).toContain("Try AI 38 here, between 35 and 41. Measured from 3 races at levels 31, 36 and 41.");
     expect(html).toContain('data-ai-basis="level"');
   });
 
   it("no suggestion here, or an older server: no card", async () => {
     await seed({ ai: { ...aiFixtures.driverAustria(), points: [], suggestions: [] } });
     setDrivers([james()]);
-    expect(visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching"))))).not.toContain("Suggested AI level");
+    expect(visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching"))))).not.toContain("Suggested AI difficulty");
     await seed({ ai: "missing" });
-    expect(visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching"))))).not.toContain("Suggested AI level");
+    expect(visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching"))))).not.toContain("Suggested AI difficulty");
   });
 
   it("synthetic suggestion keys never show", async () => {
@@ -308,6 +335,6 @@ describe("Coaching: Suggested AI level", () => {
     const synth = data.suggestions.map((s) => ({ ...s, key: { ...s.key, track_id: `synthetic:${s.key.track_id}` } }));
     await seed({ ai: { ...data, suggestions: synth } });
     setDrivers([james()]);
-    expect(visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching"))))).not.toContain("Suggested AI level");
+    expect(visible(renderToStaticMarkup(createElement(CoachingPage, route("coaching"))))).not.toContain("Suggested AI difficulty");
   });
 });

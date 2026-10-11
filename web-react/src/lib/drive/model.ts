@@ -193,8 +193,8 @@ export interface EndedCard {
   things: ThingsView | null;
   thingsLoading: boolean;
   badges: string[];
-  /** Pace vs AI, one line: "Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20"; null unless
-   * the snapshot's `ai_pace` is an "ok" comparison of this session (lib/review/aipace.ts aiEndLine). */
+  /** Pace vs AI, one line: "AI difficulty 35: best lap 3.8 s slower than the typical AI car's best lap · 20th of 20
+   * on best laps"; null unless the snapshot's `ai_pace` is an "ok" comparison of this session (aipace.ts aiEndLine). */
   aiLine: string | null;
 }
 

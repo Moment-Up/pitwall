@@ -479,8 +479,17 @@ class CarLapHistory:
     is_player: bool
     first_seen_lap: int  # numLaps of the first packet seen for this car: laps <= it were NOT observed from their start
     laps: tuple[HistoryLap, ...]  # laps 1..numLaps (the last one usually in progress)
-    pit_laps: frozenset[int]  # e and e+1 for each tyre-stint endLap e with 1 <= e <= 254 (0 and 255 ignored)
+    # In- and out-laps: e+1 and e+2 for each tyre-stint endLap e <= 254 (real F1 25 records the lap before the in-lap;
+    # 255 = the tyre fitted now), plus every lap LapData showed the car in the pit lane.
+    pit_laps: frozenset[int]
     best_lap_number: int | None  # bestLapTimeLapNum; 0 -> None
+    # Laps <= this were not (entirely) driven by the AI: the car was seen not AI-controlled (a human, e.g. in an online
+    # lobby) and the AI took it over while this lap was in progress. 0 = AI whenever seen.
+    ai_from_lap: int = 0
+    # The lap the game ended for this car before it reached the line (LapData: its result left "active" away from the
+    # line, i.e. the driver skipped to the results or the car retired): this lap's time, and any later one, was filled
+    # in by the game, not driven. None = not seen.
+    ended_lap: int | None = None
 
 
 # Union of everything an adapter can emit after decoding one packet.

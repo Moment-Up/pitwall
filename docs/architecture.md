@@ -107,8 +107,11 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
 9. **Pace vs AI difficulty** (F1 only; game telemetry only). Ingest thread: the F1 adapter turns Session History
    into `CarLapHistory` when a car's lap list changes (a byte-slice compare per packet) and reports
    `SessionInfo.ai_difficulty` only when the Session tail is filled in (gearboxAssist 1-3); `core/ai_pace.py`
-   `AiPaceCollector` keeps the latest lap list per car, the difficulty readings, weather, safety car periods and
-   flashbacks of one *game* session (O(1) per item, reset on a new game session UID). After every lap of the player
+   `AiPaceCollector` keeps the latest lap list per car, the difficulty readings, weather, safety car and red flag
+   periods and flashbacks of one *game* session (O(1) per item, reset on a new game session UID). The adapter also
+   watches every car's LapData with two strided byte slices per packet (result and pit status): a car finished away
+   from the line (a results skip, a retirement) marks its lap in progress as filled in by the game, and pit-lane laps
+   join the stint-derived pit laps; an AI flag turning on after a human's marks the laps before the takeover. After every lap of the player
    and at the session's end `SessionManager` hands a bounded snapshot (`AiPaceJob`) to the analysis worker's queue
    without blocking (dropped when full); `AiPaceProcessor` summarises it (`analysis/ai_pace.py`: eligible AI laps,
    the typical AI car = median of the AI cars' best laps, gap and rank), stores `session_ai_pace` through the writer

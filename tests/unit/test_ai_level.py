@@ -24,6 +24,7 @@ def pt(
     weather: str | None = "dry",
     status: str = "ok",
     k: int = 0,
+    gap_ms: int | None = None,
 ) -> dict[str, Any]:
     return {
         "session_id": f"s{k}",
@@ -37,6 +38,7 @@ def pt(
         "status": status,
         "ai_difficulty": level,
         "gap_pct": gap if status == "ok" else None,
+        "gap_ms": gap_ms if status == "ok" else None,
     }
 
 
@@ -59,7 +61,7 @@ def test_exact_two_point_fit() -> None:
     assert s["confidence"] == "medium" and s["slope_pct_per_level"] == 1.0 and s["note"] is None
     assert s["latest_level"] == 40 and s["latest_gap_pct"] == 5.0 and s["direction"] == "lower"
     assert s["sessions_used"] == 2 and s["levels_used"] == [30, 40] and s["slope_sources"] == []
-    assert s["text"] == "Try AI 35 here (33-37). Measured from 2 races at levels 30 and 40."
+    assert s["text"] == "Try AI 35 here, between 33 and 37. Measured from 2 races at levels 30 and 40."
     assert s["key"] == {
         "game": "f1_25",
         "track_id": "f1:17",
@@ -94,15 +96,27 @@ def test_levels_that_disagree_give_direction_only() -> None:
 def test_bounds_and_clamps() -> None:
     at_least = suggest(series((30, -10.0), (35, -9.0)))  # d* = 80: far above the levels raced
     assert at_least["level"] == 45 and at_least["bound"] == "at_least" and at_least["confidence"] == "low"
-    assert at_least["text"] == "Try AI 45 or higher here: you were faster than the typical AI car even at 35."
+    assert at_least["range"] is None  # a range around a bound would claim levels on the wrong side of it
+    assert at_least["text"] == (
+        "Try AI 45 or higher here: the trend of your 2 races at levels 30 and 35 puts level racing with the typical "
+        "AI car above AI 45."
+    )
     assert at_least["direction"] == "higher"
     at_most = suggest(series((70, 10.0), (75, 11.0)))  # d* = 20
-    assert at_most["level"] == 60 and at_most["bound"] == "at_most"
-    assert at_most["text"] == "Try AI 60 or lower here: you were slower than the typical AI car even at 70."
+    assert at_most["level"] == 60 and at_most["bound"] == "at_most" and at_most["range"] is None
+    assert at_most["text"] == (
+        "Try AI 60 or lower here: the trend of your 2 races at levels 70 and 75 puts level racing with the typical "
+        "AI car below AI 60."
+    )
     top = suggest(series((100, -10.0), (105, -9.0)))
-    assert top["level"] == 110 and top["range"][1] == 110
+    assert top["level"] == 110 and top["bound"] == "at_least" and top["range"] is None
     bottom = suggest(series((0, 10.0), (5, 11.0)))
-    assert bottom["level"] == 0 and bottom["range"][0] == 0
+    assert bottom["level"] == 0 and bottom["bound"] == "at_most" and bottom["range"] is None
+    # a measured level near either end: the range is clamped to the game's 0-110
+    high = suggest(series((104, -1.0), (110, 0.5)))  # slope 0.25, d* = 108, band 4
+    assert high["level"] == 108 and high["bound"] is None and high["range"] == [104, 110]
+    low = suggest(series((0, -0.5), (6, 1.0)))  # d* = 2
+    assert low["level"] == 2 and low["range"] == [0, 6]
 
 
 def test_round_half_up_and_target_gap() -> None:
@@ -122,12 +136,13 @@ def test_estimate_from_other_tracks() -> None:
     assert s["slope_pct_per_level"] == 0.5 and s["slope_sources"] == ["Silverstone"]
     assert s["level"] == 25 and s["range"] == [22, 28] and s["direction"] == "lower"  # a = 5 - 17.5; h = 3
     assert s["text"] == (
-        "Estimated AI level here: 25 (22-28). Based on how the AI's pace changed with level at Silverstone; "
-        "race here at another level to measure it."
+        "Estimated AI level here: about 25, between 22 and 28. Based on how the AI's pace changed with level at "
+        "Silverstone; race here at another level to measure it."
     )
-    # extrapolation is limited to 15 levels beyond the levels raced here
+    # extrapolation is limited to 15 levels beyond the levels raced here: a bound, without a range
     far = suggest([*other, pt(35, 20.0, k=11)])
-    assert far["level"] == 20 and far["bound"] == "at_most"
+    assert far["level"] == 20 and far["bound"] == "at_most" and far["range"] is None
+    assert far["text"].startswith("Estimated AI level here: 20 or lower. Based on")
     # another car class never lends its slope
     f2 = series((30, -2.5), (40, 2.5), track="f1:7", name="Silverstone", car_class="F2")
     assert suggest(f2 + here)["basis"] == "direction_only"
@@ -149,15 +164,37 @@ def test_direction_thresholds() -> None:
     assert suggest([pt(35, -1.01)])["direction"] == "higher"
     assert suggest([pt(35, 3.0)], target=2.5)["direction"] == "about_right"
     ok = suggest([pt(35, 0.4)])
-    assert ok["text"] == (
-        "At AI 35 you were level with the typical AI car here (+0.4%). Race at a couple of difficulty levels here "
-        "and Pitwall can suggest one."
+    assert ok["next_level"] is None and ok["text"] == (
+        "At AI 35 your best lap here was 0.4% slower than the typical AI car's best lap: about level, so AI 35 looks "
+        "about right. Racing here once more at AI 30 or 40 would let Pitwall measure your level."
     )
+    assert suggest([pt(35, 0.0)])["text"].startswith("At AI 35 your best lap here was level with the typical AI")
     faster = suggest([pt(35, -3.26)])
-    assert faster["text"] == (
-        "At AI 35 your best lap here was 3.3% faster than the typical AI car, so try a higher level. Race at a "
-        "couple of difficulty levels here and Pitwall can suggest one."
+    assert faster["next_level"] == 40 and faster["text"] == (
+        "At AI 35 your best lap here was 3.3% faster than the typical AI car's best lap, so try a higher level. "
+        "Race here once more at AI 40 or higher and Pitwall can suggest a level."
     )
+    # the next level is MIN_SPAN away (a fit needs levels that far apart), within the game's 0-110
+    slower = suggest([pt(35, 5.06, gap_ms=3772)])
+    assert (
+        slower["next_level"] == 30
+        and slower["latest_gap_ms"] == 3772
+        and slower["text"]
+        == (
+            "At AI 35 your best lap here was 3.8 s (5.1%) slower than the typical AI car's best lap, so a lower level "
+            "should give closer racing. Race here once more at AI 30 or lower and Pitwall can suggest a level."
+        )
+    )
+    near_floor = suggest([pt(3, 5.0)])
+    assert near_floor["next_level"] == 0 and near_floor["text"].endswith(
+        "Race here once more at AI 0 and Pitwall can suggest a level."
+    )
+    floor = suggest([pt(0, 5.0)])
+    assert floor["next_level"] is None and floor["text"].endswith("AI 0 is already the game's lowest level.")
+    ceiling = suggest([pt(110, -5.0)])
+    assert ceiling["next_level"] is None and ceiling["text"].endswith("AI 110 is already the game's highest level.")
+    edge = suggest([pt(108, 0.2)])
+    assert edge["text"].endswith("Racing here once more at AI 103 would let Pitwall measure your level.")
 
 
 def test_spec_fixture_austria() -> None:
@@ -180,13 +217,15 @@ def test_spec_fixture_austria() -> None:
         "note": None,
         "latest_level": 35,
         "latest_gap_pct": 5.06,
+        "latest_gap_ms": None,
+        "next_level": 30,
         "target_gap_pct": 0.0,
         "sessions_used": 1,
         "levels_used": [35],
         "slope_pct_per_level": None,
         "slope_sources": [],
-        "text": "At AI 35 your best lap here was 5.1% slower than the typical AI car, so a lower level should give "
-        "closer racing. Race at a couple of difficulty levels here and Pitwall can suggest one.",
+        "text": "At AI 35 your best lap here was 5.1% slower than the typical AI car's best lap, so a lower level "
+        "should give closer racing. Race here once more at AI 30 or lower and Pitwall can suggest a level.",
     }
 
 

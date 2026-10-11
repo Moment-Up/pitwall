@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pitwall import games
-from pitwall.ai.facts import AI_LEVEL_PREFIX, AI_PACE_PREFIX, LAST_LAP_PREFIX, Fact, FactSheet
+from pitwall.ai.facts import AI_LEVEL_PREFIX, AI_PACE_PREFIX, LAST_LAP_PREFIX, NO_AI_COMPARISON, Fact, FactSheet
 from pitwall.ai.grounding import GroundingResult, check_grounding, display_text
 from pitwall.ai.providers import LLMProvider, LLMUnavailable
 
@@ -76,7 +76,12 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         "ai_level",
         re.compile(
             r"\b(?:ai|a\.?\s?i\.?)\s+(?:level|difficulty|setting|skill)s?\b|\b(?:what|which)\s+(?:ai\s+)?difficulty\b"
-            r"|\bdifficulty\s+(?:should|level)\b|\b(?:turn|put|set|bump)\s+(?:the\s+)?(?:ai|a\.?\s?i\.?)\s+(?:up|down)\b",
+            r"|\bdifficulty\s+(?:should|level)\b|\b(?:turn|put|set|bump)\s+(?:the\s+)?(?:ai|a\.?\s?i\.?)\s+(?:up|down)\b"
+            # parents' words: "is the AI too hard?", "should I make the AI harder?", "how hard should I set the AI?",
+            # "what should I set the AI to?", "what AI should my son use?"
+            r"|\b(?:ai|a\.?\s?i\.?|computer|bots?)\b[^.?!]*\b(?:too\s+(?:hard|easy|fast|slow)|harder|easier)\b"
+            r"|\bhow\s+hard\b[^.?!]*\b(?:ai|a\.?\s?i\.?|computer|bots?)\b|\bset\s+(?:the\s+)?(?:ai|a\.?\s?i\.?)\b"
+            r"|\b(?:what|which)\s+(?:ai|a\.?\s?i\.?)\s+should\b",
             re.I,
         ),
     ),
@@ -186,7 +191,7 @@ _TOPICS: dict[str, set[str]] = {
     "technique": {"session", "game", "technique", "reference", "observations"},
     "balance": {"session", "game", "balance", "setup"},
     # --- end feat/technique ---
-    "general": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
+    "general": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres", "ai"},
 }
 
 
@@ -403,6 +408,8 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         return " ".join(f"{f.plain} [{f.id}]" for f in chosen)
 
     n = intent.name
+    if n in ("ai_pace", "ai_level") and first("ai") is None:
+        return NO_AI_COMPARISON  # not an F1 session against AI cars (or from before pace vs AI): laps would not help
     if n == "ai_pace":
         return say(first("ai", contains=AI_PACE_PREFIX))
     if n == "ai_level":
@@ -482,12 +489,14 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
             game,
         )
     if n == "summary":
+        ai = first("ai", contains=AI_PACE_PREFIX)
         return say(
             first("laps", contains="Best clean"),
             first("laps", contains="personal best"),
             first("corners", contains="Biggest"),
             first("observations"),
             first("fuel"),
+            ai if ai is not None and ai.data.get("status") == "ok" else None,  # only an actual comparison
         )
     return say(first("laps", contains="Best clean"), first("observations"))
 

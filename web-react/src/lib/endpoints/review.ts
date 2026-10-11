@@ -22,7 +22,7 @@
 //                                     "driver-sessions:" so laps and driver switches refresh it)
 //   reviewKeys.familyProgress(ids, q) the same for every family driver, corners=false (family board)
 //   reviewKeys.aiPace(id, q)          GET /api/drivers/{id}/ai-pace?…          (pace vs AI difficulty: Progress
-//                                     "Against the AI", Coaching "Suggested AI level"; under "driver-sessions:")
+//                                     "Against the AI", Coaching "Suggested AI difficulty"; under "driver-sessions:")
 //
 // `api.ts` stays frozen (lane S); the response types Review needs beyond it live here. Fields that a backend
 // addition brings are optional (`clean_lap_count` is D5, `text_simple` / `short` are D6): unknown stays unknown.
@@ -82,11 +82,15 @@ export type WeatherClass = "dry" | "wet" | "mixed";
 export type AiExclusion =
   | "race_lap_1"
   | "not_observed"
+  | "not_ai_driven"
+  | "results_skip"
   | "invalid"
   | "pit_in_out"
   | "safety_car"
+  | "red_flag"
   | "flashback"
   | "timing_inconsistent"
+  | "fast_outlier"
   | "slow_car";
 
 /** One session against the AI (`session_ai_pace`). Gaps are the driver minus the AI: negative = the driver faster. */
@@ -157,11 +161,14 @@ export interface AiLevelKey {
   weather_class: WeatherClass | null;
 }
 
-/** A suggested AI level for one key. `text` is the server's deterministic sentence; every number in it is a field. */
+/** A suggested AI level for one key. `text` is the server's deterministic sentence to the driver ("your": the engineer
+ * and the radio say it); every number in it is a field. A page that may show another driver builds its own sentence
+ * from the fields (lib/review/aipace.ts suggestionSentence). */
 export interface AiLevelSuggestion {
   key: AiLevelKey;
   basis: "measured" | "estimate_other_tracks" | "direction_only";
   level: number | null;
+  /** Null for a bound ("or higher" / "or lower": a range around the limit would contradict it) and without a level. */
   range: [number, number] | null;
   bound: "at_least" | "at_most" | null;
   confidence: "high" | "medium" | "low" | null;
@@ -170,6 +177,10 @@ export interface AiLevelSuggestion {
   note: "levels_disagree" | null;
   latest_level: number;
   latest_gap_pct: number | null;
+  /** The newest session's gap in ms (absent on servers before method 2). */
+  latest_gap_ms?: number | null;
+  /** direction_only: the level to race here next so a level can be measured (MIN_SPAN away); absent before method 2. */
+  next_level?: number | null;
   target_gap_pct: number;
   sessions_used: number;
   levels_used: number[];
@@ -189,6 +200,19 @@ export interface DriverAiPace {
   points: AiPacePoint[];
   /** One per key present in points, newest first. */
   suggestions: AiLevelSuggestion[];
+  /** Sessions in scope raced against the AI that could not be compared (absent on servers before method 2). */
+  unusable?: AiPaceUnusable[];
+}
+
+/** A session raced against the AI without a comparison: too few AI laps, the AI difficulty unknown or changed. */
+export interface AiPaceUnusable {
+  session_id: string;
+  started_unix: number;
+  session_category: SessionCategory;
+  ai_difficulty: number | null;
+  status: Exclude<AiPaceStatus, "ok" | "no_driver_lap" | "time_trial">;
+  online: boolean | null;
+  ai_cars: number;
 }
 
 /** The live snapshot's `ai_pace` (small, in every snapshot, like `bests`). */

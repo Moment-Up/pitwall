@@ -386,7 +386,9 @@ def driver_ai_pace(
     driving (never synthetic, never replays) whose AI metrics are known, oldest first, within the optional scope.
     ``suggestions``: the suggested AI level per (game, track, car class, category, weather) present in ``points``,
     newest first, computed from all of the driver's points (so slopes measured at other tracks are available);
-    ``target_gap_pct`` (-5..5) is the wanted gap to the typical AI car (positive: the AI slightly faster)."""
+    ``target_gap_pct`` (-5..5) is the wanted gap to the typical AI car (positive: the AI slightly faster).
+    ``unusable``: sessions in the same scope (car class aside: it may be unknown) that were raced against the AI but
+    could not be compared (too few AI laps, the level unknown or changed), so a page never says "no races"."""
     svc = driver_service(request)
     try:
         svc.get(driver_id)
@@ -397,6 +399,7 @@ def driver_ai_pace(
             c, driver_id, game=game, track_id=track_id, car_class=car_class, category=category, limit=limit
         )
         every = repo.driver_ai_pace_points(c, driver_id, limit=AI_PACE_SUGGESTION_POINTS)
+        unusable = repo.driver_ai_pace_unusable(c, driver_id, game=game, track_id=track_id, category=category)
     return {
         "driver_id": driver_id,
         "method_version": AI_PACE_METHOD_VERSION,
@@ -404,4 +407,5 @@ def driver_ai_pace(
         "scope": {"game": game, "track_id": track_id, "car_class": car_class, "category": category},
         "points": points,
         "suggestions": ai_level.suggestions(every, points, target_gap_pct=target_gap_pct),
+        "unusable": unusable,
     }

@@ -2,30 +2,31 @@
   "_fixture": {
     "source": "AI pace design spec section 6 contract shape; values from the spec prototype (spec_algo.py, section 3.5 rules) run on a read-only copy of the owner's real PS5 F1 25 capture 20261011-011513_udp20777.pwcap (Melbourne F2 race, 3 laps); session id, start time, track and car from the live pitwall service's session list (recorded-sessions-list.json). Not yet an API response: the backend route did not exist when this was written.",
     "recorded": "2026-10-11T17:30:00+01:00",
-    "what": "GET /api/sessions/1e7271f70c5e `ai_pace`: Melbourne F2 race at AI 35, the driver 3.2 s faster than the typical AI car, 1st of 22; 20 AI final laps the game filled in at the finish were left out (timing).",
+    "what": "GET /api/sessions/1e7271f70c5e `ai_pace`: Melbourne F2 race at AI 35, the driver 3.2 s faster than the typical AI car, 1st of 22; the 21 AI final laps the game filled in at the results skip were left out (LapData: finished away from the line).",
     "tier": "contract",
-    "edited": "driver_best_lap_id is illustrative (the lap id depends on the database); the driver-side values (3 clean laps, median 1:35.749) are Pitwall's, as the real backend stored them."
+    "edited": "driver_best_lap_id is illustrative (the lap id depends on the database); the driver-side values (3 clean laps, median 1:35.749) are Pitwall's, as the real backend stored them.",
+    "method_2": "Method 2 (2026-10-11 review fixes: results skip from LapData, AI takeover, in-lap = stint end + 1, 1.3 s timing, red flag, fast outlier; suggestion latest_gap_ms / next_level / bound without range; unusable): AI values regenerated from the real backend fed the same capture over loopback UDP (scratch server)."
   },
   "response": {
     "status": "ok",
-    "method_version": 1,
+    "method_version": 2,
     "updated_unix": 1791678260.0,
     "ai_difficulty": 35,
     "car_class": "F2",
     "weather_class": "dry",
     "online": false,
     "ai_cars": 21,
-    "ai_laps": 22,
+    "ai_laps": 21,
     "ai_ref_ms": 98807,
-    "ai_best_ms": 97396,
+    "ai_best_ms": 97642,
     "ai_p25_ms": 98651,
     "ai_p75_ms": 98915,
-    "ai_median_lap_ms": 98789,
+    "ai_median_lap_ms": 98807,
     "ai_bests_ms": [
-      97396,
       97642,
       97657,
       97909,
+      98140,
       98606,
       98651,
       98665,
@@ -50,13 +51,13 @@
     "driver_clean_laps": 3,
     "gap_ms": -3219,
     "gap_pct": -3.26,
-    "gap_to_best_ai_ms": -1808,
-    "race_pace_gap_pct": -3.08,
+    "gap_to_best_ai_ms": -2054,
+    "race_pace_gap_pct": -3.09,
     "field_rank": 1,
     "field_size": 22,
     "excluded": {
       "race_lap_1": 21,
-      "timing_inconsistent": 20
+      "results_skip": 21
     }
   }
 }

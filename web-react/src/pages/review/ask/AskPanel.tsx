@@ -21,7 +21,7 @@ import {
   factsLabel,
   historyEntries,
   latencyText,
-  SUGGESTIONS,
+  askSuggestions,
   topicLabel,
   type ChatEntry,
 } from "../../../lib/review/ask";
@@ -132,9 +132,11 @@ export interface AskPanelProps {
   initialQuestion?: string | null;
   /** Shown above the conversation (Review › Ask: the session picker and the LLM chip). */
   header?: ReactNode;
+  /** The session was raced against the AI (it has an AI difficulty): offer the pace vs AI question. */
+  aiPace?: boolean;
 }
 
-export function AskPanel({ sessionId, initialQuestion, header }: AskPanelProps) {
+export function AskPanel({ sessionId, initialQuestion, header, aiPace = false }: AskPanelProps) {
   const history = useHistory(sessionId);
   const [asked, setAsked] = useState<ChatEntry[]>([]);
   const [question, setQuestion] = useState(initialQuestion ?? "");
@@ -214,7 +216,7 @@ export function AskPanel({ sessionId, initialQuestion, header }: AskPanelProps) 
       <PromptSuggestion aria-label="Suggested questions">
         {/* Chips in a row (spec 6.7, mockup), not Pro's default two-column list: Pro's CSS is unlayered, hence the `!`. */}
         <PromptSuggestion.Items className="flex! flex-wrap gap-2">
-          {SUGGESTIONS.map((s) => (
+          {askSuggestions({ aiPace }).map((s) => (
             <PromptSuggestion.Item
               key={s}
               showEndIcon={false}

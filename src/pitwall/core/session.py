@@ -398,8 +398,7 @@ class SessionManager:
 
     def _on_event(self, e: GameEvent) -> None:
         self.live.on_event(e)
-        if e.kind == EventKind.FLASHBACK:
-            self._ai.on_flashback(e)
+        self._ai.on_event(e)  # flashbacks and red flags (pace vs AI); O(1)
         if e.kind == EventKind.BUTTON:
             status = e.payload.get("buttonStatus")
             if isinstance(status, int):

@@ -396,24 +396,28 @@ with the typical AI car's best lap at the AI difficulty you raced. It uses only 
 car's lap list (the Session History packet) and the AI difficulty in the Session packet. No website data.
 
 - **The typical AI car** is the median of the AI cars' best laps. An AI lap counts only when it was a normal flying
-  lap seen from its start: not race lap 1, not a pit in- or out-lap, not under a safety car or VSC, not around a
-  flashback, valid in the game, and timed consistently. The last check matters because F1 25 fills in the other
-  cars' final laps at once when you skip to the results, and those times are not real. Human opponents are never
-  used.
+  lap the AI drove, seen from its start: not race lap 1, not a pit in- or out-lap, not under a safety car, VSC or red
+  flag, not around a flashback, valid in the game, and timed consistently. When you skip to the results, F1 25
+  finishes the other cars where they are and fills in their laps in progress: those times were never driven, so
+  they are left out. Human opponents are never used, and neither are the laps a human drove before the game's AI
+  took their car over (an online player leaving).
 - **Nothing is guessed.** Pitwall needs a known AI difficulty (the game reports it a moment after the session starts)
-  and clean laps from at least 5 AI cars; otherwise it says why there is no comparison. A difficulty that changed
-  during the session gives no comparison either.
+  and clean laps from at least 5 AI cars; otherwise it says why there is no comparison, and Progress says a race
+  there could not be compared rather than that there was none. A difficulty that changed during the session, even
+  for its last minute, gives no comparison either.
 - **Where it shows:** a "Pace vs AI" tile on Review › Session › Summary (the gap in words, your rank on best laps and
   each AI car's best lap), "Against the AI" on Review › Progress (each session at the track as a dot labelled with
-  its AI level), "Suggested AI level" on Review › Coaching, and one line on Drive's Session complete card. Ask the
-  engineer or the radio "how am I doing against the AI?" or "what AI level should I use?": both answers come from
-  the stored facts, never from a language model.
+  its AI difficulty), "Suggested AI difficulty" on Review › Coaching, and one line on Drive's Session complete card.
+  Ask the engineer or the radio "how am I doing against the AI?", "what AI level should I use?" or "is the AI too
+  hard?": the answers come from the stored facts, never from a language model. A parent viewing a child's pages
+  reads the sentences about the child ("Sam's best lap"), not "your".
 - **Suggested level.** Kept per track, car class (F1, F2, ...), session type and dry or wet. Once you have raced at
   two levels at least 5 apart at a track, Pitwall fits how the gap changes with the level and suggests the level
-  where you would be level with the typical AI car, with a range and a confidence. With one level raced, it borrows
-  how the gap changed with the level at your other tracks and gives a rough estimate. With nothing to borrow from,
-  it only says whether to go up or down. The same level can mean very different pace at different tracks, which is
-  why nothing is shared between tracks except that slope.
+  where you would be level with the typical AI car, with a range and a confidence (a level beyond what your races
+  support is an "or higher" / "or lower" bound, without a range). With one level raced, it borrows how the gap
+  changed with the level at your other tracks and gives a rough estimate. With nothing to borrow from, it says
+  whether to go up or down and which level to race next (five away, so a level can be measured). The same level can
+  mean very different pace at different tracks, which is why nothing is shared between tracks except that slope.
 - **Evidence:** recorded (six PS5 F1 25 sessions, exact to the millisecond) and synthetic, and the dashboard in a
   desktop browser. Not yet seen live through the service, never with a real safety car, and every track the owner
   has raced so far has a single AI level, so real suggestions are direction only for now. Older sessions have no AI

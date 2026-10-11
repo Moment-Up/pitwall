@@ -1,9 +1,10 @@
 {
   "_fixture": {
     "source": "GET /api/sessions/42393e6e3919 (`ai_pace`) from a scratch pitwall server (branch ai-pace, data dir in scratch, LLM and voice off) whose database holds only read-only copies of the owner's real PS5 F1 25 capture 20261010-191501 streamed over local UDP with `pitwall send` (the live pitwall service and its data were not touched).",
-    "recorded": "2026-10-11T18:01:04+01:00",
+    "recorded": "2026-10-11T19:53:03+0100",
     "what": "Austria race at AI 35 in F1 World cars (the same race as contract-session-austria): the real backend's ai_pace.",
-    "tier": "recorded"
+    "tier": "recorded",
+    "method_2": "Method 2 (2026-10-11 review fixes: results skip from LapData, AI takeover, in-lap = stint end + 1, 1.3 s timing, red flag, fast outlier; suggestion latest_gap_ms / next_level / bound without range; unusable): AI values regenerated from the real backend fed the same capture over loopback UDP (scratch server)."
   },
   "response": {
     "status": "ok",
@@ -52,7 +53,7 @@
     "excluded": {
       "race_lap_1": 19
     },
-    "method_version": 1,
-    "updated_unix": 1791737480.931705
+    "method_version": 2,
+    "updated_unix": 1791744085.163203
   }
 }

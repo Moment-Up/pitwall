@@ -1,7 +1,8 @@
 """Pace vs AI difficulty, end to end on a SYNTHETIC race: capture -> F1 adapter -> SessionManager -> AnalysisWorker ->
 SQLite -> live snapshot -> engineer. The generator writes known AI lap times (Session History), a known AI difficulty
 (after two unfilled Session tails, like real F1 25), a safety car period, an AI pit stop, an invalid AI lap and the
-instant results fill-in of every AI car's last lap. The stored summary must match the ground truth exactly.
+results skip (every AI car marked finished where it is, its last lap filled in at once). The stored summary must match
+the ground truth exactly.
 
 SYNTHETIC: this proves the pipeline against generated packets; it is not evidence of game compatibility.
 """
@@ -69,14 +70,14 @@ def expected(truth: GroundTruth) -> tuple[dict[int, int], dict[str, int], int]:
             window = (end - ms / 1000 - SLACK_S, end)
             if n == 1:
                 reason = "race_lap_1"
+            elif n in truth.ai_simulated_laps.get(c, frozenset()):
+                reason = "results_skip"  # LapData showed the car finished away from the line
             elif c == INVALID_CAR and n == INVALID_LAP:
                 reason = "invalid"
             elif c == PIT_CAR and n in (PIT_LAP, PIT_LAP + 1):
                 reason = "pit_in_out"
             elif window[0] < SC[1] and SC[0] < window[1]:
                 reason = "safety_car"
-            elif n in truth.ai_simulated_laps.get(c, frozenset()):
-                reason = "timing_inconsistent"
             else:
                 eligible.append(ms)
                 continue
@@ -120,14 +121,14 @@ def test_ground_truth_is_what_the_test_needs(captured: tuple[Path, GroundTruth])
     for c, laps in truth.ai_simulated_laps.items():
         (n,) = laps
         end_as_driven = truth.ai_lap_end_s[c][n - 1] + truth.ai_lap_times_ms[c][n] / 1000
-        assert end_as_driven - truth.ai_lap_end_s[c][n] > 5.0  # far beyond the 2.5 s timing tolerance
+        assert end_as_driven - truth.ai_lap_end_s[c][n] > 5.0  # far beyond the 1.3 s timing tolerance too
 
 
 def test_summary_matches_ground_truth(replayed: tuple[Runtime, str], captured: tuple[Path, GroundTruth]) -> None:
     rt, sid = replayed
     _, truth = captured
     bests, excluded, laps_used = expected(truth)
-    assert excluded == {"race_lap_1": 7, "invalid": 1, "pit_in_out": 2, "safety_car": 6, "timing_inconsistent": 7}
+    assert excluded == {"race_lap_1": 7, "results_skip": 7, "invalid": 1, "pit_in_out": 2, "safety_car": 6}
     with rt.db.read() as c:
         s = repo.get_session(c, sid)
         a = repo.get_session_ai_pace(c, sid)

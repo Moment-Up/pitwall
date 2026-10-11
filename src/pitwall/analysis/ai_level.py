@@ -14,7 +14,12 @@ Three tiers, and no number is ever produced without the driver's own data at tha
 * ``estimate_other_tracks``: one or more sessions here but no fit; the slope is the median of the driver's own measured
   slopes at *other* keys of the same game, car class and category, the offset comes from this key's points. Always
   low confidence; extrapolation is limited to ``ESTIMATE_EXTRAPOLATION`` levels.
-* ``direction_only``: no level, only whether a lower or higher level should give closer racing, from the newest point.
+* ``direction_only``: no level, only whether a lower or higher level should give closer racing, from the newest point,
+  and the next level to race here so a fit becomes possible (``next_level``: ``MIN_SPAN`` levels in that direction).
+
+A level beyond the extrapolation limit is a bound (``bound`` "at_least" / "at_most", ``level`` the limit) and has no
+range: a range around the limit would claim levels on the wrong side of it. ``text`` speaks to the driver ("your"): it
+is what the engineer and the radio say; a page showing another driver builds its own sentence from the fields.
 
 Assumption (docs: follow-ups): gap % is roughly linear in the AI level over the levels raced. ``SIGMA0`` (1 %-point)
 is a nominal noise level used until there are three or more sessions to measure it.
@@ -152,6 +157,8 @@ def _base(key: AiLevelKey, track_name: str | None, used: Sequence[Mapping[str, A
         "note": None,
         "latest_level": int(latest["ai_difficulty"]),
         "latest_gap_pct": latest.get("gap_pct"),
+        "latest_gap_ms": latest.get("gap_ms") if isinstance(latest.get("gap_ms"), int) else None,
+        "next_level": None,
         "target_gap_pct": target,
         "sessions_used": len(used),
         "levels_used": sorted({int(p["ai_difficulty"]) for p in used}),
@@ -161,24 +168,52 @@ def _base(key: AiLevelKey, track_name: str | None, used: Sequence[Mapping[str, A
     }
 
 
+def _gap_words(out: dict[str, Any]) -> str:
+    """The newest gap as an amount and a word: "3.8 s (5.1%) slower" (percent only when seconds are unknown)."""
+    g = float(out["latest_gap_pct"])
+    word = "slower" if g > 0 else "faster"
+    ms = out.get("latest_gap_ms")
+    if isinstance(ms, int):
+        return f"{abs(ms) / 1000:.1f} s ({abs(g):.1f}%) {word}"
+    return f"{abs(g):.1f}% {word}"
+
+
 def _direction_only(out: dict[str, Any], target: float, note: str | None = None) -> dict[str, Any]:
     d, g = out["latest_level"], float(out["latest_gap_pct"])
     direction = _direction(g, target)
     out.update(basis="direction_only", direction=direction, note=note)
-    tail = "Race at a couple of difficulty levels here and Pitwall can suggest one."
     if note == "levels_disagree":
+        plural = CATEGORY_PLURAL.get(out["key"]["session_category"], "sessions")
         tail = (
-            f"Your races here at levels {_levels_text(out['levels_used'])} do not yet show the AI getting faster "
+            f"Your {plural} here at levels {_levels_text(out['levels_used'])} do not yet show the AI getting faster "
             "with level, so Pitwall cannot suggest one yet."
         )
-    if direction == "about_right":
-        out["text"] = f"At AI {d} you were level with the typical AI car here ({g:+.1f}%). {tail}"
-    else:
-        pace = "slower" if g > 0 else "faster"
-        advice = "a lower level should give closer racing" if direction == "lower" else "try a higher level"
-        out["text"] = (
-            f"At AI {d} your best lap here was {abs(g):.1f}% {pace} than the typical AI car, so {advice}. {tail}"
+    elif direction == "about_right":
+        others = [v for v in (d - MIN_SPAN, d + MIN_SPAN) if LEVEL_MIN <= v <= LEVEL_MAX]
+        tail = (
+            f"Racing here once more at AI {' or '.join(str(v) for v in others)} would let Pitwall measure your level."
         )
+    else:
+        nxt = _clamp(d - MIN_SPAN if direction == "lower" else d + MIN_SPAN)
+        if nxt == d:
+            tail = f"AI {d} is already the game's {'lowest' if direction == 'lower' else 'highest'} level."
+        else:
+            out["next_level"] = nxt
+            more = "" if nxt in (LEVEL_MIN, LEVEL_MAX) else (" or lower" if direction == "lower" else " or higher")
+            tail = f"Race here once more at AI {nxt}{more} and Pitwall can suggest a level."
+    if direction == "about_right":
+        if abs(g) < 0.05:
+            out["text"] = f"At AI {d} your best lap here was level with the typical AI car's best lap. {tail}"
+        else:
+            aim = "about level" if target == 0 else "close to the gap you aim for"
+            out["text"] = (
+                f"At AI {d} your best lap here was {_gap_words(out)} than the typical AI car's best lap: {aim}, "
+                f"so AI {d} looks about right. {tail}"
+            )
+    else:
+        advice = "a lower level should give closer racing" if direction == "lower" else "try a higher level"
+        gap = _gap_words(out)
+        out["text"] = f"At AI {d} your best lap here was {gap} than the typical AI car's best lap, so {advice}. {tail}"
     return out
 
 
@@ -212,21 +247,23 @@ def _measured(
     out.update(
         basis="measured",
         level=level,
-        range=[lo, hi],
+        range=None if bound is not None else [lo, hi],
         bound=bound,
         confidence=confidence,
         direction=_vs_latest(level, out["latest_level"]),
         slope_pct_per_level=round(fit.b, 3),
     )
-    if bound == "at_least":
-        out["text"] = f"Try AI {level} or higher here: you were faster than the typical AI car even at {d_max}."
-    elif bound == "at_most":
-        out["text"] = f"Try AI {level} or lower here: you were slower than the typical AI car even at {d_min}."
-    else:
-        plural = CATEGORY_PLURAL.get(category, "sessions")
+    plural = CATEGORY_PLURAL.get(category, "sessions")
+    levels = _levels_text(out["levels_used"])
+    if bound is not None:
+        # The fitted line reaches the target beyond the extrapolation limit: the level is a bound, not a measurement.
+        more, side = ("or higher", "above") if bound == "at_least" else ("or lower", "below")
         out["text"] = (
-            f"Try AI {level} here ({lo}-{hi}). Measured from {n} {plural} at levels {_levels_text(out['levels_used'])}."
+            f"Try AI {level} {more} here: the trend of your {n} {plural} at levels {levels} puts level racing "
+            f"with the typical AI car {side} AI {level}."
         )
+    else:
+        out["text"] = f"Try AI {level} here, between {lo} and {hi}. Measured from {n} {plural} at levels {levels}."
     return out
 
 
@@ -244,16 +281,19 @@ def _estimate(
     out.update(
         basis="estimate_other_tracks",
         level=level,
-        range=[lo, hi],
+        range=None if bound is not None else [lo, hi],
         bound=bound,
         confidence="low",
         direction=_vs_latest(level, out["latest_level"]),
         slope_pct_per_level=round(b_est, 3),
         slope_sources=sources,
     )
-    shown = f"{level} or higher" if bound == "at_least" else f"{level} or lower" if bound == "at_most" else f"{level}"
+    if bound is not None:
+        shown = f"{level} or higher" if bound == "at_least" else f"{level} or lower"
+    else:
+        shown = f"about {level}, between {lo} and {hi}"
     out["text"] = (
-        f"Estimated AI level here: {shown} ({lo}-{hi}). Based on how the AI's pace changed with level at "
+        f"Estimated AI level here: {shown}. Based on how the AI's pace changed with level at "
         f"{_levels_names(sources)}; race here at another level to measure it."
     )
     return out

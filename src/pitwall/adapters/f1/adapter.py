@@ -141,7 +141,8 @@ F1_25_INFO = AdapterInfo(
         "lap_history": FieldSupport(
             SupportLevel.RECORDED_VALIDATED,
             "Session History lap times equal LapData last-lap times on 4 real races; F1 25 fills in remaining cars' "
-            "final laps when the driver skips to results (detected by timing)",
+            "final laps when the driver skips to results (detected from all-car LapData: finished away from the "
+            "line; timing as a backstop); stint endLap = the lap before the in-lap (2 real AI stops)",
         ),
     },
     notes=(
@@ -199,6 +200,31 @@ HIST_LAP_SIZE = P.LAP_HISTORY.size  # 14
 HIST_STINTS = HIST_LAPS + P.NUM_LAP_HISTORY * HIST_LAP_SIZE  # 1436
 HIST_STINT_SIZE = P.TYRE_STINT_HISTORY.size  # 3
 _LAP_HISTORY_STRUCT = P.LAP_HISTORY.struct
+
+
+def _field_offset(sd: StructDef, name: str) -> int:
+    """Byte offset of the scalar field ``name`` inside one ``sd`` element (from the spec-checked definition)."""
+    fmt = sd.struct.format[0]  # endianness: no padding
+    for fname, f in sd.fields:
+        if fname == name:
+            return struct.calcsize(fmt)
+        fmt += f
+    raise ValueError(f"{sd.name}: no field {name!r}")
+
+
+# LapData of every car, watched for AI pace with one strided byte slice per field and packet (a C-level copy of
+# 22-24 bytes, compared with the previous packet's); cars are looked at one by one only when a slice changed.
+LD_SIZE = P.LAP_DATA.size
+LD_RESULT = _field_offset(P.LAP_DATA, "resultStatus")
+LD_PIT = _field_offset(P.LAP_DATA, "pitStatus")
+LD_LAP = _field_offset(P.LAP_DATA, "currentLapNum")
+LD_DIST = _field_offset(P.LAP_DATA, "lapDistance")
+_F32 = struct.Struct("<f")
+# A car whose result leaves "active" further than this past the line did not finish its lap on track: the game ended
+# the lap in progress (the driver skipped to the results, a retirement) and fills in its time. Real F1 25 (PS5, 10 race
+# finishes): a car that crosses the line flips 1-24 m past it (online lobby lag); after a skip, every remaining car
+# flips one LapData packet after the player's own finish, wherever it is (up to 3.1 km from the line).
+RESULT_OFF_LINE_M = 50.0
 
 _FIELD_MOTION = ("worldPositionX", "worldPositionY", "worldPositionZ", "gForceLongitudinal")
 _FIELD_LAP = (
@@ -319,13 +345,19 @@ def _track_zones(marshal: list[dict[str, Any]], tail: dict[str, Any], packet_for
 class _CarHist:
     """Session History state of one car (ingest thread only)."""
 
-    __slots__ = ("first_seen_lap", "key", "laps", "raw")
+    __slots__ = ("ai_from_lap", "best_lap", "first_seen_lap", "key", "laps", "non_ai_seen", "raw", "stint_pits")
 
     def __init__(self, first_seen_lap: int) -> None:
         self.first_seen_lap = first_seen_lap  # numLaps when first seen: those laps were not observed from the start
         self.key: tuple[object, ...] | None = None  # change key of the last emission
         self.raw: list[bytes] = []  # 14-byte LapHistoryData entries, laps 1..numLaps
         self.laps: list[HistoryLap] = []
+        self.stint_pits: frozenset[int] = frozenset()  # pit laps from the tyre stints (see _on_session_history)
+        self.best_lap: int | None = None
+        # AI takeover: a Participants packet said this car was not AI (human, or a 0 flag beyond numActiveCars) while
+        # its lap list was being followed; when it turns AI, the laps up to numLaps then were not the AI's.
+        self.non_ai_seen = False
+        self.ai_from_lap = 0
 
 
 class F1Adapter:
@@ -385,6 +417,13 @@ class F1Adapter:
         # AI pace: per-slot AI flags (always decoded) and the per-car Session History state
         self._ai_flags_raw: tuple[bool | None, ...] = ()
         self._hist: dict[int, _CarHist] = {}
+        # AI pace from the all-car LapData (``_watch_field_laps``): the previous packet (a reference), its result
+        # status bytes, the last pit-lane key, each car's laps seen in the pit lane and the lap the game ended for it
+        self._ld_prev: bytes | None = None
+        self._ld_result: bytes | None = None
+        self._ld_pit_key: bytes | None = None
+        self._pit_seen: dict[int, set[int]] = {}
+        self._ended_lap: dict[int, int] = {}
 
     # ------------------------------------------------------------------ structural validation
     def can_decode(self, data: bytes) -> bool:
@@ -540,6 +579,42 @@ class F1Adapter:
         self._prev_result = lap["resultStatus"]
         if lap["resultStatus"] != RESULT_FINISHED:
             self._prev_lap_snapshot = lap  # keep the last in-race snapshot for the final-lap sectors
+        self._watch_field_laps(data, h, t, out)
+
+    def _watch_field_laps(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
+        """AI pace: from every car's LapData, the laps each car spent in the pit lane and a lap the game ended for a car
+        before it reached the line (the driver skipped to the results, or the car retired). Per packet: two or three
+        strided byte slices and compares; the per-car loop runs only when a car's result changed, or while a car is
+        in the pit lane and a pit status or lap number changed."""
+        n = h["layout"].max_cars
+        base = P.HEADER.size
+        end = base + n * LD_SIZE
+        res = data[base + LD_RESULT : end : LD_SIZE]
+        prev_res, prev = self._ld_result, self._ld_prev
+        if res != prev_res:
+            if prev is not None and prev_res is not None and len(prev_res) == n:
+                for i in range(n):
+                    if prev_res[i] != RESULT_ACTIVE or res[i] <= RESULT_ACTIVE or i in self._ended_lap:
+                        continue
+                    off = base + i * LD_SIZE
+                    dist = _F32.unpack_from(data, off + LD_DIST)[0]
+                    if not (math.isfinite(dist) and 0.0 <= dist <= RESULT_OFF_LINE_M):
+                        # the lap in progress (as of the previous packet) was ended by the game, not on track
+                        self._ended_lap[i] = prev[off + LD_LAP]
+                        st = self._hist.get(i)
+                        if st is not None and st.key is not None:
+                            self._emit_history(i, st, h, t, out)  # also when its history came first this frame
+            self._ld_result = res
+        pit = data[base + LD_PIT : end : LD_SIZE]
+        if pit.count(0) != n:  # some car is in the pit lane
+            laps = data[base + LD_LAP : end : LD_SIZE]
+            key = pit + laps
+            if key != self._ld_pit_key:
+                self._ld_pit_key = key
+                for i in range(n):
+                    if pit[i] and laps[i]:
+                        self._pit_seen.setdefault(i, set()).add(laps[i])
+        self._ld_prev = data
 
     def _sector_snapshot(self, lap_number: int) -> dict[str, Any] | None:
         s3 = self._sector3
@@ -828,9 +903,14 @@ class F1Adapter:
 
         Cost on the ingest thread per packet: a few byte reads, one slice of at most ~1.4 kB, a dict lookup and a
         bytes compare. The change key covers the completed laps, the lap time of the lap in progress (it is filled in
-        at the flag without numLaps moving), the tyre stints and the car's AI flag; the lap in progress's sector
-        updates are left out, so a car is decoded and emitted about once per lap. Only the 14-byte entries that
-        changed are decoded again.
+        at the flag without numLaps moving), the tyre stints, the car's AI flag and what LapData added (pit-lane laps,
+        a lap the game ended); the lap in progress's sector updates are left out, so a car is decoded and emitted about
+        once per lap. Only the 14-byte entries that changed are decoded again.
+
+        Pit laps: real F1 25 (PS5, Austria, two AI stops checked against LapData pitStatus) records a stint's endLap
+        as the lap BEFORE the in-lap (the car entered the pit lane on lap e+1 and stopped on lap e+2 after crossing
+        the line in the pit lane), so laps e+1 and e+2 are the in- and out-lap; e = 0 is a stop on lap 1. Every lap
+        LapData showed the car in the pit lane is a pit lap as well, whatever the stints say.
         """
         car = data[HIST_CAR]
         if car >= h["layout"].max_cars:
@@ -838,7 +918,17 @@ class F1Adapter:
         n = min(data[HIST_NUM_LAPS], P.NUM_LAP_HISTORY)
         n_st = min(data[HIST_NUM_STINTS], P.NUM_TYRE_STINTS)
         flags = self._ai_flags_raw
-        ai = flags[car] if car < len(flags) else None
+        flag_known = car < len(flags)  # a Participants packet of this session was seen
+        ai = flags[car] if flag_known else None
+        st = self._hist.get(car)
+        if st is None:
+            st = self._hist[car] = _CarHist(first_seen_lap=n)
+        if flag_known and ai is not True:
+            st.non_ai_seen = True  # human, or a 0 flag beyond numActiveCars (a human in a real online lobby)
+        elif ai is True and st.non_ai_seen:
+            st.ai_from_lap = n  # the AI took the car over: laps up to the one in progress were not (all) the AI's
+            st.non_ai_seen = False
+        seen = self._pit_seen.get(car)
         last = HIST_LAPS + HIST_LAP_SIZE * (n - 1) if n else HIST_LAPS
         key = (
             ai,
@@ -846,11 +936,11 @@ class F1Adapter:
             data[HIST_LAPS:last],
             data[last : last + 4] if n else b"",
             data[HIST_STINTS : HIST_STINTS + HIST_STINT_SIZE * n_st],
+            len(seen) if seen else 0,
+            self._ended_lap.get(car),
+            st.ai_from_lap,
         )
-        st = self._hist.get(car)
-        if st is None:
-            st = self._hist[car] = _CarHist(first_seen_lap=n)
-        elif key == st.key:
+        if key == st.key:
             return
         st.key = key
         t_s = float(h["sessionTime"])
@@ -885,22 +975,32 @@ class F1Adapter:
         pit: set[int] = set()
         for k in range(n_st):
             end = data[HIST_STINTS + HIST_STINT_SIZE * k]
-            if 1 <= end < STINT_END_CURRENT:  # 255 = the current tyre; 0 = not a lap (seen in a real scenario)
-                pit.update((end, end + 1))
+            if end < STINT_END_CURRENT:  # 255 = the tyre currently fitted
+                pit.update((end + 1, end + 2))
+        st.stint_pits = frozenset(pit)
+        st.best_lap = data[HIST_BEST_LAP] or None
+        self._emit_history(car, st, h, t, out)
+
+    def _emit_history(self, car: int, st: _CarHist, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
+        """``CarLapHistory`` of ``car`` from its state (the latest Session History plus what LapData added)."""
+        flags = self._ai_flags_raw
+        seen = self._pit_seen.get(car)
         uid = h["sessionUID"] or self._session_uid
         out.append(
             CarLapHistory(
                 game=Game.F1_25,
                 t_recv_ns=t,
-                session_time_s=t_s,
+                session_time_s=float(h["sessionTime"]),
                 session_uid=str(uid) if uid else None,
                 car_index=car,
-                ai_controlled=ai,
+                ai_controlled=flags[car] if car < len(flags) else None,
                 is_player=car == h["playerCarIndex"],
                 first_seen_lap=st.first_seen_lap,
                 laps=tuple(st.laps),
-                pit_laps=frozenset(pit),
-                best_lap_number=data[HIST_BEST_LAP] or None,
+                pit_laps=st.stint_pits | seen if seen else st.stint_pits,
+                best_lap_number=st.best_lap,
+                ai_from_lap=st.ai_from_lap,
+                ended_lap=self._ended_lap.get(car),
             )
         )
 

@@ -172,7 +172,7 @@ export function SessionPage({ id, tab, route }: { id: string; tab: SessionTab; r
             ) : t === "corners" ? (
               <CornersTab session={session} analysis={analysis} density={density} />
             ) : (
-              <AskTab sessionId={id} question={query.get("q")} />
+              <AskTab sessionId={id} question={query.get("q")} aiPace={session.ai_difficulty != null} />
             )}
           </Tabs.Panel>
         ))}

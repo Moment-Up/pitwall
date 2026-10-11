@@ -1358,8 +1358,10 @@ def upsert_session_ai_pace(conn: sqlite3.Connection, session_id: str, row: dict[
     """Store a session's AI pace summary; True when it was written.
 
     A row of the same run (``run_id``: one per collector, i.e. per game session in one process) always replaces the
-    previous one. A row of another run (the service restarted mid-session, a backfill) replaces it only when it is
-    based on at least as many AI laps: a run that saw less of the session never overwrites a better row.
+    previous one. A row of another run (the service restarted mid-session, a backfill) replaces it when it comes from
+    a newer method (``method_version``: a backfill re-runs the improved lap selection), or from the same method and is
+    based on at least as many AI laps: a run that saw less of the session never overwrites a better row, and an older
+    method never overwrites a newer one.
     """
     values = [
         dumps(row.get(c, [] if c == "ai_bests_ms" else {})) if c in _AI_PACE_JSON else row.get(c)
@@ -1373,7 +1375,10 @@ def upsert_session_ai_pace(conn: sqlite3.Connection, session_id: str, row: dict[
     cur = conn.execute(
         f"""INSERT INTO session_ai_pace(session_id, {cols}) VALUES({marks})
             ON CONFLICT(session_id) DO UPDATE SET {sets}
-            WHERE excluded.run_id = session_ai_pace.run_id OR excluded.ai_laps >= session_ai_pace.ai_laps""",
+            WHERE excluded.run_id = session_ai_pace.run_id
+               OR excluded.method_version > session_ai_pace.method_version
+               OR (excluded.method_version = session_ai_pace.method_version
+                   AND excluded.ai_laps >= session_ai_pace.ai_laps)""",
         [session_id, *values],
     )
     return cur.rowcount > 0
@@ -1426,6 +1431,44 @@ def driver_ai_pace_points(
         f"""SELECT s.id AS session_id, s.started_unix, s.game, s.track_id, s.track_name, s.car_id, s.car_name,
                   s.session_type, a.car_class, a.weather_class, a.online, a.status, a.ai_difficulty, a.ai_ref_ms,
                   a.ai_best_ms, a.ai_cars, a.driver_best_ms, a.gap_ms, a.gap_pct, a.field_rank, a.field_size
+           FROM session_ai_pace a JOIN sessions s ON s.id = a.session_id
+           WHERE {" AND ".join(where)}
+           ORDER BY s.started_unix DESC, s.rowid DESC LIMIT ?""",
+        [*args, limit],
+    ).fetchall()
+    out: list[dict[str, Any]] = []
+    for r in reversed(rows):
+        d = dict(r)
+        d["session_category"] = d.pop("session_type") or "unknown"
+        d["online"] = None if d["online"] is None else bool(d["online"])
+        out.append(d)
+    return out
+
+
+def driver_ai_pace_unusable(
+    conn: sqlite3.Connection,
+    driver_id: int,
+    *,
+    game: str | None = None,
+    track_id: str | None = None,
+    category: str | None = None,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """Sessions of the driver's own real driving (same rules as ``driver_ai_pace_points``) that have an AI pace row
+    but no AI metrics: ``{session_id, started_unix, session_category, ai_difficulty, status, online, ai_cars}``, the
+    newest ``limit``, oldest first. Lets a page say "your race here could not be compared: too few AI laps" instead of
+    "no races against the AI". Time trials are left out (no AI cars by design)."""
+    where = [
+        f"s.driver_id=? AND {_DRIVEN} AND s.synthetic=0 AND s.track_id IS NOT NULL",
+        "a.status NOT IN ('ok','no_driver_lap','time_trial')",
+    ]
+    args: list[Any] = [driver_id]
+    for col, value in (("s.game", game), ("s.track_id", track_id), ("s.session_type", category)):
+        if value is not None:
+            where.append(f"{col}=?")
+            args.append(value)
+    rows = conn.execute(
+        f"""SELECT s.id AS session_id, s.started_unix, s.session_type, a.ai_difficulty, a.status, a.online, a.ai_cars
            FROM session_ai_pace a JOIN sessions s ON s.id = a.session_id
            WHERE {" AND ".join(where)}
            ORDER BY s.started_unix DESC, s.rowid DESC LIMIT ?""",

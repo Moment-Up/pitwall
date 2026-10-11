@@ -14,7 +14,10 @@ from pitwall.analysis.ai_pace import (
     DIFFICULTY_CHANGED,
     DIFFICULTY_KNOWN,
     DIFFICULTY_UNKNOWN,
+    EXCLUSIONS,
+    FAST_OUTLIER,
     MIN_AI_CARS,
+    TIMING_TOL_S,
     AiPaceJob,
     ScPeriod,
     resolve_difficulty,
@@ -53,6 +56,8 @@ def car(
     invalid: frozenset[int] = frozenset(),
     done_override: dict[int, float | None] | None = None,
     uid: str | None = UID,
+    ai_from: int = 0,
+    ended: int | None = None,
 ) -> CarLapHistory:
     """A car that drove ``times_ms`` back to back from ``start_s``; a None time is a lap still in progress."""
     laps: list[HistoryLap] = []
@@ -76,6 +81,8 @@ def car(
         laps=tuple(laps),
         pit_laps=pit,
         best_lap_number=None,
+        ai_from_lap=ai_from,
+        ended_lap=ended,
     )
 
 
@@ -86,12 +93,14 @@ def job(
     difficulty: int | None = 35,
     status: str = DIFFICULTY_KNOWN,
     sc: Sequence[ScPeriod] = (),
+    red: Sequence[ScPeriod] = (),
     flashbacks: Sequence[tuple[float, float]] = (),
 ) -> AiPaceJob:
     return AiPaceJob(
         session_id="s1",
         histories=tuple(cars),
         sc_periods=tuple(sc),
+        red_flags=tuple(red),
         flashbacks=tuple(flashbacks),
         ai_difficulty=difficulty if status == DIFFICULTY_KNOWN else None,
         difficulty_status=status,
@@ -170,15 +179,20 @@ def test_each_exclusion_reason() -> None:
         *base,
         car(10, [lap, lap, lap], first_seen=2),  # laps 1-2 not observed (lap 1 counts as race_lap_1 first)
         car(11, [lap, lap + 1, lap + 2], invalid=frozenset({2})),
-        car(12, [lap, lap, lap, lap], pit=frozenset({2, 3})),  # a stint ended on lap 2: laps 2 and 3 are pit laps
+        car(12, [lap, lap, lap, lap], pit=frozenset({2, 3})),  # a stint ended on lap 1: in-lap 2, out-lap 3
+        car(13, [lap, lap, lap, lap], ai_from=3),  # the AI took the car over during lap 3: laps 2-3 were a human's
+        car(14, [lap, lap, lap, lap], ended=4),  # the game ended lap 4 away from the line (results skip)
     ]
     s = summarise(job(cars), [])
     ex = s.excluded
-    assert ex["race_lap_1"] == 8
+    assert ex["race_lap_1"] == 10
     assert ex["not_observed"] == 1  # car 10 lap 2
+    assert ex["not_ai_driven"] == 2  # car 13 laps 2 and 3
+    assert ex["results_skip"] == 1  # car 14 lap 4
     assert ex["invalid"] == 1  # car 11 lap 2
     assert ex["pit_in_out"] == 2  # car 12 laps 2 and 3
-    assert s.ai_cars == 8  # 5 + car 10 (lap 3) + car 11 (lap 3) + car 12 (lap 4)
+    assert s.ai_cars == 10  # 5 + car 10 (lap 3) + car 11 (lap 3) + car 12 (lap 4) + car 13 (lap 4) + car 14 (2-3)
+    assert list(s.excluded) == [k for k in EXCLUSIONS if k in s.excluded]  # stored in the documented order
 
 
 def test_safety_car_windows_open_closed_and_slack() -> None:
@@ -212,14 +226,46 @@ def test_flashback_window() -> None:
     assert s.excluded.get("flashback") == 2 and s.ai_laps == 0
 
 
+def test_red_flag_window() -> None:
+    c = car(1, [80_000, 75_000, 75_500])  # windows (2 s slack): lap 2 [78, 155], lap 3 [153, 230.5]
+    s = summarise(job([c], red=[ScPeriod(140.0, 0, 150.0, 0)]), [])
+    assert s.excluded.get("red_flag") == 1 and s.ai_laps == 1  # lap 2
+    s = summarise(job([c], red=[ScPeriod(200.0, 0)]), [])  # no lights out after it: open to the end
+    assert s.excluded.get("red_flag") == 1 and s.ai_laps == 1  # lap 3
+    # the driver's laps under a red flag are left out like under a safety car (by receive time)
+    laps = driver_laps(75_000, 70_000, t_recv=[(0, 100), (100, 200)])
+    s = summarise(job(field(BESTS), red=[ScPeriod(0.0, 150, 0.0, 180)]), laps)
+    assert s.driver_best_ms == 75_000 and s.driver_clean_laps == 1
+
+
+def test_fast_outlier_guard() -> None:
+    # a lap faster than 90 % of the typical AI car's best is not a lap (e.g. a partial lap given a time)
+    cars = [*field(BESTS), car(20, [80_000, 75_000, 60_000])]
+    s = summarise(job(cars), [])
+    floor = FAST_OUTLIER * statistics.median([*BESTS, 60_000])
+    assert 60_000 < floor < 72_730
+    assert s.excluded["fast_outlier"] == 1 and s.ai_cars == 8 and s.ai_best_ms == 72_730
+    only = car(21, [80_000, 60_000, 60_500])  # every lap of the car is garbage: the car goes
+    s = summarise(job([*field(BESTS), only]), [])
+    assert s.excluded["fast_outlier"] == 2 and s.ai_cars == 7
+
+
 def test_timing_consistency_catches_simulated_final_laps_and_its_edge() -> None:
-    # lap 3 "completed" 10 s too early: F1 25 filling in the results when the driver skips ahead
+    # lap 3 "completed" 10 s too early: F1 25 filling in the results when the driver skips ahead (a backstop for a
+    # skip that LapData did not show: results_skip catches the ones it did)
     sim = car(1, [80_000, 75_000, 75_000], done_override={3: 80.0 + 75.0 + 65.0})
     s = summarise(job([sim]), [])
     assert s.excluded == {"race_lap_1": 1, "timing_inconsistent": 1} and s.ai_laps == 1
-    edge = car(1, [80_000, 75_000, 75_000], done_override={3: 155.0 + 75.0 - 2.5})  # exactly 2.5 s: kept
+    assert TIMING_TOL_S == 1.3  # one Session History cycle (1.1 s for 22 cars) plus margin
+    # within the tolerance (1.25 s either way: float sums make "exactly 1.3" ambiguous): kept
+    edge = car(1, [80_000, 75_000, 75_000], done_override={3: 155.0 + 75.0 - 1.25})
     assert "timing_inconsistent" not in summarise(job([edge]), []).excluded
-    beyond = car(1, [80_000, 75_000, 75_000], done_override={3: 155.0 + 75.0 + 2.6})
+    late = car(1, [80_000, 75_000, 75_000], done_override={3: 155.0 + 75.0 + 1.25})
+    assert "timing_inconsistent" not in summarise(job([late]), []).excluded
+    # 1.4 s early: dropped (real Melbourne: a lap filled in 114 m from the line was 1.70 s early)
+    early = car(1, [80_000, 75_000, 75_000], done_override={3: 155.0 + 75.0 - 1.4})
+    assert summarise(job([early]), []).excluded["timing_inconsistent"] == 1
+    beyond = car(1, [80_000, 75_000, 75_000], done_override={3: 155.0 + 75.0 + 1.4})
     assert summarise(job([beyond]), []).excluded["timing_inconsistent"] == 1
     no_prev = car(1, [80_000, 75_000, 75_000], done_override={2: None})  # previous completion never seen
     ex = summarise(job([no_prev]), []).excluded
@@ -329,9 +375,12 @@ def info(
 def test_resolve_difficulty() -> None:
     assert resolve_difficulty({35: 9}) == (None, DIFFICULTY_UNKNOWN)
     assert resolve_difficulty({35: 10}) == (35, DIFFICULTY_KNOWN)
-    assert resolve_difficulty({35: 9, 40: 1}) == (35, DIFFICULTY_KNOWN)  # exactly 90 %
+    assert resolve_difficulty({35: 1200}) == (35, DIFFICULTY_KNOWN)
+    # any second level: the laps at the old and the new level cannot be told apart
+    assert resolve_difficulty({35: 9, 40: 1}) == (None, DIFFICULTY_CHANGED)
+    assert resolve_difficulty({35: 1080, 60: 120}) == (None, DIFFICULTY_CHANGED)  # 60 for the last minute of 10
+    assert resolve_difficulty({35: 1199, 60: 1}) == (None, DIFFICULTY_CHANGED)
     assert resolve_difficulty({35: 8, 40: 2}) == (None, DIFFICULTY_CHANGED)
-    assert resolve_difficulty({35: 180, 40: 21}) == (None, DIFFICULTY_CHANGED)
 
 
 def test_collector_difficulty_mode_and_unchanged() -> None:
@@ -343,9 +392,9 @@ def test_collector_difficulty_mode_and_unchanged() -> None:
     assert results[:9] == [UNCHANGED] * 9 and results[9] == 35  # resolved at the 10th known reading
     assert c.difficulty == (35, DIFFICULTY_KNOWN)
     assert c.on_info(info(ai=35)) is UNCHANGED
-    for _ in range(2):
-        c.on_info(info(ai=50))
-    assert c.difficulty == (None, DIFFICULTY_CHANGED)  # 11 of 13 < 90 %
+    assert c.on_info(info(ai=50)) is None  # a second level: changed at once
+    assert c.difficulty == (None, DIFFICULTY_CHANGED)
+    assert c.on_info(info(ai=35)) is UNCHANGED  # and it stays changed
 
 
 def test_collector_weather_and_safety_car_transitions() -> None:
@@ -390,6 +439,25 @@ def test_collector_ignores_stale_uid_history_and_records_flashbacks() -> None:
     run = c.run_id
     c.reset("43")
     assert c.histories == {} and c.flashbacks == [] and c.run_id != run and c.game_uid == "43"
+
+
+def test_collector_red_flag_periods() -> None:
+    def ev(kind: EventKind, t: float) -> GameEvent:
+        return GameEvent(kind=kind, game=Game.F1_25, t_recv_ns=int(t * 1e9), session_time_s=t)
+
+    c = AiPaceCollector()
+    c.reset(UID)
+    c.on_event(ev(EventKind.LIGHTS_OUT, 1.0))  # the race start: no red flag open, nothing
+    c.on_event(ev(EventKind.RED_FLAG, 300.0))
+    c.on_event(ev(EventKind.RED_FLAG, 310.0))  # the same period
+    c.on_event(ev(EventKind.LIGHTS_OUT, 900.0))  # the restart
+    c.on_event(ev(EventKind.RED_FLAG, 1500.0))  # never restarted: open to the end
+    j = c.job("s1", synthetic=False, final=True)
+    assert j.red_flags == (
+        ScPeriod(300.0, 300_000_000_000, 900.0, 900_000_000_000),
+        ScPeriod(1500.0, 1_500_000_000_000),
+    )
+    assert j.sc_periods == ()
 
 
 # ---------------------------------------------------------------------------------------------- session manager
@@ -468,3 +536,16 @@ def test_session_manager_writes_a_changed_difficulty(store: tuple[Database, DbWr
     writer.flush()
     with db.read() as c:
         assert repo.get_session(c, str(sm.session_id))["ai_difficulty"] is None  # type: ignore[index]
+
+
+def test_session_manager_hands_red_flags_to_the_collector(store: tuple[Database, DbWriter]) -> None:
+    _, writer = store
+    worker = _Worker()
+    sm = SessionManager(writer, LiveState(), cast(AnalysisWorker, worker), source="udp:20777")
+    for k in range(12):
+        sm.handle(info(t=float(k)))
+    for kind, t in ((EventKind.RED_FLAG, 300.0), (EventKind.LIGHTS_OUT, 900.0)):
+        sm.handle(GameEvent(kind=kind, game=Game.F1_25, t_recv_ns=int(t * 1e9), session_time_s=t))
+    sm.end()
+    (j,) = worker.ai_jobs
+    assert j.red_flags == (ScPeriod(300.0, 300_000_000_000, 900.0, 900_000_000_000),)

@@ -141,9 +141,11 @@ def ai_level(sheet: FactSheet) -> str | None:
         return f.plain
     pace = "slower" if g > 0 else "faster"
     move = "lower" if d.get("direction") == "lower" else "higher"
+    nxt = d.get("next_level")
+    try_next = f"Try {nxt} or {move} next time" if isinstance(nxt, int) else f"Try a {move} level"
     return (
         f"Not enough levels yet. At {level} you're {abs(g):.1f} percent {pace} than the AI here. "
-        f"Try a {move} level, then I can suggest one."
+        f"{try_next}, then I can suggest one."
     )
 
 
