@@ -278,6 +278,21 @@ class RadioClient:
             await self.send(item)
 
 
+def _session_best_clean_ms(snap: dict[str, Any]) -> int | None:
+    """The session's best clean lap time so far, for the lap summary's "personal best" / "session best".
+
+    The snapshot's ``laps`` are only the latest 20 (this lap included), so the session's D2 best from the database
+    (``bests.session``: every clean lap of this session, published after each lap) covers the older ones: from lap 21
+    on, the best of the last 20 is not the session best when an earlier lap was faster. Either alone while the other
+    is missing (D2 waits for the track; it may not include this lap yet)."""
+    times = [lap["lap_time_ms"] for lap in snap.get("laps", []) if lap.get("clean") and lap.get("lap_time_ms")]
+    session = (snap.get("bests") or {}).get("session") or {}
+    d2 = session.get("lap_ms")
+    if isinstance(d2, int) and not isinstance(d2, bool) and d2 > 0:
+        times.append(d2)
+    return min(times, default=None)
+
+
 class RadioHub:
     def __init__(
         self,
@@ -1056,8 +1071,7 @@ class RadioHub:
             return
         try:
             snap = self.live.snapshot()
-            laps = [lap for lap in snap.get("laps", []) if lap.get("clean") and lap.get("lap_time_ms")]
-            best = min((lap["lap_time_ms"] for lap in laps), default=None)
+            best = _session_best_clean_ms(snap)
             if self.live.session_id != self._last_coached_sid:
                 self._last_coached_sid = self.live.session_id
                 self._last_coached.clear()
