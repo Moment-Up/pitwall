@@ -1491,3 +1491,92 @@ def sessions_for_game_uid(conn: sqlite3.Connection, game_session_uid: str) -> li
         (game_session_uid,),
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+# --- race strategy (pitwall.strategy) -----------------------------------------------------------------------------
+_PIT_STOP_COLUMNS = (
+    "car_index",
+    "is_player",
+    "entry_lap",
+    "exit_lap",
+    "entry_lap_distance_m",
+    "exit_lap_distance_m",
+    "lane_time_ms",
+    "stationary_ms",
+    "laps_ms",
+    "pace_before_ms",
+    "pace_after_ms",
+    "pit_loss_ms",
+    "neutralised",
+    "excluded",
+    "compound_before",
+    "compound_after",
+    "session_time_s",
+    "created_unix",
+)
+
+
+def upsert_strategy_lap(c: sqlite3.Connection, session_id: str, lap_number: int, data: dict[str, Any]) -> None:
+    """Store (or rewrite, e.g. after a flashback) one lap's ``StrategyLapRecord``."""
+    c.execute(
+        "INSERT INTO strategy_laps(session_id, lap_number, data, updated_unix) VALUES(?,?,?,?) "
+        "ON CONFLICT(session_id, lap_number) DO UPDATE SET data=excluded.data, updated_unix=excluded.updated_unix",
+        (session_id, lap_number, dumps(data), time.time()),
+    )
+
+
+def has_complete_lap(c: sqlite3.Connection, session_id: str) -> bool:
+    """Whether the session stored at least one lap with a lap time (Review > Strategy: old session vs short split)."""
+    r = c.execute("SELECT 1 FROM laps WHERE session_id=? AND lap_time_ms IS NOT NULL LIMIT 1", (session_id,)).fetchone()
+    return r is not None
+
+
+def list_strategy_laps(c: sqlite3.Connection, session_id: str) -> list[dict[str, Any]]:
+    """The session's ``StrategyLapRecord``s in lap order (unreadable rows are skipped)."""
+    out: list[dict[str, Any]] = []
+    for r in c.execute(
+        "SELECT lap_number, data FROM strategy_laps WHERE session_id=? ORDER BY lap_number", (session_id,)
+    ).fetchall():
+        try:
+            d = json.loads(r["data"] or "{}")
+        except ValueError:
+            continue
+        if isinstance(d, dict):
+            d.setdefault("lap", r["lap_number"])
+            out.append(d)
+    return out
+
+
+def upsert_pit_stop(c: sqlite3.Connection, session_id: str, stop: dict[str, Any]) -> None:
+    """Store one pit visit (``strategy.pitloss.PitVisit.row``); the same car and entry lap again updates it."""
+    vals = [stop.get(k) for k in _PIT_STOP_COLUMNS]
+    vals[_PIT_STOP_COLUMNS.index("is_player")] = int(bool(stop.get("is_player")))
+    vals[_PIT_STOP_COLUMNS.index("laps_ms")] = dumps(list(stop.get("laps_ms") or []))
+    if vals[_PIT_STOP_COLUMNS.index("created_unix")] is None:
+        vals[_PIT_STOP_COLUMNS.index("created_unix")] = time.time()
+    cols = ", ".join(_PIT_STOP_COLUMNS)
+    marks = ", ".join("?" for _ in _PIT_STOP_COLUMNS)
+    updates = ", ".join(
+        f"{k}=excluded.{k}" for k in _PIT_STOP_COLUMNS if k not in ("car_index", "entry_lap", "created_unix")
+    )
+    c.execute(
+        f"INSERT INTO pit_stops(session_id, {cols}) VALUES(?, {marks}) "
+        f"ON CONFLICT(session_id, car_index, entry_lap) DO UPDATE SET {updates}",
+        (session_id, *vals),
+    )
+
+
+def list_pit_stops(c: sqlite3.Connection, session_id: str) -> list[dict[str, Any]]:
+    rows = c.execute(
+        "SELECT * FROM pit_stops WHERE session_id=? ORDER BY entry_lap, car_index", (session_id,)
+    ).fetchall()
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        d = dict(r)
+        d["is_player"] = bool(d["is_player"])
+        try:
+            d["laps_ms"] = json.loads(d["laps_ms"] or "[]")
+        except ValueError:
+            d["laps_ms"] = []
+        out.append(d)
+    return out

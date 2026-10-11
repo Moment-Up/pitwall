@@ -12,6 +12,7 @@
     lap_summary: "Lap",
     coaching: "Coaching",
     info: "Info",
+    strategy: "Strategy",
     transcript: "You said",
     you: "You typed",
     error: "Error",
@@ -418,6 +419,7 @@
     --kind-lap_summary: var(--best);
     --kind-coaching: var(--loss);
     --kind-info: var(--muted);
+    --kind-strategy: var(--ref);
     --kind-transcript: var(--text);
     --kind-you: var(--text);
     --kind-error: var(--bad);

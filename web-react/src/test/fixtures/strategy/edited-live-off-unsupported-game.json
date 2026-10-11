@@ -1,0 +1,25 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "GT7 race: strategy off, the game sends no all-car timing",
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data."
+ },
+ "version": 1,
+ "mode": "off",
+ "reason": "race strategy needs F1 25 timing",
+ "session_id": "gt7session01",
+ "synthetic": false,
+ "lap": null,
+ "total_laps": null,
+ "laps_remaining": null,
+ "position": null,
+ "cars": null,
+ "gaps": null,
+ "tyres": null,
+ "fuel": null,
+ "pit": null,
+ "safety_car": null,
+ "weather": null,
+ "calls": []
+}

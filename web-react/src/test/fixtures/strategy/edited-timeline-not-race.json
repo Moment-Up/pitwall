@@ -1,0 +1,22 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyTimeline",
+  "moment": "a practice session's strategy route",
+  "notes": "The backend's reason string for non-race sessions (strategy spec 7.3)."
+ },
+ "session_id": "6cb367d74b7f",
+ "available": false,
+ "reason": "not a race",
+ "total_laps": null,
+ "grid_position": null,
+ "finish_position": null,
+ "laps": [],
+ "stints": [],
+ "stops": [],
+ "field_stops": [],
+ "pit_loss": null,
+ "safety_car_periods": [],
+ "weather": [],
+ "calls": []
+}

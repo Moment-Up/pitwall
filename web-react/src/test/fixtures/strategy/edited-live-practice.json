@@ -1,0 +1,69 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "practice: tyres, fuel and weather only, no race strategy",
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data."
+ },
+ "version": 1,
+ "mode": "practice",
+ "reason": null,
+ "session_id": "a1b2c3d4e5f6",
+ "synthetic": false,
+ "lap": 6,
+ "total_laps": null,
+ "laps_remaining": null,
+ "position": null,
+ "cars": null,
+ "gaps": null,
+ "tyres": {
+  "compound": "soft",
+  "age_laps": 6,
+  "stint_laps": 6,
+  "wear_pct": [
+   11,
+   13,
+   10,
+   11
+  ],
+  "limiting_wheel": "FR",
+  "rate_pct_per_lap": 2.0,
+  "rate_range": {
+   "low": 1.8,
+   "high": 2.2
+  },
+  "limit_pct": 70,
+  "laps_to_limit": {
+   "low": 26.4,
+   "high": 31.8
+  },
+  "enough_laps": true,
+  "note": null,
+  "game_laps_left": 14,
+  "game_usable_life": 20,
+  "new_set": null
+ },
+ "fuel": {
+  "fuel_kg": 32.0,
+  "per_lap_kg": 1.45,
+  "laps_used": 4,
+  "margin_laps": null,
+  "margin_kg": null,
+  "game_margin_laps": 21.4,
+  "status": "unknown",
+  "lift_coast": null,
+  "burn_model": null
+ },
+ "pit": null,
+ "safety_car": null,
+ "weather": {
+  "now": "clear",
+  "rain_pct": 0,
+  "track_temp_c": 38,
+  "accuracy": "perfect",
+  "forecast": [],
+  "next_change": null,
+  "crossover": null
+ },
+ "calls": []
+}

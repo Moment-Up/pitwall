@@ -11,6 +11,7 @@
 
 import type { Corner, Frame, LapSummary, Observation, Snapshot, TrackModel } from "../api";
 import type { LiveAiPace } from "../endpoints/review";
+import type { StrategyView } from "../strategy/types"; // race strategy (pitwall.strategy)
 
 export type { LiveAiPace };
 
@@ -171,6 +172,12 @@ export interface SnapshotNext extends Snapshot {
   /** AI pace: this session against the AI (null until the analysis worker has a summary, and for games without AI
    * difficulty). Its `session_id` says which session it belongs to. */
   ai_pace?: LiveAiPace | null;
+  // --- race strategy (pitwall.strategy) ---
+  /** strategy/view.py StrategyView (lib/strategy/types.ts); absent on servers without the strategy engine. A static
+   * key (lib/live.ts STATIC_KEYS): /ws/live sends it when it changed or with the static payload, null = none. Read it
+   * through lib/strategy/view.ts snapStrategy(), which ignores unknown versions. */
+  strategy?: StrategyView | null;
+  // --- end race strategy ---
 }
 
 /** Drive lock setting (Settings > Display; lib/prefs.ts DriveLock, lane S). */

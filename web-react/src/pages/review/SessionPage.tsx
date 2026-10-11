@@ -25,12 +25,15 @@ import { useAnalysis, useSession } from "./session/data";
 import { LapsTab } from "./session/LapsTab";
 import { ReportSheet } from "./session/ReportSheet";
 import { SummaryTab } from "./session/SummaryTab";
+import { StrategyTab } from "./session/StrategyTab"; // race strategy (pitwall.strategy)
+import { isRaceSession } from "../../lib/strategy/timeline"; // race strategy (pitwall.strategy)
 
 const TAB_LABEL: Record<SessionTab, string> = {
   summary: "Summary",
   laps: "Laps",
   compare: "Compare",
   corners: "Corners",
+  strategy: "Strategy", // race strategy (pitwall.strategy)
   ask: "Ask",
 };
 
@@ -108,6 +111,9 @@ export function SessionPage({ id, tab, route }: { id: string; tab: SessionTab; r
   const title = sessionTitle(session);
   const density = densityFor(session.driver_id, list, override);
   const query = queryParams(route);
+  // --- race strategy (pitwall.strategy): the Strategy tab is listed for races only; a direct link to another
+  // session's strategy route still opens it (an empty state says why) ---
+  const tabs = SESSION_TABS.filter((t) => t !== "strategy" || isRaceSession(session) || tab === "strategy");
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -146,16 +152,23 @@ export function SessionPage({ id, tab, route }: { id: string; tab: SessionTab; r
         {/* On touch screens the strip scrolls by swiping; its 16 px chevron buttons are hidden there (44 px rule). */}
         <Tabs.ListContainer className="pointer-coarse:[&>button]:hidden!">
           <Tabs.List aria-label="Session views">
-            {SESSION_TABS.map((t) => (
-              // Tighter on phones, so all five tabs fit a 390 px screen (Ask was cut off past Corners).
-              <Tabs.Tab key={t} id={t} className="min-h-11 min-w-0 px-2.5 text-[15px] sm:min-w-20 sm:px-4">
+            {tabs.map((t) => (
+              // Tighter on phones, so all five tabs fit a 390 px screen (Ask was cut off past Corners). Race strategy
+              // (pitwall.strategy): a race has six, so on a phone Ask leaves the strip (the "Ask the engineer" button
+              // above opens it) and the five left take their own width at 14 px (345 of 358 px; equal 76 px tabs did
+              // not fit "Strategy").
+              <Tabs.Tab
+                key={t}
+                id={t}
+                className={`min-h-11 min-w-0 px-2.5 text-[15px] sm:min-w-20 sm:px-4${tabs.length > 5 ? (t === "ask" ? " max-sm:hidden" : " max-sm:w-auto max-sm:px-2 max-sm:text-[14px]") : ""}`}
+              >
                 {TAB_LABEL[t]}
                 <Tabs.Indicator />
               </Tabs.Tab>
             ))}
           </Tabs.List>
         </Tabs.ListContainer>
-        {SESSION_TABS.map((t) => (
+        {tabs.map((t) => (
           <Tabs.Panel key={t} id={t} className="pt-4">
             {t !== tab ? null : t === "summary" ? (
               <SummaryTab
@@ -171,6 +184,8 @@ export function SessionPage({ id, tab, route }: { id: string; tab: SessionTab; r
               <CompareTab session={session} analysis={analysis} density={density} query={query} />
             ) : t === "corners" ? (
               <CornersTab session={session} analysis={analysis} density={density} />
+            ) : t === "strategy" ? (
+              <StrategyTab session={session} density={density} />
             ) : (
               <AskTab sessionId={id} question={query.get("q")} aiPace={session.ai_difficulty != null} />
             )}

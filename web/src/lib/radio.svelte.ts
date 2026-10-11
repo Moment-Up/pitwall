@@ -26,7 +26,8 @@
 // as close code 1006) is diagnosed over HTTP; a connect that hangs is abandoned after CONNECT_TIMEOUT_MS.
 
 export type Intensity = "quiet" | "normal" | "detailed";
-export type SayKind = "answer" | "control" | "cue" | "alert" | "lap_summary" | "coaching" | "info";
+// "strategy": race strategy calls (voice/types.py MessageKind.STRATEGY, pitwall.strategy)
+export type SayKind = "answer" | "control" | "cue" | "alert" | "lap_summary" | "coaching" | "info" | "strategy";
 export type LogKind = SayKind | "transcript" | "you" | "error" | "system";
 export type Phase = "idle" | "starting" | "live";
 export type ConnStatus = "offline" | "connecting" | "open" | "waiting";

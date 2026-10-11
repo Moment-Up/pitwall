@@ -1,0 +1,206 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "race, lap 67 of 71, P4: no stop needed, fuel ok, dry",
+  "notes": "Numbers modelled on the strategy spec's recorded figures for the owner's full-distance Austria race (PS5 F1 25, 20261010-221749 capture, read in place, never committed) and on the committed review fixture recorded-austria-race-session.json (laps 62-71: lap times, fuel, wear, compound, weather). Gaps and positions between the spec's prototype values (L64 ahead 1.67 s / behind 3.85 s; L69 P1 behind 0.95 s) are invented. Not produced by the strategy engine: test data, not game data.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed)"
+  ]
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "332904dbe3de",
+ "synthetic": false,
+ "lap": 67,
+ "total_laps": 71,
+ "laps_remaining": 4.6,
+ "position": 4,
+ "cars": 20,
+ "gaps": {
+  "ahead": {
+   "car_index": 3,
+   "gap_s": 2.0,
+   "settled": true,
+   "trend_s_per_lap": -0.3,
+   "trend_laps": 3,
+   "laps_to_1s": 3.3,
+   "within_1s": false,
+   "drs_range": false,
+   "stops": 1,
+   "in_pit": false,
+   "tyre": {
+    "compound": "hard",
+    "age_laps": 21
+   }
+  },
+  "behind": {
+   "car_index": 11,
+   "gap_s": 3.0,
+   "settled": true,
+   "trend_s_per_lap": 0.1,
+   "trend_laps": 3,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": false,
+   "stops": 1,
+   "in_pit": false,
+   "tyre": {
+    "compound": "medium",
+    "age_laps": 30
+   }
+  },
+  "leader_s": 6.4,
+  "note": null
+ },
+ "tyres": {
+  "compound": "medium",
+  "age_laps": 42,
+  "stint_laps": 6,
+  "wear_pct": [
+   13,
+   12,
+   14,
+   13
+  ],
+  "limiting_wheel": "RL",
+  "rate_pct_per_lap": 1.6,
+  "rate_range": {
+   "low": 1.4,
+   "high": 1.8
+  },
+  "limit_pct": 70,
+  "laps_to_limit": {
+   "low": 31.1,
+   "high": 40.0
+  },
+  "enough_laps": true,
+  "note": null,
+  "game_laps_left": 30,
+  "game_usable_life": 37,
+  "new_set": {
+   "compound": "medium",
+   "gain_s": 0.69,
+   "deg_s_per_lap": 0.09,
+   "tier": "game"
+  }
+ },
+ "fuel": {
+  "fuel_kg": 10.4,
+  "per_lap_kg": 1.43,
+  "laps_used": 4,
+  "margin_laps": 2.3,
+  "margin_kg": 3.3,
+  "game_margin_laps": 2.1,
+  "status": "ok",
+  "lift_coast": null,
+  "burn_model": {
+   "full_throttle_kg_per_s": 0.0238,
+   "r2": 0.85,
+   "windows": 734
+  }
+ },
+ "pit": {
+  "stops_done": 0,
+  "stop_needed": false,
+  "two_stops": null,
+  "window": null,
+  "game_window": null,
+  "pit_loss": {
+   "median_s": 18.9,
+   "range": {
+    "low": 18.9,
+    "high": 18.9
+   },
+   "n": 1
+  },
+  "pit_loss_sc": {
+   "full_s": 9.5,
+   "virtual_s": 11.3,
+   "tier": "heuristic"
+  },
+  "pit_entry_m": 4264,
+  "rejoin": {
+   "position": 9,
+   "gap_ahead_s": 1.2,
+   "gap_behind_s": 2.0,
+   "traffic": false,
+   "game_position": 9
+  },
+  "undercut_ahead": {
+   "status": "unknown",
+   "gap_s": 2.0,
+   "gain": null,
+   "reason": "no stop needed",
+   "tier": "game"
+  },
+  "undercut_threat": {
+   "status": "unknown",
+   "gap_s": 3.0,
+   "gain": null,
+   "reason": "no stop needed",
+   "tier": "game"
+  },
+  "neighbour_stop": null,
+  "note": null
+ },
+ "safety_car": {
+  "status": "none",
+  "since_lap": null,
+  "box": null
+ },
+ "weather": {
+  "now": "overcast",
+  "rain_pct": 7,
+  "track_temp_c": 35,
+  "accuracy": "perfect",
+  "forecast": [
+   {
+    "in_min": 0,
+    "weather": "overcast",
+    "rain_pct": 7,
+    "in_laps": 0
+   },
+   {
+    "in_min": 5,
+    "weather": "overcast",
+    "rain_pct": 9,
+    "in_laps": 4
+   },
+   {
+    "in_min": 10,
+    "weather": "light_cloud",
+    "rain_pct": 6,
+    "in_laps": 8
+   },
+   {
+    "in_min": 15,
+    "weather": "light_cloud",
+    "rain_pct": 5,
+    "in_laps": 13
+   },
+   {
+    "in_min": 30,
+    "weather": "light_cloud",
+    "rain_pct": 5,
+    "in_laps": 25
+   }
+  ],
+  "next_change": null,
+  "crossover": null
+ },
+ "calls": [
+  {
+   "id": "c65-gap",
+   "topic": "gap",
+   "level": "detailed",
+   "text": "Car behind is within a second.",
+   "text_simple": "Car close behind you.",
+   "audience": "all",
+   "lap": 65,
+   "t_unix": 1791668900.0,
+   "ttl_s": 20.0
+  }
+ ]
+}

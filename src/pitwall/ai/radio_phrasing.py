@@ -149,14 +149,37 @@ def ai_level(sheet: FactSheet) -> str | None:
     )
 
 
+def _strategy_first(
+    intent: str, fallback: Callable[[FactSheet], str | None] | None
+) -> Callable[[FactSheet], str | None]:
+    """Race strategy's instant answer (``strategy.phrasing``, from a live race / practice StrategyView) when the sheet
+    has strategy facts, else ``fallback`` (the per-lap phrasing, or what the game never sends)."""
+
+    def phrase(sheet: FactSheet) -> str | None:
+        from pitwall.strategy.phrasing import strategy_radio_answer  # strategy imports ai.facts: keep this lazy
+
+        short = strategy_radio_answer(intent, sheet)
+        if short is not None:
+            return short
+        return fallback(sheet) if fallback is not None else None
+
+    return phrase
+
+
+# One explicit table (plan 4.5): race strategy for the race questions, then pace vs AI, then the game's capability
+# sentence for data it never sends.
 PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
-    "tyres": tyres,
-    "fuel": fuel,
+    "fuel": _strategy_first("fuel", fuel),
+    "tyres": _strategy_first("tyres", tyres),
+    "strategy": _strategy_first("strategy", None),
+    "gaps": _strategy_first("gaps", capability("gaps")),
+    "weather": _strategy_first("weather", capability("weather")),
+    "safety_car": _strategy_first("safety_car", capability("safety_car")),
     "lap_times": lap_times,
     "last_lap": last_lap,
     "ai_pace": ai_pace,
     "ai_level": ai_level,
-    **{g: capability(g) for g in ("damage", "ers", "sectors", "flags", "weather")},
+    **{g: capability(g) for g in ("damage", "ers", "sectors", "flags")},
 }
 
 

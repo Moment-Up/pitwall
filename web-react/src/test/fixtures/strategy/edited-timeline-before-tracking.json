@@ -1,0 +1,22 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyTimeline",
+  "moment": "a race stored before the strategy engine existed",
+  "notes": "The backend's reason string for old races (strategy spec 7.3)."
+ },
+ "session_id": "332904dbe3de",
+ "available": false,
+ "reason": "recorded before strategy tracking",
+ "total_laps": null,
+ "grid_position": null,
+ "finish_position": null,
+ "laps": [],
+ "stints": [],
+ "stops": [],
+ "field_stops": [],
+ "pit_loss": null,
+ "safety_car_periods": [],
+ "weather": [],
+ "calls": []
+}

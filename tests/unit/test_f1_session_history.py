@@ -91,8 +91,9 @@ def session(
 
 
 def started(fmt: int = 2025, flags: list[int] | None = None, n_active: int = 20) -> F1Adapter:
-    """An adapter inside session ``UID`` (a Session packet seen), with AI flags for 20 slots (slot 0 = player)."""
-    a = F1Adapter(field_hz=0)
+    """An adapter inside session ``UID`` (a Session packet seen), with AI flags for 20 slots (slot 0 = player). The
+    field model and the race timing (race strategy) are off: only AI pace's own output is emitted."""
+    a = F1Adapter(field_hz=0, timing_hz=0)
     a.decode(session(fmt=fmt), 1)
     a.decode(participants(flags if flags is not None else [0] + [1] * 19, n_active, fmt=fmt), 2)
     return a
@@ -153,7 +154,7 @@ def test_lap_time_change_resets_and_zero_clears_the_completion_time() -> None:
 
 
 def test_ai_flag_change_re_emits() -> None:
-    a = F1Adapter(field_hz=0)
+    a = F1Adapter(field_hz=0, timing_hz=0)
     a.decode(session(), 1)
     (h,) = hist(a, history(6, [lap(80_000), lap(0)]))
     assert h.ai_controlled is None  # no Participants packet yet: unknown
@@ -229,7 +230,7 @@ def test_player_flag() -> None:
 
 
 def test_old_uid_or_no_session_is_ignored_without_reset() -> None:
-    fresh = F1Adapter(field_hz=0)
+    fresh = F1Adapter(field_hz=0, timing_hz=0)
     assert fresh.decode(history(3, [lap(80_000)], uid=99), 1) == []  # no session yet: never starts one
     assert fresh._session_uid is None and fresh.stats.ignored == 1
     a = started()
@@ -252,7 +253,8 @@ def test_slot_rules_for_ai_flags() -> None:
     assert flags[19] is None  # flag 0 beyond numActiveCars -> unknown (zero-filled slot)
     b = started(flags=[0, 0, 1], n_active=3)
     assert b._ai_flags_raw[:3] == (False, False, True)  # 0 inside numActiveCars -> human
-    # the field model keeps its own rule (slots >= numActiveCars unknown) and is only decoded when it is on
+    # the field model keeps its own rule (slots >= numActiveCars unknown) and is only decoded when it (or the race
+    # timing) is on
     assert a._ai_controlled == ()
     c = F1Adapter()
     c.decode(participants([1] * 18 + [1, 0], 18), 1)

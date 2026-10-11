@@ -1,0 +1,219 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "race, lap 7 of 12, P3, virtual safety car: a stop is cheap, the car ahead is in the pit lane",
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data. The VSC pit-loss factor (0.6) is the spec's unvalidated heuristic.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed)"
+  ]
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "a1b2c3d4e5f6",
+ "synthetic": false,
+ "lap": 7,
+ "total_laps": 12,
+ "laps_remaining": 5.7,
+ "position": 3,
+ "cars": 6,
+ "gaps": {
+  "ahead": {
+   "car_index": 2,
+   "gap_s": 2.4,
+   "settled": false,
+   "trend_s_per_lap": -0.1,
+   "trend_laps": 3,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": null,
+   "stops": 0,
+   "in_pit": true,
+   "tyre": {
+    "compound": "medium",
+    "age_laps": 7
+   }
+  },
+  "behind": {
+   "car_index": 4,
+   "gap_s": 1.6,
+   "settled": true,
+   "trend_s_per_lap": 0.0,
+   "trend_laps": 3,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": null,
+   "stops": 1,
+   "in_pit": false,
+   "tyre": {
+    "compound": "hard",
+    "age_laps": 2
+   }
+  },
+  "leader_s": 5.1,
+  "note": null
+ },
+ "tyres": {
+  "compound": "medium",
+  "age_laps": 7,
+  "stint_laps": 7,
+  "wear_pct": [
+   21,
+   24,
+   19,
+   20
+  ],
+  "limiting_wheel": "FR",
+  "rate_pct_per_lap": 3.4,
+  "rate_range": {
+   "low": 3.2,
+   "high": 3.6
+  },
+  "limit_pct": 70,
+  "laps_to_limit": {
+   "low": 12.8,
+   "high": 14.4
+  },
+  "enough_laps": true,
+  "note": null,
+  "game_laps_left": 4,
+  "game_usable_life": 11,
+  "new_set": {
+   "compound": "hard",
+   "gain_s": 1.1,
+   "deg_s_per_lap": 0.06,
+   "tier": "game"
+  }
+ },
+ "fuel": {
+  "fuel_kg": 9.1,
+  "per_lap_kg": 1.52,
+  "laps_used": 4,
+  "margin_laps": 0.3,
+  "margin_kg": 0.45,
+  "game_margin_laps": 0.4,
+  "status": "ok",
+  "lift_coast": null,
+  "burn_model": null
+ },
+ "pit": {
+  "stops_done": 0,
+  "stop_needed": true,
+  "two_stops": false,
+  "window": {
+   "open_lap": 5,
+   "close_lap": 10,
+   "ideal_lap": 8,
+   "close_source": "game",
+   "tier": "game"
+  },
+  "game_window": null,
+  "pit_loss": {
+   "median_s": 18.9,
+   "range": {
+    "low": 18.9,
+    "high": 18.9
+   },
+   "n": 1
+  },
+  "pit_loss_sc": {
+   "full_s": 9.5,
+   "virtual_s": 11.3,
+   "tier": "heuristic"
+  },
+  "pit_entry_m": 4264,
+  "rejoin": null,
+  "undercut_ahead": {
+   "status": "unknown",
+   "gap_s": 2.4,
+   "gain": {
+    "low": 0.77,
+    "high": 1.1
+   },
+   "reason": "the car ahead is in the pit lane",
+   "tier": "game"
+  },
+  "undercut_threat": {
+   "status": "unknown",
+   "gap_s": 1.6,
+   "gain": {
+    "low": 0.77,
+    "high": 1.1
+   },
+   "reason": "the car behind has already stopped",
+   "tier": "game"
+  },
+  "neighbour_stop": {
+   "car": "ahead",
+   "car_index": 2,
+   "rejoin_gap_s": 4.2,
+   "status": "covered",
+   "traffic": false
+  },
+  "note": null
+ },
+ "safety_car": {
+  "status": "virtual",
+  "since_lap": 7,
+  "box": {
+   "pit_loss_s": 11.3,
+   "green_pit_loss_s": 18.9,
+   "stop_needed": true,
+   "this_lap": true,
+   "tier": "heuristic"
+  }
+ },
+ "weather": {
+  "now": "light_cloud",
+  "rain_pct": 12,
+  "track_temp_c": 33,
+  "accuracy": "approximate",
+  "forecast": [
+   {
+    "in_min": 0,
+    "weather": "light_cloud",
+    "rain_pct": 12,
+    "in_laps": 0
+   },
+   {
+    "in_min": 5,
+    "weather": "overcast",
+    "rain_pct": 18,
+    "in_laps": 4
+   },
+   {
+    "in_min": 10,
+    "weather": "light_rain",
+    "rain_pct": 40,
+    "in_laps": 7
+   }
+  ],
+  "next_change": null,
+  "crossover": null
+ },
+ "calls": [
+  {
+   "id": "c7-sc",
+   "topic": "sc_box",
+   "level": "alert",
+   "text": "Virtual safety car. Pitting this lap is an option: a stop costs about 11 s now, 19 s under green.",
+   "text_simple": "Virtual safety car: a pit stop is cheap now, about 11 seconds instead of 19. You can pit this lap.",
+   "audience": "all",
+   "lap": 7,
+   "t_unix": 1791701500.0,
+   "ttl_s": 60.0
+  },
+  {
+   "id": "c7-nb",
+   "topic": "neighbour_stop",
+   "level": "detailed",
+   "text": "Car ahead is pitting: it rejoins about 4 s behind you.",
+   "text_simple": null,
+   "audience": "experienced",
+   "lap": 7,
+   "t_unix": 1791701490.0,
+   "ttl_s": 30.0
+  }
+ ]
+}

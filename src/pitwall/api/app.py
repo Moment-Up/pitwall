@@ -309,17 +309,23 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         last_version = -1
         last_static = 0.0
         last_game: Any = None
+        last_strategy_rev = -1
         try:
             while True:
                 now = time.monotonic()
                 static = now - last_static > 5.0
-                snap = r.live.snapshot(include_static=static)
+                # Race strategy rides the static merge: its view (2-3.5 kB) goes with the static payload and when it
+                # changed (<= 2 Hz); otherwise the key is left out and the client keeps the previous value.
+                strategy_rev = r.live.strategy_rev
+                send_strategy = static or strategy_rev != last_strategy_rev
+                snap = r.live.snapshot(include_static=static, include_strategy=send_strategy)
                 # The game block changes without a new frame (a selection made on another device or by the CLI, a
                 # detection going live -> stale): send it at once instead of with the next 5 s static payload.
                 game = snap.get("game")
-                if snap["version"] != last_version or static or game != last_game:
+                if snap["version"] != last_version or static or game != last_game or send_strategy:
                     last_version = snap["version"]
                     last_game = game
+                    last_strategy_rev = strategy_rev
                     if static:
                         last_static = now
                     await ws.send_bytes(orjson.dumps({"type": "snapshot", "data": snap}))
@@ -825,6 +831,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
 
     app.include_router(update_router)
     # --- end lane install ---
+    from pitwall.api.routes_strategy import router as strategy_router  # race strategy (pitwall.strategy)
+
+    app.include_router(strategy_router)
     from pitwall.api.routes_validate import router as validate_router  # validation kit (lane validate)
 
     app.include_router(validate_router)

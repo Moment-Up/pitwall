@@ -8,7 +8,7 @@ import pytest
 
 from pitwall.adapters.base import PacketRejected
 from pitwall.adapters.f1 import packets as P
-from pitwall.adapters.f1.adapter import F1Adapter
+from pitwall.adapters.f1.adapter import _HANDLERS, F1Adapter
 from pitwall.adapters.f1.spec_check import compare_struct, extract_structs, section
 from pitwall.adapters.structdef import StructDef
 
@@ -169,8 +169,13 @@ def test_can_decode_detects_both_formats_and_ignores_garbage() -> None:
 
 def test_ignored_packet_types_are_counted_not_errors() -> None:
     a = F1Adapter()
-    a.decode(_header(2025, int(P.PacketId.TYRE_SETS)) + b"\0" * (231 - 29), 0)
-    assert a.stats.ignored == 1 and a.stats.errors == 0
+    # Lobby Info (ID 9, 954 bytes) and Lap Positions (spec 5.15, 1131 bytes) are not decoded. Session History (AI
+    # pace) and TyreSets (race strategy) are decoded now: a follower of a session that has not started is ignored by
+    # the session guard instead, which is not what this test is about.
+    a.decode(_header(2025, int(P.PacketId.LOBBY_INFO)) + b"\0" * (954 - 29), 0)
+    a.decode(_header(2025, int(P.PacketId.LAP_POSITIONS)) + b"\0" * (1131 - 29), 0)
+    assert a.stats.ignored == 2 and a.stats.errors == 0
+    assert P.PacketId.LOBBY_INFO not in _HANDLERS and P.PacketId.LAP_POSITIONS not in _HANDLERS
 
 
 def test_unknown_event_code_is_tolerated() -> None:

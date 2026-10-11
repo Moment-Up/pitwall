@@ -1,0 +1,158 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "scripts/strategy_check.py --json tests/fixtures/recorded/f1_25_2025_ps5_monza_race-excerpt.pwcap",
+  "moment": "the engine's view at the end of the Monza excerpt (game session 14715103996819411055)",
+  "notes": "The strategy engine's own output (StrategyEngine fed by F1Adapter, no DB, no radio) over a committed PS5 F1 25 race excerpt, regenerated from the feat/strategy backend after the review fixes (2026-10-11): regenerate with the same command when the engine changes. Recorded tier: real decoding of a real capture, not live-validated."
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "uid:14715103996819411055",
+ "synthetic": false,
+ "lap": 3,
+ "total_laps": 3,
+ "laps_remaining": 0.61,
+ "position": 3,
+ "cars": 20,
+ "gaps": {
+  "ahead": {
+   "car_index": 2,
+   "gap_s": 1.584,
+   "settled": true,
+   "trend_s_per_lap": null,
+   "trend_laps": 0,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": null,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": {
+    "compound": "soft",
+    "age_laps": 2
+   }
+  },
+  "behind": {
+   "car_index": 1,
+   "gap_s": 1.718,
+   "settled": true,
+   "trend_s_per_lap": null,
+   "trend_laps": 0,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": null,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": {
+    "compound": "soft",
+    "age_laps": 2
+   }
+  },
+  "leader_s": 4.921,
+  "note": "not enough laps for a trend yet"
+ },
+ "tyres": {
+  "compound": "soft",
+  "age_laps": 2,
+  "stint_laps": 1,
+  "wear_pct": [
+   7.0,
+   2.0,
+   7.0,
+   5.0
+  ],
+  "limiting_wheel": null,
+  "rate_pct_per_lap": null,
+  "rate_range": null,
+  "limit_pct": 70.0,
+  "laps_to_limit": null,
+  "enough_laps": false,
+  "note": "not enough laps on this set yet: 3 green laps needed",
+  "game_laps_left": 17,
+  "game_usable_life": 18,
+  "new_set": {
+   "compound": "soft",
+   "gain_s": 0.127,
+   "deg_s_per_lap": null,
+   "tier": "game"
+  }
+ },
+ "fuel": {
+  "fuel_kg": 5.65,
+  "per_lap_kg": null,
+  "laps_used": 0,
+  "margin_laps": null,
+  "margin_kg": null,
+  "game_margin_laps": 2.58,
+  "status": "unknown",
+  "lift_coast": null,
+  "burn_model": null
+ },
+ "pit": {
+  "stops_done": 0,
+  "stop_needed": false,
+  "two_stops": null,
+  "window": null,
+  "game_window": null,
+  "pit_loss": null,
+  "pit_loss_sc": null,
+  "pit_entry_m": null,
+  "rejoin": {
+   "position": null,
+   "gap_ahead_s": null,
+   "gap_behind_s": null,
+   "traffic": null,
+   "game_position": 20
+  },
+  "undercut_ahead": {
+   "status": "unknown",
+   "gap_s": 1.58,
+   "gain": {
+    "low": 0.09,
+    "high": 0.13
+   },
+   "reason": "no stop needed",
+   "tier": "game"
+  },
+  "undercut_threat": {
+   "status": "unknown",
+   "gap_s": 1.72,
+   "gain": {
+    "low": 0.09,
+    "high": 0.13
+   },
+   "reason": "no stop needed",
+   "tier": "game"
+  },
+  "neighbour_stop": null,
+  "note": "no pit stop measured in this race yet"
+ },
+ "safety_car": {
+  "status": "none",
+  "since_lap": null,
+  "box": null
+ },
+ "weather": {
+  "now": "clear",
+  "rain_pct": 4,
+  "track_temp_c": 37.0,
+  "accuracy": "approximate",
+  "forecast": [
+   {
+    "in_min": 5,
+    "weather": "clear",
+    "rain_pct": 4,
+    "in_laps": 3
+   },
+   {
+    "in_min": 10,
+    "weather": "clear",
+    "rain_pct": 4,
+    "in_laps": 7
+   }
+  ],
+  "next_change": null,
+  "crossover": null
+ },
+ "calls": []
+}

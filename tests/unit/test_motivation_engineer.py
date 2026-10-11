@@ -28,7 +28,7 @@ T = datetime.combine(date.today() - timedelta(days=date.today().weekday()), cloc
     ("question", "intent"),
     [
         ("How am I doing on my goal?", "goals"),
-        ("what's my target lap time", "goals"),
+        ("what's my target lap time", "lap_times"),  # as before goals (motivation review #1, v0.2.0 plan 4.2)
         ("any badges?", "goals"),
         ("how long is my clean lap streak", "goals"),
         ("how many laps this week", "goals"),

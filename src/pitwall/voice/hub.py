@@ -119,9 +119,26 @@ DELIVERY_LEAD_S = 0.2  # audio already synthesised: transport + device start-up 
 # about data the game never sends (games.capability_only: damage in GT7, sectors in Forza, ...) is instant too; the
 # same question about a game that sends the data goes to the LLM like any other.
 FAST_INTENTS = frozenset(
-    {"fuel", "tyres", "lap_times", "last_lap", "strategy", "control_quiet", "control_resume", "radio_check"}
-    | {"line", "technique", "balance"}  # feat/technique: deterministic, corner-aware answers (no phraser)
-    | {"ai_pace", "ai_level"}  # pace vs AI difficulty: radio_phrasing.ai_pace / ai_level
+    {
+        "radio_check",
+        "control_quiet",
+        "control_resume",
+        # race strategy (pitwall.strategy) and the session's own facts: deterministic, short radio answers
+        "fuel",
+        "tyres",
+        "strategy",
+        "safety_car",
+        "gaps",
+        "weather",
+        "lap_times",
+        "last_lap",
+        "line",  # feat/technique: deterministic, corner-aware answers (no phraser)
+        "technique",
+        "balance",
+        "ai_pace",  # pace vs AI difficulty: radio_phrasing.ai_pace / ai_level
+        "ai_level",
+        "goals",  # lane motivation: goal facts (plan decision 1)
+    }
 )
 NO_GAME_REPLY = "Tell me which game you're playing: open Setup, then Game."
 NO_SESSION_REPLY = "No session data yet. Get a lap in and ask me again."
@@ -1172,6 +1189,8 @@ class RadioHub:
             self._loop.call_soon_threadsafe(self._enqueue_lap, payload)
         elif kind == "motivation" and self._loop is not None:  # lane motivation: a goal was reached
             self._loop.call_soon_threadsafe(self._enqueue_motivation, payload)
+        elif kind == "strategy_call" and self._loop is not None:  # race strategy (pitwall.strategy)
+            self._loop.call_soon_threadsafe(self._enqueue_strategy, payload)
 
     def _enqueue_motivation(self, payload: dict[str, Any]) -> None:  # lane motivation (event loop only)
         simple = self.coaching_limits is not None and self.coaching_limits.simple_wording
@@ -1181,6 +1200,22 @@ class RadioHub:
         )
         if msg is not None:
             self.scheduler.enqueue(msg)
+
+    # --- race strategy (pitwall.strategy) ---
+    def _enqueue_strategy(self, payload: dict[str, Any]) -> None:
+        """A proactive strategy call: queued for the scheduler's speak windows (``strategy.radio``). Calls meant for
+        experienced drivers (undercut, a neighbour pitting, gap trends) are not given to a driver whose profile asks
+        for simple wording, who hears the call's plain words (``text_simple``) instead of the jargon."""
+        try:
+            from pitwall.strategy.radio import strategy_message
+
+            limits = self.coaching_limits
+            simple = limits is not None and limits.simple_wording
+            if payload.get("audience") == "experienced" and simple:
+                return
+            self.scheduler.enqueue(strategy_message(payload, time.monotonic(), simple=simple))
+        except Exception:
+            log.exception("strategy call failed")
 
     def apply_driver(self, driver: Driver | None) -> None:
         """The seated driver changed or edited their profile (``DriverService.attach_radio``; event loop only).

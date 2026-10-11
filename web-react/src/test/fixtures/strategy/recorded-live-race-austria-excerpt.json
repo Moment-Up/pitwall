@@ -1,0 +1,149 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "scripts/strategy_check.py --json tests/fixtures/recorded/f1_25_2025_ps5_austria_race-excerpt.pwcap",
+  "moment": "the engine's view at the end of the Austria excerpt (game session 10376571985058302815)",
+  "notes": "The strategy engine's own output (StrategyEngine fed by F1Adapter, no DB, no radio) over a committed PS5 F1 25 race excerpt, regenerated from the feat/strategy backend after the review fixes (2026-10-11): regenerate with the same command when the engine changes. Recorded tier: real decoding of a real capture, not live-validated."
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "uid:10376571985058302815",
+ "synthetic": false,
+ "lap": 3,
+ "total_laps": 3,
+ "laps_remaining": 0.0,
+ "position": 20,
+ "cars": 20,
+ "gaps": {
+  "ahead": {
+   "car_index": 16,
+   "gap_s": 6.991,
+   "settled": true,
+   "trend_s_per_lap": null,
+   "trend_laps": 0,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": null,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": {
+    "compound": "soft",
+    "age_laps": 3
+   }
+  },
+  "behind": null,
+  "leader_s": 34.234,
+  "note": "not enough laps for a trend yet"
+ },
+ "tyres": {
+  "compound": "soft",
+  "age_laps": 3,
+  "stint_laps": 3,
+  "wear_pct": [
+   7.0,
+   8.0,
+   16.0,
+   15.0
+  ],
+  "limiting_wheel": "RL",
+  "rate_pct_per_lap": 5.0,
+  "rate_range": {
+   "low": 4.5,
+   "high": 5.5
+  },
+  "limit_pct": 70.0,
+  "laps_to_limit": null,
+  "enough_laps": false,
+  "note": "not enough laps on this set yet: 3 green laps needed",
+  "game_laps_left": 22,
+  "game_usable_life": 27,
+  "new_set": {
+   "compound": "soft",
+   "gain_s": 0.608,
+   "deg_s_per_lap": null,
+   "tier": "game"
+  }
+ },
+ "fuel": {
+  "fuel_kg": 4.16,
+  "per_lap_kg": 1.3,
+  "laps_used": 2,
+  "margin_laps": 3.2,
+  "margin_kg": 4.17,
+  "game_margin_laps": 2.92,
+  "status": "ok",
+  "lift_coast": null,
+  "burn_model": null
+ },
+ "pit": {
+  "stops_done": 0,
+  "stop_needed": false,
+  "two_stops": null,
+  "window": null,
+  "game_window": null,
+  "pit_loss": null,
+  "pit_loss_sc": null,
+  "pit_entry_m": null,
+  "rejoin": {
+   "position": null,
+   "gap_ahead_s": null,
+   "gap_behind_s": null,
+   "traffic": null,
+   "game_position": 20
+  },
+  "undercut_ahead": {
+   "status": "unknown",
+   "gap_s": 6.99,
+   "gain": {
+    "low": 0.43,
+    "high": 0.61
+   },
+   "reason": "no stop needed",
+   "tier": "game"
+  },
+  "undercut_threat": null,
+  "neighbour_stop": null,
+  "note": "no pit stop measured in this race yet"
+ },
+ "safety_car": {
+  "status": "none",
+  "since_lap": null,
+  "box": null
+ },
+ "weather": {
+  "now": "light_cloud",
+  "rain_pct": 7,
+  "track_temp_c": 34.0,
+  "accuracy": "approximate",
+  "forecast": [
+   {
+    "in_min": 5,
+    "weather": "light_cloud",
+    "rain_pct": 7,
+    "in_laps": 4
+   },
+   {
+    "in_min": 10,
+    "weather": "light_cloud",
+    "rain_pct": 7,
+    "in_laps": 7
+   }
+  ],
+  "next_change": null,
+  "crossover": null
+ },
+ "calls": [
+  {
+   "id": "st-gap-2-10",
+   "topic": "gap",
+   "level": "detailed",
+   "text": "Car behind is within a second.",
+   "text_simple": "Car close behind you.",
+   "audience": "all",
+   "lap": 2,
+   "ttl_s": 20.0,
+   "t_unix": 1791750838.497
+  }
+ ]
+}

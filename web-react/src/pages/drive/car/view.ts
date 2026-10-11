@@ -22,6 +22,7 @@ import type { GameEntry } from "../../../lib/endpoints/game";
 import { decimal, gearLabel, grouped, num, tyreTempColor, unit01 } from "../../../lib/format";
 import { featureOf, missing, tyresUnavailableText, unavailableLine } from "../../../lib/game";
 import { worldXZ } from "../../../lib/viz/track-map";
+import { measuredFuelMargin } from "../../../lib/strategy/view"; // race strategy (pitwall.strategy)
 
 /** The data on screen is current: not stale, not offline, and telemetry has arrived. */
 export function liveValues(model: Pick<DriveModel, "dim" | "state">): boolean {
@@ -187,7 +188,10 @@ export function tyresTile(s: SnapshotNext | null, entry: GameEntry | null = null
   const age = finite(f?.tyre_age_laps) ? `${f.tyre_age_laps} ${f.tyre_age_laps === 1 ? "lap" : "laps"}` : null;
   const chip = compound ? [compound, age].filter(Boolean).join(" · ") : null;
   const fuel = finite(f?.fuel_kg) ? `${num(f.fuel_kg, 1)} kg` : UNKNOWN;
-  const margin = finite(f?.fuel_remaining_laps_game) ? `${signedFixed(f.fuel_remaining_laps_game, 1)} laps (game)` : null;
+  // race strategy (pitwall.strategy): this race's own measured margin first, the game's figure until it is known
+  const margin =
+    measuredFuelMargin(s) ??
+    (finite(f?.fuel_remaining_laps_game) ? `${signedFixed(f.fuel_remaining_laps_game, 1)} laps (game)` : null);
   const ers = finite(f?.ers_store_j) ? `${num(f.ers_store_j / 1e6, 1)} MJ` : UNKNOWN;
   const energy = [
     missing(entry, "fuel") ? null : `Fuel ${fuel}`,

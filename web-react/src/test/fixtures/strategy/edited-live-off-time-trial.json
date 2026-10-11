@@ -1,0 +1,25 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "time trial: strategy off",
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data."
+ },
+ "version": 1,
+ "mode": "off",
+ "reason": "time trial",
+ "session_id": "a1b2c3d4e5f6",
+ "synthetic": false,
+ "lap": null,
+ "total_laps": null,
+ "laps_remaining": null,
+ "position": null,
+ "cars": null,
+ "gaps": null,
+ "tyres": null,
+ "fuel": null,
+ "pit": null,
+ "safety_car": null,
+ "weather": null,
+ "calls": []
+}

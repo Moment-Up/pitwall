@@ -65,8 +65,17 @@ const WATCHDOG_TICK_MS = 1000;
 /** Back in the foreground / online: a socket silent this long (or a connect this old) is restarted now. */
 export const FOREGROUND_RECONNECT_MS = 2000;
 
-/** The snapshot keys the server sends only with its ~5 s static payload (core/live.py snapshot(include_static)). */
-export const STATIC_KEYS = ["track_model", "skeleton", "bests", "last_comparison", "track_knowledge"] as const;
+/** The snapshot keys the server sends only with its ~5 s static payload (core/live.py snapshot(include_static)).
+ * "strategy" (race strategy) is sent with it and whenever it changed (LiveState.strategy_rev): absent keeps the previous
+ * value within the session, null means none, and a new session starts without it. */
+export const STATIC_KEYS = [
+  "track_model",
+  "skeleton",
+  "bests",
+  "last_comparison",
+  "track_knowledge",
+  "strategy",
+] as const;
 
 /** Merge the static parts of the previous snapshot into one that omitted them, within the same session (a new session
  * starts without them until its first static snapshot). Exported for tests. */

@@ -80,6 +80,30 @@ losing 0.12 s"). Recorded tier: `tests/fixtures/recorded/f1_25_2025_ps5_austria_
   (`tests/recorded/test_carsetup_real.py`); no recommended setup has been driven or validated by pitwall.
   See `docs/research/f1-car-setups.md`.
 
+- **Race strategy engineer** (`pitwall/strategy`, tables `strategy_laps` / `pit_stops`, Drive › Car strategy tile,
+  Review › Strategy, `/api/strategy/live`, `/api/sessions/{sid}/strategy`, strategy radio calls and intents): **unit + synthetic;
+  recorded** for decoding (every car's LapData as `RaceTiming`, the player's TyreSets), gaps, fuel, tyre wear,
+  TyreSets, forecast and AI pit-stop timing (committed PS5 Austria and Monza excerpts; the full 71-lap Austria race
+  checked manually with `scripts/strategy_check.py`: car 14's stop measures 18.9 s, burn model b1 0.0236 kg/s
+  R^2 0.85, fuel within 0.35 laps of the game's figure at every lap end, predicted rejoin within one place of the
+  game's in 72.7 % of samples over both session UIDs but only 44.6 % in the second). Safety car / VSC, rain, the
+  inters/wets crossover and the player's own pit stop are **synthetic only** (`race-strategy-demo`; one real
+  player stop's entry, exit, lane and stationary times were seen in the owner's 2026-10-11 Austria capture, checked
+  manually, but the capture ends on the out-lap, so its loss was not measured). Heuristics are
+  marked `[H]` in the code (70 % wear limit, the undercut bands, the SC/VSC loss factors, traffic 1 s, the ideal-lap
+  cost model, lift-and-coast limits, the 15 min forecast horizon). End to end on an isolated server (2026-10-11):
+  the full Austria race streamed over UDP at 6x gave the same lap records and car 14 stop (18.9 s) as the headless
+  check, the Drive tile and Review › Strategy rendered at iPad and phone sizes, and the radio answered the
+  strategy, gaps, fuel, tyres and weather intents instantly (no LLM); the synthetic race's VSC box, rain, fuel and
+  undercut-threat calls were said in speak windows at normal intensity. **Not live-validated**;
+  `capabilities.py` is unchanged. Review fixes (2026-10-11, unit + synthetic, the recorded fixtures regenerated): a
+  flashback into a stop re-opens it (no phantom one-lap stop), a lapped player's race ends a lap early (no false
+  "fuel critical"), the fuel verdict is judged at the line, pit-window calls are said once (not "laps 19 to 19"
+  every three laps) and wait three laps after a stop when only the game's figure closes the window, no rain call
+  for a change after the flag, no gap calls under SC / VSC ("within a second" is detail now), "this lap" only once
+  the pit entry is known; every call has plain words for simple wording (radio, tile, Review), the tile is shown in
+  races of 8 laps or more, and the Coach radio strip shows the newest strategy alert while the radio is off.
+
 ## Dashboard v2 (React + HeroUI, `web-react/`), 2026-10-11
 
 Built to the approved design (`docs/ui/design-spec.md` v2, coach-first; `docs/ui/mockup.html`) in lanes (spec 14.1).

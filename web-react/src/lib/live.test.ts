@@ -112,6 +112,17 @@ describe("mergeStatic", () => {
     for (const k of STATIC_KEYS) expect(next[k]).toBe((prev as unknown as Record<string, unknown>)[k]);
   });
 
+  it("race strategy: sent only when it changed; absent keeps it, null clears it, a new session starts without it", () => {
+    const view = { version: 1, mode: "race", session_id: "s1" };
+    const prev = { ...snapshot(), strategy: view } as unknown as Snapshot;
+    const kept = mergeStatic(prev, snapshot()) as unknown as Record<string, unknown>;
+    expect(kept.strategy).toBe(view);
+    const cleared = mergeStatic(prev, { ...snapshot(), strategy: null } as unknown as Snapshot);
+    expect((cleared as unknown as Record<string, unknown>).strategy).toBeNull();
+    const other = mergeStatic(prev, snapshot({ session_id: "s2" })) as unknown as Record<string, unknown>;
+    expect(other.strategy).toBeUndefined();
+  });
+
   it("never carries a previous session's static parts into a new session", () => {
     const prev = { ...snapshot({ track_model: MODEL }), bests: { session: { lap_ms: 1 } } } as Snapshot;
     const next = mergeStatic(prev, snapshot({ session_id: "s2" })) as unknown as Record<string, unknown>;

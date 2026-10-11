@@ -60,6 +60,12 @@ _WORDS_TO_NUM = {
 }
 _CORNER_RE = re.compile(r"\b(?:(?:turn|corner)\s*(\d{1,2}|" + "|".join(_WORDS_TO_NUM) + r")|t\s?(\d{1,2}))\b", re.I)
 
+# One ordered intent table (v0.2.0 plan 4.1): the first match wins. Every lane's intents in one order, so a question
+# that names two things goes where a driver means it ("inters" is weather before tyres, "damaged after the contact
+# with the car ahead" is damage before gaps, "my position on the brake" is braking, not race position). The coachref
+# drill rules join at the top (after radio_check) when that lane lands.
+_AI = r"(?:ai|a\.?\s?i\.?|computer|bots?)"
+
 _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("radio_check", re.compile(r"\b(radio check|can you hear me|do you (?:read|copy)(?: me)?|mic check)\b", re.I)),
     (
@@ -71,7 +77,7 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     ("control_resume", re.compile(r"\b(resume|start talking|talk to me again|you can talk|coaching on)\b", re.I)),
-    # pace vs AI difficulty: before "pace" (lap_times), "vs" (compare) and "what should i" (focus)
+    # pace vs AI difficulty: before "pace" (lap_times), "vs" (compare), "what should i" (focus) and "gap" (gaps)
     (
         "ai_level",
         re.compile(
@@ -89,16 +95,42 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         "ai_pace",
         re.compile(
             r"\b(?:against|vs\.?|versus|compared?\s+(?:to|with)|than|beat(?:ing)?)\s+(?:the\s+)?"
-            r"(?:ai|a\.?\s?i\.?|computer|bots?)\b|\b(?:ai|a\.?\s?i\.?)\s+(?:pace|cars?|drivers?|field)\b",
+            r"(?:ai|a\.?\s?i\.?|computer|bots?)\b|\b(?:ai|a\.?\s?i\.?)\s+(?:pace|cars?|drivers?|field)\b"
+            # "what's my gap to the AI?", "how far behind the AI am I?", "is the computer faster than me?"
+            rf"|\bgap\b[^.?!]*\b{_AI}\b|\b(?:behind|ahead of|off|catch(?:ing)?)\s+(?:the\s+)?{_AI}\b"
+            rf"|\b{_AI}\b[^.?!]*\b(?:faster|slower|quicker)\b",
             re.I,
         ),
     ),
     ("fuel", re.compile(r"\b(fuel|petrol|gas|lift and coast)\b", re.I)),
+    # weather (one intent, two rules): the wet-tyre and forecast words before tyres ("should I box for inters?", "are
+    # the tyres OK in the wet?"); the plain weather words last (below), so "where should I brake at turn 4 in the
+    # rain?" stays braking and "what setup for rain?" setup
+    ("weather", re.compile(r"\b(inters?|intermediates?|forecast|wet)\b", re.I)),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
-    ("strategy", re.compile(r"\b(pit|box|strategy|stop window|pit window|undercut|overcut)\b", re.I)),
-    # data some games never send (games.INTENT_FEATURES), before setup ("front wing broken"): "wing" alone stays a
-    # setup question
+    (
+        "strategy",
+        re.compile(
+            r"\b(pit|box|strategy|stop window|pit window|undercut|overcut|stay out|when should i (?:pit|stop|box))\b",
+            re.I,
+        ),
+    ),
+    ("safety_car", re.compile(r"\b(safety car|vsc|virtual safety car)\b", re.I)),
+    # data some games never send (games.INTENT_FEATURES), before setup ("front wing broken": "wing" alone stays a
+    # setup question) and before gaps ("damaged after the contact with the car ahead")
     ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
+    # race gaps and position, never the driver's own reference ("how far behind my best am I?") and "position" only as
+    # race position ("my position on the brake for turn 4" is braking)
+    (
+        "gaps",
+        re.compile(
+            r"^(?!.*\b(?:best|reference|pb|personal best|delta|record)\b).*?"
+            r"\b(gaps?|interval|car (?:ahead|behind|in front)|behind me|in front of me|how far (?:ahead|behind|back)|"
+            r"catching|within a second|drs range|in drs|(?:what|which) position|race position|"
+            r"position (?:am i|are we))\b",
+            re.I,
+        ),
+    ),
     # --- feat/technique: handling balance (before setup: "understeer" asks how the car handled) ---
     (
         "balance",
@@ -128,14 +160,6 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ),
     # --- end feat/technique ---
     ("focus", re.compile(r"\b(one thing|work on|focus|improve|tip|advice|what should i)\b", re.I)),
-    # lane motivation: after focus ("what should I work on this week" stays focus), before lap_times ("what's my
-    # target lap time" is a goal question)
-    (
-        "goals",
-        re.compile(
-            r"\b(goals?|targets?|streaks?|badges?|how am i doing|(?:sessions?|laps?) this week|this week)\b", re.I
-        ),
-    ),
     ("compare", re.compile(r"\b(compare|comparison|versus|vs|against my best|to my best|reference)\b", re.I)),
     # --- feat/technique: brake and throttle technique (after compare, before braking) ---
     (
@@ -151,29 +175,50 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     # "how was my last lap / that lap": the lap just driven, not the best one (checked before lap_times)
     ("last_lap", re.compile(r"\b(?:last|previous|latest|that|this) lap\b(?!\s*times\b)", re.I)),
     ("lap_times", re.compile(r"\b(lap ?times?|fastest|best lap|pace|how fast)\b", re.I)),
-    ("summary", re.compile(r"\b(summary|summarise|summarize|debrief|how did (?:i|that) go|report)\b", re.I)),
+    # "how am I doing (so far / overall / today / now)?" on its own is a summary, not a goal question
+    (
+        "summary",
+        re.compile(
+            r"\b(summary|summarise|summarize|debrief|how did (?:i|that) go|report)\b"
+            r"|\bhow am i doing(?:\s+(?:so far|overall|today|now))?\s*[?.!]*\s*$",
+            re.I,
+        ),
+    ),
     ("losing_time", re.compile(r"\b(losing time|lose time|where am i (?:slow|losing)|time loss|slow(?:er)?)\b", re.I)),
+    # lane motivation (review #1): narrowed and after losing_time. "What's my target lap time?" stays lap_times, "am I
+    # on target?" general; "how many sessions did I do this week?" is a goal question
+    (
+        "goals",
+        re.compile(
+            r"\b(goals?|streaks?|badges?|how am i doing (?:on|with) (?:my|the|that) goals?|how am i doing this week|"
+            r"how many (?:sessions|laps)\b[^.?!]*\bthis week|(?:sessions|laps) this week)\b",
+            re.I,
+        ),
+    ),
     # More data some games never send (games.INTENT_FEATURES): last, so they only catch questions no rule above
     # matched ("where should I brake at turn 4 in the rain?" stays braking, "which sector am I losing time in?"
-    # losing_time, "was that lap slower because of the yellow?" last_lap). Flags and weather before sectors ("a
-    # yellow in sector 2?").
+    # losing_time, "was that lap slower because of the yellow?" last_lap). Flags and weather before sectors ("a yellow
+    # in sector 2?"); the safety car and VSC have their own intent above.
     ("ers", re.compile(r"\b(ers|battery|deploy(?:ment)?|hybrid|harvest\w*|overtake mode|drs)\b", re.I)),
-    ("flags", re.compile(r"\b(flags?|yellow|safety car|vsc|marshal)\b", re.I)),
-    ("weather", re.compile(r"\b(weather|rain(?:ing)?|track temp\w*|air temp\w*|forecast)\b", re.I)),
+    ("flags", re.compile(r"\b(flags?|yellow|marshal\w*)\b", re.I)),
+    ("weather", re.compile(r"\b(weather|rain(?:ing)?|drying|track temp\w*|air temp\w*)\b", re.I)),
     ("sectors", re.compile(r"\b(sectors?|splits?)\b", re.I)),
 ]
 
 _TOPICS: dict[str, set[str]] = {
+    # every intent keeps the "game" topic: what the game never sends is answered from it
     "fuel": {"session", "game", "fuel", "strategy"},
     "tyres": {"session", "game", "tyres", "strategy"},
-    "strategy": {"session", "game", "fuel", "tyres", "strategy"},
-    # damage / ERS / flags / weather were "general" questions before game selection: same facts (plus ERS), so a game
-    # that sends the data gets the answer it always got; a game that never sends it answers from its "game" fact
+    "strategy": {"session", "game", "fuel", "tyres", "strategy", "gaps"},
+    "safety_car": {"session", "game", "strategy", "flags"},
+    "gaps": {"session", "game", "gaps"},
+    "weather": {"session", "game", "weather", "tyres", "strategy"},
+    # damage / ERS / flags were "general" questions before game selection: same facts (plus ERS), so a game that sends
+    # the data gets the answer it always got; a game that never sends it answers from its "game" fact
     "damage": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "ers": {"session", "game", "ers", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "sectors": {"session", "game", "laps"},
     "flags": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
-    "weather": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "setup": {"session", "game", "corners", "observations", "compare", "setup", "balance"},  # balance: feat/technique
     "focus": {"session", "game", "observations", "corners", "reference"},
     "goals": {"session", "game", "goals", "progress"},  # lane motivation
@@ -181,7 +226,7 @@ _TOPICS: dict[str, set[str]] = {
     "braking": {"session", "game", "corners", "observations", "reference"},
     "lap_times": {"session", "game", "laps", "reference"},
     "last_lap": {"session", "game", "laps", "reference", "compare"},
-    "summary": {"session", "game", "laps", "corners", "observations", "fuel", "tyres", "ai"},
+    "summary": {"session", "game", "laps", "corners", "observations", "fuel", "tyres", "ai", "goals", "strategy"},
     "ai_pace": {"session", "game", "ai"},  # pace vs AI difficulty
     "ai_level": {"session", "game", "ai"},
     "losing_time": {"session", "game", "corners", "compare", "observations", "reference"},
@@ -191,7 +236,19 @@ _TOPICS: dict[str, set[str]] = {
     "technique": {"session", "game", "technique", "reference", "observations"},
     "balance": {"session", "game", "balance", "setup"},
     # --- end feat/technique ---
-    "general": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres", "ai"},
+    "general": {
+        "session",
+        "game",
+        "laps",
+        "corners",
+        "observations",
+        "reference",
+        "fuel",
+        "tyres",
+        "ai",
+        "gaps",
+        "goals",
+    },
 }
 
 
@@ -421,6 +478,25 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         return say(first("tyres"), first("tyres", contains="surface temps"), game)
     if n == "strategy":
         return say(first("strategy"), first("fuel"), first("tyres"), game)
+    # Deterministic branches that share facts (plan 4.5): weather, safety car, gaps, then goals, AI pace and technique.
+    if n == "weather":
+        # race strategy's weather and crossover facts; else what the game never sends; else the session fact (weather)
+        weather = first("weather")
+        if weather is not None:
+            return say(weather, first("weather", contains="crossover"))
+        return say(game) if game is not None else say(first("session"))
+    if n == "safety_car":
+        # race strategy's safety-car fact ("Safety car deployed ...", "Virtual safety car deployed ..."), else a flags
+        # fact about it; a game that never sends flags is answered from its capability fact
+        sc = first("strategy", contains="afety car") or first("flags", contains="afety car")
+        if sc is not None:
+            return say(sc)
+        return say(game) if game is not None else say(first("session"))
+    if n == "gaps":  # race strategy (pitwall.strategy)
+        gap = first("gaps", contains="ahead") or first("gaps", contains="leading")
+        if gap is not None or first("gaps") is not None:
+            return say(gap, first("gaps", contains="behind"))
+        return say(game) if game is not None else say(first("session"))
     general = (first("laps", contains="Best clean"), first("observations"))  # the answer before these intents
     if n == "ers":
         ers = first("ers")
@@ -429,8 +505,6 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         if game is not None:
             return say(game)
         return say(first("laps", contains="Theoretical"), first("laps", contains="Best clean"))
-    if n == "weather":
-        return say(game) if game is not None else say(first("session"))  # the session fact carries the weather
     if n in ("damage", "flags"):
         # the game sends it but the sheet has no fact about it (F1 flags): the general answer, never "complete a
         # few clean laps" (more laps would not help)

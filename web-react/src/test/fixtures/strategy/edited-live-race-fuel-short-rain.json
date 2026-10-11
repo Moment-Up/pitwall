@@ -1,0 +1,185 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "race, lap 9 of 12, P2: fuel short with a lift-and-coast target, rain forecast in 5 min (before the flag)",
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed); the rain forecast moved to 5 minutes / 3 laps ahead, before the flag (7 laps was after it)"
+  ]
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "a1b2c3d4e5f6",
+ "synthetic": false,
+ "lap": 9,
+ "total_laps": 12,
+ "laps_remaining": 3.5,
+ "position": 2,
+ "cars": 6,
+ "gaps": {
+  "ahead": {
+   "car_index": 1,
+   "gap_s": 3.4,
+   "settled": true,
+   "trend_s_per_lap": 0.2,
+   "trend_laps": 4,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": null,
+   "stops": 1,
+   "in_pit": false,
+   "tyre": null
+  },
+  "behind": {
+   "car_index": 4,
+   "gap_s": 4.8,
+   "settled": true,
+   "trend_s_per_lap": -0.4,
+   "trend_laps": 4,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": null,
+   "stops": 1,
+   "in_pit": false,
+   "tyre": null
+  },
+  "leader_s": 3.4,
+  "note": null
+ },
+ "tyres": {
+  "compound": "hard",
+  "age_laps": 1,
+  "stint_laps": 1,
+  "wear_pct": [
+   2,
+   3,
+   2,
+   2
+  ],
+  "limiting_wheel": null,
+  "rate_pct_per_lap": null,
+  "rate_range": null,
+  "limit_pct": 70,
+  "laps_to_limit": null,
+  "enough_laps": false,
+  "note": "not enough laps on this set yet: 3 green laps needed",
+  "game_laps_left": 30,
+  "game_usable_life": 33,
+  "new_set": null
+ },
+ "fuel": {
+  "fuel_kg": 4.9,
+  "per_lap_kg": 1.52,
+  "laps_used": 6,
+  "margin_laps": -0.3,
+  "margin_kg": -0.46,
+  "game_margin_laps": -0.2,
+  "status": "short",
+  "lift_coast": {
+   "save_kg_per_lap": 0.17,
+   "seconds_per_lap": 2.1,
+   "feasible": true,
+   "corners": [
+    "T3",
+    "T4"
+   ]
+  },
+  "burn_model": {
+   "full_throttle_kg_per_s": 0.0241,
+   "r2": 0.82,
+   "windows": 410
+  }
+ },
+ "pit": {
+  "stops_done": 1,
+  "stop_needed": false,
+  "two_stops": null,
+  "window": null,
+  "game_window": null,
+  "pit_loss": {
+   "median_s": 18.7,
+   "range": {
+    "low": 18.4,
+    "high": 19.0
+   },
+   "n": 2
+  },
+  "pit_loss_sc": null,
+  "pit_entry_m": null,
+  "rejoin": null,
+  "undercut_ahead": null,
+  "undercut_threat": null,
+  "neighbour_stop": null,
+  "note": null
+ },
+ "safety_car": {
+  "status": "none",
+  "since_lap": 7,
+  "box": null
+ },
+ "weather": {
+  "now": "overcast",
+  "rain_pct": 34,
+  "track_temp_c": 30,
+  "accuracy": "perfect",
+  "forecast": [
+   {
+    "in_min": 0,
+    "weather": "overcast",
+    "rain_pct": 34,
+    "in_laps": 0
+   },
+   {
+    "in_min": 5,
+    "weather": "light_rain",
+    "rain_pct": 48,
+    "in_laps": 3
+   },
+   {
+    "in_min": 10,
+    "weather": "light_rain",
+    "rain_pct": 72,
+    "in_laps": 7
+   },
+   {
+    "in_min": 15,
+    "weather": "light_rain",
+    "rain_pct": 80,
+    "in_laps": 10
+   }
+  ],
+  "next_change": {
+   "in_min": 5,
+   "weather": "light_rain",
+   "rain_pct": 48,
+   "in_laps": 3
+  },
+  "crossover": null
+ },
+ "calls": [
+  {
+   "id": "c9-fuel",
+   "topic": "fuel",
+   "level": "alert",
+   "text": "Fuel critical: 0.3 laps short. Lift and coast about 2 s a lap, brake at your normal point.",
+   "text_simple": "Fuel is short. Lift off a little before each braking point, then brake as normal.",
+   "audience": "all",
+   "lap": 9,
+   "t_unix": 1791701900.0,
+   "ttl_s": 120.0
+  },
+  {
+   "id": "c9-rain",
+   "topic": "weather",
+   "level": "alert",
+   "text": "Rain forecast in about 5 minutes, around 3 laps.",
+   "text_simple": "Rain is coming in about 5 minutes.",
+   "audience": "all",
+   "lap": 9,
+   "t_unix": 1791701880.0,
+   "ttl_s": 120.0
+  }
+ ]
+}

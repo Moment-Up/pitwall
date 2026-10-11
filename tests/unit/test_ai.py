@@ -453,7 +453,9 @@ def test_display_text_keeps_the_answers_own_words(raw: str, shown: str) -> None:
         ("What were my sector times?", "sectors"),
         ("Show me my splits", "sectors"),
         ("Any yellow flags out there?", "flags"),
-        ("Is the safety car out?", "flags"),
+        ("Is the safety car out?", "safety_car"),  # its own intent (v0.2.0 plan 4.1), mapped to the flags feature
+        ("Where's the VSC?", "safety_car"),
+        ("What's the gap to the car ahead?", "gaps"),
         ("Is it going to rain?", "weather"),
         ("What's the track temperature?", "weather"),
         ("Should I change my front wing?", "setup"),  # "wing" alone stays a setup question
@@ -481,7 +483,20 @@ async def test_ac_sheet_says_what_the_game_does_not_send() -> None:
     assert session.data["game_entry"] == "ac:ps5"
     assert not any("not yet known" in f.text for f in sheet.facts)  # fuel never arrives from AC: not "yet"
     game = {f.data["group"]: f for f in sheet.facts if f.topic == "game"}
-    assert {"fuel", "tyres", "strategy", "damage", "ers", "sectors", "flags", "weather", "setup"} == set(game)
+    groups = {
+        "fuel",
+        "tyres",
+        "strategy",
+        "damage",
+        "ers",
+        "sectors",
+        "flags",
+        "safety_car",
+        "gaps",
+        "weather",
+        "setup",
+    }
+    assert groups == set(game)
     assert game["tyres"].say == (
         "Assetto Corsa doesn't send tyre temperatures, tyre wear, tyre pressures or brake temperatures."
     )

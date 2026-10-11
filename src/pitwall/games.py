@@ -1341,6 +1341,8 @@ INTENT_FEATURES: dict[str, tuple[str, ...]] = {
     "ers": ("ers", "drs"),
     "sectors": ("sectors",),
     "flags": ("flags",),
+    "safety_car": ("flags",),  # the safety car and VSC come with the flags (F1 Session.safetyCarStatus)
+    "gaps": ("field_data",),  # gaps and race position need the other cars' timing
     "weather": ("weather",),
     "setup": ("setup_telemetry", "setup_recommendations"),
 }

@@ -40,6 +40,11 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
 * ``ai_pace`` (every snapshot): the live session's pace vs the AI (``LiveAiPace``: status, AI difficulty, the typical
   AI car's best lap, the driver's best clean lap, the gap and rank), published by ``core.ai_pace.AiPaceProcessor``
   after every lap of the player and at the session's end; ``None`` until then and for non-F1 games.
+* ``strategy``: the race strategy engineer's ``StrategyView`` (``pitwall.strategy.view``, about 2-3.5 kB), published
+  by the strategy worker at most twice a second; ``None`` until it has one for the live session. It rides the static
+  merge: ``/ws/live`` sends it with the 5 s static payload and whenever ``strategy_rev`` changed (a new view, or a new
+  session), and leaves the key out otherwise (the client keeps the previous value within the session). Every other
+  caller (REST, fact sheets) gets it in every snapshot.
 """
 
 from __future__ import annotations
@@ -240,6 +245,8 @@ class LiveState:
         self.last_detected_game: str | None = None
         self.session_game: str | None = None  # the game that started the current session (reset_session)
         self.last_accepted_mono: float | None = None  # last packet a decoder accepted (on_packet): "is data arriving"
+        self.strategy: dict[str, Any] | None = None  # race strategy (pitwall.strategy): StrategyView of this session
+        self.strategy_rev = 0  # bumped when ``strategy`` changes (a new view, a new session): /ws/live sends it then
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -397,6 +404,15 @@ class LiveState:
             self._heads_up_key = key
             self.cues.set_fallback_plan(plan)
 
+    # --- race strategy (pitwall.strategy) ---
+    def set_strategy(self, session_id: str, view: dict[str, Any] | None) -> None:
+        """Publish the strategy worker's view of ``session_id``; dropped if another session went live meanwhile.
+        ``strategy_rev`` moves only when the view changed, so an unchanged view is not sent to the dashboards again."""
+        with self._lock:
+            if session_id == self.session_id and view != self.strategy:
+                self.strategy = view
+                self.strategy_rev += 1
+
     def set_cue_plan(self, plan: CuePlan | None) -> None:
         """Install a cue plan built outside the engine (normally the engine plans from ``on_lap_result``)."""
         self.cues.set_plan(plan)
@@ -490,6 +506,8 @@ class LiveState:
             self._red_flag_pitted = False
             self.bests = None
             self.ai_pace = None
+            self.strategy = None  # race strategy (pitwall.strategy)
+            self.strategy_rev += 1
             self._bests_requested = None  # the next session packet asks for the new session's bests
             self._heads_up_key = None  # the cue engine drops its heads-ups on reset; the next knowledge re-installs
         self.coach.reset()
@@ -567,7 +585,7 @@ class LiveState:
             "decode": self.decode_stats,
         }
 
-    def snapshot(self, include_static: bool = False) -> dict[str, Any]:
+    def snapshot(self, include_static: bool = False, *, include_strategy: bool = True) -> dict[str, Any]:
         f = self.frame
         s = self.session
         conn = self.connection()
@@ -605,6 +623,8 @@ class LiveState:
             out["bests"] = self.bests  # D2: small, so every snapshot (a record shows as set, not 5 s later)
             out["game"] = self.game_block()  # small: every snapshot (selection, detection, mismatch)
             out["ai_pace"] = self.ai_pace  # LiveAiPace: small, every snapshot
+            if include_strategy:  # race strategy: /ws/live sends it only when it changed (``strategy_rev``) or static
+                out["strategy"] = self.strategy
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

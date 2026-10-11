@@ -88,6 +88,7 @@ class MessageKind(StrEnum):
     LAP_SUMMARY = "lap_summary"  # post-lap summary
     COACHING = "coaching"  # post-lap coaching observation
     INFO = "info"  # low-priority info
+    STRATEGY = "strategy"  # race strategy call (pitwall.strategy.radio): normal and detailed intensity
 
 
 class Priority(IntEnum):

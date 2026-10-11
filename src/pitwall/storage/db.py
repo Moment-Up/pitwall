@@ -24,6 +24,11 @@ Schema history:
   the ``_ADDED_COLUMNS`` check), so a v2 database gets goals then AI pace, a v3 one (goals) gets AI pace only, and a
   database that already has both (or an AI-pace-only "v3" from the development branch, which gains goals) is
   stamped v4 with nothing else changed.
+* v5 - race strategy: ``strategy_laps`` (one row per lap: the strategy engine's record) and ``pit_stops`` (every
+  car's stops, with the pit loss) plus ``ix_pit_stops_session``. New tables only (no ``ADD COLUMN``), so ``SCHEMA``
+  creates them on any older database: v2 gains goals, AI pace and strategy; v3 (goals, the live database) AI pace
+  and strategy; v4 strategy only. Developed as "v3" on its lane and renumbered when it landed after goals and AI pace;
+  such a lane database (strategy tables, no goals or AI pace) gains the rest. Nothing reads ``meta.schema_version``.
 """
 
 from __future__ import annotations
@@ -45,7 +50,7 @@ from pitwall.compat import is_windows
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -245,6 +250,32 @@ CREATE TABLE IF NOT EXISTS goals (
 );
 CREATE INDEX IF NOT EXISTS ix_goals_driver ON goals(driver_id, status);
 -- end v3 motivation
+
+-- v5 race strategy (pitwall.strategy): new tables only, so they and their index can live in SCHEMA.
+CREATE TABLE IF NOT EXISTS strategy_laps (
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    lap_number INTEGER NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}',          -- StrategyLapRecord JSON (pitwall.strategy.engine)
+    updated_unix REAL NOT NULL,
+    PRIMARY KEY (session_id, lap_number)
+);
+CREATE TABLE IF NOT EXISTS pit_stops (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    car_index INTEGER NOT NULL,
+    is_player INTEGER NOT NULL DEFAULT 0,
+    entry_lap INTEGER NOT NULL, exit_lap INTEGER,
+    entry_lap_distance_m REAL, exit_lap_distance_m REAL,
+    lane_time_ms INTEGER, stationary_ms INTEGER,
+    laps_ms TEXT NOT NULL DEFAULT '[]',
+    pace_before_ms INTEGER, pace_after_ms INTEGER, pit_loss_ms INTEGER,
+    neutralised TEXT, excluded TEXT,
+    compound_before TEXT, compound_after TEXT,
+    session_time_s REAL, created_unix REAL NOT NULL,
+    UNIQUE(session_id, car_index, entry_lap)
+);
+CREATE INDEX IF NOT EXISTS ix_pit_stops_session ON pit_stops(session_id);
+-- end v5 race strategy
 """
 
 # Columns added after v1: (table, column, declaration). ADD COLUMN with a REFERENCES clause is allowed because the

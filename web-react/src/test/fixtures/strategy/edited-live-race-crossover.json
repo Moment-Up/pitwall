@@ -1,0 +1,97 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built StrategyView",
+  "moment": "race, lap 14 of 30, P5, light rain: the game's tyre model has inters faster than the fitted slicks",
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data. The crossover is the game's TyreSets estimate, unverified in the wet."
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "a1b2c3d4e5f6",
+ "synthetic": false,
+ "lap": 14,
+ "total_laps": 30,
+ "laps_remaining": 16.2,
+ "position": 5,
+ "cars": 20,
+ "gaps": {
+  "ahead": {
+   "car_index": 8,
+   "gap_s": 1.1,
+   "settled": true,
+   "trend_s_per_lap": null,
+   "trend_laps": 2,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": false,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": null
+  },
+  "behind": {
+   "car_index": 2,
+   "gap_s": 2.2,
+   "settled": true,
+   "trend_s_per_lap": null,
+   "trend_laps": 2,
+   "laps_to_1s": null,
+   "within_1s": false,
+   "drs_range": false,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": null
+  },
+  "leader_s": 9.8,
+  "note": "not enough laps for a trend yet"
+ },
+ "tyres": null,
+ "fuel": null,
+ "pit": {
+  "stops_done": 0,
+  "stop_needed": null,
+  "two_stops": null,
+  "window": null,
+  "game_window": null,
+  "pit_loss": null,
+  "pit_loss_sc": null,
+  "pit_entry_m": null,
+  "rejoin": null,
+  "undercut_ahead": null,
+  "undercut_threat": null,
+  "neighbour_stop": null,
+  "note": "not enough laps on this set yet: 3 green laps needed"
+ },
+ "safety_car": {
+  "status": "none",
+  "since_lap": null,
+  "box": null
+ },
+ "weather": {
+  "now": "light_rain",
+  "rain_pct": 64,
+  "track_temp_c": 27,
+  "accuracy": "perfect",
+  "forecast": [
+   {
+    "in_min": 0,
+    "weather": "light_rain",
+    "rain_pct": 64,
+    "in_laps": 0
+   },
+   {
+    "in_min": 5,
+    "weather": "light_rain",
+    "rain_pct": 70,
+    "in_laps": 3
+   }
+  ],
+  "next_change": null,
+  "crossover": {
+   "compound": "inter",
+   "gain_s": 0.8,
+   "tier": "game"
+  }
+ },
+ "calls": []
+}

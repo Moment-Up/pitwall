@@ -42,7 +42,8 @@ import { accessToken, forgetToken, wsUrl } from "./auth";
 import { Store } from "./store";
 
 export type Intensity = "quiet" | "normal" | "detailed";
-export type SayKind = "answer" | "control" | "cue" | "alert" | "lap_summary" | "coaching" | "info";
+/** "strategy": the race engineer's proactive strategy calls (voice/types.py MessageKind.STRATEGY, pitwall.strategy). */
+export type SayKind = "answer" | "control" | "cue" | "alert" | "lap_summary" | "coaching" | "info" | "strategy";
 export type LogKind = SayKind | "transcript" | "you" | "error" | "system";
 export type Phase = "idle" | "starting" | "live";
 export type ConnStatus = "offline" | "connecting" | "open" | "waiting";

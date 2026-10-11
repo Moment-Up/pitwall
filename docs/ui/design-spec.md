@@ -626,6 +626,7 @@ For a stationary reader: a parent on the phone, or a Mac screen next to the rig.
 | Track map | `TrackMap` (custom SVG port of `TrackMap.svelte`): sectors coloured by this lap's timing status as set, car dot, next corner label, focus rings, brake zones, live yellow zones; footer = newest race-control event | Custom `TrackMap` in a `Card` |
 | Tyres & energy | 2 × 2 in FL FR / RL RR order: surface temperature (in-window values in plain `--foreground`, cold blue, hot amber, over red: `tyreTempColor` bands), wear, pressure; fuel kg + game's laps estimate; ERS store | `Card` + custom `TyreGrid` |
 | Inputs | Speed, throttle and brake over the last 12 s (`live.history`), redrawn at 10 Hz | Custom `LiveTrace` (canvas). Not a Pro chart: Recharts re-rendering at 20 Hz is too heavy on the iPad |
+| Strategy (race strategy engineer; replaces Inputs while `snap.strategy?.mode === "race"` and the race has 8 laps or more, both fixed for the session) | Six fixed rows: "Strategy · L34/52 · P6"; Ahead (gap, trend, `IN PIT` / `CLOSE` / `DRS` / `1 STOP`, unsettled dimmed); Behind (gap + `CLOSE` / `DRS` in words, amber only in DRS range or closing within a second); Pit window ("L38-44 · best L41" / "L41" / "L41 · at the wear limit" / "No stop needed" / "Not enough laps yet"); Undercut ("ahead marginal · behind threat", amber only while the window is open; "Laps to go" when no stop is needed and for simple wording); Fuel ("+0.4 laps", "On the limit", or "−0.3 laps · lift & coast 2.1 s/lap" amber); Weather ("Light rain in 10 min · 7 laps" / "Light rain after the flag" / "Dry for 15 min"; under SC/VSC "Stop 12 s · green 19 s (estimate)"). Footer: the newest call for this driver while it holds (TTL, two laps), two lines at most. Tier suffixes "(game)", "(estimate)"; unknown `-`; `SYNTHETIC` chip | HeroUI `Card`, pure view model `strategyTile(snap, model)` in `pages/drive/car/view.ts` (unit-tested); data: `snapshot.strategy` (section 13) |
 | Laps | 8 newest, current standing colours, `INV` and `PIT` tags, `R` on the reference | Pro `DataGrid` (`variant="secondary"`, no selection, `rowHeight={44}`) with `TimingValue` cells |
 | Coaching · last lap | Up to 3 observations (D6 `picked`, else top by priority): corner chip, text (15 px, 2-line clamp), impact | Pro `ListView` (read only, no hover) |
 | Telemetry health | Packets/s, rejected, unrecognised, source (moved from today's Live strip) | Footer line of the Car tile |
@@ -689,7 +690,11 @@ Review pages are read up close (sofa, desk, between runs). HeroUI's normal app d
 Header: HeroUI `Breadcrumbs` (Sessions › Silverstone · Practice), title, chips (driver avatar + name, car, weather,
 date, `SYNTHETIC` / `REPLAY`), actions: **Ask the engineer** (secondary) and **Session report** (opens the existing
 markdown report in a Pro `Sheet` rendered by Pro `Markdown`). Tabs: HeroUI `Tabs` (secondary variant):
-**Summary · Laps · Compare · Corners · Ask**.
+**Summary · Laps · Compare · Corners · Strategy · Ask**. **Strategy** (`#/review/sessions/<id>/strategy`, race
+sessions only; another session type shows "Strategy is shown for races only."): KPIs (grid → finish, stops, measured
+pit loss, fuel at the flag), a position / gaps timeline with stops, SC/VSC bands, weather and stints, the stints and
+pit-stop tables (other cars' stops in a disclosure, with the reason a stop was left out), and the strategy calls.
+Data: `GET /api/sessions/{sid}/strategy` (`StrategyTimeline`, section 13).
 
 ### 6.3 Summary: "how did it go, and what next?"
 
@@ -1590,6 +1595,8 @@ additions. Each is additive, `null` when unknown, follows the evidence tiers, an
 | **[critic]** Clean laps per session in lists (Sessions rows, Progress tiles) | `repo.list_sessions` has `lap_count`, `best_clean_ms` only | **D5** (`clean_lap_count`) |
 | Rig walkthrough, rig check, upgrades | `/api/rig/recommendations` (sections, steps, rows, provenance), `/api/rig/check`, `/api/rig/profile` | have (hot, 14.3) |
 | Car setup | `/api/carsetup/*` | have |
+| Drive › Car strategy tile, strategy radio chips | `snapshot.strategy` (`StrategyView` v1, every snapshot, about 2-3.5 kB; also `GET /api/strategy/live`) and the `strategy_call` notification on `/ws/live`; radio kind `strategy` | **S1** |
+| Review › Strategy | `GET /api/sessions/{sid}/strategy` (`StrategyTimeline`) | **S1** |
 
 | Id | Addition | Files | UI without it |
 |---|---|---|---|
@@ -1599,6 +1606,7 @@ additions. Each is additive, `null` when unknown, follows the evidence tiers, an
 | **D4** | `snapshot.session_state`: `running` / `ended` / `red_flag`, kept server-side from events (`session_started`, `lights_out`, `chequered_flag`, `session_ended`, `red_flag`) | `core/live.py`, tests | Derived from the last 10 events |
 | **D5** | `GET /api/drivers/{id}/progress?game&track_id&car`: per session `{session_id, started_unix, laps, clean_laps, best_clean_ms, median_clean_ms, spread_ms, corners: {corner: mean_time_delta_s}, habits: {kind: count}}` plus PB history. **[critic]** Plus `clean_lap_count` on every `repo.list_sessions` row (one `SUM(l.clean)`; `/api/sessions` and `/api/drivers/{id}/sessions` both use it) | `storage/repo.py`, `api/routes_drivers.py`, tests | Progress shows lap level and the family board only; Coaching has no trends; session rows show `12 laps` |
 | **D6** | `snapshot.coach = {lap_number, picked: [...], by_corner: {...}}`: the observations the radio picks for the latest lap under the seated driver's limits (`drivers.apply_coaching_limits`). Each observation also gains `text_simple` (one idea, plain words) and `short` (≤ 48 characters, for glance use), both written by the deterministic coach from the same facts and never "brake later" on its own | New `coach/selection.py` (shared selection), `core/live.py`, `analysis/coaching.py`, and `voice/proactive.py` switched to the shared selection in the same PR | Drive shows the top observation by priority, which may differ from what the radio said |
+| **S1** | Race strategy engineer (`pitwall/strategy`): `snapshot.strategy` = `StrategyView` (`version` 1; `mode` `race` / `practice` / `off` + `reason`; `gaps`, `tyres`, `fuel`, `pit`, `safety_car`, `weather`, newest 3 `calls`; tiers `measured` / `game` / `heuristic`; keys always present, unknown `null`), `GET /api/strategy/live`, `GET /api/sessions/{sid}/strategy` = `StrategyTimeline` (`available`, `reason` `not a race` / `race strategy needs F1 25 timing` / `recorded before strategy tracking` / `no complete lap in this session` / `no strategy laps yet`, `laps` = stored `StrategyLapRecord`s, `stints`, `stops`, `field_stops`, `pit_loss`, `safety_car_periods`, weather changes, `calls`), notification `strategy_call`, radio kind `strategy`. The TypeScript mirror is `web-react/src/lib/strategy/types.ts` | `strategy/*`, `model/telemetry.py` (`RaceTiming`, `TyreSetsInfo`), `adapters/f1/adapter.py`, `core/{session,runtime,live}.py`, `storage/{db,repo}.py` (tables `strategy_laps`, `pit_stops`), `api/routes_strategy.py`, `ai/{facts,engineer,radio_phrasing}.py`, `voice/{types,scheduler,hub}.py` | Inputs tile, no Strategy tab |
 
 **Lane motivation (M1-M5)** - goals, badges, streaks, recaps and the weekly digest; types in
 `web-react/src/lib/endpoints/motivation.ts` mirror the Python exactly (`src/pitwall/motivation/`,

@@ -1,6 +1,6 @@
 """Schema v3 (lane motivation): the goals table, the migration from a v2 database, and ``total_laps`` in
-``sessions.info``. The current version is v4 (pace vs AI difficulty, ``test_db_v4_migration.py``): a database opened
-today is stamped 4, with goals."""
+``sessions.info``. Later versions (v4 pace vs AI difficulty, v5 race strategy: ``test_db_migrations.py``) only add,
+so a database opened today is stamped ``SCHEMA_VERSION`` and has goals."""
 
 from __future__ import annotations
 
@@ -24,18 +24,21 @@ def tables(db: Database) -> set[str]:
 
 def test_fresh_database_has_goals(tmp_path: Path) -> None:
     db = Database(tmp_path / "fresh.sqlite3")
-    assert SCHEMA_VERSION == 4 and version(db) == "4"
+    assert SCHEMA_VERSION >= 3 and version(db) == str(SCHEMA_VERSION)
     assert {"goals", "ix_goals_driver"} <= tables(db)
 
 
 def make_v2(path: Path) -> None:
-    """A v2 database as an older build leaves it: no goals table (nor v4's session_ai_pace and sessions.ai_difficulty),
-    version 2, with a driver and a session."""
+    """A v2 database as an older build leaves it: no goals table (nor v4's session_ai_pace and sessions.ai_difficulty,
+    nor v5's race strategy tables), version 2, with a driver and a session."""
     db = Database(path)
     with db.read() as c:
         c.execute("DROP INDEX ix_goals_driver")
         c.execute("DROP TABLE goals")
         c.execute("DROP TABLE session_ai_pace")
+        c.execute("DROP INDEX ix_pit_stops_session")
+        c.execute("DROP TABLE pit_stops")
+        c.execute("DROP TABLE strategy_laps")
         c.execute("ALTER TABLE sessions DROP COLUMN ai_difficulty")
         c.execute("UPDATE meta SET value='2' WHERE key='schema_version'")
         c.execute("INSERT INTO drivers(name, created_unix, preferences) VALUES('Sam', 0, '{}')")
@@ -52,12 +55,12 @@ def test_v2_database_migrates_and_reopening_is_idempotent(tmp_path: Path) -> Non
     assert "ai_difficulty" not in {r[1] for r in raw.execute("PRAGMA table_info(sessions)")}
     raw.close()
     db = Database(path)
-    assert version(db) == "4" and {"goals", "ix_goals_driver", "session_ai_pace"} <= tables(db)
+    assert version(db) == str(SCHEMA_VERSION) and {"goals", "ix_goals_driver", "session_ai_pace"} <= tables(db)
     with db.read() as c:
         assert repo.get_session(c, "s1") is not None and repo.get_driver(c, 1) is not None
         assert "ai_difficulty" in {r[1] for r in c.execute("PRAGMA table_info(sessions)")}
     Database(path)  # again: nothing changes
-    assert version(Database(path)) == "4"
+    assert version(Database(path)) == str(SCHEMA_VERSION)
 
 
 def test_deleting_a_driver_deletes_their_goals(tmp_path: Path) -> None:
