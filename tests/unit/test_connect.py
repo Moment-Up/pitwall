@@ -31,7 +31,7 @@ def test_probe_step_without_the_repository_scripts(monkeypatch: pytest.MonkeyPat
 def test_display_path_abbreviates_the_home_folder(tmp_path: Path) -> None:
     assert connect.display_path(Path.home() / "a" / "b") == "~/a/b"
     outside = Path("/opt/pitwall")
-    assert connect.display_path(outside) == "/opt/pitwall"
+    assert connect.display_path(outside) == str(outside)  # outside the home folder: as the OS writes it
 
 
 def test_unsupported_games_point_to_github_issues() -> None:
