@@ -135,8 +135,9 @@ export interface AskPanelProps {
   /** The session was raced against the AI (it has an AI difficulty): offer the pace vs AI question. */
   aiPace?: boolean;
   /** What else the session (and its driver) has, so each suggestion offered can be answered (lib/review/ask.ts
-   * askSuggestions, integration plan 4.7): technique data, a race with strategy records, active goals. */
-  suggest?: { technique?: boolean; strategy?: boolean; goals?: boolean };
+   * askSuggestions, integration plan 4.7): technique data, a race with strategy records, active goals, a practice
+   * drill running in this live session (coachref). */
+  suggest?: { technique?: boolean; strategy?: boolean; goals?: boolean; drill?: boolean };
 }
 
 export function AskPanel({ sessionId, initialQuestion, header, aiPace = false, suggest }: AskPanelProps) {

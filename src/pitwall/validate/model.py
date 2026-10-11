@@ -202,6 +202,7 @@ class ProactiveRecord:
     cls: str = "unmeasured"  # clean | tight | overlap | off_track | unmeasured
     cut: bool = False
     measured: bool = False  # additive: the lap traces have been read (cls is final)
+    drill_id: int | None = None  # additive (coachref): the message is a practice drill's point
 
 
 @dataclass(slots=True)
@@ -221,6 +222,7 @@ class LapRecord:
     cue_mode: str | None
     n_observations: int
     picked_ids: list[str]
+    drill_only: bool = False  # additive (coachref): a drill lap, whose one coaching message is the drill point
 
 
 @dataclass(slots=True)

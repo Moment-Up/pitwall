@@ -41,6 +41,7 @@ export const ASK = {
   gapAhead: "What's the gap to the car ahead?",
   ai: "How am I doing against the AI?",
   goals: "How am I doing on my goals?",
+  drill: "How's my drill going?",
   summary: "Give me a summary of this session.",
 } as const;
 
@@ -60,12 +61,15 @@ export interface AskSuggestionOptions {
   strategy?: boolean;
   /** The driver has goals. */
   goals?: boolean;
+  /** A practice drill runs in this (live) session (coachref): its status is the radio's drill answer. */
+  drill?: boolean;
 }
 
 /**
  * The questions to start with for a session (v0.2.0 plan 4.7), at most `MAX_SUGGESTIONS`, in this priority: where the
  * time goes and one thing to work on; with technique data, the handling and the line; in a race with strategy
- * records, the pit and the gap ahead; raced against the AI, the AI; with goals, the goals; then the summary.
+ * records, the pit and the gap ahead; raced against the AI, the AI; with goals, the goals; with a drill running, the
+ * drill; then the summary.
  */
 export function askSuggestions(opts: AskSuggestionOptions = {}): readonly string[] {
   const out: string[] = [ASK.losing, ASK.workOn];
@@ -73,6 +77,7 @@ export function askSuggestions(opts: AskSuggestionOptions = {}): readonly string
   if (opts.strategy) out.push(ASK.pit, ASK.gapAhead);
   if (opts.aiPace) out.push(ASK.ai);
   if (opts.goals) out.push(ASK.goals);
+  if (opts.drill) out.push(ASK.drill);
   out.push(ASK.summary);
   return out.slice(0, MAX_SUGGESTIONS);
 }

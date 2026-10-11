@@ -708,14 +708,18 @@ def glance_verdict(laps_by_driver: Mapping[int | None, int], coach_report: bool,
     return state("driver_only", ["Only you can judge what you read at a glance"], checks, metrics, now)
 
 
-def one_message_verdict(spoken: Sequence[tuple[int, str | None, Sequence[str]]], now: float) -> AutoState:
-    """``spoken``: (lap_id, observation_id, that lap's picked ids) per coaching message whose playback started."""
+def one_message_verdict(
+    spoken: Sequence[tuple[int, str | None, Sequence[str]]], now: float, *, drill_breaches: int = 0
+) -> AutoState:
+    """``spoken``: (lap_id, observation_id, that lap's picked ids) per coaching message whose playback started.
+    ``drill_breaches`` (coachref): coaching messages on drill laps that were not the lap's one drill point."""
     inside = [s for s in spoken if s[1] is not None and s[1] in s[2]]
     outside = [s for s in spoken if s[1] is None or s[1] not in s[2]]
     metrics: dict[str, float | int | str | None] = {
         "spoken": len(spoken),
         "same_as_card": len(inside),
         "different": len(outside),
+        "drill_breaches": drill_breaches,
     }
     checks = [
         check(
@@ -726,12 +730,16 @@ def one_message_verdict(spoken: Sequence[tuple[int, str | None, Sequence[str]]],
             f">= {ONE_MESSAGE_MIN}",
         ),
         check("same", "Spoken point is the card's point", not outside, f"{len(inside)} of {len(spoken)}", "all"),
+        check("drill", "Drill laps: only the drill point", drill_breaches == 0, str(drill_breaches), "0"),
     ]
     if not spoken:
         return state("no_evidence", ["No coaching point spoken yet"], [], metrics, now)
     if outside:
         verb = "was" if len(outside) == 1 else "were"
         why = f"{n_of(len(outside), 'spoken point')} {verb} not the coach card's pick"
+        return state("fail", [why], checks, metrics, now)
+    if drill_breaches:
+        why = f"{n_of(drill_breaches, 'coaching message')} on drill laps besides the drill point"
         return state("fail", [why], checks, metrics, now)
     if len(inside) >= ONE_MESSAGE_MIN:
         return state("pass", [f"{len(inside)} spoken points, each the coach card's pick"], checks, metrics, now)

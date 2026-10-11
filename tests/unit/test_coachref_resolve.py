@@ -250,7 +250,8 @@ def test_options_order_availability_warnings_selected(env: Env, family: dict[str
     head = [(o["kind"], o["label"], o["available"], o["selected"]) for o in opts[:5]]
     assert head == [
         ("own_best", "Your best", True, False),
-        ("household_best", "Family record", True, False),
+        # bea's 1:04.000 (another braking assist) is the family record: the best usable lap is named for its conditions
+        ("household_best", "Best in these conditions", True, False),
         ("driver_best", "bea's best", False, False),
         ("driver_best", "Jo's best", True, False),
         ("driver_best", "Sam's best", True, True),
@@ -335,3 +336,35 @@ def test_the_conditions_filter_never_drops_a_lap_with_unknown_values(env: Env, c
             c, ctx["game"], ctx["track_id"], ctx["car_id"], ctx["track_length_m"], match={**ctx, "formula": "F2"}
         )
     assert [r["lap_id"] for r in rows] == ids  # unknown never excludes (as analysis.compare)
+
+
+def test_a_compatible_best_that_is_not_the_record_is_best_in_these_conditions(
+    env: Env, clean_session: DecodedSession
+) -> None:
+    """Plan 5.2: "Family record" always means the fastest real clean lap here in any conditions (the REC lap); when
+    the family's best lap in these conditions is another one, the picker and the delta call it "Best in these
+    conditions"."""
+    info, base = clean_session.info, clean_session.laps[0]
+    ann, sam, jo = env.drivers.default_id, env.drivers.create("Sam").id, env.drivers.create("Jo").id
+    add(env, ann, "s-ann", info, base, [70_000])
+    s = add(env, sam, "s-sam", info, base, [66_000])
+    add(env, jo, "s-jo", session_info(info, condition="heavy_rain"), base, [60_000])  # the record, in the wet
+    choose(env, ann, "household_best")
+    res = resolve(env, ann, ctx_of(info))
+    assert (res.lap_id, res.kind, res.conditions) == (s[0], "household_best", True)
+    d = res.to_dict()
+    assert (d["label"], d["label_to"]) == ("Best in these conditions · Sam", "the best lap in these conditions")
+    with env.db.read() as c:
+        hh, _, _ = cr.household_best(c, ctx_of(info), None)
+        assert cr.household_label(c, ctx_of(info), hh, None) == "Best in these conditions"
+        # in the wet the record is the compatible best again
+        wet = ctx_of(info, weather="heavy_rain")
+        hh_wet, _, _ = cr.household_best(c, wet, None)
+        assert hh_wet is not None and cr.household_label(c, wet, hh_wet, None) == "Family record"
+
+
+def test_the_record_keeps_its_name(env: Env, family: dict[str, Any]) -> None:
+    info, ann = family["info"], family["ann"]
+    choose(env, ann, "household_best")
+    res = resolve(env, ann, ctx_of(info))
+    assert not res.conditions and res.to_dict()["label"] == "Family record · Sam"

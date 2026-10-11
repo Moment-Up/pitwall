@@ -373,6 +373,11 @@ def test_glance_one_message_endurance() -> None:
     assert R.one_message_verdict([(1, "a", ["a"]), (2, "b", ["b"])], NOW).verdict == "inconclusive"
     assert R.one_message_verdict([(1, "a", ["a"]), (2, "x", ["b"])], NOW).verdict == "fail"
     assert R.one_message_verdict([], NOW).verdict == "no_evidence"
+    # coachref: a drill lap's one coaching message is its drill point; anything else on a drill lap fails
+    drill_ok = [(1, "drill12:a1", ["drill12:a1"]), (2, "drill12:a2", ["drill12:a2"]), (3, "c", ["c"])]
+    assert R.one_message_verdict(drill_ok, NOW, drill_breaches=0).verdict == "pass"
+    v = R.one_message_verdict(drill_ok, NOW, drill_breaches=1)
+    assert v.verdict == "fail" and v.metrics["drill_breaches"] == 1
     assert R.endurance_verdict([60.0] * 360, 0, NOW).verdict == "pass"
     assert R.endurance_verdict([60.0] * 359, 0, NOW).verdict == "inconclusive"
     assert R.endurance_verdict([60.0] * 324 + [30.0] * 36, 0, NOW).verdict == "pass"  # exactly 90 %

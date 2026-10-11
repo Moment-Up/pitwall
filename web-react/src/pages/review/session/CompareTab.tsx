@@ -313,7 +313,15 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
           </>
         )}
         {/* feat/technique */}
-        <TechniqueComparePanel session={session} refLapId={pair.ref} lapId={pair.lap} sync={sync} density={density} phone={phone} />
+        <TechniqueComparePanel
+          session={session}
+          refLapId={pair.ref}
+          lapId={pair.lap}
+          sync={sync}
+          density={density}
+          phone={phone}
+          refWords={otherRef ? words : null}
+        />
       </div>
     );
   }

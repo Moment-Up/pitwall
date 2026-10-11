@@ -91,6 +91,16 @@ async function seedError(key: string, e: Error): Promise<void> {
   await cache.load(key, () => Promise.reject(e)).catch(() => {});
 }
 
+describe("Compare: technique sentences name the reference (plan 5.5)", () => {
+  it("another driver's lap as A: the markers and notes say whose (\"than Sam's best\"), never \"your reference\"", () => {
+    seedCompare();
+    const text = visible(renderPanel({ refWords: { picker: "Sam's lap", sentence: "Sam's best" } }));
+    expect(text).toContain("T4 apex: 1.8 m wider than Sam's best");
+    expect(text).toContain("coasted for 0.32 s between brake and throttle vs 0.08 s on Sam's best");
+    expect(text).not.toContain("wider than your reference");
+  });
+});
+
 describe("Compare: line and technique", () => {
   it("advanced: the map with numbered markers, T4 in detail with every input row, muted brake rows, degrees, every corner", () => {
     seedCompare();

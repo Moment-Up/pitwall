@@ -106,6 +106,7 @@ describe("suggested questions (plan 4.7)", () => {
     expect(askSuggestions({ technique: true })).toEqual([ASK.losing, ASK.workOn, ASK.handling, ASK.line, ASK.summary]);
     expect(askSuggestions({ strategy: true, aiPace: true })).toEqual([ASK.losing, ASK.workOn, ASK.pit, ASK.gapAhead, ASK.ai, ASK.summary]);
     expect(askSuggestions({ goals: true })).toEqual([ASK.losing, ASK.workOn, ASK.goals, ASK.summary]);
+    expect(askSuggestions({ goals: true, drill: true })).toEqual([ASK.losing, ASK.workOn, ASK.goals, ASK.drill, ASK.summary]);
     const all = askSuggestions({ technique: true, strategy: true, aiPace: true, goals: true });
     expect(all).toHaveLength(MAX_SUGGESTIONS);
     expect(all).toEqual([ASK.losing, ASK.workOn, ASK.handling, ASK.line, ASK.pit, ASK.gapAhead]);
@@ -127,6 +128,7 @@ describe("suggested questions (plan 4.7)", () => {
       gapAhead: "gaps",
       ai: "ai_pace",
       goals: "goals",
+      drill: "drill_status",
       summary: "summary",
     });
   });

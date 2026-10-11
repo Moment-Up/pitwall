@@ -99,6 +99,7 @@ def test_drill_lap_is_one_message_the_drill_point_verbatim() -> None:
     assert m.text == point["text"] == "Turn 3 drill, 1 of 5: on the point, 1 m early. 1 hit."
     assert m.kind is MessageKind.COACHING and m.priority is Priority.NORMAL and m.needs_speak_window
     assert m.meta["observation_kind"] == "drill"
+    assert m.meta["drill_id"] == 3  # the validation kit and acceptance R9 tell a drill point by it
     detailed = lap_messages(LAP, [], None, SAM_REF, "detailed", 0.0, coach=coach)
     assert [x.text for x in detailed] == [point["text"]]
 

@@ -254,6 +254,45 @@ def _add_flags(fs: FactSheet, live: dict[str, Any] | None, entry: games.GameEntr
     )
 
 
+DRILL_PREFIX = "Drill running:"
+
+
+def _plural(n: int, word: str) -> str:
+    return f"{n} {word}" if n == 1 else f"{n} {word}s"
+
+
+def _add_drill(fs: FactSheet, live: dict[str, Any] | None, session_id: str | None) -> None:
+    """The practice drill (topic ``drill``, coachref): the one running in this live session ("Drill running: T3
+    brake point, 2 of 5 laps done, 1 hit"), or the result of one driven in this session. From the live snapshot's
+    ``coachref.drill`` (``coach.drills.drill_view``); nothing when the session is not the live one."""
+    cr = (live or {}).get("coachref")
+    d = cr.get("drill") if isinstance(cr, dict) else None
+    if not isinstance(d, dict) or session_id is None:
+        return
+    if (live or {}).get("session_id") != session_id and d.get("session_id") != session_id:
+        return
+    label = str(d.get("corner_label") or d.get("corner") or "the drill corner")
+    skill = str(d.get("skill_label") or str(d.get("kind") or "").replace("_", " ")).lower()
+    raw = d.get("attempts")
+    done = len(raw) if isinstance(raw, list) else 0
+    of, hits = d.get("laps_target"), d.get("hits")
+    if not isinstance(of, int) or not isinstance(hits, int):
+        return
+    data = {"drill_id": d.get("id"), "corner": d.get("corner"), "laps_done": done, "laps": of, "hits": hits}
+    if d.get("status") == "active":
+        target = str(d.get("target_text") or "").strip()
+        fs.add(
+            "drill",
+            f"{DRILL_PREFIX} {label} {skill}, {done} of {of} laps done, {_plural(hits, 'hit')}."
+            + (f" Target: {target.rstrip('.')}." if target else ""),
+            data,
+            corner=str(d["corner"]) if d.get("corner") else None,
+            say=f"{label} {skill} drill: {done} of {of} done, {_plural(hits, 'hit')}.",
+        )
+    elif d.get("status") in ("completed", "stopped") and done and d.get("summary_text"):
+        fs.add("drill", f"Drill result: {str(d['summary_text']).rstrip('.')}.", data)
+
+
 def _add_ai_pace(fs: FactSheet, a: dict[str, Any], synthetic: bool) -> None:
     """Topic ``ai``: the session's pace vs the typical AI car (``SessionAiPace``)."""
     status = a.get("status")
@@ -416,6 +455,7 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
         session_data,
     )
     _add_flags(fs, live, entry)  # early: never pushed out of a long sheet's selection (FactSheet.select)
+    _add_drill(fs, live, s.get("id"))  # coachref: the running drill, early for the same reason
 
     # ---------------------------------------------------------------- laps
     timed = [lap for lap in sa.laps if lap.get("lap_time_ms")]

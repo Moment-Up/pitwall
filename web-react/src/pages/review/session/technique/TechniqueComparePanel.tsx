@@ -59,6 +59,9 @@ export interface TechniqueComparePanelProps {
   sync: CursorSync;
   density: Density;
   phone: boolean;
+  /** How Compare names lap A (lib/review/compare.ts refWordsFor): another driver's lap is "Sam's best", so the
+   * technique sentences say "1.8 m wider than Sam's best" (plan 5.5); default: the density's own words. */
+  refWords?: { picker: string; sentence: string } | null;
 }
 
 const POINTS = ["turn_in", "apex", "track_out"] as const;
@@ -337,9 +340,10 @@ function PanelForPair({
   sync,
   density,
   phone,
+  refWords = null,
 }: TechniqueComparePanelProps & { refLapId: number; lapId: number }) {
   const td = useMemo(() => techniqueDensity(density, phone), [density, phone]);
-  const words = refWordFor(density.level);
+  const words = refWords ?? refWordFor(density.level);
   const q = useTechniqueCompare(refLapId, lapId);
   const data = q.data;
   const [picked, setPicked] = useState<string | null>(null);
@@ -352,7 +356,15 @@ function PanelForPair({
     () => (data ? cornerAtCursor(data, sync.get()) : null),
     () => null,
   );
-  const markers = useMemo(() => markerItems(data, td.simpleWording), [data, td.simpleWording]);
+  // the backend's sentences say "your reference": named as this page names lap A ("than Sam's best", plan 5.5)
+  const markers = useMemo(
+    () =>
+      markerItems(data, td.simpleWording).map((m) => {
+        const text = refWorded(m.text, words.sentence);
+        return { ...m, text, label: `${m.n}: ${text}` };
+      }),
+    [data, td.simpleWording, words.sentence],
+  );
   const detailRef = useRef<HTMLDivElement>(null);
 
   if (!data) {

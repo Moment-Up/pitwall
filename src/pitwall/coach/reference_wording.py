@@ -52,6 +52,10 @@ def lap_date(set_unix: float | None) -> str | None:
     return f"{tm.tm_mday} {_MONTHS[tm.tm_mon - 1]}"
 
 
+CONDITIONS_LABEL = "Best in these conditions"
+FAMILY_RECORD_LABEL = "Family record"
+
+
 def descriptor_labels(
     kind: str,
     own: bool,
@@ -59,14 +63,22 @@ def descriptor_labels(
     holder_name: str | None,
     lap_number: int | None,
     set_unix: float | None,
+    *,
+    conditions: bool = False,
 ) -> tuple[str, str, str | None]:
-    """``(label, label_to, ref_name)`` for a resolved reference (spec 3.3 table).
+    """``(label, label_to, ref_name)`` for a resolved reference (spec 3.3 table). ``conditions``: the family's best
+    lap in these conditions is not the family record (a faster lap was set in other conditions): it is called "Best
+    in these conditions", never "Family record" (plan 5.2: one label per definition; the record is the REC lap).
 
     ``label`` is shown on screen ("Sam's best"), ``label_to`` follows "to" / "than" on the radio ("plus 0.792 to
     Sam's best"), ``ref_name`` names the other driver in observation texts (None for the driver's own laps)."""
     name = holder_name or "Another driver"
     date = lap_date(set_unix)
     lap_txt = f"lap {lap_number}" if lap_number is not None else "a lap"
+    if kind == "household_best" and conditions:
+        if own:
+            return f"{CONDITIONS_LABEL} (you)", "the best lap in these conditions", None
+        return f"{CONDITIONS_LABEL} · {name}", "the best lap in these conditions", name
     if kind == "household_best":
         if own:
             return "Family record (you)", "the family record", None

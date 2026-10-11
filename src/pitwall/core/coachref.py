@@ -72,7 +72,12 @@ from pitwall.analysis.track import Corner, TrackModel
 from pitwall.analysis.track_identity import CornerText, corner_texts, identify, resolve_corner_ref, track_model_payload
 from pitwall.coach import drills as dr
 from pitwall.coach.cues import MIN_REF_BRAKE_PEAK, MIN_REF_SPEED_DROP_KPH, reference_onset_ok
-from pitwall.coach.reference_wording import descriptor_labels, reword_observations
+from pitwall.coach.reference_wording import (
+    CONDITIONS_LABEL,
+    FAMILY_RECORD_LABEL,
+    descriptor_labels,
+    reword_observations,
+)
 from pitwall.core.lap_processor import TRACK_MODEL_TARGET_LAPS, CoachrefContext
 from pitwall.model.telemetry import FrameQuality, SessionInfo, TrackZones
 from pitwall.storage import repo
@@ -384,10 +389,19 @@ class ResolvedReference:
     frozen: bool = False  # held for an active drill
     clamp: Mapping[str, float] | None = None  # the frozen braking clamp (drill)
     owner: int | None = None  # the session's driver it was resolved for
+    conditions: bool = False  # household_best that is not the family record (plan 5.2: "Best in these conditions")
 
     @property
     def labels(self) -> tuple[str, str, str | None]:
-        return descriptor_labels(self.kind, self.own, self.pinned, self.driver_name, self.lap_number, self.set_unix)
+        return descriptor_labels(
+            self.kind,
+            self.own,
+            self.pinned,
+            self.driver_name,
+            self.lap_number,
+            self.set_unix,
+            conditions=self.conditions,
+        )
 
     @property
     def ref_name(self) -> str | None:
@@ -489,6 +503,22 @@ def household_best(
     return None, NO_FAMILY, []
 
 
+def household_label(
+    conn: sqlite3.Connection, ctx: Mapping[str, Any], hh: Mapping[str, Any] | None, exclude: int | None
+) -> str:
+    """The name of the family's best lap usable here (``household_best``'s row): "Family record" when it is also the
+    fastest real clean lap of this game, track, car and layout in any conditions (D2's household lap, the REC tag),
+    else "Best in these conditions" (plan 5.2: one label per definition)."""
+    if hh is None:
+        return FAMILY_RECORD_LABEL
+    game, track, car, length = _ctx_keys(ctx)
+    if car is None:
+        return FAMILY_RECORD_LABEL
+    rows = repo.reference_candidates(conn, game, track, car, length, per_driver=1, exclude_lap_id=exclude)
+    record = rows[0] if rows else None
+    return FAMILY_RECORD_LABEL if record is None or record.get("lap_id") == hh.get("lap_id") else CONDITIONS_LABEL
+
+
 def driver_best(
     conn: sqlite3.Connection, ctx: Mapping[str, Any], driver_id: int, name: str, exclude: int | None
 ) -> tuple[dict[str, Any] | None, str | None, list[str]]:
@@ -558,7 +588,10 @@ def resolve_reference(
         return own
     if choice.kind == "household_best":
         cand, reason, _ = household_best(conn, ctx, exclude_lap_id)
-        return _resolved_lap(cand, "household_best", owner) if cand else replace(own, reason=reason)
+        if not cand:
+            return replace(own, reason=reason)
+        conditions = household_label(conn, ctx, cand, exclude_lap_id) == CONDITIONS_LABEL
+        return replace(_resolved_lap(cand, "household_best", owner), conditions=conditions)
     if choice.kind == "driver_best":
         target = repo.get_driver(conn, choice.target_driver_id) if choice.target_driver_id is not None else None
         if target is None:
@@ -679,7 +712,7 @@ def reference_options(
     out.append(
         _option(
             "household_best",
-            "Family record",
+            household_label(conn, ctx, hh, exclude_lap_id),
             available=hh is not None,
             reason=reason,
             warnings=warns,
@@ -1077,7 +1110,12 @@ class CoachRef:
             hh, reason, warns = household_best(c, ctx, lap_id)
             family = [
                 _option(
-                    "household_best", "Family record", available=hh is not None, reason=reason, warnings=warns, lap=hh
+                    "household_best",
+                    household_label(c, ctx, hh, lap_id),
+                    available=hh is not None,
+                    reason=reason,
+                    warnings=warns,
+                    lap=hh,
                 )
             ]
             others = sorted(

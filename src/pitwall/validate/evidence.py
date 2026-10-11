@@ -13,6 +13,7 @@ from __future__ import annotations
 import itertools
 import math
 import statistics
+from collections import Counter
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any
@@ -651,7 +652,13 @@ def _one_message(v: View, ctx: AutoContext) -> AutoState:
         for p in v.proactive
         if p.kind == "coaching" and p.started and p.lap_id in picked
     ]
-    return R.one_message_verdict(spoken, ctx.now)
+    # coachref: on a drill lap (its coach block says drill_only) the one coaching message is the drill point
+    drill_laps = {lap.lap_id for lap in v.laps if lap.drill_only}
+    on_drill = [p for p in v.proactive if p.kind == "coaching" and p.started and p.lap_id in drill_laps]
+    drill_points = Counter(p.lap_id for p in on_drill if p.drill_id is not None)
+    others = sum(1 for p in on_drill if p.drill_id is None)  # another point on a drill lap
+    breaches = others + sum(n - 1 for n in drill_points.values() if n > 1)  # or a second drill point
+    return R.one_message_verdict(spoken, ctx.now, drill_breaches=breaches)
 
 
 def endurance_reloads(samples: Sequence[ClientSample]) -> int:

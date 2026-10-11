@@ -325,10 +325,18 @@ def lap_messages(
                     "impact_s": obs.get("impact_s"),
                     "confidence": obs.get("confidence"),
                     "positive": positive,
+                    "drill_id": _drill_id(obs),  # coachref: a drill attempt's point (validation, acceptance R9)
                 },
             )
         )
     return out
+
+
+def _drill_id(obs: Mapping[str, Any]) -> int | None:
+    """The drill a coaching point belongs to (``coach.drills.drill_point``'s ``drill.id``), else None."""
+    d = obs.get("drill")
+    i = d.get("id") if isinstance(d, Mapping) else None
+    return i if isinstance(i, int) and not isinstance(i, bool) else None
 
 
 def _control(text: str, now_mono: float, meta: dict[str, object]) -> RadioMessage:

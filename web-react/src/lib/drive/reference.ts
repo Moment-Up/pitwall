@@ -263,7 +263,8 @@ export function onlyHereDefault(r: Pick<RefOptionsResponse, "choice" | "has_trac
 /** What the status slot says after a change (null = it applies now: the snapshot shows it). Short: it shares the
  * header with the session's name ("Sam's best from next lap"). */
 export function appliesNotice(applies: Applies, kind: RefKind, label: string): string | null {
-  const what = kind === "own_best" ? DEFAULT_LABEL : kind === "household_best" ? "Family record" : label;
+  // the family's best keeps the server's name: "Family record", or "Best in these conditions" (plan 5.2)
+  const what = kind === "own_best" ? DEFAULT_LABEL : kind === "household_best" ? label.split(" · ")[0] || "Family record" : label;
   switch (applies) {
     case "next_lap":
       return `${what} from next lap`;

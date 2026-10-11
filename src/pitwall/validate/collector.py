@@ -203,6 +203,7 @@ class Collector:
             "synthetic": live.synthetic,
             "cue_mode": live.cues.mode,
             "picked": picked,
+            "drill_only": bool(coach.get("drill_only")),  # coachref: the drill point is the lap's only message
             "n_obs": len(live.observations),
             "game": None if s is None else s.game.value,
             "track_id": None if s is None else s.track_id,
@@ -243,6 +244,7 @@ class Collector:
             cue_mode=mode,
             n_observations=int(snap["n_obs"]),
             picked_ids=list(snap["picked"]),
+            drill_only=bool(snap.get("drill_only")),
         )
         self._append("laps", run.evidence.laps, rec)
         try:
@@ -390,6 +392,7 @@ class Collector:
             lap=_int(p.get("lap_number")),
             lap_id=_int(meta.get("lap_id")),
             observation_id=None if meta.get("observation_id") is None else str(meta.get("observation_id")),
+            drill_id=_int(meta.get("drill_id")),
             held_s=round(float(_num(p.get("held_s")) or 0.0), 2),
             state_at_send={
                 "on_track": bool(st.get("on_track")),

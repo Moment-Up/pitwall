@@ -99,7 +99,8 @@ def test_options_with_a_live_session(api: tuple[TestClient, Runtime], family: di
     by_label = {o["label"]: o for o in body["options"]}
     assert by_label["Your best"]["selected"] is True and by_label["Your best"]["lap"]["lap_time_ms"] == 69_000
     keys("RefOptionLap", by_label["Your best"]["lap"])
-    assert by_label["Family record"]["lap"]["driver_name"] == "Sam"  # Jo is faster but used another assist
+    # Jo is faster but used another assist: Jo holds the record, Sam's lap is the best in these conditions (plan 5.2)
+    assert by_label["Best in these conditions"]["lap"]["driver_name"] == "Sam"
     assert by_label["Jo's best"]["available"] is False
     assert by_label["Jo's best"]["reason"] == "Jo's laps here used a different braking assist"
     assert by_label["Sam's best"]["available"] is True and by_label["Sam's best"]["lap"]["lap_time_ms"] == 60_000
