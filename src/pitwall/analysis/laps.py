@@ -12,6 +12,8 @@ scenario that starts at lap 62 starts at 62, and in-, out- and opening laps are 
   (``pit_out``), the pit lane after running on track makes an in lap (``pit_in``), and only a lap that enters
   and leaves the pit lane (a drive-through, or a stop whose box is inside one lap) is both. Real F1 25 Imola:
   the pit exit is 449 m past the line, so the out lap runs 0-449 m in the pit lane and is an out lap only.
+  A flashback rewinds the pit-lane state with the trace: the pit flags are those of the frames the lap keeps
+  (rewound from the pit entry back onto the track, an in lap is a clean in lap again until the car re-enters).
 * **Standing start**: race lap 1 from the grid is timed by the game but is not a flying lap. It is recognised
   from its first frame, wherever the grid is (real F1 25: Melbourne -164 m, Las Vegas +2.6 m, Austria +132 m):
   lap 1, lap timer under ``STANDING_START_MAX_MS``, car stationary (``STANDING_START_MAX_KPH``) and not in the
@@ -207,8 +209,32 @@ class _Building:
     # feat/technique: first *available* assist states (CarStatus can lag the lap's first frame)
     first_abs: bool | None = None
     first_tc: int | None = None
-    on_track: bool = False  # a frame outside the pit lane has been seen in this lap
-    in_pit: bool = False  # the latest frame was in the pit lane
+    # pit-lane state through the lap: (session time, in the pit lane) at each change, so a flashback can rewind it
+    pit_runs: list[tuple[float, bool]] = field(default_factory=list)
+
+
+_PIT_FLAGS = frozenset({LapFlag.PIT_IN, LapFlag.PIT_OUT})
+
+
+def _pit_flags(runs: list[tuple[float, bool]]) -> set[str]:
+    """The pit flags of a lap from its pit-lane runs (alternating: in the pit lane or not, in order).
+
+    A first run in the pit lane is an out lap; the pit lane after running on track, an in lap; back on track
+    after that entry, both (a drive-through, or a stop whose box is inside the lap)."""
+    flags: set[str] = set()
+    on_track = entered = False
+    for _, in_pit in runs:
+        if in_pit:
+            if on_track:
+                flags.add(LapFlag.PIT_IN)
+                entered = True
+            else:
+                flags.add(LapFlag.PIT_OUT)
+        else:
+            if entered:
+                flags.add(LapFlag.PIT_OUT)
+            on_track = True
+    return flags
 
 
 def _standing_start(f: CarFrame) -> bool:
@@ -288,15 +314,13 @@ class LapAssembler:
             if t_new < cur.rows[-1][0] - 1e-6:
                 cur.flags.add(LapFlag.FLASHBACK)
                 cur.rows = [r for r in cur.rows if r[0] < t_new]
-        if f.pit_status:  # in the pit lane (1) or pit area (2)
-            # a lap that starts in the pit lane is an out lap; the pit lane after running on track, an in lap
-            cur.flags.add(LapFlag.PIT_IN if cur.on_track else LapFlag.PIT_OUT)
-            cur.in_pit = True
-        else:  # 0 (on track), or unknown
-            if cur.in_pit and LapFlag.PIT_IN in cur.flags:
-                cur.flags.add(LapFlag.PIT_OUT)  # entered and left the pit lane within this lap (drive-through)
-            cur.on_track = True
-            cur.in_pit = False
+                # the pit-lane state rewinds too: a pit entry (or exit) the driver flashed back over never happened
+                runs = cur.pit_runs = [r for r in cur.pit_runs if r[0] < t_new]
+                cur.flags = (cur.flags - _PIT_FLAGS) | _pit_flags(runs)
+        in_pit = bool(f.pit_status)  # in the pit lane (1) or pit area (2); 0, or unknown, is not
+        if not cur.pit_runs or cur.pit_runs[-1][1] != in_pit:
+            cur.pit_runs.append((_val(f.session_time_s), in_pit))
+            cur.flags |= _pit_flags(cur.pit_runs)
         if f.quality & (FrameQuality.STALE_LAP_DATA | FrameQuality.STALE_POSITION):
             cur.stale += 1
         if cur.first_fuel_kg is None and f.fuel_kg is not None:

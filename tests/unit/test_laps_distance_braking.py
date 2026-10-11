@@ -9,6 +9,7 @@ from pitwall.analysis.braking import BRAKE_ON, detect_braking
 from pitwall.analysis.distance import crossing, monotonic_mask, to_distance_domain
 from pitwall.analysis.laps import CHANNELS, LapAssembler, LapFlag, LapTrace
 from pitwall.model.telemetry import CarFrame, FrameQuality, Game, LapCompletion
+from pitwall.voice.proactive import LAP_IN, LAP_OUT, LAP_THAT, lap_label
 from tests.conftest import DecodedSession
 
 
@@ -294,6 +295,71 @@ def test_drive_through_within_one_lap_is_in_and_out() -> None:
     asm = LapAssembler(laps.append, track_length_m=4910.0)
     _drive_lap(asm, 7, 0.0, pit=(2000.0, 2600.0))
     assert laps[0].flags == {LapFlag.PIT_IN, LapFlag.PIT_OUT}
+
+
+def _stretch(asm: LapAssembler, lap: int, t0: float, d0: float, d1: float, pit: tuple[float, float]) -> None:
+    """Feed lap ``lap`` from ``d0`` to ``d1`` at 10 m steps, 0.1 s apart, from session time ``t0`` (a flashback is
+    a stretch that starts at an earlier session time); ``pit`` = the pit-lane stretch (from, to) of the lap."""
+    for i in range(round((d1 - d0) / 10.0)):
+        d, t = d0 + i * 10.0, t0 + i * 0.1
+        in_pit = pit[0] <= d < pit[1]
+        asm.feed(_car(t, lap, d, round(t * 1000), 80.0 if in_pit else 250.0, 1 if in_pit else 0))
+
+
+def _complete(asm: LapAssembler, lap: int) -> None:
+    asm.feed_completion(LapCompletion(game=Game.SYNTHETIC, t_recv_ns=0, lap_number=lap, lap_time_ms=90_000, valid=True))
+
+
+def test_flashback_into_the_pit_exit_keeps_the_out_lap_an_out_lap() -> None:
+    """Imola out lap (pit lane 0-449 m): on track to 700 m, then a 3 s flashback to 400 m, back in the pit lane.
+    The lap used to read pit_in + pit_out ("Pit lap"): the rewound pit lane counted as a pit entry."""
+    laps: list[LapTrace] = []
+    asm = LapAssembler(laps.append, track_length_m=4910.0)
+    pit = (0.0, 449.0)
+    _stretch(asm, 15, 0.0, 0.0, 700.0, pit)
+    _stretch(asm, 15, 4.0, 400.0, 4910.0, pit)  # flashback: session time 7.0 -> 4.0 s, 700 -> 400 m
+    _complete(asm, 15)
+    assert laps[0].flags == {LapFlag.FLASHBACK, LapFlag.PIT_OUT}
+    assert lap_label({"flags": sorted(laps[0].flags)}) == LAP_OUT
+
+
+@pytest.mark.parametrize(
+    ("pit_after_flashback", "flags", "label"),
+    [
+        ((4810.0, 4910.0), {LapFlag.FLASHBACK, LapFlag.PIT_IN}, LAP_IN),  # pits again: still an in lap
+        ((9999.0, 9999.0), {LapFlag.FLASHBACK}, LAP_THAT),  # stays out: not a pit lap at all
+    ],
+)
+def test_flashback_from_the_pit_entry_back_onto_the_track_undoes_the_entry(
+    pit_after_flashback: tuple[float, float], flags: set[str], label: str
+) -> None:
+    """Imola in lap: pit entry at 4810 m, then a flashback to 4790 m (on track). It used to read pit_in + pit_out
+    ("Pit lap"): the rewind back onto the track counted as leaving the pit lane."""
+    laps: list[LapTrace] = []
+    asm = LapAssembler(laps.append, track_length_m=4910.0)
+    _stretch(asm, 14, 0.0, 0.0, 4860.0, (4810.0, 4910.0))
+    _stretch(asm, 14, 47.9, 4790.0, 4910.0, pit_after_flashback)  # flashback: 48.5 -> 47.9 s, 4850 -> 4790 m
+    _complete(asm, 14)
+    assert laps[0].flags == flags
+    assert lap_label({"flags": sorted(laps[0].flags)}) == label
+
+
+def test_flashback_within_a_drive_through_rewinds_to_the_pit_lane() -> None:
+    """Drive-through 2000-2600 m: out at 2700 m, flashback to 2500 m (in the pit lane) and out again: still in and
+    out; a flashback to 1900 m (before the entry) that then stays out is no pit lap."""
+    laps: list[LapTrace] = []
+    asm = LapAssembler(laps.append, track_length_m=4910.0)
+    pit = (2000.0, 2600.0)
+    _stretch(asm, 7, 0.0, 0.0, 2700.0, pit)
+    _stretch(asm, 7, 25.0, 2500.0, 4910.0, pit)  # flashback: 27.0 -> 25.0 s
+    _complete(asm, 7)
+    _stretch(asm, 8, 100.0, 0.0, 2700.0, pit)
+    _stretch(asm, 8, 119.0, 1900.0, 4910.0, (9999.0, 9999.0))  # flashback: 127.0 -> 119.0 s, then stays out
+    _complete(asm, 8)
+    assert [lap.flags for lap in laps] == [
+        {LapFlag.FLASHBACK, LapFlag.PIT_IN, LapFlag.PIT_OUT},
+        {LapFlag.FLASHBACK},
+    ]
 
 
 def test_unknown_pit_status_is_never_a_pit_lap() -> None:

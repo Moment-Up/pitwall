@@ -379,6 +379,17 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
 - **Unverified:** an out lap from the garage in practice or qualifying (no such capture), a pit-lane race start, F1
   time trial lap 1, the new wording heard live on the iPad. Out of scope and unchanged: braking cues still block race
   lap 1 only when the grid is past 60 m (`coach/cues.py` `STANDING_START_M`), and in/out laps still get coaching.
+- **Review follow-ups (2026-10-11):** a flashback rewinds the pit-lane state with the trace (`analysis/laps.py`
+  `pit_runs`): a flashback from the pit entry back onto the track, or from the track back into the pit exit, used to
+  make the lap `pit_in, pit_out` ("Pit lap"; an in lap was "In-lap" before the fix above). Drive's Car tab title
+  says "Coaching · last lap" and the pit-lane chip "Next run · from last lap" for the lap just finished (they said
+  "lap 66" / "from L66" under "Lap 67"). The radio's "personal best" / "session best" also counts the session's
+  laps older than the snapshot's latest 20 (D2 `bests.session`): from lap 21 a lap slower than an earlier one was
+  called a best. Answers to questions say "Your last lap against your reference lap (lap 64)" and "Last lap, T5,
+  against the reference" for the lap just driven ("Lap 66" only for an older lap). Evidence: unit tests (synthetic
+  frames with Imola's pit geometry, recorded Drive fixtures), and the owner's 18 F1 25 captures (101 laps, 15 with a
+  flashback, 6 pit laps) give the same flags before and after; no capture has a flashback across the pit lane or a
+  session past 32 laps.
 
 ## Next
 1. Dashboard v2 rig acceptance (spec 14.5) on the iPad with live PS5 telemetry. Remove `/next/` and the Svelte
