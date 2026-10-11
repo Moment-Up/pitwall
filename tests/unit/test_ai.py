@@ -297,7 +297,9 @@ async def test_last_lap_question_is_about_the_last_completed_lap_not_the_best() 
     assert ans.text.startswith("Your last lap, lap 71, was a 1:06.126, clean, 0.500s off your best clean lap (lap 64).")
     # the reference is that same best lap: its comparison would repeat the gap ("lap 64: 0.500s slower")
     assert "against your reference lap" not in ans.text and ans.text.count("0.500s") == 1
-    assert "Lap 71, T6, against the reference: lost 0.310s, braking 12 m earlier" in ans.text  # where it went
+    # where it went; the lap just driven is "last lap" again, never a bare "Lap 71" (the HUD already shows lap 72)
+    assert "Last lap, T6, against the reference: lost 0.310s, braking 12 m earlier" in ans.text
+    assert "Lap 71" not in ans.text
     assert "lap 72" not in ans.text.lower()  # the partial lap at the end of the session is not a lap driven
     assert check_grounding(ans.cited_text, sheet.facts).ok
     # the radio's instant phrasing (voice hub FAST_INTENTS) says the same lap; the best-lap answer is unchanged
@@ -324,6 +326,30 @@ async def test_best_or_dirty_last_lap_says_so() -> None:
     assert empty.text.startswith("I don't have enough data") and radio_answer("last_lap", FactSheet()) is None
 
 
+def test_compare_facts_say_last_lap_for_the_lap_just_driven_and_a_number_for_an_older_lap() -> None:
+    """Asked over the radio while the game's HUD shows the next lap, "Lap 71 against your reference ..." sounded one
+    lap out (the lap summary already says "That lap")."""
+    from pitwall.ai.facts import build_fact_sheet
+    from pitwall.analysis.compare import Compatibility, CornerDelta, CornerMetrics, LapComparison
+
+    def says(sa: Any) -> list[str]:
+        return [f.say for f in build_fact_sheet(sa).facts if f.topic == "compare" and f.say]
+
+    sa = _race_analysis()  # lap 71 compared and the last lap driven (lap 72 only partial)
+    assert says(sa) == [
+        "Your last lap against your reference lap (lap 64): 0.500s slower.",
+        "Last lap, T6, against the reference: lost 0.310s, braking 12 m earlier, minimum speed 22.1 km/h lower, "
+        "exit speed 6.0 km/h lower.",
+    ]
+    m = CornerMetrics("T6", 10.0)
+    t6 = CornerDelta("T6", 0.31, -12.4, None, -22.1, None, None, -6.0, None, None, None, None, m, m)
+    sa.comparisons = {70: LapComparison(64, 70, 0.8, [], [], [t6], Compatibility(True))}  # lap 71 not comparable
+    assert [x.split(":")[0] for x in says(sa)] == [
+        "Lap 70 against your reference lap (lap 64)",
+        "Lap 70, T6, against the reference",
+    ]
+
+
 async def test_last_lap_answer_never_gives_an_incident_corner_as_technique() -> None:
     from pitwall.ai.facts import build_fact_sheet
     from pitwall.analysis.compare import Compatibility, CornerDelta, CornerMetrics, LapComparison
@@ -341,8 +367,8 @@ async def test_last_lap_answer_never_gives_an_incident_corner_as_technique() -> 
     ]
     ans = await RaceEngineer(None).answer("How was my last lap?", sheet)
     assert "T3" not in ans.text and "13.619" not in ans.text and "42 m" not in ans.text  # a spin is not advice
-    assert "Lap 71, T6, against the reference: lost 0.310s" in ans.text  # the biggest technique loss instead
-    assert "Lap 71 against your reference lap (lap 60): 13.900s slower." in ans.text  # a different reference: kept
+    assert "Last lap, T6, against the reference: lost 0.310s" in ans.text  # the biggest technique loss instead
+    assert "Your last lap against your reference lap (lap 60): 13.900s slower." in ans.text  # another reference: kept
     assert check_grounding(ans.cited_text, sheet.facts).ok
 
 

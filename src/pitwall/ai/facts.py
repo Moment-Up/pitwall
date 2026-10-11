@@ -449,6 +449,10 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
             fs.add("compare", "Latest lap could not be compared: " + "; ".join(comp.compatibility.blocking) + ".")
         else:
             n, total = comp.cmp_lap_number, comp.total_delta_s
+            # spoken over the radio while the game's HUD already shows the next lap: the lap just driven is "your
+            # last lap", never a bare "Lap 66" (an older lap keeps its number)
+            latest = last_completed_lap(sa.laps)
+            is_last = latest is not None and int(latest["lap_number"]) == n
             fs.add(
                 "compare",
                 f"Latest compared lap {n} vs reference lap {comp.ref_lap_number}: total {total:+.3f}s."
@@ -457,8 +461,8 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
                 {"lap": n, "ref_lap": comp.ref_lap_number, "delta_s": total},
                 say=None
                 if total is None
-                else f"Lap {n} against your reference lap (lap {comp.ref_lap_number}): "
-                f"{_signed(total, 3, 's', ('slower', 'faster'), 'level')}.",
+                else f"{'Your last lap' if is_last else f'Lap {n}'} against your reference lap "
+                f"(lap {comp.ref_lap_number}): {_signed(total, 3, 's', ('slower', 'faster'), 'level')}.",
             )
             for cd in comp.corners:
                 if cd.time_delta_s is None:
@@ -491,7 +495,9 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
                         "incident": is_incident(cd),
                     },
                     corner=cd.corner,
-                    say=f"Lap {n}, {cname(cd.corner)}, against the reference: " + ", ".join(plain) + ".",
+                    say=f"{'Last lap' if is_last else f'Lap {n}'}, {cname(cd.corner)}, against the reference: "
+                    + ", ".join(plain)
+                    + ".",
                 )
             for warning in comp.compatibility.warnings:
                 fs.add("compare", f"Comparison caveat: {warning}.")
