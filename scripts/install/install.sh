@@ -228,7 +228,9 @@ http_quiet() {
 }
 
 # json_strings KEY: the string values of "KEY" in JSON on stdin, one per line (values without quotes or commas)
+# Each of , { } [ ] becomes a newline (five characters to five newlines: a set, as intended; \133 \135 are [ ]).
 json_strings() {
+  # shellcheck disable=SC2020
   tr ',{}\133\135' '\n\n\n\n\n' | sed -n "s/^[[:space:]]*\"$1\"[[:space:]]*:[[:space:]]*\"\\([^\"\\\\]*\\)\"[[:space:]]*\$/\\1/p"
 }
 
