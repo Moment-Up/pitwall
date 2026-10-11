@@ -11,13 +11,22 @@ import { ItemCardGroup } from "@heroui-pro/react";
 import { useMemo, useState } from "react";
 import { AreaActions } from "../../components/shell/AreaHeader";
 import { useDrivers, useLive } from "../../hooks/stores";
+import { useGameCatalog, useGameState } from "../../hooks/useGame";
 import { cache } from "../../lib/cache";
 import { drivers as driverStore, type Driver } from "../../lib/drivers";
 import type { PageProps } from "../../routes";
 import { DeleteDriverDialog } from "./drivers/DeleteDriverDialog";
 import { DriverCard } from "./drivers/DriverCard";
 import { DriverSheet } from "./drivers/DriverSheet";
-import { canDelete, formBody, formFromDriver, newDriverForm, sortDrivers, type DriverForm } from "./drivers/model";
+import {
+  canDelete,
+  formBody,
+  formFromDriver,
+  newDriverForm,
+  sortDrivers,
+  usualGameOptions,
+  type DriverForm,
+} from "./drivers/model";
 import { useWide } from "./useWide";
 
 const errText = (e: unknown): string => (e instanceof Error ? e.message : String(e));
@@ -38,6 +47,13 @@ export function DriversPage(_props: PageProps) {
   const radioFollows = useDrivers((s) => s.radioFollowsDriver);
   const onTrack = useLive((s) => s.snap?.connection.status === "live" && s.snap.session_id != null);
   const wide = useWide();
+  // "Usually plays" (game selection stretch): offered only while the server says it supports driver defaults.
+  const catalog = useGameCatalog();
+  const gameState = useGameState();
+  const usualGames = useMemo(
+    () => (catalog && gameState.data?.driver_defaults ? usualGameOptions(catalog.entries) : null),
+    [catalog, gameState.data?.driver_defaults],
+  );
 
   const sorted = useMemo(() => sortDrivers(list), [list]);
   const [form, setForm] = useState<DriverForm | null>(null);
@@ -194,6 +210,7 @@ export function DriversPage(_props: PageProps) {
         radioFollows={radioFollows}
         wide={wide}
         canDelete={canDelete(list)}
+        usualGames={usualGames}
         onSave={save}
         onDelete={() => {
           if (form?.id != null) setDeletingId(form.id);

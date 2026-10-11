@@ -14,12 +14,21 @@ platform?" in step 6.
 Reference files (read the one for this OS now, the others when the step needs them):
 [macos.md](macos.md) | [windows.md](windows.md) | [games.md](games.md) | [troubleshooting.md](troubleshooting.md)
 
+**Ask about the game early.** Before the install (step 3), unless `$ARGUMENTS` already answers it, ask: "Which game
+and platform will you play?" Look it up in games.md. If Pitwall cannot read that game ("Not supported" there), say so
+now, before the user spends time installing, and say what is left (the synthetic demo; recording the game's packets
+if it sends UDP telemetry). Pitwall itself is told the game in step 6, once it is installed and running.
+
 If Claude Code asked the user to enable this project's MCP server `qwen` (from `.mcp.json`): that is the maintainer's
 optional local-model dev tool (it expects a model server at 127.0.0.1:8081 and creates `.venv` when it starts).
 Setup does not need it; recommend "No" unless they run such a server.
 
 ## Rules (apply to every step)
 
+- **Game support comes from the code.** Support claims come from `uv run pitwall game show` /
+  `uv run pitwall capabilities` (both built from `src/pitwall/capabilities.py` and the adapters' field
+  declarations); never round up. Keep two things apart: "the game does not send X" (known in advance for the
+  selected game) and "X has not arrived yet" (a runtime state, shown as `-`).
 - **Ask before you change the machine.** Every install, download, firewall rule, network setting, start-at-login
   item, `.env` edit, file move or model download needs the user's yes for that action. Read-only checks need no
   permission.
@@ -151,6 +160,8 @@ release folder, and macOS can stop the launchd service from reading those folder
 
 ## 4. Doctor
 
+Until step 6, doctor's `game` check is info ("no game selected"): expected. Do not select a game here.
+
 Run `uv run pitwall doctor --json` and read `summary` and `checks` (each has `status` ok|info|warn|fail, `detail`,
 `fix`). Fix every `fail` using its `fix` line (asking first when it changes the machine). Expected at this point and
 fine: `telemetry` info (server not running), `access_token` warn (created on first start), `llm` warn when no AI
@@ -185,16 +196,50 @@ its `fix` is an `icacls` command - offer it, run it only with a yes.
 
 ## 6. The user's game
 
-Ask which game and platform they drive (PS5, Xbox, PC - and on PC, whether the game runs on this same computer).
-Look the game up in games.md: give the exact in-game menu steps with the real values filled in (IP = doctor
-`lan_ip`, ports from `server.udp_port` and Setup > Connect) and its honest support status from
-`uv run pitwall capabilities`. Games enabled on the dashboard (GT7, Forza, Assetto Corsa, recorder) are switched on
-by the user at Setup > Connect (`http://127.0.0.1:<port>/#/setup/connect`; classic dashboard: the Connect tab),
-which also shows every value with a copy button and the live connections.
+Tell Pitwall which game the user plays: that switches on the game's telemetry input and gives the honest list of what
+the game sends. Keep the server from step 5 running: the commands below then go through it.
+Every value is also on Setup > Connect (`http://127.0.0.1:<port>/#/setup/connect`; classic dashboard: the Connect tab),
+with copy buttons and the live connections.
 
-Then: "Go on track (or into the garage) now." Re-run `uv run pitwall doctor --json` until `telemetry` is ok and
-`server.synthetic` is false (a game, not the demo); Setup > Connect > Live connections shows the sending console's
-address. Nothing after a minute -> troubleshooting.md "No telemetry arrives".
+1. **Ask** "Which game and platform do you drive?" unless the early question or `$ARGUMENTS` already answered it. On
+   PC, also ask whether the game runs on this same computer. F1 25: ask whether they drive the 2026 Season Pack cars
+   (the game's UDP Format 2026).
+2. **Find the id:** `uv run pitwall game list --all --json`. Match the answer to one `entries[].id` (by `label` and
+   `platform_label`), e.g. `f1_25:ps5`, `f1_25_2026:pc`, `gt7:ps5`, `ac:ps5` (Assetto Corsa's PS4 version on a
+   PS5). A game that is not listed is `other:any`. Confirm in one line, saying what selecting changes (from
+   `integration` and `transport.summary`), e.g. "Gran Turismo 7 on PS5? Selecting it switches on Pitwall's GT7
+   input." That yes covers sub-step 4. If `game` is not a `pitwall` command (an older Pitwall), use games.md and
+   `uv run pitwall capabilities` instead, and the user switches the game on at Setup > Connect.
+3. **Console IP**, only when the entry's `transport.console_ip` is `required` (Assetto Corsa) or `optional` (GT7):
+   ask for it (where to find it: games.md). AC cannot connect without it; GT7 works without it (Pitwall then searches
+   the network for the console), but the IP is more reliable. Only private LAN addresses are accepted.
+4. **Select:** `uv run pitwall game set <id> [--console-ip <ip>] --json`. Tell the user each `actions[].message` in
+   plain words: `enabled`, `already_enabled`, `set_platform`, `set_console_ip` = done; `needs_console_ip` = AC still
+   needs it (back to 3), GT7 optional; `skipped_live` = that input is receiving packets right now, change it on
+   Setup > Connect after the session; `error` = usually a port conflict (troubleshooting.md "Port in use");
+   `none` = Pitwall cannot read this game (the message says why), or for `other:any`: offer Setup > Connect >
+   Record another game (ask first: it listens on a UDP port and saves every packet to disk).
+   `via: "file"` = no Pitwall was running: the choice applies at its next start. Exit code 1 "predates game
+   selection" = the running Pitwall is older than this folder: restart it from here (step 5), then retry. Selecting
+   never turns another game's input off. Windows: a newly enabled input listens on a new UDP port, so if doctor's
+   `firewall` then warns, the user re-runs `firewall.ps1 add` as administrator (step 5.5).
+5. **Steps and honest support:** `uv run pitwall game show --json`. Give the user `guide.menu_path` and
+   `guide.steps` (label, value, note) with the values already filled in (this computer's IP and ports; the IP should
+   equal doctor `lan_ip`), and `guide.extras` when useful. Quote `entry.support.words`, plus the gist of
+   `entry.support.note`, without rounding up. `guide` is null for a game Pitwall cannot read: say so plainly
+   (games.md "Not supported") and skip 6-7.
+6. **Say what will stay empty**, in one sentence, from `entry.features`: the `label`s with `status` `not_sent`
+   ("GT7 doesn't send ...") and `not_implemented` ("Pitwall doesn't read ... yet"), so those empty tiles are
+   expected, not a fault. Leave `unknown` features out (they show `-`); if `entry.support.level` is `unverified`
+   (e.g. Forza Horizon on PS5), say nobody has confirmed that version sends telemetry.
+7. "Go on track (or into the garage) now." Re-run `uv run pitwall doctor --json` until `game` and `telemetry` are
+   both ok and `server.synthetic` is false (a game, not the demo); Setup > Connect > Live connections shows the
+   sending console's address. `game` warns "Receiving X, but Y is selected": ask the user which game they are
+   playing and run doctor's `fix` (`uv run pitwall game set <id>`) only for their answer. Nothing after a minute ->
+   troubleshooting.md "No telemetry arrives".
+
+The new dashboard's Setup > Game page shows the same (picker, input, "What <game> sends") and changes the game
+later. The classic dashboard has no Game page: there the game is changed with `uv run pitwall game set <id>`.
 
 ## 7. Phone or iPad
 

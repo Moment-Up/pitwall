@@ -8,6 +8,8 @@
 * Citations are bookkeeping: grounding checks the cited text (``EngineerAnswer.cited_text``), and the facts used
   are returned in ``EngineerAnswer.facts``. What the driver sees and hears (``text`` / ``speech``) never carries
   fact ids, observation labels or confidence scores (``grounding.display_text``).
+* A question only about data the game does not send (or Pitwall does not read yet: ``games.capability_only``, e.g.
+  tyres in Assetto Corsa) is answered deterministically from the sheet's ``game`` facts, without the LLM.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from pitwall import games
 from pitwall.ai.facts import LAST_LAP_PREFIX, Fact, FactSheet
 from pitwall.ai.grounding import GroundingResult, check_grounding, display_text
 from pitwall.ai.providers import LLMProvider, LLMUnavailable
@@ -70,6 +73,11 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("fuel", re.compile(r"\b(fuel|petrol|gas|lift and coast)\b", re.I)),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
     ("strategy", re.compile(r"\b(pit|box|strategy|stop window|pit window|undercut|overcut)\b", re.I)),
+    # data some games never send (games.INTENT_FEATURES): "wing" alone stays a setup question
+    ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
+    ("ers", re.compile(r"\b(ers|battery|deploy(?:ment)?|hybrid|harvest\w*|overtake mode|drs)\b", re.I)),
+    ("flags", re.compile(r"\b(flags?|yellow|safety car|vsc|marshal)\b", re.I)),
+    ("weather", re.compile(r"\b(weather|rain(?:ing)?|track temp\w*|air temp\w*|forecast)\b", re.I)),
     (
         "setup",
         re.compile(
@@ -81,6 +89,8 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("focus", re.compile(r"\b(one thing|work on|focus|improve|tip|advice|what should i)\b", re.I)),
     ("compare", re.compile(r"\b(compare|comparison|versus|vs|against my best|to my best|reference)\b", re.I)),
     ("braking", re.compile(r"\b(brak\w*|brake point|where should i brake)\b", re.I)),
+    # after braking ("is my braking OK in sector two?" is about braking), before the lap-time intents
+    ("sectors", re.compile(r"\b(sectors?|splits?)\b", re.I)),
     # "how was my last lap / that lap": the lap just driven, not the best one (checked before lap_times)
     ("last_lap", re.compile(r"\b(?:last|previous|latest|that|this) lap\b(?!\s*times\b)", re.I)),
     ("lap_times", re.compile(r"\b(lap ?times?|fastest|best lap|pace|how fast)\b", re.I)),
@@ -89,19 +99,24 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
 ]
 
 _TOPICS: dict[str, set[str]] = {
-    "fuel": {"session", "fuel", "strategy"},
-    "tyres": {"session", "tyres", "strategy"},
-    "strategy": {"session", "fuel", "tyres", "strategy"},
-    "setup": {"session", "corners", "observations", "compare", "setup"},
-    "focus": {"session", "observations", "corners", "reference"},
-    "compare": {"session", "compare", "reference", "laps"},
-    "braking": {"session", "corners", "observations", "reference"},
-    "lap_times": {"session", "laps", "reference"},
-    "last_lap": {"session", "laps", "reference", "compare"},
-    "summary": {"session", "laps", "corners", "observations", "fuel", "tyres"},
-    "losing_time": {"session", "corners", "compare", "observations", "reference"},
-    "corner": {"session", "reference"},
-    "general": {"session", "laps", "corners", "observations", "reference", "fuel", "tyres"},
+    "fuel": {"session", "game", "fuel", "strategy"},
+    "tyres": {"session", "game", "tyres", "strategy"},
+    "strategy": {"session", "game", "fuel", "tyres", "strategy"},
+    "damage": {"session", "game"},
+    "ers": {"session", "game", "ers"},
+    "sectors": {"session", "game", "laps"},
+    "flags": {"session", "game"},
+    "weather": {"session", "game"},
+    "setup": {"session", "game", "corners", "observations", "compare", "setup"},
+    "focus": {"session", "game", "observations", "corners", "reference"},
+    "compare": {"session", "game", "compare", "reference", "laps"},
+    "braking": {"session", "game", "corners", "observations", "reference"},
+    "lap_times": {"session", "game", "laps", "reference"},
+    "last_lap": {"session", "game", "laps", "reference", "compare"},
+    "summary": {"session", "game", "laps", "corners", "observations", "fuel", "tyres"},
+    "losing_time": {"session", "game", "corners", "compare", "observations", "reference"},
+    "corner": {"session", "game", "reference"},
+    "general": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
 }
 
 
@@ -144,6 +159,8 @@ Rules (strict):
   release, throttle) before suggesting setup. Present any setup change as a single-variable experiment,
   not a guaranteed fix.
 - If the facts say the data is SYNTHETIC, mention that briefly.
+- If a fact says the game does not send some data, or that Pitwall does not read it, say so plainly; never
+  estimate it.
 - If the session fact says the driver is a beginner, use plain words and give one point at a time."""
 
 
@@ -191,7 +208,9 @@ class RaceEngineer:
             )
         facts = self._select(intent, sheet)
         det = deterministic_answer(intent, facts, sheet)
-        if not use_llm or self.provider is None:
+        # only data the game never sends / Pitwall does not read: a known fact, not something to explain
+        capability = games.capability_only(intent.name, games.entry_of_sheet(sheet))
+        if not use_llm or self.provider is None or capability:
             return self._finish(det, intent, facts, None, True, None, t0, 0, [])
 
         messages: list[dict[str, Any]] = [{"role": "system", "content": SYSTEM_PROMPT}]
@@ -297,26 +316,40 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
     citation, so the result is grounded by construction (``check_grounding`` accepts it). ``RaceEngineer`` shows the
     driver ``display_text`` of it: the same sentences without the citations."""
 
-    def first(topic: str, corner: str | None = None, contains: str | None = None) -> Fact | None:
+    def first(
+        topic: str, corner: str | None = None, contains: str | None = None, group: str | None = None
+    ) -> Fact | None:
         for f in facts:
             topic_ok = f.topic == topic and (corner is None or (f.corner or "").lower() in sheet.corners_for(corner))
-            if topic_ok and (contains is None or contains in f.text):
+            group_ok = group is None or f.data.get("group") == group
+            if topic_ok and group_ok and (contains is None or contains in f.text):
                 return f
         return None
 
     def say(*fs: Fact | None) -> str:
-        chosen = [f for f in fs if f is not None]
+        chosen = list({f.id: f for f in fs if f is not None}.values())  # a fact said once (tyres: no wear fact)
         if not chosen:
             return "I don't have enough data for that yet - complete a few clean laps and ask again."
         return " ".join(f"{f.plain} [{f.id}]" for f in chosen)
 
     n = intent.name
+    game = first("game", group=n) if n in games.INTENT_FEATURES else None  # what this game never sends
     if n == "fuel":
-        return say(first("fuel"))
+        return say(first("fuel"), game)
     if n == "tyres":
-        return say(first("tyres"), first("tyres", contains="surface temps"))
+        return say(first("tyres"), first("tyres", contains="surface temps"), game)
     if n == "strategy":
-        return say(first("strategy"), first("fuel"), first("tyres"))
+        return say(first("strategy"), first("fuel"), first("tyres"), game)
+    if n == "ers":
+        return say(first("ers"), game)
+    if n == "sectors":
+        if game is not None:
+            return say(game)
+        return say(first("laps", contains="Theoretical"), first("laps", contains="Best clean"))
+    if n == "weather":
+        return say(game) if game is not None else say(first("session"))  # the session fact carries the weather
+    if n in ("damage", "flags"):
+        return say(game)
     if n in ("corner", "braking", "losing_time", "setup") and intent.corner:
         obs = first("observations", corner=intent.corner)
         return say(first("corners", corner=intent.corner), obs or first("compare", corner=intent.corner))
@@ -359,6 +392,7 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
             first("observations"),
             diff or first("setup", contains="Recommended") or first("setup", contains="Setup recommendation: none"),
             first("setup", contains="Something to test") if diff else None,
+            game,
         )
     if n == "summary":
         return say(

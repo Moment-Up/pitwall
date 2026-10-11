@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useTrackPriors } from "../../components/viz";
 import { useActiveDriver, useLive } from "../../hooks/stores";
 import { useDriveModel } from "../../hooks/useDriveModel";
+import { useEffectiveEntry } from "../../hooks/useGame";
 import type { SnapshotNext } from "../../lib/drive/types";
 import type { PageProps } from "../../routes";
 import { TrackScreen } from "./track/TrackScreen";
@@ -18,7 +19,8 @@ export function TrackPage(_props: PageProps) {
   const driver = useActiveDriver();
   const [selected, setSelected] = useState<string | null>(null);
   const simple = !!driver?.coaching?.simple_wording;
-  const view = useMemo(() => trackView(snap, model, simple), [snap, model, simple]);
+  const entry = useEffectiveEntry();
+  const view = useMemo(() => trackView(snap, model, simple, entry), [snap, model, simple, entry]);
   const { outline } = useTrackPriors({
     game: snap?.session?.game,
     trackId: snap?.session?.track_id,

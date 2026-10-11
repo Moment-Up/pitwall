@@ -178,6 +178,7 @@ class DriverPreferences:
     skill_level: SkillLevel = "intermediate"
     coaching_intensity: CoachingIntensity = "normal"
     voice_enabled: bool = True
+    default_game: str | None = None  # games catalogue id: on a seat change, selected while telemetry is not live
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -203,6 +204,7 @@ class DriverPreferences:
         take("skill_level", parse_skill_level)
         take("coaching_intensity", parse_coaching_intensity)
         take("voice_enabled", _parse_bool)
+        take("default_game", parse_default_game)  # a game the catalogue no longer has reads as none
         return out
 
 
@@ -210,6 +212,24 @@ def _parse_bool(value: object) -> bool:
     if isinstance(value, bool):
         return value
     raise DriverValidationError(f"expected true/false, got {value!r}")
+
+
+def parse_default_game(value: object) -> str | None:
+    """The game this driver usually plays: a ``pitwall.games`` catalogue id, or None / "" for none."""
+    if value is None or value == "":
+        return None
+    from pitwall.games import entry
+
+    if not isinstance(value, str) or entry(value) is None:
+        raise DriverValidationError(f"unknown game {value!r}: see GET /api/games")
+    return value
+
+
+class _Keep:
+    """``DriverService.update``: leave this preference unchanged (None means "clear" for ``default_game``)."""
+
+
+KEEP = _Keep()
 
 
 def _replace(p: DriverPreferences, **changes: Any) -> DriverPreferences:
@@ -665,6 +685,7 @@ class DriverService:
         skill_level: str = "intermediate",
         coaching_intensity: str = "normal",
         voice_enabled: bool = True,
+        default_game: str | None = None,
     ) -> Driver:
         clean = clean_name(name)
         prefs = DriverPreferences(
@@ -673,6 +694,7 @@ class DriverService:
             skill_level=parse_skill_level(skill_level),
             coaching_intensity=parse_coaching_intensity(coaching_intensity),
             voice_enabled=_parse_bool(voice_enabled),
+            default_game=parse_default_game(default_game),
         )
         pick_colour = colour is None
 
@@ -701,8 +723,10 @@ class DriverService:
         skill_level: str | None = None,
         coaching_intensity: str | None = None,
         voice_enabled: bool | None = None,
+        default_game: str | _Keep | None = KEEP,
     ) -> Driver:
-        """Partial update: only the given fields change. Never bumps the seat version (no session effect)."""
+        """Partial update: only the given fields change (``default_game``: None clears it, ``KEEP`` leaves it). Never
+        bumps the seat version (no session effect)."""
         changes: dict[str, Any] = {}
         if colour is not None:
             changes["colour"] = parse_colour(colour)
@@ -714,6 +738,8 @@ class DriverService:
             changes["coaching_intensity"] = parse_coaching_intensity(coaching_intensity)
         if voice_enabled is not None:
             changes["voice_enabled"] = _parse_bool(voice_enabled)
+        if not isinstance(default_game, _Keep):
+            changes["default_game"] = parse_default_game(default_game)
         new_name = clean_name(name) if name is not None else None
 
         def job(c: sqlite3.Connection) -> _Refused | None:

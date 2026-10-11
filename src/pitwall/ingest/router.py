@@ -31,6 +31,7 @@ class PacketRouter:
             if cand.can_decode(pkt.data):
                 self._by_port[pkt.src_port] = cand
                 self.sessions.set_ground_plane(cand.info.ground_plane)
+                self.live.last_detected_game = cand.info.game.value  # game selection: once per new sender port
                 log.info("port %d auto-detected as %s", pkt.src_port, cand.info.name)
                 return cand
         return None

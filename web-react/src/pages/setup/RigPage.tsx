@@ -5,9 +5,13 @@
 //   #/setup/rig/upgrades                              upgrade history, what the Boost Kit / Load Cell Kit change
 // Data: GET /api/rig/catalog (cached 10 min), /profile, /drivers/{id}/prefs, /recommendations, /check; writes PUT
 // /profile, PUT /drivers/{id}/prefs, POST /upgrades. Behaviour reference: web/src/views/SetupView.svelte. The settings
-// are for the driver in the seat unless another one is picked; the game is remembered per device.
+// are for the driver in the seat unless another one is picked; the game is the URL's, else the selected game's (game
+// selection, spec 5.9), else the one remembered on this device. A selected game without a researched rig guide (Forza,
+// Assetto Corsa) gets a notice and the switcher stays.
 
 import { Alert, Button, Skeleton } from "@heroui/react";
+import { useSelectedEntry } from "../../hooks/useGame";
+import { rigDefaultGame, rigNotice, rigPlatformNotice } from "../../lib/game";
 import { Segment } from "@heroui-pro/react";
 import type { Key, ReactNode } from "react";
 import { ScrollRow } from "../../components/ScrollRow";
@@ -76,7 +80,11 @@ export function RigPage({ route }: PageProps) {
   const profile = useApi(RIG_KEYS.profile, rigApi.profile);
   const games = supportedGames(catalog.data, profile.data?.platform);
   const remembered = rememberedGame();
-  const game: GameId = q.game && games.includes(q.game) ? q.game : remembered && games.includes(remembered) ? remembered : (games[0] ?? "f1_25");
+  const selected = useSelectedEntry();
+  const game: GameId = rigDefaultGame<GameId>({ url: q.game, selected: selected?.rig?.game, remembered, games, fallback: "f1_25" });
+  const notices = [rigNotice(selected, game), rigPlatformNotice(selected, profile.data?.platform, profile.data?.labels.platform)].filter(
+    (x): x is string => x !== null,
+  );
 
   const recQ: RecommendationQuery = { game, driver_id: driverId ?? null };
   const rec = useApi(driverId === undefined || !profile.data ? null : RIG_KEYS.recommendations(recQ), () => rigApi.recommendations(recQ));
@@ -115,6 +123,14 @@ export function RigPage({ route }: PageProps) {
     <div className="grid min-w-0 gap-4 [&>*]:min-w-0">
       {header}
       {segment}
+      {notices.map((t) => (
+        <Alert key={t} status="accent">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Description>{t}</Alert.Description>
+          </Alert.Content>
+        </Alert>
+      ))}
       {body}
     </div>
   );

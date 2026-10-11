@@ -10,6 +10,11 @@ session's reference is their own lap too (see ``core.session_analysis``). The pe
 when the session's car is known; otherwise it is the best in any car and no gap is stated, because a gap to a lap
 in an unknown, possibly different car is not a like-for-like comparison. Sessions without a driver keep the
 pre-profile wording.
+
+Game capabilities (``pitwall.games``): the session fact names the game by its catalogue label, and every question
+group (fuel, tyres, strategy, damage, ERS, sectors, flags, weather, setup) with data the game does not send - or
+that Pitwall does not read yet - gets one ``game`` fact ("GT7 doesn't send tyre wear, ..."). Data that will never
+arrive is never described as "not yet known": the fuel fact says that only for a game that sends fuel.
 """
 
 from __future__ import annotations
@@ -17,6 +22,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from pitwall import games
 from pitwall.analysis.coaching import is_incident
 from pitwall.analysis.laps import LapFlag
 from pitwall.analysis.strategy import fuel_estimate, pit_window, tyre_estimate
@@ -175,12 +181,23 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     if driver_name:
         skill = driver.get("skill_level")
         driver_txt = f" Driver: {driver_name}" + (f" ({skill} level)." if skill else ".")
-    session_data: dict[str, Any] = {"synthetic": synthetic, "track": s.get("track_name"), "laps": len(sa.laps)}
+    entry = games.entry_for_session(s)
+    platform_known = games.session_platform_known(s)
+    if entry is None:
+        game_txt = str(s.get("game"))
+    else:
+        game_txt = f"{entry.label} on {entry.platform_label}" if platform_known else entry.label
+    session_data: dict[str, Any] = {
+        "synthetic": synthetic,
+        "track": s.get("track_name"),
+        "laps": len(sa.laps),
+        "game_entry": entry.id if entry is not None else None,
+    }
     if driver_name:
         session_data.update(driver=driver_name, skill_level=driver.get("skill_level"))
     fs.add(
         "session",
-        f"Session: {s.get('game')} at {s.get('track_name') or 'unknown track'}, "
+        f"Session: {game_txt} at {s.get('track_name') or 'unknown track'}, "
         f"{s.get('session_type_raw') or s.get('session_type')}, "
         f"car {s.get('car_name') or 'unknown'}, weather {w.get('condition') or 'unknown'}, "
         f"track {w.get('track_temp_c')} C, air {w.get('air_temp_c')} C, {len(sa.laps)} laps recorded."
@@ -369,7 +386,7 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
         if fe.game_estimate_laps is not None:
             txt += f"; the game's own fuel figure (in-car display) is {fe.game_estimate_laps:+.1f} laps"
         fs.add("fuel", txt + ".", asdict(fe))
-    else:
+    elif entry is None or entry.feature("fuel").available:  # a game that never sends fuel has a "game" fact instead
         fs.add("fuel", "Fuel usage per lap is not yet known (needs at least one complete green lap).")
     te = tyre_estimate(sa.laps)
     if te.wear_now_pct:
@@ -396,6 +413,9 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
                 "limit_pct": te.limit_pct,
             },
         )
+    ers = frame.get("ers_store_j")
+    if isinstance(ers, int | float) and not isinstance(ers, bool):
+        fs.add("ers", f"ERS store {ers / 1e6:.1f} MJ.", {"ers_store_mj": round(ers / 1e6, 1)})
     temps = frame.get("tyre_surface_temp_c")
     if temps:
         fs.add(
@@ -421,4 +441,11 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     # ---------------------------------------------------------------- car setup (pitwall.carsetup)
     for topic, text, data in session_setup_facts(s, sa.setup, driver.get("skill_level")):
         fs.add(topic, text, data)
+
+    # ---------------------------------------------------------------- what this game does not send (pitwall.games)
+    # Known in advance, never "not yet known". Last, so a long sheet's selection limit (FactSheet.select) never
+    # pushes laps, corners or observations out for them.
+    if entry is not None:
+        for _group, cap_text, cap_say, cap_data in games.capability_facts(entry, platform_known):
+            fs.add("game", cap_text, cap_data, say=cap_say)
     return fs

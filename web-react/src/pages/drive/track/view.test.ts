@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { driveModel } from "../../../lib/drive/model";
 import { FIXTURES, fixture, newestT, snap } from "../../../lib/drive/testkit";
 import type { SnapshotNext } from "../../../lib/drive/types";
+import { catalogue, entry } from "../../../lib/game-testkit";
 import { trackView } from "./view";
 
 function view(s: SnapshotNext | null, opts: { connected?: boolean; simple?: boolean } = {}) {
@@ -109,5 +110,38 @@ describe("corner list", () => {
         if (r.note) expect(texts.has(r.note.text), `${name} ${r.name}`).toBe(true);
       }
     }
+  });
+});
+
+describe("what the game sends (game selection 5.5)", () => {
+  const CAT = catalogue();
+  const noModel = (s: SnapshotNext): SnapshotNext => ({ ...s, track_model: null });
+
+  it("an estimated track map says why the corners come later, in the server's words", () => {
+    const s = noModel(fixture("recorded-live-api-gt7-stale"));
+    const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: null });
+    const v = trackView(s, m, false, entry("gt7:ps5", CAT));
+    expect(v.empty).toBe(
+      "The corners appear after your first clean lap. GT7 sends no lap distance: Pitwall works it out from speed (about 1 % drift per lap).",
+    );
+    expect(v.note).toBeNull();
+  });
+
+  it("F1 25: the outline note while there is no model yet, the usual empty text", () => {
+    const f1 = entry("f1_25:ps5", CAT);
+    const s = noModel(fixture("recorded-d246-suzuka-on-track-brake-ahead"));
+    const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: null });
+    const v = trackView(s, m, false, f1);
+    expect(v.empty).toBe("The corners appear after your first clean lap.");
+    expect(v.note).toBe(f1.features.find((f) => f.id === "track_map")!.note);
+    // with a model: no note, the corners
+    const full = fixture("recorded-d246-suzuka-on-track-brake-ahead");
+    expect(trackView(full, m, false, f1).note).toBeNull();
+  });
+
+  it("without a game: as before", () => {
+    const v = view(snap());
+    expect(v.empty).toBe("The corners appear after your first clean lap.");
+    expect(v.note).toBeNull();
   });
 });

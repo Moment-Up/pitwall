@@ -1,0 +1,386 @@
+{
+ "selected": {
+  "id": "acc:ps5",
+  "since_unix": 1760180000.0,
+  "source": "dashboard"
+ },
+ "entry": {
+  "id": "acc:ps5",
+  "game_key": "acc",
+  "label": "Assetto Corsa Competizione",
+  "short_label": "ACC",
+  "text_name": "ACC",
+  "platform": "ps5",
+  "platform_label": "PS5",
+  "group": "more",
+  "adapter_game": null,
+  "variant": null,
+  "implemented": false,
+  "integration": null,
+  "support": {
+   "level": "unsupported",
+   "words": "Not supported",
+   "note": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply.",
+   "capability_row": "acc_console"
+  },
+  "transport": {
+   "kind": "none",
+   "summary": "Pitwall can't read this game's telemetry.",
+   "port": null,
+   "console_port": null,
+   "console_ip": "no",
+   "in_game_setting": false
+  },
+  "guide_id": null,
+  "rig": null,
+  "features": [
+   {
+    "id": "lap_timing",
+    "label": "Lap times",
+    "group": "timing",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "lap_number",
+     "current_lap_time_ms"
+    ]
+   },
+   {
+    "id": "sectors",
+    "label": "Sector times",
+    "group": "timing",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "sector"
+    ]
+   },
+   {
+    "id": "delta",
+    "label": "Live delta",
+    "group": "timing",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "lap_distance_m",
+     "current_lap_time_ms"
+    ]
+   },
+   {
+    "id": "braking_cues",
+    "label": "Braking cues",
+    "group": "coaching",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "brake",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "corner_coaching",
+    "label": "Corner coaching",
+    "group": "coaching",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "brake",
+     "throttle",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "track_map",
+    "label": "Track map",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "official_corner_names",
+    "label": "Official corner names",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "ai_field",
+    "label": "AI field braking model",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "flags",
+    "label": "Flags & marshal zones",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "track_zones"
+    ]
+   },
+   {
+    "id": "fuel",
+    "label": "Fuel",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "fuel_kg"
+    ]
+   },
+   {
+    "id": "tyre_temps",
+    "label": "Tyre temperatures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "tyre_surface_temp_c"
+    ]
+   },
+   {
+    "id": "tyre_wear",
+    "label": "Tyre wear",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "tyre_wear_pct"
+    ]
+   },
+   {
+    "id": "tyre_pressures",
+    "label": "Tyre pressures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "tyre_pressure_psi"
+    ]
+   },
+   {
+    "id": "brake_temps",
+    "label": "Brake temperatures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "brake_temp_c"
+    ]
+   },
+   {
+    "id": "damage",
+    "label": "Car damage",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "damage"
+    ]
+   },
+   {
+    "id": "ers",
+    "label": "ERS / hybrid",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "ers_store_j"
+    ]
+   },
+   {
+    "id": "drs",
+    "label": "DRS",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "drs_open"
+    ]
+   },
+   {
+    "id": "weather",
+    "label": "Weather",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "weather"
+    ]
+   },
+   {
+    "id": "session_info",
+    "label": "Session type & results",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "session_type"
+    ]
+   },
+   {
+    "id": "field_data",
+    "label": "Other cars' data",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "setup_telemetry",
+    "label": "Car setup from the game",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "setup"
+    ]
+   },
+   {
+    "id": "setup_recommendations",
+    "label": "Car setup recommendations",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "wheel_ptt",
+    "label": "Push-to-talk on a wheel button",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "buttons"
+    ]
+   }
+  ],
+  "notes": []
+ },
+ "effective_id": "acc:ps5",
+ "first_run": false,
+ "detected": null,
+ "mismatch": null,
+ "suggestion": null,
+ "input": null,
+ "other_inputs": [
+  {
+   "key": "f1",
+   "name": "EA SPORTS F1 25",
+   "enabled": true,
+   "in_use": false,
+   "can_disable": false
+  }
+ ],
+ "driver_defaults": true,
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "GET /api/game after PUT acc:ps5"
+ }
+}

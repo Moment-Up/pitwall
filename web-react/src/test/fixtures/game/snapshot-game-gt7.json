@@ -1,0 +1,12 @@
+{
+ "selected_id": "gt7:ps5",
+ "effective_id": "gt7:ps5",
+ "detected": null,
+ "mismatch": null,
+ "suggestion": null,
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "GT7 selected, nothing streaming"
+ }
+}

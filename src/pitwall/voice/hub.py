@@ -72,6 +72,7 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from pitwall import games
 from pitwall.ai.engineer import EngineerAnswer, RaceEngineer, detect_intent
 from pitwall.ai.radio_phrasing import radio_answer
 from pitwall.coach.cues import (
@@ -115,8 +116,25 @@ TICK_S = 0.1
 DELIVERY_LEAD_S = 0.2  # audio already synthesised: transport + device start-up before it is audible
 # Intents whose deterministic answer is already good radio material: answered instantly, no LLM.
 FAST_INTENTS = frozenset(
-    {"fuel", "tyres", "lap_times", "last_lap", "strategy", "control_quiet", "control_resume", "radio_check"}
+    {
+        "fuel",
+        "tyres",
+        "lap_times",
+        "last_lap",
+        "strategy",
+        "control_quiet",
+        "control_resume",
+        "radio_check",
+        # data some games never send (games.INTENT_FEATURES): a known fact or a value from the sheet
+        "damage",
+        "ers",
+        "sectors",
+        "flags",
+        "weather",
+    }
 )
+NO_GAME_REPLY = "Tell me which game you're playing: open Setup, then Game."
+NO_SESSION_REPLY = "No session data yet. Get a lap in and ask me again."
 
 UDP_ACTION_BASE = 0x00100000  # UDP Action 1; Action n = base << (n - 1)  (EA spec appendix: button flags)
 
@@ -650,7 +668,11 @@ class RadioHub:
         self._send_state()
         try:
             intent = detect_intent(question)
-            use_llm = intent.name not in FAST_INTENTS
+            # the game the data comes from (live session, else the selection): a question only about data it never
+            # sends is answered from what Pitwall knows about the game - no LLM, no "Copy, checking."
+            entry = games.entry(self.live.effective_game_id())
+            cap = games.capability_only(intent.name, entry)
+            use_llm = intent.name not in FAST_INTENTS and not cap
             if use_llm:
                 # real engineers acknowledge immediately; the LLM answer takes several seconds
                 await self.say(
@@ -658,8 +680,12 @@ class RadioHub:
                 )
             t0 = time.perf_counter()
             sheet = await asyncio.to_thread(self.fact_sheet)
+            if sheet is None and cap and entry is not None:
+                sheet = games.capability_sheet(entry)  # no session yet: the game's capabilities are still known
+            no_game = False
             if sheet is None:
-                ans_text, ans = "No session data yet. Get a lap in and ask me again.", None
+                no_game = entry is None and intent.name in games.CAPABILITY_ONLY_INTENTS
+                ans_text, ans = (NO_GAME_REPLY if no_game else NO_SESSION_REPLY), None
             else:
                 ans = await self.engineer.answer(question, sheet, use_llm=use_llm)
                 ans_text = ans.text
@@ -670,7 +696,7 @@ class RadioHub:
             rec.engineer_ms = int((time.perf_counter() - t0) * 1000)
             rec.llm = bool(ans and not ans.fallback and ans.model)
             self._apply_control(ans)
-            kind = MessageKind.CONTROL if ans and ans.control else MessageKind.ANSWER
+            kind = MessageKind.CONTROL if (ans and ans.control) or no_game else MessageKind.ANSWER
             msg = self._msg(kind, Priority.HIGH, ans_text, bypass=True)
             if ans is not None:
                 msg.meta = {

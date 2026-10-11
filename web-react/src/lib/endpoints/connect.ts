@@ -155,6 +155,8 @@ export interface ConnectInfo {
   radio_enabled: boolean;
   dashboards: number;
   integrations: Integration[];
+  /** The selected game's catalogue id (lib/endpoints/game.ts); absent from servers before game selection. */
+  selected_game?: string | null;
 }
 
 /** A partial update for PUT /api/integrations/{key} (only the fields being changed). */

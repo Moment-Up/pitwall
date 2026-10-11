@@ -1,6 +1,21 @@
 // Pure helpers of the Coach panels: content equality (memoised panels), bar geometry, the no-telemetry steps.
 import { describe, expect, it } from "vitest";
-import { barStep, cellCaption, deltaFills, deltaScale, heroText, noTelemetryView, pct, radioSeat, sameView } from "./view";
+import { catalogue, entry } from "../../../lib/game-testkit";
+import {
+  barStep,
+  cellCaption,
+  coachGameView,
+  deltaFills,
+  deltaScale,
+  estimatedDelta,
+  heroText,
+  NO_COACH_GAME,
+  noTelemetryGame,
+  noTelemetryView,
+  pct,
+  radioSeat,
+  sameView,
+} from "./view";
 
 describe("sameView", () => {
   it("compares plain view models by content", () => {
@@ -125,5 +140,151 @@ describe("noTelemetryView", () => {
     expect(v.steps[1].title).toBe("IP - · port -");
     expect(v.listening).toBeNull();
     expect(noTelemetryView({ mac: { lan_ip: "<this Mac's IP>" } }).steps[1].title).toBe("IP - · port -");
+  });
+});
+
+describe("noTelemetryView with a selected game (game selection 5.3 #2)", () => {
+  const CAT = catalogue();
+  const guides = [
+    {
+      id: "f1_25",
+      game: "EA SPORTS F1 25",
+      supported: true,
+      menu_path: "Settings > Telemetry Settings",
+      steps: [
+        { label: "UDP Telemetry", value: "On" },
+        { label: "UDP Format", value: "2025" },
+      ],
+    },
+    {
+      id: "gt7",
+      game: "Gran Turismo 7",
+      supported: true,
+      menu_path: "No in-game setting: pitwall asks the console for telemetry (heartbeat to UDP 33739)",
+      steps: [
+        { label: "Connect page > Gran Turismo 7", value: "Enable", note: "pitwall starts listening on UDP 33740" },
+        { label: "Console IP", value: "your PS5's IP address", note: "PS5 Settings > Network > Connection Status" },
+        { label: "Packet variant", value: "C" },
+      ],
+    },
+    {
+      id: "forza",
+      game: "Forza",
+      supported: true,
+      menu_path: "Settings > Gameplay & HUD > UDP Race Telemetry",
+      steps: [
+        { label: "Connect page > Forza", value: "Enable" },
+        { label: "Data Out", value: "On" },
+        { label: "Data Out IP Address", value: "192.0.2.10" },
+      ],
+    },
+    {
+      id: "ac",
+      game: "Assetto Corsa",
+      supported: true,
+      menu_path: "No in-game setting: pitwall asks the game for telemetry (handshake to UDP 9996)",
+      steps: [
+        { label: "Connect page > Assetto Corsa", value: "Enable", note: "nothing to change in the game's menus" },
+        { label: "Console IP", value: "your PS5's IP address", note: "PS5 Settings > Network > Connection Status" },
+      ],
+    },
+  ];
+  const base = {
+    mac: { lan_ip: "192.0.2.10", udp_port: 20777 },
+    udp: { listening: true, port: 20777, received: 0, sources: [] },
+    guides,
+    telemetry: { hint: null },
+  };
+
+  it("no selection: the first supported guide (F1 25), as before", () => {
+    expect(noTelemetryView(base).steps[0].description).toBe("Settings › Telemetry Settings › UDP Telemetry: On, UDP Format 2025");
+    expect(noTelemetryGame(null)).toBeNull();
+  });
+
+  it("F1 25 Season Pack: the format step asks for 2026", () => {
+    const v = noTelemetryView(base, noTelemetryGame(entry("f1_25_2026:ps5", CAT)));
+    expect(v.steps[0].description).toBe("Settings › Telemetry Settings › UDP Telemetry: On, UDP Format 2026");
+    expect(v.steps[1].title).toBe("IP 192.0.2.10 · port 20777");
+  });
+
+  it("GT7: enable on Connect, the (optional) console IP and its port, get on track", () => {
+    const off = noTelemetryView(
+      { ...base, integrations: [{ key: "gt7", enabled: false, listening: false, console_ip: null, sources: [] }] },
+      noTelemetryGame(entry("gt7:ps5", CAT)),
+    );
+    expect(off.steps.map((x) => x.title)).toEqual(["Enable it on Setup › Connect", "Console IP not set · port 33740", "Get on track"]);
+    expect(off.steps[0].description).toBe("Pitwall starts listening on UDP 33740");
+    expect(off.steps[1].description).toMatch(/^Optional: without it Pitwall searches the network for the console\./);
+    expect(off.current).toBe(0);
+    expect(off.listening).toBeNull(); // GT7's input is off: nothing listens on 33740
+    const on = noTelemetryView(
+      {
+        ...base,
+        integrations: [
+          {
+            key: "gt7",
+            enabled: true,
+            listening: true,
+            console_ip: "192.168.1.100",
+            sources: [{ ip: "192.168.1.100", port: 33739, packets: 3, last_seen_s: 4 }],
+          },
+        ],
+      },
+      noTelemetryGame(entry("gt7:ps5", CAT)),
+    );
+    expect(on.steps[0].description).toBe("On");
+    expect(on.steps[1].title).toBe("Console IP 192.168.1.100 · port 33740");
+    expect(on.steps[2].description).toBe("Last sender seen: 192.168.1.100 · 4 s ago");
+    expect(on.current).toBe(2);
+    expect(on.listening).toBe("Listening on UDP 33740");
+  });
+
+  it("Assetto Corsa: no port (Pitwall contacts the console), the client's last packet", () => {
+    const v = noTelemetryView(
+      { ...base, integrations: [{ key: "ac", enabled: true, listening: false, console_ip: null, sources: [], client: { last_rx_s_ago: null } }] },
+      noTelemetryGame(entry("ac:ps5", CAT)),
+    );
+    expect(v.steps[1].title).toBe("Console IP - · no port: Pitwall contacts the console");
+    expect(v.steps[2]).toEqual({ title: "Get on track", description: "Last sender seen: none", mono: false });
+    expect(v.current).toBe(1);
+    expect(v.listening).toBeNull();
+    const rx = noTelemetryView(
+      { ...base, integrations: [{ key: "ac", enabled: true, console_ip: "192.168.1.50", sources: [], client: { last_rx_s_ago: 12 } }] },
+      noTelemetryGame(entry("ac:ps5", CAT)),
+    );
+    expect(rx.steps[2].description).toBe("Last packet: 12 s ago");
+    expect(rx.current).toBe(2);
+  });
+
+  it("Forza: Data Out in the game, its own port, its own senders", () => {
+    const v = noTelemetryView(
+      { ...base, integrations: [{ key: "forza", enabled: true, listening: true, sources: [] }] },
+      noTelemetryGame(entry("forza_motorsport:pc", CAT)),
+    );
+    expect(v.steps[0].title).toBe("Turn on Data Out in the game");
+    expect(v.steps[0].description).toBe("Settings › Gameplay & HUD › UDP Race Telemetry › Data Out: On");
+    expect(v.steps[1].title).toBe("IP 192.0.2.10 · port 5301");
+    expect(v.listening).toBe("Listening on UDP 5301");
+  });
+});
+
+describe("what the game changes on Coach (game selection 5.3 #3, #4)", () => {
+  const CAT = catalogue();
+  it("GT7: one muted sector cell with the server's words, the delta marked estimated", () => {
+    expect(coachGameView(entry("gt7:ps5", CAT))).toEqual({ sectors: "Sectors · Not sent by GT7", deltaEstimated: true });
+    expect(coachGameView(entry("ac:ps5", CAT))).toEqual({ sectors: "Sectors · Not sent by Assetto Corsa", deltaEstimated: true });
+  });
+
+  it("F1 25 and unknown games: Coach as before", () => {
+    expect(coachGameView(entry("f1_25:ps5", CAT))).toEqual(NO_COACH_GAME);
+    expect(coachGameView(entry("other:any", CAT))).toEqual(NO_COACH_GAME); // unknown: the three '-' cells stay
+    expect(coachGameView(null)).toEqual(NO_COACH_GAME);
+  });
+
+  it("the delta header gains '· estimated' and nothing else changes", () => {
+    const d = { label: "Delta to reference", text: "−0.21" };
+    expect(estimatedDelta(d, true)).toEqual({ label: "Delta to reference · estimated", text: "−0.21" });
+    expect(estimatedDelta(d, false)).toBe(d);
+    expect(estimatedDelta({ label: "vs your target lap" }, true).label).toBe("vs your target lap · estimated");
   });
 });

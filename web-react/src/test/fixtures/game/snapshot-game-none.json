@@ -1,0 +1,12 @@
+{
+ "selected_id": null,
+ "effective_id": null,
+ "detected": null,
+ "mismatch": null,
+ "suggestion": null,
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "first run, nothing streaming"
+ }
+}

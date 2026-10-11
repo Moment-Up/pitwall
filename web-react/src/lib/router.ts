@@ -6,9 +6,9 @@
 // keeping any query inside the hash (`#/radio?token=…` -> `#/drive/radio?token=…`).
 //
 // Landing rules (spec 2.5): every area remembers its last sub-page per device (localStorage `pitwall-area-pages`,
-// read and written in try/catch - when storage is unavailable an area opens on its first page), and Setup opens on
-// Connect while there is no real (non-synthetic) session yet (`setHasRealSession`, fed by the shell from
-// GET /api/sessions).
+// read and written in try/catch - when storage is unavailable an area opens on its first page), Setup opens on Game
+// while no game is selected (`setGameSelected`, fed by the shell from snapshot.game) and on Connect while there is no
+// real (non-synthetic) session yet (`setHasRealSession`, fed by the shell from GET /api/sessions).
 
 import { rememberUrlToken } from "./auth";
 import {
@@ -66,12 +66,14 @@ export interface RouterState {
   remembered: RememberedPages;
   /** Whether GET /api/sessions has a non-synthetic session; null until known. */
   hasRealSession: boolean | null;
+  /** Whether a game is selected (snapshot.game.selected_id); null until known or with an older server. */
+  gameSelected: boolean | null;
 }
 
 export class Router extends Store<RouterState> {
   constructor() {
     const remembered = loadRemembered();
-    super({ route: parseHash(window.location.hash, remembered), remembered, hasRealSession: null });
+    super({ route: parseHash(window.location.hash, remembered), remembered, hasRealSession: null, gameSelected: null });
     this.onLocation();
     window.addEventListener("hashchange", () => {
       this.set({ route: parseHash(window.location.hash, this.get().remembered) });
@@ -120,10 +122,11 @@ export class Router extends Store<RouterState> {
     this.remember(route);
   }
 
-  /** The path an area link opens: its remembered sub-page (Setup: Connect until a real session exists). */
+  /** The path an area link opens: its remembered sub-page (Setup: Game until a game is selected, then Connect until
+   * a real session exists). */
   areaPath(area: AreaId): string {
     const s = this.get();
-    return areaPath(area, s.remembered, s.hasRealSession);
+    return areaPath(area, s.remembered, s.hasRealSession, s.gameSelected);
   }
 
   /** Open an area on its landing page. */
@@ -134,6 +137,11 @@ export class Router extends Store<RouterState> {
   /** Fed by the shell from GET /api/sessions (any session with synthetic == false). */
   setHasRealSession(v: boolean | null): void {
     this.set({ hasRealSession: v });
+  }
+
+  /** Fed by the shell from snapshot.game (null: unknown, or a server without game selection). */
+  setGameSelected(v: boolean | null): void {
+    if (this.get().gameSelected !== v) this.set({ gameSelected: v });
   }
 }
 

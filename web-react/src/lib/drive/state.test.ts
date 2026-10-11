@@ -13,6 +13,7 @@ import {
   statusSlot,
   type DriveOverlays,
 } from "./state";
+import { driveModel } from "./model";
 import { fixture, frame, lap, newestT, snap } from "./testkit";
 import type { LiveEvent, SnapshotNext } from "./types";
 
@@ -277,6 +278,43 @@ describe("status slot (4.8)", () => {
       sub: "Austria · Race · 10 laps",
       role: "status",
     });
+  });
+
+  it("game mismatch (game selection 5.3): below every flag, stale, offline and session complete; above ready / normal", () => {
+    const mm = { text: "F1 25 data · GT7 selected", sub: "change on Setup › Game" };
+    const yellow = { zone: 16, sector: 3, aheadM: 384, inZone: false, count: 1 };
+    const s = fixture("edited-safety-car");
+    // the outline line, not interactive, a status (never an alert)
+    expect(statusSlot("on_track", O(), snap(), mm)).toEqual({
+      kind: "outline",
+      tone: "warn",
+      band: "mismatch",
+      text: "F1 25 data · GT7 selected",
+      sub: "change on Setup › Game",
+      role: "status",
+    });
+    expect(statusSlot("garage", O(), snap(), mm).band).toBe("mismatch"); // above ready
+    expect(statusSlot("offline", O(), null, mm).band).toBe("offline");
+    expect(statusSlot("stale", O(), fixture("recorded-austria-stale"), mm).band).toBe("stale");
+    expect(statusSlot("no_data", O(), null, mm).band).toBe("no_data");
+    expect(statusSlot("red_flag", O(), snap(), mm).band).toBe("red");
+    expect(statusSlot("on_track", O({ safetyCar: "full" }), s, mm).band).toBe("sc");
+    expect(statusSlot("on_track", O({ yellow }), s, mm).band).toBe("yellow");
+    expect(statusSlot("on_track", O({ blue: true }), s, mm).band).toBe("blue");
+    expect(statusSlot("pit_lane", O(), s, mm).band).toBe("pit");
+    expect(statusSlot("on_track", O({ chequered: true }), s, mm).band).toBe("chequered");
+    expect(statusSlot("ended", O(), fixture("recorded-austria-session-ended"), mm).band).toBe("complete");
+    // without a mismatch (none, or moving: lib/game.ts driveMismatch gives null) the slot is as before
+    expect(statusSlot("on_track", O(), snap(), null)).toEqual(statusSlot("on_track", O(), snap()));
+    expect(statusSlot("garage", O(), snap(), null).band).toBe("ready");
+  });
+
+  it("the Drive model carries the mismatch into the status slot", () => {
+    const s = snap({ frame: frame({ speed_kph: 0 }) });
+    const mismatch = { text: "F1 25 data · GT7 selected", sub: "change on Setup › Game" };
+    const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: null, mismatch });
+    expect(m.status).toMatchObject({ kind: "outline", band: "mismatch", text: "F1 25 data · GT7 selected" });
+    expect(driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: null }).status.band).not.toBe("mismatch");
   });
 
   it("orders the bands: safety car > yellow > blue > pit > chequered", () => {

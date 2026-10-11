@@ -1,0 +1,415 @@
+{
+ "selected": {
+  "id": "ac:ps5",
+  "since_unix": 1760180000.0,
+  "source": "dashboard"
+ },
+ "entry": {
+  "id": "ac:ps5",
+  "game_key": "ac",
+  "label": "Assetto Corsa",
+  "short_label": "AC",
+  "text_name": "Assetto Corsa",
+  "platform": "ps5",
+  "platform_label": "PS5 (PS4 version)",
+  "group": "main",
+  "adapter_game": "ac",
+  "variant": null,
+  "implemented": true,
+  "integration": "ac",
+  "support": {
+   "level": "recorded_validated",
+   "words": "Tested on a recording",
+   "note": "Protocol validated live on 2026-10-11 by the probe script (scripts/probe_ac.py, ks_audi_r8_plus at ks_silverstone): the handshake is answered (408 B UTF-16), RTCarInfo streams at 59.8 Hz (14,356 packets in 240 s, 0 rejected), isInPit sits at byte 24, RTLap (212 B) decodes on a second SPOT socket. pitwall's decoder and lap logic are validated on that recording (tests/recorded): one real lap crossing, timed 2:18.817 from lastLap in the crossing packet, and a restored state correctly not counted. Not yet run through pitwall's own client and service on the console: no AC lap has been stored, timed or coached end to end, and the service does not subscribe to RTLap. The console does not report the track layout, so layouts share a track id and are told apart by track length only.",
+   "capability_row": "ac_ps5"
+  },
+  "transport": {
+   "kind": "udp_client",
+   "summary": "Pitwall registers with the game (UDP 9996); nothing to set in the game.",
+   "port": null,
+   "console_port": 9996,
+   "console_ip": "required",
+   "in_game_setting": false
+  },
+  "guide_id": "ac",
+  "rig": null,
+  "features": [
+   {
+    "id": "lap_timing",
+    "label": "Lap times",
+    "group": "timing",
+    "status": "supported",
+    "evidence": "recorded_validated",
+    "short": "",
+    "reason": "Assetto Corsa sends lap times.",
+    "detail": "lap_number: lapCount @52 + 1 (lapCount = completed laps; PS5 capture (PS4 build, 2026-10-11 live probe, replayed)); current_lap_time_ms: lapTime @40 (ms; restarts at the line; PS5 capture (PS4 build, 2026-10-11 live probe, replayed)); last_lap_time_ms: lastLap @44 (ms; 0 -> None; updated in the crossing packet on PS5); lap_completion: derived: lapCount increment with lapTime restarting (or restarting within 0.5 s), time = lastLap from the crossing packet, else a just-received RTLap, else held up to 0.5 s; one completion per lap; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): ONE real crossing (lastLap = 138,817 ms in the crossing packet) plus a restored state that is correctly not a lap. Not yet run end to end in the service (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "lap_number",
+     "current_lap_time_ms",
+     "last_lap_time_ms",
+     "lap_completion"
+    ]
+   },
+   {
+    "id": "sectors",
+    "label": "Sector times",
+    "group": "timing",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send sector times.",
+    "detail": "no sector data (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "sector"
+    ]
+   },
+   {
+    "id": "delta",
+    "label": "Live delta",
+    "group": "timing",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "Assetto Corsa sends no lap distance: Pitwall works it out from the track position once the track length is known (your first full lap measures it).",
+    "detail": "lap_distance_m: derived: (carPositionNormalized @308 - line) x track length; line = spline 0 when the first increment coincides with the spline wrap (PS5: yes), else learned from two crossings; None until line and length are known; laps scaled by an unconfirmed length estimate are completed valid=False; current_lap_time_ms: lapTime @40 (ms; restarts at the line; PS5 capture (PS4 build, 2026-10-11 live probe, replayed)) (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "lap_distance_m",
+     "current_lap_time_ms"
+    ]
+   },
+   {
+    "id": "braking_cues",
+    "label": "Braking cues",
+    "group": "coaching",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "Assetto Corsa sends no lap distance: Pitwall works it out from the track position once the track length is known (your first full lap measures it).",
+    "detail": "brake: brake @60, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, ABS active only with brake > 0.2; speed_kph: RTCarInfo.speed_Kmh @8 (abs); PS5 capture (PS4 build, 2026-10-11 live probe, replayed): == 3.6 x speed_Ms in every packet, 0..229 km/h; lap_distance_m: derived: (carPositionNormalized @308 - line) x track length; line = spline 0 when the first increment coincides with the spline wrap (PS5: yes), else learned from two crossings; None until line and length are known; laps scaled by an unconfirmed length estimate are completed valid=False (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "brake",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "corner_coaching",
+    "label": "Corner coaching",
+    "group": "coaching",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "Assetto Corsa sends no lap distance: Pitwall works it out from the track position once the track length is known (your first full lap measures it).",
+    "detail": "brake: brake @60, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, ABS active only with brake > 0.2; throttle: gas @56, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, 1 with the car accelerating; speed_kph: RTCarInfo.speed_Kmh @8 (abs); PS5 capture (PS4 build, 2026-10-11 live probe, replayed): == 3.6 x speed_Ms in every packet, 0..229 km/h; lap_distance_m: derived: (carPositionNormalized @308 - line) x track length; line = spline 0 when the first increment coincides with the spline wrap (PS5: yes), else learned from two crossings; None until line and length are known; laps scaled by an unconfirmed length estimate are completed valid=False (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "brake",
+     "throttle",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "track_map",
+    "label": "Track map",
+    "group": "track",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "Assetto Corsa sends no lap distance: Pitwall works it out from the track position once the track length is known (your first full lap measures it).",
+    "detail": "pos_x_m: carCoordinates[0] @316, metres (PS5 capture (PS4 build, 2026-10-11 live probe, replayed): path == integral of speed_Ms, 0.02 %); pos_z_m: carCoordinates[2] @324; lap_distance_m: derived: (carPositionNormalized @308 - line) x track length; line = spline 0 when the first increment coincides with the spline wrap (PS5: yes), else learned from two crossings; None until line and length are known; laps scaled by an unconfirmed length estimate are completed valid=False (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "pos_x_m",
+     "pos_z_m",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "official_corner_names",
+    "label": "Official corner names",
+    "group": "track",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Pitwall's official corner names cover F1 25 only; Assetto Corsa corners are numbered from your laps.",
+    "detail": "no track sheet lists this game (analysis.track_identity.load_sheets) (row ac_ps5)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "ai_field",
+    "label": "AI field braking model",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send the other cars' positions, so there is no AI field braking model.",
+    "detail": "RTCarInfo describes the player's car only (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "flags",
+    "label": "Flags & marshal zones",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send flags.",
+    "detail": "no sector, marshal-zone or flag data (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "track_zones"
+    ]
+   },
+   {
+    "id": "fuel",
+    "label": "Fuel",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send fuel.",
+    "detail": "not in RTCarInfo (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "fuel_kg"
+    ]
+   },
+   {
+    "id": "tyre_temps",
+    "label": "Tyre temperatures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send tyre temperatures.",
+    "detail": "not in RTCarInfo (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "tyre_surface_temp_c"
+    ]
+   },
+   {
+    "id": "tyre_wear",
+    "label": "Tyre wear",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send tyre wear.",
+    "detail": "not in RTCarInfo (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "tyre_wear_pct"
+    ]
+   },
+   {
+    "id": "tyre_pressures",
+    "label": "Tyre pressures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send tyre pressures.",
+    "detail": "not in RTCarInfo (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "tyre_pressure_psi"
+    ]
+   },
+   {
+    "id": "brake_temps",
+    "label": "Brake temperatures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send brake temperatures.",
+    "detail": "not in RTCarInfo (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "brake_temp_c"
+    ]
+   },
+   {
+    "id": "damage",
+    "label": "Car damage",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send damage.",
+    "detail": "not in RTCarInfo (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "damage"
+    ]
+   },
+   {
+    "id": "ers",
+    "label": "ERS / hybrid",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send ERS.",
+    "detail": "not in RTCarInfo (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "ers_store_j"
+    ]
+   },
+   {
+    "id": "drs",
+    "label": "DRS",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send DRS.",
+    "detail": "not in RTCarInfo (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "drs_open"
+    ]
+   },
+   {
+    "id": "weather",
+    "label": "Weather",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send weather.",
+    "detail": "not sent (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "weather"
+    ]
+   },
+   {
+    "id": "session_info",
+    "label": "Session type & results",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send the session type.",
+    "detail": "not sent (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "session_type"
+    ]
+   },
+   {
+    "id": "field_data",
+    "label": "Other cars' data",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send data about the other cars.",
+    "detail": "RTCarInfo describes the player's car only (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "setup_telemetry",
+    "label": "Car setup from the game",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send its car setup.",
+    "detail": "not sent (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "setup"
+    ]
+   },
+   {
+    "id": "setup_recommendations",
+    "label": "Car setup recommendations",
+    "group": "setup_radio",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Pitwall's car setup recommendations exist for F1 25 only.",
+    "detail": "carsetup.context.F1_GAMES (row ac_ps5)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "wheel_ptt",
+    "label": "Push-to-talk on a wheel button",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send wheel button presses.",
+    "detail": "no wheel-button data (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "buttons"
+    ]
+   }
+  ],
+  "notes": [
+   "Implemented from Kunos' Remote Telemetry spec (field list) + observed sizes and two MIT clients (layout). PS5 (PS4 build), 2026-10-11: the probe script validated the protocol live (handshake answered, 14,356 RTCarInfo at 59.8 Hz, 0 rejected); this adapter is validated on that recorded capture (tests/recorded/test_ac_ps5_real.py: one lap crossing). pitwall's own client/service path, lap storage and coaching are still to be run on a full AC session.",
+   "pitwall must handshake with the game (UDP 9996) - nothing to configure in the game; re-registers per session.",
+   "Lap distance = spline position x track length: spline 0 is the line when the first crossing coincides with the spline wrap (PS5); the length is estimated after ~15-25 % of a lap from that crossing, then fixed by the first full lap (or known from an earlier session). Laps scaled by an unconfirmed estimate are void.",
+   "Steering is not mapped (unit undocumented). No tyre, fuel, sector, validity or weather data in the protocol.",
+   "The console's trackConfig repeats the track name: layouts of one track share a track id. Stored geometry of another layout is rejected by the first full lap's length check; references, comparisons and track models downstream are restricted to sessions of a compatible track length (within 3 %)."
+  ]
+ },
+ "effective_id": "ac:ps5",
+ "first_run": false,
+ "detected": null,
+ "mismatch": null,
+ "suggestion": null,
+ "input": {
+  "key": "ac",
+  "name": "Assetto Corsa (PS4 version on PS5 / PC)",
+  "enabled": true,
+  "listening": false,
+  "received": 0,
+  "console_ip": null,
+  "console_ip_need": "required",
+  "port": null,
+  "platform": "ps5",
+  "error": null,
+  "in_use": false
+ },
+ "other_inputs": [
+  {
+   "key": "f1",
+   "name": "EA SPORTS F1 25",
+   "enabled": true,
+   "in_use": false,
+   "can_disable": false
+  },
+  {
+   "key": "gt7",
+   "name": "Gran Turismo 7",
+   "enabled": true,
+   "in_use": false,
+   "can_disable": true
+  }
+ ],
+ "driver_defaults": true,
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "GET /api/game after PUT ac:ps5 (no console IP yet)"
+ }
+}

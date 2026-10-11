@@ -12,6 +12,7 @@ import {
   draftFrom,
   evidenceOfStatus,
   gameText,
+  guideById,
   guideFor,
   guideStep,
   guideSteps,
@@ -152,6 +153,22 @@ describe("game cards", () => {
   it("F1 first, then enabled games, then the rest", () => {
     const keys = orderedIntegrations(fixtures.connectF1Live().integrations).map((g) => g.key);
     expect(keys).toEqual(["f1", "gt7", "ac", "forza", "record"]);
+  });
+
+  it("the selected game's input first (game selection 5.8), then F1, then the enabled ones", () => {
+    const list = fixtures.connectF1Live().integrations;
+    expect(orderedIntegrations(list, "forza").map((g) => g.key)).toEqual(["forza", "f1", "gt7", "ac", "record"]);
+    expect(orderedIntegrations(list, "gt7").map((g) => g.key)).toEqual(["gt7", "f1", "ac", "forza", "record"]);
+    expect(orderedIntegrations(list, "f1").map((g) => g.key)).toEqual(["f1", "gt7", "ac", "forza", "record"]);
+    expect(orderedIntegrations(list, null).map((g) => g.key)).toEqual(["f1", "gt7", "ac", "forza", "record"]);
+  });
+
+  it("guides are matched by the catalogue entry's guide id", () => {
+    const guides = fixtures.connectF1Live().guides;
+    expect(guideById(guides, "f1_25")?.id).toBe("f1_25");
+    expect(guideById(guides, "gt7")?.id).toBe("gt7");
+    expect(guideById(guides, null)).toBeNull();
+    expect(guideById(guides, "nope")).toBeNull();
   });
 });
 

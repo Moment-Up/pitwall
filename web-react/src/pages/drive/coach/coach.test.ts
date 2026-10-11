@@ -5,7 +5,7 @@ import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { driveModel, type DriveModel } from "../../../lib/drive/model";
-import { FIXTURES, fixture, newestT } from "../../../lib/drive/testkit";
+import { FIXTURES, fixture, frame, newestT, snap } from "../../../lib/drive/testkit";
 import type { Driver } from "../../../lib/drivers";
 import { stubBrowser } from "../../../test/fakes";
 import type { CoachScreenProps } from "./CoachScreen";
@@ -430,5 +430,42 @@ describe("chunks (4.9, 4.11)", () => {
     for (const [f, src] of SOURCES) {
       expect(/NumberValue|@number-flow|from\s+["']motion/.test(src), f).toBe(false);
     }
+  });
+});
+
+describe("game selection on Coach (spec 5.3): only the sector slot, the delta header and the no-data card", () => {
+  it("a game without sectors and with an estimated distance: one muted sector cell, '· estimated' on the delta", () => {
+    const m = model("recorded-d246-suzuka-on-track-brake-ahead");
+    const plain = render(m);
+    const html = render(m, { game: { sectors: "Sectors · Not sent by GT7", deltaEstimated: true } });
+    const text = visible(html);
+    expect(text).toContain("Sectors · Not sent by GT7");
+    expect(text).toContain("Delta to reference · estimated");
+    expect(visible(plain)).not.toContain("estimated");
+    // nothing else on Coach mentions the game: the status slot is the same
+    expect(slot(html)).toBe(slot(plain));
+  });
+
+  it("the no-data slot shows the card it is given (the picker or the selected game's steps)", () => {
+    const m = model("pipeline-no-data");
+    expect(m.card).toBe("no_data");
+    const html = render(m, { noData: createElement("div", { className: "probe" }, "What are you playing?") });
+    expect(visible(html)).toContain("What are you playing?");
+    expect(html).not.toContain("No packet has arrived yet");
+  });
+
+  it("the status slot carries a stationary game mismatch as an outline line", () => {
+    const s = snap({ frame: frame({ speed_kph: 0 }) });
+    const m = driveModel({
+      snap: s,
+      connected: true,
+      nowS: newestT(s) + 1,
+      driver: JAMES,
+      mismatch: { text: "F1 25 data · GT7 selected", sub: "change on Setup › Game" },
+    });
+    expect(m.status.band).toBe("mismatch");
+    const text = visible(slot(render(m)));
+    expect(text).toContain("F1 25 data · GT7 selected");
+    expect(text).toContain("change on Setup › Game");
   });
 });

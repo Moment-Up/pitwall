@@ -55,3 +55,20 @@ def test_coach_block_is_the_latest_compared_lap_with_all_wordings(replayed: Runt
     assert point["short"] == "T1: braked 20 m earlier"
     assert point["text_simple"] == "T1: you braked about 20 m earlier than on your reference lap."
     assert coach["by_corner"]["T1"]["id"] == point["id"]
+
+
+def test_game_block_follows_the_replayed_data_and_never_reports_a_mismatch(replayed: Runtime) -> None:
+    """GT7 selected while the SYNTHETIC F1 demo replays: the screens follow the F1 data (effective game), but a
+    replay of generated packets is never real data, so there is no mismatch and no suggestion."""
+    from pitwall import games
+
+    replayed.store.replace(games.SECTION, games.new_selection("gt7:ps5", "dashboard").section())
+    try:
+        g = replayed.live.snapshot()["game"]
+        assert g["selected_id"] == "gt7:ps5"
+        assert g["effective_id"] is not None and g["effective_id"].startswith("f1_25")
+        assert g["detected"]["real"] is False and g["detected"]["adapter_game"] == "f1_25"
+        assert g["mismatch"] is None and g["suggestion"] is None
+    finally:
+        replayed.store.replace(games.SECTION, {})
+    assert replayed.live.snapshot()["game"]["suggestion"] is None  # nothing selected: still no suggestion

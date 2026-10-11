@@ -1,0 +1,19 @@
+{
+ "selected_id": "ac:ps5",
+ "effective_id": "ac:ps5",
+ "detected": {
+  "entry_id": "ac:ps5",
+  "adapter_game": "ac",
+  "platform": "unknown",
+  "variant": null,
+  "real": true,
+  "status": "live"
+ },
+ "mismatch": null,
+ "suggestion": null,
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "Assetto Corsa PS5 selected and streaming"
+ }
+}

@@ -1,0 +1,23 @@
+{
+ "selected_id": null,
+ "effective_id": "f1_25:ps5",
+ "detected": {
+  "entry_id": "f1_25:ps5",
+  "adapter_game": "f1_25",
+  "platform": "ps5",
+  "variant": "2025",
+  "real": true,
+  "status": "live"
+ },
+ "mismatch": null,
+ "suggestion": {
+  "id": "f1_25:ps5",
+  "source": "live",
+  "text": "Pitwall sees F1 25 telemetry from a PS5."
+ },
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "nothing selected, the real F1 recording streaming"
+ }
+}

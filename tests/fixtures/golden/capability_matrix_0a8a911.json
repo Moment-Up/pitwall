@@ -1,0 +1,1718 @@
+[
+ {
+  "fields": {
+   "abs_active": {
+    "level": "spec_implemented",
+    "source": "CarStatus.antiLockBrakes (assist enabled, not ABS intervention)"
+   },
+   "brake": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.brake (0..1)"
+   },
+   "brake_bias_front_pct": {
+    "level": "spec_implemented",
+    "source": "CarStatus.frontBrakeBias (%)"
+   },
+   "brake_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.brakesTemperature"
+   },
+   "clutch": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.clutch (0..100 -> 0..1)"
+   },
+   "current_lap_time_ms": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapTimeInMS"
+   },
+   "drs_open": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.drs"
+   },
+   "ers_store_j": {
+    "level": "spec_implemented",
+    "source": "CarStatus.ersStoreEnergy (J)"
+   },
+   "field_samples": {
+    "level": "recorded_validated",
+    "source": "Motion + LapData + CarTelemetry of every racing car, <= 10 Hz per car (FieldSample). Recorded: real PS5 format 2025 races (Austria, Austria Reverse, Silverstone, Silverstone Reverse, Monza, Montreal, Las Vegas, Miami, Melbourne): 16-19 AI cars with analog brake and full-lap distance; AI pit stops seen in the pit lane (Austria, 2 stops); format 2026 synthetic only"
+   },
+   "fuel_capacity_kg": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelCapacity (kg)"
+   },
+   "fuel_kg": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelInTank (kg)"
+   },
+   "fuel_litres": {
+    "level": "unsupported",
+    "source": "F1 reports fuel mass (kg) only"
+   },
+   "fuel_remaining_laps_game": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelRemainingLaps (game estimate)"
+   },
+   "g_lat": {
+    "level": "spec_implemented",
+    "source": "Motion.gForceLateral (sign convention not documented by EA)"
+   },
+   "g_lon": {
+    "level": "spec_implemented",
+    "source": "Motion.gForceLongitudinal"
+   },
+   "gear": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.gear (-1 R, 0 N, 1..8)"
+   },
+   "lap_distance_m": {
+    "level": "spec_implemented",
+    "source": "LapData.lapDistance (m; negative before first line crossing)"
+   },
+   "lap_invalid": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapInvalid"
+   },
+   "lap_number": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapNum"
+   },
+   "max_rpm": {
+    "level": "spec_implemented",
+    "source": "CarStatus.maxRPM"
+   },
+   "pit_status": {
+    "level": "spec_implemented",
+    "source": "LapData.pitStatus"
+   },
+   "pos_x_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionX (m)"
+   },
+   "pos_y_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionY (m, up axis)"
+   },
+   "pos_z_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionZ (m)"
+   },
+   "race_position": {
+    "level": "spec_implemented",
+    "source": "LapData.carPosition"
+   },
+   "rpm": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.engineRPM"
+   },
+   "sector": {
+    "level": "spec_implemented",
+    "source": "LapData.sector (0-based)"
+   },
+   "setup": {
+    "level": "spec_implemented",
+    "source": "CarSetups (player car; other cars' setups are hidden online)"
+   },
+   "speed_kph": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.speed (uint16 km/h)"
+   },
+   "steering": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.steer (-1 left..+1 right)"
+   },
+   "throttle": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.throttle (0..1)"
+   },
+   "track_zones": {
+    "level": "spec_implemented",
+    "source": "Session sector 2/3 starts (m) + MarshalZone[21]; format 2026 adds DRS and active-aero zones"
+   },
+   "traction_control": {
+    "level": "spec_implemented",
+    "source": "CarStatus.tractionControl (0 off, 1 medium, 2 full)"
+   },
+   "tyre_age_laps": {
+    "level": "spec_implemented",
+    "source": "CarStatus.tyresAgeLaps"
+   },
+   "tyre_compound": {
+    "level": "spec_implemented",
+    "source": "CarStatus.visualTyreCompound"
+   },
+   "tyre_inner_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresInnerTemperature"
+   },
+   "tyre_pressure_psi": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresPressure (psi)"
+   },
+   "tyre_surface_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresSurfaceTemperature (RL,RR,FL,FR -> FL..RR)"
+   },
+   "tyre_wear_pct": {
+    "level": "spec_implemented",
+    "source": "CarDamage.tyresWear (%)"
+   },
+   "vel_x_mps": {
+    "level": "spec_implemented",
+    "source": "Motion.worldVelocityX"
+   },
+   "weather": {
+    "level": "spec_implemented",
+    "source": "Session.weather/trackTemperature/airTemperature + forecast"
+   },
+   "yaw_rad": {
+    "level": "spec_implemented",
+    "source": "Motion.yaw (rad)"
+   }
+  },
+  "game": "F1 25 (UDP format 2025)",
+  "implemented": true,
+  "notes": "Validated live on 2026-10-10: F1 25 v1.26 on PS5, Austria race. About 190k packets with 0 rejected; every packet size matches EA's spec; lap and sector times decode exactly as the game reports them; wheel 'UDP Action 1' push-to-talk works. Recorded-tier fixture: tests/fixtures/recorded (excerpt).",
+  "platform": "PS5",
+  "status": "live_validated",
+  "transport": "UDP 20777 (in-game Telemetry settings)"
+ },
+ {
+  "fields": {
+   "abs_active": {
+    "level": "spec_implemented",
+    "source": "CarStatus.antiLockBrakes (assist enabled, not ABS intervention)"
+   },
+   "brake": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.brake (0..1)"
+   },
+   "brake_bias_front_pct": {
+    "level": "spec_implemented",
+    "source": "CarStatus.frontBrakeBias (%)"
+   },
+   "brake_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.brakesTemperature"
+   },
+   "clutch": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.clutch (0..100 -> 0..1)"
+   },
+   "current_lap_time_ms": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapTimeInMS"
+   },
+   "drs_open": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.drs"
+   },
+   "ers_store_j": {
+    "level": "spec_implemented",
+    "source": "CarStatus.ersStoreEnergy (J)"
+   },
+   "field_samples": {
+    "level": "recorded_validated",
+    "source": "Motion + LapData + CarTelemetry of every racing car, <= 10 Hz per car (FieldSample). Recorded: real PS5 format 2025 races (Austria, Austria Reverse, Silverstone, Silverstone Reverse, Monza, Montreal, Las Vegas, Miami, Melbourne): 16-19 AI cars with analog brake and full-lap distance; AI pit stops seen in the pit lane (Austria, 2 stops); format 2026 synthetic only"
+   },
+   "fuel_capacity_kg": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelCapacity (kg)"
+   },
+   "fuel_kg": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelInTank (kg)"
+   },
+   "fuel_litres": {
+    "level": "unsupported",
+    "source": "F1 reports fuel mass (kg) only"
+   },
+   "fuel_remaining_laps_game": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelRemainingLaps (game estimate)"
+   },
+   "g_lat": {
+    "level": "spec_implemented",
+    "source": "Motion.gForceLateral (sign convention not documented by EA)"
+   },
+   "g_lon": {
+    "level": "spec_implemented",
+    "source": "Motion.gForceLongitudinal"
+   },
+   "gear": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.gear (-1 R, 0 N, 1..8)"
+   },
+   "lap_distance_m": {
+    "level": "spec_implemented",
+    "source": "LapData.lapDistance (m; negative before first line crossing)"
+   },
+   "lap_invalid": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapInvalid"
+   },
+   "lap_number": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapNum"
+   },
+   "max_rpm": {
+    "level": "spec_implemented",
+    "source": "CarStatus.maxRPM"
+   },
+   "pit_status": {
+    "level": "spec_implemented",
+    "source": "LapData.pitStatus"
+   },
+   "pos_x_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionX (m)"
+   },
+   "pos_y_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionY (m, up axis)"
+   },
+   "pos_z_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionZ (m)"
+   },
+   "race_position": {
+    "level": "spec_implemented",
+    "source": "LapData.carPosition"
+   },
+   "rpm": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.engineRPM"
+   },
+   "sector": {
+    "level": "spec_implemented",
+    "source": "LapData.sector (0-based)"
+   },
+   "setup": {
+    "level": "spec_implemented",
+    "source": "CarSetups (player car; other cars' setups are hidden online)"
+   },
+   "speed_kph": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.speed (uint16 km/h)"
+   },
+   "steering": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.steer (-1 left..+1 right)"
+   },
+   "throttle": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.throttle (0..1)"
+   },
+   "track_zones": {
+    "level": "spec_implemented",
+    "source": "Session sector 2/3 starts (m) + MarshalZone[21]; format 2026 adds DRS and active-aero zones"
+   },
+   "traction_control": {
+    "level": "spec_implemented",
+    "source": "CarStatus.tractionControl (0 off, 1 medium, 2 full)"
+   },
+   "tyre_age_laps": {
+    "level": "spec_implemented",
+    "source": "CarStatus.tyresAgeLaps"
+   },
+   "tyre_compound": {
+    "level": "spec_implemented",
+    "source": "CarStatus.visualTyreCompound"
+   },
+   "tyre_inner_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresInnerTemperature"
+   },
+   "tyre_pressure_psi": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresPressure (psi)"
+   },
+   "tyre_surface_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresSurfaceTemperature (RL,RR,FL,FR -> FL..RR)"
+   },
+   "tyre_wear_pct": {
+    "level": "spec_implemented",
+    "source": "CarDamage.tyresWear (%)"
+   },
+   "vel_x_mps": {
+    "level": "spec_implemented",
+    "source": "Motion.worldVelocityX"
+   },
+   "weather": {
+    "level": "spec_implemented",
+    "source": "Session.weather/trackTemperature/airTemperature + forecast"
+   },
+   "yaw_rad": {
+    "level": "spec_implemented",
+    "source": "Motion.yaw (rad)"
+   }
+  },
+  "game": "F1 25 (UDP format 2025)",
+  "implemented": true,
+  "notes": "Same packets as PS5 (EA's spec), so expected to work, but not yet tested on these platforms.",
+  "platform": "PC / Xbox Series",
+  "status": "spec_implemented",
+  "transport": "UDP 20777 (in-game Telemetry settings)"
+ },
+ {
+  "fields": {
+   "abs_active": {
+    "level": "spec_implemented",
+    "source": "CarStatus.antiLockBrakes (assist enabled, not ABS intervention)"
+   },
+   "brake": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.brake (0..1)"
+   },
+   "brake_bias_front_pct": {
+    "level": "spec_implemented",
+    "source": "CarStatus.frontBrakeBias (%)"
+   },
+   "brake_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.brakesTemperature"
+   },
+   "clutch": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.clutch (0..100 -> 0..1)"
+   },
+   "current_lap_time_ms": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapTimeInMS"
+   },
+   "drs_open": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.drs"
+   },
+   "ers_store_j": {
+    "level": "spec_implemented",
+    "source": "CarStatus.ersStoreEnergy (J)"
+   },
+   "field_samples": {
+    "level": "recorded_validated",
+    "source": "Motion + LapData + CarTelemetry of every racing car, <= 10 Hz per car (FieldSample). Recorded: real PS5 format 2025 races (Austria, Austria Reverse, Silverstone, Silverstone Reverse, Monza, Montreal, Las Vegas, Miami, Melbourne): 16-19 AI cars with analog brake and full-lap distance; AI pit stops seen in the pit lane (Austria, 2 stops); format 2026 synthetic only"
+   },
+   "fuel_capacity_kg": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelCapacity (kg)"
+   },
+   "fuel_kg": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelInTank (kg)"
+   },
+   "fuel_litres": {
+    "level": "unsupported",
+    "source": "F1 reports fuel mass (kg) only"
+   },
+   "fuel_remaining_laps_game": {
+    "level": "spec_implemented",
+    "source": "CarStatus.fuelRemainingLaps (game estimate)"
+   },
+   "g_lat": {
+    "level": "spec_implemented",
+    "source": "Motion.gForceLateral (sign convention not documented by EA)"
+   },
+   "g_lon": {
+    "level": "spec_implemented",
+    "source": "Motion.gForceLongitudinal"
+   },
+   "gear": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.gear (-1 R, 0 N, 1..8)"
+   },
+   "lap_distance_m": {
+    "level": "spec_implemented",
+    "source": "LapData.lapDistance (m; negative before first line crossing)"
+   },
+   "lap_invalid": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapInvalid"
+   },
+   "lap_number": {
+    "level": "spec_implemented",
+    "source": "LapData.currentLapNum"
+   },
+   "max_rpm": {
+    "level": "spec_implemented",
+    "source": "CarStatus.maxRPM"
+   },
+   "pit_status": {
+    "level": "spec_implemented",
+    "source": "LapData.pitStatus"
+   },
+   "pos_x_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionX (m)"
+   },
+   "pos_y_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionY (m, up axis)"
+   },
+   "pos_z_m": {
+    "level": "spec_implemented",
+    "source": "Motion.worldPositionZ (m)"
+   },
+   "race_position": {
+    "level": "spec_implemented",
+    "source": "LapData.carPosition"
+   },
+   "rpm": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.engineRPM"
+   },
+   "sector": {
+    "level": "spec_implemented",
+    "source": "LapData.sector (0-based)"
+   },
+   "setup": {
+    "level": "spec_implemented",
+    "source": "CarSetups (player car; other cars' setups are hidden online)"
+   },
+   "speed_kph": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.speed (uint16 km/h)"
+   },
+   "steering": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.steer (-1 left..+1 right)"
+   },
+   "throttle": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.throttle (0..1)"
+   },
+   "track_zones": {
+    "level": "spec_implemented",
+    "source": "Session sector 2/3 starts (m) + MarshalZone[21]; format 2026 adds DRS and active-aero zones"
+   },
+   "traction_control": {
+    "level": "spec_implemented",
+    "source": "CarStatus.tractionControl (0 off, 1 medium, 2 full)"
+   },
+   "tyre_age_laps": {
+    "level": "spec_implemented",
+    "source": "CarStatus.tyresAgeLaps"
+   },
+   "tyre_compound": {
+    "level": "spec_implemented",
+    "source": "CarStatus.visualTyreCompound"
+   },
+   "tyre_inner_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresInnerTemperature"
+   },
+   "tyre_pressure_psi": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresPressure (psi)"
+   },
+   "tyre_surface_temp_c": {
+    "level": "spec_implemented",
+    "source": "CarTelemetry.tyresSurfaceTemperature (RL,RR,FL,FR -> FL..RR)"
+   },
+   "tyre_wear_pct": {
+    "level": "spec_implemented",
+    "source": "CarDamage.tyresWear (%)"
+   },
+   "vel_x_mps": {
+    "level": "spec_implemented",
+    "source": "Motion.worldVelocityX"
+   },
+   "weather": {
+    "level": "spec_implemented",
+    "source": "Session.weather/trackTemperature/airTemperature + forecast"
+   },
+   "yaw_rad": {
+    "level": "spec_implemented",
+    "source": "Motion.yaw (rad)"
+   }
+  },
+  "game": "F1 25: 2026 Season Pack (UDP format 2026)",
+  "implemented": true,
+  "notes": "24-car layout, int16 g-forces (/1000), uint16 team ids. Car Telemetry 2 (active aero / overtake) is recognised but not yet used. Synthetic-validated only: not yet tested with the Season Pack on any platform.",
+  "platform": "PC / PS5 / Xbox Series",
+  "status": "spec_implemented",
+  "transport": "UDP 20777"
+ },
+ {
+  "fields": null,
+  "game": "F1 24 / older (UDP format 2024)",
+  "implemented": false,
+  "notes": "Rejected with a clear message; set the in-game UDP Format to 2025 or 2026.",
+  "platform": "PC / PS5 / Xbox",
+  "status": "unsupported",
+  "transport": "UDP"
+ },
+ {
+  "fields": {
+   "abs_active": {
+    "level": "unsupported",
+    "source": "no ABS flag; lockups must be inferred from wheel speed"
+   },
+   "best_lap_ms": {
+    "level": "community_documented",
+    "source": "0x78, SessionInfo.extra (GT7Eng: unstable in the raw packet)"
+   },
+   "brake": {
+    "level": "community_documented",
+    "source": "0x92 brake 0..255 -> 0..1"
+   },
+   "brake_temp_c": {
+    "level": "unsupported",
+    "source": "not sent by GT7"
+   },
+   "car_id": {
+    "level": "community_documented",
+    "source": "0x124 car code (corrupted for cars with 9+ gears)"
+   },
+   "clutch": {
+    "level": "community_documented",
+    "source": "0xF4 clutch pedal 0..1"
+   },
+   "current_lap_time_ms": {
+    "level": "community_documented",
+    "source": "C: 0x15C; A/B/~: derived from ticks since the line crossing"
+   },
+   "frame_id": {
+    "level": "community_documented",
+    "source": "0x70 packet id"
+   },
+   "fuel_capacity_litres": {
+    "level": "unverified",
+    "source": "0x48 fuel capacity, unit conflicting (100 most cars, 5 karts, 0 EVs)"
+   },
+   "fuel_kg": {
+    "level": "unsupported",
+    "source": "GT7 reports volume or percent, not mass"
+   },
+   "fuel_litres": {
+    "level": "unverified",
+    "source": "0x44 fuel level, unit conflicting (litres per PDTools, % per GT7Eng): not emitted until a capture settles it; SessionInfo.extra['fuel_fraction'] = level / capacity"
+   },
+   "g_lat": {
+    "level": "unsupported",
+    "source": "B sway/heave/surge units unverified - not mapped"
+   },
+   "gear": {
+    "level": "community_documented",
+    "source": "0x90 low nibble 1..14; 0/15 (R/N encoding unverified) -> None"
+   },
+   "lap_distance_m": {
+    "level": "community_documented",
+    "source": "derived by integration; drifts ~1%; speed x tick time since the last line crossing"
+   },
+   "lap_invalid": {
+    "level": "unsupported",
+    "source": "GT7 sends no lap validity"
+   },
+   "lap_number": {
+    "level": "community_documented",
+    "source": "0x74 lap count (0 = not in a timed lap -> None)"
+   },
+   "last_lap_time_ms": {
+    "level": "community_documented",
+    "source": "0x7C last lap (ms; -1 -> None)"
+   },
+   "max_rpm": {
+    "level": "community_documented",
+    "source": "0x8A rev-limiter alert max RPM (approximates the limiter)"
+   },
+   "pit_status": {
+    "level": "unsupported",
+    "source": "GT7 sends no pit state"
+   },
+   "pos_x_m": {
+    "level": "community_documented",
+    "source": "0x04 position X (m)"
+   },
+   "pos_y_m": {
+    "level": "community_documented",
+    "source": "0x08 position Y (m, up axis)"
+   },
+   "pos_z_m": {
+    "level": "community_documented",
+    "source": "0x0C position Z (m)"
+   },
+   "race_position": {
+    "level": "community_documented",
+    "source": "0x84 when >= 1 (conflicting: pre-race grid position vs live position)"
+   },
+   "rpm": {
+    "level": "community_documented",
+    "source": "0x3C engine RPM"
+   },
+   "sector": {
+    "level": "unsupported",
+    "source": "GT7 has no sectors / split times"
+   },
+   "session_time_s": {
+    "level": "community_documented",
+    "source": "derived: packet-id ticks x 1/60 s while not paused"
+   },
+   "session_type": {
+    "level": "unsupported",
+    "source": "not sent by GT7"
+   },
+   "setup": {
+    "level": "unsupported",
+    "source": "only gear ratios are sent"
+   },
+   "speed_kph": {
+    "level": "community_documented",
+    "source": "0x4C speed (m/s, abs) x 3.6"
+   },
+   "steering": {
+    "level": "community_documented",
+    "source": "B/~/C 0x128 wheel angle (rad) / nominal 450 deg half-lock; sign assumed left-positive, cross-checked against C road-wheel angles. Not in variant A"
+   },
+   "throttle": {
+    "level": "community_documented",
+    "source": "0x91 throttle 0..255 -> 0..1 (input vs post-TCS output unverified)"
+   },
+   "total_laps": {
+    "level": "community_documented",
+    "source": "0x76 (0 for timed races / free runs -> None)"
+   },
+   "track_id": {
+    "level": "community_documented",
+    "source": "derived heuristic: start/finish position + heading + integrated lap length + total turning; layouts differing by < 1.5 % length and < 40 deg turning can still merge (unvalidated on real data)"
+   },
+   "track_length_m": {
+    "level": "community_documented",
+    "source": "derived by integration; drifts ~1%; this session's identifying lap(s), never longer than the registry's length"
+   },
+   "tyre_inner_temp_c": {
+    "level": "unsupported",
+    "source": "not sent by GT7"
+   },
+   "tyre_pressure_psi": {
+    "level": "unsupported",
+    "source": "not sent (0xD4..0xF3 is reserved, not pressures)"
+   },
+   "tyre_surface_temp_c": {
+    "level": "community_documented",
+    "source": "0x60..0x6C surface temps, native FL, FR, RL, RR order"
+   },
+   "tyre_wear_pct": {
+    "level": "unsupported",
+    "source": "not sent by GT7"
+   },
+   "vel_x_mps": {
+    "level": "community_documented",
+    "source": "0x10..0x18 world velocity (m/s)"
+   },
+   "weather": {
+    "level": "unsupported",
+    "source": "GT7 sends time of day only"
+   },
+   "yaw_rad": {
+    "level": "unsupported",
+    "source": "0x1C..0x28 rotation naming conflicting (quaternion vs angles) - not mapped"
+   }
+  },
+  "game": "Gran Turismo 7",
+  "implemented": true,
+  "notes": "Implemented from community protocol docs (Salsa20 written from the published spec; variants A/B/~/C). No lap distance or track id on the wire: distance is integrated from speed (~1% drift), the circuit is recognised from the start/finish line. Synthetic tests only - not yet tested on a real PS5. Enable on the Connect page.",
+  "platform": "PS5 / PS4",
+  "status": "community_documented",
+  "transport": "UDP 33739 heartbeat -> 33740, Salsa20"
+ },
+ {
+  "fields": {
+   "best_lap_ms": {
+    "level": "spec_implemented",
+    "source": "Dash.BestLap (s -> ms; 0 -> None) in SessionInfo.extra['best_lap_ms']"
+   },
+   "brake": {
+    "level": "spec_implemented",
+    "source": "Dash.Brake (u8 0..255 -> 0..1)"
+   },
+   "brake_temp_c": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "car_id": {
+    "level": "spec_implemented",
+    "source": "Sled.CarOrdinal -> 'forza:<title>:car:<ordinal>'"
+   },
+   "clutch": {
+    "level": "spec_implemented",
+    "source": "Dash.Clutch (u8 0..255 -> 0..1)"
+   },
+   "current_lap_time_ms": {
+    "level": "spec_implemented",
+    "source": "Dash.CurrentLap (s -> ms)"
+   },
+   "fuel_kg": {
+    "level": "unsupported",
+    "source": "Dash.Fuel is a 0..1 tank fraction without capacity (fraction in SessionInfo.extra['fuel_fraction'])"
+   },
+   "fuel_litres": {
+    "level": "unsupported",
+    "source": "as fuel_kg"
+   },
+   "g_lat": {
+    "level": "community_documented",
+    "source": "Sled.AccelerationX / 9.80665 (car-local, + = right; m/s^2 per community docs)"
+   },
+   "g_lon": {
+    "level": "community_documented",
+    "source": "Sled.AccelerationZ / 9.80665 (+ = accelerating forwards)"
+   },
+   "g_vert": {
+    "level": "community_documented",
+    "source": "Sled.AccelerationY / 9.80665 (whether gravity is included is undocumented)"
+   },
+   "gear": {
+    "level": "partial",
+    "source": "Dash.Gear: 1..10 forward; 0 / other values -> None (reverse/neutral encoding undocumented)"
+   },
+   "lap_completion": {
+    "level": "partial",
+    "source": "derived: LapNumber increment, time = Dash.LastLap (held up to 0.1 s for a stale LastLap, else untimed); valid=False only for a lap with a reset to track (trace un-anchored)"
+   },
+   "lap_distance_m": {
+    "level": "partial",
+    "source": "derived: Dash.DistanceTraveled minus its value at the observed line crossing (driven line, not a centreline); None until the first crossing of a session and after a reset to track"
+   },
+   "lap_invalid": {
+    "level": "unsupported",
+    "source": "no lap validity flag"
+   },
+   "lap_number": {
+    "level": "spec_implemented",
+    "source": "Dash.LapNumber (laps completed) + 1"
+   },
+   "last_lap_time_ms": {
+    "level": "spec_implemented",
+    "source": "Dash.LastLap (s -> ms; 0 -> None)"
+   },
+   "max_rpm": {
+    "level": "spec_implemented",
+    "source": "Sled.EngineMaxRpm"
+   },
+   "pit_status": {
+    "level": "unsupported",
+    "source": "no pit state"
+   },
+   "pos_x_m": {
+    "level": "spec_implemented",
+    "source": "Dash.PositionX (world m)"
+   },
+   "pos_y_m": {
+    "level": "spec_implemented",
+    "source": "Dash.PositionY (world m, vertical)"
+   },
+   "pos_z_m": {
+    "level": "spec_implemented",
+    "source": "Dash.PositionZ (world m)"
+   },
+   "race_position": {
+    "level": "spec_implemented",
+    "source": "Dash.RacePosition (0 -> None)"
+   },
+   "rpm": {
+    "level": "spec_implemented",
+    "source": "Sled.CurrentEngineRpm"
+   },
+   "sector": {
+    "level": "unsupported",
+    "source": "no sector data"
+   },
+   "session_type": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "session_uid": {
+    "level": "partial",
+    "source": "derived: no session id on the wire (split on car/track/format change or race-clock reset)"
+   },
+   "setup": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "speed_kph": {
+    "level": "spec_implemented",
+    "source": "Dash.Speed (m/s -> km/h); Sled format: derived |Velocity| (m/s -> km/h)"
+   },
+   "steering": {
+    "level": "spec_implemented",
+    "source": "Dash.Steer (s8 -127 full left..127 full right -> -1..1)"
+   },
+   "throttle": {
+    "level": "spec_implemented",
+    "source": "Dash.Accel (u8 0..255 -> 0..1)"
+   },
+   "total_distance_m": {
+    "level": "spec_implemented",
+    "source": "Dash.DistanceTraveled (m, cumulative since driving started)"
+   },
+   "track_id": {
+    "level": "spec_implemented",
+    "source": "FM2023: Dash TrackOrdinal -> 'forza:<ordinal>'; FM7 / Horizon: derived start/finish fingerprint 'forza_fp:...' after the first full lap without a rewind or reset"
+   },
+   "track_length_m": {
+    "level": "partial",
+    "source": "derived: shortest recent driven lap (DistanceTraveled) within 2% of the median; median in SessionInfo.extra['track_length_nominal_m']"
+   },
+   "tyre_inner_temp_c": {
+    "level": "unsupported",
+    "source": "Forza sends a single temperature per tyre"
+   },
+   "tyre_pressure_psi": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "tyre_surface_temp_c": {
+    "level": "community_documented",
+    "source": "Dash.TireTemp* (one value per tyre; degF per community docs -> degC; surface vs core undocumented)"
+   },
+   "tyre_wear_pct": {
+    "level": "community_documented",
+    "source": "FM2023 only: TireWear* (0..1 wear fraction per community -> %)"
+   },
+   "vel_x_mps": {
+    "level": "unsupported",
+    "source": "Sled.Velocity* is car-local, not world-frame: not mapped"
+   },
+   "weather": {
+    "level": "unsupported",
+    "source": "not sent (puddle depth / rumble only)"
+   },
+   "yaw_rad": {
+    "level": "spec_implemented",
+    "source": "Sled.Yaw (rad); Pitch/Roll likewise"
+   }
+  },
+  "game": "Forza Motorsport (2023)",
+  "implemented": true,
+  "notes": "Implemented from Turn 10's Data Out doc (Sled 232 / Dash 311 / FM2023 331 B): tyre wear and track ordinal. Lap distance from DistanceTraveled. Synthetic tests only - not yet tested on a real console.",
+  "platform": "Xbox Series / PC",
+  "status": "community_documented",
+  "transport": "UDP Data Out (Dash, 331 B)"
+ },
+ {
+  "fields": {
+   "best_lap_ms": {
+    "level": "community_documented",
+    "source": "Dash.BestLap (s -> ms; 0 -> None) in SessionInfo.extra['best_lap_ms']"
+   },
+   "brake": {
+    "level": "community_documented",
+    "source": "Dash.Brake (u8 0..255 -> 0..1)"
+   },
+   "brake_temp_c": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "car_id": {
+    "level": "community_documented",
+    "source": "Sled.CarOrdinal -> 'forza:<title>:car:<ordinal>'"
+   },
+   "clutch": {
+    "level": "community_documented",
+    "source": "Dash.Clutch (u8 0..255 -> 0..1)"
+   },
+   "current_lap_time_ms": {
+    "level": "community_documented",
+    "source": "Dash.CurrentLap (s -> ms)"
+   },
+   "fuel_kg": {
+    "level": "unsupported",
+    "source": "Dash.Fuel is a 0..1 tank fraction without capacity (fraction in SessionInfo.extra['fuel_fraction'])"
+   },
+   "fuel_litres": {
+    "level": "unsupported",
+    "source": "as fuel_kg"
+   },
+   "g_lat": {
+    "level": "community_documented",
+    "source": "Sled.AccelerationX / 9.80665 (car-local, + = right; m/s^2 per community docs)"
+   },
+   "g_lon": {
+    "level": "community_documented",
+    "source": "Sled.AccelerationZ / 9.80665 (+ = accelerating forwards)"
+   },
+   "g_vert": {
+    "level": "community_documented",
+    "source": "Sled.AccelerationY / 9.80665 (whether gravity is included is undocumented)"
+   },
+   "gear": {
+    "level": "partial",
+    "source": "Dash.Gear: 1..10 forward; 0 / other values -> None (reverse/neutral encoding undocumented)"
+   },
+   "lap_completion": {
+    "level": "partial",
+    "source": "derived: LapNumber increment, time = Dash.LastLap (held up to 0.1 s for a stale LastLap, else untimed); valid=False only for a lap with a reset to track (trace un-anchored)"
+   },
+   "lap_distance_m": {
+    "level": "partial",
+    "source": "derived: Dash.DistanceTraveled minus its value at the observed line crossing (driven line, not a centreline); None until the first crossing of a session and after a reset to track"
+   },
+   "lap_invalid": {
+    "level": "unsupported",
+    "source": "no lap validity flag"
+   },
+   "lap_number": {
+    "level": "community_documented",
+    "source": "Dash.LapNumber (laps completed) + 1"
+   },
+   "last_lap_time_ms": {
+    "level": "community_documented",
+    "source": "Dash.LastLap (s -> ms; 0 -> None)"
+   },
+   "max_rpm": {
+    "level": "community_documented",
+    "source": "Sled.EngineMaxRpm"
+   },
+   "pit_status": {
+    "level": "unsupported",
+    "source": "no pit state"
+   },
+   "pos_x_m": {
+    "level": "community_documented",
+    "source": "Dash.PositionX (world m)"
+   },
+   "pos_y_m": {
+    "level": "community_documented",
+    "source": "Dash.PositionY (world m, vertical)"
+   },
+   "pos_z_m": {
+    "level": "community_documented",
+    "source": "Dash.PositionZ (world m)"
+   },
+   "race_position": {
+    "level": "community_documented",
+    "source": "Dash.RacePosition (0 -> None)"
+   },
+   "rpm": {
+    "level": "community_documented",
+    "source": "Sled.CurrentEngineRpm"
+   },
+   "sector": {
+    "level": "unsupported",
+    "source": "no sector data"
+   },
+   "session_type": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "session_uid": {
+    "level": "partial",
+    "source": "derived: no session id on the wire (split on car/track/format change or race-clock reset)"
+   },
+   "setup": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "speed_kph": {
+    "level": "community_documented",
+    "source": "Dash.Speed (m/s -> km/h); Sled format: derived |Velocity| (m/s -> km/h)"
+   },
+   "steering": {
+    "level": "community_documented",
+    "source": "Dash.Steer (s8 -127 full left..127 full right -> -1..1)"
+   },
+   "throttle": {
+    "level": "community_documented",
+    "source": "Dash.Accel (u8 0..255 -> 0..1)"
+   },
+   "total_distance_m": {
+    "level": "community_documented",
+    "source": "Dash.DistanceTraveled (m, cumulative since driving started)"
+   },
+   "track_id": {
+    "level": "partial",
+    "source": "FM2023: Dash TrackOrdinal -> 'forza:<ordinal>'; FM7 / Horizon: derived start/finish fingerprint 'forza_fp:...' after the first full lap without a rewind or reset"
+   },
+   "track_length_m": {
+    "level": "partial",
+    "source": "derived: shortest recent driven lap (DistanceTraveled) within 2% of the median; median in SessionInfo.extra['track_length_nominal_m']"
+   },
+   "tyre_inner_temp_c": {
+    "level": "unsupported",
+    "source": "Forza sends a single temperature per tyre"
+   },
+   "tyre_pressure_psi": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "tyre_surface_temp_c": {
+    "level": "community_documented",
+    "source": "Dash.TireTemp* (one value per tyre; degF per community docs -> degC; surface vs core undocumented)"
+   },
+   "tyre_wear_pct": {
+    "level": "unsupported",
+    "source": "not sent by Horizon"
+   },
+   "vel_x_mps": {
+    "level": "unsupported",
+    "source": "Sled.Velocity* is car-local, not world-frame: not mapped"
+   },
+   "weather": {
+    "level": "unsupported",
+    "source": "not sent (puddle depth / rumble only)"
+   },
+   "yaw_rad": {
+    "level": "community_documented",
+    "source": "Sled.Yaw (rad); Pitch/Roll likewise"
+   }
+  },
+  "game": "Forza Horizon 4/5",
+  "implemented": true,
+  "notes": "Implemented (324 B Horizon layout). Free roam has no laps: live data only; circuit races get lap analysis (track recognised from the start line). FH5 on PS5: Data Out not confirmed. Synthetic tests only.",
+  "platform": "Xbox / PC",
+  "status": "community_documented",
+  "transport": "UDP Data Out (324 B)"
+ },
+ {
+  "fields": {
+   "abs_active": {
+    "level": "community_documented",
+    "source": "isAbsInAction @21 (PS5: only with brake > 0.2)"
+   },
+   "assists": {
+    "level": "community_documented",
+    "source": "isAbsEnabled @20 / isTcEnabled @23 -> SessionInfo.assists"
+   },
+   "best_lap_ms": {
+    "level": "community_documented",
+    "source": "bestLap @48 (ms; 0 -> None) in SessionInfo.extra['best_lap_ms']"
+   },
+   "brake": {
+    "level": "recorded_validated",
+    "source": "brake @60, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, ABS active only with brake > 0.2"
+   },
+   "brake_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "car_id": {
+    "level": "recorded_validated",
+    "source": "handshake carName -> 'ac:car:<name>' (PS5: 'ks_audi_r8_plus')"
+   },
+   "clutch": {
+    "level": "unverified",
+    "source": "clutch @64, 0..1; PS5 rests at 1.0, so 1 = clutch engaged (pedal released) - direction not settled"
+   },
+   "current_lap_time_ms": {
+    "level": "recorded_validated",
+    "source": "lapTime @40 (ms; restarts at the line; PS5 capture (PS4 build, 2026-10-11 live probe, replayed))"
+   },
+   "frame_id": {
+    "level": "unsupported",
+    "source": "no packet counter"
+   },
+   "fuel_kg": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "fuel_litres": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "g_lat": {
+    "level": "community_documented",
+    "source": "accG_horizontal @32 (g; sign convention undocumented)"
+   },
+   "g_lon": {
+    "level": "community_documented",
+    "source": "accG_frontal @36 (g); sign learned online against d(speed_Ms)/dt, None until unambiguous (PS5: +1, 4637 agreeing windows, 0 disagreeing)"
+   },
+   "g_vert": {
+    "level": "community_documented",
+    "source": "accG_vertical @28 (g; whether gravity is included is undocumented)"
+   },
+   "gear": {
+    "level": "community_documented",
+    "source": "gear @76: 0 = R, 1 = N, 2.. = 1st.. -> -1, 0, 1.. (MIT clients agree; PS5: 1 at standstill, 2..6 rising with speed; reverse not yet seen)"
+   },
+   "lap_completion": {
+    "level": "recorded_validated",
+    "source": "derived: lapCount increment with lapTime restarting (or restarting within 0.5 s), time = lastLap from the crossing packet, else a just-received RTLap, else held up to 0.5 s; one completion per lap; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): ONE real crossing (lastLap = 138,817 ms in the crossing packet) plus a restored state that is correctly not a lap. Not yet run end to end in the service"
+   },
+   "lap_distance_m": {
+    "level": "partial",
+    "source": "derived: (carPositionNormalized @308 - line) x track length; line = spline 0 when the first increment coincides with the spline wrap (PS5: yes), else learned from two crossings; None until line and length are known; laps scaled by an unconfirmed length estimate are completed valid=False"
+   },
+   "lap_invalid": {
+    "level": "unsupported",
+    "source": "no lap validity flag"
+   },
+   "lap_number": {
+    "level": "recorded_validated",
+    "source": "lapCount @52 + 1 (lapCount = completed laps; PS5 capture (PS4 build, 2026-10-11 live probe, replayed))"
+   },
+   "last_lap_time_ms": {
+    "level": "recorded_validated",
+    "source": "lastLap @44 (ms; 0 -> None; updated in the crossing packet on PS5)"
+   },
+   "max_rpm": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "pit_status": {
+    "level": "partial",
+    "source": "isInPit @24: 1 -> 2 (in the pit box), 0 -> None. PS5: byte 24 toggles while 26/27 stay 0 (natural alignment); 1 only with the car stationary in the pit box, 0 while driving the pit lane (~8 s, ~29 m off the racing line), so the pit lane is not detected"
+   },
+   "platform": {
+    "level": "unsupported",
+    "source": "not on the wire (PC and PS4 send identical structures); set by configuration"
+   },
+   "pos_x_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[0] @316, metres (PS5 capture (PS4 build, 2026-10-11 live probe, replayed): path == integral of speed_Ms, 0.02 %)"
+   },
+   "pos_y_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[1] @320 (up axis)"
+   },
+   "pos_z_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[2] @324"
+   },
+   "race_position": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "rpm": {
+    "level": "community_documented",
+    "source": "engineRPM @68 (PS5 19..8505)"
+   },
+   "rt_lap": {
+    "level": "recorded_validated",
+    "source": "RTLap 212 B UTF-16 (SUBSCRIBE_SPOT on a second socket; PS5 capture (PS4 build, 2026-10-11 live probe, replayed)): layout and strings decode -> GameEvent. Timing semantics UNVERIFIED: no RTLap was seen at a line crossing (only a reset marker and a re-send after a restored state); the service does not subscribe to SPOT. Used only when lastLap is stale"
+   },
+   "sector": {
+    "level": "unsupported",
+    "source": "no sector data"
+   },
+   "session_time_s": {
+    "level": "partial",
+    "source": "derived: host receive clock, not advanced while the simulation is frozen"
+   },
+   "session_type": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "session_uid": {
+    "level": "partial",
+    "source": "derived: no session id (split on handshake identity change / lapCount reset)"
+   },
+   "setup": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "speed_kph": {
+    "level": "recorded_validated",
+    "source": "RTCarInfo.speed_Kmh @8 (abs); PS5 capture (PS4 build, 2026-10-11 live probe, replayed): == 3.6 x speed_Ms in every packet, 0..229 km/h"
+   },
+   "steering": {
+    "level": "unverified",
+    "source": "steer @72 has no documented unit (PS5 raw -228..227; radians / wheel degrees / normalised all claimed): not mapped; raw range in SessionInfo.extra['steer_raw_range']"
+   },
+   "throttle": {
+    "level": "recorded_validated",
+    "source": "gas @56, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, 1 with the car accelerating"
+   },
+   "track_id": {
+    "level": "community_documented",
+    "source": "handshake trackName/trackConfig -> 'ac:<track>[:<config>]' (PS5 sends trackConfig = trackName, so the layout is not on the wire)"
+   },
+   "track_length_m": {
+    "level": "partial",
+    "source": "derived: driven path (carCoordinates) / spline progress - an estimate after >= 15 % of a lap of clean driving from the first crossing (good to a few %: PS5 2945.3 m vs 2974.5 m over 1.76 laps), then fixed by the first full lap (the estimate kept if within 0.5 %); or known_tracks (kept if the first full lap is within 3 %). Layouts share a track id on consoles: only the length tells them apart. No full PS5 lap measured yet"
+   },
+   "track_name": {
+    "level": "recorded_validated",
+    "source": "handshake trackName (+ trackConfig); PS5: UTF-16 strings decode cleanly"
+   },
+   "traction_control": {
+    "level": "unsupported",
+    "source": "only an enabled flag (assists['tc']), no TC level"
+   },
+   "tyre_inner_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_pressure_psi": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_surface_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_wear_pct": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "vel_x_mps": {
+    "level": "unsupported",
+    "source": "only speed magnitudes are sent, no velocity vector"
+   },
+   "weather": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "yaw_rad": {
+    "level": "unsupported",
+    "source": "no orientation in RTCarInfo"
+   }
+  },
+  "game": "Assetto Corsa (original)",
+  "implemented": true,
+  "notes": "Implemented from Kunos' Remote Telemetry spec, the observed packet sizes (408 / 328 / 212 B) and two MIT clients; the same structures came back from a PS5 (2026-10-11 probe). Inputs, speed, gear, rpm, world position and lap times; no steering unit, tyres, fuel or sectors. Lap distance = spline position x a track length estimated after ~15-25 % of a lap and fixed by the first full lap (or a known track). Not yet tested against the PC game. Enable on the Connect page.",
+  "platform": "PC",
+  "status": "community_documented",
+  "transport": "UDP 9996 remote telemetry: pitwall handshakes with the game (nothing to set in AC)"
+ },
+ {
+  "fields": {
+   "abs_active": {
+    "level": "community_documented",
+    "source": "isAbsInAction @21 (PS5: only with brake > 0.2)"
+   },
+   "assists": {
+    "level": "community_documented",
+    "source": "isAbsEnabled @20 / isTcEnabled @23 -> SessionInfo.assists"
+   },
+   "best_lap_ms": {
+    "level": "community_documented",
+    "source": "bestLap @48 (ms; 0 -> None) in SessionInfo.extra['best_lap_ms']"
+   },
+   "brake": {
+    "level": "recorded_validated",
+    "source": "brake @60, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, ABS active only with brake > 0.2"
+   },
+   "brake_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "car_id": {
+    "level": "recorded_validated",
+    "source": "handshake carName -> 'ac:car:<name>' (PS5: 'ks_audi_r8_plus')"
+   },
+   "clutch": {
+    "level": "unverified",
+    "source": "clutch @64, 0..1; PS5 rests at 1.0, so 1 = clutch engaged (pedal released) - direction not settled"
+   },
+   "current_lap_time_ms": {
+    "level": "recorded_validated",
+    "source": "lapTime @40 (ms; restarts at the line; PS5 capture (PS4 build, 2026-10-11 live probe, replayed))"
+   },
+   "frame_id": {
+    "level": "unsupported",
+    "source": "no packet counter"
+   },
+   "fuel_kg": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "fuel_litres": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "g_lat": {
+    "level": "community_documented",
+    "source": "accG_horizontal @32 (g; sign convention undocumented)"
+   },
+   "g_lon": {
+    "level": "community_documented",
+    "source": "accG_frontal @36 (g); sign learned online against d(speed_Ms)/dt, None until unambiguous (PS5: +1, 4637 agreeing windows, 0 disagreeing)"
+   },
+   "g_vert": {
+    "level": "community_documented",
+    "source": "accG_vertical @28 (g; whether gravity is included is undocumented)"
+   },
+   "gear": {
+    "level": "community_documented",
+    "source": "gear @76: 0 = R, 1 = N, 2.. = 1st.. -> -1, 0, 1.. (MIT clients agree; PS5: 1 at standstill, 2..6 rising with speed; reverse not yet seen)"
+   },
+   "lap_completion": {
+    "level": "recorded_validated",
+    "source": "derived: lapCount increment with lapTime restarting (or restarting within 0.5 s), time = lastLap from the crossing packet, else a just-received RTLap, else held up to 0.5 s; one completion per lap; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): ONE real crossing (lastLap = 138,817 ms in the crossing packet) plus a restored state that is correctly not a lap. Not yet run end to end in the service"
+   },
+   "lap_distance_m": {
+    "level": "partial",
+    "source": "derived: (carPositionNormalized @308 - line) x track length; line = spline 0 when the first increment coincides with the spline wrap (PS5: yes), else learned from two crossings; None until line and length are known; laps scaled by an unconfirmed length estimate are completed valid=False"
+   },
+   "lap_invalid": {
+    "level": "unsupported",
+    "source": "no lap validity flag"
+   },
+   "lap_number": {
+    "level": "recorded_validated",
+    "source": "lapCount @52 + 1 (lapCount = completed laps; PS5 capture (PS4 build, 2026-10-11 live probe, replayed))"
+   },
+   "last_lap_time_ms": {
+    "level": "recorded_validated",
+    "source": "lastLap @44 (ms; 0 -> None; updated in the crossing packet on PS5)"
+   },
+   "max_rpm": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "pit_status": {
+    "level": "partial",
+    "source": "isInPit @24: 1 -> 2 (in the pit box), 0 -> None. PS5: byte 24 toggles while 26/27 stay 0 (natural alignment); 1 only with the car stationary in the pit box, 0 while driving the pit lane (~8 s, ~29 m off the racing line), so the pit lane is not detected"
+   },
+   "platform": {
+    "level": "unsupported",
+    "source": "not on the wire (PC and PS4 send identical structures); set by configuration"
+   },
+   "pos_x_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[0] @316, metres (PS5 capture (PS4 build, 2026-10-11 live probe, replayed): path == integral of speed_Ms, 0.02 %)"
+   },
+   "pos_y_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[1] @320 (up axis)"
+   },
+   "pos_z_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[2] @324"
+   },
+   "race_position": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "rpm": {
+    "level": "community_documented",
+    "source": "engineRPM @68 (PS5 19..8505)"
+   },
+   "rt_lap": {
+    "level": "recorded_validated",
+    "source": "RTLap 212 B UTF-16 (SUBSCRIBE_SPOT on a second socket; PS5 capture (PS4 build, 2026-10-11 live probe, replayed)): layout and strings decode -> GameEvent. Timing semantics UNVERIFIED: no RTLap was seen at a line crossing (only a reset marker and a re-send after a restored state); the service does not subscribe to SPOT. Used only when lastLap is stale"
+   },
+   "sector": {
+    "level": "unsupported",
+    "source": "no sector data"
+   },
+   "session_time_s": {
+    "level": "partial",
+    "source": "derived: host receive clock, not advanced while the simulation is frozen"
+   },
+   "session_type": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "session_uid": {
+    "level": "partial",
+    "source": "derived: no session id (split on handshake identity change / lapCount reset)"
+   },
+   "setup": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "speed_kph": {
+    "level": "recorded_validated",
+    "source": "RTCarInfo.speed_Kmh @8 (abs); PS5 capture (PS4 build, 2026-10-11 live probe, replayed): == 3.6 x speed_Ms in every packet, 0..229 km/h"
+   },
+   "steering": {
+    "level": "unverified",
+    "source": "steer @72 has no documented unit (PS5 raw -228..227; radians / wheel degrees / normalised all claimed): not mapped; raw range in SessionInfo.extra['steer_raw_range']"
+   },
+   "throttle": {
+    "level": "recorded_validated",
+    "source": "gas @56, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, 1 with the car accelerating"
+   },
+   "track_id": {
+    "level": "community_documented",
+    "source": "handshake trackName/trackConfig -> 'ac:<track>[:<config>]' (PS5 sends trackConfig = trackName, so the layout is not on the wire)"
+   },
+   "track_length_m": {
+    "level": "partial",
+    "source": "derived: driven path (carCoordinates) / spline progress - an estimate after >= 15 % of a lap of clean driving from the first crossing (good to a few %: PS5 2945.3 m vs 2974.5 m over 1.76 laps), then fixed by the first full lap (the estimate kept if within 0.5 %); or known_tracks (kept if the first full lap is within 3 %). Layouts share a track id on consoles: only the length tells them apart. No full PS5 lap measured yet"
+   },
+   "track_name": {
+    "level": "recorded_validated",
+    "source": "handshake trackName (+ trackConfig); PS5: UTF-16 strings decode cleanly"
+   },
+   "traction_control": {
+    "level": "unsupported",
+    "source": "only an enabled flag (assists['tc']), no TC level"
+   },
+   "tyre_inner_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_pressure_psi": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_surface_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_wear_pct": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "vel_x_mps": {
+    "level": "unsupported",
+    "source": "only speed magnitudes are sent, no velocity vector"
+   },
+   "weather": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "yaw_rad": {
+    "level": "unsupported",
+    "source": "no orientation in RTCarInfo"
+   }
+  },
+  "game": "Assetto Corsa (original)",
+  "implemented": true,
+  "notes": "Community-confirmed on PS4 hardware (2017-2020: handshake reply and 328-byte stream). The same PS4 build streamed to pitwall's probe on a PS5; not yet tested on a PS4 console.",
+  "platform": "PS4",
+  "status": "community_documented",
+  "transport": "UDP 9996 remote telemetry (handshake from pitwall)"
+ },
+ {
+  "fields": {
+   "abs_active": {
+    "level": "community_documented",
+    "source": "isAbsInAction @21 (PS5: only with brake > 0.2)"
+   },
+   "assists": {
+    "level": "community_documented",
+    "source": "isAbsEnabled @20 / isTcEnabled @23 -> SessionInfo.assists"
+   },
+   "best_lap_ms": {
+    "level": "community_documented",
+    "source": "bestLap @48 (ms; 0 -> None) in SessionInfo.extra['best_lap_ms']"
+   },
+   "brake": {
+    "level": "recorded_validated",
+    "source": "brake @60, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, ABS active only with brake > 0.2"
+   },
+   "brake_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "car_id": {
+    "level": "recorded_validated",
+    "source": "handshake carName -> 'ac:car:<name>' (PS5: 'ks_audi_r8_plus')"
+   },
+   "clutch": {
+    "level": "unverified",
+    "source": "clutch @64, 0..1; PS5 rests at 1.0, so 1 = clutch engaged (pedal released) - direction not settled"
+   },
+   "current_lap_time_ms": {
+    "level": "recorded_validated",
+    "source": "lapTime @40 (ms; restarts at the line; PS5 capture (PS4 build, 2026-10-11 live probe, replayed))"
+   },
+   "frame_id": {
+    "level": "unsupported",
+    "source": "no packet counter"
+   },
+   "fuel_kg": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "fuel_litres": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "g_lat": {
+    "level": "community_documented",
+    "source": "accG_horizontal @32 (g; sign convention undocumented)"
+   },
+   "g_lon": {
+    "level": "community_documented",
+    "source": "accG_frontal @36 (g); sign learned online against d(speed_Ms)/dt, None until unambiguous (PS5: +1, 4637 agreeing windows, 0 disagreeing)"
+   },
+   "g_vert": {
+    "level": "community_documented",
+    "source": "accG_vertical @28 (g; whether gravity is included is undocumented)"
+   },
+   "gear": {
+    "level": "community_documented",
+    "source": "gear @76: 0 = R, 1 = N, 2.. = 1st.. -> -1, 0, 1.. (MIT clients agree; PS5: 1 at standstill, 2..6 rising with speed; reverse not yet seen)"
+   },
+   "lap_completion": {
+    "level": "recorded_validated",
+    "source": "derived: lapCount increment with lapTime restarting (or restarting within 0.5 s), time = lastLap from the crossing packet, else a just-received RTLap, else held up to 0.5 s; one completion per lap; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): ONE real crossing (lastLap = 138,817 ms in the crossing packet) plus a restored state that is correctly not a lap. Not yet run end to end in the service"
+   },
+   "lap_distance_m": {
+    "level": "partial",
+    "source": "derived: (carPositionNormalized @308 - line) x track length; line = spline 0 when the first increment coincides with the spline wrap (PS5: yes), else learned from two crossings; None until line and length are known; laps scaled by an unconfirmed length estimate are completed valid=False"
+   },
+   "lap_invalid": {
+    "level": "unsupported",
+    "source": "no lap validity flag"
+   },
+   "lap_number": {
+    "level": "recorded_validated",
+    "source": "lapCount @52 + 1 (lapCount = completed laps; PS5 capture (PS4 build, 2026-10-11 live probe, replayed))"
+   },
+   "last_lap_time_ms": {
+    "level": "recorded_validated",
+    "source": "lastLap @44 (ms; 0 -> None; updated in the crossing packet on PS5)"
+   },
+   "max_rpm": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "pit_status": {
+    "level": "partial",
+    "source": "isInPit @24: 1 -> 2 (in the pit box), 0 -> None. PS5: byte 24 toggles while 26/27 stay 0 (natural alignment); 1 only with the car stationary in the pit box, 0 while driving the pit lane (~8 s, ~29 m off the racing line), so the pit lane is not detected"
+   },
+   "platform": {
+    "level": "unsupported",
+    "source": "not on the wire (PC and PS4 send identical structures); set by configuration"
+   },
+   "pos_x_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[0] @316, metres (PS5 capture (PS4 build, 2026-10-11 live probe, replayed): path == integral of speed_Ms, 0.02 %)"
+   },
+   "pos_y_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[1] @320 (up axis)"
+   },
+   "pos_z_m": {
+    "level": "recorded_validated",
+    "source": "carCoordinates[2] @324"
+   },
+   "race_position": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "rpm": {
+    "level": "community_documented",
+    "source": "engineRPM @68 (PS5 19..8505)"
+   },
+   "rt_lap": {
+    "level": "recorded_validated",
+    "source": "RTLap 212 B UTF-16 (SUBSCRIBE_SPOT on a second socket; PS5 capture (PS4 build, 2026-10-11 live probe, replayed)): layout and strings decode -> GameEvent. Timing semantics UNVERIFIED: no RTLap was seen at a line crossing (only a reset marker and a re-send after a restored state); the service does not subscribe to SPOT. Used only when lastLap is stale"
+   },
+   "sector": {
+    "level": "unsupported",
+    "source": "no sector data"
+   },
+   "session_time_s": {
+    "level": "partial",
+    "source": "derived: host receive clock, not advanced while the simulation is frozen"
+   },
+   "session_type": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "session_uid": {
+    "level": "partial",
+    "source": "derived: no session id (split on handshake identity change / lapCount reset)"
+   },
+   "setup": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "speed_kph": {
+    "level": "recorded_validated",
+    "source": "RTCarInfo.speed_Kmh @8 (abs); PS5 capture (PS4 build, 2026-10-11 live probe, replayed): == 3.6 x speed_Ms in every packet, 0..229 km/h"
+   },
+   "steering": {
+    "level": "unverified",
+    "source": "steer @72 has no documented unit (PS5 raw -228..227; radians / wheel degrees / normalised all claimed): not mapped; raw range in SessionInfo.extra['steer_raw_range']"
+   },
+   "throttle": {
+    "level": "recorded_validated",
+    "source": "gas @56, 0..1; PS5 capture (PS4 build, 2026-10-11 live probe, replayed): full range, 1 with the car accelerating"
+   },
+   "track_id": {
+    "level": "community_documented",
+    "source": "handshake trackName/trackConfig -> 'ac:<track>[:<config>]' (PS5 sends trackConfig = trackName, so the layout is not on the wire)"
+   },
+   "track_length_m": {
+    "level": "partial",
+    "source": "derived: driven path (carCoordinates) / spline progress - an estimate after >= 15 % of a lap of clean driving from the first crossing (good to a few %: PS5 2945.3 m vs 2974.5 m over 1.76 laps), then fixed by the first full lap (the estimate kept if within 0.5 %); or known_tracks (kept if the first full lap is within 3 %). Layouts share a track id on consoles: only the length tells them apart. No full PS5 lap measured yet"
+   },
+   "track_name": {
+    "level": "recorded_validated",
+    "source": "handshake trackName (+ trackConfig); PS5: UTF-16 strings decode cleanly"
+   },
+   "traction_control": {
+    "level": "unsupported",
+    "source": "only an enabled flag (assists['tc']), no TC level"
+   },
+   "tyre_inner_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_pressure_psi": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_surface_temp_c": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "tyre_wear_pct": {
+    "level": "unsupported",
+    "source": "not in RTCarInfo"
+   },
+   "vel_x_mps": {
+    "level": "unsupported",
+    "source": "only speed magnitudes are sent, no velocity vector"
+   },
+   "weather": {
+    "level": "unsupported",
+    "source": "not sent"
+   },
+   "yaw_rad": {
+    "level": "unsupported",
+    "source": "no orientation in RTCarInfo"
+   }
+  },
+  "game": "Assetto Corsa (original, PS4 version)",
+  "implemented": true,
+  "notes": "Protocol validated live on 2026-10-11 by the probe script (scripts/probe_ac.py, ks_audi_r8_plus at ks_silverstone): the handshake is answered (408 B UTF-16), RTCarInfo streams at 59.8 Hz (14,356 packets in 240 s, 0 rejected), isInPit sits at byte 24, RTLap (212 B) decodes on a second SPOT socket. pitwall's decoder and lap logic are validated on that recording (tests/recorded): one real lap crossing, timed 2:18.817 from lastLap in the crossing packet, and a restored state correctly not counted. Not yet run through pitwall's own client and service on the console: no AC lap has been stored, timed or coached end to end, and the service does not subscribe to RTLap. The console does not report the track layout, so layouts share a track id and are told apart by track length only.",
+  "platform": "PS5 (backward compatibility)",
+  "status": "recorded_validated",
+  "transport": "UDP 9996 remote telemetry (handshake from pitwall)"
+ },
+ {
+  "fields": null,
+  "game": "Assetto Corsa (original)",
+  "implemented": false,
+  "notes": "The Xbox One version has no telemetry interface (several vendors agree).",
+  "platform": "Xbox One",
+  "status": "unsupported",
+  "transport": "-"
+ },
+ {
+  "fields": null,
+  "game": "Assetto Corsa Competizione",
+  "implemented": false,
+  "notes": "Shared memory is local to the gaming PC: needs a reader there (Pitwall on that PC, or a relay to a Mac); not implemented. Broadcasting API lacks inputs.",
+  "platform": "PC",
+  "status": "partial",
+  "transport": "Shared memory + Broadcasting API (UDP 9000)"
+ },
+ {
+  "fields": null,
+  "game": "Assetto Corsa Competizione",
+  "implemented": false,
+  "notes": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply.",
+  "platform": "PS5 / Xbox Series",
+  "status": "unsupported",
+  "transport": "-"
+ },
+ {
+  "fields": null,
+  "game": "iRacing",
+  "implemented": false,
+  "notes": "SDK is local to the gaming PC: needs a reader there (Pitwall on that PC, or a relay); not implemented. Planned after GT7/Forza.",
+  "platform": "PC",
+  "status": "partial",
+  "transport": "irsdk memory-mapped file / .ibt"
+ },
+ {
+  "fields": null,
+  "game": "Video capture / computer vision",
+  "implemented": false,
+  "notes": "Research option only: HUD OCR (speed/gear) and minimap position; low precision, high latency.",
+  "platform": "any (HDMI capture)",
+  "status": "unverified",
+  "transport": "capture card + OCR"
+ }
+]

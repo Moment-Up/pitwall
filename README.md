@@ -184,6 +184,11 @@ live session; the live PS5 tests so far used the classic dashboard.
 - Official corner names are shown only where a track sheet has been checked by hand. So far that is Austria.
 
 **Setup**
+- Game: tell Pitwall what you play (Setup › Game, or `uv run pitwall game set <id>`). It switches on that game's
+  telemetry input and lists, feature by feature, what the game sends and what it does not, never stronger than
+  the [supported games](#supported-games) table. Screens and the engineer then say "Not sent by GT7" instead of
+  leaving a gap unexplained or guessing. Tested with unit, synthetic and recorded data; not yet with a live GT7,
+  Forza or Assetto Corsa console.
 - Connect: the exact in-game telemetry settings with copy buttons, and live confirmation that packets arrive.
 - Rig walkthrough for the Fanatec GT DD Pro (5 Nm, or 8 Nm with the Boost Kit) and CSL pedals, for F1 25 and
   GT7: one menu item at a time, with the source and confidence of every value. A rig check reads your last
@@ -232,6 +237,9 @@ for the full list with notes.
 | Assetto Corsa Competizione | PS5, Xbox Series | Not supported | No telemetry on consoles. Checked on a PS5 on 2026-10-11: nothing listens on its telemetry ports. |
 | iRacing | PC | Partial, not implemented | Its SDK can only be read on the gaming PC itself; no reader yet. |
 | Other games (for example Project Motor Racing) | Any | Record only | Raw packets are saved so a decoder can be written later. No analysis. |
+
+What one game and platform sends, feature by feature (sector times, tyre wear, fuel, ...), is on Setup › Game and in
+`uv run pitwall game show <id>`; it is built from the same rows and is never stronger than them.
 
 **Status words.** *Tested live*: checked end to end with the real game on that platform. *Tested on a recording*:
 checked against real game output that was recorded. *Built from the official spec* or *community docs*: written

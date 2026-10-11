@@ -284,6 +284,7 @@ export type SlotBand =
   | "pit"
   | "chequered"
   | "complete"
+  | "mismatch"
   | "ready"
   | "normal";
 
@@ -322,10 +323,23 @@ function completeSub(s: SnapshotNext | null): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
+/** Another game's real data is arriving while the car stands still (lib/game.ts driveMismatch): "F1 25 data · GT7
+ * selected", "change on Setup › Game". Null while moving, and for a platform / UDP format mismatch (not on Drive). */
+export interface SlotMismatch {
+  text: string;
+  sub: string | null;
+}
+
 /** The status slot's band for a state and its overlays. Priority (4.8): offline > stale > red > safety car >
- * yellow > blue > pit > session complete > ready > normal. When the data is in doubt no flag is shown; D4's
- * session complete is a kept fact, not a flag, so it shows while stale (driveState). */
-export function statusSlot(state: DriveState, o: DriveOverlays, s: SnapshotNext | null): StatusSlot {
+ * yellow > blue > pit > session complete > game mismatch > ready > normal. When the data is in doubt no flag is
+ * shown; D4's session complete is a kept fact, not a flag, so it shows while stale (driveState). The mismatch is an
+ * outline (not interactive, never a banner): it only replaces the status line while stationary. */
+export function statusSlot(
+  state: DriveState,
+  o: DriveOverlays,
+  s: SnapshotNext | null,
+  mismatch: SlotMismatch | null = null,
+): StatusSlot {
   const status = (band: SlotBand, text: string, tone: SlotTone | null = null): StatusSlot => ({
     kind: "normal",
     tone,
@@ -373,6 +387,9 @@ export function statusSlot(state: DriveState, o: DriveOverlays, s: SnapshotNext 
   }
   if (state === "ended") {
     return fill("complete", "neutral", o.chequered ? "CHEQUERED FLAG" : "SESSION COMPLETE", completeSub(s));
+  }
+  if (mismatch) {
+    return { kind: "outline", tone: "warn", band: "mismatch", text: mismatch.text, sub: mismatch.sub, role: "status" };
   }
   if (state === "garage") {
     const t = sessionTypeText(s?.session?.session_type);

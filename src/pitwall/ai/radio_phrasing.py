@@ -7,6 +7,7 @@ using ONLY values from the facts' structured data, so answers stay grounded by c
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 from pitwall.ai.facts import LAST_LAP_PREFIX, FactSheet, fmt_lap
@@ -92,7 +93,23 @@ def last_lap(sheet: FactSheet) -> str | None:
     return msg
 
 
-PHRASERS = {"tyres": tyres, "fuel": fuel, "lap_times": lap_times, "last_lap": last_lap}
+def capability(group: str) -> Callable[[FactSheet], str | None]:
+    """What the game does not send for this question group (the sheet's ``game`` fact, already one short sentence)."""
+
+    def phrase(sheet: FactSheet) -> str | None:
+        f = next((f for f in sheet.facts if f.topic == "game" and f.data.get("group") == group), None)
+        return None if f is None else f.plain
+
+    return phrase
+
+
+PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
+    "tyres": tyres,
+    "fuel": fuel,
+    "lap_times": lap_times,
+    "last_lap": last_lap,
+    **{g: capability(g) for g in ("damage", "ers", "sectors", "flags", "weather")},
+}
 
 
 def radio_answer(intent: str, sheet: FactSheet) -> str | None:

@@ -30,7 +30,14 @@ fail   Pitwall cannot work as configured
      "server": {"running": bool, "version": ..., "udp_port": ..., "telemetry": "live"|"stale"|"no_data"|null,
                 "synthetic": bool|null},
      "firewall_rules": ["Pitwall HTTP 8770", "Pitwall UDP 20777"],
+     "game": {"selected": "gt7:ps5" | null, "label": "Gran Turismo 7" | null, "support": "community_documented" | null,
+              "integration": "gt7" | null, "detected": "f1_25:ps5" | null, "mismatch": "game" | null},
      "checks": [{"id": "system", "title": "System", "status": "ok", "detail": "...", "fix": ""}, ...]}
+
+``game`` (additive, still schema 1) is the game the household selected (``pitwall game set`` / Setup > Game) and,
+from a running server's ``/api/game``, the detected live game and a mismatch kind (``game`` | ``platform`` |
+``variant``). A server older than game selection answers 404 there: the doctor then reads the selection from
+``settings.json`` with no detection. The ``game`` check says whether the selected game's input is on.
 
 ``server.synthetic`` is true while the packets a running server last received came from the SYNTHETIC demo
 (``pitwall send`` of a simulated capture): that proves the install, not a game, so the ``telemetry`` check is
@@ -90,6 +97,14 @@ FIREWALL_FIX = (
 )
 TAILSCALE_SERVE_FIRST_PORT = 8443  # first port the fix suggests; 443 is often taken: never assume it
 SHORT_NAMES = {"f1": "F1 25", "gt7": "GT7", "forza": "Forza", "ac": "Assetto Corsa", "record": "Recorder"}
+NO_GAME: dict[str, Any] = {
+    "selected": None,
+    "label": None,
+    "support": None,
+    "integration": None,
+    "detected": None,
+    "mismatch": None,
+}
 
 
 def firewall_rule_names(http_port: int, udp_ports: Iterable[int]) -> list[str]:
@@ -119,6 +134,7 @@ class Report:
     lan_ip: str | None = None
     server: dict[str, Any] = field(default_factory=lambda: {"running": False})
     firewall_rules: list[str] = field(default_factory=list)
+    game: dict[str, Any] = field(default_factory=lambda: dict(NO_GAME))
 
     def counts(self) -> dict[str, int]:
         out = {"ok": 0, "info": 0, "warn": 0, "fail": 0}
@@ -151,6 +167,7 @@ class Report:
             },
             "server": dict(self.server),
             "firewall_rules": list(self.firewall_rules),
+            "game": dict(self.game),
             "checks": [c.to_dict() for c in self.checks],
         }
 
@@ -380,6 +397,7 @@ class _Ctx:
     server: dict[str, Any] | None = None  # /api/health of a Pitwall answering on the HTTP port
     server_other: str | None = None  # something else answers there (description)
     server_integrations: list[dict[str, Any]] | None = None  # that Pitwall's /api/integrations
+    server_game: dict[str, Any] | None = None  # that Pitwall's /api/game (None: not running, or older than games)
     udp_ports: list[int] = field(default_factory=list)  # enabled listening ports (firewall rules)
     lan_ip: str | None = None
     dashboard_built: bool = False
@@ -392,12 +410,17 @@ class _Ctx:
     @property
     def client_host(self) -> str:
         """Where to reach this machine's server: loopback for a wildcard bind."""
-        h = self.settings.http_host.strip()
-        if h in ("", "0.0.0.0", "*"):
-            return "127.0.0.1"
-        if h == "::":
-            return "[::1]"
-        return f"[{h}]" if ":" in h else h
+        return client_host(self.settings.http_host)
+
+
+def client_host(http_host: str) -> str:
+    """Where a local client reaches the server bound to ``http_host``: loopback for a wildcard bind."""
+    h = http_host.strip()
+    if h in ("", "0.0.0.0", "*"):
+        return "127.0.0.1"
+    if h == "::":
+        return "[::1]"
+    return f"[{h}]" if ":" in h else h
 
 
 def _check(id_: str, title: str, status: Status, detail: str, fix: str = "") -> Check:
@@ -646,6 +669,10 @@ def _probe_server(ctx: _Ctx) -> None:
         listed = rows.json() if rows is not None and rows.status == 200 else None
         if isinstance(listed, list):
             ctx.server_integrations = [r for r in listed if isinstance(r, dict)]
+        state = ctx.probes.http_get(f"{base}/api/game", 2.0)  # 404 from a server older than game selection
+        data = state.json() if state is not None and state.status == 200 else None
+        if isinstance(data, dict):
+            ctx.server_game = data
         return
     ctx.server_other = f"HTTP {reply.status}"
 
@@ -755,6 +782,121 @@ def check_udp(ctx: _Ctx) -> list[Check]:
 
 def _int(v: Any) -> int | None:
     return v if isinstance(v, int) and not isinstance(v, bool) else None
+
+
+def _ascii_menu(text: str) -> str:
+    """Menu paths for the ASCII report: "Setup › Game" -> "Setup > Game"."""
+    return text.replace("\u203a", ">").replace("\u00b7", "-")
+
+
+def selected_game(ctx: _Ctx) -> tuple[Any, Any]:
+    """(selected ``games.GameEntry`` or None, the running server's ``GameState`` or None)."""
+    from pitwall import games
+
+    state = ctx.server_game
+    if state is not None:
+        sel = state.get("selected")
+        sel_id = sel.get("id") if isinstance(sel, dict) else None
+        return games.entry(sel_id if isinstance(sel_id, str) else None), state
+    sel_obj = games.parse_selection(ctx.store.get(games.SECTION) or {})
+    return (games.entry(sel_obj.id) if sel_obj is not None else None), None
+
+
+def check_game(ctx: _Ctx) -> Check:
+    """The selected game (``pitwall game``): known, readable, its input on, and what a running server receives."""
+    from pitwall.integrations import SPECS, resolve_configs
+
+    entry, state = selected_game(ctx)
+    title = "Game"
+    if entry is None:
+        return _check(
+            "game",
+            title,
+            "info",
+            "no game selected: Pitwall can't check that your game's input is on",
+            "uv run pitwall game list, then uv run pitwall game set <id> (or Setup > Game)",
+        )
+    label = entry.where
+    if entry.game_key == "other":
+        return _check(
+            "game",
+            title,
+            "info",
+            "another game: Pitwall can record its packets",
+            "Setup > Connect > Record another game",
+        )
+    if entry.integration is None:
+        reason = entry.feature("lap_timing").reason.rstrip(".")
+        return _check(
+            "game",
+            title,
+            "warn",
+            f"Pitwall can't read {label} telemetry ({reason})",
+            "pick the game you drive: uv run pitwall game list",
+        )
+    key = entry.integration
+    row: dict[str, Any] | None = None
+    if ctx.server is not None and ctx.server_integrations is not None:
+        row = next((r for r in ctx.server_integrations if r.get("key") == key), None)
+    if row is None:
+        cfg = resolve_configs(ctx.settings, ctx.store.get("integrations") or {})[key]
+        row = cfg.to_dict()
+    enabled = bool(row.get("enabled"))
+    ip = row.get("console_ip") if isinstance(row.get("console_ip"), str) else None
+    if not enabled:
+        return _check(
+            "game",
+            title,
+            "warn",
+            f"{label} is selected but its telemetry input is off",
+            f"uv run pitwall game set {entry.id}",
+        )
+    if key == "ac" and ip is None:
+        return _check(
+            "game",
+            title,
+            "warn",
+            "Assetto Corsa needs the console's IP",
+            f"uv run pitwall game set {entry.id} --console-ip <console IP>",
+        )
+    mismatch = state.get("mismatch") if state is not None else None
+    if isinstance(mismatch, dict) and mismatch.get("kind") == "game":
+        detected = mismatch.get("detected_id") or "<id>"
+        return _check(
+            "game",
+            title,
+            "warn",
+            str(mismatch.get("text") or "another game is sending"),
+            f"uv run pitwall game set {detected}",
+        )
+    if key == "gt7" and ip is None:
+        return _check(
+            "game",
+            title,
+            "info",
+            f"{label}: no console IP: Pitwall searches the network for the console",
+            f"set it if no telemetry arrives: uv run pitwall game set {entry.id} --console-ip <PS5 IP>",
+        )
+    port = _int(row.get("port"))
+    how = f"contacts {ip}" if key == "ac" else f"UDP {port if port is not None else SPECS[key].default_port}"
+    return _check("game", title, "ok", f"{label} - {entry.support_words}; input on ({how})")
+
+
+def game_report(ctx: _Ctx) -> dict[str, Any]:
+    """The JSON report's ``game`` block."""
+    entry, state = selected_game(ctx)
+    if entry is None and state is None:
+        return dict(NO_GAME)
+    detected = (state or {}).get("detected")
+    mismatch = (state or {}).get("mismatch")
+    return {
+        "selected": entry.id if entry is not None else None,
+        "label": entry.label if entry is not None else None,
+        "support": entry.level.value if entry is not None and entry.level is not None else None,
+        "integration": entry.integration if entry is not None else None,
+        "detected": detected.get("entry_id") if isinstance(detected, dict) else None,
+        "mismatch": mismatch.get("kind") if isinstance(mismatch, dict) else None,
+    }
 
 
 def check_firewall_windows(ctx: _Ctx, facts: _WinFacts | None = None) -> Check:
@@ -1214,6 +1356,14 @@ def check_telemetry(ctx: _Ctx) -> Check:
     port = srv.get("udp_port") or ctx.settings.f1_udp_port
     where = f"{ctx.lan_ip}:{port}" if ctx.lan_ip else f"this computer's LAN IP, port {port}"
     game_fix = f"in the game, send UDP telemetry to {where} (Setup > Connect lists every setting)"
+    entry, _state = selected_game(ctx)
+    if entry is not None and entry.integration is not None:
+        from pitwall.games import transport
+        from pitwall.integrations import resolve_configs
+
+        configs = resolve_configs(ctx.settings, ctx.store.get("integrations") or {})
+        summary = _ascii_menu(str(transport(entry.integration, configs)["summary"]))
+        game_fix = f"{entry.label}: {summary} (Setup > Connect lists every setting)"
     if status == "live" or (status == "stale" and packets):
         if status == "live":
             seen = f"live: {conn.get('packets_per_s', '?')} packets/s from {source}{syn}"
@@ -1364,6 +1514,7 @@ def run_doctor(
     _probe_server(ctx)
     checks.append(check_http(ctx))
     checks.extend(check_udp(ctx))
+    checks.append(check_game(ctx))
     facts: _WinFacts | None = None
     if h.is_windows:
         facts = _windows_facts(ctx, firewall_rule_names(settings.http_port, ctx.udp_ports))
@@ -1393,6 +1544,7 @@ def run_doctor(
             "synthetic": bool(conn.get("synthetic")) if ctx.server is not None else None,
         },
         firewall_rules=firewall_rule_names(settings.http_port, ctx.udp_ports) if h.is_windows else [],
+        game=game_report(ctx),
     )
 
 

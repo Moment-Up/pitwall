@@ -9,6 +9,8 @@ import { gameLength } from "../../../lib/drive/geometry";
 import type { DriveModel } from "../../../lib/drive/model";
 import { finite } from "../../../lib/drive/text";
 import type { CornerNext, ObservationNext, SnapshotNext } from "../../../lib/drive/types";
+import type { GameEntry } from "../../../lib/endpoints/game";
+import { featureOf, trackEmptyText } from "../../../lib/game";
 import { worldXZ } from "../../../lib/viz/track-map";
 import { liveValues } from "../car/view";
 
@@ -50,6 +52,9 @@ export interface TrackView {
   flags: { game_number: number; flag: string }[] | null;
   /** "14 corners · official names". */
   caption: string;
+  /** The game's track-map note while there is no track model yet (game selection: "The track outline is known
+   * before your first lap."), else null. */
+  note: string | null;
 }
 
 function byApex(corners: readonly CornerNext[]): CornerNext[] {
@@ -75,7 +80,12 @@ function noteLapId(s: SnapshotNext, o: ObservationNext | undefined): number | nu
   return lap?.lap_id ?? null;
 }
 
-export function trackView(s: SnapshotNext | null, model: Pick<DriveModel, "dim" | "state">, profileSimple: boolean): TrackView {
+export function trackView(
+  s: SnapshotNext | null,
+  model: Pick<DriveModel, "dim" | "state">,
+  profileSimple: boolean,
+  entry: GameEntry | null = null,
+): TrackView {
   const live = liveValues(model);
   const tm = s?.track_model ?? null;
   const corners = tm ? byApex(tm.corners) : [];
@@ -113,7 +123,8 @@ export function trackView(s: SnapshotNext | null, model: Pick<DriveModel, "dim" 
   const d = s?.frame?.lap_distance_m;
   return {
     rows,
-    empty: corners.length ? null : "The corners appear after your first clean lap.",
+    // An estimated track map (the game sends no lap distance) says why in the server's words (game selection).
+    empty: corners.length ? null : trackEmptyText(entry),
     liveCorner: ahead?.name ?? null,
     focus: [...(s?.cues?.focus ?? [])],
     cueTargetsM: (s?.cues?.cues ?? []).map((c) => c.target_m).filter(finite),
@@ -121,5 +132,6 @@ export function trackView(s: SnapshotNext | null, model: Pick<DriveModel, "dim" 
     carM: live && finite(d) ? d : null,
     flags: live ? (s?.marshal_flags ?? null) : null,
     caption,
+    note: tm ? null : (featureOf(entry, "track_map")?.note ?? null),
   };
 }

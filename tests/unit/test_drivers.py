@@ -899,6 +899,7 @@ def test_api_crud_and_active(api: tuple[TestClient, SimpleNamespace]) -> None:
         "skill_level": "beginner",
         "coaching_intensity": "normal",
         "voice_enabled": True,
+        "default_game": None,
     }
     assert client.post("/api/drivers", json={"name": "SAM"}).status_code == 409
     assert client.post("/api/drivers", json={"name": "X", "colour": "blue"}).status_code == 422

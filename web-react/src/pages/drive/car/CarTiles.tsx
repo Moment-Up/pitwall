@@ -4,7 +4,8 @@
 //
 //   Car (4)             speed · gear · RPM · throttle · brake · steering · bias · DRS · telemetry health
 //   Track (5)           TrackMap: sectors as set (D1), car, next corner, focus rings, brake notches, live yellows
-//   Tyres & energy (3)  FL FR / RL RR surface temperature (band colour + word), wear · pressure; fuel, ERS
+//   Tyres & energy (3)  FL FR / RL RR surface temperature (band colour + word), wear · pressure; fuel, ERS (what the
+//                       game does not send in words: one line for no tyre data, a caption for no wear / pressures)
 //   Inputs (4)          LiveTrace: speed / throttle / brake, last 12 s, canvas at 10 Hz
 //   Laps (5)            Pro DataGrid, 8 newest by current standing, R / PIT / INV; two-line rows below 600 px
 //   Coaching (3)        Pro ListView, up to 3 points of the last lap: corner chip, text, time in the corner
@@ -91,12 +92,14 @@ export const CarTile = memo(function CarTile({ v }: { v: CarTileView }) {
             <Val text={v.bias} label="Brake bias" />
           </b>
         </span>
-        <span>
-          DRS
-          <b>
-            <Val text={v.drs} label="DRS" />
-          </b>
-        </span>
+        {v.drsShown && (
+          <span>
+            DRS
+            <b>
+              <Val text={v.drs} label="DRS" />
+            </b>
+          </span>
+        )}
       </div>
     </Tile>
   );
@@ -155,22 +158,29 @@ export const TyresTile = memo(function TyresTile({ v }: { v: TyresView }) {
       foot={v.energy}
       footWrap
     >
-      <div className="pww-tyres">
-        {v.wheels.map((w) => (
-          <div key={w.wheel} className="pww-tyre" aria-label={w.aria} role="group">
-            <div className="pww-tyre__k" aria-hidden="true">
-              <span className="pww-tyre__w">{w.wheel}</span>
-              {w.word && <span style={{ color: w.colour }}>{w.word}</span>}
+      {v.empty ? (
+        <p className="pww-tyres__none">{v.empty}</p>
+      ) : (
+        <div className="pww-tyres">
+          {v.wheels.map((w) => (
+            <div key={w.wheel} className="pww-tyre" aria-label={w.aria} role="group">
+              <div className="pww-tyre__k" aria-hidden="true">
+                <span className="pww-tyre__w">{w.wheel}</span>
+                {w.word && <span style={{ color: w.colour }}>{w.word}</span>}
+              </div>
+              <b className="pww-tyre__t" style={{ color: w.colour }} aria-hidden="true">
+                <Val text={w.temp} />
+              </b>
+              {w.sub !== null && (
+                <span className="pww-tyre__s" aria-hidden="true">
+                  {w.sub}
+                </span>
+              )}
             </div>
-            <b className="pww-tyre__t" style={{ color: w.colour }} aria-hidden="true">
-              <Val text={w.temp} />
-            </b>
-            <span className="pww-tyre__s" aria-hidden="true">
-              {w.sub}
-            </span>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+      {!v.empty && v.caption && <p className="pww-tyres__caption">{v.caption}</p>}
     </Tile>
   );
 }, sameProps);
@@ -234,7 +244,7 @@ function DeltaRef({ r }: { r: LapRowView }) {
   );
 }
 
-const COLUMNS: DataGridColumn<LapRowView>[] = [
+const ALL_COLUMNS: DataGridColumn<LapRowView>[] = [
   { id: "lap", header: "Lap", isRowHeader: true, cell: (r) => <LapNo r={r} /> },
   { id: "time", header: "Time", cell: (r) => <LapTime r={r} /> },
   ...([0, 1, 2] as const).map(
@@ -246,9 +256,11 @@ const COLUMNS: DataGridColumn<LapRowView>[] = [
   ),
   { id: "dref", header: "Δ ref", align: "end", cell: (r) => <DeltaRef r={r} /> },
 ];
+/** Without S1-S3 when the game sends no sector times (game selection). */
+const NO_SECTOR_COLUMNS = ALL_COLUMNS.filter((c) => !/^s\d$/.test(c.id));
 
 /** Below 600 px the table becomes two-line rows (spec 5.4: DataGrid -> ListView), read only. */
-function LapRowsNarrow({ rows }: { rows: LapRowView[] }) {
+function LapRowsNarrow({ rows, sectors }: { rows: LapRowView[]; sectors: boolean }) {
   return (
     <ListView aria-label="Laps, newest first" items={rows} variant="secondary" className="pww-readonly">
       {(r) => (
@@ -259,13 +271,15 @@ function LapRowsNarrow({ rows }: { rows: LapRowView[] }) {
               <LapTime r={r} />
               <DeltaRef r={r} />
             </div>
-            <div className="pww-laprow__b">
-              {r.sectors.map((c, i) => (
-                <span key={i}>
-                  S{i + 1} <TimingValue ms={c.ms} kind="sector" status={c.status} context="table" />
-                </span>
-              ))}
-            </div>
+            {sectors && (
+              <div className="pww-laprow__b">
+                {r.sectors.map((c, i) => (
+                  <span key={i}>
+                    S{i + 1} <TimingValue ms={c.ms} kind="sector" status={c.status} context="table" />
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </ListView.Item>
       )}
@@ -276,17 +290,32 @@ function LapRowsNarrow({ rows }: { rows: LapRowView[] }) {
 export const LapsTile = memo(function LapsTile({ v }: { v: LapsTileView }) {
   const narrow = useMediaQuery("(max-width: 599px)");
   return (
-    <Tile span={5} title="Laps" aside={v.sub} className="pww-laps pww-wide" foot={<TimingLegend tier={v.tier} />}>
+    <Tile
+      span={5}
+      title="Laps"
+      aside={v.sub}
+      className="pww-laps pww-wide"
+      foot={
+        v.noSectors ? (
+          <span className="pww-laps__foot">
+            <TimingLegend tier={v.tier} />
+            <span className="text-muted">{v.noSectors}</span>
+          </span>
+        ) : (
+          <TimingLegend tier={v.tier} />
+        )
+      }
+    >
       <div className="pww-scroll">
         {v.empty ? (
           <p className="m-0 py-3 text-sm text-muted">{v.empty}</p>
         ) : narrow ? (
-          <LapRowsNarrow rows={v.rows} />
+          <LapRowsNarrow rows={v.rows} sectors={v.sectors} />
         ) : (
           <DataGrid
             aria-label="Laps, newest first"
             data={v.rows}
-            columns={COLUMNS}
+            columns={v.sectors ? ALL_COLUMNS : NO_SECTOR_COLUMNS}
             getRowId={(r) => r.id}
             variant="secondary"
             rowHeight={44}

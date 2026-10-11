@@ -302,6 +302,42 @@ computer and the console or PC must be on the same network.
 To find the console's IP address on a PS5: Settings › Network › Connection Status › View Connection Status ›
 IPv4 Address.
 
+### Tell Pitwall what you play
+
+Do this first. In the new dashboard: **Setup › Game**, then pick the game and the platform. From the terminal (with
+either dashboard): `uv run pitwall game list` shows the games and `uv run pitwall game set <id>` chooses one. With
+Pitwall running the change applies at once; otherwise at the next start. Choosing a game:
+
+- switches on its telemetry input (F1 25's is always on), so the game's Enable switch on the Connect page is
+  already done;
+- asks for the console's IP address where Pitwall needs it: required for Assetto Corsa, optional for Gran Turismo 7
+  (without it Pitwall searches the network for the console). Add `--console-ip <console-ip>` to `game set`;
+- never switches another game's input off;
+- shows what the game sends and what it does not, feature by feature (Setup › Game, or `uv run pitwall game show`),
+  so an empty tile for data your game never sends is expected rather than a fault. These lists come from the same
+  support matrix as [Supported games](../README.md#supported-games) and are never stronger than it.
+
+| You play | Platform | Id |
+|---|---|---|
+| F1 25 | PS5 / Xbox Series / PC | `f1_25:ps5`, `f1_25:xbox`, `f1_25:pc` |
+| F1 25 with 2026 Season Pack cars (UDP Format 2026) | PS5 / Xbox Series / PC | `f1_25_2026:ps5`, `f1_25_2026:xbox`, `f1_25_2026:pc` |
+| Gran Turismo 7 | PS5 / PS4 | `gt7:ps5`, `gt7:ps4` |
+| Forza Motorsport (2023) | Xbox Series / PC | `forza_motorsport:xbox`, `forza_motorsport:pc` |
+| Forza Horizon 4 / 5 | Xbox / PC / PS5 | `forza_horizon:xbox`, `forza_horizon:pc`, `forza_horizon:ps5` |
+| Assetto Corsa | PS5 (PS4 version) / PS4 / PC / Xbox One | `ac:ps5`, `ac:ps4`, `ac:pc`, `ac:xbox` |
+| Assetto Corsa Competizione | PC / PS5 / Xbox Series | `acc:pc`, `acc:ps5`, `acc:xbox` |
+| iRacing | PC | `iracing:pc` |
+| F1 24 or older | any | `f1_24:any` |
+| Another game | any | `other:any` |
+
+`uv run pitwall game list --all` prints the current list with each one's support. Some entries exist only so you can
+say what you play although Pitwall cannot read it (Assetto Corsa Competizione, iRacing, F1 24, Assetto Corsa on
+Xbox One). For another game, Pitwall offers to record its packets (see [Other games](#other-games)).
+
+If a different game than the one you chose is sending, Pitwall says so (an alert outside Drive; on Drive, the status
+line while the car is stationary) and offers to switch. It still decodes whatever arrives: the choice never filters
+packets. Tested with unit, synthetic and recorded data; not yet with a live GT7, Forza or Assetto Corsa console.
+
 ### F1 25 (tested live on PS5)
 
 In the game: **Settings › Telemetry Settings**.

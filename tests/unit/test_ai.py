@@ -440,3 +440,120 @@ def test_display_text_keeps_the_answers_own_words(raw: str, shown: str) -> None:
         Fact("F4", "fuel", "Fuel: using 1.20 kg per lap.", {}),
     ]
     assert display_text(raw, facts) == shown
+
+
+# ---------------------------------------------------------------- game capabilities (pitwall.games)
+@pytest.mark.parametrize(
+    ("q", "intent"),
+    [
+        ("Do I have any damage?", "damage"),
+        ("Is my front wing broken?", "damage"),
+        ("How much battery have I got?", "ers"),
+        ("Can I use DRS here?", "ers"),
+        ("What were my sector times?", "sectors"),
+        ("Show me my splits", "sectors"),
+        ("Any yellow flags out there?", "flags"),
+        ("Is the safety car out?", "flags"),
+        ("Is it going to rain?", "weather"),
+        ("What's the track temperature?", "weather"),
+        ("Should I change my front wing?", "setup"),  # "wing" alone stays a setup question
+        ("Is my braking OK in sector two?", "braking"),  # braking wins over the sector it names
+        ("how are my tyre temps", "tyres"),
+    ],
+)
+def test_capability_intents(q: str, intent: str) -> None:
+    assert detect_intent(q).name == intent
+
+
+def _game_analysis(game: str, platform: str) -> Any:
+    sa = _race_analysis()
+    sa.session = {**sa.session, "game": game, "platform": platform, "track_name": "Silverstone"}
+    return sa
+
+
+async def test_ac_sheet_says_what_the_game_does_not_send() -> None:
+    from pitwall.ai.engineer import Intent, deterministic_answer
+    from pitwall.ai.facts import build_fact_sheet
+
+    sheet = build_fact_sheet(_game_analysis("ac", "ps5"))
+    session = next(f for f in sheet.facts if f.topic == "session")
+    assert session.text.startswith("Session: Assetto Corsa on PS5 (PS4 version) at Silverstone")
+    assert session.data["game_entry"] == "ac:ps5"
+    assert not any("not yet known" in f.text for f in sheet.facts)  # fuel never arrives from AC: not "yet"
+    game = {f.data["group"]: f for f in sheet.facts if f.topic == "game"}
+    assert {"fuel", "tyres", "strategy", "damage", "ers", "sectors", "flags", "weather", "setup"} == set(game)
+    assert game["tyres"].say == (
+        "Assetto Corsa doesn't send tyre temperatures, tyre wear, tyre pressures or brake temperatures."
+    )
+    assert game["tyres"].text.startswith("Game capability (Assetto Corsa, PS5 (PS4 version)): ")
+    for q, name in (("How are my tyres?", "tyres"), ("What's my fuel?", "fuel"), ("Any damage?", "damage")):
+        facts = RaceEngineer._select(Intent(name), sheet)
+        det = deterministic_answer(Intent(name), facts, sheet)
+        assert check_grounding(det, facts).ok, det
+        ans = await RaceEngineer(None).answer(q, sheet)
+        assert ans.intent == name and ans.grounded and ans.model is None
+    ans = await RaceEngineer(None).answer("How are my tyres?", sheet)
+    assert ans.text == "Assetto Corsa doesn't send tyre temperatures, tyre wear, tyre pressures or brake temperatures."
+
+
+def test_f1_sheet_has_only_the_damage_game_fact() -> None:
+    from pitwall.ai.facts import build_fact_sheet
+
+    sheet = build_fact_sheet(_game_analysis("f1_25", "ps5"))
+    game = [f for f in sheet.facts if f.topic == "game"]
+    assert [f.data["group"] for f in game] == ["damage"]
+    assert game[0].say == "F1 25 sends car damage, but Pitwall reads only tyre wear from it so far."
+    assert any("not yet known" in f.text for f in sheet.facts if f.topic == "fuel")  # F1 sends fuel: it will come
+    unknown_platform = build_fact_sheet(_game_analysis("f1_25", "unknown"))
+    s = next(f for f in unknown_platform.facts if f.topic == "session")
+    assert s.text.startswith("Session: F1 25 at Silverstone")  # no platform claim when the game did not say
+
+
+async def test_capability_only_questions_never_reach_the_llm() -> None:
+    from pitwall.ai.facts import build_fact_sheet
+
+    p = FakeProvider([])  # any call would pop from an empty list and fail the test
+    sheet = build_fact_sheet(_game_analysis("ac", "ps5"))
+    for q in ("How are my tyres?", "Is it raining?", "What's my fuel?", "Any damage?", "What are my sector times?"):
+        ans = await RaceEngineer(p).answer(q, sheet, use_llm=True)
+        assert ans.fallback and ans.model is None and ans.grounded, q
+    assert p.calls == []
+    gt7 = build_fact_sheet(_game_analysis("gt7", "ps5"))
+    p2 = FakeProvider(["Tyre temps look fine [F1]."])
+    await RaceEngineer(p2).answer("How are my tyres?", gt7, use_llm=True)  # GT7 sends temps: the LLM may explain
+    assert len(p2.calls) == 1
+    system = " ".join(p2.calls[0][0]["content"].split())
+    assert "If a fact says the game does not send some data" in system and "never estimate it" in system
+
+
+async def test_capability_answers_are_grounded_for_every_game() -> None:
+    from pitwall import games
+
+    questions = {
+        "fuel": "What's my fuel?",
+        "tyres": "How are my tyres?",
+        "strategy": "What's the strategy?",
+        "damage": "Any damage?",
+        "ers": "How much battery do I have?",
+        "sectors": "What are my sector times?",
+        "flags": "Any yellow flags?",
+        "weather": "Is it going to rain?",
+    }
+    answered = 0
+    for e in games.entries():
+        sheet = games.capability_sheet(e)
+        for intent, q in questions.items():
+            assert detect_intent(q).name == intent
+            ans = await RaceEngineer(None).answer(q, sheet)
+            assert check_grounding(ans.cited_text, sheet.facts).ok, (e.id, intent, ans.cited_text)
+            if games.capability_only(intent, e):
+                assert ans.text == games.capability_sentence(e, games.INTENT_FEATURES[intent]), (e.id, intent)
+                answered += 1
+    assert answered > 50
+
+
+async def test_a_fact_is_said_once_even_when_two_slots_pick_it() -> None:
+    fs = FactSheet()
+    fs.add("tyres", "Current tyre surface temps FL 70 C, FR 54 C, RL 83 C, RR 76 C.", {"temps": [70, 54, 83, 76]})
+    ans = await RaceEngineer(None).answer("How are my tyres?", fs)  # no wear fact: the temps fact fills both slots
+    assert ans.text == "Current tyre surface temps FL 70 C, FR 54 C, RL 83 C, RR 76 C."

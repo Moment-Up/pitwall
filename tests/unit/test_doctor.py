@@ -770,3 +770,113 @@ def test_invalid_environment_is_reported_not_raised(monkeypatch: pytest.MonkeyPa
     assert doctor.main(False, False, echo=out.append) == 1
     assert "FAIL" in out[0]
     assert "http_port" in out[0]
+
+
+# --------------------------------------------------------------------------------------------- game selection
+def _store(repo: Path, sections: dict[str, Any]) -> None:
+    (repo / "data").mkdir(exist_ok=True)
+    (repo / "data" / "settings.json").write_text(json.dumps(sections), encoding="utf-8")
+
+
+def _selected(game_id: str, **integrations: Any) -> dict[str, Any]:
+    return {"game": {"selected": game_id, "since_unix": 1.0, "source": "cli"}, "integrations": integrations}
+
+
+@pytest.mark.parametrize(
+    ("sections", "status", "detail", "fix"),
+    [
+        ({}, "info", "no game selected", "uv run pitwall game set <id>"),
+        (_selected("acc:ps5"), "warn", "Pitwall can't read Assetto Corsa Competizione (PS5) telemetry", "game list"),
+        (_selected("other:any"), "info", "another game: Pitwall can record its packets", "Record another game"),
+        (_selected("gt7:ps5"), "warn", "selected but its telemetry input is off", "uv run pitwall game set gt7:ps5"),
+        (
+            _selected("ac:ps5", ac={"enabled": True}),
+            "warn",
+            "Assetto Corsa needs the console's IP",
+            "uv run pitwall game set ac:ps5 --console-ip <console IP>",
+        ),
+        (
+            _selected("gt7:ps4", gt7={"enabled": True}),
+            "info",
+            "no console IP: Pitwall searches the network for the console",
+            "--console-ip <PS5 IP>",
+        ),
+        (_selected("f1_25:ps5"), "ok", f"F1 25 (PS5) - Tested live; input on (UDP {UDP_PORT})", ""),
+        (
+            _selected("ac:ps4", ac={"enabled": True, "console_ip": "192.168.1.50"}),
+            "ok",
+            "Assetto Corsa (PS4) - Built from community docs; input on (contacts 192.168.1.50)",
+            "",
+        ),
+    ],
+)
+def test_game_check_rows(repo: Path, sections: dict[str, Any], status: str, detail: str, fix: str) -> None:
+    _store(repo, sections)
+    report = run(repo, Fake())
+    c = by_id(report)["game"]
+    assert (c.status, c.title) == (status, "Game"), c
+    assert detail in c.detail and fix in c.fix, c
+    format_text(report).encode("ascii")  # menu paths stay ASCII in the text report
+
+
+def test_game_mismatch_from_a_running_server(repo: Path) -> None:
+    _store(repo, _selected("gt7:ps5", gt7={"enabled": True, "console_ip": "192.168.1.100"}))
+    fake = Fake()
+    fake.http["/api/health"] = _health()
+    rows = [
+        {"key": "f1", "enabled": True, "port": UDP_PORT, "listening": True, "listens": True},
+        {"key": "gt7", "enabled": True, "port": 33740, "listening": True, "console_ip": "192.168.1.100"},
+    ]
+    fake.http["/api/integrations"] = HttpReply(200, json.dumps(rows).encode())
+    state = {
+        "selected": {"id": "gt7:ps5", "since_unix": 1.0, "source": "dashboard"},
+        "detected": {"entry_id": "f1_25:ps5", "adapter_game": "f1_25", "real": True, "status": "live"},
+        "mismatch": {
+            "kind": "game",
+            "selected_id": "gt7:ps5",
+            "detected_id": "f1_25:ps5",
+            "text": "Receiving F1 25, but Gran Turismo 7 (PS5) is selected.",
+        },
+    }
+    fake.http["/api/game"] = HttpReply(200, json.dumps(state).encode())
+    report = run(repo, fake)
+    c = by_id(report)["game"]
+    assert c.status == "warn" and c.detail == "Receiving F1 25, but Gran Turismo 7 (PS5) is selected."
+    assert c.fix == "uv run pitwall game set f1_25:ps5"
+    assert report.to_dict()["game"] == {
+        "selected": "gt7:ps5",
+        "label": "Gran Turismo 7",
+        "support": "community_documented",
+        "integration": "gt7",
+        "detected": "f1_25:ps5",
+        "mismatch": "game",
+    }
+    assert any(u.endswith("/api/game") for u in fake.http_calls)
+
+
+def test_an_older_server_falls_back_to_the_settings_file(repo: Path) -> None:
+    _store(repo, _selected("forza_motorsport:pc", forza={"enabled": True}))
+    fake = Fake()
+    fake.http["/api/health"] = _health("no_data", packets=0)
+    fake.http["/api/game"] = HttpReply(404, b'{"detail":"Not Found"}')
+    report = run(repo, fake)
+    c = by_id(report)["game"]
+    assert c.status == "ok" and c.detail.startswith("Forza Motorsport (2023) on PC - Built from community docs")
+    game = report.to_dict()["game"]
+    assert game["selected"] == "forza_motorsport:pc" and game["detected"] is None and game["mismatch"] is None
+    t = by_id(report)["telemetry"]
+    assert t.status == "info" and "Data Out telemetry" in t.fix and "port 5301" in t.fix  # the selected game's way
+    format_text(report).encode("ascii")
+
+
+def test_game_block_without_a_selection(repo: Path) -> None:
+    data = run(repo, Fake()).to_dict()
+    assert data["schema"] == 1
+    assert data["game"] == {
+        "selected": None,
+        "label": None,
+        "support": None,
+        "integration": None,
+        "detected": None,
+        "mismatch": None,
+    }

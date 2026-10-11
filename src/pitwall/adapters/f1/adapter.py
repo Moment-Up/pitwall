@@ -96,6 +96,8 @@ F1_25_INFO = AdapterInfo(
         "abs_active": FieldSupport(_S, "CarStatus.antiLockBrakes (assist enabled, not ABS intervention)"),
         "setup": FieldSupport(_S, "CarSetups (player car; other cars' setups are hidden online)"),
         "weather": FieldSupport(_S, "Session.weather/trackTemperature/airTemperature + forecast"),
+        "session_type": FieldSupport(_S, "Session.sessionType (enums.SESSION_TYPES)"),
+        "buttons": FieldSupport(_S, "Event BUTN buttonStatus (UDP Action 1-12 bit flags)"),
         "track_zones": FieldSupport(
             _S, "Session sector 2/3 starts (m) + MarshalZone[21]; format 2026 adds DRS and active-aero zones"
         ),

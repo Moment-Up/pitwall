@@ -4,11 +4,14 @@
 //                     route as `?ref=`; nothing is saved),
 //   Compare           opens Compare with this lap against the page's reference.
 // Pin as reference (the server call, POST /api/references) sits behind an inline confirmation in the reference bar.
-// Behaviour reference: web/src/views/SessionView.svelte (laps table, pin).
+// Behaviour reference: web/src/views/SessionView.svelte (laps table, pin). A session whose game sends no sector times
+// (its catalogue entry, game selection) has no S1-S3 columns and says so under the table.
 
 import { Button, Card, Chip } from "@heroui/react";
 import { DataGrid, type DataGridColumn } from "@heroui-pro/react";
 import { useMemo } from "react";
+import { useGameCatalog } from "../../../hooks/useGame";
+import { noSectorsCaption, sessionEntry } from "../../../lib/game";
 import { TimingLegend, TimingTag, TimingValue } from "../../../components/ui";
 import type { SessionAnalysis, SessionDetail } from "../../../lib/endpoints/review";
 import { router } from "../../../lib/router";
@@ -50,6 +53,8 @@ export function LapsTab({ session, analysis, refQuery }: LapsTabProps) {
   const refOther = shown?.ref_lap && shown.ref_lap.session_id !== session.id ? shown.ref_lap : null;
   const refNumber = refRow?.lapNumber ?? refOther?.lap_number ?? null;
   const eligible = timingEligible(session);
+  // The session's own game (not the selection): a game that sends no sector times loses the S1-S3 columns.
+  const noSectors = noSectorsCaption(sessionEntry(useGameCatalog(), session));
 
   const columns: DataGridColumn<LapsRow>[] = [
     {
@@ -188,7 +193,7 @@ export function LapsTab({ session, analysis, refQuery }: LapsTabProps) {
         <DataGrid
           aria-label="Laps of this session"
           data={rows}
-          columns={columns}
+          columns={noSectors ? columns.filter((c) => !/^s\d$/.test(c.id)) : columns}
           getRowId={(r) => r.id}
           defaultSortDescriptor={{ column: "lap", direction: "ascending" }}
           contentClassName="min-w-[880px]"
@@ -198,6 +203,7 @@ export function LapsTab({ session, analysis, refQuery }: LapsTabProps) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {eligible && <TimingLegend tier={badge === "rec" || badge === "pb" ? 2 : 1} scope="session" />}
         <p className="m-0 text-sm text-muted">{lapsLegendText(session)}</p>
+        {noSectors && <p className="m-0 text-sm text-muted">{noSectors}</p>}
       </div>
     </div>
   );

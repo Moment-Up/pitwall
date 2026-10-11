@@ -18,6 +18,7 @@ import {
   type DriverInput,
   type SkillLevel,
 } from "../../../lib/drivers";
+import type { GameEntry } from "../../../lib/endpoints/game";
 import { driveLockApplies, type DriveLock } from "../../../lib/prefs";
 
 /** The edit sheet's fields as typed. `id` null = a new driver. */
@@ -31,6 +32,9 @@ export interface DriverForm {
   skill_level: SkillLevel;
   coaching_intensity: CoachingIntensity;
   voice_enabled: boolean;
+  /** "Usually plays" (games catalogue id, null = none). undefined: not offered (a server before game selection, or
+   * untouched on a new driver), so it is never sent. */
+  default_game?: string | null;
 }
 
 export const NAME_MAX = 40;
@@ -72,6 +76,7 @@ export function formFromDriver(d: Driver): DriverForm {
     skill_level: d.preferences.skill_level,
     coaching_intensity: d.preferences.coaching_intensity,
     voice_enabled: d.preferences.voice_enabled,
+    default_game: d.preferences.default_game,
   };
 }
 
@@ -112,8 +117,28 @@ export function formBody(f: DriverForm): FormResult {
       skill_level: f.skill_level,
       coaching_intensity: f.coaching_intensity,
       voice_enabled: f.voice_enabled,
+      ...(f.default_game !== undefined ? { default_game: f.default_game } : {}),
     },
   };
+}
+
+/** The "Usually plays" choice that means none. */
+export const NO_USUAL_GAME = "none";
+
+/** "Usually plays" options: none, then every catalogue entry in catalogue order ("Gran Turismo 7 · PS5"). */
+export function usualGameOptions(
+  entries: readonly Pick<GameEntry, "id" | "label" | "platform" | "platform_label">[],
+): { id: string; label: string }[] {
+  return [
+    { id: NO_USUAL_GAME, label: "No usual game" },
+    ...entries.map((e) => ({ id: e.id, label: e.platform === "any" ? e.label : `${e.label} · ${e.platform_label}` })),
+  ];
+}
+
+/** The select's value for a form (an id the catalogue no longer lists reads as none). */
+export function usualGameValue(f: Pick<DriverForm, "default_game">, options: readonly { id: string }[]): string {
+  const id = f.default_game ?? NO_USUAL_GAME;
+  return options.some((o) => o.id === id) ? id : NO_USUAL_GAME;
 }
 
 export const skillLabel = (s: SkillLevel): string => SKILL_LEVELS.find((x) => x.value === s)?.label ?? s;

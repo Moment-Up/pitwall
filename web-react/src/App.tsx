@@ -5,7 +5,7 @@ import { PageErrorBoundary, PageSkeleton } from "./components/shell/PageFallback
 import { useDriveLock } from "./components/shell/useDriveLock";
 import { useLapToast } from "./components/shell/useLapToast";
 import { useApi, useCacheInvalidation } from "./hooks/useApi";
-import { useLiveConnection, useRoute } from "./hooks/stores";
+import { useLive, useLiveConnection, useRoute } from "./hooks/stores";
 import { api } from "./lib/api";
 import { router } from "./lib/router";
 import { pageById } from "./routes";
@@ -34,10 +34,20 @@ function useRealSessionFlag(): void {
   }, [data]);
 }
 
+/** Setup opens on Game while no game is selected (game-selection spec 5.1). Unknown (null) with a server that
+ * predates game selection, so nothing changes there. */
+function useGameSelectedFlag(): void {
+  const selected = useLive((s) => (s.snap?.game ? s.snap.game.selected_id !== null : null));
+  useEffect(() => {
+    router.setGameSelected(selected);
+  }, [selected]);
+}
+
 export function App() {
   useLiveConnection(); // one /ws/live socket for the whole app
   useCacheInvalidation();
   useRealSessionFlag();
+  useGameSelectedFlag();
   // Drive never shows toasts on track (spec 2.6): the toast region is only mounted off track, and the lap toast
   // ("Lap 7 analysed · 2 coaching points", Open) is only raised off track.
   const { onTrack } = useDriveLock();

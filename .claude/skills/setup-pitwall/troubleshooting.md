@@ -9,7 +9,8 @@ Check in this order (doctor `telemetry`, `udp_*`, `firewall`, `network_profile`,
 "Live connections" and per-game errors):
 
 1. **Server running and listening?** doctor `server.running` true and the game's `udp_*` check says "Pitwall is
-   listening on UDP <port>". If a `udp_*` check fails, see "Port in use".
+   listening on UDP <port>". If a `udp_*` check fails, see "Port in use". The right game selected with its input
+   on: doctor `game` ok (otherwise see "doctor `game` warns").
 2. **Right IP and port in the game?** The game's IP must be doctor `lan_ip` (this computer), not the console's, not
    a Tailscale 100.x address. The port must match exactly. The IP can change after a router restart (DHCP): suggest
    a DHCP reservation in the router if it keeps changing.
@@ -26,6 +27,26 @@ Check in this order (doctor `telemetry`, `udp_*`, `firewall`, `network_profile`,
    --port <port>` (from this computer, to 127.0.0.1; `<data_dir>` from doctor) must make `telemetry` report the
    SYNTHETIC packets (it stays `info`: only a game makes it `ok`). If that works and the console does not, the
    problem is between the console and this computer (2-4).
+
+## doctor `game` warns
+
+The `game` check compares the selected game (`uv run pitwall game show`) with the inputs and, while a server runs,
+with what is actually arriving. Its `fix` line is the command to run; selecting a game never turns another input off.
+
+- **"... is selected but its telemetry input is off":** run the `fix` (`uv run pitwall game set <id>`), which
+  switches the input on. If the result says the input is busy (`skipped_live`), change it after the session.
+- **"Assetto Corsa needs the console's IP":** ask the user for it (games.md), then
+  `uv run pitwall game set <id> --console-ip <IP>`. GT7 without an IP is only `info`: Pitwall searches the network
+  for the console; set the IP if no telemetry arrives.
+- **"Receiving <game>, but <other game> is selected":** a real game is sending, but not the selected one. Ask the
+  user which game they are playing now. If the detected one is right, run the `fix`; if the selection is right,
+  something else is sending to that port (another console, a second game, a replay tool): find it on Setup >
+  Connect > Live connections. The synthetic demo and replays (`pitwall replay`, the dashboard's Replay) never cause
+  this warning; `pitwall send` of a recording of a real game does, because it arrives like that game.
+- **"Pitwall can't read <game> telemetry":** that game or platform is not supported (games.md "Not supported").
+  If the user also plays something Pitwall reads, select that; otherwise only the demo and recording are left.
+- **`game` info "no game selected":** expected until SKILL.md step 6. `uv run pitwall game list`, then
+  `uv run pitwall game set <id>` (or Setup > Game).
 
 ## Port in use
 

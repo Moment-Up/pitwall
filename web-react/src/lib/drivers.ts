@@ -25,6 +25,9 @@ export interface DriverPreferences {
   skill_level: SkillLevel;
   coaching_intensity: CoachingIntensity;
   voice_enabled: boolean;
+  /** "Usually plays": a games catalogue id (GET /api/games), selected when this driver takes the seat while no
+   * telemetry is live. null = none; absent from servers before game selection (never sent to those). */
+  default_game?: string | null;
 }
 
 export interface DriverBestLap {

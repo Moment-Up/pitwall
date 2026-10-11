@@ -333,6 +333,12 @@ AC_INFO = AdapterInfo(
         "session_type": FieldSupport(_U, "not sent"),
         "weather": FieldSupport(_U, "not sent"),
         "setup": FieldSupport(_U, "not sent"),
+        "drs_open": FieldSupport(_U, "not in RTCarInfo"),
+        "ers_store_j": FieldSupport(_U, "not in RTCarInfo"),
+        "damage": FieldSupport(_U, "not in RTCarInfo"),
+        "track_zones": FieldSupport(_U, "no sector, marshal-zone or flag data"),
+        "field_samples": FieldSupport(_U, "RTCarInfo describes the player's car only"),
+        "buttons": FieldSupport(_U, "no wheel-button data"),
     },
     notes=(
         "Implemented from Kunos' Remote Telemetry spec (field list) + observed sizes and two MIT clients (layout). "

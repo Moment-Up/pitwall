@@ -109,6 +109,30 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
   demo replay button and driver switching from the new UI. Purple (household record) needs D2 live; until the
   service runs the new backend only green SB and yellow appear.
 
+## Game selection and capability profiles (branch `game-selection`, 2026-10-11)
+- **Built:** the user tells Pitwall what they play (Setup › Game; `pitwall game list|show|set|clear`;
+  `GET/PUT/DELETE /api/game`, `GET /api/games`). `src/pitwall/games.py` derives the catalogue from the
+  `capabilities.py` rows x platforms (plus "Another game") and each entry's 23 feature statuses (supported, partial,
+  not sent, not in Pitwall yet, unknown) from the adapters' `AdapterInfo.fields` plus a few code facts, each pinned
+  by a unit test. Selecting a game switches on its input (it never turns another input off, and leaves alone an input
+  that is receiving packets); the live snapshot carries the detected game, a mismatch (game, platform or F1 UDP
+  format; real live data only) and a suggestion. The dashboard names data the game does not send instead of showing
+  `-`; the engineer and the radio answer questions about such data deterministically (no LLM), also before any
+  session; `pitwall doctor` has a `game` check; `/setup-pitwall` selects the game in step 6. A driver can have a
+  usual game (Settings › Drivers › *Usually plays*), selected when they take the seat while no telemetry is live.
+- **No capability status changed.** Feature evidence is the weakest of the row, the platform and each field's level,
+  so F1 25 on PS5 (live-validated as a whole) shows most features at spec_implemented until per-field evidence is
+  recorded. Known gaps: FM7 and Forza Horizon 6 have no row, so no entry of their own; GT7's energy-recovery value and
+  wheel buttons are classified from community docs only.
+- **Evidence tier: unit + synthetic + recorded.** Recorded: the F1 25 PS5 Austria and Monza excerpts resolve to
+  `f1_25:ps5` and raise a `game` mismatch against another selected game; the Assetto Corsa PS5 excerpt resolves to
+  `ac:ps5` and its fact sheet says the tyre data is not sent. Synthetic: the F1 demo with GT7 selected raises no
+  mismatch. Headless-browser check on a scratch server: the first-run picker, choosing GT7 PS5 in Setup › Game (server
+  without UDP), the GT7 wording on Drive, then the recorded Austria excerpt streamed over loopback UDP with GT7
+  selected (mismatch on Review/Setup, on Drive only while stationary) and the one-tap switch to F1 25 PS5 while live. **Not verified:** any live console run of selection or mismatch (GT7, Forza and Assetto Corsa selection
+  is tested through the API without sockets only); Setup › Game and the per-game Drive wording on a real iPad; the
+  GT7 heartbeat or AC client started by a selection on real hardware.
+
 ## Known limitations
 - Corner numbers are learned from speed minima (flat-out kinks are not corners). Official numbering/names apply only
   where a track sheet is hand-verified (Austria so far).

@@ -12,6 +12,8 @@ import type { ChangeText } from "../../../lib/bests";
 import type { SessionDetail } from "../../../lib/endpoints/review";
 import type { Density } from "../../../lib/review/density";
 import { sector } from "../../../lib/format";
+import { useGameCatalog } from "../../../hooks/useGame";
+import { noSectorsCaption, sessionEntry } from "../../../lib/game";
 import {
   bestLapStatus,
   bestLapSub,
@@ -84,6 +86,8 @@ export interface KpiTilesProps {
 
 export function KpiTiles({ session, density, legend = true }: KpiTilesProps) {
   const k = summaryKpis(session.laps);
+  // A game that sends no sector times has no "Best sectors combined" (game selection: the session's own game).
+  const noSectors = noSectorsCaption(sessionEntry(useGameCatalog(), session)) !== null;
   // REC / PB once the scope's bests are known (lib/bests.ts); SB, which the session best always is, until then.
   const { bests, badge } = useSessionBests(session, k.best?.ms ?? null);
   const status = bestLapStatus(session, k.best, badge);
@@ -116,7 +120,7 @@ export function KpiTiles({ session, density, legend = true }: KpiTilesProps) {
         <Tile title="Steadiness" term="steadiness" glossary={g} sub={steadinessSentence(k.spreadMs)}>
           {k.spreadMs == null ? <Unknown className="text-[32px]" /> : <Big>{spreadSeconds(k.spreadMs)}</Big>}
         </Tile>
-        {six && (
+        {six && !noSectors && (
           <Tile
             title="Best sectors combined"
             glossary={g}

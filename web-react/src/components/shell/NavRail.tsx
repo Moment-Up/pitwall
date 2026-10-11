@@ -2,7 +2,7 @@
 // hairline on its right edge (the nav matches the page, not a contrasting panel). Top: the Pitwall mark (links to
 // Drive). Four items of 72 x 64: a 24 px icon above an 11 px / 600 label, always visible; the active item sits on a
 // 56 x 56 tile in --surface-secondary with the icon in --accent. Foot: night dim (56 px), the seated driver (opens
-// the driver menu) and the connection dot.
+// the driver menu), the game chip (Setup › Game) and the connection dot.
 //
 // On track (3.3) the rail dims to 55 % ("Dim navigation on track"); any touch restores it for 5 s and hit targets
 // keep their size. With the Drive lock, leaving Drive › Coach needs a 0.5 s hold on an item.
@@ -17,6 +17,7 @@ import { prefs } from "../../lib/prefs";
 import { AREAS, type AreaDef } from "../../routes";
 import { Brand } from "../Brand";
 import { DriverSwitcher } from "../DriverSwitcher";
+import { GameChip } from "../GameChip";
 import { StatusDotLabel } from "../StatusPill";
 import { LockableNavLink } from "./LockableNavLink";
 import { NAV_WAKE_MS } from "./navLock";
@@ -86,6 +87,7 @@ export function NavRail() {
           <Moon aria-hidden="true" className="size-6" />
         </Button>
         <DriverSwitcher variant="rail" />
+        <GameChip variant="rail" />
         <StatusDotLabel />
       </div>
     </nav>

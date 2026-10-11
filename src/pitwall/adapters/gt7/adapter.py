@@ -188,6 +188,14 @@ GT7_INFO = AdapterInfo(
         "weather": FieldSupport(_U, "GT7 sends time of day only"),
         "setup": FieldSupport(_U, "only gear ratios are sent"),
         "session_type": FieldSupport(_U, "not sent by GT7"),
+        "drs_open": FieldSupport(_U, "no DRS field in the documented layout (docs/research/gt7-protocol.md)"),
+        "ers_store_j": FieldSupport(
+            SupportLevel.UNVERIFIED, "variant ~ 0x150 'energy recovery' (units unknown): not mapped"
+        ),
+        "track_zones": FieldSupport(_U, "no sectors, marshal zones or race flags (gt7-protocol.md section 7)"),
+        "field_samples": FieldSupport(_U, "telemetry covers the player's car only (gt7-protocol.md section 7)"),
+        "damage": FieldSupport(_U, "not sent (gt7-protocol.md section 7)"),
+        "buttons": FieldSupport(_U, "no wheel-button data (the 0x8E flags are car state)"),
     },
     notes=(
         "Community-documented protocol (docs/research/gt7-protocol.md); not yet validated on a real console.",

@@ -30,6 +30,12 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   the lap processor after each lap and when the session's context changes (``set_bests_requester``). A few hundred
   bytes, so it rides every snapshot: a lap that sets a record is coloured as set on the next frame, not up to
   5 s later with the static payload.
+* ``game`` (every snapshot, ~200 bytes): the household's selected game (``set_game_selection``, from the settings
+  section ``"game"``), the game detected in the live session (or, before its first session packet, the adapter the
+  router last auto-detected: ``last_detected_game``, written once per newly detected sender port), the effective
+  game, a mismatch (real live data of another game / F1 platform / F1 UDP format) and a live suggestion while
+  nothing is selected (``games.snapshot_block``). Computed on the web thread from attributes the ingest thread
+  already writes; the ingest thread never calls into ``games``.
 """
 
 from __future__ import annotations
@@ -44,6 +50,7 @@ from typing import Any
 
 import numpy as np
 
+from pitwall import games
 from pitwall.analysis.distance import DistanceTrace
 from pitwall.analysis.track_skeleton import build_track_skeleton
 from pitwall.coach.cues import CoachingProfile, CueEngine, CuePlan, cue_labels
@@ -221,6 +228,10 @@ class LiveState:
         self.track_knowledge: dict[str, Any] | None = None
         self._heads_up_key: tuple[tuple[str, int], ...] | None = None
         self.cues = CueEngine()
+        # Game selection (games.py): the household's choice (immutable, swapped from any thread) and the adapter the
+        # packet router last auto-detected on a new sender port (written by the ingest thread once per port).
+        self._game_selection: games.Selection | None = None
+        self.last_detected_game: str | None = None
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -462,6 +473,36 @@ class LiveState:
         self.coach.reset()
         self.cues.reset_session()
 
+    # ------------------------------------------------------------- game selection (any thread)
+    def set_game_selection(self, sel: games.Selection | None) -> None:
+        """The household's selected game (``SettingsStore`` section ``"game"``): one reference swap."""
+        self._game_selection = sel
+
+    @property
+    def game_selection(self) -> games.Selection | None:
+        return self._game_selection
+
+    def game_block(self, conn: dict[str, Any] | None = None) -> dict[str, Any]:
+        """``Snapshot.game`` (web thread): selection, detection, effective game, mismatch, live suggestion."""
+        conn = conn if conn is not None else self.connection()
+        sel = self._game_selection
+        s = self.session
+        adapter_game = s.game.value if s is not None else self.last_detected_game
+        platform = variant = None
+        if s is not None and adapter_game is not None:
+            if s.platform.value != "unknown" and games.platform_on_wire(adapter_game):
+                platform = s.platform.value
+            variant = games.variant_of(adapter_game, s.extra.get("packet_format"))
+        real = not self.synthetic and not (self.source or "").startswith("replay:")
+        return games.snapshot_block(
+            None if sel is None else sel.id, adapter_game, platform, variant, real, str(conn["status"])
+        )
+
+    def effective_game_id(self) -> str | None:
+        """The game the data in front of the driver comes from: the live session's, else the selection (radio)."""
+        eid = self.game_block().get("effective_id")
+        return eid if isinstance(eid, str) else None
+
     # ------------------------------------------------------------- readers
     def connection(self) -> dict[str, Any]:
         age = time.monotonic() - self.last_packet_mono if self.last_packet_mono else None
@@ -481,10 +522,11 @@ class LiveState:
     def snapshot(self, include_static: bool = False) -> dict[str, Any]:
         f = self.frame
         s = self.session
+        conn = self.connection()
         with self._lock:
             out: dict[str, Any] = {
                 "version": self.version,
-                "connection": self.connection(),
+                "connection": conn,
                 "session_id": self.session_id,
                 "session": None
                 if s is None
@@ -513,6 +555,7 @@ class LiveState:
             out["session_state_info"] = None if st is None else st.to_dict()
             out["coach"] = self.coach.current
             out["bests"] = self.bests  # D2: small, so every snapshot (a record shows as set, not 5 s later)
+            out["game"] = self.game_block(conn)  # small: every snapshot (selection, detection, mismatch)
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

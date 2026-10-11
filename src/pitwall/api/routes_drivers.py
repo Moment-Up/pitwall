@@ -69,6 +69,7 @@ class DriverCreate(BaseModel):
     skill_level: SkillLevel = "intermediate"
     coaching_intensity: Intensity = "normal"
     voice_enabled: bool = True
+    default_game: str | None = None  # games catalogue id ("Usually plays")
 
 
 class DriverUpdate(BaseModel):
@@ -79,6 +80,7 @@ class DriverUpdate(BaseModel):
     skill_level: SkillLevel | None = None
     coaching_intensity: Intensity | None = None
     voice_enabled: bool | None = None
+    default_game: str | None = None  # null clears it (only when sent: omitted leaves it unchanged)
 
 
 class DriverRef(BaseModel):
@@ -152,6 +154,7 @@ def create_driver(request: Request, body: DriverCreate) -> dict[str, Any]:
             skill_level=body.skill_level,
             coaching_intensity=body.coaching_intensity,
             voice_enabled=body.voice_enabled,
+            default_game=body.default_game,
         )
     except DriverError as e:
         raise _http(e) from e
@@ -213,7 +216,9 @@ def get_driver(request: Request, driver_id: int) -> dict[str, Any]:
 @router.patch("/{driver_id}")
 def update_driver(request: Request, driver_id: int, body: DriverUpdate) -> dict[str, Any]:
     svc = driver_service(request)
-    fields = body.model_dump(exclude_none=True)
+    fields: dict[str, Any] = body.model_dump(exclude_none=True)
+    if "default_game" in body.model_fields_set:  # an explicit null clears the usual game
+        fields["default_game"] = body.default_game
     try:
         driver = svc.update(driver_id, **fields)
     except DriverError as e:

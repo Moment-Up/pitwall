@@ -7,9 +7,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { driveModel, type DriveModel } from "../lib/drive/model";
+import { driveMismatch } from "../lib/game";
 import type { DriveMemo } from "../lib/drive/state";
 import type { SnapshotNext } from "../lib/drive/types";
 import { useActiveDriver, useDrivers, useLive, usePrefs } from "./stores";
+import { useGameCatalog, useSnapshotGame } from "./useGame";
 
 /** Device clock in whole unix seconds, ticking once a second while mounted. */
 export function useSecondTick(): number {
@@ -30,10 +32,21 @@ export function useDriveModel(): DriveModel {
   const driveLock = usePrefs((p) => p.driveLock);
   const nowS = useSecondTick();
   const memo = useRef<DriveMemo | null>(null);
+  // Another game's real data while the car stands still (game selection): the status slot says so (never a banner).
+  const catalogue = useGameCatalog();
+  const game = useSnapshotGame();
+  const stopped = useLive((s) => {
+    const v = s.snap?.frame?.speed_kph;
+    return s.snap?.frame == null ? "none" : typeof v === "number" && Number.isFinite(v) && v < 5 ? "slow" : "moving";
+  });
+  const mismatch = useMemo(
+    () => driveMismatch(game, catalogue, stopped === "none" ? null : { speed_kph: stopped === "slow" ? 0 : null }),
+    [game, catalogue, stopped],
+  );
 
   const model = useMemo(
-    () => driveModel({ snap, connected, nowS, driver, drivers, prefs: { driveLock }, memo: memo.current }),
-    [snap, connected, nowS, driver, drivers, driveLock],
+    () => driveModel({ snap, connected, nowS, driver, drivers, prefs: { driveLock }, memo: memo.current, mismatch }),
+    [snap, connected, nowS, driver, drivers, driveLock, mismatch],
   );
   useEffect(() => {
     memo.current = model.memo;

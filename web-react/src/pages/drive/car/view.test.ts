@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { driveModel, type DriveModel } from "../../../lib/drive/model";
 import { FIXTURES, fixture, frame, lap, newestT, snap } from "../../../lib/drive/testkit";
 import type { SnapshotNext } from "../../../lib/drive/types";
+import { catalogue, entry } from "../../../lib/game-testkit";
 import {
   carTile,
   coachingTile,
@@ -280,5 +281,83 @@ describe("map tile", () => {
     const s = fixture("synthetic-demo-on-track-brake-ahead");
     expect(mapTile(s, model(s)).caption).toMatch(/^\d+ corners learned$/);
     expect(mapTile(snap(), model(snap())).caption).toBe("Learning the track");
+  });
+});
+
+// ------------------------------------------------------------------------------------- game selection (spec 5.4)
+describe("what the game sends (game selection)", () => {
+  const CAT = catalogue();
+  const F1 = entry("f1_25:ps5", CAT);
+  const GT7 = entry("gt7:ps5", CAT);
+  const AC = entry("ac:ps5", CAT);
+  const FM = entry("forza_motorsport:pc", CAT);
+  const OTHER = entry("other:any", CAT);
+
+  it("F1 25: every tile exactly as without a game (existing behaviour)", () => {
+    const s = fixture("recorded-d246-suzuka-on-track-brake-ahead");
+    const m = model(s);
+    expect(carTile(s, m, F1)).toEqual(carTile(s, m));
+    expect(tyresTile(s, F1)).toEqual(tyresTile(s));
+    expect(lapsTile(s, WALL_LAPS, F1)).toEqual(lapsTile(s));
+    expect(raceControlLine(s.events, newestT(s) + 1, F1)).toBe(raceControlLine(s.events, newestT(s) + 1));
+    expect(tyresTile(s, F1).caption).toBeNull();
+    expect(tyresTile(s, F1).empty).toBeNull();
+  });
+
+  it("GT7 (a real GT7 snapshot): temperatures only, no DRS cell, fuel and ERS said in words", () => {
+    const s = fixture("recorded-live-api-gt7-stale");
+    const v = tyresTile(s, GT7);
+    expect(v.wheels.map((w) => w.temp)).toEqual(["65°", "71°", "66°", "72°"]);
+    expect(v.wheels.every((w) => w.sub === null)).toBe(true); // no wear and no pressures: no sub line
+    expect(v.wheels[0]!.aria).toBe("FL: surface 65 degrees, cold");
+    expect(v.caption).toBe("Tyre wear, pressures: not sent by GT7");
+    expect(v.empty).toBeNull();
+    expect(v.energy).toBe("Fuel, ERS: not in Pitwall yet");
+    const c = carTile(s, model(s), GT7);
+    expect(c.drsShown).toBe(false);
+    expect(carTile(s, model(s)).drsShown).toBe(true);
+  });
+
+  it("Assetto Corsa: one line instead of a grid of dashes; fuel and ERS not sent", () => {
+    const s = snap({ frame: frame({ tyre_surface_temp_c: null, tyre_wear_pct: null, tyre_pressure_psi: null, fuel_kg: null, ers_store_j: null }) });
+    const v = tyresTile(s, AC);
+    expect(v.empty).toBe("Assetto Corsa doesn't send tyre data");
+    expect(v.caption).toBeNull();
+    expect(v.energy).toBe("Fuel, ERS: not sent by Assetto Corsa");
+  });
+
+  it("Forza Motorsport: wear kept, pressures said; the fuel / ERS footer mixes the two reasons", () => {
+    const s = snap({ frame: frame({ tyre_surface_temp_c: [80, 81, 82, 83], tyre_wear_pct: [3, 3, 4, 4], tyre_pressure_psi: null }) });
+    const v = tyresTile(s, FM);
+    expect(v.wheels[0]!.sub).toBe("3%");
+    expect(v.caption).toBe("Tyre pressures: not sent by Forza Motorsport");
+    expect(v.energy).toBe("Fuel: not in Pitwall yet · ERS: not sent by Forza Motorsport");
+  });
+
+  it("an unknown game ('Another game') keeps every dash: nothing is claimed about it", () => {
+    const s = snap();
+    expect(tyresTile(s, OTHER)).toEqual(tyresTile(s));
+    expect(carTile(s, model(s), OTHER).drsShown).toBe(true);
+    expect(lapsTile(s, WALL_LAPS, OTHER).sectors).toBe(true);
+    expect(raceControlLine([], 0, OTHER)).toBe("Race control · nothing yet");
+  });
+
+  it("laps tile: no sector columns for GT7, with the reason in the foot", () => {
+    const s = fixture("recorded-live-api-gt7-stale");
+    const v = lapsTile(s, WALL_LAPS, GT7);
+    expect(v.sectors).toBe(false);
+    expect(v.noSectors).toBe("No sectors from GT7");
+    const f1 = lapsTile(fixture("recorded-d246-suzuka-on-track-brake-ahead"), WALL_LAPS, F1);
+    expect(f1.sectors).toBe(true);
+    expect(f1.noSectors).toBeNull();
+    expect(lapsTile(null, WALL_LAPS, AC)).toMatchObject({ empty: "No completed laps yet", sectors: false, noSectors: "No sectors from Assetto Corsa" });
+  });
+
+  it("map foot: the newest event first, else that the game sends no race control", () => {
+    expect(raceControlLine([], 100, GT7)).toBe("Race control · not sent by GT7");
+    expect(raceControlLine([], 100, F1)).toBe("Race control · nothing yet");
+    expect(raceControlLine([{ kind: "session_started", code: null, session_time_s: 0, t: 90 }], 100, GT7)).toBe(
+      "Race control · Session started · 10 s ago",
+    );
   });
 });

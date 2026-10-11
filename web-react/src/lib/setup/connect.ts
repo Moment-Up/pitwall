@@ -286,8 +286,14 @@ export function lastDecodeError(t: ConnectInfo["telemetry"]): string | null {
   return typeof e === "string" && e.trim() ? e : null;
 }
 
-/** Games in the order the page shows them: F1 (always on) first, then the enabled ones, then the rest. */
-export function orderedIntegrations(list: readonly Integration[]): Integration[] {
-  const rank = (g: Integration) => (g.key === "f1" ? 0 : g.enabled ? 1 : 2);
+/** Games in the order the page shows them: the selected game's input first (game selection), then F1 (always on),
+ * then the enabled ones, then the rest. */
+export function orderedIntegrations(list: readonly Integration[], selectedKey: IntegrationKey | null = null): Integration[] {
+  const rank = (g: Integration) => (selectedKey !== null && g.key === selectedKey ? -1 : g.key === "f1" ? 0 : g.enabled ? 1 : 2);
   return list.map((g, i) => ({ g, i })).sort((a, b) => rank(a.g) - rank(b.g) || a.i - b.i).map((x) => x.g);
+}
+
+/** A guide by its connect.py id (the catalogue entry's guide_id), or null. */
+export function guideById(guides: readonly GameGuide[], id: string | null | undefined): GameGuide | null {
+  return id ? (guides.find((g) => g.id === id) ?? null) : null;
 }

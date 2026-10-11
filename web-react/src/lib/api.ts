@@ -3,6 +3,7 @@
 // (?token=...), which sets an httpOnly cookie used by every later request.
 
 import { authFetch } from "./auth";
+import type { SnapshotGame } from "./endpoints/game";
 import type { TrackSkeleton } from "./skeleton";
 
 /** Payloads the Svelte client left untyped (`any`). Typed per screen as each screen is ported. */
@@ -155,6 +156,9 @@ export interface Snapshot {
   /** Game-native sectors and zones (every 5 s); live marshal flags arrive in every snapshot. */
   skeleton?: TrackSkeleton | null;
   marshal_flags?: { game_number: number; flag: string }[];
+  /** The selected and the detected game, mismatch and suggestion (lib/endpoints/game.ts). In every snapshot; absent
+   * only from servers before game selection, and then every page renders as it did before. */
+  game?: SnapshotGame;
 }
 
 export interface SessionRow {
@@ -173,6 +177,9 @@ export interface SessionRow {
   lap_count: number;
   best_clean_ms: number | null;
   weather: { condition?: string; track_temp_c?: number; air_temp_c?: number };
+  /** The game catalogue entry this session was recorded with (lib/endpoints/game.ts); null when unresolvable,
+   * absent from servers before game selection. */
+  game_entry_id?: string | null;
 }
 
 export interface LapRow {

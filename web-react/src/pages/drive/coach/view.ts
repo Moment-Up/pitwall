@@ -5,6 +5,8 @@ import { cornerLabelOf, officialNameOf } from "../../../lib/drive/corner";
 import type { DeltaView } from "../../../lib/drive/delta";
 import type { EndedCard, HeroView } from "../../../lib/drive/model";
 import type { TrackModelNext } from "../../../lib/drive/types";
+import type { GameEntry, TransportKind } from "../../../lib/endpoints/game";
+import { featureOf, unavailable } from "../../../lib/game";
 
 /** Deep equality for plain view-model data (objects, arrays, primitives). Panels re-render only when it is false. */
 export function sameView(a: unknown, b: unknown): boolean {
@@ -82,6 +84,14 @@ export function radioSeat(phase: string, mic: string, micLabel: string): RadioSe
 
 // --------------------------------------------------------------------------------------- no-telemetry card (4.9)
 
+/** A sender as /api/connect reports it (ingest source_snapshot). */
+interface ConnectSource {
+  ip: string;
+  port: number;
+  packets: number;
+  last_seen_s: number;
+}
+
 /** The fields of GET /api/connect the no-telemetry card reads (pitwall/connect.py + api/app.py connect_page). */
 export interface ConnectInfo {
   mac?: { lan_ip?: string | null; udp_port?: number | null } | null;
@@ -89,10 +99,51 @@ export interface ConnectInfo {
     listening?: boolean;
     port?: number | null;
     received?: number | null;
-    sources?: { ip: string; port: number; packets: number; last_seen_s: number }[] | null;
+    sources?: ConnectSource[] | null;
   } | null;
-  guides?: { id: string; game: string; supported: boolean; menu_path: string; steps: { label: string; value: string }[] }[] | null;
+  guides?:
+    | {
+        id: string;
+        game: string;
+        supported: boolean;
+        menu_path: string;
+        steps: { label: string; value: string; note?: string }[];
+      }[]
+    | null;
   telemetry?: { hint?: string | null } | null;
+  /** Per input (Runtime.input_status): on/off, its senders, the console IP; AC's client state. */
+  integrations?:
+    | {
+        key: string;
+        enabled?: boolean;
+        listening?: boolean;
+        console_ip?: string | null;
+        sources?: ConnectSource[] | null;
+        client?: { last_rx_s_ago?: number | null } | null;
+      }[]
+    | null;
+}
+
+/** The selected game, as far as the no-telemetry card needs it (lib/endpoints/game.ts GameEntry). */
+export interface NoTelemetryGame {
+  /** connect.py guide id: "f1_25", "gt7", "forza", "ac", "record". */
+  guideId: string | null;
+  /** How telemetry gets here (transport.kind). */
+  kind: TransportKind;
+  /** The port it arrives on (transport.port); null for Assetto Corsa (Pitwall contacts the console). */
+  port: number | null;
+  /** The input's key on /api/connect ("f1", "gt7", ...). */
+  integration: string | null;
+  /** F1 UDP format the game must send ("2026" for the Season Pack), or null. */
+  variant: string | null;
+}
+
+/** The no-telemetry card's game from a catalogue entry (null: no entry selected, the card works as before). */
+export function noTelemetryGame(
+  e: Pick<GameEntry, "guide_id" | "transport" | "integration" | "variant"> | null | undefined,
+): NoTelemetryGame | null {
+  if (!e) return null;
+  return { guideId: e.guide_id, kind: e.transport.kind, port: e.transport.port, integration: e.integration, variant: e.variant };
 }
 
 export interface NoTelemetryStep {
@@ -108,7 +159,7 @@ export interface NoTelemetryView {
   current: number;
   /** The server's diagnosis of packets it could not use, verbatim, or null. */
   hint: string | null;
-  /** "Listening on UDP 20777", or null when unknown. */
+  /** "Listening on UDP 20777", or null when unknown (or nothing listens: Assetto Corsa). */
   listening: string | null;
 }
 
@@ -130,36 +181,120 @@ function age(s: number): string {
   return `${Math.round(s / 3600)} h ago`;
 }
 
-/** The three steps of the no-telemetry card from /api/connect (unknown values are "-"; nothing is invented). */
-export function noTelemetryView(c: ConnectInfo | undefined): NoTelemetryView {
-  const guide = c?.guides?.find((g) => g.supported) ?? null;
+function lastSender(sources: readonly ConnectSource[]): ConnectSource | null {
+  return sources.length ? sources.reduce((a, b) => (b.last_seen_s < a.last_seen_s ? b : a)) : null;
+}
+
+/** The menu path in the game's words with "›" ("Settings › Telemetry Settings"). */
+function menuPath(path: string): string {
+  return path
+    .split(">")
+    .map((x) => x.trim())
+    .filter(Boolean)
+    .join(" › ");
+}
+
+/**
+ * The three steps of the no-telemetry card from /api/connect (unknown values are "-"; nothing is invented). With a
+ * selected game the steps follow its guide (`game.guideId`) and its port; without one, the first supported guide
+ * (F1 25), as before game selection. Games Pitwall contacts itself (GT7's heartbeat, Assetto Corsa's handshake)
+ * have nothing to set in the game: their steps are "Enable on Setup › Connect", the console IP, "Get on track".
+ */
+export function noTelemetryView(c: ConnectInfo | undefined, game: NoTelemetryGame | null = null): NoTelemetryView {
+  const guides = c?.guides ?? [];
+  const guide = game?.guideId ? (guides.find((g) => g.id === game.guideId) ?? null) : (guides.find((g) => g.supported) ?? null);
   const step = (label: RegExp) => guide?.steps.find((s) => label.test(s.label)) ?? null;
-  const on = step(/^udp telemetry$/i);
-  const fmt = step(/^udp format$/i);
-  const path = guide ? guide.menu_path.split(">").map((x) => x.trim()).filter(Boolean).join(" › ") : null;
-  const first =
-    path && on
-      ? `${path} › ${on.label}: ${on.value}${fmt ? `, ${fmt.label} ${fmt.value}` : ""}`
-      : "In the game's telemetry settings";
+  const input = game?.integration ? (c?.integrations?.find((i) => i.key === game.integration) ?? null) : null;
   const ip = ipOf(c);
-  const port = portOf(c);
-  const sources = c?.udp?.sources ?? [];
-  const last = sources.length ? sources.reduce((a, b) => (b.last_seen_s < a.last_seen_s ? b : a)) : null;
+  const port = game ? (game.port ?? null) : portOf(c);
+  const sources = input?.sources ?? (game && game.integration !== "f1" ? [] : (c?.udp?.sources ?? []));
+  const last = lastSender(sources);
+  const rxAgo = input?.client?.last_rx_s_ago;
   const hint = c?.telemetry?.hint;
+  const hintText = typeof hint === "string" && hint ? hint : null;
+  const listeningOn = input ? input.listening !== false : c?.udp?.listening !== false;
+  const listening = port != null && game?.kind !== "udp_client" && listeningOn ? `Listening on UDP ${port}` : null;
+  const lastText = last
+    ? `Last sender seen: ${last.ip} · ${age(last.last_seen_s)}`
+    : typeof rxAgo === "number" && Number.isFinite(rxAgo)
+      ? `Last packet: ${age(rxAgo)}`
+      : "Last sender seen: none";
+  const seen = last !== null || (typeof rxAgo === "number" && Number.isFinite(rxAgo));
+
+  if (game && (game.kind === "udp_heartbeat" || game.kind === "udp_client")) {
+    const enable = guide?.steps[0] ?? null;
+    const ipStep = step(/^console ip$/i);
+    const consoleIp = input?.console_ip ?? null;
+    const client = game.kind === "udp_client";
+    const where = ipStep?.note ? ipStep.note : "The console's address on your network";
+    return {
+      steps: [
+        {
+          title: "Enable it on Setup › Connect",
+          description: input?.enabled ? "On" : (enable?.note ? sentenceCase(enable.note) : "Off"),
+          mono: false,
+        },
+        {
+          title: `Console IP ${consoleIp ?? (client ? "-" : "not set")} · ${client ? "no port: Pitwall contacts the console" : `port ${port ?? "-"}`}`,
+          description: !consoleIp && !client ? `Optional: without it Pitwall searches the network for the console. ${where}` : where,
+          mono: true,
+        },
+        { title: "Get on track", description: lastText, mono: false },
+      ],
+      current: seen ? 2 : input?.enabled ? 1 : 0,
+      hint: hintText,
+      listening,
+    };
+  }
+
+  const on = step(/^(udp telemetry|data out)$/i);
+  const fmt = step(/^(udp format|data out packet format)$/i);
+  const fmtValue = fmt && game?.variant && /udp format/i.test(fmt.label) ? game.variant : fmt?.value;
+  const path = guide ? menuPath(guide.menu_path) : null;
+  const first =
+    path && on ? `${path} › ${on.label}: ${on.value}${fmt ? `, ${fmt.label} ${fmtValue}` : ""}` : "In the game's telemetry settings";
   return {
     steps: [
-      { title: "Turn on UDP telemetry in the game", description: first, mono: false },
+      { title: on && /data out/i.test(on.label) ? "Turn on Data Out in the game" : "Turn on UDP telemetry in the game", description: first, mono: false },
       { title: `IP ${ip ?? "-"} · port ${port ?? "-"}`, description: "This Mac's LAN address", mono: true },
-      {
-        title: "Drive out of the garage",
-        description: last ? `Last sender seen: ${last.ip} · ${age(last.last_seen_s)}` : "Last sender seen: none",
-        mono: false,
-      },
+      { title: "Drive out of the garage", description: lastText, mono: false },
     ],
-    current: last ? 2 : 0,
-    hint: typeof hint === "string" && hint ? hint : null,
-    listening: port != null && c?.udp?.listening !== false ? `Listening on UDP ${port}` : null,
+    current: seen ? 2 : 0,
+    hint: hintText,
+    listening,
   };
+}
+
+function sentenceCase(s: string): string {
+  return s ? s[0]!.toUpperCase() + s.slice(1) : s;
+}
+
+// ------------------------------------------------------------------------------------------- game on Coach
+
+/** What the selected / detected game changes on Coach (game selection spec 5.3): nothing else moves. */
+export interface CoachGameView {
+  /** "Sectors · Not sent by GT7": the sector slot shows one muted cell; null = the three cells. */
+  sectors: string | null;
+  /** The game sends no lap distance, Pitwall estimates it: the delta header says "· estimated". */
+  deltaEstimated: boolean;
+}
+
+export const NO_COACH_GAME: CoachGameView = { sectors: null, deltaEstimated: false };
+
+/** From the effective entry (the game of the data on screen). Only known facts change anything: an unknown sector
+ * feature keeps the three "-" cells (P5). */
+export function coachGameView(entry: GameEntry | null | undefined): CoachGameView {
+  if (!entry) return NO_COACH_GAME;
+  const sect = featureOf(entry, "sectors");
+  return {
+    sectors: sect && unavailable(sect) ? `Sectors · ${sect.short}` : null,
+    deltaEstimated: featureOf(entry, "delta")?.status === "partial",
+  };
+}
+
+/** The delta panel's header with the estimate marked ("Delta to reference · estimated"). */
+export function estimatedDelta<D extends { label: string }>(d: D, estimated: boolean): D {
+  return estimated ? { ...d, label: `${d.label} · estimated` } : d;
 }
 
 /** A learned corner as the driver reads it: official label and name ("T15 Stowe"), else the label alone; null when

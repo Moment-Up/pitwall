@@ -10,7 +10,7 @@ import socket
 import sys
 import time
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
@@ -302,6 +302,255 @@ def doctor(
     from pitwall.doctor import main
 
     raise typer.Exit(main(as_json, llm, echo=typer.echo))
+
+
+# ---------------------------------------------------------------------------------------------- pitwall game
+game_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    help="What you're playing: the game catalogue, what each game sends, and the household's selection.",
+)
+app.add_typer(game_app, name="game")
+SERVER_PROBE_S = 1.5
+
+
+def _http(method: str, url: str, body: dict[str, Any] | None = None, timeout_s: float = 10.0) -> tuple[int, Any] | None:
+    """One request to a local Pitwall; ``None`` when nothing answers. Loopback is trusted (no token); a server bound
+    to a LAN address gets the access token header."""
+    import httpx
+
+    from pitwall.doctor import _is_loopback_host
+
+    headers: dict[str, str] = {}
+    host = httpx.URL(url).host
+    if not _is_loopback_host(host):
+        headers["x-pitwall-token"] = get_settings().resolve_access_token()
+    try:
+        with httpx.Client(timeout=timeout_s, trust_env=False, follow_redirects=False) as client:
+            r = client.request(method, url, json=body, headers=headers)
+    except (httpx.HTTPError, OSError, ValueError):
+        return None
+    try:
+        data = r.json()
+    except ValueError:
+        data = None
+    return r.status_code, data
+
+
+def _server(s: Settings) -> tuple[str, str] | None:
+    """(base URL, version) of a Pitwall answering on the configured HTTP port, else None."""
+    from pitwall.doctor import client_host
+
+    base = f"http://{client_host(s.http_host)}:{s.http_port}"
+    reply = _http("GET", f"{base}/api/health", timeout_s=SERVER_PROBE_S)
+    if reply is None:
+        return None
+    status, data = reply
+    if status == 200 and isinstance(data, dict) and isinstance(data.get("connection"), dict):
+        return base, str(data.get("version") or "?")
+    return None
+
+
+def _stored_sections(s: Settings) -> dict[str, Any]:
+    """settings.json sections, read without side effects (the server writes this file on every change)."""
+    from pitwall.doctor import _read_settings_file
+
+    return _read_settings_file(s.data_dir / "settings.json")[0]
+
+
+def _configs(s: Settings) -> dict[str, Any]:
+    from pitwall.integrations import resolve_configs
+
+    return resolve_configs(s, _stored_sections(s).get("integrations") or {})
+
+
+def _selected_id(s: Settings) -> str | None:
+    from pitwall import games
+
+    sel = games.parse_selection(_stored_sections(s).get(games.SECTION) or {})
+    return sel.id if sel is not None else None
+
+
+def _older_server(version: str) -> typer.Exit:
+    typer.echo(
+        f"the running Pitwall (version {version}) predates game selection: update it and restart, then run this again",
+        err=True,
+    )
+    return typer.Exit(1)
+
+
+def _entry_or_bad(entry_id: str) -> Any:
+    from pitwall import games
+
+    e = games.entry(entry_id)
+    if e is None:
+        raise typer.BadParameter(f"unknown game {entry_id!r}: see uv run pitwall game list --all", param_hint="ID")
+    return e
+
+
+@game_app.command("list")
+def game_list(
+    as_json: Annotated[bool, typer.Option("--json", help="Machine-readable output")] = False,
+    show_all: Annotated[bool, typer.Option("--all", help="Include the 'more games' group")] = False,
+) -> None:
+    """List the games Pitwall knows, with how well each is supported (* = selected)."""
+    from pitwall import games
+
+    s = get_settings()
+    selected = _selected_id(s)
+    shown = [e for e in games.entries() if show_all or e.group == "main"]
+    if as_json:
+        configs = _configs(s)
+        out = {"selected": selected, "entries": [e.to_dict(configs) for e in shown]}
+        typer.echo(json.dumps(out, indent=2, ensure_ascii=False))
+        return
+    for e in shown:
+        mark = "*" if e.id == selected else " "
+        name = e.label if e.platform == "any" else f"{e.label} · {e.platform_label}"
+        typer.echo(f"{mark} {e.id:22} {name:42} {e.support_words}")
+    if selected is None:
+        typer.echo("\nNo game selected: uv run pitwall game set <id>")
+
+
+@game_app.command("show")
+def game_show(
+    entry_id: Annotated[str | None, typer.Argument(metavar="ID", help="Defaults to the selected game")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Machine-readable output")] = False,
+) -> None:
+    """What a game sends and what Pitwall does with it (support level, features, setup guide)."""
+    from dataclasses import asdict
+
+    from pitwall import games
+    from pitwall.connect import game_guides, primary_lan_ip
+
+    s = get_settings()
+    selected = _selected_id(s)
+    eid = entry_id or selected
+    if eid is None:
+        typer.echo("no game selected: uv run pitwall game set <id> (see: uv run pitwall game list)", err=True)
+        raise typer.Exit(1)
+    e = _entry_or_bad(eid)
+    configs = _configs(s)
+    guide: dict[str, Any] | None = None
+    game_input: dict[str, Any] | None = None
+    server = _server(s)
+    if server is not None:
+        base, _version = server
+        got = _http("GET", f"{base}/api/games/{e.id}")
+        if got is not None and got[0] == 200 and isinstance(got[1], dict):
+            guide = got[1].get("guide")
+        rows = _http("GET", f"{base}/api/integrations")
+        if rows is not None and rows[0] == 200 and isinstance(rows[1], list):
+            game_input = games.game_input(e, rows[1])
+    if guide is None and e.guide_id is not None:
+        ac = configs["ac"]
+        ip = primary_lan_ip() or f"<{this_machine()}'s IP>"
+        g = next((x for x in game_guides(ip, s, ac.console_ip, ac.platform) if x.id == e.guide_id), None)
+        guide = asdict(g) if g is not None else None
+    if game_input is None:
+        game_input = games.game_input(e, [c.to_dict() for c in configs.values()])
+    if as_json:
+        out = {
+            "entry": e.to_dict(configs, with_fields=True, guide=guide),
+            "selected": e.id == selected,
+            "guide": guide,
+            "input": game_input,
+        }
+        typer.echo(json.dumps(out, indent=2, ensure_ascii=False))
+        return
+    name = e.label if e.platform == "any" else f"{e.label} · {e.platform_label}"
+    typer.echo(f"{name} ({e.id}){'  [selected]' if e.id == selected else ''}")
+    typer.echo(f"Support: {e.support_words}. {e.row.notes if e.row is not None else games.OTHER_NOTE}")
+    if e.integration is not None:
+        typer.echo(f"Telemetry: {games.transport(e.integration, configs)['summary']}")
+    by_short: dict[str, list[str]] = {}
+    for f in e.features:
+        if f.status in games.UNAVAILABLE:
+            by_short.setdefault(f.short, []).append(f.noun)
+    for short, nouns in by_short.items():
+        typer.echo(f"{short}: {', '.join(nouns)}")
+    for gid, glabel in games.GROUPS:
+        feats = sorted((f for f in e.features if f.group == gid), key=lambda f: not f.available)
+        typer.echo(f"\n{glabel}")
+        for f in feats:
+            status = {
+                "supported": "yes",
+                "partial": f.short.lower(),
+                "not_sent": "not sent",
+                "not_implemented": "not yet",
+            }.get(f.status, "unknown")
+            typer.echo(f"  {f.label:32} {status:10} {f.reason}")
+
+
+@game_app.command("set")
+def game_set(
+    entry_id: Annotated[str, typer.Argument(metavar="ID", help="A catalogue id, e.g. gt7:ps5 (pitwall game list)")],
+    console_ip: Annotated[
+        str | None, typer.Option("--console-ip", help="The console's LAN IP (Assetto Corsa: required; GT7: optional)")
+    ] = None,
+    no_input: Annotated[bool, typer.Option("--no-input", help="Only record the selection; leave inputs alone")] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Machine-readable output")] = False,
+) -> None:
+    """Tell Pitwall what you play: saves the selection and switches that game's telemetry input on (never off)."""
+    from pitwall import games
+    from pitwall.settings_store import SettingsStore
+
+    s = get_settings()
+    e = _entry_or_bad(entry_id)
+    server = _server(s)
+    if server is not None:  # never write settings.json while a server runs: it would overwrite it
+        base, version = server
+        body = {"id": e.id, "console_ip": console_ip, "ensure_input": not no_input, "source": "cli"}
+        reply = _http("PUT", f"{base}/api/game", body)
+        if reply is None:
+            typer.echo(f"the running Pitwall at {base} did not answer", err=True)
+            raise typer.Exit(1)
+        status, data = reply
+        if status == 404:
+            raise _older_server(version)
+        if status != 200 or not isinstance(data, dict):
+            detail = data.get("detail") if isinstance(data, dict) else None
+            typer.echo(f"the running Pitwall refused: {detail or f'HTTP {status}'}", err=True)
+            raise typer.Exit(1)
+        actions = data.get("actions") or []
+        via = "server"
+    else:
+        try:
+            ip = games.validate_console_ip(e, console_ip)
+        except ValueError as err:
+            typer.echo(str(err), err=True)
+            raise typer.Exit(1) from err
+        store = SettingsStore(s.data_dir / "settings.json")
+        store.replace(games.SECTION, games.new_selection(e.id, "cli").section())
+        actions = [] if no_input else games.ensure_input(e, s, store, None, ip)
+        via = "file"
+    if as_json:
+        typer.echo(json.dumps({"selected": e.id, "via": via, "actions": actions}, indent=2, ensure_ascii=False))
+        return
+    typer.echo(f"Selected {e.where} ({e.id}): {e.support_words}.")
+    for a in actions:
+        typer.echo(f"  {a.get('action')}: {a.get('message')}")
+
+
+@game_app.command("clear")
+def game_clear() -> None:
+    """Forget the selected game (inputs stay as they are)."""
+    from pitwall import games
+    from pitwall.settings_store import SettingsStore
+
+    s = get_settings()
+    server = _server(s)
+    if server is not None:
+        base, version = server
+        reply = _http("DELETE", f"{base}/api/game")
+        if reply is not None and reply[0] == 404:
+            raise _older_server(version)
+        if reply is None or reply[0] != 200:
+            typer.echo("the running Pitwall did not clear the selection", err=True)
+            raise typer.Exit(1)
+    else:
+        SettingsStore(s.data_dir / "settings.json").replace(games.SECTION, {})
+    typer.echo("No game selected.")
 
 
 @app.callback()

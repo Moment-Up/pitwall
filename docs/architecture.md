@@ -57,6 +57,17 @@ per-lap processing 7-18 ms; decode <30 us/packet.
 ground plane declared by the adapter (`AdapterInfo.ground_plane`). Field provenance per game in
 `AdapterInfo.fields` -> `/api/capabilities`.
 
+## Game selection and capability profiles
+`games.py` (pure, cached, no I/O) builds the game catalogue from `capabilities.PLANNED` (one entry per row and
+platform, plus `other:any`) and, for each entry, the status of every user-facing feature (supported / partial /
+not_sent / not_implemented / unknown) from `AdapterInfo.platforms` and `AdapterInfo.fields`, never stronger than the
+weakest of them; a field the adapter does not declare is unknown, never "not sent". The selected game is a
+`SettingsStore` section (`game`), served by `api/routes_game.py` and `pitwall game`. It drives setup flows (inputs,
+guides, doctor, engineer answers with no session). What the screens say about live data follows the *effective*
+game: the one detected from the live session (`LiveState.snapshot()` on the web thread, from state the ingest thread
+already writes; the router stores one attribute per newly detected sender port, nothing per packet), else the
+selected one. The selection never filters packets or changes an adapter.
+
 ## Analysis pipeline (deterministic)
 1. **Lap assembly** (`analysis/laps.py`): lap boundaries from the game's lap counter + official lap time;
    flashbacks detected by session time going backwards (rewound samples dropped, lap flagged); pit in/out,
@@ -91,9 +102,9 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
 `web-react/README.md` has the layout and the switch-over details.
 
 - **Routes** are hash routes `#/<area>/<page>[/<param>][?<query>]` over four areas: Drive (Coach, Car, Track,
-  Radio), Review (Sessions, Coaching, Progress, Ask), Setup (Connect, Rig, Car setup) and Settings (Drivers, Radio &
-  voice, AI engineer, Display, System). Every Svelte hash (`#/live`, `#/radio?token=…`, `#/sessions/<id>`, ...) is
-  rewritten in place, keeping its query (`src/lib/route-parse.ts`).
+  Radio), Review (Sessions, Coaching, Progress, Ask), Setup (Game, Connect, Rig, Car setup) and Settings (Drivers,
+  Radio & voice, AI engineer, Display, System). Every Svelte hash (`#/live`, `#/radio?token=…`, `#/sessions/<id>`,
+  ...) is rewritten in place, keeping its query (`src/lib/route-parse.ts`).
 - **Data:** one `/ws/live` socket for the whole app (snapshots at 20 Hz, the static payload every 5 s), the radio's
   `/ws/radio`, and REST through typed endpoint modules (`src/lib/endpoints/`) behind a request cache that a completed
   lap invalidates. Same origin and the same auth as the API: a LAN device's token cookie, or `?token=` remembered for

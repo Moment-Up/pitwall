@@ -238,6 +238,12 @@ def _fields(level: SupportLevel, motorsport: bool) -> dict[str, FieldSupport]:
         "session_type": FieldSupport(_U, "not sent"),
         "weather": FieldSupport(_U, "not sent (puddle depth / rumble only)"),
         "setup": FieldSupport(_U, "not sent"),
+        "drs_open": FieldSupport(_U, "not in Turn 10's Data Out field list"),
+        "ers_store_j": FieldSupport(_U, "not in Turn 10's Data Out field list"),
+        "damage": FieldSupport(_U, "not in Turn 10's Data Out field list"),
+        "track_zones": FieldSupport(_U, "no sector, marshal-zone or flag data"),
+        "field_samples": FieldSupport(_U, "Data Out describes the player's car only"),
+        "buttons": FieldSupport(_U, "no wheel-button data"),
     }
 
 

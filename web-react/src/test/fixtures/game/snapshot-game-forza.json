@@ -1,0 +1,12 @@
+{
+ "selected_id": "forza_motorsport:pc",
+ "effective_id": "forza_motorsport:pc",
+ "detected": null,
+ "mismatch": null,
+ "suggestion": null,
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "Forza Motorsport PC selected, nothing streaming"
+ }
+}

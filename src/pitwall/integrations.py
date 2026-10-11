@@ -21,6 +21,7 @@ console's UDP 9996), so its ``port`` is the *game's* port, never bound here and 
 from __future__ import annotations
 
 import logging
+import threading
 from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
@@ -32,9 +33,11 @@ from pitwall.model.telemetry import Platform
 
 if TYPE_CHECKING:
     from pitwall.adapters.ac.adapter import AcTrackGeometry
+    from pitwall.settings_store import SettingsStore
 
 log = logging.getLogger(__name__)
 
+SECTION = "integrations"  # SettingsStore section (core.runtime.INTEGRATIONS_SECTION)
 GT7_VARIANTS = ("A", "B", "~", "C")
 # Forza Horizon 6 binds its own outgoing socket in 5200-5300 (official doc), so the default sits just above it.
 FORZA_DEFAULT_PORT = 5301
@@ -202,6 +205,30 @@ def validate_update(key: str, values: Mapping[str, Any]) -> dict[str, Any]:
         else:
             raise ValueError(f"unknown setting {k!r}")
     return clean
+
+
+class PortConflict(Exception):
+    """Two enabled games would share a UDP port (``apply_update``)."""
+
+
+_update_lock = threading.Lock()  # read-modify-write of the section (two requests at once)
+
+
+def apply_update(settings: Settings, store: SettingsStore, key: str, values: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate a partial update of one integration, merge it into the stored section and save it (the runtime's
+    store listener applies it: listeners start or stop). Returns the integration's new stored values.
+
+    Raises ``ValueError`` (invalid value; user-readable) or ``PortConflict`` (two enabled games on one port); nothing
+    is saved then. Used by ``PUT /api/integrations/{key}``, ``PUT /api/game`` and ``pitwall game set``."""
+    clean = validate_update(key, values)
+    with _update_lock:
+        cur = store.get(SECTION)
+        merged = {**cur, key: {**(cur.get(key) or {}), **clean}}
+        conflicts = port_conflicts(resolve_configs(settings, merged).values())
+        if conflicts:
+            raise PortConflict("two enabled games would share a port: " + "; ".join(conflicts))
+        store.update(SECTION, {key: merged[key]})
+    return dict(merged[key])
 
 
 def _console_ip(v: Any, example: str) -> str:

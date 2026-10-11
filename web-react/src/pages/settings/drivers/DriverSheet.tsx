@@ -1,7 +1,8 @@
 // Add or edit a driver (spec 8): a Pro Sheet (right on iPad and Mac, bottom on phones, spec 3.4) with name, initials,
-// colour, skill level (with what it changes), coaching on the radio and the engineer's voice. The radio settings only
-// appear while the radio follows the seated driver (they would change nothing on track otherwise). Delete lives in
-// the footer and asks through an AlertDialog (DeleteDriverDialog).
+// colour, skill level (with what it changes), the game they usually play, coaching on the radio and the engineer's
+// voice. The radio settings only appear while the radio follows the seated driver (they would change nothing on track
+// otherwise); "Usually plays" only while the server supports it (GameState.driver_defaults). Delete lives in the
+// footer and asks through an AlertDialog (DeleteDriverDialog).
 
 import {
   Button,
@@ -10,18 +11,21 @@ import {
   FieldError,
   Input,
   Label,
+  ListBox,
   TextField,
 } from "@heroui/react";
-import { CellSwitch, RadioButtonGroup, Segment, Sheet } from "@heroui-pro/react";
+import { CellSelect, CellSwitch, RadioButtonGroup, Segment, Sheet } from "@heroui-pro/react";
 import { useEffect, useState, type FormEvent, type Key } from "react";
 import { usePrefs } from "../../../hooks/stores";
 import { INTENSITIES, SKILL_LEVELS, inkOn, type CoachingIntensity, type SkillLevel } from "../../../lib/drivers";
 import {
   NAME_MAX,
+  NO_USUAL_GAME,
   formBody,
   previewInitials,
   skillEffects,
   swatchesFor,
+  usualGameValue,
   withInitials,
   withName,
   type DriverForm,
@@ -35,6 +39,8 @@ export interface DriverSheetProps {
   radioFollows: boolean;
   wide: boolean;
   canDelete: boolean;
+  /** "Usually plays" options (model.usualGameOptions); null hides the control (a server without driver defaults). */
+  usualGames: { id: string; label: string }[] | null;
   onSave: (f: DriverForm) => Promise<void>;
   onDelete: () => void;
   onClose: () => void;
@@ -46,7 +52,17 @@ const SKILL_HINT: Record<SkillLevel, string> = {
   advanced: "Wants every detail",
 };
 
-export function DriverSheet({ form, savedName, radioFollows, wide, canDelete, onSave, onDelete, onClose }: DriverSheetProps) {
+export function DriverSheet({
+  form,
+  savedName,
+  radioFollows,
+  wide,
+  canDelete,
+  usualGames,
+  onSave,
+  onDelete,
+  onClose,
+}: DriverSheetProps) {
   const [f, setF] = useState<DriverForm | null>(form);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -200,6 +216,38 @@ export function DriverSheet({ form, savedName, radioFollows, wide, canDelete, on
                       ))}
                     </dl>
                   </div>
+
+                  {usualGames && (
+                    <div className="grid gap-2">
+                      <CellSelect
+                        aria-label="Usually plays"
+                        variant="secondary"
+                        value={usualGameValue(f, usualGames)}
+                        onChange={(k: Key | null) => {
+                          if (k != null) setF({ ...f, default_game: String(k) === NO_USUAL_GAME ? null : String(k) });
+                        }}
+                      >
+                        <CellSelect.Trigger className="h-auto min-h-12">
+                          <CellSelect.Label className="flex-none">Usually plays</CellSelect.Label>
+                          <CellSelect.Value className="min-w-0 flex-1 truncate text-right text-muted" />
+                          <CellSelect.Indicator />
+                        </CellSelect.Trigger>
+                        <CellSelect.Popover className="max-h-[min(60dvh,420px)] min-w-[280px] overflow-y-auto">
+                          <ListBox>
+                            {usualGames.map((o) => (
+                              <ListBox.Item key={o.id} id={o.id} textValue={o.label} className="min-h-12">
+                                {o.label}
+                                <ListBox.ItemIndicator />
+                              </ListBox.Item>
+                            ))}
+                          </ListBox>
+                        </CellSelect.Popover>
+                      </CellSelect>
+                      <span className="text-xs text-muted">
+                        Selected on Setup › Game when they take the seat, unless a game is already sending telemetry.
+                      </span>
+                    </div>
+                  )}
 
                   {radioFollows ? (
                     <>

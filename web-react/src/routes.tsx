@@ -108,6 +108,12 @@ export const AREAS: AreaDef[] = [
     question: "Are the game, the rig and the car set up right?",
     pages: [
       {
+        id: "game",
+        label: "Game",
+        summary: "What you're playing and what it sends",
+        component: lazyPage(() => import("./pages/setup/GamePage"), "GamePage"),
+      },
+      {
         id: "connect",
         label: "Connect",
         summary: "Point the game at Pitwall",

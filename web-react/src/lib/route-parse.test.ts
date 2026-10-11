@@ -184,6 +184,19 @@ describe("landing rules (spec 2.5)", () => {
     expect(landingPage("setup", {}, null)).toBe("rig"); // unknown yet: no change
     expect(landingPage("review", {}, false)).toBe("sessions"); // only Setup has the rule
   });
+
+  it("Setup opens on Game while no game is selected, before the Connect rule (game selection 5.1)", () => {
+    expect(landingPage("setup", { setup: "car" }, false, false)).toBe("game");
+    expect(landingPage("setup", { setup: "car" }, true, false)).toBe("game");
+    expect(landingPage("setup", { setup: "car" }, false, true)).toBe("connect");
+    expect(landingPage("setup", { setup: "car" }, true, true)).toBe("car");
+    expect(landingPage("setup", {}, null, null)).toBe("rig"); // unknown (or a server without game selection): no change
+    expect(landingPage("setup", { setup: "game" }, true, true)).toBe("game"); // a remembered Game page is kept
+    expect(landingPage("review", {}, null, false)).toBe("sessions"); // only Setup has the rule
+    expect(areaPath("setup", {}, true, false)).toBe("/setup/game");
+    expect(parseHash("#/setup/game").page).toBe("game");
+    expect(parseHash("#/setup/game").area).toBe("setup");
+  });
 });
 
 describe("page params", () => {
@@ -327,6 +340,19 @@ describe("router store", () => {
     expect(router.areaPath("setup")).toBe("/setup/rig");
     router.setHasRealSession(false);
     expect(router.areaPath("setup")).toBe("/setup/connect");
+    router.setHasRealSession(true);
+    expect(router.areaPath("setup")).toBe("/setup/rig");
+  });
+
+  it("Setup's link follows the game-selected flag first (game selection)", async () => {
+    stubBrowser("http://127.0.0.1:8770/next/#/drive/coach");
+    const { router } = await import("./router");
+    router.setHasRealSession(false);
+    router.setGameSelected(false);
+    expect(router.areaPath("setup")).toBe("/setup/game");
+    router.setGameSelected(true);
+    expect(router.areaPath("setup")).toBe("/setup/connect");
+    router.setGameSelected(null);
     router.setHasRealSession(true);
     expect(router.areaPath("setup")).toBe("/setup/rig");
   });

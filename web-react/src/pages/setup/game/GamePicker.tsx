@@ -1,0 +1,164 @@
+// "What are you playing?" (game-selection spec 5.1, 2.3): one HeroUI Card per game with its platforms as toggle
+// buttons (>= 44 px) and each platform's support words ("Tested live", "Built from community docs", "Not supported"),
+// from the server's catalogue, never stronger than capabilities.py. The selected card has the accent edge and a check.
+// F1 25 carries a switch for the 2026 Season Pack (UDP format 2026). ACC, iRacing and F1 24 sit under "More games".
+// Choosing sends PUT /api/game; the answer's actions (the server's words) are listed under the cards.
+
+import { Check, CircleCheck, CircleInfo, TriangleExclamation } from "@gravity-ui/icons";
+import { Button, Card, Chip, Disclosure, Switch } from "@heroui/react";
+import { useEffect, useState } from "react";
+import type { GameAction, GamesResponse } from "../../../lib/endpoints/game";
+import { actionLines, pickedId, pickerCards, pickerSelection, supportTone, type PickerCard } from "../../../lib/game";
+
+export interface GamePickerProps {
+  catalogue: GamesResponse;
+  selectedId: string | null;
+  /** The id being saved, or null. */
+  pending: string | null;
+  onChoose: (id: string) => void;
+  /** The last PUT's actions, for the entry it selected. */
+  result: { id: string; actions: GameAction[] } | null;
+  error: string | null;
+}
+
+function GameCardView({
+  card,
+  selectedId,
+  pending,
+  onChoose,
+}: {
+  card: PickerCard;
+  selectedId: string | null;
+  pending: string | null;
+  onChoose: (id: string) => void;
+}) {
+  const sel = pickerSelection({ main: [card], more: [] }, selectedId);
+  const [season, setSeason] = useState(sel?.season2026 ?? false);
+  useEffect(() => {
+    if (sel) setSeason(sel.season2026);
+  }, [sel?.season2026]);
+  const selected = sel !== null;
+  const busy = pending !== null;
+  return (
+    <Card
+      variant={selected ? "default" : "secondary"}
+      className={`gap-3 p-4 ${selected ? "shadow-[inset_4px_0_0_0_var(--accent)]" : ""}`}
+      aria-label={`${card.title}${selected ? ", selected" : ""}`}
+    >
+      <div className="flex items-start gap-2">
+        <Card.Title className="flex-1 text-base leading-snug font-semibold">{card.title}</Card.Title>
+        {selected && (
+          <span className="inline-flex items-center gap-1 text-sm font-semibold text-accent">
+            <Check aria-hidden="true" className="size-4" />
+            Selected
+          </span>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-2" role="group" aria-label={`${card.title} platforms`}>
+        {card.platforms.map((p) => {
+          const id = pickedId(p, season);
+          const on = selectedId === id;
+          return (
+            <Button
+              key={p.id}
+              variant={on ? "primary" : "outline"}
+              aria-pressed={on}
+              isPending={pending === id}
+              isDisabled={busy && pending !== id}
+              onPress={() => {
+                if (!on) onChoose(id);
+              }}
+              className="h-auto min-h-14 flex-col items-start gap-1 px-3 py-2 text-left"
+              aria-label={`${card.title} on ${p.label}: ${p.words}${on ? " (selected)" : ""}`}
+            >
+              <span className="text-[15px] leading-tight font-semibold">{p.label}</span>
+              <Chip size="sm" variant="soft" color={on ? "default" : supportTone(p.level)}>
+                <Chip.Label>{p.words}</Chip.Label>
+              </Chip>
+            </Button>
+          );
+        })}
+      </div>
+      {card.hasSeason2026 && (
+        <Switch
+          isSelected={season}
+          isDisabled={busy}
+          onChange={(v: boolean) => {
+            setSeason(v);
+            const cur = card.platforms.find((p) => p.id === sel?.platform);
+            if (cur) onChoose(pickedId(cur, v));
+          }}
+        >
+          <Switch.Content className="min-h-11">
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+            <span className="text-sm">2026 Season Pack cars (UDP format 2026)</span>
+          </Switch.Content>
+        </Switch>
+      )}
+    </Card>
+  );
+}
+
+const ACTION_ICON = { success: CircleCheck, warning: TriangleExclamation, danger: TriangleExclamation, default: CircleInfo };
+const ACTION_CLASS = { success: "text-success", warning: "text-warning", danger: "text-danger", default: "text-muted" };
+
+export function GamePicker({ catalogue, selectedId, pending, onChoose, result, error }: GamePickerProps) {
+  const { main, more } = pickerCards(catalogue);
+  const moreSelected = more.some((c) => pickerSelection({ main: [c], more: [] }, selectedId) !== null);
+  const lines = result && result.id === selectedId ? actionLines(result.actions) : [];
+  return (
+    <Card className="gap-4 p-5" aria-labelledby="pw-game-picker-title">
+      <Card.Header className="gap-1">
+        <Card.Title id="pw-game-picker-title" className="text-lg font-semibold">
+          What are you playing?
+        </Card.Title>
+        <Card.Description className="text-sm text-muted">
+          Pitwall then knows how to connect your game and what it sends. Choosing a game switches its telemetry input
+          on; it never switches another one off.
+        </Card.Description>
+      </Card.Header>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {main.map((c) => (
+          <GameCardView key={c.key} card={c} selectedId={selectedId} pending={pending} onChoose={onChoose} />
+        ))}
+      </div>
+      {more.length > 0 && (
+        <Disclosure defaultExpanded={moreSelected} className="border-t border-separator">
+          <Disclosure.Heading>
+            <Disclosure.Trigger className="flex min-h-12 w-full items-center justify-between gap-3 text-left text-sm font-semibold">
+              More games
+              <Disclosure.Indicator />
+            </Disclosure.Trigger>
+          </Disclosure.Heading>
+          <Disclosure.Content>
+            <Disclosure.Body className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2 xl:grid-cols-3">
+              {more.map((c) => (
+                <GameCardView key={c.key} card={c} selectedId={selectedId} pending={pending} onChoose={onChoose} />
+              ))}
+            </Disclosure.Body>
+          </Disclosure.Content>
+        </Disclosure>
+      )}
+      {error && (
+        <p role="alert" className="m-0 text-sm text-danger">
+          {error}
+        </p>
+      )}
+      {lines.length > 0 && (
+        <ul className="m-0 grid list-none gap-1.5 p-0" aria-label="What Pitwall did" role="status">
+          {lines.map((l) => {
+            const Icon = ACTION_ICON[l.tone];
+            return (
+              <li key={l.key} className="flex items-start gap-2 text-sm">
+                <Icon aria-hidden="true" className={`mt-0.5 size-4 shrink-0 ${ACTION_CLASS[l.tone]}`} />
+                <span>{l.text}</span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </Card>
+  );
+}

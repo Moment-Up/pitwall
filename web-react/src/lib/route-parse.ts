@@ -32,7 +32,7 @@ export const AREA_IDS: readonly AreaId[] = ["drive", "review", "setup", "setting
 export const AREA_PAGES: Readonly<Record<AreaId, readonly string[]>> = {
   drive: ["coach", "car", "track", "radio"],
   review: ["sessions", "coaching", "progress", "ask"],
-  setup: ["connect", "rig", "car"],
+  setup: ["game", "connect", "rig", "car"],
   settings: ["drivers", "radio", "ai", "display", "system"],
 };
 
@@ -65,10 +65,17 @@ export function isPage(area: AreaId, page: string | null | undefined): page is s
 
 /**
  * The page an area opens on (spec 2.1 / 2.5): the remembered sub-page when it is a real page, else the default.
- * Setup opens on Connect while there is no real (non-synthetic) session yet (`hasRealSession === false`); `null`
- * means "not known yet" and changes nothing.
+ * Setup opens on Game while no game is selected (`gameSelected === false`, game-selection spec 5.1), else on Connect
+ * while there is no real (non-synthetic) session yet (`hasRealSession === false`); `null` means "not known yet" (or
+ * a server that predates game selection) and changes nothing.
  */
-export function landingPage(area: AreaId, remembered?: RememberedPages, hasRealSession: boolean | null = null): string {
+export function landingPage(
+  area: AreaId,
+  remembered?: RememberedPages,
+  hasRealSession: boolean | null = null,
+  gameSelected: boolean | null = null,
+): string {
+  if (area === "setup" && gameSelected === false) return "game";
   if (area === "setup" && hasRealSession === false) return "connect";
   const r = remembered?.[area];
   return isPage(area, r) ? r : DEFAULT_PAGE[area];
@@ -76,8 +83,13 @@ export function landingPage(area: AreaId, remembered?: RememberedPages, hasRealS
 
 /** The full path an area link points at, e.g. "/settings/drivers". Navigation links use this, never a bare
  * "/<area>": a bare "#/settings" is the Svelte dashboard's AI-settings link (see legacyRedirect). */
-export function areaPath(area: AreaId, remembered?: RememberedPages, hasRealSession: boolean | null = null): string {
-  return `/${area}/${landingPage(area, remembered, hasRealSession)}`;
+export function areaPath(
+  area: AreaId,
+  remembered?: RememberedPages,
+  hasRealSession: boolean | null = null,
+  gameSelected: boolean | null = null,
+): string {
+  return `/${area}/${landingPage(area, remembered, hasRealSession, gameSelected)}`;
 }
 
 /** Split a location hash ("#/radio?token=x") into its path ("/radio") and query ("token=x"). */

@@ -25,6 +25,15 @@ Where a feature has less evidence than that, this page says so. [status.md](stat
 Drive is the screen next to your wheel. It reads only live telemetry and the radio, so it works with no language
 model at all. Values Pitwall does not know show as `-`, and synthetic data is labelled.
 
+**What your game sends.** A `-` means "not known right now": the value has not arrived yet. Data the game never
+sends is different, and once Pitwall knows the game ([Setup › Game](#game)) the screens say so in words where a
+whole slot is missing: for example the sector cells read "Sectors · Not sent by GT7" in Gran Turismo 7, the Car
+page names the tyre, fuel and ERS data your game does not send (or Pitwall does not read yet), and the delta is
+marked "estimated" where Pitwall works out the lap distance itself. The words describe the data on screen: the game
+that is sending right now, else the one you selected. Drive stays glanceable, with no banners: if a different game
+than the one you selected is sending, the status line says so only while the car is stationary, and the other pages
+show an alert with a button to switch.
+
 ### Coach
 
 ![Drive › Coach on track](screenshots/01-drive-coach.png)
@@ -76,6 +85,12 @@ The engineer speaks on its own too: a summary after each lap and a coaching poin
 lap (off the brake, steering nearly straight, with time to finish before the next braking zone). "Stop talking for
 two laps" and "You can talk again" work as you would expect. This timing is tested on replayed sessions; it has
 not yet been heard in a live session.
+
+The engineer knows what your game sends. Ask about data the game does not send, or that Pitwall does not read yet,
+and the answer comes at once from that fact, never from the language model and never as an estimate: in Assetto
+Corsa, "how are my tyres?" gets "Assetto Corsa doesn't send tyre temperatures, tyre wear, tyre pressures or brake
+temperatures." This works before any session is recorded, from the selected game; with no game selected or
+detected, the radio asks you to choose one on Setup › Game.
 
 **Braking calls** have four modes. *Focus* (the default) calls "brake" only for the one to three corners where you
 lose the most time under braking. *Markers* says the corner name before every braking zone. *All* calls every
@@ -133,6 +148,41 @@ Ask the engineer about any session in plain words. The same question works from 
 the facts used). `uv run pitwall report` prints a Markdown report of the latest session.
 
 ## Setup
+
+### Game
+
+Tell Pitwall what you play: pick the game, then the platform (PS5, PS4, Xbox or PC). The main list has F1 25 (with
+a switch for the 2026 Season Pack cars), Gran Turismo 7, Assetto Corsa, Forza Motorsport, Forza Horizon and
+"Another game". Assetto Corsa Competizione, iRacing and F1 24 or older are under *More games*, so you can say you
+play them even though Pitwall cannot read them. Each platform shows its support in the words of the
+[supported games](../README.md#supported-games) table.
+
+Choosing a game switches on its telemetry input and asks for the console's IP address where the game needs one
+(required for Assetto Corsa, optional for GT7). It never switches another game's input off, and it leaves alone an
+input that is receiving packets at that moment. The choice is kept for the whole rig and survives restarts. A
+driver can also have a usual game (Settings › Drivers › Edit › *Usually plays*): it is selected when that driver
+takes the seat, unless a game is sending telemetry at that moment.
+
+**What the game sends** lists Pitwall's features in six groups (timing, coaching, track, car and tyres, session and
+race, setup and radio). Each is marked Supported, Estimated, Partial, Not sent, Not in Pitwall yet or Unknown, with
+one sentence why; tap a row for the technical source. The marks come from the support matrix in
+`src/pitwall/capabilities.py` and from what each game's decoder declares field by field, and are never stronger than
+either. Some are cautious as a result: F1 25 on PS5 is tested live as a whole, but most of its features are rated
+"Built from the official spec" until each has its own evidence.
+
+The rest of Pitwall follows the choice. Setup › Connect lists your game first, the Rig walkthrough opens on it, Car
+setup says when its recommendations are for F1 25 only, and Drive › Coach without telemetry shows that game's steps
+(or asks what you are playing when nothing is chosen). Review uses each session's own game: a GT7 session has no
+sector columns. When nothing is chosen and telemetry arrives, Pitwall suggests the game it sees, or the one you last
+drove; it never chooses for you.
+
+From the terminal: `uv run pitwall game list` (`--all` for every game), `uv run pitwall game show [<id>]`,
+`uv run pitwall game set <id> [--console-ip <ip>]` and `uv run pitwall game clear`. Ids look like `gt7:ps5`;
+[install.md](install.md#tell-pitwall-what-you-play) lists them.
+
+Evidence: the selection, the feature lists and the game detection are tested with unit tests, synthetic streams and
+the recorded F1 25 (PS5) and Assetto Corsa (PS5) excerpts. Selecting GT7, Forza or Assetto Corsa has not yet been
+tried with a live console, and the page has not been used on an iPad.
 
 ### Connect
 
@@ -266,5 +316,7 @@ receives fixes only.
 | Settings | Settings › AI engineer |
 | Status | Settings › System |
 
-There is no classic equivalent of Review › Coaching or Review › Progress, and the classic Settings › Display
-equivalent is only a light/dark toggle.
+There is no classic equivalent of Setup › Game, Review › Coaching or Review › Progress, and the classic
+Settings › Display equivalent is only a light/dark toggle. The classic screens do not change with the chosen game: with the
+classic dashboard, choose the game with `uv run pitwall game set <id>` (the engineer and the radio use it either
+way).

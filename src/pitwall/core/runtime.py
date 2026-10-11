@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from pitwall import games
 from pitwall.adapters.ac.adapter import AcTrackGeometry
 from pitwall.adapters.base import GameAdapter
 from pitwall.analysis.brake_prior import BrakeEnvelope, PriorRefresher
@@ -25,7 +26,7 @@ from pitwall.core.lap_processor import AnalysisWorker, LapProcessor
 from pitwall.core.live import LiveState
 from pitwall.core.session import SessionManager
 from pitwall.core.track_knowledge import FieldWorker, PhysicsPrior, TrackKnowledgeResolver
-from pitwall.drivers import DriverService
+from pitwall.drivers import Driver, DriverService
 from pitwall.ingest.ac_client import CAPTURE_GAME_HINT as AC_CAPTURE_HINT
 from pitwall.ingest.ac_client import AcRemoteClient
 from pitwall.ingest.gt7_heartbeat import GT7Heartbeat
@@ -41,6 +42,7 @@ from pitwall.integrations import (
     listens,
     resolve_configs,
 )
+from pitwall.integrations import SECTION as INTEGRATIONS_STORE_SECTION
 from pitwall.model.telemetry import Game, Platform, SessionInfo
 from pitwall.settings_store import SecretStore, SettingsStore
 from pitwall.storage import repo
@@ -48,7 +50,7 @@ from pitwall.storage.db import Database, DbWriter
 
 log = logging.getLogger(__name__)
 
-INTEGRATIONS_SECTION = "integrations"
+INTEGRATIONS_SECTION = INTEGRATIONS_STORE_SECTION
 BOOT_BIND_ATTEMPTS = 20  # at start-up a previous instance may still be releasing the port (launchd restart)
 APPLY_BIND_ATTEMPTS = 3  # from the dashboard: fail fast and report instead of blocking the request
 AC_SOURCE = "ac-remote"  # sessions.source of live Assetto Corsa sessions
@@ -189,6 +191,13 @@ class Runtime:
         self._lock = threading.Lock()  # replay start/stop
         self._ilock = threading.RLock()  # live inputs
         self._unsubscribe = self.store.subscribe(INTEGRATIONS_SECTION, lambda _s, _v: self._on_integrations_changed())
+        # What the household plays (games.py): survives restarts and replays; the live snapshot reports it.
+        self.live.set_game_selection(games.parse_selection(self.store.get(games.SECTION)))
+        self._unsubscribe_game = self.store.subscribe(
+            games.SECTION, lambda _s, v: self.live.set_game_selection(games.parse_selection(v))
+        )
+        self._seated = self.drivers.active_id
+        self.drivers.subscribe(self._on_driver)
 
     # ------------------------------------------------------------------ live UDP (all games)
     @property
@@ -535,8 +544,25 @@ class Runtime:
         }
 
     # ------------------------------------------------------------------ shutdown
+    def _on_driver(self, driver: Driver | None) -> None:
+        """A new driver in the seat with a usual game (``DriverPreferences.default_game``) selects it, unless it is
+        already selected or telemetry is live (whatever is being driven right now wins). Profile edits of the seated
+        driver are not seat changes. Runs on the thread that changed the seat (never ingest)."""
+        new_id = driver.id if driver is not None else None
+        if new_id == self._seated:
+            return
+        self._seated = new_id
+        game = driver.preferences.default_game if driver is not None else None
+        sel = self.live.game_selection
+        if game is None or (sel is not None and sel.id == game) or self.live.connection()["status"] == "live":
+            return
+        self.store.replace(games.SECTION, games.new_selection(game, "driver_default").section())
+        log.info("game %s selected: the usual game of driver %s", game, new_id)
+
     def close(self) -> None:
         self._unsubscribe()
+        self._unsubscribe_game()
+        self.drivers.unsubscribe(self._on_driver)
         self.stop_replay()
         with self._ilock:
             self._live_ingest = False

@@ -269,13 +269,18 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         period = 1.0 / max(1.0, settings.live_ws_hz)
         last_version = -1
         last_static = 0.0
+        last_game: Any = None
         try:
             while True:
                 now = time.monotonic()
                 static = now - last_static > 5.0
                 snap = r.live.snapshot(include_static=static)
-                if snap["version"] != last_version or static:
+                # The game block changes without a new frame (a selection made on another device or by the CLI, a
+                # detection going live -> stale): send it at once instead of with the next 5 s static payload.
+                game = snap.get("game")
+                if snap["version"] != last_version or static or game != last_game:
                     last_version = snap["version"]
+                    last_game = game
                     if static:
                         last_static = now
                     await ws.send_bytes(orjson.dumps({"type": "snapshot", "data": snap}))
@@ -292,8 +297,14 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     # ------------------------------------------------------------------ sessions & laps
     @app.get("/api/sessions")
     async def sessions(request: Request, limit: int = 50, driver_id: int | None = None) -> list[dict[str, Any]]:
+        from pitwall.games import entry_for_session
+
         with rt(request).db.read() as c:
-            return repo.list_sessions(c, limit, driver_id=driver_id)
+            rows = repo.list_sessions(c, limit, driver_id=driver_id)
+        for row in rows:  # the catalogue entry of the session's game (Review chips, sector columns)
+            e = entry_for_session(row)
+            row["game_entry_id"] = e.id if e is not None else None
+        return rows
 
     @app.get("/api/sessions/{sid}")
     async def session(request: Request, sid: str) -> dict[str, Any]:
@@ -305,6 +316,10 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             s["setup"] = repo.latest_setup(c, sid)
         sk = skeleton_from_session_row(s)  # game-native sectors/zones; flags are never restored from storage
         s["skeleton"] = sk.to_dict() if sk else None
+        from pitwall.games import entry_for_session
+
+        e = entry_for_session(s)
+        s["game_entry_id"] = e.id if e is not None else None
         return s
 
     @app.get("/api/sessions/{sid}/events")
@@ -490,6 +505,17 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         r = rt(request)
         sid = body.session_id or await asyncio.to_thread(r.drivers.session_for_questions, r.live.session_id)
         if sid is None:
+            # No session yet, but a question only about data the game never sends (or Pitwall does not read) is
+            # still answerable from what Pitwall knows about the game (D8): deterministic, no LLM, nothing stored.
+            from pitwall import games
+            from pitwall.ai.engineer import detect_intent
+
+            entry = games.entry(r.live.effective_game_id())
+            if games.capability_only(detect_intent(body.question).name, entry) and entry is not None:
+                cap = await request.app.state.engineer.answer(
+                    body.question, games.capability_sheet(entry), [], use_llm=False
+                )
+                return {"session_id": None, **asdict(cap)}
             raise HTTPException(409, "no sessions recorded yet for the driver in the seat")
         sa = await asyncio.to_thread(request.app.state.analyzer.analyse, sid, None)
         if sa is None:
@@ -546,16 +572,22 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         sess = r.live.session
         decode = conn.get("decode") or {}
         err = str(decode.get("last_error") or "")
+        sel = r.live.game_selection
+        from pitwall.games import entry as game_entry
+
+        selected = game_entry(sel.id) if sel is not None else None
         hint = None
         if "packetFormat 2024" in err or "packetFormat 2023" in err:
             hint = "The game is sending an old UDP format: set UDP Format to 2025 (or 2026) in Telemetry Settings."
         elif "size" in err:
             hint = "Packet sizes don't match the selected format: check the in-game UDP Format setting."
         elif conn.get("unrecognised"):
-            hint = "Packets arrived that aren't F1 25 telemetry: check which device/game is sending to this port."
+            name = selected.text_name if selected is not None and selected.game_key != "other" else "F1 25"
+            hint = f"Packets arrived that aren't {name} telemetry: check which device/game is sending to this port."
         hub = request.app.state.hub
         return {
             **info,
+            "selected_game": selected.id if selected is not None else None,
             "udp": {
                 "listening": r.udp is not None,
                 "port": settings.f1_udp_port,
@@ -585,21 +617,15 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     @app.put("/api/integrations/{key}")
     async def update_integration(request: Request, key: str, body: dict[str, Any]) -> list[dict[str, Any]]:
         """Enable a game / set its console IP or port. Applied immediately (listeners restart as needed)."""
-        from pitwall.integrations import validate_update
+        from pitwall.integrations import PortConflict, apply_update
 
         r = rt(request)
         try:
-            clean = validate_update(key, body)
+            await asyncio.to_thread(apply_update, settings, r.store, key, body)
+        except PortConflict as e:
+            raise HTTPException(409, str(e)) from e
         except ValueError as e:
             raise HTTPException(422, str(e)) from e
-        cur = r.store.get("integrations")
-        merged = {**cur, key: {**(cur.get(key) or {}), **clean}}
-        from pitwall.integrations import port_conflicts, resolve_configs
-
-        conflicts = port_conflicts(resolve_configs(settings, merged).values())
-        if conflicts:
-            raise HTTPException(409, "two enabled games would share a port: " + "; ".join(conflicts))
-        await asyncio.to_thread(r.store.update, "integrations", {key: merged[key]})
         return r.input_status()
 
     # ------------------------------------------------------------------ voice lab (audition TTS samples)
@@ -741,6 +767,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_track import router as track_router
 
     app.include_router(track_router)
+    from pitwall.api.routes_game import router as game_router
+
+    app.include_router(game_router)
 
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias

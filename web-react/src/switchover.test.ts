@@ -34,6 +34,7 @@ const PAGE_FILES: Record<string, string> = {
   "review/coaching": "./pages/review/CoachingPage.tsx",
   "review/progress": "./pages/review/ProgressPage.tsx",
   "review/ask": "./pages/review/AskPage.tsx",
+  "setup/game": "./pages/setup/GamePage.tsx",
   "setup/connect": "./pages/setup/ConnectPage.tsx",
   "setup/rig": "./pages/setup/RigPage.tsx",
   "setup/car": "./pages/setup/CarSetupPage.tsx",

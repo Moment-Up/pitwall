@@ -45,10 +45,12 @@ export function useRouter<T>(select: (s: RouterState) => T): T {
   return useStore(router, select);
 }
 
-/** The path an area link opens (its remembered sub-page; Setup: Connect until a real session exists). */
+/** The path an area link opens (its remembered sub-page; Setup: Game until a game is selected, then Connect until a
+ * real session exists). */
 export function useAreaPath(area: AreaId): string {
   useRouter((s) => s.remembered);
   useRouter((s) => s.hasRealSession);
+  useRouter((s) => s.gameSelected);
   return router.areaPath(area);
 }
 

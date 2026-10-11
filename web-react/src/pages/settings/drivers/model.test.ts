@@ -16,9 +16,12 @@ import {
   skillEffects,
   sortDrivers,
   swatchesFor,
+  usualGameOptions,
+  usualGameValue,
   withInitials,
   withName,
 } from "./model";
+import { catalogue } from "../../../lib/game-testkit";
 
 // James's limits as the live server computes them (advanced, normal intensity).
 const ADVANCED: CoachingLimits = {
@@ -165,6 +168,33 @@ describe("the form", () => {
     expect(swatchesFor(PALETTE[0] ?? "")).toEqual(PALETTE);
     expect(swatchesFor("#123456")).toEqual([...PALETTE, "#123456"]);
     expect(swatchesFor("bad")).toEqual(PALETTE);
+  });
+});
+
+describe("usually plays (game selection)", () => {
+  it("is sent only when offered: an older server rejects unknown keys", () => {
+    const james = formBody(formFromDriver(JAMES));
+    expect(james.ok && "default_game" in james.body).toBe(false);
+    expect(formBody({ ...formFromDriver(JAMES), default_game: "gt7:ps5" })).toMatchObject({
+      ok: true,
+      body: { default_game: "gt7:ps5" },
+    });
+    const cleared = formBody({ ...formFromDriver(JAMES), default_game: null });
+    expect(cleared.ok && cleared.body.default_game).toBeNull();
+    const fromServer = formFromDriver({ ...JAMES, preferences: { ...JAMES.preferences, default_game: "ac:ps5" } });
+    expect(fromServer.default_game).toBe("ac:ps5");
+  });
+
+  it("offers none, then every catalogue entry in catalogue order; an unknown id reads as none", () => {
+    const entries = catalogue().entries;
+    const opts = usualGameOptions(entries);
+    expect(opts[0]).toEqual({ id: "none", label: "No usual game" });
+    expect(opts).toHaveLength(entries.length + 1);
+    expect(opts.find((o) => o.id === "gt7:ps5")?.label).toBe("Gran Turismo 7 · PS5");
+    expect(opts.find((o) => o.id === "other:any")?.label).toBe("Another game");
+    expect(usualGameValue({ default_game: "gt7:ps5" }, opts)).toBe("gt7:ps5");
+    expect(usualGameValue({ default_game: "fm7:xbox" }, opts)).toBe("none");
+    expect(usualGameValue({}, opts)).toBe("none");
   });
 });
 

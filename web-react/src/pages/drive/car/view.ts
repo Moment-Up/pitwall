@@ -6,6 +6,10 @@
 // is last known, dimmed by the page. Timing colours by current standing in the laps table (4.6), purple and PB only
 // with D2. Coaching texts are the backend's, verbatim (P9); race-control words never claim whose car an event was
 // unless the event says so.
+//
+// Game selection (spec 5.4): the game of the data on screen (`entry`, the effective catalogue entry) decides what a
+// tile leaves out. Only what the game is KNOWN not to send (not sent / not in Pitwall yet) is replaced by words or
+// hidden; an unknown feature keeps its "-". Without an entry (no catalogue yet, an older server) nothing changes.
 
 import { cornerAhead, cornerLabelOf } from "../../../lib/drive/corner";
 import { lapPicks, NO_REFERENCE_COACHING, pointText, simpleWording } from "../../../lib/drive/coach";
@@ -14,7 +18,9 @@ import type { DriveModel } from "../../../lib/drive/model";
 import { ageText, finite, signedFixed, UNKNOWN } from "../../../lib/drive/text";
 import { bestsOf, notCleanWords, standing, type TimingStatus } from "../../../lib/drive/timing";
 import type { LiveEvent, ObservationNext, SnapshotNext } from "../../../lib/drive/types";
+import type { GameEntry } from "../../../lib/endpoints/game";
 import { decimal, gearLabel, grouped, num, tyreTempColor, unit01 } from "../../../lib/format";
+import { featureOf, missing, tyresUnavailableText, unavailableLine } from "../../../lib/game";
 import { worldXZ } from "../../../lib/viz/track-map";
 
 /** The data on screen is current: not stale, not offline, and telemetry has arrived. */
@@ -46,6 +52,8 @@ export interface CarTileView {
   bias: string;
   /** "open" / "closed" / "-". */
   drs: string;
+  /** false: the game does not send DRS, so the cell is left out. */
+  drsShown: boolean;
   /** Telemetry health footer (moved from today's Live strip): "0 rejected · 0 unrecognised · udp:20777". */
   health: string;
 }
@@ -58,7 +66,11 @@ function pct(v: number | null | undefined): MeterView {
   return { text: f == null ? UNKNOWN : `${Math.round(f * 100)}%`, frac: f, hot: false };
 }
 
-export function carTile(s: SnapshotNext | null, model: Pick<DriveModel, "dim" | "state">): CarTileView {
+export function carTile(
+  s: SnapshotNext | null,
+  model: Pick<DriveModel, "dim" | "state">,
+  entry: GameEntry | null = null,
+): CarTileView {
   const live = liveValues(model);
   const f = live ? (s?.frame ?? null) : null;
   const facts = s?.frame ?? null; // settings (bias) stay as last known
@@ -76,6 +88,7 @@ export function carTile(s: SnapshotNext | null, model: Pick<DriveModel, "dim" | 
     steering: num(f?.steering, 2),
     bias: finite(facts?.brake_bias_front_pct) ? `${decimal(facts.brake_bias_front_pct, 1)}%` : UNKNOWN,
     drs: f?.drs_open == null ? UNKNOWN : f.drs_open ? "open" : "closed",
+    drsShown: !missing(entry, "drs"),
     health:
       offline || !conn
         ? "Telemetry health unknown while offline"
@@ -96,8 +109,8 @@ export interface TyreView {
   band: TyreBand;
   /** Out of the window in words, so colour is never the only signal (P4): "cold", "hot", "over", else null. */
   word: string | null;
-  /** "6% · 23.1 psi" (wear · pressure). */
-  sub: string;
+  /** "6% · 23.1 psi" (wear · pressure); only the parts the game sends; null = no line (it sends neither). */
+  sub: string | null;
   aria: string;
 }
 
@@ -106,8 +119,14 @@ export interface TyresView {
   chip: string | null;
   /** FL FR / RL RR (wheel order is always FL, FR, RL, RR). */
   wheels: [TyreView, TyreView, TyreView, TyreView];
-  /** "Fuel 18.4 kg · +1.2 laps (game) · ERS 2.8 MJ". */
+  /** "Fuel 18.4 kg · +1.2 laps (game) · ERS 2.8 MJ"; what the game does not send in words ("Fuel, ERS: not in
+   * Pitwall yet"). */
   energy: string;
+  /** The game sends no tyre data at all: one line instead of the wheel grid ("Assetto Corsa doesn't send tyre
+   * data"), else null. */
+  empty: string | null;
+  /** Under the grid when wear or pressures are not sent ("Tyre wear, pressures: not sent by GT7"), else null. */
+  caption: string | null;
 }
 
 const WHEELS = ["FL", "FR", "RL", "RR"] as const;
@@ -132,25 +151,36 @@ function capitalised(s: string): string {
   return s.length ? s[0]!.toUpperCase() + s.slice(1) : s;
 }
 
-export function tyresTile(s: SnapshotNext | null): TyresView {
+export function tyresTile(s: SnapshotNext | null, entry: GameEntry | null = null): TyresView {
   const f = s?.frame ?? null;
+  const showTemp = !missing(entry, "tyre_temps");
+  const showWear = !missing(entry, "tyre_wear");
+  const showP = !missing(entry, "tyre_pressures");
+  // A game that sends wear but no temperatures shows wear as the main value (none does today; kept for honesty).
+  const wearMain = !showTemp && showWear;
   const wheels = WHEELS.map((wheel, i): TyreView => {
-    const t = at(f?.tyre_surface_temp_c, i);
+    const t = showTemp ? at(f?.tyre_surface_temp_c, i) : null;
     const wear = at(f?.tyre_wear_pct, i);
     const p = at(f?.tyre_pressure_psi, i);
     const band = tyreBand(t);
     const wearText = wear == null ? UNKNOWN : `${num(wear)}%`;
     const pText = p == null ? UNKNOWN : `${num(p, 1)} psi`;
+    const subParts = [showWear && !wearMain ? wearText : null, showP ? pText : null].filter((x): x is string => x !== null);
+    const aria = [
+      showTemp
+        ? `surface ${t == null ? "unknown" : `${num(t)} degrees`}${BAND_WORD[band] ? `, ${BAND_WORD[band]}` : ""}`
+        : null,
+      showWear ? `wear ${wear == null ? "unknown" : `${num(wear)} percent`}` : null,
+      showP ? `pressure ${p == null ? "unknown" : `${num(p, 1)} psi`}` : null,
+    ].filter(Boolean);
     return {
       wheel,
-      temp: t == null ? UNKNOWN : `${num(t)}°`,
+      temp: wearMain ? wearText : t == null ? UNKNOWN : `${num(t)}°`,
       colour: tyreTempColor(t),
       band,
       word: BAND_WORD[band] ?? null,
-      sub: `${wearText} · ${pText}`,
-      aria: `${wheel}: surface ${t == null ? "unknown" : `${num(t)} degrees`}${BAND_WORD[band] ? `, ${BAND_WORD[band]}` : ""}, wear ${
-        wear == null ? "unknown" : `${num(wear)} percent`
-      }, pressure ${p == null ? "unknown" : `${num(p, 1)} psi`}`,
+      sub: subParts.length ? subParts.join(" · ") : null,
+      aria: `${wheel}: ${aria.join(", ")}`,
     };
   }) as TyresView["wheels"];
   const compound = f?.tyre_compound ? capitalised(f.tyre_compound) : null;
@@ -159,7 +189,22 @@ export function tyresTile(s: SnapshotNext | null): TyresView {
   const fuel = finite(f?.fuel_kg) ? `${num(f.fuel_kg, 1)} kg` : UNKNOWN;
   const margin = finite(f?.fuel_remaining_laps_game) ? `${signedFixed(f.fuel_remaining_laps_game, 1)} laps (game)` : null;
   const ers = finite(f?.ers_store_j) ? `${num(f.ers_store_j / 1e6, 1)} MJ` : UNKNOWN;
-  return { chip, wheels, energy: [`Fuel ${fuel}`, margin, `ERS ${ers}`].filter(Boolean).join(" · ") };
+  const energy = [
+    missing(entry, "fuel") ? null : `Fuel ${fuel}`,
+    margin,
+    missing(entry, "ers") ? null : `ERS ${ers}`,
+    unavailableLine(entry, ["fuel", "ers"]),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const empty = tyresUnavailableText(entry);
+  return {
+    chip,
+    wheels,
+    energy,
+    empty,
+    caption: empty || !showTemp ? null : unavailableLine(entry, ["tyre_wear", "tyre_pressures"]),
+  };
 }
 
 // ------------------------------------------------------------------------------------------------ laps tile
@@ -190,16 +235,24 @@ export interface LapsTileView {
   sub: string;
   tier: 1 | 2;
   empty: string | null;
+  /** false: the game sends no sector times, so the S1-S3 columns are left out. */
+  sectors: boolean;
+  /** The tile foot's words when it does not ("No sectors from GT7"), else null. */
+  noSectors: string | null;
 }
 
 /** Newest laps shown on the wall (spec 5.1). */
 export const WALL_LAPS = 8;
 
-export function lapsTile(s: SnapshotNext | null, max = WALL_LAPS): LapsTileView {
+export function lapsTile(s: SnapshotNext | null, max = WALL_LAPS, entry: GameEntry | null = null): LapsTileView {
   const laps = s?.laps ?? [];
   const ref = s?.reference ?? null;
   const sub = `current standing · ${ref ? `ref L${ref.lap_number}` : "no reference yet"}`;
-  if (!s || !laps.length) return { rows: [], sub, tier: s ? bestsOf(s).tier : 1, empty: "No completed laps yet" };
+  const sectors = !missing(entry, "sectors");
+  const noSectors = sectors || !entry ? null : `No sectors from ${entry.text_name}`;
+  if (!s || !laps.length) {
+    return { rows: [], sub, tier: s ? bestsOf(s).tier : 1, empty: "No completed laps yet", sectors, noSectors };
+  }
   const bv = bestsOf(s);
   const clean = laps.map((l) => l.clean);
   // Standing over every lap the snapshot carries (20 newest), so the session best is right; then the newest `max`.
@@ -251,7 +304,7 @@ export function lapsTile(s: SnapshotNext | null, max = WALL_LAPS): LapsTileView 
       delta: isRef || t == null || refMs == null ? null : signedFixed((t - refMs) / 1000, 2),
     };
   });
-  return { rows, sub, tier: bv.tier, empty: null };
+  return { rows, sub, tier: bv.tier, empty: null, sectors, noSectors };
 }
 
 // -------------------------------------------------------------------------------------------- coaching tile
@@ -354,14 +407,21 @@ export function eventWords(e: Pick<LiveEvent, "kind" | "code" | "player">): stri
   return null;
 }
 
-/** The map tile's footer: the newest race-control event and its age ("Race control · Penalty issued · 2 min ago"). */
-export function raceControlLine(events: readonly LiveEvent[] | null | undefined, nowS: number): string {
+/** The map tile's footer: the newest race-control event and its age ("Race control · Penalty issued · 2 min ago").
+ * With nothing to show and a game known not to send flags: "Race control · not sent by GT7". */
+export function raceControlLine(
+  events: readonly LiveEvent[] | null | undefined,
+  nowS: number,
+  entry: GameEntry | null = null,
+): string {
   for (const e of events ?? []) {
     const w = eventWords(e);
     if (!w) continue;
     const age = finite(e.t) && e.t <= nowS + 5 ? Math.max(0, nowS - e.t) : null;
     return `Race control · ${w}${age != null ? ` · ${age < 5 ? "just now" : `${ageText(age)} ago`}` : ""}`;
   }
+  const flags = featureOf(entry, "flags");
+  if (flags && missing(entry, "flags")) return `Race control · ${flags.short[0]!.toLowerCase()}${flags.short.slice(1)}`;
   return "Race control · nothing yet";
 }
 

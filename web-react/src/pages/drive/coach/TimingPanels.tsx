@@ -15,8 +15,27 @@ import type { LapTimesView, SectorCellsView } from "../../../lib/drive/timing";
 import { TimeText } from "./parts";
 import { barStep, cellCaption, sameProps } from "./view";
 
-export const SectorCells = memo(function SectorCells({ sectors }: { sectors: SectorCellsView }) {
+/**
+ * `unavailable`: the game is known not to send sector times ("Sectors · Not sent by GT7", game selection): one muted
+ * cell across the same slot (same size, P2) instead of three dashes. Null = the three cells as always.
+ */
+export const SectorCells = memo(function SectorCells({
+  sectors,
+  unavailable = null,
+}: {
+  sectors: SectorCellsView;
+  unavailable?: string | null;
+}) {
   const caption = cellCaption(sectors.caption);
+  if (unavailable) {
+    return (
+      <div className="pwc-sect">
+        <Card variant="secondary" className="pw-tcell pwc-sect__none" role="note">
+          <span className="pwc-sect__none-text">{unavailable}</span>
+        </Card>
+      </div>
+    );
+  }
   return (
     <div className="pwc-sect">
       {/* Phones: one caption over the row instead of one per cell (no room for "last lap · L6" in a third). */}

@@ -1,0 +1,409 @@
+{
+ "selected": {
+  "id": "forza_motorsport:pc",
+  "since_unix": 1760180000.0,
+  "source": "dashboard"
+ },
+ "entry": {
+  "id": "forza_motorsport:pc",
+  "game_key": "forza_motorsport",
+  "label": "Forza Motorsport (2023)",
+  "short_label": "FM",
+  "text_name": "Forza Motorsport",
+  "platform": "pc",
+  "platform_label": "PC",
+  "group": "main",
+  "adapter_game": "forza_motorsport",
+  "variant": null,
+  "implemented": true,
+  "integration": "forza",
+  "support": {
+   "level": "community_documented",
+   "words": "Built from community docs",
+   "note": "Implemented from Turn 10's Data Out doc (Sled 232 / Dash 311 / FM2023 331 B): tyre wear and track ordinal. Lap distance from DistanceTraveled. Synthetic tests only - not yet tested on a real console.",
+   "capability_row": "forza_motorsport"
+  },
+  "transport": {
+   "kind": "udp_listen",
+   "summary": "The game sends Data Out telemetry to this Mac's IP, port 5301 (Settings › Gameplay & HUD › UDP Race Telemetry).",
+   "port": 5301,
+   "console_port": null,
+   "console_ip": "no",
+   "in_game_setting": true
+  },
+  "guide_id": "forza",
+  "rig": null,
+  "features": [
+   {
+    "id": "lap_timing",
+    "label": "Lap times",
+    "group": "timing",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Partial",
+    "reason": "Forza Motorsport sends lap times, but Pitwall works out where each lap ends, so a lap can stay untimed.",
+    "detail": "lap_number: Dash.LapNumber (laps completed) + 1; current_lap_time_ms: Dash.CurrentLap (s -> ms); last_lap_time_ms: Dash.LastLap (s -> ms; 0 -> None); lap_completion: derived: LapNumber increment, time = Dash.LastLap (held up to 0.1 s for a stale LastLap, else untimed); valid=False only for a lap with a reset to track (trace un-anchored) (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "lap_number",
+     "current_lap_time_ms",
+     "last_lap_time_ms",
+     "lap_completion"
+    ]
+   },
+   {
+    "id": "sectors",
+    "label": "Sector times",
+    "group": "timing",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send sector times.",
+    "detail": "no sector data (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "sector"
+    ]
+   },
+   {
+    "id": "delta",
+    "label": "Live delta",
+    "group": "timing",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "Forza sends no lap distance: Pitwall measures the distance you drive from the start line.",
+    "detail": "lap_distance_m: derived: Dash.DistanceTraveled minus its value at the observed line crossing (driven line, not a centreline); None until the first crossing of a session and after a reset to track; current_lap_time_ms: Dash.CurrentLap (s -> ms) (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "lap_distance_m",
+     "current_lap_time_ms"
+    ]
+   },
+   {
+    "id": "braking_cues",
+    "label": "Braking cues",
+    "group": "coaching",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "Forza sends no lap distance: Pitwall measures the distance you drive from the start line.",
+    "detail": "brake: Dash.Brake (u8 0..255 -> 0..1); speed_kph: Dash.Speed (m/s -> km/h); Sled format: derived |Velocity| (m/s -> km/h); lap_distance_m: derived: Dash.DistanceTraveled minus its value at the observed line crossing (driven line, not a centreline); None until the first crossing of a session and after a reset to track (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "brake",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "corner_coaching",
+    "label": "Corner coaching",
+    "group": "coaching",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "Forza sends no lap distance: Pitwall measures the distance you drive from the start line.",
+    "detail": "brake: Dash.Brake (u8 0..255 -> 0..1); throttle: Dash.Accel (u8 0..255 -> 0..1); speed_kph: Dash.Speed (m/s -> km/h); Sled format: derived |Velocity| (m/s -> km/h); lap_distance_m: derived: Dash.DistanceTraveled minus its value at the observed line crossing (driven line, not a centreline); None until the first crossing of a session and after a reset to track (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "brake",
+     "throttle",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "track_map",
+    "label": "Track map",
+    "group": "track",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "Forza sends no lap distance: Pitwall measures the distance you drive from the start line.",
+    "detail": "pos_x_m: Dash.PositionX (world m); pos_z_m: Dash.PositionZ (world m); lap_distance_m: derived: Dash.DistanceTraveled minus its value at the observed line crossing (driven line, not a centreline); None until the first crossing of a session and after a reset to track (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "pos_x_m",
+     "pos_z_m",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "official_corner_names",
+    "label": "Official corner names",
+    "group": "track",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Pitwall's official corner names cover F1 25 only; Forza Motorsport corners are numbered from your laps.",
+    "detail": "no track sheet lists this game (analysis.track_identity.load_sheets) (row forza_motorsport)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "ai_field",
+    "label": "AI field braking model",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send the other cars' positions, so there is no AI field braking model.",
+    "detail": "Data Out describes the player's car only (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "flags",
+    "label": "Flags & marshal zones",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send flags.",
+    "detail": "no sector, marshal-zone or flag data (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "track_zones"
+    ]
+   },
+   {
+    "id": "fuel",
+    "label": "Fuel",
+    "group": "car",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Forza sends only how full the tank is, not its size, so Pitwall doesn't show fuel yet.",
+    "detail": "fuel_kg: Dash.Fuel is a 0..1 tank fraction without capacity (fraction in SessionInfo.extra['fuel_fraction']) (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "fuel_kg"
+    ]
+   },
+   {
+    "id": "tyre_temps",
+    "label": "Tyre temperatures",
+    "group": "car",
+    "status": "supported",
+    "evidence": "community_documented",
+    "short": "",
+    "reason": "Forza Motorsport sends tyre temperatures.",
+    "detail": "tyre_surface_temp_c: Dash.TireTemp* (one value per tyre; degF per community docs -> degC; surface vs core undocumented) (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "tyre_surface_temp_c"
+    ]
+   },
+   {
+    "id": "tyre_wear",
+    "label": "Tyre wear",
+    "group": "car",
+    "status": "supported",
+    "evidence": "community_documented",
+    "short": "",
+    "reason": "Forza Motorsport sends tyre wear.",
+    "detail": "tyre_wear_pct: FM2023 only: TireWear* (0..1 wear fraction per community -> %) (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "tyre_wear_pct"
+    ]
+   },
+   {
+    "id": "tyre_pressures",
+    "label": "Tyre pressures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send tyre pressures.",
+    "detail": "not sent (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "tyre_pressure_psi"
+    ]
+   },
+   {
+    "id": "brake_temps",
+    "label": "Brake temperatures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send brake temperatures.",
+    "detail": "not sent (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "brake_temp_c"
+    ]
+   },
+   {
+    "id": "damage",
+    "label": "Car damage",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send damage.",
+    "detail": "not in Turn 10's Data Out field list (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "damage"
+    ]
+   },
+   {
+    "id": "ers",
+    "label": "ERS / hybrid",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send ERS.",
+    "detail": "not in Turn 10's Data Out field list (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "ers_store_j"
+    ]
+   },
+   {
+    "id": "drs",
+    "label": "DRS",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send DRS.",
+    "detail": "not in Turn 10's Data Out field list (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "drs_open"
+    ]
+   },
+   {
+    "id": "weather",
+    "label": "Weather",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send weather.",
+    "detail": "not sent (puddle depth / rumble only) (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "weather"
+    ]
+   },
+   {
+    "id": "session_info",
+    "label": "Session type & results",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send the session type.",
+    "detail": "not sent (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "session_type"
+    ]
+   },
+   {
+    "id": "field_data",
+    "label": "Other cars' data",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send data about the other cars.",
+    "detail": "Data Out describes the player's car only (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "setup_telemetry",
+    "label": "Car setup from the game",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send its car setup.",
+    "detail": "not sent (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "setup"
+    ]
+   },
+   {
+    "id": "setup_recommendations",
+    "label": "Car setup recommendations",
+    "group": "setup_radio",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Pitwall's car setup recommendations exist for F1 25 only.",
+    "detail": "carsetup.context.F1_GAMES (row forza_motorsport)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "wheel_ptt",
+    "label": "Push-to-talk on a wheel button",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send wheel button presses.",
+    "detail": "no wheel-button data (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "buttons"
+    ]
+   }
+  ],
+  "notes": [
+   "Implemented from Turn 10's official field list + community packet sizes; synthetic-validated only.",
+   "Select the 'Dash' packet format in game: 'Sled' (232 B) has no position, lap, input or tyre data.",
+   "Lap distance is the driven distance (DistanceTraveled), not a centreline: a 1 % longer line moves the end of a 4 km lap ~40 m. The first lap of a session (no observed line crossing) is not assembled.",
+   "A lap whose time (LastLap) lags the lap counter by more than 0.1 s is stored untimed (unverified game behaviour: the hold is kept short so live cues are not delayed).",
+   "No sector times, lap validity, pit state, weather or setup in the protocol.",
+   "Gear 0 / reverse / neutral encoding undocumented: reported as None until verified with a capture."
+  ]
+ },
+ "effective_id": "forza_motorsport:pc",
+ "first_run": false,
+ "detected": null,
+ "mismatch": null,
+ "suggestion": null,
+ "input": {
+  "key": "forza",
+  "name": "Forza Motorsport / Forza Horizon (Data Out)",
+  "enabled": true,
+  "listening": true,
+  "received": 0,
+  "console_ip": null,
+  "console_ip_need": "no",
+  "port": 5301,
+  "platform": null,
+  "error": null,
+  "in_use": false
+ },
+ "other_inputs": [
+  {
+   "key": "f1",
+   "name": "EA SPORTS F1 25",
+   "enabled": true,
+   "in_use": false,
+   "can_disable": false
+  }
+ ],
+ "driver_defaults": true,
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "GET /api/game after PUT forza_motorsport:pc"
+ }
+}

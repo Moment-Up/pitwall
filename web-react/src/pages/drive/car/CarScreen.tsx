@@ -7,13 +7,14 @@
 //   Inputs, last 12 s (4) │ Laps, current standing (5)            │ Coaching · last lap (3)     1fr
 
 import { gameLength } from "../../../lib/drive/geometry";
+import type { GameEntry } from "../../../lib/endpoints/game";
 import type { DriveModel } from "../../../lib/drive/model";
 import type { SnapshotNext } from "../../../lib/drive/types";
 import type { HistoryPoint } from "../../../lib/live";
 import type { BrakePrior, TrackOutline } from "../../../lib/viz/outline";
 import { DriveFrame } from "../DriveFrame";
 import { CarTile, CoachingTile, InputsTile, LapsTile, MapTile, TyresTile } from "./CarTiles";
-import { carTile, coachingTile, lapsTile, mapTile, raceControlLine, tyresTile } from "./view";
+import { carTile, coachingTile, lapsTile, mapTile, raceControlLine, tyresTile, WALL_LAPS } from "./view";
 
 export interface CarScreenProps {
   model: DriveModel;
@@ -26,14 +27,26 @@ export interface CarScreenProps {
   simple?: boolean;
   outline?: TrackOutline | null;
   prior?: BrakePrior | null;
+  /** The game of the data on screen (game selection): what it does not send is said in words, not dashes. */
+  entry?: GameEntry | null;
 }
 
-export function CarScreen({ model, snap, history, nowS, maySleep = false, simple = false, outline = null, prior = null }: CarScreenProps) {
+export function CarScreen({
+  model,
+  snap,
+  history,
+  nowS,
+  maySleep = false,
+  simple = false,
+  outline = null,
+  prior = null,
+  entry = null,
+}: CarScreenProps) {
   // Every snapshot arrives as fresh JSON, so the views are cheap to rebuild and each tile is memoised on its
   // content instead: the laps and coaching tiles re-render once a lap, not per frame.
   return (
     <DriveFrame status={model.status} maySleep={maySleep} layout="car" dim={model.dim} state={model.state}>
-      <CarTile v={carTile(snap, model)} />
+      <CarTile v={carTile(snap, model, entry)} />
       <MapTile
         model={snap?.track_model}
         skeleton={snap?.skeleton}
@@ -41,11 +54,11 @@ export function CarScreen({ model, snap, history, nowS, maySleep = false, simple
         view={mapTile(snap, model)}
         outline={outline}
         prior={prior}
-        raceControl={raceControlLine(snap?.events, nowS)}
+        raceControl={raceControlLine(snap?.events, nowS, entry)}
       />
-      <TyresTile v={tyresTile(snap)} />
+      <TyresTile v={tyresTile(snap, entry)} />
       <InputsTile history={history} dim={model.dim} />
-      <LapsTile v={lapsTile(snap)} />
+      <LapsTile v={lapsTile(snap, WALL_LAPS, entry)} />
       <CoachingTile v={coachingTile(snap, simple)} />
     </DriveFrame>
   );

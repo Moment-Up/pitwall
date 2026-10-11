@@ -11,9 +11,13 @@
 // States (4.7): ready / session complete / no telemetry swap the hero, coach and delta areas for one card; every
 // other state keeps the slots and swaps content inside them (P2: nothing moves). Stale and offline dim the last
 // content to 45 % and blank every running value.
+//
+// Game selection (spec 5.3) changes only: the no-telemetry card (the picker while no game is selected, else the
+// selected game's steps), one muted sector cell when the game sends no sectors, and "· estimated" on the delta header
+// when the game sends no lap distance. Nothing else on Coach mentions the game (glanceable).
 
 import { Card, Skeleton } from "@heroui/react";
-import { lazy, memo, Suspense } from "react";
+import { lazy, memo, Suspense, type ReactNode } from "react";
 import { DriveStatusSlot } from "../../../components/shell/DriveStatusSlot";
 import type { DeltaView } from "../../../lib/drive/delta";
 import type { DriveModel, EndedCard } from "../../../lib/drive/model";
@@ -27,7 +31,7 @@ import { RadioStrip } from "./RadioStrip";
 import { ReadyCard } from "./ReadyCard";
 import { StatusContent } from "./StatusContent";
 import { LapTimes, SectorCells } from "./TimingPanels";
-import { barStep, endedCorners, heroText, sameProps } from "./view";
+import { barStep, endedCorners, estimatedDelta, heroText, NO_COACH_GAME, sameProps, type CoachGameView } from "./view";
 import "./coach.css";
 
 // Pro KPI pulls Recharts in at module level: the card is its own chunk (spec 4.9, 4.11).
@@ -70,9 +74,21 @@ export interface CoachScreenProps {
   listening?: string | null;
   /** The live track model: names the Session complete card's corners by official label and name. */
   trackModel?: TrackModelNext | null;
+  /** What the game of the data on screen changes (game selection 5.3): the sector slot, the delta header. */
+  game?: CoachGameView;
+  /** The no-telemetry card to show instead of the default one (the game picker, or the selected game's steps). */
+  noData?: ReactNode;
 }
 
-export function CoachScreen({ model, delta, maySleep = false, listening = null, trackModel = null }: CoachScreenProps) {
+export function CoachScreen({
+  model,
+  delta,
+  maySleep = false,
+  listening = null,
+  trackModel = null,
+  game = NO_COACH_GAME,
+  noData,
+}: CoachScreenProps) {
   const s = model.status;
   const approach = model.hero.kind === "corner" ? barStep(model.hero.approach) : null;
   let middle;
@@ -82,13 +98,13 @@ export function CoachScreen({ model, delta, maySleep = false, listening = null, 
       <SessionCompleteSlot ended={model.ended} legendTier={model.tier} corners={endedCorners(model.ended, trackModel)} />
     );
   }
-  else if (model.card === "no_data") middle = <NoTelemetryCard />;
+  else if (model.card === "no_data") middle = noData ?? <NoTelemetryCard />;
   else {
     middle = (
       <>
         <HeroPanel hero={heroText(model.hero)} approach={approach} cue={model.cue} />
         <CoachCard coach={model.coach} />
-        <DeltaPanel delta={delta ?? model.delta} />
+        <DeltaPanel delta={estimatedDelta(delta ?? model.delta, game.deltaEstimated)} />
       </>
     );
   }
@@ -98,7 +114,7 @@ export function CoachScreen({ model, delta, maySleep = false, listening = null, 
         <StatusContent status={s} maySleep={maySleep} listening={listening} />
       </DriveStatusSlot>
       {middle}
-      <SectorCells sectors={model.sectors} />
+      <SectorCells sectors={model.sectors} unavailable={game.sectors} />
       <LapTimes laps={model.laps} />
       <CoachRibbon ribbon={model.ribbon} />
       <RadioStrip outcome={model.lastCue?.words ?? null} />

@@ -4,7 +4,8 @@
 //                                              Drive: no header, its Segment sits in the status slot (DriveStatusSlot)
 //   <  768 px   app bar (52) / content / tab bar (64 + safe area); the Segment scrolls under the app bar
 //
-// The content column scrolls; the rail, app bar and tab bar stay put. Content max width 1680 px, centred. The app
+// Review, Setup and Settings carry the game alert (another game's data arriving, or a suggestion) above the page;
+// Drive never does (P2). The content column scrolls; the rail, app bar and tab bar stay put. Content max width 1680 px, centred. The app
 // runs as a Home Screen web app with a translucent status bar, so the shell pads by the safe-area insets (the bottom
 // one: the tab bar on phones, the rail foot and the mini radio bar on iPad; Drive's grids pad their own bottom).
 //
@@ -15,6 +16,7 @@ import { Component, lazy, Suspense, useState, type ErrorInfo, type ReactNode } f
 import { useRoute } from "../../hooks/stores";
 import { AreaActionsContext, AreaHeader } from "./AreaHeader";
 import { BottomTabBar } from "./BottomTabBar";
+import { GameAlert } from "./GameAlert";
 import { useRadio } from "../radio";
 import { ScrollRow } from "../ScrollRow";
 import { NavRail } from "./NavRail";
@@ -95,7 +97,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className={`mx-auto w-full max-w-[1680px] px-4 md:px-6 ${miniBar ? "pb-24" : "pb-8"}`}>
               <AreaHeader area={route.area} actionsRef={setActionsEl} />
               <AreaActionsContext.Provider value={actionsEl}>
-                <div className="pt-2 md:pt-6">{children}</div>
+                <div className="pt-2 md:pt-6">
+                  <GameAlert />
+                  {children}
+                </div>
               </AreaActionsContext.Provider>
             </div>
           )}

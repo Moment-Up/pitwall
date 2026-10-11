@@ -1,0 +1,424 @@
+{
+ "selected": {
+  "id": "gt7:ps5",
+  "since_unix": 1760180000.0,
+  "source": "dashboard"
+ },
+ "entry": {
+  "id": "gt7:ps5",
+  "game_key": "gt7",
+  "label": "Gran Turismo 7",
+  "short_label": "GT7",
+  "text_name": "GT7",
+  "platform": "ps5",
+  "platform_label": "PS5",
+  "group": "main",
+  "adapter_game": "gt7",
+  "variant": null,
+  "implemented": true,
+  "integration": "gt7",
+  "support": {
+   "level": "community_documented",
+   "words": "Built from community docs",
+   "note": "Implemented from community protocol docs (Salsa20 written from the published spec; variants A/B/~/C). No lap distance or track id on the wire: distance is integrated from speed (~1% drift), the circuit is recognised from the start/finish line. Synthetic tests only - not yet tested on a real PS5. Enable on the Connect page.",
+   "capability_row": "gt7"
+  },
+  "transport": {
+   "kind": "udp_heartbeat",
+   "summary": "Pitwall asks the console for telemetry (heartbeat to UDP 33739); it arrives on UDP 33740.",
+   "port": 33740,
+   "console_port": 33739,
+   "console_ip": "optional",
+   "in_game_setting": false
+  },
+  "guide_id": "gt7",
+  "rig": {
+   "game": "gt7",
+   "platform": "ps5"
+  },
+  "features": [
+   {
+    "id": "lap_timing",
+    "label": "Lap times",
+    "group": "timing",
+    "status": "supported",
+    "evidence": "community_documented",
+    "short": "",
+    "reason": "GT7 sends lap times.",
+    "detail": "lap_number: 0x74 lap count (0 = not in a timed lap -> None); current_lap_time_ms: C: 0x15C; A/B/~: derived from ticks since the line crossing; last_lap_time_ms: 0x7C last lap (ms; -1 -> None) (row gt7)",
+    "note": null,
+    "fields": [
+     "lap_number",
+     "current_lap_time_ms",
+     "last_lap_time_ms"
+    ]
+   },
+   {
+    "id": "sectors",
+    "label": "Sector times",
+    "group": "timing",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send sector times.",
+    "detail": "GT7 has no sectors / split times (row gt7)",
+    "note": null,
+    "fields": [
+     "sector"
+    ]
+   },
+   {
+    "id": "delta",
+    "label": "Live delta",
+    "group": "timing",
+    "status": "partial",
+    "evidence": "community_documented",
+    "short": "Estimated",
+    "reason": "GT7 sends no lap distance: Pitwall works it out from speed (about 1 % drift per lap).",
+    "detail": "lap_distance_m: derived by integration; drifts ~1%; speed x tick time since the last line crossing; current_lap_time_ms: C: 0x15C; A/B/~: derived from ticks since the line crossing (row gt7)",
+    "note": null,
+    "fields": [
+     "lap_distance_m",
+     "current_lap_time_ms"
+    ]
+   },
+   {
+    "id": "braking_cues",
+    "label": "Braking cues",
+    "group": "coaching",
+    "status": "partial",
+    "evidence": "community_documented",
+    "short": "Estimated",
+    "reason": "GT7 sends no lap distance: Pitwall works it out from speed (about 1 % drift per lap).",
+    "detail": "brake: 0x92 brake 0..255 -> 0..1; speed_kph: 0x4C speed (m/s, abs) x 3.6; lap_distance_m: derived by integration; drifts ~1%; speed x tick time since the last line crossing (row gt7)",
+    "note": null,
+    "fields": [
+     "brake",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "corner_coaching",
+    "label": "Corner coaching",
+    "group": "coaching",
+    "status": "partial",
+    "evidence": "community_documented",
+    "short": "Estimated",
+    "reason": "GT7 sends no lap distance: Pitwall works it out from speed (about 1 % drift per lap).",
+    "detail": "brake: 0x92 brake 0..255 -> 0..1; throttle: 0x91 throttle 0..255 -> 0..1 (input vs post-TCS output unverified); speed_kph: 0x4C speed (m/s, abs) x 3.6; lap_distance_m: derived by integration; drifts ~1%; speed x tick time since the last line crossing (row gt7)",
+    "note": null,
+    "fields": [
+     "brake",
+     "throttle",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "track_map",
+    "label": "Track map",
+    "group": "track",
+    "status": "partial",
+    "evidence": "community_documented",
+    "short": "Estimated",
+    "reason": "GT7 sends no lap distance: Pitwall works it out from speed (about 1 % drift per lap).",
+    "detail": "pos_x_m: 0x04 position X (m); pos_z_m: 0x0C position Z (m); lap_distance_m: derived by integration; drifts ~1%; speed x tick time since the last line crossing (row gt7)",
+    "note": null,
+    "fields": [
+     "pos_x_m",
+     "pos_z_m",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "official_corner_names",
+    "label": "Official corner names",
+    "group": "track",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Pitwall's official corner names cover F1 25 only; GT7 corners are numbered from your laps.",
+    "detail": "no track sheet lists this game (analysis.track_identity.load_sheets) (row gt7)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "ai_field",
+    "label": "AI field braking model",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send the other cars' positions, so there is no AI field braking model.",
+    "detail": "telemetry covers the player's car only (gt7-protocol.md section 7) (row gt7)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "flags",
+    "label": "Flags & marshal zones",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send flags.",
+    "detail": "no sectors, marshal zones or race flags (gt7-protocol.md section 7) (row gt7)",
+    "note": null,
+    "fields": [
+     "track_zones"
+    ]
+   },
+   {
+    "id": "fuel",
+    "label": "Fuel",
+    "group": "car",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "GT7 sends a fuel level, but sources disagree on its unit (litres or per cent), so Pitwall doesn't show fuel yet.",
+    "detail": "fuel_litres: 0x44 fuel level, unit conflicting (litres per PDTools, % per GT7Eng): not emitted until a capture settles it; SessionInfo.extra['fuel_fraction'] = level / capacity (row gt7)",
+    "note": null,
+    "fields": [
+     "fuel_kg"
+    ]
+   },
+   {
+    "id": "tyre_temps",
+    "label": "Tyre temperatures",
+    "group": "car",
+    "status": "supported",
+    "evidence": "community_documented",
+    "short": "",
+    "reason": "GT7 sends tyre temperatures.",
+    "detail": "tyre_surface_temp_c: 0x60..0x6C surface temps, native FL, FR, RL, RR order (row gt7)",
+    "note": null,
+    "fields": [
+     "tyre_surface_temp_c"
+    ]
+   },
+   {
+    "id": "tyre_wear",
+    "label": "Tyre wear",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send tyre wear.",
+    "detail": "not sent by GT7 (row gt7)",
+    "note": null,
+    "fields": [
+     "tyre_wear_pct"
+    ]
+   },
+   {
+    "id": "tyre_pressures",
+    "label": "Tyre pressures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send tyre pressures.",
+    "detail": "not sent (0xD4..0xF3 is reserved, not pressures) (row gt7)",
+    "note": null,
+    "fields": [
+     "tyre_pressure_psi"
+    ]
+   },
+   {
+    "id": "brake_temps",
+    "label": "Brake temperatures",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send brake temperatures.",
+    "detail": "not sent by GT7 (row gt7)",
+    "note": null,
+    "fields": [
+     "brake_temp_c"
+    ]
+   },
+   {
+    "id": "damage",
+    "label": "Car damage",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send damage.",
+    "detail": "not sent (gt7-protocol.md section 7) (row gt7)",
+    "note": null,
+    "fields": [
+     "damage"
+    ]
+   },
+   {
+    "id": "ers",
+    "label": "ERS / hybrid",
+    "group": "car",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "GT7 may send an energy-recovery value of unknown units; Pitwall doesn't read it.",
+    "detail": "ers_store_j: variant ~ 0x150 'energy recovery' (units unknown): not mapped (row gt7)",
+    "note": null,
+    "fields": [
+     "ers_store_j"
+    ]
+   },
+   {
+    "id": "drs",
+    "label": "DRS",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send DRS.",
+    "detail": "no DRS field in the documented layout (docs/research/gt7-protocol.md) (row gt7)",
+    "note": null,
+    "fields": [
+     "drs_open"
+    ]
+   },
+   {
+    "id": "weather",
+    "label": "Weather",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send weather.",
+    "detail": "GT7 sends time of day only (row gt7)",
+    "note": null,
+    "fields": [
+     "weather"
+    ]
+   },
+   {
+    "id": "session_info",
+    "label": "Session type & results",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send the session type.",
+    "detail": "not sent by GT7 (row gt7)",
+    "note": null,
+    "fields": [
+     "session_type"
+    ]
+   },
+   {
+    "id": "field_data",
+    "label": "Other cars' data",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send data about the other cars.",
+    "detail": "telemetry covers the player's car only (gt7-protocol.md section 7) (row gt7)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "setup_telemetry",
+    "label": "Car setup from the game",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send its car setup.",
+    "detail": "only gear ratios are sent (row gt7)",
+    "note": null,
+    "fields": [
+     "setup"
+    ]
+   },
+   {
+    "id": "setup_recommendations",
+    "label": "Car setup recommendations",
+    "group": "setup_radio",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Pitwall's car setup recommendations exist for F1 25 only.",
+    "detail": "carsetup.context.F1_GAMES (row gt7)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "wheel_ptt",
+    "label": "Push-to-talk on a wheel button",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send wheel button presses.",
+    "detail": "no wheel-button data (the 0x8E flags are car state) (row gt7)",
+    "note": null,
+    "fields": [
+     "buttons"
+    ]
+   }
+  ],
+  "notes": [
+   "Community-documented protocol (docs/research/gt7-protocol.md); not yet validated on a real console.",
+   "No lap distance in the protocol: integrated from speed x tick time; drifts ~1 %, unanchored until the first start/finish crossing seen while moving (race lap 1 after a standing start has no distance).",
+   "No track id: derived from the start/finish crossing position and direction, the lap length and the lap's total turning - a heuristic that separates chicane / no-chicane layouts on synthetic data but is unvalidated on real circuits. A new circuit is learned from two agreeing laps.",
+   "Retries without a loading screen (lap counter reset, time-of-day rewind, packet-id restart) start a new session.",
+   "Fuel unit conflicting (litres vs %): only the level / capacity fraction is reported.",
+   "Requires a heartbeat to the console (UDP 33739) every few seconds; telemetry arrives on UDP 33740.",
+   "Synthetic streams carry a marker in reserved bytes 0xD4..0xF3 and are flagged synthetic."
+  ]
+ },
+ "effective_id": "f1_25:ps5",
+ "first_run": false,
+ "detected": {
+  "entry_id": "f1_25:ps5",
+  "adapter_game": "f1_25",
+  "platform": "ps5",
+  "variant": "2025",
+  "real": true,
+  "status": "live"
+ },
+ "mismatch": {
+  "kind": "game",
+  "selected_id": "gt7:ps5",
+  "detected_id": "f1_25:ps5",
+  "text": "Receiving F1 25, but Gran Turismo 7 (PS5) is selected."
+ },
+ "suggestion": null,
+ "input": {
+  "key": "gt7",
+  "name": "Gran Turismo 7",
+  "enabled": true,
+  "listening": true,
+  "received": 0,
+  "console_ip": null,
+  "console_ip_need": "optional",
+  "port": 33740,
+  "platform": null,
+  "error": null,
+  "in_use": false
+ },
+ "other_inputs": [
+  {
+   "key": "f1",
+   "name": "EA SPORTS F1 25",
+   "enabled": true,
+   "in_use": true,
+   "can_disable": false
+  }
+ ],
+ "driver_defaults": true,
+ "_fixture": {
+  "tier": "edited",
+  "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
+  "moment": "GET /api/game: GT7 selected while the real F1 Austria recording streams"
+ }
+}

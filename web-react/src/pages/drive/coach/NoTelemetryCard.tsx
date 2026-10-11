@@ -8,6 +8,9 @@
 //   ② IP 192.168.1.20 · port 20777
 //   ③ Drive out of the garage · Last sender seen: none
 //
+// With a selected game (game selection) the steps follow that game's guide and port; a game Pitwall cannot read gets
+// a "Pitwall can't read ... telemetry" card with Change game instead.
+//
 // The demo writes the synthetic coaching demo (POST /api/simulate, as Settings › System does) and replays it at
 // real time (POST /api/replay); it is SYNTHETIC everywhere and never pollutes real track models.
 
@@ -19,7 +22,9 @@ import { useApi } from "../../../hooks/useApi";
 import { api } from "../../../lib/api";
 import { authFetch } from "../../../lib/auth";
 import { router } from "../../../lib/router";
-import { noTelemetryView, type ConnectInfo } from "./view";
+import type { GameEntry } from "../../../lib/endpoints/game";
+import { readable, unreadableReason } from "../../../lib/game";
+import { noTelemetryGame, noTelemetryView, type ConnectInfo } from "./view";
 
 /** GET /api/connect (shared cache key with Setup › Connect). */
 export async function fetchConnect(): Promise<ConnectInfo> {
@@ -76,13 +81,49 @@ function DemoButton() {
   );
 }
 
-export function NoTelemetryCard() {
-  const view = noTelemetryView(useConnectInfo(true));
+/** The selected game has no reader in Pitwall (ACC, iRacing, AC on Xbox, F1 24) or is "Another game": say so, with a
+ * way to change the game. The words are the server's (games.py), never composed here beyond the heading. */
+function UnreadableCard({ entry }: { entry: GameEntry }) {
+  const other = entry.integration === "record";
   return (
     <Card className="pwc-nodata pwc-span3">
       <EmptyState size="lg">
         <EmptyState.Header>
-          <EmptyState.Title>Waiting for telemetry</EmptyState.Title>
+          <EmptyState.Title>Pitwall can't read {other ? "this game's" : entry.label} telemetry</EmptyState.Title>
+          <EmptyState.Description>
+            {other
+              ? "It can record the game's packets so a decoder can be written later: turn on Record another game on Setup › Connect."
+              : unreadableReason(entry)}
+          </EmptyState.Description>
+        </EmptyState.Header>
+      </EmptyState>
+      <div className="pwc-nodata__actions">
+        <Button variant="primary" size="lg" className="pwc-glove" onPress={() => router.navigate("/setup/game")}>
+          Change game
+        </Button>
+        {other && (
+          <Button variant="tertiary" size="lg" className="pwc-xl" onPress={() => router.navigate("/setup/connect")}>
+            Open Setup › Connect
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * `entry`: the selected game (its guide and port drive the steps); null = no selection or an older server, and the
+ * card shows the first supported guide (F1 25) as before.
+ */
+export function NoTelemetryCard({ entry = null }: { entry?: GameEntry | null }) {
+  const connect = useConnectInfo(true);
+  if (entry && !readable(entry)) return <UnreadableCard entry={entry} />;
+  const view = noTelemetryView(connect, noTelemetryGame(entry));
+  return (
+    <Card className="pwc-nodata pwc-span3">
+      <EmptyState size="lg">
+        <EmptyState.Header>
+          <EmptyState.Title>{entry ? `Waiting for ${entry.text_name} telemetry` : "Waiting for telemetry"}</EmptyState.Title>
           <EmptyState.Description>No packet has arrived yet. Check these three things.</EmptyState.Description>
         </EmptyState.Header>
         <EmptyState.Content>

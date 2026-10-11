@@ -159,6 +159,24 @@
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+/* Game selection: the game sends no tyre data (one muted line), or not wear / pressures (a caption under the grid). */
+.pww-tyres__none {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 15px;
+  color: var(--muted);
+}
+.pww-tyres__caption {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pww-laps__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
 .pww-tyre {
   display: grid;
   gap: 2px;

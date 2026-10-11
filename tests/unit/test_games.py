@@ -1,0 +1,455 @@
+"""Game catalogue (``pitwall.games``): derived from ``capabilities.PLANNED`` and ``AdapterInfo``, never stronger than
+the evidence, golden profiles (design spec section 2.6) and the code facts each pinned to the code they restate."""
+
+from __future__ import annotations
+
+import json
+import re
+from dataclasses import fields as dc_fields
+from dataclasses import replace
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from pitwall import games
+from pitwall.adapters.base import SupportLevel
+from pitwall.capabilities import ADAPTER_INFOS, PLANNED, capability_matrix
+from pitwall.model.telemetry import CarFrame, Game, Platform
+
+S = SupportLevel
+GOLDEN_MATRIX = Path(__file__).resolve().parents[1] / "fixtures" / "golden" / "capability_matrix_0a8a911.json"
+
+ABBR = {
+    "live_validated": "live",
+    "recorded_validated": "rec",
+    "spec_implemented": "spec",
+    "community_documented": "comm",
+    "partial": "part",
+}
+CODE = {"supported": "S", "partial": "P", "not_sent": "NS", "not_implemented": "NI", "unknown": "U"}
+
+
+def code(f: games.GameFeature) -> str:
+    c = CODE[f.status]
+    if c in ("S", "P"):
+        return f"{c}·{ABBR[f.evidence.value] if f.evidence is not None else '-'}"
+    return c
+
+
+# Design spec section 2.6, verbatim.
+GOLDEN_COLUMNS = ("f1_25:ps5", "gt7:ps5", "ac:ps5", "forza_motorsport:pc", "forza_horizon:xbox")
+GOLDEN = """
+lap_timing             S·spec  S·comm  S·rec   P·part  P·part
+sectors                S·spec  NS      NS      NS      NS
+delta                  S·spec  P·comm  P·part  P·part  P·part
+braking_cues           S·spec  P·comm  P·part  P·part  P·part
+corner_coaching        S·spec  P·comm  P·part  P·part  P·part
+track_map              S·spec  P·comm  P·part  P·part  P·part
+official_corner_names  S·-     NI      NI      NI      NI
+ai_field               S·rec   NS      NS      NS      NS
+flags                  S·spec  NS      NS      NS      NS
+fuel                   S·spec  NI      NS      NI      NI
+tyre_temps             S·spec  S·comm  NS      S·comm  S·comm
+tyre_wear              S·spec  NS      NS      S·comm  NS
+tyre_pressures         S·spec  NS      NS      NS      NS
+brake_temps            S·spec  NS      NS      NS      NS
+damage                 NI      NS      NS      NS      NS
+ers                    S·spec  NI      NS      NS      NS
+drs                    S·spec  NS      NS      NS      NS
+weather                S·spec  NS      NS      NS      NS
+session_info           P·spec  NS      NS      NS      NS
+field_data             S·rec   NS      NS      NS      NS
+setup_telemetry        S·spec  NS      NS      NS      NS
+setup_recommendations  P·-     NI      NI      NI      NI
+wheel_ptt              S·spec  NS      NS      NS      NS
+"""
+
+
+def golden() -> dict[str, dict[str, str]]:
+    out: dict[str, dict[str, str]] = {c: {} for c in GOLDEN_COLUMNS}
+    for line in GOLDEN.strip().splitlines():
+        fid, *cells = line.split()
+        for col, cell in zip(GOLDEN_COLUMNS, cells, strict=True):
+            out[col][fid] = cell
+    return out
+
+
+def profile(entry_id: str) -> dict[str, str]:
+    e = games.entry(entry_id)
+    assert e is not None
+    return {f.id: code(f) for f in e.features}
+
+
+# ---------------------------------------------------------------------------------------------- catalogue shape
+def test_ids_are_unique_and_well_formed() -> None:
+    ids = [e.id for e in games.entries()]
+    assert len(ids) == len(set(ids)) == 23
+    for i in ids:
+        assert re.fullmatch(r"[a-z0-9_]+:(ps5|ps4|xbox|pc|any)", i), i
+    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 23
+    assert {f.group for f in games.FEATURES} == {g for g, _ in games.GROUPS}
+
+
+def test_every_entry_maps_to_one_row_and_every_row_platform_has_an_entry() -> None:
+    keys = {r.key for r in PLANNED}
+    by_row: dict[str, set[str]] = {}
+    for e in games.entries():
+        if e.id == "other:any":
+            assert e.row is None
+            continue
+        assert e.row is not None and e.row.key in keys, e.id
+        assert e.platform in e.row.platform_ids, e.id
+        by_row.setdefault(e.row.key, set()).add(e.platform)
+    for r in PLANNED:
+        if r.key == "video_capture":
+            assert r.platform_ids == () and r.key not in by_row
+            continue
+        assert by_row[r.key] == set(r.platform_ids), r.key
+
+
+def test_short_labels_and_entry_words() -> None:
+    shorts = {e.game_key: e.short_label for e in games.entries()}
+    assert shorts == {
+        "f1_25": "F1 25",
+        "f1_25_2026": "F1 25",
+        "f1_24": "F1 24",
+        "gt7": "GT7",
+        "forza_motorsport": "FM",
+        "forza_horizon": "FH",
+        "ac": "AC",
+        "acc": "ACC",
+        "iracing": "iRacing",  # the spec's list; 7 characters
+        "other": "Other",
+    }
+    words = {e.id: e.support_words for e in games.entries()}
+    assert words["f1_25:ps5"] == "Tested live"
+    assert words["f1_25:pc"] == words["f1_25_2026:ps5"] == "Built from the official spec"
+    assert words["ac:ps5"] == "Tested on a recording"
+    assert words["gt7:ps4"] == words["ac:pc"] == "Built from community docs"
+    assert words["forza_horizon:ps5"] == "Unverified"
+    assert words["acc:pc"] == words["iracing:pc"] == "Partial, not implemented"
+    assert words["acc:ps5"] == words["ac:xbox"] == words["f1_24:any"] == "Not supported"
+    assert words["other:any"] == "Record only"
+
+
+def test_integrations_guides_and_rig() -> None:
+    by = {e.id: e for e in games.entries()}
+    assert {e.id for e in games.entries() if e.integration is None} == {
+        "f1_24:any",
+        "ac:xbox",
+        "acc:pc",
+        "acc:ps5",
+        "acc:xbox",
+        "iracing:pc",
+    }
+    assert by["other:any"].integration == "record" and by["other:any"].guide_id == "record"
+    assert by["f1_25_2026:xbox"].integration == "f1" and by["f1_25_2026:xbox"].guide_id == "f1_25"
+    assert by["f1_25:ps5"].rig() == {"game": "f1_25", "platform": "ps5"}
+    assert by["f1_25:xbox"].rig() == {"game": "f1_25", "platform": None}
+    assert by["f1_25_2026:pc"].rig() == {"game": "f1_25", "platform": "pc"}
+    assert by["gt7:ps4"].rig() == {"game": "gt7", "platform": None}
+    assert by["ac:ps5"].rig() is None and by["f1_24:any"].rig() is None
+
+
+# ---------------------------------------------------------------------------------------------- never stronger
+def _platform_level(e: games.GameEntry) -> SupportLevel:
+    assert e.info is not None
+    return e.info.platforms.get(Platform(e.platform), S.UNVERIFIED)
+
+
+def test_never_stronger_than_the_row_the_adapter_or_any_field() -> None:
+    for e in games.entries():
+        lvl = e.level
+        if e.row is None:
+            assert lvl is None
+            continue
+        assert lvl is not None
+        assert not games.stronger(lvl, e.row.status), e.id
+        if e.info is not None and e.row.status is not S.UNSUPPORTED:
+            assert not games.stronger(lvl, _platform_level(e)), e.id
+        for f in e.features:
+            if f.status in ("supported", "partial"):
+                assert e.implemented, (e.id, f.id)
+            if f.evidence is None:
+                continue
+            assert f.status in ("supported", "partial"), (e.id, f.id)
+            assert not games.stronger(f.evidence, lvl), (e.id, f.id)
+            assert e.info is not None
+            for k in f.fields:
+                assert not games.stronger(f.evidence, e.info.fields[k].level), (e.id, f.id, k)
+        for k, fd in e.fields_dict().items():
+            assert not games.stronger(SupportLevel(fd["level"]), lvl), (e.id, k)
+
+
+def test_not_sent_and_unknown_follow_the_declarations() -> None:
+    for e in games.entries():
+        for f in e.features:
+            fd = games.feature_def(f.id)
+            if f.status == "not_sent":
+                assert e.row is not None
+                if e.row.no_output:
+                    continue
+                assert e.info is not None
+                sources = [e.info.fields[k] for k in f.fields if k in e.info.fields]
+                unsupported = [fs for fs in sources if fs.level is S.UNSUPPORTED]
+                assert unsupported, (e.id, f.id)
+                assert unsupported[0].source in f.detail, (e.id, f.id)
+            if f.status == "unknown":
+                if e.row is None or e.level is S.UNVERIFIED:
+                    continue
+                assert e.info is not None
+                keys = (*(e.info.ground_plane if fd.ground_plane else ()), *fd.required)
+                assert any(k not in e.info.fields or e.info.fields[k].level is S.UNVERIFIED for k in keys), (
+                    e.id,
+                    f.id,
+                )
+
+
+def test_an_undeclared_field_is_unknown_never_not_sent(monkeypatch: pytest.MonkeyPatch) -> None:
+    from pitwall.adapters.gt7.adapter import GT7_INFO
+
+    trimmed = {k: v for k, v in GT7_INFO.fields.items() if k != "drs_open"}
+    monkeypatch.setitem(ADAPTER_INFOS, Game.GT7, replace(GT7_INFO, fields=trimmed))  # AdapterInfo is frozen
+    games._features.cache_clear()
+    try:
+        drs = games.entry("gt7:ps5").feature("drs")  # type: ignore[union-attr]
+        assert drs.status == "unknown" and drs.short == "Unknown" and "not declared" in drs.detail
+    finally:
+        games._features.cache_clear()
+
+
+# ---------------------------------------------------------------------------------------------- golden profiles
+def test_golden_profiles() -> None:
+    for col, expected in golden().items():
+        assert profile(col) == expected, col
+
+
+def test_platform_and_variant_profiles() -> None:
+    ps5 = profile("f1_25:ps5")
+    pc_like = {**ps5, "ai_field": "S·spec", "field_data": "S·spec"}  # the entry level caps the recorded fields
+    assert profile("f1_25:pc") == profile("f1_25:xbox") == pc_like
+    for p in ("ps5", "xbox", "pc"):
+        assert profile(f"f1_25_2026:{p}") == pc_like
+    assert profile("gt7:ps4") == profile("gt7:ps5")
+    ac_comm = {k: v.replace("·rec", "·comm") for k, v in profile("ac:ps5").items()}
+    assert profile("ac:pc") == profile("ac:ps4") == ac_comm
+    fh_ps5 = profile("forza_horizon:ps5")
+    assert all(v in ("NS", "NI", "U") for v in fh_ps5.values())
+    assert {k for k, v in fh_ps5.items() if v == "U"} == {
+        k for k, v in profile("forza_horizon:xbox").items() if v not in ("NS", "NI")
+    }
+    for eid in ("acc:ps5", "acc:xbox", "ac:xbox"):
+        assert set(profile(eid).values()) == {"NS"}, eid
+    for eid in ("acc:pc", "iracing:pc", "f1_24:any"):
+        assert set(profile(eid).values()) == {"NI"}, eid
+    assert set(profile("other:any").values()) == {"U"}
+
+
+def test_feature_texts() -> None:
+    gt7 = games.entry("gt7:ps5")
+    assert gt7 is not None
+    wear = gt7.feature("tyre_wear").to_dict()
+    assert wear == {
+        "id": "tyre_wear",
+        "label": "Tyre wear",
+        "group": "car",
+        "status": "not_sent",
+        "evidence": None,
+        "short": "Not sent by GT7",
+        "reason": "GT7 doesn't send tyre wear.",
+        "detail": "not sent by GT7 (row gt7)",
+        "note": None,
+        "fields": ["tyre_wear_pct"],
+    }
+    assert gt7.feature("delta").short == "Estimated" and "1 % drift" in gt7.feature("delta").reason
+    f1 = games.entry("f1_25:ps5")
+    assert f1 is not None
+    assert f1.feature("track_map").note is not None  # shipped outline before the first lap
+    assert gt7.feature("track_map").note is None
+    fm = games.entry("forza_motorsport:pc")
+    assert fm is not None and fm.feature("lap_timing").short == "Partial"
+    fh = games.entry("forza_horizon:xbox")
+    assert fh is not None and fh.feature("lap_timing").reason == games.PARTIAL_FACTS[("forza_horizon", "lap_timing")]
+    names = re.compile(r"F1 2[45]")
+    for e in games.entries():
+        for f in e.features:
+            assert len(f.short) <= 32, (e.id, f.id, f.short)
+            assert f.reason.endswith("."), (e.id, f.id)
+            plain = names.sub("", f.reason)
+            assert not re.search(r"\bF\d+\b|_|\bNone\b", plain), (e.id, f.id, f.reason)
+            if f.status == "supported":
+                assert f.short == ""
+            if f.status == "not_sent":
+                assert f.short == f"Not sent by {e.text_name}"
+
+
+# ---------------------------------------------------------------------------------------------- code facts
+def test_code_fact_estimated_gt7_distance() -> None:
+    from pitwall.adapters.gt7.adapter import GT7_INFO
+
+    assert {("gt7", "lap_distance_m")} == games.ESTIMATED
+    assert "derived" in GT7_INFO.fields["lap_distance_m"].source
+    assert (
+        set(games.DISTANCE_REASON)
+        == {g for g in games.DISTANCE_REASON}
+        == {
+            "gt7",
+            "forza_motorsport",
+            "forza_horizon",
+            "ac",
+        }
+    )
+
+
+def test_code_fact_not_implemented() -> None:
+    from pitwall.adapters.f1 import packets as P
+    from pitwall.adapters.forza.adapter import FORZA_HORIZON_INFO, FORZA_MOTORSPORT_INFO
+    from pitwall.adapters.gt7.adapter import GT7_INFO
+
+    damage_fields = {name for name, _ in P.CAR_DAMAGE.fields}
+    assert "frontLeftWingDamage" in damage_fields and "tyresWear" in damage_fields  # F1 sends damage ...
+    assert not any("damage" in f.name or "wing" in f.name for f in dc_fields(CarFrame))  # ... Pitwall maps none
+    assert GT7_INFO.fields["fuel_litres"].level is S.UNVERIFIED
+    assert GT7_INFO.fields["ers_store_j"].level is S.UNVERIFIED
+    for info in (FORZA_MOTORSPORT_INFO, FORZA_HORIZON_INFO):
+        assert "fraction" in info.fields["fuel_kg"].source
+    assert set(games.NOT_IMPLEMENTED) == {
+        ("f1_25", "damage"),
+        ("gt7", "fuel"),
+        ("forza_motorsport", "fuel"),
+        ("forza_horizon", "fuel"),
+        ("gt7", "ers"),
+    }
+
+
+def test_code_fact_partial() -> None:
+    from pitwall.adapters.f1 import packets as P
+    from pitwall.adapters.f1.adapter import _HANDLERS
+    from pitwall.adapters.forza.adapter import FORZA_HORIZON_INFO
+
+    assert P.PacketId.FINAL_CLASSIFICATION not in _HANDLERS
+    assert P.PacketId.SESSION in _HANDLERS
+    assert any("free roam" in n.lower() and "no laps" in n.lower() for n in FORZA_HORIZON_INFO.notes)
+
+
+def test_code_fact_sheets_outlines_and_setups() -> None:
+    from pitwall import trackdata
+    from pitwall.analysis.track_geometry import OUTLINE_GAMES
+    from pitwall.analysis.track_identity import load_sheets
+    from pitwall.carsetup.context import F1_GAMES
+
+    sheet_games = {g for fam in trackdata.sheet_families() for s in load_sheets(fam) for g in s.games}
+    assert games.official_name_games() == sheet_games == {"f1_25"}
+    assert games.outline_games() == OUTLINE_GAMES
+    assert games.setup_games() == F1_GAMES
+
+
+def test_adapter_declarations_added_for_documented_absences() -> None:
+    old = {(r["game"], r["platform"]): r for r in json.loads(GOLDEN_MATRIX.read_text(encoding="utf-8"))}
+    added = {
+        Game.F1_25: {"session_type", "buttons"},
+        Game.GT7: {"drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons"},
+        Game.FORZA_MOTORSPORT: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
+        Game.FORZA_HORIZON: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
+        Game.AC: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
+    }
+    for r in PLANNED:
+        before = old[(r.game, r.platform)]["fields"]
+        if r.adapter_game is None or before is None:
+            continue
+        now = set(ADAPTER_INFOS[r.adapter_game].fields)
+        assert now - set(before) == added[r.adapter_game], r.key
+        for k, v in before.items():  # no level was upgraded or changed
+            fs = ADAPTER_INFOS[r.adapter_game].fields[k]
+            assert (fs.level.value, fs.source) == (v["level"], v["source"]), (r.key, k)
+    for g in (Game.GT7, Game.FORZA_MOTORSPORT, Game.FORZA_HORIZON, Game.AC):
+        new = {k: ADAPTER_INFOS[g].fields[k].level for k in added[g]}
+        expected_unverified = {"ers_store_j"} if g is Game.GT7 else set()
+        assert {k for k, v in new.items() if v is S.UNVERIFIED} == expected_unverified, g
+        assert {k for k, v in new.items() if v is S.UNSUPPORTED} == added[g] - expected_unverified, g
+
+
+def test_capability_matrix_golden() -> None:
+    old = json.loads(GOLDEN_MATRIX.read_text(encoding="utf-8"))
+    new = json.loads(json.dumps(capability_matrix()))
+    assert len(old) == len(new) == len(PLANNED)
+    for o, n in zip(old, new, strict=True):
+        n = dict(n)
+        assert n.pop("key") and isinstance(n.pop("platform_ids"), list)
+        if n["fields"] is not None:  # section 2.2 declarations are the only additions
+            n["fields"] = {k: v for k, v in n["fields"].items() if k in o["fields"]}
+        assert o == n, o["game"]
+    keys = [r["key"] for r in new]
+    assert keys == [r.key for r in PLANNED] and len(set(keys)) == len(keys)
+
+
+# ---------------------------------------------------------------------------------------------- resolve
+@pytest.mark.parametrize(
+    ("args", "expected"),
+    [
+        (("f1_25", "ps5", "2025", None), "f1_25:ps5"),
+        (("f1_25", "ps5", "2026", None), "f1_25_2026:ps5"),
+        (("f1_25", "unknown", "2025", "f1_25:pc"), "f1_25:pc"),
+        (("f1_25", "unknown", "2025", None), "f1_25:ps5"),
+        (("gt7", "unknown", None, "gt7:ps4"), "gt7:ps4"),
+        (("gt7", "unknown", None, None), "gt7:ps5"),
+        (("gt7", None, None, "f1_25:ps5"), "gt7:ps5"),  # a preference that is not a candidate is ignored
+        (("ac", "ps4", None, None), "ac:ps4"),
+        (("forza_horizon", "unknown", None, None), "forza_horizon:xbox"),
+        (("acc", "pc", None, None), None),  # not implemented: never a detection
+        (("synthetic", None, None, None), None),
+        ((None, None, None, None), None),
+    ],
+)
+def test_resolve(args: tuple[Any, ...], expected: str | None) -> None:
+    assert games.resolve(*args) == expected
+
+
+def test_entry_for_session_rows() -> None:
+    row = {"game": "f1_25", "platform": "ps5", "info": {"packet_format": 2026}}
+    assert games.entry_for_session(row).id == "f1_25_2026:ps5"  # type: ignore[union-attr]
+    assert games.entry_for_session({"game": "ac", "platform": "pc", "info": {}}).id == "ac:pc"  # type: ignore[union-attr]
+    assert games.entry_for_session({"game": "synthetic"}) is None
+    assert games.entry_for_session(None) is None
+
+
+def test_parse_selection_is_lenient(caplog: pytest.LogCaptureFixture) -> None:
+    assert games.parse_selection({}) is None and games.parse_selection(None) is None
+    sel = games.parse_selection({"selected": "gt7:ps5", "since_unix": 12.5, "source": "cli"})
+    assert sel == games.Selection("gt7:ps5", 12.5, "cli")
+    assert games.parse_selection({"selected": "fm7:xbox", "since_unix": 1.0}) is None
+    assert "fm7:xbox" in caplog.text
+    odd = games.parse_selection({"selected": "ac:ps5", "since_unix": "x", "source": "hacker"})
+    assert odd == games.Selection("ac:ps5", 0.0, "dashboard")
+
+
+# ---------------------------------------------------------------------------------------------- capability sentences
+def test_capability_sentences_and_only() -> None:
+    ac = games.entry("ac:ps5")
+    gt7 = games.entry("gt7:ps5")
+    f1 = games.entry("f1_25:ps5")
+    assert games.capability_sentence(ac, games.INTENT_FEATURES["tyres"]) == (
+        "Assetto Corsa doesn't send tyre temperatures, tyre wear, tyre pressures or brake temperatures."
+    )
+    assert games.capability_sentence(gt7, games.INTENT_FEATURES["tyres"]) == (
+        "GT7 doesn't send tyre wear, tyre pressures or brake temperatures."
+    )
+    assert games.capability_sentence(f1, games.INTENT_FEATURES["tyres"]) is None
+    assert games.capability_only("tyres", ac) and not games.capability_only("tyres", gt7)
+    assert games.capability_only("fuel", gt7)  # not read yet: still a known fact, not data
+    assert not games.capability_only("setup", ac)  # setup keeps its technique-first answer
+    assert not games.capability_only("tyres", None)
+    assert games.capability_only("damage", f1) and not games.capability_only("weather", f1)
+    acc = games.entry("acc:ps5")
+    assert games.capability_sentence(acc, ["fuel", "tyre_wear"]) == "ACC on PS5 has no telemetry output."
+    assert [g for g, *_ in games.capability_facts(f1)] == ["damage"]  # type: ignore[arg-type]
+
+
+def test_games_response_is_json_and_covers_every_entry() -> None:
+    body = json.loads(json.dumps(games.games_response()))
+    assert body["schema"] == 1
+    assert [e["id"] for e in body["entries"]] == [e.id for e in games.entries()]
+    assert set(body["support_words"]) == {lvl.value for lvl in SupportLevel}
+    assert all("fields" not in e and "guide" not in e for e in body["entries"])
+    assert all(len(e["features"]) == 23 for e in body["entries"])

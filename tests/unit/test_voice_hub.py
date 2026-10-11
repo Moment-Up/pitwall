@@ -430,3 +430,75 @@ def test_time_to_next_braking_treats_entered_zone_as_now() -> None:
     wrap = time_to_next_braking(model, 3900.0, 360.0)  # next zone is T1 of the next lap
     assert wrap == pytest.approx((4000 - 3900 + 707 - 15) / 100.0)
     assert time_to_next_braking({"corners": []}, 10.0, 200.0) == float("inf")
+
+
+# ---------------------------------------------------------------------------------------------- game capabilities
+class NoLlmEngineer(RaceEngineer):
+    """Fails the test if the radio ever asks for an LLM answer."""
+
+    async def answer(self, question: str, sheet: Any, history: Any = None, use_llm: bool = True) -> Any:
+        assert not use_llm, question
+        return await super().answer(question, sheet, history, use_llm=False)
+
+
+async def _hub_without_session(selected: str | None) -> tuple[RadioHub, list[Any]]:
+    from pitwall import games
+
+    live = LiveState()
+    if selected is not None:
+        live.set_game_selection(games.Selection(selected, 0.0, "dashboard"))
+    hub = RadioHub(
+        live,
+        NoLlmEngineer(None),
+        FakeStt(),
+        FakeTts(),
+        FakeScheduler(),
+        fact_sheet=lambda: None,  # no session recorded yet
+        to_speech=lambda s: s,
+        lap_messages=None,
+    )
+    hub.start()
+    sent: list[Any] = []
+
+    async def send(item: Any) -> None:
+        sent.append(item)
+
+    await hub.connect(RadioClient(send=send))
+    return hub, sent
+
+
+async def test_capability_question_with_no_session_answers_from_the_selected_game() -> None:
+    hub, sent = await _hub_without_session("ac:ps5")
+    hub.ask_text("how are my tyres")
+    await settle()
+    said = [m["text"] for m in texts(sent, "say")]
+    assert "Copy, checking." not in said
+    assert said[-1] == "Assetto Corsa doesn't send tyre temperatures, tyre wear, tyre pressures or brake temperatures."
+    hub.ask_text("is it going to rain")
+    await settle()
+    assert [m["text"] for m in texts(sent, "say")][-1] == "Assetto Corsa doesn't send weather."
+    hub.ask_text("where am I losing time")  # not about the game: still needs a session
+    await settle()
+    assert [m["text"] for m in texts(sent, "say")][-1] == "No session data yet. Get a lap in and ask me again."
+    await hub.stop()
+
+
+async def test_capability_question_with_a_game_that_sends_it_waits_for_a_session() -> None:
+    hub, sent = await _hub_without_session("gt7:ps5")
+    hub.ask_text("how are my tyres")  # GT7 sends tyre temperatures: not a capability-only answer
+    await settle()
+    assert [m["text"] for m in texts(sent, "say")][-1] == "No session data yet. Get a lap in and ask me again."
+    hub.ask_text("what's my fuel situation")  # GT7 fuel is not read yet: a known fact
+    await settle()
+    assert [m["text"] for m in texts(sent, "say")][-1].startswith("GT7 sends a fuel level, but sources disagree")
+    await hub.stop()
+
+
+async def test_nothing_selected_asks_which_game() -> None:
+    hub, sent = await _hub_without_session(None)
+    hub.ask_text("how are my tyres")
+    await settle()
+    msg = texts(sent, "say")[-1]
+    assert msg["text"].startswith("Tell me which game you're playing") and msg["kind"] == "control"
+    assert "Copy, checking." not in [m["text"] for m in texts(sent, "say")]
+    await hub.stop()

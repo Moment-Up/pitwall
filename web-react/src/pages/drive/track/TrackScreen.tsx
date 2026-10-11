@@ -147,6 +147,8 @@ export function TrackScreen({ model, snap, view, selected, onSelect, maySleep = 
                 Follow the car
               </Button>
             </span>
+          ) : view.note ? (
+            view.note
           ) : view.car || view.carM != null ? (
             "Following the car: the next corner is highlighted"
           ) : (
