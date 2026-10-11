@@ -1,0 +1,3 @@
+# Vendored upstream files ship byte-for-byte (licence + provenance: tests check their git blob hashes).
+# Never convert line endings, e.g. Git for Windows' default core.autocrlf=true would check them out as CRLF.
+* -text

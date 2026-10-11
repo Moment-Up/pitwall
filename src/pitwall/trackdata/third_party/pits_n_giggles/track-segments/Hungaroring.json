@@ -1,0 +1,119 @@
+{
+  "circuit_name": "Hungaroring",
+  "circuit_number": 9,
+  "track_length": 4378,
+  "segments": [
+    {
+      "type": "straight",
+      "start_m": 0,
+      "end_m": 435,
+      "name": "Pit Straight"
+    },
+    {
+      "type": "corner",
+      "start_m": 435,
+      "end_m": 770,
+      "name": "Piquet",
+      "corner_number": 1
+    },
+    {
+      "type": "corner",
+      "start_m": 980,
+      "end_m": 1215,
+      "name": "Hamilton",
+      "corner_number": 2
+    },
+    {
+      "type": "corner",
+      "start_m": 1225,
+      "end_m": 1400,
+      "name": "Spring",
+      "corner_number": 3
+    },
+    {
+      "type": "corner",
+      "start_m": 1680,
+      "end_m": 1855,
+      "name": "Mansell",
+      "corner_number": 4
+    },
+    {
+      "type": "corner",
+      "start_m": 1950,
+      "end_m": 2150,
+      "name": "Mogyorod",
+      "corner_number": 5
+    },
+    {
+      "type": "complex_corner",
+      "start_m": 2250,
+      "end_m": 2470,
+      "name": "Driving Center",
+      "corner_numbers": [
+        6,
+        7
+      ]
+    },
+    {
+      "type": "complex_corner",
+      "start_m": 2500,
+      "end_m": 2790,
+      "name": "Buda/Pest",
+      "corner_numbers": [
+        8,
+        9
+      ]
+    },
+    {
+      "type": "corner",
+      "start_m": 2860,
+      "end_m": 2990,
+      "name": "Danube",
+      "corner_number": 10
+    },
+    {
+      "type": "corner",
+      "start_m": 3015,
+      "end_m": 3205,
+      "name": "Alesi",
+      "corner_number": 11
+    },
+    {
+      "type": "straight",
+      "start_m": 3205,
+      "end_m": 3400,
+      "name": "Back Straight"
+    },
+    {
+      "type": "corner",
+      "start_m": 3400,
+      "end_m": 3600,
+      "name": "Schumacher",
+      "corner_number": 12
+    },
+    {
+      "type": "corner",
+      "start_m": 3650,
+      "end_m": 3900,
+      "name": "Senna",
+      "corner_number": 13
+    },
+    {
+      "type": "corner",
+      "start_m": 3950,
+      "end_m": 4220,
+      "name": "Szisz",
+      "corner_number": 14
+    },
+    {
+      "type": "straight",
+      "start_m": 4220,
+      "end_m": 4378,
+      "name": "Pit Straight"
+    }
+  ],
+  "sectors": {
+    "s1": 1689,
+    "s2": 3246
+  }
+}

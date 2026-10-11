@@ -1,0 +1,1417 @@
+{
+ "version": 44890,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 267454,
+  "packets_per_s": 159222.5,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261010-221749_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 267400,
+   "decoded": 191105,
+   "ignored": 76295,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "EVENT": 924,
+    "SESSION": 1499,
+    "PARTICIPANTS": 151,
+    "CAR_SETUPS": 1499,
+    "CAR_DAMAGE": 7490,
+    "TYRE_SETS": 14979,
+    "LAP_POSITIONS": 1500,
+    "LAP_DATA": 44886,
+    "MOTION": 44886,
+    "MOTION_EX": 44885,
+    "CAR_TELEMETRY": 44885,
+    "CAR_STATUS": 44885,
+    "SESSION_HISTORY": 14931
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "a4357e7c9018",
+ "session": {
+  "game": "f1_25",
+  "platform": "ps5",
+  "track_id": "f1:17",
+  "track_name": "Austria",
+  "track_length_m": 4323.0,
+  "session_type": "Race",
+  "car_name": "Haas",
+  "weather": {
+   "condition": "light_cloud",
+   "track_temp_c": 34.0,
+   "air_temp_c": 23.0,
+   "rain_percentage": 9.0
+  },
+  "total_laps": 71,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1860968520246666,
+  "session_time_s": 4913.042,
+  "speed_kph": 279.0,
+  "throttle": 1.0,
+  "brake": 0.0,
+  "steering": -0.003,
+  "clutch": 0.0,
+  "gear": 7,
+  "rpm": 11333.0,
+  "max_rpm": 13099.0,
+  "drs_open": false,
+  "pos": [
+   445.67,
+   -42.21,
+   181.05
+  ],
+  "g_lat": 0.11,
+  "g_lon": 0.51,
+  "lap_number": 71,
+  "lap_distance_m": 2.9,
+  "current_lap_time_ms": 16,
+  "last_lap_time_ms": 72959,
+  "sector": 0,
+  "lap_invalid": false,
+  "pit_status": 0,
+  "race_position": 1,
+  "tyre_surface_temp_c": [
+   79.0,
+   57.0,
+   81.0,
+   74.0
+  ],
+  "tyre_inner_temp_c": [
+   91.0,
+   84.0,
+   93.0,
+   91.0
+  ],
+  "tyre_pressure_psi": [
+   24.3,
+   24.3,
+   21.5,
+   21.5
+  ],
+  "brake_temp_c": [
+   587.0,
+   575.0,
+   533.0,
+   521.0
+  ],
+  "tyre_wear_pct": [
+   22.0,
+   22.0,
+   21.0,
+   19.0
+  ],
+  "tyre_compound": "medium",
+  "tyre_age_laps": 47,
+  "fuel_kg": 3.69,
+  "fuel_remaining_laps_game": 2.5,
+  "ers_store_j": 1945610.0,
+  "brake_bias_front_pct": 58.0,
+  "quality": 68
+ },
+ "delta_s": -0.014,
+ "reference": {
+  "lap_id": 2,
+  "lap_number": 63,
+  "lap_time_ms": 71745,
+  "session_id": "a4357e7c9018"
+ },
+ "laps": [
+  {
+   "lap_id": 10,
+   "lap_number": 71,
+   "lap_time_ms": 72959,
+   "sector_times_ms": [
+    17124,
+    33021,
+    22814
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.326
+  },
+  {
+   "lap_id": 9,
+   "lap_number": 70,
+   "lap_time_ms": 74299,
+   "sector_times_ms": [
+    16970,
+    34546,
+    22783
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.291
+  },
+  {
+   "lap_id": 8,
+   "lap_number": 69,
+   "lap_time_ms": 73821,
+   "sector_times_ms": [
+    17221,
+    32925,
+    23675
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.368
+  },
+  {
+   "lap_id": 7,
+   "lap_number": 68,
+   "lap_time_ms": 72443,
+   "sector_times_ms": [
+    17396,
+    32727,
+    22320
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.422
+  },
+  {
+   "lap_id": 6,
+   "lap_number": 67,
+   "lap_time_ms": 72241,
+   "sector_times_ms": [
+    17203,
+    32112,
+    22926
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.397
+  },
+  {
+   "lap_id": 5,
+   "lap_number": 66,
+   "lap_time_ms": 73897,
+   "sector_times_ms": [
+    17189,
+    32583,
+    24125
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.416
+  },
+  {
+   "lap_id": 4,
+   "lap_number": 65,
+   "lap_time_ms": 74344,
+   "sector_times_ms": [
+    17141,
+    33049,
+    24154
+   ],
+   "valid": true,
+   "clean": false,
+   "flags": [
+    "flashback"
+   ],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.421
+  },
+  {
+   "lap_id": 3,
+   "lap_number": 64,
+   "lap_time_ms": 71800,
+   "sector_times_ms": [
+    17000,
+    31585,
+    23215
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.396
+  },
+  {
+   "lap_id": 2,
+   "lap_number": 63,
+   "lap_time_ms": 71745,
+   "sector_times_ms": [
+    17259,
+    31554,
+    22932
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.464
+  },
+  {
+   "lap_id": 1,
+   "lap_number": 62,
+   "lap_time_ms": 76577,
+   "sector_times_ms": [
+    18000,
+    34132,
+    24445
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.434
+  }
+ ],
+ "observations": [
+  {
+   "id": "L71:T4:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T4",
+   "lap_number": 71,
+   "ref_lap_number": 63,
+   "metric": "min_speed_delta_kph",
+   "value": -15.0,
+   "unit": "km/h",
+   "impact_s": 0.921,
+   "confidence": 1.0,
+   "text": "Turn 6: minimum speed is 15 km/h lower than your reference (151 vs 166 km/h), losing 0.92 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.921,
+    "brake_point_delta_m": 12.736,
+    "min_speed_delta_kph": -15.0,
+    "exit_speed_delta_kph": -21.0,
+    "entry_speed_delta_kph": -28.203,
+    "throttle_full_delta_m": 318.656,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T4",
+     "segment_time_s": 6.92,
+     "brake_start_m": 2600.81,
+     "brake_end_m": 2666.26,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.17,
+     "release_s": 0.28,
+     "trail_brake_m": 20.06,
+     "coast_m": 0.0,
+     "entry_speed_kph": 267.2,
+     "min_speed_kph": 166.0,
+     "min_speed_m": 2752.0,
+     "exit_speed_kph": 172.0,
+     "throttle_pickup_m": 2750.32,
+     "throttle_full_m": 2777.44
+    },
+    "lap": {
+     "corner": "T4",
+     "segment_time_s": 7.84,
+     "brake_start_m": 2613.54,
+     "brake_end_m": 2683.62,
+     "brake_peak": 0.89,
+     "time_to_peak_s": 0.33,
+     "release_s": 0.55,
+     "trail_brake_m": 49.38,
+     "coast_m": 0.0,
+     "entry_speed_kph": 239.0,
+     "min_speed_kph": 151.0,
+     "min_speed_m": 2788.0,
+     "exit_speed_kph": 151.0,
+     "throttle_pickup_m": 2787.52,
+     "throttle_full_m": 3096.09
+    }
+   },
+   "consistency": "6 of the last 6 laps",
+   "consistency_ratio": 1.0,
+   "positive": false,
+   "corner_label": "T6",
+   "corner_voice": "Turn 6",
+   "priority": 0.921
+  },
+  {
+   "id": "L71:T4:late_throttle",
+   "kind": "late_throttle",
+   "corner": "T4",
+   "lap_number": 71,
+   "ref_lap_number": 63,
+   "metric": "throttle_full_delta_m",
+   "value": 318.656,
+   "unit": "m",
+   "impact_s": 0.921,
+   "confidence": 1.0,
+   "text": "Turn 6: you're reaching full throttle 319 m later than your reference, losing 0.92 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.921,
+    "brake_point_delta_m": 12.736,
+    "min_speed_delta_kph": -15.0,
+    "exit_speed_delta_kph": -21.0,
+    "entry_speed_delta_kph": -28.203,
+    "throttle_full_delta_m": 318.656,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T4",
+     "segment_time_s": 6.92,
+     "brake_start_m": 2600.81,
+     "brake_end_m": 2666.26,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.17,
+     "release_s": 0.28,
+     "trail_brake_m": 20.06,
+     "coast_m": 0.0,
+     "entry_speed_kph": 267.2,
+     "min_speed_kph": 166.0,
+     "min_speed_m": 2752.0,
+     "exit_speed_kph": 172.0,
+     "throttle_pickup_m": 2750.32,
+     "throttle_full_m": 2777.44
+    },
+    "lap": {
+     "corner": "T4",
+     "segment_time_s": 7.84,
+     "brake_start_m": 2613.54,
+     "brake_end_m": 2683.62,
+     "brake_peak": 0.89,
+     "time_to_peak_s": 0.33,
+     "release_s": 0.55,
+     "trail_brake_m": 49.38,
+     "coast_m": 0.0,
+     "entry_speed_kph": 239.0,
+     "min_speed_kph": 151.0,
+     "min_speed_m": 2788.0,
+     "exit_speed_kph": 151.0,
+     "throttle_pickup_m": 2787.52,
+     "throttle_full_m": 3096.09
+    }
+   },
+   "consistency": "4 of the last 4 laps",
+   "consistency_ratio": 1.0,
+   "positive": false,
+   "corner_label": "T6",
+   "corner_voice": "Turn 6",
+   "priority": 0.921
+  },
+  {
+   "id": "L71:T4:brake_late_overdrive",
+   "kind": "brake_late_overdrive",
+   "corner": "T4",
+   "lap_number": 71,
+   "ref_lap_number": 63,
+   "metric": "brake_point_delta_m",
+   "value": 12.736,
+   "unit": "m",
+   "impact_s": 0.921,
+   "confidence": 0.8,
+   "text": "Turn 6: you're braking 13 m later than your reference but exiting 21 km/h slower - the later braking isn't paying off, losing 0.92 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.921,
+    "brake_point_delta_m": 12.736,
+    "min_speed_delta_kph": -15.0,
+    "exit_speed_delta_kph": -21.0,
+    "entry_speed_delta_kph": -28.203,
+    "throttle_full_delta_m": 318.656,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T4",
+     "segment_time_s": 6.92,
+     "brake_start_m": 2600.81,
+     "brake_end_m": 2666.26,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.17,
+     "release_s": 0.28,
+     "trail_brake_m": 20.06,
+     "coast_m": 0.0,
+     "entry_speed_kph": 267.2,
+     "min_speed_kph": 166.0,
+     "min_speed_m": 2752.0,
+     "exit_speed_kph": 172.0,
+     "throttle_pickup_m": 2750.32,
+     "throttle_full_m": 2777.44
+    },
+    "lap": {
+     "corner": "T4",
+     "segment_time_s": 7.84,
+     "brake_start_m": 2613.54,
+     "brake_end_m": 2683.62,
+     "brake_peak": 0.89,
+     "time_to_peak_s": 0.33,
+     "release_s": 0.55,
+     "trail_brake_m": 49.38,
+     "coast_m": 0.0,
+     "entry_speed_kph": 239.0,
+     "min_speed_kph": 151.0,
+     "min_speed_m": 2788.0,
+     "exit_speed_kph": 151.0,
+     "throttle_pickup_m": 2787.52,
+     "throttle_full_m": 3096.09
+    }
+   },
+   "consistency": "2 of the last 5 laps",
+   "consistency_ratio": 0.4,
+   "positive": false,
+   "corner_label": "T6",
+   "corner_voice": "Turn 6",
+   "priority": 0.56
+  },
+  {
+   "id": "L71:T8:late_throttle",
+   "kind": "late_throttle",
+   "corner": "T8",
+   "lap_number": 71,
+   "ref_lap_number": 63,
+   "metric": "throttle_full_delta_m",
+   "value": 30.481,
+   "unit": "m",
+   "impact_s": 0.591,
+   "confidence": 1.0,
+   "text": "Turn 10: you're reaching full throttle 30 m later than your reference, losing 0.59 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.591,
+    "brake_point_delta_m": -3.932,
+    "min_speed_delta_kph": -6.042,
+    "exit_speed_delta_kph": 5.655,
+    "entry_speed_delta_kph": -45.688,
+    "throttle_full_delta_m": 30.481,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T8",
+     "segment_time_s": 7.28,
+     "brake_start_m": 3922.56,
+     "brake_end_m": 3985.36,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.28,
+     "release_s": 0.27,
+     "trail_brake_m": 40.97,
+     "coast_m": 0.0,
+     "entry_speed_kph": 237.46,
+     "min_speed_kph": 150.04,
+     "min_speed_m": 3986.0,
+     "exit_speed_kph": 155.0,
+     "throttle_pickup_m": 3984.66,
+     "throttle_full_m": 3994.75
+    },
+    "lap": {
+     "corner": "T8",
+     "segment_time_s": 7.87,
+     "brake_start_m": 3918.63,
+     "brake_end_m": 3956.23,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.27,
+     "release_s": 0.22,
+     "trail_brake_m": 4.28,
+     "coast_m": 0.0,
+     "entry_speed_kph": 191.77,
+     "min_speed_kph": 144.0,
+     "min_speed_m": 3955.0,
+     "exit_speed_kph": 160.66,
+     "throttle_pickup_m": 3953.36,
+     "throttle_full_m": 4025.23
+    }
+   },
+   "consistency": "5 of the last 6 laps",
+   "consistency_ratio": 0.83,
+   "positive": false,
+   "corner_label": "T10",
+   "corner_voice": "Turn 10",
+   "priority": 0.5508
+  },
+  {
+   "id": "L71:T6:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T6",
+   "lap_number": 71,
+   "ref_lap_number": 63,
+   "metric": "exit_speed_delta_kph",
+   "value": 26.406,
+   "unit": "km/h",
+   "impact_s": -0.973,
+   "confidence": 1.0,
+   "text": "Turn 7, part 2: good - exit speed is up 26 km/h on your reference and you gained 0.97 s there.",
+   "evidence": {
+    "time_delta_s": -0.973,
+    "min_speed_delta_kph": -1.0,
+    "exit_speed_delta_kph": 26.406,
+    "entry_speed_delta_kph": -48.798,
+    "ref": {
+     "corner": "T6",
+     "segment_time_s": 7.06,
+     "brake_start_m": 2941.32,
+     "brake_end_m": 2998.01,
+     "brake_peak": 0.94,
+     "time_to_peak_s": 0.42,
+     "release_s": 0.3,
+     "trail_brake_m": 32.72,
+     "coast_m": 15.81,
+     "entry_speed_kph": 227.8,
+     "min_speed_kph": 158.0,
+     "min_speed_m": 3195.0,
+     "exit_speed_kph": 162.0,
+     "throttle_pickup_m": 3192.85,
+     "throttle_full_m": 3192.85
+    },
+    "lap": {
+     "corner": "T6",
+     "segment_time_s": 6.09,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 179.0,
+     "min_speed_kph": 157.0,
+     "min_speed_m": 3060.0,
+     "exit_speed_kph": 188.41,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "T7 (2)",
+   "corner_voice": "Turn 7, second part",
+   "priority": 0.4865
+  },
+  {
+   "id": "L71:T5:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T5",
+   "lap_number": 71,
+   "ref_lap_number": 63,
+   "metric": "min_speed_delta_kph",
+   "value": -11.0,
+   "unit": "km/h",
+   "impact_s": 0.474,
+   "confidence": 1.0,
+   "text": "Turn 7, part 1: minimum speed is 11 km/h lower than your reference (157 vs 168 km/h), losing 0.47 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.474,
+    "min_speed_delta_kph": -11.0,
+    "exit_speed_delta_kph": -8.508,
+    "entry_speed_delta_kph": -48.798,
+    "ref": {
+     "corner": "T5",
+     "segment_time_s": 3.14,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 227.8,
+     "min_speed_kph": 168.0,
+     "min_speed_m": 2995.0,
+     "exit_speed_kph": 176.85,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    },
+    "lap": {
+     "corner": "T5",
+     "segment_time_s": 3.62,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 179.0,
+     "min_speed_kph": 157.0,
+     "min_speed_m": 3051.0,
+     "exit_speed_kph": 168.34,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    }
+   },
+   "consistency": "5 of the last 6 laps",
+   "consistency_ratio": 0.83,
+   "positive": false,
+   "corner_label": "T7 (1)",
+   "corner_voice": "Turn 7, first part",
+   "priority": 0.4418
+  },
+  {
+   "id": "L71:T8:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T8",
+   "lap_number": 71,
+   "ref_lap_number": 63,
+   "metric": "min_speed_delta_kph",
+   "value": -6.042,
+   "unit": "km/h",
+   "impact_s": 0.591,
+   "confidence": 0.76,
+   "text": "Turn 10: minimum speed is 6 km/h lower than your reference (144 vs 150 km/h), losing 0.59 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.591,
+    "brake_point_delta_m": -3.932,
+    "min_speed_delta_kph": -6.042,
+    "exit_speed_delta_kph": 5.655,
+    "entry_speed_delta_kph": -45.688,
+    "throttle_full_delta_m": 30.481,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T8",
+     "segment_time_s": 7.28,
+     "brake_start_m": 3922.56,
+     "brake_end_m": 3985.36,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.28,
+     "release_s": 0.27,
+     "trail_brake_m": 40.97,
+     "coast_m": 0.0,
+     "entry_speed_kph": 237.46,
+     "min_speed_kph": 150.04,
+     "min_speed_m": 3986.0,
+     "exit_speed_kph": 155.0,
+     "throttle_pickup_m": 3984.66,
+     "throttle_full_m": 3994.75
+    },
+    "lap": {
+     "corner": "T8",
+     "segment_time_s": 7.87,
+     "brake_start_m": 3918.63,
+     "brake_end_m": 3956.23,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.27,
+     "release_s": 0.22,
+     "trail_brake_m": 4.28,
+     "coast_m": 0.0,
+     "entry_speed_kph": 191.77,
+     "min_speed_kph": 144.0,
+     "min_speed_m": 3955.0,
+     "exit_speed_kph": 160.66,
+     "throttle_pickup_m": 3953.36,
+     "throttle_full_m": 4025.23
+    }
+   },
+   "consistency": "5 of the last 6 laps",
+   "consistency_ratio": 0.83,
+   "positive": false,
+   "corner_label": "T10",
+   "corner_voice": "Turn 10",
+   "priority": 0.4186
+  },
+  {
+   "id": "L71:T3:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T3",
+   "lap_number": 71,
+   "ref_lap_number": 63,
+   "metric": "min_speed_delta_kph",
+   "value": -7.0,
+   "unit": "km/h",
+   "impact_s": 0.427,
+   "confidence": 0.88,
+   "text": "Turn 4: minimum speed is 7 km/h lower than your reference (101 vs 108 km/h), losing 0.43 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.427,
+    "brake_point_delta_m": -4.23,
+    "min_speed_delta_kph": -7.0,
+    "exit_speed_delta_kph": -14.0,
+    "entry_speed_delta_kph": -1.016,
+    "coast_delta_m": 4.188,
+    "ref": {
+     "corner": "T3",
+     "segment_time_s": 11.94,
+     "brake_start_m": 2075.63,
+     "brake_end_m": 2196.59,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.43,
+     "release_s": 0.42,
+     "trail_brake_m": 31.47,
+     "coast_m": 4.62,
+     "entry_speed_kph": 308.0,
+     "min_speed_kph": 108.0,
+     "min_speed_m": 2204.0,
+     "exit_speed_kph": 118.0,
+     "throttle_pickup_m": 2203.41,
+     "throttle_full_m": 2256.0
+    },
+    "lap": {
+     "corner": "T3",
+     "segment_time_s": 12.36,
+     "brake_start_m": 2071.4,
+     "brake_end_m": 2205.63,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.22,
+     "release_s": 0.97,
+     "trail_brake_m": 39.25,
+     "coast_m": 8.81,
+     "entry_speed_kph": 306.98,
+     "min_speed_kph": 101.0,
+     "min_speed_m": 2240.0,
+     "exit_speed_kph": 104.0,
+     "throttle_pickup_m": 2239.43,
+     "throttle_full_m": null
+    }
+   },
+   "consistency": "5 of the last 6 laps",
+   "consistency_ratio": 0.83,
+   "positive": false,
+   "corner_label": "T4",
+   "corner_voice": "Turn 4",
+   "priority": 0.3502
+  }
+ ],
+ "events": [
+  {
+   "kind": "session_ended",
+   "code": "SEND",
+   "session_time_s": 4913.04150390625,
+   "t": 1791679736.5968268
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4912.140625,
+   "t": 1791679736.584388
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4909.67138671875,
+   "t": 1791679736.5792482
+  },
+  {
+   "kind": "chequered_flag",
+   "code": "CHQF",
+   "session_time_s": 4909.10400390625,
+   "t": 1791679736.5770502
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4900.01171875,
+   "t": 1791679736.558997
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4893.7890625,
+   "t": 1791679736.546149
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4889.88525390625,
+   "t": 1791679736.53833
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4889.6015625,
+   "t": 1791679736.537781
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4889.50146484375,
+   "t": 1791679736.537591
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4887.98291015625,
+   "t": 1791679736.534081
+  }
+ ],
+ "marshal_flags": [],
+ "track_model": {
+  "game": "f1_25",
+  "track_id": "f1:17",
+  "track_name": "Austria",
+  "length_m": 4323.0,
+  "version": 3,
+  "n_laps": 3,
+  "corners": [
+   {
+    "name": "T1",
+    "apex_m": 447.0,
+    "entry_m": 439.0,
+    "exit_m": 458.0,
+    "seg_start_m": 0.0,
+    "seg_end_m": 930.0,
+    "direction": "right",
+    "ref_min_speed_kph": 125.0,
+    "label": "T1",
+    "official_numbers": [
+     1
+    ],
+    "display_name": "Niki Lauda Kurve",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T2",
+    "apex_m": 1413.0,
+    "entry_m": 1275.0,
+    "exit_m": 1418.0,
+    "seg_start_m": 930.0,
+    "seg_end_m": 1809.0,
+    "direction": "right",
+    "ref_min_speed_kph": 55.0,
+    "label": "T3",
+    "official_numbers": [
+     3
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T3",
+    "apex_m": 2205.0,
+    "entry_m": 2075.0,
+    "exit_m": 2256.0,
+    "seg_start_m": 1809.0,
+    "seg_end_m": 2498.0,
+    "direction": "right",
+    "ref_min_speed_kph": 108.0,
+    "label": "T4",
+    "official_numbers": [
+     4
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T4",
+    "apex_m": 2791.0,
+    "entry_m": 2603.0,
+    "exit_m": 2791.0,
+    "seg_start_m": 2498.0,
+    "seg_end_m": 2895.5,
+    "direction": "left",
+    "ref_min_speed_kph": 160.0,
+    "label": "T6",
+    "official_numbers": [
+     6
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T5",
+    "apex_m": 3000.0,
+    "entry_m": 2952.0,
+    "exit_m": 3020.0,
+    "seg_start_m": 2895.5,
+    "seg_end_m": 3070.0,
+    "direction": "left",
+    "ref_min_speed_kph": 156.7734375,
+    "label": "T7",
+    "official_numbers": [
+     7
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": 1,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T6",
+    "apex_m": 3140.0,
+    "entry_m": 2952.0,
+    "exit_m": 3140.0,
+    "seg_start_m": 3070.0,
+    "seg_end_m": 3459.0,
+    "direction": "left",
+    "ref_min_speed_kph": 156.0,
+    "label": "T7",
+    "official_numbers": [
+     7
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": 2,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T7",
+    "apex_m": 3778.0,
+    "entry_m": 3688.0,
+    "exit_m": 3778.0,
+    "seg_start_m": 3459.0,
+    "seg_end_m": 3885.5,
+    "direction": "right",
+    "ref_min_speed_kph": 185.0,
+    "label": "T9",
+    "official_numbers": [
+     9
+    ],
+    "display_name": "Rindt Kurve",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T8",
+    "apex_m": 3993.0,
+    "entry_m": 3923.0,
+    "exit_m": 3995.0,
+    "seg_start_m": 3885.5,
+    "seg_end_m": 4323.0,
+    "direction": "right",
+    "ref_min_speed_kph": 145.0,
+    "label": "T10",
+    "official_numbers": [
+     10
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   }
+  ],
+  "corner_text": {
+   "T1": {
+    "short": "T1",
+    "long": "Turn 1 (Niki Lauda Kurve)",
+    "voice": "Turn 1, Niki Lauda Kurve"
+   },
+   "T2": {
+    "short": "T3",
+    "long": "Turn 3",
+    "voice": "Turn 3"
+   },
+   "T3": {
+    "short": "T4",
+    "long": "Turn 4",
+    "voice": "Turn 4"
+   },
+   "T4": {
+    "short": "T6",
+    "long": "Turn 6",
+    "voice": "Turn 6"
+   },
+   "T5": {
+    "short": "T7 (1)",
+    "long": "Turn 7, part 1",
+    "voice": "Turn 7, first part"
+   },
+   "T6": {
+    "short": "T7 (2)",
+    "long": "Turn 7, part 2",
+    "voice": "Turn 7, second part"
+   },
+   "T7": {
+    "short": "T9",
+    "long": "Turn 9 (Rindt Kurve)",
+    "voice": "Turn 9, Rindt Kurve"
+   },
+   "T8": {
+    "short": "T10",
+    "long": "Turn 10",
+    "voice": "Turn 10"
+   }
+  }
+ },
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:17",
+  "track_length_m": 4323.0,
+  "pit_speed_limit_kph": 80.0,
+  "sector2_start_m": 1203.96,
+  "sector3_start_m": 2934.93,
+  "sector_boundaries_m": [
+   0.0,
+   1203.96,
+   2934.93,
+   4323.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 1203.96,
+    "length_m": 1203.96
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 1203.96,
+    "end_m": 2934.93,
+    "length_m": 1730.97
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 2934.93,
+    "end_m": 4323.0,
+    "length_m": 1388.07
+   }
+  ],
+  "marshal_zones": [
+   {
+    "kind": "marshal",
+    "index": 1,
+    "game_number": 2,
+    "lap_order": 1,
+    "start_m": 342.33,
+    "end_m": 552.8,
+    "length_m": 210.47,
+    "start_frac": 0.079188,
+    "end_frac": 0.127874,
+    "wraps": false,
+    "segments_m": [
+     [
+      342.33,
+      552.8
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 2,
+    "game_number": 3,
+    "lap_order": 2,
+    "start_m": 552.8,
+    "end_m": 937.2,
+    "length_m": 384.4,
+    "start_frac": 0.127874,
+    "end_frac": 0.216793,
+    "wraps": false,
+    "segments_m": [
+     [
+      552.8,
+      937.2
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 3,
+    "game_number": 4,
+    "lap_order": 3,
+    "start_m": 937.2,
+    "end_m": 1277.05,
+    "length_m": 339.86,
+    "start_frac": 0.216793,
+    "end_frac": 0.295408,
+    "wraps": false,
+    "segments_m": [
+     [
+      937.2,
+      1277.05
+     ]
+    ],
+    "flag": "blue"
+   },
+   {
+    "kind": "marshal",
+    "index": 4,
+    "game_number": 5,
+    "lap_order": 4,
+    "start_m": 1277.05,
+    "end_m": 1488.67,
+    "length_m": 211.62,
+    "start_frac": 0.295408,
+    "end_frac": 0.344361,
+    "wraps": false,
+    "segments_m": [
+     [
+      1277.05,
+      1488.67
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 5,
+    "game_number": 6,
+    "lap_order": 5,
+    "start_m": 1488.67,
+    "end_m": 1820.77,
+    "length_m": 332.1,
+    "start_frac": 0.344361,
+    "end_frac": 0.421182,
+    "wraps": false,
+    "segments_m": [
+     [
+      1488.67,
+      1820.77
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 6,
+    "game_number": 7,
+    "lap_order": 6,
+    "start_m": 1820.77,
+    "end_m": 2344.3,
+    "length_m": 523.53,
+    "start_frac": 0.421182,
+    "end_frac": 0.542286,
+    "wraps": false,
+    "segments_m": [
+     [
+      1820.77,
+      2344.3
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 7,
+    "game_number": 8,
+    "lap_order": 7,
+    "start_m": 2344.3,
+    "end_m": 2560.01,
+    "length_m": 215.71,
+    "start_frac": 0.542286,
+    "end_frac": 0.592184,
+    "wraps": false,
+    "segments_m": [
+     [
+      2344.3,
+      2560.01
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 8,
+    "game_number": 9,
+    "lap_order": 8,
+    "start_m": 2560.01,
+    "end_m": 2903.74,
+    "length_m": 343.73,
+    "start_frac": 0.592184,
+    "end_frac": 0.671696,
+    "wraps": false,
+    "segments_m": [
+     [
+      2560.01,
+      2903.74
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 9,
+    "game_number": 10,
+    "lap_order": 9,
+    "start_m": 2903.74,
+    "end_m": 3231.82,
+    "length_m": 328.07,
+    "start_frac": 0.671696,
+    "end_frac": 0.747586,
+    "wraps": false,
+    "segments_m": [
+     [
+      2903.74,
+      3231.82
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 10,
+    "game_number": 11,
+    "lap_order": 10,
+    "start_m": 3231.82,
+    "end_m": 3461.65,
+    "length_m": 229.83,
+    "start_frac": 0.747586,
+    "end_frac": 0.800751,
+    "wraps": false,
+    "segments_m": [
+     [
+      3231.82,
+      3461.65
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 11,
+    "game_number": 12,
+    "lap_order": 11,
+    "start_m": 3461.65,
+    "end_m": 3920.49,
+    "length_m": 458.84,
+    "start_frac": 0.800751,
+    "end_frac": 0.90689,
+    "wraps": false,
+    "segments_m": [
+     [
+      3461.65,
+      3920.49
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 12,
+    "game_number": 13,
+    "lap_order": 12,
+    "start_m": 3920.49,
+    "end_m": 4283.38,
+    "length_m": 362.89,
+    "start_frac": 0.90689,
+    "end_frac": 0.990834,
+    "wraps": false,
+    "segments_m": [
+     [
+      3920.49,
+      4283.38
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 0,
+    "game_number": 1,
+    "lap_order": 13,
+    "start_m": 4283.38,
+    "end_m": 342.33,
+    "length_m": 381.96,
+    "start_frac": 0.990834,
+    "end_frac": 0.079188,
+    "wraps": true,
+    "segments_m": [
+     [
+      4283.38,
+      4323.0
+     ],
+     [
+      0.0,
+      342.33
+     ]
+    ],
+    "flag": "none"
+   }
+  ],
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": null,
+  "ref_lap_number": 63,
+  "focus": [
+   "T4",
+   "T7"
+  ],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [
+   {
+    "corner": "T4",
+    "kind": "brake",
+    "target_m": 2600.8,
+    "text": "T4 brake",
+    "focus": true,
+    "reason": "brake_late_overdrive on 1 of the last 3 lap(s)"
+   },
+   {
+    "corner": "T7",
+    "kind": "brake",
+    "target_m": 3695.5,
+    "text": "T7 brake",
+    "focus": true,
+    "reason": "brake_early on 2 of the last 3 lap(s)"
+   }
+  ],
+  "next": null,
+  "last": {
+   "seq": 13,
+   "corner": "T7",
+   "kind": "brake",
+   "target_m": 3695.5,
+   "text": "T7 brake",
+   "focus": true,
+   "reason": null,
+   "lap": 70,
+   "d_m": 3593.3,
+   "speed_kph": 293.0,
+   "aim_m": 3690.5,
+   "latency_ms": 250,
+   "word_offset_ms": 919,
+   "path": "pcm",
+   "status": "pending",
+   "error_m": null,
+   "latency_measured_ms": null,
+   "age_s": 0.2
+  },
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 13,
+   "missed": 0,
+   "suppressed": 3,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "pitwall replay (headless, temp DB) of 20261010-221749_udp20777.pwcap (a local PS5 F1 25 recording from the rig, data/captures, not committed)",
+  "moment": "right after a session_ended event",
+  "trimmed": [
+   "last_comparison",
+   "track_model.centreline",
+   "track_model.ground_plane",
+   "track_model.source_lap_ids"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending.",
+  "generated_unix": 1791679737
+ }
+}

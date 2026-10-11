@@ -1,0 +1,89 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 41
+layout = "Zandvoort (Reverse)"
+lap_length_m = 4258
+official_turn_count = 0
+reverse_of = 26
+sector_starts_m = [1293, 2770]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "Reverse layout: there is no official numbering, so PnG's numbers are dropped and only names are kept (they name the same physical corners driven the other way). PnG's reverse windows look like mirrored forward windows, so check them against recorded reverse laps before verifying. official_turn_count = 0: reverse layouts are not officially numbered."
+
+[[turns]]
+names = [{ text = "Arie Luyendykbocht", kind = "unclassified" }]
+game_segment_m = [308, 658]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Kumhobocht", kind = "unclassified" }]
+game_segment_m = [658, 878]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Hans Ernst Bocht", kind = "unclassified" }]
+game_segment_m = [988, 1268]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Mastersbocht", kind = "unclassified" }]
+game_segment_m = [2108, 2338]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Scheivlak", kind = "unclassified" }]
+game_segment_m = [2428, 2703]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Slotemakerbocht", kind = "unclassified" }]
+game_segment_m = [2703, 2908]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Hunserug", kind = "unclassified" }]
+game_segment_m = [3118, 3231]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Hugenholtzbocht", kind = "unclassified" }]
+game_segment_m = [3298, 3498]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Gerlachbocht", kind = "unclassified" }]
+game_segment_m = [3498, 3658]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+names = [{ text = "Tarzanbocht", kind = "unclassified" }]
+game_segment_m = [3778, 4058]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

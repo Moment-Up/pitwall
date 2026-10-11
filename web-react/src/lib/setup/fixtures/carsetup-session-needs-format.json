@@ -1,0 +1,345 @@
+{
+ "_fixture": {
+  "source": "GET /api/carsetup/sessions/df149ca2d149 on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded: a real PS5 F1 25 Suzuka race whose car format cannot be told"
+ },
+ "body": {
+  "session": {
+   "id": "df149ca2d149",
+   "game": "f1_25",
+   "track_id": "f1:13",
+   "track_name": "Suzuka",
+   "session_type": "race",
+   "session_type_raw": "Race",
+   "car_name": null,
+   "weather": {
+    "condition": "light_cloud",
+    "track_temp_c": 23.0,
+    "air_temp_c": 17.0,
+    "rain_percentage": 6.0
+   },
+   "synthetic": false,
+   "driver": {
+    "id": 1,
+    "name": "James",
+    "skill_level": "advanced"
+   }
+  },
+  "context": {
+   "track_id": 13,
+   "track_name": "Suzuka",
+   "car_format": null,
+   "car_format_certain": false,
+   "session": "race",
+   "conditions": "dry",
+   "reasons": {
+    "car_format": "an unknown car in UDP format 2025: 2025 and 2026 cars cannot be told apart, choose the car format (or set the game's UDP format to 2026)"
+   },
+   "notes": []
+  },
+  "chosen": {
+   "car_format": null,
+   "session": "race",
+   "conditions": "dry",
+   "style": null
+  },
+  "needs": [
+   "car_format"
+  ],
+  "setup": {
+   "t_recv_ns": 1863413302561166,
+   "fingerprint": "ballast=6;brake_bias=58;brake_pressure=100;diff_off_throttle=55;diff_on_throttle=90;engine_braking=50;front_arb=15;front_camber=-3.5;front_ride_height=25;front_suspension=37;front_toe=0.02;front_wing=10;fuel_load=14.0;rear_arb=10;rear_camber=-2.0;rear_ride_height=46;rear_suspension=10;rear_toe=0.12;rear_wing=12;tyre_pressure_fl=24.3;tyre_pressure_fr=24.3;tyre_pressure_rl=21.5;tyre_pressure_rr=21.5",
+   "params": {
+    "front_wing": {
+     "key": "front_wing",
+     "value": 10,
+     "unit": null,
+     "label": "Front wing",
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_wing": {
+     "key": "rear_wing",
+     "value": 12,
+     "unit": null,
+     "label": "Rear wing",
+     "min_value": null,
+     "max_value": null
+    },
+    "diff_on_throttle": {
+     "key": "diff_on_throttle",
+     "value": 90,
+     "unit": "%",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "diff_off_throttle": {
+     "key": "diff_off_throttle",
+     "value": 55,
+     "unit": "%",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_camber": {
+     "key": "front_camber",
+     "value": -3.5,
+     "unit": "deg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_camber": {
+     "key": "rear_camber",
+     "value": -2.0,
+     "unit": "deg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_toe": {
+     "key": "front_toe",
+     "value": 0.020000001415610313,
+     "unit": "deg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_toe": {
+     "key": "rear_toe",
+     "value": 0.12000000476837158,
+     "unit": "deg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_suspension": {
+     "key": "front_suspension",
+     "value": 37,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_suspension": {
+     "key": "rear_suspension",
+     "value": 10,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_arb": {
+     "key": "front_arb",
+     "value": 15,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_arb": {
+     "key": "rear_arb",
+     "value": 10,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_ride_height": {
+     "key": "front_ride_height",
+     "value": 25,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_ride_height": {
+     "key": "rear_ride_height",
+     "value": 46,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "brake_pressure": {
+     "key": "brake_pressure",
+     "value": 100,
+     "unit": "%",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "brake_bias": {
+     "key": "brake_bias",
+     "value": 58,
+     "unit": "% front",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "engine_braking": {
+     "key": "engine_braking",
+     "value": 50,
+     "unit": "%",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "tyre_pressure_rl": {
+     "key": "tyre_pressure_rl",
+     "value": 21.5,
+     "unit": "psi",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "tyre_pressure_rr": {
+     "key": "tyre_pressure_rr",
+     "value": 21.5,
+     "unit": "psi",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "tyre_pressure_fl": {
+     "key": "tyre_pressure_fl",
+     "value": 24.299999237060547,
+     "unit": "psi",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "tyre_pressure_fr": {
+     "key": "tyre_pressure_fr",
+     "value": 24.299999237060547,
+     "unit": "psi",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "ballast": {
+     "key": "ballast",
+     "value": 6,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "fuel_load": {
+     "key": "fuel_load",
+     "value": 14.0,
+     "unit": "kg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    }
+   }
+  },
+  "recommendation": null,
+  "unavailable": {
+   "reason": "choose car format to see a recommendation",
+   "alternatives": [
+    {
+     "car_format": "f1_2025",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2025",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2025",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2025",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2025",
+     "track_id": 13,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2025",
+     "track_id": 13,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    }
+   ]
+  },
+  "diff": null,
+  "caveat": "A setup is a starting point, not a guaranteed fix: rule out technique first (braking point, entry speed, brake release, throttle), then change one thing at a time and compare laps."
+ }
+}

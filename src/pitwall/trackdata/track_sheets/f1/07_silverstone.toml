@@ -1,0 +1,182 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa),
+# MIT licence, Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# HAND-REVIEWED 2026-10-10 (numbers, windows, directions and names; see checked_against and the turn notes) against
+# the 72f78aa copy (Silverstone.json blob 96badd7e). Evidence per turn: docs/research/track-sheets-review-g1.md.
+# CROSS-CHECKED 2026-10-11 (independent field-data and FIA-map review): four PnG window boundaries moved towards the
+# measured direction change between neighbouring turns (T1/T2 545 m, T3/T4 970 m, T6/T7 2090 m, T13/T14 4150 m).
+# The importer leaves this file alone because it contains verified turns.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 7
+layout = "Silverstone"
+lap_length_m = 5890
+official_turn_count = 18
+sector_starts_m = [1813, 4294]
+verified_formats = [2025]
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = [
+    "capture:20261010-202758+203637 - real F1 25 PS5 race (UDP format 2025), sessions 12171973911245196708 / 10484264066372284569: 2 complete and 4 partial laps, speed/brake/throttle/steering/lateral g by lap distance; Session packet trackLength 5890 m, S2 start 1812.85 m, S3 start 4293.46 m",
+    "fia:2025-britain-circuit-map-v2 - FIA F1 2025 British GP Event Notes, Circuit Map V2 (doc 6, 03 Jul 2025), https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_event_notes_-_circuit_map_v2.pdf: corners 1-18, S1 110 m before T6, S2 50 m after T14, speed trap 140 m before T15, centreline 5.891 km",
+    "f1db:v2026.16.1 - circuits/silverstone.yml: layout silverstone-8 (2010-present), 18 turns, clockwise, 5.891 km",
+    "f1com:2026-silverstone-corner-names - formula1.com 'EXPLAINED: How every Silverstone corner got its name': Abbey T1, Farm T2, Village T3, The Loop T4, Aintree T5, Brooklands T6, Luffield T7, Woodcote T8, Copse T9, Maggotts, Becketts and Chapel T10-14, Stowe T15, Vale T16, Club T17/18",
+    "en.wikipedia:Silverstone_Circuit - Arena GP circuit since 2011: 18 turns, Maggotts and Becketts T10-13, Chapel T14, Club T17-18",
+    "field-curvature:7 - cross-check 2026-10-11 on the same two captures: all 22 cars (100 lap segments), path heading from the Motion packet's world forward vector on a 5 m lap-distance grid (lap turns -360 deg = clockwise; right = negative heading change), field speed minima (8 km/h prominence) and per-lap steering/heading sign changes between neighbouring turns",
+]
+notes = "Windows are PnG's except four boundaries moved by the 2026-10-11 cross-check towards where the field's path curvature and steering change sign between two opposite-direction turns (PnG's boundaries cut Abbey, Village, Brooklands and Becketts short by 20-54 m, so their own late minima fell into the next window, where that turn's direction vetoes them): T1/T2 500 -> 545 m, T3/T4 950/960 -> 970 m, T6/T7 2070 -> 2090 m, T13/T14 4100 -> 4150 m. The Vale/Club boundary (5560 m) is kept: the player's steering changes sign there (field path curvature at 5575 m), and the learned direction comes from steering. On the real capture the game's S2/S3 starts equal PnG's sector values to 0.54 m. FIA cross-check: S1 line 110 m before T6 puts T6 at about 1923 m (Brooklands window 1800-2090); S2 line 50 m after T14 puts T14 at about 4243 m (Chapel window 4150-4290). Directions are measured (steering and lateral-g sign; re-confirmed 2026-10-11 from the path heading of all 22 cars) and match the FIA drawing (clockwise). Turns 2, 5, 8, 10, 12 and 14 are taken without a speed minimum on the recorded laps. The recorded driver spun at The Loop, Chapel and after the line on some laps, so learned models from this session carry extra minima (e.g. 115 m, 4123 m); that is driver data, not a sheet issue. Verified with UDP format 2025 only: verified_formats keeps 2026 Season Pack sessions (format 2026) at the seeded tier until a format-2026 capture is checked."
+
+[[turns]]
+numbers = [1]
+names = [{ text = "Abbey", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [280, 545]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names", "field-curvature:7"]
+notes = "Fast right (lateral g about 2-2.5 to the right). This driver lifts/brakes: minima 219-260 km/h at 396-454 m. Window end moved from PnG's 500 m to 545 m (cross-check 2026-10-11): the field's right-hand path curvature runs to 545 m (player steering changes sign at 548 m), and 12 AI Abbey minima at 500-515 m sat in Farm's left-hand window."
+
+[[turns]]
+numbers = [2]
+names = [{ text = "Farm", kind = "official", sources = ["f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [545, 690]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names", "field-curvature:7"]
+notes = "Flat-out left kink (full throttle, 250-280 km/h, lateral g about 1.5 to the left); no speed minimum. PnG calls it 'Farm Curve'; F1.com and en.wikipedia say 'Farm'. Window start moved from 500 to 545 m with Abbey's end (left-hand path curvature from about 550 m)."
+
+[[turns]]
+numbers = [3]
+names = [{ text = "Village", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [780, 970]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names", "field-curvature:7"]
+notes = "Braking about 880-900 m, right steering 870-940 m, minima 78-112 km/h at 910-950 m. Window end moved from PnG's 950 m to 970 m (cross-check 2026-10-11): the field's Village minima (right steering) lie at 940-965 m, so PnG's end put the late ones in the old 950-960 m gap or in The Loop's left-hand window. The right-hand path curvature runs to about 990 m and clean-lap steering changes sign at 980-1005 m, but 970 m is kept so that the live learned model v1's left-steering minimum at 971 m (a lap with a spin at The Loop entry) keeps its Loop label."
+
+[[turns]]
+numbers = [4]
+names = [{ text = "The Loop", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [970, 1125]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names", "field-curvature:7"]
+notes = "Slowest corner: left steering 1000-1110 m, clean minimum about 88-92 km/h at 1030-1057 m. Several recorded laps spun here (minima 3-21 km/h). Window start moved from 960 to 970 m with Village's end (the live learned apexes at 971 m and 989 m stay in this window)."
+
+[[turns]]
+numbers = [5]
+names = [{ text = "Aintree", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [1140, 1350]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names"]
+notes = "Part-throttle left from about 1160 m (lateral g 1.3-2 to the left) with speed rising; no speed minimum."
+
+[[turns]]
+numbers = [6]
+names = [{ text = "Brooklands", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [1800, 2090]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names", "field-curvature:7"]
+notes = "Braking from about 1857 m (310 km/h), left, minima 124-152 km/h at 1994-2069 m. FIA puts the S1 line 110 m before T6: game S2 start 1813 m + 110 m = 1923 m, inside this window. Window end moved from PnG's 2070 m to 2090 m (cross-check 2026-10-11): the left-hand path curvature and the player's steering change sign at 2085-2100 m, and the player's latest Brooklands minimum (2069 m) sat 1 m inside the old end."
+
+[[turns]]
+numbers = [7]
+names = [{ text = "Luffield", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [2090, 2385]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names", "field-curvature:7"]
+notes = "Long right, minima 100-108 km/h at 2143-2255 m. Window start moved from 2070 to 2090 m with Brooklands' end."
+
+[[turns]]
+numbers = [8]
+names = [{ text = "Woodcote", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [2400, 2715]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names"]
+notes = "Right at (near) full throttle, lateral g 1.2-1.7 to the right; no speed minimum."
+
+[[turns]]
+numbers = [9]
+names = [{ text = "Copse", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [2950, 3260]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names"]
+notes = "Fast right (lateral g about 2.3-2.6); this driver brakes from about 2980-3065 m, minima 241-256 km/h at 3018-3143 m."
+
+[[turns]]
+numbers = [10, 11, 12, 13]
+names = [{ text = "Maggotts and Becketts", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [3520, 4150]
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "en.wikipedia:Silverstone_Circuit", "field-curvature:7"]
+notes = "Measured sequence on the cleanest lap: T10 left 3540-3640 m (flat, ~300 km/h), T11 right 3680-3790 m (minimum ~233 km/h at 3740-3760 m), T12 left 3820-3920 m (~250 km/h), T13 right 3940-4140 m (minimum 162-168 km/h at 3975-3987 m). Kept as one complex (mixed directions, no direction set): learned minima take T10-13 with parts. A per-turn split is possible later from more laps. Spelled 'Maggotts and Becketts' (PnG: 'Maggots & Becketts'). Window end moved from PnG's 4100 m to 4150 m (cross-check 2026-10-11): T13's right-hand path curvature runs to 4154 m (field median; player steering sign change 4150 m), so PnG's end left 50 m of Becketts in Chapel's window."
+
+[[turns]]
+numbers = [14]
+names = [{ text = "Chapel", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [4150, 4290]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "en.wikipedia:Silverstone_Circuit", "field-curvature:7"]
+notes = "Flat-out left at 4160-4290 m (lateral g 1.8-2.8 to the left), no speed minimum (a learned minimum at 4123 m on one lap is a spin). Chapel = T14 confirmed: FIA puts the S2 line 50 m after T14, and game S3 start 4293 m - 50 m = 4243 m is inside this window and in the measured left. Window start moved from 4100 to 4150 m (cross-check 2026-10-11): 4100-4150 m is the end of T13's right; Chapel's left-hand curvature starts at about 4155 m. The spin minimum at 4123 m now falls in T10-13."
+
+[[turns]]
+numbers = [15]
+names = [{ text = "Stowe", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [4880, 5260]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names"]
+notes = "End of the Hangar Straight: braking from about 4885 m (312 km/h), right, minima 180-204 km/h at 4959-4974 m."
+
+[[turns]]
+numbers = [16]
+names = [{ text = "Vale", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [5420, 5560]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names"]
+notes = "Heavy braking 5405-5510 m, left steering 5495-5560 m, minima 80-95 km/h at 5522-5559 m. The left-to-right change into Club is at 5555-5565 m, the window boundary; a minimum at the change (5568 m on the learned model) lands in Club and Vale merges into it (label T16-18)."
+
+[[turns]]
+numbers = [17, 18]
+names = [{ text = "Club", kind = "official", sources = ["pits_n_giggles@72f78aa", "f1com:2026-silverstone-corner-names", "en.wikipedia:Silverstone_Circuit"] }]
+game_segment_m = [5560, 5840]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-202758+203637", "fia:2025-britain-circuit-map-v2", "f1com:2026-silverstone-corner-names"]
+notes = "Two rights: T17 at about 5570-5610 m (minima 46-84 km/h at 5570-5666 m) and T18 at about 5705-5860 m onto the Hamilton Straight (part to full throttle). Both right, so the direction veto applies."

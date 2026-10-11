@@ -1,0 +1,170 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa),
+# MIT licence, Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# HAND-REVIEWED 2026-10-10 (numbers, windows, directions and names; see checked_against and the turn notes) against
+# the 72f78aa copy (Suzuka.json blob b6af5f46, byte-identical at 3490db9). The review added Turn 18 and split PnG's
+# [1, 2] and [3-6] windows at gaps between measured minima; every other window is PnG's, unchanged.
+# The importer leaves this file alone because it contains verified turns. Evidence: docs/research/track-sheets-review-g3.md.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 13
+layout = "Suzuka Circuit (Grand Prix circuit)"
+lap_length_m = 5809
+official_turn_count = 18
+sector_starts_m = [2226, 4690]
+verified_formats = [2025]
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = [
+    "capture:20261010-225601 - real F1 25 v1.26 PS5 qualifying and race (UDP format 2025); race clean laps 3-5 speed/brake/throttle/steering/lateral g by lap distance, and 51 flying laps of 19 cars (field minima); Session packet trackLength 5809 m, S2 start 2225.65 m, S3 start 4690.02 m",
+    "fia:2025-japan-circuit-map - FIA F1 2025 Japanese GP Event Notes, Circuit Map (doc 5, 03 Apr 2025, https://www.fia.com/system/files/decision-document/2025_japanese_grand_prix_-_event_notes_-_circuit_map_pit_lane_quarantine_and_red_zone.pdf): corners 1-18 (turn directions from the drawing), S1 line 105 m before T8, S2 line 270 m before T15, centreline 5.807 km",
+    "f1db@b457bedc:circuits/suzuka - CC BY 4.0: layout suzuka-2 (2003-present) 5.807 km, 18 turns, clockwise",
+    "suzukacircuit.jp - official course guide (https://www.suzukacircuit.jp/eng/course_s/): 18 corners on the four-wheel course, 5.807 km; F1 ticket pages (https://www.suzukacircuit.jp/eng/f1/ticket/): S Curve (T3, T5), Reverse Bank (T6), NIPPO Corner (T7), 110R (T10), NISSIN Brake Hairpin (T11), Spoon Curve (T14), 130R (T15), Astemo Chicane (T16-17), Final Corner (T18)",
+    "ja.wikipedia:鈴鹿サーキット - 18 corners; 1-2 two rights; S curves left-right-left-right ending at the Reverse Bank (逆バンク); Dunlop (ダンロップコーナー) long left; Degner 1 and 2 rights; 110R right then the left Hairpin; 200R/250R rights; Spoon (スプーンカーブ) left; 130R left; chicane right-left (formerly Casio Triangle, now sponsor-named); final corner right",
+    "en.wikipedia:Suzuka_Circuit - 18 turns; the chicane's 'Casio' name is historic (later sponsor-renamed)",
+]
+notes = "PnG's numbering 1-17 was right but stopped at 17: the final right (Turn 18, F1DB/FIA 18 turns) was folded into PnG's pit straight; it is added here and official_turn_count is 18. The game's S2/S3 starts equal PnG's to 0.35/0.02 m, and the FIA sector lines land inside the expected windows (S1 + 105 m = 2331 m in T8, S2 + 270 m = 4960 m in T15). Directions are measured (steering sign and lateral g on race laps 3-5) and match the FIA drawing and ja.wikipedia: 10 right, 8 left. On the real race every learned speed minimum (13) falls inside its window; on single-lap models of the field's 51 flying laps (18 AI cars and the player) every labelled minimum is inside its window (one at T16-17 by the edge margin) and 15 noisy AI single-lap minima stayed unlabelled (14 by the direction veto, 1 between windows), none mislabelled. Turns 3, 10, 12 and 18 are taken without a speed minimum, so learned models normally have no corner for them. Sponsor names change at this circuit (T7 'Dunlop' -> 'NIPPO Corner', T11 'NISSIN Brake Hairpin', T16-17 'Casio Triangle' -> 'Astemo Chicane'): those turns carry no sponsor name. Verified with UDP format 2025 (F1 25 v1.26) only."
+
+[[turns]]
+numbers = [1]
+game_segment_m = [585, 740]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Braking 585-650 m, minimum 245 km/h at 660 m (learned T1), right (steering +0.15, lateral 3.2 g). PnG has turns 1-2 as one window 585-975; the review split it at 740 m, after Turn 1's right steering (625-725 m) and about 100 m before Turn 2's minimum. Unnamed ('1st Corner' is generic)."
+
+[[turns]]
+numbers = [2]
+game_segment_m = [740, 975]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Braking 725-805 m, minimum 155-158 km/h at 830-866 m (learned T2), right (steering +0.38, lateral 3.3 g). Field minima (51 laps): 827-894 m (p10-p90). Unnamed."
+
+[[turns]]
+numbers = [3, 4, 5]
+names = [{ text = "S Curve", kind = "official", sources = ["suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット", "pits_n_giggles@72f78aa"] }]
+game_segment_m = [1030, 1460]
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Mixed directions, so no direction: left 1025-1150 m (a lift to 0.3 throttle, no minimum), right 1175-1300 m (minimum 183 km/h at 1303 m, learned T3), left 1325-1450 m (minimum 177 km/h at 1376 m, learned T4). PnG's [3-6] window 1030-1700 'S' Curves was split at 1460 m, where the steering turns from Turn 5 (left) to Turn 6 (right). Name as the circuit writes it ('S Curve (T3)', 'S Curve (T5)')."
+
+[[turns]]
+numbers = [6]
+names = [{ text = "Reverse Bank", kind = "official", sources = ["suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット"] }]
+game_segment_m = [1460, 1700]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Braking 1475-1525 m, minimum 163 km/h at 1549 m (learned T5), right (steering +0.35-0.41). Field minima median 1557 m. The last corner of the S curves (ja: 逆バンク, unbanked); the circuit's ticket pages name it 'Reverse Bank (T6)'."
+
+[[turns]]
+numbers = [7]
+game_segment_m = [1700, 2125]
+direction = "left"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Long uphill left from 1675 m (steering -0.13 to -0.37, lateral up to 3.5 g), throttle 0.8-1.0, no braking; minimum 198 km/h at 1849 m (learned T6). Name unresolved and therefore omitted: PnG and ja.wikipedia use the traditional 'Dunlop'; the circuit's current F1 ticket pages call it 'NIPPO Corner (T7)' (naming rights). Neither is shown until a reference for the game's season settles it."
+
+[[turns]]
+numbers = [8]
+names = [{ text = "Degner 1", kind = "traditional", sources = ["ja.wikipedia:鈴鹿サーキット", "suzukacircuit.jp", "pits_n_giggles@72f78aa"] }]
+game_segment_m = [2190, 2385]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Braking 2225-2300 m, minimum 187-198 km/h at 2280-2303 m (learned T7), right. FIA puts the S1 line 105 m before T8: game S2 start 2226 m + 105 m = 2331 m, inside this window. Named after Ernst Degner (ja: デグナー1; PnG 'Degner Curve 1')."
+
+[[turns]]
+numbers = [9]
+names = [{ text = "Degner 2", kind = "traditional", sources = ["ja.wikipedia:鈴鹿サーキット", "suzukacircuit.jp", "pits_n_giggles@72f78aa"] }]
+game_segment_m = [2385, 2530]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Braking 2385-2463 m, minimum 116-128 km/h at 2464-2497 m (learned T8), right (steering +0.33). ja: デグナー2; PnG 'Degner Curve 2'."
+
+[[turns]]
+numbers = [10]
+names = [{ text = "110R", kind = "official", sources = ["suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット"] }]
+game_segment_m = [2720, 2830]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Flat right after the crossover: about 250 km/h, steering +0.07 to +0.15 and lateral up to 3.8 g at 2725-2825 m; no speed minimum (the Hairpin braking starts at 2825 m; 2750 m on one lap). Named '110R (T10)' by the circuit; PnG leaves it unnamed."
+
+[[turns]]
+numbers = [11]
+names = [{ text = "Hairpin", kind = "traditional", sources = ["ja.wikipedia:鈴鹿サーキット", "en.wikipedia:Suzuka_Circuit", "pits_n_giggles@72f78aa"] }]
+game_segment_m = [2830, 3000]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Braking 2830-2937 m, minimum 57-64 km/h at 2942-2949 m (learned T9), full left lock. The circuit's own name is the sponsor name 'NISSIN Brake Hairpin (T11)' (naming rights since 2020); the traditional 'Hairpin' is shown."
+
+[[turns]]
+numbers = [12]
+names = [{ text = "200R", kind = "traditional", sources = ["ja.wikipedia:鈴鹿サーキット", "pits_n_giggles@72f78aa"] }]
+game_segment_m = [3050, 3670]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Flat-out right, 181 -> 296 km/h, steering +0.04 to +0.09 and lateral 1.5-2.9 g over 3100-3675 m; no speed minimum. ja.wikipedia calls the section 200R and 250R (one official number)."
+
+[[turns]]
+numbers = [13, 14]
+names = [{ text = "Spoon Curve", kind = "official", sources = ["suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット", "pits_n_giggles@72f78aa"] }]
+game_segment_m = [3675, 4100]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット"]
+notes = "Braking 3690-3800 m, left from 3775 m, minimum 116-137 km/h at 3949-4001 m (learned T10; one learned minimum for both numbers on this capture). Field minima 3954-4027 m (p10-p90)."
+
+[[turns]]
+numbers = [15]
+names = [{ text = "130R", kind = "official", sources = ["suzukacircuit.jp", "ja.wikipedia:鈴鹿サーキット", "pits_n_giggles@72f78aa"] }]
+game_segment_m = [4850, 5180]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "suzukacircuit.jp"]
+notes = "Lift (throttle 0.2-0.4 at 4900-4950 m), left 4925-5175 m, minimum 283 km/h at 5067 m (learned T11; 259 km/h at 4989 m on lap 3 with a brake tap). FIA puts the S2 line 270 m before T15: game S3 start 4690 m + 270 m = 4960 m, inside this window."
+
+[[turns]]
+numbers = [16, 17]
+game_segment_m = [5300, 5500]
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "suzukacircuit.jp", "en.wikipedia:Suzuka_Circuit"]
+notes = "Right-left chicane, so no direction: braking 5275-5400 m, right minimum 85 km/h at 5404 m and left minimum 83 km/h at 5470 m (learned T12 and T13, parts 1 and 2). Kept as one window: the minima are 66 m apart, close to the 60 m spacing rule, so a single merged minimum can land either side. Names omitted: PnG's 'Casio Triangle' is the historic name; the circuit's current name is the sponsor name 'Astemo Chicane (T16-17)'."
+
+[[turns]]
+numbers = [18]
+game_segment_m = [5530, 5760]
+direction = "right"
+verified = true
+sources = ["capture:20261010-225601"]
+checked_against = ["capture:20261010-225601", "fia:2025-japan-circuit-map", "f1db@b457bedc:circuits/suzuka", "suzukacircuit.jp"]
+notes = "Added by the review: PnG folds it into its pit straight (5500-5809 m). Flat-out right onto the pit straight: steering +0.07 to +0.11 and lateral 0.9-2.5 g over 5500-5800 m, peak 5575-5675 m, full throttle; no speed minimum. Window placed from this capture, with a 30 m gap after the chicane window so a late chicane minimum joins T16-17 through the edge margin. Unnamed ('Final Corner (T18)')."

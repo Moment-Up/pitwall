@@ -1,0 +1,123 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 10
+layout = "Spa"
+lap_length_m = 7007
+official_turn_count = 19
+sector_starts_m = [2324, 5065]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1]
+names = [{ text = "La Source", kind = "unclassified" }]
+game_segment_m = [230, 460]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [2, 3, 4]
+names = [{ text = "Le Raidillon de l'Eau Rouge", kind = "unclassified" }]
+game_segment_m = [980, 1360]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [5, 6]
+names = [{ text = "Les Combes", kind = "unclassified" }]
+game_segment_m = [2290, 2575]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [7]
+names = [{ text = "Malmedy", kind = "unclassified" }]
+game_segment_m = [2600, 2800]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [8]
+names = [{ text = "Bruxelles/Rivage", kind = "unclassified" }]
+game_segment_m = [2900, 3160]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [9]
+names = [{ text = "Jacky Ickx/No Name", kind = "unclassified" }]
+game_segment_m = [3200, 3400]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [10, 11]
+names = [{ text = "Pouhon", kind = "unclassified" }]
+game_segment_m = [3700, 4200]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [12, 13]
+names = [{ text = "Fagnes Chicane", kind = "unclassified" }]
+game_segment_m = [4350, 4790]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+notes = "Name spelling corrected from PnG 'Fagnes Chicaine'."
+
+[[turns]]
+numbers = [14]
+names = [{ text = "Campus", kind = "unclassified" }]
+game_segment_m = [4850, 5050]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [15]
+names = [{ text = "Stavelot", kind = "unclassified" }]
+game_segment_m = [5090, 5310]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [16]
+names = [{ text = "Paul Frère Curve", kind = "unclassified" }]
+game_segment_m = [5735, 6030]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [17]
+names = [{ text = "Blanchimont", kind = "unclassified" }]
+game_segment_m = [6070, 6335]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [18, 19]
+names = [{ text = "Bus Stop", kind = "unclassified" }]
+game_segment_m = [6600, 6877]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

@@ -1,0 +1,106 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 15
+layout = "Texas"
+lap_length_m = 5514
+official_turn_count = 20
+sector_starts_m = [1661, 3923]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1]
+names = [{ text = "Big Red", kind = "unclassified" }]
+game_segment_m = [530, 750]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [2]
+game_segment_m = [780, 1060]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [3, 4, 5, 6]
+names = [{ text = "The Esses", kind = "unclassified" }]
+game_segment_m = [1060, 1640]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [7, 8, 9]
+game_segment_m = [1640, 2060]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [10]
+game_segment_m = [2130, 2280]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [11]
+names = [{ text = "The Bobby Pin", kind = "unclassified" }]
+game_segment_m = [2400, 2660]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [12]
+game_segment_m = [3650, 3860]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13, 14]
+game_segment_m = [3950, 4170]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [15]
+game_segment_m = [4235, 4375]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [16, 17, 18]
+game_segment_m = [4430, 4960]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [19]
+game_segment_m = [4960, 5150]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [20]
+names = [{ text = "The Andretti", kind = "unclassified" }]
+game_segment_m = [5260, 5440]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

@@ -1,0 +1,3578 @@
+{
+ "_fixture": {
+  "source": "GET /api/rig/recommendations?game=f1_25&driver_id=1 on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded: F1 25, James (advanced), his saved Competitive style"
+ },
+ "body": {
+  "game": "f1_25",
+  "game_name": "EA SPORTS F1 25 (incl. 2026 Season Pack)",
+  "platform": "ps5",
+  "hardware": {
+   "platform": "ps5",
+   "wheel_base": "fanatec_gt_dd_pro",
+   "torque_nm": 5,
+   "pedals": "csl",
+   "rim": "gt_dd_pro_bundled"
+  },
+  "requested_style": "competitive",
+  "style": "competitive",
+  "style_label": "Competitive",
+  "sourced": true,
+  "skill_level": "advanced",
+  "strength_scale": 1.0,
+  "strength_scale_source": "none",
+  "peak_torque_nm": 5.0,
+  "confidence": "medium",
+  "pedal_confidence": "low",
+  "summary": "Esports-style: canned effects off, low damping, rotation 300-360. A lab study (Murphy et al. 2026, iRacing GT3) found faster laps with mid-intensity FFB than with high or none; neither it nor the F1 sources tested a 5 Nm base in F1 25.",
+  "a_set": false,
+  "stale": false,
+  "basis": [
+   "srs_f1_25_esports_5nm",
+   "carson_f1_25_8nm",
+   "carson_f1_26_8nm_2026_09"
+  ],
+  "presets": {
+   "carson_f1_25_8nm": {
+    "id": "carson_f1_25_8nm",
+    "code": "F6",
+    "name": "Carson F1 - F1 25 Fanatec FFB guide (CSL DD class, 8 Nm)",
+    "preference": "competitive",
+    "preference_inferred": false,
+    "torque_nm": 8,
+    "applies_to_torque_nm": [
+     8
+    ],
+    "source_platform": "pc",
+    "pedals": "unknown_load_cell",
+    "confidence": "medium",
+    "published": "2025-06-26",
+    "game_version": "f1_25_launch",
+    "status": "current",
+    "stale": false,
+    "url": "https://www.youtube.com/watch?v=67fkv68XPRc",
+    "author": "Carson F1",
+    "verified": true
+   },
+   "carson_f1_26_8nm_2026_09": {
+    "id": "carson_f1_26_8nm_2026_09",
+    "code": "F7",
+    "name": "Carson F1 - F1 26 (2026 Season Pack) FFB guide, 2026-09-07 description update (8 Nm Boost Kit)",
+    "preference": "competitive",
+    "preference_inferred": false,
+    "torque_nm": 8,
+    "applies_to_torque_nm": [
+     8
+    ],
+    "source_platform": "pc",
+    "pedals": null,
+    "confidence": "medium",
+    "published": "2026-06-30",
+    "game_version": "f1_25_v1_25",
+    "status": "current",
+    "stale": false,
+    "url": "https://www.youtube.com/watch?v=hGUFX4C-KJk",
+    "author": "Carson F1",
+    "verified": true
+   },
+   "f1withnick_f1_26_5nm_realism": {
+    "id": "f1withnick_f1_26_5nm_realism",
+    "code": "F11",
+    "name": "F1withNick - F1 26 (2026 Season Pack) CSL DD QR2 'most realistic' FFB",
+    "preference": "realism",
+    "preference_inferred": false,
+    "torque_nm": 5,
+    "applies_to_torque_nm": [
+     5
+    ],
+    "source_platform": "pc",
+    "pedals": "fanatec_csl_pedals",
+    "confidence": "low",
+    "published": "2026-07-10",
+    "game_version": "f1_25_sp2026_v1_20",
+    "status": "current",
+    "stale": false,
+    "url": "https://www.youtube.com/watch?v=RN_TQcpQMgA",
+    "author": "F1withNick",
+    "verified": true
+   },
+   "fanatec_f1_25_official_2025": {
+    "id": "fanatec_f1_25_official_2025",
+    "code": "F1",
+    "name": "Fanatec official F1 25 - CSL DD / GT DD (PC/PS5 column)",
+    "preference": "official_default",
+    "preference_inferred": false,
+    "torque_nm": null,
+    "applies_to_torque_nm": [
+     5,
+     8
+    ],
+    "source_platform": "pc_ps5",
+    "pedals": null,
+    "confidence": "high",
+    "published": "2025-07-01",
+    "game_version": "f1_25_launch",
+    "status": "current",
+    "stale": false,
+    "url": "https://www.fanatec.com/explorer/games/f1-2024/f1-25-fanatec-recommended-settings/",
+    "author": "Fanatec (Fanatec Explorer, no byline)",
+    "verified": false
+   },
+   "fanatec_f1_25_official_2026_season_pack": {
+    "id": "fanatec_f1_25_official_2026_season_pack",
+    "code": "F3",
+    "name": "Fanatec official F1 25 2026 Season Pack - CSL DD / GT DD Pro",
+    "preference": "official_default",
+    "preference_inferred": false,
+    "torque_nm": null,
+    "applies_to_torque_nm": [
+     5,
+     8
+    ],
+    "source_platform": "not_split",
+    "pedals": null,
+    "confidence": "medium",
+    "published": "2026-06-03",
+    "game_version": "f1_25_sp2026_v1_20",
+    "status": "current",
+    "stale": false,
+    "url": "https://www.fanatec.com/us/en/explorer/products/racing-wheels-wheel-bases/f1-25-2026-season-pack-launches-today/",
+    "author": "Fanatec (no byline)",
+    "verified": true
+   },
+   "fin_f1_25_gt_dd_pro_8nm": {
+    "id": "fin_f1_25_gt_dd_pro_8nm",
+    "code": "F8",
+    "name": "Alessandro Fin - F1 25 GT DD Pro 8 Nm settings",
+    "preference": "balanced",
+    "preference_inferred": true,
+    "torque_nm": 8,
+    "applies_to_torque_nm": [
+     8
+    ],
+    "source_platform": "pc",
+    "pedals": "unknown_load_cell",
+    "confidence": "low",
+    "published": "2025-06-02",
+    "game_version": "f1_25_launch",
+    "status": "current",
+    "stale": false,
+    "url": "https://www.youtube.com/watch?v=fN72kvthVrU",
+    "author": "Alessandro Fin",
+    "verified": true
+   },
+   "fin_f1_26_csl_gt_dd_pro_8nm": {
+    "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+    "code": "F9",
+    "name": "Alessandro Fin - F1 26 (2026 Season Pack) CSL DD / GT DD Pro 8 Nm settings",
+    "preference": "competitive",
+    "preference_inferred": false,
+    "torque_nm": 8,
+    "applies_to_torque_nm": [
+     8
+    ],
+    "source_platform": "pc",
+    "pedals": null,
+    "confidence": "low",
+    "published": "2026-06-24",
+    "game_version": "f1_25_sp2026_v1_20",
+    "status": "current",
+    "stale": false,
+    "url": "https://www.youtube.com/watch?v=b1HmTpQ0KZk",
+    "author": "Alessandro Fin",
+    "verified": true
+   },
+   "matt212_f1_25_gt_dd_pro_8nm": {
+    "id": "matt212_f1_25_gt_dd_pro_8nm",
+    "code": "F10",
+    "name": "Matt212 - F1 25 wheel settings (GT DD Pro + Boost Kit)",
+    "preference": "balanced",
+    "preference_inferred": true,
+    "torque_nm": 8,
+    "applies_to_torque_nm": [
+     8
+    ],
+    "source_platform": "pc",
+    "pedals": "fanatec_csl_elite_lc",
+    "confidence": "medium",
+    "published": "2025-05-28",
+    "game_version": "f1_25_launch",
+    "status": "current",
+    "stale": false,
+    "url": "https://www.youtube.com/watch?v=gOrxAbx1sMI",
+    "author": "Matt212",
+    "verified": true
+   },
+   "srs_f1_25_esports_5nm": {
+    "id": "srs_f1_25_esports_5nm",
+    "code": "F5a",
+    "name": "SimRacingSetup esports table - CSL DD (5Nm) row (CSL DD / GT DD Pro class)",
+    "preference": "competitive",
+    "preference_inferred": false,
+    "torque_nm": 5,
+    "applies_to_torque_nm": [
+     5
+    ],
+    "source_platform": "not_stated",
+    "pedals": null,
+    "confidence": "medium",
+    "published": "2025-10-08",
+    "game_version": "f1_25_launch",
+    "status": "current",
+    "stale": false,
+    "url": "https://web.archive.org/web/20260509143649/https://simracingsetup.com/ea-sports-f1/f1-25-fanatec-wheel-settings-esports/",
+    "author": "Carson (SimRacingSetup esports setup engineer, FVR)",
+    "verified": true
+   },
+   "srs_f1_25_esports_8nm": {
+    "id": "srs_f1_25_esports_8nm",
+    "code": "F5b",
+    "name": "SimRacingSetup esports table - CSL DD (8Nm power kit) row (CSL DD / GT DD Pro class)",
+    "preference": "competitive",
+    "preference_inferred": false,
+    "torque_nm": 8,
+    "applies_to_torque_nm": [
+     8
+    ],
+    "source_platform": "not_stated",
+    "pedals": null,
+    "confidence": "medium",
+    "published": "2025-10-08",
+    "game_version": "f1_25_launch",
+    "status": "current",
+    "stale": false,
+    "url": "https://web.archive.org/web/20260509143649/https://simracingsetup.com/ea-sports-f1/f1-25-fanatec-wheel-settings-esports/",
+    "author": "Carson (SimRacingSetup esports setup engineer, FVR)",
+    "verified": true
+   },
+   "srs_f1_25_fanatec_380": {
+    "id": "srs_f1_25_fanatec_380",
+    "code": "F4",
+    "name": "SimRacingSetup - F1 25 / 2026 Season Pack Fanatec CSL DD & GT DD Pro (380 deg, PC/PS5 column)",
+    "preference": "balanced",
+    "preference_inferred": false,
+    "torque_nm": 8,
+    "applies_to_torque_nm": [
+     5,
+     8
+    ],
+    "source_platform": "pc_ps5",
+    "pedals": null,
+    "confidence": "high",
+    "published": "2025-05-26",
+    "game_version": "f1_25_sp2026_v1_20",
+    "status": "current",
+    "stale": false,
+    "url": "https://web.archive.org/web/20260712081334/https://simracingsetup.com/ea-sports-f1/f1-25-fanatec-wheel-settings/",
+    "author": "Rich (SimRacingSetup)",
+    "verified": true
+   }
+  },
+  "sections": [
+   {
+    "id": "base",
+    "title": "1. Base mode and Tuning Menu",
+    "steps": [
+     {
+      "id": "mode",
+      "text": "Put the base in DARK BLUE mode (power-button LED). Native PlayStation mode: short-press the power button until the LED is dark blue.",
+      "evidence": "V",
+      "derived": false,
+      "source": "GT DD Pro manual 5.6; Fanatec help",
+      "detail": null
+     },
+     {
+      "id": "firmware",
+      "text": "Firmware: the current set is base 1.9.2.3 (Fanatec App 1.6.1.3, 2026-09-21). Updating needs a Windows PC with the base in RED mode; afterwards switch back, recalibrate the wheel centre and recheck your slot values.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec App 1.6.1.3 release notes",
+      "detail": null
+     },
+     {
+      "id": "menu",
+      "text": "Switch to the Advanced Tuning Menu: hold the Tuning button for about 4 s (Fanatec's FAQ says 3 s). The Standard menu cannot show: SETUP 1 SET, NDP OFF, INT 2.",
+      "evidence": "V",
+      "derived": false,
+      "source": "GT DD Pro manual 5.6.1",
+      "detail": null
+     },
+     {
+      "id": "no_a_set_f1",
+      "text": "Do not use A SET for F1 25: it hands control to the game and locks the values, and F1 25 support for it is undocumented.",
+      "evidence": "U",
+      "derived": false,
+      "source": "GT DD Pro manual 5.6.1; rig-setup-sources.md 2",
+      "detail": null
+     },
+     {
+      "id": "sen_match",
+      "text": "Set SEN on the wheel to 360, the same as Maximum Wheel Rotation in the game. Do not rely on AUTO in F1 (known issue). Turn the wheel 90 degrees and check the on-screen wheel matches.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec App 1.6.1.3 known issues; Fanatec F1 25 pages",
+      "detail": null
+     },
+     {
+      "id": "v125_bug",
+      "text": "F1 25 v1.25 known bug: if the wheel oscillates or loses force feedback after a session change (for example Qualifying to Race), pause and power-cycle the base. Do not tune NDP, INT or the damper against it. Every report that states a torque is at 8 Nm.",
+      "evidence": "V",
+      "derived": false,
+      "source": "EA forums threads 13695137 / 13701405; forum.fanatec.com topic 20597",
+      "detail": null
+     },
+     {
+      "id": "one_change",
+      "text": "Change one thing at a time, then drive the same car and track and run the rig check to compare.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec F1 25 and oscillation pages; SimXPro (rig-setup-sources.md 7)",
+      "detail": null
+     }
+    ],
+    "rows": []
+   },
+   {
+    "id": "wheel",
+    "title": "2. Wheel base Tuning Menu (on-wheel order)",
+    "steps": [
+     {
+      "id": "rim_items",
+      "text": "MPS and AP are left out: the Bundled Gran Turismo DD Pro rim has no multi-position switch or analogue paddles. Skip them if the menu shows them. Not recommended here because it is not known whether the Bundled Gran Turismo DD Pro rim has them: SHO (vibration motors). If the menu shows them, leave them at their defaults.",
+      "evidence": "U",
+      "derived": false,
+      "source": "GT DD Pro manual 5.6",
+      "detail": null
+     }
+    ],
+    "rows": [
+     {
+      "key": "SETUP",
+      "label": "Tuning Menu profile (A SET / C SET / 1 SET-5 SET)",
+      "value": "1 SET",
+      "range": null,
+      "menu_range": "Standard menu: A SET + C SET (one custom). Advanced menu: A SET + 1 SET..5 SET",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": true,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "derived",
+       "evidence": "D",
+       "derived": true,
+       "basis": [],
+       "others": [],
+       "consensus": null,
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "pitwall's slot suggestion (rig-setup-sources.md 6.0): 1 SET F1 25, 2 SET GT7 custom, 3 SET experiments. Any custom slot works; custom slots save each change immediately.",
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "SEN",
+      "label": "Sensitivity (steering rotation)",
+      "value": "360",
+      "range": "300-360",
+      "menu_range": "Standard: 180-1080 or AUTO; Advanced: 90-2520 or AUTO",
+      "factory_default": "AUTO",
+      "changed_from_default": true,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "range_pick",
+       "evidence": "D",
+       "derived": true,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "300-360",
+         "evidence": "V",
+         "note": "300-360 (or AUTO)",
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "360",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "AUTO",
+         "evidence": "V",
+         "note": "Page: if AUTO does not work, set SEN to the in-game rotation; Fanatec App 1.6.1.3 recommends manual SEN for F1 games.",
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "380",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "300-360",
+         "evidence": "V",
+         "note": "300-360 (or AUTO)",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "360",
+         "evidence": "A",
+         "note": "AUTO also shown at ~2:10.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "360",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "330",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "310",
+         "evidence": "A",
+         "note": "~310",
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "400",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "360",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 9,
+        "median": "360",
+        "range": "310-400",
+        "status": "strong",
+        "note": "Strong around 360 (Fanatec: matches a real F1 wheel). Esports 300-360, SimRacingSetup 380, Matt212 400."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "pitwall's start value inside the published range 300-360 (F5a).",
+       "original": null,
+       "range_basis": "published",
+       "range_evidence": "V",
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "FF",
+      "label": "Force Feedback (max motor strength; 'FFB' on Fanatec web pages and the wheel display)",
+      "value": "100",
+      "range": null,
+      "menu_range": "Standard: 005-100; Advanced: OFF, 001-100",
+      "factory_default": "100",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "100",
+         "evidence": "V",
+         "note": "100%",
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "100",
+         "evidence": "V",
+         "note": "FFB 100",
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "100",
+         "evidence": "V",
+         "note": "FFB 100",
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "100",
+         "evidence": "V",
+         "note": "FFB 100",
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "100",
+         "evidence": "V",
+         "note": "100%",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "100",
+         "evidence": "V",
+         "note": "Spoken: 8 Nm at 100%.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "80",
+         "evidence": "V",
+         "note": "FFB 80%",
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "100",
+        "range": "80-100",
+        "status": "consensus",
+        "note": "Near-unanimous (Matt212 80)."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "FFS",
+      "label": "Force Feedback Scaling",
+      "value": "PEA",
+      "range": null,
+      "menu_range": "LIN / PEA (Advanced menu only)",
+      "factory_default": "PEA",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "PEA",
+         "evidence": "V",
+         "note": "Peak",
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "PEA",
+         "evidence": "V",
+         "note": "PEAK",
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "PEA",
+         "evidence": "V",
+         "note": "PEAK",
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "PEA",
+         "evidence": "V",
+         "note": "Peak",
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "PEA",
+         "evidence": "V",
+         "note": "Peak",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "PEA",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "not shown (Boost Kit on FullForce firmware)",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "PEA",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "PEA",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "PEA",
+         "evidence": "V",
+         "note": "Peak",
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "PEA",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 9,
+        "median": "PEA",
+        "range": "PEA",
+        "status": "consensus",
+        "note": "Unanimous where present. Not offered with the Boost Kit on FullForce firmware."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "NDP",
+      "label": "Natural Damper",
+      "value": "OFF",
+      "range": "OFF-5",
+      "menu_range": "Standard: 25-100; Advanced: OFF, 01-100",
+      "factory_default": "50",
+      "changed_from_default": true,
+      "needs_advanced": true,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "range_pick",
+       "evidence": "D",
+       "derived": true,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "OFF-5",
+         "evidence": "V",
+         "note": "Off or <=5",
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "35",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "20",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "35",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "OFF-5",
+         "evidence": "V",
+         "note": "Off or <=5",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "OFF",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "OFF",
+         "evidence": "V",
+         "note": "From the description update.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "50",
+         "evidence": "A",
+         "note": "~50",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "30",
+         "evidence": "A",
+         "note": "~30",
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "50",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "OFF",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "25",
+        "range": "OFF-50",
+        "status": "split",
+        "note": "OFF-5 (esports, realism); 20-35 (Fanatec, SimRacingSetup); 50 (Fin 2025, Matt212)."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "pitwall's start value inside the published range OFF-5 (F5a). Raise in steps of 5 if the wheel oscillates hands-off.",
+       "original": null,
+       "range_basis": "published",
+       "range_evidence": "V",
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "NFR",
+      "label": "Natural Friction",
+      "value": "OFF",
+      "range": null,
+      "menu_range": "OFF, 001-100 (Advanced menu only)",
+      "factory_default": "OFF",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "OFF",
+         "evidence": "V",
+         "note": "0",
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "OFF",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "OFF",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "10",
+         "evidence": "A",
+         "note": "~10",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "15",
+         "evidence": "A",
+         "note": "~15",
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "OFF",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "OFF",
+        "range": "OFF-15",
+        "status": "consensus",
+        "note": "Only Fin uses it."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "NIN",
+      "label": "Natural Inertia",
+      "value": "OFF",
+      "range": null,
+      "menu_range": "OFF, 001-100 (Advanced menu only)",
+      "factory_default": "OFF",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "OFF",
+         "evidence": "V",
+         "note": "0",
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "OFF",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "OFF",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "10",
+         "evidence": "A",
+         "note": "~10",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "5",
+         "evidence": "A",
+         "note": "~5",
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "OFF",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "OFF",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "OFF",
+        "range": "OFF-10",
+        "status": "consensus",
+        "note": "Only Fin uses it."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "INT",
+      "label": "FFB Interpolation filter",
+      "value": "2",
+      "range": "OFF-5",
+      "menu_range": "OFF, 01-20 (Advanced menu only)",
+      "factory_default": "11",
+      "changed_from_default": true,
+      "needs_advanced": true,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "range_pick",
+       "evidence": "D",
+       "derived": true,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "OFF-5",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "3",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "3",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "3",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "OFF-5",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "2",
+         "evidence": "A",
+         "note": "~2",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "1",
+         "evidence": "A",
+         "note": "~1",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "3",
+         "evidence": "A",
+         "note": "~3",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "6",
+         "evidence": "A",
+         "note": "~6",
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "11",
+         "evidence": "V",
+         "note": "Factory default.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "3",
+         "evidence": "A",
+         "note": "~3",
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "3",
+        "range": "1-11",
+        "status": "strong",
+        "note": "Strong 1-3; Fin 6, Matt212 11 (the factory default)."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "pitwall's start value inside the published range OFF-5 (F5a). Carson ~1-2 [A]; start 2 [D].",
+       "original": null,
+       "range_basis": "published",
+       "range_evidence": "V",
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "FEI",
+      "label": "Force Effect Intensity",
+      "value": "100",
+      "range": "90-100",
+      "menu_range": "000-100 (Advanced menu only; step size unverified)",
+      "factory_default": "100",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [
+       "Carson ~90 on screen [A]."
+      ],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "90",
+         "evidence": "A",
+         "note": "Spoken: 100.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "90",
+         "evidence": "A",
+         "note": "~90",
+         "applies_at_torque": false
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "100",
+        "range": "90-100",
+        "status": "consensus",
+        "note": "Carson about 90 on screen."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": "across_sources",
+       "range_evidence": "A",
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "FOR",
+      "label": "Force effect modifier (constant force)",
+      "value": "100",
+      "range": null,
+      "menu_range": "OFF, 010-120 (Advanced menu only)",
+      "factory_default": "100",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "derived",
+       "evidence": "D",
+       "derived": true,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "100",
+         "evidence": "D",
+         "note": "Key inferred: the source labels it 'FFS'; FOR is the likely meaning.",
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "100",
+         "evidence": "D",
+         "note": "Key inferred: the source labels it 'FFS'; FOR is the likely meaning.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "110",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "100",
+        "range": "100-110",
+        "status": "consensus",
+        "note": "Unanimous apart from Matt212's 110."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "F5a publishes 'Force Effect Strength (FFS) 100', which the research reads as FOR: an inference, so pitwall marks it derived.",
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "SPR",
+      "label": "Spring effect modifier",
+      "value": "100",
+      "range": null,
+      "menu_range": "OFF, 010-120 (Advanced menu only)",
+      "factory_default": "100",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "100",
+        "range": "100",
+        "status": "consensus",
+        "note": "Unanimous."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "DPR",
+      "label": "Damper effect modifier",
+      "value": "100",
+      "range": null,
+      "menu_range": "OFF, 010-120 (Advanced menu only)",
+      "factory_default": "100",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "100",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "100",
+        "range": "100",
+        "status": "consensus",
+        "note": "Unanimous."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "FUL",
+      "label": "FullForce strength",
+      "value": "100",
+      "range": null,
+      "menu_range": "OFF-100 (Fanatec documents the range for Podium DD / CS DD / CS DD+; GT DD Pro range unverified)",
+      "factory_default": "100",
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "derived",
+       "evidence": "D",
+       "derived": true,
+       "basis": [],
+       "others": [
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "100",
+         "evidence": "A",
+         "note": "~100",
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "100",
+         "evidence": "A",
+         "note": "~100",
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": null,
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "Factory default; no confirmed effect in F1 25. Only shown on FullForce firmware.",
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     }
+    ]
+   },
+   {
+    "id": "ingame",
+    "title": "3. EA SPORTS F1 25 (incl. 2026 Season Pack): in-game settings",
+    "steps": [],
+    "rows": [
+     {
+      "key": "VIB_FFB",
+      "label": "Vibration & Force Feedback",
+      "value": "On",
+      "range": null,
+      "menu_range": "On / Off",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [
+       "Published for 8 Nm only; used unchanged at 5 Nm."
+      ],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "On",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "On",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "On",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "On",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "On",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "On",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "On",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "On",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": null,
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": "Published for 8 Nm only; used unchanged at 5 Nm.",
+       "stale": false
+      }
+     },
+     {
+      "key": "VIB_FFB_STRENGTH",
+      "label": "Vibration & Force Feedback Strength",
+      "value": "90",
+      "range": "80-100",
+      "menu_range": "0 to above 100 (110, ~115 and 120 observed; maximum unverified, ~150 suggested by slider proportions)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "range_pick",
+       "evidence": "D",
+       "derived": true,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "80-100",
+         "evidence": "V",
+         "note": "Explicit CSL DD (5Nm) row; the same 80-100 is given for 5 and 8 Nm.",
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "80",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "50-70",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "70",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "80-100",
+         "evidence": "V",
+         "note": "Explicit CSL DD (8Nm power kit) row; the same 80-100 is given for 5 and 8 Nm.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "90",
+         "evidence": "V",
+         "note": "Spoken range 75-90 at 8 Nm (transcript); 90 on screen [A].",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "90-100",
+         "evidence": "V",
+         "note": "'For 8nm' in the 2026-09-07 description; also says raise in-game strength by 10-20 from earlier values because the game added damper/inertia [U]. June value 75 unconfirmed.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "100",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "115",
+         "evidence": "A",
+         "note": "~115",
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "110",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "60",
+         "evidence": "A",
+         "note": "~60",
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "90",
+        "range": "60-115",
+        "status": "split",
+        "note": "Split by game version and style, not by torque: no credible source lowers it from 5 to 8 Nm (rig-setup-sources.md 5.2). Carson at 8 Nm went 55-70 (F1 24), 75-90 (F1 25), 90-100 (after v1.25)."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "pitwall's start value inside the published range 80-100 (F5a). SRS esports 5 Nm row (pre-v1.25). After v1.25 start at 90-100 [D, by analogy with Carson's 8 Nm update].",
+       "original": null,
+       "range_basis": "published",
+       "range_evidence": "V",
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "ON_TRACK_EFFECTS",
+      "label": "On Track Effects",
+      "value": "0",
+      "range": null,
+      "menu_range": "unverified (0-70 observed)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "30",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "30",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "15",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "70",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "25",
+         "evidence": "A",
+         "note": "~25",
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 10,
+        "median": "7.5",
+        "range": "0-70",
+        "status": "split",
+        "note": "0 (esports); 15-30 (official, balanced, realism); 70 (Matt212)."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "RUMBLE_STRIP_EFFECTS",
+      "label": "Rumble Strip Effects",
+      "value": "0",
+      "range": null,
+      "menu_range": "unverified (0-40 observed)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "30",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "0-20",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "30",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "15",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "40",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "25",
+         "evidence": "A",
+         "note": "~25",
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 11,
+        "median": "10",
+        "range": "0-40",
+        "status": "split",
+        "note": "Same split; Fanatec 2026 lowered it to 0-20."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "OFF_TRACK_EFFECTS",
+      "label": "Off Track Effects",
+      "value": "0",
+      "range": null,
+      "menu_range": "unverified (0-25 observed)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "15",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "0-20",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "15",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "10",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "25",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "15",
+         "evidence": "A",
+         "note": "~15",
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 11,
+        "median": "10",
+        "range": "0-25",
+        "status": "split",
+        "note": "Same split."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "PIT_STOP_EFFECTS",
+      "label": "Pit Stop Effects",
+      "value": "0",
+      "range": null,
+      "menu_range": "unverified (0-50 observed)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "sourced",
+       "evidence": "V",
+       "derived": false,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "0-20",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "50",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 9,
+        "median": "0",
+        "range": "0-50",
+        "status": "strong",
+        "note": "No driving effect."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "WHEEL_DAMPER",
+      "label": "Wheel Damper",
+      "value": "0",
+      "range": "0-3",
+      "menu_range": "unverified (0-10 observed)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "range_pick",
+       "evidence": "D",
+       "derived": true,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "0-3",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "3",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "0-3",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "3",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "0-3",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "1",
+         "evidence": "A",
+         "note": "Spoken: off.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "0",
+         "evidence": "V",
+         "note": "Description: no damper in game.",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "0",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "0",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 11,
+        "median": "0",
+        "range": "0-3",
+        "status": "strong",
+        "note": "Fanatec's Xbox column uses 5; a generic-wheel guide's 10 is an outlier."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "pitwall's start value inside the published range 0-3 (F5a). Carson after v1.25: no damper in game.",
+       "original": null,
+       "range_basis": "published",
+       "range_evidence": "V",
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "MAX_WHEEL_ROTATION",
+      "label": "Maximum Wheel Rotation",
+      "value": "360",
+      "range": "300-360",
+      "menu_range": "unverified (300-400 used)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "range_pick",
+       "evidence": "D",
+       "derived": true,
+       "basis": [
+        {
+         "id": "srs_f1_25_esports_5nm",
+         "code": "F5a",
+         "value": "300-360",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "carson_f1_25_8nm",
+         "code": "F6",
+         "value": "360",
+         "evidence": "A",
+         "note": "Changed on screen from 400; spoken range 300-360.",
+         "applies_at_torque": false
+        }
+       ],
+       "others": [
+        {
+         "id": "fanatec_f1_25_official_2025",
+         "code": "F1",
+         "value": "360",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "fanatec_f1_25_official_2026_season_pack",
+         "code": "F3",
+         "value": "360",
+         "evidence": "V",
+         "note": "Page: slightly lower also possible for a faster response.",
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_fanatec_380",
+         "code": "F4",
+         "value": "380",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": true
+        },
+        {
+         "id": "srs_f1_25_esports_8nm",
+         "code": "F5b",
+         "value": "300-360",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "carson_f1_26_8nm_2026_09",
+         "code": "F7",
+         "value": "360",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_25_gt_dd_pro_8nm",
+         "code": "F8",
+         "value": "330",
+         "evidence": "A",
+         "note": "~330",
+         "applies_at_torque": false
+        },
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "310",
+         "evidence": "A",
+         "note": "~310",
+         "applies_at_torque": false
+        },
+        {
+         "id": "matt212_f1_25_gt_dd_pro_8nm",
+         "code": "F10",
+         "value": "400",
+         "evidence": "V",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "360",
+         "evidence": "A",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": 9,
+        "median": "360",
+        "range": "310-400",
+        "status": "strong",
+        "note": "Must equal SEN."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "pitwall's start value inside the published range 300-360 (F5a).",
+       "original": null,
+       "range_basis": "published",
+       "range_evidence": "V",
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "THROTTLE_DEADZONE",
+      "label": "Throttle Deadzone",
+      "value": "0",
+      "range": null,
+      "menu_range": "0-100 (F1 22 PS5 docs; F1 25 unverified)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "derived",
+       "evidence": "D",
+       "derived": true,
+       "basis": [],
+       "others": [],
+       "consensus": null,
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "F1 25 calibration baseline (rig-setup-sources.md 6.0): 0 unless the rig check finds throttle input at rest.",
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "THROTTLE_LINEARITY",
+      "label": "Throttle Linearity",
+      "value": "0",
+      "range": null,
+      "menu_range": "0-100 (F1 22 PS5 docs; F1 25 unverified)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "derived",
+       "evidence": "D",
+       "derived": true,
+       "basis": [],
+       "others": [],
+       "consensus": null,
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "F1 25 calibration baseline (rig-setup-sources.md 6.0): 0 (linear).",
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "THROTTLE_SATURATION",
+      "label": "Throttle Saturation",
+      "value": "0",
+      "range": null,
+      "menu_range": "0-100 (F1 22 PS5 docs; F1 25 unverified)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "derived",
+       "evidence": "D",
+       "derived": true,
+       "basis": [],
+       "others": [],
+       "consensus": null,
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "F1 25 calibration baseline (rig-setup-sources.md 6.0): 0 unless the rig check finds 100% throttle is not reached.",
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "BRAKE_DEADZONE",
+      "label": "Brake Deadzone",
+      "value": "0",
+      "range": null,
+      "menu_range": "0-100 (F1 22 PS5 docs; F1 25 unverified)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "derived",
+       "evidence": "D",
+       "derived": true,
+       "basis": [],
+       "others": [
+        {
+         "id": "fin_f1_26_csl_gt_dd_pro_8nm",
+         "code": "F9",
+         "value": "3",
+         "evidence": "U",
+         "note": null,
+         "applies_at_torque": false
+        },
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "3",
+         "evidence": "U",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": null,
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "Raise 1-3 only if the rig check finds brake at rest.",
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "BRAKE_LINEARITY",
+      "label": "Brake Linearity",
+      "value": "25",
+      "range": null,
+      "menu_range": "0-100 (F1 22 PS5 docs; F1 25 unverified)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [
+       "Opmeer keeps the default 25 (pedals unknown). A less sensitive start can help trail braking on a position pedal (Joyce et al. 2025) [D]."
+      ],
+      "provenance": {
+       "kind": "cited",
+       "evidence": "U",
+       "derived": false,
+       "basis": [],
+       "others": [
+        {
+         "id": "f1withnick_f1_26_5nm_realism",
+         "code": "F11",
+         "value": "3",
+         "evidence": "U",
+         "note": null,
+         "applies_at_torque": true
+        }
+       ],
+       "consensus": {
+        "n": null,
+        "median": null,
+        "range": "0 / 3 / 25",
+        "status": "split",
+        "note": "Carson 0, F1withNick 3, Opmeer and THOMB 25 (the default per Opmeer). No CSL LC owner data."
+       },
+       "source": null,
+       "reports": [],
+       "citations": [
+        {
+         "label": "Jarno Opmeer",
+         "url": "https://www.youtube.com/watch?v=ZyCpIu_34kw",
+         "evidence": "U"
+        }
+       ],
+       "derivation": null,
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     },
+     {
+      "key": "BRAKE_SATURATION",
+      "label": "Brake Saturation",
+      "value": "0",
+      "range": null,
+      "menu_range": "0-100 (F1 22 PS5 docs; F1 25 unverified)",
+      "factory_default": null,
+      "changed_from_default": false,
+      "needs_advanced": false,
+      "locked": false,
+      "instruction": false,
+      "notes": [],
+      "provenance": {
+       "kind": "derived",
+       "evidence": "D",
+       "derived": true,
+       "basis": [],
+       "others": [],
+       "consensus": null,
+       "source": null,
+       "reports": [],
+       "citations": [],
+       "derivation": "F1 25 calibration baseline (rig-setup-sources.md 6.0): 0. Fix the pedal range in hardware (press-fully routine, BRF), not with saturation.",
+       "original": null,
+       "range_basis": null,
+       "range_evidence": null,
+       "transfer": null,
+       "stale": false
+      }
+     }
+    ]
+   },
+   {
+    "id": "pedals",
+    "title": "4. Pedals: Fanatec CSL Pedals (stock, 2 or 3 pedals)",
+    "steps": [
+     {
+      "id": "power_on_press",
+      "text": "After every power-on, press the throttle and brake fully once and release them before driving.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec CSL Pedals product page, Explorer guide and Pedals FAQ",
+      "detail": "The CSL Pedals calibrate min/max automatically as they are pressed; until then the readings can be wrong."
+     },
+     {
+      "id": "hall_no_brf",
+      "text": "Nothing to set on the pedals: the stock brake measures travel with a 12-bit Hall sensor (not a potentiometer). There is no BRF and no manual calibration.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec CSL Pedals product page",
+      "detail": null
+     },
+     {
+      "id": "connection",
+      "text": "The pedals connect by RJ12 to the wheel base (the only path on a console).",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec CSL Pedals guide",
+      "detail": null
+     },
+     {
+      "id": "rig_check",
+      "text": "After a session, open the rig check: brake input at rest, whether 100% throttle and brake are reached, how long the brake sits at 100% and whether the peaks drift during the session.",
+      "evidence": "D",
+      "derived": true,
+      "source": "pitwall rig check (rig-setup-sources.md 8)",
+      "detail": null
+     }
+    ],
+    "rows": []
+   }
+  ],
+  "safety": [],
+  "notes": [
+   "Hall position brake: no BRF. Press-fully routine after power-on."
+  ],
+  "warnings": [],
+  "rules": [
+   {
+    "id": "f1_torque_5_to_8_keep_strength",
+    "game": "f1_25",
+    "applies_to_preferences": [
+     "official_default",
+     "balanced",
+     "competitive",
+     "realism"
+    ],
+    "rule": "When moving from 5 Nm to 8 Nm keep FF 100 and the same VIB_FFB_STRENGTH. Every same-author source gives the same in-game value at both torques (SRS esports 80-100 at 5 and 8 Nm; SRS 70 built for 8 Nm, usable at 5; Fanatec one CSL DD/GT DD row of 80; Fanatec 2026 50-70 for every base). No source lowers in-game strength going from 5 to 8 Nm. Forces become up to 1.6x stronger; game-side clipping is unchanged if F1 25 sends a normalised command [D].",
+    "evidence": "V",
+    "basis_presets": [
+     "srs_f1_25_esports_5nm",
+     "srs_f1_25_esports_8nm",
+     "srs_f1_25_fanatec_380",
+     "fanatec_f1_25_official_2025",
+     "fanatec_f1_25_official_2026_season_pack"
+    ],
+    "factor": null
+   },
+   {
+    "id": "exact_5nm_feel_at_8nm",
+    "game": "any",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "For an exact A/B against the old 5 Nm feel, set FF 63 at 8 Nm with unchanged in-game values; this reproduces the 5 Nm torque map, including its clipping. Endstop strength does not depend on FF on current firmware.",
+    "evidence": "D",
+    "basis_presets": [],
+    "factor": null
+   },
+   {
+    "id": "first_session_after_boost_kit",
+    "game": "any",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "Base FW >= 1.9.0.2 raised Boost Kit holding torque from 6 to 8 Nm, so long high-load corners feel heavier than 8 Nm presets made on older firmware. If the first sessions are tiring, lower in-game strength in steps of 5-10 or use the comfort entry.",
+    "evidence": "D",
+    "basis_presets": [],
+    "factor": null
+   },
+   {
+    "id": "ffs_with_boost_kit",
+    "game": "any",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "With the Boost Kit on base FW >= 1.9.0.2 FFS is not offered (Fanatec App 1.5.1.2 changelog). Set FFS PEA only if the menu still shows it (LIN gives ~6 Nm).",
+    "evidence": "V",
+    "basis_presets": [],
+    "factor": null
+   },
+   {
+    "id": "f1_v1_25_strength",
+    "game": "f1_25",
+    "applies_to_preferences": [
+     "competitive",
+     "realism",
+     "balanced",
+     "official_default"
+    ],
+    "rule": "Presets made before v1.25 (2026-09-07) may feel lighter after it (player reports; Carson raises strength by 10-20 at 8 Nm). Start at the upper end of a published range, then adjust by feel.",
+    "evidence": "U",
+    "basis_presets": [
+     "carson_f1_26_8nm_2026_09"
+    ],
+    "factor": null
+   },
+   {
+    "id": "oscillation_ladder",
+    "game": "any",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "Hands-off oscillation on straights: raise NDP in steps of 5 first, keep INT 1-5, then lower strength, then a little NFR; NIN with care (Fanatec oscillation guide). With NDP OFF at 8 Nm expect to need NDP 5-20 [U]. Oscillation starting at a session boundary in F1 25 v1.25+ is a known game bug, not a settings fault.",
+    "evidence": "V",
+    "basis_presets": [],
+    "factor": null
+   }
+  ],
+  "known_issues": [
+   {
+    "id": "f1_v125_session_oscillation",
+    "title": "F1 25 v1.25: the wheel oscillates or loses FFB after a session change",
+    "detail": "Since v1.25 (2026-09-07) CSL DD / GT DD Pro owners report violent left-right oscillation or lost FFB after a session change or restart (for example Qualifying to Race), until the base is power-cycled. Pause and power-cycle the base; do not tune NDP, INT or the damper against it (it happened at NDP 50 / INT 11, and FUL OFF did not help). Every report that states a torque is at 8 Nm, and no PS5 report was found. EA confirmed it and shared a fix with Fanatec on 2026-10-07 (no ETA). The rig check flags it as 'Oscillation after a session change'.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "EA forums threads 13695137, 13701405, 13701710; forum.fanatec.com topic 20597 (PS5 impact unverified)"
+   },
+   {
+    "id": "f1_v125_lighter_ffb",
+    "title": "F1 25 v1.25: FFB reported lighter",
+    "detail": "Players on several brands report lighter or less detailed FFB after v1.25, so values from before September may feel lighter. Carson raised his 8 Nm strength by 10-20. Start at the upper end of a published range and adjust by feel.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "U",
+    "source": "EA thread 13746020; Carson F1 description (2026-09-07)"
+   },
+   {
+    "id": "fullforce_weak",
+    "title": "FullForce weaker than intended on CSL DD / GT DD Pro",
+    "detail": "Fanatec App 1.6.1.3 known issue. No source shows that F1 25 implements FullForce: leave FUL at its default for F1.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.6.1.3 release notes"
+   },
+   {
+    "id": "sen_auto_f1",
+    "title": "SEN AUTO misbehaves in F1 games",
+    "detail": "Fanatec App 1.6.1.3 known issue (seen on PC). Set SEN by hand to the in-game rotation.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.6.1.3 release notes"
+   },
+   {
+    "id": "mobile_app",
+    "title": "The Fanatec mobile app does not work with the new Windows App",
+    "detail": "Its own release notes say so. There is no console path for base settings on PS5 other than the on-wheel Tuning Menu.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.6.1.3 release notes; App Store listing"
+   },
+   {
+    "id": "straight_mode_bump",
+    "title": "F1 25: a small FFB bump when Straight Mode switches",
+    "detail": "Reported by a DD+ owner on PS5 Pro. Not a fault; the rig check ignores it.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "U",
+    "source": "community report"
+   },
+   {
+    "id": "f1_ffb_drop",
+    "title": "F1 25: FFB dropping mid-race on PS5",
+    "detail": "Community reports; toggling Vibration & Force Feedback restored it.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "U",
+    "source": "community reports"
+   }
+  ],
+  "verify": [
+   {
+    "id": 2,
+    "question": "Does the F1 25 v1.25 session-change oscillation occur on PS5, and at 5 Nm? Does EA's next patch fix it?",
+    "verify": "Drive Qualifying into the Race; the rig check flags oscillation with no pedal input after the session change.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 3,
+    "question": "Is FUL shown in this base's PS5 menu at 5 Nm, and does F1 25 do anything with it?",
+    "verify": "Scroll the Advanced menu in DARK BLUE mode.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 4,
+    "question": "Does F1 25 use A SET? Does SEN AUTO work in F1 25 on PS5?",
+    "verify": "Try AUTO, turn the wheel 90 degrees and compare with the on-screen wheel.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 5,
+    "question": "What are F1 25's PS5 wheel-preset defaults (strength, effects, damper, rotation, Brake Linearity 25?) and the slider maxima?",
+    "verify": "Reset the wheel preset to default and note the values.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 6,
+    "question": "Are UDP brake, throttle and steering reported before or after in-game calibration and ABS? Is UDP sent while paused?",
+    "verify": "In Time Trial, stationary, set Brake Saturation from 0 to 20 and check whether the same press reads higher in pitwall.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 7,
+    "question": "Do slots and load-cell min/max set in the Fanatec App persist unchanged in DARK BLUE mode on PS5?",
+    "verify": "Set a slot on the PC, switch to DARK BLUE and read the values on the wheel.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 8,
+    "question": "Does the bundled GT DD Pro rim have vibration motors and a display for reading Tuning Menu values?",
+    "verify": "Check whether SHO appears in the menu.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 11,
+    "question": "Does F1 25 v1.25 add game-side damper or inertia (Carson's claim)? Is there a measurement of F1 25 game-side clipping against strength?",
+    "verify": "Retest pre-September presets; compare the rig check before and after.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 12,
+    "question": "What is the pedal-curve Tuning Menu item reportedly added by the FullForce firmware?",
+    "verify": "Look for a new item at the end of the Advanced menu.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 13,
+    "question": "What are the sign and scale of F1 MotionEx wheel slip ratio and the units of wheel speed? What do GT7's throttle and brake bytes mean (input or after TCS/ABS)?",
+    "verify": "Needed before pitwall can measure lock-ups against brake level, or separate GT7 pedal and ABS effects.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   }
+  ],
+  "driver": {
+   "id": 1,
+   "name": "James",
+   "skill_level": "advanced",
+   "skill_source": "driver"
+  },
+  "upcoming": [
+   {
+    "change": "boost_kit_180",
+    "label": "Boost Kit 180 (8 Nm)",
+    "hardware": {
+     "platform": "ps5",
+     "wheel_base": "fanatec_gt_dd_pro",
+     "torque_nm": 8,
+     "pedals": "csl",
+     "rim": "gt_dd_pro_bundled"
+    },
+    "diffs": [
+     {
+      "section": "wheel",
+      "key": "FFS",
+      "label": "Force Feedback Scaling",
+      "before": "PEA",
+      "after": "check on your base",
+      "derived": false,
+      "evidence": "V"
+     },
+     {
+      "section": "ingame",
+      "key": "VIB_FFB_STRENGTH",
+      "label": "Vibration & Force Feedback Strength",
+      "before": "90",
+      "after": "95",
+      "derived": true,
+      "evidence": "D"
+     }
+    ],
+    "steps": [
+     {
+      "id": "fit_and_detect",
+      "text": "Fit the Boost Kit 180 in place of the standard PSU. The base detects it and releases 8 Nm automatically; there is no setup step.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec help 30312080999825; GT DD Pro manual 5.6.4",
+      "detail": null
+     },
+     {
+      "id": "check_ffs",
+      "text": "Check FFS on your base: it is not offered with the Boost Kit on base firmware 1.9.0.2 or later. If it is still shown, set PEA (LIN caps the base at about 6 Nm). Note what each slot reports as maximum torque.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec App 1.5.1.2 release notes; slot report GTPlanet 2026-09-12 (unverified)",
+      "detail": null
+     },
+     {
+      "id": "endstop",
+      "text": "The endstop does not depend on FF on current firmware, so a lower FF never weakens it.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec App 1.5.3.1 release notes",
+      "detail": null
+     },
+     {
+      "id": "strength",
+      "text": "Vibration & Force Feedback Strength goes up from 90 to 95 at 8 Nm (start value inside the 8 Nm range 90-100, F5b, F7). At FF 100 the base peaks at about 8.0 Nm, against 5.0 Nm at FF 100 on the 5 Nm base (1.6x).",
+      "evidence": "D",
+      "derived": true,
+      "source": "rig-setup-sources.md 5.2 and 6.2",
+      "detail": null
+     },
+     {
+      "id": "exact_ab",
+      "text": "For an exact A/B with the old 5 Nm feel, set FF 63 and Vibration & Force Feedback Strength back to 90 (the 5 Nm value) for one back-to-back test (it reproduces the 5 Nm torque map, including its clipping), then return to FF 100 and Vibration & Force Feedback Strength 95.",
+      "evidence": "D",
+      "derived": true,
+      "source": "rule exact_5nm_feel_at_8nm",
+      "detail": null
+     },
+     {
+      "id": "holding_torque",
+      "text": "Holding torque is now 8 Nm (firmware 1.9.0.2 or later), so long high-load corners feel heavier than on older-firmware 8 Nm presets. If the first sessions are tiring, step Vibration & Force Feedback Strength down by 5-10 or use Comfort.",
+      "evidence": "D",
+      "derived": true,
+      "source": "rule first_session_after_boost_kit",
+      "detail": null
+     },
+     {
+      "id": "oscillation",
+      "text": "Expect more hands-off oscillation at 8 Nm. With NDP OFF you may need NDP 5-20: raise it in steps of 5 and compare the rig check before and after.",
+      "evidence": "U",
+      "derived": false,
+      "source": "viewer comments on Fin's 8 Nm video; Fanatec oscillation guide",
+      "detail": null
+     },
+     {
+      "id": "v125_bug",
+      "text": "F1 25 v1.25: if the wheel oscillates or loses FFB after a session change, pause and power-cycle the base. Every report that states a torque is at 8 Nm. Do not tune against it.",
+      "evidence": "V",
+      "derived": false,
+      "source": "EA forums; Fanatec forum topic 20597",
+      "detail": null
+     },
+     {
+      "id": "airflow",
+      "text": "Keep airflow around the base (it is passively cooled). Fanatec publishes no thermal data for the GT DD Pro at 8 Nm.",
+      "evidence": "U",
+      "derived": false,
+      "source": "rig-setup-sources.md 3.2",
+      "detail": null
+     }
+    ],
+    "peak_before_nm": 5.0,
+    "peak_after_nm": 8.0,
+    "notes": [
+     "Peak wheel torque for James: about 5.0 Nm now, 8.0 Nm with the kit."
+    ]
+   },
+   {
+    "change": "load_cell_kit",
+    "label": "CSL Pedals Load Cell Kit",
+    "hardware": {
+     "platform": "ps5",
+     "wheel_base": "fanatec_gt_dd_pro",
+     "torque_nm": 5,
+     "pedals": "csl_load_cell",
+     "rim": "gt_dd_pro_bundled"
+    },
+    "diffs": [
+     {
+      "section": "ingame",
+      "key": "BRAKE_LINEARITY",
+      "label": "Brake Linearity",
+      "before": "25",
+      "after": "preset default",
+      "derived": false,
+      "evidence": "U"
+     },
+     {
+      "section": "wheel",
+      "key": "BRF",
+      "label": "Brake Force (set in the wheel base Tuning Menu)",
+      "before": null,
+      "after": "070",
+      "derived": true,
+      "evidence": "D"
+     }
+    ],
+    "steps": [
+     {
+      "id": "firmware_first",
+      "text": "Update the base firmware before installing the kit (Windows PC, Fanatec App, base in RED mode). Then back to DARK BLUE, recalibrate the wheel centre and recheck your slots.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec Load Cell Kit manual; App 1.6.1.3 notes",
+      "detail": null
+     },
+     {
+      "id": "wiring",
+      "text": "Wiring: RJ12 from the accelerator's 'Wheel Base / Load Cell' port to the load cell's 'Load Cell' port, accelerator to the base. Never connect RJ12 and USB at the same time.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec CSL Pedals Load Cell Kit manual",
+      "detail": null
+     },
+     {
+      "id": "brf_start",
+      "text": "Set BRF in the Tuning Menu (it appears in the Standard menu too once the load cell is detected). Start at the value in the wheel table.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec Tuning Menu article (help 43901256649233)",
+      "detail": null
+     },
+     {
+      "id": "brf_owners",
+      "text": "Owners of this exact kit (CSL Pedals Load Cell Kit, stock, latest value each, n=5) run BRF 30, 40, 55, 70, 90: median 55. pitwall's starting points by style are derived from them: Official 050 (factory default), Balanced 055 (050-060), Competitive 070 (065-075), Realism 065 (065-075), Comfort 040 (035-045).",
+      "evidence": "D",
+      "derived": true,
+      "source": "rig-setup-sources.md 4.6 and 5.4 (GTPlanet owner reports)",
+      "detail": null
+     },
+     {
+      "id": "brf_method",
+      "text": "Tune BRF so a firm press you can repeat every lap reaches 100%, not your maximum effort. Do 10 identical stops: if the peaks vary a lot, lower BRF; if 100% comes too easily (long plateaus at 100% in the rig check), raise it.",
+      "evidence": "U",
+      "derived": false,
+      "source": "EveZone and SimXPro load-cell guides (community method)",
+      "detail": "Roughly 70-80% of your physical limit; reaching 100% should not need straining or lifting off the seat. A light stand or Playseat forces a lower BRF."
+     },
+     {
+      "id": "power_on_press",
+      "text": "After every power-on, press each pedal fully once (hold the brake at maximum for 2-3 s) and release. There is no manual calibration without a PC.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec Pedals FAQ; community note on the hold",
+      "detail": null
+     },
+     {
+      "id": "lock_margin",
+      "text": "Locking too easily? Raise BRF, lower Brake Pressure in the F1 25 car setup, or add brake linearity. BLI is not available (it needs ClubSport V3 pedals).",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec Tuning Menu article; Trophi/Driver61 braking guides",
+      "detail": null
+     },
+     {
+      "id": "fault_signatures",
+      "text": "These are hardware faults, not reasons to change BRF: the peak suddenly far below 100% at your usual press, the signal oscillating under constant pressure, a light press reading full brake, or input with your foot off the pedal. Recheck BRF on the wheel, update firmware, then contact support.",
+      "evidence": "V",
+      "derived": false,
+      "source": "rig-setup-sources.md 6.3 and 8 (Fanatec staff; owner reports)",
+      "detail": null
+     },
+     {
+      "id": "manual_cal_pc",
+      "text": "Manual min/max calibration needs a Windows PC and is reset by a load-cell firmware update. If the brake reads input at rest, Fanatec's fix is a firmware update plus a pedal reset via PC.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec help 30893849063181 and 50374908960273",
+      "detail": null
+     },
+     {
+      "id": "old_brake_clutch",
+      "text": "The old CSL brake can be refitted as a clutch; F1 25 and GT7 do not need one.",
+      "evidence": "V",
+      "derived": false,
+      "source": "Fanatec Load Cell Kit manual",
+      "detail": null
+     },
+     {
+      "id": "rerun_rig_check",
+      "text": "Run the rig check after fitting and compare it with a session from before the upgrade.",
+      "evidence": "D",
+      "derived": true,
+      "source": "pitwall",
+      "detail": null
+     }
+    ],
+    "peak_before_nm": 5.0,
+    "peak_after_nm": 5.0,
+    "notes": []
+   }
+  ]
+ }
+}

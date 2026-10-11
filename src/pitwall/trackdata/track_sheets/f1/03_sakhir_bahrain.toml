@@ -1,0 +1,103 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 3
+layout = "Sakhir (Bahrain)"
+lap_length_m = 5408
+official_turn_count = 15
+sector_starts_m = [1800, 4001]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1]
+names = [{ text = "Schumacher", kind = "unclassified" }]
+game_segment_m = [540, 780]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [2]
+game_segment_m = [780, 880]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [3]
+game_segment_m = [880, 1100]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [4]
+game_segment_m = [1375, 1615]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [5, 6, 7]
+game_segment_m = [1735, 2100]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [8]
+game_segment_m = [2125, 2375]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [9]
+game_segment_m = [2525, 2685]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [10]
+game_segment_m = [2685, 2800]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [11]
+game_segment_m = [3290, 3585]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [12]
+game_segment_m = [3670, 3950]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13]
+game_segment_m = [4070, 4275]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [14, 15]
+game_segment_m = [4765, 5080]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

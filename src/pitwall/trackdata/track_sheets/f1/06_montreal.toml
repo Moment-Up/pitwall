@@ -1,0 +1,125 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa), MIT
+# licence, Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# HAND-REVIEWED 2026-10-10 (numbers, windows, directions and names; see checked_against, the turn notes and
+# docs/research/track-sheets-review-g2.md) against the 72f78aa copy (Montreal.json blob 5489e1ae). Changes from the
+# seed: PnG's "T10-11" window split into T10 (the hairpin) and T11 (the flat left kink after it); directions added;
+# names classified, "Pont de la Concorde" dropped (unconfirmed). Every other window is PnG's except the T6/T7 boundary (cross-check 2026-10-11).
+# CROSS-CHECKED 2026-10-11 (independent field-data review): the T6/T7 boundary moved from 1290 to 1305 m.
+# The importer leaves this file alone because it contains verified turns.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 6
+layout = "Circuit Gilles Villeneuve (Montreal)"
+lap_length_m = 4371
+official_turn_count = 14
+sector_starts_m = [1101, 2500]
+verified_formats = [2025]
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = [
+    "capture:20261010-215916 - real F1 25 v1.26 PS5 race (UDP format 2025): clean laps 2-3 speed/brake/throttle/steering/lateral g by lap distance, plus 42 complete field car-laps (19 AI + player) from the Lap Data and Car Telemetry packets; Session packet trackLength 4371 m, S2 start 1100.91 m, S3 start 2499.77 m",
+    "fia:2024-canada-event-notes-map - FIA F1 2024 Canadian GP Event Notes, Circuit Map (doc 6, 06 Jun 2024, map version 3): corners 1-14, S1 line 145 m before T6, S2 line 190 m before T10, speed trap 250 m before T13, centreline 4.361 km. https://www.fia.com/sites/default/files/decision-document/2024%20Canadian%20Grand%20Prix%20-%20Event%20Notes%20-%20Circuit%20Map,%20Pit%20Lane%20Drawing%20and%20Red%20Zones.pdf",
+    "f1db:montreal - layout montreal-6 (2002-2008, 2010-2019, 2022-): 4.361 km, 14 turns, clockwise",
+    "en.wikipedia:Circuit_Gilles_Villeneuve - 14 turns; turns 1-2 known as the Senna 'S'; turn 10 the 180-degree hairpin; turn 14 dubbed the 'Wall of Champions'",
+    "formula1.com:what-makes-the-canadian-grand-prix-special - 'Virage Senna at Turn 1', 'the hairpin at L'Epingle', the Wall of Champions on the outside of the final chicane",
+    "field-curvature:6 - cross-check 2026-10-11 on the same capture: all 22 cars (60 lap segments), path heading from the Motion packet's world forward vector on a 5 m grid (lap turns -360 deg = clockwise; right = negative heading change), field speed minima and per-lap steering/heading sign changes; every sheet direction and every turn position (FIA S1/S2 anchors) agrees",
+]
+notes = "Game lap 4371 m vs FIA centreline 4361 m (+0.2 %). The game's S2/S3 starts equal PnG's sector values to 0.23 m, and the FIA sector lines land where they should: S1 + 145 m = 1246 m (T6 braking/turn-in), S2 + 190 m = 2690 m (T10 turn-in at about 2670 m). Directions are measured (player steering sign and lateral g; field median steering) and match the FIA drawing (6 left, 8 right). On the capture every field speed minimum of every complete car-lap (264 minima, 42 car-laps) falls inside the window with the matching turn except 4 lap-start/incident outliers, and the flat turns 5, 7, 11 and 12 have none, so learned models normally have no corner for them. Complexes 1-2, 3-4, 8-9 and 13-14 are left/right pairs taken off one braking zone and stay grouped without a direction. Verified with UDP format 2025 (F1 25 v1.26) only: verified_formats keeps 2026 Season Pack sessions (format 2026) at the seeded tier until a format-2026 capture is checked."
+
+[[turns]]
+numbers = [1, 2]
+names = [{ text = "Virage Senna", kind = "traditional", sources = ["pits_n_giggles@72f78aa", "formula1.com:what-makes-the-canadian-grand-prix-special", "en.wikipedia:Circuit_Gilles_Villeneuve"] }]
+game_segment_m = [170, 500]
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map", "en.wikipedia:Circuit_Gilles_Villeneuve"]
+notes = "Left (T1) then right hairpin (T2) off one braking zone: braking from 112-131 m, left 211-296 m, right 289-415 m. Laps 2/3: minimum 75/71 km/h at 362/341 m, right (lap 2 also 95 km/h at 278 m in T1); learned apex 352 m. Field minima 256-419 m (43 right, 4 left in T1). Wikipedia calls the pair the Senna 'S'; formula1.com puts Virage Senna at Turn 1."
+
+[[turns]]
+numbers = [3, 4]
+game_segment_m = [630, 880]
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map"]
+notes = "Right-left chicane: braking 643-726 m, right 690-771 m (minimum 140/133 km/h at 737/725 m, learned apex 737 m), left 766-838 m (shallow second minimum at 812-828 m). Field minima 725-877 m (41 right, 2 left)."
+
+[[turns]]
+numbers = [5]
+game_segment_m = [950, 1130]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map"]
+notes = "Flat-out right kink: full throttle at 230-260 km/h, right steering and up to 3.9 g lateral at 950-1110 m; no speed minimum (player or field). The S1 line follows it at 1101 m, as on the FIA map."
+
+[[turns]]
+numbers = [6]
+game_segment_m = [1175, 1305]
+direction = "left"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map", "field-curvature:6"]
+notes = "Braking 1158-1247 m, left 1215-1298 m, minimum 101/98 km/h at 1275/1284 m, learned apex 1281 m. Field minima 1267-1284 m, all left. FIA: S1 line 145 m before T6 = 1246 m. Window end moved from PnG's 1290 m to 1305 m (cross-check 2026-10-11): with all 22 cars' lap segments, 4 T6 minima (89-98 km/h, one of them the player's) lay at 1290-1295 m, inside T7's right-hand window, where a left-steering apex is vetoed rather than labelled; field path curvature changes sign at 1308 m and the player's and field's steering at 1305 m."
+
+[[turns]]
+numbers = [7]
+game_segment_m = [1305, 1570]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map", "field-curvature:6"]
+notes = "Right on the exit of T6 at 1305-1445 m, accelerating (lap 3 a brief lift to 0.75 throttle at 1350 m); no speed minimum of its own. Window start moved from 1290 to 1305 m with T6's end."
+
+[[turns]]
+numbers = [8, 9]
+game_segment_m = [1880, 2150]
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map"]
+notes = "Right-left chicane after the long straight: braking 1897-2010 m, right 1974-2058 m (minimum 124/135 km/h at 2011/2005 m, learned apex 2011 m), left 2062-2126 m (shallow minimum at 2103-2115 m). Field minima 2005-2104 m (38 right, 4 left). PnG's name 'Pont de la Concorde' is dropped: only en.wikipedia uses it ('Turn 8'), in a passage whose other numbers (final chicane 'turns 12 & 13') are not the FIA numbering, and formula1.com does not name this corner."
+
+[[turns]]
+numbers = [10]
+names = [
+    { text = "The Hairpin", kind = "traditional", sources = ["pits_n_giggles@72f78aa", "en.wikipedia:Circuit_Gilles_Villeneuve", "formula1.com:what-makes-the-canadian-grand-prix-special"] },
+    { text = "L'Épingle", kind = "traditional", sources = ["formula1.com:what-makes-the-canadian-grand-prix-special"] },
+]
+game_segment_m = [2550, 2800]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map", "en.wikipedia:Circuit_Gilles_Villeneuve"]
+notes = "Right hairpin: braking 2577-2697 m, minimum 62/59 km/h at 2718/2729 m, learned apex 2722 m; field minima 2699-2729 m, all right; right steering ends at about 2800 m (field median). FIA: S2 line 190 m before T10 = 2690 m. Split from PnG's 'T10-11' window [2550, 2880], which put the flat T11 kink inside the hairpin's window and so labelled the hairpin 'Turns 10-11'."
+
+[[turns]]
+numbers = [11]
+game_segment_m = [2800, 2880]
+direction = "left"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map"]
+notes = "Flat left kink after the hairpin exit (FIA map: '11' just past the hairpin): left steering 2810-2890 m (field median), lateral +0.8 to +1.5 g at 150-200 km/h on full throttle; no speed minimum. Its window centre (2840 m) is more than 60 m past the hairpin's minimum, so it is reported absent rather than merged into Turn 10."
+
+[[turns]]
+numbers = [12]
+game_segment_m = [3180, 3250]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map"]
+notes = "Flat right bend on the back straight at 285-300 km/h: field median steering peaks right at 3200-3220 m, player lateral up to -1.2 g (right) at 3100-3260 m; no speed minimum. FIA drawing: '12' about a third of the way down the back straight, bending right."
+
+[[turns]]
+numbers = [13, 14]
+names = [{ text = "Wall of Champions", kind = "nickname", sources = ["pits_n_giggles@72f78aa", "en.wikipedia:Circuit_Gilles_Villeneuve", "formula1.com:what-makes-the-canadian-grand-prix-special"] }]
+game_segment_m = [3850, 4070]
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-215916", "fia:2024-canada-event-notes-map", "en.wikipedia:Circuit_Gilles_Villeneuve"]
+notes = "Final chicane, right (T13) then left (T14): braking 3747-3901 m, right 3870-3937 m (minimum 135/148 km/h at 3909/3891 m), left 3939-4010 m (minimum 141/156 km/h at 4000/4003 m). The learned model finds both: apex 3908 m right and 4003 m left, i.e. parts 1 and 2 of this turn. Field minima 3891-4000 m (42 right, 1 left). The name is the nickname of the wall on the outside of the T14 exit (en.wikipedia: 'Turn 14 is dubbed the Wall of Champions'; formula1.com: outside of the final chicane)."

@@ -1,0 +1,1133 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pitwall Pit-wall Mockup</title>
+<meta name="description" content="Static mockup for docs/ui/proposal-pit-wall.md: Direction B, pit-wall dense. Sample data only.">
+<style>
+/* =====================================================================================================
+   Pitwall UI - Direction B "Pit wall (dense)" - static mockup for docs/ui/proposal-pit-wall.md
+   Self-contained: no external requests (system fonts, inline SVG). ALL DATA IS SAMPLE DATA.
+   ===================================================================================================== */
+
+/* ---------- design tokens (proposal section 6.1) ---------- */
+:root {
+  --bg: #07090C; --panel: #0D1116; --panel-2: #121820; --raise: #19212B;
+  --line: #1F2832; --line-strong: #2B3744;
+  --fg: #ECF0F4; --fg-2: #A9B3BF; --fg-3: #7D8996;
+  --t-purple: #C08CFF; --t-green: #34E08A; --t-yellow: #FFD43B;
+  --gain: #34E08A; --loss: #FF6B5E;
+  --flag-yellow: #FFD43B; --flag-red: #D7263D; --flag-blue: #5A9BFF; --pit: #4CC6E8;
+  --accent: #FF6A2B; --ref: #38BDF8; --throttle: #34E08A; --brake: #FF4D5E;
+  --temp-cold: #5A9BFF; --temp-hot: #FFB020; --temp-over: #FF4552;
+  --ink-on-bright: #07090C;
+  /* sector cells: dark = tint + coloured numerals */
+  --sec-p-bg: color-mix(in srgb, var(--t-purple) 18%, var(--panel)); --sec-p-fg: var(--t-purple);
+  --sec-g-bg: color-mix(in srgb, var(--t-green) 16%, var(--panel));  --sec-g-fg: var(--t-green);
+  --sec-y-bg: color-mix(in srgb, var(--t-yellow) 14%, var(--panel)); --sec-y-fg: var(--t-yellow);
+  --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  /* documentation chrome (not part of the design) */
+  --doc-bg: #0A0C0F; --doc-fg: #D9DEE4; --doc-muted: #8A94A1; --doc-line: #232A33; --note: #E83E8C;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #F2F4F7; --panel: #FFFFFF; --panel-2: #F3F5F8; --raise: #E7ECF2;
+  --line: #DCE2EA; --line-strong: #C5CEDA;
+  --fg: #0E1318; --fg-2: #46515E; --fg-3: #5F6B78;
+  --t-purple: #7B3FE0; --t-green: #0A7A42; --t-yellow: #8A6200;
+  --gain: #0A7A42; --loss: #C2352A;
+  --flag-yellow: #FFD43B; --flag-red: #C8202E; --pit: #4CC6E8;
+  --accent: #D9531C; --ref: #0A6CA3; --throttle: #16A35A; --brake: #C8202E;
+  --temp-cold: #1F5FD6; --temp-hot: #A86400; --temp-over: #C8202E;
+  /* light: solid fills with checked ink */
+  --sec-p-bg: #7B3FE0; --sec-p-fg: #FFFFFF;
+  --sec-g-bg: #16A35A; --sec-g-fg: #0E1318;
+  --sec-y-bg: #FFD43B; --sec-y-fg: #0E1318;
+  --doc-bg: #E9EDF2; --doc-fg: #11161C; --doc-muted: #59636F; --doc-line: #CBD3DD;
+  color-scheme: light;
+}
+/* Night dim (dark only): lower luminance for a dark room */
+:root[data-dim="night"]:not([data-theme="light"]) .screen {
+  --fg: #C9CFD6; --fg-2: #9199A4; --fg-3: #6E7884;
+  --t-purple: #A97BE0; --t-green: #2DC27A; --t-yellow: #E3BD36; --gain: #2DC27A; --loss: #E05E53;
+  --accent: #E05E26; --flag-yellow: #E3BD36; --pit: #44AFCD;
+  --sec-p-bg: color-mix(in srgb, #A97BE0 16%, var(--panel)); --sec-p-fg: #A97BE0;
+  --sec-g-bg: color-mix(in srgb, #2DC27A 14%, var(--panel)); --sec-g-fg: #2DC27A;
+  --sec-y-bg: color-mix(in srgb, #E3BD36 12%, var(--panel)); --sec-y-fg: #E3BD36;
+}
+
+/* ---------- documentation page ---------- */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--doc-bg); color: var(--doc-fg); font-family: var(--font-ui); font-size: 15px; -webkit-font-smoothing: antialiased; }
+[hidden] { display: none !important; }
+.doc { max-width: 1320px; margin: 0 auto; padding: 24px 16px 64px; }
+.doc-head h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -0.01em; }
+.doc-head p { margin: 0 0 4px; color: var(--doc-muted); max-width: 980px; line-height: 1.5; }
+.sample-flag { display: inline-block; font-weight: 800; letter-spacing: .08em; font-size: 12px; padding: 3px 8px; border-radius: 4px; background: #FFD43B; color: #07090C; margin-right: 6px; }
+.controls { position: sticky; top: 0; z-index: 30; display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: center; padding: 12px 0; margin: 14px 0 6px; background: color-mix(in srgb, var(--doc-bg) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--doc-line); }
+.ctl { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ctl > span { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--doc-muted); margin-right: 2px; }
+.ctl button { font: inherit; font-size: 13px; min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--doc-line); background: transparent; color: var(--doc-fg); cursor: pointer; }
+.ctl button[aria-pressed="true"] { background: var(--doc-fg); color: var(--doc-bg); border-color: var(--doc-fg); }
+.ctl label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; min-height: 36px; cursor: pointer; }
+.stage { margin-top: 28px; }
+.stage > h2 { font-size: 17px; margin: 0 0 4px; }
+.stage > p { margin: 0 0 12px; color: var(--doc-muted); max-width: 980px; line-height: 1.5; }
+.fit { position: relative; overflow: hidden; }
+.fit.oneone { overflow-x: auto; }
+.scaler { transform-origin: 0 0; }
+.notes-list { columns: 2 380px; column-gap: 32px; margin: 14px 0 0; padding-left: 22px; color: var(--doc-muted); line-height: 1.45; font-size: 14px; }
+.notes-list li { break-inside: avoid; margin-bottom: 6px; }
+.notes-list b { color: var(--doc-fg); }
+.row-2 { display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: start; }
+@media (max-width: 1100px) { .row-2 { grid-template-columns: 1fr; } }
+
+/* ---------- device frames ---------- */
+.bezel { background: #050607; border-radius: 34px; padding: 18px; box-shadow: 0 0 0 1px #2a3038 inset, 0 24px 60px rgb(0 0 0 / .45); position: relative; width: max-content; }
+:root[data-theme="light"] .bezel { background: #1a1d21; }
+.bezel .caption { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font: 700 10px/14px var(--font-ui); letter-spacing: .14em; color: #8d96a3; text-transform: uppercase; }
+.bezel.phone { border-radius: 48px; padding: 14px; }
+
+/* ---------- app screen ---------- */
+.screen { position: relative; width: 1180px; height: 820px; background: var(--bg); color: var(--fg); font-family: var(--font-ui); display: grid; grid-template-columns: 64px 1fr; overflow: hidden; border-radius: 18px; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.unk { color: var(--fg-3) !important; }
+
+/* rail */
+.rail { border-right: 1px solid var(--line); display: flex; flex-direction: column; background: var(--bg); }
+.rail .mark { height: 48px; display: grid; place-items: center; border-bottom: 1px solid var(--line); }
+.rail-item { height: 64px; display: grid; justify-items: center; align-content: center; gap: 4px; color: var(--fg-3); font-size: 10px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; position: relative; text-decoration: none; }
+.rail-item svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.rail-item.active { color: var(--fg); background: var(--raise); }
+.rail-item.active::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; background: var(--accent); border-radius: 0 2px 2px 0; }
+.rail .spacer { flex: 1; }
+.rail-foot { display: grid; justify-items: center; gap: 6px; padding: 8px 0 12px; }
+.rail-btn { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 10px; color: var(--fg-3); border: 1px solid var(--line); }
+.rail-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.conn-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--fg-3); margin-top: 4px; }
+.conn-dot.live { background: var(--gain); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gain) 25%, transparent); }
+.conn-dot.stale { background: var(--temp-hot); }
+.lockhint { font-size: 9px; font-weight: 800; letter-spacing: .1em; color: var(--fg-3); text-align: center; line-height: 1.2; }
+.screen.locked .rail-item:not(.active) { opacity: .4; }
+
+/* app column + top bar */
+.app { display: grid; grid-template-rows: 48px 1fr; min-width: 0; min-height: 0; }
+.topbar { display: flex; align-items: center; gap: 14px; padding: 0 10px 0 8px; border-bottom: 1px solid var(--line); min-width: 0; }
+.subtabs { display: flex; height: 44px; padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); flex: none; }
+.subtabs a { min-width: 88px; display: grid; place-items: center; padding: 0 12px; border-radius: 6px; font-size: 12.5px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); text-decoration: none; }
+.subtabs a.on { background: var(--raise); color: var(--fg); box-shadow: inset 0 -2px 0 var(--accent); }
+.ctx { flex: 1; min-width: 0; font-size: 14px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ctx b { color: var(--fg); font-weight: 650; }
+.pills { display: flex; gap: 8px; align-items: center; flex: none; }
+.pill { height: 40px; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 20px; font-size: 12px; font-weight: 800; letter-spacing: .08em; color: var(--fg-2); white-space: nowrap; }
+.pill .d { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill.live { color: var(--gain); border-color: color-mix(in srgb, var(--gain) 45%, transparent); }
+.pill.stale { color: var(--temp-hot); border-color: color-mix(in srgb, var(--temp-hot) 55%, transparent); }
+.pill.radio-on .d { background: var(--gain); }
+.pill.radio-off .d { background: transparent; border: 1.5px solid var(--fg-3); }
+.pill.syn { color: var(--fg-2); border-style: dashed; background: repeating-linear-gradient(135deg, var(--raise) 0 4px, transparent 4px 8px); }
+.chip { height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 4px; border: 1px solid var(--line-strong); border-radius: 20px; font-size: 14px; font-weight: 650; }
+.av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 800; color: #07090C; background: var(--accent); flex: none; }
+.av.sam { background: #38BDF8; }
+.av.sm { width: 22px; height: 22px; font-size: 9.5px; }
+
+/* panels */
+.pnl { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; position: relative; }
+.pnl > .hd { height: 26px; flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 10px; background: var(--panel-2); border-bottom: 1px solid var(--line); font-size: 11px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); white-space: nowrap; }
+.pnl > .hd .tag { color: var(--fg-2); font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.pnl > .bd { flex: 1; min-height: 0; padding: 10px 12px; position: relative; }
+.dim .pnl, .pnl.dim { opacity: .45; }
+
+/* ---------- Drive grid ---------- */
+.drive { display: grid; grid-template-columns: 638px 454px; gap: 8px; padding: 8px; min-height: 0; height: 772px; }
+.dcol { display: grid; grid-template-rows: 56px 1.2fr 1fr 1.35fr; gap: 8px; min-height: 0; grid-template-areas: "slot" "delta" "cc" "timing"; }
+.wall { display: grid; grid-template-rows: 1.45fr 1fr 1.1fr 1fr; gap: 8px; min-height: 0; min-width: 0; }
+.wall .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; min-height: 0; }
+.slot { grid-area: slot; }
+.delta-p { grid-area: delta; }
+.cc { grid-area: cc; display: grid; grid-template-columns: 55fr 45fr; gap: 8px; min-height: 0; }
+.timing-p { grid-area: timing; }
+
+/* status slot */
+.slot { border-radius: 6px; display: flex; align-items: center; gap: 18px; padding: 0 16px; font-size: 22px; font-weight: 650; letter-spacing: .02em; min-width: 0; white-space: nowrap; overflow: hidden; }
+.slot.line { background: var(--panel); border: 1px solid var(--line); }
+.slot .lb { color: var(--fg-3); font-weight: 650; margin-right: 6px; }
+.slot .sep { color: var(--line-strong); }
+.slot .right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.slot .clear-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--gain); margin-right: 8px; vertical-align: 1px; }
+.slot .cuechip { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--fg-2); border: 1px solid var(--line-strong); padding: 6px 10px; border-radius: 6px; }
+.slot .inv { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--ink-on-bright); background: var(--loss); padding: 6px 10px; border-radius: 6px; }
+.band { font-size: 25px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.band.yellow { background: var(--flag-yellow); color: var(--ink-on-bright); }
+.band.red { background: var(--flag-red); color: #fff; }
+.band.pit { background: var(--pit); color: var(--ink-on-bright); }
+.band.neutral { background: var(--raise); color: var(--fg); border: 1px solid var(--line-strong); }
+.band.stale { background: var(--panel); color: var(--temp-hot); border: 2px solid var(--temp-hot); }
+.band .soft { font-weight: 650; opacity: .8; }
+.band.flash { animation: edge 1s ease-in-out 2; }
+@keyframes edge { 50% { box-shadow: inset 0 0 0 4px rgb(255 255 255 / .55); } }
+@media (prefers-reduced-motion: reduce) { .band.flash { animation: none; } }
+
+/* delta */
+.delta-p .bd { display: grid; grid-template-rows: 1fr auto; padding: 4px 18px 14px; }
+.delta-num { font-size: 144px; line-height: .95; font-weight: 700; letter-spacing: -.02em; align-self: center; text-align: center; }
+.delta-num.gain { color: var(--gain); }
+.delta-num.loss { color: var(--loss); }
+.delta-num .tagsc { font-size: 22px; letter-spacing: .1em; font-weight: 800; vertical-align: top; color: var(--fg-2); border: 1px solid var(--line-strong); border-radius: 6px; padding: 4px 8px; margin-left: 12px; position: relative; top: 22px; }
+.dbar { position: relative; height: 20px; margin-top: 8px; background: var(--raise); border: 1px solid var(--line-strong); border-radius: 3px; }
+.dbar .fill { position: absolute; top: 2px; bottom: 2px; border-radius: 2px; }
+.dbar .fill.gain { right: 50%; background: var(--gain); }
+.dbar .fill.loss { left: 50%; background: var(--loss); }
+.screen[data-state="sc"] .dbar .fill { opacity: .35; }
+.dbar .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--fg-3) 55%, transparent); }
+.dbar .tick.c { width: 2px; margin-left: -1px; background: var(--fg); top: -4px; bottom: -4px; }
+.dbar-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; font-weight: 750; letter-spacing: .1em; color: var(--fg-3); }
+.dbar-labels .mid { color: var(--fg-3); font-family: var(--font-mono); font-weight: 500; letter-spacing: 0; }
+
+/* cards that replace the delta / corner / timing content in some states */
+.card-fill { position: absolute; inset: 0; padding: 14px 18px; display: grid; align-content: start; gap: 10px; }
+.kvg { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; align-items: baseline; }
+.kvg .k { font-size: 13px; font-weight: 750; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); }
+.kvg .v { font-size: 26px; font-weight: 650; }
+.kvg .v small { font-size: 16px; color: var(--fg-2); font-weight: 500; }
+.ok { color: var(--gain); }
+.bigbtn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; padding: 0 22px; border-radius: 10px; background: var(--accent); color: var(--ink-on-bright); font-size: 20px; font-weight: 800; letter-spacing: .02em; border: 0; }
+.bigbtn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line-strong); }
+.big-text { font-size: 26px; line-height: 1.3; font-weight: 600; }
+.evid { font-size: 15px; color: var(--fg-2); }
+.checklist { display: grid; gap: 10px; font-size: 19px; }
+.checklist .r { display: grid; grid-template-columns: 26px 1fr; gap: 8px; align-items: baseline; }
+.checklist .r .i { font-weight: 800; }
+
+/* corner + cue */
+.corner .bd, .cue .bd { display: grid; align-content: center; gap: 6px; padding: 8px 16px 10px; }
+.cn-top { display: flex; align-items: baseline; gap: 14px; }
+.cn-when { font-size: 14px; font-weight: 800; letter-spacing: .12em; color: var(--fg-3); align-self: center; }
+.cn-label { font-size: 64px; font-weight: 750; line-height: 1; letter-spacing: -.01em; }
+.cn-label.focus { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; padding: 0 6px; }
+.cn-dist { font-size: 36px; font-weight: 650; color: var(--fg); }
+.cn-dist small, .cue-dist small { font-size: 22px; color: var(--fg-2); font-weight: 600; }
+.cn-name { font-size: 32px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cn-then { font-size: 16px; color: var(--fg-3); }
+.cue-word { font-size: 48px; font-weight: 800; letter-spacing: .04em; line-height: 1; color: var(--brake); }
+.cue-dist { font-size: 36px; font-weight: 650; line-height: 1.05; }
+.cbar { height: 10px; border-radius: 3px; background: var(--panel-2); border: 1px solid var(--line); position: relative; overflow: hidden; }
+.cbar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--brake); }
+.cue-last { font-size: 15px; color: var(--fg-3); }
+.cue-last.late { color: var(--loss); }
+.muted-big { font-size: 30px; font-weight: 750; color: var(--fg-2); letter-spacing: .04em; }
+
+/* timing */
+.timing-p .bd { display: grid; grid-template-rows: auto auto auto; gap: 10px; padding: 10px 14px 12px; align-content: space-between; }
+.lap-row { display: flex; align-items: baseline; gap: 16px; }
+.lap-row .k { font-size: 14px; font-weight: 800; letter-spacing: .12em; color: var(--fg-3); width: 44px; }
+.lap-run { font-size: 56px; font-weight: 650; line-height: 1; }
+.lap-run.struck { text-decoration: line-through; text-decoration-thickness: 4px; color: var(--fg-3); }
+.lap-row .inv { font-size: 13px; font-weight: 800; letter-spacing: .1em; color: var(--ink-on-bright); background: var(--loss); padding: 5px 9px; border-radius: 5px; align-self: center; }
+.lap-row .ctxs { margin-left: auto; font-size: 14px; color: var(--fg-3); align-self: center; }
+.secs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.sec { position: relative; height: 76px; border-radius: 5px; background: var(--panel-2); border-top: 4px solid var(--line-strong); padding: 6px 12px; display: grid; align-content: space-between; color: var(--fg); }
+.sec .sl { font-size: 13px; font-weight: 800; letter-spacing: .12em; color: var(--fg-3); }
+.sec .sv { font-size: 36px; font-weight: 650; line-height: 1; }
+.sec .stag { position: absolute; top: 6px; right: 8px; font-size: 12px; font-weight: 800; letter-spacing: .1em; padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor; }
+.sec.p { background: var(--sec-p-bg); border-top-color: var(--t-purple); color: var(--sec-p-fg); }
+.sec.g { background: var(--sec-g-bg); border-top-color: var(--t-green); color: var(--sec-g-fg); }
+.sec.y { background: var(--sec-y-bg); border-top-color: var(--t-yellow); color: var(--sec-y-fg); }
+.sec.p .sl, .sec.g .sl, .sec.y .sl { color: inherit; opacity: .8; }
+.sec.run { border-top-color: var(--fg-2); }
+.sec .prog { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.sec .prog i { display: block; height: 100%; background: var(--fg-2); }
+.sec.done-neutral .sv { font-size: 28px; color: var(--fg-2); }
+.trip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.trip .c { display: grid; gap: 2px; }
+.trip .k { font-size: 12px; font-weight: 800; letter-spacing: .12em; color: var(--fg-3); display: flex; gap: 6px; align-items: center; }
+.trip .v { font-size: 36px; font-weight: 650; line-height: 1.05; }
+.tp { color: var(--t-purple); } .tg { color: var(--t-green); } .ty { color: var(--t-yellow); }
+.mtag { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; }
+
+/* wall tiles */
+.wall .pnl > .bd { padding: 8px 10px; }
+.map-svg { width: 100%; height: 100%; display: block; min-height: 0; }
+.map-bd { display: grid; grid-template-rows: 1fr auto; gap: 4px; }
+.rc { font-size: 12.5px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rc b { color: var(--fg-3); font-weight: 800; letter-spacing: .08em; margin-right: 4px; }
+.trk-base { fill: none; stroke: var(--line); stroke-width: 13; stroke-linejoin: round; stroke-linecap: round; }
+.seg { fill: none; stroke-width: 5.5; stroke-linejoin: round; stroke-linecap: round; }
+.seg.p { stroke: var(--t-purple); } .seg.g { stroke: var(--t-green); } .seg.y { stroke: var(--t-yellow); }
+.seg.cur { stroke: var(--fg); } .seg.fut { stroke: var(--line-strong); } .seg.unk { stroke: var(--fg-3); stroke-dasharray: 2 6; }
+.brk { fill: none; stroke: var(--brake); stroke-width: 3; stroke-linecap: round; opacity: .8; }
+.yz { fill: none; stroke: var(--flag-yellow); stroke-width: 12; stroke-linecap: round; opacity: .85; }
+.pitlane { fill: none; stroke: var(--fg-3); stroke-width: 2; stroke-dasharray: 4 4; }
+.clabel { font: 700 13px var(--font-mono); fill: var(--fg-2); }
+.clabel.next { fill: var(--accent); font-size: 15px; }
+.cdot { fill: var(--panel); stroke: var(--fg-2); stroke-width: 1.5; }
+.cdot.next { fill: var(--accent); stroke: var(--fg); }
+.focus-ring { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 3 2; }
+.car { fill: var(--accent); stroke: #fff; stroke-width: 2.5; }
+.sline { fill: var(--fg); }
+.stick { stroke: var(--fg-2); stroke-width: 2; }
+.slab { font: 700 10px var(--font-mono); fill: var(--fg-3); }
+
+.tyres-bd { display: grid; grid-template-rows: 1fr auto; gap: 5px; padding-top: 6px !important; padding-bottom: 6px !important; }
+.tgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tc { border: 1px solid var(--line); border-radius: 4px; padding: 2px 7px 3px; display: grid; grid-template-columns: auto 1fr; align-items: baseline; gap: 0 6px; background: var(--panel-2); }
+.tc .w { font-size: 10.5px; font-weight: 800; letter-spacing: .08em; color: var(--fg-3); }
+.tc .t { font-size: 21px; font-weight: 650; text-align: right; line-height: 1.15; }
+.tc .m { grid-column: 1 / -1; font-size: 11px; line-height: 1.25; color: var(--fg-3); text-align: right; font-family: var(--font-mono); }
+.t-cold { color: var(--temp-cold); } .t-ok { color: var(--fg); } .t-hot { color: var(--temp-hot); } .t-over { color: var(--temp-over); }
+.foot { font-size: 12px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.foot b { color: var(--fg); font-weight: 650; }
+
+.inputs-bd { display: grid; grid-template-rows: auto 1fr auto; gap: 4px; }
+.inputs-top { font-size: 13px; color: var(--fg-2); display: flex; gap: 8px; white-space: nowrap; }
+.inputs-top b { color: var(--fg); font-size: 15px; }
+.trace { width: 100%; height: 100%; display: block; }
+.legend { display: flex; gap: 10px; font-size: 11px; color: var(--fg-3); }
+.legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: 2px; }
+
+.tt { width: 100%; border-collapse: collapse; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 14px; }
+.tt th { font: 750 10.5px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--fg-3); text-align: right; padding: 0 6px 3px; border-bottom: 1px solid var(--line); }
+.tt th:first-child, .tt td:first-child { text-align: left; }
+.tt td { text-align: right; padding: 0 6px; height: 21px; border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent); white-space: nowrap; }
+.tt tr:last-child td { border-bottom: 0; }
+.tt .lapn { color: var(--fg-2); }
+.tt .invrow td { color: var(--fg-3); }
+.tt .invrow .lt { text-decoration: line-through; }
+.tt .rtag { font: 800 9.5px var(--font-ui); letter-spacing: .06em; color: var(--ref); border: 1px solid currentColor; border-radius: 3px; padding: 0 3px; margin-left: 4px; vertical-align: 1px; }
+.tt .itag { font: 800 9.5px var(--font-ui); letter-spacing: .06em; color: var(--loss); border: 1px solid currentColor; border-radius: 3px; padding: 0 3px; margin-left: 4px; vertical-align: 1px; }
+.dl-gain { color: var(--gain); } .dl-loss { color: var(--loss); }
+
+.coach-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.coach-list li { display: grid; grid-template-columns: 40px 1fr auto; gap: 8px; align-items: start; font-size: 13.5px; line-height: 1.3; }
+.ctag { font: 800 11.5px var(--font-mono); text-align: center; padding: 2px 0; border-radius: 4px; background: color-mix(in srgb, var(--loss) 20%, transparent); color: var(--loss); }
+.coach-list li.good .ctag { background: color-mix(in srgb, var(--gain) 18%, transparent); color: var(--gain); }
+.ctext { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: var(--fg); }
+.ctext .gw { font: 800 10px var(--font-ui); letter-spacing: .1em; color: var(--gain); margin-right: 4px; }
+.cimp { font: 650 13px var(--font-mono); color: var(--loss); }
+.coach-list li.good .cimp { color: var(--gain); }
+.empty-note { font-size: 14px; color: var(--fg-3); display: grid; place-items: center; height: 100%; text-align: center; padding: 0 12px; }
+
+/* Focus layout: wall hidden, driver column takes all 12 columns, type steps up */
+.screen[data-layout="focus"] .drive { grid-template-columns: 1fr; }
+.screen[data-layout="focus"] .wall { display: none; }
+.screen[data-layout="focus"] .dcol { grid-template-columns: 1.12fr 1fr; grid-template-rows: 56px 1.3fr 1fr; grid-template-areas: "slot slot" "delta cc" "timing timing"; }
+.screen[data-layout="focus"] .cc { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+.screen[data-layout="focus"] .delta-num { font-size: 176px; }
+.screen[data-layout="focus"] .sec { height: 88px; }
+.screen[data-layout="focus"] .sec .sv { font-size: 44px; }
+.screen[data-layout="focus"] .trip .v { font-size: 44px; }
+.screen[data-layout="focus"] .lap-run { font-size: 64px; }
+
+/* annotations (documentation overlay, not part of the design) */
+.note { display: none; position: absolute; z-index: 20; bottom: 4px; right: 4px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; background: var(--note); color: #fff; font: 800 12px/22px var(--font-ui); text-align: center; box-shadow: 0 0 0 2px var(--bg); pointer-events: none; }
+body.show-notes .note { display: block; }
+.note.l { right: auto; left: 4px; bottom: auto; }
+
+/* ---------- phone ---------- */
+.phone-screen { width: 390px; height: 844px; border-radius: 38px; overflow: hidden; background: var(--bg); color: var(--fg); font-family: var(--font-ui); display: grid; grid-template-rows: 50px 52px 1fr 90px; position: relative; }
+.ph-status { display: flex; justify-content: space-between; align-items: center; padding: 14px 28px 0; font-size: 14px; font-weight: 650; }
+.ph-notch { position: absolute; top: 10px; left: 50%; width: 120px; height: 32px; margin-left: -60px; border-radius: 18px; background: #000; }
+.ph-top { display: flex; align-items: center; gap: 8px; padding: 0 12px; border-bottom: 1px solid var(--line); }
+.ph-top .subtabs { height: 40px; }
+.ph-top .subtabs a { min-width: 64px; font-size: 11px; padding: 0 8px; }
+.ph-top .av { width: 34px; height: 34px; margin-left: auto; }
+.ph-main { padding: 10px 12px; display: grid; grid-template-rows: 44px auto auto auto; gap: 8px; align-content: start; overflow: hidden; }
+.ph-main > * { grid-area: auto !important; }
+.ph-main .slot { font-size: 16px; padding: 0 12px; gap: 10px; }
+.ph-delta .bd { padding: 6px 12px 10px; }
+.ph-delta .delta-num { font-size: 96px; }
+.ph-cc { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ph-cc .bd { padding: 8px 10px; display: grid; gap: 2px; }
+.ph-cc .cn-label { font-size: 44px; }
+.ph-cc .cn-name { font-size: 18px; }
+.ph-cc .cue-word { font-size: 30px; }
+.ph-cc .cue-dist, .ph-cc .cn-dist { font-size: 24px; }
+.ph-time .bd { display: grid; gap: 8px; padding: 8px 10px; }
+.ph-time .lap-run { font-size: 40px; }
+.ph-time .sec { height: 58px; padding: 4px 8px; }
+.ph-time .sec .sv { font-size: 22px; }
+.ph-time .trip .v { font-size: 22px; }
+.tabbar { border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); padding: 6px 8px 30px; background: var(--bg); }
+.tabbar a { display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 56px; color: var(--fg-3); font-size: 10.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; position: relative; border-radius: 10px; }
+.tabbar a svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tabbar a.on { color: var(--fg); background: var(--raise); }
+.tabbar a .ld { position: absolute; top: 8px; right: calc(50% - 20px); width: 8px; height: 8px; border-radius: 50%; background: var(--gain); }
+
+/* ---------- IA map ---------- */
+.ia { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ia-card { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.ia-card .hd { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--panel-2); border-bottom: 1px solid var(--line); }
+.ia-card .hd svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ia-card .hd b { font-size: 15px; letter-spacing: .1em; text-transform: uppercase; }
+.ia-card .q { padding: 10px 14px 4px; color: var(--fg-2); font-size: 14px; font-style: italic; }
+.ia-card ul { list-style: none; margin: 0; padding: 4px 14px 12px; display: grid; gap: 6px; }
+.ia-card li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.ia-card li:last-child { border-bottom: 0; }
+.ia-card li .was { color: var(--fg-3); font-size: 12.5px; text-align: right; }
+.ia-card li .sub { color: var(--fg-3); font-size: 12.5px; display: block; }
+.ia-foot { grid-column: 1 / -1; background: var(--panel); color: var(--fg-2); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; font-size: 13.5px; line-height: 1.55; }
+.ia-foot code { font-family: var(--font-mono); font-size: 12.5px; color: var(--fg); }
+@media (max-width: 700px) { .ia { grid-template-columns: 1fr; } }
+
+/* ---------- Review screen ---------- */
+.review { padding: 10px 12px; display: grid; grid-template-rows: auto auto 1fr; gap: 10px; min-height: 0; height: 772px; }
+.rv-head { display: flex; align-items: flex-end; gap: 16px; }
+.crumb { font-size: 13px; color: var(--fg-3); text-decoration: none; display: inline-block; margin-bottom: 2px; }
+.rv-title { font-size: 26px; font-weight: 700; letter-spacing: -.01em; margin: 0; }
+.rv-title span { color: var(--fg-2); font-weight: 500; }
+.rv-meta { font-size: 14px; color: var(--fg-2); margin-top: 2px; display: flex; gap: 8px; align-items: center; }
+.rv-tabs { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.btn { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line-strong); color: var(--fg); background: var(--panel); font-size: 14px; font-weight: 650; }
+.btn.pri { background: var(--accent); border-color: var(--accent); color: var(--ink-on-bright); }
+.kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.kpi { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 2px; }
+.kpi .k { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--fg-3); }
+.kpi .v { font-size: 30px; font-weight: 650; line-height: 1.1; }
+.kpi .s { font-size: 13px; color: var(--fg-2); }
+.rv-body { display: grid; grid-template-columns: 1.25fr 1fr; gap: 8px; min-height: 0; }
+.rv-col { display: grid; gap: 8px; align-content: start; min-height: 0; }
+.wo { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.wo:last-child { border-bottom: 0; }
+.wo svg { width: 110px; height: 60px; }
+.wo .ct { display: flex; gap: 8px; align-items: center; margin-bottom: 3px; }
+.wo .ct b { font-size: 15px; letter-spacing: .04em; text-transform: uppercase; }
+.wo .tx { font-size: 16px; line-height: 1.4; }
+.wo .ev { font-size: 13px; color: var(--fg-2); margin-top: 4px; }
+.wo .acts { display: flex; gap: 8px; margin-top: 8px; }
+.wo .acts .btn { min-height: 40px; font-size: 13px; padding: 0 12px; }
+.good-strip { display: flex; gap: 10px; align-items: center; padding: 10px 12px; font-size: 15px; border-top: 3px solid var(--gain); }
+.good-strip .ctag { padding: 2px 6px; }
+.mini-trk { fill: none; stroke: var(--line-strong); stroke-width: 9; stroke-linejoin: round; }
+.mini-hi { fill: var(--accent); stroke: var(--fg); stroke-width: 3; }
+.glossary { font-size: 13px; color: var(--fg-2); }
+.glossary a { color: var(--ref); }
+.prog-svg { width: 100%; height: 150px; display: block; }
+.prog-axis { font: 500 10.5px var(--font-mono); fill: var(--fg-3); }
+.syn-chip { font-size: 11px; font-weight: 800; letter-spacing: .08em; padding: 3px 8px; border-radius: 4px; border: 1px dashed var(--fg-3); color: var(--fg-2); background: repeating-linear-gradient(135deg, var(--raise) 0 4px, transparent 4px 8px); }
+</style>
+</head>
+<body>
+
+<!-- shared SVG geometry (fictional circuit "Halden Ring") -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <path id="trk-d" d="M70 190 L300 190 C340 190 352 176 346 156 L332 112 C327 92 343 80 360 70 C381 57 377 30 350 30 C322 30 302 48 280 60 L200 95 C180 105 160 101 150 86 C141 71 122 60 100 65 C72 72 51 90 56 116 C61 141 41 150 36 166 C31 186 46 190 70 190 Z"/>
+    <path id="s1-d" d="M70 190 L300 190 C340 190 352 176 346 156 L332 112 C327 92 343 80 360 70 C381 57 377 30 350 30"/>
+    <path id="s2-d" d="M350 30 C322 30 302 48 280 60 L200 95 C180 105 160 101 150 86 C141 71 122 60 100 65"/>
+    <path id="s3-d" d="M100 65 C72 72 51 90 56 116 C61 141 41 150 36 166 C31 186 46 190 70 190"/>
+  </defs>
+</svg>
+
+<div class="doc">
+  <header class="doc-head">
+    <h1>Pitwall UI · Direction B · “Pit wall” (dense)</h1>
+    <p><span class="sample-flag">SAMPLE DATA</span>This static mockup goes with <code>docs/ui/proposal-pit-wall.md</code>. The circuit (“Halden Ring”), the corner names, the times and the second driver are made up, and nothing here comes from a real session. It is an original design with no series, team or broadcast branding.</p>
+    <p>Use the controls to step through the Drive states, switch between Pit wall and Focus, and try the light theme or Night dim. Annotations number the panels, and the list under each frame explains them.</p>
+  </header>
+
+  <div class="controls" role="group" aria-label="Mockup controls">
+    <div class="ctl" id="stateCtl"><span>Drive state</span>
+      <button data-state="nodata">No data</button>
+      <button data-state="pre">Pre-session</button>
+      <button data-state="track" aria-pressed="true">On track</button>
+      <button data-state="yellow">Yellow flag</button>
+      <button data-state="sc">Safety car</button>
+      <button data-state="pit">In pit</button>
+      <button data-state="stale">Stale</button>
+      <button data-state="ended">Session ended</button>
+    </div>
+    <div class="ctl" id="layoutCtl"><span>Layout</span>
+      <button data-layout="wall" aria-pressed="true">Pit wall</button>
+      <button data-layout="focus">Focus</button>
+    </div>
+    <div class="ctl" id="themeCtl"><span>Theme</span>
+      <button data-theme-btn="dark" aria-pressed="true">Dark</button>
+      <button data-theme-btn="light">Light</button>
+      <label><input type="checkbox" id="dimToggle"> Night dim</label>
+      <label><input type="checkbox" id="synToggle"> Synthetic marker</label>
+      <label><input type="checkbox" id="notesToggle" checked> Annotations</label>
+    </div>
+    <div class="ctl" id="scaleCtl"><span>Scale</span>
+      <button data-scale="fit" aria-pressed="true">Fit</button>
+      <button data-scale="1">1 : 1</button>
+    </div>
+  </div>
+
+  <!-- =========================================================================================== -->
+  <section class="stage">
+    <h2>1 · Drive › Timing: iPad 11″ landscape, 1180 × 820 (home-screen web app)</h2>
+    <p>The driver column (638 px, columns 1–7) carries only what can be read at a glance at about 70 cm. The wall (454 px, columns 8–12) is dense and calm, for a second person or for the driver in the pit. While the car is on track, the rail is dimmed by <b>Drive lock</b>, and leaving Drive takes a half-second press.</p>
+    <div class="fit" data-fit>
+      <div class="scaler">
+        <div class="bezel">
+          <div class="screen locked" id="drive-ipad" data-state="track" data-layout="wall">
+            <!-- RAIL -->
+            <nav class="rail" aria-label="Areas">
+              <div class="mark"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M5 23 L13 8 L18 18 L21 13 L27 23" stroke="var(--accent)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <a class="rail-item active" href="#drive" aria-current="page"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.4 10.6h6.2M14.4 10.6h6.2M12 14.4v6.2"/></svg>Drive</a>
+              <a class="rail-item" href="#review"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 15l4-4.5 3 3L20 7"/></svg>Review</a>
+              <a class="rail-item" href="#setup"><svg viewBox="0 0 24 24"><path d="M20 7.5a4.5 4.5 0 0 1-6.2 4.2L6.5 19a1.8 1.8 0 0 1-2.5-2.5l7.3-7.3A4.5 4.5 0 0 1 16.5 3l-2.6 2.6.5 2 2 .5z"/></svg>Setup</a>
+              <a class="rail-item" href="#settings"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Settings</a>
+              <div class="spacer"></div>
+              <div class="rail-foot">
+                <div class="lockhint" data-show="track yellow sc">HOLD<br>TO LEAVE</div>
+                <span class="rail-btn" title="Night dim"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span>
+                <span class="rail-btn" title="Theme"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg></span>
+                <span class="conn-dot live" data-show="pre track yellow sc pit ended"></span>
+                <span class="conn-dot stale" data-show="stale"></span>
+                <span class="conn-dot" data-show="nodata"></span>
+              </div>
+              <i class="note l" style="top:60px">11</i>
+            </nav>
+
+            <div class="app">
+              <!-- TOP BAR -->
+              <header class="topbar" style="position:relative">
+                <nav class="subtabs" aria-label="Drive pages"><a class="on" href="#t">Timing</a><a href="#c">Car</a><a href="#r">Radio</a></nav>
+                <div class="ctx" data-hide="nodata"><b>Halden Ring</b> · Practice · Dry · track 31°C · air 22°C</div>
+                <div class="ctx" data-show="nodata">No session yet</div>
+                <div class="pills">
+                  <span class="pill syn" data-syn hidden>SYNTHETIC</span>
+                  <span class="pill live" data-show="pre track yellow sc pit ended"><span class="d"></span>LIVE</span>
+                  <span class="pill stale" data-show="stale"><span class="d"></span>STALE 6 s</span>
+                  <span class="pill" data-show="nodata"><span class="d" style="background:transparent;border:1.5px solid var(--fg-3)"></span>NO DATA</span>
+                  <span class="pill radio-on" data-show="track yellow sc pit stale ended"><span class="d"></span>RADIO</span>
+                  <span class="pill radio-off" data-show="pre nodata"><span class="d"></span>RADIO</span>
+                  <span class="chip"><span class="av">JR</span>James</span>
+                </div>
+                <i class="note">12</i>
+              </header>
+
+              <!-- DRIVE GRID -->
+              <main class="drive">
+                <section class="dcol" aria-label="Driver">
+
+                  <!-- A. STATUS SLOT (fixed 56 px) -->
+                  <div class="slot line" data-show="track" style="position:relative">
+                    <span><span class="lb">LAP</span><span class="num">8</span></span><span class="sep">│</span>
+                    <span><span class="lb">SECTOR</span><span class="num">2</span></span><span class="sep">│</span>
+                    <span><span class="clear-dot"></span>TRACK CLEAR</span>
+                    <span class="right"><span class="cuechip">CUES · FOCUS</span></span>
+                    <i class="note">1</i>
+                  </div>
+                  <div class="slot band yellow flash" role="status" data-show="yellow">YELLOW <span class="soft">·</span> SECTOR 2 <span class="soft">·</span> ZONE 7 AHEAD</div>
+                  <div class="slot band yellow" role="status" data-show="sc">SAFETY CAR <span class="soft">· cues muted</span></div>
+                  <div class="slot band pit" role="status" data-show="pit">PIT LANE <span class="soft">·</span> LIMIT 80 <span class="soft">·</span> <span class="num">78</span>&thinsp;km/h</div>
+                  <div class="slot band stale" role="status" data-show="stale">NO SIGNAL · <span class="num">6</span>&thinsp;s <span class="soft" style="text-transform:none;font-size:19px">game paused or in a menu?</span></div>
+                  <div class="slot band neutral" role="status" data-show="ended">CHEQUERED FLAG <span class="soft">· session ended</span></div>
+                  <div class="slot line" data-show="pre"><span class="lb">WAITING FOR START</span><span class="sep">│</span>PRACTICE<span class="right"><span class="cuechip">CUES · FOCUS</span></span></div>
+                  <div class="slot line" data-show="nodata"><span class="lb" style="color:var(--fg-2)">WAITING FOR TELEMETRY</span></div>
+
+                  <!-- B. DELTA -->
+                  <section class="pnl delta-p">
+                    <div class="hd"><span data-show="track yellow sc stale">Delta · vs REF L5 · <span class="num">1:28.904</span></span><span data-show="pre">Ready check</span><span data-show="pit">Stint</span><span data-show="ended">Session summary</span><span data-show="nodata">Delta</span><span class="tag" data-show="track yellow sc stale">this session</span></div>
+                    <div class="bd" data-show="track yellow sc stale">
+                      <div class="delta-num num gain" data-show="track yellow">−0.21</div>
+                      <div class="delta-num num" data-show="sc" style="color:var(--fg-3)">−0.21<span class="tagsc">SC</span></div>
+                      <div class="delta-num num unk" data-show="stale">-</div>
+                      <div>
+                        <div class="dbar" aria-label="Delta bar: 0.21 seconds ahead">
+                          <i class="tick" style="left:12.5%"></i><i class="tick" style="left:25%"></i><i class="tick" style="left:37.5%"></i>
+                          <i class="tick" style="left:62.5%"></i><i class="tick" style="left:75%"></i><i class="tick" style="left:87.5%"></i>
+                          <i class="fill gain" style="width:10.5%" data-show="track yellow sc"></i>
+                          <i class="tick c" style="left:50%"></i>
+                        </div>
+                        <div class="dbar-labels"><span>AHEAD ◀</span><span class="mid">−1.0 &nbsp; −0.5 &nbsp; 0 &nbsp; +0.5 &nbsp; +1.0 s</span><span>▶ BEHIND</span></div>
+                      </div>
+                    </div>
+                    <!-- pre-session: ready check -->
+                    <div class="bd" data-show="pre"><div class="card-fill">
+                      <div class="kvg">
+                        <span class="k">Reference</span><span class="v num">L5 · 1:28.904 <small>3 Oct · your best here</small></span>
+                        <span class="k">Radio</span><span class="v" style="display:flex;gap:14px;align-items:center"><span style="color:var(--fg-2);font-size:20px">Not live</span><span class="bigbtn" style="min-height:52px">Go live</span></span>
+                        <span class="k">Cues</span><span class="v">Focus <small>T3 Mill Hairpin · T5 Lakeside · T8 Long Bend</small></span>
+                        <span class="k">Track</span><span class="v">9 corners <small>learned · official names</small></span>
+                      </div>
+                    </div></div>
+                    <!-- pit: stint -->
+                    <div class="bd" data-show="pit"><div class="card-fill">
+                      <div class="kvg">
+                        <span class="k">Laps</span><span class="v num">8 <small>6 clean</small></span>
+                        <span class="k">Best</span><span class="v num tg">1:28.904 <span class="mtag">PB</span></span>
+                        <span class="k">Tyres</span><span class="v">Soft <small>9 laps · wear 4–7%</small></span>
+                        <span class="k">Fuel</span><span class="v num">16.9 kg <small>+1.0 laps (game)</small></span>
+                      </div>
+                    </div></div>
+                    <!-- ended: summary -->
+                    <div class="bd" data-show="ended"><div class="card-fill">
+                      <div class="kvg">
+                        <span class="k">Best lap</span><span class="v num tg">1:28.904 <span class="mtag">PB</span> <small>−0.146 vs previous PB</small></span>
+                        <span class="k">Laps</span><span class="v num">9 <small>6 clean · 1 invalid</small></span>
+                        <span class="k">Best sectors</span><span class="v num">1:28.774 <small>0.130 s on the table</small></span>
+                      </div>
+                    </div></div>
+                    <!-- no data -->
+                    <div class="bd" data-show="nodata"><div class="card-fill">
+                      <div style="font-size:28px;font-weight:700">Waiting for telemetry</div>
+                      <div class="checklist">
+                        <div class="r"><span class="i ok">✓</span><span>Pitwall is listening on UDP <span class="num">20777</span></span></div>
+                        <div class="r"><span class="i unk">-</span><span>Packets received: <span class="unk">none yet</span></span></div>
+                        <div class="r"><span class="i" style="color:var(--fg-2)">→</span><span>Point the game’s UDP telemetry at this Mac</span></div>
+                      </div>
+                    </div></div>
+                    <i class="note">2</i>
+                  </section>
+
+                  <!-- C. CORNER + CUE (pit / ended replace it with one wide panel) -->
+                  <div class="cc" data-hide="pit ended nodata">
+                    <section class="pnl corner" data-dimin="stale">
+                      <div class="hd"><span>Corner</span><span class="tag">official name</span></div>
+                      <div class="bd" data-hide="nodata">
+                        <div class="cn-top"><span class="cn-when" data-hide="pre">NEXT</span><span class="cn-when" data-show="pre">FIRST</span>
+                          <span class="cn-label focus" data-hide="pre">T5</span><span class="cn-label" data-show="pre">T1</span>
+                          <span class="cn-dist num" data-hide="pre">240<small>&thinsp;m</small></span></div>
+                        <div class="cn-name" data-hide="pre">Lakeside</div><div class="cn-name" data-show="pre">Harbour</div>
+                        <div class="cn-then" data-hide="pre">then T6 Chapel</div><div class="cn-then" data-show="pre">then T2 Kiln</div>
+                      </div>
+                      <div class="bd" data-show="nodata"><div class="empty-note">- <br>Corners appear after the first clean lap</div></div>
+                      <i class="note">3</i>
+                    </section>
+                    <section class="pnl cue" data-dimin="stale">
+                      <div class="hd"><span>Next cue</span><span class="tag" data-hide="nodata">focus</span></div>
+                      <div class="bd" data-show="track yellow stale">
+                        <div class="cue-word">BRAKE</div>
+                        <div class="cue-dist num">T5 · 180<small>&thinsp;m</small></div>
+                        <div class="cbar"><i style="width:60%"></i></div>
+                        <div class="cue-last">Last T4 · on time (−3 m)</div>
+                      </div>
+                      <div class="bd" data-show="sc"><div class="muted-big">MUTED</div><div class="cue-last" style="font-size:18px">safety car · cues resume at green</div></div>
+                      <div class="bd" data-show="pre"><div class="muted-big" style="font-size:26px">Armed when radio is live</div><div class="cue-last" style="font-size:16px">Brake calls for T3, T5, T8</div></div>
+                      <div class="bd" data-show="nodata"><div class="empty-note">-</div></div>
+                      <i class="note">4</i>
+                    </section>
+                  </div>
+                  <section class="pnl" style="grid-area:cc" data-show="nodata">
+                    <div class="hd"><span>Get connected</span><span class="tag">no data yet</span></div>
+                    <div class="bd" style="display:grid;align-content:center;gap:14px;padding:12px 18px">
+                      <div style="display:flex;gap:12px;flex-wrap:wrap"><span class="bigbtn">Setup › Connect</span><span class="bigbtn ghost">Run synthetic demo</span></div>
+                      <div class="evid">Game telemetry settings are under Setup › Connect. The demo replays a generated session and is marked SYNTHETIC everywhere.</div>
+                    </div>
+                  </section>
+                  <section class="pnl" style="grid-area:cc" data-show="pit">
+                    <div class="hd"><span>Top point from lap 8</span><span class="tag">vs REF L5</span></div>
+                    <div class="bd" style="display:grid;align-content:center;gap:10px;padding:12px 18px">
+                      <div class="big-text"><span class="ctag" style="font-size:16px;padding:3px 8px;margin-right:8px">T5</span>T5: braking about 9 m earlier than your reference (lap 5), losing 0.14 s.</div>
+                      <div class="evid">Seen on 4 of the last 5 laps · confidence 0.84 · Lakeside</div>
+                    </div>
+                  </section>
+                  <section class="pnl" style="grid-area:cc" data-show="ended">
+                    <div class="hd"><span>Work on next time</span><span class="tag">2 points</span></div>
+                    <div class="bd" style="display:grid;align-content:center;gap:12px;padding:10px 18px">
+                      <div style="font-size:21px;line-height:1.3"><span class="ctag" style="font-size:14px;padding:2px 7px;margin-right:8px">T5</span>T5: braking about 11 m earlier than your reference (lap 5), losing 0.18 s.</div>
+                      <div style="font-size:21px;line-height:1.3"><span class="ctag" style="font-size:14px;padding:2px 7px;margin-right:8px">T8</span>T8: minimum speed 6 km/h lower than your reference (lap 5), losing 0.09 s.</div>
+                    </div>
+                  </section>
+
+                  <!-- D. TIMING -->
+                  <section class="pnl timing-p" data-dimin="stale">
+                    <div class="hd"><span data-show="track yellow sc stale">Timing · lap 8</span><span data-show="pre nodata">Timing</span><span data-show="pit ended">Timing · last lap 8</span><span class="tag" data-show="track yellow sc">sector 2 running</span></div>
+                    <div class="bd">
+                      <div class="lap-row" data-hide="ended">
+                        <span class="k">LAP</span>
+                        <span class="lap-run num" data-show="track yellow sc">0:47.3</span>
+                        <span class="lap-run num unk" data-show="pre stale nodata">-</span>
+                        <span class="lap-run num" data-show="pit" style="color:var(--fg-2)">1:12.4</span>
+                        <span class="ctxs" data-show="pit">in-lap</span>
+                        <span class="ctxs" data-show="track yellow sc">of practice</span>
+                      </div>
+                      <div class="lap-row" data-show="ended"><span class="bigbtn" style="min-height:56px">Review session&nbsp;→</span><span class="ctxs">9 laps · 2 points to work on</span></div>
+                      <!-- running lap 8 -->
+                      <div class="secs" data-show="track yellow sc">
+                        <div class="sec g"><span class="sl">S1</span><span class="sv num">27.402</span><span class="stag">PB</span></div>
+                        <div class="sec run"><span class="sl">S2 ▸</span><div class="prog"><i style="width:41%"></i></div></div>
+                        <div class="sec"><span class="sl">S3</span><span class="sv num unk">-</span></div>
+                      </div>
+                      <!-- last completed lap 8 (as set) -->
+                      <div class="secs" data-show="pit ended">
+                        <div class="sec g"><span class="sl">S1</span><span class="sv num">27.402</span><span class="stag">PB</span></div>
+                        <div class="sec y"><span class="sl">S2</span><span class="sv num">33.151</span></div>
+                        <div class="sec p"><span class="sl">S3</span><span class="sv num">28.498</span><span class="stag">REC</span></div>
+                      </div>
+                      <div class="secs" data-show="pre nodata stale">
+                        <div class="sec"><span class="sl">S1</span><span class="sv num unk">-</span></div>
+                        <div class="sec"><span class="sl">S2</span><span class="sv num unk">-</span></div>
+                        <div class="sec"><span class="sl">S3</span><span class="sv num unk">-</span></div>
+                      </div>
+                      <div class="trip">
+                        <div class="c"><span class="k">LAST</span><span class="v num ty" data-show="track yellow sc stale">1:29.047</span><span class="v num ty" data-show="pit ended">1:29.051</span><span class="v num unk" data-show="pre nodata">-</span></div>
+                        <div class="c"><span class="k">BEST <span class="mtag tg" data-hide="pre nodata">PB</span></span><span class="v num tg" data-hide="pre nodata">1:28.904</span><span class="v num unk" data-show="pre nodata">-</span></div>
+                        <div class="c"><span class="k">REC <span class="av sam sm" data-hide="nodata">SR</span></span><span class="v num tp" data-hide="nodata">1:28.612</span><span class="v num unk" data-show="nodata">-</span></div>
+                      </div>
+                    </div>
+                    <i class="note">5</i>
+                  </section>
+                </section>
+
+                <!-- ============ THE WALL ============ -->
+                <section class="wall" aria-label="Pit wall">
+                  <!-- 1. track map -->
+                  <section class="pnl" data-dimin="stale nodata">
+                    <div class="hd"><span>Track · Halden Ring</span><span class="tag" data-hide="nodata">9 corners · official</span><span class="tag" data-show="nodata">-</span></div>
+                    <div class="bd map-bd">
+                      <svg class="map-svg" viewBox="0 0 400 215" role="img" aria-label="Track map, sample circuit">
+                        <use href="#trk-d" class="trk-base"/>
+                        <!-- running lap: S1 green (PB), S2 current, S3 future -->
+                        <g data-show="track yellow sc stale">
+                          <use href="#s1-d" class="seg g"/><use href="#s2-d" class="seg cur"/><use href="#s3-d" class="seg fut"/>
+                        </g>
+                        <!-- last completed lap 8 (as set): S1 green, S2 yellow, S3 purple -->
+                        <g data-show="pit ended">
+                          <use href="#s1-d" class="seg g"/><use href="#s2-d" class="seg y"/><use href="#s3-d" class="seg p"/>
+                        </g>
+                        <g data-show="pre"><use href="#trk-d" class="seg fut"/></g>
+                        <g data-show="nodata"><use href="#trk-d" class="seg unk"/></g>
+                        <path class="pitlane" d="M88 203 L282 203"/>
+                        <!-- yellow flag, marshal zone 7 (around T5) -->
+                        <path class="yz" data-show="yellow" d="M200 95 C180 105 160 101 150 86"/>
+                        <!-- braking zones -->
+                        <path class="brk" d="M280 190 L300 190"/><path class="brk" d="M362 69 L372 60"/><path class="brk" d="M214 89 L200 95"/><path class="brk" d="M120 61 L104 64"/>
+                        <!-- sector ticks + start line -->
+                        <rect class="sline" x="117" y="183" width="4" height="14"/>
+                        <line class="stick" x1="350" y1="21" x2="350" y2="39"/><text class="slab" x="327" y="16">S2</text>
+                        <line class="stick" x1="99" y1="56" x2="101" y2="74"/><text class="slab" x="84" y="50">S3</text>
+                        <text class="slab" x="124" y="182">S1</text>
+                        <!-- focus rings (cue focus corners T3, T5, T8) -->
+                        <circle class="focus-ring" cx="372" cy="47" r="9"/><circle class="focus-ring" cx="162" cy="99" r="10"/><circle class="focus-ring" cx="39" cy="158" r="9"/>
+                        <!-- corners -->
+                        <g>
+                          <circle class="cdot" cx="345" cy="168" r="3.5"/><text class="clabel" x="356" y="176">T1</text>
+                          <circle class="cdot" cx="333" cy="100" r="3.5"/><text class="clabel" x="312" y="104">T2</text>
+                          <circle class="cdot" cx="372" cy="47" r="3.5"/><text class="clabel" x="380" y="52">T3</text>
+                          <circle class="cdot" cx="296" cy="51" r="3.5"/><text class="clabel" x="292" y="40">T4</text>
+                          <circle class="cdot next" cx="162" cy="99" r="4.5" data-show="track yellow sc stale"/><circle class="cdot" cx="162" cy="99" r="3.5" data-show="pre nodata pit ended"/>
+                          <text class="clabel next" x="150" y="124" data-show="track yellow sc stale">T5 LAKESIDE</text><text class="clabel" x="156" y="122" data-show="pre nodata pit ended">T5</text>
+                          <circle class="cdot" cx="128" cy="63" r="3.5"/><text class="clabel" x="118" y="52">T6</text>
+                          <circle class="cdot" cx="57" cy="104" r="3.5"/><text class="clabel" x="66" y="108">T7</text>
+                          <circle class="cdot" cx="39" cy="158" r="3.5"/><text class="clabel" x="4" y="150">T8</text>
+                          <circle class="cdot" cx="50" cy="187" r="3.5"/><text class="clabel" x="22" y="205">T9</text>
+                        </g>
+                        <!-- car -->
+                        <circle class="car" cx="225" cy="84" r="7" data-show="track yellow sc stale"/>
+                        <circle class="car" cx="168" cy="203" r="7" data-show="pit"/>
+                        <circle class="car" cx="104" cy="190" r="7" data-show="pre"/>
+                      </svg>
+                      <div class="rc" data-show="track sc stale"><b>RC</b>Lap 6 · Pit exit · 4 min ago</div>
+                      <div class="rc" data-show="yellow"><b>RC</b><span style="color:var(--flag-yellow)">Yellow flag · zone 7 (sector 2) · now</span></div>
+                      <div class="rc" data-show="pit"><b>RC</b>Lap 8 · Pit entry · now</div>
+                      <div class="rc" data-show="pre"><b>RC</b>Session started · Practice · 60 min</div>
+                      <div class="rc" data-show="ended"><b>RC</b>Chequered flag · 1 min ago</div>
+                      <div class="rc" data-show="nodata"><b>RC</b>-</div>
+                    </div>
+                    <i class="note">6</i>
+                  </section>
+
+                  <!-- 2. tyres + inputs -->
+                  <div class="pair">
+                    <section class="pnl" data-dimin="stale nodata">
+                      <div class="hd"><span data-hide="pre nodata">Tyres · soft · 8 laps</span><span data-show="pre">Tyres · soft · new</span><span data-show="nodata">Tyres · -</span></div>
+                      <div class="bd tyres-bd">
+                        <div class="tgrid" data-hide="pre nodata">
+                          <div class="tc"><span class="w">FL</span><span class="t num t-ok">92°</span><span class="m">6.2% · 23.1</span></div>
+                          <div class="tc"><span class="w">FR</span><span class="t num t-ok">96°</span><span class="m">7.0% · 23.3</span></div>
+                          <div class="tc"><span class="w">RL</span><span class="t num t-ok">99°</span><span class="m">4.1% · 21.4</span></div>
+                          <div class="tc"><span class="w">RR</span><span class="t num t-hot">108°</span><span class="m">4.8% · 21.6</span></div>
+                        </div>
+                        <div class="tgrid" data-show="pre">
+                          <div class="tc"><span class="w">FL</span><span class="t num t-cold">68°</span><span class="m">0.0% · 21.9</span></div>
+                          <div class="tc"><span class="w">FR</span><span class="t num t-cold">69°</span><span class="m">0.0% · 21.9</span></div>
+                          <div class="tc"><span class="w">RL</span><span class="t num t-cold">66°</span><span class="m">0.0% · 20.4</span></div>
+                          <div class="tc"><span class="w">RR</span><span class="t num t-cold">67°</span><span class="m">0.0% · 20.4</span></div>
+                        </div>
+                        <div class="tgrid" data-show="nodata">
+                          <div class="tc"><span class="w">FL</span><span class="t num unk">-</span><span class="m">-</span></div>
+                          <div class="tc"><span class="w">FR</span><span class="t num unk">-</span><span class="m">-</span></div>
+                          <div class="tc"><span class="w">RL</span><span class="t num unk">-</span><span class="m">-</span></div>
+                          <div class="tc"><span class="w">RR</span><span class="t num unk">-</span><span class="m">-</span></div>
+                        </div>
+                        <div class="foot" data-hide="nodata">Fuel <b class="num">18.4 kg</b> · +1.2 laps · ERS <b class="num">2.8 MJ</b></div>
+                        <div class="foot" data-show="nodata">Fuel - · ERS -</div>
+                      </div>
+                      <i class="note">7</i>
+                    </section>
+                    <section class="pnl" data-dimin="stale nodata">
+                      <div class="hd"><span>Inputs · 12 s</span><span class="tag" data-hide="nodata">bias 56%</span></div>
+                      <div class="bd inputs-bd">
+                        <div class="inputs-top" data-show="track yellow sc stale"><b class="num">212</b>km/h · gear <b class="num">6</b> · DRS -</div>
+                        <div class="inputs-top" data-show="pit"><b class="num">78</b>km/h · gear <b class="num">2</b> · limiter</div>
+                        <div class="inputs-top" data-show="pre ended"><b class="num">0</b>km/h · gear <b class="num">N</b></div>
+                        <div class="inputs-top" data-show="nodata"><b class="unk">-</b>km/h · gear <b class="unk">-</b></div>
+                        <svg class="trace" viewBox="0 0 200 80" preserveAspectRatio="none" aria-label="Input trace, last 12 seconds" data-show="track yellow sc stale pit">
+                          <line x1="0" y1="40" x2="200" y2="40" stroke="var(--line)" stroke-width="1"/>
+                          <polyline fill="none" stroke="var(--fg-2)" stroke-width="1.5" points="0,30 25,49 40,52 70,45 110,32 150,25 200,21"/>
+                          <polyline fill="none" stroke="var(--brake)" stroke-width="2" points="0,76 6,22 16,18 24,40 30,76 200,76"/>
+                          <polyline fill="none" stroke="var(--throttle)" stroke-width="2" points="0,76 30,76 38,60 60,30 80,12 92,4 200,4"/>
+                        </svg>
+                        <div class="empty-note" data-show="pre ended nodata" style="font-size:13px">trace runs while moving</div>
+                        <div class="legend"><span><i style="background:var(--throttle)"></i>thr</span><span><i style="background:var(--brake)"></i>brk</span><span><i style="background:var(--fg-2)"></i>speed</span></div>
+                      </div>
+                      <i class="note">8</i>
+                    </section>
+                  </div>
+
+                  <!-- 3. laps (current standing colours) -->
+                  <section class="pnl" data-dimin="stale">
+                    <div class="hd"><span data-hide="nodata">Laps · ref L5</span><span data-show="nodata">Laps</span><span class="tag" data-show="track yellow sc stale">best sectors 1:28.821</span><span class="tag" data-show="pit ended">best sectors 1:28.774</span><span class="tag" data-show="pre nodata">-</span></div>
+                    <div class="bd" style="padding:4px 8px" data-show="pit ended">
+                      <table class="tt">
+                        <thead><tr><th>Lap</th><th>Time</th><th>S1</th><th>S2</th><th>S3</th><th>Δ ref</th></tr></thead>
+                        <tbody>
+                          <tr><td class="lapn">8</td><td class="ty">1:29.051</td><td class="tg">27.402</td><td class="ty">33.151</td><td class="tp">28.498</td><td class="dl-loss">+0.147</td></tr>
+                          <tr><td class="lapn">7</td><td class="ty">1:29.047</td><td class="ty">27.511</td><td class="ty">33.020</td><td class="ty">28.516</td><td class="dl-loss">+0.143</td></tr>
+                          <tr><td class="lapn">6</td><td class="ty">1:29.335</td><td class="ty">27.431</td><td class="ty">33.215</td><td class="ty">28.689</td><td class="dl-loss">+0.431</td></tr>
+                          <tr><td class="lapn">5<span class="rtag">R</span></td><td class="tg">1:28.904</td><td class="ty">27.455</td><td class="tg">32.874</td><td class="ty">28.575</td><td style="color:var(--fg-3)">ref</td></tr>
+                          <tr class="invrow"><td>4<span class="itag">INV</span></td><td class="lt">1:30.211</td><td>27.602</td><td>33.910</td><td>28.699</td><td>-</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="bd" style="padding:4px 8px" data-show="track yellow sc stale">
+                      <table class="tt">
+                        <thead><tr><th>Lap</th><th>Time</th><th>S1</th><th>S2</th><th>S3</th><th>Δ ref</th></tr></thead>
+                        <tbody>
+                          <tr><td class="lapn">7</td><td class="ty">1:29.047</td><td class="ty">27.511</td><td class="ty">33.020</td><td class="tp">28.516</td><td class="dl-loss">+0.143</td></tr>
+                          <tr><td class="lapn">6</td><td class="ty">1:29.335</td><td class="tg">27.431</td><td class="ty">33.215</td><td class="ty">28.689</td><td class="dl-loss">+0.431</td></tr>
+                          <tr><td class="lapn">5<span class="rtag">R</span></td><td class="tg">1:28.904</td><td class="ty">27.455</td><td class="tg">32.874</td><td class="ty">28.575</td><td style="color:var(--fg-3)">ref</td></tr>
+                          <tr class="invrow"><td>4<span class="itag">INV</span></td><td class="lt">1:30.211</td><td>27.602</td><td>33.910</td><td>28.699</td><td>-</td></tr>
+                          <tr><td class="lapn">3</td><td class="ty">1:29.876</td><td class="ty">27.690</td><td class="ty">33.305</td><td class="ty">28.881</td><td class="dl-loss">+0.972</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div class="bd" data-show="pre nodata"><div class="empty-note">No laps yet this session</div></div>
+                    <i class="note">9</i>
+                  </section>
+
+                  <!-- 4. coaching -->
+                  <section class="pnl" data-dimin="stale">
+                    <div class="hd"><span data-show="track yellow sc stale">Coaching · L7 vs ref L5</span><span data-show="pre nodata">Coaching · last lap</span><span data-show="pit ended">Coaching · L8 vs ref L5</span><span class="tag" data-show="pit ended">review →</span></div>
+                    <div class="bd" data-show="pit ended">
+                      <ul class="coach-list">
+                        <li><span class="ctag">T5</span><span class="ctext">T5: braking about 9 m earlier than your reference (lap 5), losing 0.14 s.</span><span class="cimp">+0.14</span></li>
+                        <li><span class="ctag">T8</span><span class="ctext">T8: minimum speed 5 km/h lower than your reference (lap 5), losing 0.07 s.</span><span class="cimp">+0.07</span></li>
+                        <li class="good"><span class="ctag">T6</span><span class="ctext"><span class="gw">GOOD</span>T6: exit speed 3 km/h higher than your reference, 0.04 s faster.</span><span class="cimp">−0.04</span></li>
+                      </ul>
+                    </div>
+                    <div class="bd" data-show="track yellow sc stale">
+                      <ul class="coach-list">
+                        <li><span class="ctag">T5</span><span class="ctext">T5: braking about 11 m earlier than your reference (lap 5), losing 0.18 s.</span><span class="cimp">+0.18</span></li>
+                        <li><span class="ctag">T8</span><span class="ctext">T8: minimum speed 6 km/h lower than your reference (lap 5), losing 0.09 s.</span><span class="cimp">+0.09</span></li>
+                        <li class="good"><span class="ctag">T3</span><span class="ctext"><span class="gw">GOOD</span>T3: 4 km/h more at the apex than your reference, 0.06 s faster.</span><span class="cimp">−0.06</span></li>
+                      </ul>
+                    </div>
+                    <div class="bd" data-show="pre nodata"><div class="empty-note">Coaching appears after each completed lap</div></div>
+                    <i class="note">10</i>
+                  </section>
+                </section>
+              </main>
+            </div>
+          </div>
+          <div class="caption">sample data · fictional circuit, drivers and times</div>
+        </div>
+      </div>
+    </div>
+    <ol class="notes-list">
+      <li><b>Status slot (fixed 56 px).</b> Shows the session line, or a flag band: yellow, safety car, red, pit (cyan), no signal (amber outline) or ended. It never pushes content down.</li>
+      <li><b>Delta to reference</b> at 144 px with two decimals. Neutral within ±0.02 s. The bar is a number line from −1 to +1 s, labelled AHEAD and BEHIND so the meaning does not depend on colour. Unknown shows <code>-</code>.</li>
+      <li><b>The corner that matters now.</b> NOW if inside a corner segment, otherwise NEXT with the distance. The official name comes from <code>track_model.corner_text</code> and is never invented. Focus corners get an orange outline.</li>
+      <li><b>Next braking cue</b> from <code>cues.next</code>, with a countdown to the braking point and the last cue’s outcome (the same rule as today). Shows MUTED for a safety car or radio off.</li>
+      <li><b>Timing.</b> The running lap shows tenths. Sector cells are coloured <i>as set</i>: purple = household record (REC), green = personal best (PB), yellow = slower. Live S1/S2 times need backend addition D1. LAST, BEST and REC (with the holder’s avatar) sit at 36 px.</li>
+      <li><b>Track map.</b> Sectors are coloured by timing status, with your car in orange, the next corner labelled, dashed rings on focus corners, red braking zones, a yellow overlay for flagged zones, and the latest race-control line.</li>
+      <li><b>Tyres and energy</b> on a calm scale: in the temperature window = plain white, cold = blue, hot = amber, overheating = red. Wear % and psi, then fuel and ERS.</li>
+      <li><b>Inputs.</b> Throttle, brake and speed over the last 12 s (uPlot in the app). Speed and gear sit here rather than in the driver column because the game’s own HUD shows them.</li>
+      <li><b>Laps,</b> newest five, coloured by <i>current standing</i> (only the column bests are green or purple). INV, PIT and R (reference) tags; best sectors combined in the header.</li>
+      <li><b>Coaching, last lap.</b> The backend’s observation text, shown verbatim with its impact. Positive observations are tagged GOOD. The UI never writes advice.</li>
+      <li><b>Rail.</b> Four areas at 64 × 64 px. With Drive lock on track, the other items dim and leaving takes a half-second press.</li>
+      <li><b>Top bar.</b> Sub-tabs (44 px), the session line, and the connection, radio and driver pills, which are global on every page.</li>
+    </ol>
+  </section>
+
+  <!-- =========================================================================================== -->
+  <section class="stage">
+    <h2>2 · Navigation: four areas instead of nine tabs</h2>
+    <p>On iPad and desktop the areas sit in a left rail with sub-tabs in the top bar. On phone they move to a bottom tab bar, and Drive always uses the Focus layout. Every old URL redirects, so <code>#/radio</code> keeps working from the iPad home screen.</p>
+    <div class="row-2">
+      <div class="fit" data-fit data-max="1">
+        <div class="scaler">
+          <div class="bezel phone">
+            <div class="phone-screen">
+              <div class="ph-status"><span class="num">19:42</span><span style="font-size:12px">●●● ▮</span></div>
+              <div class="ph-notch"></div>
+              <div class="ph-top">
+                <nav class="subtabs"><a class="on">Timing</a><a>Car</a><a>Radio</a></nav>
+                <span class="pill live" style="height:34px;padding:0 9px"><span class="d"></span>LIVE</span>
+                <span class="av">JR</span>
+              </div>
+              <div class="ph-main">
+                <div class="slot line"><span><span class="lb">LAP</span>8</span><span class="sep">│</span><span><span class="lb">S</span>2</span><span class="sep">│</span><span><span class="clear-dot"></span>CLEAR</span></div>
+                <section class="pnl ph-delta delta-p">
+                  <div class="hd"><span>Delta · REF L5</span><span class="tag num">1:28.904</span></div>
+                  <div class="bd"><div class="delta-num num gain">−0.21</div>
+                    <div><div class="dbar"><i class="fill gain" style="width:10.5%"></i><i class="tick c" style="left:50%"></i></div>
+                    <div class="dbar-labels" style="font-size:10px"><span>AHEAD ◀</span><span>▶ BEHIND</span></div></div>
+                  </div>
+                </section>
+                <div class="ph-cc">
+                  <section class="pnl"><div class="hd"><span>Next</span><span class="tag num">240 m</span></div>
+                    <div class="bd"><span class="cn-label focus" style="justify-self:start">T5</span><span class="cn-name">Lakeside</span></div></section>
+                  <section class="pnl"><div class="hd"><span>Cue</span><span class="tag">focus</span></div>
+                    <div class="bd"><span class="cue-word">BRAKE</span><span class="cue-dist num">180<small>&thinsp;m</small></span><div class="cbar"><i style="width:60%"></i></div></div></section>
+                </div>
+                <section class="pnl ph-time timing-p">
+                  <div class="hd"><span>Timing</span><span class="tag">lap 8</span></div>
+                  <div class="bd">
+                    <div class="lap-row"><span class="k">LAP</span><span class="lap-run num">0:47.3</span></div>
+                    <div class="secs">
+                      <div class="sec g"><span class="sl">S1</span><span class="sv num">27.402</span></div>
+                      <div class="sec run"><span class="sl">S2 ▸</span><div class="prog"><i style="width:41%"></i></div></div>
+                      <div class="sec"><span class="sl">S3</span><span class="sv num unk">-</span></div>
+                    </div>
+                    <div class="trip">
+                      <div class="c"><span class="k">LAST</span><span class="v num ty">1:29.047</span></div>
+                      <div class="c"><span class="k">BEST</span><span class="v num tg">1:28.904</span></div>
+                      <div class="c"><span class="k">REC</span><span class="v num tp">1:28.612</span></div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+              <nav class="tabbar" aria-label="Areas">
+                <a class="on"><span class="ld"></span><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.4 10.6h6.2M14.4 10.6h6.2M12 14.4v6.2"/></svg>Drive</a>
+                <a><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 15l4-4.5 3 3L20 7"/></svg>Review</a>
+                <a><svg viewBox="0 0 24 24"><path d="M20 7.5a4.5 4.5 0 0 1-6.2 4.2L6.5 19a1.8 1.8 0 0 1-2.5-2.5l7.3-7.3A4.5 4.5 0 0 1 16.5 3l-2.6 2.6.5 2 2 .5z"/></svg>Setup</a>
+                <a><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Settings</a>
+              </nav>
+            </div>
+            <div class="caption">sample data</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ia" aria-label="Information architecture">
+        <div class="ia-card">
+          <div class="hd"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.4 10.6h6.2M14.4 10.6h6.2M12 14.4v6.2"/></svg><b>Drive</b></div>
+          <div class="q">“How am I doing right now?”</div>
+          <ul>
+            <li><span>Timing <span class="sub">delta · corner · cue · sectors · the wall</span></span><span class="was">was Live</span></li>
+            <li><span>Car <span class="sub">all telemetry, tyres, fuel, health</span></span><span class="was">was Live</span></li>
+            <li><span>Radio <span class="sub">Go live · push-to-talk · log · cue mode</span></span><span class="was">was Radio</span></li>
+          </ul>
+        </div>
+        <div class="ia-card">
+          <div class="hd"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 15l4-4.5 3 3L20 7"/></svg><b>Review</b></div>
+          <div class="q">“What happened, what should I work on, am I improving?”</div>
+          <ul>
+            <li><span>Sessions → Session <span class="sub">Overview · Laps &amp; compare · Coaching</span></span><span class="was">was Sessions + Session</span></li>
+            <li><span>Progress <span class="sub">per driver · household board</span></span><span class="was">new</span></li>
+            <li><span>Engineer <span class="sub">ask about a session</span></span><span class="was">was Engineer</span></li>
+          </ul>
+        </div>
+        <div class="ia-card">
+          <div class="hd"><svg viewBox="0 0 24 24"><path d="M20 7.5a4.5 4.5 0 0 1-6.2 4.2L6.5 19a1.8 1.8 0 0 1-2.5-2.5l7.3-7.3A4.5 4.5 0 0 1 16.5 3l-2.6 2.6.5 2 2 .5z"/></svg><b>Setup</b></div>
+          <div class="q">“Get the driver, rig and game ready.”</div>
+          <ul>
+            <li><span>Drivers <span class="sub">profiles · who’s in the seat</span></span><span class="was">was Drivers</span></li>
+            <li><span>Rig <span class="sub">wheel / pedal / game settings · rig check</span></span><span class="was">was Setup</span></li>
+            <li><span>Connect <span class="sub">game telemetry · live senders · other devices</span></span><span class="was">was Connect</span></li>
+          </ul>
+        </div>
+        <div class="ia-card">
+          <div class="hd"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><b>Settings</b></div>
+          <div class="q">“How Pitwall behaves.”</div>
+          <ul>
+            <li><span>Display <span class="sub">theme · night dim · layout · Drive lock</span></span><span class="was">new</span></li>
+            <li><span>Radio &amp; voice</span><span class="was">from Radio</span></li>
+            <li><span>AI engineer</span><span class="was">was Settings</span></li>
+            <li><span>System <span class="sub">health · replay · synthetic demo · capabilities</span></span><span class="was">was Status</span></li>
+          </ul>
+        </div>
+        <div class="ia-foot">
+          <b style="color:var(--fg)">Always visible:</b> the connection pill (LIVE / STALE / NO DATA, plus SYNTHETIC or REPLAY markers), the radio pill (tap to Go live) and the driver chip (who’s in the seat).
+          <br><b style="color:var(--fg)">Legacy routes redirect:</b> <code>#/live</code>→<code>#/drive</code> · <code>#/radio</code>→<code>#/drive/radio</code> · <code>#/sessions/&lt;id&gt;</code>→<code>#/review/s/&lt;id&gt;</code> · <code>#/engineer</code>→<code>#/review/engineer</code> · <code>#/profiles</code>→<code>#/setup/drivers</code> · <code>#/setup</code>→<code>#/setup/rig</code> · <code>#/connect</code>→<code>#/setup/connect</code> · <code>#/settings</code>→<code>#/settings/ai</code> · <code>#/status</code>→<code>#/settings/system</code>
+          <br><b style="color:var(--fg)">Touch:</b> rail items 64 × 64, tab-bar items ≥ 72 × 56, sub-tabs 44 px tall and ≥ 88 px wide, sheet rows 56 px.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================================================== -->
+  <section class="stage">
+    <h2>3 · Review › Session › Overview: iPad landscape</h2>
+    <p>This page answers “how did it go, and what’s next?” on one screen. The coaching text comes from the backend verbatim, with the evidence behind it. Beginner profiles see one “work on” card and plain labels. Colours here mean the same as on Drive.</p>
+    <div class="fit" data-fit>
+      <div class="scaler">
+        <div class="bezel">
+          <div class="screen">
+            <nav class="rail" aria-label="Areas">
+              <div class="mark"><svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><path d="M5 23 L13 8 L18 18 L21 13 L27 23" stroke="var(--accent)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+              <a class="rail-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.4 10.6h6.2M14.4 10.6h6.2M12 14.4v6.2"/></svg>Drive</a>
+              <a class="rail-item active"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M7.5 15l4-4.5 3 3L20 7"/></svg>Review</a>
+              <a class="rail-item"><svg viewBox="0 0 24 24"><path d="M20 7.5a4.5 4.5 0 0 1-6.2 4.2L6.5 19a1.8 1.8 0 0 1-2.5-2.5l7.3-7.3A4.5 4.5 0 0 1 16.5 3l-2.6 2.6.5 2 2 .5z"/></svg>Setup</a>
+              <a class="rail-item"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>Settings</a>
+              <div class="spacer"></div>
+              <div class="rail-foot"><span class="rail-btn"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></span><span class="conn-dot"></span></div>
+            </nav>
+            <div class="app">
+              <header class="topbar">
+                <nav class="subtabs"><a class="on">Sessions</a><a>Progress</a><a>Engineer</a></nav>
+                <div class="ctx">Session · <b>Halden Ring</b> · Practice · today 19:40</div>
+                <div class="pills"><span class="pill"><span class="d" style="background:transparent;border:1.5px solid var(--fg-3)"></span>NO DATA</span><span class="chip"><span class="av">JR</span>James</span></div>
+              </header>
+              <main class="review">
+                <div class="rv-head">
+                  <div>
+                    <a class="crumb">‹ Sessions</a>
+                    <h3 class="rv-title">Halden Ring <span>· Practice</span></h3>
+                    <div class="rv-meta"><span class="av sm">JR</span>James · sample car · dry · track 31°C · 9 laps</div>
+                  </div>
+                  <div class="rv-tabs">
+                    <nav class="subtabs"><a class="on">Overview</a><a>Laps &amp; compare</a><a>Coaching</a></nav>
+                    <span class="btn pri">Ask the engineer</span><span class="btn">Report</span>
+                  </div>
+                </div>
+                <div class="kpis">
+                  <div class="kpi"><span class="k">Best clean lap</span><span class="v num tg">1:28.904</span><span class="s"><span class="mtag tg">PB</span> −0.146 vs previous PB</span></div>
+                  <div class="kpi"><span class="k">Laps</span><span class="v num">6 / 9</span><span class="s">clean / total · 1 invalid</span></div>
+                  <div class="kpi"><span class="k">Best sectors combined</span><span class="v num">1:28.774</span><span class="s">0.130 s on the table</span></div>
+                  <div class="kpi"><span class="k">Consistency</span><span class="v num">0.29 s</span><span class="s">spread of the last 3 clean laps</span></div>
+                  <div class="kpi"><span class="k">Reference</span><span class="v num" style="color:var(--ref)">L5</span><span class="s">1:28.904 · compare →</span></div>
+                </div>
+                <div class="rv-body">
+                  <div class="rv-col">
+                    <section class="pnl">
+                      <div class="hd"><span>What to work on</span><span class="tag">from 6 analysed laps · backend text</span></div>
+                      <div class="wo">
+                        <svg viewBox="0 0 400 215"><use href="#trk-d" class="mini-trk"/><circle class="mini-hi" cx="162" cy="99" r="14"/></svg>
+                        <div><div class="ct"><span class="ctag" style="padding:2px 7px">T5</span><b>Lakeside</b></div>
+                          <div class="tx">T5: braking about 11 m earlier than your reference (lap 5), losing 0.18 s.</div>
+                          <div class="ev">Seen on 3 of the last 4 laps · ≈ 0.18 s a lap · confidence 0.82</div>
+                          <div class="acts"><span class="btn">Show on chart →</span><span class="btn">Why?</span></div></div>
+                      </div>
+                      <div class="wo">
+                        <svg viewBox="0 0 400 215"><use href="#trk-d" class="mini-trk"/><circle class="mini-hi" cx="39" cy="158" r="14"/></svg>
+                        <div><div class="ct"><span class="ctag" style="padding:2px 7px">T8</span><b>Long Bend</b></div>
+                          <div class="tx">T8: minimum speed 6 km/h lower than your reference (lap 5), losing 0.09 s.</div>
+                          <div class="ev">Seen on 2 of the last 4 laps · ≈ 0.09 s a lap · confidence 0.74</div></div>
+                      </div>
+                      <div class="good-strip"><span class="ctag" style="background:color-mix(in srgb,var(--gain) 18%,transparent);color:var(--gain)">T3</span><span><b style="color:var(--gain);font-size:12px;letter-spacing:.1em">GOING WELL</b> T3 Mill Hairpin: 4 km/h more at the apex than your reference, 0.06 s faster.</span></div>
+                    </section>
+                    <div class="glossary">New to this? <a>What is a reference lap?</a> · <a>braking point</a> · <a>apex</a> · <a>minimum speed</a> · <a>delta</a></div>
+                  </div>
+                  <div class="rv-col">
+                    <section class="pnl">
+                      <div class="hd"><span>Laps · current standing</span><span class="tag">tap a lap to compare</span></div>
+                      <div class="bd" style="padding:4px 8px">
+                        <table class="tt" style="font-size:14.5px">
+                          <thead><tr><th>Lap</th><th>Time</th><th>S1</th><th>S2</th><th>S3</th><th>Δ ref</th></tr></thead>
+                          <tbody>
+                            <tr><td class="lapn">9</td><td colspan="5" style="text-align:left;color:var(--fg-3)">in-lap · not timed for comparison</td></tr>
+                            <tr><td class="lapn">8</td><td class="ty">1:29.051</td><td class="tg">27.402</td><td class="ty">33.151</td><td class="tp">28.498</td><td class="dl-loss">+0.147</td></tr>
+                            <tr><td class="lapn">7</td><td class="ty">1:29.047</td><td class="ty">27.511</td><td class="ty">33.020</td><td class="ty">28.516</td><td class="dl-loss">+0.143</td></tr>
+                            <tr><td class="lapn">6</td><td class="ty">1:29.335</td><td class="ty">27.431</td><td class="ty">33.215</td><td class="ty">28.689</td><td class="dl-loss">+0.431</td></tr>
+                            <tr><td class="lapn">5<span class="rtag">R</span></td><td class="tg">1:28.904</td><td class="ty">27.455</td><td class="tg">32.874</td><td class="ty">28.575</td><td style="color:var(--fg-3)">ref</td></tr>
+                            <tr class="invrow"><td>4<span class="itag">INV</span></td><td class="lt">1:30.211</td><td>27.602</td><td>33.910</td><td>28.699</td><td>-</td></tr>
+                            <tr><td class="lapn">3</td><td class="ty">1:29.876</td><td class="ty">27.690</td><td class="ty">33.305</td><td class="ty">28.881</td><td class="dl-loss">+0.972</td></tr>
+                            <tr><td class="lapn">2</td><td class="ty">1:30.954</td><td class="ty">28.012</td><td class="ty">33.610</td><td class="ty">29.332</td><td class="dl-loss">+2.050</td></tr>
+                            <tr><td class="lapn">1</td><td colspan="5" style="text-align:left;color:var(--fg-3)">out-lap</td></tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </section>
+                    <section class="pnl">
+                      <div class="hd"><span>Your best here · last 6 sessions</span><span class="tag">faster ↑</span></div>
+                      <div class="bd" style="padding:6px 10px">
+                        <svg class="prog-svg" viewBox="0 0 420 150" aria-label="Best lap per session, sample">
+                          <!-- y inverted: faster is higher. 1:28.5 at y=14, 1:31.5 at y=124 -->
+                          <line x1="40" y1="14" x2="410" y2="14" stroke="var(--line)"/><line x1="40" y1="69" x2="410" y2="69" stroke="var(--line)"/><line x1="40" y1="124" x2="410" y2="124" stroke="var(--line)"/>
+                          <text class="prog-axis" x="0" y="17">1:28.5</text><text class="prog-axis" x="0" y="72">1:30.0</text><text class="prog-axis" x="0" y="127">1:31.5</text>
+                          <line x1="40" y1="18.4" x2="410" y2="18.4" stroke="var(--t-purple)" stroke-dasharray="5 4" stroke-width="1.5"/>
+                          <text class="prog-axis" x="300" y="12" style="fill:var(--t-purple)">REC 1:28.612 · SR</text>
+                          <polyline fill="none" stroke="var(--fg-2)" stroke-width="2" points="55,121 125,91.4 195,69.7 265,49.9 335,34.2 395,28.8"/>
+                          <circle cx="55" cy="121" r="4.5" fill="var(--t-yellow)"/><circle cx="125" cy="91.4" r="4.5" fill="var(--t-yellow)"/><circle cx="195" cy="69.7" r="4.5" fill="var(--t-yellow)"/><circle cx="265" cy="49.9" r="4.5" fill="var(--t-yellow)"/><circle cx="335" cy="34.2" r="4.5" fill="var(--t-yellow)"/><circle cx="395" cy="28.8" r="6" fill="var(--t-green)" stroke="var(--fg)" stroke-width="1.5"/>
+                          <text class="prog-axis" x="42" y="145">12 Sep</text><text class="prog-axis" x="112" y="145">19 Sep</text><text class="prog-axis" x="182" y="145">26 Sep</text><text class="prog-axis" x="252" y="145">29 Sep</text><text class="prog-axis" x="324" y="145">3 Oct</text><text class="prog-axis" x="380" y="145">today</text>
+                        </svg>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </main>
+            </div>
+          </div>
+          <div class="caption">sample data · fictional circuit, drivers and times</div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:10px;color:var(--doc-muted);font-size:14px">The laps table here is coloured by <i>current standing</i>, so lap 8’s S1 (27.402) is now the green column best and lap 6’s S1 has turned yellow. On Drive, the sector cells show the colour <i>as set</i>. Purple marks the household record for S3, lap 8’s 28.498. Lap 7 had set it first (28.516, beating Sam’s 28.530), so lap 7’s S3 is now yellow.</p>
+  </section>
+
+  <footer style="margin-top:40px;color:var(--doc-muted);font-size:13px;line-height:1.6">
+    The mockup is static: no network requests, system fonts only, inline SVG. <b>All values are sample data</b> and do not describe a real session. Each colour token here matches proposal section 6.1, including the WCAG contrast ratios listed there.
+  </footer>
+</div>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const drive = document.getElementById('drive-ipad');
+  const LOCKED = ['track', 'yellow', 'sc'];
+  const DIMMED = { stale: 1 };
+
+  function applyState(s) {
+    drive.dataset.state = s;
+    drive.classList.toggle('locked', LOCKED.includes(s));
+    // toggleAttribute (not .hidden) so SVG elements inside the map are switched too
+    drive.querySelectorAll('[data-show]').forEach(el => { el.toggleAttribute('hidden', !el.dataset.show.split(' ').includes(s)); });
+    drive.querySelectorAll('[data-hide]').forEach(el => { if (!el.hasAttribute('data-show')) el.toggleAttribute('hidden', el.dataset.hide.split(' ').includes(s)); });
+    drive.querySelectorAll('[data-dimin]').forEach(el => { el.classList.toggle('dim', el.dataset.dimin.split(' ').includes(s)); });
+    document.querySelectorAll('#stateCtl button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.state === s)));
+  }
+  document.querySelectorAll('#stateCtl button').forEach(b => b.addEventListener('click', () => applyState(b.dataset.state)));
+
+  document.querySelectorAll('#layoutCtl button').forEach(b => b.addEventListener('click', () => {
+    drive.dataset.layout = b.dataset.layout;
+    document.querySelectorAll('#layoutCtl button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+
+  document.querySelectorAll('#themeCtl [data-theme-btn]').forEach(b => b.addEventListener('click', () => {
+    root.dataset.theme = b.dataset.themeBtn;
+    document.querySelectorAll('#themeCtl [data-theme-btn]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+  document.getElementById('dimToggle').addEventListener('change', e => { if (e.target.checked) root.dataset.dim = 'night'; else delete root.dataset.dim; });
+  document.getElementById('synToggle').addEventListener('change', e => { document.querySelectorAll('[data-syn]').forEach(el => el.toggleAttribute('hidden', !e.target.checked)); });
+  const notes = document.getElementById('notesToggle');
+  const setNotes = () => document.body.classList.toggle('show-notes', notes.checked);
+  notes.addEventListener('change', setNotes); setNotes();
+
+  // Fit each device frame to the available width (never upscale); 1:1 shows real CSS pixels.
+  let mode = 'fit';
+  function fit() {
+    document.querySelectorAll('[data-fit]').forEach(box => {
+      const sc = box.querySelector('.scaler');
+      const dev = sc.firstElementChild;
+      sc.style.transform = 'none';
+      const w = dev.offsetWidth, h = dev.offsetHeight;
+      const avail = box.parentElement.classList.contains('row-2') ? box.clientWidth || w : box.clientWidth;
+      const s = mode === '1' ? 1 : Math.min(1, avail / w);
+      sc.style.transform = `scale(${s})`;
+      box.style.height = (h * s) + 'px';
+      box.classList.toggle('oneone', mode === '1');
+      sc.style.width = w + 'px';
+    });
+  }
+  document.querySelectorAll('#scaleCtl button').forEach(b => b.addEventListener('click', () => {
+    mode = b.dataset.scale;
+    document.querySelectorAll('#scaleCtl button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    fit();
+  }));
+  window.addEventListener('resize', fit);
+  applyState('track');
+  fit();
+})();
+</script>
+</body>
+</html>

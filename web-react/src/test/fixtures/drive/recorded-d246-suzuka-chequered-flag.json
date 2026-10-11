@@ -1,0 +1,1774 @@
+{
+ "version": 36493,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 218968,
+  "packets_per_s": 170575.8,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261010-225601_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 218800,
+   "decoded": 156697,
+   "ignored": 62103,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "EVENT": 2188,
+    "SESSION_HISTORY": 12178,
+    "FINAL_CLASSIFICATION": 3,
+    "LOBBY_INFO": 65,
+    "SESSION": 1219,
+    "PARTICIPANTS": 124,
+    "CAR_SETUPS": 1219,
+    "CAR_DAMAGE": 6086,
+    "TYRE_SETS": 12170,
+    "LAP_POSITIONS": 1222,
+    "LAP_DATA": 36466,
+    "MOTION": 36465,
+    "MOTION_EX": 36465,
+    "CAR_TELEMETRY": 36465,
+    "CAR_STATUS": 36465
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "e3e0d6df9e22",
+ "session": {
+  "game": "f1_25",
+  "platform": "unknown",
+  "track_id": "f1:13",
+  "track_name": "Suzuka",
+  "track_length_m": 5809.0,
+  "session_type": "Race",
+  "car_name": null,
+  "weather": {
+   "condition": "light_cloud",
+   "track_temp_c": 23.0,
+   "air_temp_c": 16.0,
+   "rain_percentage": 6.0
+  },
+  "total_laps": 5,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1863389042796500,
+  "session_time_s": 493.001,
+  "speed_kph": 165.0,
+  "throttle": 1.0,
+  "brake": 0.0,
+  "steering": 0.081,
+  "clutch": 0.0,
+  "gear": 4,
+  "rpm": 10558.0,
+  "max_rpm": 13099.0,
+  "drs_open": false,
+  "pos": [
+   415.81,
+   -2.71,
+   -165.53
+  ],
+  "g_lat": -1.37,
+  "g_lon": 1.41,
+  "lap_number": 5,
+  "lap_distance_m": 5560.6,
+  "current_lap_time_ms": 92412,
+  "last_lap_time_ms": 97037,
+  "sector": 2,
+  "lap_invalid": false,
+  "pit_status": 0,
+  "race_position": 16,
+  "tyre_surface_temp_c": [
+   65.0,
+   67.0,
+   71.0,
+   72.0
+  ],
+  "tyre_inner_temp_c": [
+   90.0,
+   90.0,
+   90.0,
+   90.0
+  ],
+  "tyre_pressure_psi": [
+   24.3,
+   24.3,
+   21.5,
+   21.5
+  ],
+  "brake_temp_c": [
+   804.0,
+   801.0,
+   766.0,
+   765.0
+  ],
+  "tyre_wear_pct": [
+   13.0,
+   15.0,
+   12.0,
+   13.0
+  ],
+  "tyre_compound": "soft",
+  "tyre_age_laps": 4,
+  "fuel_kg": 4.83,
+  "fuel_remaining_laps_game": 2.44,
+  "ers_store_j": 3107744.0,
+  "brake_bias_front_pct": 58.0,
+  "quality": 0
+ },
+ "delta_s": -0.668,
+ "reference": {
+  "lap_id": 5,
+  "lap_number": 3,
+  "lap_time_ms": 97191,
+  "session_id": "e3e0d6df9e22"
+ },
+ "laps": [
+  {
+   "lap_id": 6,
+   "lap_number": 4,
+   "lap_time_ms": 97037,
+   "sector_times_ms": [
+    35546,
+    42802,
+    18689
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.905
+  },
+  {
+   "lap_id": 5,
+   "lap_number": 3,
+   "lap_time_ms": 97191,
+   "sector_times_ms": [
+    35725,
+    41928,
+    19538
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.932
+  },
+  {
+   "lap_id": 4,
+   "lap_number": 2,
+   "lap_time_ms": 100350,
+   "sector_times_ms": [
+    39415,
+    41782,
+    19153
+   ],
+   "valid": true,
+   "clean": false,
+   "flags": [
+    "distance_jump"
+   ],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.869
+  },
+  {
+   "lap_id": 3,
+   "lap_number": 1,
+   "lap_time_ms": 105995,
+   "sector_times_ms": [
+    38345,
+    47003,
+    20647
+   ],
+   "valid": true,
+   "clean": false,
+   "flags": [
+    "distance_jump",
+    "flashback",
+    "standing_start"
+   ],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.941
+  }
+ ],
+ "observations": [
+  {
+   "id": "L4:T6:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T6",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "min_speed_delta_kph",
+   "value": -12.0,
+   "unit": "km/h",
+   "impact_s": 0.434,
+   "confidence": 1.0,
+   "text": "Turn 9 (Degner 2): minimum speed is 12 km/h lower than your reference (116 vs 128 km/h), losing 0.43 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.434,
+    "brake_point_delta_m": -11.971,
+    "min_speed_delta_kph": -12.0,
+    "exit_speed_delta_kph": -14.318,
+    "entry_speed_delta_kph": -1.998,
+    "throttle_full_delta_m": 24.562,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T6",
+     "segment_time_s": 6.3,
+     "brake_start_m": 2396.31,
+     "brake_end_m": 2456.53,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.07,
+     "release_s": 0.22,
+     "trail_brake_m": 43.0,
+     "coast_m": 0.0,
+     "entry_speed_kph": 219.0,
+     "min_speed_kph": 128.0,
+     "min_speed_m": 2464.0,
+     "exit_speed_kph": 132.32,
+     "throttle_pickup_m": 2463.67,
+     "throttle_full_m": 2463.67
+    },
+    "lap": {
+     "corner": "T6",
+     "segment_time_s": 6.74,
+     "brake_start_m": 2384.34,
+     "brake_end_m": 2451.8,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.25,
+     "release_s": 0.73,
+     "trail_brake_m": 33.3,
+     "coast_m": 0.0,
+     "entry_speed_kph": 217.0,
+     "min_speed_kph": 116.0,
+     "min_speed_m": 2485.0,
+     "exit_speed_kph": 118.0,
+     "throttle_pickup_m": 2483.77,
+     "throttle_full_m": 2488.23
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T9",
+   "corner_voice": "Turn 9, Degner 2",
+   "text_simple": "Turn 9 (Degner 2): you were 12 km/h slower at the slowest point of the corner.",
+   "short": "T9: 12 km/h slower mid-corner",
+   "priority": 0.434
+  },
+  {
+   "id": "L4:T3:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T3",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "min_speed_delta_kph",
+   "value": -21.0,
+   "unit": "km/h",
+   "impact_s": 0.379,
+   "confidence": 1.0,
+   "text": "Turn 6 (Reverse Bank): minimum speed is 21 km/h lower than your reference (148 vs 169 km/h), losing 0.38 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.379,
+    "min_speed_delta_kph": -21.0,
+    "exit_speed_delta_kph": -25.52,
+    "entry_speed_delta_kph": -14.163,
+    "ref": {
+     "corner": "T3",
+     "segment_time_s": 5.52,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 170.0,
+     "min_speed_kph": 169.0,
+     "min_speed_m": 1531.0,
+     "exit_speed_kph": 175.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    },
+    "lap": {
+     "corner": "T3",
+     "segment_time_s": 5.9,
+     "brake_start_m": 1592.46,
+     "brake_end_m": 1600.51,
+     "brake_peak": 0.16,
+     "time_to_peak_s": 0.02,
+     "release_s": 0.13,
+     "trail_brake_m": 7.85,
+     "coast_m": 0.0,
+     "entry_speed_kph": 155.84,
+     "min_speed_kph": 148.0,
+     "min_speed_m": 1619.0,
+     "exit_speed_kph": 149.48,
+     "throttle_pickup_m": 1617.69,
+     "throttle_full_m": 1630.46
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T6",
+   "corner_voice": "Turn 6, Reverse Bank",
+   "text_simple": "Turn 6 (Reverse Bank): you were 21 km/h slower at the slowest point of the corner.",
+   "short": "T6: 21 km/h slower mid-corner",
+   "priority": 0.379
+  },
+  {
+   "id": "L4:T6:late_throttle",
+   "kind": "late_throttle",
+   "corner": "T6",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "throttle_full_delta_m",
+   "value": 24.562,
+   "unit": "m",
+   "impact_s": 0.434,
+   "confidence": 0.82,
+   "text": "Turn 9 (Degner 2): you're reaching full throttle 25 m later than your reference, losing 0.43 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.434,
+    "brake_point_delta_m": -11.971,
+    "min_speed_delta_kph": -12.0,
+    "exit_speed_delta_kph": -14.318,
+    "entry_speed_delta_kph": -1.998,
+    "throttle_full_delta_m": 24.562,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T6",
+     "segment_time_s": 6.3,
+     "brake_start_m": 2396.31,
+     "brake_end_m": 2456.53,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.07,
+     "release_s": 0.22,
+     "trail_brake_m": 43.0,
+     "coast_m": 0.0,
+     "entry_speed_kph": 219.0,
+     "min_speed_kph": 128.0,
+     "min_speed_m": 2464.0,
+     "exit_speed_kph": 132.32,
+     "throttle_pickup_m": 2463.67,
+     "throttle_full_m": 2463.67
+    },
+    "lap": {
+     "corner": "T6",
+     "segment_time_s": 6.74,
+     "brake_start_m": 2384.34,
+     "brake_end_m": 2451.8,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.25,
+     "release_s": 0.73,
+     "trail_brake_m": 33.3,
+     "coast_m": 0.0,
+     "entry_speed_kph": 217.0,
+     "min_speed_kph": 116.0,
+     "min_speed_m": 2485.0,
+     "exit_speed_kph": 118.0,
+     "throttle_pickup_m": 2483.77,
+     "throttle_full_m": 2488.23
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T9",
+   "corner_voice": "Turn 9, Degner 2",
+   "text_simple": "Turn 9 (Degner 2): you got back to full throttle about 25 m later than on your reference lap.",
+   "short": "T9: full throttle 25 m later",
+   "priority": 0.3559
+  },
+  {
+   "id": "L4:T4:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T4",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "exit_speed_delta_kph",
+   "value": 57.0,
+   "unit": "km/h",
+   "impact_s": -0.665,
+   "confidence": 1.0,
+   "text": "Turn 7: good - exit speed is up 57 km/h on your reference and you gained 0.67 s there.",
+   "evidence": {
+    "time_delta_s": -0.665,
+    "min_speed_delta_kph": 45.0,
+    "exit_speed_delta_kph": 57.0,
+    "entry_speed_delta_kph": -14.163,
+    "ref": {
+     "corner": "T4",
+     "segment_time_s": 5.84,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 170.0,
+     "min_speed_kph": 171.0,
+     "min_speed_m": 1878.0,
+     "exit_speed_kph": 171.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    },
+    "lap": {
+     "corner": "T4",
+     "segment_time_s": 5.17,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 155.84,
+     "min_speed_kph": 216.0,
+     "min_speed_m": 1792.0,
+     "exit_speed_kph": 228.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "T7",
+   "corner_voice": "Turn 7",
+   "text_simple": "Turn 7: good exit - you came out 57 km/h faster than on your reference lap.",
+   "short": "T7: good exit, 57 km/h faster",
+   "priority": 0.3325
+  },
+  {
+   "id": "L4:T8:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T8",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "min_speed_delta_kph",
+   "value": -21.0,
+   "unit": "km/h",
+   "impact_s": 0.331,
+   "confidence": 1.0,
+   "text": "Turns 13-14 (Spoon Curve): minimum speed is 21 km/h lower than your reference (116 vs 137 km/h), losing 0.33 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.331,
+    "brake_point_delta_m": 22.333,
+    "min_speed_delta_kph": -21.0,
+    "exit_speed_delta_kph": -2.15,
+    "entry_speed_delta_kph": -15.0,
+    "throttle_full_delta_m": -57.011,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T8",
+     "segment_time_s": 16.67,
+     "brake_start_m": 3925.42,
+     "brake_end_m": 3946.9,
+     "brake_peak": 0.56,
+     "time_to_peak_s": 0.15,
+     "release_s": 0.2,
+     "trail_brake_m": 18.56,
+     "coast_m": 0.0,
+     "entry_speed_kph": 138.0,
+     "min_speed_kph": 137.0,
+     "min_speed_m": 3949.0,
+     "exit_speed_kph": 159.79,
+     "throttle_pickup_m": 3948.24,
+     "throttle_full_m": 4056.83
+    },
+    "lap": {
+     "corner": "T8",
+     "segment_time_s": 17.0,
+     "brake_start_m": 3947.76,
+     "brake_end_m": 3953.28,
+     "brake_peak": 0.36,
+     "time_to_peak_s": 0.02,
+     "release_s": 0.02,
+     "trail_brake_m": 5.2,
+     "coast_m": 0.0,
+     "entry_speed_kph": 123.0,
+     "min_speed_kph": 116.0,
+     "min_speed_m": 3954.0,
+     "exit_speed_kph": 157.64,
+     "throttle_pickup_m": 3952.94,
+     "throttle_full_m": 3999.82
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T13-14",
+   "corner_voice": "Turns 13 to 14, Spoon Curve",
+   "text_simple": "Turns 13-14 (Spoon Curve): you were 21 km/h slower at the slowest point of the corner.",
+   "short": "T13-14: 21 km/h slower mid-corner",
+   "priority": 0.331
+  },
+  {
+   "id": "L4:T6:brake_early",
+   "kind": "brake_early",
+   "corner": "T6",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "brake_point_delta_m",
+   "value": -11.971,
+   "unit": "m",
+   "impact_s": 0.434,
+   "confidence": 0.75,
+   "text": "Turn 9 (Degner 2): you're braking about 12 m earlier than your reference (lap 3), losing 0.43 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.434,
+    "brake_point_delta_m": -11.971,
+    "min_speed_delta_kph": -12.0,
+    "exit_speed_delta_kph": -14.318,
+    "entry_speed_delta_kph": -1.998,
+    "throttle_full_delta_m": 24.562,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T6",
+     "segment_time_s": 6.3,
+     "brake_start_m": 2396.31,
+     "brake_end_m": 2456.53,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.07,
+     "release_s": 0.22,
+     "trail_brake_m": 43.0,
+     "coast_m": 0.0,
+     "entry_speed_kph": 219.0,
+     "min_speed_kph": 128.0,
+     "min_speed_m": 2464.0,
+     "exit_speed_kph": 132.32,
+     "throttle_pickup_m": 2463.67,
+     "throttle_full_m": 2463.67
+    },
+    "lap": {
+     "corner": "T6",
+     "segment_time_s": 6.74,
+     "brake_start_m": 2384.34,
+     "brake_end_m": 2451.8,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.25,
+     "release_s": 0.73,
+     "trail_brake_m": 33.3,
+     "coast_m": 0.0,
+     "entry_speed_kph": 217.0,
+     "min_speed_kph": 116.0,
+     "min_speed_m": 2485.0,
+     "exit_speed_kph": 118.0,
+     "throttle_pickup_m": 2483.77,
+     "throttle_full_m": 2488.23
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T9",
+   "corner_voice": "Turn 9, Degner 2",
+   "text_simple": "Turn 9 (Degner 2): you braked about 12 m earlier than on your reference lap.",
+   "short": "T9: braked 12 m earlier",
+   "priority": 0.3255
+  },
+  {
+   "id": "L4:T11:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T11",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "exit_speed_delta_kph",
+   "value": 4.853,
+   "unit": "km/h",
+   "impact_s": -0.422,
+   "confidence": 0.81,
+   "text": "Turns 16-17, part 2: good - exit speed is up 5 km/h on your reference and you gained 0.42 s there.",
+   "evidence": {
+    "time_delta_s": -0.422,
+    "min_speed_delta_kph": -7.0,
+    "exit_speed_delta_kph": 4.853,
+    "entry_speed_delta_kph": 5.0,
+    "ref": {
+     "corner": "T11",
+     "segment_time_s": 7.68,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 291.0,
+     "min_speed_kph": 85.0,
+     "min_speed_m": 5397.0,
+     "exit_speed_kph": 89.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    },
+    "lap": {
+     "corner": "T11",
+     "segment_time_s": 7.26,
+     "brake_start_m": 5271.99,
+     "brake_end_m": 5416.03,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.25,
+     "release_s": 0.84,
+     "trail_brake_m": 66.01,
+     "coast_m": 0.0,
+     "entry_speed_kph": 296.0,
+     "min_speed_kph": 78.0,
+     "min_speed_m": 5414.0,
+     "exit_speed_kph": 93.85,
+     "throttle_pickup_m": 5413.73,
+     "throttle_full_m": 5468.71
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "T16-17 (2)",
+   "corner_voice": "Turns 16 to 17, second part",
+   "text_simple": "Turns 16-17, part 2: good exit - you came out 5 km/h faster than on your reference lap.",
+   "short": "T16-17 (2): good exit, 5 km/h faster",
+   "priority": 0.1709
+  },
+  {
+   "id": "L4:T7:brake_early",
+   "kind": "brake_early",
+   "corner": "T7",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "brake_point_delta_m",
+   "value": -11.917,
+   "unit": "m",
+   "impact_s": 0.149,
+   "confidence": 0.74,
+   "text": "Turn 11 (Hairpin): you're braking about 12 m earlier than your reference (lap 3), losing 0.15 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.149,
+    "brake_point_delta_m": -11.917,
+    "min_speed_delta_kph": 0.0,
+    "exit_speed_delta_kph": 2.954,
+    "entry_speed_delta_kph": 8.0,
+    "throttle_full_delta_m": -7.953,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T7",
+     "segment_time_s": 13.93,
+     "brake_start_m": 2826.27,
+     "brake_end_m": 2937.22,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.1,
+     "release_s": 0.25,
+     "trail_brake_m": 101.8,
+     "coast_m": 0.0,
+     "entry_speed_kph": 247.0,
+     "min_speed_kph": 57.0,
+     "min_speed_m": 2949.0,
+     "exit_speed_kph": 57.83,
+     "throttle_pickup_m": 2948.21,
+     "throttle_full_m": 2950.34
+    },
+    "lap": {
+     "corner": "T7",
+     "segment_time_s": 14.08,
+     "brake_start_m": 2814.35,
+     "brake_end_m": 2919.27,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.05,
+     "release_s": 0.55,
+     "trail_brake_m": 37.35,
+     "coast_m": 0.0,
+     "entry_speed_kph": 255.0,
+     "min_speed_kph": 57.0,
+     "min_speed_m": 2942.0,
+     "exit_speed_kph": 60.79,
+     "throttle_pickup_m": 2941.64,
+     "throttle_full_m": 2942.38
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T11",
+   "corner_voice": "Turn 11, Hairpin",
+   "text_simple": "Turn 11 (Hairpin): you braked about 12 m earlier than on your reference lap.",
+   "short": "T11: braked 12 m earlier",
+   "priority": 0.1103
+  }
+ ],
+ "events": [
+  {
+   "kind": "chequered_flag",
+   "code": "CHQF",
+   "session_time_s": 493.0009460449219,
+   "t": 1791680736.611735
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 487.7289123535156,
+   "t": 1791680736.600506
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 485.9270935058594,
+   "t": 1791680736.59649
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 483.357666015625,
+   "t": 1791680736.590606
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 480.6550598144531,
+   "t": 1791680736.5848079
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 480.62176513671875,
+   "t": 1791680736.584716
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 478.03564453125,
+   "t": 1791680736.578805
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 477.3014221191406,
+   "t": 1791680736.577448
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 474.24835205078125,
+   "t": 1791680736.570146
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 474.03179931640625,
+   "t": 1791680736.5695941
+  }
+ ],
+ "marshal_flags": [],
+ "session_state": "running",
+ "session_state_info": {
+  "state": "running",
+  "cause": "lights_out",
+  "since_unix": 1791680735.523,
+  "chequered_flag": true
+ },
+ "coach": {
+  "lap_number": 4,
+  "lap_id": 6,
+  "ref_lap_number": 3,
+  "skill_level": "advanced",
+  "simple_wording": false,
+  "radio_quiet": false,
+  "picked": [
+   {
+    "id": "L4:T6:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T6",
+    "corner_label": "T9",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "min_speed_delta_kph",
+    "value": -12.0,
+    "unit": "km/h",
+    "impact_s": 0.434,
+    "confidence": 1.0,
+    "priority": 0.434,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 9 (Degner 2): minimum speed is 12 km/h lower than your reference (116 vs 128 km/h), losing 0.43 s through the corner.",
+    "text_simple": "Turn 9 (Degner 2): you were 12 km/h slower at the slowest point of the corner.",
+    "short": "T9: 12 km/h slower mid-corner",
+    "corner_voice": "Turn 9, Degner 2",
+    "evidence": {
+     "time_delta_s": 0.434,
+     "brake_point_delta_m": -11.971,
+     "min_speed_delta_kph": -12.0,
+     "exit_speed_delta_kph": -14.318,
+     "entry_speed_delta_kph": -1.998,
+     "throttle_full_delta_m": 24.562,
+     "coast_delta_m": 0.0
+    },
+    "picked": true
+   }
+  ],
+  "by_corner": {
+   "T6": {
+    "id": "L4:T6:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T6",
+    "corner_label": "T9",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "min_speed_delta_kph",
+    "value": -12.0,
+    "unit": "km/h",
+    "impact_s": 0.434,
+    "confidence": 1.0,
+    "priority": 0.434,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 9 (Degner 2): minimum speed is 12 km/h lower than your reference (116 vs 128 km/h), losing 0.43 s through the corner.",
+    "text_simple": "Turn 9 (Degner 2): you were 12 km/h slower at the slowest point of the corner.",
+    "short": "T9: 12 km/h slower mid-corner",
+    "corner_voice": "Turn 9, Degner 2",
+    "evidence": {
+     "time_delta_s": 0.434,
+     "brake_point_delta_m": -11.971,
+     "min_speed_delta_kph": -12.0,
+     "exit_speed_delta_kph": -14.318,
+     "entry_speed_delta_kph": -1.998,
+     "throttle_full_delta_m": 24.562,
+     "coast_delta_m": 0.0
+    },
+    "picked": true
+   },
+   "T3": {
+    "id": "L4:T3:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T3",
+    "corner_label": "T6",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "min_speed_delta_kph",
+    "value": -21.0,
+    "unit": "km/h",
+    "impact_s": 0.379,
+    "confidence": 1.0,
+    "priority": 0.379,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 6 (Reverse Bank): minimum speed is 21 km/h lower than your reference (148 vs 169 km/h), losing 0.38 s through the corner.",
+    "text_simple": "Turn 6 (Reverse Bank): you were 21 km/h slower at the slowest point of the corner.",
+    "short": "T6: 21 km/h slower mid-corner",
+    "corner_voice": "Turn 6, Reverse Bank",
+    "evidence": {
+     "time_delta_s": 0.379,
+     "min_speed_delta_kph": -21.0,
+     "exit_speed_delta_kph": -25.52,
+     "entry_speed_delta_kph": -14.163
+    },
+    "picked": false
+   },
+   "T8": {
+    "id": "L4:T8:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T8",
+    "corner_label": "T13-14",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "min_speed_delta_kph",
+    "value": -21.0,
+    "unit": "km/h",
+    "impact_s": 0.331,
+    "confidence": 1.0,
+    "priority": 0.331,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turns 13-14 (Spoon Curve): minimum speed is 21 km/h lower than your reference (116 vs 137 km/h), losing 0.33 s through the corner.",
+    "text_simple": "Turns 13-14 (Spoon Curve): you were 21 km/h slower at the slowest point of the corner.",
+    "short": "T13-14: 21 km/h slower mid-corner",
+    "corner_voice": "Turns 13 to 14, Spoon Curve",
+    "evidence": {
+     "time_delta_s": 0.331,
+     "brake_point_delta_m": 22.333,
+     "min_speed_delta_kph": -21.0,
+     "exit_speed_delta_kph": -2.15,
+     "entry_speed_delta_kph": -15.0,
+     "throttle_full_delta_m": -57.011,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   },
+   "T7": {
+    "id": "L4:T7:brake_early",
+    "kind": "brake_early",
+    "corner": "T7",
+    "corner_label": "T11",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "brake_point_delta_m",
+    "value": -11.917,
+    "unit": "m",
+    "impact_s": 0.149,
+    "confidence": 0.74,
+    "priority": 0.1103,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 11 (Hairpin): you're braking about 12 m earlier than your reference (lap 3), losing 0.15 s through the corner.",
+    "text_simple": "Turn 11 (Hairpin): you braked about 12 m earlier than on your reference lap.",
+    "short": "T11: braked 12 m earlier",
+    "corner_voice": "Turn 11, Hairpin",
+    "evidence": {
+     "time_delta_s": 0.149,
+     "brake_point_delta_m": -11.917,
+     "min_speed_delta_kph": 0.0,
+     "exit_speed_delta_kph": 2.954,
+     "entry_speed_delta_kph": 8.0,
+     "throttle_full_delta_m": -7.953,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   },
+   "T4": {
+    "id": "L4:T4:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T4",
+    "corner_label": "T7",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 57.0,
+    "unit": "km/h",
+    "impact_s": -0.665,
+    "confidence": 1.0,
+    "priority": 0.3325,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 7: good - exit speed is up 57 km/h on your reference and you gained 0.67 s there.",
+    "text_simple": "Turn 7: good exit - you came out 57 km/h faster than on your reference lap.",
+    "short": "T7: good exit, 57 km/h faster",
+    "corner_voice": "Turn 7",
+    "evidence": {
+     "time_delta_s": -0.665,
+     "min_speed_delta_kph": 45.0,
+     "exit_speed_delta_kph": 57.0,
+     "entry_speed_delta_kph": -14.163
+    },
+    "picked": false
+   },
+   "T11": {
+    "id": "L4:T11:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T11",
+    "corner_label": "T16-17 (2)",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 4.853,
+    "unit": "km/h",
+    "impact_s": -0.422,
+    "confidence": 0.81,
+    "priority": 0.1709,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turns 16-17, part 2: good - exit speed is up 5 km/h on your reference and you gained 0.42 s there.",
+    "text_simple": "Turns 16-17, part 2: good exit - you came out 5 km/h faster than on your reference lap.",
+    "short": "T16-17 (2): good exit, 5 km/h faster",
+    "corner_voice": "Turns 16 to 17, second part",
+    "evidence": {
+     "time_delta_s": -0.422,
+     "min_speed_delta_kph": -7.0,
+     "exit_speed_delta_kph": 4.853,
+     "entry_speed_delta_kph": 5.0
+    },
+    "picked": false
+   },
+   "T9": {
+    "id": "L4:T9:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T9",
+    "corner_label": "T15",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 24.0,
+    "unit": "km/h",
+    "impact_s": -0.206,
+    "confidence": 1.0,
+    "priority": 0.103,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 15 (130R): good - exit speed is up 24 km/h on your reference and you gained 0.21 s there.",
+    "text_simple": "Turn 15 (130R): good exit - you came out 24 km/h faster than on your reference lap.",
+    "short": "T15: good exit, 24 km/h faster",
+    "corner_voice": "Turn 15, 130R",
+    "evidence": {
+     "time_delta_s": -0.206,
+     "min_speed_delta_kph": 24.0,
+     "exit_speed_delta_kph": 24.0,
+     "entry_speed_delta_kph": 30.0
+    },
+    "picked": false
+   },
+   "T10": {
+    "id": "L4:T10:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T10",
+    "corner_label": "T16-17 (1)",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 4.853,
+    "unit": "km/h",
+    "impact_s": -0.215,
+    "confidence": 0.81,
+    "priority": 0.0871,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turns 16-17, part 1: good - exit speed is up 5 km/h on your reference and you gained 0.22 s there.",
+    "text_simple": "Turns 16-17, part 1: good exit - you came out 5 km/h faster than on your reference lap.",
+    "short": "T16-17 (1): good exit, 5 km/h faster",
+    "corner_voice": "Turns 16 to 17, first part",
+    "evidence": {
+     "time_delta_s": -0.215,
+     "brake_point_delta_m": 3.146,
+     "min_speed_delta_kph": -4.0,
+     "exit_speed_delta_kph": 4.853,
+     "entry_speed_delta_kph": 5.0,
+     "throttle_full_delta_m": -17.143,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   },
+   "T5": {
+    "id": "L4:T5:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T5",
+    "corner_label": "T8",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 5.0,
+    "unit": "km/h",
+    "impact_s": -0.152,
+    "confidence": 0.83,
+    "priority": 0.0631,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 8 (Degner 1): good - exit speed is up 5 km/h on your reference and you gained 0.15 s there.",
+    "text_simple": "Turn 8 (Degner 1): good exit - you came out 5 km/h faster than on your reference lap.",
+    "short": "T8: good exit, 5 km/h faster",
+    "corner_voice": "Turn 8, Degner 1",
+    "evidence": {
+     "time_delta_s": -0.152,
+     "brake_point_delta_m": -9.514,
+     "min_speed_delta_kph": 9.0,
+     "exit_speed_delta_kph": 5.0,
+     "entry_speed_delta_kph": 13.0,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   }
+  }
+ },
+ "track_model": {
+  "game": "f1_25",
+  "track_id": "f1:13",
+  "track_name": "Suzuka",
+  "length_m": 5809.0,
+  "version": 2,
+  "n_laps": 2,
+  "corners": [
+   {
+    "name": "T1",
+    "apex_m": 867.0,
+    "entry_m": 843.0,
+    "exit_m": 876.0,
+    "seg_start_m": 0.0,
+    "seg_end_m": 1081.0,
+    "direction": "right",
+    "ref_min_speed_kph": 151.5,
+    "label": "T2",
+    "official_numbers": [
+     2
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T2",
+    "apex_m": 1295.0,
+    "entry_m": 1223.0,
+    "exit_m": 1329.0,
+    "seg_start_m": 1081.0,
+    "seg_end_m": 1453.0,
+    "direction": "right",
+    "ref_min_speed_kph": 181.17396449704142,
+    "label": "T3-5",
+    "official_numbers": [
+     3,
+     4,
+     5
+    ],
+    "display_name": "S Curve",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T3",
+    "apex_m": 1611.0,
+    "entry_m": 1593.0,
+    "exit_m": 1630.0,
+    "seg_start_m": 1453.0,
+    "seg_end_m": 1741.5,
+    "direction": "right",
+    "ref_min_speed_kph": 160.5,
+    "label": "T6",
+    "official_numbers": [
+     6
+    ],
+    "display_name": "Reverse Bank",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T4",
+    "apex_m": 1872.0,
+    "entry_m": 1593.0,
+    "exit_m": 1882.0,
+    "seg_start_m": 1741.5,
+    "seg_end_m": 2080.5,
+    "direction": "left",
+    "ref_min_speed_kph": 198.73047858942067,
+    "label": "T7",
+    "official_numbers": [
+     7
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T5",
+    "apex_m": 2289.0,
+    "entry_m": 2217.0,
+    "exit_m": 2342.0,
+    "seg_start_m": 2080.5,
+    "seg_end_m": 2384.5,
+    "direction": "right",
+    "ref_min_speed_kph": 192.80537111801243,
+    "label": "T8",
+    "official_numbers": [
+     8
+    ],
+    "display_name": "Degner 1",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T6",
+    "apex_m": 2480.0,
+    "entry_m": 2385.0,
+    "exit_m": 2488.0,
+    "seg_start_m": 2384.5,
+    "seg_end_m": 2714.0,
+    "direction": "right",
+    "ref_min_speed_kph": 123.0,
+    "label": "T9",
+    "official_numbers": [
+     9
+    ],
+    "display_name": "Degner 2",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T7",
+    "apex_m": 2948.0,
+    "entry_m": 2815.0,
+    "exit_m": 2948.0,
+    "seg_start_m": 2714.0,
+    "seg_end_m": 3451.0,
+    "direction": "left",
+    "ref_min_speed_kph": 59.30787025427554,
+    "label": "T11",
+    "official_numbers": [
+     11
+    ],
+    "display_name": "Hairpin",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T8",
+    "apex_m": 3954.0,
+    "entry_m": 3948.0,
+    "exit_m": 4046.0,
+    "seg_start_m": 3451.0,
+    "seg_end_m": 4497.0,
+    "direction": "left",
+    "ref_min_speed_kph": 126.5,
+    "label": "T13-14",
+    "official_numbers": [
+     13,
+     14
+    ],
+    "display_name": "Spoon Curve",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T9",
+    "apex_m": 5040.0,
+    "entry_m": 4987.0,
+    "exit_m": 5040.0,
+    "seg_start_m": 4497.0,
+    "seg_end_m": 5228.5,
+    "direction": "left",
+    "ref_min_speed_kph": 273.0,
+    "label": "T15",
+    "official_numbers": [
+     15
+    ],
+    "display_name": "130R",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T10",
+    "apex_m": 5417.0,
+    "entry_m": 5268.0,
+    "exit_m": 5485.0,
+    "seg_start_m": 5228.5,
+    "seg_end_m": 5447.0,
+    "direction": "right",
+    "ref_min_speed_kph": 81.5,
+    "label": "T16-17",
+    "official_numbers": [
+     16,
+     17
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": 1,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T11",
+    "apex_m": 5477.0,
+    "entry_m": 5268.0,
+    "exit_m": 5485.0,
+    "seg_start_m": 5447.0,
+    "seg_end_m": 5809.0,
+    "direction": "left",
+    "ref_min_speed_kph": 87.0,
+    "label": "T16-17",
+    "official_numbers": [
+     16,
+     17
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": 2,
+    "identity_match": "inside"
+   }
+  ],
+  "corner_text": {
+   "T1": {
+    "short": "T2",
+    "long": "Turn 2",
+    "voice": "Turn 2"
+   },
+   "T2": {
+    "short": "T3-5",
+    "long": "Turns 3-5 (S Curve)",
+    "voice": "Turns 3 to 5, S Curve"
+   },
+   "T3": {
+    "short": "T6",
+    "long": "Turn 6 (Reverse Bank)",
+    "voice": "Turn 6, Reverse Bank"
+   },
+   "T4": {
+    "short": "T7",
+    "long": "Turn 7",
+    "voice": "Turn 7"
+   },
+   "T5": {
+    "short": "T8",
+    "long": "Turn 8 (Degner 1)",
+    "voice": "Turn 8, Degner 1"
+   },
+   "T6": {
+    "short": "T9",
+    "long": "Turn 9 (Degner 2)",
+    "voice": "Turn 9, Degner 2"
+   },
+   "T7": {
+    "short": "T11",
+    "long": "Turn 11 (Hairpin)",
+    "voice": "Turn 11, Hairpin"
+   },
+   "T8": {
+    "short": "T13-14",
+    "long": "Turns 13-14 (Spoon Curve)",
+    "voice": "Turns 13 to 14, Spoon Curve"
+   },
+   "T9": {
+    "short": "T15",
+    "long": "Turn 15 (130R)",
+    "voice": "Turn 15, 130R"
+   },
+   "T10": {
+    "short": "T16-17 (1)",
+    "long": "Turns 16-17, part 1",
+    "voice": "Turns 16 to 17, first part"
+   },
+   "T11": {
+    "short": "T16-17 (2)",
+    "long": "Turns 16-17, part 2",
+    "voice": "Turns 16 to 17, second part"
+   }
+  }
+ },
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:13",
+  "track_length_m": 5809.0,
+  "pit_speed_limit_kph": 80.0,
+  "sector2_start_m": 2225.65,
+  "sector3_start_m": 4690.02,
+  "sector_boundaries_m": [
+   0.0,
+   2225.65,
+   4690.02,
+   5809.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 2225.65,
+    "length_m": 2225.65
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 2225.65,
+    "end_m": 4690.02,
+    "length_m": 2464.37
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 4690.02,
+    "end_m": 5809.0,
+    "length_m": 1118.98
+   }
+  ],
+  "marshal_zones": [
+   {
+    "kind": "marshal",
+    "index": 0,
+    "game_number": 1,
+    "lap_order": 1,
+    "start_m": 606.34,
+    "end_m": 858.65,
+    "length_m": 252.31,
+    "start_frac": 0.10438,
+    "end_frac": 0.147814,
+    "wraps": false,
+    "segments_m": [
+     [
+      606.34,
+      858.65
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 1,
+    "game_number": 2,
+    "lap_order": 2,
+    "start_m": 858.65,
+    "end_m": 1221.09,
+    "length_m": 362.44,
+    "start_frac": 0.147814,
+    "end_frac": 0.210207,
+    "wraps": false,
+    "segments_m": [
+     [
+      858.65,
+      1221.09
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 2,
+    "game_number": 3,
+    "lap_order": 3,
+    "start_m": 1221.09,
+    "end_m": 1601.39,
+    "length_m": 380.3,
+    "start_frac": 0.210207,
+    "end_frac": 0.275675,
+    "wraps": false,
+    "segments_m": [
+     [
+      1221.09,
+      1601.39
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 3,
+    "game_number": 4,
+    "lap_order": 4,
+    "start_m": 1601.39,
+    "end_m": 2130.33,
+    "length_m": 528.93,
+    "start_frac": 0.275675,
+    "end_frac": 0.366729,
+    "wraps": false,
+    "segments_m": [
+     [
+      1601.39,
+      2130.33
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 4,
+    "game_number": 5,
+    "lap_order": 5,
+    "start_m": 2130.33,
+    "end_m": 2460.68,
+    "length_m": 330.35,
+    "start_frac": 0.366729,
+    "end_frac": 0.423598,
+    "wraps": false,
+    "segments_m": [
+     [
+      2130.33,
+      2460.68
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 5,
+    "game_number": 6,
+    "lap_order": 6,
+    "start_m": 2460.68,
+    "end_m": 2763.73,
+    "length_m": 303.05,
+    "start_frac": 0.423598,
+    "end_frac": 0.475768,
+    "wraps": false,
+    "segments_m": [
+     [
+      2460.68,
+      2763.73
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 6,
+    "game_number": 7,
+    "lap_order": 7,
+    "start_m": 2763.73,
+    "end_m": 3172.39,
+    "length_m": 408.66,
+    "start_frac": 0.475768,
+    "end_frac": 0.546117,
+    "wraps": false,
+    "segments_m": [
+     [
+      2763.73,
+      3172.39
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 7,
+    "game_number": 8,
+    "lap_order": 8,
+    "start_m": 3172.39,
+    "end_m": 3527.03,
+    "length_m": 354.63,
+    "start_frac": 0.546117,
+    "end_frac": 0.607166,
+    "wraps": false,
+    "segments_m": [
+     [
+      3172.39,
+      3527.03
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 8,
+    "game_number": 9,
+    "lap_order": 9,
+    "start_m": 3527.03,
+    "end_m": 4003.07,
+    "length_m": 476.04,
+    "start_frac": 0.607166,
+    "end_frac": 0.689116,
+    "wraps": false,
+    "segments_m": [
+     [
+      3527.03,
+      4003.07
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 9,
+    "game_number": 10,
+    "lap_order": 10,
+    "start_m": 4003.07,
+    "end_m": 4467.69,
+    "length_m": 464.62,
+    "start_frac": 0.689116,
+    "end_frac": 0.769099,
+    "wraps": false,
+    "segments_m": [
+     [
+      4003.07,
+      4467.69
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 10,
+    "game_number": 11,
+    "lap_order": 11,
+    "start_m": 4467.69,
+    "end_m": 5031.85,
+    "length_m": 564.16,
+    "start_frac": 0.769099,
+    "end_frac": 0.866216,
+    "wraps": false,
+    "segments_m": [
+     [
+      4467.69,
+      5031.85
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 11,
+    "game_number": 12,
+    "lap_order": 12,
+    "start_m": 5031.85,
+    "end_m": 5388.76,
+    "length_m": 356.91,
+    "start_frac": 0.866216,
+    "end_frac": 0.927657,
+    "wraps": false,
+    "segments_m": [
+     [
+      5031.85,
+      5388.76
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 12,
+    "game_number": 13,
+    "lap_order": 13,
+    "start_m": 5388.76,
+    "end_m": 5607.93,
+    "length_m": 219.17,
+    "start_frac": 0.927657,
+    "end_frac": 0.965386,
+    "wraps": false,
+    "segments_m": [
+     [
+      5388.76,
+      5607.93
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 13,
+    "game_number": 14,
+    "lap_order": 14,
+    "start_m": 5607.93,
+    "end_m": 606.34,
+    "length_m": 807.42,
+    "start_frac": 0.965386,
+    "end_frac": 0.10438,
+    "wraps": true,
+    "segments_m": [
+     [
+      5607.93,
+      5809.0
+     ],
+     [
+      0.0,
+      606.34
+     ]
+    ],
+    "flag": "none"
+   }
+  ],
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "bests": {
+  "scope": {
+   "game": "f1_25",
+   "track_id": "f1:13",
+   "car_id": null,
+   "records": false
+  },
+  "session": {
+   "lap_ms": 97037,
+   "sectors_ms": [
+    35546,
+    41928,
+    18689
+   ],
+   "lap_id": 6,
+   "sector_lap_ids": [
+    6,
+    5,
+    6
+   ]
+  },
+  "driver": null,
+  "household": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": null,
+  "ref_lap_number": 3,
+  "focus": [
+   "T7"
+  ],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [
+   {
+    "corner": "T7",
+    "kind": "brake",
+    "target_m": 2826.3,
+    "text": "T7 brake",
+    "focus": true,
+    "reason": "brake_early on 1 of the last 1 lap(s)"
+   }
+  ],
+  "next": null,
+  "last": {
+   "seq": 1,
+   "corner": "T7",
+   "kind": "brake",
+   "target_m": 2826.3,
+   "text": "T7 brake",
+   "focus": true,
+   "reason": null,
+   "lap": 5,
+   "d_m": 2739.7,
+   "speed_kph": 251.0,
+   "aim_m": 2821.3,
+   "latency_ms": 250,
+   "word_offset_ms": 919,
+   "path": "pcm",
+   "status": "pending",
+   "error_m": null,
+   "latency_measured_ms": null,
+   "age_s": 0.1
+  },
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 1,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "pitwall replay (headless, temp DB) of 20261010-225601_udp20777.pwcap (a local PS5 F1 25 recording from the rig, data/captures, not committed)",
+  "moment": "right after a chequered_flag event",
+  "trimmed": [
+   "last_comparison",
+   "track_model.centreline",
+   "track_model.ground_plane",
+   "track_model.source_lap_ids"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending. Backend: working tree with D2 (bests), D4 (session_state) and D6 (coach) from lane B, not yet committed; replays never get driver or household bests (bests.scope.records false).",
+  "generated_unix": 1791680737
+ }
+}

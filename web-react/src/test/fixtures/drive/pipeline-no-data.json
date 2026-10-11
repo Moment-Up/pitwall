@@ -1,0 +1,64 @@
+{
+ "version": 0,
+ "connection": {
+  "status": "no_data",
+  "last_packet_age_s": null,
+  "packets": 0,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": null,
+  "synthetic": false,
+  "decode": {}
+ },
+ "session_id": null,
+ "session": null,
+ "frame": null,
+ "delta_s": null,
+ "reference": null,
+ "laps": [],
+ "observations": [],
+ "events": [],
+ "marshal_flags": [],
+ "session_state": null,
+ "session_state_info": null,
+ "coach": null,
+ "track_model": null,
+ "last_comparison": null,
+ "skeleton": null,
+ "bests": null,
+ "cues": {
+  "mode": "focus",
+  "armed": false,
+  "muted": "radio off",
+  "reason": "no reference lap yet",
+  "ref_lap_number": null,
+  "focus": [],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [],
+  "next": null,
+  "last": null,
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "pipeline",
+  "source": "LiveState().snapshot(include_static=True) before any packet",
+  "moment": "no telemetry yet (connection.status == no_data)"
+ }
+}

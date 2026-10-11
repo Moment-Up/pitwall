@@ -1,0 +1,56 @@
+{
+  "name": "pitwall-web-react",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:root": "vite build --mode root",
+    "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.node.json",
+    "test": "vitest run",
+    "check": "npm run typecheck && npm run test",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@gravity-ui/icons": "2.22.0",
+    "@heroui-pro/react": "1.0.0-beta.10",
+    "@heroui/react": "3.2.6",
+    "@heroui/styles": "3.2.6",
+    "@internationalized/date": "3.12.4",
+    "@number-flow/react": "0.6.2",
+    "@react-aria/ssr": "3.10.1",
+    "@react-aria/utils": "3.34.1",
+    "embla-carousel": "8.6.0",
+    "embla-carousel-react": "8.6.0",
+    "marked": "18.0.14",
+    "motion": "14.1.0",
+    "react": "19.3.0",
+    "react-aria": "3.52.1",
+    "react-aria-components": "1.22.1",
+    "react-dom": "19.3.0",
+    "react-markdown": "10.1.0",
+    "react-resizable-panels": "4.14.4",
+    "recharts": "3.10.1",
+    "remark-breaks": "4.0.0",
+    "remark-gfm": "4.0.1",
+    "shiki": "4.4.3",
+    "streamdown": "2.7.0",
+    "tailwind-merge": "3.7.0",
+    "tailwind-variants": "3.3.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.3.3",
+    "@types/node": "22.20.4",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "vite": "8.3.3",
+    "vitest": "4.1.11"
+  }
+}

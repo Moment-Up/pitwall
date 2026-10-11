@@ -1,0 +1,1082 @@
+{
+ "_fixture": {
+  "source": "GET /api/rig/catalog on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded; presets and pedal_reports removed (the page does not read them; size)",
+  "edited": [
+   "body.presets (removed)",
+   "body.pedal_reports (removed)"
+  ]
+ },
+ "body": {
+  "schema_revision": 2,
+  "research_date": "2026-10-10",
+  "evidence_labels": {
+   "V": "Read directly from the source (text, transcript, description, manual, API) and, where a verifier ran, confirmed by it.",
+   "A": "Approximate: read from low-resolution YouTube storyboard frames; consistent with the source but digits not legible.",
+   "U": "Unverified: single community claim, search snippet, illegible value, inferred key mapping or conflicting sources.",
+   "D": "Derived by the pitwall synthesis (arithmetic or inference). Not a published value.",
+   "H": "pitwall heuristic threshold (rig_check only). Unsourced; calibrate on recorded captures before giving advice."
+  },
+  "firmware": {
+   "app": "1.6.1.3",
+   "date": "2026-09-21",
+   "base": "1.9.2.3",
+   "motor": "1.1.2.2",
+   "qr": "6.0.1.1",
+   "csl_pedals_lc": "1.8"
+  },
+  "platforms": [
+   {
+    "id": "ps5",
+    "name": "PlayStation 5",
+    "base_mode": "DARK BLUE",
+    "tuning_interface": "On-wheel Tuning Menu only (the Fanatec App needs a Windows PC with the base in RED mode)."
+   },
+   {
+    "id": "pc",
+    "name": "PC",
+    "base_mode": "RED",
+    "tuning_interface": "On-wheel Tuning Menu or the Fanatec App (Windows)."
+   }
+  ],
+  "styles": [
+   {
+    "id": "official_default",
+    "label": "Official",
+    "description": "Fanatec's or the game's own recommended values.",
+    "sourced": true
+   },
+   {
+    "id": "balanced",
+    "label": "Balanced",
+    "description": "A mainstream community preset aimed at most sim racers.",
+    "sourced": true
+   },
+   {
+    "id": "competitive",
+    "label": "Competitive",
+    "description": "Esports style: raw signal, little damping, no canned effects.",
+    "sourced": true
+   },
+   {
+    "id": "realism",
+    "label": "Realism",
+    "description": "Strongest force that still feels unclipped and linear, with some road feel.",
+    "sourced": true
+   },
+   {
+    "id": "comfort",
+    "label": "Comfort",
+    "description": "Calmer, smoother and lighter. Mostly derived by pitwall: no F1 25 source, one GT7 8 Nm user setup.",
+    "sourced": false
+   }
+  ],
+  "games": [
+   {
+    "id": "f1_25",
+    "name": "EA SPORTS F1 25 (incl. 2026 Season Pack)",
+    "platforms": [
+     "ps5",
+     "xbox",
+     "pc"
+    ],
+    "versions": [
+     {
+      "id": "f1_25_launch",
+      "label": "F1 25 launch, 2025 cars",
+      "date": "2025-05-30"
+     },
+     {
+      "id": "f1_25_sp2026_v1_20",
+      "label": "2026 Season Pack (v1.20), 2026 cars",
+      "date": "2026-06-03"
+     },
+     {
+      "id": "f1_25_v1_25",
+      "label": "v1.25",
+      "date": "2026-09-07"
+     },
+     {
+      "id": "f1_25_v1_26",
+      "label": "v1.26",
+      "date": "2026-09-16"
+     }
+    ]
+   },
+   {
+    "id": "gt7",
+    "name": "Gran Turismo 7",
+    "platforms": [
+     "ps5",
+     "ps4"
+    ],
+    "versions": [
+     {
+      "id": "gt7_launch",
+      "label": "GT7 launch",
+      "date": "2022-03-04"
+     },
+     {
+      "id": "gt7_1_15",
+      "label": "1.15 (temporary wheel FFB cut)",
+      "date": "2022-05"
+     },
+     {
+      "id": "gt7_1_16",
+      "label": "1.16 (FFB restored)",
+      "date": "2022-06-09"
+     },
+     {
+      "id": "gt7_1_49",
+      "label": "1.49",
+      "date": "2024-07-25"
+     },
+     {
+      "id": "gt7_1_55",
+      "label": "1.55",
+      "date": "2025-01"
+     },
+     {
+      "id": "gt7_1_60_1_66",
+      "label": "1.60-1.66",
+      "date": "2025-12"
+     },
+     {
+      "id": "gt7_1_71",
+      "label": "1.71",
+      "date": "2026-08-20"
+     }
+    ]
+   }
+  ],
+  "hardware": {
+   "wheel_bases": [
+    {
+     "id": "fanatec_gt_dd_pro",
+     "name": "Fanatec Gran Turismo DD Pro",
+     "torque_variants": [
+      {
+       "torque_nm": 5,
+       "label": "5 Nm (standard 90 W PSU)"
+      },
+      {
+       "torque_nm": 8,
+       "label": "8 Nm (Boost Kit 180)"
+      }
+     ],
+     "firmware_eras": [
+      {
+       "id": "fw_legacy",
+       "label": "Fanatec Control Panel / FanaLab driver era and early Fanatec App, base firmware before 1.8",
+       "app": "Control Panel / FanaLab / Fanatec App < 1.4.2.3",
+       "base_fw": "< 1.8",
+       "from": null
+      },
+      {
+       "id": "fw_1_8",
+       "label": "Last pre-FullForce firmware",
+       "app": "1.4.2.3 (2026-05-05), 1.4.3.4 (2026-06-08)",
+       "base_fw": "1.8.0.6 / 1.8.1.7",
+       "from": "2026-05-05"
+      },
+      {
+       "id": "fw_1_9_0",
+       "label": "FullForce firmware for CSL DD / GT DD Pro",
+       "app": "1.5.1.2 (2026-06-16), 1.5.2.3 (2026-06-24)",
+       "base_fw": "1.9.0.2 / 1.9.0.3",
+       "from": "2026-06-16"
+      },
+      {
+       "id": "fw_1_9_1",
+       "label": "DPR/NDP correction",
+       "app": "1.5.3.1 (2026-08-11)",
+       "base_fw": "1.9.1.1",
+       "from": "2026-08-11"
+      },
+      {
+       "id": "fw_1_9_2",
+       "label": "GT7 1.71 hotfix firmware (current)",
+       "app": "1.5.4.1 (2026-09-03), 1.5.4.2 (2026-09-11), listed again in 1.6.1.3 (2026-09-21)",
+       "base_fw": "1.9.2.3",
+       "from": "2026-09-03"
+      }
+     ]
+    }
+   ],
+   "pedals": [
+    {
+     "id": "csl",
+     "model": "fanatec_csl_pedals",
+     "name": "Fanatec CSL Pedals (stock, 2 or 3 pedals)",
+     "brake_sensor": "hall_position"
+    },
+    {
+     "id": "csl_load_cell",
+     "model": "fanatec_csl_pedals_lc",
+     "name": "Fanatec CSL Pedals + CSL Pedals Load Cell Kit",
+     "brake_sensor": "load_cell"
+    }
+   ],
+   "rims": [
+    {
+     "id": "gt_dd_pro_bundled",
+     "name": "Bundled Gran Turismo DD Pro rim",
+     "note": "No multi-position switch or analogue paddles (GT DD Pro manual 5.6). Vibration motors unverified (open question 8).",
+     "has_items": [],
+     "unknown_items": [
+      "SHO"
+     ]
+    },
+    {
+     "id": "other",
+     "name": "Other Fanatec rim",
+     "note": "Which rim-specific items it has (MPS, AP, SHO) is not recorded.",
+     "has_items": [],
+     "unknown_items": [
+      "MPS",
+      "AP",
+      "SHO"
+     ]
+    }
+   ]
+  },
+  "timeline": [
+   {
+    "date": "2025-07-01",
+    "event": "Fanatec F1 25 recommended-settings page",
+    "effect": "Baseline official F1 values (page still unrevised on 2026-10-10)."
+   },
+   {
+    "date": "2026-05-05",
+    "event": "Fanatec App 1.4.2.3 (base 1.8.0.6)",
+    "effect": "BRF reset after a base restart fixed; endstop independent of FF."
+   },
+   {
+    "date": "2026-06-03",
+    "event": "F1 25 2026 Season Pack (v1.20); Fanatec 2026 page",
+    "effect": "New official F1 values that conflict with the 2025 page."
+   },
+   {
+    "date": "2026-06-08",
+    "event": "Fanatec App 1.4.3.4 (base 1.8.1.7)",
+    "effect": "Last pre-FullForce firmware."
+   },
+   {
+    "date": "2026-06-16",
+    "event": "Fanatec App 1.5.1.2 (base 1.9.0.2)",
+    "effect": "FUL added at 5 and 8 Nm. Boost Kit: holding torque 6 to 8 Nm, FFS removed."
+   },
+   {
+    "date": "2026-08-11",
+    "event": "Fanatec App 1.5.3.1 (base 1.9.1.1)",
+    "effect": "DPR corrected; graininess at high NDP fixed; endstop independent of FF again."
+   },
+   {
+    "date": "2026-08-20",
+    "event": "GT7 1.71",
+    "effect": "FFB, friction and pedal input changed; A SET re-tuned; FullForce on GT DD Pro. All earlier GT7 presets are stale."
+   },
+   {
+    "date": "2026-09-03",
+    "event": "Fanatec App 1.5.4.1 / 1.5.4.2",
+    "effect": "Hotfix for GT DD Pro FFB loss, oscillation and shutdowns after GT7 1.71."
+   },
+   {
+    "date": "2026-09-07",
+    "event": "F1 25 v1.25",
+    "effect": "S Mode/DRS needs throttle above 90%. Introduced the session-change oscillation on Fanatec DD bases; players report lighter FFB."
+   },
+   {
+    "date": "2026-09-21",
+    "event": "Fanatec App 1.6.1.3",
+    "effect": "Current firmware set (base 1.9.2.3). Known issues listed separately."
+   },
+   {
+    "date": "2026-10-07",
+    "event": "EA status post",
+    "effect": "Fix for the v1.25 oscillation shared with Fanatec for approval; no ETA."
+   }
+  ],
+  "brf_owner_stats": {
+   "population": "CSL Pedals LC Kit owners, stock elastomers, latest value per owner (GTPlanet 2022-2023, mostly GT7 on PS5 with a GT DD Pro)",
+   "n": 5,
+   "values": [
+    30.0,
+    40.0,
+    55.0,
+    70.0,
+    90.0
+   ],
+   "median": 55.0,
+   "min": 30.0,
+   "max": 90.0,
+   "evidence": "D",
+   "note": "Modified pedals ran higher (65 spring, 85 progressive elastomer, MAX travel-limited). No post-1.71 and no F1 25 report from a CSL LC owner exists."
+  },
+  "rules": [
+   {
+    "id": "f1_torque_5_to_8_keep_strength",
+    "game": "f1_25",
+    "applies_to_preferences": [
+     "official_default",
+     "balanced",
+     "competitive",
+     "realism"
+    ],
+    "rule": "When moving from 5 Nm to 8 Nm keep FF 100 and the same VIB_FFB_STRENGTH. Every same-author source gives the same in-game value at both torques (SRS esports 80-100 at 5 and 8 Nm; SRS 70 built for 8 Nm, usable at 5; Fanatec one CSL DD/GT DD row of 80; Fanatec 2026 50-70 for every base). No source lowers in-game strength going from 5 to 8 Nm. Forces become up to 1.6x stronger; game-side clipping is unchanged if F1 25 sends a normalised command [D].",
+    "evidence": "V",
+    "basis_presets": [
+     "srs_f1_25_esports_5nm",
+     "srs_f1_25_esports_8nm",
+     "srs_f1_25_fanatec_380",
+     "fanatec_f1_25_official_2025",
+     "fanatec_f1_25_official_2026_season_pack"
+    ],
+    "factor": null
+   },
+   {
+    "id": "f1_torque_5_to_8_comfort",
+    "game": "f1_25",
+    "applies_to_preferences": [
+     "comfort"
+    ],
+    "rule": "For comfort, scale VIB_FFB_STRENGTH by 5/8 (about x0.63) to keep the 5 Nm weight, then adjust by feel.",
+    "evidence": "D",
+    "basis_presets": [],
+    "factor": 0.625
+   },
+   {
+    "id": "exact_5nm_feel_at_8nm",
+    "game": "any",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "For an exact A/B against the old 5 Nm feel, set FF 63 at 8 Nm with unchanged in-game values; this reproduces the 5 Nm torque map, including its clipping. Endstop strength does not depend on FF on current firmware.",
+    "evidence": "D",
+    "basis_presets": [],
+    "factor": null
+   },
+   {
+    "id": "first_session_after_boost_kit",
+    "game": "any",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "Base FW >= 1.9.0.2 raised Boost Kit holding torque from 6 to 8 Nm, so long high-load corners feel heavier than 8 Nm presets made on older firmware. If the first sessions are tiring, lower in-game strength in steps of 5-10 or use the comfort entry.",
+    "evidence": "D",
+    "basis_presets": [],
+    "factor": null
+   },
+   {
+    "id": "ffs_with_boost_kit",
+    "game": "any",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "With the Boost Kit on base FW >= 1.9.0.2 FFS is not offered (Fanatec App 1.5.1.2 changelog). Set FFS PEA only if the menu still shows it (LIN gives ~6 Nm).",
+    "evidence": "V",
+    "basis_presets": [],
+    "factor": null
+   },
+   {
+    "id": "f1_v1_25_strength",
+    "game": "f1_25",
+    "applies_to_preferences": [
+     "competitive",
+     "realism",
+     "balanced",
+     "official_default"
+    ],
+    "rule": "Presets made before v1.25 (2026-09-07) may feel lighter after it (player reports; Carson raises strength by 10-20 at 8 Nm). Start at the upper end of a published range, then adjust by feel.",
+    "evidence": "U",
+    "basis_presets": [
+     "carson_f1_26_8nm_2026_09"
+    ],
+    "factor": null
+   },
+   {
+    "id": "oscillation_ladder",
+    "game": "any",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "Hands-off oscillation on straights: raise NDP in steps of 5 first, keep INT 1-5, then lower strength, then a little NFR; NIN with care (Fanatec oscillation guide). With NDP OFF at 8 Nm expect to need NDP 5-20 [U]. Oscillation starting at a session boundary in F1 25 v1.25+ is a known game bug, not a settings fault.",
+    "evidence": "V",
+    "basis_presets": [],
+    "factor": null
+   },
+   {
+    "id": "gt7_torque_5_to_8",
+    "game": "gt7",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "Fanatec's GT7 values are stated to suit 5 and 8 Nm. After fitting the kit restart at Max. Torque 5 (or 4-5 with A SET) and step up; post-hotfix 8 Nm reports range 5-10 with no consensus.",
+    "evidence": "U",
+    "basis_presets": [
+     "fanatec_gt7_official_2022",
+     "gt7_auto_setup_1_71",
+     "thenormsk_gt7_gt_dd_pro_8nm_post_hotfix"
+    ],
+    "factor": null
+   },
+   {
+    "id": "gt7_ful_fallback",
+    "game": "gt7",
+    "applies_to_preferences": [
+     "any"
+    ],
+    "rule": "FUL default 100 on hotfix firmware (App >= 1.5.4.2). If FFB drops out or the base disconnects: FUL 60, then OFF; then leave 10-20% headroom (FF 80-90) and lower Sensitivity.",
+    "evidence": "U",
+    "basis_presets": [
+     "gt7_auto_setup_1_71"
+    ],
+    "factor": null
+   }
+  ],
+  "rig_check_metrics": [
+   {
+    "metric": "brake_at_rest_max",
+    "label": "Brake at rest",
+    "unit": "%",
+    "good_range": "0.0 (<= 0.005) [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "throttle_at_rest_min",
+    "label": "Throttle at rest",
+    "unit": "%",
+    "good_range": "0.0 [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "throttle_peak_straights",
+    "label": "Full throttle reached",
+    "unit": "%",
+    "good_range": ">= 0.99 [H]; must be > 0.90 for S Mode/DRS (sourced)",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "brake_peak_heavy_zones",
+    "label": "Full brake in heavy stops",
+    "unit": "%",
+    "good_range": ">= 0.95 [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "brake_time_at_full_pct",
+    "label": "Braking time at 100%",
+    "unit": "%",
+    "good_range": "<= ~30% of braking time overall; no flat tops concentrated in low-speed corners with lock-ups [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "brake_time_to_peak_s",
+    "label": "Time to peak brake",
+    "unit": "s",
+    "good_range": "close to the driver's own best laps; ACC GT3 reference 0.31-0.38 s",
+    "threshold_evidence": "V",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "trail_brake_duration_s",
+    "label": "Trail-brake release",
+    "unit": "s",
+    "good_range": "close to the driver's own best laps; ACC GT3 reference 0.94-1.26 s",
+    "threshold_evidence": "V",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "brake_reapply_count",
+    "label": "Brake re-applications",
+    "unit": "per lap",
+    "good_range": "0-1 per lap [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "lockup_at_full_brake_share",
+    "label": "Lock-ups at 100% brake",
+    "unit": "%",
+    "good_range": "low [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "drs_drop_light_brake",
+    "label": "DRS closed by a light brake touch",
+    "unit": "count",
+    "good_range": "0 [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "brake_peak_drift_session",
+    "label": "Brake peak drift in the session",
+    "unit": "points",
+    "good_range": "drift <= 0.05 [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl",
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "brake_hold_noise",
+    "label": "Brake noise in steady holds",
+    "unit": "%",
+    "good_range": "low and stable across sessions [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "brake_peak_vs_history",
+    "label": "Heavy-stop peak against your history",
+    "unit": "points",
+    "good_range": "within 0.10 of the driver's history at the same BRF [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": [
+     "csl_load_cell"
+    ]
+   },
+   {
+    "metric": "steer_full_lock_share",
+    "label": "Time at full lock",
+    "unit": "%",
+    "good_range": "~0 outside hairpins (Monaco hairpin needs ~21-22 deg road-wheel lock vs ~17 deg normally) [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": []
+   },
+   {
+    "metric": "steer_centre_offset",
+    "label": "Steering centre offset",
+    "unit": "%",
+    "good_range": "<= 0.01 [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": []
+   },
+   {
+    "metric": "steer_roadwheel_linearity",
+    "label": "Steering against road-wheel angle",
+    "unit": "R²",
+    "good_range": "linear, no centre kink [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25"
+    ],
+    "pedals": []
+   },
+   {
+    "metric": "straight_oscillation_rate",
+    "label": "Steering oscillation on straights",
+    "unit": "/s",
+    "good_range": "low [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": []
+   },
+   {
+    "metric": "session_start_oscillation",
+    "label": "Oscillation after a session change",
+    "unit": "events",
+    "good_range": "none [H]",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25"
+    ],
+    "pedals": []
+   },
+   {
+    "metric": "steering_reversal_rate",
+    "label": "Steering reversal rate",
+    "unit": "/min",
+    "good_range": "driver-relative; racing gap size must be calibrated on recordings (driver-workload gaps of 0.5-0.7 deg are too small)",
+    "threshold_evidence": "H",
+    "games": [
+     "f1_25",
+     "gt7"
+    ],
+    "pedals": []
+   }
+  ],
+  "skill_levels": [
+   "beginner",
+   "intermediate",
+   "advanced"
+  ],
+  "upgrade_changes": [
+   "boost_kit_180",
+   "load_cell_kit",
+   "firmware",
+   "rim",
+   "other"
+  ],
+  "supported": [
+   {
+    "game": "f1_25",
+    "platform": "pc"
+   },
+   {
+    "game": "f1_25",
+    "platform": "ps5"
+   },
+   {
+    "game": "gt7",
+    "platform": "ps5"
+   }
+  ],
+  "known_issues": [
+   {
+    "id": "f1_v125_session_oscillation",
+    "title": "F1 25 v1.25: the wheel oscillates or loses FFB after a session change",
+    "detail": "Since v1.25 (2026-09-07) CSL DD / GT DD Pro owners report violent left-right oscillation or lost FFB after a session change or restart (for example Qualifying to Race), until the base is power-cycled. Pause and power-cycle the base; do not tune NDP, INT or the damper against it (it happened at NDP 50 / INT 11, and FUL OFF did not help). Every report that states a torque is at 8 Nm, and no PS5 report was found. EA confirmed it and shared a fix with Fanatec on 2026-10-07 (no ETA). The rig check flags it as 'Oscillation after a session change'.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "EA forums threads 13695137, 13701405, 13701710; forum.fanatec.com topic 20597 (PS5 impact unverified)"
+   },
+   {
+    "id": "f1_v125_lighter_ffb",
+    "title": "F1 25 v1.25: FFB reported lighter",
+    "detail": "Players on several brands report lighter or less detailed FFB after v1.25, so values from before September may feel lighter. Carson raised his 8 Nm strength by 10-20. Start at the upper end of a published range and adjust by feel.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "U",
+    "source": "EA thread 13746020; Carson F1 description (2026-09-07)"
+   },
+   {
+    "id": "ffs_boost_kit",
+    "title": "FFS (Peak/Linear) is gone with the Boost Kit on current firmware",
+    "detail": "Fanatec App 1.5.1.2 (base 1.9.0.2) removed FFS for Boost Kit bases and raised holding torque from 6 to 8 Nm. Fanatec help articles updated in September 2026 still describe LIN/PEAK, so check the Advanced menu once the kit is fitted; set PEA only if FFS is still shown.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": [
+      8
+     ]
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.5.1.2 release notes (2026-06-16)"
+   },
+   {
+    "id": "slot_torque_report",
+    "title": "Slots may report different maximum torque",
+    "detail": "One user saw the PC App report 8 Nm in AUTO and slot 5 but 6 Nm in slots 1-4. Check what your slots report after fitting the Boost Kit.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": [
+      8
+     ]
+    },
+    "evidence": "U",
+    "source": "GTPlanet, 2026-09-12"
+   },
+   {
+    "id": "gt7_ffb_loss",
+    "title": "GT DD Pro can lose FFB in GT7 (wheel may spin)",
+    "detail": "Fanatec App 1.6.1.3 known issue. Not a tuning mistake. If it happens: FUL 60, then OFF; then FF 80-90 and a lower Sensitivity.",
+    "applies_to": {
+     "games": [
+      "gt7"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.6.1.3 release notes (2026-09-21)"
+   },
+   {
+    "id": "gt7_spr_dpr",
+    "title": "SPR and DPR do not work in GT7 menus on the GT DD Pro",
+    "detail": "Fanatec App 1.6.1.3 known issue; users say they do nothing while driving.",
+    "applies_to": {
+     "games": [
+      "gt7"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.6.1.3 release notes"
+   },
+   {
+    "id": "gt7_spec_iv",
+    "title": "GT7 Spec IV Part 1 is reported for 2026-10-15",
+    "detail": "Headline only. Re-check GT7 values and rerun the rig check after it.",
+    "applies_to": {
+     "games": [
+      "gt7"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "U",
+    "source": "DG Edge headline"
+   },
+   {
+    "id": "fullforce_weak",
+    "title": "FullForce weaker than intended on CSL DD / GT DD Pro",
+    "detail": "Fanatec App 1.6.1.3 known issue. No source shows that F1 25 implements FullForce: leave FUL at its default for F1.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.6.1.3 release notes"
+   },
+   {
+    "id": "sen_auto_f1",
+    "title": "SEN AUTO misbehaves in F1 games",
+    "detail": "Fanatec App 1.6.1.3 known issue (seen on PC). Set SEN by hand to the in-game rotation.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.6.1.3 release notes"
+   },
+   {
+    "id": "mobile_app",
+    "title": "The Fanatec mobile app does not work with the new Windows App",
+    "detail": "Its own release notes say so. There is no console path for base settings on PS5 other than the on-wheel Tuning Menu.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.6.1.3 release notes; App Store listing"
+   },
+   {
+    "id": "straight_mode_bump",
+    "title": "F1 25: a small FFB bump when Straight Mode switches",
+    "detail": "Reported by a DD+ owner on PS5 Pro. Not a fault; the rig check ignores it.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "U",
+    "source": "community report"
+   },
+   {
+    "id": "f1_ffb_drop",
+    "title": "F1 25: FFB dropping mid-race on PS5",
+    "detail": "Community reports; toggling Vibration & Force Feedback restored it.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    },
+    "evidence": "U",
+    "source": "community reports"
+   },
+   {
+    "id": "brf_reset",
+    "title": "BRF reset after a restart",
+    "detail": "Fixed for the CSL DD / GT DD Pro in Fanatec App 1.4.2.3 (May 2026); 'BRF shown as 0% in the App' fixed in 1.6.1.3. Recheck BRF on the wheel after every base restart or firmware update.",
+    "applies_to": {
+     "games": [],
+     "pedals": [
+      "csl_load_cell"
+     ],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec App 1.4.2.3 and 1.6.1.3 release notes"
+   },
+   {
+    "id": "lc_fw_reset",
+    "title": "A firmware update resets the load cell's manual calibration and may change the base mode",
+    "detail": "After any update: DARK BLUE mode, recalibrate the wheel centre, recheck slots and BRF.",
+    "applies_to": {
+     "games": [],
+     "pedals": [
+      "csl_load_cell"
+     ],
+     "torque_nm": []
+    },
+    "evidence": "V",
+    "source": "Fanatec help 50374908960273"
+   }
+  ],
+  "open_questions": [
+   {
+    "id": 1,
+    "question": "After fitting the Boost Kit on base 1.9.2.3: is FFS gone, and what maximum torque does each slot report (8 Nm, or 6 Nm in slots 1-4 as one user saw)?",
+    "verify": "Open the Advanced menu after fitting the kit and note whether FFS exists and what each slot reports.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": [
+      8
+     ]
+    }
+   },
+   {
+    "id": 2,
+    "question": "Does the F1 25 v1.25 session-change oscillation occur on PS5, and at 5 Nm? Does EA's next patch fix it?",
+    "verify": "Drive Qualifying into the Race; the rig check flags oscillation with no pedal input after the session change.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 3,
+    "question": "Is FUL shown in this base's PS5 menu at 5 Nm, and does F1 25 do anything with it?",
+    "verify": "Scroll the Advanced menu in DARK BLUE mode.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 4,
+    "question": "Does F1 25 use A SET? Does SEN AUTO work in F1 25 on PS5?",
+    "verify": "Try AUTO, turn the wheel 90 degrees and compare with the on-screen wheel.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 5,
+    "question": "What are F1 25's PS5 wheel-preset defaults (strength, effects, damper, rotation, Brake Linearity 25?) and the slider maxima?",
+    "verify": "Reset the wheel preset to default and note the values.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 6,
+    "question": "Are UDP brake, throttle and steering reported before or after in-game calibration and ABS? Is UDP sent while paused?",
+    "verify": "In Time Trial, stationary, set Brake Saturation from 0 to 20 and check whether the same press reads higher in pitwall.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 7,
+    "question": "Do slots and load-cell min/max set in the Fanatec App persist unchanged in DARK BLUE mode on PS5?",
+    "verify": "Set a slot on the PC, switch to DARK BLUE and read the values on the wheel.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 8,
+    "question": "Does the bundled GT DD Pro rim have vibration motors and a display for reading Tuning Menu values?",
+    "verify": "Check whether SHO appears in the menu.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 9,
+    "question": "What are GT7 1.71 A SET values at 5 Nm and after the hotfix? What does the in-game Vibration setting do? Does GT7 have the claimed Options > Controllers pedal calibration?",
+    "verify": "Read the Advanced menu while GT7 runs with A SET; look under Options > Controllers.",
+    "applies_to": {
+     "games": [
+      "gt7"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 10,
+    "question": "How does BRF map to kg on the CSL Pedals Load Cell Kit, and what is the load cell's capacity? Is there a CSL LC owner report for F1 25 brake linearity?",
+    "verify": "No published data; use the repeatable-press method and the rig check.",
+    "applies_to": {
+     "games": [],
+     "pedals": [
+      "csl_load_cell"
+     ],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 11,
+    "question": "Does F1 25 v1.25 add game-side damper or inertia (Carson's claim)? Is there a measurement of F1 25 game-side clipping against strength?",
+    "verify": "Retest pre-September presets; compare the rig check before and after.",
+    "applies_to": {
+     "games": [
+      "f1_25"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 12,
+    "question": "What is the pedal-curve Tuning Menu item reportedly added by the FullForce firmware?",
+    "verify": "Look for a new item at the end of the Advanced menu.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 13,
+    "question": "What are the sign and scale of F1 MotionEx wheel slip ratio and the units of wheel speed? What do GT7's throttle and brake bytes mean (input or after TCS/ABS)?",
+    "verify": "Needed before pitwall can measure lock-ups against brake level, or separate GT7 pedal and ABS effects.",
+    "applies_to": {
+     "games": [],
+     "pedals": [],
+     "torque_nm": []
+    }
+   },
+   {
+    "id": 14,
+    "question": "What did GT7 Spec IV (2026-10-15?) change in FFB?",
+    "verify": "Re-check GT7 values after the update.",
+    "applies_to": {
+     "games": [
+      "gt7"
+     ],
+     "pedals": [],
+     "torque_nm": []
+    }
+   }
+  ]
+ }
+}

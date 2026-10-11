@@ -1,0 +1,114 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 16
+layout = "Brazil"
+lap_length_m = 4294
+official_turn_count = 15
+sector_starts_m = [1215, 3160]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1, 2]
+names = [{ text = "‘S’ do Senna", kind = "unclassified" }]
+game_segment_m = [220, 530]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [3]
+names = [{ text = "Curva do Sol", kind = "unclassified" }]
+game_segment_m = [530, 800]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [4, 5]
+names = [{ text = "Descida do Lago", kind = "unclassified" }]
+game_segment_m = [1290, 1700]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [6, 7]
+names = [{ text = "Ferradura", kind = "unclassified" }]
+game_segment_m = [1950, 2240]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [8]
+names = [{ text = "Laranjinha", kind = "unclassified" }]
+game_segment_m = [2270, 2415]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [9]
+names = [{ text = "Pinheirinho", kind = "unclassified" }]
+game_segment_m = [2415, 2590]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [10]
+names = [{ text = "Bico de Pato", kind = "unclassified" }]
+game_segment_m = [2660, 2850]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [11]
+names = [{ text = "Mergulho", kind = "unclassified" }]
+game_segment_m = [2870, 3115]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [12]
+names = [{ text = "Junção", kind = "unclassified" }]
+game_segment_m = [3185, 3335]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13]
+names = [{ text = "Café", kind = "unclassified" }]
+game_segment_m = [3350, 3500]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [14]
+names = [{ text = "Subida dos Boxes", kind = "unclassified" }]
+game_segment_m = [3550, 3825]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [15]
+names = [{ text = "Arquibancadas", kind = "unclassified" }]
+game_segment_m = [3900, 4170]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

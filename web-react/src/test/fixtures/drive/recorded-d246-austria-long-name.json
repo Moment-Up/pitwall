@@ -1,0 +1,1157 @@
+{
+ "version": 8895,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 53212,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261010-221749_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 53200,
+   "decoded": 38098,
+   "ignored": 15102,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "EVENT": 420,
+    "SESSION": 297,
+    "PARTICIPANTS": 30,
+    "CAR_SETUPS": 297,
+    "CAR_DAMAGE": 1484,
+    "TYRE_SETS": 2968,
+    "LAP_POSITIONS": 298,
+    "LAP_DATA": 8893,
+    "MOTION": 8893,
+    "MOTION_EX": 8892,
+    "CAR_TELEMETRY": 8892,
+    "CAR_STATUS": 8892,
+    "SESSION_HISTORY": 2944
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "6e5cdbbcc182",
+ "session": {
+  "game": "f1_25",
+  "platform": "ps5",
+  "track_id": "f1:17",
+  "track_name": "Austria",
+  "track_length_m": 4323.0,
+  "session_type": "Race",
+  "car_name": "Haas",
+  "weather": {
+   "condition": "light_cloud",
+   "track_temp_c": 34.0,
+   "air_temp_c": 23.0,
+   "rain_percentage": 5.0
+  },
+  "total_laps": 71,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1860359543261125,
+  "session_time_s": 4327.395,
+  "speed_kph": 296.0,
+  "throttle": 1.0,
+  "brake": 0.0,
+  "steering": -0.012,
+  "clutch": 0.0,
+  "gear": 8,
+  "rpm": 10638.0,
+  "max_rpm": 13099.0,
+  "drs_open": true,
+  "pos": [
+   432.41,
+   -42.27,
+   183.67
+  ],
+  "g_lat": 0.23,
+  "g_lon": 0.51,
+  "lap_number": 64,
+  "lap_distance_m": 16.4,
+  "current_lap_time_ms": 200,
+  "last_lap_time_ms": 71745,
+  "sector": 0,
+  "lap_invalid": false,
+  "pit_status": 0,
+  "race_position": 8,
+  "tyre_surface_temp_c": [
+   68.0,
+   55.0,
+   79.0,
+   73.0
+  ],
+  "tyre_inner_temp_c": [
+   92.0,
+   91.0,
+   95.0,
+   94.0
+  ],
+  "tyre_pressure_psi": [
+   24.8,
+   24.8,
+   22.1,
+   22.1
+  ],
+  "brake_temp_c": [
+   661.0,
+   651.0,
+   603.0,
+   595.0
+  ],
+  "tyre_wear_pct": [
+   9.0,
+   11.0,
+   9.0,
+   9.0
+  ],
+  "tyre_compound": "medium",
+  "tyre_age_laps": 39,
+  "fuel_kg": 14.73,
+  "fuel_remaining_laps_game": 2.16,
+  "ers_store_j": 3414740.0,
+  "brake_bias_front_pct": 58.0,
+  "quality": 0
+ },
+ "delta_s": null,
+ "reference": {
+  "lap_id": 1,
+  "lap_number": 62,
+  "lap_time_ms": 76577,
+  "session_id": "6e5cdbbcc182"
+ },
+ "laps": [
+  {
+   "lap_id": 2,
+   "lap_number": 63,
+   "lap_time_ms": 71745,
+   "sector_times_ms": [
+    17259,
+    31554,
+    22932
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.464
+  },
+  {
+   "lap_id": 1,
+   "lap_number": 62,
+   "lap_time_ms": 76577,
+   "sector_times_ms": [
+    18000,
+    34132,
+    24445
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "medium",
+   "fuel_used_kg": 1.434
+  }
+ ],
+ "observations": [
+  {
+   "id": "L63:T4:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T4",
+   "lap_number": 63,
+   "ref_lap_number": 62,
+   "metric": "exit_speed_delta_kph",
+   "value": 118.0,
+   "unit": "km/h",
+   "impact_s": -3.337,
+   "confidence": 1.0,
+   "text": "Corner at 2873 m: good - exit speed is up 118 km/h on your reference and you gained 3.34 s there.",
+   "evidence": {
+    "time_delta_s": -3.337,
+    "min_speed_delta_kph": 88.0,
+    "exit_speed_delta_kph": 118.0,
+    "entry_speed_delta_kph": 15.0,
+    "ref": {
+     "corner": "T4",
+     "segment_time_s": 11.44,
+     "brake_start_m": 2800.06,
+     "brake_end_m": 2809.87,
+     "brake_peak": 0.24,
+     "time_to_peak_s": 0.0,
+     "release_s": 0.07,
+     "trail_brake_m": 10.03,
+     "coast_m": 13.06,
+     "entry_speed_kph": 161.0,
+     "min_speed_kph": 85.0,
+     "min_speed_m": 2904.0,
+     "exit_speed_kph": 94.0,
+     "throttle_pickup_m": 2903.43,
+     "throttle_full_m": 2903.43
+    },
+    "lap": {
+     "corner": "T4",
+     "segment_time_s": 8.11,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 176.0,
+     "min_speed_kph": 173.0,
+     "min_speed_m": 2793.0,
+     "exit_speed_kph": 212.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "2873 m",
+   "corner_voice": "Corner at 2870 metres",
+   "text_simple": "Corner at 2873 m: good exit - you came out 118 km/h faster than on your reference lap.",
+   "short": "2873 m: good exit, 118 km/h faster",
+   "priority": 1.6685
+  },
+  {
+   "id": "L63:T7:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T7",
+   "lap_number": 63,
+   "ref_lap_number": 62,
+   "metric": "exit_speed_delta_kph",
+   "value": 9.555,
+   "unit": "km/h",
+   "impact_s": -0.424,
+   "confidence": 1.0,
+   "text": "Turn 10: good - exit speed is up 10 km/h on your reference and you gained 0.42 s there.",
+   "evidence": {
+    "time_delta_s": -0.424,
+    "brake_point_delta_m": 4.351,
+    "min_speed_delta_kph": 14.042,
+    "exit_speed_delta_kph": 9.555,
+    "entry_speed_delta_kph": 10.829,
+    "throttle_full_delta_m": 12.542,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T7",
+     "segment_time_s": 7.82,
+     "brake_start_m": 3918.21,
+     "brake_end_m": 3979.35,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.35,
+     "release_s": 0.22,
+     "trail_brake_m": 25.59,
+     "coast_m": 0.0,
+     "entry_speed_kph": 226.08,
+     "min_speed_kph": 136.0,
+     "min_speed_m": 3977.0,
+     "exit_speed_kph": 145.0,
+     "throttle_pickup_m": 3975.68,
+     "throttle_full_m": 3982.21
+    },
+    "lap": {
+     "corner": "T7",
+     "segment_time_s": 7.39,
+     "brake_start_m": 3922.56,
+     "brake_end_m": 3985.36,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.28,
+     "release_s": 0.27,
+     "trail_brake_m": 40.97,
+     "coast_m": 0.0,
+     "entry_speed_kph": 236.91,
+     "min_speed_kph": 150.04,
+     "min_speed_m": 3986.0,
+     "exit_speed_kph": 154.56,
+     "throttle_pickup_m": 3984.66,
+     "throttle_full_m": 3994.75
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "T10",
+   "corner_voice": "Turn 10",
+   "text_simple": "Turn 10: good exit - you came out 10 km/h faster than on your reference lap.",
+   "short": "T10: good exit, 10 km/h faster",
+   "priority": 0.212
+  },
+  {
+   "id": "L63:T6:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T6",
+   "lap_number": 63,
+   "ref_lap_number": 62,
+   "metric": "exit_speed_delta_kph",
+   "value": 38.322,
+   "unit": "km/h",
+   "impact_s": -0.357,
+   "confidence": 1.0,
+   "text": "Turn 9 (Rindt Kurve): good - exit speed is up 38 km/h on your reference and you gained 0.36 s there.",
+   "evidence": {
+    "time_delta_s": -0.357,
+    "brake_point_delta_m": 14.235,
+    "min_speed_delta_kph": 38.0,
+    "exit_speed_delta_kph": 38.322,
+    "entry_speed_delta_kph": -1.925,
+    "throttle_full_delta_m": -23.645,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T6",
+     "segment_time_s": 6.41,
+     "brake_start_m": 3681.25,
+     "brake_end_m": 3773.31,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.22,
+     "release_s": 0.3,
+     "trail_brake_m": 34.66,
+     "coast_m": 0.0,
+     "entry_speed_kph": 296.92,
+     "min_speed_kph": 165.0,
+     "min_speed_m": 3775.0,
+     "exit_speed_kph": 170.68,
+     "throttle_pickup_m": 3774.15,
+     "throttle_full_m": 3793.93
+    },
+    "lap": {
+     "corner": "T6",
+     "segment_time_s": 6.06,
+     "brake_start_m": 3695.49,
+     "brake_end_m": 3764.74,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.07,
+     "release_s": 0.23,
+     "trail_brake_m": 38.91,
+     "coast_m": 0.0,
+     "entry_speed_kph": 295.0,
+     "min_speed_kph": 203.0,
+     "min_speed_m": 3766.0,
+     "exit_speed_kph": 209.0,
+     "throttle_pickup_m": 3764.79,
+     "throttle_full_m": 3770.29
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "T9",
+   "corner_voice": "Turn 9, Rindt Kurve",
+   "text_simple": "Turn 9 (Rindt Kurve): good exit - you came out 38 km/h faster than on your reference lap.",
+   "short": "T9: good exit, 38 km/h faster",
+   "priority": 0.1785
+  },
+  {
+   "id": "L63:T3:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T3",
+   "lap_number": 63,
+   "ref_lap_number": 62,
+   "metric": "exit_speed_delta_kph",
+   "value": 6.0,
+   "unit": "km/h",
+   "impact_s": -0.174,
+   "confidence": 1.0,
+   "text": "Turn 4: good - exit speed is up 6 km/h on your reference and you gained 0.17 s there.",
+   "evidence": {
+    "time_delta_s": -0.174,
+    "brake_point_delta_m": 0.921,
+    "min_speed_delta_kph": 0.0,
+    "exit_speed_delta_kph": 6.0,
+    "entry_speed_delta_kph": 3.0,
+    "throttle_full_delta_m": 0.366,
+    "coast_delta_m": -4.0,
+    "ref": {
+     "corner": "T3",
+     "segment_time_s": 12.7,
+     "brake_start_m": 2074.71,
+     "brake_end_m": 2192.43,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.38,
+     "release_s": 0.6,
+     "trail_brake_m": 24.72,
+     "coast_m": 8.62,
+     "entry_speed_kph": 111.0,
+     "min_speed_kph": 108.0,
+     "min_speed_m": 2202.0,
+     "exit_speed_kph": 112.0,
+     "throttle_pickup_m": 2201.61,
+     "throttle_full_m": 2255.64
+    },
+    "lap": {
+     "corner": "T3",
+     "segment_time_s": 12.52,
+     "brake_start_m": 2075.63,
+     "brake_end_m": 2196.59,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.43,
+     "release_s": 0.42,
+     "trail_brake_m": 31.47,
+     "coast_m": 4.62,
+     "entry_speed_kph": 114.0,
+     "min_speed_kph": 108.0,
+     "min_speed_m": 2204.0,
+     "exit_speed_kph": 118.0,
+     "throttle_pickup_m": 2203.41,
+     "throttle_full_m": 2256.0
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "T4",
+   "corner_voice": "Turn 4",
+   "text_simple": "Turn 4: good exit - you came out 6 km/h faster than on your reference lap.",
+   "short": "T4: good exit, 6 km/h faster",
+   "priority": 0.087
+  }
+ ],
+ "events": [
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4315.9326171875,
+   "t": 1791681411.966205
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4314.98193359375,
+   "t": 1791681411.964173
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4306.60693359375,
+   "t": 1791681411.948352
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4298.365234375,
+   "t": 1791681411.932825
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4291.20849609375,
+   "t": 1791681411.919153
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4287.48779296875,
+   "t": 1791681411.9116428
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4285.61962890625,
+   "t": 1791681411.908399
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4280.1474609375,
+   "t": 1791681411.8977768
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4280.04736328125,
+   "t": 1791681411.8976
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 4276.1767578125,
+   "t": 1791681411.889639
+  }
+ ],
+ "marshal_flags": [],
+ "session_state": "running",
+ "session_state_info": {
+  "state": "running",
+  "cause": null,
+  "since_unix": 1791681411.681,
+  "chequered_flag": false
+ },
+ "coach": {
+  "lap_number": 63,
+  "lap_id": 2,
+  "ref_lap_number": 62,
+  "skill_level": "advanced",
+  "simple_wording": false,
+  "radio_quiet": false,
+  "picked": [],
+  "by_corner": {
+   "T4": {
+    "id": "L63:T4:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T4",
+    "corner_label": "2873 m",
+    "lap_number": 63,
+    "ref_lap_number": 62,
+    "metric": "exit_speed_delta_kph",
+    "value": 118.0,
+    "unit": "km/h",
+    "impact_s": -3.337,
+    "confidence": 1.0,
+    "priority": 1.6685,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Corner at 2873 m: good - exit speed is up 118 km/h on your reference and you gained 3.34 s there.",
+    "text_simple": "Corner at 2873 m: good exit - you came out 118 km/h faster than on your reference lap.",
+    "short": "2873 m: good exit, 118 km/h faster",
+    "corner_voice": "Corner at 2870 metres",
+    "evidence": {
+     "time_delta_s": -3.337,
+     "min_speed_delta_kph": 88.0,
+     "exit_speed_delta_kph": 118.0,
+     "entry_speed_delta_kph": 15.0
+    },
+    "picked": false
+   },
+   "T7": {
+    "id": "L63:T7:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T7",
+    "corner_label": "T10",
+    "lap_number": 63,
+    "ref_lap_number": 62,
+    "metric": "exit_speed_delta_kph",
+    "value": 9.555,
+    "unit": "km/h",
+    "impact_s": -0.424,
+    "confidence": 1.0,
+    "priority": 0.212,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 10: good - exit speed is up 10 km/h on your reference and you gained 0.42 s there.",
+    "text_simple": "Turn 10: good exit - you came out 10 km/h faster than on your reference lap.",
+    "short": "T10: good exit, 10 km/h faster",
+    "corner_voice": "Turn 10",
+    "evidence": {
+     "time_delta_s": -0.424,
+     "brake_point_delta_m": 4.351,
+     "min_speed_delta_kph": 14.042,
+     "exit_speed_delta_kph": 9.555,
+     "entry_speed_delta_kph": 10.829,
+     "throttle_full_delta_m": 12.542,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   },
+   "T6": {
+    "id": "L63:T6:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T6",
+    "corner_label": "T9",
+    "lap_number": 63,
+    "ref_lap_number": 62,
+    "metric": "exit_speed_delta_kph",
+    "value": 38.322,
+    "unit": "km/h",
+    "impact_s": -0.357,
+    "confidence": 1.0,
+    "priority": 0.1785,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 9 (Rindt Kurve): good - exit speed is up 38 km/h on your reference and you gained 0.36 s there.",
+    "text_simple": "Turn 9 (Rindt Kurve): good exit - you came out 38 km/h faster than on your reference lap.",
+    "short": "T9: good exit, 38 km/h faster",
+    "corner_voice": "Turn 9, Rindt Kurve",
+    "evidence": {
+     "time_delta_s": -0.357,
+     "brake_point_delta_m": 14.235,
+     "min_speed_delta_kph": 38.0,
+     "exit_speed_delta_kph": 38.322,
+     "entry_speed_delta_kph": -1.925,
+     "throttle_full_delta_m": -23.645,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   },
+   "T3": {
+    "id": "L63:T3:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T3",
+    "corner_label": "T4",
+    "lap_number": 63,
+    "ref_lap_number": 62,
+    "metric": "exit_speed_delta_kph",
+    "value": 6.0,
+    "unit": "km/h",
+    "impact_s": -0.174,
+    "confidence": 1.0,
+    "priority": 0.087,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 4: good - exit speed is up 6 km/h on your reference and you gained 0.17 s there.",
+    "text_simple": "Turn 4: good exit - you came out 6 km/h faster than on your reference lap.",
+    "short": "T4: good exit, 6 km/h faster",
+    "corner_voice": "Turn 4",
+    "evidence": {
+     "time_delta_s": -0.174,
+     "brake_point_delta_m": 0.921,
+     "min_speed_delta_kph": 0.0,
+     "exit_speed_delta_kph": 6.0,
+     "entry_speed_delta_kph": 3.0,
+     "throttle_full_delta_m": 0.366,
+     "coast_delta_m": -4.0
+    },
+    "picked": false
+   }
+  }
+ },
+ "track_model": {
+  "game": "f1_25",
+  "track_id": "f1:17",
+  "track_name": "Austria",
+  "length_m": 4323.0,
+  "version": 2,
+  "n_laps": 2,
+  "corners": [
+   {
+    "name": "T1",
+    "apex_m": 445.0,
+    "entry_m": 329.0,
+    "exit_m": 520.0,
+    "seg_start_m": 0.0,
+    "seg_end_m": 929.0,
+    "direction": "right",
+    "ref_min_speed_kph": 124.5,
+    "label": "T1",
+    "official_numbers": [
+     1
+    ],
+    "display_name": "Niki Lauda Kurve",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T2",
+    "apex_m": 1413.0,
+    "entry_m": 1275.0,
+    "exit_m": 1418.0,
+    "seg_start_m": 929.0,
+    "seg_end_m": 1809.0,
+    "direction": "right",
+    "ref_min_speed_kph": 54.0,
+    "label": "T3",
+    "official_numbers": [
+     3
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T3",
+    "apex_m": 2205.0,
+    "entry_m": 2195.0,
+    "exit_m": 2256.0,
+    "seg_start_m": 1809.0,
+    "seg_end_m": 2539.0,
+    "direction": "right",
+    "ref_min_speed_kph": 108.0,
+    "label": "T4",
+    "official_numbers": [
+     4
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T4",
+    "apex_m": 2873.0,
+    "entry_m": 2801.0,
+    "exit_m": 2873.0,
+    "seg_start_m": 2539.0,
+    "seg_end_m": 2999.5,
+    "direction": "right",
+    "ref_min_speed_kph": 153.0,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   },
+   {
+    "name": "T5",
+    "apex_m": 3126.0,
+    "entry_m": 2942.0,
+    "exit_m": 3126.0,
+    "seg_start_m": 2999.5,
+    "seg_end_m": 3450.5,
+    "direction": "left",
+    "ref_min_speed_kph": 154.5,
+    "label": "T7",
+    "official_numbers": [
+     7
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T6",
+    "apex_m": 3775.0,
+    "entry_m": 3682.0,
+    "exit_m": 3793.0,
+    "seg_start_m": 3450.5,
+    "seg_end_m": 3878.5,
+    "direction": "right",
+    "ref_min_speed_kph": 185.0,
+    "label": "T9",
+    "official_numbers": [
+     9
+    ],
+    "display_name": "Rindt Kurve",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T7",
+    "apex_m": 3982.0,
+    "entry_m": 3919.0,
+    "exit_m": 3994.0,
+    "seg_start_m": 3878.5,
+    "seg_end_m": 4323.0,
+    "direction": "right",
+    "ref_min_speed_kph": 145.08565340909092,
+    "label": "T10",
+    "official_numbers": [
+     10
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   }
+  ],
+  "corner_text": {
+   "T1": {
+    "short": "T1",
+    "long": "Turn 1 (Niki Lauda Kurve)",
+    "voice": "Turn 1, Niki Lauda Kurve"
+   },
+   "T2": {
+    "short": "T3",
+    "long": "Turn 3",
+    "voice": "Turn 3"
+   },
+   "T3": {
+    "short": "T4",
+    "long": "Turn 4",
+    "voice": "Turn 4"
+   },
+   "T4": {
+    "short": "2873 m",
+    "long": "Corner at 2873 m",
+    "voice": "Corner at 2870 metres"
+   },
+   "T5": {
+    "short": "T7",
+    "long": "Turn 7",
+    "voice": "Turn 7"
+   },
+   "T6": {
+    "short": "T9",
+    "long": "Turn 9 (Rindt Kurve)",
+    "voice": "Turn 9, Rindt Kurve"
+   },
+   "T7": {
+    "short": "T10",
+    "long": "Turn 10",
+    "voice": "Turn 10"
+   }
+  }
+ },
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:17",
+  "track_length_m": 4323.0,
+  "pit_speed_limit_kph": 80.0,
+  "sector2_start_m": 1203.96,
+  "sector3_start_m": 2934.93,
+  "sector_boundaries_m": [
+   0.0,
+   1203.96,
+   2934.93,
+   4323.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 1203.96,
+    "length_m": 1203.96
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 1203.96,
+    "end_m": 2934.93,
+    "length_m": 1730.97
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 2934.93,
+    "end_m": 4323.0,
+    "length_m": 1388.07
+   }
+  ],
+  "marshal_zones": [
+   {
+    "kind": "marshal",
+    "index": 1,
+    "game_number": 2,
+    "lap_order": 1,
+    "start_m": 342.33,
+    "end_m": 552.8,
+    "length_m": 210.47,
+    "start_frac": 0.079188,
+    "end_frac": 0.127874,
+    "wraps": false,
+    "segments_m": [
+     [
+      342.33,
+      552.8
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 2,
+    "game_number": 3,
+    "lap_order": 2,
+    "start_m": 552.8,
+    "end_m": 937.2,
+    "length_m": 384.4,
+    "start_frac": 0.127874,
+    "end_frac": 0.216793,
+    "wraps": false,
+    "segments_m": [
+     [
+      552.8,
+      937.2
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 3,
+    "game_number": 4,
+    "lap_order": 3,
+    "start_m": 937.2,
+    "end_m": 1277.05,
+    "length_m": 339.86,
+    "start_frac": 0.216793,
+    "end_frac": 0.295408,
+    "wraps": false,
+    "segments_m": [
+     [
+      937.2,
+      1277.05
+     ]
+    ],
+    "flag": "blue"
+   },
+   {
+    "kind": "marshal",
+    "index": 4,
+    "game_number": 5,
+    "lap_order": 4,
+    "start_m": 1277.05,
+    "end_m": 1488.67,
+    "length_m": 211.62,
+    "start_frac": 0.295408,
+    "end_frac": 0.344361,
+    "wraps": false,
+    "segments_m": [
+     [
+      1277.05,
+      1488.67
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 5,
+    "game_number": 6,
+    "lap_order": 5,
+    "start_m": 1488.67,
+    "end_m": 1820.77,
+    "length_m": 332.1,
+    "start_frac": 0.344361,
+    "end_frac": 0.421182,
+    "wraps": false,
+    "segments_m": [
+     [
+      1488.67,
+      1820.77
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 6,
+    "game_number": 7,
+    "lap_order": 6,
+    "start_m": 1820.77,
+    "end_m": 2344.3,
+    "length_m": 523.53,
+    "start_frac": 0.421182,
+    "end_frac": 0.542286,
+    "wraps": false,
+    "segments_m": [
+     [
+      1820.77,
+      2344.3
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 7,
+    "game_number": 8,
+    "lap_order": 7,
+    "start_m": 2344.3,
+    "end_m": 2560.01,
+    "length_m": 215.71,
+    "start_frac": 0.542286,
+    "end_frac": 0.592184,
+    "wraps": false,
+    "segments_m": [
+     [
+      2344.3,
+      2560.01
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 8,
+    "game_number": 9,
+    "lap_order": 8,
+    "start_m": 2560.01,
+    "end_m": 2903.74,
+    "length_m": 343.73,
+    "start_frac": 0.592184,
+    "end_frac": 0.671696,
+    "wraps": false,
+    "segments_m": [
+     [
+      2560.01,
+      2903.74
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 9,
+    "game_number": 10,
+    "lap_order": 9,
+    "start_m": 2903.74,
+    "end_m": 3231.82,
+    "length_m": 328.07,
+    "start_frac": 0.671696,
+    "end_frac": 0.747586,
+    "wraps": false,
+    "segments_m": [
+     [
+      2903.74,
+      3231.82
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 10,
+    "game_number": 11,
+    "lap_order": 10,
+    "start_m": 3231.82,
+    "end_m": 3461.65,
+    "length_m": 229.83,
+    "start_frac": 0.747586,
+    "end_frac": 0.800751,
+    "wraps": false,
+    "segments_m": [
+     [
+      3231.82,
+      3461.65
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 11,
+    "game_number": 12,
+    "lap_order": 11,
+    "start_m": 3461.65,
+    "end_m": 3920.49,
+    "length_m": 458.84,
+    "start_frac": 0.800751,
+    "end_frac": 0.90689,
+    "wraps": false,
+    "segments_m": [
+     [
+      3461.65,
+      3920.49
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 12,
+    "game_number": 13,
+    "lap_order": 12,
+    "start_m": 3920.49,
+    "end_m": 4283.38,
+    "length_m": 362.89,
+    "start_frac": 0.90689,
+    "end_frac": 0.990834,
+    "wraps": false,
+    "segments_m": [
+     [
+      3920.49,
+      4283.38
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 0,
+    "game_number": 1,
+    "lap_order": 13,
+    "start_m": 4283.38,
+    "end_m": 342.33,
+    "length_m": 381.96,
+    "start_frac": 0.990834,
+    "end_frac": 0.079188,
+    "wraps": true,
+    "segments_m": [
+     [
+      4283.38,
+      4323.0
+     ],
+     [
+      0.0,
+      342.33
+     ]
+    ],
+    "flag": "none"
+   }
+  ],
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "bests": {
+  "scope": {
+   "game": "f1_25",
+   "track_id": "f1:17",
+   "car_id": "f1:team:7",
+   "records": false
+  },
+  "session": {
+   "lap_ms": 71745,
+   "sectors_ms": [
+    17259,
+    31554,
+    22932
+   ],
+   "lap_id": 2,
+   "sector_lap_ids": [
+    2,
+    2,
+    2
+   ]
+  },
+  "driver": null,
+  "household": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": "no braking corrections to focus on",
+  "ref_lap_number": 62,
+  "focus": [],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [],
+  "next": null,
+  "last": null,
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "pitwall replay (headless, temp DB) of 20261010-221749_udp20777.pwcap (a local PS5 F1 25 recording from the rig, data/captures, not committed)",
+  "moment": "next corner T1 Niki Lauda Kurve (313 m to the entry)",
+  "trimmed": [
+   "last_comparison",
+   "track_model.centreline",
+   "track_model.ground_plane",
+   "track_model.source_lap_ids"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending. Backend: working tree with D2 (bests), D4 (session_state) and D6 (coach) from lane B, not yet committed; replays never get driver or household bests (bests.scope.records false).",
+  "generated_unix": 1791681412
+ }
+}

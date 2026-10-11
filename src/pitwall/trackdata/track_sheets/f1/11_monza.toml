@@ -1,0 +1,114 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa),
+# MIT licence, Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# HAND-REVIEWED 2026-10-10 (numbers, windows, directions and names; see checked_against and the turn notes) against
+# the 72f78aa copy (Monza.json blob 65f9c8f7). Evidence per turn: docs/research/track-sheets-review-g1.md.
+# The importer leaves this file alone because it contains verified turns.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 11
+layout = "Monza"
+lap_length_m = 5798
+official_turn_count = 11
+sector_starts_m = [1898, 3727]
+verified_formats = [2025]
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = [
+    "capture:20261010-204720+205007 - real F1 25 PS5 race (UDP format 2025), session 14715103996819411055: 1 complete clean lap, 1 standing-start lap and 2 partial laps, speed/brake/throttle/steering/lateral g by lap distance; Session packet trackLength 5798 m, S2 start 1897.79 m, S3 start 3726.98 m",
+    "fia:2025-monza-circuit-map - FIA F1 2025 Italian GP Circuit Map (Stewards doc 3, 04 Sep 2025, ITALY_CIRCUIT_25 FIAv2), https://www.fia.com/system/files/decision-document/2025_monza_event_-_circuit_map_-_monza_2025.pdf: corners 1-11, S1 233 m before T4, S2 215 m before T8, speed trap 212 m before T1, centreline 5.793 km",
+    "f1db:v2026.16.1 - circuits/monza.yml: layout monza-7 (2000-present), 11 turns, clockwise, 5.793 km",
+    "monzanet:the-circuit - https://www.monzanet.it/en/?p=4265 (circuit's own page): Prima Variante (Variante del Rettifilo), Biassono curve (originally Curva Grande, renamed 1972), Seconda Variante (Variante della Roggia), First and Second Lesmo curve, Curva del Serraglio (slight left, not numbered), Ascari variant (left-right-left), Alboreto Curve (Parabolica; current official name Curva Alboreto)",
+    "f1com:monza-corner-names - formula1.com 'EXPLAINED: How every corner at Monza got its name': Turns 1/2 Prima Variante, Turn 3 Biassono, Turns 4/5 Seconda Variante (Roggia), Turns 6/7 Lesmo 1 and Lesmo 2, Turns 8/9/10 Variante Ascari, Turn 11 Curva Alboreto ('still often called the Parabolica'); Serraglio is not an official corner",
+    "it.wikipedia:Autodromo_Nazionale_di_Monza - Rettifilo right-left, Curva Biassono (gia Curva Grande) right, Roggia left-right, Lesmo 1 and 2 right, Ascari left-right-left, Curva Alboreto (gia Parabolica) right",
+    "en.wikipedia:Monza_Circuit - 11 turns; 'Curva Alboreto (formerly Curva Parabolica)'; still calls turn 3 'Curva Grande'",
+]
+notes = "Windows are PnG's except Lesmo 1 (T6), whose end moved from 2650 to 2700 m: the recorded right-hander runs to 2655-2665 m and exit minima sat at 2651 and 2682 m. The game's S2/S3 starts equal PnG's sector values to 0.21 m. FIA cross-check: S1 line 233 m before T4 puts T4 at about 2131 m (measured left of the Roggia at 2095-2160 m); S2 line 215 m before T8 puts T8 at about 3942 m (measured first Ascari left at 3900-3990 m). Directions are measured (steering and lateral-g sign) and match the FIA drawing (clockwise); complexes with mixed directions (T1-2, T4-5, T8-10) have no direction. Curva del Serraglio (slight left before Ascari) is not an official numbered corner and is not listed. Names: the circuit's own current names, with the traditional ones as second names; 'Curva Biassono' (T3) is not voiced because en.wikipedia and PnG still use 'Curva Grande' (T3 is flat-out, so learned corners normally never take it). Verified with UDP format 2025 only: verified_formats keeps 2026 Season Pack sessions (format 2026) at the seeded tier until a format-2026 capture is checked."
+
+[[turns]]
+numbers = [1, 2]
+names = [
+    { text = "Prima Variante", kind = "official", sources = ["monzanet:the-circuit", "f1com:monza-corner-names"] },
+    { text = "Variante del Rettifilo", kind = "traditional", sources = ["pits_n_giggles@72f78aa", "monzanet:the-circuit", "it.wikipedia:Autodromo_Nazionale_di_Monza"] },
+]
+game_segment_m = [770, 1015]
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-204720+205007", "fia:2025-monza-circuit-map", "monzanet:the-circuit", "f1com:monza-corner-names"]
+notes = "First chicane, right then left: braking from about 735 m (337 km/h), T1 right at 885-960 m (minima 54-80 km/h at 913 m), T2 left at 965-1010 m (minima 28-88 km/h at 976-987 m; the 28 km/h was a lock-up). Mixed directions, so no direction. F1.com: the 'Rettifilo' name was dropped when the chicane was reprofiled in 2000; the circuit lists it in brackets."
+
+[[turns]]
+numbers = [3]
+names = [
+    { text = "Curva Biassono", kind = "official", sources = ["monzanet:the-circuit", "f1com:monza-corner-names", "it.wikipedia:Autodromo_Nazionale_di_Monza"] },
+    { text = "Curva Grande", kind = "traditional", sources = ["pits_n_giggles@72f78aa", "monzanet:the-circuit", "en.wikipedia:Monza_Circuit"] },
+]
+game_segment_m = [1060, 1860]
+direction = "right"
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-204720+205007", "fia:2025-monza-circuit-map", "monzanet:the-circuit", "f1com:monza-corner-names"]
+notes = "Flat-out long right (full throttle, 300-320 km/h, lateral g about 1.3 to the right); no speed minimum. Not voiced: current usage is split (circuit and F1.com 'Biassono', en.wikipedia and PnG 'Curva Grande')."
+
+[[turns]]
+numbers = [4, 5]
+names = [
+    { text = "Variante della Roggia", kind = "official", sources = ["pits_n_giggles@72f78aa", "monzanet:the-circuit", "f1com:monza-corner-names", "it.wikipedia:Autodromo_Nazionale_di_Monza"] },
+    { text = "Seconda Variante", kind = "official", sources = ["monzanet:the-circuit", "f1com:monza-corner-names"] },
+]
+game_segment_m = [1950, 2250]
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-204720+205007", "fia:2025-monza-circuit-map", "monzanet:the-circuit", "f1com:monza-corner-names"]
+notes = "Second chicane, left then right: braking from about 1990 m (325 km/h), T4 left at 2095-2160 m, T5 right at 2170-2215 m; minima 85-108 km/h at 2155-2185 m. FIA S1 line 233 m before T4: game S2 start 1898 m + 233 m = 2131 m, in the measured left. Both names are the circuit's (it lists 'Seconda Variante (Variante della Roggia)'); 'Roggia' is displayed because it is the distinctive word drivers and F1.com use."
+
+[[turns]]
+numbers = [6]
+names = [{ text = "Lesmo 1", kind = "official", sources = ["pits_n_giggles@72f78aa", "monzanet:the-circuit", "f1com:monza-corner-names", "it.wikipedia:Autodromo_Nazionale_di_Monza"] }]
+game_segment_m = [2400, 2700]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-204720+205007", "fia:2025-monza-circuit-map", "monzanet:the-circuit", "f1com:monza-corner-names"]
+notes = "Braking from about 2440 m, right at 2460-2665 m (lateral g up to 3.6), minima 171-187 km/h at 2490-2580 m and exit lifts at 2651 m (clean lap) and 2682 m. Window end moved from PnG's 2650 m to 2700 m so those exit minima stay inside; Lesmo 2 braking starts at about 2780 m. PnG: 'Curva di Lesmo 1'; F1.com: 'Lesmo 1'; circuit: 'First Lesmo curve'."
+
+[[turns]]
+numbers = [7]
+names = [{ text = "Lesmo 2", kind = "official", sources = ["pits_n_giggles@72f78aa", "monzanet:the-circuit", "f1com:monza-corner-names", "it.wikipedia:Autodromo_Nazionale_di_Monza"] }]
+game_segment_m = [2755, 2970]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-204720+205007", "fia:2025-monza-circuit-map", "monzanet:the-circuit", "f1com:monza-corner-names"]
+notes = "Braking from about 2780 m, right at 2820-2960 m, minima 144-170 km/h at 2828-2846 m. PnG: 'Curva di Lesmo 2'."
+
+[[turns]]
+numbers = [8, 9, 10]
+names = [{ text = "Variante Ascari", kind = "official", sources = ["pits_n_giggles@72f78aa", "monzanet:the-circuit", "f1com:monza-corner-names", "it.wikipedia:Autodromo_Nazionale_di_Monza"] }]
+game_segment_m = [3790, 4240]
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-204720+205007", "fia:2025-monza-circuit-map", "monzanet:the-circuit", "f1com:monza-corner-names"]
+notes = "Left-right-left: braking from about 3790 m (335 km/h), T8 left 3900-3990 m (minima 135-161 km/h at 3886-3918 m, second minimum 154-167 km/h at 3974-3999 m), T9 right 4020-4100 m, T10 left 4120-4220 m. FIA S2 line 215 m before T8: game S3 start 3727 m + 215 m = 3942 m, in the measured T8 left. Mixed directions, so no direction."
+
+[[turns]]
+numbers = [11]
+names = [
+    { text = "Curva Alboreto", kind = "official", sources = ["monzanet:the-circuit", "f1com:monza-corner-names", "it.wikipedia:Autodromo_Nazionale_di_Monza", "en.wikipedia:Monza_Circuit"] },
+    { text = "Parabolica", kind = "traditional", sources = ["pits_n_giggles@72f78aa", "monzanet:the-circuit", "f1com:monza-corner-names"] },
+]
+game_segment_m = [5000, 5540]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-204720+205007", "fia:2025-monza-circuit-map", "monzanet:the-circuit", "f1com:monza-corner-names"]
+notes = "Braking from about 5020 m (335 km/h), long right 5110-5560 m, minima 127-207 km/h at 5110-5320 m. Every reference agrees the current official name is Curva Alboreto; 'Parabolica' (PnG's name) is kept as the traditional second name, not voiced."

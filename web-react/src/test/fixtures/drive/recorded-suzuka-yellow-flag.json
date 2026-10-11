@@ -1,0 +1,545 @@
+{
+ "version": 7938,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 48696,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261010-225601_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 48600,
+   "decoded": 35040,
+   "ignored": 13560,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "EVENT": 1464,
+    "SESSION_HISTORY": 2654,
+    "FINAL_CLASSIFICATION": 3,
+    "LOBBY_INFO": 65,
+    "SESSION": 267,
+    "PARTICIPANTS": 29,
+    "CAR_SETUPS": 267,
+    "CAR_DAMAGE": 1324,
+    "TYRE_SETS": 2646,
+    "LAP_POSITIONS": 270,
+    "LAP_DATA": 7923,
+    "MOTION": 7922,
+    "MOTION_EX": 7922,
+    "CAR_TELEMETRY": 7922,
+    "CAR_STATUS": 7922
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "5a324a8b4b88",
+ "session": {
+  "game": "f1_25",
+  "platform": "unknown",
+  "track_id": "f1:13",
+  "track_name": "Suzuka",
+  "track_length_m": 5809.0,
+  "session_type": "Race",
+  "car_name": null,
+  "weather": {
+   "condition": "light_cloud",
+   "track_temp_c": 23.0,
+   "air_temp_c": 16.0,
+   "rain_percentage": 6.0
+  },
+  "total_laps": 5,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1862912603286291,
+  "session_time_s": 16.561,
+  "speed_kph": 215.0,
+  "throttle": 1.0,
+  "brake": 0.0,
+  "steering": -0.021,
+  "clutch": 0.0,
+  "gear": 5,
+  "rpm": 11564.0,
+  "max_rpm": null,
+  "drs_open": false,
+  "pos": [
+   907.15,
+   -31.62,
+   522.82
+  ],
+  "g_lat": 0.67,
+  "g_lon": 0.8,
+  "lap_number": 1,
+  "lap_distance_m": 1002.9,
+  "current_lap_time_ms": 16499,
+  "last_lap_time_ms": null,
+  "sector": 0,
+  "lap_invalid": false,
+  "pit_status": 0,
+  "race_position": 8,
+  "tyre_surface_temp_c": [
+   91.0,
+   59.0,
+   83.0,
+   70.0
+  ],
+  "tyre_inner_temp_c": [
+   90.0,
+   90.0,
+   90.0,
+   90.0
+  ],
+  "tyre_pressure_psi": [
+   24.3,
+   24.3,
+   21.5,
+   21.5
+  ],
+  "brake_temp_c": [
+   710.0,
+   690.0,
+   685.0,
+   671.0
+  ],
+  "tyre_wear_pct": null,
+  "tyre_compound": null,
+  "tyre_age_laps": null,
+  "fuel_kg": null,
+  "fuel_remaining_laps_game": null,
+  "ers_store_j": null,
+  "brake_bias_front_pct": null,
+  "quality": 0
+ },
+ "delta_s": null,
+ "reference": null,
+ "laps": [],
+ "observations": [],
+ "events": [
+  {
+   "kind": "collision",
+   "code": "COLL",
+   "session_time_s": 16.310571670532227,
+   "t": 1791679713.783757
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 16.293851852416992,
+   "t": 1791679713.783722
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 15.943533897399902,
+   "t": 1791679713.7831092
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 15.710049629211426,
+   "t": 1791679713.7827451
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 15.576899528503418,
+   "t": 1791679713.782527
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 15.526474952697754,
+   "t": 1791679713.782349
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 15.259407043457031,
+   "t": 1791679713.781832
+  },
+  {
+   "kind": "collision",
+   "code": "COLL",
+   "session_time_s": 15.209574699401855,
+   "t": 1791679713.781726
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 15.176156044006348,
+   "t": 1791679713.7816708
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 15.142756462097168,
+   "t": 1791679713.781594
+  }
+ ],
+ "marshal_flags": [
+  {
+   "game_number": 2,
+   "flag": "yellow"
+  }
+ ],
+ "track_model": null,
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:13",
+  "track_length_m": 5809.0,
+  "pit_speed_limit_kph": 80.0,
+  "sector2_start_m": 2225.65,
+  "sector3_start_m": 4690.02,
+  "sector_boundaries_m": [
+   0.0,
+   2225.65,
+   4690.02,
+   5809.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 2225.65,
+    "length_m": 2225.65
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 2225.65,
+    "end_m": 4690.02,
+    "length_m": 2464.37
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 4690.02,
+    "end_m": 5809.0,
+    "length_m": 1118.98
+   }
+  ],
+  "marshal_zones": [
+   {
+    "kind": "marshal",
+    "index": 0,
+    "game_number": 1,
+    "lap_order": 1,
+    "start_m": 606.34,
+    "end_m": 858.65,
+    "length_m": 252.31,
+    "start_frac": 0.10438,
+    "end_frac": 0.147814,
+    "wraps": false,
+    "segments_m": [
+     [
+      606.34,
+      858.65
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 1,
+    "game_number": 2,
+    "lap_order": 2,
+    "start_m": 858.65,
+    "end_m": 1221.09,
+    "length_m": 362.44,
+    "start_frac": 0.147814,
+    "end_frac": 0.210207,
+    "wraps": false,
+    "segments_m": [
+     [
+      858.65,
+      1221.09
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 2,
+    "game_number": 3,
+    "lap_order": 3,
+    "start_m": 1221.09,
+    "end_m": 1601.39,
+    "length_m": 380.3,
+    "start_frac": 0.210207,
+    "end_frac": 0.275675,
+    "wraps": false,
+    "segments_m": [
+     [
+      1221.09,
+      1601.39
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 3,
+    "game_number": 4,
+    "lap_order": 4,
+    "start_m": 1601.39,
+    "end_m": 2130.33,
+    "length_m": 528.93,
+    "start_frac": 0.275675,
+    "end_frac": 0.366729,
+    "wraps": false,
+    "segments_m": [
+     [
+      1601.39,
+      2130.33
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 4,
+    "game_number": 5,
+    "lap_order": 5,
+    "start_m": 2130.33,
+    "end_m": 2460.68,
+    "length_m": 330.35,
+    "start_frac": 0.366729,
+    "end_frac": 0.423598,
+    "wraps": false,
+    "segments_m": [
+     [
+      2130.33,
+      2460.68
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 5,
+    "game_number": 6,
+    "lap_order": 6,
+    "start_m": 2460.68,
+    "end_m": 2763.73,
+    "length_m": 303.05,
+    "start_frac": 0.423598,
+    "end_frac": 0.475768,
+    "wraps": false,
+    "segments_m": [
+     [
+      2460.68,
+      2763.73
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 6,
+    "game_number": 7,
+    "lap_order": 7,
+    "start_m": 2763.73,
+    "end_m": 3172.39,
+    "length_m": 408.66,
+    "start_frac": 0.475768,
+    "end_frac": 0.546117,
+    "wraps": false,
+    "segments_m": [
+     [
+      2763.73,
+      3172.39
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 7,
+    "game_number": 8,
+    "lap_order": 8,
+    "start_m": 3172.39,
+    "end_m": 3527.03,
+    "length_m": 354.63,
+    "start_frac": 0.546117,
+    "end_frac": 0.607166,
+    "wraps": false,
+    "segments_m": [
+     [
+      3172.39,
+      3527.03
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 8,
+    "game_number": 9,
+    "lap_order": 9,
+    "start_m": 3527.03,
+    "end_m": 4003.07,
+    "length_m": 476.04,
+    "start_frac": 0.607166,
+    "end_frac": 0.689116,
+    "wraps": false,
+    "segments_m": [
+     [
+      3527.03,
+      4003.07
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 9,
+    "game_number": 10,
+    "lap_order": 10,
+    "start_m": 4003.07,
+    "end_m": 4467.69,
+    "length_m": 464.62,
+    "start_frac": 0.689116,
+    "end_frac": 0.769099,
+    "wraps": false,
+    "segments_m": [
+     [
+      4003.07,
+      4467.69
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 10,
+    "game_number": 11,
+    "lap_order": 11,
+    "start_m": 4467.69,
+    "end_m": 5031.85,
+    "length_m": 564.16,
+    "start_frac": 0.769099,
+    "end_frac": 0.866216,
+    "wraps": false,
+    "segments_m": [
+     [
+      4467.69,
+      5031.85
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 11,
+    "game_number": 12,
+    "lap_order": 12,
+    "start_m": 5031.85,
+    "end_m": 5388.76,
+    "length_m": 356.91,
+    "start_frac": 0.866216,
+    "end_frac": 0.927657,
+    "wraps": false,
+    "segments_m": [
+     [
+      5031.85,
+      5388.76
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 12,
+    "game_number": 13,
+    "lap_order": 13,
+    "start_m": 5388.76,
+    "end_m": 5607.93,
+    "length_m": 219.17,
+    "start_frac": 0.927657,
+    "end_frac": 0.965386,
+    "wraps": false,
+    "segments_m": [
+     [
+      5388.76,
+      5607.93
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 13,
+    "game_number": 14,
+    "lap_order": 14,
+    "start_m": 5607.93,
+    "end_m": 606.34,
+    "length_m": 807.42,
+    "start_frac": 0.965386,
+    "end_frac": 0.10438,
+    "wraps": true,
+    "segments_m": [
+     [
+      5607.93,
+      5809.0
+     ],
+     [
+      0.0,
+      606.34
+     ]
+    ],
+    "flag": "none"
+   }
+  ],
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": "no reference lap yet",
+  "ref_lap_number": null,
+  "focus": [],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [],
+  "next": null,
+  "last": null,
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "pitwall replay (headless, temp DB) of 20261010-225601_udp20777.pwcap (a local PS5 F1 25 recording from the rig, data/captures, not committed)",
+  "moment": "marshal_flags has a yellow zone",
+  "trimmed": [
+   "last_comparison"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending.",
+  "generated_unix": 1791679714
+ }
+}

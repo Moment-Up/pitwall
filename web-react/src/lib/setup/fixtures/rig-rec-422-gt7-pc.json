@@ -1,0 +1,10 @@
+{
+ "_fixture": {
+  "source": "GET /api/rig/recommendations?game=gt7&platform=pc on the live pitwall service (read-only), 2026-10-11",
+  "status": 422,
+  "note": "recorded error"
+ },
+ "body": {
+  "detail": "no curated Gran Turismo 7 settings for pc; supported: f1_25/pc, f1_25/ps5, gt7/ps5"
+ }
+}

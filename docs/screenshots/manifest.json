@@ -1,0 +1,155 @@
+[
+  {
+    "file": "01-drive-coach.png",
+    "title": "Drive › Coach on track",
+    "caption": "On track at Austria: the next corner, an active braking cue for T3, the live delta to the reference lap and the coaching point from the previous lap.",
+    "area": "Drive › Coach",
+    "state": "on track (lap 67 of 71, race), radio live, braking calls: focus",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "02-drive-yellow-flag.png",
+    "title": "Drive › Coach under a yellow flag",
+    "caption": "A yellow flag from the game takes over the status band and is hatched on the track ribbon, while the delta and coaching keep running.",
+    "area": "Drive › Coach",
+    "state": "on track with a yellow flag in sector 2 (marshal zone 6)",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "03-drive-session-complete.png",
+    "title": "Drive › Session complete",
+    "caption": "When the session ends, Drive shows the best lap, clean laps, time gained and one thing to work on next to one thing that went well.",
+    "area": "Drive › Coach",
+    "state": "session complete (after the chequered flag), radio off",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "04-drive-car.png",
+    "title": "Drive › Car (pit wall)",
+    "caption": "The pit wall view: speed, gear and inputs, the track map with the car's position, tyres and fuel, the lap table and the last lap's coaching.",
+    "area": "Drive › Car",
+    "state": "on track (lap 66 of 71, race)",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "05-drive-track.png",
+    "title": "Drive › Track",
+    "caption": "The track map follows the car and highlights the next corner, with what the coach said about each corner on the last lap.",
+    "area": "Drive › Track",
+    "state": "on track (lap 66 of 71, race)",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "06-drive-radio.png",
+    "title": "Drive › Radio",
+    "caption": "The race-engineer radio between runs, answering typed questions from the last session's data (local LLM and speech recognition switched off, so these are the built-in deterministic answers).",
+    "area": "Drive › Radio",
+    "state": "radio live between runs (no telemetry), text-only, questions typed",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "07-review-sessions.png",
+    "title": "Review › Sessions",
+    "caption": "Every session for the selected driver, newest first, with a preview of the selected session and its top thing to work on.",
+    "area": "Review › Sessions",
+    "state": "driver filter on one demo profile, several real sessions",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "08-review-session-summary.png",
+    "title": "Review › Session summary",
+    "caption": "A session's summary: best lap, clean laps, improvement and consistency, best sectors combined and the corners ranked by time lost.",
+    "area": "Review › Sessions › Summary",
+    "state": "finished 10-lap race session",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "09-review-compare-light.png",
+    "title": "Review › Compare (light theme)",
+    "caption": "Two laps compared on the same car, track and conditions: time gained or lost along the lap, a map coloured by where time went, and per-corner detail.",
+    "area": "Review › Sessions › Compare",
+    "state": "reference lap vs last lap of a finished session, light theme",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), light"
+  },
+  {
+    "file": "10-review-coaching-plan.png",
+    "title": "Review › Coaching plan",
+    "caption": "The coaching plan for a driver, track and car: the corners to work on now with their trend over sessions, habits and what the radio will focus on.",
+    "area": "Review › Coaching",
+    "state": "two sessions at the same track and car",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "11-review-progress.png",
+    "title": "Review › Progress",
+    "caption": "Progress at one track and car: the personal best, sessions and clean laps, and how the time lost at each corner changed between sessions.",
+    "area": "Review › Progress",
+    "state": "two sessions at the same track and car",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "12-setup-connect.png",
+    "title": "Setup › Connect",
+    "caption": "Connect shows the exact in-game telemetry settings and confirms packets are arriving. Here a recorded capture was streamed from this Mac to test port 20790; in the game use 20777.",
+    "area": "Setup › Connect",
+    "state": "receiving telemetry on test port 20790; cropped above the UDP IP Address row",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "1366x1024 @2x (iPad Pro landscape size, desktop browser), cropped to 1366x593, dark"
+  },
+  {
+    "file": "13-setup-rig.png",
+    "title": "Setup › Rig walkthrough",
+    "caption": "The rig walkthrough sets the wheel base one menu item at a time, with the recommended value, the factory default and how well the sources agree.",
+    "area": "Setup › Rig",
+    "state": "walkthrough, wheel menu step 32 of 43",
+    "data_source": "none",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "14-setup-car-setup.png",
+    "title": "Setup › Car setup",
+    "caption": "A car setup recommendation built from published setups for the chosen track, session, weather and driving style, with per-value confidence and disagreements called out.",
+    "area": "Setup › Car setup",
+    "state": "recommendation for Austria, race, dry, balanced",
+    "data_source": "none",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "15-settings-radio-voice.png",
+    "title": "Settings › Radio & voice",
+    "caption": "Radio and voice settings: who speaks, which voice, speaking speed, how many braking calls and how much coaching.",
+    "area": "Settings › Radio & voice",
+    "state": "radio live",
+    "data_source": "none",
+    "viewport": "1180x820 @2x (iPad landscape size, desktop browser), dark"
+  },
+  {
+    "file": "16-phone-drive.png",
+    "title": "Drive on a phone",
+    "caption": "The same Drive › Coach screen on a phone: delta, next corner, braking cue and the coaching point.",
+    "area": "Drive › Coach",
+    "state": "on track (lap 67 of 71, race)",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "390x844 @3x (phone size, desktop browser), dark"
+  },
+  {
+    "file": "17-phone-review.png",
+    "title": "Review on a phone",
+    "caption": "A session summary on a phone.",
+    "area": "Review › Sessions › Summary",
+    "state": "finished 10-lap race session",
+    "data_source": "recorded F1 25 PS5 capture",
+    "viewport": "390x844 @3x (phone size, desktop browser), dark"
+  }
+]

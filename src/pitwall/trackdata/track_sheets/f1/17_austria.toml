@@ -1,0 +1,127 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa),
+# MIT licence, Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# HAND-REVIEWED 2026-10-10 (numbers, windows, directions and names; see checked_against and the turn notes) against
+# the 3490db9 copy; Austria.json is byte-identical at the current pin 72f78aa (blob be04963).
+# CROSS-CHECKED 2026-10-11 (circuit's own corner names, FIA 2024 map, field data): the sponsor names Remus (T3),
+# Würth Kurve (T7) and Red Bull Mobile (T10) are no longer the circuit's names and were removed; T4 = Rauch per the
+# circuit. Numbers, windows and directions are unchanged and re-confirmed.
+# The importer leaves this file alone because it contains verified turns.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 17
+layout = "Red Bull Ring (Grand Prix circuit)"
+lap_length_m = 4323
+official_turn_count = 10
+sector_starts_m = [1204, 2935]
+verified_formats = [2025]
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = [
+    "capture:20261010-191501 - real F1 25 v1.26 PS5 race (UDP format 2025), clean lap 2 speed/brake/throttle/steering by lap distance; Session packet trackLength 4323 m, S2 start 1203.96 m, S3 start 2934.93 m",
+    "fia:2024-austria-event-notes-map - FIA F1 2024 Austrian GP Event Notes, Circuit Map (doc 3): corners 1-10, S1 line 170 m before T3, S2 line 60 m before T7, centreline 4.318 km",
+    "fia:2026-spielberg-f2f3-map - FIA 2026 Spielberg F2/F3 Circuit Map (doc 8): corners 1-10 on the layout drawing (turn directions), centreline 4.326 km",
+    "fia:2021-f3-r3-preview-map - FIA F3 2021 Round 3 preview, Red Bull Ring map: 01 Niki Lauda Kurve, 03 Remus, 04 Rauch, 07 Wurth Kurve, 09 Rindt, 10 Red Bull Mobile",
+    "de.wikipedia:Red_Bull_Ring - 10 corners, seven right and three left",
+    "en.wikipedia:Red_Bull_Ring - turn 1 renamed in honour of Niki Lauda on 30 June 2019",
+    "redbullring.com:formula-1-circuit - the circuit's own F1 track page (https://redbullring.com/en/events-tickets/formula-1/formula-1-circuit, read 2026-10-11; length note 'as of Summer 2024'): 10 corners; T1 Niki Lauda Turn, T2 Münzer Turn, T3 Interwetten Turn, T4 Rauch Turn, T5 and T6 unnamed, T7 Graz Turn, T8 unnamed, T9 Jochen Rindt Turn, T10 unnamed",
+    "spielberg:2025-f1-media-kit - Projekt Spielberg F1 Austrian GP 2025 media kit (https://www.fia.com/sites/default/files/spg2025_0062_f1_mediakit_2025_eng_a4_250623_view.pdf, 23 Jun 2025), circuit photo-tour map: T1 Niki Lauda Turn, T2 Münzer Turn / Chicane, T4 Rauch Turn, T7 Graz Turn, T9 Jochen Rindt Turn; 10 corners (3 left, 7 right)",
+    "field-curvature:17 - cross-check 2026-10-11 on captures 20261010-191501 and 20261010-221749: all 22 cars (425 lap segments), path heading from the Motion packet's world forward vector on a 5 m grid (lap turns -360 deg = clockwise; right = negative heading change) and field speed minima: every direction and window confirmed",
+]
+notes = "Windows are PnG's, unchanged: on the real capture every speed minimum falls inside the expected window, and the game's S2/S3 starts equal PnG's sector values to 0.07 m. Directions are measured (steering sign) and match the FIA drawing and the 7 right / 3 left count. Turns 2, 5 and 8 are taken without a speed minimum, so learned models normally have no corner for them. Sponsor names at this circuit change between seasons. The circuit's own 2025 media kit and its current website name T1 Niki Lauda, T2 Münzer, T4 Rauch, T7 Graz, T9 Jochen Rindt (website also T3 Interwetten) and leave T5, T6, T8 and T10 unnamed: the 2021-era names Remus (T3), Würth Kurve (T7) and Red Bull Mobile (T10) that this sheet used to display and voice are stale and were removed by the 2026-10-11 cross-check, and PnG's T4 'Schlossgold' / T6 'Rauch' are wrong (Rauch is T4, T6 has no name). Only the honorific names (Niki Lauda, Rindt) are shown; adding current sponsor names is a naming-policy decision (track-knowledge-sources open question 7). Verified with UDP format 2025 (F1 25 v1.26) only: verified_formats keeps 2026 Season Pack sessions (format 2026) at the seeded tier until a format-2026 capture is checked."
+
+[[turns]]
+numbers = [1]
+names = [{ text = "Niki Lauda Kurve", kind = "official", sources = ["pits_n_giggles@72f78aa", "fia:2021-f3-r3-preview-map", "en.wikipedia:Red_Bull_Ring", "spielberg:2025-f1-media-kit", "redbullring.com:formula-1-circuit"] }]
+game_segment_m = [320, 545]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2024-austria-event-notes-map", "fia:2026-spielberg-f2f3-map"]
+notes = "Lap 2: braking 335-425 m, minimum 119 km/h at 443 m, right. A lift on the exit left a second learned minimum at 565 m, 20 m past this window (joins it through the edge margin)."
+
+[[turns]]
+numbers = [2]
+game_segment_m = [1010, 1200]
+direction = "left"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2026-spielberg-f2f3-map", "de.wikipedia:Red_Bull_Ring"]
+notes = "Flat-out left kink: about 305 km/h, light left steering and 1-2 g lateral at 1025-1225 m; no speed minimum."
+
+[[turns]]
+numbers = [3]
+game_segment_m = [1200, 1460]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2024-austria-event-notes-map", "redbullring.com:formula-1-circuit", "field-curvature:17"]
+notes = "Uphill hairpin: braking 1250-1390 m, minimum 63 km/h at 1431 m. FIA puts the S1 line 170 m before T3: game S2 start 1204 m + 170 m = 1374 m, inside this window. Name removed by the 2026-10-11 cross-check: PnG and the FIA 2021 map say 'Remus' (sponsor), the circuit's website now says 'Interwetten Turn', and the 2025 media kit does not name T3, so the game season's name is unknown."
+
+[[turns]]
+numbers = [4]
+game_segment_m = [2050, 2300]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2026-spielberg-f2f3-map"]
+notes = "Braking 2075-2200 m, minimum 71 km/h at 2213 m. Name omitted: the FIA 2021 map, the circuit's 2025 media kit and its website all call T4 'Rauch' (sponsor; PnG's 'Schlossgold' is wrong), but sponsor names are not shown until the naming policy is decided (cross-check 2026-10-11)."
+
+[[turns]]
+numbers = [5]
+game_segment_m = [2370, 2540]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2026-spielberg-f2f3-map"]
+notes = "Part-throttle right (throttle ~0.77) with speed rising 177 -> 221 km/h: no speed minimum."
+
+[[turns]]
+numbers = [6]
+game_segment_m = [2540, 2870]
+direction = "left"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2026-spielberg-f2f3-map", "de.wikipedia:Red_Bull_Ring"]
+notes = "Double-apex left: braking 2625-2650 m, minima 119 km/h at 2672 m and 128 km/h at 2755 m (two learned corners, both T6). No name: the circuit's website lists T6 unnamed; PnG's 'Rauch' belongs to T4 (FIA 2021 map, circuit 2025 media kit and website)."
+
+[[turns]]
+numbers = [7]
+game_segment_m = [2900, 3160]
+direction = "left"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2024-austria-event-notes-map", "spielberg:2025-f1-media-kit", "redbullring.com:formula-1-circuit", "field-curvature:17"]
+notes = "Braking 2975-3050 m, minimum 116 km/h at 3053 m, left. FIA puts the S2 line 60 m before T7: game S3 start 2935 m + 60 m = 2995 m, inside this window. Name removed by the 2026-10-11 cross-check: 'Würth Kurve' (PnG, FIA 2021 map) is stale; the circuit's 2025 media kit and website call T7 'Graz Turn' (not shown: naming policy for sponsor-era names is open)."
+
+[[turns]]
+numbers = [8]
+game_segment_m = [3160, 3380]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2026-spielberg-f2f3-map"]
+notes = "Part-throttle right at 3175-3350 m; the ~182 km/h plateau is below the 8 km/h prominence, so no learned minimum."
+
+[[turns]]
+numbers = [9]
+names = [{ text = "Rindt Kurve", kind = "official", sources = ["pits_n_giggles@72f78aa", "fia:2021-f3-r3-preview-map", "spielberg:2025-f1-media-kit", "redbullring.com:formula-1-circuit"] }]
+game_segment_m = [3650, 3900]
+direction = "right"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2026-spielberg-f2f3-map", "fia:2021-f3-r3-preview-map"]
+notes = "Braking 3700-3775 m, minimum 150 km/h at 3800 m, right. Named after Jochen Rindt (FIA 2021 map: 'Rindt')."
+
+[[turns]]
+numbers = [10]
+game_segment_m = [3940, 4090]
+direction = "right"
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-191501", "fia:2026-spielberg-f2f3-map", "redbullring.com:formula-1-circuit", "field-curvature:17"]
+notes = "Final corner: braking 3950-4000 m, minimum 125 km/h at 4027 m, right. Pitwall's learned 'T9' on the real race is this turn. Name removed by the 2026-10-11 cross-check: 'Red Bull Mobile' (PnG, FIA 2021 map) is stale; the circuit's website lists T10 unnamed. The field's right-hand curvature runs to about 4140 m (exit minima at 4095-4145 m join through the edge margin or stay unlabelled); the window is PnG's."

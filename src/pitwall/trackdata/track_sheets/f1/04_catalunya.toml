@@ -1,0 +1,110 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 4
+layout = "Catalunya"
+lap_length_m = 4664
+official_turn_count = 14
+sector_starts_m = [1624, 3410]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "Catalunya names are sponsor/historic names that change by season - classify before voicing. official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1, 2]
+names = [{ text = "Elf", kind = "unclassified" }]
+game_segment_m = [655, 1000]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [3]
+names = [{ text = "Renault", kind = "unclassified" }]
+game_segment_m = [1020, 1490]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [4]
+names = [{ text = "Repsol", kind = "unclassified" }]
+game_segment_m = [1570, 1955]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [5]
+names = [{ text = "Seat", kind = "unclassified" }]
+game_segment_m = [2000, 2230]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [6]
+game_segment_m = [2300, 2430]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [7, 8]
+game_segment_m = [2450, 2725]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [9]
+names = [{ text = "Campsa", kind = "unclassified" }]
+game_segment_m = [2750, 3050]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [10]
+names = [{ text = "La Caixa", kind = "unclassified" }]
+game_segment_m = [3350, 3570]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [11]
+game_segment_m = [3570, 3680]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [12]
+names = [{ text = "Banc de Sabadell", kind = "unclassified" }]
+game_segment_m = [3682, 3950]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13]
+game_segment_m = [3980, 4175]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [14]
+names = [{ text = "New Holland", kind = "unclassified" }]
+game_segment_m = [4235, 4530]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

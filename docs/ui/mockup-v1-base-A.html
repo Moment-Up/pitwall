@@ -1,0 +1,1330 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pitwall UI mockup</title>
+<link rel="icon" href="data:,">
+<meta name="description" content="Final Pitwall UI design: clickable mockup of the four areas, the iPad Drive screen in every state, Review and Setup. Sample data only.">
+<style>
+/* =====================================================================================================
+   Pitwall - final UI design - clickable mockup (docs/ui/design-spec-v1-base-A.md; SUPERSEDED by design-spec.md v2 and mockup.html).
+   Self-contained: inline CSS and JS, no external requests. Every value shown is SAMPLE DATA from a fictional
+   circuit ("Kestrel Park"). Tokens mirror design-spec.md section 6.1; inside the fixed device frames the Drive scale
+   uses the 1180 x 820 baseline px values (the app uses the clamp() definitions).
+   ===================================================================================================== */
+:root {
+  color-scheme: dark;
+  --bg-0: #050608; --bg-1: #0b0e12; --surface-1: #11151b; --surface-2: #171c24; --surface-3: #222a35;
+  --line: #252c37; --line-strong: #5d6878;
+  --text-1: #eef1f5; --text-2: #a9b2bf; --text-3: #8590a0;
+  --accent: #ff6a2b; --on-accent: #0d1117;
+  --t-purple: #c58cff; --t-purple-fg: #c58cff; --t-purple-bg: transparent;
+  --t-green: #2fe37f;  --t-green-fg: #2fe37f;  --t-green-bg: transparent;
+  --t-yellow: #ffd23f; --t-yellow-fg: #ffd23f; --t-yellow-bg: transparent;
+  --ahead: #2fe37f; --behind: #ff5466;
+  --live: #2fe37f; --warn: #ffb020; --danger: #ff5466; --info: #4cc3ff; --synthetic: #ff7ac0;
+  --hatch-synthetic: repeating-linear-gradient(135deg, color-mix(in srgb, var(--synthetic) 24%, transparent) 0 6px, transparent 6px 12px);
+  --flag-yellow: #ffd23f; --flag-yellow-ink: #0d1117; --flag-sc: #ffb020; --flag-sc-ink: #0d1117;
+  --flag-red: #d7263d; --flag-red-ink: #ffffff; --flag-blue: #4cc3ff; --flag-blue-ink: #0d1117;
+  --pit: #4cc3ff; --pit-ink: #0d1117;
+  --throttle: #2fe37f; --brake: #ff5466;
+  --font-num: "DIN Condensed", "DIN Alternate", "Avenir Next Condensed", "Barlow Semi Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
+  --font-label: "Avenir Next Condensed", "Barlow Semi Condensed", "Roboto Condensed", "DIN Condensed", "Arial Narrow", sans-serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --drive-k: 1;
+  --d-hero: calc(172px * var(--drive-k)); --d-xl: calc(112px * var(--drive-k)); --d-l: calc(56px * var(--drive-k));
+  --d-m: calc(48px * var(--drive-k)); --d-s: calc(40px * var(--drive-k)); --d-xs: calc(24px * var(--drive-k));
+  --d-label: calc(18px * var(--drive-k));
+  --r-cell: 2px; --r-panel: 6px; --r-pill: 999px;
+  --rail-w: 80px; --status-h: 56px;
+  --focus-ring: 0 0 0 2px var(--bg-1), 0 0 0 4px var(--accent);
+  --frame: #1b1f26; --frame-edge: #2e3540;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-0: #f5f6f8; --bg-1: #eceff3; --surface-1: #ffffff; --surface-2: #eceff3; --surface-3: #dfe4eb;
+  --line: #d9dee6; --line-strong: #848e9d;
+  --text-1: #0d1117; --text-2: #4a5463; --text-3: #5b6574;
+  --accent: #b93c0a; --on-accent: #ffffff;
+  --t-purple: #6d28d9; --t-purple-fg: #ffffff; --t-purple-bg: #6d28d9;
+  --t-green: #047857;  --t-green-fg: #ffffff;  --t-green-bg: #047857;
+  --t-yellow: #ffd23f; --t-yellow-fg: #0d1117; --t-yellow-bg: #ffd23f;
+  --ahead: #047857; --behind: #c81e3a; --live: #047857; --warn: #9a5b00; --danger: #c81e3a; --info: #0369a1;
+  --synthetic: #be185d; --pit: #0369a1; --pit-ink: #ffffff; --throttle: #047857; --brake: #c81e3a;
+  --frame: #c3c9d2; --frame-edge: #a6aeb9;
+}
+:root[data-night="on"]:not([data-theme="light"]) {
+  --bg-0: #000000; --bg-1: #030405; --surface-1: #0a0c10; --surface-2: #101319; --surface-3: #181d25;
+  --line: #1a1f27; --line-strong: #444d5a; --text-1: #c9ced6; --text-2: #8b94a1; --text-3: #78828f;
+  --accent: #e0602a; --t-purple: #b07ae6; --t-purple-fg: #b07ae6; --t-green: #28c46e; --t-green-fg: #28c46e;
+  --t-yellow: #e0b836; --t-yellow-fg: #e0b836; --ahead: #28c46e; --behind: #e04a5a; --live: #28c46e; --warn: #e09a1c; --danger: #e04a5a;
+}
+:root[data-cvd="rg"] { --t-green: #4cc3ff; --t-green-fg: #4cc3ff; --ahead: #4cc3ff; --live: #4cc3ff; --throttle: #4cc3ff; --behind: #ff9f1c; --danger: #ff9f1c; --brake: #ff9f1c; }
+:root[data-theme="light"][data-cvd="rg"] { --t-green: #0369a1; --t-green-fg: #fff; --t-green-bg: #0369a1; --ahead: #0369a1; --live: #0369a1; --throttle: #0369a1; --behind: #9f4706; --danger: #9f4706; --brake: #9f4706; }
+.device[data-size="large"] { --drive-k: 1.2; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg-1); color: var(--text-1); font: 16px/1.5 var(--font-ui); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 0; box-shadow: var(--focus-ring); }
+.num { font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
+.lbl { font-family: var(--font-label); font-weight: 600; font-size: var(--d-label); letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); line-height: 1; }
+.u { text-transform: none; letter-spacing: 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ------------------------------------------------------------------ document chrome */
+.doc { max-width: 1340px; margin: 0 auto; padding: 24px 16px 64px; }
+.doc-head h1 { font: 700 34px/1.05 var(--font-label); letter-spacing: .02em; text-transform: uppercase; margin: 0 0 6px; }
+.doc-head p { margin: 0 0 8px; color: var(--text-2); max-width: 90ch; }
+.sample-flag { display: inline-flex; align-items: center; gap: 8px; margin: 6px 0 4px; padding: 6px 12px; border-radius: var(--r-panel);
+  border: 1px dashed var(--warn); color: var(--warn); font: 600 14px/1.35 var(--font-ui); }
+.controls { position: sticky; top: 0; z-index: 60; display: grid; gap: 6px; padding: 10px 0 12px; margin-top: 12px; background: var(--bg-1); border-bottom: 1px solid var(--line); }
+.ctl-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ctl-row > .lbl { font-size: 13px; min-width: 92px; }
+.ctl { min-height: 44px; padding: 8px 14px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); background: var(--surface-1); color: var(--text-2); font: 600 14px/1 var(--font-ui); }
+.ctl[aria-pressed="true"] { background: var(--text-1); color: var(--bg-1); border-color: var(--text-1); }
+.ctl.sm { min-height: 36px; padding: 6px 12px; font-size: 13px; }
+.ctl-sep { width: 1px; height: 28px; background: var(--line); margin: 0 6px; }
+.stage { padding: 14px 0 0; overflow: hidden; }
+.scaler { transform-origin: top left; }
+.notes { margin-top: 28px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.notes .card { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-panel); padding: 14px 16px; }
+.notes h2 { font: 700 16px/1.2 var(--font-label); letter-spacing: .08em; text-transform: uppercase; margin: 0 0 6px; color: var(--text-2); }
+.notes p, .notes li { margin: 0 0 6px; color: var(--text-2); font-size: 15px; }
+.notes ul { margin: 0; padding-left: 18px; }
+
+/* ------------------------------------------------------------------ device frames */
+.device { position: relative; overflow: hidden; background: var(--bg-0); color: var(--text-1); border-radius: 24px;
+  box-shadow: 0 0 0 12px var(--frame), 0 0 0 13px var(--frame-edge); margin: 13px; }
+.device.ipad { width: 1180px; height: 820px; }
+.device.phone { width: 390px; height: 844px; border-radius: 48px; }
+.sample-tag { position: absolute; z-index: 30; left: 6px; bottom: 3px; font: 700 10px/1 var(--font-ui); letter-spacing: .14em; color: var(--warn);
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent); padding: 3px 6px; border-radius: 4px; background: var(--bg-0); pointer-events: none; }
+.device.phone .sample-tag { bottom: auto; left: 50%; top: 16px; transform: translateX(-50%); }
+.app { height: 100%; display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); background: var(--bg-1); }
+.device.phone .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: 44px 52px minmax(0, 1fr) 84px; }
+.content { position: relative; min-width: 0; min-height: 0; overflow: auto; background: var(--bg-1); }
+.content.drive { background: var(--bg-0); }
+
+/* ------------------------------------------------------------------ rail */
+.rail { display: flex; flex-direction: column; align-items: stretch; background: var(--bg-1); border-right: 1px solid var(--line); transition: opacity .2s; z-index: 5; }
+.rail.dim { opacity: .4; }
+.rail .mark { height: 64px; display: grid; place-items: center; border: 0; background: none; padding: 0; }
+.ritem { position: relative; height: 76px; display: grid; place-items: center; align-content: center; gap: 6px; border: 0; background: none; color: var(--text-3);
+  font: 600 13px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; padding: 0; touch-action: none; user-select: none; -webkit-user-select: none; }
+.ritem svg { width: 28px; height: 28px; }
+.ritem[aria-current="page"] { color: var(--text-1); }
+.ritem[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
+.rsub { height: 44px; border: 0; background: none; color: var(--text-3); font: 600 12px/1 var(--font-label); letter-spacing: .1em; text-transform: uppercase; padding: 0; position: relative; touch-action: none; user-select: none; -webkit-user-select: none; }
+.rsub[aria-current="page"] { color: var(--text-1); background: var(--surface-2); }
+.rsubs { display: grid; margin: -6px 8px 6px; border-radius: var(--r-panel); overflow: hidden; border: 1px solid var(--line); }
+.hold-ring::after { content: ""; position: absolute; inset: 4px; border-radius: 8px; border: 3px solid var(--accent); clip-path: inset(0 100% 0 0); animation: hold .5s linear forwards; pointer-events: none; }
+@keyframes hold { to { clip-path: inset(0 0 0 0); } }
+.rail .spacer { flex: 1; }
+.rail .foot { display: grid; justify-items: center; gap: 10px; padding: 10px 0 24px; }
+.iconbtn { width: 56px; height: 56px; display: grid; place-items: center; border-radius: var(--r-panel); border: 1px solid var(--line); background: var(--surface-1); color: var(--text-2); padding: 0; }
+.iconbtn svg { width: 24px; height: 24px; }
+.iconbtn[aria-pressed="true"] { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.avatar { width: 40px; height: 40px; font-size: 15px; display: inline-grid; place-items: center; border-radius: 50%; color: #0d1117; font: 700 18px/1 var(--font-label); letter-spacing: .04em; flex: none; border: 0; padding: 0; }
+.rail .avatar { width: 48px; height: 48px; }
+.conn-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--live); }
+.conn-dot.warn { background: var(--warn); } .conn-dot.off { background: var(--text-3); } .conn-dot.danger { background: var(--danger); }
+
+/* ------------------------------------------------------------------ phone chrome */
+.ios { display: flex; align-items: center; justify-content: space-between; padding: 14px 30px 0; font: 600 15px/1 var(--font-ui); color: var(--text-1); background: var(--bg-1); }
+.appbar { display: flex; align-items: center; gap: 10px; padding: 0 14px; background: var(--bg-1); border-bottom: 1px solid var(--line); }
+.appbar h1 { margin: 0; flex: 1; font: 700 22px/1 var(--font-label); letter-spacing: .06em; text-transform: uppercase; }
+.appbar .avatar { width: 40px; height: 40px; font-size: 15px; }
+.tabbar { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--bg-1); border-top: 1px solid var(--line); padding-bottom: 28px; }
+.tab { position: relative; display: grid; place-items: center; align-content: center; gap: 4px; border: 0; background: none; color: var(--text-3); font: 600 12px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; min-height: 56px; padding: 0; touch-action: none; }
+.tab svg { width: 24px; height: 24px; }
+.tab[aria-current="page"] { color: var(--accent); }
+.tab .livedot { position: absolute; top: 8px; right: calc(50% - 20px); width: 8px; height: 8px; border-radius: 50%; background: var(--live); }
+.pills { position: sticky; top: 0; z-index: 4; display: flex; gap: 6px; overflow-x: auto; padding: 8px 12px; background: var(--bg-1); border-bottom: 1px solid var(--line); scrollbar-width: none; }
+.pills button { flex: none; min-height: 36px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); background: var(--surface-1); color: var(--text-2); font: 600 13px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; }
+.pills button[aria-current="page"] { background: var(--text-1); color: var(--bg-1); border-color: var(--text-1); }
+
+/* ------------------------------------------------------------------ pills and chips (shared) */
+.pill { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-strong);
+  font: 600 var(--d-label)/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); white-space: nowrap; background: transparent; }
+.pill .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.pill.live { color: var(--live); border-color: color-mix(in srgb, var(--live) 45%, transparent); }
+.pill.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.pill.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 60%, transparent); }
+.chip-syn { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: var(--r-cell); border: 1px solid var(--synthetic); color: var(--synthetic); background: var(--hatch-synthetic);
+  font: 700 13px/1 var(--font-label); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.chip-rep { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: var(--r-cell); border: 1px solid var(--line-strong); color: var(--text-2); font: 700 13px/1 var(--font-label); letter-spacing: .1em; }
+.tag { display: inline-block; font: 700 14px/1 var(--font-label); letter-spacing: .12em; text-transform: uppercase; padding: 3px 6px; border-radius: var(--r-cell); }
+.tag.rec { color: var(--t-purple); border: 1px solid var(--t-purple); } .tag.pb { color: var(--t-green); border: 1px solid var(--t-green); }
+.tag.sb { color: var(--t-green); border: 1px solid color-mix(in srgb, var(--t-green) 50%, transparent); } .tag.inv { color: var(--danger); border: 1px solid var(--danger); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; padding: 0 18px; border-radius: var(--r-panel); border: 1px solid var(--line-strong);
+  background: var(--surface-2); color: var(--text-1); font: 700 15px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.glove { min-height: 64px; padding: 0 26px; font-size: 21px; }
+.btn.drive { min-height: 56px; font-size: 18px; }
+.btn.ghost { background: transparent; }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-panel); overflow: hidden; flex: none; }
+.seg button { min-height: 44px; min-width: 88px; padding: 0 16px; border: 0; background: transparent; color: var(--text-2); font: 600 14px/1 var(--font-label); letter-spacing: .1em; text-transform: uppercase; }
+.seg button + button { border-left: 1px solid var(--line-strong); }
+.seg button[aria-current="page"], .seg button[aria-pressed="true"] { background: var(--text-1); color: var(--bg-1); }
+.syn-ref { color: var(--synthetic); }
+
+/* ------------------------------------------------------------------ Drive dash */
+.dash { position: relative; height: 100%; display: grid; padding: 20px; gap: 12px; background: var(--bg-0);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-rows: var(--status-h) minmax(0, 1fr) 148px 64px;
+  grid-template-areas: "status status" "left right" "timing timing" "strip strip"; }
+.device[data-size="large"] .dash { grid-template-rows: var(--status-h) minmax(0, 1fr) 172px 64px; }
+.panel { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-panel); min-width: 0; min-height: 0; contain: layout paint; position: relative; }
+.p-left { grid-area: left; } .p-right { grid-area: right; } .p-span { grid-column: 1 / -1; grid-row: 2; }
+.dimmed { opacity: .4; }
+
+/* status slot */
+.status { grid-area: status; position: relative; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.status .ctx { font: 600 22px/1 var(--font-label); letter-spacing: .04em; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.status .ctx b { color: var(--text-1); font-weight: 600; }
+.status .ctx i { font-style: normal; color: var(--text-3); padding: 0 6px; }
+.status .ticker { flex: 1; min-width: 0; font: 500 19px/1.2 var(--font-ui); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right; }
+.status .ticker b { font: 700 15px/1 var(--font-label); letter-spacing: .1em; color: var(--text-3); margin-right: 8px; }
+.status.dimnav > :not(.band):not(.radiopill) { opacity: .4; }
+.evchip { flex: none; height: 36px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: var(--r-cell); border: 1px solid var(--danger); color: var(--danger); font: 700 17px/1 var(--font-label); letter-spacing: .1em; }
+.radiopill { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 56px; min-width: 200px; padding: 0 16px; border-radius: var(--r-panel);
+  border: 1px solid var(--line-strong); background: var(--surface-1); color: var(--text-1); font: 700 17px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; touch-action: none; user-select: none; -webkit-user-select: none; }
+.radiopill svg { width: 22px; height: 22px; }
+.radiopill .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--live); }
+.radiopill.off { color: var(--on-accent); background: var(--accent); border-color: var(--accent); }
+.radiopill.talking { background: var(--live); border-color: var(--live); color: #0d1117; }
+.radiopill.talking .dot { background: #0d1117; }
+.band { position: absolute; inset: 0 268px 0 0; z-index: 3; display: flex; align-items: center; gap: 16px; padding: 0 20px; border-radius: var(--r-panel);
+  font: 700 27px/1 var(--font-label); letter-spacing: .1em; text-transform: uppercase; }
+.band small { font: 600 20px/1 var(--font-label); letter-spacing: .06em; opacity: .9; }
+.band svg { width: 30px; height: 30px; flex: none; }
+.band .grow { flex: 1; }
+.band.yellow { background: var(--flag-yellow); color: var(--flag-yellow-ink); }
+.band.sc { background: var(--flag-sc); color: var(--flag-sc-ink); }
+.band.red { background: var(--flag-red); color: var(--flag-red-ink); }
+.band.blue { background: var(--flag-blue); color: var(--flag-blue-ink); }
+.band.pit { background: var(--pit); color: var(--pit-ink); }
+.band.neutral { background: var(--surface-2); color: var(--text-1); border: 1px solid var(--line-strong); }
+.band.outline-warn { background: color-mix(in srgb, var(--warn) 8%, var(--bg-0)); color: var(--warn); border: 2px solid var(--warn); }
+.band.outline-danger { background: color-mix(in srgb, var(--danger) 8%, var(--bg-0)); color: var(--danger); border: 2px solid var(--danger); }
+
+/* delta hero */
+.delta { display: grid; grid-template-rows: auto 1fr auto auto auto; padding: 22px 26px 22px; }
+.d-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.d-head .proj { font: 700 var(--d-xs)/1 var(--font-num); color: var(--text-2); white-space: nowrap; }
+.d-head .proj .lbl { margin-right: 8px; }
+.d-num { align-self: center; justify-self: center; font: 700 var(--d-hero)/.86 var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -.005em; white-space: nowrap; padding-top: .08em; }
+.d-num .sign { display: inline-block; transform: scaleX(.62); transform-origin: right center; margin-left: -.18em; }
+.d-word { justify-self: center; font: 700 22px/1 var(--font-label); letter-spacing: .16em; text-transform: uppercase; margin: 6px 0 16px; min-height: 22px; }
+.d-reason { justify-self: center; align-self: center; text-align: center; font: 500 var(--d-xs)/1.35 var(--font-ui); color: var(--text-2); max-width: 30ch; }
+.tone-ahead { color: var(--ahead); } .tone-behind { color: var(--behind); } .tone-level { color: var(--text-1); } .tone-muted { color: var(--text-2); } .tone-unknown { color: var(--text-3); }
+.dbar { position: relative; height: 28px; background: var(--surface-2); border-radius: var(--r-cell); }
+.dbar .fill { position: absolute; top: 0; bottom: 0; transition: width .1s linear; }
+.dbar .fill.ahead { right: 50%; background: var(--ahead); } .dbar .fill.behind { left: 50%; background: var(--behind); }
+.dbar .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: color-mix(in srgb, var(--text-3) 45%, transparent); }
+.dbar .mid { position: absolute; left: 50%; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; background: var(--text-1); }
+.dbar .clamp { position: absolute; top: 50%; width: 0; height: 0; border: 9px solid transparent; transform: translateY(-50%); }
+.dbar .clamp.l { left: -2px; border-right-color: var(--ahead); border-left: 0; } .dbar .clamp.r { right: -2px; border-left-color: var(--behind); border-right: 0; }
+.dscale { display: flex; justify-content: space-between; margin-top: 8px; font: 600 15px/1 var(--font-label); color: var(--text-3); letter-spacing: .08em; }
+.sc-tag { display: inline-block; margin-left: 10px; font: 700 18px/1 var(--font-label); letter-spacing: .1em; color: var(--flag-sc-ink); background: var(--flag-sc); padding: 4px 8px; border-radius: var(--r-cell); vertical-align: middle; }
+
+/* corner & cue */
+.corner { display: grid; grid-template-rows: auto auto auto 1fr auto auto; padding: 22px 26px; gap: 6px; }
+.c-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.focus-tag { font: 700 var(--d-label)/1 var(--font-label); letter-spacing: .1em; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 65%, transparent); padding: 6px 10px; border-radius: var(--r-cell); white-space: nowrap; }
+.c-id { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+.c-id .num { font-size: var(--d-xl); line-height: .82; padding-top: .1em; }
+.c-id svg { width: 60px; height: 60px; color: var(--text-2); }
+.c-name { font: 700 var(--d-s)/1.02 var(--font-label); letter-spacing: .01em; color: var(--text-1); min-height: calc(var(--d-s) * 1.02); }
+.c-name.long { font-size: 32px; }
+.c-name.none { color: var(--text-3); font-size: var(--d-xs); font-family: var(--font-ui); font-weight: 500; letter-spacing: 0; align-self: center; }
+.cue { align-self: end; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px 14px; }
+.kind { font: 700 var(--d-label)/1 var(--font-label); letter-spacing: .12em; padding: 8px 10px; border-radius: var(--r-cell); border: 2px solid var(--brake); color: var(--brake); }
+.kind.marker { border-color: var(--text-2); color: var(--text-2); }
+.cue .dist { font: 700 var(--d-m)/1 var(--font-num); text-align: right; }
+.cue .dist small { font-size: .5em; color: var(--text-2); margin-left: 4px; }
+.cbar { grid-column: 1 / -1; height: 16px; background: var(--surface-2); border-radius: var(--r-cell); overflow: hidden; }
+.cbar i { display: block; height: 100%; background: var(--accent); transition: width .1s linear; }
+.c-note { align-self: end; font: 500 var(--d-xs)/1.3 var(--font-ui); color: var(--text-2); }
+.c-why { font: 500 21px/1.3 var(--font-ui); color: var(--text-2); }
+.c-last { font: 700 var(--d-label)/1 var(--font-label); letter-spacing: .08em; color: var(--text-3); text-transform: uppercase; padding-top: 10px; border-top: 1px solid var(--line); }
+.c-last.late { color: var(--warn); }
+
+/* timing strip */
+.timing { grid-area: timing; display: grid; grid-template-columns: 1.5fr repeat(3, 1fr) 1.15fr 1.15fr; gap: 8px; position: relative; }
+.cell { position: relative; display: grid; grid-template-rows: auto 1fr; padding: 16px 16px 12px; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-cell); min-width: 0; }
+.cell::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 6px; background: var(--bar, transparent); border-radius: var(--r-cell) var(--r-cell) 0 0; }
+.cell .top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.cell .micro { font: 700 15px/1 var(--font-label); letter-spacing: .12em; color: var(--bar, var(--text-3)); }
+.cell .val { align-self: end; font: 700 var(--d-m)/1 var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; justify-self: start; padding: .06em .1em 0; margin-left: -.1em; border-radius: var(--r-cell); }
+.cell.lap .val { font-size: var(--d-l); }
+.cell.lb .val { font-size: var(--d-s); }
+.cell.cur { outline: 2px solid var(--text-1); outline-offset: -2px; }
+.cell .curmark { width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 12px solid var(--text-1); display: inline-block; }
+.cell.hist .val { font-weight: 700; opacity: .78; }
+.cell .inv { font: 700 15px/1 var(--font-label); letter-spacing: .12em; color: var(--danger); }
+.st-rec { --bar: var(--t-purple); } .st-pb, .st-sb { --bar: var(--t-green); } .st-slow { --bar: var(--t-yellow); }
+.st-rec .val, .tv.st-rec { color: var(--t-purple-fg); background: var(--t-purple-bg); }
+.st-pb .val, .st-sb .val, .tv.st-pb, .tv.st-sb { color: var(--t-green-fg); background: var(--t-green-bg); }
+.st-slow .val, .tv.st-slow { color: var(--t-yellow-fg); background: var(--t-yellow-bg); }
+.st-neutral .val, .st-unknown .val { color: var(--text-1); }
+.st-unknown .val { color: var(--text-3); }
+.st-inv .val, .tv.st-inv { color: var(--text-2); text-decoration: line-through; text-decoration-thickness: 2px; }
+.tv { font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; padding: .08em .2em 0; border-radius: var(--r-cell); }
+.histcap { position: absolute; z-index: 2; top: -11px; left: calc((100% - 40px) * 1.5 / 6.8 + 8px); width: calc((100% - 40px) * 3 / 6.8 + 16px); text-align: center; pointer-events: none; }
+.histcap span { background: var(--bg-0); padding: 0 10px; font: 700 15px/22px var(--font-label); letter-spacing: .12em; color: var(--text-2); }
+
+/* lap strip */
+.strip { grid-area: strip; position: relative; }
+.strip svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+/* state panels */
+.statep { padding: 26px 30px; display: grid; gap: 18px; align-content: start; }
+#p-span > .statep { height: 100%; align-content: space-between; }
+.statep h2 { margin: 0; font: 700 var(--d-l)/1 var(--font-label); letter-spacing: .06em; text-transform: uppercase; }
+.statep .sub { font: 500 22px/1.35 var(--font-ui); color: var(--text-2); margin: 0; }
+.cols3 { display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 26px; }
+.kv { display: grid; gap: 6px; align-content: start; }
+.kv .v { font: 700 var(--d-s)/1.02 var(--font-num); }
+.kv .v.sm { font-size: 30px; }
+.kv .s { font: 500 18px/1.35 var(--font-ui); color: var(--text-2); }
+.seat { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: center; }
+.seat .avatar { width: 96px; height: 96px; font-size: 38px; grid-row: span 2; }
+.seat .who { font: 600 34px/1.1 var(--font-ui); }
+.seat .who b { font-weight: 800; }
+.focus-list { display: grid; gap: 8px; }
+.focus-list div { font: 500 19px/1.3 var(--font-ui); color: var(--text-2); }
+.focus-list b { font: 700 24px/1 var(--font-num); color: var(--text-1); margin-right: 8px; }
+.rowbtns { display: flex; gap: 12px; flex-wrap: wrap; }
+.footline { font: 600 17px/1.3 var(--font-label); letter-spacing: .06em; color: var(--text-3); text-transform: uppercase; border-top: 1px solid var(--line); padding-top: 14px; }
+.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; font: 500 22px/1.35 var(--font-ui); color: var(--text-2); }
+.steps li::before { content: counter(s); display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-strong); font: 700 22px/1 var(--font-num); color: var(--text-1); }
+.steps code { font: 600 19px/1 var(--font-mono); color: var(--text-1); }
+.quote { font: 500 27px/1.38 var(--font-ui); color: var(--text-1); margin: 0; }
+.evidence { font: 500 17px/1.35 var(--font-ui); color: var(--text-3); }
+.big-time { font: 700 var(--d-hero)/.86 var(--font-num); padding-top: .08em; }
+.pitspeed { font: 700 var(--d-hero)/.86 var(--font-num); white-space: nowrap; padding-top: .08em; }
+.pitspeed small { font-size: .32em; color: var(--text-2); margin-left: 10px; }
+.toast { position: absolute; z-index: 40; left: 50%; bottom: 96px; transform: translateX(-50%); background: var(--text-1); color: var(--bg-1); padding: 14px 20px; border-radius: var(--r-panel);
+  font: 600 18px/1.2 var(--font-ui); opacity: 0; pointer-events: none; transition: opacity .2s; white-space: nowrap; }
+.toast.on { opacity: 1; }
+.device.phone .toast { bottom: 100px; font-size: 15px; white-space: normal; width: 300px; text-align: center; }
+
+/* phone drive */
+.device.phone .dash { height: auto; min-height: 100%; padding: 10px 12px 16px; gap: 10px; grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto; grid-template-areas: "status" "left" "right" "timing" "strip";
+  --d-hero: clamp(88px, 26vw, 120px); --d-xl: 64px; --d-l: 34px; --d-m: 30px; --d-s: 28px; --d-xs: 17px; --d-label: 14px; --status-h: 40px; }
+.device.phone .p-span { grid-column: 1; grid-row: auto; }
+.device.phone .status { height: 40px; }
+.device.phone .status .ctx { font-size: 16px; }
+.device.phone .status .ticker, .device.phone .status .radiopill, .device.phone .status .iconbtn { display: none; }
+.device.phone .band { inset: 0; font-size: 17px; padding: 0 12px; gap: 10px; } .device.phone .band small { font-size: 14px; } .device.phone .band svg { width: 20px; height: 20px; }
+.device.phone .pill { height: 30px; padding: 0 10px; }
+.device.phone .delta { padding: 14px 16px; min-height: 230px; }
+.device.phone .d-word { font-size: 16px; margin: 4px 0 10px; } .device.phone .dbar { height: 18px; } .device.phone .dscale { font-size: 12px; }
+.device.phone .corner { padding: 14px 16px; gap: 4px; } .device.phone .c-id svg { width: 40px; height: 40px; } .device.phone .c-why { font-size: 15px; } .device.phone .kind { padding: 6px 8px; }
+.device.phone .timing { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.device.phone .timing .cell { padding: 12px 10px 8px; }
+.device.phone .timing .cell.lap { order: 4; } .device.phone .timing .cell.lb { order: 5; }
+.device.phone .cell .micro { font-size: 12px; }
+.device.phone .strip { height: 48px; }
+.device.phone .statep { padding: 16px; gap: 12px; } .device.phone .cols3 { grid-template-columns: 1fr; gap: 16px; }
+.device.phone .statep h2 { font-size: 30px; } .device.phone .statep .sub, .device.phone .steps li { font-size: 16px; } .device.phone .quote { font-size: 19px; }
+.device.phone .seat .avatar { width: 64px; height: 64px; font-size: 26px; } .device.phone .seat .who { font-size: 22px; }
+.device.phone .histcap { left: 0; width: 100%; }
+
+/* ------------------------------------------------------------------ app pages (Review, Setup, Settings, Car, Radio) */
+.page { padding: 18px 24px 40px; font-size: 16px; }
+.page-head { display: flex; align-items: center; gap: 18px; margin: 0 0 18px; flex-wrap: wrap; }
+.page-head h1 { margin: 0; font: 700 28px/1 var(--font-label); letter-spacing: .06em; text-transform: uppercase; }
+.page-head .right { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.device.phone .page { padding: 12px 12px 32px; }
+.device.phone .page-head h1 { display: none; } .device.phone .page-head .seg { display: none; } .device.phone .page-head .right { margin-left: 0; }
+.grid12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; }
+.span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; } .span-5 { grid-column: span 5; } .span-6 { grid-column: span 6; } .span-7 { grid-column: span 7; } .span-8 { grid-column: span 8; } .span-12 { grid-column: span 12; }
+.device.phone .grid12 > * { grid-column: span 12; }
+.device.phone .card > header .htag { display: none; }
+.card { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-panel); min-width: 0; }
+.card > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 40px; padding: 0 14px; border-bottom: 1px solid var(--line); background: var(--surface-2); border-radius: var(--r-panel) var(--r-panel) 0 0; }
+.card > header h3 { margin: 0; font: 700 14px/1 var(--font-label); letter-spacing: .1em; text-transform: uppercase; color: var(--text-2); }
+.card > header .htag { font: 600 13px/1 var(--font-label); letter-spacing: .08em; color: var(--text-3); text-transform: uppercase; }
+.card .body { padding: 14px; }
+.muted { color: var(--text-2); } .faint { color: var(--text-3); }
+.small { font-size: 14px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.kpis.six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.device.phone .kpis, .device.phone .kpis.six { grid-template-columns: 1fr 1fr; }
+.kpi { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-cell); padding: 12px 14px; position: relative; }
+.kpi::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 4px; background: var(--bar, var(--line-strong)); }
+.kpi .k { font: 600 14px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); display: flex; justify-content: space-between; align-items: center; }
+.kpi .vv { font: 700 32px/1.1 var(--font-num); margin: 8px 0 2px; white-space: nowrap; }
+.kpi .cx { font-size: 14px; color: var(--text-2); }
+.qmark { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line-strong); background: none; color: var(--text-2); font: 700 13px/1 var(--font-ui); padding: 0; position: relative; }
+.qmark::after { content: ""; position: absolute; inset: -9px; }
+.work { display: grid; grid-template-columns: 120px 1fr; gap: 14px; padding: 14px; border-top: 1px solid var(--line); }
+.work:first-of-type { border-top: 0; }
+.device.phone .work { grid-template-columns: 1fr; }
+.work .ct { display: inline-flex; gap: 8px; align-items: baseline; font: 700 22px/1 var(--font-num); }
+.work .ct span { font: 600 16px/1 var(--font-label); letter-spacing: .06em; color: var(--text-2); text-transform: uppercase; }
+.work p { margin: 6px 0; font-size: 17px; line-height: 1.45; }
+.work .ev { font-size: 14px; color: var(--text-3); }
+.work .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.work .acts .btn { min-height: 44px; font-size: 13px; padding: 0 14px; }
+.minimap svg { width: 120px; height: 72px; display: block; }
+.went { display: flex; gap: 10px; align-items: baseline; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 16px; }
+.went b { font: 700 18px/1 var(--font-num); color: var(--t-green); min-width: 34px; }
+table.tt { width: 100%; border-collapse: collapse; font-size: 15px; }
+table.tt th { text-align: left; font: 600 13px/1 var(--font-label); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); padding: 10px 10px; border-bottom: 1px solid var(--line); }
+table.tt td { padding: 0 10px; height: 48px; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); white-space: nowrap; }
+table.tt td.n { font-family: var(--font-num); font-weight: 700; font-size: 21px; font-variant-numeric: tabular-nums; }
+table.tt tr.click { cursor: pointer; } table.tt tr.click:hover td { background: var(--surface-2); }
+table.tt .r { text-align: right; }
+.flagw { font-size: 13px; color: var(--warn); }
+.srow { display: grid; grid-template-columns: 48px 1.6fr 1fr 0.8fr 1.1fr auto; align-items: center; gap: 12px; min-height: 64px; padding: 6px 14px; border-top: 1px solid var(--line); cursor: pointer; background: none; border-left: 0; border-right: 0; border-bottom: 0; width: 100%; text-align: left; color: inherit; }
+.srow:hover { background: var(--surface-2); }
+.srow .avatar { width: 36px; height: 36px; font-size: 14px; }
+.srow .t { font-weight: 650; } .srow .s { font-size: 14px; color: var(--text-2); }
+.srow .n { font: 700 22px/1 var(--font-num); }
+.device.phone .srow { grid-template-columns: 40px 1fr auto; }
+.device.phone .srow .hide-phone { display: none; }
+.dayhead { padding: 10px 14px 6px; font: 700 13px/1 var(--font-label); letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); background: var(--bg-1); }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.fchip { min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px 0 6px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); background: var(--surface-1); color: var(--text-2); font-weight: 600; font-size: 15px; }
+.fchip.plain { padding: 0 14px; }
+.fchip .avatar { width: 32px; height: 32px; font-size: 13px; }
+.fchip[aria-pressed="true"] { border-color: var(--text-1); color: var(--text-1); background: var(--surface-3); }
+.bars { display: grid; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: 150px 1fr 76px; gap: 12px; align-items: center; font-size: 15px; }
+.device.phone .bar-row { grid-template-columns: 96px 1fr 64px; }
+.bar-row .track { height: 14px; background: var(--surface-2); border-radius: var(--r-cell); position: relative; overflow: hidden; }
+.bar-row .track i { position: absolute; top: 0; bottom: 0; left: 0; background: var(--behind); }
+.bar-row .track i.gain { background: var(--ahead); }
+.bar-row .w { font-size: 13px; color: var(--text-3); grid-column: 2 / -1; margin-top: -6px; }
+.chart svg { display: block; width: 100%; height: auto; }
+.chart text { font: 600 12px var(--font-ui); fill: var(--text-3); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--text-2); align-items: center; }
+.legend i { display: inline-block; width: 18px; height: 4px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+.note-wrap { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border: 1px dashed var(--line-strong); border-radius: var(--r-panel); color: var(--text-2); font-size: 14px; margin-bottom: 14px; }
+.needs { display: inline-block; font: 700 11px/1 var(--font-label); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); border: 1px dashed var(--line-strong); padding: 3px 6px; border-radius: var(--r-cell); vertical-align: middle; }
+.checkrow { display: grid; grid-template-columns: 18px 160px 1fr auto; gap: 16px; align-items: center; min-height: 72px; padding: 10px 18px; border-top: 1px solid var(--line); }
+.checkrow:first-child { border-top: 0; }
+.device.phone .checkrow { grid-template-columns: 14px 1fr; } .device.phone .checkrow .what { grid-column: 2; } .device.phone .checkrow .btn { grid-column: 2; justify-self: start; }
+.sdot { width: 14px; height: 14px; border-radius: 50%; background: var(--live); } .sdot.warn { background: var(--warn); } .sdot.off { background: var(--text-3); }
+.checkrow .lab { font: 700 18px/1 var(--font-label); letter-spacing: .08em; text-transform: uppercase; }
+.checkrow .what { color: var(--text-2); }
+.drivers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.device.phone .drivers { grid-template-columns: 1fr; }
+.dcard { padding: 16px; display: grid; gap: 10px; }
+.dcard .top { display: flex; gap: 14px; align-items: center; }
+.dcard .avatar { width: 56px; height: 56px; font-size: 21px; }
+.dcard h3 { margin: 0; font-size: 20px; }
+.setrow { display: grid; grid-template-columns: 240px 1fr; gap: 16px; align-items: center; padding: 14px 16px; border-top: 1px solid var(--line); }
+.setrow:first-child { border-top: 0; }
+.device.phone .setrow { grid-template-columns: 1fr; gap: 8px; }
+.setrow .t { font-weight: 650; } .setrow .h { font-size: 14px; color: var(--text-2); }
+.preview { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; }
+.preview .cell { width: 160px; min-height: 110px; --d-m: 40px; }
+.preview .pd { display: grid; align-content: center; padding: 10px 18px; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-cell); }
+.preview .pd .num { font-size: 64px; line-height: .9; padding-top: .08em; }
+.chat { display: grid; gap: 12px; max-width: 760px; }
+.bubble { padding: 12px 16px; border-radius: 12px; background: var(--surface-2); max-width: 85%; }
+.bubble.me { justify-self: end; background: color-mix(in srgb, var(--accent) 18%, var(--surface-1)); }
+.fact { display: inline-block; font: 600 12px/1 var(--font-mono); color: var(--text-2); border: 1px solid var(--line-strong); border-radius: 4px; padding: 4px 6px; margin: 4px 4px 0 0; }
+.radio-stage { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.device.phone .radio-stage { grid-template-columns: 1fr; }
+.ptt { width: 240px; height: 240px; border-radius: 50%; border: 2px solid var(--line-strong); background: var(--surface-2); display: grid; place-items: center; align-content: center; gap: 10px; margin: 8px auto;
+  font: 700 22px/1.1 var(--font-label); letter-spacing: .1em; text-transform: uppercase; color: var(--text-1); touch-action: none; user-select: none; -webkit-user-select: none; }
+.ptt svg { width: 56px; height: 56px; }
+.ptt.talking { background: var(--live); color: #0d1117; border-color: var(--live); }
+.statuschips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.log { display: grid; gap: 0; font-size: 15px; }
+.log div { display: grid; grid-template-columns: 64px 92px 1fr; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.log b { font: 700 12px/1.6 var(--font-label); letter-spacing: .1em; color: var(--text-3); text-transform: uppercase; }
+.wall .tile-big { font: 700 64px/.9 var(--font-num); padding-top: .08em; }
+.tyres { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tyre { border: 1px solid var(--line); border-radius: var(--r-cell); padding: 8px 10px; background: var(--surface-2); }
+.tyre .tt { font: 700 30px/1 var(--font-num); }
+.tyre.hot .tt { color: var(--warn); }
+.pedals { display: flex; gap: 12px; align-items: flex-end; }
+.pedal { width: 22px; height: 84px; background: var(--surface-2); border-radius: 4px; display: flex; align-items: flex-end; overflow: hidden; }
+.pedal i { display: block; width: 100%; }
+.sessionhead { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.sessionhead h2 { margin: 0; font: 700 26px/1.1 var(--font-label); letter-spacing: .04em; text-transform: uppercase; }
+.sessionhead .avatar { width: 40px; height: 40px; font-size: 15px; }
+.backlink { min-height: 44px; border: 0; background: none; color: var(--text-2); font-weight: 600; padding: 0 8px 0 0; }
+.pickers { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.picker { min-height: 56px; display: inline-flex; align-items: center; gap: 12px; padding: 0 16px; border-radius: var(--r-panel); border: 1px solid var(--line-strong); background: var(--surface-1); color: var(--text-1); font-size: 16px; }
+.picker b { font: 700 13px/1 var(--font-label); letter-spacing: .12em; padding: 5px 7px; border-radius: var(--r-cell); }
+.picker.a b { background: var(--info); color: #0d1117; } .picker.b b { background: var(--text-1); color: var(--bg-1); }
+.explainer { font-size: 17px; line-height: 1.5; }
+.explainer .big { font: 700 26px/1.1 var(--font-num); }
+.trend { font: 700 18px/1 var(--font-ui); }
+.trend.up { color: var(--ahead); } .trend.flat { color: var(--text-2); }
+.board { display: grid; gap: 0; }
+.board div { display: grid; grid-template-columns: 40px 1fr auto auto; gap: 12px; align-items: center; min-height: 52px; border-top: 1px solid var(--line); padding: 0 4px; }
+.board div:first-child { border-top: 0; }
+.board .avatar { width: 32px; height: 32px; font-size: 13px; }
+.board .n { font: 700 22px/1 var(--font-num); }
+.mile { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--line); font-size: 15px; }
+.mile b { font: 700 13px/1 var(--font-label); letter-spacing: .1em; color: var(--text-3); text-transform: uppercase; min-width: 80px; }
+</style>
+</head>
+<body>
+<div class="doc">
+  <header class="doc-head">
+    <h1>Pitwall UI: final design</h1>
+    <p><b>Superseded (v1, base A).</b> See <code>docs/ui/mockup.html</code> for v2. Clickable mockup for <code>docs/ui/design-spec-v1-base-A.md</code>. The iPad frame is 1180 × 820 CSS px, the Drive baseline. Use the rail inside the frame to move between <b>Drive · Review · Setup · Settings</b>, and the controls below to switch device, theme, driver, data tier and Drive state. The live lap runs on a fictional circuit.</p>
+    <div class="sample-flag" role="note">SAMPLE DATA ONLY: a fictional circuit (Kestrel Park), sample drivers and invented lap times. Nothing is connected to the Pitwall API.</div>
+  </header>
+
+  <div class="controls" id="controls" aria-label="Mockup controls"></div>
+
+  <div class="stage" id="stage"><div class="scaler" id="scaler">
+    <div class="device ipad" id="device" data-size="std">
+      <div class="app" id="app"></div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <div class="sample-tag">SAMPLE DATA</div>
+    </div>
+  </div></div>
+
+  <section class="notes" aria-label="What to look at">
+    <div class="card"><h2>Drive (iPad on the rig)</h2><ul>
+      <li>One focal number: the delta (172 px) with a word and a bar that fills left or right. It is neutral inside ±0.02 s.</li>
+      <li>Next corner: the official name appears only where the verified sheet has one (T2, T4 and the other numbered-only corners show the label alone).</li>
+      <li>Cue: a kind chip and an emptying bar, with no flash. The footer shows how the last call landed.</li>
+      <li>On track the rail dims. With <b>Sam (beginner)</b> in the seat, Drive lock asks for a 0.5 s hold to leave Dash.</li>
+    </ul></div>
+    <div class="card"><h2>Timing colours</h2><ul>
+      <li><b style="color:var(--t-purple)">Purple REC</b>: household record (needs D2, so it is never shown with "Today's API").</li>
+      <li><b style="color:var(--t-green)">Green PB / SB</b>: your best ever / your best today. <b style="color:var(--t-yellow)">Yellow</b>: slower.</li>
+      <li>Switch the data tier to see the honest fallback: last lap's sectors under a caption, and no purple.</li>
+    </ul></div>
+    <div class="card"><h2>Review and Setup</h2><ul>
+      <li>Review › Sessions → open a session: Summary, Laps & compare, Corners. The number of Work on cards follows the viewed driver's skill level.</li>
+      <li>Review › Coaching and Progress use the "faster ↑" axis. Setup › Checklist is the pre-flight page.</li>
+      <li>Pages with a dashed note show an existing view that phase 1 wraps unchanged.</li>
+    </ul></div>
+  </section>
+</div>
+
+<script>
+"use strict";
+/* ================================================================================== sample data (fictional) */
+const MINUS = "−";
+const L = 4210;                 // lap length, m
+const PTS = "685,567 697,567 709,567 722,567 734,567 746,567 759,567 771,567 783,567 796,567 808,567 820,567 833,567 845,567 857,566 869,563 881,560 892,555 902,547 910,538 915,527 919,515 920,503 920,490 920,478 919,466 918,453 918,441 920,429 922,417 926,405 931,394 936,383 942,372 949,361 955,351 962,340 968,330 974,319 981,309 987,298 992,287 996,275 999,263 1000,251 998,239 993,227 985,218 975,211 963,207 951,206 939,207 927,209 915,212 903,216 891,221 880,225 868,229 857,234 845,237 833,240 820,241 808,239 796,236 786,230 776,222 767,214 758,205 750,196 741,187 733,178 724,170 714,162 704,154 694,148 683,142 671,138 659,134 647,132 635,131 623,130 610,130 598,131 586,132 573,133 561,135 549,137 537,139 525,141 512,142 500,144 488,146 476,148 463,150 451,151 439,151 427,150 415,147 403,142 394,134 386,125 379,115 373,104 368,93 363,81 358,70 353,59 347,48 342,37 335,26 327,17 318,9 307,3 295,0 282,1 271,4 260,10 249,17 240,25 231,33 223,42 214,51 206,60 197,69 189,78 180,87 172,96 163,105 155,114 146,123 137,131 127,139 117,145 105,150 94,153 81,156 69,158 57,160 45,163 33,167 22,172 12,179 4,188 0,200 1,212 6,223 15,232 25,238 37,242 49,245 61,246 73,248 86,249 98,250 110,250 123,251 135,252 147,253 159,254 172,255 184,256 196,257 209,257 221,258 233,260 245,261 257,263 269,267 281,271 292,277 302,284 311,292 320,301 328,310 337,319 345,328 353,337 361,346 370,356 378,365 386,374 394,383 403,392 411,401 419,411 427,420 435,429 444,438 452,447 460,456 468,466 477,475 485,484 493,493 502,502 510,511 519,520 528,528 537,536 547,543 558,549 569,554 581,559 593,562 605,564 617,566 629,566 642,567 654,567 666,567 679,567"
+  .split(" ").map(p => p.split(",").map(Number));     // one point every 20 m
+const CORNERS = [  // label, official name (null = numbered only), apex m, turn angle (deg, < 0 = left), width m
+  ["T1", "Harbour", 373, -98, 60], ["T2", null, 576, 40, 50], ["T3", "Mill", 935, -144, 70], ["T4", null, 1250, 73, 50],
+  ["T5", "Long Bend", 1517, -60, 90], ["T6", null, 1960, 76, 50], ["T7", "Chapel", 2259, -114, 60], ["T8", null, 2644, 39, 40],
+  ["T9", "Kestrel", 2874, -168, 60], ["T10", null, 3367, 44, 50], ["T11", "Gate", 4020, -48, 70],
+].map(([label, name, apex, ang, w]) => ({ label, name, apex, ang, w, entry: Math.round(apex - 70 - Math.abs(ang) * 0.9), dir: ang < 0 ? "left" : "right" }));
+const SECTORS = [[0, 1380], [1380, 2780], [2780, L]];
+const CUES = [{ c: "T1", kind: "brake", at: 250 }, { c: "T3", kind: "brake", at: 790 }, { c: "T5", kind: "marker", at: 1400 },
+  { c: "T7", kind: "brake", at: 2120 }, { c: "T9", kind: "brake", at: 2735 }, { c: "T10", kind: "marker", at: 3260 }];
+const FOCUS = { T9: "braking early · 3 of your last 5 laps", T3: "slowest point 4 km/h low · 2 of your last 4 laps" };
+const DRS = [[4100, L], [0, 170]];
+const YELLOW = { zone: 7, a: 2470, b: 2700, sector: 2 };
+const DRIVERS = {
+  jr: { id: "jr", name: "James", initials: "JR", colour: "#ff6a2b", skill: "advanced" },
+  sr: { id: "sr", name: "Sam", initials: "S", colour: "#38bdf8", skill: "beginner" },
+  ar: { id: "ar", name: "Alex", initials: "A", colour: "#3ddc84", skill: "intermediate" },
+};
+
+/* -------- sample lap model: base speed profile, per-lap loss distributed over corners (consistent sector times) */
+const circ = (a, b) => { let d = (a - b) % L; if (d > L / 2) d -= L; if (d < -L / 2) d += L; return d; };
+const vRaw = d => { let s = 84; for (const c of CORNERS) { const x = circ(d, c.apex) / (2.4 * c.w); s -= Math.min(60, Math.abs(c.ang) * 0.42) * Math.exp(-x * x); } return Math.max(s, 17); };
+const TB = new Float64Array(L + 1); for (let d = 1; d <= L; d++) TB[d] = TB[d - 1] + 1 / vRaw(d - 0.5);
+const KS = TB[L] / 88.40; for (let d = 0; d <= L; d++) TB[d] /= KS;          // base lap 88.40 s
+const vMs = d => vRaw(((d % L) + L) % L) * KS;
+const BASE_SEC = SECTORS.map(([a, b]) => TB[b] - TB[a]);
+const erf = x => { const t = 1 / (1 + 0.3275911 * Math.abs(x)); const y = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x); return x >= 0 ? y : -y; };
+const Phi = z => 0.5 * (1 + erf(z / Math.SQRT2));
+const fac = (n, k) => 1 + 0.0036 * Math.sin(n * 1.93 + k * 2.1) + 0.0016 * Math.cos(n * 0.71 + k) + 0.0034 * Math.max(-0.35, (5 - n) / 4);   // noise + learning trend
+const sectorOf = d => (d < SECTORS[1][0] ? 0 : d < SECTORS[2][0] ? 1 : 2);
+const CS = CORNERS.map(c => ({ ...c, k: sectorOf(c.apex) }));
+const SHARE = CS.map(c => Math.abs(c.ang) / CS.filter(o => o.k === c.k).reduce((s, o) => s + Math.abs(o.ang), 0));
+function lapT(n, d) {        // seconds into lap n at distance d (lap loss lands at the corners)
+  let t = TB[Math.max(0, Math.min(L, Math.round(d)))];
+  CS.forEach((c, i) => { const loss = BASE_SEC[c.k] * (fac(n, c.k) - 1) * SHARE[i]; const [a, b] = SECTORS[c.k];
+    const z = (d - c.apex) / c.w; let f = d >= b ? 1 : d < a ? 0 : Phi(z); if (d >= b) f = 1; t += loss * f; });
+  return t * (PACE[S.driver] || 1);
+}
+const sectorsOf = n => { const a = lapT(n, SECTORS[1][0]), b = lapT(n, SECTORS[2][0]), c = lapT(n, L); return [a, b - a, c - b]; };
+const BASE_LAP = TB[L];
+// Household record (sample): lap, S1 and S3 held by James, S2 by Alex. PBs are per driver; sample pace per driver.
+const REC = { sec: BASE_SEC.map(s => s * 0.9958), lap: BASE_LAP * 0.9965, holder: ["JR", "A", "JR"], lapHolder: "JR" };
+const PACE = { jr: 1, ar: 1.027, sr: 1.057 };
+function pbOf(id) { if (id === "jr") return { sec: [REC.sec[0], BASE_SEC[1] * 0.9979, REC.sec[2]], lap: REC.lap };
+  const p = PACE[id] * 0.998; return { sec: BASE_SEC.map(s => s * p), lap: BASE_LAP * p }; }
+let PB = pbOf("jr");
+const LAP_FLAGS = { 1: ["pit out"], 3: ["flashback"] };
+function lapRec(n) { const s = sectorsOf(n); const out = n === 1 ? 6.2 : 0; s[0] += out; return { n, sec: s, time: s[0] + s[1] + s[2], flags: LAP_FLAGS[n] || [], clean: !LAP_FLAGS[n] }; }
+
+/* ================================================================================== mockup state */
+const S = {
+  device: "ipad", theme: "dark", night: false, cvd: false, large: false,
+  area: "drive", page: { drive: "dash", review: "sessions", setup: "checklist", settings: "display" },
+  session: null, sessionTab: "summary", progressDriver: null,
+  state: "on_track", ov: { sc: false, yellow: false, invalid: false, contact: false },
+  tier: 2, driver: "jr", playing: true, speed: 1, radio: "live", talking: false, dimNav: true, lock: "beginner",
+  dimUntil: 0, toastT: 0,
+};
+// live sim
+const SIM = { n: 8, d: 2050, t: 0, laps: [], doneAt: -1, lastDone: null, lastCue: null, ticker: null, tickerAt: 0, hist: [] };
+const cleanLaps = () => SIM.laps.filter(l => l.clean);
+let REF = null;
+function resetSim() {   // a driver change hands the seat over: the server starts a new session for the new driver
+  Object.assign(SIM, { n: 8, d: 2050, laps: [], doneAt: -1, lastDone: null, lastCue: null, ticker: null, hist: [] });
+  for (let n = 1; n <= 7; n++) SIM.laps.push(lapRec(n));
+  SIM.t = lapT(SIM.n, SIM.d); PB = pbOf(S.driver);
+  REF = cleanLaps().reduce((a, b) => (b.time < a.time ? b : a));
+}
+resetSim();
+
+/* ================================================================================== helpers */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmtLap = s => (s == null ? "-" : `${Math.floor(s / 60)}:${(s % 60).toFixed(3).padStart(6, "0")}`);
+const fmtRun = s => (s == null ? "-" : `${Math.floor(s / 60)}:${(Math.floor((s % 60) * 10) / 10).toFixed(1).padStart(4, "0")}`);
+const fmtSec = s => (s == null ? "-" : s.toFixed(3));
+const sgn = (v, dg = 2) => (v == null ? "-" : (v < 0 ? MINUS : v > 0 ? "+" : "±") + Math.abs(v).toFixed(dg));
+const drv = () => DRIVERS[S.driver];
+const beginner = () => drv().skill === "beginner";
+const av = (d, extra = "") => `<span class="avatar ${extra}" style="background:${d.colour}" aria-label="${esc(d.name)}">${d.initials}</span>`;
+const ICON = {
+  drive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.4 10.6c3 .9 5.6.9 6.4.2M20.6 10.6c-3 .9-5.6.9-6.4.2M12 14.4V21"/></svg>',
+  review: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5l3.6-3.2M10 2.5h4M12 2.5V6"/><path d="M6.5 17.5c2-1.6 3.5-.4 5-1.6s2.6-2.6 4.8-1.8" stroke-width="1.4"/></svg>',
+  setup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 6.4a4.2 4.2 0 0 0-5.5 5.5L3.4 17.6l3 3 5.7-5.7a4.2 4.2 0 0 0 5.5-5.5l-2.7 2.7-2.5-.5-.5-2.5z"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M20 14.6A8.2 8.2 0 0 1 9.4 4a8.2 8.2 0 1 0 10.6 10.6z"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>',
+  flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4h12l-2.5 4.5L17 13H5"/></svg>',
+  left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-8a5 5 0 0 0-5-5H5M9 4 5 8l4 4"/></svg>',
+  right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 21v-8a5 5 0 0 1 5-5h7M15 4l4 4-4 4"/></svg>',
+  mark: '<svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path d="M5 23 L13 8 L18 18 L21 13 L27 23" stroke="var(--accent)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
+const AREAS = {
+  drive: { label: "Drive", pages: [["dash", "Dash"], ["car", "Car"], ["radio", "Radio"]] },
+  review: { label: "Review", pages: [["sessions", "Sessions"], ["coaching", "Coaching"], ["progress", "Progress"], ["engineer", "Engineer"]] },
+  setup: { label: "Setup", pages: [["checklist", "Checklist"], ["drivers", "Drivers"], ["connect", "Connect"], ["rig", "Rig"], ["car", "Car setup"]] },
+  settings: { label: "Settings", pages: [["display", "Display"], ["radio", "Radio & voice"], ["ai", "AI engineer"], ["system", "System"]] },
+};
+
+/* ================================================================================== timing status (spec 4.4) */
+function statusAsSet(t, k /* 0-2 sector, 3 lap */, prior, clean) {
+  if (t == null) return "unknown";
+  if (!clean || (S.ov.invalid && prior.current)) return "inv";
+  const rec = k === 3 ? REC.lap : REC.sec[k], pb = k === 3 ? PB.lap : PB.sec[k];
+  if (S.tier === 2 && t < rec) return "rec";
+  if (S.tier === 2 && t < pb) return "pb";
+  if (prior.session == null || t <= prior.session) return "sb";
+  return "slow";
+}
+const sessBest = (k, beforeN) => { const v = SIM.laps.filter(l => l.clean && l.n < beforeN).map(l => (k === 3 ? l.time : l.sec[k])); return v.length ? Math.min(...v) : null; };
+const TAGS = { rec: "REC", pb: "PB", sb: "SB", inv: "INV" };
+
+/* ================================================================================== view model for Drive */
+function vm() {
+  const d = SIM.d, n = SIM.n;
+  const st = S.state;
+  const live = st === "on_track";
+  const k = sectorOf(d);
+  // corner ahead (spec 4.3): first apex ahead, stays until passed
+  let ci = CS.findIndex(c => c.apex > d); if (ci < 0) ci = 0;
+  const c = CS[ci];
+  const toEntry = c.entry > d ? c.entry - d : (ci === 0 && d > c.apex ? L - d + c.entry : 0);
+  // cue ahead
+  let qi = CUES.findIndex(q => q.at > d); const wrap = qi < 0; if (wrap) qi = 0;
+  const q = CUES[qi]; const inM = wrap ? L - d + q.at : q.at - d;
+  const delta = live || st === "stale" ? lapT(n, d) - lapT(REF.n, d) : null;
+  return { d, n, k, c, toEntry, q, inM, delta, run: SIM.t };
+}
+
+/* ================================================================================== rendering: shell */
+function rail() {
+  const items = Object.entries(AREAS).map(([id, a]) => {
+    const cur = S.area === id;
+    let html = `<button class="ritem" data-area="${id}" ${cur ? 'aria-current="page"' : ""}>${ICON[id]}<span>${a.label}</span></button>`;
+    if (id === "drive" && cur) html += `<div class="rsubs">${a.pages.map(([p, l]) => `<button class="rsub" data-sub="${p}" ${S.page.drive === p ? 'aria-current="page"' : ""}>${l}</button>`).join("")}</div>`;
+    return html;
+  }).join("");
+  const conn = connClass();
+  return `<nav class="rail ${railDim() ? "dim" : ""}" id="rail" aria-label="Areas">
+    <button class="mark" data-area="drive" aria-label="Pitwall: go to Drive">${ICON.mark}</button>${items}
+    <div class="spacer"></div>
+    <div class="foot"><button class="iconbtn" data-act="night" aria-pressed="${S.night}" aria-label="Night dim">${ICON.moon}</button>
+      <button class="avatar" style="background:${drv().colour};width:48px;height:48px" data-act="seat" aria-label="${drv().name} is in the seat: switch driver">${drv().initials}</button>
+      <span class="conn-dot ${conn}" title="Telemetry"></span></div></nav>`;
+}
+function connClass() { return { link_lost: "danger", no_data: "off", stale: "warn" }[S.state] || ""; }
+function railDim() { return S.area === "drive" && S.page.drive === "dash" && S.state === "on_track" && S.dimNav && Date.now() > S.dimUntil; }
+function locked() { return S.area === "drive" && S.page.drive === "dash" && S.state === "on_track" && (S.lock === "all" || (S.lock === "beginner" && beginner())); }
+function phoneChrome() {
+  const a = AREAS[S.area];
+  return [`<div class="ios"><span>9:41</span><span>Wi-Fi · 82%</span></div>`,
+    `<header class="appbar"><h1>${a.label}</h1>${radioPill(true)}<button class="avatar" style="background:${drv().colour}" data-act="seat" aria-label="${drv().name} is in the seat">${drv().initials}</button></header>`];
+}
+function pillsRow() {
+  const a = AREAS[S.area];
+  return `<nav class="pills" aria-label="${a.label} pages">${a.pages.map(([p, l]) => `<button data-sub="${p}" ${S.page[S.area] === p ? 'aria-current="page"' : ""}>${l}</button>`).join("")}</nav>`;
+}
+function tabBar() {
+  return `<nav class="tabbar" aria-label="Areas">${Object.entries(AREAS).map(([id, a]) => `<button class="tab" data-area="${id}" ${S.area === id ? 'aria-current="page"' : ""}>${ICON[id]}<span>${a.label}</span>${id === "drive" && S.state === "on_track" ? '<i class="livedot"></i>' : ""}</button>`).join("")}</nav>`;
+}
+function radioPill(compact) {
+  if (S.radio !== "live") return `<button class="radiopill off" data-act="golive" style="${compact ? "height:40px;min-width:0;font-size:14px" : ""}">${ICON.mic}GO LIVE</button>`;
+  return `<button class="radiopill ${S.talking ? "talking" : ""}" data-ptt="1" style="${compact ? "height:40px;min-width:0;font-size:14px;padding:0 12px" : ""}" aria-label="Hold to talk to the engineer"><span class="dot"></span>${S.talking ? "TALKING…" : compact ? "TALK" : "HOLD TO TALK"}</button>`;
+}
+function connPill() {
+  const st = S.state;
+  if (st === "link_lost") return `<span class="pill danger"><span class="dot"></span>NO LINK</span>`;
+  if (st === "no_data") return `<span class="pill"><span class="dot"></span>NO DATA</span>`;
+  if (st === "stale") return `<span class="pill warn"><span class="dot"></span>STALE 8 s</span>`;
+  return `<span class="pill live"><span class="dot"></span>LIVE</span>`;
+}
+function pageHead(title, extra = "") {
+  const a = AREAS[S.area];
+  return `<header class="page-head"><h1>${title}</h1><nav class="seg" aria-label="${a.label} pages">${a.pages.map(([p, l]) => `<button data-sub="${p}" ${S.page[S.area] === p ? 'aria-current="page"' : ""}>${l}</button>`).join("")}</nav>
+    <div class="right">${extra}${connPill()}${radioPill(true)}</div></header>`;
+}
+
+function render() {
+  const root = document.documentElement;
+  root.dataset.theme = S.theme; root.dataset.night = S.night ? "on" : "off"; root.dataset.cvd = S.cvd ? "rg" : "std";
+  const dev = $("#device"); dev.className = "device " + S.device; dev.dataset.size = S.large ? "large" : "std";
+  const isDash = S.area === "drive" && S.page.drive === "dash";
+  let html = "";
+  if (S.device === "phone") { const [ios, bar] = phoneChrome(); html += ios + bar; } else html += rail();
+  html += `<main class="content ${S.area === "drive" ? "drive" : ""}" id="content">${S.device === "phone" ? pillsRow() : ""}${pageBody()}</main>`;
+  if (S.device === "phone") html += tabBar();
+  $("#app").innerHTML = html;
+  if (isDash) { lastKeys = {}; tickDash(true); }
+  if (S.area === "drive" && S.page.drive === "car") tickCar();
+  renderControls(); fit();
+}
+function pageBody() {
+  const p = S.page[S.area];
+  if (S.area === "drive") return p === "dash" ? dashShell() : p === "car" ? carPage() : radioPage();
+  if (S.area === "review") { if (p === "sessions" && S.session) return sessionPage(); return { sessions: sessionsPage, coaching: coachingPage, progress: progressPage, engineer: engineerPage }[p](); }
+  if (S.area === "setup") return { checklist: checklistPage, drivers: driversPage, connect: connectPage, rig: rigPage, car: carSetupPage }[p]();
+  return { display: displayPage, radio: radioVoicePage, ai: aiPage, system: systemPage }[p]();
+}
+
+/* ================================================================================== Drive › Dash */
+const SPAN_STATES = ["no_data", "pre_session", "ended"];
+function dashShell() {
+  const st = S.state;
+  const body = SPAN_STATES.includes(st) ? `<section class="panel p-span" id="p-span"></section>`
+    : `<section class="panel p-left" id="p-left"></section><section class="panel p-right" id="p-right"></section>`;
+  return `<div class="dash" id="dash" data-state="${st}"><div class="status" id="p-status"></div>${body}<div class="timing" id="p-timing"></div><div class="strip" id="p-strip"></div></div>`;
+}
+let lastKeys = {};
+function setPanel(id, key, fn) { const el = document.getElementById(id); if (!el) return; if (lastKeys[id] !== key) { lastKeys[id] = key; el.innerHTML = fn(); } }
+function tickDash(force) {
+  if (!document.getElementById("dash")) return;
+  const v = vm(); const st = S.state;
+  const dim = railDim();
+  const rl = document.getElementById("rail"); if (rl) rl.classList.toggle("dim", dim);
+  const stEl = document.getElementById("p-status"); if (stEl) stEl.classList.toggle("dimnav", dim);
+  setPanel("p-status", statusKey(v), () => statusHtml(v));
+  if (SPAN_STATES.includes(st)) setPanel("p-span", st + S.driver + S.tier + S.radio + S.device, () => spanHtml(st));
+  else {
+    const left = document.getElementById("p-left"), right = document.getElementById("p-right");
+    if (left) { left.className = "panel p-left " + (st === "pit_lane" || st === "between_runs" ? "statep" : "delta") + (st === "stale" ? "" : ""); left.innerHTML = leftHtml(v); }
+    if (right) { right.className = "panel p-right " + (st === "pit_lane" || st === "between_runs" ? "statep" : "corner") + (st === "stale" || st === "link_lost" ? " dimmed" : ""); right.innerHTML = rightHtml(v); }
+  }
+  document.getElementById("p-timing").innerHTML = timingHtml(v);
+  document.getElementById("p-strip").innerHTML = stripHtml(v);
+}
+function statusKey(v) { return [S.state, JSON.stringify(S.ov), S.radio, S.talking, v.n, v.k, SIM.ticker, S.night, S.device, S.tier, contactOn()].join("|"); }
+function contactOn() { return S.ov.contact; }
+function statusHtml(v) {
+  const st = S.state;
+  let band = "";
+  if (st === "link_lost") band = `<div class="band outline-danger" role="status">${ICON.flag}NO LINK<small class="grow">reconnecting to Pitwall… live values hidden</small></div>`;
+  else if (st === "stale") band = `<div class="band outline-warn" role="status">NO SIGNAL · 8 s<small class="grow">game paused or in a menu?</small></div>`;
+  else if (st === "red_flag") band = `<div class="band red" role="alert">${ICON.flag}RED FLAG<small class="grow">session stopped</small></div>`;
+  else if (st === "ended") band = `<div class="band neutral" role="status">${ICON.flag}SESSION COMPLETE<small class="grow">chequered flag</small></div>`;
+  else if (st === "no_data") band = `<div class="band neutral" role="status">WAITING FOR TELEMETRY</div>`;
+  else if (st === "pre_session") band = `<div class="band neutral" role="status">READY · PRACTICE<small class="grow">Kestrel Park</small></div>`;
+  else if (S.ov.sc) band = `<div class="band sc" role="status">${ICON.flag}SAFETY CAR<small class="grow">calls paused</small></div>`;
+  else if (S.ov.yellow) band = `<div class="band yellow" role="status">${ICON.flag}YELLOW · SECTOR ${YELLOW.sector} · ZONE ${YELLOW.zone}<small class="grow">${yellowAhead(v)}</small></div>`;
+  else if (st === "pit_lane") band = `<div class="band pit" role="status">PIT LANE<small class="grow">limit 80 <span class="u">km/h</span></small></div>`;
+  else if (st === "between_runs") band = `<div class="band pit" role="status">IN GARAGE<small class="grow">between runs</small></div>`;
+  const total = 20;
+  const ctx = `<span class="ctx"><b>Kestrel Park</b><i>·</i>Practice<i>·</i>LAP <b>${v.n}/${total}</b><i>·</i><b>S${v.k + 1}</b></span>`;
+  const tick = S.radio === "live" && SIM.ticker && Date.now() - SIM.tickerAt < 8000 ? `<span class="ticker"><b>RADIO</b>${esc(SIM.ticker)}</span>` : `<span class="ticker"></span>`;
+  const chip = S.ov.contact && st === "on_track" ? `<span class="evchip">CONTACT</span>` : "";
+  return `${band}${connPill()}${ctx}${tick}${chip}${radioPill(false)}<button class="iconbtn" data-act="night" aria-pressed="${S.night}" aria-label="Night dim">${ICON.moon}</button>`;
+}
+function yellowAhead(v) { const a = ((YELLOW.a - v.d) % L + L) % L; return a <= 1000 ? `${Math.round(a / 10) * 10} <span class="u">m</span> ahead` : "this lap"; }
+
+function leftHtml(v) {
+  const st = S.state;
+  if (st === "pit_lane") {
+    const spd = 78;
+    return `<div class="lbl">PIT LANE · SPEED / LIMIT</div><div class="pitspeed tone-level">${spd}<span style="color:var(--text-3)"> / 80</span><small>km/h</small></div>
+      <p class="sub">Under the limit</p>`;
+  }
+  if (st === "between_runs") {
+    const l = SIM.laps[SIM.laps.length - 1]; const s = statusAsSet(l.time, 3, { session: sessBest(3, l.n) }, l.clean);
+    return `<div class="lbl">LAST LAP · L${l.n}</div><div class="big-time"><span class="tv st-${s}">${fmtLap(l.time)}</span></div>
+      <div class="kv"><span class="v sm ${l.time - REF.time < 0 ? "tone-ahead" : "tone-behind"}">${sgn(l.time - REF.time, 3)} <span class="lbl" style="font-size:18px">vs ref L${REF.n}</span></span>
+      <span class="s">${s in TAGS ? `<span class="tag ${s}">${TAGS[s]}</span> ` : ""}Clean lap · ${SIM.laps.filter(x => x.clean).length} clean of ${SIM.laps.length} today</span></div>
+      <div class="seat" style="margin-top:6px">${av(drv())}<div class="who"><b>${drv().name}</b> in the seat</div><div><button class="btn drive" data-act="seat">Switch driver</button></div></div>`;
+  }
+  // delta hero
+  const unknown = st === "link_lost" || st === "stale" || st === "red_flag";
+  const d = unknown ? null : v.delta;
+  const scTag = S.ov.sc && !unknown ? '<span class="sc-tag">SC</span>' : "";
+  const muted = S.ov.invalid || S.ov.sc;
+  let tone = "unknown", word = "";
+  if (d != null) { tone = muted ? "muted" : d < -0.02 ? "ahead" : d > 0.02 ? "behind" : "level"; word = d < -0.02 ? "AHEAD" : d > 0.02 ? "BEHIND" : "LEVEL"; }
+  const frac = d == null ? 0 : Math.max(-1, Math.min(1, d / 1.0));
+  const clamped = d != null && Math.abs(d) > 1;
+  const sign = d == null ? "" : d < 0 ? MINUS : d > 0 ? "+" : "±";
+  const digits = d == null ? "-" : Math.abs(d).toFixed(Math.abs(d) >= 10 ? 1 : 2);
+  const label = beginner() ? `VS YOUR TARGET LAP · ${fmtLap(REF.time)}` : `DELTA · REF L${REF.n} ${fmtLap(REF.time)}`;
+  const proj = beginner() ? "" : `<span class="proj"><span class="lbl">PROJ</span>${d == null || S.ov.invalid ? "-" : fmtLap(REF.time + d)}</span>`;
+  const reason = st === "link_lost" ? "Reconnecting to Pitwall…" : st === "stale" ? "No signal for 8 s" : st === "red_flag" ? "Session stopped" : S.ov.invalid ? "This lap will not count" : "";
+  const aria = d == null ? "Delta unknown" : `${Math.abs(d).toFixed(2)} seconds ${d < 0 ? "ahead of" : "behind"} reference lap ${REF.n}`;
+  const ticks = [-0.5, -0.25, 0.25, 0.5].map(x => `<span class="tick" style="left:${50 + x * 50}%"></span>`).join("");
+  return `<div class="d-head"><span class="lbl">${label}${scTag}</span>${proj}</div>
+    <div class="d-num tone-${tone}" role="img" aria-label="${aria}">${sign ? `<span class="sign">${sign}</span>` : ""}${digits}</div>
+    ${reason ? `<div class="d-reason">${reason}</div>` : `<div class="d-word tone-${tone}">${word}</div>`}
+    <div class="dbar" aria-hidden="true">${ticks}${d == null ? "" : `<i class="fill ${frac < 0 ? "ahead" : "behind"}" style="width:${Math.abs(frac) * 50}%"></i>`}<b class="mid"></b>${clamped ? `<i class="clamp ${frac < 0 ? "l" : "r"}"></i>` : ""}</div>
+    <div class="dscale"><span>◀ AHEAD</span><span>${MINUS}1.0</span><span>${MINUS}0.5</span><span>0</span><span>+0.5</span><span>+1.0</span><span>BEHIND ▶</span></div>`;
+}
+function rightHtml(v) {
+  const st = S.state;
+  if (st === "pit_lane" || st === "between_runs") {
+    return `<div class="lbl">ONE THING FOR THE NEXT RUN</div>
+      <p class="quote">T9: you're braking about 12 m earlier than your reference (lap ${REF.n}), losing 0.12 s through the corner.</p>
+      <div class="evidence">Seen on 3 of your last 5 laps · about 0.12 s a lap · confidence high${S.tier === 2 ? " · the radio's pick (D6)" : ""}</div>
+      <div class="lbl" style="margin-top:8px">WENT WELL</div>
+      <p class="quote" style="font-size:22px;color:var(--text-2)">T1: good - exit speed is up 3 km/h on your reference and you gained 0.05 s there.</p>`;
+  }
+  const unknown = st === "link_lost";
+  const c = v.c;
+  const focus = FOCUS[c.label];
+  const inCorner = v.d >= c.entry;
+  const head = unknown ? "NEXT CORNER" : inCorner ? "IN CORNER" : `NEXT CORNER · ${Math.round(v.toEntry / 10) * 10} <span class="u">m</span>`;
+  const nameCls = !c.name ? "none" : c.name.length > 14 ? "long" : "";
+  const name = c.name ? esc(c.name) : "&nbsp;";
+  let cue = "";
+  if (S.ov.sc || st === "red_flag") cue = `<div class="c-note">Calls paused: ${S.ov.sc ? "safety car" : "red flag"}</div>`;
+  else if (!unknown) {
+    const forShown = v.q.c === c.label;
+    const fill = Math.max(0, Math.min(1, v.inM / 400));
+    if (forShown && v.inM <= 1200) cue = `<div class="cue"><span class="kind ${v.q.kind}">${v.q.kind === "brake" ? "BRAKE" : "MARKER"}</span><span class="dist">${Math.round(v.inM)}<small>m</small></span><div class="cbar"><i style="width:${fill * 100}%"></i></div></div>`;
+    else cue = `<div class="c-note">Next call: ${v.q.c} ${v.q.kind} · ${v.inM >= 1000 ? (v.inM / 1000).toFixed(1) + " km" : Math.round(v.inM) + " m"}</div>`;
+  }
+  const last = SIM.lastCue && !unknown ? `<div class="c-last ${SIM.lastCue.late ? "late" : ""}">LAST ${SIM.lastCue.c} · ${SIM.lastCue.words}</div>` : `<div class="c-last">LAST CALL · -</div>`;
+  return `<div class="c-head"><span class="lbl">${head}</span>${focus && !unknown ? `<span class="focus-tag">◆ FOCUS</span>` : ""}</div>
+    <div class="c-id"><span class="num">${unknown ? "-" : c.label}</span>${unknown ? "" : ICON[c.dir]}</div>
+    <div class="c-name ${unknown ? "none" : nameCls}">${unknown ? "&nbsp;" : name}</div>
+    ${cue || "<div></div>"}
+    ${focus && !unknown && !beginner() ? `<div class="c-why">${focus}</div>` : "<div></div>"}
+    ${last}`;
+}
+function timingHtml(v) {
+  const st = S.state;
+  const noLive = ["link_lost", "no_data"].includes(st);
+  const n = v.n;
+  const prevLap = SIM.laps[SIM.laps.length - 1];
+  const cells = [];
+  // LAP
+  let lapVal, lapSt = "neutral", lapTag = "";
+  const justDone = SIM.lastDone && Date.now() - SIM.doneAt < 6000 && st === "on_track";
+  if (noLive || ["stale", "pre_session", "between_runs", "ended"].includes(st)) lapVal = "-";
+  else if (justDone) { lapVal = fmtLap(SIM.lastDone.time); lapSt = statusAsSet(SIM.lastDone.time, 3, { session: sessBest(3, SIM.lastDone.n) }, SIM.lastDone.clean); lapTag = TAGS[lapSt] || ""; }
+  else lapVal = fmtRun(v.run);
+  if (S.ov.invalid && st === "on_track" && !justDone) lapSt = "inv-run";
+  cells.push(`<div class="cell lap ${lapSt === "inv-run" ? "" : "st-" + lapSt}"><div class="top"><span class="lbl">LAP ${noLive || ["pre_session", "between_runs", "ended"].includes(st) ? "-" : `${n}/20`}</span>${S.ov.invalid && st === "on_track" ? '<span class="inv">INVALID</span>' : lapTag ? `<span class="micro">${lapTag}</span>` : ""}</div><span class="val num" ${lapSt === "inv-run" ? 'style="color:var(--text-2)"' : ""}>${lapVal}</span></div>`);
+  // sectors
+  const hist = S.tier === 1 && !noLive;
+  for (let k = 0; k < 3; k++) {
+    let val = "-", s = "unknown", cur = false, tag = "";
+    if (noLive) { /* unknown */ }
+    else if (hist) { const t = prevLap.sec[k]; s = statusAsSet(t, k, { session: sessBest(k, prevLap.n) }, prevLap.clean); val = fmtSec(t); tag = TAGS[s] || ""; }   // no current-sector outline on last-lap values
+    else if (st === "pre_session") { /* nothing yet */ }
+    else if (k < v.k || ["ended", "between_runs", "pit_lane"].includes(st)) {
+      const src = ["ended", "between_runs", "pit_lane"].includes(st) ? prevLap : null;
+      const t = src ? src.sec[k] : sectorsOf(n)[k];
+      s = statusAsSet(t, k, { session: sessBest(k, src ? src.n : n), current: !src }, src ? src.clean : !S.ov.invalid);
+      val = fmtSec(t); tag = TAGS[s] || "";
+    } else if (k === v.k) cur = true;
+    const curMark = cur ? '<span class="curmark" aria-label="current sector"></span>' : "";
+    cells.push(`<div class="cell st-${s} ${cur ? "cur" : ""} ${hist ? "hist" : ""}"><div class="top"><span class="lbl">S${k + 1}</span>${tag ? `<span class="micro">${tag}</span>` : curMark}</div><span class="val num">${val}</span></div>`);
+  }
+  // LAST, BEST
+  const lastT = noLive || st === "pre_session" ? null : prevLap.time;
+  const lastS = lastT == null ? "unknown" : statusAsSet(lastT, 3, { session: sessBest(3, prevLap.n) }, prevLap.clean);
+  const bestT = noLive || st === "pre_session" ? null : Math.min(...cleanLaps().map(l => l.time));
+  let bestS = bestT == null ? "unknown" : (S.tier === 2 && bestT < REC.lap ? "rec" : S.tier === 2 && bestT < PB.lap ? "pb" : "sb");
+  cells.push(`<div class="cell lb st-${lastS}"><div class="top"><span class="lbl">LAST</span>${TAGS[lastS] ? `<span class="micro">${TAGS[lastS]}</span>` : ""}</div><span class="val num">${fmtLap(lastT)}</span></div>`);
+  cells.push(`<div class="cell lb st-${bestS}"><div class="top"><span class="lbl">BEST</span>${TAGS[bestS] ? `<span class="micro">${TAGS[bestS]}</span>` : ""}</div><span class="val num">${fmtLap(bestT)}</span></div>`);
+  const cap = hist ? `<div class="histcap"><span>LAST LAP · L${prevLap.n}</span></div>` : "";
+  return cap + cells.join("");
+}
+function stripHtml(v) {
+  const st = S.state;
+  const W = 1000, H = 64, x = m => (m / L) * W;
+  const parts = [];
+  SECTORS.forEach(([a, b], k) => {
+    let fill = "var(--surface-2)";
+    if (st === "on_track" || st === "stale") {
+      if (k < v.k && S.tier === 2) { const s = statusAsSet(sectorsOf(v.n)[k], k, { session: sessBest(k, v.n), current: true }, !S.ov.invalid); fill = { rec: "var(--t-purple)", pb: "var(--t-green)", sb: "var(--t-green)", slow: "var(--t-yellow)" }[s] || "var(--surface-3)"; }
+      else if (k === v.k) fill = "var(--surface-3)";
+    }
+    const done = fill.startsWith("var(--t-");
+    parts.push(`<rect x="${x(a)}" y="20" width="${x(b) - x(a)}" height="22" fill="${done ? "var(--surface-2)" : fill}"/>`);
+    if (done) parts.push(`<rect x="${x(a)}" y="20" width="${x(b) - x(a)}" height="6" fill="${fill}"/>`);
+    parts.push(`<line x1="${x(a)}" x2="${x(a)}" y1="14" y2="48" stroke="var(--text-2)" stroke-width="2"/><text x="${x(a) + 6}" y="12" font-size="14" font-weight="700" fill="var(--text-2)" font-family="var(--font-label)" letter-spacing="1.5">S${k + 1}</text>`);
+  });
+  DRS.forEach(([a, b]) => parts.push(`<line x1="${x(a)}" x2="${x(b)}" y1="46" y2="46" stroke="var(--text-3)" stroke-width="3" stroke-dasharray="6 4"/>`));
+  if (S.ov.yellow) parts.push(`<rect x="${x(YELLOW.a)}" y="20" width="${x(YELLOW.b) - x(YELLOW.a)}" height="22" fill="url(#hatchY)"/>`);
+  if (st !== "no_data") {
+    CUES.forEach(q => parts.push(`<line x1="${x(q.at)}" x2="${x(q.at)}" y1="20" y2="42" stroke="var(--accent)" stroke-width="2"/>`));
+    CS.forEach(c => { const next = st === "on_track" && c === v.c; parts.push(`<line x1="${x(c.apex)}" x2="${x(c.apex)}" y1="42" y2="50" stroke="var(--text-3)" stroke-width="1.5"/><text x="${x(c.apex)}" y="63" text-anchor="middle" font-size="${next ? 15 : 13}" font-weight="700" font-family="var(--font-label)" fill="${next ? "var(--text-1)" : "var(--text-3)"}">${c.label}</text>${FOCUS[c.label] ? `<circle cx="${x(c.apex)}" cy="16" r="3.5" fill="var(--accent)"/>` : ""}`); });
+  }
+  const showCar = ["on_track", "stale", "pit_lane"].includes(st);
+  if (showCar) { const cx = x(st === "pit_lane" ? 4180 : v.d); parts.push(`<path d="M${cx - 8},14 L${cx + 8},14 L${cx},30 Z" fill="var(--accent)" stroke="var(--bg-0)" stroke-width="1.5"/>`); }
+  return `<svg viewBox="0 -2 ${W} ${H + 2}" preserveAspectRatio="none" role="img" aria-label="Lap strip: sectors, corners, braking calls and your car"><defs><pattern id="hatchY" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="8" fill="var(--flag-yellow)"/></pattern></defs>${parts.join("")}</svg>`;
+}
+function spanHtml(st) {
+  const d = drv();
+  if (st === "no_data") return `<div class="statep"><h2>Waiting for telemetry</h2>
+      <ol class="steps"><li><span>In the game: Settings › Telemetry › UDP Telemetry <b>On</b>, UDP Format <b>2025</b>.</span></li>
+      <li><span>UDP IP <code>192.0.2.20</code> (this Mac), port <code>20777</code>.</span></li>
+      <li><span>Drive out of the garage. Last sender seen: <b>-</b> (none since the service started).</span></li></ol>
+      <div class="rowbtns"><button class="btn glove primary" data-go="setup/connect">Open Connect</button><button class="btn glove" data-go="settings/system">Demo replay <span class="chip-syn" style="margin-left:6px">SYNTHETIC</span></button></div></div>`;
+  if (st === "ended") {
+    const best = cleanLaps().reduce((a, b) => (b.time < a.time ? b : a)); const first = cleanLaps()[0];
+    const bs = S.tier === 2 && best.time < REC.lap ? "rec" : S.tier === 2 && best.time < PB.lap ? "pb" : "sb";
+    return `<div class="statep"><h2>Your session · Kestrel Park</h2><div class="cols3">
+      <div class="kv"><span class="lbl">BEST LAP · L${best.n}</span><span class="v"><span class="tv st-${bs}">${fmtLap(best.time)}</span> <span class="tag ${bs}">${TAGS[bs]}</span></span>
+        <span class="s">${cleanLaps().length} clean of ${SIM.laps.length} laps · gained ${sgn(best.time - first.time, 3)} s since your first clean lap</span>
+        <span class="s">${S.tier === 2 ? `Family record ${fmtLap(REC.lap)} (JR) · your best ever ${fmtLap(PB.lap)}` : "Family record: - · Your best ever: -"}</span></div>
+      <div class="kv"><span class="lbl">WORK ON</span><span class="s" style="font-size:20px;color:var(--text-1)">T9: you're braking about 12 m earlier than your reference (lap ${REF.n}), losing 0.12 s through the corner.</span></div>
+      <div class="kv"><span class="lbl">WENT WELL</span><span class="s" style="font-size:20px;color:var(--text-1)">T1: good - exit speed is up 3 km/h on your reference and you gained 0.05 s there.</span></div></div>
+      <div class="rowbtns"><button class="btn glove primary" data-go="review/s1">Review this session</button></div></div>`;
+  }
+  // pre_session: Ready card
+  const pbHere = fmtLap(PB.lap);
+  return `<div class="statep"><div class="cols3">
+      <div class="kv"><div class="seat">${av(d)}<div class="who"><b>${d.name}</b> is in the seat</div><div><span class="tag" style="border:1px solid var(--line-strong);color:var(--text-2)">${d.skill}</span></div></div>
+        <button class="btn glove" data-act="seat" style="margin-top:10px">Not you? Switch driver</button></div>
+      <div class="kv"><span class="lbl">YOUR BEST HERE</span><span class="v">${pbHere}</span><span class="s">${d.id === "jr" ? "PB · also the family record · 3 Oct" : "PB · set 3 Oct"}</span>
+        <span class="lbl" style="margin-top:12px">FAMILY RECORD</span><span class="v sm">${S.tier === 2 ? `<span class="tv st-rec">${fmtLap(REC.lap)}</span> <span class="faint" style="font-size:18px">JR</span>` : "-"}</span>
+        <span class="lbl" style="margin-top:12px">DELTA REFERENCE</span><span class="s">L${REF.n} ${fmtLap(REF.time)} · earlier today</span></div>
+      <div class="kv"><span class="lbl">FOCUS TODAY</span><div class="focus-list">${Object.entries(FOCUS).map(([k, w]) => `<div><b>${k}</b>${CS.find(c => c.label === k).name ?? ""}<br><span class="faint" style="font-size:16px">${w}</span></div>`).join("")}</div>
+        <span class="lbl" style="margin-top:12px">BRAKING CALLS</span><span class="s">Focus corners only</span>
+        <div style="margin-top:10px">${S.radio === "live" ? `<span class="pill live"><span class="dot"></span>RADIO LIVE · MIC OK</span>` : `<button class="btn glove primary" data-act="golive">${ICON.mic.replace("<svg", '<svg width="24" height="24"')}Go live</button>`}</div></div></div>
+      <div class="footline">4 210 m · S1 1 380 m · S2 1 400 m · S3 1 430 m · 11 corners learned · official names: verified sheet (sample)</div></div>`;
+}
+
+/* ================================================================================== Drive › Car (pit wall) and Radio */
+function trackPath(fromM = 0, toM = L) { const i0 = Math.floor(fromM / 20), i1 = Math.ceil(toM / 20); return "M" + PTS.slice(i0, Math.min(i1 + 1, PTS.length)).map(p => p.join(",")).join("L"); }
+function ptAt(m) { const f = (((m % L) + L) % L) / 20, i = Math.floor(f), t = f - i, a = PTS[i], b = PTS[Math.min(i + 1, PTS.length - 1)]; return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]; }
+function mapSvg(opts = {}) {
+  const v = vm(); const cur = opts.highlight;
+  const secCols = SECTORS.map((_, k) => {
+    if (opts.static) return "var(--text-3)";
+    if (k < v.k && S.tier === 2) { const s = statusAsSet(sectorsOf(v.n)[k], k, { session: sessBest(k, v.n) }, true); return { rec: "var(--t-purple)", pb: "var(--t-green)", sb: "var(--t-green)", slow: "var(--t-yellow)" }[s]; }
+    return k === v.k ? "var(--text-1)" : "var(--line-strong)";
+  });
+  const segs = SECTORS.map(([a, b], k) => `<path d="${trackPath(a, b)}" fill="none" stroke="${secCols[k]}" stroke-width="${opts.thin ? 14 : 12}" stroke-linecap="round" stroke-linejoin="round"/>`).join("");
+  const labels = opts.noLabels ? "" : CS.map(c => { const [px, py] = ptAt(c.apex); return `<text x="${px + 18}" y="${py - 14}" font-size="36" font-weight="700" fill="${cur === c.label ? "var(--accent)" : "var(--text-2)"}" font-family="var(--font-label)">${c.label}</text>`; }).join("");
+  const hl = cur ? (() => { const c = CS.find(o => o.label === cur); return `<path d="${trackPath(c.entry, c.apex + 120)}" fill="none" stroke="var(--accent)" stroke-width="24" stroke-linecap="round" opacity=".9"/>`; })() : "";
+  const yel = S.ov.yellow && !opts.static ? `<path d="${trackPath(YELLOW.a, YELLOW.b)}" fill="none" stroke="var(--flag-yellow)" stroke-width="22" stroke-linecap="round" opacity=".9"/>` : "";
+  const [cx, cy] = ptAt(v.d);
+  const car = opts.static ? "" : `<circle cx="${cx}" cy="${cy}" r="16" fill="var(--accent)" stroke="var(--text-1)" stroke-width="4"/>`;
+  const [sx, sy] = ptAt(0);
+  return `<svg viewBox="-40 -40 1080 650" role="img" aria-label="Track map (sample circuit)"><path d="${trackPath()}" fill="none" stroke="var(--surface-3)" stroke-width="${opts.thin ? 26 : 22}" stroke-linejoin="round"/>${segs}${yel}${hl}<line x1="${sx}" x2="${sx}" y1="${sy - 22}" y2="${sy + 22}" stroke="var(--text-1)" stroke-width="5"/>${labels}${car}</svg>`;
+}
+function carPage() {
+  return `<div class="page wall">${S.device === "phone" ? "" : pageHeadDrive("Car · pit wall")}
+    <div class="grid12">
+      <div class="card span-7" style="grid-row:span 2"><header><h3>Track · Kestrel Park</h3><span class="htag">11 corners · official names: verified sheet</span></header><div class="body chart" id="car-map">${mapSvg()}</div></div>
+      <div class="card span-5"><header><h3>Timing</h3><span class="htag">vs ref L${REF.n}</span></header><div class="body" id="car-timing"></div></div>
+      <div class="card span-5"><header><h3>Car</h3><span class="htag">from the game</span></header><div class="body" id="car-car"></div></div>
+      <div class="card span-4"><header><h3>Tyres · Soft · 6 laps</h3></header><div class="body"><div class="tyres">
+        ${[["FL", 96, 6.1, 23.1, 412], ["FR", 99, 6.8, 23.2, 431], ["RL", 92, 5.2, 21.8, 298], ["RR", 108, 7.4, 22.0, 305]].map(([w, t, wr, p, b]) => `<div class="tyre ${t > 105 ? "hot" : ""}"><div class="lbl" style="font-size:13px">${w}</div><div class="tt">${t}°</div><div class="small faint">wear ${wr}% · ${p} psi · brake ${b}°</div></div>`).join("")}
+      </div><div class="small muted" style="margin-top:8px">Fuel 18.4 kg · +1.2 laps (game) · ERS 2.8 MJ. In-window temperatures are plain; amber means look here.</div></div></div>
+      <div class="card span-8"><header><h3>Inputs · last 12 s</h3></header><div class="body chart" id="car-inputs"></div></div>
+      <div class="card span-6"><header><h3>Laps · current standing</h3></header><div class="body" style="padding:0">${lapsTable(5, true)}</div></div>
+      <div class="card span-6"><header><h3>Coaching · L${SIM.laps[SIM.laps.length - 1].n} vs ref L${REF.n}</h3></header><div class="body" style="padding:0">
+        ${[["T9", "T9: you're braking about 12 m earlier than your reference (lap " + REF.n + "), losing 0.12 s through the corner.", "+0.12 s", false], ["T3", "T3: minimum speed is 4 km/h lower than your reference (71 vs 75 km/h), losing 0.07 s through the corner.", "+0.07 s", false], ["T1", "T1: good - exit speed is up 3 km/h on your reference and you gained 0.05 s there.", MINUS + "0.05 s", true]].map(([c, t, i, pos]) => `<div class="went" style="align-items:start"><b style="color:${pos ? "var(--t-green)" : "var(--warn)"}">${c}</b><span style="flex:1">${t}</span><span class="faint small" style="white-space:nowrap">${i}</span></div>`).join("")}
+      </div></div>
+      <div class="card span-12"><header><h3>Race control</h3></header><div class="body log">
+        <div><b>18:52</b><b>Lap 7</b><span>Lap analysed · 3 coaching points</span></div><div><b>18:46</b><b>Lap 3</b><span>Flashback: lap 3 will not count</span></div><div><b>18:41</b><b>Lap 1</b><span>Pit exit</span></div>
+      </div></div>
+    </div></div>`;
+}
+function pageHeadDrive(title) { return `<header class="page-head"><h1>${title}</h1><div class="right">${connPill()}${radioPill(true)}</div></header>`; }
+function tickCar() {
+  if (!document.getElementById("car-map")) return;
+  const v = vm(); const st = S.state;
+  document.getElementById("car-map").innerHTML = mapSvg({ highlight: v.c.label });
+  const d = st === "on_track" ? v.delta : null; const tone = d == null ? "unknown" : d < -0.02 ? "ahead" : d > 0.02 ? "behind" : "level";
+  document.getElementById("car-timing").innerHTML = `<div style="display:flex;justify-content:space-between;align-items:end;gap:12px"><div><div class="lbl" style="font-size:14px">DELTA</div><div class="tile-big tone-${tone}">${d == null ? "-" : sgn(d, 2)}</div></div>
+    <div style="text-align:right"><div class="lbl" style="font-size:14px">LAP ${v.n}</div><div class="num" style="font-size:44px;line-height:1">${st === "on_track" ? fmtRun(v.run) : "-"}</div></div></div>
+    <div class="small muted" style="margin-top:8px">Last ${fmtLap(SIM.laps[SIM.laps.length - 1].time)} · Best ${fmtLap(Math.min(...cleanLaps().map(l => l.time)))} · Next ${v.c.label}${v.c.name ? " " + v.c.name : ""}</div>`;
+  const kph = Math.round(vMs(v.d) * 3.6); const gear = Math.max(1, Math.min(8, 1 + Math.floor((kph - 55) / 34)));
+  const dv = vMs(v.d + 6) - vMs(v.d); const thr = st === "on_track" ? (dv > -0.05 ? 1 : 0.15) : 0, brk = st === "on_track" ? Math.max(0, Math.min(1, -dv * 0.9)) : 0;
+  document.getElementById("car-car").innerHTML = `<div style="display:flex;gap:18px;align-items:end"><div><div class="tile-big">${st === "on_track" ? kph : "-"}</div><div class="lbl" style="font-size:13px">KM/H</div></div>
+    <div><div class="tile-big" style="color:var(--accent)">${st === "on_track" ? gear : "-"}</div><div class="lbl" style="font-size:13px">GEAR</div></div>
+    <div class="pedals" style="margin-left:auto"><div class="pedal"><i style="height:${thr * 100}%;background:var(--throttle)"></i></div><div class="pedal"><i style="height:${brk * 100}%;background:var(--brake)"></i></div></div></div>
+    <div class="small muted" style="margin-top:8px">DRS - · Brake bias 56% · G lat ${(Math.abs(dv) * 2.4).toFixed(1)}</div>`;
+  if (SIM.hist.length < 2) for (let j = 119; j > 0; j--) { const dd = v.d - j * vMs(v.d) * 0.1, dv2 = vMs(dd + 6) - vMs(dd); SIM.hist.push([Math.round(vMs(dd) * 3.6), dv2 > -0.05 ? 1 : 0.15, Math.max(0, Math.min(1, -dv2 * 0.9))]); }
+  if (st === "on_track") { SIM.hist.push([kph, thr, brk]); if (SIM.hist.length > 120) SIM.hist.shift(); }
+  const H = SIM.hist, W = 800, h = 130;
+  const line = (i, sc, col) => H.length < 2 ? "" : `<polyline fill="none" stroke="${col}" stroke-width="2" points="${H.map((p, j) => `${(j / 119) * W},${h - p[i] * sc}`).join(" ")}"/>`;
+  document.getElementById("car-inputs").innerHTML = `<svg viewBox="0 0 ${W} ${h + 4}">${line(0, 0.4, "var(--text-1)")}${line(1, h * 0.95, "var(--throttle)")}${line(2, h * 0.95, "var(--brake)")}</svg><div class="legend"><span><i style="background:var(--text-1)"></i>Speed</span><span><i style="background:var(--throttle)"></i>Throttle</span><span><i style="background:var(--brake)"></i>Brake</span></div>`;
+}
+function lapsTable(max, standing) {
+  const laps = SIM.laps.slice(-max).reverse();
+  const bestSec = [0, 1, 2].map(k => Math.min(...cleanLaps().map(l => l.sec[k]))), bestLap = Math.min(...cleanLaps().map(l => l.time));
+  const st = (t, k, l) => { if (!l.clean) return "inv"; const best = k === 3 ? bestLap : bestSec[k]; const rec = k === 3 ? REC.lap : REC.sec[k]; const pb = k === 3 ? PB.lap : PB.sec[k];
+    if (t !== best) return "slow"; if (S.tier === 2 && t < rec) return "rec"; if (S.tier === 2 && t < pb) return "pb"; return "sb"; };
+  return `<table class="tt"><thead><tr><th>Lap</th><th class="r">Time</th><th class="r">S1</th><th class="r">S2</th><th class="r">S3</th><th></th></tr></thead><tbody>
+    ${laps.map(l => `<tr><td class="n">${l.n}${l.n === REF.n ? ' <span class="tag" style="border:1px solid var(--info);color:var(--info);font-size:11px">R</span>' : ""}</td><td class="n r"><span class="tv st-${st(l.time, 3, l)}">${fmtLap(l.time)}</span></td>${[0, 1, 2].map(k => `<td class="n r"><span class="tv st-${st(l.sec[k], k, l)}">${fmtSec(l.sec[k])}</span></td>`).join("")}<td>${l.clean ? "" : `<span class="flagw">${l.flags.join(", ")}</span>`}</td></tr>`).join("")}
+  </tbody></table>`;
+}
+function radioPage() {
+  return `<div class="page">${S.device === "phone" ? "" : pageHeadDrive("Radio")}
+    <div class="note-wrap">Phase 1 wraps today's <code>RadioView</code> unchanged (other engineers are editing it). Voice settings move to Settings › Radio & voice in phase 5.</div>
+    <div class="radio-stage"><div class="card"><div class="body" style="text-align:center">
+      <div class="statuschips"><span class="pill ${S.radio === "live" ? "live" : ""}"><span class="dot"></span>Link ${S.radio === "live" ? "open" : "off"}</span><span class="pill ${S.radio === "live" ? "live" : ""}"><span class="dot"></span>Mic ${S.radio === "live" ? "live" : "off"}</span><span class="pill ${S.radio === "live" ? "live" : ""}"><span class="dot"></span>Screen awake</span></div>
+      ${S.radio === "live" ? `<button class="ptt ${S.talking ? "talking" : ""}" data-ptt="1">${ICON.mic}${S.talking ? "Talking…" : "Hold to talk"}</button>` : `<button class="ptt" data-act="golive" style="background:var(--accent);color:var(--on-accent);border-color:var(--accent)">${ICON.mic}Go live</button>`}
+      <div class="rowbtns" style="justify-content:center"><button class="btn drive">Radio check</button><button class="btn drive">Stop talking</button></div>
+      <div style="margin-top:16px;display:grid;gap:10px;justify-items:center"><div class="seg"><button>Off</button><button aria-pressed="true">Focus</button><button>Markers</button><button>All</button></div><span class="small faint">Braking calls</span>
+      <div class="seg"><button>Quiet</button><button aria-pressed="true">Normal</button><button>Detailed</button></div><span class="small faint">Coaching</span></div></div></div>
+    <div class="card"><header><h3>Radio log</h3><span class="htag">sample</span></header><div class="body log">
+      <div><b>18:52</b><b>Lap</b><span>Lap 7, 1:28.9. Two tenths off your best.</span></div><div><b>18:52</b><b>Coaching</b><span>Turn 9, braking about twelve metres early. That's a tenth.</span></div>
+      <div><b>18:50</b><b>You</b><span>"How are the tyres?"</span></div><div><b>18:50</b><b>Engineer</b><span>Tyres are fine. Rear right is warm, 108 degrees.</span></div><div><b>18:41</b><b>System</b><span>Radio live · mic OK · screen will stay awake</span></div>
+    </div></div></div></div>`;
+}
+
+/* ================================================================================== Review */
+function sessionsPage() {
+  const others = Object.values(DRIVERS).filter(d => d.id !== S.driver);
+  const rows = [
+    { day: "Today", d: drv(), t: "Kestrel Park", ty: "Practice", laps: `${cleanLaps().length}/${SIM.laps.length}`, pb: true, when: "18:40" },
+    { day: "Today", d: others[0], t: "Kestrel Park", ty: "Time trial", laps: "4/9", when: "17:55", time: BASE_LAP * PACE[others[0].id] * 1.003 },
+    { day: "Yesterday", d: others[1], t: "Kestrel Park", ty: "Practice", laps: "8/10", when: "20:10", time: BASE_LAP * PACE[others[1].id] * 1.002 },
+    { day: "Yesterday", d: drv(), t: "Kestrel Park", ty: "Race", laps: "17/20", when: "19:02", time: BASE_LAP * PACE[S.driver] * 1.006 },
+    { day: "2 Oct", d: null, t: "Kestrel Park", ty: "Practice · replay of a synthetic capture", laps: "10/10", syn: true, when: "21:15", time: BASE_LAP - 0.9 },
+  ];
+  const best = Math.min(...cleanLaps().map(l => l.time));
+  let lastDay = "";
+  const list = rows.map((r, i) => { const head = r.day !== lastDay ? `<div class="dayhead">${r.day}</div>` : ""; lastDay = r.day;
+    const tm = r.time ?? best; const st = r.syn ? "neutral" : r.pb ? (S.tier === 2 ? "pb" : "sb") : "neutral";
+    return `${head}<button class="srow" data-open="s${i + 1}">${r.d ? av(r.d) : `<span class="avatar" style="background:var(--surface-3);color:var(--text-2)">-</span>`}
+      <span><span class="t">${r.t}</span><br><span class="s">${r.ty} · ${r.when}</span></span>
+      <span class="hide-phone s">${r.laps} clean</span>
+      <span class="hide-phone">${r.syn ? '<span class="chip-syn">SYNTHETIC</span>' : r.pb ? '<span class="tag pb">PB SET</span>' : ""}</span>
+      <span class="n"><span class="tv st-${st}">${fmtLap(tm)}</span></span><span class="faint">›</span></button>`; }).join("");
+  return `<div class="page">${pageHead("Review")}
+    <div class="chips" style="margin-bottom:14px"><button class="fchip plain" aria-pressed="true">Everyone</button>${Object.values(DRIVERS).map(d => `<button class="fchip">${av(d)}${d.name}</button>`).join("")}<button class="fchip plain">Track: all ▾</button></div>
+    <div class="grid12">
+      <div class="card span-12"><header><h3>Last session</h3><span class="htag">today 18:40</span></header><div class="body" style="display:flex;gap:18px;align-items:center;flex-wrap:wrap">
+        ${av(drv())}<div style="flex:1;min-width:200px"><div style="font-weight:650;font-size:18px">Kestrel Park · Practice</div><div class="muted small">${cleanLaps().length} of ${SIM.laps.length} laps clean · 3 coaching points</div></div>
+        <div><div class="lbl" style="font-size:13px">BEST LAP</div><div class="num" style="font-size:36px;line-height:1.1"><span class="tv st-${S.tier === 2 ? "pb" : "sb"}">${fmtLap(best)}</span></div></div>
+        <button class="btn drive primary" data-open="s1">Open</button></div></div>
+      <div class="card span-12" style="overflow:hidden">${list}</div>
+    </div></div>`;
+}
+function sessionPage() {
+  const tabs = [["summary", "Summary"], ["laps", "Laps & compare"], ["corners", "Corners"]];
+  const body = S.sessionTab === "summary" ? summaryTab() : S.sessionTab === "laps" ? compareTab() : cornersTab();
+  return `<div class="page">${pageHead("Review")}
+    <div class="sessionhead"><button class="backlink" data-act="back">‹ Sessions</button>${av(drv())}<h2>Kestrel Park · Practice</h2><span class="muted">Today 18:40 · F1 25 · PS5 · dry, track 31 °C</span>
+      <span style="margin-left:auto;display:flex;gap:8px"><button class="btn" data-go="review/engineer">Ask the engineer</button><button class="btn">Report</button></span></div>
+    <nav class="seg" style="margin-bottom:16px" aria-label="Session">${tabs.map(([t, l]) => `<button data-stab="${t}" ${S.sessionTab === t ? 'aria-current="page"' : ""}>${l}</button>`).join("")}</nav>${body}</div>`;
+}
+const WORK = [
+  ["T9", "Kestrel", "T9: you're braking about 12 m earlier than your reference (lap R), losing 0.12 s through the corner.", "Seen on 3 of your last 5 laps · about 0.12 s a lap · confidence high"],
+  ["T3", "Mill", "T3: minimum speed is 4 km/h lower than your reference (71 vs 75 km/h), losing 0.07 s through the corner.", "Seen on 2 of your last 4 laps · about 0.07 s a lap · confidence medium"],
+  ["T7", "Chapel", "T7: you're reaching full throttle 18 m later than your reference, losing 0.05 s through the corner.", "Seen on 3 of your last 5 laps · about 0.05 s a lap · confidence medium"],
+  ["T5", "Long Bend", "T5: about 9 m more coasting (no brake, no throttle) than your reference.", "Seen on 2 of your last 5 laps · about 0.03 s a lap · confidence low"],
+  ["T11", "Gate", "T11: minimum speed is 2 km/h lower than your reference (88 vs 90 km/h).", "Seen on 2 of your last 5 laps · about 0.02 s a lap · confidence low"],
+];
+function miniMap(label) { return `<div class="minimap">${mapSvg({ static: true, highlight: label, noLabels: true, thin: true })}</div>`; }
+function summaryTab() {
+  const skill = drv().skill; const nWork = skill === "beginner" ? 1 : skill === "intermediate" ? 3 : 5;
+  const best = cleanLaps().reduce((a, b) => (b.time < a.time ? b : a)), first = cleanLaps()[0];
+  const bs = S.tier === 2 && best.time < REC.lap ? "rec" : S.tier === 2 && best.time < PB.lap ? "pb" : "sb";
+  const adv = skill === "advanced";
+  const theo = [0, 1, 2].reduce((s, k) => s + Math.min(...cleanLaps().map(l => l.sec[k])), 0);
+  const kpis = [
+    ["Best lap", `<span class="tv st-${bs}">${fmtLap(best.time)}</span>`, `lap ${best.n} · <span class="tag ${bs}" style="font-size:11px">${TAGS[bs]}</span>`, "var(--t-" + (bs === "rec" ? "purple" : "green") + ")"],
+    ["Clean laps", `${cleanLaps().length} of ${SIM.laps.length}`, `2 not used: pit out, flashback`],
+    ["Gained today", `${sgn(best.time - first.time, 3)} s`, `first clean lap → best`],
+    ["Steadiest corner", `T3`, `braking point within ±2.1 m`],
+  ];
+  if (adv) kpis.push(["Best sectors combined", fmtLap(theo), `${(best.time - theo).toFixed(3)} s on the table`], ["Reference", `L${REF.n}`, fmtLap(REF.time)]);
+  const lapsChart = (() => { const W = 560, H = 180, ls = SIM.laps, cl = cleanLaps().map(l => l.time), fast = Math.min(...cl) - 0.35, slow = Math.max(...cl) + 0.5;
+    const hgt = t => Math.max(6, ((slow - Math.min(t, slow)) / (slow - fast)) * (H - 46)), bw = W / ls.length, base = H - 22;   // taller = faster
+    return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lap times, taller is faster"><defs><pattern id="hb" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="var(--text-3)"/></pattern></defs>
+      <text x="4" y="12" style="fill:var(--text-2);font-weight:700">faster ↑</text>
+      ${ls.map((l, i) => `<rect x="${i * bw + 10}" y="${base - hgt(l.time)}" width="${bw - 20}" height="${hgt(l.time)}" fill="${l.clean ? (l === best ? (bs === "rec" ? "var(--t-purple)" : "var(--t-green)") : "var(--surface-3)") : "url(#hb)"}"/><text x="${i * bw + bw / 2}" y="${H - 6}" text-anchor="middle">L${l.n}${l.clean ? "" : " ·"}</text><text x="${i * bw + bw / 2}" y="${base - hgt(l.time) - 6}" text-anchor="middle">${l.clean ? fmtLap(l.time).slice(2) : l.flags[0]}</text>`).join("")}
+      <line x1="0" x2="${W}" y1="${base - hgt(REF.time)}" y2="${base - hgt(REF.time)}" stroke="var(--info)" stroke-dasharray="5 4"/></svg>
+      <div class="legend"><span><i style="background:var(--info)"></i>reference L${REF.n}</span><span>hatched: not used for coaching (tap for why)</span></div>`; })();
+  const where = [["T9 Kestrel", 0.12, "braked about 12 m earlier"], ["T3 Mill", 0.07, "4 km/h slower at the slowest point"], ["T7 Chapel", 0.05, "full throttle 18 m later"], ["T1 Harbour", -0.05, "exit 3 km/h faster"]];
+  return `${S.tier === 1 && drv().skill === "beginner" ? "" : ""}
+    <div class="kpis ${adv ? "six" : ""}">${kpis.map(([k, v, c, bar]) => `<div class="kpi" ${bar ? `style="--bar:${bar}"` : ""}><div class="k">${k}<button class="qmark" aria-label="What is ${k}?">?</button></div><div class="vv">${v}</div><div class="cx">${c}</div></div>`).join("")}</div>
+    <div class="grid12" style="margin-top:12px">
+      <div class="card span-7"><header><h3>Work on</h3><span class="htag">${nWork} for ${drv().skill} · from the coach, word for word</span></header>
+        ${WORK.slice(0, nWork).map(([c, n, t, e]) => `<div class="work">${miniMap(c)}<div><div class="ct">${c}<span>${n}</span></div><p>${(beginner() && S.tier === 2 && c === "T9") ? "T9: you start braking a little earlier than on your best lap. That costs about a tenth here." : t.replace("lap R", "lap " + REF.n)}</p><div class="ev">${e}${beginner() && S.tier === 2 && c === "T9" ? " · simple wording (D6)" : ""}</div>
+          <div class="acts"><button class="btn" data-stab="laps">See it on the lap</button><button class="btn ghost">Why?</button><button class="btn ghost" data-go="review/engineer">Ask the engineer</button></div></div></div>`).join("")}
+        ${nWork < 5 ? `<div class="went"><button class="btn ghost" style="min-height:44px">Show more (${5 - nWork})</button></div>` : ""}</div>
+      <div class="span-5" style="display:grid;gap:12px;align-content:start">
+        <div class="card"><header><h3>Went well</h3></header><div class="went"><b>T1</b><span>T1: good - exit speed is up 3 km/h on your reference and you gained 0.05 s there.</span></div><div class="went"><b>T6</b><span>T6: good - exit speed is up 2 km/h on your reference and you gained 0.02 s there.</span></div></div>
+        <div class="card"><header><h3>Where the time is</h3><span class="htag">average vs reference</span></header><div class="body bars">${where.map(([c, t, w]) => `<div class="bar-row"><span>${c}</span><span class="track"><i class="${t < 0 ? "gain" : ""}" style="width:${Math.abs(t) / 0.14 * 100}%"></i></span><span class="num" style="font-size:20px;text-align:right">${sgn(t, 2)} s</span><span class="w">${w}</span></div>`).join("")}</div></div>
+      </div>
+      <div class="card span-7"><header><h3>Lap times</h3><span class="htag">hatched = not used</span></header><div class="body chart">${lapsChart}</div></div>
+      <div class="card span-5"><header><h3>Your best here</h3><button class="btn ghost" style="min-height:36px" data-go="review/progress">Progress ›</button></header><div class="body chart">${progressChart(true)}</div></div>
+    </div>`;
+}
+function progressChart(mini) {
+  const pts = [[0, 6.1], [1, 4.4], [2, 3.2], [3, 2.1], [4, 1.4], [5, 0.611], [6, 0.18]]; const W = mini ? 420 : 760, H = mini ? 150 : 240;
+  const y = s => 20 + (s / 7) * (H - 50); const x = i => 40 + (i / 6) * (W - 60);
+  const recY = y(-0.31 + 0.31);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Best clean lap per session, faster is up"><text x="6" y="14" style="fill:var(--text-2);font-weight:700">faster ↑</text>
+    ${[0, 2, 4, 6].map(s => `<line x1="34" x2="${W}" y1="${y(s)}" y2="${y(s)}" stroke="var(--line)"/><text x="4" y="${y(s) + 4}">${fmtLap(BASE_LAP + s).slice(0, 4)}</text>`).join("")}
+    ${S.tier === 2 ? `<line x1="34" x2="${W}" y1="${recY}" y2="${recY}" stroke="var(--t-purple)" stroke-dasharray="6 4"/><text x="${W - 4}" y="${recY - 6}" text-anchor="end" style="fill:var(--t-purple)">family record</text>` : ""}
+    <polyline fill="none" stroke="var(--text-2)" stroke-width="2" points="${pts.map(([i, s]) => `${x(i)},${y(s)}`).join(" ")}"/>
+    ${pts.map(([i, s], j) => `<circle cx="${x(i)}" cy="${y(s)}" r="${j === pts.length - 1 ? 7 : 5}" fill="${j === pts.length - 1 ? "var(--t-green)" : "var(--surface-3)"}" stroke="var(--text-2)"/>`).join("")}
+    <text x="${x(0)}" y="${H - 6}" text-anchor="middle">12 Sep</text><text x="${x(6)}" y="${H - 6}" text-anchor="middle">today</text></svg>
+    <div class="small muted">Your best here dropped 5.9 s over 7 sessions.</div>`;
+}
+function compareTab() {
+  const W = 760, H = 150, x = m => 40 + (m / L) * (W - 50);
+  const dl = []; for (let m = 0; m <= L; m += 40) dl.push([m, lapT(7, m) - lapT(REF.n, m)]);
+  const mx = Math.max(0.35, ...dl.map(p => Math.abs(p[1])));
+  const y = v => H / 2 - (v / mx) * (H / 2 - 16);
+  const sp = []; for (let m = 0; m <= L; m += 20) sp.push([m, vMs(m) * 3.6]);
+  const y2 = k => 140 - ((k - 60) / 260) * 120;
+  const bands = SECTORS.map(([a, b], k) => `<rect x="${x(a)}" y="0" width="${x(b) - x(a)}" height="${H}" fill="${k % 2 ? "var(--surface-2)" : "transparent"}"/><text x="${x(a) + 6}" y="14" style="font-weight:700">S${k + 1}</text>`).join("");
+  const ticks = CS.map(c => `<line x1="${x(c.apex)}" x2="${x(c.apex)}" y1="18" y2="${H}" stroke="var(--line)"/><text x="${x(c.apex)}" y="${H - 4}" text-anchor="middle">${c.label}</text>`).join("");
+  const showPedals = drv().skill !== "beginner";
+  return `<div class="pickers"><button class="picker a"><b>A</b>Reference · L${REF.n} ${fmtLap(REF.time)} ▾</button><button class="picker b"><b>B</b>Compare · L7 ${fmtLap(SIM.laps[6].time)} ▾</button><button class="picker">Family: Alex's best ▾</button><button class="btn ghost">Pin A as reference</button></div>
+    <div class="grid12"><div class="card span-8"><header><h3>Time lost along the lap</h3><span class="htag">above 0 = B slower</span></header><div class="body chart">
+      <svg viewBox="0 0 ${W} ${H}">${bands}${ticks}<line x1="40" x2="${W}" y1="${y(0)}" y2="${y(0)}" stroke="var(--text-3)"/><polyline fill="none" stroke="var(--text-1)" stroke-width="2.5" points="${dl.map(([m, v]) => `${x(m)},${y(v)}`).join(" ")}"/><line x1="${x(2874)}" x2="${x(2874)}" y1="0" y2="${H}" stroke="var(--accent)" stroke-width="2"/></svg>
+      <svg viewBox="0 0 ${W} 150" style="margin-top:8px">${bands}<polyline fill="none" stroke="var(--info)" stroke-width="2" points="${sp.map(([m, k]) => `${x(m)},${y2(k)}`).join(" ")}"/><polyline fill="none" stroke="var(--text-1)" stroke-width="2" points="${sp.map(([m, k]) => `${x(m)},${y2(k * (m > 2700 && m < 2900 ? 0.97 : 1) - (m > 2700 && m < 2760 ? 6 : 0))}`).join(" ")}"/><line x1="${x(2874)}" x2="${x(2874)}" y1="0" y2="150" stroke="var(--accent)" stroke-width="2"/></svg>
+      <div class="legend"><span><i style="background:var(--info)"></i>A reference</span><span><i style="background:var(--text-1)"></i>B compare</span><span>Speed</span>${showPedals ? "" : '<button class="btn ghost" style="min-height:36px">Show pedals</button>'}</div></div></div>
+    <div class="span-4" style="display:grid;gap:12px;align-content:start"><div class="card"><header><h3>At the cursor · T9 Kestrel</h3></header><div class="body explainer">
+      <div class="big">+0.11 s</div><p style="margin:6px 0">At T9 you braked <b>12 m earlier</b>, slowest speed <b>4 km/h lower</b>, <b>0.11 s slower</b> than A.</p>
+      <p class="faint small" style="margin:0">Description only. The coach says: "T9: you're braking about 12 m earlier than your reference (lap ${REF.n}), losing 0.12 s through the corner."</p></div></div>
+      <div class="card"><div class="body chart">${mapSvg({ static: true, highlight: "T9" })}</div></div></div>
+    <div class="card span-12" style="overflow:auto"><table class="tt"><thead><tr><th>Corner</th><th class="r">Time lost here</th><th class="r">Braked</th><th class="r">Slowest speed</th><th class="r">Exit speed</th><th class="r">Full throttle</th></tr></thead><tbody>
+      ${[["T9 Kestrel", "+0.11 s", "12 m earlier", "4 km/h lower", "1 km/h lower", "6 m later"], ["T3 Mill", "+0.07 s", "same", "4 km/h lower", "2 km/h lower", "same"], ["T7 Chapel", "+0.05 s", "3 m earlier", "same", "5 km/h lower", "18 m later"], ["T1 Harbour", MINUS + "0.05 s", "same", "1 km/h higher", "3 km/h higher", "4 m earlier"]].map(r => `<tr><td>${r[0]}</td>${r.slice(1).map((c, i) => `<td class="r ${i === 0 ? "n" : ""}" ${i === 0 ? `style="color:${c.startsWith("+") ? "var(--behind)" : "var(--ahead)"}"` : ""}>${c}</td>`).join("")}</tr>`).join("")}
+    </tbody></table></div></div>`;
+}
+function cornersTab() {
+  const groups = [["T9", "Kestrel", "left hairpin", "+0.12 s", "braked 12 m earlier on average (spread 4.1 m) · slowest speed 3 km/h lower", [["L4", WORK[0][2]], ["L6", WORK[0][2]], ["L7", WORK[0][2]]]],
+    ["T3", "Mill", "left", "+0.07 s", "braking point steady (spread 2.1 m) · slowest speed 4 km/h lower", [["L5", WORK[1][2]], ["L7", WORK[1][2]]]],
+    ["T1", "Harbour", "left", MINUS + "0.05 s", "exit speed 3 km/h higher on average", [["L7", "T1: good - exit speed is up 3 km/h on your reference and you gained 0.05 s there."]]]];
+  return `<div class="chips" style="margin-bottom:12px"><button class="fchip plain" aria-pressed="true">All</button><button class="fchip plain">Work on</button><button class="fchip plain">Went well</button></div>
+    <div style="display:grid;gap:12px">${groups.map(([c, n, dsc, t, avg, obs]) => `<div class="card"><header><h3>${c} · ${n} · ${dsc}</h3><span class="htag" style="color:${t.startsWith("+") ? "var(--behind)" : "var(--ahead)"}">${t} a lap</span></header>
+      <div class="body"><div class="muted small" style="margin-bottom:6px">Session average: ${avg}</div>${obs.map(([l, o]) => `<div class="went" style="padding-left:0"><b style="color:var(--text-2)">${l}</b><span>${o.replace("lap R", "lap " + REF.n)}</span></div>`).join("")}</div></div>`).join("")}</div>`;
+}
+function coachingPage() {
+  return `<div class="page">${pageHead("Review")}
+    <div class="chips" style="margin-bottom:14px">${Object.values(DRIVERS).map(d => `<button class="fchip" aria-pressed="${d.id === S.driver}">${av(d)}${d.name}</button>`).join("")}<button class="fchip plain">Kestrel Park · F1 25 ▾</button></div>
+    <div class="grid12"><div class="card span-7"><header><h3>Working on now</h3><span class="htag">${S.tier === 2 ? "last 5 sessions (D5)" : "latest session"}</span></header>
+      ${WORK.slice(0, 3).map(([c, n, t], i) => `<div class="work" style="grid-template-columns:120px 1fr">${miniMap(c)}<div><div class="ct">${c}<span>${n}</span> ${S.tier === 2 ? `<span class="trend ${i === 0 ? "up" : "flat"}">${i === 0 ? "▲ getting better" : "■ about the same"}</span>` : ""}</div><p>${t.replace("lap R", "lap " + REF.n)}</p><div class="acts"><button class="btn" data-go="review/s1">See it</button></div></div></div>`).join("")}</div>
+    <div class="span-5" style="display:grid;gap:12px;align-content:start">
+      <div class="card"><header><h3>Habits</h3><span class="htag">the coach's own words</span></header><div class="went"><b>T9</b><span>braking early · 3 of the last 5 laps</span></div><div class="went"><b>T7</b><span>late to full throttle · 3 of the last 5 laps</span></div></div>
+      <div class="card"><header><h3>Recently fixed</h3>${S.tier === 2 ? "" : '<span class="needs">needs D5</span>'}</header><div class="went">${S.tier === 2 ? '<b>T5</b><span>coasting gone: under the threshold for 3 sessions</span>' : '<span class="faint">-</span>'}</div></div>
+      <div class="card"><header><h3>The radio will focus on</h3><span class="htag">live plan</span></header>${Object.entries(FOCUS).map(([k, w]) => `<div class="went"><b style="color:var(--accent)">${k}</b><span>${w}</span></div>`).join("")}</div></div></div></div>`;
+}
+function progressPage() {
+  const pd = S.progressDriver || S.driver;
+  const board = [[DRIVERS.jr, BASE_LAP * 0.9965, true], [DRIVERS.ar, BASE_LAP + 2.413], [DRIVERS.sr, BASE_LAP + 5.012]];
+  return `<div class="page">${pageHead("Review")}
+    <div class="chips" style="margin-bottom:14px">${Object.values(DRIVERS).map(d => `<button class="fchip" data-pdriver="${d.id}" aria-pressed="${d.id === pd}">${av(d)}${d.name}</button>`).join("")}<button class="fchip plain">Kestrel Park · F1 25 ▾</button></div>
+    <div class="grid12"><div class="card span-8"><header><h3>Getting faster?</h3><span class="htag">best clean lap per session · synthetic excluded</span></header><div class="body chart">${progressChart(false)}</div></div>
+    <div class="span-4" style="display:grid;gap:12px;align-content:start"><div class="card"><header><h3>Family board · Kestrel Park</h3></header><div class="body board">
+      ${board.map(([d, t, rec], i) => `<div>${av(d)}<span>${d.name}</span><span class="n"><span class="tv st-${rec && S.tier === 2 ? "rec" : "neutral"}">${fmtLap(t)}</span></span><span class="faint small">${i === 0 ? (S.tier === 2 ? "REC" : "") : "+" + (t - board[0][1]).toFixed(3)}</span></div>`).join("")}</div></div>
+      <div class="card"><header><h3>Milestones</h3></header><div class="body"><div class="mile"><b>Today</b><span>New PB here: ${MINUS}0.43 s</span></div><div class="mile"><b>28 Sep</b><span>First session with 10 clean laps</span></div><div class="mile"><b>12 Sep</b><span>First clean lap at Kestrel Park</span></div></div></div></div>
+    <div class="card span-6"><header><h3>Getting steadier?</h3>${S.tier === 2 ? '<span class="htag">spread of clean laps</span>' : '<span class="needs">needs D5</span>'}</header><div class="body">${S.tier === 2 ? '<div class="bars">' + [["12 Sep", 1.9], ["20 Sep", 1.2], ["28 Sep", 0.8], ["Today", 0.41]].map(([d, s]) => `<div class="bar-row"><span>${d}</span><span class="track"><i class="gain" style="width:${s / 2 * 100}%;background:var(--info)"></i></span><span class="num" style="font-size:20px;text-align:right">${s.toFixed(2)} s</span></div>`).join("") + '</div><div class="small muted" style="margin-top:8px">Your laps are 1.5 s closer together than in September.</div>' : '<span class="faint">-</span>'}</div></div>
+    <div class="card span-6"><header><h3>What changed? Corners over time</h3>${S.tier === 2 ? "" : '<span class="needs">needs D5</span>'}</header><div class="body">${S.tier === 2 ? '<div class="bars">' + [["T9 Kestrel", 0.12, "getting closer: 0.21 → 0.12 s"], ["T3 Mill", 0.07, "about the same"], ["T5 Long Bend", 0.01, "fixed"]].map(([c, t, w]) => `<div class="bar-row"><span>${c}</span><span class="track"><i style="width:${t / 0.22 * 100}%"></i></span><span class="num" style="font-size:20px;text-align:right">+${t.toFixed(2)}</span><span class="w">${w}</span></div>`).join("") + "</div>" : '<span class="faint">-</span>'}</div></div></div></div>`;
+}
+function engineerPage() {
+  return `<div class="page">${pageHead("Review", '<span class="pill live"><span class="dot"></span>LOCAL LLM OK</span>')}
+    <div class="note-wrap">Today's <code>EngineerView</code>, with the session preselected and the question pre-filled from the card you came from.</div>
+    <div class="chat"><div class="bubble me">Why am I losing time at T9?</div>
+      <div class="bubble">At T9 Kestrel you start braking about 12 m before your reference lap ${REF.n}, on 3 of your last 5 laps. Your slowest speed there is about 4 km/h lower, and the corner costs about 0.12 s a lap.<br>
+        <span class="fact">F12 · T9 brake point −12 m</span><span class="fact">F14 · T9 min speed −4 km/h</span><span class="fact">F15 · T9 +0.12 s</span><br><span class="small faint">grounded · every number checked against the facts</span></div>
+      <div class="chips"><button class="fchip plain">Where did I lose the most?</button><button class="fchip plain">Compare my last two laps</button><button class="fchip plain">How are my tyres?</button></div></div></div>`;
+}
+
+/* ================================================================================== Setup and Settings */
+function checklistPage() {
+  const r = S.radio === "live";
+  return `<div class="page">${pageHead("Setup")}
+    <div class="card" style="max-width:920px"><header><h3>Before you drive</h3><span class="htag">every row is live data</span></header>
+      <div class="checkrow"><span class="sdot"></span><span class="lab">Game</span><span class="what">Receiving F1 25 from 192.0.2.30 · 60 packets/s · UDP format 2025</span><button class="btn" data-sub="connect">Connect</button></div>
+      <div class="checkrow"><span class="sdot"></span><span class="lab">Driver</span><span class="what" style="display:flex;gap:10px;align-items:center">${av(drv())}<span><b>${drv().name}</b> is in the seat · ${drv().skill}</span></span><button class="btn" data-act="seat">Switch</button></div>
+      <div class="checkrow"><span class="sdot ${r ? "" : "warn"}"></span><span class="lab">Radio</span><span class="what">${r ? "Live · mic OK · screen stays awake · HTTPS (Tailscale)" : "Not live. Tap Go live on this iPad (needs the Tailscale HTTPS address for the mic)"}</span>${r ? '<button class="btn" data-go="drive/radio">Radio</button>' : '<button class="btn primary" data-act="golive">Go live</button>'}</div>
+      <div class="checkrow"><span class="sdot warn"></span><span class="lab">Rig</span><span class="what">Last rig check: 9 pass · 2 warn · 0 fail · 3 unknown</span><button class="btn" data-sub="rig">Rig</button></div>
+      <div style="padding:18px"><button class="btn glove primary" data-go="drive/dash">Open Drive</button></div></div></div>`;
+}
+function driversPage() {
+  return `<div class="page">${pageHead("Setup")}<div class="note-wrap">Today's <code>ProfilesView</code>, wrapped in phase 1 and restyled in phase 5.</div>
+    <div class="drivers">${Object.values(DRIVERS).map(d => `<div class="card dcard"><div class="top">${av(d)}<div><h3>${d.name}</h3><div class="muted small">${d.skill} · coaching normal</div></div></div>
+      <div class="small muted">${d.id === "jr" ? "42 sessions · 512 laps · 6 tracks" : d.id === "ar" ? "11 sessions · 96 laps · 2 tracks" : "7 sessions · 51 laps · 1 track"}</div>
+      ${d.id === S.driver ? '<span class="pill live" style="justify-self:start"><span class="dot"></span>IN THE SEAT</span>' : `<button class="btn drive" data-seat="${d.id}">Put in the seat</button>`}</div>`).join("")}</div></div>`;
+}
+function connectPage() {
+  return `<div class="page">${pageHead("Setup")}<div class="note-wrap">Today's <code>ConnectView</code> (F1 25 and Assetto Corsa), wrapped in phase 1 and restyled in phase 5.</div>
+    <div class="card" style="max-width:920px"><header><h3>Game telemetry</h3><span class="htag">F1 25 · PS5</span></header><div class="body"><p style="margin-top:0"><span class="pill live"><span class="dot"></span>RECEIVING</span> &nbsp;192.0.2.30 → UDP 20777 · 60 packets/s</p>
+      <ol class="steps"><li style="font-size:17px"><span>Settings › Telemetry Settings › UDP Telemetry: <b>On</b></span></li><li style="font-size:17px"><span>UDP IP Address: <code>192.0.2.20</code> · Port <code>20777</code> · Format <b>2025</b></span></li></ol></div></div></div>`;
+}
+function rigPage() {
+  return `<div class="page">${pageHead("Setup")}<div class="note-wrap">Today's <code>SetupView</code> (rig, recommendations, rig check) is wrapped until the rig fixes land. Rig check uses status dots, never timing colours.</div>
+    <div class="card" style="max-width:920px"><header><h3>Rig check · latest real session</h3><span class="htag">James · today</span></header><div class="body" style="display:flex;gap:12px;flex-wrap:wrap">
+      ${[["pass", 9, "var(--live)"], ["warn", 2, "var(--warn)"], ["fail", 0, "var(--danger)"], ["unknown", 3, "var(--text-3)"]].map(([k, n, c]) => `<div class="kpi" style="--bar:${c};min-width:150px"><div class="k">${k}</div><div class="vv">${n}</div></div>`).join("")}</div></div></div>`;
+}
+function carSetupPage() {
+  return `<div class="page">${pageHead("Setup")}<div class="note-wrap">Today's <code>CarSetupView</code> (recommendations, diff, experiments) is wrapped in phase 1; its old <code>#/carsetup</code> tab redirects here.</div>
+    <div class="card" style="max-width:980px"><header><h3>Kestrel Park · recommended setup</h3><span class="htag">sample</span></header><div class="body muted">Front wing 28 · Rear wing 22 · Brake bias 56 % · Differential on throttle 60 % … (the existing view, restyled in phase 5)</div></div></div>`;
+}
+function displayPage() {
+  const o = (cur, val, label, act) => `<button data-set="${act}" data-val="${val}" aria-pressed="${cur === val}">${label}</button>`;
+  return `<div class="page">${pageHead("Settings")}
+    <div class="card" style="max-width:980px">
+      <div class="setrow"><div><div class="t">Theme</div><div class="h">Dark is for the rig. Light is kept for daytime.</div></div><div class="seg">${o(S.theme, "dark", "Dark", "theme")}${o(S.theme, "light", "Light", "theme")}<button>Match device</button></div></div>
+      <div class="setrow"><div><div class="t">Drive text size</div><div class="h">Large × 1.2 is suggested on an iPad mini.</div></div><div class="seg">${o(String(S.large), "false", "Standard", "large")}${o(String(S.large), "true", "Large", "large")}</div></div>
+      <div class="setrow"><div><div class="t">Night dim</div><div class="h">Lowers brightness further for a dark room.</div></div><div class="seg">${o(String(S.night), "false", "Off", "night")}${o(String(S.night), "true", "On", "night")}</div></div>
+      <div class="setrow"><div><div class="t">Colour vision</div><div class="h">Green → blue, red → orange. Signs, words and tags stay.</div></div><div class="seg">${o(String(S.cvd), "false", "Standard", "cvd")}${o(String(S.cvd), "true", "Red-green safe", "cvd")}</div></div>
+      <div class="setrow"><div><div class="t">Dim navigation on track</div><div class="h">The rail fades to 40 %; a touch brings it back for 5 s.</div></div><div class="seg">${o(String(S.dimNav), "true", "On", "dimNav")}${o(String(S.dimNav), "false", "Off", "dimNav")}</div></div>
+      <div class="setrow"><div><div class="t">Drive lock</div><div class="h">On track, leaving Dash needs a 0.5 s press.</div></div><div class="seg">${o(S.lock, "off", "Off", "lock")}${o(S.lock, "beginner", "Beginners", "lock")}${o(S.lock, "all", "Everyone", "lock")}</div></div>
+      <div class="setrow"><div><div class="t">Preview</div><div class="h">Timing colours: REC family record · PB your best ever · SB your best today.</div></div>
+        <div class="preview"><div class="cell st-rec"><div class="top"><span class="lbl">S2</span><span class="micro">REC</span></div><span class="val num">33.118</span></div><div class="cell st-pb"><div class="top"><span class="lbl">S1</span><span class="micro">PB</span></div><span class="val num">27.402</span></div><div class="cell st-slow"><div class="top"><span class="lbl">S3</span></div><span class="val num">28.731</span></div>
+        <div class="pd"><span class="lbl" style="font-size:14px">DELTA</span><span class="num tone-ahead">${MINUS}0.21</span></div></div></div>
+    </div></div>`;
+}
+function radioVoicePage() { return `<div class="page">${pageHead("Settings")}<div class="note-wrap">Phase 5: the settings block moves here from <code>RadioView</code> once the voice work lands.</div><div class="card" style="max-width:980px">
+  <div class="setrow"><div><div class="t">Engineer voice</div><div class="h">The Mac's natural voice, or this device's own voices</div></div><div class="seg"><button aria-pressed="true">Mac (neural)</button><button>This device</button></div></div>
+  <div class="setrow"><div><div class="t">Speaking speed</div></div><div class="seg"><button>Slower</button><button aria-pressed="true">Normal</button><button>Faster</button></div></div>
+  <div class="setrow"><div><div class="t">Voice on</div></div><div class="seg"><button aria-pressed="true">On</button><button>Off</button></div></div></div></div>`; }
+function aiPage() { return `<div class="page">${pageHead("Settings")}<div class="note-wrap">Today's <code>SettingsView</code> (AI engineer: off / local / cloud, keys, fallback, usage, what gets sent).</div><div class="card" style="max-width:980px"><div class="setrow"><div><div class="t">Engineer AI</div><div class="h">Answers are grounded in facts or replaced by a deterministic answer. Pitwall works fully with it off.</div></div><div class="seg"><button>Off</button><button aria-pressed="true">Local</button><button>Cloud</button></div></div></div></div>`; }
+function systemPage() { return `<div class="page">${pageHead("Settings")}<div class="note-wrap">Today's <code>StatusView</code>: health, local LLM, captures and replay, the synthetic demo, capability matrix, build version, licences.</div>
+  <div class="card" style="max-width:980px"><header><h3>Demo and replay</h3></header><div class="body" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center"><button class="btn drive">Replay a capture</button><button class="btn drive">Run synthetic demo</button><span class="chip-syn">SYNTHETIC</span><span class="muted small">Synthetic data is hatched and labelled on every screen, and never sets a PB or a record.</span></div></div></div>`; }
+
+/* ================================================================================== controls (outside the frame) */
+function renderControls() {
+  const b = (on, act, val, label) => `<button class="ctl" data-c="${act}" data-v="${val}" aria-pressed="${on}">${label}</button>`;
+  const states = [["on_track", "On track"], ["pre_session", "Ready"], ["pit_lane", "Pit lane"], ["between_runs", "Between runs"], ["ended", "Session complete"], ["no_data", "No data"], ["stale", "Stale"], ["link_lost", "Link lost"], ["red_flag", "Red flag"]];
+  $("#controls").innerHTML = `
+    <div class="ctl-row"><span class="lbl">Device</span>${b(S.device === "ipad", "device", "ipad", "iPad landscape")}${b(S.device === "phone", "device", "phone", "Phone")}<span class="ctl-sep"></span>
+      <span class="lbl" style="min-width:0">Look</span>${b(S.theme === "dark", "theme", "dark", "Dark")}${b(S.theme === "light", "theme", "light", "Light")}${b(S.night, "night", "", "Night dim")}${b(S.cvd, "cvd", "", "Red-green safe")}${b(S.large, "large", "", "Large text")}</div>
+    <div class="ctl-row"><span class="lbl">In the seat</span>${Object.values(DRIVERS).map(d => b(S.driver === d.id, "driver", d.id, `${d.name} · ${d.skill}`)).join("")}<span class="ctl-sep"></span>
+      <span class="lbl" style="min-width:0">Data</span>${b(S.tier === 1, "tier", "1", "Today's API")}${b(S.tier === 2, "tier", "2", "With D1-D6")}</div>
+    <div class="ctl-row"><span class="lbl">Drive state</span>${states.map(([k, l]) => b(S.state === k, "state", k, l)).join("")}</div>
+    <div class="ctl-row"><span class="lbl">Overlays</span>${b(S.ov.yellow, "ov", "yellow", "Yellow flag")}${b(S.ov.sc, "ov", "sc", "Safety car")}${b(S.ov.invalid, "ov", "invalid", "Lap invalid")}${b(S.ov.contact, "ov", "contact", "Contact chip")}<span class="ctl-sep"></span>
+      <span class="lbl" style="min-width:0">Lap</span>${b(!S.playing, "play", "", S.playing ? "Pause" : "Play")}${b(S.speed === 4, "speed", "", "4× speed")}<span class="ctl-sep"></span>${b(S.radio === "live", "radio", "", "Radio live")}</div>`;
+}
+
+/* ================================================================================== events */
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(S.toastT); S.toastT = setTimeout(() => t.classList.remove("on"), 2200); }
+function go(area, page) {
+  if (area === "review" && page && page.startsWith("s")) { S.area = "review"; S.page.review = "sessions"; S.session = page; S.sessionTab = "summary"; render(); return; }
+  S.area = area; if (page) S.page[area] = page; if (area === "review" && page === "sessions") S.session = null; render();
+  $("#content")?.scrollTo(0, 0);
+}
+let holdTimer = null, holdEl = null;
+function navAttempt(el, area, sub) {
+  if (!locked() || (area === "drive" && sub === "dash")) { if (sub) go(area || S.area, sub); else go(area, null); return; }
+  holdEl = el; el.classList.add("hold-ring");
+  holdTimer = setTimeout(() => { holdTimer = null; el.classList.remove("hold-ring"); if (sub) go(area || S.area, sub); else go(area, null); }, 500);
+}
+function navRelease() { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; holdEl?.classList.remove("hold-ring"); toast("Hold to leave Drive while driving"); } }
+document.addEventListener("pointerdown", e => {
+  if (e.target.closest("#device")) { const was = railDim(); S.dimUntil = Date.now() + 5000; if (was) { $("#rail")?.classList.remove("dim"); $("#p-status")?.classList.remove("dimnav"); } }
+  const ptt = e.target.closest("[data-ptt]"); if (ptt) { S.talking = true; lastKeys["p-status"] = null; refreshRadio(); return; }
+  const nav = e.target.closest("[data-area],[data-sub]");
+  if (nav && nav.closest("#app") && (nav.classList.contains("ritem") || nav.classList.contains("rsub") || nav.classList.contains("tab") || nav.classList.contains("mark") || nav.closest(".pills"))) {
+    e.preventDefault(); const area = nav.dataset.area || (nav.closest(".rsubs") || nav.closest(".pills") ? (nav.closest(".rsubs") ? "drive" : S.area) : null); navAttempt(nav, area, nav.dataset.sub || null);
+  }
+});
+document.addEventListener("pointerup", () => { if (S.talking) { S.talking = false; lastKeys["p-status"] = null; refreshRadio(); } navRelease(); });
+document.addEventListener("pointercancel", () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; holdEl?.classList.remove("hold-ring"); } });
+function refreshRadio() { if ($("#dash")) tickDash(true); else if (S.area === "drive" && S.page.drive === "radio") render(); }
+document.addEventListener("click", e => {
+  const t = e.target;
+  const c = t.closest("[data-c]");
+  if (c) { const k = c.dataset.c, v = c.dataset.v;
+    if (k === "device") S.device = v; else if (k === "theme") S.theme = v; else if (k === "night") S.night = !S.night; else if (k === "cvd") S.cvd = !S.cvd; else if (k === "large") S.large = !S.large;
+    else if (k === "driver") { S.driver = v; resetSim(); } else if (k === "tier") S.tier = Number(v);
+    else if (k === "state") { S.state = v; S.area = "drive"; S.page.drive = "dash"; if (v !== "on_track") S.ov.invalid = false; }
+    else if (k === "ov") { S.ov[v] = !S.ov[v]; if (S.state !== "on_track" && v !== "contact") { S.state = "on_track"; } S.area = "drive"; S.page.drive = "dash"; }
+    else if (k === "play") S.playing = !S.playing; else if (k === "speed") S.speed = S.speed === 4 ? 1 : 4; else if (k === "radio") S.radio = S.radio === "live" ? "off" : "live";
+    render(); return; }
+  if (!t.closest("#app")) return;
+  const act = t.closest("[data-act]")?.dataset.act;
+  if (act === "night") { S.night = !S.night; render(); return; }
+  if (act === "golive") { S.radio = "live"; toast("Radio live · mic OK · screen will stay awake"); render(); return; }
+  if (act === "seat") { const ids = Object.keys(DRIVERS); S.driver = ids[(ids.indexOf(S.driver) + 1) % ids.length]; resetSim(); toast(`${drv().name} is in the seat`); render(); return; }
+  if (act === "back") { S.session = null; render(); return; }
+  const gogo = t.closest("[data-go]"); if (gogo) { const [a, p] = gogo.dataset.go.split("/"); go(a, p); return; }
+  const op = t.closest("[data-open]"); if (op) { go("review", op.dataset.open); return; }
+  const stab = t.closest("[data-stab]"); if (stab) { S.sessionTab = stab.dataset.stab; render(); $("#content")?.scrollTo(0, 0); return; }
+  const seat = t.closest("[data-seat]"); if (seat) { S.driver = seat.dataset.seat; resetSim(); toast(`${drv().name} is in the seat`); render(); return; }
+  const pd = t.closest("[data-pdriver]"); if (pd) { S.progressDriver = pd.dataset.pdriver; render(); return; }
+  const set = t.closest("[data-set]"); if (set) { const k = set.dataset.set, v = set.dataset.val; if (k === "theme") S.theme = v; else if (k === "lock") S.lock = v; else S[k] = v === "true"; render(); return; }
+  const sub = t.closest("[data-sub]"); if (sub && sub.closest(".seg, .checkrow")) { go(S.area, sub.dataset.sub); }
+});
+document.addEventListener("keydown", e => {
+  if (e.key === " " && S.radio === "live" && S.area === "drive" && !e.repeat && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); S.talking = true; refreshRadio(); }
+});
+document.addEventListener("keyup", e => { if (e.key === " " && S.talking) { S.talking = false; refreshRadio(); } });
+
+/* ================================================================================== sim loop (10 Hz) */
+function step() {
+  if (!S.playing || S.state !== "on_track") return;
+  const dt = 0.1 * S.speed;
+  SIM.t += dt;
+  const prevD = SIM.d;
+  while (SIM.d < L && lapT(SIM.n, SIM.d + 1) <= SIM.t) SIM.d += 1;
+  // cue passed
+  for (const q of CUES) if (prevD < q.at && SIM.d >= q.at) { const err = ((SIM.n * 7 + q.at) % 11) - 5; SIM.lastCue = { c: q.c, late: err > 3, words: err > 3 ? `LATE +${err} <span class="u">m</span>` : `ON TIME ${err === 0 ? "" : sgn(err, 0) + ' <span class="u">m</span>'}` }; }
+  if (SIM.d >= L) {   // lap complete
+    const rec = lapRec(SIM.n); if (S.ov.invalid) { rec.clean = false; rec.flags = ["invalid"]; }
+    SIM.laps.push(rec); SIM.lastDone = rec; SIM.doneAt = Date.now();
+    const best = Math.min(...cleanLaps().filter(l => l !== rec).map(l => l.time));
+    SIM.ticker = `Lap ${rec.n}, ${fmtLap(rec.time)}. ${rec.time < best ? "New best today." : `${(rec.time - best).toFixed(2)} s off your best.`}`; SIM.tickerAt = Date.now();
+    SIM.n += 1; SIM.t = Math.max(0, SIM.t - rec.time); SIM.d = 0; S.ov.invalid = false;
+    REF = cleanLaps().reduce((a, b) => (b.time < a.time ? b : a));
+    if (SIM.laps.length > 14) SIM.laps.shift();
+  }
+}
+setInterval(() => {
+  step();
+  if (S.area === "drive" && S.page.drive === "dash") tickDash(false);
+  else if (S.area === "drive" && S.page.drive === "car" && S.state === "on_track" && S.playing) tickCar();
+}, 100);
+
+/* ================================================================================== fit the frame to the window */
+function fit() {
+  const dev = $("#device"), sc = $("#scaler"), stage = $("#stage");
+  const w = dev.offsetWidth + 26, h = dev.offsetHeight + 26;
+  const avail = stage.clientWidth;
+  const ctlH = $("#controls").offsetHeight;
+  const k = Math.min(1, avail / w, Math.max(0.45, (window.innerHeight - ctlH - 20) / h));
+  sc.style.transform = `scale(${k})`; sc.style.width = w + "px"; stage.style.height = h * k + 16 + "px";
+  if (S.device === "phone") sc.style.marginLeft = Math.max(0, (avail - w * k) / 2) + "px"; else sc.style.marginLeft = "0";
+}
+window.addEventListener("resize", fit);
+render();
+</script>
+</body>
+</html>

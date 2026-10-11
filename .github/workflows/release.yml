@@ -1,0 +1,321 @@
+# Release: a full Pitwall zip with the React dashboard prebuilt, so people without a HeroUI Pro licence (and without
+# Node.js) get the new dashboard. See docs/releasing.md.
+#
+# Three stages:
+#   build   (ubuntu)  build the dashboard (HeroUI Pro), package the zip + .sha256, upload them as a workflow artifact
+#   verify  (windows-latest, macos-latest, ubuntu-latest)  download the artifact, check the SHA-256, unzip it the way
+#           docs/install.md tells users to, `uv sync --all-extras` there and run scripts/verify_release.py from
+#           it: `pitwall serve` must serve the prebuilt React dashboard and store and analyse a SYNTHETIC telemetry
+#           stream sent over loopback UDP. On Windows also install.ps1 (release-folder branch, Node.js off PATH),
+#           pitwall doctor and smoke.ps1 (the recorded F1 25 capture) from the unzipped folder.
+#   publish (ubuntu, tag pushes only, after every verify job passed)  create the GitHub Release with the zip + .sha256
+#
+# - Push a tag v* (e.g. v0.2.0, or v0.2.0-rc.1 for a pre-release; a tag with "-" makes a pre-release): all three.
+# - Run it by hand (Actions > release > Run workflow, or `gh workflow run release.yml -f version=v0.2.0-test.1`):
+#   build and verify only; the zip stays a workflow artifact, no Release is made.
+#
+# Evidence: verify proves the zip installs and runs on GitHub's runners with synthetic telemetry. It is not a game
+# test; Windows stays "CI-tested on GitHub runners, not yet validated live with a game on a Windows PC".
+#
+# HeroUI Pro conditions (licence): the compiled dashboard ships only inside the full Pitwall archive, minified,
+# never with source maps, node_modules or a token. scripts/package_release.py enforces them and this workflow checks
+# the source maps again. HEROUI_AUTH_TOKEN is a HeroUI Pro CI/CD token (repository secret), read only by three
+# steps of the build job: the token check, `npm ci` + build, and packaging (which only scans the zip for its value).
+# The verify and publish jobs never see it.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version label for a test package, e.g. v0.2.0-test.1 (artifact only, no GitHub Release)"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    env:
+      # Never interpolated into scripts directly (input values go through the environment).
+      VERSION: ${{ github.event_name == 'push' && github.ref_name || inputs.version }}
+    steps:
+      - name: Check the version and the HeroUI Pro token
+        id: version
+        env:
+          HEROUI_AUTH_TOKEN: ${{ secrets.HEROUI_AUTH_TOKEN }}
+        run: |
+          if [ -z "$HEROUI_AUTH_TOKEN" ]; then
+            echo "::error title=HEROUI_AUTH_TOKEN is not set::A release needs the HEROUI_AUTH_TOKEN repository secret (a HeroUI Pro CI/CD token from heroui.pro) to install HeroUI Pro and build the dashboard. Add it under Settings > Secrets and variables > Actions, then run the release again. See docs/releasing.md."
+            exit 1
+          fi
+          if ! printf '%s' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$'; then
+            printf 'Version: %q\n' "$VERSION"
+            echo "::error title=Bad version::The version (tag or input) must look like v1.2.3 or v1.2.3-rc.1"
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install and build the dashboard (HeroUI Pro)
+        working-directory: web-react
+        env:
+          HEROUI_AUTH_TOKEN: ${{ secrets.HEROUI_AUTH_TOKEN }}
+        run: |
+          npm ci --no-audit --no-fund
+          if [ ! -f node_modules/@heroui-pro/react/dist/index.js ]; then
+            echo "::error title=HeroUI Pro not installed::npm ci did not install the HeroUI Pro components. Check that HEROUI_AUTH_TOKEN is a valid HeroUI Pro CI/CD token and that the licence is active."
+            exit 1
+          fi
+          npm run build:root
+
+      - name: Refuse source maps
+        run: |
+          maps=$(find web-react/dist -type f -name '*.map')
+          if [ -n "$maps" ]; then
+            echo "$maps"
+            echo "::error title=Source maps in the dashboard build::A release must never contain source maps (HeroUI Pro terms)."
+            exit 1
+          fi
+          if grep -rIl 'sourceMappingURL=' web-react/dist; then
+            echo "::error title=Source map reference in the dashboard build::A release must never reference source maps."
+            exit 1
+          fi
+
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+        with:
+          python-version: "3.12"
+
+      # Real captures carry other players' online IDs: every committed capture must be scrubbed. (package_release.py
+      # checks the captures it packages again, from the commit.)
+      - name: Check the recorded captures are scrubbed (no player names, no LAN addresses)
+        run: |
+          shopt -s nullglob
+          caps=(tests/fixtures/recorded/*.pwcap)
+          if [ ${#caps[@]} -gt 0 ]; then uv run python scripts/scrub_capture.py --check "${caps[@]}"; fi
+
+      - name: Package the release
+        id: package
+        env:
+          # Only so the script can refuse a zip in which the token's value appears.
+          HEROUI_AUTH_TOKEN: ${{ secrets.HEROUI_AUTH_TOKEN }}
+        run: uv run --no-project python scripts/package_release.py --version "$VERSION" --out "$RUNNER_TEMP/release"
+
+      # A zip that fails verification can still be downloaded from the run and inspected; only publish waits for it.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pitwall-${{ steps.version.outputs.version }}
+          path: |
+            ${{ runner.temp }}/release/pitwall-*.zip
+            ${{ runner.temp }}/release/pitwall-*.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+  verify:
+    name: verify (${{ matrix.os }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      # No checkout: everything below runs from the zip, as a user would.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: pitwall-${{ needs.build.outputs.version }}
+          path: ${{ runner.temp }}/release
+
+      # No python-version: uv picks Python 3.12 from the release's .python-version, as on a user's machine.
+      - uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
+
+      - name: Check the SHA-256 and unzip (macOS, Linux; as in docs/install.md)
+        if: runner.os != 'Windows'
+        run: |
+          set -euo pipefail
+          printf '%s' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$'
+          cd "$RUNNER_TEMP/release"
+          if command -v sha256sum > /dev/null; then
+            sha256sum -c "pitwall-$VERSION.zip.sha256"
+          else
+            shasum -a 256 -c "pitwall-$VERSION.zip.sha256"
+          fi
+          mkdir -p "$RUNNER_TEMP/unzipped"
+          unzip -q "pitwall-$VERSION.zip" -d "$RUNNER_TEMP/unzipped"
+          dir="$RUNNER_TEMP/unzipped/pitwall-$VERSION"
+          test -f "$dir/RELEASE.txt"
+          test ! -e "$dir/.git"
+          echo "RELEASE_DIR=$dir" >> "$GITHUB_ENV"
+
+      # Windows PowerShell 5.1 (`shell: powershell`), which is what users type docs/install.md's commands into; the
+      # check is the doc's own one-liner.
+      - name: Check the SHA-256 and unzip (Windows PowerShell 5.1; as in docs/install.md)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          if ($env:VERSION -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$') { throw 'bad version' }
+          Write-Output "PowerShell $($PSVersionTable.PSVersion) ($($PSVersionTable.PSEdition))"
+          Set-Location -LiteralPath (Join-Path $env:RUNNER_TEMP 'release')
+          $zip = ".\pitwall-$($env:VERSION).zip"
+          if (-not ((Get-FileHash $zip -Algorithm SHA256).Hash -eq (Get-Content "$zip.sha256").Split(' ')[0])) { throw "SHA-256 mismatch for $zip" }
+          Write-Output "${zip}: OK"
+          $dest = Join-Path $env:RUNNER_TEMP 'unzipped'
+          Expand-Archive $zip -DestinationPath $dest
+          $dir = Join-Path $dest "pitwall-$($env:VERSION)"
+          if (-not (Test-Path -LiteralPath (Join-Path $dir 'RELEASE.txt'))) { throw "no RELEASE.txt in $dir" }
+          if (Test-Path -LiteralPath (Join-Path $dir '.git')) { throw "$dir is a git checkout" }
+          # No Out-File here: Windows PowerShell 5.1 writes UTF-8 with a BOM.
+          [IO.File]::AppendAllText($env:GITHUB_ENV, "RELEASE_DIR=$dir`n")
+
+      - name: uv sync in the release folder (with the extras, as docs/install.md says)
+        working-directory: ${{ env.RELEASE_DIR }}
+        run: uv sync --locked --all-extras
+
+      - name: Run the release (scripts/verify_release.py)
+        working-directory: ${{ env.RELEASE_DIR }}
+        timeout-minutes: 15
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: uv run --locked python scripts/verify_release.py --version "$VERSION"
+
+      # install.ps1's release-folder branch: the prebuilt dashboard is used as it is, so it must work without Node.js
+      # (taken off PATH here) and must leave web-react/dist untouched; then doctor and smoke.ps1 from the same folder.
+      - name: Windows - install.ps1 -NonInteractive from the release folder, without Node.js (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        working-directory: ${{ env.RELEASE_DIR }}
+        shell: pwsh
+        run: |
+          function Get-DistDigest {
+            $dist = (Resolve-Path -LiteralPath 'web-react/dist').Path
+            $lines = Get-ChildItem -LiteralPath $dist -Recurse -File | Sort-Object FullName | ForEach-Object {
+              '{0} {1}' -f $_.FullName.Substring($dist.Length), (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash
+            }
+            return ($lines -join "`n")
+          }
+          $before = Get-DistDigest
+          # Take every folder with node or npm off PATH (this step only; install.ps1 inherits it).
+          for ($i = 0; $i -lt 20; $i++) {
+            $c = @(Get-Command -Name node, npm -CommandType Application -ErrorAction SilentlyContinue)
+            if ($c.Count -eq 0) { break }
+            $dir = (Split-Path -Parent $c[0].Source).TrimEnd('\')
+            Write-Output "taking $dir off PATH"
+            $env:Path = (($env:Path -split ';') | Where-Object { $_ -and ($_.TrimEnd('\') -ne $dir) }) -join ';'
+          }
+          if (@(Get-Command -Name node, npm -CommandType Application -ErrorAction SilentlyContinue).Count -ne 0) { throw 'node or npm is still on PATH' }
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/install.ps1 -NonInteractive
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ((Get-DistDigest) -ne $before) { throw 'install.ps1 changed the prebuilt web-react/dist' }
+          foreach ($p in 'web/dist', 'web/node_modules', 'web-react/node_modules') {
+            if (Test-Path -LiteralPath $p) { throw "install.ps1 created $p in a release folder" }
+          }
+          if (-not (Test-Path -LiteralPath '.venv/Scripts/pitwall.exe')) { throw 'install.ps1 did not install pitwall.exe' }
+          if (-not (Test-Path -LiteralPath 'data' -PathType Container)) { throw 'install.ps1 did not create the data folder' }
+          $r = (& .venv/Scripts/pitwall.exe doctor --no-llm --json | Out-String) | ConvertFrom-Json
+          $dash = @($r.checks | Where-Object { $_.id -eq 'dashboard' })[0]
+          if ($dash.status -ne 'ok' -or $dash.detail -notmatch 'React') { throw "doctor dashboard: $($dash.status) - $($dash.detail)" }
+          Write-Output "doctor dashboard: $($dash.detail)"
+          Write-Output 'install.ps1 used the prebuilt dashboard without Node.js and left web-react/dist unchanged'
+          exit 0
+
+      - name: Windows - smoke.ps1 (recorded F1 25 capture over UDP) from the release folder
+        if: runner.os == 'Windows'
+        working-directory: ${{ env.RELEASE_DIR }}
+        timeout-minutes: 10
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/smoke.ps1 -HttpPort 8780 -UdpPort 20780 -SkipSynthetic -RequireDashboard
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [build, verify]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: pitwall-${{ needs.build.outputs.version }}
+          path: release
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$'
+          zip="release/pitwall-$VERSION.zip"
+          sha="release/pitwall-$VERSION.zip.sha256"
+          test -f "$zip" && test -f "$sha"
+          (cd release && sha256sum -c "pitwall-$VERSION.zip.sha256")
+          digest=$(cut -d' ' -f1 "$sha")
+          cat > notes.md <<'EOF'
+          ## Pitwall __VERSION__
+
+          **Download `pitwall-__VERSION__.zip`** (below), unzip it, and follow
+          [Install from a release](https://github.com/__REPO__/blob/__VERSION__/docs/install.md#install-from-a-release)
+          in `docs/install.md`.
+
+          The dashboard inside the zip is **prebuilt** (`web-react/dist`): you need [uv](https://docs.astral.sh/uv/),
+          but not Node.js, npm or a HeroUI Pro licence. GitHub's automatic "Source code" downloads do **not** contain
+          the prebuilt dashboard; use `pitwall-__VERSION__.zip`.
+
+          SHA-256: `__SHA256__` (also in `pitwall-__VERSION__.zip.sha256`).
+          Check it with `shasum -a 256 -c pitwall-__VERSION__.zip.sha256` (macOS/Linux) or
+          `Get-FileHash pitwall-__VERSION__.zip -Algorithm SHA256` (Windows PowerShell).
+
+          Before it was published, this zip was unzipped, installed (`uv sync --all-extras`) and run
+          (`scripts/verify_release.py`) on GitHub's Windows, macOS and Linux runners: it served the prebuilt dashboard
+          and stored and analysed a synthetic telemetry stream. That shows the zip installs and runs there; it is not a test with a game.
+          Windows support is CI-tested on GitHub runners, not yet validated live with a game on a Windows PC. Which
+          games are supported, and on what evidence: `uv run pitwall capabilities`.
+
+          The dashboard includes HeroUI Pro (`@heroui-pro/react`), © NextUI Inc., used under licence and not covered
+          by Pitwall's terms; it may not be extracted or redistributed separately. Third-party licences are in
+          `THIRD_PARTY_NOTICES.txt` inside the zip.
+
+          Commit: __SHA__
+          EOF
+          sed -i -e "s|__VERSION__|$VERSION|g" -e "s|__REPO__|$REPO|g" \
+            -e "s|__SHA256__|$digest|g" -e "s|__SHA__|$GITHUB_SHA|g" notes.md
+          prerelease=()
+          case "$VERSION" in *-*) prerelease=(--prerelease) ;; esac
+          if gh release view "$VERSION" --repo "$REPO" > /dev/null 2>&1; then
+            echo "Release $VERSION exists: replacing its assets."
+            gh release upload "$VERSION" "$zip" "$sha" --repo "$REPO" --clobber
+          else
+            gh release create "$VERSION" "$zip" "$sha" --repo "$REPO" --verify-tag \
+              --title "Pitwall $VERSION" --notes-file notes.md "${prerelease[@]}"
+          fi

@@ -1,0 +1,196 @@
+{
+ "_fixture": {
+  "source": "GET /api/drivers/1/progress?game=f1_25&track_id=f1:17 (lane B's D5 route run on a read-only copy of the live pitwall service's database)",
+  "recorded": "2026-10-11T03:31:00+01:00",
+  "what": "James at Austria in any car: 3 sessions in 2 cars (F1 Generic, Haas); the PB history is per car.",
+  "tier": "recorded",
+  "edited": "Computed by lane B's D5 route (src/pitwall/api/routes_drivers.py driver_progress, working tree) on a read-only backup of the live database (sqlite3 .backup of data/pitwall.sqlite3 opened mode=ro), because the live service still runs the code without D5. Real PS5 F1 25 laps; nothing hand-edited."
+ },
+ "response": {
+  "driver_id": 1,
+  "scope": {
+   "game": "f1_25",
+   "track_id": "f1:17",
+   "car_id": null
+  },
+  "include_synthetic": false,
+  "sessions": [
+   {
+    "session_id": "e2c05b9f70f3",
+    "started_unix": 1791656101.7219641,
+    "game": "f1_25",
+    "track_id": "f1:17",
+    "track_name": "Austria",
+    "car_id": "f1:team:41",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "synthetic": false,
+    "laps": 3,
+    "clean_laps": 1,
+    "best_clean_ms": 78351,
+    "median_clean_ms": 78351,
+    "spread_ms": null,
+    "ref_lap_id": 16,
+    "corners": null,
+    "habits": null
+   },
+   {
+    "session_id": "a100cbc9b5bd",
+    "started_unix": 1791667516.384177,
+    "game": "f1_25",
+    "track_id": "f1:17",
+    "track_name": "Austria",
+    "car_id": "f1:team:7",
+    "car_name": "Haas",
+    "session_type": "race",
+    "synthetic": false,
+    "laps": 10,
+    "clean_laps": 9,
+    "best_clean_ms": 71745,
+    "median_clean_ms": 72959,
+    "spread_ms": 4832,
+    "ref_lap_id": 52,
+    "corners": {
+     "T1": 0.292,
+     "T2": 0.302,
+     "T3": 0.228,
+     "T4": 0.793,
+     "T5": 0.823,
+     "T6": -0.139,
+     "T7": 0.062
+    },
+    "habits": {
+     "brake_early": 5,
+     "brake_late_overdrive": 2,
+     "late_throttle": 1,
+     "low_min_speed": 37
+    }
+   },
+   {
+    "session_id": "332904dbe3de",
+    "started_unix": 1791668489.147202,
+    "game": "f1_25",
+    "track_id": "f1:17",
+    "track_name": "Austria",
+    "car_id": "f1:team:7",
+    "car_name": "Haas",
+    "session_type": "race",
+    "synthetic": false,
+    "laps": 10,
+    "clean_laps": 9,
+    "best_clean_ms": 70549,
+    "median_clean_ms": 71718,
+    "spread_ms": 5776,
+    "ref_lap_id": 52,
+    "corners": {
+     "T1": 0.173,
+     "T2": 0.412,
+     "T3": 0.097,
+     "T4": 0.402,
+     "T5": 0.372,
+     "T6": -0.231,
+     "T7": -0.148
+    },
+    "habits": {
+     "brake_early": 4,
+     "brake_late_overdrive": 3,
+     "low_min_speed": 23
+    }
+   }
+  ],
+  "corner_text": {
+   "f1_25/f1:17": {
+    "T1": {
+     "short": "T1",
+     "long": "Turn 1 (Niki Lauda Kurve)"
+    },
+    "T2": {
+     "short": "T3",
+     "long": "Turn 3"
+    },
+    "T3": {
+     "short": "T4",
+     "long": "Turn 4"
+    },
+    "T4": {
+     "short": "T6",
+     "long": "Turn 6"
+    },
+    "T5": {
+     "short": "T7",
+     "long": "Turn 7"
+    },
+    "T6": {
+     "short": "T9",
+     "long": "Turn 9 (Rindt Kurve)"
+    },
+    "T7": {
+     "short": "T10",
+     "long": "Turn 10"
+    }
+   }
+  },
+  "pb_history": [
+   {
+    "game": "f1_25",
+    "track_id": "f1:17",
+    "track_name": "Austria",
+    "car_id": "f1:team:41",
+    "car_name": "F1 Generic",
+    "lap_id": 16,
+    "session_id": "e2c05b9f70f3",
+    "lap_number": 2,
+    "lap_ms": 78351,
+    "set_unix": 1791656946.9817228,
+    "previous_ms": null,
+    "gain_ms": null,
+    "synthetic": false
+   },
+   {
+    "game": "f1_25",
+    "track_id": "f1:17",
+    "track_name": "Austria",
+    "car_id": "f1:team:7",
+    "car_name": "Haas",
+    "lap_id": 40,
+    "session_id": "a100cbc9b5bd",
+    "lap_number": 62,
+    "lap_ms": 76577,
+    "set_unix": 1791667592.881734,
+    "previous_ms": null,
+    "gain_ms": null,
+    "synthetic": false
+   },
+   {
+    "game": "f1_25",
+    "track_id": "f1:17",
+    "track_name": "Austria",
+    "car_id": "f1:team:7",
+    "car_name": "Haas",
+    "lap_id": 41,
+    "session_id": "a100cbc9b5bd",
+    "lap_number": 63,
+    "lap_ms": 71745,
+    "set_unix": 1791667664.6911209,
+    "previous_ms": 76577,
+    "gain_ms": 4832,
+    "synthetic": false
+   },
+   {
+    "game": "f1_25",
+    "track_id": "f1:17",
+    "track_name": "Austria",
+    "car_id": "f1:team:7",
+    "car_name": "Haas",
+    "lap_id": 52,
+    "session_id": "332904dbe3de",
+    "lap_number": 64,
+    "lap_ms": 70549,
+    "set_unix": 1791668708.232791,
+    "previous_ms": 71745,
+    "gain_ms": 1196,
+    "synthetic": false
+   }
+  ]
+ }
+}

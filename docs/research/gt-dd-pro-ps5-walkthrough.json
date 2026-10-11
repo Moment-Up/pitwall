@@ -1,0 +1,1229 @@
+{
+ "version": 2,
+ "research_date": "2026-10-11",
+ "rig": "Fanatec GT DD Pro (5 Nm, Boost Kit 180 pending) + bundled Steering Wheel for Gran Turismo DD Pro + CSL Pedals (Load Cell Kit pending), PS5",
+ "companion": "docs/research/gt-dd-pro-ps5-walkthrough.md",
+ "evidence_labels": {
+  "V": "official Fanatec/EA/Polyphony source (text, figure, help article, product page, Fanatec video caption)",
+  "A": "seen in Fanatec's own low-resolution (320x180) video frames",
+  "U": "owner report, community guide, or not confirmed",
+  "D": "derived"
+ },
+ "controls": {
+  "display": {
+   "name": "White OLED display on the steering wheel",
+   "where": "Top centre of the steering wheel, directly above the round GT logo and just below the curved RevLED light strip. The wheel base has no display.",
+   "shows": "Profile item: one word such as AUTO, C SET or SET 4 [A]. A setting: the value in big digits, a small label in the top corner (probably the item name), and a bar under numeric values [A]. 'CAL' when centre calibration is needed. Fanatec text: 'A.SET.' when a game actively uses Auto Setup (OLED appearance [U]). With the menu closed it may be blank or show game data ('telemetry output (where supported)', PROD).",
+   "size": "not confirmed (a search summary claimed 1-inch 128x64; no Fanatec page found saying so)",
+   "source": "PROD; M p17, p19, p20; VID25 frames 10:20-11:45",
+   "verified": true,
+   "verifier": "fix",
+   "verifier_note": "added RevLED locator, what the OLED shows (from fresh video frames) and closed-menu behaviour"
+  },
+  "tuning_button": {
+   "name": "Tuning Menu button",
+   "where": "Tiny round button immediately LEFT of the display, between the display and the 'L2' tab; much smaller than the other buttons.",
+   "label": "not confirmed: no source shows a legible label on the button. Fanatec drawings use a three-sliders icon for 'Enter/Exit Tuning Menu' (manual p17, QG), not shown to be printed on the rim.",
+   "short_press": "open / close the Tuning Menu",
+   "hold_3_to_4_s_with_menu_open": "toggle Standard <-> Advanced menu (Fanatec gives 3 s in FAQ36/VID25/D431 and 4 s in M p21/H-ADV)",
+   "hold_about_6_s_more": "RESET of all custom setups to factory values; returns to Standard menu. M p21/H-ADV say 'additional 6 seconds'; one EXP caption reads like 6 s in total. Never hold past 5 s.",
+   "source": "M p19 figure, p21; QG panels G/H; GTP22; VID25 10:20, 11:00, 11:45; FAQ36; D431",
+   "verified": true,
+   "verifier": "fix",
+   "verifier_note": "reset timing ambiguity added"
+  },
+  "menu_stick": {
+   "name": "Menu stick (manual: 'D-Pad'; Fanatec 2025 video: 'D-Stick'; product page: '5-way directional stick for menu navigation')",
+   "where": "Lower LEFT of the wheel face, below the blue-ringed stick. Not one of the four coloured-ring sticks.",
+   "left_right": "move between settings (items); which direction is 'next' is not confirmed",
+   "up_down": "change the value; on the first item (profile) choose the profile; in A SET only shows the game's value",
+   "which_way_is_next_or_increase": "not confirmed; GTPlanet 2022 implies UP steps from AUTO to SET 1 to SET 2",
+   "confirm_button": "none: changes are used and saved immediately",
+   "source": "M p19 figure; PROD; FAQ36 ('directional stick'); VID25 captions 10:20-11:40; GTP22",
+   "verified": true,
+   "verifier": "fix",
+   "verifier_note": "left/right direction semantics downgraded to unconfirmed"
+  },
+  "coloured_ring_sticks": {
+   "name": "Four additional 5-way directional sticks (green, blue left; red, yellow right)",
+   "use": "game inputs; NOT used for the Tuning Menu",
+   "source": "PROD; VID25 frames",
+   "verified": true,
+   "colours_evidence": "A (video frames only; PROD names no colours)",
+   "verifier": "fix",
+   "verifier_note": "ring colours are A, not V"
+  },
+  "face_buttons": {
+   "layout": "lower right cluster: triangle top, square left, circle right, cross bottom",
+   "source": "VID25 frames",
+   "verified": false,
+   "evidence": "A"
+  },
+  "hub_top_small_buttons": {
+   "left": "small round button under the L2 tab (icon resembles PlayStation CREATE; name not confirmed)",
+   "right": "small round button under the R2 tab with a three-line symbol (resembles PlayStation OPTIONS; name not confirmed)",
+   "mode_change_combo": "left small button + triangle (manual p16 figure, highlighted positions)",
+   "centre_calibration_combo": "right small button + cross (manual p17 figure, highlighted positions)",
+   "source": "M p16, p17 figures; VID25 frames",
+   "verified": false,
+   "evidence": "A",
+   "note": "positions of both combos are V (M p16/p17, EXP I/K, QG F/G figures); button names and icons are A"
+  },
+  "power_button": {
+   "where": "Right-hand side of the wheel base, towards the front (wheel end) [A], power symbol; its ring LED shows the mode colour",
+   "press_1_s": "power on (base runs start-up calibration; hands off the wheel)",
+   "short_press_while_on": "cycle operating mode",
+   "hold_3_s": "power off",
+   "hold_8_s_while_off": "bootloader mode (firmware rescue only; avoid)",
+   "source": "M p15, p16, p29; EXP H; QG panels E, I; VID25 06:15-06:40",
+   "verified": true
+  },
+  "mode_led": {
+   "DARK BLUE": "PlayStation native: use for PS5 (F1 25, GT7)",
+   "PURPLE": "PS4 compatibility: detected as CSL Elite Wheel Base+ PS4; only for old games (e.g. F1 2020)",
+   "RED": "PC native; needed for firmware updates",
+   "YELLOW": "PC compatibility: detected as ClubSport Wheel Base V2.5",
+   "persistence": "mode is kept across power cycles except after a firmware update",
+   "cycle_order": "not confirmed; VID25 shows blue, red, purple, yellow in that order [A]",
+   "source": "M p16; H-MODES; H-BLUE; EXP I; VID25",
+   "verified": true,
+   "GREEN": "Xbox; needs an Xbox wheel, so not seen with the bundled GT wheel (H-MODES)",
+   "verifier": "fix",
+   "verifier_note": "video colour order and green note added"
+  },
+  "ports": {
+   "base_pedal_port": "Pedals (base rear)",
+   "pedal_side_port": "Wheel Base / Load Cell (throttle module)",
+   "usb": "supplied 'USB Type-A to Type-C' cable; USB-A end to the PS5 [D]",
+   "power_order": "DC plug into the base before the AC plug into the wall",
+   "source": "M p1, p2, p5, p11, p13",
+   "verified": true,
+   "verifier": "new"
+  }
+ },
+ "walkthroughs": [
+  {
+   "id": "controls",
+   "title": "Find the controls",
+   "steps": [
+    {
+     "text": "Find the screen: the small white window at the top centre of the steering wheel, above the GT logo and just below the curved light strip. The base has no screen.",
+     "check": "It shows menu text when you short-press the Tuning button (with the menu closed it may be blank or show game data).",
+     "source": "PROD; M p19; GTP22",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "locator and closed-menu behaviour added"
+    },
+    {
+     "text": "Find the Tuning Menu button: the tiny round button just LEFT of the screen.",
+     "check": "One short press turns the screen on with a menu item.",
+     "source": "M p19 figure; GTP22; VID25 ~10:15",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Find the menu stick: the stick at the lower LEFT of the wheel face, under the blue-ringed stick. Ignore the four coloured-ring sticks.",
+     "check": "With the menu open, tilting it right changes the item name on the screen.",
+     "source": "M p19 figure 'D-Pad'; PROD; VID25",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Remember the directions: LEFT/RIGHT = move between settings; UP/DOWN = change the value (on the first item: change profile). Which of LEFT/RIGHT is 'next' is not confirmed; if you go the wrong way, tilt the other way.",
+     "check": "The small label changes with left/right; the big number changes with up/down.",
+     "source": "VID25 captions 10:30-11:40; FAQ36; GTP22",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "'next/previous' direction was implied as verified"
+    },
+    {
+     "text": "Find the power button on the right-hand side of the wheel base; its ring shows the mode colour.",
+     "check": "Ring is lit after power-on.",
+     "source": "M p15; EXP H",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Learn the screen: on a setting, the big digits are the value, the small text in the top corner is which setting you are on, and numbers have a bar underneath.",
+     "check": "Big number changes when you tilt up/down.",
+     "source": "VID25 frames 10:45-11:40",
+     "verified": false,
+     "evidence": "A",
+     "verifier": "new"
+    }
+   ]
+  },
+  {
+   "id": "mode",
+   "title": "Power on and set PlayStation (dark blue) mode",
+   "steps": [
+    {
+     "text": "Put the steering wheel on the base. QR2 Lite: press it firmly onto the base's quick release (the top of the base-side part is more rounded, so it fits one way only). To remove: pull the sleeve on the wheel side while pulling the wheel towards you.",
+     "check": "The wheel does not wobble or come off when pulled gently.",
+     "source": "EXP E; VID25 05:35-05:55, 11:55",
+     "verified": true,
+     "evidence": "V",
+     "note": "Older bundles have QR1 Lite (M p4); then follow M p10. Which version this rig has is unknown [U].",
+     "verifier": "new"
+    },
+    {
+     "text": "Before power-on plug in: the pedal RJ12 cable from the throttle module port 'Wheel Base / Load Cell' to the base port 'Pedals'; the power brick into the base first, then into the wall; the supplied USB cable to the PS5.",
+     "check": "Cables seated; devices are detected after start-up.",
+     "source": "M p1, p2, p5, p6 (4.1 ATTENTION), p11, p13",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "port names and power-brick order added"
+    },
+    {
+     "text": "Press the power button for about 1 second. Keep your hands off the wheel while it moves during start-up calibration.",
+     "check": "Ring lights up; the wheel moves briefly and settles.",
+     "source": "M p15 (5.2); VID25 06:05-06:10",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Wait until start-up has finished before changing mode.",
+     "check": "Wheel has stopped moving.",
+     "source": "H-STARTUP",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Read the ring colour: dark blue = PlayStation (PS5). Purple = PS4 compatibility, red = PC, yellow = PC compatibility.",
+     "check": "Ring is dark blue.",
+     "source": "M p16 (5.3); EXP I; H-MODES; H-BLUE; VID25 06:15-06:35",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "If not dark blue: tap (short press, under 1 s) the power button once, wait for the colour to change, repeat until dark blue. Never hold it (3 s turns the base off).",
+     "check": "Ring is dark blue.",
+     "source": "M p15-16; VID25 06:15",
+     "verified": true,
+     "evidence": "V",
+     "note": "Tap order not confirmed; the video shows blue, red, purple, yellow in that order [A]."
+    },
+    {
+     "text": "Alternative wheel combination (not needed): small round button under the L2 tab together with triangle.",
+     "check": "Ring colour changes.",
+     "source": "M p16 figure (positions only)",
+     "verified": false,
+     "evidence": "A",
+     "note": "The combination exists (V: M p16, EXP I, QG F); the buttons are identified from figure positions (A)."
+    },
+    {
+     "text": "The mode is remembered after power off/on, except after a firmware update: check the colour after updates.",
+     "check": "Ring still dark blue after next power-on.",
+     "source": "M p16 NOTE",
+     "verified": true,
+     "evidence": "V"
+    }
+   ]
+  },
+  {
+   "id": "menu_basics",
+   "title": "Open the Tuning Menu, move, change a value, close",
+   "steps": [
+    {
+     "text": "Short-press the Tuning button. In Fanatec's video the menu opens on the profile item (AUTO / C SET / SET n). If you see a number instead, tilt LEFT or RIGHT until a profile name appears.",
+     "check": "A profile name is on the screen.",
+     "source": "VID25 frame 10:30 [A]; profile names in text: M p20-21, FAQ36; OLED spelling: VID25 frames, GTP22",
+     "verified": false,
+     "evidence": "A",
+     "verifier": "fix",
+     "verifier_note": "was verified=true; no Fanatec text says the menu always opens on the profile item"
+    },
+    {
+     "text": "Tilt the menu stick LEFT or RIGHT to move to another setting. If you go the wrong way, tilt the other way.",
+     "check": "The small label and the value change.",
+     "source": "VID25 11:25-11:40 ('Left and right switches between the available settings')",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "'RIGHT = next' was presented as verified; direction is U"
+    },
+    {
+     "text": "Tilt UP or DOWN to change the value.",
+     "check": "The big number changes and the bar under it grows or shrinks [A].",
+     "source": "VID25 ('Up and down adjusts the values'); FAQ36",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "There is no confirm button: the value is used and saved at once in the base.",
+     "check": "Close and re-open the menu: the value is still there.",
+     "source": "FAQ36; EXP-TM",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Short-press the Tuning button again to close the menu.",
+     "check": "Menu text disappears from the screen.",
+     "source": "VID25 11:45; QG panel H step 3; EXP M step 3",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "The menu works at any time, even while a game is running. Use it while stopped or paused.",
+     "check": "-",
+     "source": "EXP-TM ('accessed at any time ... even on consoles')",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "new"
+    }
+   ]
+  },
+  {
+   "id": "standard_advanced",
+   "title": "Standard vs Advanced: tell, switch, and avoid the reset",
+   "steps": [
+    {
+     "text": "To tell which menu you are in: on the profile item tilt UP/DOWN. Standard offers only Auto and Custom (A SET / C SET; on the OLED AUTO / C SET [A]); Advanced offers Auto plus 1 SET..5 SET (on the OLED SET 1..SET 5 [A]). Any profile with a number = Advanced.",
+     "check": "You see 1 SET..5 SET = Advanced.",
+     "source": "M p20-21; EXP M; FAQ36",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "OLED spellings and simplest test added"
+    },
+    {
+     "text": "Or tilt LEFT/RIGHT through the items: Standard shows only SEN, FF, NDP (+BRF with a load-cell brake; SHO/MPS only with supporting hardware). Advanced adds FFS, NFR, NIN, INT, FEI, FOR, SPR, DPR. FUL (FullForce) exists on GT DD Pro firmware since June 2026, but which menu shows it is [U].",
+     "check": "INT or FEI visible = Advanced.",
+     "source": "M p21-25; EXP M; VID25 ('three core parameters'); PROD; H-TORQUE; FF-BLOG",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "FUL existence now V; menu location U"
+    },
+    {
+     "text": "Extra clue: in Standard NDP stops at 25 and FF at 005; in Advanced both go to OFF.",
+     "check": "NDP can reach OFF = Advanced.",
+     "source": "M p22-23",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Before your first switch, write your slot values down (pitwall Setup tab) so an accidental reset only costs re-typing.",
+     "check": "Values recorded.",
+     "source": "derived from M p21 reset behaviour",
+     "verified": true,
+     "evidence": "D",
+     "verifier": "new"
+    },
+    {
+     "text": "To switch: short-press the Tuning button so the menu is open, then press and HOLD it, counting 'one-thousand-one...'. Fanatec says 3 s (FAQ, video, driver notes) or 4 s (manual, help).",
+     "check": "The screen changes while you hold (GTPlanet 2022: 'MOD CHANGED TO ADVANCED' [U]); the profile item now offers SET 1..SET 5 (Advanced) or only AUTO / C SET (Standard).",
+     "source": "FAQ36; VID25 11:00; D431; M p21; H-ADV; EXP M; GTP22",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Let go as soon as the screen changes and never hold past 5 s. If nothing happened, let go and try again. Holding on resets ALL custom profiles to factory values and returns to Standard: the manual says after an additional 6 s (~10 s total), but one Fanatec caption reads like 6 s in total.",
+     "check": "Your 1 SET values are still there afterwards.",
+     "source": "M p21; H-ADV; EXP M",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "reset timing ambiguity; limit changed from '~10 s' framing to 'never past 5 s'"
+    },
+    {
+     "text": "The same hold toggles back to Standard. Whether slot values survive a normal toggle (without the long reset), and which profile is active afterwards, are not documented.",
+     "check": "Re-check a slot value after toggling.",
+     "source": "M p21 (toggle); survival not documented",
+     "verified": false,
+     "evidence": "U"
+    }
+   ]
+  },
+  {
+   "id": "slot",
+   "title": "Choose a custom slot (1 SET..5 SET)",
+   "steps": [
+    {
+     "text": "Be in the Advanced menu.",
+     "check": "1 SET..5 SET are offered on the first item.",
+     "source": "M p21",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Go to the profile item; tilt UP/DOWN until it shows 1 SET (on the OLED most likely 'SET 1' [A]). Suggested: 1 SET = F1 25, 2 SET = GT7 custom, 3 SET = experiments.",
+     "check": "Slot name on the screen.",
+     "source": "VID25 11:20 ('Up and down switches between different setup profiles'); RSS 6.0",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Selecting the profile activates it; close the menu with it showing.",
+     "check": "Re-open the menu: the first item still shows your slot.",
+     "source": "FAQ36 ('Select the Custom setup to activate it')",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "A SET = Auto Setup: the game controls the values; you can view but not change them (trying to change one shows the game's value). It is the factory default. Fanatec's text says the screen shows 'A.SET.' when a game actively uses it; how that looks on this OLED is [U]. Owners describe the settings as 'locked'; the exact on-screen word is not confirmed.",
+     "check": "If values refuse to change you are in A SET: pick 1 SET (or C SET in Standard).",
+     "source": "M p20; D431; FORUM-LOCK [U]",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "'A.SET.' appearance on this OLED downgraded to U"
+    },
+    {
+     "text": "If no game sends values, A SET simply uses the factory defaults (SEN AUTO, FF 100, NDP 50 ...).",
+     "check": "-",
+     "source": "M p20; FAQ36",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "new"
+    },
+    {
+     "text": "Switching to Advanced may leave you on A SET (one owner: more items appeared but stayed 'locked'). Always pick SET 1 after switching.",
+     "check": "Profile item shows SET 1, and values change.",
+     "source": "FORUM-LOCK",
+     "verified": false,
+     "evidence": "U",
+     "verifier": "new"
+    },
+    {
+     "text": "Changes save immediately; each slot keeps its own values in the base across power cycles.",
+     "check": "Power-cycle the base, re-open the menu, read a value back.",
+     "source": "EXP-TM; FAQ36",
+     "verified": true,
+     "evidence": "V"
+    }
+   ]
+  },
+  {
+   "id": "values",
+   "title": "Change each value in your slot",
+   "steps": [
+    {
+     "text": "Select your slot, tilt RIGHT (or LEFT) once, read the small label, tilt UP/DOWN until the big number shows the target, move to the next item; repeat for every item on your sheet.",
+     "check": "Each item shows your target number.",
+     "source": "VID25; FAQ36",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "label is small on the OLED; direction not confirmed"
+    },
+    {
+     "text": "To choose OFF: the manual lists OFF just before the lowest number ('OFF 001 ... 100'), so it is probably one step below the lowest number. For BLI the manual lists OFF after 100.",
+     "check": "Screen shows OFF.",
+     "source": "M p22-25 list order",
+     "verified": false,
+     "evidence": "D",
+     "verifier": "fix",
+     "verifier_note": "was V; position of OFF is inferred from list order"
+    },
+    {
+     "text": "SEN starts at AUTO. The manual lists AUTO after the highest number ('90 ... 2520 AUTO'), so one step from AUTO probably lands on 2520 (Advanced) or 1080 (Standard); then step down to 360. If you land on 90, go the other way.",
+     "check": "Screen shows 360.",
+     "source": "M p22 list order; VID25 frame 11:25 shows 2520 [A]",
+     "verified": false,
+     "evidence": "D",
+     "verifier": "new"
+    },
+    {
+     "text": "Close the menu, re-open it and re-read two items.",
+     "check": "They still show your values.",
+     "source": "FAQ36",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "SEN check: with SEN 360 the base stops the wheel at about half a turn (180 deg) each way from centre (manual: SEN 90 allows 45 deg each way).",
+     "check": "Wheel stops near 180 deg each side.",
+     "source": "M p22; derived",
+     "verified": true,
+     "evidence": "D"
+    },
+    {
+     "text": "The order of items in the menu is not confirmed (manual describes SEN, FF, FFS, NDP, NFR, NIN, INT, FEI, FOR/SPR/DPR, BLI, SHO, MPS, AP, BRF).",
+     "check": "Read each item name before changing it.",
+     "source": "M p22-28",
+     "verified": false,
+     "evidence": "U"
+    }
+   ]
+  },
+  {
+   "id": "pedals_hall",
+   "title": "CSL Pedals (stock Hall sensors): routine after every power-on",
+   "steps": [
+    {
+     "text": "Plug the pedals (RJ12) into the base before power-on.",
+     "check": "Pedals respond in game.",
+     "source": "M p6, p13",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "After every power-on, before driving: press the throttle all the way down and let it all the way back; press the brake as far as it goes and let it all the way back (clutch too if fitted).",
+     "check": "pitwall Live tab (F1 25 telemetry on, on track): brake and throttle bars read 0 at rest and 100 at full press.",
+     "source": "M p30 troubleshooting",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Stock CSL Pedals have no BRF setting.",
+     "check": "BRF does not appear in the menu.",
+     "source": "M p28 ('Not supported by the included CSL Pedals')",
+     "verified": true,
+     "evidence": "V"
+    }
+   ]
+  },
+  {
+   "id": "load_cell_brf",
+   "title": "After the CSL Pedals Load Cell Kit: find and set BRF",
+   "steps": [
+    {
+     "text": "Update the base firmware first: Windows PC with the Fanatec App, base in RED, then return to DARK BLUE. A Mac cannot do this. Expect 'CAL' afterwards (centre calibration) and re-check the mode colour.",
+     "check": "Ring dark blue again.",
+     "source": "LCK 4.4; M p3, p15 (5.1), p16, p17",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "Windows-only and post-update checks added"
+    },
+    {
+     "text": "Wire per the LC manual: short RJ12 from the accelerator 'Wheel Base / Load Cell' port to the load-cell module 'Load Cell' port; load-cell module to the wheel base with the long RJ12 from the CSL Pedals; old brake may go to 'Clutch'. Never connect RJ12 and USB at the same time. Check the printed port labels.",
+     "check": "Ports match the printed labels.",
+     "source": "LCK 4.4",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Power on and press every pedal fully and release (needed when Manual Mode is not set, i.e. always on PS5 without a PC).",
+     "check": "Brake bar 0 at rest, 100 at a firm press.",
+     "source": "LCK 6",
+     "verified": true,
+     "evidence": "V",
+     "note": "That Manual Mode is never set on a PS5-only rig is D: it can only be enabled from PC software (LCK 4.5).",
+     "verifier": "fix",
+     "verifier_note": "'always on PS5' part is D"
+    },
+    {
+     "text": "Open the menu, choose your slot, tilt LEFT/RIGHT until BRF appears. It shows in Standard and Advanced, but only when the load-cell brake is detected.",
+     "check": "BRF is listed; if not, check wiring and firmware.",
+     "source": "M p21; EXP M; LCK 6",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Set BRF with UP/DOWN: Lo, 010..100, Hi; default 050. Lower = less force for 100% brake.",
+     "check": "pitwall Live brake bar reaches 100 at your chosen firm press.",
+     "source": "M p28; H-TM",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Re-check BRF after base restarts and firmware updates (past BRF-reset bugs).",
+     "check": "BRF still shows your value.",
+     "source": "RSS 3.4",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Manual p28, EXP M (BRF), H-TM and LCK 4.5 all say BRF needs RJ12 'and' USB; LCK 4.4 says never both; EXP M's Standard-menu note only requires a load-cell pedal set, and LCK 4.5 says BRF is also in the Tuning Menu. On PS5 use RJ12 only. Whether BRF is per slot or global is not confirmed.",
+     "check": "BRF visible with RJ12 only.",
+     "source": "M p28; EXP M; H-TM; LCK 4.4, 4.5",
+     "verified": false,
+     "evidence": "U",
+     "verifier": "fix",
+     "verifier_note": "the 'RJ12 and USB' wording is not only in the PDF"
+    }
+   ]
+  },
+  {
+   "id": "f1_25",
+   "title": "F1 25 on PS5: where the in-game settings are",
+   "steps": [
+    {
+     "text": "Main menu or pause menu: Settings > Controls, Vibration & Force Feedback.",
+     "check": "You see a list of input devices/presets.",
+     "source": "BK25 (2025-05-28, 'Settings > Controls, Vibration & Force Feedback > [wheel] > Calibration'); SRS25; EA-F122 controls (F1 22)",
+     "verified": false,
+     "evidence": "U"
+    },
+    {
+     "text": "Select your wheel's entry (not the Wireless Controller). The exact name F1 25 shows for the GT DD Pro is not confirmed.",
+     "check": "Wheel entry opens with Calibration and Vibration & Force Feedback options.",
+     "source": "BK25",
+     "verified": false,
+     "evidence": "U",
+     "note": "EA's F1 22 page calls these entries 'Wireless Controller Preset 1/2'."
+    },
+    {
+     "text": "Calibration: Steering/Throttle/Brake Deadzone, Linearity, Saturation (0-100, default 0 in EA's F1 22 docs). F1 25 also has 'Steering Rate' per BK25.",
+     "check": "Sliders show your values.",
+     "source": "EA-F122 calibration (F1 22); BK25 (Steering Rate, F1 25)",
+     "verified": false,
+     "evidence": "U",
+     "verifier": "fix",
+     "verifier_note": "Steering Rate is not in EA's F1 22 list"
+    },
+    {
+     "text": "Vibration & Force Feedback (BK25: 'Vibration & Feedback'). F1 25 per BK25: Vibration & Force Feedback On/Off, Strength, On Track Effects, Rumble Strip Effects, Off Track Effects, Pit Stop Effects, Wheel Damper, Maximum Wheel Rotation. EA's F1 22 list instead has Understeer Enhance and two rotation items (F1 & F2 default 360; Super Cars default 900) and no Pit Stop Effects. If there are two rotation items, set the F1 one.",
+     "check": "All items listed.",
+     "source": "BK25 (F1 25); EA-F122 vibration-force (F1 22)",
+     "verified": false,
+     "evidence": "U",
+     "verifier": "fix",
+     "verifier_note": "Pit Stop Effects was credited to EA F1 22; it is BK25-only"
+    },
+    {
+     "text": "Set Maximum Wheel Rotation to the same number as SEN on the wheel (e.g. 360 and 360).",
+     "check": "Turn the real wheel to 90 deg: the in-game wheel is at 90 deg too. If not, Fanatec's fix is to change SEN until they match; some games' wheel animation is not realistic.",
+     "source": "H-ANGLE",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Set SEN by hand for F1; do not rely on SEN AUTO (Fanatec known issue; observed on PC, PS5 behaviour unknown).",
+     "check": "SEN shows a number, not AUTO.",
+     "source": "APP1613",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "If items seem missing, look for a settings filter and set it to Expert.",
+     "check": "Calibration and effect sliders visible.",
+     "source": "RSS 3.5 (not confirmed in an EA source)",
+     "verified": false,
+     "evidence": "U"
+    }
+   ]
+  },
+  {
+   "id": "gt7",
+   "title": "GT7 on PS5: Force Feedback Max. Torque and Sensitivity",
+   "steps": [
+    {
+     "text": "Before a race, in the Quick Menu choose Settings > Controller Settings.",
+     "check": "Controller Settings screen opens.",
+     "source": "GT7M drivingoption/01, /04",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Under Steering Force Feedback set 'Force Feedback Max. Torque' and 'Force Feedback Sensitivity'. The official manual gives no ranges (owners use 1-10).",
+     "check": "Values shown.",
+     "source": "GT7M drivingoption/04; ranges [U]",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "On the wheel GT7 can use A SET (game-pushed, read-only) or your own slot (e.g. 2 SET).",
+     "check": "Profile item shows A SET or 2 SET.",
+     "source": "M p20 (Auto Setup in general); RSS 2 and 6.4 (GT7 1.71 notice: GT7 uses A SET)",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "fix",
+     "verifier_note": "GT7's use of A SET is not in the manual"
+    },
+    {
+     "text": "Whether Controller Settings is also reachable while paused is not confirmed.",
+     "check": "-",
+     "source": "RSS 3.6",
+     "verified": false,
+     "evidence": "U"
+    },
+    {
+     "text": "Known GT DD Pro issues in GT7: FFB can be lost with the wheel spinning uncontrollably; SPR and DPR do not work in the GT7 menu. If the wheel spins on its own: hands off, hold power 3 s to switch the base off.",
+     "check": "Base off; wheel stops.",
+     "source": "APP1613 known issues; M p15",
+     "verified": true,
+     "evidence": "V",
+     "verifier": "new"
+    }
+   ]
+  },
+  {
+   "id": "centre_calibration",
+   "title": "Centre calibration ('CAL' flashing or wheel off-centre)",
+   "steps": [
+    {
+     "text": "'CAL' flashing on the wheel screen is normal after a base firmware update.",
+     "check": "'CAL' visible.",
+     "source": "H-CAL; M p17",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Short-press the Tuning button to open the menu.",
+     "check": "Menu open.",
+     "source": "M p17 step 1; QG panel G; VID25 08:40-08:45",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Hold the wheel dead straight.",
+     "check": "Wheel centred.",
+     "source": "M p17 step 2",
+     "verified": true,
+     "evidence": "V"
+    },
+    {
+     "text": "Press together: the small round button under the R2 tab (top-right of the hub, three-line symbol) and cross (bottom face button).",
+     "check": "'CAL' disappears.",
+     "source": "M p17 step 3 figure; EXP K; QG panel G (positions); VID25 08:50-08:55 (names)",
+     "verified": true,
+     "evidence": "V",
+     "note": "Positions are V (three Fanatec figures); the names cross and three-line symbol are A.",
+     "verifier": "fix",
+     "verifier_note": "positions are verified by official figures; only the button names are A"
+    },
+    {
+     "text": "Short-press the Tuning button to exit. If the wheel still won't centre, make sure SPR is not low or OFF.",
+     "check": "Wheel returns to centre after start-up.",
+     "source": "M p17 step 4; M p25; VID25 ~08:55",
+     "verified": true,
+     "evidence": "V"
+    }
+   ]
+  }
+ ],
+ "menu_items": {
+  "SETUP": {
+   "display": "Fanatec text: A SET / C SET (Standard); A SET / 1 SET..5 SET (Advanced). OLED in VID25: AUTO, C SET, SET 4 [A]. 'A.SET.' when a game actively uses Auto Setup (text; OLED look [U])",
+   "values": "profile selector (first item); UP/DOWN chooses",
+   "menu": "both",
+   "default": "A SET (Auto Setup is the factory default)",
+   "source": "M p20-21; D431; VID25; GTP22",
+   "verified": true
+  },
+  "SEN": {
+   "display": "SEN",
+   "values": "degrees: Standard 180..1080 or AUTO; Advanced 90..2520 or AUTO; step size not confirmed",
+   "menu": "both",
+   "default": "AUTO",
+   "note": "set by hand for F1 and match Maximum Wheel Rotation. AUTO is listed after the highest value, so from AUTO you probably step down from 2520/1080 [D]",
+   "source": "M p22; H-TM; APP1613",
+   "verified": true
+  },
+  "FF": {
+   "display": "FF (Fanatec web pages and PC App: FFB)",
+   "values": "Standard 005..100; Advanced OFF, 001..100 (% of motor)",
+   "menu": "both",
+   "default": "100",
+   "source": "M p22; FAN-F125; H-6NM",
+   "verified": true
+  },
+  "FFS": {
+   "display": "FFS",
+   "values": "LIN / PEA (App and Fanatec pages: LINEAR / PEAK)",
+   "menu": "advanced",
+   "default": "PEA",
+   "note": "RSS 3.1: not offered with the Boost Kit on base FW >= 1.9.0.2; conflicts with help 50420340753297 (2026-09-24) which still says set PEAK for 8 Nm. If shown, set PEA.",
+   "source": "M p23; D431; H-6NM; RSS 3.1",
+   "verified": true,
+   "verifier": "fix",
+   "verifier_note": "conflict with a September 2026 help article added"
+  },
+  "NDP": {
+   "display": "NDP",
+   "values": "Standard 25..100; Advanced OFF, 01..100",
+   "menu": "both",
+   "default": "50",
+   "source": "M p23",
+   "verified": true
+  },
+  "NFR": {
+   "display": "NFR",
+   "values": "OFF, 001..100",
+   "menu": "advanced",
+   "default": "OFF",
+   "source": "M p24",
+   "verified": true
+  },
+  "NIN": {
+   "display": "NIN",
+   "values": "OFF, 001..100",
+   "menu": "advanced",
+   "default": "OFF",
+   "source": "M p24",
+   "verified": true
+  },
+  "INT": {
+   "display": "INT",
+   "values": "OFF, 01..20 (OFF = unfiltered)",
+   "menu": "advanced",
+   "default": "11",
+   "source": "M p24",
+   "verified": true
+  },
+  "FEI": {
+   "display": "FEI",
+   "values": "000..100 (000 smoothest, 100 sharpest); steps of 10 on older bases per FAQ36, not confirmed for GT DD Pro",
+   "menu": "advanced",
+   "default": "100",
+   "source": "M p24; FAQ36",
+   "verified": true
+  },
+  "FOR": {
+   "display": "FOR",
+   "values": "OFF, 010..120",
+   "menu": "advanced",
+   "default": "100",
+   "source": "M p25",
+   "verified": true
+  },
+  "SPR": {
+   "display": "SPR",
+   "values": "OFF, 010..120; low/OFF stops the base re-centring the wheel after centre calibration",
+   "menu": "advanced",
+   "default": "100",
+   "source": "M p25",
+   "verified": true
+  },
+  "DPR": {
+   "display": "DPR",
+   "values": "OFF, 010..120",
+   "menu": "advanced",
+   "default": "100",
+   "source": "M p25",
+   "verified": true
+  },
+  "BRF": {
+   "display": "BRF",
+   "values": "Lo, 010..100, Hi (Lo = least force for 100% brake); only when a load-cell brake is detected",
+   "menu": "both",
+   "default": "050",
+   "source": "M p21, p28; EXP M; LCK 4.5",
+   "verified": true
+  },
+  "FUL": {
+   "display": "FUL",
+   "values": "OFF..100 per H-TM (written for Podium/CS DD) [U for GT DD Pro]",
+   "menu": "[U]",
+   "default": "100 [U]",
+   "note": "FullForce is on the GT DD Pro from the June 2026 firmware (V: PROD note, H-TORQUE, FF-BLOG). H-TM still says 'ONLY for Podium DD, CS DD and CS DD+' (out of date). Known issue: weaker than intended (APP1613). Leave at default for F1.",
+   "source": "PROD; H-TORQUE; FF-BLOG; H-TM; APP1613; RSS 3.1",
+   "verified": false,
+   "verifier": "fix",
+   "verifier_note": "existence upgraded to V; menu, position and range on GT DD Pro remain U"
+  },
+  "display_format_note": {
+   "display": "manual writes leading zeros (050, 001, 010; 01 for NDP/INT)",
+   "values": "OLED shows the value in big digits, a small label in the top corner and a bar under numbers [A]; leading zeros, % / deg signs, FF-vs-FFB spelling and whether the label is text or an icon not confirmed",
+   "source": "M p22-28; VID25 frames 10:45-11:40",
+   "verified": false
+  }
+ },
+ "mistakes": [
+  {
+   "id": "a_set_locked",
+   "symptom": "Values won't change; settings appear 'locked'",
+   "cause": "Profile is A SET (Auto Setup, 'AUTO' on the OLED), the factory default",
+   "fix": "First item: choose C SET (Standard) or 1 SET (Advanced), then change values",
+   "source": "M p20; D431; FORUM-LOCK",
+   "verified": true
+  },
+  {
+   "id": "menu_locked_firmware",
+   "symptom": "Even custom profiles cannot be changed; menu seems frozen",
+   "cause": "Firmware fault (Fanatec article 'Tuning Menu is locked'); the article gives no symptom detail, so rule out A SET first",
+   "fix": "Re-flash base firmware from a Windows PC with the Fanatec App (base in RED), then back to DARK BLUE",
+   "source": "H-LOCK",
+   "verified": true,
+   "verifier": "fix",
+   "verifier_note": "rule out A SET first; Windows-only"
+  },
+  {
+   "id": "standard_menu",
+   "symptom": "INT, FEI, FOR, FFS etc. missing; NDP won't go below 25",
+   "cause": "Standard Tuning Menu",
+   "fix": "Open menu, hold Tuning button 3-4 s, release when the screen changes",
+   "source": "M p21-23",
+   "verified": true
+  },
+  {
+   "id": "accidental_reset",
+   "symptom": "Back in Standard; all values back to defaults (SEN AUTO, FF 100, FFS PEA, NDP 50, NFR/NIN OFF, INT 11, FEI 100, FOR/SPR/DPR 100)",
+   "cause": "Tuning button held too long: manual says 4 s + 6 s more; one caption reads like 6 s total",
+   "fix": "Switch to Advanced again, select 1 SET, re-enter values from the pitwall Setup sheet",
+   "source": "M p21-25; H-ADV",
+   "verified": true,
+   "verifier": "fix",
+   "verifier_note": "reset timing ambiguity"
+  },
+  {
+   "id": "wrong_stick",
+   "symptom": "Menu does not react",
+   "cause": "Using a coloured-ring stick",
+   "fix": "Use the lower-left menu stick (D-Pad)",
+   "source": "M p19; PROD",
+   "verified": true
+  },
+  {
+   "id": "wrong_mode",
+   "symptom": "Wheel not recognised properly on PS5",
+   "cause": "Base not in DARK BLUE mode (e.g. purple after experimenting, or mode changed after a firmware update)",
+   "fix": "Tap the power button until the ring is dark blue",
+   "source": "M p16; H-BLUE; H-MODES",
+   "verified": true
+  },
+  {
+   "id": "power_held",
+   "symptom": "Base switched off while changing mode",
+   "cause": "Power button held 3 s instead of tapped",
+   "fix": "Power on again; slots are stored in the base",
+   "source": "M p15; EXP-TM",
+   "verified": true
+  },
+  {
+   "id": "sen_mismatch",
+   "symptom": "In-game wheel turns more or less than the real wheel in F1 25",
+   "cause": "SEN differs from Maximum Wheel Rotation, or SEN AUTO",
+   "fix": "Set SEN by hand equal to Maximum Wheel Rotation; 90 deg check",
+   "source": "H-ANGLE; APP1613",
+   "verified": true
+  },
+  {
+   "id": "cal_flashing",
+   "symptom": "'CAL' flashing or wheel off-centre after firmware update",
+   "cause": "Centre calibration needed",
+   "fix": "Centre calibration walkthrough",
+   "source": "H-CAL; M p17",
+   "verified": true
+  },
+  {
+   "id": "no_recentre",
+   "symptom": "Wheel does not return to centre",
+   "cause": "SPR low/OFF or calibration needed",
+   "fix": "SPR 100; centre calibration",
+   "source": "M p25",
+   "verified": true
+  },
+  {
+   "id": "pedal_range",
+   "symptom": "Brake/throttle don't reach 100% or show input at rest (stock CSL)",
+   "cause": "Power-on press-fully routine skipped",
+   "fix": "Press each pedal fully and release after every power-on",
+   "source": "M p30",
+   "verified": true
+  },
+  {
+   "id": "brf_missing",
+   "symptom": "BRF not in the menu",
+   "cause": "Stock CSL Pedals (no BRF) or load cell not detected",
+   "fix": "Check LC wiring (LCK 4.4) and firmware",
+   "source": "M p28; LCK 6",
+   "verified": true
+  },
+  {
+   "id": "lc_input_at_rest",
+   "symptom": "Load-cell brake shows input with foot off",
+   "cause": "Load-cell fault/drift",
+   "fix": "Firmware update and pedal reset on a PC",
+   "source": "H-LCREST",
+   "verified": true
+  },
+  {
+   "id": "ffs_missing_boost",
+   "symptom": "FFS missing after fitting the Boost Kit",
+   "cause": "Expected on base FW >= 1.9.0.2",
+   "fix": "Nothing to fix. If FFS is still shown, set PEA (H-6NM, 2026-09-24)",
+   "source": "RSS 3.1 (App 1.5.1.2 changelog, not re-read); H-6NM",
+   "verified": false,
+   "verifier": "fix",
+   "verifier_note": "conflicting Fanatec help article"
+  },
+  {
+   "id": "f1_v125_oscillation",
+   "symptom": "F1 25: violent oscillation or lost FFB after a session change",
+   "cause": "F1 25 v1.25 game bug",
+   "fix": "Pause and power-cycle the base; do not retune for it",
+   "source": "RSS 1",
+   "verified": true
+  },
+  {
+   "id": "still_auto_after_switch",
+   "symptom": "Switched to Advanced, more items appear, but values still won't change",
+   "cause": "Still on A SET / AUTO",
+   "fix": "Profile item: pick SET 1",
+   "source": "FORUM-LOCK",
+   "verified": false,
+   "verifier": "new"
+  },
+  {
+   "id": "blank_display",
+   "symptom": "Pressing the Tuning button shows nothing on the screen",
+   "cause": "Bent quick-release pins, or faulty wheel/base",
+   "fix": "Check the pins inside the quick release; try another wheel; contact Fanatec",
+   "source": "M p30",
+   "verified": true,
+   "verifier": "new"
+  },
+  {
+   "id": "menu_opens_on_value",
+   "symptom": "Menu opens on a number, not a profile name",
+   "cause": "Menu did not open on the profile item",
+   "fix": "Tilt LEFT or RIGHT until AUTO / C SET / SET n appears",
+   "source": "derived",
+   "verified": false,
+   "verifier": "new"
+  },
+  {
+   "id": "gt7_wheel_spins",
+   "symptom": "GT7: FFB lost and the wheel spins on its own",
+   "cause": "Known GT DD Pro issue in GT7 (App 1.6.1.3 notes)",
+   "fix": "Hands off; hold power 3 s to switch the base off; power on again",
+   "source": "APP1613; M p15",
+   "verified": true,
+   "verifier": "new"
+  }
+ ],
+ "unverified": [
+  "Printed label/symbol on the Tuning Menu button (position certain; no legible label in any source)",
+  "Names of the two small round hub buttons under L2 and R2 (look like PS CREATE / OPTIONS in 320x180 video frames)",
+  "Exact OLED wording: video shows 'AUTO', 'C SET', 'SET 4' [A] while Fanatec text says 'A SET', '1 SET' (FAQ36: 'A SET' on 1'' OLED wheels); whether the small label is the 3-letter name or an icon; 'FF' vs 'FFB', 'PEA'/'LIN' vs 'PEAK'/'LINEAR'; leading zeros, % / deg signs",
+  "Which of LEFT/RIGHT is 'next' and whether UP increases a value",
+  "Order of items in the menu; position of BRF and FUL; whether the menu always opens on the profile item",
+  "Hold time 3 s vs 4 s; confirmation text on current firmware ('MOD CHANGED TO ADVANCED' is a 2022 owner quote); what the screen shows during/after a reset; whether the reset is 6 s after the menu change or 6 s in total",
+  "Whether slot values survive a normal Standard<->Advanced toggle, and which profile is active afterwards",
+  "Whether the screen literally shows 'LOCKED' in A SET",
+  "Step sizes (SEN, FEI); whether holding the stick auto-repeats; where AUTO sits in the SEN list and OFF in others",
+  "Order of mode colours when tapping the power button (video suggests blue, red, purple, yellow [A])",
+  "Display size (1-inch 128x64 not confirmed on a Fanatec page)",
+  "BRF per slot or global; manual p28 'RJ12 and USB' wording vs LC manual 'never both'",
+  "F1 25: wheel entry name; 'Vibration & Force Feedback' vs 'Vibration & Feedback' label; whether Steering Rate, Pit Stop Effects, Understeer Enhance and one or two Maximum Wheel Rotation items exist; Settings Filter/Expert; live input bars in Calibration; slider ranges/defaults; SEN AUTO on PS5; whether F1 25 uses A SET",
+  "GT7: Max. Torque / Sensitivity ranges; Controller Settings while paused",
+  "Whether DualSense or the wheel's cross/circle is easier for F1 25 menus",
+  "Which quick release this base has (QR1 Lite per 2022 manual, QR2 Lite on current bundles); attach step differs",
+  "FUL on the GT DD Pro: which menu, position and range (FullForce itself is confirmed)",
+  "FFS with the Boost Kit: removed (RSS 3.1) or still shown (help 50420340753297, 2026-09-24)"
+ ],
+ "sources": {
+  "M": {
+   "title": "GT DD Pro manual (EN, Rev. 04)",
+   "url": "https://www3.corsair.com/Files/Fanatec/Documentation/GT-DD-PRO-Manual-EN_01.pdf",
+   "date": "2022-09-26",
+   "locator": "printed page N = PDF page N+4; QR1 Lite bundle (rim and menu same as QR2 Lite)"
+  },
+  "QG": {
+   "title": "GT DD Pro Quick Guide poster",
+   "url": "https://fanatec.com/media/pdf/7c/12/4d/GT-DD-PRO-QG-SIE-EU-AU-US_Web_02.pdf",
+   "date": "2023-03-02",
+   "locator": "page 2 panels E (ON & OFF), F (MODES), G (CENTER CALIBRATION), H (TUNING OPTIONS)"
+  },
+  "EXP": {
+   "title": "Fanatec Explorer online manual: Gran Turismo DD Pro (QR2)",
+   "url": "https://www.fanatec.com/us/en/explorer/products/racing-wheels-wheel-bases/gran-turismo-dd-pro/",
+   "date": "read 2026-10-11",
+   "locator": "sections H, I, K, M"
+  },
+  "EXP-TM": {
+   "title": "Fanatec Explorer: Unlocking Performance: The Fanatec Tuning Menu",
+   "url": "https://www.fanatec.com/us/en/explorer/products/steering-wheel/fanatec-tuning-menu-for-performance/",
+   "date": "read 2026-10-11",
+   "locator": "Create presets"
+  },
+  "PROD": {
+   "title": "Fanatec GT DD Pro 5 Nm QR2L bundle product page",
+   "url": "https://www.fanatec.com/eu/en/p/sim-racing-bundles/crd-9020007-eu/gran-turismo-dd-pro-5nm-qr2l-eu",
+   "date": "read 2026-10-11",
+   "locator": "Features: Steering wheel for Gran Turismo DD Pro"
+  },
+  "VID25": {
+   "title": "Fanatec: Gran Turismo DD Pro (QR2 Lite) - Video Guide",
+   "url": "https://www.youtube.com/watch?v=28SrBLy-V_M",
+   "date": "2025-05-15",
+   "locator": "on-screen captions from 320x180 storyboard frames (every 5 s): 05:15-05:55 connections and wheel attach, 06:00-06:40 power/modes, 08:40-09:00 centre calibration, 09:50-11:45 tuning, 11:55 detach"
+  },
+  "FAQ36": {
+   "title": "Fanatec FAQ: What can be set in the Tuning Menu of my wheel?",
+   "url": "https://www.fanatec.com/uk/en/s/faq-what-can-be-set-wheel-tuning-menu",
+   "date": "legacy, multi-base",
+   "locator": "Auto/Custom setup explained"
+  },
+  "H-TM": {
+   "title": "Fanatec help 43901256649233: Tuning Menu parameters",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/43901256649233.json",
+   "date": "updated 2026-08-31",
+   "note": "still lists FUL as 'ONLY for Podium DD, CS DD and CS DD+' (out of date)"
+  },
+  "H-ADV": {
+   "title": "Fanatec help 30312152662033: How do I change to the advanced tuning menu?",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/30312152662033.json",
+   "date": "updated 2026-09-01"
+  },
+  "H-MODES": {
+   "title": "Fanatec help 49452636576017: Wheel Base Compatibility Modes - A Primer",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/49452636576017.json",
+   "date": "2026-08-03"
+  },
+  "H-BLUE": {
+   "title": "Fanatec help 45694330932369: GT DD Pro - PlayStation Blue Mode vs. Purple Mode",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/45694330932369.json",
+   "date": "updated 2026-09-19"
+  },
+  "H-STARTUP": {
+   "title": "Fanatec help 51364321050897: Changing modes after the wheel base has completed its initial startup process",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/51364321050897.json",
+   "date": "2026-09-29"
+  },
+  "H-CAL": {
+   "title": "Fanatec help 51462672436113: CAL = Center Calibration flashes continuously",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/51462672436113.json",
+   "date": "2026-10-01"
+  },
+  "H-ANGLE": {
+   "title": "Fanatec help 30312080760593: The steering wheel angle does not match the virtual steering wheel",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/30312080760593.json",
+   "date": "updated 2026-09-02"
+  },
+  "H-LOCK": {
+   "title": "Fanatec help 43900063462289: The Tuning Menu is locked, and no adjustments can be made",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/43900063462289.json",
+   "date": "updated 2026-08-31"
+  },
+  "H-6NM": {
+   "title": "Fanatec help 30312080999825 / 50420340753297: Boost Kit shows 6 Nm instead of 8 Nm",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/50420340753297.json",
+   "date": "updated 2026-09-24"
+  },
+  "H-LCREST": {
+   "title": "Fanatec help 50374918547985: load cell brake input detected while not pressed",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/50374918547985.json",
+   "date": "updated 2026-10-10"
+  },
+  "APP1613": {
+   "title": "Fanatec App v1.6.1.3 release notes (help 51115557248017)",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/51115557248017.json",
+   "date": "2026-09-21",
+   "locator": "Known issues: set SEN manually for F1 games"
+  },
+  "D431": {
+   "title": "Fanatec driver 431 changelog (forum, Wayback snapshot 2024-08-01)",
+   "url": "https://web.archive.org/web/20240801081944/https://forum.fanatec.com/discussion/comment/74347/",
+   "date": "2021-11-26"
+  },
+  "FORUM-LOCK": {
+   "title": "Fanatec forum: GT DD Pro owner on PS5, settings 'locked' (Wayback snapshot 2024-08-01)",
+   "url": "https://web.archive.org/web/20240801205841/https://forum.fanatec.com/discussion/comment/77758/",
+   "date": "2022-01-18"
+  },
+  "GTP22": {
+   "title": "GTPlanet (J. Greer): Gran Turismo 7's Latest Update Nerfed the Fanatec GT DD Pro: Here's How to Fix It",
+   "url": "https://www.gtplanet.net/gran-turismo-7s-latest-update-nerfed-the-fanatec-gt-dd-pro-heres-how-to-fix-it/",
+   "date": "2022-05-29"
+  },
+  "LCK": {
+   "title": "Fanatec Explorer: CSL Pedals Load Cell Kit manual",
+   "url": "https://www.fanatec.com/us/en/explorer/products/pedals/csl-pedals-load-cell-kit/",
+   "date": "read 2026-10-11",
+   "locator": "4.4 Connections, 4.5 Tuning Options, 6 Troubleshooting"
+  },
+  "FAN-F125": {
+   "title": "Fanatec: F1 25 Fanatec Wheel Bases Recommended Settings",
+   "url": "https://www.fanatec.com/us/en/explorer/games/f1-2024/f1-25-fanatec-recommended-settings/",
+   "date": "read 2026-10-11"
+  },
+  "EA-F122": {
+   "title": "EA accessibility resources, F1 22 PS5 (controls, calibration, vibration-force)",
+   "url": "https://www.ea.com/able/resources/f1-22/ps5/calibration",
+   "date": "F1 22",
+   "note": "no 'Steering Rate' or 'Pit Stop Effects'; has 'Understeer Enhance' and two rotation items"
+  },
+  "BK25": {
+   "title": "Brian Koponen: Best F1 25 Settings for Thrustmaster T248",
+   "url": "https://www.briankoponen.com/f1-25-thrustmaster-t248-settings/",
+   "date": "2025-05-28",
+   "note": "source of 'Steering Rate' and 'Pit Stop Effects' for F1 25"
+  },
+  "SRS25": {
+   "title": "SimRacingSetup: F1 25 Controls Guide for PS5, Xbox & PC",
+   "url": "https://simracingsetup.com/?p=13877919",
+   "date": "updated 2025-05-26"
+  },
+  "GT7M": {
+   "title": "Gran Turismo 7 official manual: Settings / Controller Settings",
+   "url": "https://www.gran-turismo.com/gb/gt7/manual/drivingoption/04",
+   "date": "read 2026-10-11",
+   "locator": "also /drivingoption/01; text via /gb/gt7/api/manual/?u=/drivingoption/04"
+  },
+  "RSS": {
+   "title": "pitwall docs/research/rig-setup-sources.md",
+   "url": "docs/research/rig-setup-sources.md",
+   "date": "2026-10-10"
+  },
+  "H-TORQUE": {
+   "title": "Fanatec help 48812077676177: Wheel Base Torque FAQ",
+   "url": "https://help.fanatec.com/api/v2/help_center/en-us/articles/48812077676177.json",
+   "date": "updated 2026-07-31",
+   "locator": "As of June 2026, FullForce is supported on ... Gran Turismo DD Pro"
+  },
+  "FF-BLOG": {
+   "title": "Fanatec Explorer: FullForce arrives on CSL DD and GT DD Pro",
+   "url": "https://www.fanatec.com/eu/en/explorer/products/racing-wheels-wheel-bases/fullforce-arrives-on-csl-dd-and-gran-turismo-dd-pro/",
+   "date": "2026-06-16"
+  }
+ },
+ "verification": {
+  "date": "2026-10-11",
+  "role": "adversarial verifier",
+  "marking": "steps/items changed by the verifier carry 'verifier': 'fix' (corrected) or 'new' (added), plus 'verifier_note'",
+  "sources_reread": [
+   "M (all pages; figures p16, p17, p19, p21 rendered at 400 dpi)",
+   "QG page 2 panels E-H",
+   "EXP (GT DD Pro QR2) sections B, E, H, I, K, M, O; LCK sections 4.4, 4.5, 6",
+   "EXP-TM",
+   "PROD",
+   "FAQ36",
+   "help JSON 43901256649233, 30312152662033, 49452636576017, 45694330932369, 51364321050897, 51462672436113, 30312080760593, 43900063462289, 30312080999825, 50420340753297, 50374918547985, 51115557248017, 48812077676177",
+   "D431 and FORUM-LOCK Wayback snapshots",
+   "GTP22",
+   "GT7M /01 and /04",
+   "EA-F122 (3 pages)",
+   "BK25",
+   "FAN-F125",
+   "FF-BLOG",
+   "VID25 storyboard frames 05:15-12:00 (320x180, every 5 s)"
+  ],
+  "confirmed": [
+   "screen position; Tuning button tiny, left of the screen, right of the L2 tab",
+   "menu stick lower left; left/right = setting, up/down = value or profile; no confirm button; saved at once",
+   "exit with a short press; 3 s vs 4 s hold conflict; +6 s reset returns to Standard",
+   "Standard = A SET + C SET with SEN/FF/NDP (+BRF/SHO/MPS with hardware); Advanced = A SET + 1-5 SET",
+   "every range and default in menu_items; Fanatec F1 25 PC/PS5 values (incl. FEI 90/80 if harsh)",
+   "power button right side, ~1 s on, 3 s off, 8 s bootloader; 4 LED colours; mode kept except after firmware update",
+   "centre-calibration button positions; pedal power-on routine; LCK wiring and 'never RJ12 and USB together'",
+   "GT7 Quick Menu > Settings > Controller Settings > Steering Force Feedback"
+  ],
+  "corrections": [
+   "menu opening on the profile item was verified=true; no text says so -> A (video) with recovery step",
+   "'RIGHT = next' was presented as verified; only 'left/right switches setting' is verified",
+   "'OFF is one step below the lowest number' was V; it is D from the manual's list order",
+   "reset timing: EXP caption 'Hold ... for 6 seconds to perform a reset' can be read as 6 s total; limit is now 'never past 5 s'",
+   "ring colours of the four sticks are A, not V",
+   "FUL: FullForce on GT DD Pro confirmed (PROD note, H-TORQUE, FF-BLOG); H-TM still says Podium/CS DD only",
+   "F1 25: 'Steering Rate' and 'Pit Stop Effects' were credited to EA F1 22 pages; they are BK25-only. EA F1 22 also lists Understeer Enhance and two rotation items",
+   "BRF 'RJ12 and USB' wording is also in EXP M, H-TM and LCK 4.5, not only the PDF",
+   "'Manual Mode never set on PS5' is D, not V",
+   "GT7 using A SET comes from RSS (GT7 1.71 notice), not the manual",
+   "FFS removal with Boost Kit conflicts with help 50420340753297 (2026-09-24)",
+   "appearance of 'A.SET.' on this OLED unknown; video shows 'AUTO'",
+   "VID25 timestamps corrected"
+  ],
+  "additions": [
+   "wheel attach step (QR2 Lite)",
+   "port names and power-brick order",
+   "what the OLED shows (big value, small label, bar)",
+   "screen may be blank or show game data when menu closed",
+   "menu works while a game runs",
+   "SEN-from-AUTO direction hint",
+   "A SET uses factory defaults when no game sends values",
+   "switching to Advanced may leave you on A SET",
+   "write values down before switching menus",
+   "Windows-only firmware updates",
+   "GT7 known issues",
+   "mistakes: still_auto_after_switch, blank_display, menu_opens_on_value, gt7_wheel_spins"
+  ]
+ }
+}

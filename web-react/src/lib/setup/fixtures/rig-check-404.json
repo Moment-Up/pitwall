@@ -1,0 +1,10 @@
+{
+ "_fixture": {
+  "source": "GET /api/rig/check?driver_id=2&game=gt7 on the live pitwall service (read-only), 2026-10-11",
+  "status": 404,
+  "note": "recorded error"
+ },
+ "body": {
+  "detail": "unknown driver 2"
+ }
+}

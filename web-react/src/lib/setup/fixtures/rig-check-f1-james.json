@@ -1,0 +1,481 @@
+{
+ "_fixture": {
+  "source": "GET /api/rig/check?driver_id=1&game=f1_25&laps=clean&baseline=none on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded: a real PS5 F1 25 Melbourne race, 3 clean laps; warns, infos and unknowns"
+ },
+ "body": {
+  "session_id": "1e7271f70c5e",
+  "game": "f1_25",
+  "track": "Melbourne",
+  "session_type": "race",
+  "synthetic": false,
+  "started_unix": 1791677832.3194518,
+  "lap_policy": "clean",
+  "laps": [
+   1,
+   2,
+   3
+  ],
+  "lap_ids": [
+   70,
+   71,
+   72
+  ],
+  "sample_rate_hz": 59.9597,
+  "rotation_deg": 360.0,
+  "steering_lock_deg": 360.0,
+  "pedals": "csl",
+  "counts": {
+   "pass": 7,
+   "warn": 3,
+   "fail": 0,
+   "info": 5,
+   "unknown": 4
+  },
+  "metrics": [
+   {
+    "metric": "brake_at_rest_max",
+    "label": "Brake at rest",
+    "value": 4.8809,
+    "unit": "%",
+    "status": "warn",
+    "heuristic": true,
+    "good_range": "0.0 (<= 0.005) [H]",
+    "target": "<= 0.5% (fail above 5%)",
+    "detail": "Highest brake reading during 58 s of full throttle on straights; above 0.5% for 1.6 s.",
+    "action": "Hall pedals: press-fully routine after power-on, check mechanics. Load cell: check elastomer/piston preload; firmware update + pedal reset via PC (Fanatec help 50374908960273). Then F1 25 BRAKE_DEADZONE +1..3 and confirm trail-brake input is not swallowed.",
+    "reason_unknown": null,
+    "samples": 3502,
+    "per_lap": {
+     "1": 0.1431,
+     "2": 0.5207,
+     "3": 4.8809
+    },
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://help.fanatec.com/hc/en-us/articles/50374908960273-An-input-signal-from-the-load-cell-brake-pedals-is-detected-while-the-pedal-is-not-pressed",
+     "https://www.ea.com/able/resources/f1-22/ps5/calibration",
+     "https://www.overtake.gg/threads/csl-elite-load-cell-question-deadzone.147291/"
+    ]
+   },
+   {
+    "metric": "throttle_at_rest_min",
+    "label": "Throttle at rest",
+    "value": 0.0002,
+    "unit": "%",
+    "status": "pass",
+    "heuristic": true,
+    "good_range": "0.0 [H]",
+    "target": "<= 0.5% (fail above 5%)",
+    "detail": "Lowest throttle reading of each lap (worst lap shown): the pedal should return to 0.",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 3,
+    "per_lap": {
+     "1": 0.0,
+     "2": 0.0002,
+     "3": 0.0002
+    },
+    "reference": null,
+    "threshold_note": "The research target is exactly 0; pitwall passes up to 0.5% because 12-bit pedals read a few thousandths at rest (0.002% on the real PS5 race).",
+    "sources": [
+     "https://www.ea.com/able/resources/f1-22/ps5/calibration",
+     "https://fanatec.com//eu/en/explorer/products/pedals/guide-to-fanatecs-csl-pedals/"
+    ]
+   },
+   {
+    "metric": "throttle_peak_straights",
+    "label": "Full throttle reached",
+    "value": 100.0,
+    "unit": "%",
+    "status": "pass",
+    "heuristic": true,
+    "good_range": ">= 0.99 [H]; must be > 0.90 for S Mode/DRS (sourced)",
+    "target": ">= 99% (fail below 90%)",
+    "detail": "99th percentile of throttle on straights, lowest lap shown. Since F1 25 v1.25, S Mode/DRS stays open only while throttle is above 90%.",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 5435,
+    "per_lap": {
+     "1": 100.0,
+     "2": 100.0,
+     "3": 100.0
+    },
+    "reference": null,
+    "threshold_note": "The 90% limit is sourced for F1 25 since v1.25 (S Mode/DRS needs throttle above 90%); the 99% target is a pitwall heuristic.",
+    "sources": [
+     "https://forums.ea.com/blog/f1-games-game-info-hub-en/f1%C2%AE-25-2026-season-pack-%E2%80%93-v1-25-%E2%80%93-patch-notes/13694119",
+     "https://mp1st.com/title-updates-and-patches/f1-25-version-1-25-released-september-7-update-1-025-consoles",
+     "https://www.ea.com/able/resources/f1-22/ps5/calibration"
+    ]
+   },
+   {
+    "metric": "brake_peak_heavy_zones",
+    "label": "Full brake in heavy stops",
+    "value": 100.0,
+    "unit": "%",
+    "status": "pass",
+    "heuristic": true,
+    "good_range": ">= 0.95 [H]",
+    "target": ">= 95% (fail below 80%)",
+    "detail": "Median peak brake of 11 braking zones entered above 250 km/h.",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 11,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://doi.org/10.3390/s25133872",
+     "https://help.fanatec.com/hc/en-us/articles/43901256649233-In-the-Tuning-Menu-of-your-wheel-base-you-can-adjust-a-variety-of-parameters",
+     "https://evezone.evetech.co.za/deep-dives/the-complete-guide-load-cell-brake-pedals-sim"
+    ]
+   },
+   {
+    "metric": "brake_time_at_full_pct",
+    "label": "Braking time at 100%",
+    "value": 18.419,
+    "unit": "%",
+    "status": "pass",
+    "heuristic": true,
+    "good_range": "<= ~30% of braking time overall; no flat tops concentrated in low-speed corners with lock-ups [H]",
+    "target": "<= 30%",
+    "detail": "Share of 64.1 s of braking spent at 100% over 24 braking events; 5 plateaus at 100% longer than 0.3 s in slow corners (below 120 km/h).",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 24,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://help.fanatec.com/hc/en-us/articles/43901256649233-In-the-Tuning-Menu-of-your-wheel-base-you-can-adjust-a-variety-of-parameters",
+     "https://www.trophi.ai/post/the-ultimate-f1-24-braking-guide",
+     "https://www.hpacademy.com/courses/professional-motorsport-data-analysis/braking-performance-braking-technique"
+    ]
+   },
+   {
+    "metric": "brake_time_to_peak_s",
+    "label": "Time to peak brake",
+    "value": 0.4336,
+    "unit": "s",
+    "status": "info",
+    "heuristic": false,
+    "good_range": "close to the driver's own best laps; ACC GT3 reference 0.31-0.38 s",
+    "target": "Compare with your own sessions (ACC GT3 0.31-0.38 s (Joyce et al. 2025); not F1)",
+    "detail": "Median time from brake onset to peak over 24 braking events (middle half 0.35-0.66 s).",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 24,
+    "per_lap": {},
+    "reference": "ACC GT3 0.31-0.38 s (Joyce et al. 2025); not F1",
+    "threshold_note": null,
+    "sources": [
+     "https://doi.org/10.3390/s25133872",
+     "https://coachdaveacademy.com/tutorials/a-delta-guide-understanding-brake-traces-to-be-faster"
+    ]
+   },
+   {
+    "metric": "trail_brake_duration_s",
+    "label": "Trail-brake release",
+    "value": 0.684,
+    "unit": "s",
+    "status": "info",
+    "heuristic": false,
+    "good_range": "close to the driver's own best laps; ACC GT3 reference 0.94-1.26 s",
+    "target": "Compare with your own sessions (ACC GT3 0.94-1.26 s (Joyce et al. 2025); not F1)",
+    "detail": "Median time from the last moment at peak brake to release over 24 braking events (middle half 0.50-2.09 s).",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 24,
+    "per_lap": {},
+    "reference": "ACC GT3 0.94-1.26 s (Joyce et al. 2025); not F1",
+    "threshold_note": null,
+    "sources": [
+     "https://doi.org/10.3390/s25133872",
+     "https://pure.ul.ie/en/publications/ai-enabled-prediction-of-sim-racing-performance-using-telemetry-d/"
+    ]
+   },
+   {
+    "metric": "brake_reapply_count",
+    "label": "Brake re-applications",
+    "value": 2.6667,
+    "unit": "per lap",
+    "status": "warn",
+    "heuristic": true,
+    "good_range": "0-1 per lap [H]",
+    "target": "<= 1 per lap",
+    "detail": "Braking events per lap where the brake fell by at least 10 points and was pressed 10+ points again before being released (a full release starts a new press), over 3 laps with measured stops.",
+    "action": "Braking too early or modulation trouble (HP Academy); review pedal mapping (BRF / linearity) and technique.",
+    "reason_unknown": null,
+    "samples": 24,
+    "per_lap": {
+     "1": 2.0,
+     "2": 2.0,
+     "3": 4.0
+    },
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://www.hpacademy.com/courses/professional-motorsport-data-analysis/braking-performance-braking-technique"
+    ]
+   },
+   {
+    "metric": "lockup_at_full_brake_share",
+    "label": "Lock-ups at 100% brake",
+    "value": null,
+    "unit": "%",
+    "status": "unknown",
+    "heuristic": true,
+    "good_range": "low [H]",
+    "target": "<= 25%",
+    "detail": "Wheel slip is not recorded in pitwall lap traces, and the sign and scale of F1's wheel slip ratio are unconfirmed (open question 13).",
+    "action": null,
+    "reason_unknown": "Wheel slip is not recorded in pitwall lap traces, and the sign and scale of F1's wheel slip ratio are unconfirmed (open question 13).",
+    "samples": 0,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://www.hpacademy.com/courses/professional-motorsport-data-analysis/braking-performance-brake-locking/",
+     "https://www.trophi.ai/post/the-ultimate-f1-24-braking-guide",
+     "https://forums.ea.com/blog/f1-games-game-info-hub-en/ea-sports%E2%84%A2-f1%C2%AE25-2026-season-pack-udp-specification/12187347"
+    ]
+   },
+   {
+    "metric": "drs_drop_light_brake",
+    "label": "DRS closed by a light brake touch",
+    "value": null,
+    "unit": "count",
+    "status": "unknown",
+    "heuristic": true,
+    "good_range": "0 [H]",
+    "target": "<= 0 count",
+    "detail": "DRS state is not recorded in pitwall lap traces.",
+    "action": null,
+    "reason_unknown": "DRS state is not recorded in pitwall lap traces.",
+    "samples": 0,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://admin.forum.fanatec.com/discussion/26061/f1-2019-game-play-drs-flashing-second-time-after-it-is-actived"
+    ]
+   },
+   {
+    "metric": "brake_peak_drift_session",
+    "label": "Brake peak drift in the session",
+    "value": -6.1179,
+    "unit": "points",
+    "status": "warn",
+    "heuristic": true,
+    "good_range": "drift <= 0.05 [H]",
+    "target": "within +-5 points (fail beyond +-15 points)",
+    "detail": "Median peak of the last 3 firm stops minus the first 3 (6 single-press stops entered above 250 km/h; positive: later stops peak higher).",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 6,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": "Median peak of the last three firm stops minus the first three (single-press stops entered above 250 km/h, at least six). The research compares stops 8-10 with stops 1-3 at a similar entry speed; on real races that mixed light lifts with full stops and drift came out at +-30 points from driving alone, so pitwall compares firm stops only. The fail limit is a pitwall heuristic.",
+    "sources": [
+     "https://www3.corsair.com/Files/Fanatec/Documentation/CSL-P-LCK-Manual-EN_01.pdf",
+     "https://www.gtplanet.net/forum/posts/14388602/"
+    ]
+   },
+   {
+    "metric": "brake_hold_noise",
+    "label": "Brake noise in steady holds",
+    "value": 0.439,
+    "unit": "%",
+    "status": "info",
+    "heuristic": true,
+    "good_range": "low and stable across sessions [H]",
+    "target": "<= 2%",
+    "detail": "Median standard deviation of the brake (the driver's slow change removed) over 7 steady holds of 0.3 s or more. Shown for comparison: the threshold is for the load-cell brake, and this session used the Hall brake.",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 7,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": "The threshold is for the load cell; with the Hall brake the value is shown for comparison only.",
+    "sources": [
+     "https://www.gtplanet.net/forum/posts/13658975/"
+    ]
+   },
+   {
+    "metric": "brake_peak_vs_history",
+    "label": "Heavy-stop peak against your history",
+    "value": null,
+    "unit": "points",
+    "status": "unknown",
+    "heuristic": true,
+    "good_range": "within 0.10 of the driver's history at the same BRF [H]",
+    "target": "within +-10 points",
+    "detail": "Load Cell Kit only: this session used the Hall brake.",
+    "action": null,
+    "reason_unknown": "Load Cell Kit only: this session used the Hall brake.",
+    "samples": 0,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://www.gtplanet.net/forum/posts/14052323/",
+     "https://www.gtplanet.net/forum/posts/13325531/",
+     "https://help.fanatec.com/hc/en-us/articles/43901256649233-In-the-Tuning-Menu-of-your-wheel-base-you-can-adjust-a-variety-of-parameters"
+    ]
+   },
+   {
+    "metric": "steer_full_lock_share",
+    "label": "Time at full lock",
+    "value": 0.2021,
+    "unit": "%",
+    "status": "pass",
+    "heuristic": true,
+    "good_range": "~0 outside hairpins (Monaco hairpin needs ~21-22 deg road-wheel lock vs ~17 deg normally) [H]",
+    "target": "<= 1%",
+    "detail": "0.6 s at full steering lock above 80 km/h in 5.1 min of driving.",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 0,
+    "per_lap": {
+     "1": 0.3363,
+     "2": 0.2439,
+     "3": 0.0
+    },
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://www.motorsport.com/f1/news/monaco-grand-prix-the-latest-tech-stories/3217923/",
+     "https://www.ea.com/able/resources/f1-22/ps5/calibration"
+    ]
+   },
+   {
+    "metric": "steer_centre_offset",
+    "label": "Steering centre offset",
+    "value": 0.1343,
+    "unit": "%",
+    "status": "pass",
+    "heuristic": true,
+    "good_range": "<= 0.01 [H]",
+    "target": "<= 1% (fail above 5%)",
+    "detail": "Median steering on straights over 5435 samples, as % of full lock (0 = centred).",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 5435,
+    "per_lap": {
+     "1": 0.4272,
+     "2": 0.0122,
+     "3": 0.0488
+    },
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://www3.corsair.com/Files/Fanatec/Documentation/GT-DD-PRO-Manual-EN_01.pdf"
+    ]
+   },
+   {
+    "metric": "steer_roadwheel_linearity",
+    "label": "Steering against road-wheel angle",
+    "value": null,
+    "unit": "R²",
+    "status": "unknown",
+    "heuristic": true,
+    "good_range": "linear, no centre kink [H]",
+    "target": ">= 0.98 R²",
+    "detail": "Front wheel angle is not recorded in pitwall lap traces.",
+    "action": null,
+    "reason_unknown": "Front wheel angle is not recorded in pitwall lap traces.",
+    "samples": 0,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": null,
+    "sources": [
+     "https://forums.ea.com/blog/f1-games-game-info-hub-en/ea-sports%E2%84%A2-f1%C2%AE25-2026-season-pack-udp-specification/12187347",
+     "https://www.ea.com/able/resources/f1-22/ps5/calibration"
+    ]
+   },
+   {
+    "metric": "straight_oscillation_rate",
+    "label": "Steering oscillation on straights",
+    "value": 2.0918,
+    "unit": "/s",
+    "status": "info",
+    "heuristic": true,
+    "good_range": "low [H]",
+    "target": "Compare with your own sessions (Uncalibrated: hands-on driving already produces small corrections. Compare before and after a change (for example the Boost Kit).)",
+    "detail": "145 steering reversals larger than 1% of lock in 69.3 s of near-centre straight-line driving (low-pass 10 Hz). Hands-on corrections count too: compare before and after a change.",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 145,
+    "per_lap": {},
+    "reference": "Uncalibrated: hands-on driving already produces small corrections. Compare before and after a change (for example the Boost Kit).",
+    "threshold_note": null,
+    "sources": [
+     "https://help.fanatec.com/hc/en-us/articles/30312108300177-Why-is-my-steering-wheel-oscillating-or-shaking",
+     "https://help.fanatec.com/hc/en-us/articles/30894863193613-Some-cars-have-steering-wobble-at-high-speed-in-Gran-Turismo-7",
+     "https://forums.ea.com/discussions/f1-25-general-discussion-en/ffb-%E2%80%9Cbump%E2%80%9D-on-sm-activationdeactivation/13697335"
+    ]
+   },
+   {
+    "metric": "session_start_oscillation",
+    "label": "Oscillation after a session change",
+    "value": 0.0,
+    "unit": "events",
+    "status": "pass",
+    "heuristic": true,
+    "good_range": "none [H]",
+    "target": "<= 0 events",
+    "detail": "0 bursts of 3+ steering reversals larger than 10% of lock in 7.7 s standing still or without pedal input at the start of the session. Paused and garage frames are not recorded.",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 461,
+    "per_lap": {},
+    "reference": null,
+    "threshold_note": "Bursts of 3+ steering reversals larger than 10% of lock while standing still or with no pedal input, in the first 30 s of the session's first lap (pitwall heuristic; standing still is added to the research definition because drivers rev on the grid). Paused and garage frames are not recorded.",
+    "sources": [
+     "https://forums.ea.com/idea/f1-25-bug-reports-en/force-feedback-disabled-or-violently-throwing-the-wheel-on-new-update/13695137",
+     "https://forums.ea.com/discussions/f1-25-general-discussion-en/fanatec-gt-dd-pro-%E2%80%93-how-to-fix-severe-ffb-oscillation-after-second-session/13701405",
+     "https://forums.ea.com/discussions/ea-app-technical-issues-es/severe-force-feedback-issue-after-update-%E2%80%93-fanatec-csl-dd/13701710",
+     "https://forum.fanatec.com/topic/20597-gt-dd-pro/"
+    ]
+   },
+   {
+    "metric": "steering_reversal_rate",
+    "label": "Steering reversal rate",
+    "value": 81.18,
+    "unit": "/min",
+    "status": "info",
+    "heuristic": true,
+    "good_range": "driver-relative; racing gap size must be calibrated on recordings (driver-workload gaps of 0.5-0.7 deg are too small)",
+    "target": "Compare with your own sessions (Driver-relative smoothness indicator (Markkula & Engstrom 2006). Compare with your own best sessions.)",
+    "detail": "413 steering reversals of at least 2 deg (low-pass 2 Hz, 360 deg rotation assumed) in 5.1 min.",
+    "action": null,
+    "reason_unknown": null,
+    "samples": 413,
+    "per_lap": {
+     "1": 72.0509,
+     "2": 85.9855,
+     "3": 87.2713
+    },
+    "reference": "Driver-relative smoothness indicator (Markkula & Engstrom 2006). Compare with your own best sessions.",
+    "threshold_note": null,
+    "sources": [
+     "https://eprints.whiterose.ac.uk/id/eprint/131534/",
+     "https://lero.ie/sites/default/files/Faz%20Esport%20Poster%20edited.pdf"
+    ]
+   }
+  ],
+  "notes": [
+   "Telemetry carries the game's processed inputs (probably after in-game deadzone, linearity and saturation; unverified). It cannot show pedal force, BRF or SEN.",
+   "Neither F1 25 nor GT7 sends force-feedback torque, so clipping and FFB strength cannot be measured here.",
+   "Thresholds marked H are pitwall heuristics, not published values. Use them to compare sessions, before and after a change."
+  ],
+  "generated_unix": 1791684538.403688,
+  "baseline": null,
+  "comparison": null,
+  "upgrade": null,
+  "baseline_note": null
+ }
+}

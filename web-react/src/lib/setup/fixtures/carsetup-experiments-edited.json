@@ -1,0 +1,118 @@
+{
+ "_fixture": {
+  "source": "GET /api/carsetup/experiments (shape from src/pitwall/carsetup/experiments.py)",
+  "status": 200,
+  "note": "edited: the live service has no experiments yet, so both are hand-written on the real Suzuka session ids; every value is sample data",
+  "edited": [
+   "every field (hand-written)"
+  ]
+ },
+ "body": [
+  {
+   "id": 2,
+   "game": "f1_25",
+   "track_id": "f1:13",
+   "car_id": null,
+   "created_unix": 1791672000.0,
+   "hypothesis": "A stiffer rear bar should help the car rotate through the Esses.",
+   "parameter": "rear_arb",
+   "from_value": 10.0,
+   "to_value": 20.0,
+   "status": "running",
+   "before_session_id": "df149ca2d149",
+   "after_session_id": "a86b0d9d6f69",
+   "before_metrics": null,
+   "after_metrics": null,
+   "conclusion": null
+  },
+  {
+   "id": 1,
+   "game": "f1_25",
+   "track_id": "f1:13",
+   "car_id": null,
+   "created_unix": 1791660000.0,
+   "hypothesis": "More front wing for turn-in at Spoon.",
+   "parameter": "front_wing",
+   "from_value": 10.0,
+   "to_value": 14.0,
+   "status": "concluded",
+   "before_session_id": "df149ca2d149",
+   "after_session_id": "a86b0d9d6f69",
+   "before_metrics": {
+    "session_id": "df149ca2d149",
+    "clean_laps": 5,
+    "best_clean_ms": 92980,
+    "median_clean_ms": 93412.0,
+    "stdev_clean_ms": 310.0,
+    "theoretical_best_ms": 92611,
+    "tyre_compound": "soft",
+    "wear_rate_pct_per_lap": [
+     1.9,
+     2.0,
+     1.6,
+     1.7
+    ],
+    "weather": "light_cloud",
+    "track_temp_c": 23.0,
+    "setup": {
+     "front_wing": 10.0,
+     "rear_wing": 12.0
+    }
+   },
+   "after_metrics": {
+    "session_id": "a86b0d9d6f69",
+    "clean_laps": 4,
+    "best_clean_ms": 92844,
+    "median_clean_ms": 93101.0,
+    "stdev_clean_ms": 310.0,
+    "theoretical_best_ms": 92530,
+    "tyre_compound": "soft",
+    "wear_rate_pct_per_lap": [
+     1.9,
+     2.0,
+     1.6,
+     1.7
+    ],
+    "weather": "light_cloud",
+    "track_temp_c": 23.0,
+    "setup": {
+     "front_wing": 14.0,
+     "rear_wing": 12.0
+    },
+    "comparison": {
+     "verdict": "faster",
+     "reason": "median clean lap -0.311 s, beyond the lap-to-lap noise (+/-0.150 s)",
+     "noise_s": 0.15,
+     "best_delta_s": -0.136,
+     "median_delta_s": -0.311,
+     "theoretical_delta_s": -0.081,
+     "reference_lap_id": 101,
+     "corners": [
+      {
+       "corner": "C5",
+       "label": "T11",
+       "laps": 4,
+       "mean_time_delta_s": -0.084,
+       "mean_min_speed_delta_kph": 2.3,
+       "mean_exit_speed_delta_kph": 1.1
+      },
+      {
+       "corner": "C2",
+       "label": "T3-4",
+       "laps": 4,
+       "mean_time_delta_s": 0.021,
+       "mean_min_speed_delta_kph": -0.6,
+       "mean_exit_speed_delta_kph": null
+      }
+     ],
+     "setup_check": {
+      "applied": true,
+      "other_changes": [],
+      "note": null
+     }
+    }
+   },
+   "conclusion": "Front Wing Aero 10 to 14: faster by 0.311 s on the median clean lap at Suzuka. One session each: confirm with another run before keeping it."
+  }
+ ]
+}

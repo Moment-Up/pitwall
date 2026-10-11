@@ -1,0 +1,1227 @@
+{
+ "_fixture": {
+  "source": "GET /api/carsetup/sessions/df149ca2d149?car_format=f1_2025 on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded: the same session with the 2025 car chosen"
+ },
+ "body": {
+  "session": {
+   "id": "df149ca2d149",
+   "game": "f1_25",
+   "track_id": "f1:13",
+   "track_name": "Suzuka",
+   "session_type": "race",
+   "session_type_raw": "Race",
+   "car_name": null,
+   "weather": {
+    "condition": "light_cloud",
+    "track_temp_c": 23.0,
+    "air_temp_c": 17.0,
+    "rain_percentage": 6.0
+   },
+   "synthetic": false,
+   "driver": {
+    "id": 1,
+    "name": "James",
+    "skill_level": "advanced"
+   }
+  },
+  "context": {
+   "track_id": 13,
+   "track_name": "Suzuka",
+   "car_format": null,
+   "car_format_certain": false,
+   "session": "race",
+   "conditions": "dry",
+   "reasons": {
+    "car_format": "an unknown car in UDP format 2025: 2025 and 2026 cars cannot be told apart, choose the car format (or set the game's UDP format to 2026)"
+   },
+   "notes": []
+  },
+  "chosen": {
+   "car_format": "f1_2025",
+   "session": "race",
+   "conditions": "dry",
+   "style": null
+  },
+  "needs": [],
+  "setup": {
+   "t_recv_ns": 1863413302561166,
+   "fingerprint": "ballast=6;brake_bias=58;brake_pressure=100;diff_off_throttle=55;diff_on_throttle=90;engine_braking=50;front_arb=15;front_camber=-3.5;front_ride_height=25;front_suspension=37;front_toe=0.02;front_wing=10;fuel_load=14.0;rear_arb=10;rear_camber=-2.0;rear_ride_height=46;rear_suspension=10;rear_toe=0.12;rear_wing=12;tyre_pressure_fl=24.3;tyre_pressure_fr=24.3;tyre_pressure_rl=21.5;tyre_pressure_rr=21.5",
+   "params": {
+    "front_wing": {
+     "key": "front_wing",
+     "value": 10,
+     "unit": null,
+     "label": "Front wing",
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_wing": {
+     "key": "rear_wing",
+     "value": 12,
+     "unit": null,
+     "label": "Rear wing",
+     "min_value": null,
+     "max_value": null
+    },
+    "diff_on_throttle": {
+     "key": "diff_on_throttle",
+     "value": 90,
+     "unit": "%",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "diff_off_throttle": {
+     "key": "diff_off_throttle",
+     "value": 55,
+     "unit": "%",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_camber": {
+     "key": "front_camber",
+     "value": -3.5,
+     "unit": "deg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_camber": {
+     "key": "rear_camber",
+     "value": -2.0,
+     "unit": "deg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_toe": {
+     "key": "front_toe",
+     "value": 0.020000001415610313,
+     "unit": "deg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_toe": {
+     "key": "rear_toe",
+     "value": 0.12000000476837158,
+     "unit": "deg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_suspension": {
+     "key": "front_suspension",
+     "value": 37,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_suspension": {
+     "key": "rear_suspension",
+     "value": 10,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_arb": {
+     "key": "front_arb",
+     "value": 15,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_arb": {
+     "key": "rear_arb",
+     "value": 10,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "front_ride_height": {
+     "key": "front_ride_height",
+     "value": 25,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "rear_ride_height": {
+     "key": "rear_ride_height",
+     "value": 46,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "brake_pressure": {
+     "key": "brake_pressure",
+     "value": 100,
+     "unit": "%",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "brake_bias": {
+     "key": "brake_bias",
+     "value": 58,
+     "unit": "% front",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "engine_braking": {
+     "key": "engine_braking",
+     "value": 50,
+     "unit": "%",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "tyre_pressure_rl": {
+     "key": "tyre_pressure_rl",
+     "value": 21.5,
+     "unit": "psi",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "tyre_pressure_rr": {
+     "key": "tyre_pressure_rr",
+     "value": 21.5,
+     "unit": "psi",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "tyre_pressure_fl": {
+     "key": "tyre_pressure_fl",
+     "value": 24.299999237060547,
+     "unit": "psi",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "tyre_pressure_fr": {
+     "key": "tyre_pressure_fr",
+     "value": 24.299999237060547,
+     "unit": "psi",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "ballast": {
+     "key": "ballast",
+     "value": 6,
+     "unit": null,
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    },
+    "fuel_load": {
+     "key": "fuel_load",
+     "value": 14.0,
+     "unit": "kg",
+     "label": null,
+     "min_value": null,
+     "max_value": null
+    }
+   }
+  },
+  "recommendation": {
+   "id": "f1_2025:13:race:dry:balanced",
+   "car_format": "f1_2025",
+   "track_id": 13,
+   "track_name": "Suzuka",
+   "session": "race",
+   "conditions": "dry",
+   "style": "balanced",
+   "requested_session": "race",
+   "requested_style": "balanced",
+   "style_reason": "advanced driver: balanced setup",
+   "selection": "medoid",
+   "groups": [
+    "Aerodynamics",
+    "Transmission",
+    "Suspension Geometry",
+    "Suspension",
+    "Brakes",
+    "Tyres"
+   ],
+   "rows": [
+    {
+     "key": "front_wing",
+     "label": "Front Wing Aero",
+     "group": "Aerodynamics",
+     "order": 1,
+     "value": 23.0,
+     "display": "23",
+     "unit": null,
+     "min": 0.0,
+     "max": 50.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      21.0,
+      23.0
+     ]
+    },
+    {
+     "key": "rear_wing",
+     "label": "Rear Wing Aero",
+     "group": "Aerodynamics",
+     "order": 2,
+     "value": 23.0,
+     "display": "23",
+     "unit": null,
+     "min": 0.0,
+     "max": 50.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      17.0,
+      23.0
+     ]
+    },
+    {
+     "key": "diff_on_throttle",
+     "label": "Differential Adjustment On Throttle",
+     "group": "Transmission",
+     "order": 3,
+     "value": 95.0,
+     "display": "95",
+     "unit": "%",
+     "min": 10.0,
+     "max": 100.0,
+     "step": 5.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d"
+     ],
+     "patches": [],
+     "spread": [
+      30.0,
+      95.0
+     ]
+    },
+    {
+     "key": "diff_off_throttle",
+     "label": "Differential Adjustment Off Throttle",
+     "group": "Transmission",
+     "order": 4,
+     "value": 55.0,
+     "display": "55",
+     "unit": "%",
+     "min": 10.0,
+     "max": 100.0,
+     "step": 5.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      35.0,
+      55.0
+     ]
+    },
+    {
+     "key": "front_camber",
+     "label": "Front Camber",
+     "group": "Suspension Geometry",
+     "order": 5,
+     "value": -3.5,
+     "display": "-3.50",
+     "unit": "deg",
+     "min": -3.5,
+     "max": -2.5,
+     "step": 0.1,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      -3.5,
+      -3.4
+     ]
+    },
+    {
+     "key": "rear_camber",
+     "label": "Rear Camber",
+     "group": "Suspension Geometry",
+     "order": 6,
+     "value": -2.0,
+     "display": "-2.00",
+     "unit": "deg",
+     "min": -2.0,
+     "max": -1.0,
+     "step": 0.1,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      -2.0,
+      -1.9
+     ]
+    },
+    {
+     "key": "front_toe",
+     "label": "Front Toe-Out",
+     "group": "Suspension Geometry",
+     "order": 7,
+     "value": 0.0,
+     "display": "0.00",
+     "unit": "deg",
+     "min": 0.0,
+     "max": 0.2,
+     "step": 0.01,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d"
+     ],
+     "patches": [],
+     "spread": [
+      0.0,
+      0.08
+     ]
+    },
+    {
+     "key": "rear_toe",
+     "label": "Rear Toe-In",
+     "group": "Suspension Geometry",
+     "order": 8,
+     "value": 0.1,
+     "display": "0.10",
+     "unit": "deg",
+     "min": 0.1,
+     "max": 0.25,
+     "step": 0.01,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d"
+     ],
+     "patches": [],
+     "spread": [
+      0.1,
+      0.18
+     ]
+    },
+    {
+     "key": "front_suspension",
+     "label": "Front Suspension",
+     "group": "Suspension",
+     "order": 9,
+     "value": 41.0,
+     "display": "41",
+     "unit": null,
+     "min": 2.0,
+     "max": 41.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d"
+     ],
+     "patches": [],
+     "spread": [
+      37.0,
+      41.0
+     ]
+    },
+    {
+     "key": "rear_suspension",
+     "label": "Rear Suspension",
+     "group": "Suspension",
+     "order": 10,
+     "value": 1.0,
+     "display": "1",
+     "unit": null,
+     "min": 1.0,
+     "max": 41.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d"
+     ],
+     "patches": [],
+     "spread": [
+      1.0,
+      19.0
+     ]
+    },
+    {
+     "key": "front_arb",
+     "label": "Front Anti-Roll Bar",
+     "group": "Suspension",
+     "order": 11,
+     "value": 10.0,
+     "display": "10",
+     "unit": null,
+     "min": 1.0,
+     "max": 21.0,
+     "step": 1.0,
+     "confidence": "low",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d"
+     ],
+     "patches": [],
+     "spread": [
+      1.0,
+      15.0
+     ]
+    },
+    {
+     "key": "rear_arb",
+     "label": "Rear Anti-Roll Bar",
+     "group": "Suspension",
+     "order": 12,
+     "value": 20.0,
+     "display": "20",
+     "unit": null,
+     "min": 1.0,
+     "max": 21.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d"
+     ],
+     "patches": [],
+     "spread": [
+      9.0,
+      20.0
+     ]
+    },
+    {
+     "key": "front_ride_height",
+     "label": "Front Ride Height",
+     "group": "Suspension",
+     "order": 13,
+     "value": 25.0,
+     "display": "25",
+     "unit": null,
+     "min": 15.0,
+     "max": 35.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      22.0,
+      25.0
+     ]
+    },
+    {
+     "key": "rear_ride_height",
+     "label": "Rear Ride Height",
+     "group": "Suspension",
+     "order": 14,
+     "value": 50.0,
+     "display": "50",
+     "unit": null,
+     "min": 40.0,
+     "max": 60.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      41.0,
+      50.0
+     ]
+    },
+    {
+     "key": "brake_pressure",
+     "label": "Brake Pressure",
+     "group": "Brakes",
+     "order": 15,
+     "value": 100.0,
+     "display": "100",
+     "unit": "%",
+     "min": 85.0,
+     "max": 100.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7771938d",
+      "f1laps-25-13-7d2b689d"
+     ],
+     "patches": [],
+     "spread": [
+      97.0,
+      100.0
+     ]
+    },
+    {
+     "key": "brake_bias",
+     "label": "Front Brake Bias",
+     "group": "Brakes",
+     "order": 16,
+     "value": 58.0,
+     "display": "58",
+     "unit": "%",
+     "min": 50.0,
+     "max": 60.0,
+     "step": 1.0,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      54.0,
+      58.0
+     ]
+    },
+    {
+     "key": "tyre_pressure_fr",
+     "label": "Front Right Tyre Pressure",
+     "group": "Tyres",
+     "order": 17,
+     "value": 24.2,
+     "display": "24.2",
+     "unit": "psi",
+     "min": 22.5,
+     "max": 29.5,
+     "step": 0.1,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      24.2,
+      29.5
+     ]
+    },
+    {
+     "key": "tyre_pressure_fl",
+     "label": "Front Left Tyre Pressure",
+     "group": "Tyres",
+     "order": 18,
+     "value": 24.2,
+     "display": "24.2",
+     "unit": "psi",
+     "min": 22.5,
+     "max": 29.5,
+     "step": 0.1,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      24.2,
+      29.5
+     ]
+    },
+    {
+     "key": "tyre_pressure_rr",
+     "label": "Rear Right Tyre Pressure",
+     "group": "Tyres",
+     "order": 19,
+     "value": 21.3,
+     "display": "21.3",
+     "unit": "psi",
+     "min": 20.5,
+     "max": 26.5,
+     "step": 0.1,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      21.3,
+      26.5
+     ]
+    },
+    {
+     "key": "tyre_pressure_rl",
+     "label": "Rear Left Tyre Pressure",
+     "group": "Tyres",
+     "order": 20,
+     "value": 21.3,
+     "display": "21.3",
+     "unit": "psi",
+     "min": 20.5,
+     "max": 26.5,
+     "step": 0.1,
+     "confidence": "high",
+     "derived": false,
+     "rule": null,
+     "from_setup": "f1laps-25-13-7d2b689d",
+     "sources": [
+      "f1laps-25-13-7d2b689d",
+      "f1laps-25-13-92fa5a08"
+     ],
+     "patches": [],
+     "spread": [
+      21.3,
+      26.5
+     ]
+    }
+   ],
+   "setups": {
+    "f1laps-25-13-7771938d": {
+     "id": "f1laps-25-13-7771938d",
+     "source": "f1laps",
+     "source_name": "F1Laps community setups",
+     "url": "https://www.f1laps.com/f1-25/setups/japan/7771938d-0f26-4bb8-918d-95bf8d8921b8/",
+     "author": "carloss_fbfd",
+     "published": "2025-10-13",
+     "patch": null,
+     "session": "race",
+     "conditions": "dry",
+     "style": null,
+     "input": "wheel",
+     "verified": "2026-10-10"
+    },
+    "f1laps-25-13-7d2b689d": {
+     "id": "f1laps-25-13-7d2b689d",
+     "source": "f1laps",
+     "source_name": "F1Laps community setups",
+     "url": "https://www.f1laps.com/f1-25/setups/japan/7d2b689d-2e8b-4e9f-a435-246b851359da/",
+     "author": "idrisananda63",
+     "published": "2026-02-01",
+     "patch": null,
+     "session": "race",
+     "conditions": "dry",
+     "style": null,
+     "input": null,
+     "verified": "2026-10-10"
+    },
+    "f1laps-25-13-92fa5a08": {
+     "id": "f1laps-25-13-92fa5a08",
+     "source": "f1laps",
+     "source_name": "F1Laps community setups",
+     "url": "https://www.f1laps.com/f1-25/setups/japan/92fa5a08-fb25-4fb2-81f2-e2f00a112225/",
+     "author": "nickjacks",
+     "published": "2025-08-17",
+     "patch": null,
+     "session": "race",
+     "conditions": "dry",
+     "style": null,
+     "input": "controller",
+     "verified": "2026-10-10"
+    }
+   },
+   "disagreements": [
+    "Differential Adjustment On Throttle: the 3 setups range from 30 to 95; the recommended setup has 95.",
+    "Front Toe-Out: the 3 setups range from 0 to 0.08; the recommended setup has 0.",
+    "Rear Toe-In: the 3 setups range from 0.1 to 0.18; the recommended setup has 0.1.",
+    "Rear Suspension: the 3 setups range from 1 to 19; the recommended setup has 1.",
+    "Front Anti-Roll Bar: the 3 setups range from 1 to 15; the recommended setup has 10.",
+    "Rear Anti-Roll Bar: the 3 setups range from 9 to 20; the recommended setup has 20.",
+    "Rear Ride Height: the 3 setups range from 41 to 50; the recommended setup has 50.",
+    "Front Brake Bias: the 3 setups range from 54 to 58; the recommended setup has 58.",
+    "Front Right Tyre Pressure: the 3 setups range from 24.2 to 29.5; the recommended setup has 24.2.",
+    "Front Left Tyre Pressure: the 3 setups range from 24.2 to 29.5; the recommended setup has 24.2.",
+    "Rear Right Tyre Pressure: the 3 setups range from 21.3 to 26.5; the recommended setup has 21.3.",
+    "Rear Left Tyre Pressure: the 3 setups range from 21.3 to 26.5; the recommended setup has 21.3."
+   ],
+   "notes": [],
+   "caveat": "A setup is a starting point, not a guaranteed fix: rule out technique first (braking point, entry speed, brake release, throttle), then change one thing at a time and compare laps."
+  },
+  "unavailable": null,
+  "diff": {
+   "recommendation_id": "f1_2025:13:race:dry:balanced",
+   "rows": [
+    {
+     "key": "front_wing",
+     "label": "Front Wing Aero",
+     "group": "Aerodynamics",
+     "order": 1,
+     "unit": null,
+     "yours": 10.0,
+     "yours_display": "10",
+     "recommended": 23.0,
+     "recommended_display": "23",
+     "delta": 13.0,
+     "steps": 13.0,
+     "direction": "higher",
+     "magnitude": "large",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 23 is higher than yours (10), a large change: More front downforce gives sharper turn-in and more front grip in medium and fast corners. The cost is drag (lower top speed), and if the front wing is high compared with the rear the rear gets light and oversteery."
+    },
+    {
+     "key": "rear_wing",
+     "label": "Rear Wing Aero",
+     "group": "Aerodynamics",
+     "order": 2,
+     "unit": null,
+     "yours": 12.0,
+     "yours_display": "12",
+     "recommended": 23.0,
+     "recommended_display": "23",
+     "delta": 11.0,
+     "steps": 11.0,
+     "direction": "higher",
+     "magnitude": "moderate",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 23 is higher than yours (12), a moderate change: More rear downforce makes the rear more planted under braking, in fast corners and on exits. It costs top speed, and if it outweighs the front the car understeers."
+    },
+    {
+     "key": "diff_on_throttle",
+     "label": "Differential Adjustment On Throttle",
+     "group": "Transmission",
+     "order": 3,
+     "unit": "%",
+     "yours": 90.0,
+     "yours_display": "90",
+     "recommended": 95.0,
+     "recommended_display": "95",
+     "delta": 5.0,
+     "steps": 1.0,
+     "direction": "higher",
+     "magnitude": "small",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 95 % is higher than yours (90 %), a small change: The rear wheels are locked together more under power. That gives stronger drive out of slow corners and can make the car push wide on exit, but once the rears break loose it snaps into oversteer that is hard to catch."
+    },
+    {
+     "key": "diff_off_throttle",
+     "label": "Differential Adjustment Off Throttle",
+     "group": "Transmission",
+     "order": 4,
+     "unit": "%",
+     "yours": 55.0,
+     "yours_display": "55",
+     "recommended": 55.0,
+     "recommended_display": "55",
+     "delta": 0.0,
+     "steps": 0.0,
+     "direction": "same",
+     "magnitude": "same",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Matches the recommendation (55 %)."
+    },
+    {
+     "key": "front_camber",
+     "label": "Front Camber",
+     "group": "Suspension Geometry",
+     "order": 5,
+     "unit": "deg",
+     "yours": -3.5,
+     "yours_display": "-3.50",
+     "recommended": -3.5,
+     "recommended_display": "-3.50",
+     "delta": 0.0,
+     "steps": 0.0,
+     "direction": "same",
+     "magnitude": "same",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Matches the recommendation (-3.50 deg)."
+    },
+    {
+     "key": "rear_camber",
+     "label": "Rear Camber",
+     "group": "Suspension Geometry",
+     "order": 6,
+     "unit": "deg",
+     "yours": -2.0,
+     "yours_display": "-2.00",
+     "recommended": -2.0,
+     "recommended_display": "-2.00",
+     "delta": 0.0,
+     "steps": 0.0,
+     "direction": "same",
+     "magnitude": "same",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Matches the recommendation (-2.00 deg)."
+    },
+    {
+     "key": "front_toe",
+     "label": "Front Toe-Out",
+     "group": "Suspension Geometry",
+     "order": 7,
+     "unit": "deg",
+     "yours": 0.02,
+     "yours_display": "0.02",
+     "recommended": 0.0,
+     "recommended_display": "0.00",
+     "delta": -0.02,
+     "steps": -2.0,
+     "direction": "lower",
+     "magnitude": "small",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 0.00 deg is lower than yours (0.02 deg), a small change: Less toe means less drag and scrub, so a touch more top speed and tyre life, but turn-in is lazier."
+    },
+    {
+     "key": "rear_toe",
+     "label": "Rear Toe-In",
+     "group": "Suspension Geometry",
+     "order": 8,
+     "unit": "deg",
+     "yours": 0.12,
+     "yours_display": "0.12",
+     "recommended": 0.1,
+     "recommended_display": "0.10",
+     "delta": -0.02,
+     "steps": -2.0,
+     "direction": "lower",
+     "magnitude": "moderate",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 0.10 deg is lower than yours (0.12 deg), a moderate change: Less toe-in means less drag and wear and a car that rotates more easily, but the rear is less settled, especially on exits."
+    },
+    {
+     "key": "front_suspension",
+     "label": "Front Suspension",
+     "group": "Suspension",
+     "order": 9,
+     "unit": null,
+     "yours": 37.0,
+     "yours_display": "37",
+     "recommended": 41.0,
+     "recommended_display": "41",
+     "delta": 4.0,
+     "steps": 4.0,
+     "direction": "higher",
+     "magnitude": "moderate",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 41 is higher than yours (37), a moderate change: A stiffer front gives sharper response and turn-in on smooth track. It copes worse with bumps and kerbs and tends to understeer mid-corner."
+    },
+    {
+     "key": "rear_suspension",
+     "label": "Rear Suspension",
+     "group": "Suspension",
+     "order": 10,
+     "unit": null,
+     "yours": 10.0,
+     "yours_display": "10",
+     "recommended": 1.0,
+     "recommended_display": "1",
+     "delta": -9.0,
+     "steps": -9.0,
+     "direction": "lower",
+     "magnitude": "moderate",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 1 is lower than yours (10), a moderate change: A softer rear gives better traction and a calmer rear out of slow corners and over kerbs. The car feels lazier and may understeer, and too soft risks bottoming out."
+    },
+    {
+     "key": "front_arb",
+     "label": "Front Anti-Roll Bar",
+     "group": "Suspension",
+     "order": 11,
+     "unit": null,
+     "yours": 15.0,
+     "yours_display": "15",
+     "recommended": 10.0,
+     "recommended_display": "10",
+     "delta": -5.0,
+     "steps": -5.0,
+     "direction": "lower",
+     "magnitude": "moderate",
+     "in_range": true,
+     "confidence": "low",
+     "derived": false,
+     "explanation": "Recommended 10 is lower than yours (15), a moderate change: A softer front bar gives more front grip in slow and medium corners, at the cost of slower response and more body roll."
+    },
+    {
+     "key": "rear_arb",
+     "label": "Rear Anti-Roll Bar",
+     "group": "Suspension",
+     "order": 12,
+     "unit": null,
+     "yours": 10.0,
+     "yours_display": "10",
+     "recommended": 20.0,
+     "recommended_display": "20",
+     "delta": 10.0,
+     "steps": 10.0,
+     "direction": "higher",
+     "magnitude": "large",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 20 is higher than yours (10), a large change: A stiffer rear bar helps the car rotate and feel agile. It takes grip from the rear, so the car can snap on exits."
+    },
+    {
+     "key": "front_ride_height",
+     "label": "Front Ride Height",
+     "group": "Suspension",
+     "order": 13,
+     "unit": null,
+     "yours": 25.0,
+     "yours_display": "25",
+     "recommended": 25.0,
+     "recommended_display": "25",
+     "delta": 0.0,
+     "steps": 0.0,
+     "direction": "same",
+     "magnitude": "same",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Matches the recommendation (25)."
+    },
+    {
+     "key": "rear_ride_height",
+     "label": "Rear Ride Height",
+     "group": "Suspension",
+     "order": 14,
+     "unit": null,
+     "yours": 46.0,
+     "yours_display": "46",
+     "recommended": 50.0,
+     "recommended_display": "50",
+     "delta": 4.0,
+     "steps": 4.0,
+     "direction": "higher",
+     "magnitude": "moderate",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 50 is higher than yours (46), a moderate change: More rake helps the car turn in and rotate and ride kerbs, but the rear gets less stable at high speed and drag rises."
+    },
+    {
+     "key": "brake_pressure",
+     "label": "Brake Pressure",
+     "group": "Brakes",
+     "order": 15,
+     "unit": "%",
+     "yours": 100.0,
+     "yours_display": "100",
+     "recommended": 100.0,
+     "recommended_display": "100",
+     "delta": 0.0,
+     "steps": 0.0,
+     "direction": "same",
+     "magnitude": "same",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Matches the recommendation (100 %)."
+    },
+    {
+     "key": "brake_bias",
+     "label": "Front Brake Bias",
+     "group": "Brakes",
+     "order": 16,
+     "unit": "%",
+     "yours": 58.0,
+     "yours_display": "58",
+     "recommended": 58.0,
+     "recommended_display": "58",
+     "delta": 0.0,
+     "steps": 0.0,
+     "direction": "same",
+     "magnitude": "same",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Matches the recommendation (58 %)."
+    },
+    {
+     "key": "tyre_pressure_fr",
+     "label": "Front Right Tyre Pressure",
+     "group": "Tyres",
+     "order": 17,
+     "unit": "psi",
+     "yours": 24.3,
+     "yours_display": "24.3",
+     "recommended": 24.2,
+     "recommended_display": "24.2",
+     "delta": -0.1,
+     "steps": -1.0,
+     "direction": "lower",
+     "magnitude": "small",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 24.2 psi is lower than yours (24.3 psi), a small change: A bigger contact patch gives more front grip and turn-in in slow corners, but the tyre heats up and wears faster."
+    },
+    {
+     "key": "tyre_pressure_fl",
+     "label": "Front Left Tyre Pressure",
+     "group": "Tyres",
+     "order": 18,
+     "unit": "psi",
+     "yours": 24.3,
+     "yours_display": "24.3",
+     "recommended": 24.2,
+     "recommended_display": "24.2",
+     "delta": -0.1,
+     "steps": -1.0,
+     "direction": "lower",
+     "magnitude": "small",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 24.2 psi is lower than yours (24.3 psi), a small change: A bigger contact patch gives more front grip and turn-in in slow corners, but the tyre heats up and wears faster."
+    },
+    {
+     "key": "tyre_pressure_rr",
+     "label": "Rear Right Tyre Pressure",
+     "group": "Tyres",
+     "order": 19,
+     "unit": "psi",
+     "yours": 21.5,
+     "yours_display": "21.5",
+     "recommended": 21.3,
+     "recommended_display": "21.3",
+     "delta": -0.2,
+     "steps": -2.0,
+     "direction": "lower",
+     "magnitude": "small",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 21.3 psi is lower than yours (21.5 psi), a small change: More rear grip and traction out of slow corners, a common qualifying choice, but the rears heat up and wear faster over a stint."
+    },
+    {
+     "key": "tyre_pressure_rl",
+     "label": "Rear Left Tyre Pressure",
+     "group": "Tyres",
+     "order": 20,
+     "unit": "psi",
+     "yours": 21.5,
+     "yours_display": "21.5",
+     "recommended": 21.3,
+     "recommended_display": "21.3",
+     "delta": -0.2,
+     "steps": -2.0,
+     "direction": "lower",
+     "magnitude": "small",
+     "in_range": true,
+     "confidence": "high",
+     "derived": false,
+     "explanation": "Recommended 21.3 psi is lower than yours (21.5 psi), a small change: More rear grip and traction out of slow corners, a common qualifying choice, but the rears heat up and wear faster over a stint."
+    }
+   ],
+   "differing": 14,
+   "out_of_range": [],
+   "not_compared": [
+    "ballast",
+    "engine_braking",
+    "fuel_load"
+   ],
+   "summary": "14 of 20 parameters differ from the recommendation. Biggest differences: front wing aero, rear wing aero, rear toe-in.",
+   "experiment": {
+    "key": "rear_arb",
+    "label": "Rear Anti-Roll Bar",
+    "from_value": 10.0,
+    "to_value": 20.0,
+    "text": "Something to test, not a fix: change only rear anti-roll bar from 10 to 20, then compare a few clean laps with the same tyres and fuel."
+   },
+   "caveat": "A setup is a starting point, not a guaranteed fix: rule out technique first (braking point, entry speed, brake release, throttle), then change one thing at a time and compare laps."
+  },
+  "caveat": "A setup is a starting point, not a guaranteed fix: rule out technique first (braking point, entry speed, brake release, throttle), then change one thing at a time and compare laps."
+ }
+}

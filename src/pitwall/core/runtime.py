@@ -1,0 +1,554 @@
+"""Application runtime: owns the database, workers, live state and packet sources.
+
+Packet sources are per integration (``integrations.py``): one ``UdpListener`` per bound port (F1, GT7, Forza,
+raw recording) and, for Assetto Corsa, one ``AcRemoteClient`` that registers with the game and receives its stream
+on an ephemeral port. Each source has its own ``PacketRouter`` + ``SessionManager``, all feeding the same
+``LiveState``, database writer and analysis worker.
+"""
+
+from __future__ import annotations
+
+import logging
+import threading
+import time
+from collections.abc import Callable
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+from pitwall.adapters.ac.adapter import AcTrackGeometry
+from pitwall.adapters.base import GameAdapter
+from pitwall.analysis.brake_prior import BrakeEnvelope, PriorRefresher
+from pitwall.analysis.field_model import FieldSnapshot
+from pitwall.config import Settings
+from pitwall.core.lap_processor import AnalysisWorker, LapProcessor
+from pitwall.core.live import LiveState
+from pitwall.core.session import SessionManager
+from pitwall.core.track_knowledge import FieldWorker, PhysicsPrior, TrackKnowledgeResolver
+from pitwall.drivers import DriverService
+from pitwall.ingest.ac_client import CAPTURE_GAME_HINT as AC_CAPTURE_HINT
+from pitwall.ingest.ac_client import AcRemoteClient
+from pitwall.ingest.gt7_heartbeat import GT7Heartbeat
+from pitwall.ingest.router import PacketRouter
+from pitwall.ingest.sources import ReplaySource, UdpListener
+from pitwall.integrations import (
+    CAPTURE_ONLY,
+    SPECS,
+    IntegrationConfig,
+    ac_platform,
+    adapters_for,
+    all_adapters,
+    listens,
+    resolve_configs,
+)
+from pitwall.model.telemetry import Game, Platform, SessionInfo
+from pitwall.settings_store import SecretStore, SettingsStore
+from pitwall.storage import repo
+from pitwall.storage.db import Database, DbWriter
+
+log = logging.getLogger(__name__)
+
+INTEGRATIONS_SECTION = "integrations"
+BOOT_BIND_ATTEMPTS = 20  # at start-up a previous instance may still be releasing the port (launchd restart)
+APPLY_BIND_ATTEMPTS = 3  # from the dashboard: fail fast and report instead of blocking the request
+AC_SOURCE = "ac-remote"  # sessions.source of live Assetto Corsa sessions
+AC_GEOMETRY_SCAN_SESSIONS = 1000  # most recent sessions searched for AC track geometry (an existing repo read)
+
+
+def default_adapters() -> list[GameAdapter]:
+    """Every decoder pitwall has (replays and tests decode any game's capture)."""
+    return all_adapters()
+
+
+@dataclass(slots=True)
+class _Input:
+    """One bound UDP port: its listener, router (own session manager) and the integrations it serves."""
+
+    port: int
+    keys: tuple[str, ...]
+    listener: UdpListener
+    router: PacketRouter | None  # None for capture-only inputs (raw recording of a game pitwall can't decode yet)
+
+
+@dataclass(slots=True)
+class _AcInput:
+    """The Assetto Corsa client (no bound port): it registers with the game and feeds its own router."""
+
+    client: AcRemoteClient
+    router: PacketRouter
+    platform: str | None  # the configured platform this client's adapter was built with
+
+
+def ac_known_tracks(sessions: list[dict[str, Any]]) -> dict[str, AcTrackGeometry]:
+    """AC track geometry (length + spline position of the line) from stored sessions, most recent first.
+
+    Only real (non-synthetic) AC sessions whose ``track_id`` came from the handshake contribute, and only values the
+    adapter itself learned or was given (``sessions.track_length_m`` + ``info['ac_line_norm']``). The most recent
+    session with a usable line position wins; one with only a length is kept if nothing better exists. A session
+    whose stream contradicted the stored geometry (``info['ac_geometry_rejected']``) closes that track to every
+    older session: they carry the rejected values, so only what it learned itself (if anything) is used.
+    """
+    out: dict[str, AcTrackGeometry] = {}
+    closed: set[str] = set()
+    for row in sessions:
+        track_id = row.get("track_id")
+        if row.get("game") != Game.AC.value or row.get("synthetic") or not isinstance(track_id, str):
+            continue
+        if not track_id.startswith("ac:") or track_id in closed:
+            continue
+        info = row.get("info")
+        extra = info if isinstance(info, dict) else None
+        if extra is not None and extra.get("ac_geometry_rejected") is True:
+            closed.add(track_id)
+        geo = AcTrackGeometry.from_session(row.get("track_length_m"), extra)
+        if geo is None:
+            continue
+        have = out.get(track_id)
+        if have is None or (have.line_norm is None and geo.line_norm is not None):
+            out[track_id] = geo
+    return out
+
+
+def finish_router(router: PacketRouter) -> None:
+    """End a router's session after releasing what an adapter still holds (AC: a lap completion waiting for
+    ``lastLap`` and the frames behind it), so the last lap of a stream that stops at the line is not lost."""
+    for adapter in router.adapters:
+        flush = getattr(adapter, "flush", None)
+        if callable(flush):
+            try:
+                for item in flush():
+                    router.sessions.handle(item)
+            except Exception:  # ending a session must never fail because of one adapter
+                log.exception("flushing %s failed", adapter.info.name)
+    router.finish()
+
+
+def knowledge_feeds(
+    resolver: TrackKnowledgeResolver,
+) -> tuple[Callable[[FieldSnapshot | None], None], Callable[[SessionInfo | None], None]]:
+    """Field-worker callbacks: the AI-field layer (L0b) plus the physics heavy-stop prior (L1c) for the same track.
+
+    Both run on the field worker thread, never on ingest. The prior is rebuilt only when the track, its length or the
+    AI field's fitted brake envelope change (``PriorRefresher``); it only ever yields severity windows, never
+    positions or "brake" calls.
+    """
+    priors = PriorRefresher()
+
+    def push(game: str, track_id: str | None, length: float | None, env: BrakeEnvelope | None) -> None:
+        changed, prior = priors.refresh(game, track_id, length, env)
+        if changed:
+            resolver.set_physics(None if prior is None else PhysicsPrior.from_payload(prior.to_payload()))
+
+    def on_session(info: SessionInfo | None) -> None:
+        resolver.set_session(info)
+        if info is not None:
+            push(info.game.value, info.track_id, info.track_length_m, None)
+
+    def on_snapshot(snap: FieldSnapshot | None) -> None:
+        resolver.set_field(snap)
+        fe = snap.brake_envelope if snap is not None else None
+        if snap is None or fe is None:
+            return
+        try:
+            env = BrakeEnvelope(fe.brake_base, fe.brake_aero, "AI field")  # constant source: part of the cache key
+        except ValueError:  # a non-physical fit keeps the current prior
+            return
+        push(snap.game, snap.track_id, snap.track_length_m, env)
+
+    return on_snapshot, on_session
+
+
+class Runtime:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
+        # Dashboard-editable settings (rig, integrations, AI provider) and API keys; see settings_store.py.
+        self.store = SettingsStore(settings.data_dir / "settings.json")
+        self.secrets = SecretStore(settings.data_dir / "secrets.json")
+        self.db = Database(settings.db_path)
+        self.writer = DbWriter(self.db)
+        # Who is in the seat: new sessions are tagged with the active driver (also runs the profiles migration).
+        # A fresh install's first profile is named from settings.driver_name; existing drivers are never renamed.
+        self.drivers = DriverService(self.db, self.writer, default_name=settings.driver_name)
+        self.live = LiveState()
+        # Track knowledge (layers L3 > L0b > L1c): the field worker learns the circuit from the other cars off the
+        # ingest thread; the resolver publishes one TrackKnowledge to live state (snapshot "track_knowledge") and
+        # the cue engine (AI-field heads-ups while the driver has no reference lap). Replays get their own pair.
+        self.knowledge = TrackKnowledgeResolver(self.live.set_track_knowledge)
+        self.live.knowledge = self.knowledge
+        on_snapshot, on_session = knowledge_feeds(self.knowledge)
+        self.field = FieldWorker(on_snapshot, on_session=on_session)
+        self._replay_field: FieldWorker | None = None
+        self.processor = LapProcessor(self.db, self.writer, self.live)
+        self.worker = AnalysisWorker(self.processor)
+        self.inputs: dict[int, _Input] = {}
+        self.ac: _AcInput | None = None  # Assetto Corsa client (when enabled with a console IP)
+        self.input_errors: dict[str, str] = {}  # integration key -> last bind/start error (Connect page)
+        self.gt7_heartbeat: GT7Heartbeat | None = None
+        self.replay: ReplaySource | None = None
+        self._live_ingest = False
+        self._lock = threading.Lock()  # replay start/stop
+        self._ilock = threading.RLock()  # live inputs
+        self._unsubscribe = self.store.subscribe(INTEGRATIONS_SECTION, lambda _s, _v: self._on_integrations_changed())
+
+    # ------------------------------------------------------------------ live UDP (all games)
+    @property
+    def udp(self) -> UdpListener | None:
+        """The F1 listener (kept for callers written before multi-game ingest)."""
+        inp = self.inputs.get(self.integration_configs()["f1"].port)
+        return inp.listener if inp else None
+
+    def integration_configs(self) -> dict[str, IntegrationConfig]:
+        return resolve_configs(self.settings, self.store.get(INTEGRATIONS_SECTION))
+
+    def start_udp(self) -> None:
+        """Start listening for every enabled game. Raises if the F1 port cannot be bound (the primary input)."""
+        self._live_ingest = True
+        self.apply_integrations(bind_attempts=BOOT_BIND_ATTEMPTS)
+        if self.udp is None:
+            raise OSError(self.input_errors.get("f1", f"could not bind UDP {self.settings.f1_udp_port}"))
+
+    def _on_integrations_changed(self) -> None:
+        if self._live_ingest:
+            self.apply_integrations()
+
+    def apply_integrations(self, bind_attempts: int = APPLY_BIND_ATTEMPTS) -> None:
+        """Make the running listeners match the configured integrations (idempotent; safe from any thread)."""
+        with self._ilock:
+            configs = self.integration_configs()
+            wanted: dict[int, tuple[str, ...]] = {}
+            for c in configs.values():
+                if c.enabled and listens(c.key):
+                    wanted[c.port] = tuple(sorted((*wanted.get(c.port, ()), c.key)))
+            for port, inp in list(self.inputs.items()):
+                if wanted.get(port) != inp.keys:
+                    self._stop_input(inp)
+                    del self.inputs[port]
+            for port, keys in wanted.items():
+                if port not in self.inputs:
+                    self._start_input(port, keys, bind_attempts)
+            self._apply_gt7_heartbeat(configs["gt7"])
+            self._apply_ac(configs["ac"])
+
+    def _known_tracks(self) -> dict[str, list[str]]:
+        try:
+            with self.db.read() as c:
+                return {
+                    "gt7": repo.derived_track_ids(c, ("gt7",)),
+                    "forza": repo.derived_track_ids(c, ("forza_motorsport", "forza_horizon")),
+                }
+        except Exception:  # an old database must never stop ingest from starting
+            log.exception("could not load known GT7/Forza tracks")
+            return {}
+
+    def _ac_known_tracks(self) -> dict[str, AcTrackGeometry]:
+        try:
+            with self.db.read() as c:
+                return ac_known_tracks(repo.list_sessions(c, limit=AC_GEOMETRY_SCAN_SESSIONS))
+        except Exception:  # an old database must never stop ingest from starting
+            log.exception("could not load known AC track geometry")
+            return {}
+
+    def _resume_candidate(self, source: str) -> dict[str, Any] | None:
+        try:
+            with self.db.read() as c:
+                return repo.last_live_session(c, source)
+        except Exception:
+            log.exception("could not read the last session for %s", source)
+            return None
+
+    def _start_input(self, port: int, keys: tuple[str, ...], attempts: int) -> None:
+        if set(keys) <= CAPTURE_ONLY:
+            self._start_capture_only(port, keys, attempts)
+            return
+        source = f"udp:{port}"
+        sessions = SessionManager(
+            self.writer,
+            self.live,
+            self.worker,
+            source=source,
+            drivers=self.drivers,
+            resume_candidate=self._resume_candidate(source),  # a restart mid-race continues the same session
+            field=self.field if "f1" in keys else None,  # only F1 reports the whole field (one worker per runtime)
+        )
+        router = PacketRouter(adapters_for(keys, self._known_tracks()), sessions, self.live)
+        last_err: OSError | None = None
+        listener: UdpListener | None = None
+        for attempt in range(attempts):
+            try:
+                listener = UdpListener(
+                    port,
+                    router.handle,
+                    bind=self.settings.udp_bind,
+                    capture_dir=self.settings.capture_dir if self.settings.record_raw else None,
+                    on_idle=router.finish,
+                    idle_timeout_s=self.settings.session_idle_timeout_s,
+                )
+                break
+            except OSError as e:
+                last_err = e
+                if attempt + 1 < attempts:
+                    time.sleep(0.5)
+        if listener is None:
+            msg = f"could not listen on UDP {port}: {last_err}"
+            log.error("%s (%s)", msg, ", ".join(SPECS[k].name for k in keys))
+            for k in keys:
+                self.input_errors[k] = msg
+            return
+        for k in keys:
+            self.input_errors.pop(k, None)
+        listener.start()
+        self.inputs[port] = _Input(port, keys, listener, router)
+        log.info("telemetry input udp:%d for %s", port, ", ".join(SPECS[k].name for k in keys))
+
+    def _start_capture_only(self, port: int, keys: tuple[str, ...], attempts: int) -> None:
+        """Record raw datagrams (UdpListener writes the .pwcap before calling the handler) without decoding."""
+        last_err: OSError | None = None
+        for attempt in range(attempts):
+            try:
+                listener = UdpListener(
+                    port,
+                    lambda _pkt: None,
+                    bind=self.settings.udp_bind,
+                    capture_dir=self.settings.capture_dir,  # recording is the whole point: always on
+                    idle_timeout_s=self.settings.session_idle_timeout_s,
+                )
+                break
+            except OSError as e:
+                last_err = e
+                if attempt + 1 < attempts:
+                    time.sleep(0.5)
+        else:
+            for k in keys:
+                self.input_errors[k] = f"could not listen on UDP {port}: {last_err}"
+            return
+        for k in keys:
+            self.input_errors.pop(k, None)
+        listener.start()
+        self.inputs[port] = _Input(port, keys, listener, None)
+        log.info("raw capture input udp:%d (no decoding)", port)
+
+    @staticmethod
+    def _stop_input(inp: _Input) -> None:
+        inp.listener.stop()
+        if inp.router is not None:
+            inp.router.finish()
+        log.info("telemetry input udp:%d stopped", inp.port)
+
+    def _apply_gt7_heartbeat(self, cfg: IntegrationConfig) -> None:
+        hb = self.gt7_heartbeat
+        if not cfg.enabled or cfg.port not in self.inputs:
+            if hb is not None:
+                hb.stop()
+                self.gt7_heartbeat = None
+            return
+        if hb is None:
+            hb = GT7Heartbeat(cfg.console_ip, cfg.variant)
+            hb.start()
+            self.gt7_heartbeat = hb
+            log.info("GT7 heartbeat -> %s (variant %s)", cfg.console_ip or "broadcast", cfg.variant)
+        else:
+            hb.set_console_ip(cfg.console_ip)
+            hb.set_variant(cfg.variant)
+
+    # ------------------------------------------------------------------ Assetto Corsa (client, no bound port)
+    def _apply_ac(self, cfg: IntegrationConfig) -> None:
+        """Start, retarget or stop the AC client to match the settings (caller holds ``_ilock``)."""
+        cur = self.ac
+        want = cfg.enabled and cfg.console_ip is not None
+        if cur is not None and (not want or cur.platform != cfg.platform):
+            self._stop_ac()  # disabled, IP cleared, or another platform (the adapter is built with it)
+            cur = None
+        if not want:
+            self.input_errors.pop("ac", None)
+            return
+        if cur is not None:
+            try:
+                cur.client.set_console_ip(cfg.console_ip)  # DISMISS the old target, handshake the new one
+            except ValueError as e:
+                self.input_errors["ac"] = f"invalid console IP: {e}"
+            else:
+                self.input_errors.pop("ac", None)
+            return
+        self._start_ac(cfg)
+
+    def _start_ac(self, cfg: IntegrationConfig) -> None:
+        sessions = SessionManager(
+            self.writer,
+            self.live,
+            self.worker,
+            source=AC_SOURCE,
+            drivers=self.drivers,
+            resume_candidate=self._resume_candidate(AC_SOURCE),
+        )
+        platform = ac_platform(cfg)
+        router = PacketRouter(
+            adapters_for(("ac",), ac_tracks=self._ac_known_tracks(), ac_platform=platform), sessions, self.live
+        )
+        try:
+            client = AcRemoteClient(
+                cfg.console_ip,
+                router.handle,
+                bind=self.settings.udp_bind,
+                capture_dir=self.settings.capture_dir if self.settings.record_raw else None,
+                on_idle=lambda: finish_router(router),
+                idle_timeout_s=self.settings.session_idle_timeout_s,
+                capture_meta_extra={"platform": platform.value},
+            )
+        except (OSError, ValueError) as e:
+            self.input_errors["ac"] = f"could not start the Assetto Corsa client: {e}"
+            log.error("%s", self.input_errors["ac"])
+            return
+        client.start()
+        self.ac = _AcInput(client, router, cfg.platform)
+        self.input_errors.pop("ac", None)
+        log.info("Assetto Corsa client -> %s:%d (%s)", cfg.console_ip, client.port, platform.value)
+
+    def _stop_ac(self) -> None:
+        cur, self.ac = self.ac, None
+        if cur is None:
+            return
+        cur.client.stop()  # sends DISMISS, closes the socket and the capture
+        finish_router(cur.router)
+        log.info("Assetto Corsa client stopped")
+
+    def input_status(self) -> list[dict[str, Any]]:
+        """Per integration: configuration and what is actually happening (Connect page)."""
+        configs = self.integration_configs()
+        out: list[dict[str, Any]] = []
+        for key, cfg in configs.items():
+            spec = SPECS[key]
+            if not spec.listens:
+                out.append(self._ac_status(cfg) if key == "ac" else {**cfg.to_dict(), "listens": False})
+                continue
+            inp = self.inputs.get(cfg.port) if cfg.enabled else None
+            row: dict[str, Any] = {
+                **cfg.to_dict(),
+                "name": spec.name,
+                "platforms": list(spec.platforms),
+                "status": spec.status,
+                "port_editable": spec.port_editable,
+                "needs_console_ip": spec.needs_console_ip,
+                "listening": inp is not None,
+                "received": inp.listener.received if inp else 0,
+                "sources": inp.listener.source_snapshot() if inp else [],
+                "capture": str(inp.listener.capture.path) if inp and inp.listener.capture else None,
+                "error": self.input_errors.get(key),
+                "listens": True,
+            }
+            if key == "gt7":
+                row["heartbeat"] = self.gt7_heartbeat.snapshot() if self.gt7_heartbeat else None
+            out.append(row)
+        return out
+
+    def _ac_status(self, cfg: IntegrationConfig) -> dict[str, Any]:
+        spec = SPECS["ac"]
+        cur = self.ac if cfg.enabled else None
+        client = cur.client if cur is not None else None
+        snap = client.snapshot() if client is not None else None
+        if snap is not None:
+            snap["platform"] = cur.platform if cur is not None else None
+        return {
+            **cfg.to_dict(),
+            "name": spec.name,
+            "platforms": list(spec.platforms),
+            "status": spec.status,
+            "port_editable": spec.port_editable,
+            "needs_console_ip": spec.needs_console_ip,
+            "listens": False,  # nothing bound on this Mac: the client registers with the game
+            "listening": client is not None and client.running,
+            "received": client.received if client is not None else 0,
+            "sources": client.source_snapshot() if client is not None else [],
+            "capture": str(client.capture.path) if client is not None and client.capture else None,
+            "error": self.input_errors.get("ac"),
+            "client": snap,  # state, sent/received, rate, last error, last handshake (car/track)
+        }
+
+    # ------------------------------------------------------------------ replay
+    def start_replay(self, path: Path, speed: float | None = 1.0, loop: bool = False) -> ReplaySource:
+        with self._lock:
+            self.stop_replay()
+            from pitwall.ingest.capture import CaptureReader
+
+            meta = CaptureReader(path).meta
+            platform = Platform.UNKNOWN
+            if meta.game_hint == AC_CAPTURE_HINT:  # AC captures carry the platform the client/probe was told
+                try:
+                    platform = Platform(str(meta.extra.get("platform")))
+                except ValueError:
+                    platform = Platform.UNKNOWN
+            # A replay learns the field with its own worker and resolver, so it never rebuilds the live stream's
+            # field model; it is not the UDP thread, so it waits for its worker instead of dropping samples (a
+            # max-speed replay would overflow the queue). Live state follows the replay's knowledge until it ends.
+            resolver = TrackKnowledgeResolver(self.live.set_track_knowledge)
+            on_snapshot, on_session = knowledge_feeds(resolver)
+            field = FieldWorker(on_snapshot, on_session=on_session, block_when_full=True)
+            self._replay_field = field
+            self.live.knowledge = resolver
+            sessions = SessionManager(
+                self.writer,
+                self.live,
+                self.worker,
+                source=f"replay:{path.name}",
+                synthetic=meta.synthetic,
+                capture_path=str(path),
+                overrides={"track_name": meta.extra.get("track_name"), "scenario": meta.extra.get("scenario")},
+                drivers=self.drivers,
+                field=field,
+            )
+            adapters = all_adapters(self._known_tracks(), ac_tracks=self._ac_known_tracks(), ac_platform=platform)
+            if meta.game_hint != AC_CAPTURE_HINT:
+                # AC is detected by datagram size alone, so only AC's own captures (client, probe, synthetic writer:
+                # game_hint 'ac-remote') are decoded as AC; a raw recording of another game never is.
+                adapters = [a for a in adapters if a.info.game is not Game.AC]
+            router = PacketRouter(adapters, sessions, self.live)
+
+            def done() -> None:
+                finish_router(router)
+                field.close(drain=True)  # learn what is still queued, publish the final view
+                if self.live.knowledge is resolver:
+                    self.live.knowledge = self.knowledge  # learned (L3) models feed the live resolver again
+
+            self.replay = ReplaySource(path, router.handle, speed=speed, on_done=done, loop=loop)
+            self.replay.start()
+            log.info("replaying %s at %s", path, "max speed" if not speed else f"{speed}x")
+            return self.replay
+
+    def stop_replay(self) -> None:
+        if self.replay is not None:
+            self.replay.stop()
+            self.replay = None
+        field, self._replay_field = self._replay_field, None
+        if field is not None:
+            field.close()
+        self.live.knowledge = self.knowledge
+
+    def replay_status(self) -> dict[str, Any] | None:
+        r = self.replay
+        if r is None:
+            return None
+        return {
+            "path": str(r.path),
+            "sent": r.sent,
+            "done": r.done.is_set(),
+            "speed": r.speed,
+            "synthetic": r.meta.synthetic,
+        }
+
+    # ------------------------------------------------------------------ shutdown
+    def close(self) -> None:
+        self._unsubscribe()
+        self.stop_replay()
+        with self._ilock:
+            self._live_ingest = False
+            if self.gt7_heartbeat is not None:
+                self.gt7_heartbeat.stop()
+                self.gt7_heartbeat = None
+            self._stop_ac()
+            for inp in self.inputs.values():
+                self._stop_input(inp)
+            self.inputs.clear()
+        self.worker.join()
+        self.worker.close()
+        self.field.close()
+        self.writer.flush()
+        self.writer.close()

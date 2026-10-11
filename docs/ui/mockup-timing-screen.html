@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pitwall timing screen</title>
+<meta name="description" content="Direction A mockup: iPad-landscape Drive screen, navigation and review. Sample data only.">
+<style>
+/* =====================================================================================================
+   Pitwall - Direction A "Timing screen minimal" - static mockup.
+   Self-contained: inline CSS + a small inline script for the state switcher. No external requests.
+   Tokens below mirror docs/ui/proposal-timing-screen.md section 5. Inside the fixed device frames the Drive
+   type scale uses the 1180x820 baseline px values (the real app uses the clamp() definitions).
+   ===================================================================================================== */
+:root {
+  --bg-0: #050608; --bg-1: #0b0e12; --surface-1: #11151b; --surface-2: #171c24; --surface-3: #222a35;
+  --line: #252c37; --line-strong: #3a4352;
+  --text-1: #eef1f5; --text-2: #a9b2bf; --text-3: #7c8696;
+  --accent: #ff6a2b; --on-accent: #0d1117;
+  --t-best: #c58cff; --t-pb: #2fe37f; --t-slower: #ffd23f;
+  --ahead: #2fe37f; --behind: #ff5466;
+  --live: #2fe37f; --warn: #ffb020; --danger: #ff5466; --info: #4cc3ff;
+  --flag-yellow: #ffd23f; --flag-sc: #ffb020; --flag-red: #ff3347; --flag-ink: #0d1117;
+  --synthetic: #ff7ac0;
+  --chip-ink: transparent;           /* light theme fills timing chips */
+  --frame: #1b1f26; --frame-edge: #2c333e;
+
+  --r-cell: 2px; --r-panel: 6px; --r-pill: 999px;
+  --font-num: "Barlow Semi Condensed", "DIN Condensed", "Avenir Next Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  /* Drive scale at the 1180x820 baseline */
+  --d-hero: 172px; --d-xl: 112px; --d-l: 56px; --d-m: 44px; --d-s: 40px; --d-xs: 24px; --d-label: 18px;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg-0: #f5f6f8; --bg-1: #eceff3; --surface-1: #ffffff; --surface-2: #eceff3; --surface-3: #dfe4eb;
+  --line: #d9dee6; --line-strong: #b9c1cc;
+  --text-1: #0d1117; --text-2: #4a5463; --text-3: #5f6977;
+  --accent: #c2410c; --on-accent: #ffffff;
+  --t-best: #6d28d9; --t-pb: #047857; --t-slower: #8a5a00;
+  --ahead: #047857; --behind: #c81e3a;
+  --live: #047857; --warn: #9a5b00; --danger: #c81e3a; --info: #0369a1;
+  --synthetic: #be185d;
+  --frame: #c9ced6; --frame-edge: #aab2bd;
+  color-scheme: light;
+}
+/* Red-green safe colour-vision mode */
+:root[data-cvd="rg"] { --ahead: #4cc3ff; --t-pb: #4cc3ff; --live: #4cc3ff; --behind: #ff9f1c; --danger: #ff9f1c; }
+:root[data-theme="light"][data-cvd="rg"] { --ahead: #0369a1; --t-pb: #0369a1; --live: #0369a1; --behind: #b45309; --danger: #b45309; }
+/* Night dim (Drive frame only) */
+:root[data-night="on"] .device { --text-1: #c9cdd3; --text-2: #8a929e; --bg-0: #000; --surface-1: #0a0c10;
+  --t-best: #b07ae6; --t-pb: #28c46e; --t-slower: #e0b836; --ahead: #28c46e; }
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg-1); color: var(--text-1); font: 16px/1.5 var(--font-ui); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.lbl { font-family: var(--font-num); font-size: var(--d-label); letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 600; line-height: 1; }
+
+/* ------------------------------------------------------------------ document chrome */
+.doc { max-width: 1260px; margin: 0 auto; padding: 24px 16px 64px; }
+.doc h1 { font: 700 32px/1.1 var(--font-num); letter-spacing: .02em; margin: 0 0 6px; text-transform: uppercase; }
+.doc h2 { font: 700 22px/1.2 var(--font-num); letter-spacing: .06em; text-transform: uppercase; margin: 48px 0 6px; }
+.doc p { margin: 0 0 10px; color: var(--text-2); max-width: 78ch; }
+.sample-flag { display: inline-flex; align-items: center; gap: 8px; margin: 8px 0 16px; padding: 6px 12px; border-radius: var(--r-panel);
+  border: 1px dashed var(--warn); color: var(--warn); font: 600 14px/1.3 var(--font-ui); }
+.controls { position: sticky; top: 0; z-index: 20; display: grid; gap: 8px; padding: 12px 0; background: var(--bg-1); border-bottom: 1px solid var(--line); }
+.ctl-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ctl-row .lbl { font-size: 14px; margin-right: 4px; min-width: 64px; }
+.ctl { min-height: 44px; padding: 8px 14px; border-radius: var(--r-pill); border: 1px solid var(--line-strong); background: var(--surface-1); cursor: pointer; font: 600 14px/1 var(--font-ui); color: var(--text-2); }
+.ctl[aria-pressed="true"] { background: var(--text-1); color: var(--bg-1); border-color: var(--text-1); }
+.ctl:focus-visible, .rail a:focus-visible, .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.caption { font-size: 14px; color: var(--text-3); margin-top: 12px; }
+
+/* fit-to-width wrappers for the fixed-size device frames */
+.fit { width: 100%; overflow-x: auto; overflow-y: hidden; padding: 12px 12px 16px; }
+.fit > .device { transform-origin: top left; }
+.devices-row { display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start; }
+.devices-row > div { min-width: 0; flex: 1 1 340px; }
+
+/* ------------------------------------------------------------------ device frames */
+.device { position: relative; overflow: hidden; background: var(--bg-0); color: var(--text-1);
+  border-radius: 22px; box-shadow: 0 0 0 12px var(--frame), 0 0 0 13px var(--frame-edge); margin: 13px; }
+.device.ipad { width: 1180px; height: 820px; display: grid; grid-template-columns: 80px minmax(0, 1fr); }
+.device.phone { width: 390px; height: 844px; border-radius: 44px; display: grid; grid-template-rows: 44px 48px 52px minmax(0,1fr) 90px; }
+.sample-tag { position: absolute; z-index: 9; right: 20px; bottom: 2px; font: 700 10px/1 var(--font-ui); letter-spacing: .12em;
+  color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 60%, transparent); padding: 2px 6px; border-radius: 4px; background: var(--bg-0); pointer-events: none; }
+
+/* ------------------------------------------------------------------ rail (iPad nav) */
+.rail { display: grid; grid-template-rows: 64px repeat(4, 76px) 1fr auto; background: var(--bg-1); border-right: 1px solid var(--line);
+  transition: opacity .2s; }
+.device[data-dim="on"] .rail, .device[data-dim="on"] .status > :not(.banner) { opacity: .4; }
+.rail .mark { display: grid; place-items: center; }
+.rail a { position: relative; display: grid; place-items: center; align-content: center; gap: 6px; color: var(--text-3); text-decoration: none;
+  font: 600 13px/1 var(--font-num); letter-spacing: .08em; text-transform: uppercase; min-height: 44px; }
+.rail a svg { width: 28px; height: 28px; }
+.rail a[aria-current="page"] { color: var(--text-1); }
+.rail a[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 14px; bottom: 14px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
+.rail .me { display: grid; justify-items: center; gap: 10px; padding: 12px 0 18px; }
+.avatar { display: inline-grid; place-items: center; border-radius: 50%; background: #ff6a2b; color: #0d1117; font: 700 18px/1 var(--font-num); letter-spacing: .04em; }
+.rail .avatar { width: 48px; height: 48px; }
+.conn-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--live); }
+
+/* ------------------------------------------------------------------ Drive dash grid */
+.dash { position: relative; display: grid; padding: 20px; gap: 12px; height: 820px; min-width: 0;
+  grid-template-columns: 7fr 5fr; grid-template-rows: 56px minmax(0, 1fr) 148px 64px;
+  grid-template-areas: "status status" "delta next" "timing timing" "strip strip"; }
+.status { grid-area: status; display: flex; align-items: center; gap: 14px; min-width: 0; position: relative; }
+.status > * { transition: opacity .2s; }
+.pill { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px; border-radius: var(--r-pill); border: 1px solid var(--line-strong);
+  font: 700 var(--d-label)/1 var(--font-num); letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); white-space: nowrap; }
+.pill .dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.pill.live { color: var(--live); border-color: color-mix(in srgb, var(--live) 45%, transparent); }
+.pill.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 50%, transparent); }
+.pill.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 55%, transparent); }
+.pill.synthetic { color: var(--synthetic); border-color: var(--synthetic);
+  background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--synthetic) 22%, transparent) 0 6px, transparent 6px 12px); }
+.ctx { font: 600 22px/1 var(--font-num); letter-spacing: .04em; color: var(--text-2); white-space: nowrap; }
+.ticker { flex: 1; min-width: 0; font: 500 20px/1.2 var(--font-ui); color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.ticker b { font: 700 var(--d-label)/1 var(--font-num); letter-spacing: .08em; color: var(--text-3); margin-right: 8px; }
+.sbtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-width: 56px; height: 56px; padding: 0 14px; border-radius: var(--r-panel);
+  border: 1px solid var(--line); background: var(--surface-1); color: var(--text-2); font: 700 var(--d-label)/1 var(--font-num); letter-spacing: .08em; text-transform: uppercase; }
+.sbtn svg { width: 24px; height: 24px; }
+.sbtn .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--live); }
+.sbtn.off .dot { background: var(--text-3); }
+
+/* banners take over the status row (P2: panels never move) */
+.banner { position: absolute; inset: 0; display: flex; align-items: center; gap: 18px; padding: 0 20px; border-radius: var(--r-panel);
+  font: 700 28px/1 var(--font-num); letter-spacing: .1em; text-transform: uppercase; z-index: 3; }
+.banner small { font: 600 20px/1 var(--font-num); letter-spacing: .06em; opacity: .85; }
+.banner.yellow { background: var(--flag-yellow); color: var(--flag-ink); }
+.banner.sc { background: var(--flag-sc); color: var(--flag-ink); }
+.banner.red { background: var(--flag-red); color: #fff; }
+.banner.link { background: color-mix(in srgb, var(--danger) 16%, var(--bg-0)); color: var(--danger); border: 1px solid var(--danger); }
+.banner .flagmark { width: 34px; height: 34px; }
+
+/* hero panels */
+.panel { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-panel); min-width: 0; min-height: 0; contain: layout paint; }
+.delta { grid-area: delta; display: grid; grid-template-rows: auto 1fr auto; padding: 22px 26px 24px; }
+.hero-mid { align-self: center; display: grid; justify-items: center; }
+.delta .head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.delta .value { align-self: center; justify-self: center; display: flex; align-items: center; gap: 14px; }
+.delta .big { font: 700 var(--d-hero)/.9 var(--font-num); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.sign { display: inline-block; transform: scaleX(.62); transform-origin: right center; margin-left: -.14em; }
+.delta .trend { width: 40px; height: 40px; color: inherit; opacity: .8; }
+.delta .word { justify-self: center; font: 700 22px/1 var(--font-num); letter-spacing: .14em; margin: 14px 0 0; text-transform: uppercase; }
+.delta .reason { justify-self: center; font: 500 var(--d-xs)/1.3 var(--font-ui); color: var(--text-2); text-align: center; margin: 14px 0 0; max-width: 30ch; }
+.c-ahead { color: var(--ahead); } .c-behind { color: var(--behind); } .c-neutral { color: var(--text-1); } .c-unknown { color: var(--text-3); } .c-muted { color: var(--text-2); }
+.dbar { position: relative; height: 28px; background: var(--surface-2); border-radius: var(--r-cell); }
+.dbar .fill { position: absolute; top: 0; bottom: 0; }
+.dbar .fill.ahead { right: 50%; background: var(--ahead); }
+.dbar .fill.behind { left: 50%; background: var(--behind); }
+.dbar .mid { position: absolute; left: 50%; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; background: var(--text-1); }
+.dscale { display: flex; justify-content: space-between; margin-top: 8px; font: 600 15px/1 var(--font-num); color: var(--text-3); letter-spacing: .06em; }
+
+.next { grid-area: next; display: grid; align-content: start; gap: 10px; padding: 22px 26px; }
+.next .head { display: flex; justify-content: space-between; align-items: center; }
+.focus-tag { font: 700 var(--d-label)/1 var(--font-num); letter-spacing: .1em; color: var(--accent); border: 1px solid color-mix(in srgb, var(--accent) 60%, transparent); padding: 6px 10px; border-radius: var(--r-cell); }
+.corner { display: flex; align-items: center; gap: 16px; margin-top: 4px; }
+.corner .id { font: 700 var(--d-xl)/.85 var(--font-num); }
+.corner svg { width: 64px; height: 64px; color: var(--text-2); }
+.corner-name { font: 600 var(--d-s)/1.05 var(--font-num); letter-spacing: .02em; color: var(--text-1); }
+.brake { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 6px 12px; margin-top: 10px; }
+.brake .dist { font: 700 var(--d-m)/1 var(--font-num); font-variant-numeric: tabular-nums; }
+.brake .dist small { font-size: 24px; color: var(--text-2); margin-left: 4px; }
+.cbar { grid-column: 1 / -1; height: 16px; background: var(--surface-2); border-radius: var(--r-cell); overflow: hidden; }
+.cbar i { display: block; height: 100%; background: var(--accent); }
+.ctxline { font: 500 var(--d-xs)/1.3 var(--font-ui); color: var(--text-2); }
+.ctxline + .ctxline { margin-top: -4px; }
+
+/* full-width state panels (pre-session, ended, no data) */
+.statep { grid-column: 1 / -1; grid-row: 2; display: grid; padding: 28px 32px; gap: 18px; align-content: start; }
+.statep h3 { margin: 0; font: 700 var(--d-l)/1 var(--font-num); letter-spacing: .06em; text-transform: uppercase; }
+.statep .cols { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 28px; }
+.statep .kv { display: grid; gap: 6px; align-content: start; }
+.statep .kv .v { font: 700 var(--d-s)/1.05 var(--font-num); font-variant-numeric: tabular-nums; }
+.statep .kv .s { font: 500 20px/1.35 var(--font-ui); color: var(--text-2); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 64px; padding: 0 26px; border-radius: var(--r-panel);
+  border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--text-1); font: 700 22px/1 var(--font-num); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; counter-reset: s; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: start; font: 500 22px/1.35 var(--font-ui); color: var(--text-2); }
+.steps li::before { content: counter(s); display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line-strong); font: 700 22px/1 var(--font-num); color: var(--text-1); }
+.steps code { font: 600 19px/1 ui-monospace, "SF Mono", Menlo, monospace; color: var(--text-1); }
+.obs-quote { font: 500 26px/1.4 var(--font-ui); color: var(--text-1); margin: 0; }
+.big-avatar { width: 96px; height: 96px; font-size: 40px; }
+
+/* timing strip */
+.timing { grid-area: timing; display: grid; grid-template-columns: 1.5fr repeat(3, 1fr) 1.15fr 1.15fr; gap: 8px; }
+.cell { position: relative; display: grid; grid-template-rows: auto 1fr; padding: 16px 16px 12px; background: var(--surface-1); border: 1px solid var(--line);
+  border-radius: var(--r-cell); min-width: 0; }
+.cell::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 6px; background: var(--bar, transparent); border-radius: var(--r-cell) var(--r-cell) 0 0; }
+.cell .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.cell .micro { font: 700 15px/1 var(--font-num); letter-spacing: .12em; color: var(--bar, var(--text-3)); }
+.cell .val { align-self: end; font: 700 var(--d-m)/1 var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cell.lap .val { font-size: var(--d-l); }
+.cell.lb .val { font-size: var(--d-s); }
+.cell.best { --bar: var(--t-best); } .cell.best .val { color: var(--t-best); }
+.cell.pb { --bar: var(--t-pb); } .cell.pb .val { color: var(--t-pb); }
+.cell.slower { --bar: var(--t-slower); } .cell.slower .val { color: var(--t-slower); }
+.cell.unknown .val { color: var(--text-3); }
+.cell.current { border-color: var(--text-1); box-shadow: inset 0 0 0 1px var(--text-1); }
+.cell.current .val { color: var(--text-3); }
+.cell .sub { font: 700 16px/1 var(--font-num); letter-spacing: .1em; color: var(--danger); margin-top: 6px; }
+/* light theme: timing colours as filled chips (coloured text on white is too weak) */
+:root[data-theme="light"] .cell.best .val, :root[data-theme="light"] .cell.pb .val, :root[data-theme="light"] .cell.slower .val {
+  justify-self: start; padding: 4px 8px 2px; border-radius: var(--r-cell); }
+:root[data-theme="light"] .cell.best .val { background: var(--t-best); color: #fff; }
+:root[data-theme="light"] .cell.pb .val { background: var(--t-pb); color: #fff; }
+:root[data-theme="light"] .cell.slower .val { background: #ffd23f; color: #0d1117; }
+
+/* lap strip */
+.strip { grid-area: strip; position: relative; }
+.strip .track { position: absolute; left: 0; right: 0; top: 30px; height: 12px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+.strip .seg { position: absolute; top: 0; bottom: 0; }
+.strip .tick { position: absolute; top: 24px; width: 2px; height: 24px; margin-left: -1px; background: var(--text-3); }
+.strip .slab { position: absolute; top: 50px; font: 700 14px/1 var(--font-num); letter-spacing: .1em; color: var(--text-3); transform: translateX(6px); }
+.strip .clab { position: absolute; top: 2px; transform: translateX(-50%); font: 700 16px/1 var(--font-num); letter-spacing: .04em; color: var(--text-3); }
+.strip .clab.is-next { color: var(--text-1); }
+.strip .cmark { position: absolute; top: 22px; width: 2px; height: 8px; margin-left: -1px; background: var(--text-3); }
+.strip .car { position: absolute; top: 44px; width: 0; height: 0; margin-left: -9px; border-left: 9px solid transparent; border-right: 9px solid transparent; border-bottom: 14px solid var(--accent); }
+.strip .cue { position: absolute; top: 0; height: 12px; background: var(--accent); opacity: .9; }
+.strip .yz { position: absolute; top: 26px; height: 20px; background: repeating-linear-gradient(135deg, var(--flag-yellow) 0 5px, transparent 5px 10px); }
+
+/* stale / link-lost treatments */
+.device[data-stale="on"] .delta, .device[data-stale="on"] .next, .device[data-stale="on"] .timing, .device[data-stale="on"] .strip { opacity: .35; }
+.stamp { position: absolute; z-index: 4; left: 50%; top: 44%; transform: translate(-50%, -50%) rotate(-3deg); padding: 14px 24px; border: 3px solid var(--warn);
+  color: var(--warn); font: 700 34px/1 var(--font-num); letter-spacing: .1em; background: color-mix(in srgb, var(--bg-0) 80%, transparent); border-radius: var(--r-panel); white-space: nowrap; }
+
+/* synthetic: hatched top edge on the whole screen */
+.device[data-synthetic="on"]::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 6px; z-index: 6;
+  background: repeating-linear-gradient(135deg, var(--synthetic) 0 8px, transparent 8px 16px); }
+
+/* annotations */
+.annot { display: none; position: absolute; z-index: 8; width: 34px; height: 34px; border-radius: 50%; background: var(--info); color: #0d1117;
+  font: 800 18px/34px var(--font-ui); text-align: center; box-shadow: 0 0 0 3px var(--bg-0); }
+:root[data-annot="on"] .annot { display: block; }
+.legend-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px 24px; margin: 14px 0 0; padding: 0; list-style: none; }
+.legend-list li { display: grid; grid-template-columns: 30px 1fr; gap: 10px; font-size: 15px; color: var(--text-2); }
+.legend-list b { display: inline-grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--info); color: #0d1117; font-size: 14px; }
+
+/* ------------------------------------------------------------------ phone */
+.ph-notch { display: grid; place-items: center; }
+.ph-notch i { width: 120px; height: 30px; border-radius: 16px; background: #000; }
+.ph-bar { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; }
+.ph-bar h4 { margin: 0; font: 700 26px/1 var(--font-num); letter-spacing: .06em; text-transform: uppercase; }
+.ph-bar .avatar { width: 40px; height: 40px; font-size: 16px; }
+.ph-sub { display: flex; gap: 8px; padding: 4px 16px; overflow-x: auto; }
+.ph-sub > span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: var(--r-pill); border: 1px solid var(--line); color: var(--text-2);
+  font: 700 16px/1 var(--font-num); letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+.ph-sub > span.on { background: var(--text-1); color: var(--bg-0); border-color: var(--text-1); }
+.ph-body { padding: 8px 16px; display: grid; gap: 10px; align-content: start; min-height: 0; overflow: hidden; }
+.ph-status { display: flex; gap: 8px; align-items: center; }
+.ph-status .pill { height: 30px; font-size: 15px; padding: 0 10px; }
+.ph-status .ctx { font-size: 17px; }
+.ph-delta { padding: 14px 16px; display: grid; justify-items: center; gap: 6px; }
+.ph-delta .big { font: 700 104px/.9 var(--font-num); font-variant-numeric: tabular-nums; }
+.ph-delta .word { font: 700 18px/1 var(--font-num); letter-spacing: .14em; }
+.ph-delta .dbar { width: 100%; height: 18px; }
+.ph-next { padding: 14px 16px; display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; align-items: center; }
+.ph-next .id { font: 700 64px/.9 var(--font-num); grid-row: span 2; }
+.ph-next .nm { font: 600 28px/1 var(--font-num); }
+.ph-next .ds { font: 700 30px/1 var(--font-num); }
+.ph-next .ds small { font-size: 18px; color: var(--text-2); }
+.ph-sect { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.ph-sect .cell, .ph-lap .cell { padding: 12px 10px 8px; }
+.ph-sect .val, .ph-lap .val { font-size: 30px; }
+.ph-sect .lbl, .ph-lap .lbl { font-size: 14px; }
+.ph-sect .micro { font-size: 12px; }
+.ph-lap { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 6px; }
+.ph-lap .val { font-size: 24px; }
+.ph-strip { position: relative; height: 48px; }
+.ph-strip .track { position: absolute; left: 0; right: 0; top: 22px; height: 10px; background: var(--surface-2); border-radius: 5px; overflow: hidden; }
+.ph-strip .seg { position: absolute; top: 0; bottom: 0; }
+.ph-strip .clab { position: absolute; top: 0; transform: translateX(-50%); font: 700 15px/1 var(--font-num); color: var(--text-1); }
+.ph-strip .car { position: absolute; top: 34px; width: 0; height: 0; margin-left: -8px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 12px solid var(--accent); }
+/* phone review list */
+.ph-list { display: grid; gap: 0; }
+.ph-row { display: grid; grid-template-columns: 36px 1fr auto; gap: 4px 12px; align-items: center; min-height: 64px; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+.ph-row .avatar { width: 32px; height: 32px; font-size: 13px; grid-row: span 2; }
+.ph-row .t { font: 700 20px/1.1 var(--font-num); letter-spacing: .03em; }
+.ph-row .b { font: 700 20px/1 var(--font-num); text-align: right; font-variant-numeric: tabular-nums; }
+.ph-row .m { font-size: 13px; color: var(--text-3); }
+.ph-row .d { font: 700 14px/1 var(--font-num); text-align: right; }
+.ph-day { font: 700 13px/1 var(--font-num); letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); padding: 14px 4px 4px; }
+.hatch { background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--synthetic) 14%, transparent) 0 6px, transparent 6px 12px); }
+.tabbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--bg-1); padding-bottom: 34px; }
+.tabbar a { display: grid; justify-items: center; align-content: center; gap: 4px; min-height: 56px; color: var(--text-3); text-decoration: none;
+  font: 700 12px/1 var(--font-num); letter-spacing: .1em; text-transform: uppercase; }
+.tabbar a svg { width: 26px; height: 26px; }
+.tabbar a[aria-current="page"] { color: var(--text-1); }
+.tabbar a[aria-current="page"] svg { color: var(--accent); }
+
+/* ------------------------------------------------------------------ IA map */
+.ia { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 16px; }
+.ia-card { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-panel); padding: 16px 18px; position: relative; }
+.ia-card::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 4px; background: var(--accent); border-radius: var(--r-panel) var(--r-panel) 0 0; }
+.ia-card h3 { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; font: 700 24px/1 var(--font-num); letter-spacing: .08em; text-transform: uppercase; }
+.ia-card h3 svg { width: 26px; height: 26px; color: var(--accent); }
+.ia-card ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.ia-card li { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; border-top: 1px solid var(--line); padding-top: 6px; }
+.ia-card li span:first-child { color: var(--text-1); font-weight: 600; }
+.ia-card li span:last-child { color: var(--text-3); text-align: right; }
+.ia-card .route { font: 600 13px/1.4 ui-monospace, "SF Mono", Menlo, monospace; color: var(--text-3); margin-top: 10px; }
+
+/* ------------------------------------------------------------------ review frame */
+.rv { display: grid; grid-template-rows: auto auto auto auto minmax(0, 1fr); gap: 12px; padding: 18px 24px; min-width: 0; height: 820px; overflow: hidden; background: var(--bg-1); }
+.rv-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.rv-head h4 { margin: 0; font: 700 30px/1 var(--font-num); letter-spacing: .06em; text-transform: uppercase; }
+.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--r-panel); overflow: hidden; }
+.seg span { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; font: 700 16px/1 var(--font-num); letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); }
+.seg span + span { border-left: 1px solid var(--line-strong); }
+.seg span.on { background: var(--text-1); color: var(--bg-1); }
+.crumb { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-size: 16px; color: var(--text-2); }
+.crumb strong { color: var(--text-1); font: 700 24px/1 var(--font-num); letter-spacing: .04em; }
+.crumb .avatar { width: 32px; height: 32px; font-size: 14px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); }
+.tabs span { min-height: 44px; display: inline-flex; align-items: center; padding: 0 16px; font: 700 16px/1 var(--font-num); letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); border-bottom: 3px solid transparent; }
+.tabs span.on { color: var(--text-1); border-bottom-color: var(--accent); }
+.tabs .ask { margin-left: auto; color: var(--info); border: 1px solid color-mix(in srgb, var(--info) 50%, transparent); border-radius: var(--r-panel); margin-bottom: 6px; min-height: 40px; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.kpi { position: relative; background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-cell); padding: 14px 16px 12px; }
+.kpi::before { content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 6px; background: var(--bar, var(--line)); }
+.kpi .k { font: 700 14px/1 var(--font-num); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); display: flex; justify-content: space-between; }
+.kpi .k i { font-style: normal; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-strong); font-size: 13px; color: var(--text-2); }
+.kpi .v { font: 700 32px/1.1 var(--font-num); font-variant-numeric: tabular-nums; margin-top: 8px; }
+.kpi .c { font-size: 14px; color: var(--text-2); }
+.rv-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 14px; min-height: 0; }
+.rv-col { display: grid; gap: 14px; align-content: start; min-height: 0; }
+.box { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-panel); padding: 14px 16px; }
+.box h5 { margin: 0 0 10px; font: 700 15px/1 var(--font-num); letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; }
+.box h5 span { letter-spacing: .02em; text-transform: none; font: 500 13px/1 var(--font-ui); }
+.bars { display: grid; grid-template-columns: repeat(11, 1fr); align-items: end; gap: 6px; height: 96px; position: relative; }
+.bars .b { position: relative; background: var(--surface-3); border-radius: 2px 2px 0 0; }
+.bars .b.clean { background: var(--text-2); }
+.bars .b.best { background: var(--t-best); }
+.bars .b.nc { background: repeating-linear-gradient(135deg, var(--line-strong) 0 4px, transparent 4px 8px); border: 1px solid var(--line-strong); }
+.bars .refline { position: absolute; left: 0; right: 0; border-top: 2px dashed var(--info); }
+.bars-x { display: grid; grid-template-columns: repeat(11, 1fr); gap: 6px; margin-top: 6px; font: 600 13px/1 var(--font-num); color: var(--text-3); text-align: center; }
+.wt { display: grid; grid-template-columns: 130px 1fr 70px; gap: 4px 12px; align-items: center; font-size: 15px; }
+.wt .cn { font: 700 18px/1 var(--font-num); letter-spacing: .04em; }
+.wt .cn small { display: block; font: 500 13px/1.2 var(--font-ui); color: var(--text-3); letter-spacing: 0; margin-top: 2px; }
+.wt .track { position: relative; height: 16px; background: var(--surface-2); border-radius: 2px; }
+.wt .track i { position: absolute; top: 0; bottom: 0; left: 30%; }
+.wt .track i.loss { background: var(--behind); }
+.wt .track i.gain { background: var(--ahead); right: 70%; left: auto; }
+.wt .track::after { content: ""; position: absolute; left: 30%; top: -3px; bottom: -3px; width: 2px; background: var(--text-2); }
+.wt .dv { font: 700 18px/1 var(--font-num); text-align: right; font-variant-numeric: tabular-nums; }
+.wt .why { grid-column: 2 / -1; margin: -4px 0 4px; font-size: 13px; color: var(--text-3); }
+.card { border: 1px solid var(--line); border-left: 4px solid var(--behind); border-radius: var(--r-panel); padding: 10px 14px; background: var(--surface-1); display: grid; gap: 4px; }
+.card.good { border-left-color: var(--ahead); }
+.card .ch { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.card .ch b { font: 700 18px/1 var(--font-num); letter-spacing: .04em; }
+.card .ch span { font: 700 16px/1 var(--font-num); }
+.card p { margin: 0; font-size: 16px; line-height: 1.4; color: var(--text-1); max-width: none; }
+.card .ev { font-size: 13px; color: var(--text-3); display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+.card .ev a { color: var(--info); text-decoration: none; font-weight: 600; min-height: 32px; display: inline-flex; align-items: center; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (max-width: 700px) { .controls { position: static; } }
+@media (max-width: 600px) { .doc h1 { font-size: 26px; } .ctl-row .lbl { min-width: 100%; } }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Pitwall · Direction A · Timing screen minimal</h1>
+  <p>Static mockup for <code>docs/ui/proposal-timing-screen.md</code>. It shows the iPad-landscape <strong>Drive › Dash</strong> screen in every
+    state, the four-area navigation (iPad rail and phone tab bar) and one Review page. The device frames are drawn at real
+    CSS pixel size (iPad 1180 × 820, phone 390 × 844) and scaled down to fit your window.</p>
+  <div class="sample-flag" role="note">SAMPLE DATA: every number, name and message here is illustrative. None of it comes from a real session.</div>
+
+  <div class="controls" role="group" aria-label="Mockup controls">
+    <div class="ctl-row" id="stateRow"><span class="lbl">State</span></div>
+    <div class="ctl-row">
+      <span class="lbl">Options</span>
+      <button class="ctl" data-toggle="theme" aria-pressed="false">Light theme</button>
+      <button class="ctl" data-toggle="cvd" aria-pressed="false">Red-green safe</button>
+      <button class="ctl" data-toggle="night" aria-pressed="false">Night dim</button>
+      <button class="ctl" data-toggle="tier" aria-pressed="true">Tier 2 colours (B1/B2)</button>
+      <button class="ctl" data-toggle="beginner" aria-pressed="false">Beginner labels</button>
+      <button class="ctl" data-toggle="synthetic" aria-pressed="false">Synthetic replay</button>
+      <button class="ctl" data-toggle="annot" aria-pressed="false">Annotations</button>
+    </div>
+  </div>
+
+  <h2>1 · Drive › Dash · iPad landscape at about 70 cm</h2>
+  <p>One focal number (the delta to your reference lap). The next corner, using the official name only when the hand-verified track
+    sheet has one, and the distance to the reference braking marker. Timing cells with a coloured top bar. A linear lap strip instead
+    of a map. The rail and status bar dim while you are on track. Panels never move: states only change what is inside them.</p>
+  <div class="fit" data-w="1206"><div class="device ipad" id="ipad" data-dim="on">
+    <nav class="rail" aria-label="Main">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30"><path d="M5 23 L13 8 L18 18 L21 13 L27 23" stroke="var(--accent)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.2 11h6.4M14.4 11h6.4M12 14.4V21"/></svg>Drive</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5l3.4-3.4M10 2.5h4M12 2.5v3.5M19 6l1.4-1.4"/></svg>Review</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5l3 3 5.9-5.9a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.3-.7-.7-2.3z"/></svg>Setup</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Settings</a>
+      <div></div>
+      <div class="me"><span class="avatar" title="James is in the seat (sample)">JR</span><span class="conn-dot" id="railDot" title="Telemetry live"></span></div>
+    </nav>
+    <div class="dash" id="dash"></div>
+    <span class="sample-tag">SAMPLE DATA</span>
+    <span class="annot" style="left:84px;top:6px">6</span>
+    <span class="annot" style="left:104px;top:28px">1</span>
+    <span class="annot" style="left:104px;top:100px">2</span>
+    <span class="annot" style="left:746px;top:100px">3</span>
+    <span class="annot" style="left:104px;top:612px">4</span>
+    <span class="annot" style="left:104px;top:752px">5</span>
+  </div></div>
+  <ol class="legend-list" aria-label="Annotations">
+    <li><b>1</b><span><strong>Status bar.</strong> Connection, evidence tier (synthetic / replay), track and session, the latest radio line, radio pill, night dim. Banners (yellow, safety car, link lost) take over this row.</span></li>
+    <li><b>2</b><span><strong>Delta hero.</strong> 172 px, tabular, 2 decimals, at most 10 updates a second. Sign, AHEAD/BEHIND word and bar direction repeat the colour. It reads <code>delta_s</code> and the reference lap.</span></li>
+    <li><b>3</b><span><strong>Next corner.</strong> The first corner whose apex is ahead. Official name only from the verified sheet. The brake-marker distance comes from <code>cues.next.in_m</code>. It never flashes "brake now": the radio does the timing.</span></li>
+    <li><b>4</b><span><strong>Timing strip.</strong> LAP clock, S1-S3, LAST, BEST. 6 px top bar plus a <code>BEST</code>/<code>PB</code> micro-label. Toggle "Tier 2" to see what ships first (last lap's sectors).</span></li>
+    <li><b>5</b><span><strong>Lap strip.</strong> Linear lap from the game's own sector boundaries and the learned corners, with the car, the next cue's braking zone and live yellow zones.</span></li>
+    <li><b>6</b><span><strong>Rail.</strong> Four areas. 80 px wide with 76 px targets. Dimmed to 40 % on track, and any touch restores it. Driver avatar and connection dot at the bottom.</span></li>
+  </ol>
+  <p class="caption">Type stand-in: this mockup uses fonts already on Apple devices (DIN Condensed, Avenir Next Condensed). The proposal self-hosts
+    Barlow Semi Condensed (SIL OFL) so every device looks the same offline.</p>
+
+  <h2>2 · Navigation: four areas instead of nine tabs</h2>
+  <p>Drive · Review · Setup · Settings. A left rail on the iPad in landscape (height is scarce, width is not), and a bottom tab bar on phones
+    and in portrait. Sub-pages are a segmented control (iPad) or a scrollable pill row (phone). Legacy links such as
+    <code>#/radio</code> redirect.</p>
+  <div class="ia">
+    <div class="ia-card"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.2 11h6.4M14.4 11h6.4M12 14.4V21"/></svg>Drive</h3>
+      <ul><li><span>Dash</span><span>Live (glance part)</span></li><li><span>Car</span><span>Live (tyres, fuel, inputs, map, laps)</span></li><li><span>Radio</span><span>Radio (Go live, PTT, log)</span></li></ul>
+      <div class="route">#/drive · #/drive/car · #/drive/radio<br>← #/live, #/radio</div></div>
+    <div class="ia-card"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5l3.4-3.4M10 2.5h4M12 2.5v3.5"/></svg>Review</h3>
+      <ul><li><span>Sessions</span><span>Sessions</span></li><li><span>· Summary / Laps / Compare / Coaching</span><span>Session</span></li><li><span>Progress</span><span>new (per driver)</span></li><li><span>Engineer</span><span>Engineer</span></li></ul>
+      <div class="route">#/review · #/review/s/:id/… · #/review/progress<br>← #/sessions, #/sessions/:id, #/engineer</div></div>
+    <div class="ia-card"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5l3 3 5.9-5.9a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.3-.7-.7-2.3z"/></svg>Setup</h3>
+      <ul><li><span>Checklist</span><span>new (pre-flight)</span></li><li><span>Connect</span><span>Connect</span></li><li><span>Drivers</span><span>Drivers</span></li><li><span>Rig</span><span>Setup (rig)</span></li></ul>
+      <div class="route">#/setup · /connect · /drivers · /rig<br>← #/connect, #/profiles, #/setup</div></div>
+    <div class="ia-card"><h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Settings</h3>
+      <ul><li><span>Engineer AI</span><span>Settings</span></li><li><span>Radio &amp; voice</span><span>Radio settings panel</span></li><li><span>Display</span><span>new (theme, night, CVD, text size)</span></li><li><span>System</span><span>Status</span></li></ul>
+      <div class="route">#/settings · /radio · /display · /system<br>← #/settings, #/status</div></div>
+  </div>
+
+  <div class="devices-row" style="margin-top:24px">
+    <div>
+      <p><strong>Phone, portrait: Drive › Dash.</strong> Same data and colour rules, stacked in one column. Tab bar with labels always
+        visible, 56 px targets plus the home-indicator safe area.</p>
+      <div class="fit" data-w="416"><div class="device phone" id="phone">
+        <div class="ph-notch"><i></i></div>
+        <div class="ph-bar"><h4>Drive</h4><span class="avatar">JR</span></div>
+        <div class="ph-sub"><span class="on">Dash</span><span>Car</span><span>Radio</span></div>
+        <div class="ph-body" id="phBody"></div>
+        <nav class="tabbar" aria-label="Main (phone)">
+          <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.2 11h6.4M14.4 11h6.4M12 14.4V21"/></svg>Drive</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5l3.4-3.4M10 2.5h4M12 2.5v3.5"/></svg>Review</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5l3 3 5.9-5.9a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.3-.7-.7-2.3z"/></svg>Setup</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Settings</a>
+        </nav>
+        <span class="sample-tag" style="bottom:96px">SAMPLE DATA</span>
+      </div></div>
+    </div>
+    <div>
+      <p><strong>Phone, portrait: Review › Sessions.</strong> A timing-tower list with two-line rows (the whole row is the target). Purple marks a
+        personal best when it was set. Synthetic sessions are hatched and never count towards bests.</p>
+      <div class="fit" data-w="416"><div class="device phone">
+        <div class="ph-notch"><i></i></div>
+        <div class="ph-bar"><h4>Review</h4><span class="avatar">JR</span></div>
+        <div class="ph-sub"><span class="on">Sessions</span><span>Progress</span><span>Engineer</span></div>
+        <div class="ph-body">
+          <div class="ph-sub" style="padding:0"><span class="on">Everyone</span><span><span class="avatar" style="width:24px;height:24px;font-size:11px;margin-right:6px">JR</span>James</span><span><span class="avatar" style="width:24px;height:24px;font-size:11px;margin-right:6px;background:#38bdf8">S</span>Sam</span><span><span class="avatar" style="width:24px;height:24px;font-size:11px;margin-right:6px;background:#3ddc84">A</span>Alex</span></div>
+          <div class="ph-list">
+            <div class="ph-day">Today</div>
+            <div class="ph-row"><span class="avatar">JR</span><span class="t">Austria · Practice</span><span class="b" style="color:var(--t-best)">1:06.412</span>
+              <span class="m">18:40 · 12 laps, 8 clean · PB</span><span class="d c-ahead">−0.384 vs PB</span></div>
+            <div class="ph-row"><span class="avatar" style="background:#38bdf8">S</span><span class="t">Austria · Time trial</span><span class="b">1:09.880</span>
+              <span class="m">17:55 · 8 laps, 6 clean</span><span class="d c-behind">+0.122 vs PB</span></div>
+            <div class="ph-day">Yesterday</div>
+            <div class="ph-row"><span class="avatar">JR</span><span class="t">Austria · Race</span><span class="b">1:06.796</span>
+              <span class="m">20:10 · 20 laps, 17 clean</span><span class="d c-unknown">-</span></div>
+            <div class="ph-day">2 Oct</div>
+            <div class="ph-row hatch"><span class="avatar" style="background:#3ddc84">A</span><span class="t">Austria · Practice <span class="pill synthetic" style="height:22px;font-size:12px;padding:0 6px">Synthetic</span></span><span class="b c-muted">1:05.900</span>
+              <span class="m">replay · 10 laps · not counted</span><span class="d c-unknown">-</span></div>
+          </div>
+        </div>
+        <nav class="tabbar" aria-label="Main (phone, review)">
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.2 11h6.4M14.4 11h6.4M12 14.4V21"/></svg>Drive</a>
+          <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5l3.4-3.4M10 2.5h4M12 2.5v3.5"/></svg>Review</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5l3 3 5.9-5.9a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.3-.7-.7-2.3z"/></svg>Setup</a>
+          <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Settings</a>
+        </nav>
+        <span class="sample-tag" style="bottom:96px">SAMPLE DATA</span>
+      </div></div>
+    </div>
+  </div>
+
+  <h2>3 · Review › Session › Summary (iPad)</h2>
+  <p>"The story of the session" for a beginner: four plain-words numbers, lap times, where the time went, and the coach's own top points.
+    Coaching text keeps the coach's exact wording format. The UI adds no advice of its own.</p>
+  <div class="fit" data-w="1206"><div class="device ipad">
+    <nav class="rail" aria-label="Main (review example)">
+      <div class="mark" aria-hidden="true"><svg viewBox="0 0 32 32" width="30" height="30"><path d="M5 23 L13 8 L18 18 L21 13 L27 23" stroke="var(--accent)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4"/><path d="M3.2 11h6.4M14.4 11h6.4M12 14.4V21"/></svg>Drive</a>
+      <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5l3.4-3.4M10 2.5h4M12 2.5v3.5"/></svg>Review</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.3 5.3L3.5 17.5l3 3 5.9-5.9a4 4 0 0 0 5.3-5.3l-2.6 2.6-2.3-.7-.7-2.3z"/></svg>Setup</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Settings</a>
+      <div></div>
+      <div class="me"><span class="avatar">JR</span><span class="conn-dot"></span></div>
+    </nav>
+    <div class="rv">
+      <div class="rv-head"><h4>Review</h4><div class="seg"><span class="on">Sessions</span><span>Progress</span><span>Engineer</span></div></div>
+      <div class="crumb"><span>Sessions ›</span><strong>Austria · Practice</strong><span>Today 18:40</span><span class="avatar">JR</span><span>James in the seat · F1 25 · PS5</span></div>
+      <div class="tabs"><span class="on">Summary</span><span>Laps</span><span>Compare</span><span>Coaching</span><span class="ask">Ask the engineer</span></div>
+      <div class="kpis">
+        <div class="kpi" style="--bar:var(--t-best)"><div class="k">Best lap <i title="Fastest clean lap of this session">?</i></div><div class="v" style="color:var(--t-best)">1:06.412</div><div class="c">Lap 5 · new personal best here</div></div>
+        <div class="kpi"><div class="k">Clean laps <i title="Laps with no flashback, pit, pause or game invalidation">?</i></div><div class="v">8 of 12</div><div class="c">4 not used: out lap, invalid, flashback, in lap</div></div>
+        <div class="kpi" style="--bar:var(--ahead)"><div class="k">Gained today <i title="First clean lap minus best clean lap">?</i></div><div class="v" style="color:var(--ahead)">−1.284 s</div><div class="c">first clean lap (2) → best (5)</div></div>
+        <div class="kpi"><div class="k">Steadiest corner <i title="Smallest spread of your braking point across laps">?</i></div><div class="v">T1 ±2.1 m</div><div class="c">braking point spread, 8 laps</div></div>
+      </div>
+      <div class="rv-grid">
+        <div class="rv-col">
+          <div class="box"><h5>Lap times <span>shorter = faster · hatched = not used for coaching · dashed = reference (lap 5)</span></h5>
+            <div class="bars" id="bars"></div>
+            <div class="bars-x"><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12</span></div>
+          </div>
+          <div class="box"><h5>Where the time is <span>average vs your reference, 8 clean laps</span></h5>
+            <div class="wt">
+              <div class="cn">T9<small>Rindt Kurve</small></div><div class="track"><i class="loss" style="width:48%"></i></div><div class="dv c-behind">+0.12 s</div>
+              <div class="why">braking point −12 m (earlier than the reference)</div>
+              <div class="cn">T3<small>right-hander</small></div><div class="track"><i class="loss" style="width:28%"></i></div><div class="dv c-behind">+0.07 s</div>
+              <div class="why">minimum speed −3 km/h</div>
+              <div class="cn">T6<small>left-hander</small></div><div class="track"><i class="gain" style="width:8%"></i></div><div class="dv c-ahead">−0.02 s</div>
+              <div class="why">exit speed +4 km/h</div>
+            </div>
+          </div>
+        </div>
+        <div class="rv-col">
+          <div class="box"><h5>Coaching points <span>from the coach, top 2 of 5</span></h5>
+            <div style="display:grid;gap:10px">
+              <div class="card"><div class="ch"><b>T9 · Rindt Kurve</b><span class="c-behind">costs 0.12 s a lap</span></div>
+                <p>T9: you're braking about 12 m earlier than your reference (lap 5), losing 0.12 s through the corner.</p>
+                <div class="ev"><span>Seen on 3 of your last 5 laps · confidence: high</span><a href="#">Ask the engineer ›</a></div></div>
+              <div class="card"><div class="ch"><b>T3</b><span class="c-behind">costs 0.07 s a lap</span></div>
+                <p>T3: minimum speed is 3 km/h lower than your reference (60 vs 63 km/h), losing 0.07 s through the corner.</p>
+                <div class="ev"><span>Seen on 2 of your last 5 laps · confidence: medium</span><a href="#">Ask the engineer ›</a></div></div>
+            </div>
+          </div>
+          <div class="box"><h5>Went well</h5>
+            <div class="card good"><div class="ch"><b>T6</b><span class="c-ahead">gained 0.03 s</span></div>
+              <p>T6: good - exit speed is up 4 km/h on your reference and you gained 0.03 s there.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <span class="sample-tag">SAMPLE DATA</span>
+  </div></div>
+
+  <p class="caption" style="margin-top:32px">Mockup only: not wired to the API. Sample circuit geometry follows the hand-verified Austria track sheet
+    (4,323 m lap, S2 from 1,204 m, S3 from 2,935 m, learned corners T1 T3 T4 T6 T7 T9 T10). Lap times, deltas, driver names and messages are made up.</p>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // ----------------------------------------------------------------------------- sample data (illustrative)
+  const LEN = 4323, SECT = [0, 1204, 2935, 4323];
+  const CORNERS = [["T1", 443], ["T3", 1431], ["T4", 2213], ["T6", 2700], ["T7", 3030], ["T9", 3800], ["T10", 4015]];
+  const MINUS = "−";
+
+  const STATES = {
+    ontrack:  { label: "On track" },
+    yellow:   { label: "Yellow flag", banner: "yellow", yz: [1650, 1900] },
+    sc:       { label: "Safety car", banner: "sc" },
+    invalid:  { label: "Lap invalid", invalid: true },
+    pitlane:  { label: "Pit lane (out lap)", hero: "pitlane" },
+    inpit:    { label: "In pit (after run)", hero: "inpit" },
+    pre:      { label: "Pre-session", full: "pre" },
+    ended:    { label: "Session ended", full: "ended" },
+    stale:    { label: "Stale (game paused)", stale: true },
+    linklost: { label: "Link lost", linklost: true },
+    nodata:   { label: "No data", full: "nodata" },
+  };
+  const opts = { state: "ontrack", tier: true, beginner: false, synthetic: false };
+
+  // ----------------------------------------------------------------------------- helpers
+  const fmtDelta = (v) => v == null ? "-" : `<span class="sign">${v < -0.005 ? MINUS : v > 0.005 ? "+" : "±"}</span>` + Math.abs(v).toFixed(2);
+  const dClass = (v) => v == null ? "c-unknown" : v < -0.005 ? "c-ahead" : v > 0.005 ? "c-behind" : "c-neutral";
+  const pct = (m) => (m / LEN * 100).toFixed(3) + "%";
+  const arrow = (dir) => `<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" aria-label="${dir}-hander" role="img" ${dir === "left" ? 'style="transform:scaleX(-1)"' : ""}><path d="M16 56V34a16 16 0 0 1 16-16h18"/><path d="M40 6l12 12-12 12"/></svg>`;
+  const trend = (gain) => `<svg class="trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-label="${gain ? "gaining" : "losing"}" role="img"><path d="${gain ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"}"/></svg>`;
+  const moon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>`;
+  const flagSvg = `<svg class="flagmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>`;
+
+  function cell(kind, label, value, state, extra = "") {
+    const micro = state === "best" ? "BEST" : state === "pb" ? "PB" : state === "current" ? "▸" : "";
+    return `<div class="cell ${kind} ${state || ""}"><div class="top"><span class="lbl">${label}</span><span class="micro">${micro}</span></div>` +
+      `<div class="val num">${value}</div>${extra}</div>`;
+  }
+
+  // ----------------------------------------------------------------------------- Drive render
+  function model() {
+    const st = STATES[opts.state];
+    const unknown = !!st.linklost;
+    const m = {
+      st, unknown,
+      delta: unknown ? null : -0.21,
+      carM: 3420, sectorNow: 2,
+      lapLbl: "Lap 8", lapClock: unknown ? "-" : "0:55.2",
+      next: { id: "T9", dir: "right", name: "Rindt Kurve", brakeM: 285, ref: 150, reason: "Braking early · 3 of the last 5 laps" },
+    };
+    if (opts.tier) {               // Tier 2 (needs B1/B2): current-lap sectors, record = purple, personal best = green
+      m.sectors = [["17.198", "best"], ["29.087", "pb"], ["-", "current"]];
+      m.sectorPrefix = "";
+    } else {                       // Tier 1 ships first: the last completed lap's sectors (exact game values)
+      m.sectors = [["17.240", "best"], ["29.244", "slower"], ["20.156", "slower"]];
+      m.sectorPrefix = "L7 ";
+    }
+    if (st.hero === "pitlane") {   // out lap after the stop: lap 8 just started from the pit exit
+      Object.assign(m, { carM: 250, sectorNow: 0, lapLbl: "Lap 8 · out lap", lapClock: "0:14.2", sectorPrefix: "",
+        sectors: [["-", "current"], ["-", "unknown"], ["-", "unknown"]] });
+    }
+    if (st.hero === "inpit") {     // stationary after lap 7
+      Object.assign(m, { carM: 4290, sectorNow: 3, lapLbl: "Lap 7 · in pit", lapClock: "-", sectorPrefix: "L7 ",
+        sectors: [["17.301", "slower"], ["29.244", "slower"], ["20.156", "slower"]] });
+    }
+    if (st.full === "ended") {     // last lap was an in lap: flagged laps are never coloured
+      Object.assign(m, { sectorNow: 3, lapLbl: "Lap 12 · in lap", lapClock: "1:09.115", sectorPrefix: "L12 ",
+        sectors: [["17.402", ""], ["29.880", ""], ["21.833", ""]] });
+    }
+    if (unknown) Object.assign(m, { lapLbl: "Lap", sectors: [["-", "unknown"], ["-", "unknown"], ["-", "unknown"]] });
+    return m;
+  }
+
+  function statusBar(m) {
+    const st = m.st;
+    let pill = `<span class="pill live"><span class="dot"></span>Live</span>`;
+    if (st.stale) pill = `<span class="pill warn"><span class="dot"></span>Stale 8 s</span>`;
+    if (st.linklost) pill = `<span class="pill danger"><span class="dot"></span>No link</span>`;
+    if (st.full === "nodata") pill = `<span class="pill"><span class="dot"></span>No data</span>`;
+    const syn = opts.synthetic ? `<span class="pill synthetic">Synthetic</span><span class="pill">Replay</span>` : "";
+    const ctx = st.full === "nodata" ? `<span class="ctx">Listening on UDP 20777</span>` : `<span class="ctx">Austria · Practice · F1 25</span>`;
+    const tick = (st.full || st.linklost) ? `<span class="ticker"></span>` :
+      `<span class="ticker"><b>RADIO</b>Lap 7: 1:06.701, plus 0.289 on your reference.</span>`;
+    const radio = st.full === "pre" || st.full === "nodata"
+      ? `<span class="sbtn off"><span class="dot"></span>Radio off</span>`
+      : `<span class="sbtn"><span class="dot"></span>Radio</span>`;
+    let banner = "";
+    if (st.banner === "yellow") banner = `<div class="banner yellow" role="status">${flagSvg}Yellow flag <small>Sector 2 · marshal zone 7</small></div>`;
+    if (st.banner === "sc") banner = `<div class="banner sc" role="status">${flagSvg}Safety car <small>Braking cues paused</small></div>`;
+    if (st.linklost) banner = `<div class="banner link" role="alert">No link to pitwall <small>Reconnecting · next try in 4 s · values hidden until the link is back</small></div>`;
+    // P8: the evidence tier stays visible even when a banner takes over the row
+    if (banner && opts.synthetic) banner = banner.replace(/<\/div>$/, `<span class="pill synthetic" style="margin-left:auto;background-color:var(--bg-0)">Synthetic</span></div>`);
+    return `<div class="status">${pill}${syn}${ctx}${tick}${radio}<span class="sbtn" title="Night dim">${moon}</span>${banner}</div>`;
+  }
+
+  function deltaPanel(m) {
+    const st = m.st;
+    if (st.hero === "pitlane") {
+      return `<section class="panel delta" aria-label="Pit lane speed"><div class="head"><span class="lbl">Pit lane · limit 80 km/h</span><span class="lbl">Speed</span></div>
+        <div class="hero-mid"><div class="value"><span class="big num c-ahead">78</span><span class="num" style="font:700 56px/1 var(--font-num);color:var(--text-2)">/ 80</span></div>
+        <div class="word c-ahead">Under the limit</div></div>
+        <div><div class="dbar"><span class="fill" style="left:0;width:${78 / 80 * 100}%;background:var(--ahead)"></span></div>
+        <div class="dscale"><span>0</span><span>km/h</span><span>80</span></div></div></section>`;
+    }
+    if (st.hero === "inpit") {
+      return `<section class="panel delta" aria-label="Last lap"><div class="head"><span class="lbl">In pit · last lap (L7)</span><span class="lbl">Stationary</span></div>
+        <div class="hero-mid"><div class="value" style="flex-direction:column;gap:10px"><span class="num" style="font:700 var(--d-xl)/.9 var(--font-num);color:var(--t-slower)">1:06.701</span>
+        <span class="num c-behind" style="font:700 var(--d-l)/1 var(--font-num)">+0.289 <span class="lbl" style="font-size:20px">vs reference L5</span></span></div>
+        <div class="reason">Best this session: <span class="num" style="color:var(--t-best);font-weight:700">1:06.412</span> (lap 5) · 5 clean laps of 7</div></div><div></div></section>`;
+    }
+    const v = m.delta;
+    let cls = dClass(v), word = v == null ? "" : v < -0.005 ? "Ahead" : v > 0.005 ? "Behind" : "On par", reason = "";
+    if (st.invalid) { cls = "c-muted"; word = "Invalid lap"; reason = `<div class="reason">The delta is real, but this lap will not count. Colours are off until the next lap.</div>`; }
+    const label = opts.beginner ? "vs your target lap · 1:06.412" : "Delta · ref L5 · 1:06.412";
+    const fillW = v == null ? 0 : Math.min(Math.abs(v), 1) / 1 * 50;
+    const fillCls = v == null ? "" : v < 0 ? "ahead" : "behind";
+    const fillStyle = st.invalid ? "background:var(--text-3)" : "";
+    const aria = v == null ? "Delta unknown" : `${Math.abs(v).toFixed(2)} seconds ${v < 0 ? "ahead of" : "behind"} reference lap 5`;
+    return `<section class="panel delta" aria-label="${aria}"><div class="head"><span class="lbl">${label}</span><span class="lbl">±1.0 s</span></div>
+      <div class="hero-mid"><div class="value ${cls}"><span class="big num">${v == null ? "-" : fmtDelta(v)}</span>${v == null || st.invalid ? "" : trend(v < 0)}</div>
+      ${reason || `<div class="word ${cls}">${v == null ? "&nbsp;" : word}</div>`}</div>
+      <div><div class="dbar"><span class="fill ${fillCls}" style="width:${fillW}%;${fillStyle}"></span><span class="mid"></span></div>
+      <div class="dscale"><span>${MINUS}1.0 · ahead</span><span>0</span><span>behind · +1.0</span></div></div></section>`;
+  }
+
+  function nextPanel(m) {
+    const st = m.st, n = m.next;
+    if (st.hero === "pitlane") {
+      return `<section class="panel next"><div class="head"><span class="lbl">Last lap</span></div>
+        <div class="num" style="font:700 var(--d-l)/1 var(--font-num);color:var(--t-slower);margin-top:10px">1:06.701</div>
+        <div class="corner-name num c-behind">+0.289 vs ref</div>
+        <div class="ctxline" style="margin-top:12px">Best this session <span class="num" style="color:var(--t-best);font-weight:700">1:06.412</span> · lap 5</div></section>`;
+    }
+    if (st.hero === "inpit") {
+      return `<section class="panel next" aria-label="One thing for the next run"><div class="head"><span class="lbl">One thing for the next run</span><span class="focus-tag">◆ T9</span></div>
+        <p class="obs-quote">T9: you're braking about 12 m earlier than your reference (lap 5), losing 0.12 s through the corner.</p>
+        <div class="ctxline">Seen on 3 of your last 5 laps · confidence: high</div></section>`;
+    }
+    if (m.unknown) {
+      return `<section class="panel next"><div class="head"><span class="lbl">Next corner</span></div>
+        <div class="corner"><span class="id num c-unknown">-</span></div><div class="ctxline">Waiting for the link to come back.</div></section>`;
+    }
+    const brakeFrac = Math.max(0, Math.min(1, n.brakeM / 400));
+    return `<section class="panel next" aria-label="Next corner ${n.id} ${n.name}, brake marker in ${n.brakeM} metres">
+      <div class="head"><span class="lbl">Next corner</span><span class="focus-tag">◆ Focus</span></div>
+      <div class="corner"><span class="id num">${n.id}</span>${arrow(n.dir)}</div>
+      <div class="corner-name">${n.name}</div>
+      <div class="brake"><span class="lbl">Brake marker</span><span class="dist num">${n.brakeM}<small>m</small></span>
+        <div class="cbar"><i style="width:${(brakeFrac * 100).toFixed(1)}%"></i></div></div>
+      <div class="ctxline">Ref apex ${n.ref} km/h</div><div class="ctxline">${n.reason}</div></section>`;
+  }
+
+  function fullPanel(m) {
+    const f = m.st.full;
+    if (f === "pre") {
+      return `<section class="panel statep" aria-label="Ready"><h3>Ready · Austria · Practice</h3>
+        <div class="cols">
+          <div class="kv"><span class="lbl">In the seat</span>
+            <div style="display:flex;gap:18px;align-items:center"><span class="avatar big-avatar">JR</span><div><div class="v">James</div><div class="s">Intermediate · normal radio</div></div></div>
+            <span class="btn" style="margin-top:12px">Switch driver</span></div>
+          <div class="kv"><span class="lbl">Reference lap</span><div class="v num" style="color:var(--t-best)">1:06.796</div><div class="s">Lap 9 · yesterday · your best clean lap here</div>
+            <span class="lbl" style="margin-top:16px">Radio focus (cues: focus mode)</span><div class="v">T9 · T3</div><div class="s">From your recent laps: braking early at T9, low minimum speed at T3</div></div>
+          <div class="kv"><span class="lbl">Radio</span><div class="v">Off</div><div class="s">Start it before you go out: it unlocks audio and the mic and keeps the screen awake.</div>
+            <span class="btn primary" style="margin-top:12px">Start radio</span>
+            <span class="lbl" style="margin-top:16px">Track</span><div class="s">4,323 m · S1 1,204 m · S2 1,731 m · S3 1,388 m</div></div>
+        </div></section>`;
+    }
+    if (f === "ended") {
+      return `<section class="panel statep" aria-label="Session complete"><h3>Session complete</h3>
+        <div class="cols">
+          <div class="kv"><span class="lbl">Best lap</span><div class="v num" style="color:var(--t-best);font-size:var(--d-l)">1:06.412</div><div class="s">Lap 5 · new personal best here</div></div>
+          <div class="kv"><span class="lbl">Laps</span><div class="v num">12 · 8 clean</div><div class="s">4 not used: out lap, invalid, flashback, in lap</div>
+            <span class="lbl" style="margin-top:14px">Gained today</span><div class="v num c-ahead">${MINUS}1.284 s</div><div class="s">first clean lap → best</div></div>
+          <div class="kv"><span class="lbl">Top coaching point</span><p class="obs-quote" style="font-size:22px">T9: you're braking about 12 m earlier than your reference (lap 5), losing 0.12 s through the corner.</p>
+            <span class="btn primary" style="margin-top:10px">Review this session</span></div>
+        </div></section>`;
+    }
+    // nodata
+    return `<section class="panel statep" aria-label="Waiting for telemetry"><h3>Waiting for telemetry</h3>
+      <div class="cols" style="grid-template-columns:1.6fr 1fr">
+        <ol class="steps">
+          <li><span>Pitwall is listening on <code>UDP 20777</code> on this Mac. Nothing has arrived yet.</span></li>
+          <li><span>In the game, turn UDP telemetry on and send it to this Mac's address, port 20777 (the exact menu path comes from the Connect guide).</span></li>
+          <li><span>Enter a session (the garage is enough). This screen switches to the Ready view as soon as the first packets arrive.</span></li>
+        </ol>
+        <div style="display:grid;gap:12px;align-content:start"><span class="btn primary">Open Connect</span><span class="btn">Demo replay</span>
+          <div class="s" style="font:500 18px/1.4 var(--font-ui);color:var(--text-3)">Demo replay uses synthetic data and is labelled SYNTHETIC everywhere.</div></div>
+      </div></section>`;
+  }
+
+  function timing(m) {
+    const st = m.st;
+    const pre = st.full === "pre" || st.full === "nodata";
+    const lapExtra = st.invalid ? `<div class="sub">Invalid</div>` : "";
+    const lapVal = pre ? "-" : m.lapClock;
+    let html = cell("lap", pre ? "Lap" : m.lapLbl, lapVal, pre || m.unknown || lapVal === "-" ? "unknown" : "", lapExtra);
+    const secs = pre ? [["-", "unknown"], ["-", "unknown"], ["-", "unknown"]] : m.sectors;
+    secs.forEach(([v, s], i) => {
+      const state = st.invalid && (s === "best" || s === "pb") ? "" : s;
+      html += cell("sec", (pre ? "" : m.sectorPrefix) + "S" + (i + 1), v, state);
+    });
+    const last = pre || m.unknown ? ["-", "unknown"] : st.full === "ended" ? ["1:09.115", ""] : ["1:06.701", "slower"];
+    const best = pre || m.unknown ? ["-", "unknown"] : ["1:06.412", "best"];
+    html += cell("lb", "Last", last[0], last[1]);
+    html += cell("lb", "Best", best[0], best[1]);
+    return `<section class="timing" aria-label="Timing">${html}</section>`;
+  }
+
+  function strip(m) {
+    const st = m.st;
+    if (st.full === "nodata") return `<section class="strip" aria-label="Lap strip"><div class="track"></div><span class="clab" style="left:50%;top:50px">No track yet</span></section>`;
+    const segCol = (i) => {
+      if (st.full === "pre") return "var(--surface-2)";
+      if (i < m.sectorNow) { const s = st.invalid ? "" : m.sectors[i][1]; return s === "best" ? "var(--t-best)" : s === "pb" ? "var(--t-pb)" : s === "slower" ? "var(--t-slower)" : "var(--surface-2)"; }
+      return i === m.sectorNow ? "var(--surface-3)" : "var(--surface-2)";
+    };
+    let h = `<div class="track">`;
+    for (let i = 0; i < 3; i++) h += `<span class="seg" style="left:${pct(SECT[i])};width:${pct(SECT[i + 1] - SECT[i])};background:${segCol(i)};opacity:${i < m.sectorNow && !opts.tier && st.full !== "pre" ? .55 : .9}"></span>`;
+    if (!st.full && !st.hero && !m.unknown) h += `<span class="cue" style="left:${pct(3645)};width:${pct(60)}"></span>`;
+    h += `</div>`;
+    if (st.yz) h += `<span class="yz" style="left:${pct(st.yz[0])};width:${pct(st.yz[1] - st.yz[0])}"></span>`;
+    [1, 2].forEach((i) => { h += `<span class="tick" style="left:${pct(SECT[i])}"></span>`; });
+    ["S1", "S2", "S3"].forEach((s, i) => { h += `<span class="slab" style="left:${pct(SECT[i])}">${s}</span>`; });
+    CORNERS.forEach(([c, a]) => {
+      const nx = !st.full && !st.hero && !m.unknown && c === "T9";
+      h += `<span class="cmark" style="left:${pct(a)}"></span><span class="clab ${nx ? "is-next" : ""}" style="left:${pct(a)}">${c}</span>`;
+    });
+    if (!st.full && !m.unknown) h += `<span class="car" style="left:${pct(m.carM)}" aria-label="Car at ${m.carM} m"></span>`;
+    return `<section class="strip" aria-label="Lap strip">${h}</section>`;
+  }
+
+  function renderDrive() {
+    const m = model(), st = m.st;
+    const dash = document.getElementById("dash");
+    const ipad = document.getElementById("ipad");
+    let body = statusBar(m);
+    body += st.full ? fullPanel(m) : deltaPanel(m) + nextPanel(m);
+    body += timing(m) + strip(m);
+    if (st.stale) body += `<div class="stamp">Paused? No data for 8 s · last known values</div>`;
+    dash.innerHTML = body;
+    ipad.dataset.stale = st.stale ? "on" : "off";
+    ipad.dataset.synthetic = opts.synthetic ? "on" : "off";
+    ipad.dataset.dim = (!st.full && !st.hero && !st.linklost && !st.stale) ? "on" : "off";
+    const dot = document.getElementById("railDot");
+    dot.style.background = st.linklost ? "var(--danger)" : st.stale ? "var(--warn)" : st.full === "nodata" ? "var(--text-3)" : "var(--live)";
+    renderPhone(m);
+  }
+
+  // ----------------------------------------------------------------------------- phone render (compact Dash)
+  function renderPhone(m) {
+    const st = m.st, el = document.getElementById("phBody");
+    const pill = st.linklost ? `<span class="pill danger"><span class="dot"></span>No link</span>` : st.stale ? `<span class="pill warn"><span class="dot"></span>Stale 8 s</span>` :
+      st.full === "nodata" ? `<span class="pill"><span class="dot"></span>No data</span>` : `<span class="pill live"><span class="dot"></span>Live</span>`;
+    let h = `<div class="ph-status">${pill}${opts.synthetic ? '<span class="pill synthetic">Synthetic</span>' : ""}<span class="ctx">Austria · Practice</span></div>`;
+    if (st.banner === "yellow") h += `<div class="banner yellow" style="position:static;height:48px;font-size:22px">${flagSvg}Yellow · S2</div>`;
+    if (st.banner === "sc") h += `<div class="banner sc" style="position:static;height:48px;font-size:22px">${flagSvg}Safety car</div>`;
+    if (st.full) {
+      const t = { pre: "Ready", ended: "Session complete", nodata: "Waiting for telemetry" }[st.full];
+      h += `<section class="panel ph-delta"><div class="lbl">${t}</div><div class="num" style="font:700 40px/1.1 var(--font-num);text-align:center">${st.full === "ended" ? '<span style="color:var(--t-best)">1:06.412</span>' : st.full === "pre" ? "James · ref 1:06.796" : "UDP 20777"}</div>
+        <span class="btn primary" style="width:100%">${st.full === "pre" ? "Start radio" : st.full === "ended" ? "Review this session" : "Open Connect"}</span></section>`;
+      el.innerHTML = h; return;
+    }
+    const v = st.hero ? null : m.delta;
+    const cls = st.invalid ? "c-muted" : dClass(v);
+    const fillW = v == null ? 0 : Math.min(Math.abs(v), 1) * 50;
+    h += `<section class="panel ph-delta" style="${st.stale ? "opacity:.35" : ""}"><div class="lbl">${st.hero === "pitlane" ? "Pit lane · 78 / 80 km/h" : st.hero === "inpit" ? "In pit · last lap 1:06.701" : opts.beginner ? "vs your target lap" : "Delta · ref L5"}</div>
+      <div class="big num ${cls}">${v == null ? "-" : fmtDelta(v)}</div><div class="word ${cls}">${v == null ? "&nbsp;" : st.invalid ? "Invalid lap" : v < 0 ? "Ahead" : "Behind"}</div>
+      <div class="dbar"><span class="fill ${v == null ? "" : v < 0 ? "ahead" : "behind"}" style="width:${fillW}%"></span><span class="mid"></span></div></section>`;
+    if (!st.hero) h += `<section class="panel ph-next" style="${st.stale ? "opacity:.35" : ""}"><span class="id num ${m.unknown ? "c-unknown" : ""}">${m.unknown ? "-" : "T9"}</span>
+      <span class="nm">${m.unknown ? "&nbsp;" : "Rindt Kurve"}</span><span class="ds num">${m.unknown ? "-" : "285"} <small>m to brake marker</small></span></section>`;
+    const secs = m.sectors.map(([val, s], i) => cell("sec", "S" + (i + 1), val, st.invalid && (s === "best" || s === "pb") ? "" : s)).join("");
+    h += `<div class="ph-sect" style="${st.stale ? "opacity:.35" : ""}">${secs}</div>`;
+    h += `<div class="ph-lap" style="${st.stale ? "opacity:.35" : ""}">${cell("lap", m.unknown ? "Lap" : "Lap 8", m.lapClock, m.unknown ? "unknown" : "", st.invalid ? '<div class="sub">Invalid</div>' : "")}${cell("lb", "Last", m.unknown ? "-" : "1:06.701", m.unknown ? "unknown" : "slower")}${cell("lb", "Best", m.unknown ? "-" : "1:06.412", m.unknown ? "unknown" : "best")}</div>`;
+    // compact lap strip: sectors, car and the next corner only (labels for every corner would collide at 358 px)
+    let ps = `<div class="ph-strip" style="${st.stale ? "opacity:.35" : ""}"><div class="track">`;
+    for (let i = 0; i < 3; i++) {
+      const sc = i < m.sectorNow ? (st.invalid ? "" : m.sectors[i][1]) : i === m.sectorNow ? "cur" : "";
+      const col = sc === "best" ? "var(--t-best)" : sc === "pb" ? "var(--t-pb)" : sc === "slower" ? "var(--t-slower)" : sc === "cur" ? "var(--surface-3)" : "var(--surface-2)";
+      ps += `<span class="seg" style="left:${pct(SECT[i])};width:${pct(SECT[i + 1] - SECT[i])};background:${col}"></span>`;
+    }
+    ps += `</div>`;
+    if (!st.hero && !m.unknown) ps += `<span class="clab is-next" style="left:${pct(3800)}">T9</span>`;
+    if (!m.unknown) ps += `<span class="car" style="left:${pct(m.carM)}"></span>`;
+    h += ps + `</div>`;
+    el.innerHTML = h;
+  }
+
+  // ----------------------------------------------------------------------------- review lap bars (sample)
+  function renderBars() {
+    // laps 2..12: [seconds, kind] - kind: clean | best | nc (not used)
+    const laps = [[67.696, "clean"], [67.402, "clean"], [66.990, "nc"], [66.412, "best"], [66.588, "clean"], [66.701, "clean"],
+      [66.493, "clean"], [66.845, "clean"], [68.204, "nc"], [66.530, "clean"], [69.115, "nc"]];
+    const lo = 65.8, hi = 69.4, H = 96;
+    const y = (s) => ((s - lo) / (hi - lo)) * H;
+    const el = document.getElementById("bars");
+    el.innerHTML = laps.map(([s, k]) => `<div class="b ${k}" style="height:${y(s).toFixed(1)}px" title="${Math.floor(s / 60)}:${(s % 60).toFixed(3).padStart(6, "0")}"></div>`).join("") +
+      `<div class="refline" style="bottom:${y(66.412).toFixed(1)}px"></div>`;
+  }
+
+  // ----------------------------------------------------------------------------- controls
+  const root = document.documentElement;
+  const stateRow = document.getElementById("stateRow");
+  Object.entries(STATES).forEach(([key, s]) => {
+    const b = document.createElement("button");
+    b.className = "ctl"; b.textContent = s.label; b.dataset.state = key;
+    b.setAttribute("aria-pressed", String(key === opts.state));
+    b.addEventListener("click", () => {
+      opts.state = key;
+      stateRow.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.state === key)));
+      renderDrive();
+    });
+    stateRow.appendChild(b);
+  });
+  document.querySelectorAll("[data-toggle]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const on = b.getAttribute("aria-pressed") !== "true";
+      b.setAttribute("aria-pressed", String(on));
+      const t = b.dataset.toggle;
+      if (t === "theme") root.dataset.theme = on ? "light" : "dark";
+      else if (t === "cvd") root.dataset.cvd = on ? "rg" : "";
+      else if (t === "night") root.dataset.night = on ? "on" : "";
+      else if (t === "annot") root.dataset.annot = on ? "on" : "";
+      else { opts[t] = on; renderDrive(); }
+    });
+  });
+
+  // ----------------------------------------------------------------------------- fit device frames to the window
+  function fit() {
+    document.querySelectorAll(".fit").forEach((w) => {
+      const dev = w.firstElementChild, natural = Number(w.dataset.w) || dev.offsetWidth + 26;
+      const avail = w.clientWidth - 24;
+      const k = Math.min(1, avail / natural);
+      dev.style.transform = `scale(${k})`;
+      w.style.height = (dev.offsetHeight + 26) * k + 28 + "px";
+      w.style.overflowX = k < 1 ? "hidden" : "auto";
+    });
+  }
+  window.addEventListener("resize", fit);
+  renderBars();
+  renderDrive();
+  fit();
+})();
+</script>
+<noscript><p style="padding:16px;color:#ffb020">This mockup needs JavaScript to draw the Drive screen and switch states.</p></noscript>
+</body>
+</html>

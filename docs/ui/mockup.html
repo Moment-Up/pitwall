@@ -1,0 +1,1436 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pitwall v2 mockup</title>
+<style>
+/* =====================================================================================================================
+   Pitwall UI v2 - clickable mockup for docs/ui/design-spec.md (v2: base C coach-first, React 19 + HeroUI v3 + Pro).
+   Self-contained: inline CSS and JS, no external requests, no web fonts (system faces only).
+   EVERYTHING SHOWN IS SAMPLE DATA. Silverstone lap length, sector starts and corner windows come from Pitwall's
+   verified track sheet (07_silverstone.toml); every time, driver, message, setting value and flag is invented.
+   The visual language imitates HeroUI v3 (rounded cards, pill controls, soft chips, segmented controls) with the
+   pit-wall identity of the spec (chamfered hero, tinted timing cells, condensed numerals, flag bands).
+   ===================================================================================================================== */
+:root {
+  --page: #0b0c0f; --page-2: #15171c; --page-line: #272b32; --page-text: #e9ecf1; --page-muted: #a3adbb;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+  --num: "DIN Condensed", "DIN Alternate", "Avenir Next Condensed", "Barlow Semi Condensed", "Roboto Condensed", "Arial Narrow", sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--page); color: var(--page-text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+body { padding: 20px 16px 56px; }
+.doc { max-width: 1260px; margin: 0 auto; }
+.doc > h1 { font-size: 24px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+.doc > p { color: var(--page-muted); line-height: 1.55; margin: 6px 0; max-width: 960px; font-size: 15px; }
+.doc > h1 .sample { display: inline-block; font: 800 11px/1 var(--sans); letter-spacing: .14em; color: #0c1016; background: #ffd23f; padding: 6px 9px; border-radius: 999px; vertical-align: 3px; margin-left: 8px; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; margin: 16px 0 14px; }
+.controls .grp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.controls .grp > span { font: 600 13px/1 var(--sans); color: var(--page-muted); margin-right: 4px; }
+.controls button { font: 500 14px/1 var(--sans); color: var(--page-text); background: var(--page-2); border: 1px solid var(--page-line); border-radius: 999px; padding: 0 14px; min-height: 40px; cursor: pointer; }
+.controls button[aria-pressed="true"] { background: #ff6a2b; border-color: #ff6a2b; color: #0c1016; font-weight: 650; }
+.fit { position: relative; width: 100%; overflow: hidden; margin-top: 4px; }
+.device { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.frame-ipad { width: 1216px; height: 856px; padding: 18px; border-radius: 40px; background: #1f2228; box-shadow: inset 0 0 0 2px #33373f, 0 20px 60px rgb(0 0 0 / .5); }
+.frame-phone { width: 414px; height: 868px; padding: 12px; border-radius: 56px; background: #1f2228; box-shadow: inset 0 0 0 2px #33373f, 0 16px 40px rgb(0 0 0 / .5); }
+.note { color: var(--page-muted); font-size: 14px; line-height: 1.55; margin: 12px auto 0; max-width: 1260px; }
+.note b { color: var(--page-text); }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Tokens (spec section 9.2 / 11). Dark default; light; night (dark only); red-green safe. Drive always dark = the shell uses the dark theme while a Drive page is open.
+   --------------------------------------------------------------------------------------------------------------- */
+.screen[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #06080b; --surface: #0f1318; --surface-2: #161b22; --surface-3: #1e252e; --border: #2a323d; --line-strong: #5d6878;
+  --foreground: #eef1f5; --muted: #a3adbb; --faint: #808b9b;
+  --accent: #ff6a2b; --accent-fg: #0c1016; --accent-text: #ff6a2b;
+  --success: #2fe37f; --warning: #ffb020; --danger: #ff5466; --ink: #0c1016;
+  --rec: #c58cff; --pb: #2fe37f; --slower: #ffd23f; --neutral: #808b9b;
+  --rec-fg: var(--rec); --pb-fg: var(--pb); --slower-fg: var(--slower); --neutral-fg: var(--foreground);
+  --rec-bg: color-mix(in oklab, var(--rec) 10%, var(--surface)); --pb-bg: color-mix(in oklab, var(--pb) 10%, var(--surface));
+  --slower-bg: color-mix(in oklab, var(--slower) 10%, var(--surface)); --neutral-bg: var(--surface-2);
+  --ahead: var(--pb); --behind: var(--danger); --brake: var(--danger); --throttle: var(--pb);
+  --ref: #4cc3ff; --cmp: #eef1f5; --synthetic: #ff7ac0;
+  --sec1: #2f3843; --sec2: #3a4450; --sec3: #46515e;
+  --card-shadow: none; --overlay-shadow: 0 12px 40px rgb(0 0 0 / .55); --tag-ink-rec: #0c1016; --tag-ink-pb: #0c1016;
+}
+.screen[data-theme="light"] {
+  color-scheme: light;
+  --background: #f3f5f8; --surface: #ffffff; --surface-2: #eef1f5; --surface-3: #e3e8ef; --border: #d9dee6; --line-strong: #848e9d;
+  --foreground: #0c1016; --muted: #4d5766; --faint: #5f6977;
+  --accent: #c2410c; --accent-fg: #ffffff; --accent-text: #c2410c;
+  --success: #047857; --warning: #9a5b00; --danger: #c81e3a; --ink: #0c1016;
+  --rec: #6d28d9; --pb: #047857; --slower: #ffd23f; --neutral: #5f6977;
+  --rec-fg: #ffffff; --pb-fg: #ffffff; --slower-fg: #0c1016; --neutral-fg: #0c1016;
+  --rec-bg: var(--rec); --pb-bg: var(--pb); --slower-bg: var(--slower); --neutral-bg: var(--surface-3);
+  --ahead: var(--pb); --behind: var(--danger); --brake: var(--danger); --throttle: var(--pb);
+  --ref: #0369a1; --cmp: #0c1016; --synthetic: #be185d;
+  --sec1: #d3d9e1; --sec2: #c6cdd7; --sec3: #b9c1cc;
+  --card-shadow: 0 0 0 1px rgb(24 24 27 / .04), 0 2px 10px rgb(24 24 27 / .07); --overlay-shadow: 0 12px 40px rgb(24 24 27 / .18); --tag-ink-rec: #ffffff; --tag-ink-pb: #ffffff;
+}
+.screen[data-night="on"][data-theme="dark"] {
+  --background: #000000; --surface: #0a0c10; --surface-2: #101319; --surface-3: #181d25; --border: #1a1f27; --line-strong: #444d5a;
+  --foreground: #c9ced6; --muted: #8b94a1; --faint: #78828f; --accent: #e0602a; --accent-text: #e0602a;
+  --success: #28c46e; --warning: #e09a1c; --danger: #e04a5a; --rec: #b07ae6; --pb: #28c46e; --slower: #e0b836; --cmp: #c9ced6;
+}
+.screen[data-cvd="rg"] { --pb: #0369a1; --behind: #9f4706; --danger: #9f4706; --brake: #9f4706; --success: #0369a1; }
+.screen[data-cvd="rg"][data-theme="dark"] { --pb: #4cc3ff; --behind: #ff9f1c; --danger: #ff9f1c; --brake: #ff9f1c; --success: #4cc3ff; }
+.screen { --flag-yellow: #ffd23f; --flag-sc: #ffb020; --flag-red: #d7263d; --flag-blue: #2563eb; --pit: #4cc3ff; }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Screen base and HeroUI-like primitives
+   --------------------------------------------------------------------------------------------------------------- */
+.screen { position: relative; overflow: hidden; background: var(--background); color: var(--foreground); font: 400 15px/1.45 var(--sans); }
+.frame-ipad .screen { width: 1180px; height: 820px; border-radius: 22px; }
+.frame-phone .screen { width: 390px; height: 844px; border-radius: 46px; }
+.screen button { font: inherit; color: inherit; }
+.ios { position: absolute; inset: 0 0 auto 0; height: 24px; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font: 600 13px/1 var(--sans); color: var(--foreground); z-index: 5; pointer-events: none; }
+.phone-ios { height: 44px; padding: 0 30px; font-size: 15px; }
+.num { font-family: var(--num); font-variant-numeric: tabular-nums; font-weight: 700; letter-spacing: 0; }
+.mono { font-family: var(--mono); }
+.muted { color: var(--muted); }
+.faint { color: var(--faint); }
+.unk { color: var(--faint); }
+.nb { white-space: nowrap; }
+.minus { display: inline-block; transform: scaleX(.62); transform-origin: 70% 50%; margin-right: -.12em; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.card { background: var(--surface); border-radius: 24px; padding: 16px; box-shadow: var(--card-shadow); min-width: 0; min-height: 0; }
+.card.secondary { background: var(--surface-2); box-shadow: none; }
+.card-title { font: 600 16px/1.3 var(--sans); margin: 0; }
+.card-desc { font-size: 14px; color: var(--muted); margin: 2px 0 0; }
+.card-head { display: flex; align-items: center; gap: 10px; justify-content: space-between; margin-bottom: 12px; }
+.lbl { font: 500 14px/1.2 var(--sans); color: var(--muted); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 999px; border: 0; background: var(--surface-3); color: var(--foreground); font: 500 14px/1 var(--sans); cursor: pointer; white-space: nowrap; }
+.btn.primary { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.btn.ghost { background: transparent; }
+.btn.outline { background: transparent; box-shadow: inset 0 0 0 1px var(--border); }
+.btn.danger-soft { background: color-mix(in oklab, var(--danger) 14%, transparent); color: var(--danger); }
+.btn.lg { height: 48px; padding: 0 20px; font-size: 15px; }
+.btn.xl { height: 56px; padding: 0 24px; font-size: 17px; }
+.btn.glove { height: 64px; padding: 0 28px; font-size: 18px; }
+.btn.icon { width: 40px; padding: 0; }
+.btn svg { width: 18px; height: 18px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font: 600 12px/1 var(--sans); white-space: nowrap; background: var(--surface-3); color: var(--foreground); }
+.chip.lg { height: 32px; padding: 0 12px; font-size: 14px; }
+.chip.soft { --k: var(--muted); background: color-mix(in oklab, var(--k) 15%, transparent); color: var(--k); }
+.chip.k-accent { --k: var(--accent-text); } .chip.k-success { --k: var(--success); } .chip.k-warning { --k: var(--warning); }
+.chip.k-danger { --k: var(--danger); } .chip.k-ref { --k: var(--ref); } .chip.k-rec { --k: var(--rec); }
+.chip.solid-danger { background: var(--brake); color: var(--ink); }
+.chip.outline-accent { background: transparent; box-shadow: inset 0 0 0 1.5px var(--accent); color: var(--accent-text); }
+.chip.code { font: 700 12px/1 var(--mono); letter-spacing: .02em; }
+.chip.caps { letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.chip.syn { color: var(--synthetic); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--synthetic) 60%, transparent);
+  background: repeating-linear-gradient(135deg, color-mix(in oklab, var(--synthetic) 24%, transparent) 0 6px, transparent 6px 12px); letter-spacing: .08em; font-weight: 800; }
+.chip.need { background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--faint); border: 0; outline: 1px dashed var(--line-strong); outline-offset: -1px; box-shadow: none; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; flex: none; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-3); }
+.seg button { border: 0; background: transparent; color: var(--muted); height: 34px; padding: 0 14px; border-radius: 999px; font: 500 14px/1 var(--sans); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.seg button[aria-selected="true"] { background: var(--surface); color: var(--foreground); box-shadow: 0 1px 2px rgb(0 0 0 / .18), 0 0 0 1px color-mix(in oklab, var(--foreground) 6%, transparent); }
+.seg.lg button { height: 40px; padding: 0 18px; font-size: 15px; }
+.seg.drive button { height: 38px; min-width: 76px; font-size: 15px; }
+.tabs { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--surface-2); }
+.tabs button { border: 0; background: transparent; color: var(--muted); height: 36px; padding: 0 16px; border-radius: 999px; font: 500 14px/1 var(--sans); cursor: pointer; }
+.tabs button[aria-selected="true"] { background: var(--surface-3); color: var(--foreground); }
+.field { display: inline-flex; align-items: center; justify-content: space-between; gap: 10px; height: 40px; padding: 0 12px 0 14px; border-radius: 12px; background: var(--surface-2); color: var(--foreground); font: 500 14px/1 var(--sans); min-width: 160px; }
+.field.lg { height: 56px; border-radius: 16px; font-size: 16px; }
+.field .chev { color: var(--faint); }
+.inline-sel { display: inline-flex; align-items: center; gap: 4px; font-weight: 650; border-bottom: 2px solid color-mix(in oklab, var(--accent) 55%, transparent); padding: 0 2px; cursor: pointer; }
+.switch { width: 44px; height: 26px; border-radius: 999px; background: var(--surface-3); position: relative; flex: none; cursor: pointer; border: 0; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .3); transition: left .15s; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"]::after { left: 21px; }
+.cells { border-radius: 20px; background: var(--surface); box-shadow: var(--card-shadow); overflow: hidden; }
+.cell { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; padding: 10px 16px; }
+.cell + .cell { border-top: 1px solid var(--surface-3); }
+.cell .t { font-weight: 500; }
+.cell .d { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.cell .v { color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+.avatar { display: inline-grid; place-items: center; border-radius: 50%; font: 700 13px/1 var(--sans); color: #0c1016; flex: none; width: 32px; height: 32px; }
+.kbd { display: inline-grid; place-items: center; min-width: 30px; height: 28px; padding: 0 8px; border-radius: 8px; background: var(--surface-3); font: 700 14px/1 var(--mono); box-shadow: inset 0 -2px 0 rgb(0 0 0 / .18); }
+.alert { display: flex; gap: 12px; align-items: flex-start; border-radius: 18px; padding: 12px 14px; background: color-mix(in oklab, var(--k, var(--warning)) 12%, var(--surface)); }
+.alert .ai { color: var(--k, var(--warning)); margin-top: 1px; }
+.alert b { display: block; margin-bottom: 2px; }
+.list { border-radius: 20px; background: var(--surface); box-shadow: var(--card-shadow); overflow: hidden; }
+.li { display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 56px; }
+.li + .li { border-top: 1px solid var(--surface-3); }
+.li .main { flex: 1; min-width: 0; }
+.li .ttl { font-weight: 600; }
+.li .sub { font-size: 13px; color: var(--muted); }
+.li.sel { background: color-mix(in oklab, var(--accent) 9%, var(--surface)); }
+.li.clickable { cursor: pointer; }
+table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; }
+table.grid th { text-align: left; font-weight: 500; color: var(--muted); padding: 10px 12px; background: var(--surface-2); }
+table.grid th:first-child { border-radius: 12px 0 0 12px; } table.grid th:last-child { border-radius: 0 12px 12px 0; }
+table.grid td { padding: 10px 12px; border-bottom: 1px solid var(--surface-3); white-space: nowrap; }
+table.grid tr:last-child td { border-bottom: 0; }
+table.grid td.r, table.grid th.r { text-align: right; }
+.tv { font-family: var(--num); font-variant-numeric: tabular-nums; font-weight: 700; color: var(--c-fg, inherit); }
+.st-rec { --c: var(--rec); --c-fg: var(--rec-fg); --c-bg: var(--rec-bg); }
+.st-pb, .st-sb { --c: var(--pb); --c-fg: var(--pb-fg); --c-bg: var(--pb-bg); }
+.st-slower { --c: var(--slower); --c-fg: var(--slower-fg); --c-bg: var(--slower-bg); }
+.st-neutral { --c: var(--neutral); --c-fg: var(--foreground); --c-bg: var(--neutral-bg); }
+.st-inv { --c: var(--neutral); --c-fg: var(--faint); --c-bg: var(--neutral-bg); }
+.tv.st-rec, .tv.st-pb, .tv.st-sb, .tv.st-slower { background: var(--c-pill, transparent); }
+.screen[data-theme="light"] .tv.pill:not(.st-neutral):not(.st-inv) { background: var(--c-bg); color: var(--c-fg); padding: 1px 6px; border-radius: 7px; }
+table.grid .tv, table.grid .num { font-size: 17px; }
+.screen[data-theme="light"] table.grid .tv.pill.st-slower, .screen[data-theme="light"] .li .tv.pill.st-slower { background: transparent; color: var(--foreground); padding: 0; }
+.ttag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font: 800 11px/1 var(--sans); letter-spacing: .08em; color: var(--tag-ink, var(--ink)); background: var(--c); }
+.st-rec { --tag-ink: var(--tag-ink-rec); } .st-pb, .st-sb { --tag-ink: var(--tag-ink-pb); }
+.ttag.st-inv { background: var(--surface-3); color: var(--muted); }
+.sparkle { color: var(--faint); font-size: 12px; }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Shell: rail (72), area header, phone app bar and tab bar, mini radio bar (Pro ActionBar), toast
+   --------------------------------------------------------------------------------------------------------------- */
+.app { position: absolute; inset: 24px 0 0 0; display: grid; grid-template-columns: 72px minmax(0, 1fr); }
+.rail { display: grid; grid-template-rows: 60px repeat(4, 64px) 1fr auto; justify-items: center; border-right: 1px solid var(--border); background: var(--background); transition: opacity .2s; z-index: 3; }
+.rail.dim { opacity: .55; }
+.rail .mark { display: grid; place-items: center; width: 72px; height: 60px; cursor: pointer; }
+.rail .item { position: relative; display: grid; place-items: center; align-content: center; gap: 4px; width: 72px; height: 64px; color: var(--muted); font: 600 11px/1 var(--sans); cursor: pointer; border: 0; background: transparent; }
+.rail .item .tile { position: absolute; inset: 4px 8px; border-radius: 16px; }
+.rail .item svg, .tabbar .item svg { width: 24px; height: 24px; position: relative; }
+.rail .item span { position: relative; }
+.rail .item.on { color: var(--foreground); }
+.rail .item.on .tile { background: var(--surface-2); }
+.rail .item.on svg { color: var(--accent-text); }
+.rail .foot { display: grid; gap: 8px; justify-items: center; padding-bottom: 12px; }
+.rail .foot .btn { width: 56px; height: 56px; padding: 0; }
+.rail .conn { width: 10px; height: 10px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 4px color-mix(in oklab, var(--success) 22%, transparent); }
+.rail .conn.warn { background: var(--warning); box-shadow: 0 0 0 4px color-mix(in oklab, var(--warning) 22%, transparent); }
+.rail .conn.idle { background: var(--faint); box-shadow: none; }
+.hold { position: relative; overflow: hidden; }
+.hold::after { content: ""; position: absolute; inset: 4px 8px; border-radius: 16px; background: color-mix(in oklab, var(--accent) 45%, transparent); clip-path: inset(100% 0 0 0); pointer-events: none; }
+.hold.holding::after { clip-path: inset(0 0 0 0); transition: clip-path .5s linear; }
+.main { position: relative; min-width: 0; overflow: hidden; }
+.page { position: absolute; inset: 0; overflow: auto; padding: 0 24px 96px; }
+.area-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 16px; height: 64px; background: var(--background); }
+.area-head h1 { font: 600 24px/1 var(--sans); margin: 0; letter-spacing: -.01em; }
+.area-head .act { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+.minibar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 16px; border-radius: 999px; background: var(--surface-2); box-shadow: var(--overlay-shadow), 0 0 0 1px var(--border); z-index: 4; max-width: 640px; }
+.minibar .msg { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.toast { position: absolute; right: 18px; top: 16px; z-index: 9; max-width: 380px; padding: 12px 14px; border-radius: 18px; background: var(--surface-2); box-shadow: var(--overlay-shadow), 0 0 0 1px var(--border); font-size: 14px; }
+.appbar, .tabbar { display: none; }
+
+/* phone */
+.phone .app { inset: 44px 0 0 0; grid-template-columns: 1fr; grid-template-rows: 52px minmax(0, 1fr) 84px; }
+.phone .rail { display: none; }
+.phone .appbar { display: flex; align-items: center; gap: 10px; padding: 0 16px; }
+.phone .appbar h1 { font: 650 20px/1 var(--sans); margin: 0; }
+.phone .appbar .r { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.phone .tabbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--border); background: var(--background); padding-bottom: 20px; }
+.phone .tabbar .item { display: grid; place-items: center; align-content: center; gap: 4px; height: 64px; color: var(--muted); font: 600 11px/1 var(--sans); border: 0; background: transparent; cursor: pointer; position: relative; }
+.phone .tabbar .item.on { color: var(--accent-text); }
+.phone .tabbar .live { position: absolute; top: 12px; left: calc(50% + 10px); width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.phone .page { padding: 0 16px 28px; }
+.phone .area-head { height: auto; padding: 8px 0 12px; flex-wrap: wrap; position: static; }
+.phone .area-head h1 { display: none; }
+.phone .area-head .seg { max-width: 100%; overflow-x: auto; }
+.phone .area-head .act { display: none; }
+.phone .g2, .phone .g3, .phone .g4, .phone .g12 { grid-template-columns: 1fr !important; }
+.phone .minibar { bottom: 10px; max-width: 360px; }
+.phone .hide-phone { display: none !important; }
+.phone .main { overflow: auto; }
+.phone .master, .phone .rig-step { grid-template-columns: 1fr; }
+.phone .setup-row { grid-template-columns: 1fr auto; } .phone .setup-row .range, .phone .setup-row .chip { display: none; }
+.phone .phone-sub { overflow-x: auto; padding-bottom: 2px; }
+.phone table.grid { display: block; overflow-x: auto; }
+.phone .stepcard .big { font-size: 72px; } .phone .hstep .s { font-size: 0; gap: 0; }
+
+/* ---------------------------------------------------------------------------------------------------------------
+   Drive > Coach grid (spec 4.2): content 1108 x 796, padding 12, gap 10, rows 52 / 1fr / 120 / 132 / 56 / 72.
+   --------------------------------------------------------------------------------------------------------------- */
+.pw-drive { position: absolute; inset: 0; background: var(--background); color: var(--foreground); }
+.coach { display: grid; height: 100%; padding: 12px; gap: 10px; grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: 52px minmax(0, 1fr) 120px 132px 56px 72px;
+  grid-template-areas:
+    "status status status status status status status status status status status status"
+    "hero hero hero hero hero hero hero delta delta delta delta delta"
+    "coachc coachc coachc coachc coachc coachc coachc delta delta delta delta delta"
+    "sect sect sect sect sect sect sect laps laps laps laps laps"
+    "ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon"
+    "radio radio radio radio radio radio radio radio radio radio radio radio"; }
+.coach .card { box-shadow: none; }
+.coach .status { grid-area: status; }
+.wall .status { grid-column: 1 / -1; grid-row: 1; }
+.wall { display: grid; height: 100%; padding: 12px; gap: 10px; grid-template-columns: repeat(12, minmax(0, 1fr)); grid-template-rows: 52px minmax(0, 1.25fr) minmax(0, 1fr); }
+.wall .card { box-shadow: none; }
+.status { display: flex; align-items: center; gap: 14px; padding: 0 6px 0 16px; border-radius: 16px; background: var(--surface); white-space: nowrap; min-width: 0; }
+.status .pill { display: inline-flex; align-items: center; gap: 7px; font: 700 15px/1 var(--sans); color: var(--success); }
+.status .pill.stale { color: var(--warning); } .status .pill.idle { color: var(--faint); }
+.status .trk { font: 650 20px/1 var(--sans); }
+.status .meta { font: 500 18px/1 var(--sans); color: var(--muted); }
+.status .lapno { font: 700 22px/1 var(--num); font-variant-numeric: tabular-nums; }
+.status .sp { flex: 1; }
+/* [critic] band words 20 -> 26 px: a flag band is glance-critical, 20 px caps was 14' at 70 cm (ISO 15008 minimum 16') */
+.status .bandtext { font: 800 26px/1 var(--sans); letter-spacing: .04em; overflow: hidden; text-overflow: ellipsis; }
+.status .bandtext small { font: 600 20px/1 var(--sans); letter-spacing: 0; opacity: .85; margin-left: 12px; }
+.status.fill { color: var(--ink); }
+.status.fill .seg { background: rgb(0 0 0 / .14); }
+.status.fill .seg button { color: rgb(0 0 0 / .7); }
+.status.fill .seg button[aria-selected="true"] { background: rgb(255 255 255 / .55); color: #0c1016; box-shadow: none; }
+.status.f-yellow { background: var(--flag-yellow); }
+.status.f-pit { background: var(--pit); }
+.status.f-neutral { background: var(--surface-3); color: var(--foreground); }
+.status.f-neutral .seg { background: var(--surface-2); } .status.f-neutral .seg button { color: var(--muted); }
+.status.f-neutral .seg button[aria-selected="true"] { background: var(--surface); color: var(--foreground); }
+.status.outline { box-shadow: inset 0 0 0 2px var(--k); color: var(--k); }
+.status .hint { font: 600 16px/1 var(--sans); color: var(--accent-text); }
+/* hero: next corner + cue. Chamfered top-right corner + accent edge = the pit-board signature */
+.hero { grid-area: hero; position: relative; display: grid; grid-template-rows: auto auto auto 1fr; gap: 10px; padding: 16px 20px 16px;
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); }
+.hero::before { content: ""; position: absolute; top: 0; left: 24px; right: 30px; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); }
+.hero .head { display: flex; align-items: center; gap: 10px; height: 26px; padding-right: 18px; }
+.hero .head .lbl { font-size: 15px; }
+.hero .head .dir { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); font-size: 15px; }
+.hero .head .dir svg { width: 18px; height: 18px; }
+.hero .head .chip { margin-left: auto; }
+.hero .corner { display: flex; align-items: baseline; gap: 20px; min-width: 0; height: 100px; }
+.hero .clabel { font: 800 112px/.9 var(--sans); letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.hero .cname { font: 700 44px/1 var(--sans); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.hero .cdist { margin-left: auto; font: 700 44px/1 var(--num); }
+/* [critic] long corner rule (spec 4.5): a label over 4 characters ("T10-13") or a name over 14 characters
+   ("Maggotts and Becketts") wrapped and overlapped the approach bar. Two lines instead: label 88 px + distance,
+   then the name at 32 px on one full-width line (corner row 114 px). Fits the 290 px hero with 8 px gaps:
+   16 + 26 + 8 + 114 + 8 + 10 + 8 + 80 + 16 = 286. */
+.hero.two { gap: 8px; }
+.hero .corner.two { display: grid; grid-template-columns: auto 1fr auto; grid-template-rows: 76px 36px; align-items: end; column-gap: 20px; row-gap: 2px; height: 114px; }
+.hero .corner.two .clabel { font-size: 88px; line-height: .85; white-space: nowrap; }
+.hero .corner.two .cname { grid-column: 1 / -1; grid-row: 2; font-size: 32px; line-height: 1.1; }
+.hero .corner.two .cdist { align-self: end; }
+.hero .corner.two .cdist { grid-column: 3; grid-row: 1; }
+.hero .clabel { white-space: nowrap; }
+.hero .cdist small, .cue .in small { font: 500 20px/1 var(--sans); color: var(--muted); margin-left: 4px; }
+.bar { height: 10px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 100%; border-radius: 999px; background: var(--muted); transform-origin: 0 50%; }
+.cue { align-self: end; display: flex; align-items: center; gap: 18px; height: 80px; padding: 0 18px 0 14px; border-radius: 18px;
+  background: color-mix(in oklab, var(--brake) 11%, var(--surface-2)); }
+.cue .kind { font: 800 24px/1 var(--sans); letter-spacing: .08em; color: var(--ink); background: var(--brake); padding: 10px 14px; border-radius: 12px; }
+.cue .kind.marker { background: var(--surface-3); color: var(--foreground); }
+.cue .text { font: 700 40px/1 var(--sans); white-space: nowrap; }
+.cue .in { margin-left: auto; font: 700 40px/1 var(--num); white-space: nowrap; }
+.cue.muted-cue { background: var(--surface-2); }
+.cue.muted-cue .text { font-size: 26px; color: var(--muted); font-weight: 600; }
+.bigtext { font: 800 112px/.9 var(--sans); letter-spacing: -.03em; }
+.coachc { grid-area: coachc; display: flex; align-items: center; padding: 12px 20px; }
+.coachc p { margin: 0; font: 500 26px/1.22 var(--sans); }
+.coachc p.s30 { font-size: 30px; } .coachc p.s22 { font-size: 22px; }
+/* [critic] on track the coach text never drops below 26 px (22 px was 14.5' at 70 cm, under ISO 15008's 16'):
+   a longer text is clamped to 3 lines (verbatim prefix + ellipsis); 22 px only when stationary. */
+.coachc p.clamp3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.coachc .chip { vertical-align: 5px; margin-right: 10px; height: 30px; font-size: 14px; }
+.coachc .empty { color: var(--faint); }
+.delta { grid-area: delta; display: grid; grid-template-rows: auto auto 1fr auto auto auto auto; padding: 18px 22px; }
+.delta .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.delta .dv { align-self: center; justify-self: center; font: 700 144px/1 var(--num); letter-spacing: -.01em; margin-top: 10px; }
+.delta .dv.ahead, .ahead { color: var(--ahead); } .delta .dv.behind, .behind { color: var(--behind); }
+.delta .dv.mutedv { color: var(--muted); } .delta .dv.unk { color: var(--faint); }
+.delta .word { text-align: center; font: 800 22px/1 var(--sans); letter-spacing: .24em; margin: -4px 0 18px; }
+.delta .reason { text-align: center; font-size: 20px; color: var(--muted); margin: 0 0 18px; }
+.dbar { position: relative; height: 28px; border-radius: 10px; background: var(--surface-2); }
+.dbar .mid { position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--muted); border-radius: 2px; }
+.dbar .tk { position: absolute; top: 6px; bottom: 6px; width: 1px; background: var(--line-strong); }
+.dbar .fill { position: absolute; top: 4px; bottom: 4px; border-radius: 7px; }
+.dbar .fill.ahead { background: var(--ahead); } .dbar .fill.behind { background: var(--behind); }
+.dscale { display: flex; justify-content: space-between; margin-top: 8px; font: 500 14px/1 var(--sans); color: var(--faint); }
+.delta .proj { display: flex; justify-content: space-between; align-items: baseline; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--surface-3); }
+.delta .proj .num { font-size: 32px; }
+.sect { grid-area: sect; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; position: relative; }
+.tcell { display: grid; grid-template-rows: auto 1fr auto; padding: 12px 14px 12px 16px; border-radius: 20px; background: var(--c-bg, var(--surface-2)); min-width: 0; }
+.tcell .top { display: flex; justify-content: space-between; align-items: center; }
+.tcell .top b { font: 600 16px/1 var(--sans); }
+.tcell .t { align-self: center; font: 700 40px/1 var(--num); color: var(--c-fg, var(--foreground)); }
+.tcell .s { font-size: 14px; color: var(--c-fg, var(--muted)); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tcell.run { background: var(--surface-2); box-shadow: inset 0 0 0 2px var(--line-strong); }
+.tcell.run .t { color: var(--muted); font-size: 32px; }
+.tcell.future .t { color: var(--faint); }
+.sect .caption { position: absolute; top: -9px; left: 16px; z-index: 1; }
+.laps { grid-area: laps; display: grid; grid-template-rows: repeat(3, 1fr); padding: 6px 20px; }
+.laps .row { display: flex; align-items: center; gap: 12px; }
+.laps .row + .row { border-top: 1px solid var(--surface-3); }
+.laps .row .lbl { width: 52px; font-size: 15px; }
+.laps .row .num, .laps .row .tv { font-size: 32px; }
+.laps .row .x { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.ribbon { grid-area: ribbon; padding: 0; overflow: hidden; border-radius: 16px; }
+.ribbon svg { display: block; width: 100%; height: 100%; }
+.radio { grid-area: radio; display: flex; align-items: center; gap: 16px; padding: 0 8px 0 18px; border-radius: 20px; }
+.radio .msg { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; }
+.radio .msg p { margin: 0; font: 500 22px/1.2 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.radio .age { color: var(--faint); font: 600 16px/1 var(--num); }
+.radio .btn.xl { width: 220px; }
+.span3 { grid-column: 1 / -1; grid-row: 2 / 4; }
+.is-stale .hero, .is-stale .coachc, .is-stale .sect, .is-stale .laps, .is-stale .ribbon { opacity: .45; }
+/* state cards */
+.ready { display: grid; grid-template-columns: 1.05fr 1fr 1.1fr; grid-template-rows: 1fr auto; gap: 0 28px; padding: 24px 28px 18px; position: relative;
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); }
+.ready::before { content: ""; position: absolute; top: 0; left: 24px; right: 30px; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); }
+.ready h3 { font: 600 15px/1 var(--sans); color: var(--muted); margin: 0 0 14px; }
+.ready .seat .who { font: 700 32px/1.15 var(--sans); margin: 14px 0 10px; }
+.ready .kv { display: grid; gap: 14px; }
+.ready .kv .k { font-size: 15px; color: var(--muted); }
+.ready .kv .v { font: 700 30px/1.1 var(--num); }
+.ready .kv .v.txt { font: 600 18px/1.35 var(--sans); }
+.ready .foot { grid-column: 1 / -1; border-top: 1px solid var(--surface-3); margin-top: 14px; padding-top: 12px; font-size: 14px; color: var(--muted); }
+.ready .focus-row { display: grid; gap: 10px; }
+.ready .focus-row .f { display: flex; flex-direction: column; gap: 2px; }
+.ready .focus-row .f b { font-size: 20px; }
+.ready .focus-row .f span { font-size: 15px; color: var(--muted); }
+.endcard { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; gap: 14px 18px; padding: 22px 26px; align-content: start; }
+.endcard .kpi .v { font-size: 40px; }
+.endcard h2 { grid-column: 1 / -1; margin: 0; font: 650 28px/1 var(--sans); display: flex; align-items: center; gap: 12px; }
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi { background: var(--surface-2); border-radius: 20px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; min-width: 0; }
+.kpi .k { font-size: 14px; color: var(--muted); display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.kpi .v { font: 700 32px/1 var(--num); display: flex; align-items: center; gap: 8px; }
+.kpi .s { font-size: 13px; color: var(--muted); }
+.li .tv { font-size: 19px; }
+.trend { white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 8px; border-radius: 999px; font: 600 12px/1 var(--sans); background: color-mix(in oklab, var(--success) 15%, transparent); color: var(--success); }
+.trend.down-bad { background: color-mix(in oklab, var(--danger) 15%, transparent); color: var(--danger); }
+.trend.flat { background: var(--surface-3); color: var(--muted); }
+.itemcard { display: flex; gap: 12px; align-items: flex-start; background: var(--surface-2); border-radius: 20px; padding: 14px; }
+.itemcard .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none; background: color-mix(in oklab, var(--k) 16%, transparent); color: var(--k); }
+.itemcard .ttl { font-weight: 650; }
+.itemcard .dsc { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.nodata { display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; padding: 26px 30px; align-items: center; }
+.stepper { display: grid; gap: 0; }
+.step { display: grid; grid-template-columns: 36px 1fr; gap: 14px; position: relative; padding-bottom: 18px; }
+.step:not(:last-child)::before { content: ""; position: absolute; left: 17px; top: 38px; bottom: 2px; width: 2px; background: var(--surface-3); }
+.step .ind { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 700 15px/1 var(--sans); background: var(--surface-3); color: var(--muted); }
+.step.done .ind { background: color-mix(in oklab, var(--success) 18%, transparent); color: var(--success); }
+.step.cur .ind { background: var(--accent); color: var(--accent-fg); }
+.step .st { font-weight: 650; font-size: 17px; margin-top: 6px; }
+.step .sd { color: var(--muted); font-size: 15px; margin-top: 2px; }
+.hstep { display: flex; align-items: center; gap: 8px; }
+.hstep .s { display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.hstep .s .ind { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3); font: 700 13px/1 var(--sans); }
+.hstep .s.done .ind { background: color-mix(in oklab, var(--success) 18%, transparent); color: var(--success); }
+.hstep .s.cur { color: var(--foreground); } .hstep .s.cur .ind { background: var(--accent); color: var(--accent-fg); }
+.hstep .sep { flex: 1; height: 2px; min-width: 16px; background: var(--surface-3); border-radius: 2px; }
+.hstep .sep.done { background: color-mix(in oklab, var(--success) 55%, transparent); }
+
+/* phone Drive stack (spec 5.4) */
+.phone .pw-drive { position: relative; inset: auto; min-height: 100%; }
+.phone .coach { display: flex; flex-direction: column; height: auto; padding: 10px 12px 16px; gap: 8px; }
+.phone .coach > * { flex: none; }
+.phone .status { order: 1; height: 44px; gap: 8px; padding: 0 12px; }
+.phone .status .seg, .phone .status .meta, .phone .status .trk, .phone .status .pill { display: none; }
+.phone .status .bandtext { font-size: 15px; } .phone .status .bandtext small { display: none; }
+.phone .delta { order: 2; padding: 12px 16px; }
+.phone .delta .dv { font-size: 104px; margin-top: 0; }
+.phone .delta .proj, .phone .delta .dscale { display: none; }
+.phone .delta .word { margin-bottom: 10px; font-size: 18px; }
+.phone .hero { order: 3; padding: 12px 14px; gap: 8px; }
+.phone .hero .corner { height: auto; gap: 10px; flex-wrap: wrap; }
+.phone .hero .clabel { font-size: 64px; } .phone .hero .cname { font-size: 28px; } .phone .hero .cdist { font-size: 32px; }
+.phone .cue { height: 52px; gap: 10px; padding: 0 12px 0 8px; }
+.phone .cue .kind { font-size: 15px; padding: 7px 9px; } .phone .cue .text, .phone .cue .in { font-size: 24px; }
+.phone .coachc { order: 4; padding: 12px 14px; } .phone .coachc p { font-size: 18px; }
+.phone .sect { order: 5; } .phone .tcell { padding: 10px; } .phone .tcell .t { font-size: 28px; } .phone .tcell .s { display: none; }
+.phone .laps { order: 6; padding: 8px 14px; } .phone .laps .row { min-height: 40px; } .phone .laps .row .num, .phone .laps .row .tv { font-size: 24px; }
+.phone .ribbon { display: none; }
+.phone .radio { order: 7; height: 64px; padding: 0 6px 0 12px; gap: 8px; } .phone .radio .msg p { font-size: 15px; } .phone .radio .btn.xl { width: 128px; height: 52px; font-size: 15px; }
+.phone .radio .micchip, .phone .radio .age { display: none; }
+.phone .span3, .phone .ready, .phone .endcard, .phone .nodata { order: 2; grid-template-columns: 1fr; display: grid; }
+.phone .ready { gap: 18px; padding: 20px; } .phone .ready .foot { display: none; }
+.phone .kpis { grid-template-columns: 1fr 1fr; }
+.phone .bigtext { font-size: 56px; }
+.phone .wall { display: flex; flex-direction: column; height: auto; }
+
+/* Review, Setup, Settings */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.g12 { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.stack { display: grid; gap: 16px; align-content: start; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.h2 { font: 600 18px/1.3 var(--sans); margin: 8px 0 0; }
+.h3 { font: 600 16px/1.3 var(--sans); margin: 0; }
+.sub { color: var(--muted); font-size: 14px; }
+.master { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 20px; align-items: start; }
+.grp-title { font: 600 14px/1 var(--sans); color: var(--muted); margin: 18px 4px 8px; }
+.breadcrumbs { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.breadcrumbs a { color: var(--muted); text-decoration: none; cursor: pointer; }
+.sess-head { display: flex; align-items: flex-start; gap: 16px; padding: 4px 0 16px; }
+.sess-head h2 { font: 650 26px/1.15 var(--sans); margin: 6px 0 8px; letter-spacing: -.01em; }
+.workon { display: grid; grid-template-columns: 120px 1fr; gap: 16px; }
+.workon .txt { font-size: 16px; line-height: 1.45; margin: 6px 0 4px; }
+.workon .ev { font-size: 13px; color: var(--muted); }
+.why { margin-top: 8px; padding: 10px 12px; background: var(--surface-2); border-radius: 14px; font-size: 14px; color: var(--muted); }
+.chart { width: 100%; display: block; }
+.chart text { font: 500 11px var(--sans); fill: var(--faint); }
+.chart .gl { stroke: var(--surface-3); stroke-width: 1; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.gloss { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); color: var(--muted); font: 700 12px/1 var(--sans); cursor: help; }
+.explainer { border-radius: 20px; padding: 16px; background: var(--surface-2); }
+.explainer p { margin: 6px 0 0; font-size: 16px; line-height: 1.45; }
+.rig-step { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.rowlist { max-height: 470px; overflow: auto; }
+.stepcard { position: relative; display: grid; gap: 12px; padding: 16px 24px 20px; clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); }
+.stepcard::before { content: ""; position: absolute; top: 0; left: 24px; right: 30px; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); }
+.stepcard .big { font: 700 96px/1 var(--num); text-align: center; margin: 0; }
+.stepcard .big small { font: 600 28px/1 var(--sans); color: var(--muted); margin-left: 6px; }
+.stepcard .nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.rowlist .li { min-height: 46px; padding: 6px 14px; cursor: pointer; }
+.rowlist .li .code { width: 54px; font: 700 13px/1 var(--mono); }
+.rowlist .li .val { margin-left: auto; font: 700 18px/1 var(--num); }
+.rowlist .li.cur { background: color-mix(in oklab, var(--accent) 12%, var(--surface)); }
+.tick { color: var(--success); }
+.setup-row { display: grid; grid-template-columns: minmax(0, 1.2fr) 110px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 10px 2px; }
+.setup-row + .setup-row { border-top: 1px solid var(--surface-3); }
+.setup-row .val { font: 700 24px/1 var(--num); text-align: right; }
+.setup-row .val small { font: 500 13px var(--sans); color: var(--muted); margin-left: 3px; }
+.range { position: relative; height: 22px; }
+.range .tr { position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 4px; background: var(--surface-3); }
+.range .sp { position: absolute; top: 7px; height: 8px; border-radius: 6px; background: color-mix(in oklab, var(--accent) 30%, transparent); }
+.range .mk { position: absolute; top: 3px; width: 4px; height: 16px; margin-left: -2px; border-radius: 3px; background: var(--accent); }
+.range .mn, .range .mx { position: absolute; top: 14px; font-size: 10px; color: var(--faint); }
+.range .mx { right: 0; }
+.sentence { font: 500 22px/1.6 var(--sans); }
+.chat { display: grid; gap: 14px; }
+.msg-u { justify-self: end; max-width: 70%; background: var(--surface-3); padding: 10px 14px; border-radius: 18px 18px 6px 18px; }
+.msg-a { max-width: 82%; }
+.msg-a .bubble { background: var(--surface); padding: 12px 16px; border-radius: 18px 18px 18px 6px; box-shadow: var(--card-shadow); line-height: 1.5; }
+.facts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.prompt { display: flex; gap: 10px; align-items: center; padding: 8px 8px 8px 16px; border-radius: 22px; background: var(--surface); box-shadow: var(--card-shadow), 0 0 0 1px var(--border); }
+.prompt .ph { flex: 1; color: var(--faint); }
+.timeline { display: grid; gap: 0; }
+.tl { display: grid; grid-template-columns: 76px 18px 1fr; gap: 10px; position: relative; padding-bottom: 14px; }
+.tl .d { font-size: 13px; color: var(--muted); text-align: right; padding-top: 1px; }
+.tl .m { width: 12px; height: 12px; border-radius: 50%; background: var(--k, var(--line-strong)); margin-top: 3px; position: relative; z-index: 1; }
+.tl:not(:last-child)::before { content: ""; position: absolute; left: 91px; top: 16px; bottom: 0; width: 2px; background: var(--surface-3); }
+.tyres { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tyre { background: var(--surface-2); border-radius: 14px; padding: 8px 10px; }
+.tyre b { font: 700 26px/1 var(--num); }
+.meter { height: 10px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.meter i { display: block; height: 100%; border-radius: 999px; }
+.ptt-big { width: 168px; height: 168px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-fg); font: 750 20px/1.2 var(--sans); cursor: pointer; box-shadow: 0 0 0 10px color-mix(in oklab, var(--accent) 18%, transparent); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Pitwall UI v2: coach-first, on HeroUI v3 <span class="sample">SAMPLE DATA</span></h1>
+  <p>Clickable mockup for <code>docs/ui/design-spec.md</code> (v2). Base: direction C (coach-first), with A's large delta, B's fixed status slot and flag semantics and B's dense Car wall grafted on. Styled like HeroUI v3 (rounded cards, pill controls, segmented controls) with the pit-wall identity. Use the rail inside the iPad (Drive, Review, Setup, Settings), the segmented controls and buttons, or the shortcuts below. <b>Every time, name, message and setting value is invented</b>; Silverstone's lap length, sector starts and corner windows come from Pitwall's verified track sheet. The circuit outline is a schematic.</p>
+  <p><b>Critic pass (2026-10-11, spec section 17).</b> Marked <code>[critic]</code> in the source: flag-band words 26 px; long corner labels (<code>T10-13</code> Maggotts and Becketts) use a two-line corner row instead of wrapping; coach text never below 26 px while moving; Stale shows <code>-</code> for every running distance, not only the delta; Review density follows the viewed session's driver, the session filter starts on the seated driver, gains are written in words, a beginner's Summary keeps the extra charts behind <b>More detail</b>, Compare charts carry plain captions; sample data made consistent (pit lap, sector colours).</p>
+  <div class="controls" id="controls"></div>
+</div>
+<div class="doc"><div class="fit" id="fit"><div class="device" id="device"></div></div></div>
+<p class="note" id="caption"></p>
+
+<script>
+(() => {
+"use strict";
+/* ------------------------------------------------------------------------------------------------------------------
+   State
+   ------------------------------------------------------------------------------------------------------------------ */
+const S = {
+  area: "drive", page: { drive: "coach", review: "sessions", setup: "rig", settings: "drivers" }, /* [critic] Settings opens on Drivers (spec 2.1) */
+  sessFilter: null, moreDetail: false, /* [critic] Review: filter defaults to the seated driver; beginner "More detail" */
+  drive: "track", theme: "dark", device: "ipad", driver: "james", tier: 2,
+  driveAlwaysDark: true, night: false, cvd: false, driveSize: "standard", dimNav: true, driveLock: "beginners",
+  session: null, tab: "summary", rigView: "walk", rigSec: 1, rigIdx: 2, rigDone: { 0: true, 1: true },
+  showPedals: false, toast: null, hint: false, liveRadio: true,
+};
+const DRIVERS = {
+  james: { name: "James", ini: "JR", col: "#ff6a2b", skill: "advanced", skillLabel: "Advanced", pb: "1:30.874", pbDate: "3 Oct" },
+  alex: { name: "Alex", ini: "AL", col: "#38bdf8", skill: "beginner", skillLabel: "Beginner", pb: "1:41.322", pbDate: "11 Oct" },
+  jo: { name: "Jo", ini: "JO", col: "#ffb020", skill: "intermediate", skillLabel: "Intermediate", pb: "1:30.412", pbDate: "10 Oct" },
+};
+const drv = () => DRIVERS[S.driver];
+const beginner = () => drv().skill === "beginner";
+
+/* Silverstone (F1 25) from src/pitwall/trackdata/track_sheets/f1/07_silverstone.toml: lap 5890 m, S2 1813 m, S3 4294 m. */
+const LAP = 5890, S2 = 1813, S3 = 4294;
+const CORNERS = [
+  { l: "T1", n: "Abbey", a: 280, b: 545, apex: 430, d: "right" }, { l: "T2", n: "Farm", a: 545, b: 690, apex: 620, d: "left" },
+  { l: "T3", n: "Village", a: 780, b: 970, apex: 930, d: "right" }, { l: "T4", n: "The Loop", a: 970, b: 1125, apex: 1045, d: "left" },
+  { l: "T5", n: "Aintree", a: 1140, b: 1350, apex: 1240, d: "left" }, { l: "T6", n: "Brooklands", a: 1800, b: 2090, apex: 2030, d: "left" },
+  { l: "T7", n: "Luffield", a: 2090, b: 2385, apex: 2220, d: "right" }, { l: "T8", n: "Woodcote", a: 2400, b: 2715, apex: 2560, d: "right" },
+  { l: "T9", n: "Copse", a: 2950, b: 3260, apex: 3100, d: "right" }, { l: "T10-13", n: "Maggotts and Becketts", a: 3520, b: 4150, apex: 3980, d: null },
+  { l: "T14", n: "Chapel", a: 4150, b: 4290, apex: 4220, d: "left" }, { l: "T15", n: "Stowe", a: 4880, b: 5260, apex: 5010, d: "right" },
+  { l: "T16", n: "Vale", a: 5420, b: 5560, apex: 5530, d: "left" }, { l: "T17-18", n: "Club", a: 5560, b: 5840, apex: 5700, d: "right" },
+];
+const CUES = [880, 1857, 2140, 4810, 5405];        /* sample braking points of the cue plan */
+const DRS = [[1400, 1780], [4300, 4860]];           /* sample DRS zones */
+const FOCUS = ["T15", "T3"];
+
+/* ------------------------------------------------------------------------------------------------------------------
+   Helpers
+   ------------------------------------------------------------------------------------------------------------------ */
+const esc = (s) => String(s);
+const minus = (s) => { s = String(s); return s.startsWith("−") ? `<span class="nb"><span class="minus">−</span>${s.slice(1)}</span>` : s; };
+const avatar = (d, size = 32) => `<span class="avatar" style="width:${size}px;height:${size}px;background:${d.col};font-size:${Math.round(size * .38)}px">${d.ini}</span>`;
+const chip = (t, cls = "") => `<span class="chip ${cls}">${t}</span>`;
+const btn = (t, cls = "", attrs = "") => `<button class="btn ${cls}" ${attrs}>${t}</button>`;
+const ttag = (st) => {
+  if (S.tier < 2 && (st === "rec" || st === "pb")) return "";
+  const t = { rec: "REC", pb: "PB", sb: "SB", inv: "INV" }[st];
+  return t ? `<span class="ttag st-${st}">${t}</span>` : "";
+};
+const tstat = (st) => (S.tier < 2 && (st === "rec" || st === "pb")) ? (st === "rec" ? "sb" : "sb") : st;
+const tv = (t, st = "neutral", extra = "") => `<span class="tv pill st-${tstat(st)} ${extra}">${minus(t)}</span>`;
+const seg = (items, active, attr, cls = "") => `<div class="seg ${cls}" role="tablist">${items.map(([id, label]) =>
+  `<button role="tab" aria-selected="${id === active}" ${attr}="${id}">${label}</button>`).join("")}</div>`;
+const sw = (on, attr) => `<button class="switch" role="switch" aria-checked="${on}" ${attr}></button>`;
+const syn = () => chip("SYNTHETIC", "syn");
+const needs = (d) => chip(`needs ${d}`, "need");
+const ICON = {
+  drive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 16a8 8 0 1 1 16 0"/><path d="M12 16l4.5-5"/><circle cx="12" cy="16" r="1.4" fill="currentColor"/></svg>',
+  review: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M5 15l4-5 4 3 6-7"/></svg>',
+  setup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>',
+  moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+  mic: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+  right: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V11a4 4 0 0 1 4-4h8"/><path d="M15 4l3 3-3 3"/></svg>',
+  left: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V11a4 4 0 0 0-4-4H6"/><path d="M9 4L6 7l3 3"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>',
+  open: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg>',
+};
+const mark = '<svg viewBox="0 0 32 32" width="28" height="28" aria-hidden="true"><path d="M5 23 L13 8 L18 18 L21 13 L27 23" stroke="var(--accent)" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+/* ------------------------------------------------------------------------------------------------------------------
+   Lap ribbon (custom SVG, shared by Drive Coach and Review Compare)
+   ------------------------------------------------------------------------------------------------------------------ */
+function ribbonSvg(w, h, o = {}) {
+  const x = (m) => (m / LAP) * (w - 24) + 12;
+  const secs = [[0, S2, "S1", "var(--sec1)"], [S2, S3, "S2", "var(--sec2)"], [S3, LAP, "S3", "var(--sec3)"]];
+  let s = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid meet" aria-label="Lap ribbon">`;
+  const top = h > 50 ? 22 : 18, bh = h - top - 10;
+  if (o.empty) return s + `<rect x="12" y="${top}" width="${w - 24}" height="${bh}" rx="6" fill="var(--surface-2)"/></svg>`;
+  s += `<defs><pattern id="hy" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="4" height="8" fill="var(--flag-yellow)"/></pattern></defs>`;
+  secs.forEach(([a, b, l, c]) => {
+    s += `<rect x="${x(a)}" y="${top}" width="${x(b) - x(a) - 2}" height="${bh}" rx="6" fill="${c}"/>`;
+    s += `<text x="${x(a) + 6}" y="${top + bh / 2 + 5}" style="font:700 13px var(--sans);fill:var(--muted)">${l}</text>`;
+  });
+  DRS.forEach(([a, b]) => { s += `<line x1="${x(a)}" x2="${x(b)}" y1="${top + bh - 4}" y2="${top + bh - 4}" stroke="var(--pb)" stroke-width="2" stroke-dasharray="5 4" opacity=".75"/>`; });
+  if (o.yellow) s += `<rect x="${x(o.yellow[0])}" y="${top}" width="${x(o.yellow[1]) - x(o.yellow[0])}" height="${bh}" fill="url(#hy)" opacity=".85"/>`;
+  CORNERS.forEach((c) => {
+    const isNext = o.next === c.l, isFocus = FOCUS.includes(c.l);
+    s += `<line x1="${x(c.apex)}" x2="${x(c.apex)}" y1="${top + 4}" y2="${top + bh - 4}" stroke="${isNext ? "var(--foreground)" : "var(--line-strong)"}" stroke-width="${isNext ? 2 : 1}"/>`;
+    /* [critic] label collision rule: with all labels on (Compare) a label closer than 34 px to the last drawn one is
+       skipped (it showed "T3T4", "T10-1314"); next, focus and cursor corners always win */
+    const want = isNext || isFocus || o.allLabels;
+    const room = isNext || isFocus || x(c.apex) - (o._lastX ?? -99) >= 34;
+    if (want && room) { o._lastX = x(c.apex); }
+    if (want && room) s += `<text x="${x(c.apex)}" y="${top - 6}" text-anchor="middle" style="font:700 13px var(--sans);fill:${isNext ? "var(--foreground)" : "var(--muted)"}">${c.l}</text>`;
+    if (isFocus) s += `<circle cx="${x(c.apex)}" cy="${top + bh - 7}" r="3" fill="var(--accent)"/>`;
+  });
+  if (o.cues !== false) CUES.forEach((m) => { s += `<rect x="${x(m) - 1.5}" y="${top}" width="3" height="${bh * .45}" rx="1" fill="var(--brake)"/>`; });
+  if (o.car != null) { const cx = x(o.car); s += `<path d="M${cx - 8} ${top + bh + 9} L${cx + 8} ${top + bh + 9} L${cx} ${top + bh - 5} Z" fill="var(--accent)"/>`; }
+  if (o.cursor != null) s += `<line x1="${x(o.cursor)}" x2="${x(o.cursor)}" y1="0" y2="${h}" stroke="var(--accent)" stroke-width="2"/>`;
+  return s + "</svg>";
+}
+/* Schematic circuit (NOT Silverstone's real outline): a closed path with corner markers. */
+const MAPPATH = "M60 150 C 40 150 30 130 40 112 L 70 62 C 80 44 100 40 116 52 L 150 78 C 162 86 176 84 186 74 L 214 44 C 226 32 246 34 254 48 L 272 84 C 280 100 276 118 262 128 L 214 160 C 200 170 180 172 164 166 L 120 152 C 104 147 88 150 60 150 Z";
+const MAPPTS = { T1: [50, 128], T3: [64, 74], T6: [104, 46], T7: [146, 76], T9: [196, 64], "T10-13": [236, 38], T15: [276, 98], T16: [246, 138], "T17-18": [196, 166] };
+function mapSvg(w, h, o = {}) {
+  let s = `<svg viewBox="0 0 310 200" width="${w}" height="${h}" style="display:block;max-width:100%" aria-label="Track map (schematic)">`;
+  s += `<path d="${MAPPATH}" fill="none" stroke="var(--surface-3)" stroke-width="12" stroke-linejoin="round"/>`;
+  s += `<path d="${MAPPATH}" fill="none" stroke="var(--line-strong)" stroke-width="3" stroke-linejoin="round"/>`;
+  Object.entries(MAPPTS).forEach(([k, [px, py]]) => {
+    const dc = o.deltas ? o.deltas[k] : null;
+    const col = dc == null ? (o.highlight === k ? "var(--accent)" : "var(--muted)") : dc > 0.01 ? "var(--behind)" : dc < -0.01 ? "var(--ahead)" : "var(--muted)";
+    const r = o.highlight === k ? 7 : (dc != null ? 6 : 4);
+    s += `<circle cx="${px}" cy="${py}" r="${r}" fill="${col}"/>`;
+    if (o.labels !== false) s += `<text x="${px + 9}" y="${py + 4}" style="font:600 10px var(--sans);fill:var(--muted)">${k}</text>`;
+  });
+  if (o.car) s += `<circle cx="${o.car[0]}" cy="${o.car[1]}" r="7" fill="var(--accent)" stroke="var(--background)" stroke-width="2.5"/>`;
+  if (o.yellow) s += `<path d="M 262 128 L 214 160" stroke="var(--flag-yellow)" stroke-width="8" stroke-linecap="round"/>`;
+  return s + `<text x="306" y="196" text-anchor="end" style="font:500 9px var(--sans);fill:var(--faint)">schematic</text></svg>`;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------
+   Shell
+   ------------------------------------------------------------------------------------------------------------------ */
+const AREAS = [["drive", "Drive"], ["review", "Review"], ["setup", "Setup"], ["settings", "Settings"]];
+const PAGES = {
+  drive: [["coach", "Coach"], ["car", "Car"], ["track", "Track"], ["radio", "Radio"]],
+  review: [["sessions", "Sessions"], ["coaching", "Coaching"], ["progress", "Progress"], ["ask", "Ask"]],
+  setup: [["connect", "Connect"], ["rig", "Rig"], ["car", "Car setup"]],
+  settings: [["drivers", "Drivers"], ["radio", "Radio & voice"], ["ai", "AI engineer"], ["display", "Display"], ["system", "System"]],
+};
+const onTrack = () => S.area === "drive" && ["track", "yellow"].includes(S.drive);
+const locked = () => onTrack() && (S.driveLock === "everyone" || (S.driveLock === "beginners" && beginner()));
+function rail() {
+  const conn = S.drive === "stale" ? "warn" : S.drive === "nodata" ? "idle" : "";
+  return `<nav class="rail ${S.dimNav && onTrack() ? "dim" : ""}" aria-label="Areas">
+    <div class="mark" data-go="drive" title="Pitwall">${mark}</div>
+    ${AREAS.map(([id, l]) => `<button class="item ${S.area === id ? "on" : ""} ${locked() && id !== "drive" ? "hold" : ""}" data-go="${id}" aria-current="${S.area === id ? "page" : "false"}"><span class="tile"></span>${ICON[id]}<span>${l}</span></button>`).join("")}
+    <div></div>
+    <div class="foot">${btn(ICON.moon, "ghost icon", `data-act="night" aria-label="Night dim" aria-pressed="${S.night}"`)}
+      <button class="btn ghost icon" data-act="driver" aria-label="Driver: ${drv().name}" style="width:56px;height:56px">${avatar(drv(), 36)}</button>
+      <span class="conn ${conn}" title="Connection"></span></div>
+  </nav>`;
+}
+function phoneBars() {
+  const pg = PAGES[S.area].find((p) => p[0] === S.page[S.area]);
+  const top = `<div class="appbar"><h1>${S.area === "drive" ? "Drive" : pg[1]}</h1><div class="r">${statusPill(true)}${avatar(drv(), 32)}</div></div>`;
+  const bottom = `<nav class="tabbar">${AREAS.map(([id, l]) => `<button class="item ${S.area === id ? "on" : ""}" data-go="${id}">${ICON[id]}<span>${l}</span>${id === "drive" && ["track", "yellow", "pit"].includes(S.drive) ? '<i class="live"></i>' : ""}</button>`).join("")}</nav>`;
+  return [top, bottom];
+}
+function statusPill(small) {
+  const m = { stale: ["stale", "Stale 6 s"], nodata: ["idle", "No data"] }[S.drive] || ["", "Live"];
+  return `<span class="pill ${m[0]}" style="${small ? "font-size:13px;display:inline-flex;align-items:center;gap:6px;font-weight:700;color:" + (m[0] === "stale" ? "var(--warning)" : m[0] === "idle" ? "var(--faint)" : "var(--success)") : ""}"><i class="dot"></i>${m[1]}</span>`;
+}
+function areaHead(actions = "") {
+  const pages = PAGES[S.area];
+  const title = { review: "Review", setup: "Setup", settings: "Settings" }[S.area];
+  return `<div class="area-head"><h1>${title}</h1>${seg(pages, S.page[S.area], "data-page", "lg")}<div class="act">${actions}</div></div>`;
+}
+function miniBar() {
+  if (S.area === "drive" || !S.liveRadio) return "";
+  return `<div class="minibar" role="region" aria-label="Radio"><span class="chip soft k-success caps"><i class="dot"></i>Radio</span>
+    <span class="msg">${chip("LAP", "soft k-accent caps")} Lap 6: 1:31.512, half a second off your best.</span>
+    ${btn(ICON.mic + "Hold to talk", "primary lg")}${btn(ICON.open, "ghost icon", 'data-go="drive" data-to="radio" aria-label="Open Drive › Radio"')}</div>`;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------
+   Drive > Coach
+   ------------------------------------------------------------------------------------------------------------------ */
+const DSTATE = {
+  track: { car: 4560, next: "T15", dist: 320, approach: 0.2, cue: ["BRAKE", "T15 brake", 250], delta: -0.214, lap: "1:10.8", s3: 0.17, s3t: "4.6",
+    coach: ["work", "L6", "Stowe: you braked about 12 m earlier than on your reference lap and lost about 0.11 s here."],
+    radio: ["LAP", "accent", "Lap 6: 1:31.512, half a second off your best.", "8 s"] },
+  yellow: { car: 5040, next: "T16", dist: 380, approach: 0.05, cue: ["BRAKE", "T16 brake", 365], delta: -0.183, lap: "1:14.3", s3: 0.47, s3t: "8.1",
+    coach: ["good", "L6", "Vale: your exit speed was 6 km/h higher than on your reference lap."],
+    radio: ["CUE", "danger", "T15 brake · on time (3 m early)", "3 s"], yellow: [5380, 5560] },
+};
+function driveCoach() {
+  const st = S.drive;
+  const D = DSTATE[st === "yellow" ? "yellow" : "track"];
+  const big = st === "ready" || st === "ended" || st === "nodata";
+  return `<div class="coach ${st === "stale" ? "is-stale" : ""}">
+    ${statusSlot(D)}
+    ${big ? bigCard(st) : heroCard(D, st) + coachCard(D, st) + deltaCard(D, st)}
+    ${sectors(D, st)}${lapTimes(D, st)}
+    <div class="card ribbon">${ribbonSvg(1084, 56, { empty: st === "nodata", car: big || st === "stale" ? null : st === "pit" ? 5850 : D.car, next: big ? null : D.next, yellow: st === "yellow" ? D.yellow : null })}</div>
+    ${radioStrip(D, st)}
+  </div>`;
+}
+function driveSeg(onBand) {
+  return seg(PAGES.drive, S.page.drive, "data-page", "drive");
+}
+function statusSlot(D) {
+  const sub = S.device === "phone" ? `<div class="phone-sub">${seg(PAGES.drive, S.page.drive, "data-page", "drive")}</div>` : "";
+  return sub + statusSlotInner(D);
+}
+function statusSlotInner(D) {
+  const st = S.drive;
+  const hint = S.hint ? `<span class="hint">Hold to leave Drive while driving</span>` : "";
+  const normal = (extra = "") => `<div class="status" role="status">${statusPill()}<span class="trk">Silverstone</span><span class="meta">Practice</span><span class="lapno">Lap ${st === "pit" ? 7 : 7} <span class="faint">/ -</span></span>${extra}<span class="sp"></span>${hint}${driveSeg()}</div>`;
+  if (st === "track") return normal();
+  if (st === "yellow") return `<div class="status fill f-yellow" role="status"><span class="bandtext">YELLOW FLAG · SECTOR 3 · ZONE 16<small>380 m ahead</small></span><span class="sp"></span>${hint}${driveSeg(true)}</div>`;
+  if (st === "pit") return `<div class="status fill f-pit" role="status"><span class="bandtext">PIT LANE<small>limit 80 km/h</small></span><span class="sp"></span>${driveSeg(true)}</div>`;
+  if (st === "stale") return `<div class="status outline" style="--k:var(--warning)" role="status"><span class="bandtext" style="letter-spacing:.02em">No signal · 6 s<small>game paused or in a menu?</small></span><span class="sp"></span>${driveSeg()}</div>`;
+  if (st === "ended") return `<div class="status fill f-neutral" role="status"><span class="bandtext">SESSION COMPLETE<small>Silverstone · Practice · 12 laps</small></span><span class="sp"></span>${driveSeg()}</div>`;
+  if (st === "nodata") return `<div class="status" role="status">${statusPill()}<span class="meta">Listening on UDP 20777</span><span class="sp"></span>${driveSeg()}</div>`;
+  return `<div class="status" role="status">${statusPill()}<span class="trk">Silverstone</span><span class="meta">Practice · ready</span><span class="sp"></span>${driveSeg()}</div>`;
+}
+function heroCard(D, st) {
+  if (st === "pit") {
+    return `<div class="card hero"><div class="head"><span class="lbl">Pit lane · speed / limit</span></div>
+      <div class="corner" style="height:auto;align-items:center;gap:28px"><span class="bigtext" style="font-size:96px">PIT</span>
+      <span class="num" style="font-size:144px;line-height:1">78</span><!-- [critic] speed at the delta token (144 px), as the spec says --><span class="num muted" style="font-size:56px">/ 80</span><span class="muted" style="font-size:22px;align-self:flex-end;margin-bottom:14px">km/h</span></div>
+      <div></div><div class="cue muted-cue"><span class="text">Calls resume on your out lap</span></div></div>`;
+  }
+  const c = CORNERS.find((x) => x.l === D.next);
+  const focus = FOCUS.includes(c.l);
+  /* [critic] stale: running distances (corner distance, approach bar, cue distance) show "-" like the delta: a frozen
+     "in 250 m" must never look current. Static facts (label, name, cue text) stay, dimmed by .is-stale. */
+  const stale = st === "stale";
+  const dist = stale ? '<span class="unk">-</span>' : `${D.dist}<small>m</small>`;
+  const cueIn = stale ? '<span class="unk">-</span>' : `${D.cue[2]}<small>m</small>`;
+  /* [critic] long corner rule (spec 4.5): label > 4 chars or name > 14 chars -> two-line corner row */
+  const two = c.l.length > 4 || c.n.length > 14;
+  return `<div class="card hero ${two ? "two" : ""}" aria-label="Next corner ${c.l} ${c.n}${stale ? "" : `, ${D.dist} metres`}">
+    <div class="head"><span class="lbl">Next corner</span>${c.d ? `<span class="dir">${ICON[c.d === "left" ? "left" : "right"]}${c.d}</span>` : ""}${focus ? chip("FOCUS", "outline-accent caps lg") : ""}</div>
+    <div class="corner ${two ? "two" : ""}"><span class="clabel">${c.l}</span><span class="cname">${c.n}</span><span class="cdist num">${dist}</span></div>
+    <div class="bar" aria-label="Approach" ${stale ? 'style="visibility:hidden"' : ""}><i style="transform:scaleX(${D.approach})"></i></div>
+    <div class="cue"><span class="kind">${D.cue[0]}</span><span class="text">${D.cue[1]}</span><span class="in num"><small style="margin:0 8px 0 0">in</small>${cueIn}</span></div>
+  </div>`;
+}
+function coachCard(D, st) {
+  if (st === "pit") {
+    return `<div class="card coachc"><p class="s22">${chip("Next run · from L6", "soft k-warning")}Stowe: you braked about 12 m earlier than on your reference lap and lost about 0.11 s here. <span class="muted" style="font-size:17px">Seen on 3 of your last 5 laps · confidence high</span></p></div>`;
+  }
+  const [kind, lap, text] = D.coach;
+  const tg = kind === "work" ? chip(`Work on · ${lap}`, "soft k-warning") : chip(`Good · ${lap}`, "soft k-success");
+  const shown = S.tier < 2 ? text : text;
+  /* [critic] on track: 30 px up to 60 characters, else 26 px clamped to 3 lines. Never 22 px while moving. */
+  const size = shown.length <= 60 ? "s30" : "clamp3";
+  return `<div class="card coachc"><p class="${size}">${tg}${shown}${S.tier < 2 ? ' <span class="faint" style="font-size:15px">(top observation · before D6)</span>' : ""}</p></div>`;
+}
+function deltaCard(D, st) {
+  const b = beginner();
+  const refl = b ? "vs your target lap" : "Delta to reference";
+  const refc = chip("Lap 4 · 1:30.986 · today", "soft k-ref");
+  if (st === "pit" || st === "stale") {
+    const reason = st === "pit" ? "No delta in the pit lane" : "No signal · 6 s";
+    return `<div class="card delta"><div class="top"><span class="lbl">${refl}</span>${refc}</div><div></div>
+      <div class="dv unk">-</div><div class="reason">${reason}</div><div class="dbar"><span class="mid"></span></div><div class="dscale"><span>◀ ahead</span><span>behind ▶</span></div>
+      ${b ? "" : '<div class="proj"><span class="lbl">Projected</span><span class="num unk">-</span></div>'}</div>`;
+  }
+  const v = D.delta, tone = v < -0.02 ? "ahead" : v > 0.02 ? "behind" : "level";
+  const txt = (v < 0 ? "−" : "+") + Math.abs(v).toFixed(2);
+  const w = Math.min(Math.abs(v), 1) * 50;
+  const fill = tone === "level" ? "" : `<span class="fill ${tone}" style="${v < 0 ? `right:50%;width:${w}%` : `left:50%;width:${w}%`}"></span>`;
+  const ticks = [-1, -.5, -.25, .25, .5, 1].map((t) => `<span class="tk" style="left:${50 + t * 50}%"></span>`).join("");
+  const proj = (90.986 + v);
+  return `<div class="card delta" aria-label="${Math.abs(v).toFixed(2)} seconds ${tone} of reference lap 4">
+    <div class="top"><span class="lbl">${refl}</span>${refc}</div><div></div>
+    <div class="dv num ${tone}">${minus(txt)}</div>
+    <div class="word ${tone}">${tone.toUpperCase()}</div>
+    <div class="dbar">${ticks}<span class="mid"></span>${fill}</div>
+    <div class="dscale"><span>◀ ahead · 1.0</span><span>0</span><span>1.0 · behind ▶</span></div>
+    ${b ? "" : `<div class="proj"><span class="lbl">Projected</span><span class="num">1:${(proj - 60).toFixed(2).padStart(5, "0")}</span></div>`}
+  </div>`;
+}
+function sectors(D, st) {
+  const none = st === "ready" || st === "nodata";
+  if (none) return `<div class="sect">${["S1", "S2", "S3"].map((s) => `<div class="tcell st-neutral"><div class="top"><b>${s}</b></div><div class="t unk">-</div><div class="s">${st === "ready" ? "your best here " + ["29.204", "36.711", "24.959"][+s[1] - 1] : ""}</div></div>`).join("")}</div>`;
+  if (S.tier < 2) {
+    const lastLbl = '<span style="font-size:13px;opacity:.8">last lap · L6</span>';
+    return `<div class="sect">
+      <div class="tcell st-slower" style="opacity:.8"><div class="top"><b>S1 ${lastLbl}</b></div><div class="t">29.341</div><div class="s">+0.023 vs today's best</div></div><!-- [critic] was SB, but L4's 29.318 is faster -->
+
+      <div class="tcell st-slower" style="opacity:.8"><div class="top"><b>S2 ${lastLbl}</b></div><div class="t">37.022</div><div class="s">+0.118 vs today's best</div></div>
+      <div class="tcell st-slower" style="opacity:.8"><div class="top"><b>S3 ${lastLbl}</b>${needs("D1")}</div><div class="t">25.149</div><div class="s">+0.190 vs today's best</div></div></div>`;
+  }
+  const ended = st === "ended";
+  const s3 = st === "pit" || ended ? `<div class="tcell st-slower"><div class="top"><b>S3</b></div><div class="t">25.290</div><div class="s">+0.331 vs today's best</div></div>`
+    : st === "stale" ? `<div class="tcell future"><div class="top"><b>S3</b></div><div class="t">-</div><div class="s">no signal</div></div>`
+    : `<div class="tcell run"><div class="top"><b>S3</b><span class="muted" style="font-size:14px">running</span></div><div class="t num">${D.s3t}</div><div class="bar" style="height:8px"><i style="transform:scaleX(${D.s3});background:var(--foreground)"></i></div></div>`;
+  return `<div class="sect">
+    <div class="tcell st-sb"><div class="top"><b>S1</b>${ttag("sb")}</div><div class="t">29.318</div><div class="s">${minus("−0.023")} on today's best</div></div>
+    <div class="tcell st-rec"><div class="top"><b>S2</b>${ttag("rec")}</div><div class="t">36.904</div><div class="s">family record</div></div>
+    ${s3}</div>`;
+}
+function lapTimes(D, st) {
+  const none = st === "ready" || st === "nodata";
+  const inv = false;
+  const lap = none || st === "stale" ? '<span class="num unk">-</span>' : st === "pit" ? '<span class="num muted">0:08.2</span>' : st === "ended" ? '<span class="num unk">-</span>' : `<span class="num">${D.lap}</span>`;
+  /* [critic] sample consistency: in the pit and at the end lap 7 (1:31.208, +0.22 on ref L4 1:30.986) is the last lap */
+  const l7 = st === "ended" || st === "pit";
+  const last = none ? '<span class="num unk">-</span>' : `${tv(l7 ? "1:31.208" : "1:31.512", "slower")}<span class="x"><span class="num behind" style="font-size:22px">${l7 ? "+0.22" : "+0.53"}</span></span>`;
+  const best = st === "nodata" ? '<span class="num unk">-</span>' : st === "ready" ? `<span class="num unk">-</span><span class="x muted" style="font-size:14px">first lap sets it</span>` :
+    st === "ended" ? `${tv("1:30.702", "pb")}<span class="x">${ttag("pb")}</span>` : `${tv("1:30.986", "sb")}<span class="x">${ttag("sb")}</span>`;
+  return `<div class="card laps"><div class="row"><span class="lbl">Lap</span>${lap}${inv ? chip("INVALID", "soft k-danger") : ""}</div>
+    <div class="row"><span class="lbl">Last</span>${last}</div><div class="row"><span class="lbl">Best</span>${best}</div></div>`;
+}
+function radioStrip(D, st) {
+  if (!S.liveRadio || st === "ready" || st === "nodata") {
+    return `<div class="card radio"><div class="msg">${chip("RADIO", "soft caps")}<p class="muted">Radio is off. Tap Go live (iOS needs a tap to start audio and the mic).</p></div>${btn("Go live", "primary xl")}</div>`;
+  }
+  const msgs = { pit: ["LAP", "accent", "Lap 7: 1:31.208. Tyres in the window, fuel for 9 laps.", "12 s"],
+    ended: ["LAP", "accent", "Chequered flag. Best lap 1:30.702, a new personal best.", "20 s"],
+    stale: ["ALERT", "warning", "Telemetry stopped. Game paused?", "6 s"] };
+  const m = msgs[st] || D.radio;
+  return `<div class="card radio"><div class="msg">${chip(m[0], `soft k-${m[1]} caps lg`)}<p>${m[2]}</p><span class="age">${m[3]}</span></div>
+    <span class="chip soft k-success lg micchip"><i class="dot"></i>Mic live</span>${btn(ICON.mic + "Hold to talk", "primary xl")}</div>`;
+}
+function bigCard(st) {
+  const d = drv();
+  if (st === "ready") {
+    return `<div class="card ready span3">
+      <div class="seat"><h3>Seat</h3>${avatar(d, 72)}<div class="who">${d.name} is in the seat</div>
+        <div class="row" style="margin-bottom:16px">${chip(d.skillLabel, "soft lg")}${chip("Coaching: normal", "soft lg")}</div>
+        ${btn("Not you? Switch driver", "secondary glove", 'data-act="driver"')}</div>
+      <div><h3>Target</h3><div class="kv">
+        <div><div class="k">Your best here</div><div class="v">${tv(d.pb, "pb")} <span class="muted" style="font:500 16px var(--sans)">${d.pbDate}</span></div></div>
+        <div><div class="k">Family record</div><div class="v">${S.tier < 2 ? '<span class="unk">-</span> ' + needs("D2") : tv("1:30.412", "rec") + ' <span class="row" style="display:inline-flex;font:500 16px var(--sans);color:var(--muted)">' + avatar(DRIVERS.jo, 24) + " Jo · 10 Oct</span>"}</div></div>
+        <div><div class="k">Delta reference</div><div class="v txt">Lap 5 · 1:30.874 · 3 Oct <span class="muted">(your best)</span></div></div></div></div>
+      <div><h3>Today</h3><div class="focus-row">
+        <div class="f"><b>${chip("FOCUS", "outline-accent caps")} T15 Stowe</b><span>braking early · 3 of your last 5 laps</span></div>
+        <div class="f"><b>${chip("FOCUS", "outline-accent caps")} T3 Village</b><span>slow exit · 2 of your last 4 laps</span></div>
+        <div class="f"><b style="font-size:17px">Braking calls: Focus corners</b></div></div>
+        <div class="f"><b style="font-size:17px">Radio: ${chip("Off", "soft lg")}</b><span>Go live is in the radio strip below</span></div></div>
+      <div class="foot">5 890 m · S2 1 813 m · S3 4 294 m · 14 corners learned · names: verified track sheet</div></div>`;
+  }
+  if (st === "ended") {
+    return `<div class="card endcard span3">
+      <div class="kpis" style="grid-column:1/-1">
+        <div class="kpi"><div class="k">Best lap ${ttag("pb")}</div><div class="v">${tv("1:30.702", "pb")}</div><div class="s">lap 9 · new personal best</div></div>
+        <div class="kpi"><div class="k">Clean laps</div><div class="v num">9 <span class="muted" style="font-size:20px">of 12</span></div><div class="s">3 not used: out lap, flashback, track limits</div></div>
+        <div class="kpi"><div class="k">Gained today</div><div class="v num ahead">${minus("−2.50")}<span class="muted" style="font-size:18px">s</span></div><div class="s">first clean lap → best</div></div>
+        <div class="kpi"><div class="k">To the family record</div><div class="v num">${S.tier < 2 ? '<span class="unk">-</span>' : "+0.290"}</div><div class="s">${S.tier < 2 ? needs("D2") : "Jo · 1:30.412"}</div></div></div>
+      <div class="itemcard" style="--k:var(--warning)"><span class="ic">${ICON.warn}</span><div><div class="ttl">Work on · T15 Stowe</div><div class="dsc">You braked about 12 m earlier than on your reference lap and lost about 0.11 s here.</div></div></div>
+      <div class="itemcard" style="--k:var(--success)"><span class="ic">${ICON.check}</span><div><div class="ttl">Went well · T9 Copse</div><div class="dsc">Your exit speed was 6 km/h higher than on your reference lap.</div></div></div>
+      <div style="grid-column:1/-1;display:flex;justify-content:flex-end">${btn("Review this session", "primary glove", 'data-act="review-session"')}</div></div>`;
+  }
+  return `<div class="card nodata span3"><div><h2 style="margin:0 0 6px;font:650 28px/1.2 var(--sans)">Waiting for telemetry</h2>
+      <p class="muted" style="margin:0 0 20px;font-size:16px">No packet has arrived yet. Check these three things.</p>
+      <div class="stepper">
+        <div class="step cur"><span class="ind">1</span><div><div class="st">Turn on UDP telemetry in the game</div><div class="sd">Settings › Telemetry › UDP telemetry: On, format 2025</div></div></div>
+        <div class="step"><span class="ind">2</span><div><div class="st">IP <span class="mono">192.0.2.20</span> · port <span class="mono">20777</span></div><div class="sd">This Mac's LAN address (sample)</div></div></div>
+        <div class="step"><span class="ind">3</span><div><div class="st">Drive out of the garage</div><div class="sd">Last sender seen: none</div></div></div></div></div>
+    <div class="stack" style="justify-items:start">${btn("Open Setup › Connect", "primary glove", 'data-go="setup" data-to="connect"')}${btn("Try a demo replay (synthetic)", "secondary xl")}
+      <span class="sub">The demo is labelled ${syn()} on every screen.</span></div></div>`;
+}
+
+/* Drive > Car: B's pit wall */
+function driveCar() {
+  const laps = [[6, "1:31.512", "slower", "29.341", "37.022", "25.149", "+0.53"], [5, "1:31.844", "slower", "29.502", "37.118", "25.224", "+0.86"],
+    [4, "1:30.986", "sb", "29.318", "36.904", "24.764", "R"], [3, "1:32.611", "slower", "29.811", "37.420", "25.380", "+1.63"], [2, "1:33.204", "slower", "30.006", "37.771", "25.427", "+2.22"]];
+  const st4 = (i, col) => (i === 2 ? (col === 2 ? "rec" : "sb") : "slower");
+  return `<div class="wall">${statusSlot(DSTATE.track)}
+    <div class="card" style="grid-column:span 4"><div class="card-head"><h3 class="h3">Car</h3>${chip("Telemetry 60/s", "soft")}</div>
+      <div class="row" style="justify-content:space-between;align-items:flex-end"><div><div class="num" style="font-size:64px;line-height:1">212</div><div class="sub">km/h</div></div><div style="text-align:right"><div class="num" style="font-size:64px;line-height:1;color:var(--accent-text)">6</div><div class="sub">gear</div></div></div>
+      <div class="stack" style="gap:10px;margin-top:14px">${[["RPM", 0.82, "var(--accent)", "10 950"], ["Throttle", 1, "var(--throttle)", "100%"], ["Brake", 0, "var(--brake)", "0%"]].map(([l, v, c, t]) => `<div><div class="row" style="justify-content:space-between"><span class="lbl">${l}</span><span class="num">${t}</span></div><div class="meter"><i style="width:${v * 100}%;background:${c}"></i></div></div>`).join("")}
+      <div class="row sub" style="justify-content:space-between"><span>Steering ${minus("−0.04")}</span><span>Bias 56%</span><span>DRS open</span></div></div></div>
+    <div class="card" style="grid-column:span 5"><div class="card-head"><h3 class="h3">Track</h3><span class="sub">14 corners · official names</span></div>${mapSvg(420, 240, { car: [264, 116], highlight: "T15" })}<div class="sub">Race control · Lap 7 · pit exit · 2 min ago</div></div>
+    <div class="card" style="grid-column:span 3"><div class="card-head"><h3 class="h3">Tyres & energy</h3>${chip("Soft · 7 laps", "soft")}</div>
+      <div class="tyres">${[["FL", 92, "6%", "23.1"], ["FR", 95, "7%", "23.2"], ["RL", 98, "5%", "21.4"], ["RR", 101, "6%", "21.5"]].map(([w, t, wr, p]) => `<div class="tyre"><div class="sub">${w}</div><b>${t}°</b><div class="sub">${wr} · ${p} psi</div></div>`).join("")}</div>
+      <div class="sub" style="margin-top:10px">Fuel 18.4 kg · +1.2 laps (game) · ERS 2.8 MJ</div></div>
+    <div class="card" style="grid-column:span 4"><div class="card-head"><h3 class="h3">Inputs · last 12 s</h3></div>${traceSvg()}</div>
+    <div class="card" style="grid-column:span 5;overflow:hidden"><div class="card-head"><h3 class="h3">Laps</h3><span class="sub">current standing · ref L4</span></div>
+      <table class="grid"><tr><th>Lap</th><th>Time</th><th>S1</th><th>S2</th><th>S3</th><th class="r">Δ ref</th></tr>
+      ${laps.map((l, i) => `<tr><td>${l[0]}</td><td>${tv(l[1], l[2])}</td><td>${tv(l[3], i === 2 ? "sb" : "slower")}</td><td>${tv(l[4], i === 2 ? "rec" : "slower")}</td><td>${tv(l[5], i === 2 ? "sb" : "slower")}</td><td class="r num">${l[6]}</td></tr>`).join("")}</table></div>
+    <div class="card" style="grid-column:span 3"><div class="card-head"><h3 class="h3">Coaching · lap 6</h3></div>
+      <div class="stack" style="gap:10px;font-size:14px"><div>${chip("T15", "soft k-warning")} Braked about 12 m earlier than your reference. <span class="num behind">+0.11 s</span></div>
+      <div>${chip("T3", "soft k-warning")} Exit speed 5 km/h lower. <span class="num behind">+0.08 s</span></div>
+      <div>${chip("T9 · good", "soft k-success")} Exit speed 6 km/h higher. <span class="num ahead">${minus("−0.04")} s</span></div></div></div>
+  </div>`;
+}
+function traceSvg() {
+  let sp = "", th = "", br = "";
+  for (let i = 0; i <= 120; i++) {
+    const t = i / 120, x = 8 + t * 304;
+    const v = 0.55 + 0.4 * Math.sin(t * 6.3 + 0.6) * (t < 0.5 ? 1 : 0.8);
+    const brake = t > 0.36 && t < 0.46 ? Math.min(1, (0.46 - t) * 18) : t > 0.78 && t < 0.84 ? 0.7 : 0;
+    const thr = brake > 0.05 ? 0 : Math.min(1, 0.4 + v);
+    sp += `${i ? "L" : "M"}${x.toFixed(1)} ${(120 - v * 100).toFixed(1)} `;
+    th += `${i ? "L" : "M"}${x.toFixed(1)} ${(130 - thr * 30 + 30).toFixed(1)} `;
+    br += `${i ? "L" : "M"}${x.toFixed(1)} ${(160 - brake * 30 + 30).toFixed(1)} `;
+  }
+  return `<svg class="chart" viewBox="0 0 320 200"><path d="${sp}" fill="none" stroke="var(--foreground)" stroke-width="2"/><path d="${th}" fill="none" stroke="var(--throttle)" stroke-width="2"/><path d="${br}" fill="none" stroke="var(--brake)" stroke-width="2"/>
+    <text x="8" y="14">speed</text><text x="8" y="150">throttle</text><text x="8" y="196">brake</text></svg>`;
+}
+function driveTrack() {
+  const notes = { T15: "Braked about 12 m earlier than your reference (lap 6).", T3: "Exit speed 5 km/h lower (lap 6).", T9: "Exit speed 6 km/h higher (lap 6).", T7: "Slowest speed 4 km/h lower (lap 5)." };
+  return `<div class="wall" style="grid-template-rows:52px minmax(0,1fr)">${statusSlot(DSTATE.track)}
+    <div class="card" style="grid-column:span 7;display:grid;place-items:center">${mapSvg(640, 413, { car: [264, 116], highlight: "T15" })}</div>
+    <div class="card" style="grid-column:span 5;overflow:auto;padding:8px"><div class="list" style="box-shadow:none">
+    ${CORNERS.map((c) => `<div class="li ${c.l === "T15" ? "sel" : ""}"><span class="kbd" style="min-width:58px">${c.l}</span><div class="main"><div class="ttl">${c.n} ${FOCUS.includes(c.l) ? chip("FOCUS", "outline-accent caps") : ""}</div><div class="sub">${c.d || "mixed"}${notes[c.l] ? " · " + notes[c.l] : ""}</div></div></div>`).join("")}
+    </div></div></div>`;
+}
+function driveRadio() {
+  const log = [["CUE", "danger", "T15 brake · on time (3 m early)", "now"], ["LAP", "accent", "Lap 6: 1:31.512, half a second off your best.", "1 min"],
+    ["YOU", "", "How are the tyres?", "2 min"], ["ENGINEER", "ref", "Fronts 92 and 95, rears just under 100. All in the window.", "2 min"], ["CUE", "danger", "T3 brake · late (6 m)", "3 min"]];
+  return `<div class="wall" style="grid-template-rows:52px minmax(0,1fr)">${statusSlot(DSTATE.track)}
+    <div class="card" style="grid-column:span 6;display:grid;justify-items:center;align-content:center;gap:22px;text-align:center">
+      ${chip("ENGINEER", "soft k-ref caps lg")}<p style="margin:0;font:500 28px/1.3 var(--sans);max-width:460px">Fronts 92 and 95, rears just under 100. All in the window.</p>
+      <button class="ptt-big">Hold<br>to talk</button><div class="row">${btn("Radio check", "secondary lg")}${btn("Stop talking", "secondary lg")}${chip('<i class="dot"></i>Mic live', "soft k-success lg")}</div>
+      <div class="stack" style="gap:10px;justify-items:center"><div class="row"><span class="lbl">Braking calls</span>${seg([["off", "Off"], ["focus", "Focus"], ["markers", "Markers"], ["all", "All"]], "focus", "data-x")}</div>
+      <div class="row"><span class="lbl">Coaching</span>${seg([["quiet", "Quiet"], ["normal", "Normal"], ["detailed", "Detailed"]], "normal", "data-x")}</div></div></div>
+    <div class="card" style="grid-column:span 6;overflow:auto"><div class="card-head"><h3 class="h3">Radio log</h3><span class="sub">voice settings: Settings › Radio & voice</span></div>
+      <div class="list" style="box-shadow:none">${log.map((l) => `<div class="li">${chip(l[0], `soft caps ${l[1] ? "k-" + l[1] : ""}`)}<div class="main">${l[2]}</div><span class="sub">${l[3]}</span></div>`).join("")}</div></div></div>`;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------
+   Review
+   ------------------------------------------------------------------------------------------------------------------ */
+/* [critic] Review rewritten so that (a) density follows the VIEWED session's driver, not the seated one (spec 6.10;
+   v2's mockup used the seated driver, so Alex in the seat made James's session look like a beginner's); (b) each row
+   opens its own session; (c) the driver filter starts on the seated driver ("Everyone" one tap away), so another driver
+   lands on their own last session; (d) gains are written in words ("2.50 s faster"), never as a bare signed
+   number, on Review tiles; (e) a beginner's Summary is KPIs, one Work on, Went well and the lap chart, with the rest
+   behind "More detail". */
+const SESS = [
+  { day: "Today", id: "s1", who: "james", track: "Silverstone", type: "Practice", car: "2025 car", laps: "9 / 12", total: 12, best: "1:30.702", st: "pb", tag: "PB set", when: "Today · 19:40" },
+  { day: "Today", id: "s2", who: "alex", track: "Silverstone", type: "Time trial", car: "2025 car", laps: "6 / 10", total: 10, best: "1:41.322", st: "pb", tag: "PB set", when: "Today · 18:55" },
+  { day: "Yesterday", id: "s3", who: "jo", track: "Silverstone", type: "Practice", car: "2025 car", laps: "11 / 14", total: 14, best: "1:30.412", st: "rec", tag: "Record", when: "Yesterday · 20:10" },
+  { day: "Yesterday", id: "s4", who: "james", track: "Synthetic demo", type: "coaching-demo", car: "-", laps: "8 / 8", total: 8, best: "1:29.990", st: "neutral", syn: true, when: "Yesterday · 21:02" },
+  { day: "3 Oct", id: "s5", who: "james", track: "Silverstone", type: "Practice", car: "2025 car", laps: "10 / 13", total: 13, best: "1:30.874", st: "slower", when: "3 Oct · 19:15" },
+];
+const WORKON = [
+  ["T15", "Stowe", "You braked about 12 m earlier than on your reference lap and lost about 0.11 s here.", "Seen on 3 of your last 5 laps · about 0.11 s a lap · confidence high", "At Stowe you braked 12 m earlier, your slowest speed was 4 km/h lower, and the corner took 0.11 s longer.", 0.11],
+  ["T3", "Village", "Your exit speed was 5 km/h lower than on your reference lap; about 0.08 s.", "Seen on 2 of your last 4 laps · confidence medium", "At Village you left the corner 5 km/h slower and full throttle came 18 m later.", 0.08],
+  ["T7", "Luffield", "You were 4 km/h slower at the slowest point; about 0.06 s.", "Seen on 2 of your last 5 laps · confidence medium", "At Luffield your slowest speed was 4 km/h lower.", 0.06],
+];
+/* Alex (beginner): the coach's text_simple wording (D6), one idea per card. Sample text, invented. */
+const WORKON_ALEX = [
+  ["T15", "Stowe", "You started braking for Stowe earlier than on your best lap. That cost about 0.3 s each lap.", "Seen on 4 of your last 6 laps · about 0.3 s a lap · confidence high", "At Stowe you braked 31 m earlier and your slowest speed was 9 km/h lower than on your best lap.", 0.3],
+  ["T3", "Village", "You came out of Village slower than on your best lap.", "Seen on 3 of your last 6 laps · confidence medium", "At Village you left the corner 7 km/h slower.", 0.2],
+  ["T7", "Luffield", "You were slower in the middle of Luffield than on your best lap.", "Seen on 2 of your last 6 laps · confidence medium", "At Luffield your slowest speed was 6 km/h lower.", 0.1],
+];
+const SUMMARY = {
+  s1: { bestLap: "lap 9", clean: 9, notUsed: "3 not used", gain: "2.50", spread: "1.4", work: WORKON,
+    good: [["T9 Copse", "Your exit speed was 6 km/h higher than on your reference lap."], ["T10-13 Maggotts and Becketts", "Your braking point was within 4 m on every clean lap."]] },
+  s2: { bestLap: "lap 8 · new personal best", clean: 6, notUsed: "4 not used", gain: "3.10", spread: "2.9", work: WORKON_ALEX,
+    good: [["T9 Copse", "You came out of Copse 8 km/h faster than on your first clean lap."], ["Clean laps", "6 clean laps in a row at the end of the session."]] },
+};
+const sessById = (id) => SESS.find((s) => s.id === id) || SESS[0];
+const sumOf = (s) => SUMMARY[s.id] || SUMMARY.s1;
+const viewed = () => DRIVERS[sessById(S.session).who];          /* the driver whose session is open */
+const vBeginner = () => viewed().skill === "beginner";
+function reviewPage() {
+  const p = S.page.review;
+  if (p === "sessions") return S.session ? sessionPage() : sessionsList();
+  if (p === "coaching") return coachingPage();
+  if (p === "progress") return progressPage();
+  return areaHead() + askView(false);
+}
+function sessionsList() {
+  const f = S.sessFilter || S.driver;                                  /* default: the seated driver */
+  const rows = SESS.filter((s) => f === "all" || s.who === f);
+  const sel = rows[0] || SESS[0];
+  const groups = [...new Set(rows.map((s) => s.day))];
+  const items = [["all", "Everyone"], ...Object.entries(DRIVERS).map(([id, d]) => [id, avatar(d, 22) + d.name])];
+  const lapsText = (s) => S.tier < 2 ? `${s.total} laps` : `${s.laps} clean`;      /* clean count needs D5 */
+  return `${areaHead()}
+    <div class="row" style="margin-bottom:14px">${seg(items, f, "data-sf")}<span class="field">All tracks <span class="chev">⌄</span></span></div>
+    <div class="master"><div>${groups.map((g) => `<div class="grp-title">${g}</div><div class="list">${rows.filter((s) => s.day === g).map((s) => `
+      <div class="li clickable ${s === sel ? "sel" : ""}" data-act="open-session" data-id="${s.id}">${avatar(DRIVERS[s.who], 34)}<div class="main"><div class="ttl">${s.track} ${s.syn ? syn() : ""}</div><div class="sub">${s.type} · ${s.car} · ${lapsText(s)}</div></div>
+      <div style="text-align:right">${tv(s.best, s.st)}<div class="sub">${(s.tag === "Record" && S.tier < 2 ? "" : s.tag) || "&nbsp;"}</div></div></div>`).join("")}</div>`).join("")}</div>
+    <div class="stack"><div class="card"><div class="card-head"><div><div class="sub">${sel.when} · ${avatar(DRIVERS[sel.who], 20)} ${DRIVERS[sel.who].name}</div><h3 class="h3" style="font-size:20px;margin-top:4px">${sel.track} · ${sel.type}</h3></div>${btn("Open session", "primary lg", `data-act="open-session" data-id="${sel.id}"`)}</div>
+      ${kpiRow(sel)}</div>${workOnCard(0, true, sel)}</div></div>`;
+}
+function kpiRow(s) {
+  const m = sumOf(s);
+  return `<div class="kpis">
+    <div class="kpi"><div class="k">Best lap ${ttag(s.st === "pb" ? "pb" : "")}</div><div class="v">${tv(s.best, s.st)}</div><div class="s">${m.bestLap}</div></div>
+    <div class="kpi"><div class="k">Clean laps <span class="gloss" title="A clean lap is valid and has no pit, flashback, pause or data gap">?</span></div><div class="v num">${m.clean} <span class="muted" style="font-size:18px">of ${s.total}</span></div><div class="s">${m.notUsed}</div></div>
+    <div class="kpi"><div class="k">Gained today</div><div class="v num ahead">${m.gain}<span class="muted" style="font-size:18px"> s</span><span class="trend">▲ faster</span></div><div class="s">first clean lap → best lap</div></div>
+    <div class="kpi"><div class="k">Steadiness</div><div class="v num">${m.spread}<span class="muted" style="font-size:18px"> s</span></div><div class="s">your clean laps were within ${m.spread} s of each other</div></div></div>`;
+}
+function workOnCard(i, compact, s = sessById(S.session)) {
+  const w = sumOf(s).work[i];
+  const beg = DRIVERS[s.who].skill === "beginner";
+  /* beginners: no signed number in the corner of the card; the evidence line says it in words */
+  const cost = beg ? "" : `<span class="num behind" style="margin-left:auto;font-size:20px">+${w[5].toFixed(2)} s</span>`;
+  return `<div class="card stack" style="gap:10px">
+    <div class="row">${chip("Work on", "soft k-warning")}<b style="font-size:17px">${w[0]} ${w[1]}</b>${cost}</div>
+    <div style="display:grid;grid-template-columns:1fr 96px;gap:12px;align-items:start"><p class="txt" style="margin:0;font-size:${beg ? 18 : 16}px;line-height:1.45">${w[2]}</p>${mapSvg(96, 62, { highlight: w[0], labels: false })}</div>
+    <div class="ev sub">${w[3]}</div>
+    ${compact ? "" : `<div class="row" style="gap:6px">${btn("See it on the lap", "secondary", 'data-tab="compare"')}${btn("Why?", "ghost", `data-act="why" data-i="${i}"`)}${btn("Ask", "ghost", 'data-tab="ask"')}</div><div class="why" id="why${i}" hidden>${w[4]} <span class="faint">(a description from the comparison, not advice)</span></div>`}
+  </div>`;
+}
+function sessionPage() {
+  const s = sessById(S.session), d = DRIVERS[s.who];
+  const tabs = [["summary", "Summary"], ["laps", "Laps"], ["compare", "Compare"], ["corners", "Corners"], ["ask", "Ask"]];
+  const head = areaHead() + `<div style="padding:0 0 8px"><div class="breadcrumbs"><a data-act="close-session">Sessions</a><span>›</span><span>${s.track} · ${s.type}</span></div>
+    <div class="sess-head"><div style="flex:1"><h2>${s.track} · ${s.type} ${s.syn ? syn() : ""}</h2><div class="row">${chip(avatar(d, 18) + d.name + " · " + d.skillLabel.toLowerCase(), "soft lg")}${chip(s.car, "soft lg")}${chip("Dry · track 31°", "soft lg")}${chip(s.when, "soft lg")}</div></div>
+    <div class="row hide-phone">${btn("Ask the engineer", "secondary lg", 'data-tab="ask"')}${btn("Session report", "secondary lg")}</div></div>
+    <div class="tabs" role="tablist">${tabs.map(([id, l]) => `<button role="tab" aria-selected="${S.tab === id}" data-tab="${id}">${l}</button>`).join("")}</div></div>`;
+  const body = { summary: summaryTab, laps: lapsTab, compare: compareTab, corners: cornersTab, ask: () => askView(true) }[S.tab]();
+  return head + `<div style="padding-top:8px">${body}</div>`;
+}
+function summaryTab() {
+  const s = sessById(S.session), m = sumOf(s), beg = vBeginner();
+  const n = beg ? 1 : viewed().skill === "intermediate" ? 2 : 3;
+  const more = beg && !S.moreDetail;
+  const detail = `<div class="g12"><div class="card" style="grid-column:span 5"><div class="card-head"><h3 class="h3">Where the time is</h3><span class="sub">per lap, vs reference</span></div>${cornerBars()}</div>
+      <div class="card" style="grid-column:span 7"><div class="card-head"><h3 class="h3">Corners on the map</h3></div>${mapSvg(380, 245, { deltas: { T15: .11, T3: .08, T7: .06, T9: -.04, "T10-13": -.01, T1: .0, T6: .02, T16: .01, "T17-18": .03 } })}
+      <div class="legend"><span><i style="background:var(--behind)"></i>time lost</span><span><i style="background:var(--ahead)"></i>time gained</span></div></div></div>
+    <div class="card"><div class="card-head"><h3 class="h3">Engineer summary</h3>${chip("Deterministic", "soft")}</div>
+      <p style="margin:0;line-height:1.55">${s.id === "s2" ? "Best lap 1:41.322 on lap 8, your best here so far. Most time went at Stowe (about 0.3 s a lap) and Village. Copse was your strongest corner." : "Best lap 1:30.702 on lap 9, a new personal best by 0.172 s. Most time went at Stowe (about 0.11 s a lap, braking early) and Village (0.08 s, slow exit). Copse was your strongest corner."}</p>
+      <p class="sub" style="margin:10px 0 0">Answers are grounded on the session's facts, or replaced by a deterministic answer.</p></div>`;
+  return `<div class="stack">${kpiRow(s)}
+    <div class="row" style="justify-content:space-between"><h2 class="h2">${beg ? "One thing to work on" : "Work on"}</h2><span class="sub">${beg ? "the biggest one first · Show more" : "ranked by time lost"}</span></div>
+    <div class="g3" style="grid-template-columns:repeat(${n},1fr)">${[0, 1, 2].slice(0, n).map((i) => workOnCard(i, false, s)).join("")}</div>
+    <h2 class="h2">Went well</h2>
+    <div class="g2">${m.good.map(([t, d]) => `<div class="itemcard" style="--k:var(--success)"><span class="ic">${ICON.check}</span><div><div class="ttl">${t}</div><div class="dsc">${d}</div></div></div>`).join("")}</div>
+    <div class="card"><div class="card-head"><h3 class="h3">Lap times</h3><span class="sub">higher = faster · tap a lap to compare it</span></div>${lapChart()}
+      <div class="legend"><span><i style="background:var(--foreground)"></i>clean lap</span><span><i style="background:transparent;box-shadow:inset 0 0 0 2px var(--faint)"></i>not clean</span><span><i style="background:var(--pb)"></i>personal best</span><span><i style="background:var(--ref)"></i>reference</span></div></div>
+    ${more ? `<div>${btn("More detail: where the time is, corners on the map, engineer summary", "secondary lg", 'data-act="more"')}</div>` : detail}</div>`;
+}
+const LAPS = [[1, 0, "inv", "out lap"], [2, 93.204, "slower"], [3, 92.611, "slower"], [4, 90.986, "slower"], [5, 91.844, "slower"], [6, 91.512, "slower"], [7, 91.120, "inv", "track limits"], [8, 91.402, "slower"], [9, 90.702, "pb"], [10, 91.035, "slower"], [11, 0, "inv", "flashback"], [12, 91.208, "slower"]];
+const fmt = (s) => { const m = Math.floor(s / 60); return `${m}:${(s - m * 60).toFixed(3).padStart(6, "0")}`; };
+function lapChart() {
+  const W = 560, H = 210, x0 = 44, y0 = 10, w = W - x0 - 10, h = H - 40, lo = 90.4, hi = 93.6;
+  const y = (t) => y0 + ((t - lo) / (hi - lo)) * h;  /* reversed: faster (smaller) is higher */
+  const x = (i) => x0 + (i - 1) * (w / 11);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}">`;
+  [91, 92, 93].forEach((t) => { s += `<line class="gl" x1="${x0}" x2="${W - 10}" y1="${y(t)}" y2="${y(t)}"/><text x="${x0 - 6}" y="${y(t) + 4}" text-anchor="end">1:${t - 60}.0</text>`; });
+  s += `<line x1="${x0}" x2="${W - 10}" y1="${y(90.986)}" y2="${y(90.986)}" stroke="var(--ref)" stroke-dasharray="5 4" stroke-width="1.5"/>`;
+  const pts = LAPS.filter((l) => l[1] && l[2] !== "inv");
+  s += `<path d="${pts.map((l, i) => `${i ? "L" : "M"}${x(l[0])} ${y(l[1])}`).join(" ")}" fill="none" stroke="var(--line-strong)" stroke-width="1.5"/>`;
+  LAPS.forEach((l) => {
+    if (!l[1]) { s += `<text x="${x(l[0])}" y="${H - 24}" text-anchor="middle">-</text>`; }
+    else if (l[2] === "inv") s += `<circle cx="${x(l[0])}" cy="${y(l[1])}" r="5" fill="none" stroke="var(--faint)" stroke-width="2"/>`;
+    else s += `<circle cx="${x(l[0])}" cy="${y(l[1])}" r="${l[2] === "pb" ? 7 : 5}" fill="${l[2] === "pb" ? "var(--pb)" : "var(--foreground)"}"/>`;
+    s += `<text x="${x(l[0])}" y="${H - 8}" text-anchor="middle">${l[0]}</text>`;
+  });
+  s += `<text x="${x0}" y="${H - 22}" style="fill:var(--muted)">↑ faster</text>`;
+  return s + "</svg>";
+}
+function cornerBars() {
+  const rows = [["T15 Stowe", .11, "braked about 12 m earlier"], ["T3 Village", .08, "5 km/h slower out"], ["T7 Luffield", .06, "4 km/h slower at the slowest point"], ["T17-18 Club", .03, ""], ["T9 Copse", -.04, "6 km/h faster out"]];
+  return `<div class="stack" style="gap:10px">${rows.map(([n, v, w]) => `<div><div class="row" style="justify-content:space-between"><b style="font-size:14px">${n}</b><span class="num ${v > 0 ? "behind" : "ahead"}">${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(2)} s</span></div>
+    <div style="position:relative;height:8px;background:var(--surface-2);border-radius:6px;margin:4px 0"><i style="position:absolute;top:0;bottom:0;border-radius:6px;${v > 0 ? `left:30%;width:${v * 560}%;background:var(--behind)` : `right:70%;width:${-v * 560}%;background:var(--ahead)`}"></i><i style="position:absolute;left:30%;top:-3px;bottom:-3px;width:2px;background:var(--muted)"></i></div>
+    <div class="sub">${w}</div></div>`).join("")}</div>`;
+}
+function lapsTab() {
+  /* [critic] current standing: the fastest S1 is L4's 29.318 (it was shown yellow while L9's slower 29.691 was green),
+     and sectors of an invalid lap are grey INV, never timing colours */
+  const sx = (l, bestLap, st) => (l[2] === "inv" ? "inv" : l[0] === bestLap ? st : "slower");
+  const rows = LAPS.map((l) => {
+    const t = l[1] ? fmt(l[1]) : "-";
+    const st = l[2] === "pb" ? "pb" : l[2];
+    return `<tr><td>${l[0]}${l[0] === 9 ? " " + chip("R", "soft k-ref") : ""}</td><td>${l[1] ? tv(t, st) : '<span class="unk">-</span>'} ${ttag(st === "pb" ? "pb" : st === "inv" ? "inv" : "")}</td>
+      <td>${l[1] ? tv(l[0] === 4 ? "29.318" : "29.6" + l[0] % 10 + "1", sx(l, 4, "pb")) : "-"}</td><td>${l[1] ? tv(l[0] === 4 ? "36.904" : "37.1" + l[0] % 10 + "4", sx(l, 4, "rec")) : "-"}</td><td>${l[1] ? tv(l[0] === 9 ? "24.759" : "25.2" + l[0] % 10 + "0", sx(l, 9, "pb")) : "-"}</td>
+      <td class="r num">${l[1] && l[2] !== "inv" ? (l[1] - 90.702 > 0.0005 ? "+" + (l[1] - 90.702).toFixed(3) : "R") : "-"}</td><td class="sub">${l[3] || ""}</td>
+      <td class="r">${l[1] && l[2] !== "inv" ? btn("Set as reference", "outline") + " " + btn("Compare", "secondary", 'data-tab="compare"') : ""}</td></tr>`;
+  }).join("");
+  return `<div class="card" style="padding:8px 8px 4px;overflow:auto"><table class="grid"><tr><th>Lap</th><th>Time</th><th>S1</th><th>S2</th><th>S3</th><th class="r">Δ ref</th><th>Status</th><th></th></tr>${rows}</table></div>
+    <p class="sub">Colours show the current standing: only times that are still the best are green or purple. ${S.tier < 2 ? "Purple and PB appear with D2." : "REC family record · PB your best ever · SB your best today"}</p>`;
+}
+function traces() {
+  const sp = (d, late) => {
+    let v = 315;
+    CORNERS.forEach((c) => {
+      const vmin = { T1: 238, T2: 262, T3: 95, T4: 90, T5: 205, T6: 140, T7: 120, T8: 232, T9: 252, "T10-13": 168, T14: 262, T15: 178, T16: 86, "T17-18": 140 }[c.l];
+      let vm = vmin; let apex = c.apex;
+      if (late && c.l === "T15") { vm = 174; apex = c.apex - 8; }
+      if (late && c.l === "T3") vm = 90;
+      const k = d < apex ? 0.33 : 0.21;
+      v = Math.min(v, vm + k * Math.abs(d - apex) + (late && c.l === "T15" && d < apex && d > apex - 260 ? -7 : 0));
+    });
+    return v;
+  };
+  return sp;
+}
+function compareTab() {
+  /* [critic] the pickers and the explainer follow the open session (Alex's session showed James's laps) */
+  const cmpS = S.session === "s2" ? { ref: "Lap 8", refT: "1:41.322", lap: "Lap 5", lapT: "1:42.640" } : { ref: "Lap 9", refT: "1:30.702", lap: "Lap 6", lapT: "1:31.512" };
+  const cmpW = sumOf(sessById(S.session)).work[0];
+  const W = 700, H = 150, x0 = 36, w = W - x0 - 8;
+  const sp = traces();
+  const X = (m) => x0 + (m / LAP) * w;
+  let a = "", b = "", dl = "";
+  let cum = 0;
+  const steps = { T15: .11, T3: .08, T7: .06, T9: -.04, "T17-18": .03, T6: .02, T16: .01, T1: .005 };
+  for (let m = 0; m <= LAP; m += 20) {
+    const va = sp(m, false), vb = sp(m, true);
+    a += `${m ? "L" : "M"}${X(m).toFixed(1)} ${(H - 12 - (va / 330) * (H - 24)).toFixed(1)} `;
+    b += `${m ? "L" : "M"}${X(m).toFixed(1)} ${(H - 12 - (vb / 330) * (H - 24)).toFixed(1)} `;
+    CORNERS.forEach((c) => { if (steps[c.l] && m > c.a && m <= c.b) cum += steps[c.l] / ((c.b - c.a) / 20); });
+    dl += `${m ? "L" : "M"}${X(m).toFixed(1)} ${(75 - cum * 70).toFixed(1)} `;
+  }
+  const cur = 5010;
+  const pedals = S.showPedals || !vBeginner(); /* [critic] density by the viewed driver */
+  /* [critic] beginner and intermediate drivers get one plain sentence under each chart title; "B vs A" became words */
+  const plain = viewed().skill !== "advanced";
+  const chart = (title, inner, h, cap = "") => `<div class="card" style="padding:12px 14px"><div class="card-head" style="margin-bottom:4px;display:block"><h3 class="h3" style="font-size:15px">${title}</h3>${plain && cap ? `<p class="sub" style="margin:2px 0 0">${cap}</p>` : ""}</div><svg class="chart" viewBox="0 0 ${W} ${h}">${inner}<line x1="${X(cur)}" x2="${X(cur)}" y1="0" y2="${h}" stroke="var(--accent)" stroke-width="1.5"/></svg></div>`;
+  return `<div class="row" style="margin-bottom:12px"><span class="field lg" style="min-width:300px"><span><span class="dot" style="color:var(--ref)"></span>&nbsp; A · Reference: ${cmpS.ref} · ${tv(cmpS.refT, "pb")}</span><span class="chev">⌄</span></span>
+      <span class="field lg" style="min-width:280px"><span>B · Your lap: ${cmpS.lap} · ${tv(cmpS.lapT, "slower")}</span><span class="chev">⌄</span></span>${chip(ICON.check + "Same car, track and conditions", "soft k-success lg")}${btn("Pin A as reference", "outline lg")}</div>
+    <div class="g12"><div class="stack" style="grid-column:span 8;gap:10px">
+      <div class="card" style="padding:6px">${ribbonSvg(W, 44, { allLabels: true, cursor: cur, cues: false })}</div>
+      ${chart("Time gained or lost: your lap against the reference", `<line class="gl" x1="${x0}" x2="${W}" y1="75" y2="75"/><text x="4" y="79">0 s</text><text x="4" y="20">+0.8</text><path d="${dl}" fill="none" stroke="var(--behind)" stroke-width="2"/>`, 110, "The line goes up where your lap lost time and down where it gained time. Flat means the same as the reference.")}
+      ${chart("Speed", `<path d="${a}" fill="none" stroke="var(--ref)" stroke-width="2"/><path d="${b}" fill="none" stroke="var(--cmp)" stroke-width="1.6"/><text x="4" y="16">km/h</text>`, H, "Blue is the reference lap, white is your lap. Each dip is a corner: the lower line was slower there.")}
+      ${pedals ? chart("Throttle and brake", `<rect x="${X(4810)}" y="10" width="${X(4990) - X(4810)}" height="40" fill="var(--brake)" opacity=".75"/><rect x="${X(4802)}" y="56" width="${X(4990) - X(4802)}" height="40" fill="var(--brake)" opacity=".45"/><text x="4" y="34">A</text><text x="4" y="80">B</text>`, 100) : `<div>${btn("Show pedals", "secondary", 'data-act="pedals"')} <span class="sub">hidden for beginners</span></div>`}
+    </div><div class="stack" style="grid-column:span 4;gap:12px">
+      <div class="card" style="display:grid;place-items:center">${mapSvg(260, 168, { highlight: "T15", car: [276, 98] })}</div>
+      <div class="explainer"><div class="row">${chip("T15", "soft k-warning")}<b>Stowe</b><span class="num behind" style="margin-left:auto">+${cmpW[5].toFixed(2)} s</span></div>
+        <p>${cmpW[4]}</p>
+        <p class="sub">Coach (${cmpS.lap.toLowerCase()}): ${cmpW[2]}</p></div>
+      <div class="card" style="padding:8px"><table class="grid"><tr><th>Corner</th><th class="r">Time lost here</th><th class="r">Braked</th></tr>
+        <tr><td>Stowe</td><td class="r num behind">+0.11</td><td class="r">12 m earlier</td></tr><tr><td>Village</td><td class="r num behind">+0.08</td><td class="r">same</td></tr><tr><td>Copse</td><td class="r num ahead">${minus("−0.04")}</td><td class="r">3 m later</td></tr></table></div>
+    </div></div>`;
+}
+function cornersTab() {
+  return `<div class="row" style="margin-bottom:12px">${seg([["work", "Work on"], ["good", "Went well"], ["all", "All"]], "work", "data-x")}</div>
+    <div class="g3">${WORKON.map((w, i) => `<div class="card"><div class="row">${chip(w[0], "soft k-warning")}<b>${w[1]}</b>${i === 0 ? chip("FOCUS", "outline-accent caps") : ""}<span class="num behind" style="margin-left:auto">+${[0.11, 0.08, 0.06][i]} s</span></div>
+      <div class="sub" style="margin:8px 0">Brake point spread ${[9, 6, 11][i]} m · slowest speed ${[178, 95, 120][i]} km/h</div><p style="margin:0 0 6px">${w[2]}</p><div class="ev sub">Laps ${["3, 5, 6", "5, 8", "3, 10"][i]}</div></div>`).join("")}</div>`;
+}
+function askView(scoped) {
+  return `<div class="stack" style="max-width:820px">${scoped ? "" : '<div class="row"><span class="field lg">Session: Silverstone · Practice · today <span class="chev">⌄</span></span>' + chip('<i class="dot"></i>Local LLM ready', "soft k-success lg") + "</div>"}
+    <div class="chat"><div class="msg-u">Where did I lose the most time?</div>
+      <div class="msg-a"><div class="bubble">Mostly at <b>Stowe</b>: about 0.11 s a lap. You braked about 12 m earlier than on your reference lap (lap 9), and your slowest speed was 4 km/h lower. Village was next, about 0.08 s, from a slower exit.</div>
+        <div class="facts">${chip("LLM · grounded", "soft k-success")}${chip("fact: corner_summary.T15", "code")}${chip("fact: observation.brake_early.T15", "code")}${chip("fact: corner_summary.T3", "code")}</div></div>
+      <div class="msg-u">What went well?</div>
+      <div class="msg-a"><div class="bubble">Copse: your exit speed was 6 km/h higher than on your reference lap.</div><div class="facts">${chip("Deterministic", "soft")}${chip("LLM was busy: deterministic answer", "soft k-warning")}</div></div></div>
+    <div class="row">${["Where did I lose the most time?", "What went well?", "How consistent was I?"].map((q) => chip(q, "lg")).join("")}</div>
+    <div class="prompt"><span class="ph">Ask the engineer about this session…</span>${btn(ICON.mic, "ghost icon")}${btn("Ask", "primary")}</div>
+    <p class="sub">Answers are grounded on the session's facts, or replaced by a deterministic answer.</p></div>`;
+}
+function coachingPage() {
+  return `${areaHead()}<div class="row" style="margin-bottom:16px">${seg([["james", avatar(DRIVERS.james, 22) + "James"], ["alex", avatar(DRIVERS.alex, 22) + "Alex"], ["jo", avatar(DRIVERS.jo, 22) + "Jo"]], "james", "data-x")}<span class="field">Silverstone · 2025 car <span class="chev">⌄</span></span></div>
+    <div class="stack"><h2 class="h2">Working on now</h2><div class="g3">
+      ${WORKON.map((w, i) => `<div class="card"><div class="row">${chip(w[0], "soft k-warning")}<b>${w[1]}</b><span style="margin-left:auto">${S.tier < 2 ? needs("D5") : `<span class="trend ${["", "flat", "down-bad"][i]}">${["▲ better", "= same", "▼ worse"][i]}</span>`}</span></div><p style="margin:10px 0">${w[2]}</p>${btn("See it", "secondary")}</div>`).join("")}</div>
+      <div class="g2"><div class="card"><div class="card-head"><h3 class="h3">Habits</h3></div><div class="list" style="box-shadow:none"><div class="li"><div class="main">Braking early at Stowe</div><span class="sub">4 of your last 5 laps</span></div><div class="li"><div class="main">Slow exit at Village</div><span class="sub">2 of your last 4 laps</span></div></div></div>
+      <div class="card"><div class="card-head"><h3 class="h3">The radio will focus on</h3></div><div class="row">${chip("FOCUS", "outline-accent caps")}<b>T15 Stowe</b><span class="sub">braking early · 3 of last 5 laps</span></div><div class="row" style="margin-top:10px">${chip("FOCUS", "outline-accent caps")}<b>T3 Village</b><span class="sub">slow exit · 2 of last 4 laps</span></div>
+      <h3 class="h3" style="margin-top:16px">Recently fixed ${S.tier < 2 ? needs("D5") : ""}</h3><div class="sub" style="margin-top:6px">T6 Brooklands: average loss below 0.02 s for 3 sessions.</div></div></div></div>`;
+}
+function progressPage() {
+  const pts = [["12 Sep", 92.940], ["19 Sep", 92.105], ["26 Sep", 91.390], ["3 Oct", 90.874], ["11 Oct", 90.702]];
+  const W = 640, H = 220, x0 = 50, lo = 90.2, hi = 93.2;
+  const x = (i) => x0 + i * ((W - x0 - 30) / 4), y = (t) => 14 + ((t - lo) / (hi - lo)) * (H - 50);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}">`;
+  [91, 92, 93].forEach((t) => { s += `<line class="gl" x1="${x0}" x2="${W - 10}" y1="${y(t)}" y2="${y(t)}"/><text x="${x0 - 6}" y="${y(t) + 4}" text-anchor="end">1:${t - 60}.0</text>`; });
+  /* [critic] purple only with D2: before it the line is neutral and called "fastest in the family" */
+  const recC = S.tier < 2 ? "var(--line-strong)" : "var(--rec)", recT = S.tier < 2 ? "fastest in the family 1:30.412 · Jo (car may differ)" : "family record 1:30.412 · Jo";
+  s += `<line x1="${x0}" x2="${W - 10}" y1="${y(90.412)}" y2="${y(90.412)}" stroke="${recC}" stroke-dasharray="5 4"/><text x="${W - 12}" y="${y(90.412) - 6}" text-anchor="end" style="fill:${S.tier < 2 ? "var(--muted)" : "var(--rec)"}">${recT}</text>`;
+  s += `<path d="${pts.map((p, i) => `${i ? "L" : "M"}${x(i)} ${y(p[1])}`).join(" ")}" fill="none" stroke="var(--pb)" stroke-width="2.5"/>`;
+  pts.forEach((p, i) => { s += `<circle cx="${x(i)}" cy="${y(p[1])}" r="6" fill="var(--pb)"/><text x="${x(i)}" y="${H - 10}" text-anchor="middle">${p[0]}</text>`; });
+  s += `<text x="${x0}" y="${H - 26}" style="fill:var(--muted)">↑ faster</text></svg>`;
+  return `${areaHead()}<div class="row" style="margin-bottom:16px">${seg([["james", avatar(DRIVERS.james, 22) + "James"], ["alex", avatar(DRIVERS.alex, 22) + "Alex"], ["jo", avatar(DRIVERS.jo, 22) + "Jo"]], "james", "data-x")}<span class="field">Silverstone · 2025 car <span class="chev">⌄</span></span>${chip("Real sessions only · replays and synthetic excluded", "soft")}</div>
+    <div class="stack"><div class="kpis">
+      <div class="kpi"><div class="k">Best here</div><div class="v">${tv("1:30.702", "pb")} <span class="trend">▲ 2.24 s</span></div><div class="s">since 12 Sep</div></div>
+      <div class="kpi"><div class="k">Sessions</div><div class="v num">5</div><div class="s">at Silverstone</div></div>
+      <div class="kpi"><div class="k">${S.tier < 2 ? "Laps" : "Clean laps"}</div><div class="v num">${S.tier < 2 ? "61" : "48"}</div><div class="s">${S.tier < 2 ? "clean count per track: " + needs("D5") : "of 61"}</div></div>${/* [critic] clean laps per track need D5's clean_lap_count */""}
+      <div class="kpi"><div class="k">New PBs this month</div><div class="v num">2</div><div class="s">3 Oct, 11 Oct</div></div></div>
+    <div class="g12"><div class="card" style="grid-column:span 8"><div class="card-head"><div><h3 class="h3">Getting faster?</h3><p class="card-desc" style="color:var(--foreground);font-size:16px;margin-top:6px">Your best here dropped 2.24 s over 5 sessions.</p></div></div>${s}</div>
+      <div class="card" style="grid-column:span 4"><div class="card-head"><h3 class="h3">Milestones</h3></div><div class="timeline">
+        ${[["11 Oct", "New PB 1:30.702 (−0.172 s)", "var(--pb)"], ["3 Oct", "New PB 1:30.874 (−0.516 s)", "var(--pb)"], ["26 Sep", "First session with 10 clean laps", ""], ["12 Sep", "First clean lap at Silverstone", ""]].map(([d, t, k]) => `<div class="tl" style="--k:${k || "var(--line-strong)"}"><span class="d">${d}</span><span class="m"></span><span>${t}</span></div>`).join("")}</div></div></div>
+    <div class="g12"><div class="card" style="grid-column:span 6"><div class="card-head"><h3 class="h3">Getting steadier?</h3>${S.tier < 2 ? needs("D5") : '<span class="sub">spread of clean laps</span>'}</div>
+      <div class="row" style="align-items:flex-end;gap:18px;height:150px;flex-wrap:nowrap">${[3.1, 2.4, 2.0, 1.6, 1.4].map((v, i) => `<div style="flex:1;display:grid;justify-items:center;gap:6px"><span class="num">${v}</span><i style="display:block;width:100%;max-width:46px;height:${v * 24}px;border-radius:8px;background:var(--surface-3)"></i><span class="sub">${pts[i][0]}</span></div>`).join("")}</div>
+      <p class="sub">Smaller is steadier: your clean laps are now within 1.4 s of each other.</p></div>
+      <div class="card" style="grid-column:span 6"><div class="card-head"><h3 class="h3">Family board</h3><span class="sub">Silverstone · 2025 car</span></div>
+      <table class="grid"><tr><th>Driver</th><th>Best</th><th class="r">Gap</th></tr>
+      ${/* [critic] before D2 the board is neutral with the word "Fastest" (stats.best_laps is per track, any car) */""}
+      <tr><td>${avatar(DRIVERS.jo, 24)} Jo</td><td>${S.tier < 2 ? tv("1:30.412", "neutral") + " " + chip("Fastest", "soft") : tv("1:30.412", "rec") + " " + ttag("rec")}</td><td class="r">-</td></tr>
+      <tr><td>${avatar(DRIVERS.james, 24)} James</td><td>${tv("1:30.702", S.tier < 2 ? "neutral" : "pb")}</td><td class="r num">+0.290</td></tr>
+      <tr><td>${avatar(DRIVERS.alex, 24)} Alex</td><td>${tv("1:41.322", S.tier < 2 ? "neutral" : "slower")}</td><td class="r num">+10.910</td></tr></table>${S.tier < 2 ? '<p class="sub" style="margin:8px 0 0">Best lap per track; the car may differ. Family records in purple come with D2.</p>' : ""}</div></div></div>`;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------
+   Setup
+   ------------------------------------------------------------------------------------------------------------------ */
+const RIG = [
+  { t: "Base mode", rows: [{ c: "MODE", l: "Wheel base mode", v: "Dark blue", i: true, note: "Native PlayStation mode: short-press the power button until the LED is dark blue." }] },
+  { t: "Wheel menu", rows: [
+    { c: "SETUP", l: "Tuning slot", v: "1", r: "1-5", f: "1" }, { c: "SEN", l: "Steering sensitivity", v: "AUTO", r: "AUTO or 90-2520", f: "AUTO" },
+    { c: "FF", l: "Force feedback strength", v: "80", r: "70-85", f: "100", ch: true, ev: "Sourced · 3 presets", note: "Your strength scale lowers the wheel's force for comfort; it starts from the presets' 85." },
+    { c: "FFS", l: "Force feedback scale", v: "Check on your base", i: true, note: "Not offered with the Boost Kit on current firmware. If your Advanced menu still shows FFS, set PEA." },
+    { c: "NDP", l: "Natural damper", v: "10", r: "5-20", f: "OFF", ch: true }, { c: "NFR", l: "Natural friction", v: "OFF", r: "OFF-10", f: "OFF" },
+    { c: "NIN", l: "Natural inertia", v: "OFF", r: "OFF-5", f: "OFF" }, { c: "INT", l: "FFB interpolation", v: "3", r: "1-6", f: "OFF", ch: true },
+    { c: "FEI", l: "Force effect intensity", v: "100", r: "90-100", f: "100" }, { c: "FOR", l: "Force effect", v: "100", r: "100", f: "100" },
+    { c: "SPR", l: "Spring effect", v: "OFF", r: "OFF", f: "100", ch: true, adv: true }, { c: "DPR", l: "Damper effect", v: "OFF", r: "OFF", f: "100", ch: true, adv: true },
+    { c: "FUL", l: "FullForce", v: "OFF", r: "OFF-100", f: "OFF", ev: "Unverified" }] },
+  { t: "In game", rows: [{ c: "Wheel", l: "Vibration & force feedback", v: "On" }, { c: "Strength", l: "Force feedback strength", v: "75" }] },
+  { t: "Pedals", rows: [{ c: "CAL", l: "After every power-on", v: "Press throttle and brake fully once", i: true }] },
+  { t: "Check on track", rows: [{ c: "CHECK", l: "Drive 3 clean laps, then open Rig check", v: "3 laps", i: true }] },
+];
+function setupPage() {
+  const p = S.page.setup;
+  if (p === "connect") return connectPage();
+  if (p === "car") return carSetupPage();
+  return rigPage();
+}
+function rigPage() {
+  const sec = RIG[S.rigSec], row = sec.rows[Math.min(S.rigIdx, sec.rows.length - 1)];
+  const views = seg([["walk", "Walkthrough"], ["all", "All settings"], ["check", "Rig check"], ["upgrades", "Upgrades"]], S.rigView, "data-rigview");
+  let body;
+  if (S.rigView === "walk") {
+    const hstep = RIG.map((s, i) => `${i ? `<span class="sep ${S.rigDone[i - 1] && i <= S.rigSec ? "done" : ""}"></span>` : ""}<span class="s ${i === S.rigSec ? "cur" : S.rigDone[i] ? "done" : ""}" data-rigsec="${i}"><span class="ind">${S.rigDone[i] && i !== S.rigSec ? ICON.check : i + 1}</span>${s.t}</span>`).join("");
+    const isNum = !row.i && /^[0-9]/.test(row.v);
+    body = `<div class="card" style="padding:14px 18px;margin-bottom:14px"><div class="hstep">${hstep}</div></div>
+      <div class="rig-step"><div class="card stepcard"><div class="row" style="justify-content:space-between"><span class="lbl">${sec.t} · ${S.rigIdx + 1} of ${sec.rows.length} <span class="faint">· sample values</span></span>${btn("Why this value?", "ghost")}</div>
+        <div class="row"><span class="kbd" style="font-size:18px;height:36px;min-width:52px">${row.c}</span><span style="font:650 26px/1.2 var(--sans)">${row.l}</span></div>
+        ${row.i ? `<div style="font:600 30px/1.3 var(--sans);text-align:center;margin:18px 0">${row.v}</div>` : `<div class="big">${row.v}${isNum && row.c === "FF" ? "<small>%</small>" : ""}</div>`}
+        <div class="row" style="justify-content:center">${row.r ? chip("Range " + row.r, "soft lg") : ""}${row.f ? chip("Factory " + row.f, "soft lg") : ""}${row.ch ? chip("Changed", "soft k-accent lg") : ""}${row.adv ? chip("Advanced menu", "soft k-warning lg") : ""}${chip(row.ev || "Sourced", `soft lg ${row.ev === "Unverified" ? "k-warning" : "k-ref"}`)}</div>
+        ${row.note ? `<p style="margin:0;text-align:center;color:var(--muted);font-size:16px">${row.note}</p>` : ""}
+        <div class="nav">${btn("‹ Previous", "secondary glove", 'data-rig="prev"')}${btn("Done, next ›", "primary glove", 'data-rig="next"')}</div></div>
+      <div class="list rowlist" style="align-self:start">${sec.rows.map((r, i) => `<div class="li ${i === S.rigIdx ? "cur" : ""}" data-rigjump="${i}"><span class="code">${r.c}</span><span class="sub" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.l}</span><span class="val">${r.i ? "check" : r.v}</span>${i < S.rigIdx ? `<span class="tick">${ICON.check}</span>` : '<span style="width:18px"></span>'}</div>`).join("")}</div></div>`;
+  } else if (S.rigView === "check") {
+    const rows = [["Brake at rest", "0.0%", "≤ 0.5%", "pass"], ["Throttle at rest", "0.0%", "≤ 0.5%", "pass"], ["Full throttle reached", "100%", "≥ 99%", "pass"], ["Full brake in heavy stops", "88%", "≥ 95%", "warn"], ["Braking time at 100%", "12%", "≤ 30%", "pass"], ["Trail-brake release", "-", "driver relative", "unknown"]];
+    body = `<div class="list">${rows.map(([l, v, t, s]) => `<div class="li"><div class="main"><div class="ttl">${l}</div><div class="sub">target ${t}</div></div><span class="num" style="font-size:22px">${v}</span>${chip(s === "unknown" ? "-" : s, `soft lg ${s === "pass" ? "k-success" : s === "warn" ? "k-warning" : ""}`)}</div>`).join("")}</div><p class="sub">Session: Silverstone · Practice · today · 9 clean laps. Status colours, never timing colours.</p>`;
+  } else if (S.rigView === "upgrades") {
+    body = `<div class="g2"><div class="card"><div class="card-head"><h3 class="h3">Upgrade history</h3>${btn("Record an upgrade", "secondary")}</div><div class="timeline">${[["2026-09-21", "Firmware 1.6.1.3 (base 1.9.2.3)"], ["2026-08-30", "Rig profile created: GT DD Pro 5 Nm, CSL pedals"]].map(([d, t]) => `<div class="tl"><span class="d">${d.slice(5)}</span><span class="m"></span><span>${t}</span></div>`).join("")}</div></div>
+      <div class="card"><div class="card-head"><h3 class="h3">What changes with the Boost Kit 180</h3></div><table class="grid"><tr><th>Setting</th><th class="r">Now</th><th class="r">With the kit</th></tr><tr><td>FF</td><td class="r num">80</td><td class="r num">55</td></tr><tr><td>NDP</td><td class="r num">10</td><td class="r num">15</td></tr><tr><td>Peak torque</td><td class="r num">4.0 Nm</td><td class="r num">4.4 Nm</td></tr></table><p class="sub">Sample values.</p></div></div>`;
+  } else {
+    body = `<div class="g2"><div class="cells">${[["Platform", "PlayStation 5"], ["Wheel base", "GT DD Pro"], ["Torque", "5 Nm (standard PSU)"], ["Pedals", "CSL Pedals"], ["Rim", "Bundled rim"]].map(([t, v]) => `<div class="cell"><span class="t">${t}</span><span class="v">${v} <span class="chev faint">⌄</span></span></div>`).join("")}</div>
+      <div class="cells">${[["Official", "Fanatec's or the game's own values", true], ["Balanced", "A mainstream community preset"], ["Competitive", "Raw signal, little damping"], ["Realism", "Strongest unclipped force"], ["Comfort", "Calmer and lighter · mostly derived"]].map(([t, d, on]) => `<div class="cell"><div><div class="t">${t}</div><div class="d">${d}</div></div><span class="avatar" style="width:22px;height:22px;background:${on ? "var(--accent)" : "transparent"};box-shadow:inset 0 0 0 2px ${on ? "var(--accent)" : "var(--line-strong)"}"></span></div>`).join("")}</div></div>`;
+  }
+  return `<div class="area-head">${S.device === "phone" ? "" : "<h1>Setup</h1>"}${seg(PAGES.setup, "rig", "data-page", "lg")}<div class="act"><span class="sub">For ${avatar(drv(), 22)} ${drv().name} · F1 25 · PS5 · GT DD Pro 5 Nm</span></div></div>
+    <div class="row" style="margin-bottom:14px">${views}</div>${body}`;
+}
+function connectPage() {
+  return `${areaHead()}<div class="g2"><div class="card"><div class="card-head"><h3 class="h3">F1 25 on PlayStation 5</h3>${chip('<i class="dot"></i>Receiving', "soft k-success")}</div>
+      <div class="stepper">${[["Turn on UDP telemetry", "Settings › Telemetry settings › UDP telemetry: On", 1], ["IP address", "<span class='mono'>192.0.2.20</span> " + btn("Copy", "ghost"), 1], ["Port and format", "<span class='mono'>20777</span> · format 2025 · rate 60 Hz", 1], ["Drive out of the garage", "Packets arrive as soon as you are on track", 0]].map(([t, d, done], i) => `<div class="step ${done ? "done" : "cur"}"><span class="ind">${done ? ICON.check : i + 1}</span><div><div class="st">${t}</div><div class="sd">${d}</div></div></div>`).join("")}</div></div>
+    <div class="stack"><div class="card"><div class="card-head"><h3 class="h3">Live senders</h3></div><div class="list" style="box-shadow:none"><div class="li"><div class="main"><div class="ttl">192.0.2.30</div><div class="sub">F1 25 · format 2025</div></div><span class="num">60/s</span>${chip("Live", "soft k-success")}</div></div></div>
+      <div class="card"><div class="card-head"><h3 class="h3">Open Pitwall on another device</h3></div><div class="sub" style="margin-bottom:8px">HTTPS over Tailscale (the radio's microphone needs it)</div>
+      <div class="row" style="background:var(--surface-2);border-radius:14px;padding:10px 12px;justify-content:space-between"><span class="mono" style="font-size:13px">https://studio.tail-sample.ts.net:8443/</span>${btn("Copy", "ghost")}</div></div></div></div>`;
+}
+function carSetupPage() {
+  const groups = [
+    ["Aerodynamics", [["Front Wing Aero", 22, "", 0, 50, [18, 26]], ["Rear Wing Aero", 25, "", 0, 50, [20, 30]]]],
+    ["Transmission", [["Differential On Throttle", 55, "%", 10, 100, [50, 65]], ["Differential Off Throttle", 50, "%", 10, 100, [40, 55]]]],
+    ["Suspension Geometry", [["Front Camber", "−3.50", "°", -3.5, -2.5, [-3.5, -3.3]], ["Rear Camber", "−2.00", "°", -2.0, -1.0, [-2.0, -1.8]], ["Front Toe-Out", "0.05", "°", 0, 0.5, [0.05, 0.1]], ["Rear Toe-In", "0.20", "°", 0, 0.5, [0.1, 0.25]]]],
+    ["Brakes", [["Brake Pressure", 100, "%", 80, 100, [95, 100]], ["Front Brake Bias", 55, "%", 50, 70, [54, 57]]]],
+  ];
+  const pos = (v, lo, hi) => ((parseFloat(String(v).replace("−", "-")) - lo) / (hi - lo)) * 100;
+  return `${areaHead()}<div class="sentence" style="margin-bottom:14px">Setup for the <span class="inline-sel">2025 car ⌄</span> at <span class="inline-sel">Silverstone ⌄</span>, <span class="inline-sel">Race ⌄</span>, <span class="inline-sel">Dry ⌄</span>, <span class="inline-sel">Stable ⌄</span> <span class="sub">(chosen for a beginner)</span></div>
+    <div class="g12" style="margin-bottom:16px"><div class="card" style="grid-column:span 8"><div class="row">${chip("3 sources", "soft k-ref lg")}${chip("Confidence: medium", "soft lg")}${chip("Patch 1.25", "soft lg")}<span class="sub">Sample values, not a real recommendation.</span></div>
+      <p style="margin:10px 0 0">Stable: softer rear, more front-wing balance and a little more brake bias, so the rear stays calm on corner entry.</p></div>
+      <div class="alert" style="grid-column:span 4"><span class="ai">${ICON.warn}</span><div><b>Sources disagree on rear wing</b><span class="sub">20 to 30 across the three setups; the middle is shown.</span></div></div></div>
+    <div class="g2">${groups.map(([g, rows]) => `<div class="card"><div class="card-head"><h3 class="h3">${g}</h3>${btn("Copy section", "ghost")}</div>
+      ${rows.map(([l, v, u, lo, hi, sp]) => `<div class="setup-row"><span>${l}</span><span class="val">${minus(v)}<small>${u}</small></span>
+        <span class="range"><span class="tr"></span><span class="sp" style="left:${pos(sp[0], lo, hi)}%;width:${pos(sp[1], lo, hi) - pos(sp[0], lo, hi)}%"></span><span class="mk" style="left:${pos(v, lo, hi)}%"></span><span class="mn">${lo}</span><span class="mx">${hi}</span></span>
+        ${chip(l.includes("Bias") ? "Derived" : "3 sources", "soft")}</div>`).join("")}</div>`).join("")}</div>
+    <div class="g12" style="margin-top:16px"><div class="card" style="grid-column:span 7"><div class="card-head"><h3 class="h3">Your setup vs recommended</h3><span class="sub">from Silverstone · Practice · today</span></div>
+      <table class="grid"><tr><th>Parameter</th><th class="r">Yours</th><th class="r">Recommended</th><th class="r">Difference</th></tr>
+      <tr><td>Rear Wing Aero</td><td class="r num">18</td><td class="r num">25</td><td class="r num">+7</td></tr><tr><td>Differential On Throttle</td><td class="r num">70%</td><td class="r num">55%</td><td class="r num">${minus("−15")}</td></tr><tr><td>Front Brake Bias</td><td class="r num">57%</td><td class="r num">55%</td><td class="r num">${minus("−2")}</td></tr></table></div>
+      <div class="card" style="grid-column:span 5"><div class="card-head"><h3 class="h3">Experiment</h3>${chip("Running", "soft k-accent")}</div>
+      <div class="hstep" style="margin-bottom:12px"><span class="s done"><span class="ind">${ICON.check}</span>Proposed</span><span class="sep done"></span><span class="s cur"><span class="ind">2</span>Running</span><span class="sep"></span><span class="s"><span class="ind">3</span>Concluded</span></div>
+      <p style="margin:0">Rear wing 18 → 25. Hypothesis: calmer rear at Stowe and Club.</p><p class="sub">Drive one session with the change, then conclude.</p></div></div>`;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------
+   Settings
+   ------------------------------------------------------------------------------------------------------------------ */
+function settingsPage() {
+  const p = S.page.settings;
+  if (p === "display") return displayPage();
+  if (p === "drivers") return `${areaHead(btn("Add driver", "primary"))}<div class="g3">${Object.entries(DRIVERS).map(([id, d]) => `<div class="card"><div class="row">${avatar(d, 48)}<div><div class="h3" style="font-size:18px">${d.name}</div><div class="sub">${d.skillLabel} · coaching normal</div></div>${S.driver === id ? chip("In the seat", "soft k-success") : ""}</div>
+      <div class="kpis" style="grid-template-columns:repeat(3,1fr);margin:14px 0"><div class="kpi"><div class="k">Sessions</div><div class="v num" style="font-size:24px">${{ james: 14, alex: 6, jo: 9 }[id]}</div></div><div class="kpi"><div class="k">Clean laps</div><div class="v num" style="font-size:24px">${{ james: 132, alex: 41, jo: 97 }[id]}</div></div><div class="kpi"><div class="k">Tracks</div><div class="v num" style="font-size:24px">${{ james: 4, alex: 1, jo: 2 }[id]}</div></div></div>
+      <div class="row">${S.driver === id ? btn("Edit", "secondary") : btn("Put in the seat", "primary", `data-driver="${id}"`) + btn("Edit", "secondary")}</div></div>`).join("")}</div>`;
+  if (p === "radio") return `${areaHead()}<div class="g2"><div class="cells">${[["Voice", sw(true, "")], ["Engineer voice", '<span class="v">This iPad (Premium voice) <span class="faint">⌄</span></span>'], ["Device voice", '<span class="v">Serena (Premium) <span class="faint">⌄</span></span>'], ["Speaking speed", '<span class="v num">1.05×</span>'], ["Mac voice (fallback)", '<span class="v">Daniel <span class="faint">⌄</span></span>']].map(([t, v]) => `<div class="cell"><span class="t">${t}</span>${v}</div>`).join("")}</div>
+      <div class="cells"><div class="cell"><span class="t">Braking calls</span>${seg([["off", "Off"], ["focus", "Focus"], ["markers", "Markers"], ["all", "All"]], "focus", "data-x")}</div><div class="cell"><span class="t">Coaching</span>${seg([["quiet", "Quiet"], ["normal", "Normal"], ["detailed", "Detailed"]], "normal", "data-x")}</div><div class="cell"><div><div class="t">Diagnostics</div><div class="d">TTS: device · last spoken 8 s ago · mic 16 kHz</div></div><span class="faint">⌄</span></div></div></div>`;
+  if (p === "ai") return `${areaHead()}<div class="g2"><div class="stack"><div class="cells"><div class="cell"><span class="t">Engine</span>${seg([["off", "Off"], ["local", "Local"], ["cloud", "Cloud"]], "local", "data-x")}</div><div class="cell"><span class="t">Model</span><span class="v">Qwen (llama.cpp, 127.0.0.1:8081) <span class="faint">⌄</span></span></div><div class="cell"><div><div class="t">What gets sent</div><div class="d">Only the validated facts of the session you ask about. Nothing leaves this Mac with Local.</div></div></div></div>
+      <div class="row">${btn("Test a request", "secondary lg")}${chip('<i class="dot"></i>Ready · 15 tok/s', "soft k-success lg")}</div></div>
+      <div class="card"><div class="card-head"><h3 class="h3">Usage today</h3></div><div class="kpis" style="grid-template-columns:1fr 1fr"><div class="kpi"><div class="k">Answers</div><div class="v num">12</div></div><div class="kpi"><div class="k">Deterministic fallbacks</div><div class="v num">3</div></div></div>
+      <div style="margin-top:12px;background:var(--surface-2);border-radius:14px;padding:12px;font:12px/1.5 var(--mono);color:var(--muted)">POST /v1/chat/completions<br>facts: 14 · tokens in 1 820 · out 96</div></div></div>`;
+  return `${areaHead()}<div class="stack"><div class="kpis"><div class="kpi"><div class="k">Server</div><div class="v" style="font-size:22px">${chip('<i class="dot"></i>Healthy', "soft k-success lg")}</div></div><div class="kpi"><div class="k">Local LLM</div><div class="v" style="font-size:22px">${chip('<i class="dot"></i>Ready', "soft k-success lg")}</div></div><div class="kpi"><div class="k">Captures</div><div class="v num">23</div></div><div class="kpi"><div class="k">Worker errors</div><div class="v num">0</div></div></div>
+    <div class="g2"><div class="card"><div class="card-head"><h3 class="h3">Captures</h3>${btn("Synthetic demo", "secondary")}</div><div class="list" style="box-shadow:none">${["20261010-202758 · F1 25 race", "20261011-1940 · Silverstone practice"].map((c) => `<div class="li"><div class="main mono" style="font-size:13px">${c}</div>${btn("Replay", "outline")}</div>`).join("")}<div class="li"><div class="main">coaching-demo ${syn()}</div>${btn("Replay", "outline")}</div></div></div>
+    <div class="card"><div class="card-head"><h3 class="h3">Capability matrix</h3></div><table class="grid"><tr><th>Integration</th><th>Status</th><th>Evidence</th></tr><tr><td>F1 25 telemetry</td><td>${chip("Works", "soft k-success")}</td><td>live</td></tr><tr><td>Assetto Corsa</td><td>${chip("Partial", "soft k-warning")}</td><td>recorded</td></tr><tr><td>Radio (iPad)</td><td>${chip("Works", "soft k-success")}</td><td>live</td></tr></table></div></div></div>`;
+}
+function displayPage() {
+  const preview = `<div class="card secondary force-preview"><div class="row" style="justify-content:space-between"><span class="lbl">Preview</span><span class="sub">a sector and the delta</span></div>
+    <div class="row" style="margin-top:10px;gap:14px"><div class="tcell st-rec" style="width:160px;height:96px"><div class="top"><b>S2</b>${ttag("rec")}</div><div class="t">36.904</div></div><div class="tcell st-sb" style="width:160px;height:96px"><div class="top"><b>S1</b>${ttag("sb")}</div><div class="t">29.318</div></div><span class="num ahead" style="font-size:72px">${minus("−0.21")}</span></div></div>`;
+  const row = (t, d, ctl) => `<div class="cell"><div><div class="t">${t}</div>${d ? `<div class="d">${d}</div>` : ""}</div>${ctl}</div>`;
+  return `${areaHead()}<div class="g2"><div class="cells">
+      ${row("Theme", "", seg([["dark", "Dark"], ["light", "Light"], ["system", "Match device"]], S.theme, "data-set-theme"))}
+      ${row("Drive always dark", "Drive stays dark when the app is light", sw(S.driveAlwaysDark, 'data-toggle="driveAlwaysDark"'))}
+      ${row("Drive text size", "Large suits the iPad mini", seg([["standard", "Standard"], ["large", "Large"]], S.driveSize, "data-set-size"))}
+      ${row("Night dim", "Dark room, low brightness", sw(S.night, 'data-toggle="night"'))}
+      ${row("Colour vision", "Green becomes blue, red becomes orange", seg([["std", "Standard"], ["rg", "Red-green safe"]], S.cvd ? "rg" : "std", "data-set-cvd"))}
+      ${row("Dim navigation on track", "", sw(S.dimNav, 'data-toggle="dimNav"'))}
+      ${row("Drive lock", "Hold 0.5 s to leave Drive while driving", seg([["off", "Off"], ["beginners", "Beginners"], ["everyone", "Everyone"]], S.driveLock, "data-set-lock"))}
+    </div><div class="stack">${preview}<p class="sub">Stored on this device. The preview uses the same tokens as Drive.</p></div></div>`;
+}
+
+/* ------------------------------------------------------------------------------------------------------------------
+   Render, events, fit
+   ------------------------------------------------------------------------------------------------------------------ */
+function content() {
+  if (S.area === "drive") {
+    const p = S.page.drive;
+    const inner = p === "coach" ? driveCoach() : p === "car" ? driveCar() : p === "track" ? driveTrack() : driveRadio();
+    return `<div class="pw-drive">${inner}</div>`;
+  }
+  const html = S.area === "review" ? reviewPage() : S.area === "setup" ? setupPage() : settingsPage();
+  return `<div class="page">${html}</div>${miniBar()}`;
+}
+/* Drive always dark: the whole shell is dark while a Drive page is open (prefs.effectiveTheme in the app). */
+function effTheme() { return S.area === "drive" && S.driveAlwaysDark ? "dark" : S.theme; }
+function renderControls() {
+  const g = (label, items, key) => `<div class="grp"><span>${label}</span>${items.map(([v, l]) => `<button data-ctl="${key}" data-v="${v}" aria-pressed="${String(S[key]) === String(v) && (key !== "drive" || (S.area === "drive" && S.page.drive === "coach"))}">${l}</button>`).join("")}</div>`;
+  $("#controls").innerHTML =
+    g("Drive state", [["ready", "Ready (garage)"], ["track", "On track"], ["pit", "Pit lane"], ["yellow", "Yellow flag"], ["ended", "Session complete"], ["stale", "Stale"], ["nodata", "No telemetry"]], "drive") +
+    g("Theme", [["dark", "Dark"], ["light", "Light"]], "theme") + g("Device", [["ipad", "iPad landscape"], ["phone", "Phone"]], "device") +
+    g("Driver", [["james", "James (advanced)"], ["alex", "Alex (beginner)"]], "driver") + g("Backend", [["2", "With D1-D6"], ["1", "Today's data"]], "tier");
+}
+function render() {
+  renderControls();
+  const phone = S.device === "phone";
+  const [top, bottom] = phoneBars();
+  const toast = S.toast ? `<div class="toast" role="status">${S.toast}</div>` : "";
+  $("#device").className = `device ${phone ? "frame-phone" : "frame-ipad"}`;
+  $("#device").innerHTML = `<div class="screen ${phone ? "phone" : ""}" data-theme="${effTheme()}" data-night="${S.night ? "on" : "off"}" data-cvd="${S.cvd ? "rg" : "std"}">
+    <div class="ios ${phone ? "phone-ios" : ""}"><span>9:41</span><span>${phone ? "" : "Mon 11 Oct · "}100%</span></div>
+    <div class="app">${rail()}${top}<main class="main">${content()}</main>${bottom}</div>${toast}</div>`;
+  if (S.driveSize === "large") $("#device").querySelectorAll(".clabel,.dv,.cdist,.cue .text,.cue .in,.tcell .t,.laps .num").forEach((el) => { el.style.fontSize = `calc(${getComputedStyle(el).fontSize} * 1.12)`; });
+  caption();
+  fit();
+}
+function caption() {
+  const t = {
+    ready: "<b>Ready (garage).</b> C's \"who is in the seat\" card spans the hero, coach and delta slots: switch driver (64 px), target times, focus corners with the reason, Go live for the radio.",
+    track: "<b>On track.</b> C's hierarchy: the hero (next corner, official name, distance, approach bar, BRAKE cue) and the coaching point under it; A's large delta (144 px, 2 decimals, AHEAD word, bar) as the strong second element; sectors in timing colours, the lap ribbon, the radio strip.",
+    pit: "<b>Pit lane.</b> B's status slot fills cyan (the track says); the hero shows speed against the limit; the coach card shows the full point for the next run (stationary).",
+    yellow: "<b>Yellow flag.</b> The fixed status slot becomes a filled band (no blinking, the Segment stays); the zone is hatched on the ribbon. The radio strip shows the last braking call with its outcome.",
+    ended: "<b>Session complete.</b> KPI tiles (Pro KPIGroup), one Work on and one Went well, and a 64 px Review this session button.",
+    stale: "<b>Stale.</b> The status slot is outlined (data in doubt, not a track fact); the delta shows - because a frozen delta must never look current; other values dim.",
+    nodata: "<b>No telemetry.</b> A Pro Stepper with the three things to check, Open Setup › Connect, and a synthetic demo that says so.",
+  }[S.drive];
+  const where = S.area === "drive" ? (S.page.drive === "coach" ? t : `<b>Drive › ${S.page.drive}.</b> ${{ car: "B's dense pit wall for a parent or a second screen: never the default.", track: "For learning a track: map and the corner list with official names and last-lap notes.", radio: "The radio stage: hold to talk, cue mode and coaching amount, the log." }[S.page.drive]}`)
+    : `<b>${S.area[0].toUpperCase() + S.area.slice(1)}.</b> HeroUI app density (body 16 px, rounded 24 px cards, pill controls). ${S.area === "review" ? "Plain words for beginners; density follows the viewed driver's skill (switch the driver above)." : S.area === "setup" ? "The rig walkthrough is a glance screen: one setting at a time at 96 px, in the wheel menu's order." : "Display holds the per-device choices (theme, Drive always dark, night, colour vision, Drive lock)."}`;
+  $("#caption").innerHTML = where + (locked() ? " <b>Drive lock is on</b> (beginner on track): press and hold a rail item for 0.5 s to leave." : "");
+}
+function fit() {
+  const dev = $("#device"), box = $("#fit");
+  const w = S.device === "phone" ? 414 : 1216, h = S.device === "phone" ? 868 : 856;
+  const avail = box.clientWidth;
+  const sc = Math.min(1, avail / w);
+  dev.style.transform = `scale(${sc})`;
+  dev.style.left = S.device === "phone" ? `${Math.max(0, (avail - w * sc) / 2)}px` : "0";
+  box.style.height = `${h * sc + 4}px`;
+}
+function $(s) { return document.querySelector(s); }
+let toastTimer = null, hintTimer = null, holdTimer = null;
+function toast(msg) { S.toast = msg; render(); clearTimeout(toastTimer); toastTimer = setTimeout(() => { S.toast = null; render(); }, 2600); }
+function go(area, page) {
+  S.area = area; if (page) S.page[area] = page;
+  if (area !== "review") S.session = null;
+  render();
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-ctl],[data-go],[data-page],[data-act],[data-tab],[data-rig],[data-rigjump],[data-rigsec],[data-rigview],[data-toggle],[data-set-theme],[data-set-size],[data-set-cvd],[data-set-lock],[data-driver],[data-sf]");
+  if (!t) return;
+  const d = t.dataset;
+  if (d.ctl) {
+    const k = d.ctl; let v = d.v;
+    if (k === "tier") v = +v;
+    if (k === "drive") { S.area = "drive"; S.page.drive = "coach"; }
+    if (k === "theme" && v === "light" && S.driveAlwaysDark && S.area === "drive") { S[k] = v; toast("Drive stays dark (Settings › Display › Drive always dark). Review, Setup and Settings are now light."); return; }
+    S[k] = v; render(); return;
+  }
+  if (d.go !== undefined) {
+    if (locked() && d.go !== "drive" && !t.classList.contains("holding-done")) { S.hint = true; render(); clearTimeout(hintTimer); hintTimer = setTimeout(() => { S.hint = false; render(); }, 2000); return; }
+    go(d.go, d.to); return;
+  }
+  if (d.page) {
+    if (S.area === "drive" && locked() && d.page !== "coach") { S.hint = true; render(); clearTimeout(hintTimer); hintTimer = setTimeout(() => { S.hint = false; render(); }, 2000); return; }
+    S.page[S.area] = d.page; if (S.area === "review") S.session = null; render(); return;
+  }
+  /* [critic] keep the open session (was always s1); filter chips switch the list */
+  if (d.sf) { S.sessFilter = d.sf; render(); return; }
+  if (d.tab) { S.session = S.session || (SESS.find((x) => x.who === S.driver) || SESS[0]).id; S.area = "review"; S.page.review = "sessions"; S.tab = d.tab; render(); return; }
+  if (d.driver) { S.driver = d.driver; toast(`${DRIVERS[d.driver].name} is in the seat.`); return; }
+  if (d.rigview) { S.rigView = d.rigview; render(); return; }
+  if (d.rigsec !== undefined) { S.rigSec = +d.rigsec; S.rigIdx = 0; render(); return; }
+  if (d.rigjump !== undefined) { S.rigIdx = +d.rigjump; render(); return; }
+  if (d.rig) {
+    const n = RIG[S.rigSec].rows.length;
+    if (d.rig === "next") { if (S.rigIdx < n - 1) S.rigIdx++; else { S.rigDone[S.rigSec] = true; if (S.rigSec < RIG.length - 1) { S.rigSec++; S.rigIdx = 0; } } }
+    else { if (S.rigIdx > 0) S.rigIdx--; else if (S.rigSec > 0) { S.rigSec--; S.rigIdx = RIG[S.rigSec].rows.length - 1; } }
+    render(); return;
+  }
+  if (d.toggle) { S[d.toggle] = !S[d.toggle]; render(); return; }
+  if (d.setTheme) { S.theme = d.setTheme === "system" ? "dark" : d.setTheme; render(); return; }
+  if (d.setSize) { S.driveSize = d.setSize; render(); return; }
+  if (d.setCvd) { S.cvd = d.setCvd === "rg"; render(); return; }
+  if (d.setLock) { S.driveLock = d.setLock; render(); return; }
+  if (d.act) {
+    const a = d.act;
+    if (a === "night") { S.night = !S.night; render(); }
+    else if (a === "driver") { const ids = Object.keys(DRIVERS); S.driver = ids[(ids.indexOf(S.driver) + 1) % ids.length]; toast(`Who's in the seat? ${drv().name} (sample: the real menu is the existing DriverSwitcher).`); }
+    else if (a === "open-session") { S.session = d.id || "s1"; S.tab = "summary"; S.moreDetail = false; render(); }
+    else if (a === "close-session") { S.session = null; render(); }
+    else if (a === "review-session") { S.area = "review"; S.page.review = "sessions"; S.session = (SESS.find((x) => x.who === S.driver) || SESS[0]).id; S.tab = "summary"; S.moreDetail = false; render(); }
+    else if (a === "more") { S.moreDetail = true; render(); }
+    else if (a === "pedals") { S.showPedals = true; render(); }
+    else if (a === "why") { const el = document.getElementById("why" + d.i); if (el) el.hidden = !el.hidden; }
+  }
+});
+/* Drive lock: press and hold a rail or tab item for 0.5 s (Pro PressableFeedback.HoldConfirm in the app). */
+document.addEventListener("pointerdown", (e) => {
+  const t = e.target.closest(".rail [data-go], .tabbar [data-go], .status [data-page]");
+  if (!t || !locked()) return;
+  const target = t.dataset.go || null, page = t.dataset.page || null;
+  if ((target && target === "drive") || (page && page === "coach")) return;
+  t.classList.add("holding");
+  holdTimer = setTimeout(() => { t.classList.remove("holding"); S.hint = false; if (target) go(target); else { S.page.drive = page; render(); } }, 500);
+  const cancel = () => { clearTimeout(holdTimer); t.classList.remove("holding"); window.removeEventListener("pointerup", cancel); };
+  window.addEventListener("pointerup", cancel);
+});
+window.addEventListener("resize", fit);
+render();
+})();
+</script>
+</body>
+</html>

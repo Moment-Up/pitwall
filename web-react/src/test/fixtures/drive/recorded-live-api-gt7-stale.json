@@ -1,0 +1,1034 @@
+{
+ "version": 29371,
+ "connection": {
+  "status": "stale",
+  "last_packet_age_s": 1256.55,
+  "packets": 29399,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "udp:33740",
+  "synthetic": false,
+  "decode": {
+   "adapter": "Gran Turismo 7 (Simulator Interface, variants A/B/~/C)",
+   "packets": 29200,
+   "decoded": 29172,
+   "ignored": 28,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "variant_C": 29200,
+    "sessions": 2,
+    "lap_start": 2,
+    "loading": 28
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "380c4c1873f2",
+ "session": {
+  "game": "gt7",
+  "platform": "unknown",
+  "track_id": "gt7:sf:0:100:90:920:340",
+  "track_name": "Unidentified GT7 circuit (0.92 km)",
+  "track_length_m": 913.3028192043304,
+  "session_type": "unknown",
+  "car_name": null,
+  "weather": {
+   "condition": null,
+   "track_temp_c": null,
+   "air_temp_c": null,
+   "rain_percentage": null
+  },
+  "total_laps": 10,
+  "safety_car_status": null
+ },
+ "frame": {
+  "t_recv_ns": 1872119040152500,
+  "session_time_s": 485.671,
+  "speed_kph": 165.2,
+  "throttle": 0.831,
+  "brake": 0.0,
+  "steering": -0.02,
+  "clutch": 0.0,
+  "gear": 3,
+  "rpm": 8690.0,
+  "max_rpm": 10000.0,
+  "drs_open": null,
+  "pos": [
+   81.86,
+   1.65,
+   91.83
+  ],
+  "g_lat": null,
+  "g_lon": null,
+  "lap_number": 5,
+  "lap_distance_m": 16843.7,
+  "current_lap_time_ms": 1871,
+  "last_lap_time_ms": 23482,
+  "sector": null,
+  "lap_invalid": null,
+  "pit_status": null,
+  "race_position": 8,
+  "tyre_surface_temp_c": [
+   65.0,
+   71.0,
+   66.0,
+   72.0
+  ],
+  "tyre_inner_temp_c": null,
+  "tyre_pressure_psi": null,
+  "brake_temp_c": null,
+  "tyre_wear_pct": null,
+  "tyre_compound": null,
+  "tyre_age_laps": null,
+  "fuel_kg": null,
+  "fuel_remaining_laps_game": null,
+  "ers_store_j": null,
+  "brake_bias_front_pct": null,
+  "quality": 0
+ },
+ "delta_s": null,
+ "reference": {
+  "lap_id": 75,
+  "lap_number": 3,
+  "lap_time_ms": 23055,
+  "session_id": "380c4c1873f2"
+ },
+ "laps": [
+  {
+   "lap_id": 77,
+   "lap_number": 5,
+   "lap_time_ms": null,
+   "sector_times_ms": [],
+   "valid": null,
+   "clean": false,
+   "flags": [
+    "incomplete"
+   ],
+   "tyre_compound": null,
+   "fuel_used_kg": null
+  },
+  {
+   "lap_id": 76,
+   "lap_number": 4,
+   "lap_time_ms": 23482,
+   "sector_times_ms": [],
+   "valid": null,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": null,
+   "fuel_used_kg": null
+  },
+  {
+   "lap_id": 75,
+   "lap_number": 3,
+   "lap_time_ms": 23055,
+   "sector_times_ms": [],
+   "valid": null,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": null,
+   "fuel_used_kg": null
+  },
+  {
+   "lap_id": 74,
+   "lap_number": 2,
+   "lap_time_ms": 23222,
+   "sector_times_ms": [],
+   "valid": null,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": null,
+   "fuel_used_kg": null
+  }
+ ],
+ "observations": [],
+ "events": [],
+ "marshal_flags": [],
+ "track_model": {
+  "game": "gt7",
+  "track_id": "gt7:sf:0:100:90:920:340",
+  "track_name": "Unidentified GT7 circuit (0.92 km)",
+  "length_m": 913.3028192043304,
+  "version": 2,
+  "n_laps": 3,
+  "corners": [
+   {
+    "name": "T1",
+    "apex_m": 232.0,
+    "entry_m": 106.0,
+    "exit_m": 236.0,
+    "seg_start_m": 0.0,
+    "seg_end_m": 313.5,
+    "direction": "left",
+    "ref_min_speed_kph": 128.2054667459355,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   },
+   {
+    "name": "T2",
+    "apex_m": 395.0,
+    "entry_m": 106.0,
+    "exit_m": 451.0,
+    "seg_start_m": 313.5,
+    "seg_end_m": 578.0,
+    "direction": "left",
+    "ref_min_speed_kph": 150.64146969516932,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   },
+   {
+    "name": "T3",
+    "apex_m": 761.0,
+    "entry_m": 537.0,
+    "exit_m": 861.0,
+    "seg_start_m": 578.0,
+    "seg_end_m": 913.3028192043304,
+    "direction": "left",
+    "ref_min_speed_kph": 131.78611136074304,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   }
+  ],
+  "centreline": [
+   [
+    0.16,
+    95.83
+   ],
+   [
+    5.17,
+    95.81
+   ],
+   [
+    10.17,
+    95.73
+   ],
+   [
+    15.18,
+    95.66
+   ],
+   [
+    20.18,
+    95.64
+   ],
+   [
+    25.17,
+    95.68
+   ],
+   [
+    30.17,
+    95.42
+   ],
+   [
+    35.17,
+    95.07
+   ],
+   [
+    40.17,
+    94.77
+   ],
+   [
+    45.17,
+    94.56
+   ],
+   [
+    50.18,
+    94.43
+   ],
+   [
+    55.19,
+    94.36
+   ],
+   [
+    60.2,
+    94.28
+   ],
+   [
+    65.2,
+    94.13
+   ],
+   [
+    70.2,
+    93.81
+   ],
+   [
+    75.18,
+    93.28
+   ],
+   [
+    80.14,
+    92.56
+   ],
+   [
+    85.06,
+    91.62
+   ],
+   [
+    90.03,
+    90.52
+   ],
+   [
+    94.99,
+    89.25
+   ],
+   [
+    99.93,
+    87.87
+   ],
+   [
+    104.84,
+    86.41
+   ],
+   [
+    109.65,
+    84.85
+   ],
+   [
+    114.31,
+    83.18
+   ],
+   [
+    118.81,
+    81.35
+   ],
+   [
+    123.19,
+    79.35
+   ],
+   [
+    127.65,
+    77.16
+   ],
+   [
+    132.06,
+    74.78
+   ],
+   [
+    136.35,
+    72.18
+   ],
+   [
+    140.49,
+    69.36
+   ],
+   [
+    144.45,
+    66.29
+   ],
+   [
+    148.23,
+    62.98
+   ],
+   [
+    151.84,
+    59.49
+   ],
+   [
+    155.8,
+    55.84
+   ],
+   [
+    159.71,
+    52.01
+   ],
+   [
+    163.17,
+    48.04
+   ],
+   [
+    166.06,
+    43.91
+   ],
+   [
+    168.7,
+    39.64
+   ],
+   [
+    171.08,
+    35.25
+   ],
+   [
+    173.19,
+    30.72
+   ],
+   [
+    175.01,
+    26.08
+   ],
+   [
+    176.55,
+    21.34
+   ],
+   [
+    177.83,
+    16.5
+   ],
+   [
+    178.83,
+    11.58
+   ],
+   [
+    179.56,
+    6.6
+   ],
+   [
+    180.0,
+    1.57
+   ],
+   [
+    180.14,
+    -3.49
+   ],
+   [
+    179.96,
+    -8.55
+   ],
+   [
+    178.83,
+    -13.55
+   ],
+   [
+    177.43,
+    -18.47
+   ],
+   [
+    176.0,
+    -23.31
+   ],
+   [
+    174.39,
+    -28.07
+   ],
+   [
+    172.53,
+    -32.73
+   ],
+   [
+    170.44,
+    -37.29
+   ],
+   [
+    168.11,
+    -41.73
+   ],
+   [
+    165.55,
+    -46.05
+   ],
+   [
+    162.75,
+    -50.22
+   ],
+   [
+    159.72,
+    -54.22
+   ],
+   [
+    156.46,
+    -58.03
+   ],
+   [
+    152.97,
+    -61.65
+   ],
+   [
+    149.28,
+    -64.95
+   ],
+   [
+    145.4,
+    -67.94
+   ],
+   [
+    141.34,
+    -70.69
+   ],
+   [
+    137.13,
+    -73.2
+   ],
+   [
+    132.78,
+    -75.58
+   ],
+   [
+    128.32,
+    -78.48
+   ],
+   [
+    123.75,
+    -80.89
+   ],
+   [
+    119.1,
+    -82.78
+   ],
+   [
+    114.38,
+    -84.48
+   ],
+   [
+    109.6,
+    -86.01
+   ],
+   [
+    104.78,
+    -87.37
+   ],
+   [
+    99.92,
+    -88.6
+   ],
+   [
+    95.03,
+    -89.72
+   ],
+   [
+    90.13,
+    -90.76
+   ],
+   [
+    85.22,
+    -91.72
+   ],
+   [
+    80.28,
+    -92.6
+   ],
+   [
+    75.33,
+    -93.37
+   ],
+   [
+    70.37,
+    -94.05
+   ],
+   [
+    65.39,
+    -94.62
+   ],
+   [
+    60.4,
+    -95.09
+   ],
+   [
+    55.41,
+    -95.45
+   ],
+   [
+    50.4,
+    -95.7
+   ],
+   [
+    45.39,
+    -95.83
+   ],
+   [
+    40.39,
+    -95.83
+   ],
+   [
+    35.38,
+    -95.74
+   ],
+   [
+    30.42,
+    -95.48
+   ],
+   [
+    25.42,
+    -95.18
+   ],
+   [
+    20.42,
+    -94.85
+   ],
+   [
+    15.43,
+    -94.5
+   ],
+   [
+    10.43,
+    -94.15
+   ],
+   [
+    5.43,
+    -93.82
+   ],
+   [
+    0.43,
+    -93.53
+   ],
+   [
+    -4.57,
+    -93.29
+   ],
+   [
+    -9.58,
+    -93.08
+   ],
+   [
+    -14.58,
+    -92.9
+   ],
+   [
+    -19.59,
+    -92.74
+   ],
+   [
+    -24.59,
+    -92.58
+   ],
+   [
+    -29.6,
+    -92.41
+   ],
+   [
+    -34.6,
+    -92.24
+   ],
+   [
+    -39.61,
+    -92.06
+   ],
+   [
+    -44.61,
+    -91.87
+   ],
+   [
+    -49.61,
+    -91.66
+   ],
+   [
+    -54.62,
+    -91.98
+   ],
+   [
+    -59.62,
+    -92.66
+   ],
+   [
+    -64.62,
+    -93.19
+   ],
+   [
+    -69.62,
+    -93.55
+   ],
+   [
+    -74.61,
+    -93.73
+   ],
+   [
+    -79.6,
+    -93.45
+   ],
+   [
+    -84.57,
+    -92.75
+   ],
+   [
+    -89.54,
+    -91.94
+   ],
+   [
+    -94.49,
+    -91.02
+   ],
+   [
+    -99.42,
+    -89.96
+   ],
+   [
+    -104.32,
+    -88.75
+   ],
+   [
+    -109.18,
+    -87.37
+   ],
+   [
+    -113.98,
+    -85.81
+   ],
+   [
+    -118.71,
+    -84.07
+   ],
+   [
+    -123.36,
+    -82.14
+   ],
+   [
+    -127.92,
+    -80.03
+   ],
+   [
+    -132.38,
+    -77.72
+   ],
+   [
+    -136.73,
+    -75.22
+   ],
+   [
+    -140.96,
+    -72.52
+   ],
+   [
+    -145.08,
+    -69.63
+   ],
+   [
+    -149.08,
+    -66.56
+   ],
+   [
+    -152.93,
+    -63.29
+   ],
+   [
+    -156.61,
+    -59.85
+   ],
+   [
+    -160.12,
+    -56.24
+   ],
+   [
+    -163.41,
+    -52.45
+   ],
+   [
+    -166.48,
+    -48.5
+   ],
+   [
+    -169.31,
+    -44.38
+   ],
+   [
+    -171.85,
+    -40.1
+   ],
+   [
+    -174.06,
+    -35.68
+   ],
+   [
+    -176.02,
+    -31.12
+   ],
+   [
+    -177.69,
+    -26.45
+   ],
+   [
+    -179.09,
+    -21.69
+   ],
+   [
+    -180.19,
+    -16.83
+   ],
+   [
+    -180.97,
+    -11.91
+   ],
+   [
+    -181.42,
+    -6.93
+   ],
+   [
+    -181.49,
+    -1.91
+   ],
+   [
+    -181.17,
+    3.11
+   ],
+   [
+    -180.47,
+    8.13
+   ],
+   [
+    -179.52,
+    13.11
+   ],
+   [
+    -179.13,
+    18.03
+   ],
+   [
+    -178.33,
+    22.86
+   ],
+   [
+    -177.11,
+    27.6
+   ],
+   [
+    -175.49,
+    32.21
+   ],
+   [
+    -173.5,
+    36.67
+   ],
+   [
+    -171.15,
+    40.97
+   ],
+   [
+    -168.5,
+    45.07
+   ],
+   [
+    -165.65,
+    48.98
+   ],
+   [
+    -162.71,
+    52.65
+   ],
+   [
+    -159.69,
+    56.08
+   ],
+   [
+    -156.53,
+    59.23
+   ],
+   [
+    -152.53,
+    62.12
+   ],
+   [
+    -148.22,
+    65.72
+   ],
+   [
+    -143.78,
+    69.15
+   ],
+   [
+    -139.26,
+    72.39
+   ],
+   [
+    -134.79,
+    75.42
+   ],
+   [
+    -130.38,
+    78.24
+   ],
+   [
+    -126.04,
+    80.82
+   ],
+   [
+    -121.69,
+    83.18
+   ],
+   [
+    -117.24,
+    85.03
+   ],
+   [
+    -112.72,
+    86.68
+   ],
+   [
+    -108.09,
+    88.2
+   ],
+   [
+    -103.36,
+    89.6
+   ],
+   [
+    -98.55,
+    90.85
+   ],
+   [
+    -93.66,
+    91.95
+   ],
+   [
+    -88.71,
+    92.9
+   ],
+   [
+    -83.71,
+    93.71
+   ],
+   [
+    -78.69,
+    94.37
+   ],
+   [
+    -73.65,
+    94.7
+   ],
+   [
+    -68.6,
+    94.73
+   ],
+   [
+    -63.57,
+    94.57
+   ],
+   [
+    -58.55,
+    94.26
+   ],
+   [
+    -53.53,
+    93.88
+   ],
+   [
+    -48.53,
+    93.54
+   ],
+   [
+    -43.52,
+    93.32
+   ],
+   [
+    -38.51,
+    93.3
+   ],
+   [
+    -33.5,
+    93.34
+   ],
+   [
+    -28.49,
+    93.36
+   ],
+   [
+    -23.49,
+    93.34
+   ],
+   [
+    -18.48,
+    93.29
+   ],
+   [
+    -13.47,
+    93.24
+   ],
+   [
+    -8.46,
+    93.22
+   ]
+  ],
+  "ground_plane": [
+   "pos_x_m",
+   "pos_z_m"
+  ],
+  "source_lap_ids": [
+   75,
+   74,
+   76
+  ],
+  "corner_text": {
+   "T1": {
+    "short": "T1",
+    "long": "T1",
+    "voice": "T1"
+   },
+   "T2": {
+    "short": "T2",
+    "long": "T2",
+    "voice": "T2"
+   },
+   "T3": {
+    "short": "T3",
+    "long": "T3",
+    "voice": "T3"
+   }
+  }
+ },
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": null,
+  "game": "gt7",
+  "track_id": "gt7:sf:0:100:90:920:340",
+  "track_length_m": 913.3,
+  "pit_speed_limit_kph": null,
+  "sector2_start_m": null,
+  "sector3_start_m": null,
+  "sector_boundaries_m": null,
+  "sectors": null,
+  "marshal_zones": null,
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "cues": {
+  "mode": "all",
+  "armed": true,
+  "muted": "no radio connected",
+  "reason": null,
+  "ref_lap_number": 3,
+  "focus": [],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.02,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [
+   {
+    "corner": "T1",
+    "kind": "brake",
+    "target_m": 106.8,
+    "text": "T1 brake",
+    "focus": false,
+    "reason": "braking zone"
+   }
+  ],
+  "next": null,
+  "last": null,
+  "timing": {
+   "latency_ms": 438,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 2,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "GET http://127.0.0.1:8770/api/live?static=true (live service, real GT7 session on PS5)",
+  "moment": "connection stale; GT7 lap distance kept integrating past the lap length",
+  "trimmed": [
+   "last_comparison"
+  ]
+ }
+}

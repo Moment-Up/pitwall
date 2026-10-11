@@ -1,0 +1,27 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+/data/
+!/data/.gitkeep
+/web/node_modules/
+/web/dist/
+.env
+*.pwcap
+!tests/fixtures/**/*.pwcap
+.DS_Store
+
+# Claude Code: machine-specific notes (see CLAUDE.md)
+CLAUDE.local.md
+
+# Local settings and Pitwall data written outside /data/ (Pitwall started from another folder, or PITWALL_DATA_DIR
+# inside the repository). Do not add **/data/: src/pitwall/{carsetup,rig,voice}/data are tracked.
+.env.*
+!.env.example
+*.sqlite3
+*.sqlite3-*
+access_token
+secrets.json
+.claude/settings.local.json

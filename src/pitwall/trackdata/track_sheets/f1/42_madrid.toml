@@ -1,0 +1,137 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 42
+layout = "Madrid"
+lap_length_m = 5411
+official_turn_count = 22
+sector_starts_m = [1805, 3857]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "The FIA 2026 map numbers 22 turns plus sub-turns 5A and 20A, which PnG's integer schema cannot represent: after review add each as its own [[turns]] entry with numbers = [5] / [20] and label = \"T5a\" / \"T20a\", directly after turn 5 / turn 20. official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1, 2]
+game_segment_m = [344, 530]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [3]
+names = [{ text = "Hortaleza", kind = "unclassified" }]
+game_segment_m = [530, 807]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [4]
+game_segment_m = [1095, 1380]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [5, 6]
+game_segment_m = [1400, 1600]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [7, 8]
+names = [{ text = "El Búnker", kind = "unclassified" }]
+game_segment_m = [1790, 2030]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [9]
+game_segment_m = [2050, 2130]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [10, 11]
+names = [{ text = "La Chicane", kind = "unclassified" }]
+game_segment_m = [2150, 2470]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [12]
+names = [{ text = "La Monumental", kind = "unclassified" }]
+game_segment_m = [2470, 3090]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13]
+game_segment_m = [3150, 3370]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [14, 15, 16]
+names = [{ text = "Las Enlazadas de Valdebebas", kind = "unclassified" }]
+game_segment_m = [3420, 3900]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [17]
+game_segment_m = [3900, 4050]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [18]
+names = [{ text = "Norte", kind = "unclassified" }]
+game_segment_m = [4150, 4300]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [19]
+game_segment_m = [4360, 4500]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [20]
+game_segment_m = [4680, 4850]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [21]
+game_segment_m = [4850, 5000]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [22]
+names = [{ text = "El Parque", kind = "unclassified" }]
+game_segment_m = [5120, 5280]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

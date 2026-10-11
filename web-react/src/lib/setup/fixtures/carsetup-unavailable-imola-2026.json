@@ -1,0 +1,1150 @@
+{
+ "_fixture": {
+  "source": "GET /api/carsetup/recommendation?car_format=f1_2026&track_id=27&session=race&conditions=wet on the live pitwall service (read-only), 2026-10-11",
+  "status": 404,
+  "note": "recorded: the 404 {reason, alternatives}"
+ },
+ "body": {
+  "detail": {
+   "reason": "Imola is not drivable with 2026 Season Pack cars (2026 regulations)",
+   "alternatives": [
+    {
+     "car_format": "f1_2026",
+     "track_id": 0,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 0,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 0,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 0,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 0,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 0,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 2,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 2,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 2,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 2,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 2,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 2,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 3,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 3,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 3,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 3,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 3,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 3,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 4,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 4,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 4,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 4,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 4,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 4,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 5,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 5,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 5,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 5,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 5,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 5,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 6,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 6,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 6,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 6,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 6,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 6,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 7,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 7,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 7,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 7,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 7,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 7,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 9,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 9,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 9,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 9,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 9,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 9,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 10,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 10,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 10,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 10,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 10,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 10,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 11,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 11,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 11,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 11,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 11,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 11,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 12,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 12,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 12,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 12,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 12,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 12,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 13,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 14,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 14,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 14,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 14,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 15,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 15,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 15,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 15,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 15,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 15,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 16,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 16,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 16,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 16,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 16,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 16,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 17,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 17,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 17,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 17,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 17,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 17,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 19,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 19,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 19,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 19,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 19,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 19,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 20,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 20,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 20,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 20,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 20,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 20,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 26,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 26,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 26,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 26,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 26,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 26,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 29,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 29,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 29,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 29,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 29,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 29,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 30,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 30,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 30,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 30,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 30,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 30,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 31,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 31,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 31,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 31,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 31,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 31,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 32,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 32,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 32,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 32,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 32,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 32,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 42,
+     "session": "race",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 42,
+     "session": "race",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 42,
+     "session": "race",
+     "conditions": "wet",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 42,
+     "session": "race",
+     "conditions": "wet",
+     "style": "stable",
+     "derived": true
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 42,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "balanced",
+     "derived": false
+    },
+    {
+     "car_format": "f1_2026",
+     "track_id": 42,
+     "session": "qualifying",
+     "conditions": "dry",
+     "style": "stable",
+     "derived": true
+    }
+   ]
+  }
+ }
+}

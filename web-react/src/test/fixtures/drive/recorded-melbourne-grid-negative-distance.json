@@ -1,0 +1,188 @@
+{
+ "version": 6,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 107,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261011-011513_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {}
+ },
+ "session_id": "0f9f32394a11",
+ "session": {
+  "game": "f1_25",
+  "platform": "unknown",
+  "track_id": "f1:0",
+  "track_name": "Melbourne",
+  "track_length_m": 5276.0,
+  "session_type": "Race",
+  "car_name": null,
+  "weather": {
+   "condition": "clear",
+   "track_temp_c": 34.0,
+   "air_temp_c": 22.0,
+   "rain_percentage": 1.0
+  },
+  "total_laps": 3,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1870527123688500,
+  "session_time_s": 0.0,
+  "speed_kph": 0.0,
+  "throttle": 0.0,
+  "brake": 0.069,
+  "steering": 0.014,
+  "clutch": 0.0,
+  "gear": 0,
+  "rpm": 2756.0,
+  "max_rpm": 8750.0,
+  "drs_open": false,
+  "pos": [
+   3.2,
+   3.39,
+   575.32
+  ],
+  "g_lat": -0.0,
+  "g_lon": -0.0,
+  "lap_number": 1,
+  "lap_distance_m": -164.2,
+  "current_lap_time_ms": 0,
+  "last_lap_time_ms": null,
+  "sector": 2,
+  "lap_invalid": false,
+  "pit_status": 0,
+  "race_position": 21,
+  "tyre_surface_temp_c": [
+   74.0,
+   74.0,
+   74.0,
+   74.0
+  ],
+  "tyre_inner_temp_c": [
+   85.0,
+   85.0,
+   85.0,
+   85.0
+  ],
+  "tyre_pressure_psi": [
+   22.0,
+   22.0,
+   19.1,
+   19.1
+  ],
+  "brake_temp_c": [
+   21.0,
+   21.0,
+   21.0,
+   21.0
+  ],
+  "tyre_wear_pct": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "tyre_compound": "super_soft",
+  "tyre_age_laps": 0,
+  "fuel_kg": 13.2,
+  "fuel_remaining_laps_game": 2.27,
+  "ers_store_j": 0.0,
+  "brake_bias_front_pct": 58.0,
+  "quality": 0
+ },
+ "delta_s": null,
+ "reference": null,
+ "laps": [],
+ "observations": [],
+ "events": [],
+ "marshal_flags": [],
+ "track_model": null,
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:0",
+  "track_length_m": 5276.0,
+  "pit_speed_limit_kph": 60.0,
+  "sector2_start_m": 1757.05,
+  "sector3_start_m": 3178.6,
+  "sector_boundaries_m": [
+   0.0,
+   1757.05,
+   3178.6,
+   5276.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 1757.05,
+    "length_m": 1757.05
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 1757.05,
+    "end_m": 3178.6,
+    "length_m": 1421.55
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 3178.6,
+    "end_m": 5276.0,
+    "length_m": 2097.4
+   }
+  ],
+  "marshal_zones": null,
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": "no reference lap yet",
+  "ref_lap_number": null,
+  "focus": [],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [],
+  "next": null,
+  "last": null,
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "pitwall replay (headless, temp DB) of 20261011-011513_udp20777.pwcap (a local PS5 F1 25 recording from the rig, data/captures, not committed)",
+  "moment": "lap 1, lap clock 0, no completed lap (pre-session / grid)",
+  "trimmed": [
+   "last_comparison"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending.",
+  "generated_unix": 1791679745
+ }
+}

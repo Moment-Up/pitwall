@@ -1,0 +1,822 @@
+{
+ "version": 15255,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 90597,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261010-203637_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 90400,
+   "decoded": 64762,
+   "ignored": 25638,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "LAP_DATA": 15222,
+    "MOTION": 15222,
+    "MOTION_EX": 15221,
+    "CAR_TELEMETRY": 15221,
+    "CAR_STATUS": 15221,
+    "SESSION_HISTORY": 5081,
+    "TYRE_SETS": 5081,
+    "SESSION": 509,
+    "CAR_SETUPS": 509,
+    "CAR_DAMAGE": 2541,
+    "LAP_POSITIONS": 255,
+    "EVENT": 266,
+    "PARTICIPANTS": 51
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "31c02491ae29",
+ "session": {
+  "game": "f1_25",
+  "platform": "ps5",
+  "track_id": "f1:7",
+  "track_name": "Silverstone",
+  "track_length_m": 5890.0,
+  "session_type": "Race",
+  "car_name": "F1 Generic",
+  "weather": {
+   "condition": "light_cloud",
+   "track_temp_c": 38.0,
+   "air_temp_c": 25.0,
+   "rain_percentage": 7.0
+  },
+  "total_laps": 3,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1853956916097333,
+  "session_time_s": 295.726,
+  "speed_kph": 273.0,
+  "throttle": 1.0,
+  "brake": 0.0,
+  "steering": 0.032,
+  "clutch": 0.0,
+  "gear": 7,
+  "rpm": 10993.0,
+  "max_rpm": 13099.0,
+  "drs_open": false,
+  "pos": [
+   401.93,
+   6.89,
+   -692.63
+  ],
+  "g_lat": -0.78,
+  "g_lon": 0.51,
+  "lap_number": 3,
+  "lap_distance_m": 3286.0,
+  "current_lap_time_ms": 75168,
+  "last_lap_time_ms": 103819,
+  "sector": 1,
+  "lap_invalid": false,
+  "pit_status": 0,
+  "race_position": 20,
+  "tyre_surface_temp_c": [
+   88.0,
+   62.0,
+   88.0,
+   72.0
+  ],
+  "tyre_inner_temp_c": [
+   85.0,
+   85.0,
+   85.0,
+   85.0
+  ],
+  "tyre_pressure_psi": [
+   24.2,
+   24.2,
+   21.3,
+   21.3
+  ],
+  "brake_temp_c": [
+   494.0,
+   491.0,
+   449.0,
+   448.0
+  ],
+  "tyre_wear_pct": [
+   7.0,
+   3.0,
+   13.0,
+   11.0
+  ],
+  "tyre_compound": "soft",
+  "tyre_age_laps": 2,
+  "fuel_kg": 5.32,
+  "fuel_remaining_laps_game": 2.53,
+  "ers_store_j": 3587013.0,
+  "brake_bias_front_pct": 58.0,
+  "quality": 0
+ },
+ "delta_s": null,
+ "reference": null,
+ "laps": [
+  {
+   "lap_id": 2,
+   "lap_number": 2,
+   "lap_time_ms": 103819,
+   "sector_times_ms": [
+    36340,
+    39586,
+    27893
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.889
+  },
+  {
+   "lap_id": 1,
+   "lap_number": 1,
+   "lap_time_ms": 116717,
+   "sector_times_ms": [
+    42948,
+    45112,
+    28657
+   ],
+   "valid": true,
+   "clean": false,
+   "flags": [
+    "incomplete"
+   ],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.39
+  }
+ ],
+ "observations": [],
+ "events": [
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 293.14019775390625,
+   "t": 1791681405.2249432
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 292.5562744140625,
+   "t": 1791681405.223979
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 290.1706237792969,
+   "t": 1791681405.219656
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 289.58673095703125,
+   "t": 1791681405.218285
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 287.2343444824219,
+   "t": 1791681405.2143092
+  },
+  {
+   "kind": "other",
+   "code": "RCWN",
+   "session_time_s": 286.7839050292969,
+   "t": 1791681405.213131
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 285.4493103027344,
+   "t": 1791681405.210936
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 284.53167724609375,
+   "t": 1791681405.20943
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 280.61114501953125,
+   "t": 1791681405.2022662
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 271.7023620605469,
+   "t": 1791681405.185915
+  }
+ ],
+ "marshal_flags": [],
+ "session_state": "running",
+ "session_state_info": {
+  "state": "running",
+  "cause": null,
+  "since_unix": 1791681404.721,
+  "chequered_flag": false
+ },
+ "coach": null,
+ "track_model": {
+  "game": "f1_25",
+  "track_id": "f1:7",
+  "track_name": "Silverstone",
+  "length_m": 5890.0,
+  "version": 1,
+  "n_laps": 1,
+  "corners": [
+   {
+    "name": "T1",
+    "apex_m": 454.0,
+    "entry_m": 401.0,
+    "exit_m": 454.0,
+    "seg_start_m": 0.0,
+    "seg_end_m": 712.5,
+    "direction": "right",
+    "ref_min_speed_kph": 260.0,
+    "label": "T1",
+    "official_numbers": [
+     1
+    ],
+    "display_name": "Abbey",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T2",
+    "apex_m": 971.0,
+    "entry_m": 883.0,
+    "exit_m": 976.0,
+    "seg_start_m": 712.5,
+    "seg_end_m": 1557.0,
+    "direction": "left",
+    "ref_min_speed_kph": 20.616438356164384,
+    "label": "T4",
+    "official_numbers": [
+     4
+    ],
+    "display_name": "The Loop",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T3",
+    "apex_m": 2143.0,
+    "entry_m": 2111.0,
+    "exit_m": 2381.0,
+    "seg_start_m": 1557.0,
+    "seg_end_m": 2633.0,
+    "direction": "right",
+    "ref_min_speed_kph": 100.34798877455566,
+    "label": "T7",
+    "official_numbers": [
+     7
+    ],
+    "display_name": "Luffield",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T4",
+    "apex_m": 3123.0,
+    "entry_m": 2998.0,
+    "exit_m": 3123.0,
+    "seg_start_m": 2633.0,
+    "seg_end_m": 3436.5,
+    "direction": "right",
+    "ref_min_speed_kph": 250.0,
+    "label": "T9",
+    "official_numbers": [
+     9
+    ],
+    "display_name": "Copse",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T5",
+    "apex_m": 3750.0,
+    "entry_m": 3669.0,
+    "exit_m": 3750.0,
+    "seg_start_m": 3436.5,
+    "seg_end_m": 3862.5,
+    "direction": "right",
+    "ref_min_speed_kph": 233.0,
+    "label": "T10-13",
+    "official_numbers": [
+     10,
+     11,
+     12,
+     13
+    ],
+    "display_name": "Maggotts and Becketts",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": 1,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T6",
+    "apex_m": 3975.0,
+    "entry_m": 3912.0,
+    "exit_m": 3989.0,
+    "seg_start_m": 3862.5,
+    "seg_end_m": 4468.5,
+    "direction": "right",
+    "ref_min_speed_kph": 162.0,
+    "label": "T10-13",
+    "official_numbers": [
+     10,
+     11,
+     12,
+     13
+    ],
+    "display_name": "Maggotts and Becketts",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": 2,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T7",
+    "apex_m": 4962.0,
+    "entry_m": 4886.0,
+    "exit_m": 4966.0,
+    "seg_start_m": 4468.5,
+    "seg_end_m": 5267.0,
+    "direction": "right",
+    "ref_min_speed_kph": 187.0,
+    "label": "T15",
+    "official_numbers": [
+     15
+    ],
+    "display_name": "Stowe",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T8",
+    "apex_m": 5572.0,
+    "entry_m": 5471.0,
+    "exit_m": 5712.0,
+    "seg_start_m": 5267.0,
+    "seg_end_m": 5890.0,
+    "direction": "right",
+    "ref_min_speed_kph": 70.0,
+    "label": "T16-18",
+    "official_numbers": [
+     16,
+     17,
+     18
+    ],
+    "display_name": "Club",
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "merged"
+   }
+  ],
+  "corner_text": {
+   "T1": {
+    "short": "T1",
+    "long": "Turn 1 (Abbey)",
+    "voice": "Turn 1, Abbey"
+   },
+   "T2": {
+    "short": "T4",
+    "long": "Turn 4 (The Loop)",
+    "voice": "Turn 4, The Loop"
+   },
+   "T3": {
+    "short": "T7",
+    "long": "Turn 7 (Luffield)",
+    "voice": "Turn 7, Luffield"
+   },
+   "T4": {
+    "short": "T9",
+    "long": "Turn 9 (Copse)",
+    "voice": "Turn 9, Copse"
+   },
+   "T5": {
+    "short": "T10-13 (1)",
+    "long": "Turns 10-13, part 1 (Maggotts and Becketts)",
+    "voice": "Turns 10 to 13, Maggotts and Becketts, first part"
+   },
+   "T6": {
+    "short": "T10-13 (2)",
+    "long": "Turns 10-13, part 2 (Maggotts and Becketts)",
+    "voice": "Turns 10 to 13, Maggotts and Becketts, second part"
+   },
+   "T7": {
+    "short": "T15",
+    "long": "Turn 15 (Stowe)",
+    "voice": "Turn 15, Stowe"
+   },
+   "T8": {
+    "short": "T16-18",
+    "long": "Turns 16-18 (Club)",
+    "voice": "Turns 16 to 18"
+   }
+  }
+ },
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:7",
+  "track_length_m": 5890.0,
+  "pit_speed_limit_kph": 60.0,
+  "sector2_start_m": 1812.85,
+  "sector3_start_m": 4293.46,
+  "sector_boundaries_m": [
+   0.0,
+   1812.85,
+   4293.46,
+   5890.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 1812.85,
+    "length_m": 1812.85
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 1812.85,
+    "end_m": 4293.46,
+    "length_m": 2480.61
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 4293.46,
+    "end_m": 5890.0,
+    "length_m": 1596.54
+   }
+  ],
+  "marshal_zones": [
+   {
+    "kind": "marshal",
+    "index": 0,
+    "game_number": 1,
+    "lap_order": 1,
+    "start_m": 253.44,
+    "end_m": 803.81,
+    "length_m": 550.37,
+    "start_frac": 0.043028,
+    "end_frac": 0.13647,
+    "wraps": false,
+    "segments_m": [
+     [
+      253.44,
+      803.81
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 1,
+    "game_number": 2,
+    "lap_order": 2,
+    "start_m": 803.81,
+    "end_m": 1029.46,
+    "length_m": 225.65,
+    "start_frac": 0.13647,
+    "end_frac": 0.17478,
+    "wraps": false,
+    "segments_m": [
+     [
+      803.81,
+      1029.46
+     ]
+    ],
+    "flag": "yellow"
+   },
+   {
+    "kind": "marshal",
+    "index": 2,
+    "game_number": 3,
+    "lap_order": 3,
+    "start_m": 1029.46,
+    "end_m": 1208.3,
+    "length_m": 178.84,
+    "start_frac": 0.17478,
+    "end_frac": 0.205144,
+    "wraps": false,
+    "segments_m": [
+     [
+      1029.46,
+      1208.3
+     ]
+    ],
+    "flag": "yellow"
+   },
+   {
+    "kind": "marshal",
+    "index": 3,
+    "game_number": 4,
+    "lap_order": 4,
+    "start_m": 1208.3,
+    "end_m": 1573.51,
+    "length_m": 365.21,
+    "start_frac": 0.205144,
+    "end_frac": 0.267149,
+    "wraps": false,
+    "segments_m": [
+     [
+      1208.3,
+      1573.51
+     ]
+    ],
+    "flag": "green"
+   },
+   {
+    "kind": "marshal",
+    "index": 4,
+    "game_number": 5,
+    "lap_order": 5,
+    "start_m": 1573.51,
+    "end_m": 1827.4,
+    "length_m": 253.89,
+    "start_frac": 0.267149,
+    "end_frac": 0.310255,
+    "wraps": false,
+    "segments_m": [
+     [
+      1573.51,
+      1827.4
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 5,
+    "game_number": 6,
+    "lap_order": 6,
+    "start_m": 1827.4,
+    "end_m": 2163.71,
+    "length_m": 336.31,
+    "start_frac": 0.310255,
+    "end_frac": 0.367353,
+    "wraps": false,
+    "segments_m": [
+     [
+      1827.4,
+      2163.71
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 6,
+    "game_number": 7,
+    "lap_order": 7,
+    "start_m": 2163.71,
+    "end_m": 2587.59,
+    "length_m": 423.89,
+    "start_frac": 0.367353,
+    "end_frac": 0.43932,
+    "wraps": false,
+    "segments_m": [
+     [
+      2163.71,
+      2587.59
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 7,
+    "game_number": 8,
+    "lap_order": 8,
+    "start_m": 2587.59,
+    "end_m": 2947.73,
+    "length_m": 360.14,
+    "start_frac": 0.43932,
+    "end_frac": 0.500464,
+    "wraps": false,
+    "segments_m": [
+     [
+      2587.59,
+      2947.73
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 8,
+    "game_number": 9,
+    "lap_order": 9,
+    "start_m": 2947.73,
+    "end_m": 3511.7,
+    "length_m": 563.96,
+    "start_frac": 0.500464,
+    "end_frac": 0.596213,
+    "wraps": false,
+    "segments_m": [
+     [
+      2947.73,
+      3511.7
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 9,
+    "game_number": 10,
+    "lap_order": 10,
+    "start_m": 3511.7,
+    "end_m": 4378.6,
+    "length_m": 866.9,
+    "start_frac": 0.596213,
+    "end_frac": 0.743395,
+    "wraps": false,
+    "segments_m": [
+     [
+      3511.7,
+      4378.6
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 10,
+    "game_number": 11,
+    "lap_order": 11,
+    "start_m": 4378.6,
+    "end_m": 4842.19,
+    "length_m": 463.6,
+    "start_frac": 0.743395,
+    "end_frac": 0.822104,
+    "wraps": false,
+    "segments_m": [
+     [
+      4378.6,
+      4842.19
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 11,
+    "game_number": 12,
+    "lap_order": 12,
+    "start_m": 4842.19,
+    "end_m": 5355.23,
+    "length_m": 513.04,
+    "start_frac": 0.822104,
+    "end_frac": 0.909207,
+    "wraps": false,
+    "segments_m": [
+     [
+      4842.19,
+      5355.23
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 12,
+    "game_number": 13,
+    "lap_order": 13,
+    "start_m": 5355.23,
+    "end_m": 5666.2,
+    "length_m": 310.97,
+    "start_frac": 0.909207,
+    "end_frac": 0.962004,
+    "wraps": false,
+    "segments_m": [
+     [
+      5355.23,
+      5666.2
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 13,
+    "game_number": 14,
+    "lap_order": 14,
+    "start_m": 5666.2,
+    "end_m": 253.44,
+    "length_m": 477.23,
+    "start_frac": 0.962004,
+    "end_frac": 0.043028,
+    "wraps": true,
+    "segments_m": [
+     [
+      5666.2,
+      5890.0
+     ],
+     [
+      0.0,
+      253.44
+     ]
+    ],
+    "flag": "none"
+   }
+  ],
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "bests": {
+  "scope": {
+   "game": "f1_25",
+   "track_id": "f1:7",
+   "car_id": "f1:team:41",
+   "records": false
+  },
+  "session": {
+   "lap_ms": 103819,
+   "sectors_ms": [
+    36340,
+    39586,
+    27893
+   ],
+   "lap_id": 2,
+   "sector_lap_ids": [
+    2,
+    2,
+    2
+   ]
+  },
+  "driver": null,
+  "household": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": "no reference lap yet",
+  "ref_lap_number": null,
+  "focus": [],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [],
+  "next": null,
+  "last": null,
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "pitwall replay (headless, temp DB) of 20261010-203637_udp20777.pwcap (a local PS5 F1 25 recording from the rig, data/captures, not committed)",
+  "moment": "next corner T10-13 Maggotts and Becketts (383 m to the entry)",
+  "trimmed": [
+   "last_comparison",
+   "track_model.centreline",
+   "track_model.ground_plane",
+   "track_model.source_lap_ids"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending. Backend: working tree with D2 (bests), D4 (session_state) and D6 (coach) from lane B, not yet committed; replays never get driver or household bests (bests.scope.records false).",
+  "generated_unix": 1791681405
+ }
+}

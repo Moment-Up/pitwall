@@ -1,0 +1,6415 @@
+{
+ "version": 33345,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 200214,
+  "packets_per_s": 170575.8,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261010-225601_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 200200,
+   "decoded": 143407,
+   "ignored": 56793,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "EVENT": 2128,
+    "SESSION_HISTORY": 11136,
+    "FINAL_CLASSIFICATION": 3,
+    "LOBBY_INFO": 65,
+    "SESSION": 1115,
+    "PARTICIPANTS": 114,
+    "CAR_SETUPS": 1115,
+    "CAR_DAMAGE": 5565,
+    "TYRE_SETS": 11128,
+    "LAP_POSITIONS": 1118,
+    "LAP_DATA": 33343,
+    "MOTION": 33343,
+    "MOTION_EX": 33343,
+    "CAR_TELEMETRY": 33342,
+    "CAR_STATUS": 33342
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "e3e0d6df9e22",
+ "session": {
+  "game": "f1_25",
+  "platform": "unknown",
+  "track_id": "f1:13",
+  "track_name": "Suzuka",
+  "track_length_m": 5809.0,
+  "session_type": "Race",
+  "car_name": null,
+  "weather": {
+   "condition": "light_cloud",
+   "track_temp_c": 23.0,
+   "air_temp_c": 16.0,
+   "rain_percentage": 6.0
+  },
+  "total_laps": 5,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1863336522664750,
+  "session_time_s": 440.482,
+  "speed_kph": 122.0,
+  "throttle": 0.621,
+  "brake": 0.0,
+  "steering": 0.485,
+  "clutch": 0.0,
+  "gear": 3,
+  "rpm": 9244.0,
+  "max_rpm": 13099.0,
+  "drs_open": false,
+  "pos": [
+   -88.92,
+   -9.49,
+   148.55
+  ],
+  "g_lat": -2.0,
+  "g_lon": 0.07,
+  "lap_number": 5,
+  "lap_distance_m": 2483.1,
+  "current_lap_time_ms": 39895,
+  "last_lap_time_ms": 97037,
+  "sector": 1,
+  "lap_invalid": false,
+  "pit_status": 0,
+  "race_position": 16,
+  "tyre_surface_temp_c": [
+   89.0,
+   69.0,
+   75.0,
+   67.0
+  ],
+  "tyre_inner_temp_c": [
+   90.0,
+   90.0,
+   90.0,
+   90.0
+  ],
+  "tyre_pressure_psi": [
+   24.3,
+   24.3,
+   21.5,
+   21.5
+  ],
+  "brake_temp_c": [
+   857.0,
+   853.0,
+   838.0,
+   841.0
+  ],
+  "tyre_wear_pct": [
+   12.0,
+   13.0,
+   11.0,
+   12.0
+  ],
+  "tyre_compound": "soft",
+  "tyre_age_laps": 4,
+  "fuel_kg": 5.83,
+  "fuel_remaining_laps_game": 2.44,
+  "ers_store_j": 4000000.0,
+  "brake_bias_front_pct": 58.0,
+  "quality": 0
+ },
+ "delta_s": -0.604,
+ "reference": {
+  "lap_id": 5,
+  "lap_number": 3,
+  "lap_time_ms": 97191,
+  "session_id": "e3e0d6df9e22"
+ },
+ "laps": [
+  {
+   "lap_id": 6,
+   "lap_number": 4,
+   "lap_time_ms": 97037,
+   "sector_times_ms": [
+    35546,
+    42802,
+    18689
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.905
+  },
+  {
+   "lap_id": 5,
+   "lap_number": 3,
+   "lap_time_ms": 97191,
+   "sector_times_ms": [
+    35725,
+    41928,
+    19538
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.932
+  },
+  {
+   "lap_id": 4,
+   "lap_number": 2,
+   "lap_time_ms": 100350,
+   "sector_times_ms": [
+    39415,
+    41782,
+    19153
+   ],
+   "valid": true,
+   "clean": false,
+   "flags": [
+    "distance_jump"
+   ],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.869
+  },
+  {
+   "lap_id": 3,
+   "lap_number": 1,
+   "lap_time_ms": 105995,
+   "sector_times_ms": [
+    38345,
+    47003,
+    20647
+   ],
+   "valid": true,
+   "clean": false,
+   "flags": [
+    "distance_jump",
+    "flashback",
+    "standing_start"
+   ],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.941
+  }
+ ],
+ "observations": [
+  {
+   "id": "L4:T6:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T6",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "min_speed_delta_kph",
+   "value": -12.0,
+   "unit": "km/h",
+   "impact_s": 0.434,
+   "confidence": 1.0,
+   "text": "Turn 9 (Degner 2): minimum speed is 12 km/h lower than your reference (116 vs 128 km/h), losing 0.43 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.434,
+    "brake_point_delta_m": -11.971,
+    "min_speed_delta_kph": -12.0,
+    "exit_speed_delta_kph": -14.318,
+    "entry_speed_delta_kph": -1.998,
+    "throttle_full_delta_m": 24.562,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T6",
+     "segment_time_s": 6.3,
+     "brake_start_m": 2396.31,
+     "brake_end_m": 2456.53,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.07,
+     "release_s": 0.22,
+     "trail_brake_m": 43.0,
+     "coast_m": 0.0,
+     "entry_speed_kph": 219.0,
+     "min_speed_kph": 128.0,
+     "min_speed_m": 2464.0,
+     "exit_speed_kph": 132.32,
+     "throttle_pickup_m": 2463.67,
+     "throttle_full_m": 2463.67
+    },
+    "lap": {
+     "corner": "T6",
+     "segment_time_s": 6.74,
+     "brake_start_m": 2384.34,
+     "brake_end_m": 2451.8,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.25,
+     "release_s": 0.73,
+     "trail_brake_m": 33.3,
+     "coast_m": 0.0,
+     "entry_speed_kph": 217.0,
+     "min_speed_kph": 116.0,
+     "min_speed_m": 2485.0,
+     "exit_speed_kph": 118.0,
+     "throttle_pickup_m": 2483.77,
+     "throttle_full_m": 2488.23
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T9",
+   "corner_voice": "Turn 9, Degner 2",
+   "text_simple": "Turn 9 (Degner 2): you were 12 km/h slower at the slowest point of the corner.",
+   "short": "T9: 12 km/h slower mid-corner",
+   "priority": 0.434
+  },
+  {
+   "id": "L4:T3:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T3",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "min_speed_delta_kph",
+   "value": -21.0,
+   "unit": "km/h",
+   "impact_s": 0.379,
+   "confidence": 1.0,
+   "text": "Turn 6 (Reverse Bank): minimum speed is 21 km/h lower than your reference (148 vs 169 km/h), losing 0.38 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.379,
+    "min_speed_delta_kph": -21.0,
+    "exit_speed_delta_kph": -25.52,
+    "entry_speed_delta_kph": -14.163,
+    "ref": {
+     "corner": "T3",
+     "segment_time_s": 5.52,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 170.0,
+     "min_speed_kph": 169.0,
+     "min_speed_m": 1531.0,
+     "exit_speed_kph": 175.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    },
+    "lap": {
+     "corner": "T3",
+     "segment_time_s": 5.9,
+     "brake_start_m": 1592.46,
+     "brake_end_m": 1600.51,
+     "brake_peak": 0.16,
+     "time_to_peak_s": 0.02,
+     "release_s": 0.13,
+     "trail_brake_m": 7.85,
+     "coast_m": 0.0,
+     "entry_speed_kph": 155.84,
+     "min_speed_kph": 148.0,
+     "min_speed_m": 1619.0,
+     "exit_speed_kph": 149.48,
+     "throttle_pickup_m": 1617.69,
+     "throttle_full_m": 1630.46
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T6",
+   "corner_voice": "Turn 6, Reverse Bank",
+   "text_simple": "Turn 6 (Reverse Bank): you were 21 km/h slower at the slowest point of the corner.",
+   "short": "T6: 21 km/h slower mid-corner",
+   "priority": 0.379
+  },
+  {
+   "id": "L4:T6:late_throttle",
+   "kind": "late_throttle",
+   "corner": "T6",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "throttle_full_delta_m",
+   "value": 24.562,
+   "unit": "m",
+   "impact_s": 0.434,
+   "confidence": 0.82,
+   "text": "Turn 9 (Degner 2): you're reaching full throttle 25 m later than your reference, losing 0.43 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.434,
+    "brake_point_delta_m": -11.971,
+    "min_speed_delta_kph": -12.0,
+    "exit_speed_delta_kph": -14.318,
+    "entry_speed_delta_kph": -1.998,
+    "throttle_full_delta_m": 24.562,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T6",
+     "segment_time_s": 6.3,
+     "brake_start_m": 2396.31,
+     "brake_end_m": 2456.53,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.07,
+     "release_s": 0.22,
+     "trail_brake_m": 43.0,
+     "coast_m": 0.0,
+     "entry_speed_kph": 219.0,
+     "min_speed_kph": 128.0,
+     "min_speed_m": 2464.0,
+     "exit_speed_kph": 132.32,
+     "throttle_pickup_m": 2463.67,
+     "throttle_full_m": 2463.67
+    },
+    "lap": {
+     "corner": "T6",
+     "segment_time_s": 6.74,
+     "brake_start_m": 2384.34,
+     "brake_end_m": 2451.8,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.25,
+     "release_s": 0.73,
+     "trail_brake_m": 33.3,
+     "coast_m": 0.0,
+     "entry_speed_kph": 217.0,
+     "min_speed_kph": 116.0,
+     "min_speed_m": 2485.0,
+     "exit_speed_kph": 118.0,
+     "throttle_pickup_m": 2483.77,
+     "throttle_full_m": 2488.23
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T9",
+   "corner_voice": "Turn 9, Degner 2",
+   "text_simple": "Turn 9 (Degner 2): you got back to full throttle about 25 m later than on your reference lap.",
+   "short": "T9: full throttle 25 m later",
+   "priority": 0.3559
+  },
+  {
+   "id": "L4:T4:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T4",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "exit_speed_delta_kph",
+   "value": 57.0,
+   "unit": "km/h",
+   "impact_s": -0.665,
+   "confidence": 1.0,
+   "text": "Turn 7: good - exit speed is up 57 km/h on your reference and you gained 0.67 s there.",
+   "evidence": {
+    "time_delta_s": -0.665,
+    "min_speed_delta_kph": 45.0,
+    "exit_speed_delta_kph": 57.0,
+    "entry_speed_delta_kph": -14.163,
+    "ref": {
+     "corner": "T4",
+     "segment_time_s": 5.84,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 170.0,
+     "min_speed_kph": 171.0,
+     "min_speed_m": 1878.0,
+     "exit_speed_kph": 171.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    },
+    "lap": {
+     "corner": "T4",
+     "segment_time_s": 5.17,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 155.84,
+     "min_speed_kph": 216.0,
+     "min_speed_m": 1792.0,
+     "exit_speed_kph": 228.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "T7",
+   "corner_voice": "Turn 7",
+   "text_simple": "Turn 7: good exit - you came out 57 km/h faster than on your reference lap.",
+   "short": "T7: good exit, 57 km/h faster",
+   "priority": 0.3325
+  },
+  {
+   "id": "L4:T8:low_min_speed",
+   "kind": "low_min_speed",
+   "corner": "T8",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "min_speed_delta_kph",
+   "value": -21.0,
+   "unit": "km/h",
+   "impact_s": 0.331,
+   "confidence": 1.0,
+   "text": "Turns 13-14 (Spoon Curve): minimum speed is 21 km/h lower than your reference (116 vs 137 km/h), losing 0.33 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.331,
+    "brake_point_delta_m": 22.333,
+    "min_speed_delta_kph": -21.0,
+    "exit_speed_delta_kph": -2.15,
+    "entry_speed_delta_kph": -15.0,
+    "throttle_full_delta_m": -57.011,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T8",
+     "segment_time_s": 16.67,
+     "brake_start_m": 3925.42,
+     "brake_end_m": 3946.9,
+     "brake_peak": 0.56,
+     "time_to_peak_s": 0.15,
+     "release_s": 0.2,
+     "trail_brake_m": 18.56,
+     "coast_m": 0.0,
+     "entry_speed_kph": 138.0,
+     "min_speed_kph": 137.0,
+     "min_speed_m": 3949.0,
+     "exit_speed_kph": 159.79,
+     "throttle_pickup_m": 3948.24,
+     "throttle_full_m": 4056.83
+    },
+    "lap": {
+     "corner": "T8",
+     "segment_time_s": 17.0,
+     "brake_start_m": 3947.76,
+     "brake_end_m": 3953.28,
+     "brake_peak": 0.36,
+     "time_to_peak_s": 0.02,
+     "release_s": 0.02,
+     "trail_brake_m": 5.2,
+     "coast_m": 0.0,
+     "entry_speed_kph": 123.0,
+     "min_speed_kph": 116.0,
+     "min_speed_m": 3954.0,
+     "exit_speed_kph": 157.64,
+     "throttle_pickup_m": 3952.94,
+     "throttle_full_m": 3999.82
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T13-14",
+   "corner_voice": "Turns 13 to 14, Spoon Curve",
+   "text_simple": "Turns 13-14 (Spoon Curve): you were 21 km/h slower at the slowest point of the corner.",
+   "short": "T13-14: 21 km/h slower mid-corner",
+   "priority": 0.331
+  },
+  {
+   "id": "L4:T6:brake_early",
+   "kind": "brake_early",
+   "corner": "T6",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "brake_point_delta_m",
+   "value": -11.971,
+   "unit": "m",
+   "impact_s": 0.434,
+   "confidence": 0.75,
+   "text": "Turn 9 (Degner 2): you're braking about 12 m earlier than your reference (lap 3), losing 0.43 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.434,
+    "brake_point_delta_m": -11.971,
+    "min_speed_delta_kph": -12.0,
+    "exit_speed_delta_kph": -14.318,
+    "entry_speed_delta_kph": -1.998,
+    "throttle_full_delta_m": 24.562,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T6",
+     "segment_time_s": 6.3,
+     "brake_start_m": 2396.31,
+     "brake_end_m": 2456.53,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.07,
+     "release_s": 0.22,
+     "trail_brake_m": 43.0,
+     "coast_m": 0.0,
+     "entry_speed_kph": 219.0,
+     "min_speed_kph": 128.0,
+     "min_speed_m": 2464.0,
+     "exit_speed_kph": 132.32,
+     "throttle_pickup_m": 2463.67,
+     "throttle_full_m": 2463.67
+    },
+    "lap": {
+     "corner": "T6",
+     "segment_time_s": 6.74,
+     "brake_start_m": 2384.34,
+     "brake_end_m": 2451.8,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.25,
+     "release_s": 0.73,
+     "trail_brake_m": 33.3,
+     "coast_m": 0.0,
+     "entry_speed_kph": 217.0,
+     "min_speed_kph": 116.0,
+     "min_speed_m": 2485.0,
+     "exit_speed_kph": 118.0,
+     "throttle_pickup_m": 2483.77,
+     "throttle_full_m": 2488.23
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T9",
+   "corner_voice": "Turn 9, Degner 2",
+   "text_simple": "Turn 9 (Degner 2): you braked about 12 m earlier than on your reference lap.",
+   "short": "T9: braked 12 m earlier",
+   "priority": 0.3255
+  },
+  {
+   "id": "L4:T11:exit_gain",
+   "kind": "exit_gain",
+   "corner": "T11",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "exit_speed_delta_kph",
+   "value": 4.853,
+   "unit": "km/h",
+   "impact_s": -0.422,
+   "confidence": 0.81,
+   "text": "Turns 16-17, part 2: good - exit speed is up 5 km/h on your reference and you gained 0.42 s there.",
+   "evidence": {
+    "time_delta_s": -0.422,
+    "min_speed_delta_kph": -7.0,
+    "exit_speed_delta_kph": 4.853,
+    "entry_speed_delta_kph": 5.0,
+    "ref": {
+     "corner": "T11",
+     "segment_time_s": 7.68,
+     "brake_start_m": null,
+     "brake_end_m": null,
+     "brake_peak": null,
+     "time_to_peak_s": null,
+     "release_s": null,
+     "trail_brake_m": null,
+     "coast_m": null,
+     "entry_speed_kph": 291.0,
+     "min_speed_kph": 85.0,
+     "min_speed_m": 5397.0,
+     "exit_speed_kph": 89.0,
+     "throttle_pickup_m": null,
+     "throttle_full_m": null
+    },
+    "lap": {
+     "corner": "T11",
+     "segment_time_s": 7.26,
+     "brake_start_m": 5271.99,
+     "brake_end_m": 5416.03,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.25,
+     "release_s": 0.84,
+     "trail_brake_m": 66.01,
+     "coast_m": 0.0,
+     "entry_speed_kph": 296.0,
+     "min_speed_kph": 78.0,
+     "min_speed_m": 5414.0,
+     "exit_speed_kph": 93.85,
+     "throttle_pickup_m": 5413.73,
+     "throttle_full_m": 5468.71
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": true,
+   "corner_label": "T16-17 (2)",
+   "corner_voice": "Turns 16 to 17, second part",
+   "text_simple": "Turns 16-17, part 2: good exit - you came out 5 km/h faster than on your reference lap.",
+   "short": "T16-17 (2): good exit, 5 km/h faster",
+   "priority": 0.1709
+  },
+  {
+   "id": "L4:T7:brake_early",
+   "kind": "brake_early",
+   "corner": "T7",
+   "lap_number": 4,
+   "ref_lap_number": 3,
+   "metric": "brake_point_delta_m",
+   "value": -11.917,
+   "unit": "m",
+   "impact_s": 0.149,
+   "confidence": 0.74,
+   "text": "Turn 11 (Hairpin): you're braking about 12 m earlier than your reference (lap 3), losing 0.15 s through the corner.",
+   "evidence": {
+    "time_delta_s": 0.149,
+    "brake_point_delta_m": -11.917,
+    "min_speed_delta_kph": 0.0,
+    "exit_speed_delta_kph": 2.954,
+    "entry_speed_delta_kph": 8.0,
+    "throttle_full_delta_m": -7.953,
+    "coast_delta_m": 0.0,
+    "ref": {
+     "corner": "T7",
+     "segment_time_s": 13.93,
+     "brake_start_m": 2826.27,
+     "brake_end_m": 2937.22,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.1,
+     "release_s": 0.25,
+     "trail_brake_m": 101.8,
+     "coast_m": 0.0,
+     "entry_speed_kph": 247.0,
+     "min_speed_kph": 57.0,
+     "min_speed_m": 2949.0,
+     "exit_speed_kph": 57.83,
+     "throttle_pickup_m": 2948.21,
+     "throttle_full_m": 2950.34
+    },
+    "lap": {
+     "corner": "T7",
+     "segment_time_s": 14.08,
+     "brake_start_m": 2814.35,
+     "brake_end_m": 2919.27,
+     "brake_peak": 1.0,
+     "time_to_peak_s": 0.05,
+     "release_s": 0.55,
+     "trail_brake_m": 37.35,
+     "coast_m": 0.0,
+     "entry_speed_kph": 255.0,
+     "min_speed_kph": 57.0,
+     "min_speed_m": 2942.0,
+     "exit_speed_kph": 60.79,
+     "throttle_pickup_m": 2941.64,
+     "throttle_full_m": 2942.38
+    }
+   },
+   "consistency": null,
+   "consistency_ratio": null,
+   "positive": false,
+   "corner_label": "T11",
+   "corner_voice": "Turn 11, Hairpin",
+   "text_simple": "Turn 11 (Hairpin): you braked about 12 m earlier than on your reference lap.",
+   "short": "T11: braked 12 m earlier",
+   "priority": 0.1103
+  }
+ ],
+ "events": [
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 422.78082275390625,
+   "t": 1791680736.446208
+  },
+  {
+   "kind": "penalty",
+   "code": "PENA",
+   "session_time_s": 417.6922912597656,
+   "t": 1791680736.4344692
+  },
+  {
+   "kind": "penalty",
+   "code": "PENA",
+   "session_time_s": 416.4424743652344,
+   "t": 1791680736.431148
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 415.55706787109375,
+   "t": 1791680736.4292212
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 415.0233459472656,
+   "t": 1791680736.427924
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 413.6051940917969,
+   "t": 1791680736.424404
+  },
+  {
+   "kind": "collision",
+   "code": "COLL",
+   "session_time_s": 413.5755310058594,
+   "t": 1791680736.42433
+  },
+  {
+   "kind": "penalty",
+   "code": "PENA",
+   "session_time_s": 412.48724365234375,
+   "t": 1791680736.421777
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 405.9641418457031,
+   "t": 1791680736.40513
+  },
+  {
+   "kind": "collision",
+   "code": "COLL",
+   "session_time_s": 400.8760070800781,
+   "t": 1791680736.391519
+  }
+ ],
+ "marshal_flags": [],
+ "session_state": "running",
+ "session_state_info": {
+  "state": "running",
+  "cause": "lights_out",
+  "since_unix": 1791680735.523,
+  "chequered_flag": false
+ },
+ "coach": {
+  "lap_number": 4,
+  "lap_id": 6,
+  "ref_lap_number": 3,
+  "skill_level": "advanced",
+  "simple_wording": false,
+  "radio_quiet": false,
+  "picked": [
+   {
+    "id": "L4:T6:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T6",
+    "corner_label": "T9",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "min_speed_delta_kph",
+    "value": -12.0,
+    "unit": "km/h",
+    "impact_s": 0.434,
+    "confidence": 1.0,
+    "priority": 0.434,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 9 (Degner 2): minimum speed is 12 km/h lower than your reference (116 vs 128 km/h), losing 0.43 s through the corner.",
+    "text_simple": "Turn 9 (Degner 2): you were 12 km/h slower at the slowest point of the corner.",
+    "short": "T9: 12 km/h slower mid-corner",
+    "corner_voice": "Turn 9, Degner 2",
+    "evidence": {
+     "time_delta_s": 0.434,
+     "brake_point_delta_m": -11.971,
+     "min_speed_delta_kph": -12.0,
+     "exit_speed_delta_kph": -14.318,
+     "entry_speed_delta_kph": -1.998,
+     "throttle_full_delta_m": 24.562,
+     "coast_delta_m": 0.0
+    },
+    "picked": true
+   }
+  ],
+  "by_corner": {
+   "T6": {
+    "id": "L4:T6:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T6",
+    "corner_label": "T9",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "min_speed_delta_kph",
+    "value": -12.0,
+    "unit": "km/h",
+    "impact_s": 0.434,
+    "confidence": 1.0,
+    "priority": 0.434,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 9 (Degner 2): minimum speed is 12 km/h lower than your reference (116 vs 128 km/h), losing 0.43 s through the corner.",
+    "text_simple": "Turn 9 (Degner 2): you were 12 km/h slower at the slowest point of the corner.",
+    "short": "T9: 12 km/h slower mid-corner",
+    "corner_voice": "Turn 9, Degner 2",
+    "evidence": {
+     "time_delta_s": 0.434,
+     "brake_point_delta_m": -11.971,
+     "min_speed_delta_kph": -12.0,
+     "exit_speed_delta_kph": -14.318,
+     "entry_speed_delta_kph": -1.998,
+     "throttle_full_delta_m": 24.562,
+     "coast_delta_m": 0.0
+    },
+    "picked": true
+   },
+   "T3": {
+    "id": "L4:T3:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T3",
+    "corner_label": "T6",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "min_speed_delta_kph",
+    "value": -21.0,
+    "unit": "km/h",
+    "impact_s": 0.379,
+    "confidence": 1.0,
+    "priority": 0.379,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 6 (Reverse Bank): minimum speed is 21 km/h lower than your reference (148 vs 169 km/h), losing 0.38 s through the corner.",
+    "text_simple": "Turn 6 (Reverse Bank): you were 21 km/h slower at the slowest point of the corner.",
+    "short": "T6: 21 km/h slower mid-corner",
+    "corner_voice": "Turn 6, Reverse Bank",
+    "evidence": {
+     "time_delta_s": 0.379,
+     "min_speed_delta_kph": -21.0,
+     "exit_speed_delta_kph": -25.52,
+     "entry_speed_delta_kph": -14.163
+    },
+    "picked": false
+   },
+   "T8": {
+    "id": "L4:T8:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T8",
+    "corner_label": "T13-14",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "min_speed_delta_kph",
+    "value": -21.0,
+    "unit": "km/h",
+    "impact_s": 0.331,
+    "confidence": 1.0,
+    "priority": 0.331,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turns 13-14 (Spoon Curve): minimum speed is 21 km/h lower than your reference (116 vs 137 km/h), losing 0.33 s through the corner.",
+    "text_simple": "Turns 13-14 (Spoon Curve): you were 21 km/h slower at the slowest point of the corner.",
+    "short": "T13-14: 21 km/h slower mid-corner",
+    "corner_voice": "Turns 13 to 14, Spoon Curve",
+    "evidence": {
+     "time_delta_s": 0.331,
+     "brake_point_delta_m": 22.333,
+     "min_speed_delta_kph": -21.0,
+     "exit_speed_delta_kph": -2.15,
+     "entry_speed_delta_kph": -15.0,
+     "throttle_full_delta_m": -57.011,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   },
+   "T7": {
+    "id": "L4:T7:brake_early",
+    "kind": "brake_early",
+    "corner": "T7",
+    "corner_label": "T11",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "brake_point_delta_m",
+    "value": -11.917,
+    "unit": "m",
+    "impact_s": 0.149,
+    "confidence": 0.74,
+    "priority": 0.1103,
+    "positive": false,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 11 (Hairpin): you're braking about 12 m earlier than your reference (lap 3), losing 0.15 s through the corner.",
+    "text_simple": "Turn 11 (Hairpin): you braked about 12 m earlier than on your reference lap.",
+    "short": "T11: braked 12 m earlier",
+    "corner_voice": "Turn 11, Hairpin",
+    "evidence": {
+     "time_delta_s": 0.149,
+     "brake_point_delta_m": -11.917,
+     "min_speed_delta_kph": 0.0,
+     "exit_speed_delta_kph": 2.954,
+     "entry_speed_delta_kph": 8.0,
+     "throttle_full_delta_m": -7.953,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   },
+   "T4": {
+    "id": "L4:T4:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T4",
+    "corner_label": "T7",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 57.0,
+    "unit": "km/h",
+    "impact_s": -0.665,
+    "confidence": 1.0,
+    "priority": 0.3325,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 7: good - exit speed is up 57 km/h on your reference and you gained 0.67 s there.",
+    "text_simple": "Turn 7: good exit - you came out 57 km/h faster than on your reference lap.",
+    "short": "T7: good exit, 57 km/h faster",
+    "corner_voice": "Turn 7",
+    "evidence": {
+     "time_delta_s": -0.665,
+     "min_speed_delta_kph": 45.0,
+     "exit_speed_delta_kph": 57.0,
+     "entry_speed_delta_kph": -14.163
+    },
+    "picked": false
+   },
+   "T11": {
+    "id": "L4:T11:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T11",
+    "corner_label": "T16-17 (2)",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 4.853,
+    "unit": "km/h",
+    "impact_s": -0.422,
+    "confidence": 0.81,
+    "priority": 0.1709,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turns 16-17, part 2: good - exit speed is up 5 km/h on your reference and you gained 0.42 s there.",
+    "text_simple": "Turns 16-17, part 2: good exit - you came out 5 km/h faster than on your reference lap.",
+    "short": "T16-17 (2): good exit, 5 km/h faster",
+    "corner_voice": "Turns 16 to 17, second part",
+    "evidence": {
+     "time_delta_s": -0.422,
+     "min_speed_delta_kph": -7.0,
+     "exit_speed_delta_kph": 4.853,
+     "entry_speed_delta_kph": 5.0
+    },
+    "picked": false
+   },
+   "T9": {
+    "id": "L4:T9:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T9",
+    "corner_label": "T15",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 24.0,
+    "unit": "km/h",
+    "impact_s": -0.206,
+    "confidence": 1.0,
+    "priority": 0.103,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 15 (130R): good - exit speed is up 24 km/h on your reference and you gained 0.21 s there.",
+    "text_simple": "Turn 15 (130R): good exit - you came out 24 km/h faster than on your reference lap.",
+    "short": "T15: good exit, 24 km/h faster",
+    "corner_voice": "Turn 15, 130R",
+    "evidence": {
+     "time_delta_s": -0.206,
+     "min_speed_delta_kph": 24.0,
+     "exit_speed_delta_kph": 24.0,
+     "entry_speed_delta_kph": 30.0
+    },
+    "picked": false
+   },
+   "T10": {
+    "id": "L4:T10:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T10",
+    "corner_label": "T16-17 (1)",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 4.853,
+    "unit": "km/h",
+    "impact_s": -0.215,
+    "confidence": 0.81,
+    "priority": 0.0871,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turns 16-17, part 1: good - exit speed is up 5 km/h on your reference and you gained 0.22 s there.",
+    "text_simple": "Turns 16-17, part 1: good exit - you came out 5 km/h faster than on your reference lap.",
+    "short": "T16-17 (1): good exit, 5 km/h faster",
+    "corner_voice": "Turns 16 to 17, first part",
+    "evidence": {
+     "time_delta_s": -0.215,
+     "brake_point_delta_m": 3.146,
+     "min_speed_delta_kph": -4.0,
+     "exit_speed_delta_kph": 4.853,
+     "entry_speed_delta_kph": 5.0,
+     "throttle_full_delta_m": -17.143,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   },
+   "T5": {
+    "id": "L4:T5:exit_gain",
+    "kind": "exit_gain",
+    "corner": "T5",
+    "corner_label": "T8",
+    "lap_number": 4,
+    "ref_lap_number": 3,
+    "metric": "exit_speed_delta_kph",
+    "value": 5.0,
+    "unit": "km/h",
+    "impact_s": -0.152,
+    "confidence": 0.83,
+    "priority": 0.0631,
+    "positive": true,
+    "consistency": null,
+    "consistency_ratio": null,
+    "text": "Turn 8 (Degner 1): good - exit speed is up 5 km/h on your reference and you gained 0.15 s there.",
+    "text_simple": "Turn 8 (Degner 1): good exit - you came out 5 km/h faster than on your reference lap.",
+    "short": "T8: good exit, 5 km/h faster",
+    "corner_voice": "Turn 8, Degner 1",
+    "evidence": {
+     "time_delta_s": -0.152,
+     "brake_point_delta_m": -9.514,
+     "min_speed_delta_kph": 9.0,
+     "exit_speed_delta_kph": 5.0,
+     "entry_speed_delta_kph": 13.0,
+     "coast_delta_m": 0.0
+    },
+    "picked": false
+   }
+  }
+ },
+ "track_model": {
+  "game": "f1_25",
+  "track_id": "f1:13",
+  "track_name": "Suzuka",
+  "length_m": 5809.0,
+  "version": 2,
+  "n_laps": 2,
+  "corners": [
+   {
+    "name": "T1",
+    "apex_m": 867.0,
+    "entry_m": 843.0,
+    "exit_m": 876.0,
+    "seg_start_m": 0.0,
+    "seg_end_m": 1081.0,
+    "direction": "right",
+    "ref_min_speed_kph": 151.5,
+    "label": "T2",
+    "official_numbers": [
+     2
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T2",
+    "apex_m": 1295.0,
+    "entry_m": 1223.0,
+    "exit_m": 1329.0,
+    "seg_start_m": 1081.0,
+    "seg_end_m": 1453.0,
+    "direction": "right",
+    "ref_min_speed_kph": 181.17396449704142,
+    "label": "T3-5",
+    "official_numbers": [
+     3,
+     4,
+     5
+    ],
+    "display_name": "S Curve",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T3",
+    "apex_m": 1611.0,
+    "entry_m": 1593.0,
+    "exit_m": 1630.0,
+    "seg_start_m": 1453.0,
+    "seg_end_m": 1741.5,
+    "direction": "right",
+    "ref_min_speed_kph": 160.5,
+    "label": "T6",
+    "official_numbers": [
+     6
+    ],
+    "display_name": "Reverse Bank",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T4",
+    "apex_m": 1872.0,
+    "entry_m": 1593.0,
+    "exit_m": 1882.0,
+    "seg_start_m": 1741.5,
+    "seg_end_m": 2080.5,
+    "direction": "left",
+    "ref_min_speed_kph": 198.73047858942067,
+    "label": "T7",
+    "official_numbers": [
+     7
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T5",
+    "apex_m": 2289.0,
+    "entry_m": 2217.0,
+    "exit_m": 2342.0,
+    "seg_start_m": 2080.5,
+    "seg_end_m": 2384.5,
+    "direction": "right",
+    "ref_min_speed_kph": 192.80537111801243,
+    "label": "T8",
+    "official_numbers": [
+     8
+    ],
+    "display_name": "Degner 1",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T6",
+    "apex_m": 2480.0,
+    "entry_m": 2385.0,
+    "exit_m": 2488.0,
+    "seg_start_m": 2384.5,
+    "seg_end_m": 2714.0,
+    "direction": "right",
+    "ref_min_speed_kph": 123.0,
+    "label": "T9",
+    "official_numbers": [
+     9
+    ],
+    "display_name": "Degner 2",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T7",
+    "apex_m": 2948.0,
+    "entry_m": 2815.0,
+    "exit_m": 2948.0,
+    "seg_start_m": 2714.0,
+    "seg_end_m": 3451.0,
+    "direction": "left",
+    "ref_min_speed_kph": 59.30787025427554,
+    "label": "T11",
+    "official_numbers": [
+     11
+    ],
+    "display_name": "Hairpin",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T8",
+    "apex_m": 3954.0,
+    "entry_m": 3948.0,
+    "exit_m": 4046.0,
+    "seg_start_m": 3451.0,
+    "seg_end_m": 4497.0,
+    "direction": "left",
+    "ref_min_speed_kph": 126.5,
+    "label": "T13-14",
+    "official_numbers": [
+     13,
+     14
+    ],
+    "display_name": "Spoon Curve",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T9",
+    "apex_m": 5040.0,
+    "entry_m": 4987.0,
+    "exit_m": 5040.0,
+    "seg_start_m": 4497.0,
+    "seg_end_m": 5228.5,
+    "direction": "left",
+    "ref_min_speed_kph": 273.0,
+    "label": "T15",
+    "official_numbers": [
+     15
+    ],
+    "display_name": "130R",
+    "voice_ok": true,
+    "identity_tier": "sheet_verified",
+    "label_part": null,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T10",
+    "apex_m": 5417.0,
+    "entry_m": 5268.0,
+    "exit_m": 5485.0,
+    "seg_start_m": 5228.5,
+    "seg_end_m": 5447.0,
+    "direction": "right",
+    "ref_min_speed_kph": 81.5,
+    "label": "T16-17",
+    "official_numbers": [
+     16,
+     17
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": 1,
+    "identity_match": "inside"
+   },
+   {
+    "name": "T11",
+    "apex_m": 5477.0,
+    "entry_m": 5268.0,
+    "exit_m": 5485.0,
+    "seg_start_m": 5447.0,
+    "seg_end_m": 5809.0,
+    "direction": "left",
+    "ref_min_speed_kph": 87.0,
+    "label": "T16-17",
+    "official_numbers": [
+     16,
+     17
+    ],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": "sheet_verified",
+    "label_part": 2,
+    "identity_match": "inside"
+   }
+  ],
+  "centreline": [
+   [
+    627.31,
+    -53.34
+   ],
+   [
+    629.82,
+    -50.22
+   ],
+   [
+    632.95,
+    -46.32
+   ],
+   [
+    636.08,
+    -42.42
+   ],
+   [
+    639.22,
+    -38.53
+   ],
+   [
+    642.35,
+    -34.63
+   ],
+   [
+    645.49,
+    -30.73
+   ],
+   [
+    648.62,
+    -26.84
+   ],
+   [
+    651.75,
+    -22.94
+   ],
+   [
+    654.87,
+    -19.03
+   ],
+   [
+    657.99,
+    -15.12
+   ],
+   [
+    661.11,
+    -11.21
+   ],
+   [
+    664.23,
+    -7.3
+   ],
+   [
+    667.35,
+    -3.4
+   ],
+   [
+    670.49,
+    0.5
+   ],
+   [
+    673.64,
+    4.38
+   ],
+   [
+    676.81,
+    8.24
+   ],
+   [
+    680.01,
+    12.09
+   ],
+   [
+    683.22,
+    15.91
+   ],
+   [
+    686.47,
+    19.72
+   ],
+   [
+    689.73,
+    23.5
+   ],
+   [
+    693.03,
+    27.26
+   ],
+   [
+    696.35,
+    30.99
+   ],
+   [
+    699.7,
+    34.7
+   ],
+   [
+    703.07,
+    38.39
+   ],
+   [
+    706.47,
+    42.06
+   ],
+   [
+    709.9,
+    45.71
+   ],
+   [
+    713.34,
+    49.34
+   ],
+   [
+    716.79,
+    52.96
+   ],
+   [
+    720.25,
+    56.58
+   ],
+   [
+    723.7,
+    60.21
+   ],
+   [
+    727.14,
+    63.84
+   ],
+   [
+    730.56,
+    67.49
+   ],
+   [
+    733.96,
+    71.16
+   ],
+   [
+    737.35,
+    74.84
+   ],
+   [
+    740.71,
+    78.54
+   ],
+   [
+    744.07,
+    82.25
+   ],
+   [
+    747.4,
+    85.97
+   ],
+   [
+    750.73,
+    89.71
+   ],
+   [
+    754.04,
+    93.45
+   ],
+   [
+    757.34,
+    97.21
+   ],
+   [
+    760.63,
+    100.97
+   ],
+   [
+    763.92,
+    104.73
+   ],
+   [
+    767.2,
+    108.5
+   ],
+   [
+    770.48,
+    112.28
+   ],
+   [
+    773.75,
+    116.05
+   ],
+   [
+    777.02,
+    119.84
+   ],
+   [
+    780.27,
+    123.63
+   ],
+   [
+    783.52,
+    127.43
+   ],
+   [
+    786.74,
+    131.25
+   ],
+   [
+    789.96,
+    135.07
+   ],
+   [
+    793.18,
+    138.9
+   ],
+   [
+    796.39,
+    142.73
+   ],
+   [
+    799.6,
+    146.55
+   ],
+   [
+    802.82,
+    150.38
+   ],
+   [
+    806.05,
+    154.19
+   ],
+   [
+    809.28,
+    158.0
+   ],
+   [
+    812.52,
+    161.81
+   ],
+   [
+    815.76,
+    165.62
+   ],
+   [
+    819.0,
+    169.42
+   ],
+   [
+    822.25,
+    173.22
+   ],
+   [
+    825.5,
+    177.02
+   ],
+   [
+    828.74,
+    180.82
+   ],
+   [
+    831.99,
+    184.62
+   ],
+   [
+    835.24,
+    188.42
+   ],
+   [
+    838.48,
+    192.22
+   ],
+   [
+    841.73,
+    196.02
+   ],
+   [
+    844.98,
+    199.82
+   ],
+   [
+    848.24,
+    203.62
+   ],
+   [
+    851.49,
+    207.42
+   ],
+   [
+    854.74,
+    211.22
+   ],
+   [
+    857.99,
+    215.02
+   ],
+   [
+    861.24,
+    218.82
+   ],
+   [
+    864.49,
+    222.62
+   ],
+   [
+    867.73,
+    226.43
+   ],
+   [
+    870.98,
+    230.23
+   ],
+   [
+    874.22,
+    234.04
+   ],
+   [
+    877.45,
+    237.85
+   ],
+   [
+    880.69,
+    241.66
+   ],
+   [
+    883.92,
+    245.47
+   ],
+   [
+    887.15,
+    249.28
+   ],
+   [
+    890.38,
+    253.1
+   ],
+   [
+    893.6,
+    256.92
+   ],
+   [
+    896.83,
+    260.74
+   ],
+   [
+    900.05,
+    264.56
+   ],
+   [
+    903.27,
+    268.38
+   ],
+   [
+    906.49,
+    272.2
+   ],
+   [
+    909.71,
+    276.02
+   ],
+   [
+    912.93,
+    279.84
+   ],
+   [
+    916.15,
+    283.66
+   ],
+   [
+    919.38,
+    287.48
+   ],
+   [
+    922.6,
+    291.3
+   ],
+   [
+    925.83,
+    295.12
+   ],
+   [
+    929.05,
+    298.93
+   ],
+   [
+    932.29,
+    302.75
+   ],
+   [
+    935.52,
+    306.56
+   ],
+   [
+    938.76,
+    310.37
+   ],
+   [
+    941.99,
+    314.18
+   ],
+   [
+    945.23,
+    317.98
+   ],
+   [
+    948.47,
+    321.8
+   ],
+   [
+    951.7,
+    325.61
+   ],
+   [
+    954.94,
+    329.42
+   ],
+   [
+    958.17,
+    333.23
+   ],
+   [
+    961.41,
+    337.04
+   ],
+   [
+    964.64,
+    340.85
+   ],
+   [
+    967.88,
+    344.66
+   ],
+   [
+    971.12,
+    348.46
+   ],
+   [
+    974.36,
+    352.27
+   ],
+   [
+    977.6,
+    356.08
+   ],
+   [
+    980.84,
+    359.89
+   ],
+   [
+    984.07,
+    363.7
+   ],
+   [
+    987.29,
+    367.53
+   ],
+   [
+    990.5,
+    371.36
+   ],
+   [
+    993.7,
+    375.19
+   ],
+   [
+    996.9,
+    379.04
+   ],
+   [
+    1000.08,
+    382.89
+   ],
+   [
+    1003.27,
+    386.74
+   ],
+   [
+    1006.44,
+    390.6
+   ],
+   [
+    1009.62,
+    394.46
+   ],
+   [
+    1012.79,
+    398.33
+   ],
+   [
+    1015.95,
+    402.2
+   ],
+   [
+    1019.11,
+    406.07
+   ],
+   [
+    1022.25,
+    409.96
+   ],
+   [
+    1025.38,
+    413.87
+   ],
+   [
+    1028.47,
+    417.8
+   ],
+   [
+    1031.51,
+    421.77
+   ],
+   [
+    1034.5,
+    425.79
+   ],
+   [
+    1037.41,
+    429.88
+   ],
+   [
+    1040.24,
+    434.05
+   ],
+   [
+    1042.98,
+    438.3
+   ],
+   [
+    1045.61,
+    442.63
+   ],
+   [
+    1048.12,
+    447.02
+   ],
+   [
+    1050.51,
+    451.49
+   ],
+   [
+    1052.73,
+    455.99
+   ],
+   [
+    1054.8,
+    460.54
+   ],
+   [
+    1056.7,
+    465.12
+   ],
+   [
+    1058.42,
+    469.72
+   ],
+   [
+    1059.97,
+    474.28
+   ],
+   [
+    1061.39,
+    478.85
+   ],
+   [
+    1062.71,
+    483.42
+   ],
+   [
+    1063.93,
+    487.98
+   ],
+   [
+    1065.08,
+    492.52
+   ],
+   [
+    1066.17,
+    497.12
+   ],
+   [
+    1067.18,
+    501.77
+   ],
+   [
+    1068.08,
+    506.47
+   ],
+   [
+    1068.84,
+    511.2
+   ],
+   [
+    1069.44,
+    516.05
+   ],
+   [
+    1069.86,
+    521.01
+   ],
+   [
+    1070.09,
+    526.04
+   ],
+   [
+    1070.09,
+    531.11
+   ],
+   [
+    1069.85,
+    536.2
+   ],
+   [
+    1069.37,
+    541.26
+   ],
+   [
+    1068.68,
+    546.27
+   ],
+   [
+    1067.78,
+    551.23
+   ],
+   [
+    1066.66,
+    556.13
+   ],
+   [
+    1065.32,
+    560.96
+   ],
+   [
+    1063.72,
+    565.72
+   ],
+   [
+    1061.79,
+    570.51
+   ],
+   [
+    1059.55,
+    575.18
+   ],
+   [
+    1057.0,
+    579.67
+   ],
+   [
+    1054.14,
+    583.9
+   ],
+   [
+    1051.03,
+    587.83
+   ],
+   [
+    1047.62,
+    591.51
+   ],
+   [
+    1043.94,
+    594.91
+   ],
+   [
+    1040.06,
+    597.98
+   ],
+   [
+    1036.09,
+    600.69
+   ],
+   [
+    1032.0,
+    603.07
+   ],
+   [
+    1027.72,
+    605.18
+   ],
+   [
+    1023.34,
+    607.01
+   ],
+   [
+    1018.92,
+    608.53
+   ],
+   [
+    1014.49,
+    609.76
+   ],
+   [
+    1009.91,
+    610.71
+   ],
+   [
+    1005.24,
+    611.33
+   ],
+   [
+    1000.55,
+    611.63
+   ],
+   [
+    995.93,
+    611.62
+   ],
+   [
+    991.24,
+    611.29
+   ],
+   [
+    986.5,
+    610.6
+   ],
+   [
+    981.8,
+    609.56
+   ],
+   [
+    977.22,
+    608.19
+   ],
+   [
+    972.73,
+    606.47
+   ],
+   [
+    968.26,
+    604.37
+   ],
+   [
+    963.89,
+    601.93
+   ],
+   [
+    959.7,
+    599.21
+   ],
+   [
+    955.68,
+    596.25
+   ],
+   [
+    951.76,
+    593.02
+   ],
+   [
+    948.0,
+    589.53
+   ],
+   [
+    944.43,
+    585.81
+   ],
+   [
+    941.07,
+    581.89
+   ],
+   [
+    938.0,
+    577.9
+   ],
+   [
+    935.16,
+    573.79
+   ],
+   [
+    932.5,
+    569.55
+   ],
+   [
+    929.99,
+    565.21
+   ],
+   [
+    927.58,
+    560.81
+   ],
+   [
+    925.21,
+    556.38
+   ],
+   [
+    922.86,
+    551.94
+   ],
+   [
+    920.5,
+    547.5
+   ],
+   [
+    918.11,
+    543.09
+   ],
+   [
+    915.71,
+    538.68
+   ],
+   [
+    913.29,
+    534.28
+   ],
+   [
+    910.88,
+    529.88
+   ],
+   [
+    908.49,
+    525.47
+   ],
+   [
+    906.1,
+    521.05
+   ],
+   [
+    903.72,
+    516.63
+   ],
+   [
+    901.34,
+    512.21
+   ],
+   [
+    898.93,
+    507.8
+   ],
+   [
+    896.51,
+    503.42
+   ],
+   [
+    894.04,
+    499.06
+   ],
+   [
+    891.5,
+    494.74
+   ],
+   [
+    888.9,
+    490.46
+   ],
+   [
+    886.22,
+    486.25
+   ],
+   [
+    883.44,
+    482.09
+   ],
+   [
+    880.58,
+    477.99
+   ],
+   [
+    877.63,
+    473.95
+   ],
+   [
+    874.57,
+    469.98
+   ],
+   [
+    871.4,
+    466.05
+   ],
+   [
+    868.11,
+    462.19
+   ],
+   [
+    864.72,
+    458.43
+   ],
+   [
+    861.22,
+    454.8
+   ],
+   [
+    857.61,
+    451.32
+   ],
+   [
+    853.89,
+    448.03
+   ],
+   [
+    850.02,
+    444.9
+   ],
+   [
+    846.02,
+    441.98
+   ],
+   [
+    841.93,
+    439.29
+   ],
+   [
+    837.79,
+    436.86
+   ],
+   [
+    833.5,
+    434.63
+   ],
+   [
+    829.1,
+    432.61
+   ],
+   [
+    824.6,
+    430.84
+   ],
+   [
+    820.06,
+    429.33
+   ],
+   [
+    815.38,
+    428.05
+   ],
+   [
+    810.59,
+    427.0
+   ],
+   [
+    805.74,
+    426.19
+   ],
+   [
+    800.87,
+    425.62
+   ],
+   [
+    795.89,
+    425.27
+   ],
+   [
+    790.9,
+    425.13
+   ],
+   [
+    785.9,
+    425.04
+   ],
+   [
+    780.91,
+    424.76
+   ],
+   [
+    775.94,
+    424.21
+   ],
+   [
+    771.04,
+    423.4
+   ],
+   [
+    766.2,
+    422.32
+   ],
+   [
+    761.47,
+    421.0
+   ],
+   [
+    756.88,
+    419.46
+   ],
+   [
+    752.47,
+    417.74
+   ],
+   [
+    748.13,
+    415.81
+   ],
+   [
+    743.9,
+    413.69
+   ],
+   [
+    739.82,
+    411.38
+   ],
+   [
+    735.92,
+    408.89
+   ],
+   [
+    732.09,
+    406.21
+   ],
+   [
+    728.33,
+    403.35
+   ],
+   [
+    724.7,
+    400.32
+   ],
+   [
+    721.22,
+    397.15
+   ],
+   [
+    717.81,
+    393.76
+   ],
+   [
+    714.5,
+    390.14
+   ],
+   [
+    711.34,
+    386.31
+   ],
+   [
+    708.36,
+    382.3
+   ],
+   [
+    705.56,
+    378.09
+   ],
+   [
+    702.95,
+    373.7
+   ],
+   [
+    700.59,
+    369.17
+   ],
+   [
+    698.46,
+    364.53
+   ],
+   [
+    696.58,
+    359.81
+   ],
+   [
+    694.94,
+    355.08
+   ],
+   [
+    693.54,
+    350.29
+   ],
+   [
+    692.31,
+    345.44
+   ],
+   [
+    691.26,
+    340.55
+   ],
+   [
+    690.29,
+    335.63
+   ],
+   [
+    689.37,
+    330.7
+   ],
+   [
+    688.38,
+    325.78
+   ],
+   [
+    687.25,
+    320.91
+   ],
+   [
+    685.93,
+    316.14
+   ],
+   [
+    684.41,
+    311.46
+   ],
+   [
+    682.65,
+    306.86
+   ],
+   [
+    680.66,
+    302.37
+   ],
+   [
+    678.46,
+    298.02
+   ],
+   [
+    676.1,
+    293.9
+   ],
+   [
+    673.51,
+    289.88
+   ],
+   [
+    670.72,
+    286.0
+   ],
+   [
+    667.76,
+    282.3
+   ],
+   [
+    664.62,
+    278.79
+   ],
+   [
+    661.25,
+    275.42
+   ],
+   [
+    657.67,
+    272.21
+   ],
+   [
+    653.93,
+    269.21
+   ],
+   [
+    650.06,
+    266.45
+   ],
+   [
+    646.02,
+    263.91
+   ],
+   [
+    641.81,
+    261.57
+   ],
+   [
+    637.48,
+    259.45
+   ],
+   [
+    633.06,
+    257.59
+   ],
+   [
+    628.53,
+    255.96
+   ],
+   [
+    623.85,
+    254.55
+   ],
+   [
+    619.07,
+    253.37
+   ],
+   [
+    614.23,
+    252.45
+   ],
+   [
+    609.34,
+    251.81
+   ],
+   [
+    604.35,
+    251.43
+   ],
+   [
+    599.37,
+    251.27
+   ],
+   [
+    594.37,
+    251.28
+   ],
+   [
+    589.38,
+    251.31
+   ],
+   [
+    584.39,
+    251.26
+   ],
+   [
+    579.39,
+    251.09
+   ],
+   [
+    574.4,
+    250.78
+   ],
+   [
+    569.42,
+    250.33
+   ],
+   [
+    564.47,
+    249.71
+   ],
+   [
+    559.55,
+    248.91
+   ],
+   [
+    554.67,
+    247.95
+   ],
+   [
+    549.85,
+    246.81
+   ],
+   [
+    545.13,
+    245.49
+   ],
+   [
+    540.48,
+    243.96
+   ],
+   [
+    535.88,
+    242.19
+   ],
+   [
+    531.38,
+    240.16
+   ],
+   [
+    527.04,
+    237.88
+   ],
+   [
+    522.87,
+    235.35
+   ],
+   [
+    518.83,
+    232.55
+   ],
+   [
+    514.96,
+    229.51
+   ],
+   [
+    511.3,
+    226.25
+   ],
+   [
+    507.87,
+    222.82
+   ],
+   [
+    504.65,
+    219.17
+   ],
+   [
+    501.66,
+    215.32
+   ],
+   [
+    498.91,
+    211.3
+   ],
+   [
+    496.44,
+    207.16
+   ],
+   [
+    494.23,
+    202.91
+   ],
+   [
+    492.26,
+    198.52
+   ],
+   [
+    490.54,
+    194.03
+   ],
+   [
+    489.09,
+    189.5
+   ],
+   [
+    487.88,
+    185.01
+   ],
+   [
+    486.89,
+    180.49
+   ],
+   [
+    486.11,
+    175.88
+   ],
+   [
+    485.57,
+    171.23
+   ],
+   [
+    485.3,
+    166.59
+   ],
+   [
+    485.3,
+    161.86
+   ],
+   [
+    485.61,
+    157.07
+   ],
+   [
+    486.21,
+    152.28
+   ],
+   [
+    487.11,
+    147.55
+   ],
+   [
+    488.37,
+    142.81
+   ],
+   [
+    489.93,
+    138.07
+   ],
+   [
+    491.7,
+    133.39
+   ],
+   [
+    493.6,
+    128.77
+   ],
+   [
+    495.55,
+    124.15
+   ],
+   [
+    497.46,
+    119.52
+   ],
+   [
+    499.26,
+    114.85
+   ],
+   [
+    500.93,
+    110.14
+   ],
+   [
+    502.44,
+    105.37
+   ],
+   [
+    503.79,
+    100.54
+   ],
+   [
+    504.99,
+    95.65
+   ],
+   [
+    506.02,
+    90.72
+   ],
+   [
+    506.9,
+    85.74
+   ],
+   [
+    507.59,
+    80.73
+   ],
+   [
+    508.09,
+    75.73
+   ],
+   [
+    508.39,
+    70.77
+   ],
+   [
+    508.48,
+    65.87
+   ],
+   [
+    508.35,
+    61.07
+   ],
+   [
+    508.02,
+    56.3
+   ],
+   [
+    507.5,
+    51.53
+   ],
+   [
+    506.77,
+    46.8
+   ],
+   [
+    505.85,
+    42.13
+   ],
+   [
+    504.74,
+    37.55
+   ],
+   [
+    503.43,
+    33.0
+   ],
+   [
+    501.95,
+    28.47
+   ],
+   [
+    500.28,
+    24.01
+   ],
+   [
+    498.46,
+    19.64
+   ],
+   [
+    496.45,
+    15.32
+   ],
+   [
+    494.23,
+    11.02
+   ],
+   [
+    491.78,
+    6.79
+   ],
+   [
+    489.12,
+    2.68
+   ],
+   [
+    486.24,
+    -1.31
+   ],
+   [
+    483.13,
+    -5.27
+   ],
+   [
+    479.78,
+    -9.14
+   ],
+   [
+    476.22,
+    -12.88
+   ],
+   [
+    472.47,
+    -16.45
+   ],
+   [
+    468.58,
+    -19.81
+   ],
+   [
+    464.54,
+    -23.0
+   ],
+   [
+    460.38,
+    -25.99
+   ],
+   [
+    456.1,
+    -28.78
+   ],
+   [
+    451.74,
+    -31.38
+   ],
+   [
+    447.3,
+    -33.81
+   ],
+   [
+    442.78,
+    -36.08
+   ],
+   [
+    438.17,
+    -38.17
+   ],
+   [
+    433.44,
+    -40.13
+   ],
+   [
+    428.57,
+    -41.9
+   ],
+   [
+    423.67,
+    -43.51
+   ],
+   [
+    418.78,
+    -45.0
+   ],
+   [
+    413.87,
+    -46.32
+   ],
+   [
+    408.88,
+    -47.48
+   ],
+   [
+    403.85,
+    -48.51
+   ],
+   [
+    398.8,
+    -49.39
+   ],
+   [
+    393.74,
+    -50.14
+   ],
+   [
+    388.67,
+    -50.73
+   ],
+   [
+    383.6,
+    -51.21
+   ],
+   [
+    378.53,
+    -51.6
+   ],
+   [
+    373.47,
+    -51.93
+   ],
+   [
+    368.43,
+    -52.18
+   ],
+   [
+    363.4,
+    -52.37
+   ],
+   [
+    358.36,
+    -52.5
+   ],
+   [
+    353.33,
+    -52.57
+   ],
+   [
+    348.31,
+    -52.55
+   ],
+   [
+    343.3,
+    -52.43
+   ],
+   [
+    338.3,
+    -52.17
+   ],
+   [
+    333.3,
+    -51.79
+   ],
+   [
+    328.31,
+    -51.28
+   ],
+   [
+    323.35,
+    -50.64
+   ],
+   [
+    318.42,
+    -49.88
+   ],
+   [
+    313.52,
+    -49.01
+   ],
+   [
+    308.65,
+    -48.04
+   ],
+   [
+    303.84,
+    -46.96
+   ],
+   [
+    299.05,
+    -45.76
+   ],
+   [
+    294.3,
+    -44.43
+   ],
+   [
+    289.58,
+    -42.96
+   ],
+   [
+    284.91,
+    -41.36
+   ],
+   [
+    280.3,
+    -39.62
+   ],
+   [
+    275.71,
+    -37.74
+   ],
+   [
+    271.16,
+    -35.76
+   ],
+   [
+    266.65,
+    -33.69
+   ],
+   [
+    262.18,
+    -31.54
+   ],
+   [
+    257.72,
+    -29.32
+   ],
+   [
+    253.3,
+    -27.03
+   ],
+   [
+    248.92,
+    -24.67
+   ],
+   [
+    244.58,
+    -22.23
+   ],
+   [
+    240.31,
+    -19.74
+   ],
+   [
+    236.11,
+    -17.18
+   ],
+   [
+    231.96,
+    -14.54
+   ],
+   [
+    227.86,
+    -11.83
+   ],
+   [
+    223.82,
+    -9.05
+   ],
+   [
+    219.82,
+    -6.19
+   ],
+   [
+    215.87,
+    -3.25
+   ],
+   [
+    211.99,
+    -0.22
+   ],
+   [
+    208.18,
+    2.88
+   ],
+   [
+    204.46,
+    6.05
+   ],
+   [
+    200.8,
+    9.29
+   ],
+   [
+    197.2,
+    12.61
+   ],
+   [
+    193.67,
+    16.01
+   ],
+   [
+    190.21,
+    19.5
+   ],
+   [
+    186.8,
+    23.1
+   ],
+   [
+    183.48,
+    26.77
+   ],
+   [
+    180.23,
+    30.51
+   ],
+   [
+    177.06,
+    34.33
+   ],
+   [
+    173.94,
+    38.23
+   ],
+   [
+    170.88,
+    42.18
+   ],
+   [
+    167.88,
+    46.18
+   ],
+   [
+    164.91,
+    50.2
+   ],
+   [
+    161.95,
+    54.23
+   ],
+   [
+    158.98,
+    58.26
+   ],
+   [
+    156.0,
+    62.28
+   ],
+   [
+    153.0,
+    66.28
+   ],
+   [
+    149.97,
+    70.26
+   ],
+   [
+    146.92,
+    74.22
+   ],
+   [
+    143.84,
+    78.16
+   ],
+   [
+    140.72,
+    82.07
+   ],
+   [
+    137.57,
+    85.95
+   ],
+   [
+    134.39,
+    89.8
+   ],
+   [
+    131.18,
+    93.64
+   ],
+   [
+    127.95,
+    97.46
+   ],
+   [
+    124.71,
+    101.28
+   ],
+   [
+    121.48,
+    105.09
+   ],
+   [
+    118.24,
+    108.9
+   ],
+   [
+    115.01,
+    112.72
+   ],
+   [
+    111.79,
+    116.55
+   ],
+   [
+    108.56,
+    120.37
+   ],
+   [
+    105.29,
+    124.16
+   ],
+   [
+    101.96,
+    127.89
+   ],
+   [
+    98.51,
+    131.54
+   ],
+   [
+    94.93,
+    135.08
+   ],
+   [
+    91.18,
+    138.48
+   ],
+   [
+    87.25,
+    141.75
+   ],
+   [
+    83.33,
+    144.73
+   ],
+   [
+    79.56,
+    147.34
+   ],
+   [
+    75.81,
+    149.67
+   ],
+   [
+    71.64,
+    151.94
+   ],
+   [
+    67.15,
+    154.07
+   ],
+   [
+    62.34,
+    156.08
+   ],
+   [
+    57.5,
+    157.82
+   ],
+   [
+    52.63,
+    159.31
+   ],
+   [
+    47.74,
+    160.54
+   ],
+   [
+    42.82,
+    161.53
+   ],
+   [
+    37.87,
+    162.32
+   ],
+   [
+    32.92,
+    162.94
+   ],
+   [
+    27.95,
+    163.49
+   ],
+   [
+    22.97,
+    164.0
+   ],
+   [
+    18.0,
+    164.48
+   ],
+   [
+    13.02,
+    164.95
+   ],
+   [
+    8.04,
+    165.4
+   ],
+   [
+    3.06,
+    165.84
+   ],
+   [
+    -1.92,
+    166.27
+   ],
+   [
+    -6.9,
+    166.7
+   ],
+   [
+    -11.88,
+    167.14
+   ],
+   [
+    -16.86,
+    167.59
+   ],
+   [
+    -21.83,
+    168.06
+   ],
+   [
+    -26.81,
+    168.53
+   ],
+   [
+    -31.79,
+    168.96
+   ],
+   [
+    -36.78,
+    169.26
+   ],
+   [
+    -41.8,
+    169.34
+   ],
+   [
+    -46.85,
+    169.13
+   ],
+   [
+    -51.94,
+    168.56
+   ],
+   [
+    -57.07,
+    167.57
+   ],
+   [
+    -62.18,
+    166.14
+   ],
+   [
+    -66.92,
+    164.33
+   ],
+   [
+    -71.18,
+    162.23
+   ],
+   [
+    -74.39,
+    160.34
+   ],
+   [
+    -76.91,
+    158.62
+   ],
+   [
+    -79.43,
+    156.64
+   ],
+   [
+    -82.47,
+    153.89
+   ],
+   [
+    -85.41,
+    150.61
+   ],
+   [
+    -88.46,
+    146.47
+   ],
+   [
+    -91.06,
+    142.08
+   ],
+   [
+    -93.32,
+    137.46
+   ],
+   [
+    -95.18,
+    132.74
+   ],
+   [
+    -96.69,
+    127.95
+   ],
+   [
+    -97.94,
+    123.11
+   ],
+   [
+    -99.06,
+    118.23
+   ],
+   [
+    -100.1,
+    113.34
+   ],
+   [
+    -101.13,
+    108.45
+   ],
+   [
+    -102.17,
+    103.56
+   ],
+   [
+    -103.24,
+    98.68
+   ],
+   [
+    -104.35,
+    93.8
+   ],
+   [
+    -105.45,
+    88.92
+   ],
+   [
+    -106.55,
+    84.05
+   ],
+   [
+    -107.62,
+    79.16
+   ],
+   [
+    -108.67,
+    74.27
+   ],
+   [
+    -109.7,
+    69.38
+   ],
+   [
+    -110.74,
+    64.49
+   ],
+   [
+    -111.8,
+    59.61
+   ],
+   [
+    -112.89,
+    54.73
+   ],
+   [
+    -114.02,
+    49.85
+   ],
+   [
+    -115.17,
+    44.99
+   ],
+   [
+    -116.34,
+    40.12
+   ],
+   [
+    -117.5,
+    35.26
+   ],
+   [
+    -118.65,
+    30.39
+   ],
+   [
+    -119.79,
+    25.52
+   ],
+   [
+    -120.91,
+    20.65
+   ],
+   [
+    -122.01,
+    15.77
+   ],
+   [
+    -123.09,
+    10.89
+   ],
+   [
+    -124.16,
+    6.01
+   ],
+   [
+    -125.22,
+    1.12
+   ],
+   [
+    -126.28,
+    -3.76
+   ],
+   [
+    -127.33,
+    -8.65
+   ],
+   [
+    -128.38,
+    -13.54
+   ],
+   [
+    -129.43,
+    -18.43
+   ],
+   [
+    -130.48,
+    -23.32
+   ],
+   [
+    -131.53,
+    -28.21
+   ],
+   [
+    -132.59,
+    -33.09
+   ],
+   [
+    -133.65,
+    -37.97
+   ],
+   [
+    -134.7,
+    -42.86
+   ],
+   [
+    -135.75,
+    -47.74
+   ],
+   [
+    -136.78,
+    -52.63
+   ],
+   [
+    -137.78,
+    -57.53
+   ],
+   [
+    -138.73,
+    -62.43
+   ],
+   [
+    -139.62,
+    -67.35
+   ],
+   [
+    -140.45,
+    -72.29
+   ],
+   [
+    -141.23,
+    -77.23
+   ],
+   [
+    -141.98,
+    -82.18
+   ],
+   [
+    -142.7,
+    -87.13
+   ],
+   [
+    -143.41,
+    -92.09
+   ],
+   [
+    -144.1,
+    -97.05
+   ],
+   [
+    -144.77,
+    -102.01
+   ],
+   [
+    -145.39,
+    -106.99
+   ],
+   [
+    -145.94,
+    -111.96
+   ],
+   [
+    -146.41,
+    -116.94
+   ],
+   [
+    -146.77,
+    -121.92
+   ],
+   [
+    -147.0,
+    -126.88
+   ],
+   [
+    -147.08,
+    -131.76
+   ],
+   [
+    -146.99,
+    -136.64
+   ],
+   [
+    -146.73,
+    -141.5
+   ],
+   [
+    -146.29,
+    -146.32
+   ],
+   [
+    -145.67,
+    -151.1
+   ],
+   [
+    -144.86,
+    -155.88
+   ],
+   [
+    -143.87,
+    -160.63
+   ],
+   [
+    -142.71,
+    -165.33
+   ],
+   [
+    -141.4,
+    -169.99
+   ],
+   [
+    -139.93,
+    -174.7
+   ],
+   [
+    -138.35,
+    -179.38
+   ],
+   [
+    -136.68,
+    -184.02
+   ],
+   [
+    -134.9,
+    -188.63
+   ],
+   [
+    -133.01,
+    -193.24
+   ],
+   [
+    -131.04,
+    -197.82
+   ],
+   [
+    -129.01,
+    -202.39
+   ],
+   [
+    -126.97,
+    -206.95
+   ],
+   [
+    -124.97,
+    -211.52
+   ],
+   [
+    -123.04,
+    -216.11
+   ],
+   [
+    -121.17,
+    -220.72
+   ],
+   [
+    -119.36,
+    -225.36
+   ],
+   [
+    -117.63,
+    -230.04
+   ],
+   [
+    -116.01,
+    -234.79
+   ],
+   [
+    -114.55,
+    -239.6
+   ],
+   [
+    -113.33,
+    -244.52
+   ],
+   [
+    -112.41,
+    -249.57
+   ],
+   [
+    -111.88,
+    -254.54
+   ],
+   [
+    -111.8,
+    -259.3
+   ],
+   [
+    -112.22,
+    -263.65
+   ],
+   [
+    -113.14,
+    -267.69
+   ],
+   [
+    -114.55,
+    -271.46
+   ],
+   [
+    -116.64,
+    -275.14
+   ],
+   [
+    -119.46,
+    -278.54
+   ],
+   [
+    -123.03,
+    -281.37
+   ],
+   [
+    -127.44,
+    -283.3
+   ],
+   [
+    -132.21,
+    -283.73
+   ],
+   [
+    -137.0,
+    -282.47
+   ],
+   [
+    -141.09,
+    -280.05
+   ],
+   [
+    -144.83,
+    -277.03
+   ],
+   [
+    -148.46,
+    -273.83
+   ],
+   [
+    -152.15,
+    -270.31
+   ],
+   [
+    -155.61,
+    -266.56
+   ],
+   [
+    -158.79,
+    -262.59
+   ],
+   [
+    -161.71,
+    -258.44
+   ],
+   [
+    -164.37,
+    -254.19
+   ],
+   [
+    -166.9,
+    -249.88
+   ],
+   [
+    -169.38,
+    -245.54
+   ],
+   [
+    -171.85,
+    -241.2
+   ],
+   [
+    -174.33,
+    -236.86
+   ],
+   [
+    -176.8,
+    -232.51
+   ],
+   [
+    -179.27,
+    -228.18
+   ],
+   [
+    -181.74,
+    -223.85
+   ],
+   [
+    -184.2,
+    -219.52
+   ],
+   [
+    -186.67,
+    -215.2
+   ],
+   [
+    -189.12,
+    -210.86
+   ],
+   [
+    -191.55,
+    -206.51
+   ],
+   [
+    -193.96,
+    -202.14
+   ],
+   [
+    -196.36,
+    -197.76
+   ],
+   [
+    -198.75,
+    -193.35
+   ],
+   [
+    -201.14,
+    -188.95
+   ],
+   [
+    -203.52,
+    -184.55
+   ],
+   [
+    -205.93,
+    -180.15
+   ],
+   [
+    -208.37,
+    -175.78
+   ],
+   [
+    -210.86,
+    -171.44
+   ],
+   [
+    -213.4,
+    -167.15
+   ],
+   [
+    -216.02,
+    -162.89
+   ],
+   [
+    -218.71,
+    -158.67
+   ],
+   [
+    -221.48,
+    -154.51
+   ],
+   [
+    -224.35,
+    -150.42
+   ],
+   [
+    -227.34,
+    -146.41
+   ],
+   [
+    -230.43,
+    -142.52
+   ],
+   [
+    -233.65,
+    -138.72
+   ],
+   [
+    -236.99,
+    -135.03
+   ],
+   [
+    -240.46,
+    -131.44
+   ],
+   [
+    -244.02,
+    -127.96
+   ],
+   [
+    -247.67,
+    -124.6
+   ],
+   [
+    -251.41,
+    -121.36
+   ],
+   [
+    -255.23,
+    -118.23
+   ],
+   [
+    -259.16,
+    -115.22
+   ],
+   [
+    -263.17,
+    -112.32
+   ],
+   [
+    -267.26,
+    -109.54
+   ],
+   [
+    -271.42,
+    -106.88
+   ],
+   [
+    -275.62,
+    -104.35
+   ],
+   [
+    -279.84,
+    -101.94
+   ],
+   [
+    -284.09,
+    -99.66
+   ],
+   [
+    -288.41,
+    -97.47
+   ],
+   [
+    -292.78,
+    -95.38
+   ],
+   [
+    -297.19,
+    -93.38
+   ],
+   [
+    -301.63,
+    -91.48
+   ],
+   [
+    -306.08,
+    -89.69
+   ],
+   [
+    -310.65,
+    -87.98
+   ],
+   [
+    -315.31,
+    -86.35
+   ],
+   [
+    -320.02,
+    -84.82
+   ],
+   [
+    -324.78,
+    -83.4
+   ],
+   [
+    -329.59,
+    -82.1
+   ],
+   [
+    -334.43,
+    -80.93
+   ],
+   [
+    -339.3,
+    -79.88
+   ],
+   [
+    -344.22,
+    -78.97
+   ],
+   [
+    -349.16,
+    -78.18
+   ],
+   [
+    -354.12,
+    -77.51
+   ],
+   [
+    -359.08,
+    -76.94
+   ],
+   [
+    -364.06,
+    -76.45
+   ],
+   [
+    -369.04,
+    -76.04
+   ],
+   [
+    -374.01,
+    -75.7
+   ],
+   [
+    -378.98,
+    -75.42
+   ],
+   [
+    -383.97,
+    -75.2
+   ],
+   [
+    -388.97,
+    -75.05
+   ],
+   [
+    -393.97,
+    -74.98
+   ],
+   [
+    -398.97,
+    -75.0
+   ],
+   [
+    -403.95,
+    -75.13
+   ],
+   [
+    -408.94,
+    -75.35
+   ],
+   [
+    -413.93,
+    -75.68
+   ],
+   [
+    -418.92,
+    -76.12
+   ],
+   [
+    -423.89,
+    -76.66
+   ],
+   [
+    -428.85,
+    -77.3
+   ],
+   [
+    -433.8,
+    -78.03
+   ],
+   [
+    -438.72,
+    -78.83
+   ],
+   [
+    -443.64,
+    -79.69
+   ],
+   [
+    -448.56,
+    -80.6
+   ],
+   [
+    -453.47,
+    -81.55
+   ],
+   [
+    -458.38,
+    -82.54
+   ],
+   [
+    -463.28,
+    -83.56
+   ],
+   [
+    -468.18,
+    -84.63
+   ],
+   [
+    -473.06,
+    -85.74
+   ],
+   [
+    -477.94,
+    -86.91
+   ],
+   [
+    -482.8,
+    -88.13
+   ],
+   [
+    -487.66,
+    -89.41
+   ],
+   [
+    -492.51,
+    -90.74
+   ],
+   [
+    -497.33,
+    -92.13
+   ],
+   [
+    -502.14,
+    -93.58
+   ],
+   [
+    -506.93,
+    -95.1
+   ],
+   [
+    -511.69,
+    -96.68
+   ],
+   [
+    -516.42,
+    -98.34
+   ],
+   [
+    -521.12,
+    -100.09
+   ],
+   [
+    -525.78,
+    -101.93
+   ],
+   [
+    -530.41,
+    -103.87
+   ],
+   [
+    -535.01,
+    -105.91
+   ],
+   [
+    -539.56,
+    -108.05
+   ],
+   [
+    -544.08,
+    -110.3
+   ],
+   [
+    -548.54,
+    -112.63
+   ],
+   [
+    -552.94,
+    -115.06
+   ],
+   [
+    -557.29,
+    -117.57
+   ],
+   [
+    -561.58,
+    -120.15
+   ],
+   [
+    -565.81,
+    -122.8
+   ],
+   [
+    -570.01,
+    -125.51
+   ],
+   [
+    -574.15,
+    -128.29
+   ],
+   [
+    -578.26,
+    -131.13
+   ],
+   [
+    -582.31,
+    -134.02
+   ],
+   [
+    -586.31,
+    -136.97
+   ],
+   [
+    -590.24,
+    -139.97
+   ],
+   [
+    -594.12,
+    -143.04
+   ],
+   [
+    -597.94,
+    -146.17
+   ],
+   [
+    -601.71,
+    -149.38
+   ],
+   [
+    -605.41,
+    -152.66
+   ],
+   [
+    -609.04,
+    -156.0
+   ],
+   [
+    -612.6,
+    -159.41
+   ],
+   [
+    -616.08,
+    -162.88
+   ],
+   [
+    -619.5,
+    -166.42
+   ],
+   [
+    -622.86,
+    -170.02
+   ],
+   [
+    -626.14,
+    -173.68
+   ],
+   [
+    -629.36,
+    -177.4
+   ],
+   [
+    -632.51,
+    -181.16
+   ],
+   [
+    -635.6,
+    -184.95
+   ],
+   [
+    -638.64,
+    -188.78
+   ],
+   [
+    -641.63,
+    -192.66
+   ],
+   [
+    -644.58,
+    -196.59
+   ],
+   [
+    -647.47,
+    -200.55
+   ],
+   [
+    -650.31,
+    -204.54
+   ],
+   [
+    -653.11,
+    -208.56
+   ],
+   [
+    -655.86,
+    -212.61
+   ],
+   [
+    -658.57,
+    -216.71
+   ],
+   [
+    -661.23,
+    -220.86
+   ],
+   [
+    -663.83,
+    -225.04
+   ],
+   [
+    -666.36,
+    -229.28
+   ],
+   [
+    -668.82,
+    -233.55
+   ],
+   [
+    -671.22,
+    -237.86
+   ],
+   [
+    -673.57,
+    -242.25
+   ],
+   [
+    -675.86,
+    -246.69
+   ],
+   [
+    -678.08,
+    -251.16
+   ],
+   [
+    -680.23,
+    -255.66
+   ],
+   [
+    -682.32,
+    -260.19
+   ],
+   [
+    -684.35,
+    -264.74
+   ],
+   [
+    -686.32,
+    -269.33
+   ],
+   [
+    -688.24,
+    -273.95
+   ],
+   [
+    -690.12,
+    -278.59
+   ],
+   [
+    -691.97,
+    -283.24
+   ],
+   [
+    -693.79,
+    -287.91
+   ],
+   [
+    -695.62,
+    -292.57
+   ],
+   [
+    -697.46,
+    -297.23
+   ],
+   [
+    -699.33,
+    -301.87
+   ],
+   [
+    -701.24,
+    -306.5
+   ],
+   [
+    -703.2,
+    -311.1
+   ],
+   [
+    -705.23,
+    -315.68
+   ],
+   [
+    -707.33,
+    -320.22
+   ],
+   [
+    -709.51,
+    -324.73
+   ],
+   [
+    -711.76,
+    -329.2
+   ],
+   [
+    -714.09,
+    -333.64
+   ],
+   [
+    -716.48,
+    -338.05
+   ],
+   [
+    -718.91,
+    -342.43
+   ],
+   [
+    -721.38,
+    -346.8
+   ],
+   [
+    -723.9,
+    -351.14
+   ],
+   [
+    -726.49,
+    -355.45
+   ],
+   [
+    -729.18,
+    -359.71
+   ],
+   [
+    -732.0,
+    -363.88
+   ],
+   [
+    -734.95,
+    -367.95
+   ],
+   [
+    -738.06,
+    -371.86
+   ],
+   [
+    -741.33,
+    -375.59
+   ],
+   [
+    -744.73,
+    -379.08
+   ],
+   [
+    -748.22,
+    -382.3
+   ],
+   [
+    -751.79,
+    -385.26
+   ],
+   [
+    -755.59,
+    -388.09
+   ],
+   [
+    -759.6,
+    -390.74
+   ],
+   [
+    -763.76,
+    -393.17
+   ],
+   [
+    -768.01,
+    -395.35
+   ],
+   [
+    -772.32,
+    -397.28
+   ],
+   [
+    -776.89,
+    -399.01
+   ],
+   [
+    -781.63,
+    -400.5
+   ],
+   [
+    -786.52,
+    -401.73
+   ],
+   [
+    -791.49,
+    -402.69
+   ],
+   [
+    -796.52,
+    -403.35
+   ],
+   [
+    -801.55,
+    -403.71
+   ],
+   [
+    -806.6,
+    -403.78
+   ],
+   [
+    -811.66,
+    -403.54
+   ],
+   [
+    -816.7,
+    -403.0
+   ],
+   [
+    -821.7,
+    -402.19
+   ],
+   [
+    -826.64,
+    -401.15
+   ],
+   [
+    -831.51,
+    -399.92
+   ],
+   [
+    -836.34,
+    -398.53
+   ],
+   [
+    -841.14,
+    -397.0
+   ],
+   [
+    -845.89,
+    -395.32
+   ],
+   [
+    -850.58,
+    -393.54
+   ],
+   [
+    -855.23,
+    -391.65
+   ],
+   [
+    -859.81,
+    -389.69
+   ],
+   [
+    -864.29,
+    -387.63
+   ],
+   [
+    -868.7,
+    -385.36
+   ],
+   [
+    -872.95,
+    -382.83
+   ],
+   [
+    -876.98,
+    -380.03
+   ],
+   [
+    -880.75,
+    -376.99
+   ],
+   [
+    -884.23,
+    -373.76
+   ],
+   [
+    -887.16,
+    -370.64
+   ],
+   [
+    -889.97,
+    -367.18
+   ],
+   [
+    -892.6,
+    -363.42
+   ],
+   [
+    -894.96,
+    -359.4
+   ],
+   [
+    -896.97,
+    -355.21
+   ],
+   [
+    -898.63,
+    -350.97
+   ],
+   [
+    -899.95,
+    -346.74
+   ],
+   [
+    -900.99,
+    -342.34
+   ],
+   [
+    -901.72,
+    -337.72
+   ],
+   [
+    -902.14,
+    -332.98
+   ],
+   [
+    -902.22,
+    -328.18
+   ],
+   [
+    -901.96,
+    -323.41
+   ],
+   [
+    -901.41,
+    -318.74
+   ],
+   [
+    -900.6,
+    -314.15
+   ],
+   [
+    -899.5,
+    -309.44
+   ],
+   [
+    -898.15,
+    -304.72
+   ],
+   [
+    -896.54,
+    -300.03
+   ],
+   [
+    -894.68,
+    -295.4
+   ],
+   [
+    -892.6,
+    -290.88
+   ],
+   [
+    -890.3,
+    -286.43
+   ],
+   [
+    -887.79,
+    -282.04
+   ],
+   [
+    -885.07,
+    -277.75
+   ],
+   [
+    -882.16,
+    -273.57
+   ],
+   [
+    -879.1,
+    -269.54
+   ],
+   [
+    -875.88,
+    -265.64
+   ],
+   [
+    -872.51,
+    -261.88
+   ],
+   [
+    -869.0,
+    -258.25
+   ],
+   [
+    -865.36,
+    -254.76
+   ],
+   [
+    -861.59,
+    -251.4
+   ],
+   [
+    -857.72,
+    -248.16
+   ],
+   [
+    -853.78,
+    -245.01
+   ],
+   [
+    -849.79,
+    -241.93
+   ],
+   [
+    -845.81,
+    -238.92
+   ],
+   [
+    -841.8,
+    -235.94
+   ],
+   [
+    -837.78,
+    -232.98
+   ],
+   [
+    -833.75,
+    -230.04
+   ],
+   [
+    -829.72,
+    -227.1
+   ],
+   [
+    -825.67,
+    -224.17
+   ],
+   [
+    -821.63,
+    -221.25
+   ],
+   [
+    -817.57,
+    -218.32
+   ],
+   [
+    -813.52,
+    -215.39
+   ],
+   [
+    -809.46,
+    -212.46
+   ],
+   [
+    -805.4,
+    -209.55
+   ],
+   [
+    -801.34,
+    -206.64
+   ],
+   [
+    -797.27,
+    -203.74
+   ],
+   [
+    -793.19,
+    -200.85
+   ],
+   [
+    -789.1,
+    -197.98
+   ],
+   [
+    -784.99,
+    -195.12
+   ],
+   [
+    -780.86,
+    -192.29
+   ],
+   [
+    -776.71,
+    -189.49
+   ],
+   [
+    -772.54,
+    -186.72
+   ],
+   [
+    -768.35,
+    -183.98
+   ],
+   [
+    -764.14,
+    -181.27
+   ],
+   [
+    -759.91,
+    -178.59
+   ],
+   [
+    -755.66,
+    -175.95
+   ],
+   [
+    -751.38,
+    -173.34
+   ],
+   [
+    -747.09,
+    -170.77
+   ],
+   [
+    -742.78,
+    -168.22
+   ],
+   [
+    -738.45,
+    -165.71
+   ],
+   [
+    -734.11,
+    -163.22
+   ],
+   [
+    -729.76,
+    -160.75
+   ],
+   [
+    -725.39,
+    -158.3
+   ],
+   [
+    -721.03,
+    -155.87
+   ],
+   [
+    -716.65,
+    -153.44
+   ],
+   [
+    -712.27,
+    -151.03
+   ],
+   [
+    -707.89,
+    -148.63
+   ],
+   [
+    -703.49,
+    -146.25
+   ],
+   [
+    -699.08,
+    -143.89
+   ],
+   [
+    -694.66,
+    -141.56
+   ],
+   [
+    -690.22,
+    -139.26
+   ],
+   [
+    -685.77,
+    -137.0
+   ],
+   [
+    -681.29,
+    -134.77
+   ],
+   [
+    -676.81,
+    -132.57
+   ],
+   [
+    -672.32,
+    -130.39
+   ],
+   [
+    -667.82,
+    -128.22
+   ],
+   [
+    -663.32,
+    -126.05
+   ],
+   [
+    -658.82,
+    -123.88
+   ],
+   [
+    -654.33,
+    -121.7
+   ],
+   [
+    -649.83,
+    -119.53
+   ],
+   [
+    -645.33,
+    -117.36
+   ],
+   [
+    -640.83,
+    -115.2
+   ],
+   [
+    -636.32,
+    -113.05
+   ],
+   [
+    -631.81,
+    -110.91
+   ],
+   [
+    -627.29,
+    -108.79
+   ],
+   [
+    -622.76,
+    -106.69
+   ],
+   [
+    -618.25,
+    -104.61
+   ],
+   [
+    -613.72,
+    -102.54
+   ],
+   [
+    -609.18,
+    -100.5
+   ],
+   [
+    -604.63,
+    -98.48
+   ],
+   [
+    -600.08,
+    -96.47
+   ],
+   [
+    -595.52,
+    -94.48
+   ],
+   [
+    -590.94,
+    -92.5
+   ],
+   [
+    -586.35,
+    -90.55
+   ],
+   [
+    -581.76,
+    -88.61
+   ],
+   [
+    -577.15,
+    -86.69
+   ],
+   [
+    -572.54,
+    -84.79
+   ],
+   [
+    -567.93,
+    -82.89
+   ],
+   [
+    -563.31,
+    -81.0
+   ],
+   [
+    -558.68,
+    -79.13
+   ],
+   [
+    -554.04,
+    -77.27
+   ],
+   [
+    -549.4,
+    -75.43
+   ],
+   [
+    -544.75,
+    -73.6
+   ],
+   [
+    -540.1,
+    -71.78
+   ],
+   [
+    -535.44,
+    -69.96
+   ],
+   [
+    -530.78,
+    -68.16
+   ],
+   [
+    -526.12,
+    -66.36
+   ],
+   [
+    -521.44,
+    -64.57
+   ],
+   [
+    -516.77,
+    -62.8
+   ],
+   [
+    -512.09,
+    -61.03
+   ],
+   [
+    -507.41,
+    -59.28
+   ],
+   [
+    -502.72,
+    -57.53
+   ],
+   [
+    -498.03,
+    -55.79
+   ],
+   [
+    -493.34,
+    -54.06
+   ],
+   [
+    -488.64,
+    -52.34
+   ],
+   [
+    -483.94,
+    -50.63
+   ],
+   [
+    -479.24,
+    -48.93
+   ],
+   [
+    -474.54,
+    -47.23
+   ],
+   [
+    -469.83,
+    -45.54
+   ],
+   [
+    -465.12,
+    -43.86
+   ],
+   [
+    -460.41,
+    -42.18
+   ],
+   [
+    -455.7,
+    -40.5
+   ],
+   [
+    -450.99,
+    -38.84
+   ],
+   [
+    -446.27,
+    -37.17
+   ],
+   [
+    -441.55,
+    -35.52
+   ],
+   [
+    -436.83,
+    -33.87
+   ],
+   [
+    -432.11,
+    -32.23
+   ],
+   [
+    -427.38,
+    -30.59
+   ],
+   [
+    -422.66,
+    -28.96
+   ],
+   [
+    -417.93,
+    -27.32
+   ],
+   [
+    -413.21,
+    -25.68
+   ],
+   [
+    -408.49,
+    -24.03
+   ],
+   [
+    -403.77,
+    -22.39
+   ],
+   [
+    -399.04,
+    -20.74
+   ],
+   [
+    -394.33,
+    -19.09
+   ],
+   [
+    -389.61,
+    -17.43
+   ],
+   [
+    -384.89,
+    -15.77
+   ],
+   [
+    -380.18,
+    -14.1
+   ],
+   [
+    -375.46,
+    -12.44
+   ],
+   [
+    -370.75,
+    -10.77
+   ],
+   [
+    -366.03,
+    -9.1
+   ],
+   [
+    -361.32,
+    -7.44
+   ],
+   [
+    -356.6,
+    -5.77
+   ],
+   [
+    -351.89,
+    -4.11
+   ],
+   [
+    -347.17,
+    -2.44
+   ],
+   [
+    -342.45,
+    -0.79
+   ],
+   [
+    -337.73,
+    0.86
+   ],
+   [
+    -333.01,
+    2.5
+   ],
+   [
+    -328.28,
+    4.14
+   ],
+   [
+    -323.56,
+    5.77
+   ],
+   [
+    -318.83,
+    7.4
+   ],
+   [
+    -314.1,
+    9.02
+   ],
+   [
+    -309.37,
+    10.64
+   ],
+   [
+    -304.63,
+    12.24
+   ],
+   [
+    -299.9,
+    13.84
+   ],
+   [
+    -295.16,
+    15.44
+   ],
+   [
+    -290.42,
+    17.03
+   ],
+   [
+    -285.67,
+    18.62
+   ],
+   [
+    -280.93,
+    20.2
+   ],
+   [
+    -276.19,
+    21.79
+   ],
+   [
+    -271.45,
+    23.37
+   ],
+   [
+    -266.71,
+    24.96
+   ],
+   [
+    -261.97,
+    26.55
+   ],
+   [
+    -257.23,
+    28.15
+   ],
+   [
+    -252.49,
+    29.75
+   ],
+   [
+    -247.76,
+    31.35
+   ],
+   [
+    -243.02,
+    32.96
+   ],
+   [
+    -238.29,
+    34.58
+   ],
+   [
+    -233.56,
+    36.2
+   ],
+   [
+    -228.83,
+    37.82
+   ],
+   [
+    -224.1,
+    39.45
+   ],
+   [
+    -219.38,
+    41.09
+   ],
+   [
+    -214.66,
+    42.73
+   ],
+   [
+    -209.93,
+    44.37
+   ],
+   [
+    -205.21,
+    46.02
+   ],
+   [
+    -200.49,
+    47.65
+   ],
+   [
+    -195.76,
+    49.29
+   ],
+   [
+    -191.03,
+    50.91
+   ],
+   [
+    -186.3,
+    52.53
+   ],
+   [
+    -181.56,
+    54.13
+   ],
+   [
+    -176.82,
+    55.72
+   ],
+   [
+    -172.08,
+    57.29
+   ],
+   [
+    -167.32,
+    58.84
+   ],
+   [
+    -162.56,
+    60.37
+   ],
+   [
+    -157.8,
+    61.88
+   ],
+   [
+    -153.02,
+    63.38
+   ],
+   [
+    -148.25,
+    64.86
+   ],
+   [
+    -143.47,
+    66.34
+   ],
+   [
+    -138.69,
+    67.81
+   ],
+   [
+    -133.91,
+    69.28
+   ],
+   [
+    -129.13,
+    70.76
+   ],
+   [
+    -124.34,
+    72.22
+   ],
+   [
+    -119.55,
+    73.65
+   ],
+   [
+    -114.74,
+    75.04
+   ],
+   [
+    -109.9,
+    76.34
+   ],
+   [
+    -105.02,
+    77.53
+   ],
+   [
+    -100.1,
+    78.59
+   ],
+   [
+    -95.14,
+    79.51
+   ],
+   [
+    -90.13,
+    80.28
+   ],
+   [
+    -85.08,
+    80.91
+   ],
+   [
+    -80.12,
+    81.37
+   ],
+   [
+    -75.2,
+    81.67
+   ],
+   [
+    -70.34,
+    81.82
+   ],
+   [
+    -65.56,
+    81.84
+   ],
+   [
+    -60.86,
+    81.76
+   ],
+   [
+    -56.16,
+    81.59
+   ],
+   [
+    -51.48,
+    81.35
+   ],
+   [
+    -46.84,
+    81.02
+   ],
+   [
+    -42.13,
+    80.6
+   ],
+   [
+    -37.28,
+    80.06
+   ],
+   [
+    -32.43,
+    79.41
+   ],
+   [
+    -27.59,
+    78.62
+   ],
+   [
+    -22.76,
+    77.7
+   ],
+   [
+    -17.9,
+    76.64
+   ],
+   [
+    -13.06,
+    75.43
+   ],
+   [
+    -8.26,
+    74.08
+   ],
+   [
+    -3.51,
+    72.58
+   ],
+   [
+    1.19,
+    70.96
+   ],
+   [
+    5.85,
+    69.22
+   ],
+   [
+    10.48,
+    67.37
+   ],
+   [
+    15.06,
+    65.42
+   ],
+   [
+    19.6,
+    63.38
+   ],
+   [
+    24.1,
+    61.26
+   ],
+   [
+    28.56,
+    59.07
+   ],
+   [
+    32.99,
+    56.83
+   ],
+   [
+    37.41,
+    54.55
+   ],
+   [
+    41.81,
+    52.23
+   ],
+   [
+    46.19,
+    49.87
+   ],
+   [
+    50.55,
+    47.47
+   ],
+   [
+    54.88,
+    45.03
+   ],
+   [
+    59.18,
+    42.54
+   ],
+   [
+    63.46,
+    39.99
+   ],
+   [
+    67.69,
+    37.36
+   ],
+   [
+    71.88,
+    34.66
+   ],
+   [
+    76.01,
+    31.88
+   ],
+   [
+    80.08,
+    29.01
+   ],
+   [
+    84.09,
+    26.05
+   ],
+   [
+    88.04,
+    23.01
+   ],
+   [
+    91.93,
+    19.89
+   ],
+   [
+    95.75,
+    16.69
+   ],
+   [
+    99.51,
+    13.43
+   ],
+   [
+    103.21,
+    10.09
+   ],
+   [
+    106.85,
+    6.7
+   ],
+   [
+    110.43,
+    3.25
+   ],
+   [
+    113.99,
+    -0.26
+   ],
+   [
+    117.52,
+    -3.8
+   ],
+   [
+    121.04,
+    -7.35
+   ],
+   [
+    124.54,
+    -10.91
+   ],
+   [
+    128.05,
+    -14.47
+   ],
+   [
+    131.57,
+    -18.03
+   ],
+   [
+    135.1,
+    -21.57
+   ],
+   [
+    138.65,
+    -25.09
+   ],
+   [
+    142.22,
+    -28.59
+   ],
+   [
+    145.8,
+    -32.08
+   ],
+   [
+    149.39,
+    -35.56
+   ],
+   [
+    152.98,
+    -39.03
+   ],
+   [
+    156.59,
+    -42.49
+   ],
+   [
+    160.2,
+    -45.95
+   ],
+   [
+    163.82,
+    -49.4
+   ],
+   [
+    167.44,
+    -52.85
+   ],
+   [
+    171.06,
+    -56.3
+   ],
+   [
+    174.66,
+    -59.77
+   ],
+   [
+    178.26,
+    -63.24
+   ],
+   [
+    181.85,
+    -66.72
+   ],
+   [
+    185.44,
+    -70.2
+   ],
+   [
+    189.03,
+    -73.68
+   ],
+   [
+    192.63,
+    -77.15
+   ],
+   [
+    196.24,
+    -80.61
+   ],
+   [
+    199.86,
+    -84.05
+   ],
+   [
+    203.5,
+    -87.48
+   ],
+   [
+    207.16,
+    -90.89
+   ],
+   [
+    210.83,
+    -94.29
+   ],
+   [
+    214.51,
+    -97.67
+   ],
+   [
+    218.21,
+    -101.04
+   ],
+   [
+    221.92,
+    -104.41
+   ],
+   [
+    225.66,
+    -107.78
+   ],
+   [
+    229.4,
+    -111.14
+   ],
+   [
+    233.16,
+    -114.48
+   ],
+   [
+    236.96,
+    -117.77
+   ],
+   [
+    240.86,
+    -120.98
+   ],
+   [
+    244.89,
+    -124.03
+   ],
+   [
+    249.07,
+    -126.88
+   ],
+   [
+    253.41,
+    -129.48
+   ],
+   [
+    257.88,
+    -131.84
+   ],
+   [
+    262.46,
+    -134.01
+   ],
+   [
+    267.13,
+    -136.0
+   ],
+   [
+    271.94,
+    -137.7
+   ],
+   [
+    276.77,
+    -138.91
+   ],
+   [
+    280.7,
+    -139.46
+   ],
+   [
+    284.24,
+    -139.58
+   ],
+   [
+    287.63,
+    -139.37
+   ],
+   [
+    291.52,
+    -138.69
+   ],
+   [
+    296.16,
+    -137.08
+   ],
+   [
+    300.6,
+    -134.63
+   ],
+   [
+    304.57,
+    -131.58
+   ],
+   [
+    308.45,
+    -128.43
+   ],
+   [
+    312.64,
+    -125.7
+   ],
+   [
+    317.07,
+    -123.58
+   ],
+   [
+    321.56,
+    -122.16
+   ],
+   [
+    325.66,
+    -121.45
+   ],
+   [
+    329.7,
+    -121.28
+   ],
+   [
+    333.8,
+    -121.62
+   ],
+   [
+    338.17,
+    -122.57
+   ],
+   [
+    342.71,
+    -124.3
+   ],
+   [
+    347.02,
+    -126.8
+   ],
+   [
+    350.94,
+    -129.84
+   ],
+   [
+    354.64,
+    -133.21
+   ],
+   [
+    358.26,
+    -136.67
+   ],
+   [
+    362.0,
+    -140.0
+   ],
+   [
+    365.98,
+    -143.04
+   ],
+   [
+    370.14,
+    -145.82
+   ],
+   [
+    374.45,
+    -148.38
+   ],
+   [
+    378.85,
+    -150.73
+   ],
+   [
+    383.29,
+    -152.9
+   ],
+   [
+    387.77,
+    -154.9
+   ],
+   [
+    392.31,
+    -156.77
+   ],
+   [
+    396.89,
+    -158.53
+   ],
+   [
+    401.49,
+    -160.17
+   ],
+   [
+    406.09,
+    -161.66
+   ],
+   [
+    410.73,
+    -163.02
+   ],
+   [
+    415.46,
+    -164.24
+   ],
+   [
+    420.25,
+    -165.31
+   ],
+   [
+    425.07,
+    -166.24
+   ],
+   [
+    429.96,
+    -167.0
+   ],
+   [
+    434.9,
+    -167.59
+   ],
+   [
+    439.87,
+    -167.97
+   ],
+   [
+    444.86,
+    -168.15
+   ],
+   [
+    449.84,
+    -168.14
+   ],
+   [
+    454.84,
+    -167.92
+   ],
+   [
+    459.83,
+    -167.5
+   ],
+   [
+    464.81,
+    -166.92
+   ],
+   [
+    469.77,
+    -166.21
+   ],
+   [
+    474.73,
+    -165.36
+   ],
+   [
+    479.7,
+    -164.37
+   ],
+   [
+    484.68,
+    -163.23
+   ],
+   [
+    489.62,
+    -161.94
+   ],
+   [
+    494.5,
+    -160.5
+   ],
+   [
+    499.31,
+    -158.91
+   ],
+   [
+    504.07,
+    -157.16
+   ],
+   [
+    508.76,
+    -155.24
+   ],
+   [
+    513.38,
+    -153.16
+   ],
+   [
+    517.94,
+    -150.93
+   ],
+   [
+    522.45,
+    -148.55
+   ],
+   [
+    526.91,
+    -146.05
+   ],
+   [
+    531.3,
+    -143.43
+   ],
+   [
+    535.64,
+    -140.71
+   ],
+   [
+    539.9,
+    -137.91
+   ],
+   [
+    544.09,
+    -135.04
+   ],
+   [
+    548.2,
+    -132.1
+   ],
+   [
+    552.25,
+    -129.08
+   ],
+   [
+    556.25,
+    -125.99
+   ],
+   [
+    560.2,
+    -122.83
+   ],
+   [
+    564.09,
+    -119.62
+   ],
+   [
+    567.93,
+    -116.34
+   ],
+   [
+    571.75,
+    -113.0
+   ],
+   [
+    575.52,
+    -109.59
+   ],
+   [
+    579.25,
+    -106.13
+   ],
+   [
+    582.93,
+    -102.61
+   ],
+   [
+    586.55,
+    -99.04
+   ],
+   [
+    590.12,
+    -95.43
+   ],
+   [
+    593.62,
+    -91.78
+   ],
+   [
+    597.05,
+    -88.12
+   ],
+   [
+    600.43,
+    -84.43
+   ],
+   [
+    603.79,
+    -80.7
+   ],
+   [
+    607.11,
+    -76.95
+   ],
+   [
+    610.42,
+    -73.18
+   ],
+   [
+    613.7,
+    -69.39
+   ],
+   [
+    616.96,
+    -65.58
+   ],
+   [
+    620.2,
+    -61.75
+   ],
+   [
+    623.42,
+    -57.91
+   ]
+  ],
+  "ground_plane": [
+   "pos_x_m",
+   "pos_z_m"
+  ],
+  "source_lap_ids": [
+   6,
+   5
+  ],
+  "corner_text": {
+   "T1": {
+    "short": "T2",
+    "long": "Turn 2",
+    "voice": "Turn 2"
+   },
+   "T2": {
+    "short": "T3-5",
+    "long": "Turns 3-5 (S Curve)",
+    "voice": "Turns 3 to 5, S Curve"
+   },
+   "T3": {
+    "short": "T6",
+    "long": "Turn 6 (Reverse Bank)",
+    "voice": "Turn 6, Reverse Bank"
+   },
+   "T4": {
+    "short": "T7",
+    "long": "Turn 7",
+    "voice": "Turn 7"
+   },
+   "T5": {
+    "short": "T8",
+    "long": "Turn 8 (Degner 1)",
+    "voice": "Turn 8, Degner 1"
+   },
+   "T6": {
+    "short": "T9",
+    "long": "Turn 9 (Degner 2)",
+    "voice": "Turn 9, Degner 2"
+   },
+   "T7": {
+    "short": "T11",
+    "long": "Turn 11 (Hairpin)",
+    "voice": "Turn 11, Hairpin"
+   },
+   "T8": {
+    "short": "T13-14",
+    "long": "Turns 13-14 (Spoon Curve)",
+    "voice": "Turns 13 to 14, Spoon Curve"
+   },
+   "T9": {
+    "short": "T15",
+    "long": "Turn 15 (130R)",
+    "voice": "Turn 15, 130R"
+   },
+   "T10": {
+    "short": "T16-17 (1)",
+    "long": "Turns 16-17, part 1",
+    "voice": "Turns 16 to 17, first part"
+   },
+   "T11": {
+    "short": "T16-17 (2)",
+    "long": "Turns 16-17, part 2",
+    "voice": "Turns 16 to 17, second part"
+   }
+  }
+ },
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:13",
+  "track_length_m": 5809.0,
+  "pit_speed_limit_kph": 80.0,
+  "sector2_start_m": 2225.65,
+  "sector3_start_m": 4690.02,
+  "sector_boundaries_m": [
+   0.0,
+   2225.65,
+   4690.02,
+   5809.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 2225.65,
+    "length_m": 2225.65
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 2225.65,
+    "end_m": 4690.02,
+    "length_m": 2464.37
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 4690.02,
+    "end_m": 5809.0,
+    "length_m": 1118.98
+   }
+  ],
+  "marshal_zones": [
+   {
+    "kind": "marshal",
+    "index": 0,
+    "game_number": 1,
+    "lap_order": 1,
+    "start_m": 606.34,
+    "end_m": 858.65,
+    "length_m": 252.31,
+    "start_frac": 0.10438,
+    "end_frac": 0.147814,
+    "wraps": false,
+    "segments_m": [
+     [
+      606.34,
+      858.65
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 1,
+    "game_number": 2,
+    "lap_order": 2,
+    "start_m": 858.65,
+    "end_m": 1221.09,
+    "length_m": 362.44,
+    "start_frac": 0.147814,
+    "end_frac": 0.210207,
+    "wraps": false,
+    "segments_m": [
+     [
+      858.65,
+      1221.09
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 2,
+    "game_number": 3,
+    "lap_order": 3,
+    "start_m": 1221.09,
+    "end_m": 1601.39,
+    "length_m": 380.3,
+    "start_frac": 0.210207,
+    "end_frac": 0.275675,
+    "wraps": false,
+    "segments_m": [
+     [
+      1221.09,
+      1601.39
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 3,
+    "game_number": 4,
+    "lap_order": 4,
+    "start_m": 1601.39,
+    "end_m": 2130.33,
+    "length_m": 528.93,
+    "start_frac": 0.275675,
+    "end_frac": 0.366729,
+    "wraps": false,
+    "segments_m": [
+     [
+      1601.39,
+      2130.33
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 4,
+    "game_number": 5,
+    "lap_order": 5,
+    "start_m": 2130.33,
+    "end_m": 2460.68,
+    "length_m": 330.35,
+    "start_frac": 0.366729,
+    "end_frac": 0.423598,
+    "wraps": false,
+    "segments_m": [
+     [
+      2130.33,
+      2460.68
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 5,
+    "game_number": 6,
+    "lap_order": 6,
+    "start_m": 2460.68,
+    "end_m": 2763.73,
+    "length_m": 303.05,
+    "start_frac": 0.423598,
+    "end_frac": 0.475768,
+    "wraps": false,
+    "segments_m": [
+     [
+      2460.68,
+      2763.73
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 6,
+    "game_number": 7,
+    "lap_order": 7,
+    "start_m": 2763.73,
+    "end_m": 3172.39,
+    "length_m": 408.66,
+    "start_frac": 0.475768,
+    "end_frac": 0.546117,
+    "wraps": false,
+    "segments_m": [
+     [
+      2763.73,
+      3172.39
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 7,
+    "game_number": 8,
+    "lap_order": 8,
+    "start_m": 3172.39,
+    "end_m": 3527.03,
+    "length_m": 354.63,
+    "start_frac": 0.546117,
+    "end_frac": 0.607166,
+    "wraps": false,
+    "segments_m": [
+     [
+      3172.39,
+      3527.03
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 8,
+    "game_number": 9,
+    "lap_order": 9,
+    "start_m": 3527.03,
+    "end_m": 4003.07,
+    "length_m": 476.04,
+    "start_frac": 0.607166,
+    "end_frac": 0.689116,
+    "wraps": false,
+    "segments_m": [
+     [
+      3527.03,
+      4003.07
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 9,
+    "game_number": 10,
+    "lap_order": 10,
+    "start_m": 4003.07,
+    "end_m": 4467.69,
+    "length_m": 464.62,
+    "start_frac": 0.689116,
+    "end_frac": 0.769099,
+    "wraps": false,
+    "segments_m": [
+     [
+      4003.07,
+      4467.69
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 10,
+    "game_number": 11,
+    "lap_order": 11,
+    "start_m": 4467.69,
+    "end_m": 5031.85,
+    "length_m": 564.16,
+    "start_frac": 0.769099,
+    "end_frac": 0.866216,
+    "wraps": false,
+    "segments_m": [
+     [
+      4467.69,
+      5031.85
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 11,
+    "game_number": 12,
+    "lap_order": 12,
+    "start_m": 5031.85,
+    "end_m": 5388.76,
+    "length_m": 356.91,
+    "start_frac": 0.866216,
+    "end_frac": 0.927657,
+    "wraps": false,
+    "segments_m": [
+     [
+      5031.85,
+      5388.76
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 12,
+    "game_number": 13,
+    "lap_order": 13,
+    "start_m": 5388.76,
+    "end_m": 5607.93,
+    "length_m": 219.17,
+    "start_frac": 0.927657,
+    "end_frac": 0.965386,
+    "wraps": false,
+    "segments_m": [
+     [
+      5388.76,
+      5607.93
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 13,
+    "game_number": 14,
+    "lap_order": 14,
+    "start_m": 5607.93,
+    "end_m": 606.34,
+    "length_m": 807.42,
+    "start_frac": 0.965386,
+    "end_frac": 0.10438,
+    "wraps": true,
+    "segments_m": [
+     [
+      5607.93,
+      5809.0
+     ],
+     [
+      0.0,
+      606.34
+     ]
+    ],
+    "flag": "none"
+   }
+  ],
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "bests": {
+  "scope": {
+   "game": "f1_25",
+   "track_id": "f1:13",
+   "car_id": null,
+   "records": false
+  },
+  "session": {
+   "lap_ms": 97037,
+   "sectors_ms": [
+    35546,
+    41928,
+    18689
+   ],
+   "lap_id": 6,
+   "sector_lap_ids": [
+    6,
+    5,
+    6
+   ]
+  },
+  "driver": null,
+  "household": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": null,
+  "ref_lap_number": 3,
+  "focus": [
+   "T7"
+  ],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [
+   {
+    "corner": "T7",
+    "kind": "brake",
+    "target_m": 2826.3,
+    "text": "T7 brake",
+    "focus": true,
+    "reason": "brake_early on 1 of the last 1 lap(s)"
+   }
+  ],
+  "next": {
+   "corner": "T7",
+   "text": "T7 brake",
+   "kind": "brake",
+   "in_m": 343
+  },
+  "last": null,
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "pitwall replay (headless, temp DB) of 20261010-225601_udp20777.pwcap (a local PS5 F1 25 recording from the rig, data/captures, not committed)",
+  "moment": "lap >= 3, delta, braking call 150-400 m ahead",
+  "trimmed": [
+   "last_comparison"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending. Backend: working tree with D2 (bests), D4 (session_state) and D6 (coach) from lane B, not yet committed; replays never get driver or household bests (bests.scope.records false).",
+  "generated_unix": 1791680736
+ }
+}

@@ -1,0 +1,116 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 27
+layout = "Imola"
+lap_length_m = 4910
+official_turn_count = 19
+sector_starts_m = [1800, 3389]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1]
+game_segment_m = [200, 310]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [2, 3, 4]
+names = [{ text = "Variante Tamburello", kind = "unclassified" }]
+game_segment_m = [780, 1150]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [5, 6]
+names = [{ text = "Variante Villeneuve", kind = "unclassified" }]
+game_segment_m = [1420, 1700]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [7]
+names = [{ text = "Tosa", kind = "unclassified" }]
+game_segment_m = [1800, 2000]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [8]
+game_segment_m = [2280, 2420]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [9]
+names = [{ text = "Piratella", kind = "unclassified" }]
+game_segment_m = [2430, 2640]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [10]
+game_segment_m = [2670, 2780]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [11, 12]
+names = [{ text = "Acque Minerali", kind = "unclassified" }]
+game_segment_m = [2840, 3115]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13]
+game_segment_m = [3115, 3200]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [14, 15]
+names = [{ text = "Variante Alta", kind = "unclassified" }]
+game_segment_m = [3450, 3670]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [16]
+game_segment_m = [4080, 4250]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [17, 18]
+names = [{ text = "Rivazza", kind = "unclassified" }]
+game_segment_m = [4250, 4560]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [19]
+game_segment_m = [4660, 4910]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

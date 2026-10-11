@@ -1,0 +1,2 @@
+# Raw packet captures are zstd streams: never let a line-ending conversion (core.autocrlf on Windows) touch them.
+*.pwcap binary

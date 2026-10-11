@@ -1,0 +1,139 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 5
+layout = "Monaco"
+lap_length_m = 3067
+official_turn_count = 19
+sector_starts_m = [1059, 2470]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "PnG track_length 3067 m is truncated (the F1 25 lap is probably about 3323 m; unverified) and turns 17-19 are mislabelled (research Action 2): the length gate refuses this sheet if the game reports another length. Never rescale these windows - fix them from a capture. official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1]
+names = [{ text = "Sainte Dévote", kind = "unclassified" }]
+game_segment_m = [100, 290]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [2]
+names = [{ text = "Beau Rivage", kind = "unclassified" }]
+game_segment_m = [550, 670]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [3]
+names = [{ text = "Massanet", kind = "unclassified" }]
+game_segment_m = [670, 840]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [4]
+names = [{ text = "Casino", kind = "unclassified" }]
+game_segment_m = [840, 967]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [5]
+names = [{ text = "Mirabeau Haute", kind = "unclassified" }]
+game_segment_m = [1070, 1180]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [6]
+names = [{ text = "Grand Hotel Hairpin", kind = "unclassified" }]
+game_segment_m = [1210, 1310]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [7]
+names = [{ text = "Mirabeau Bas", kind = "unclassified" }]
+game_segment_m = [1310, 1390]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [8]
+names = [{ text = "Portier", kind = "unclassified" }]
+game_segment_m = [1390, 1480]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [9]
+names = [{ text = "Tunnel", kind = "unclassified" }]
+game_segment_m = [1480, 1965]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [10, 11]
+names = [{ text = "Nouvelle Chicane", kind = "unclassified" }]
+game_segment_m = [1965, 2180]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+notes = "Name spelling corrected from PnG 'Nouvelle Chicaine'."
+
+[[turns]]
+numbers = [12]
+names = [{ text = "Tabac", kind = "unclassified" }]
+game_segment_m = [2280, 2470]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13, 14]
+names = [{ text = "Louis Chiron", kind = "unclassified" }]
+game_segment_m = [2480, 2625]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [15, 16]
+names = [{ text = "Piscine", kind = "unclassified" }]
+game_segment_m = [2630, 2800]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [17]
+names = [{ text = "La Rascasse", kind = "unclassified" }]
+game_segment_m = [2820, 2960]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [18, 19]
+names = [{ text = "Anthony Noghes", kind = "unclassified" }]
+game_segment_m = [2970, 3067]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

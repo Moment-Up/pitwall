@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pitwall Coach-first mockup</title>
+<style>
+/* ------------------------------------------------------------------------------------------------------------
+   Pitwall UI direction C "Coach-first": static mockup. Self-contained (no external requests).
+   EVERYTHING SHOWN IS SAMPLE DATA. Track geometry (Silverstone lap length, sector lines, corner windows) comes
+   from Pitwall's verified track sheet; times, driver, messages and flags are invented for illustration.
+   ------------------------------------------------------------------------------------------------------------ */
+
+/* Page chrome (around the devices) */
+:root {
+  --page: #0b0c0f;
+  --page-2: #14161b;
+  --page-line: #262a31;
+  --page-text: #e9ecf1;
+  --page-muted: #a3adbb;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--page); color: var(--page-text); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+body { padding: 24px 16px 64px; }
+.doc { max-width: 1260px; margin: 0 auto; }
+.doc h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.01em; }
+.doc h2 { font-size: 19px; margin: 40px 0 6px; }
+.doc p { color: var(--page-muted); line-height: 1.55; margin: 6px 0; max-width: 900px; }
+.doc .sample-note { display: inline-flex; gap: 8px; align-items: center; font: 700 12px/1 var(--mono); letter-spacing: 0.12em; color: #0c1016; background: #ffd23f; padding: 6px 10px; border-radius: 6px; }
+.controls { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: center; margin: 18px 0 14px; }
+.controls .group { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.controls .group > span { font: 700 12px/1 var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--page-muted); margin-right: 4px; }
+.controls button { font: 600 14px/1 var(--sans); color: var(--page-text); background: var(--page-2); border: 1px solid var(--page-line); border-radius: 999px; padding: 0 14px; min-height: 44px; cursor: pointer; }
+.controls button[aria-pressed="true"] { background: #ff6a2b; border-color: #ff6a2b; color: #0c1016; }
+
+/* Device frames (scaled to fit by script) */
+.fit { position: relative; width: 100%; overflow: hidden; }
+.device { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+.ipad { width: 1216px; height: 856px; padding: 18px; border-radius: 40px; background: #1f2228; box-shadow: inset 0 0 0 2px #33373f, 0 20px 60px rgb(0 0 0 / 0.5); }
+.phone { width: 414px; height: 868px; padding: 12px; border-radius: 54px; background: #1f2228; box-shadow: inset 0 0 0 2px #33373f, 0 16px 40px rgb(0 0 0 / 0.5); }
+.bezel-tag { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font: 800 10px/14px var(--mono); letter-spacing: 0.2em; color: #0c1016; background: #ffd23f; padding: 0 10px; border-radius: 0 0 6px 6px; }
+.phones { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
+.phones figure { margin: 0; }
+figcaption { color: var(--page-muted); font-size: 14px; line-height: 1.5; margin-top: 10px; }
+
+/* ------------------------------------------------------------------------------------------------------------
+   App tokens (proposal section 6.1). Dark is the default; light and dim follow the proposal.
+   ------------------------------------------------------------------------------------------------------------ */
+.screen {
+  --bg: #050608; --s1: #0d1015; --s2: #151a21; --s3: #1d242d; --line: #252d38; --line2: #3a4554;
+  --text: #eef1f5; --text2: #a3adbb; --text3: #7a8596;
+  --accent: #ff6a2b; --accent-text: #ff6a2b; --ink: #0c1016;
+  --purple: #b97cff; --green: #22d36f; --yellow: #ffd23f;
+  --ahead: #22d36f; --behind: #ff4d5e; --brake: #ff4d5e; --ref: #38bdf8; --amber: #ffb020;
+  --flag-yellow: #ffd23f; --flag-sc: #ffb020; --synthetic: #f472b6;
+  --live: #22d36f; --stale: #ffb020;
+  position: relative; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--sans);
+}
+.screen[data-theme="light"] {
+  --bg: #f3f5f8; --s1: #ffffff; --s2: #eef1f5; --s3: #e3e8ef; --line: #d9dee6; --line2: #b8c1cd;
+  --text: #0c1016; --text2: #4d5766; --text3: #5f6977;
+  --accent-text: #c2410c;
+  --purple: #7c3aed; --green: #0f7a3d; --yellow: #8a5a00;
+  --ahead: #0f7a3d; --behind: #c81e3a; --brake: #c81e3a; --ref: #0369a1; --amber: #a3480a;
+  --synthetic: #be185d; --live: #0f7a3d; --stale: #a3480a;
+}
+.screen.dim { --text: #c9ced6; --text2: #8e98a6; }
+.ipad .screen { width: 1180px; height: 820px; border-radius: 22px; }
+.phone .screen { width: 390px; height: 844px; border-radius: 44px; }
+
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.lbl { font: 700 13px/1 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--text2); }
+.unk { color: var(--text3); }
+.tag { display: inline-flex; align-items: center; font: 800 13px/1 var(--sans); letter-spacing: 0.1em; padding: 5px 8px; border-radius: 6px; text-transform: uppercase; }
+.tag.focus { color: var(--accent-text); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.tag.workon { color: var(--ink); background: var(--amber); }
+.screen[data-theme="light"] .tag.workon { color: #fff; }
+.tag.good { color: var(--ink); background: #22d36f; }
+.tag.k { color: var(--k); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--k) 55%, transparent); background: color-mix(in srgb, var(--k) 12%, transparent); }
+.avatar { display: inline-grid; place-items: center; border-radius: 50%; font: 800 13px/1 var(--sans); color: #0c1016; background: #ff6a2b; flex: none; }
+[hidden] { display: none !important; }
+
+/* iPadOS status bar (outside the web app viewport) */
+.ios-bar { height: 24px; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font: 600 13px/1 var(--sans); color: var(--text); }
+.ios-bar span:last-child { font-weight: 500; color: var(--text2); }
+
+/* Shell: rail + content */
+.app { display: grid; grid-template-columns: 64px 1fr; height: 796px; }
+.rail { background: var(--s1); border-right: 1px solid var(--line); display: grid; grid-template-rows: 64px repeat(4, 64px) 1fr auto; justify-items: center; transition: opacity 0.2s; }
+.rail.ontrack { opacity: 0.55; }
+.rail .logo { display: grid; place-items: center; width: 64px; height: 64px; }
+.rail a { position: relative; display: grid; place-items: center; align-content: center; gap: 4px; width: 64px; height: 64px; color: var(--text2); text-decoration: none; font: 600 11px/1 var(--sans); }
+.rail a svg { width: 24px; height: 24px; }
+.rail a.on { color: var(--text); }
+.rail a.on::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+.rail .foot { display: grid; gap: 14px; justify-items: center; padding-bottom: 14px; }
+.rail .conn { width: 10px; height: 10px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 4px color-mix(in srgb, var(--live) 20%, transparent); }
+
+/* ------------------------------------------------------------------------------------------------------------
+   Drive > Coach grid (proposal 5.1): 1116 px content, 12 px padding, 10 px gaps.
+   ------------------------------------------------------------------------------------------------------------ */
+.drive {
+  position: relative; display: grid; padding: 12px; gap: 10px; height: 796px; min-width: 0;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: 48px minmax(240px, 1fr) 120px 132px 56px 72px;
+  grid-template-areas:
+    "status status status status status status status status status status status status"
+    "next   next   next   next   next   next   next   delta  delta  delta  delta  delta"
+    "coach  coach  coach  coach  coach  coach  coach  delta  delta  delta  delta  delta"
+    "sect   sect   sect   sect   sect   sect   sect   laps   laps   laps   laps   laps"
+    "ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon"
+    "radio  radio  radio  radio  radio  radio  radio  radio  radio  radio  radio  radio";
+}
+.panel { background: var(--s1); border: 1px solid var(--line); border-radius: 10px; min-width: 0; min-height: 0; }
+
+/* status bar */
+.status { grid-area: status; display: flex; align-items: center; gap: 14px; padding: 0 6px 0 14px; border-radius: 10px; background: var(--s1); border: 1px solid var(--line); white-space: nowrap; }
+.status .pill { display: inline-flex; align-items: center; gap: 7px; font: 800 13px/1 var(--sans); letter-spacing: 0.12em; color: var(--live); }
+.status .pill i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.status .pill.stale { color: var(--stale); }
+.status .pill.idle { color: var(--text3); }
+.status .track { font: 700 17px/1 var(--sans); }
+.status .meta { font: 500 17px/1 var(--sans); color: var(--text2); }
+.status .lapno { font: 700 17px/1 var(--mono); }
+.status .flagtext { display: none; font: 800 17px/1 var(--sans); letter-spacing: 0.06em; }
+.status .spacer { flex: 1; }
+.subnav { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--s2); border: 1px solid var(--line); }
+.subnav span { display: grid; place-items: center; min-width: 74px; height: 36px; padding: 0 12px; border-radius: 999px; font: 600 15px/1 var(--sans); color: var(--text2); }
+.subnav span.on { background: var(--s3); color: var(--text); box-shadow: inset 0 0 0 1px var(--line2); }
+.chip { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px 0 4px; border-radius: 999px; background: var(--s2); border: 1px solid var(--line); font: 600 15px/1 var(--sans); }
+.chip .avatar { width: 32px; height: 32px; }
+.chip .caret { color: var(--text3); font-size: 12px; }
+/* yellow-flag overlay: the status bar becomes the flag band (same 48 px row) */
+.drive[data-state="yellow"] .status { background: var(--flag-yellow); border-color: var(--flag-yellow); color: #0c1016; }
+.drive[data-state="yellow"] .status .pill, .drive[data-state="yellow"] .status .track,
+.drive[data-state="yellow"] .status .meta, .drive[data-state="yellow"] .status .lapno { display: none; }
+.drive[data-state="yellow"] .status .flagtext { display: inline-flex; gap: 12px; align-items: center; }
+.drive[data-state="yellow"] .subnav { background: rgb(0 0 0 / 0.12); border-color: rgb(0 0 0 / 0.2); }
+.drive[data-state="yellow"] .subnav span { color: #0c1016; }
+.drive[data-state="yellow"] .subnav span.on { background: rgb(0 0 0 / 0.16); box-shadow: none; }
+.drive[data-state="yellow"] .chip { background: rgb(0 0 0 / 0.1); border-color: rgb(0 0 0 / 0.2); color: #0c1016; }
+
+/* hero: next corner + cue */
+.next { grid-area: next; position: relative; display: grid; grid-template-rows: auto 1fr auto auto; gap: 12px; padding: 18px 22px 18px;
+  background: var(--s1); border-radius: 10px;
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 0 100%); }
+.next::before { content: ""; position: absolute; left: 0; right: 16px; top: 0; height: 3px; background: var(--accent); }
+.next .head { display: flex; align-items: center; gap: 12px; }
+.next .dir { display: inline-flex; align-items: center; gap: 6px; font: 700 13px/1 var(--sans); letter-spacing: 0.14em; color: var(--text2); }
+.next .dir svg { width: 20px; height: 20px; }
+.next .head .tag { margin-left: auto; }
+.next .corner { display: flex; align-items: baseline; gap: 22px; min-width: 0; }
+.next .clabel { font: 800 96px/0.9 var(--sans); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.next .cname { font: 700 44px/1 var(--sans); letter-spacing: -0.01em; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.next .cdist { margin-left: auto; font: 700 44px/1 var(--mono); }
+.next .cdist small { font-size: 22px; color: var(--text2); margin-left: 4px; }
+.approach { height: 10px; border-radius: 5px; background: var(--s3); overflow: hidden; }
+.approach i { display: block; height: 100%; background: var(--text2); border-radius: 5px; }
+.cue { display: flex; align-items: center; gap: 18px; height: 84px; padding: 0 18px; border-radius: 10px; background: color-mix(in srgb, var(--brake) 10%, var(--s2)); border: 1px solid color-mix(in srgb, var(--brake) 35%, var(--line)); }
+.cue .kind { font: 800 28px/1 var(--sans); letter-spacing: 0.08em; color: var(--ink); background: var(--brake); padding: 10px 14px; border-radius: 8px; }
+.screen[data-theme="light"] .cue .kind { color: #fff; }
+.cue .text { font: 700 40px/1 var(--sans); }
+.cue .in { margin-left: auto; font: 700 40px/1 var(--mono); }
+.cue .in small { font-size: 20px; color: var(--text2); margin-right: 6px; font-family: var(--sans); font-weight: 600; letter-spacing: 0.08em; }
+
+/* coach card */
+.coach { grid-area: coach; display: grid; align-content: center; padding: 12px 20px; border-left: 4px solid var(--amber); }
+.coach p { margin: 0; font: 550 26px/1.2 var(--sans); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.coach p .tag { vertical-align: 4px; margin-right: 10px; }
+
+/* delta */
+.delta { grid-area: delta; display: grid; grid-template-rows: auto auto 1fr auto auto auto; padding: 18px 22px; }
+.delta .refid { margin-top: 10px; font: 600 17px/1.2 var(--sans); color: var(--text2); }
+.delta .refid b { color: var(--purple); font-weight: 800; letter-spacing: 0.06em; }
+.delta .dval { align-self: center; font: 700 108px/1 var(--mono); letter-spacing: -0.04em; text-align: center; }
+.ahead { color: var(--ahead); }
+.behind { color: var(--behind); }
+.delta .dword { text-align: center; font: 800 24px/1 var(--sans); letter-spacing: 0.24em; margin: -4px 0 16px; }
+.dbar { position: relative; height: 18px; border-radius: 4px; background: var(--s2); border: 1px solid var(--line); }
+.dbar .mid { position: absolute; left: 50%; top: -5px; bottom: -5px; width: 2px; margin-left: -1px; background: var(--text2); }
+.dbar .tk { position: absolute; top: 3px; bottom: 3px; width: 1px; background: var(--line2); }
+.dbar .fill { position: absolute; top: 2px; bottom: 2px; border-radius: 3px; transition: left 80ms linear, width 80ms linear; }
+.dbar .fill.ahead { background: var(--ahead); }
+.dscale { display: flex; justify-content: space-between; margin-top: 6px; font: 600 13px/1 var(--mono); color: var(--text3); }
+.delta .proj { display: flex; justify-content: space-between; align-items: baseline; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+.delta .proj .num { font: 700 32px/1 var(--mono); }
+
+/* sectors */
+.sect { grid-area: sect; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sbox { --c: var(--text3); display: grid; grid-template-rows: auto 1fr auto; padding: 12px 14px 12px 16px; border-radius: 10px; background: color-mix(in srgb, var(--c) 14%, var(--s2)); border: 1px solid color-mix(in srgb, var(--c) 40%, var(--line)); border-left: 6px solid var(--c); }
+.sbox.pb { --c: var(--purple); }
+.sbox.sb { --c: var(--green); }
+.sbox.slow { --c: var(--yellow); }
+.sbox.run { --c: var(--line2); background: var(--s2); }
+.sbox .top { display: flex; justify-content: space-between; align-items: center; }
+.sbox .top .lbl { color: var(--text); font-size: 15px; }
+.sbox .t { align-self: center; font: 700 40px/1 var(--mono); color: var(--c); letter-spacing: -0.02em; }
+.sbox.run .t { color: var(--text); }
+.sbox .sub { font: 600 15px/1 var(--mono); color: var(--text2); }
+.ttag { font: 800 13px/1 var(--sans); letter-spacing: 0.1em; color: var(--ink); background: var(--c); padding: 4px 7px; border-radius: 5px; }
+.screen[data-theme="light"] .ttag { color: #fff; }
+.screen[data-theme="light"] .sbox.slow .ttag { color: #fff; }
+.runbar { height: 8px; border-radius: 4px; background: var(--s3); overflow: hidden; margin-bottom: 8px; }
+.runbar i { display: block; height: 100%; background: var(--text2); }
+/* light theme: solid sector fills with dark ink (proposal 6.1) */
+.screen[data-theme="light"] .sbox.pb { --fill: #b97cff; }
+.screen[data-theme="light"] .sbox.sb { --fill: #22d36f; }
+.screen[data-theme="light"] .sbox.slow { --fill: #ffd23f; }
+.screen[data-theme="light"] .sbox.pb, .screen[data-theme="light"] .sbox.sb, .screen[data-theme="light"] .sbox.slow { background: var(--fill); border-color: var(--fill); border-left-color: #0c1016; }
+.screen[data-theme="light"] .sbox.pb .t, .screen[data-theme="light"] .sbox.sb .t, .screen[data-theme="light"] .sbox.slow .t,
+.screen[data-theme="light"] .sbox.pb .sub, .screen[data-theme="light"] .sbox.sb .sub, .screen[data-theme="light"] .sbox.slow .sub,
+.screen[data-theme="light"] .sbox.pb .lbl, .screen[data-theme="light"] .sbox.sb .lbl, .screen[data-theme="light"] .sbox.slow .lbl { color: #0c1016; }
+.screen[data-theme="light"] .sbox.pb .ttag, .screen[data-theme="light"] .sbox.sb .ttag, .screen[data-theme="light"] .sbox.slow .ttag { background: #0c1016; color: #fff; }
+
+/* lap times */
+.laps { grid-area: laps; display: grid; align-content: center; gap: 8px; padding: 12px 22px; }
+.laps .row { display: grid; grid-template-columns: 64px 1fr auto; align-items: baseline; gap: 12px; }
+.laps .row .v { font: 700 32px/1 var(--mono); letter-spacing: -0.02em; }
+.laps .row .x { font: 600 17px/1 var(--mono); color: var(--text2); display: inline-flex; gap: 8px; align-items: center; }
+.laps .row .v.slow { color: var(--yellow); }
+.laps .row .v.sb { color: var(--green); }
+.laps .row .x .ttag.sb { --c: var(--green); }
+
+/* lap ribbon */
+.ribbon { grid-area: ribbon; position: relative; padding: 0 16px; overflow: hidden; }
+.rib { position: absolute; left: 16px; right: 16px; top: 22px; height: 14px; }
+.rib .sec { position: absolute; top: 0; bottom: 0; border-left: 2px solid var(--c); background: color-mix(in srgb, var(--c) 22%, transparent); }
+.rib .sec span { position: absolute; left: 5px; top: -18px; font: 800 12px/1 var(--mono); color: var(--text2); }
+.rib .seg { position: absolute; top: 3px; bottom: 3px; background: var(--text2); opacity: 0.55; border-radius: 2px; }
+.rib .seg.focus { background: var(--accent); opacity: 1; }
+.rib .seg.nextc { box-shadow: 0 0 0 2px var(--text); }
+.rib .clab { position: absolute; top: 18px; transform: translateX(-50%); font: 700 12px/1 var(--mono); color: var(--text2); white-space: nowrap; }
+.rib .clab.focus { color: var(--accent-text); }
+.rib .clab.nextc { color: var(--text); }
+.rib .cue { position: absolute; top: -3px; bottom: -3px; width: 3px; height: auto; padding: 0; border: 0; border-radius: 2px; background: var(--brake); margin-left: -1px; }
+.rib .yellow { position: absolute; top: -6px; bottom: -6px; background: color-mix(in srgb, var(--flag-yellow) 70%, transparent); border-radius: 3px; }
+.rib .car { position: absolute; top: -12px; width: 0; height: 0; margin-left: -8px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 11px solid var(--text); }
+.drive[data-state="garage"] .rib .car { display: none; }
+
+/* radio strip */
+.radio { grid-area: radio; display: flex; align-items: center; gap: 16px; padding: 0 8px 0 18px; }
+.radio .tag { --k: var(--purple); flex: none; }
+.radio .msg { font: 550 22px/1.2 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.radio .age { font: 600 15px/1 var(--mono); color: var(--text3); flex: none; }
+.radio .mic { display: inline-flex; align-items: center; gap: 8px; font: 700 15px/1 var(--sans); color: var(--live); flex: none; }
+.radio .mic i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; }
+.radio .mic.off { color: var(--text3); }
+.btn-big { flex: none; display: grid; place-items: center; min-width: 220px; height: 56px; padding: 0 22px; border-radius: 14px; font: 800 20px/1 var(--sans); letter-spacing: 0.06em; border: 2px solid var(--line2); background: var(--s2); color: var(--text); }
+.btn-big.accent { background: var(--accent); border-color: var(--accent); color: #0c1016; }
+
+/* state cards */
+.statecard { grid-column: 1 / -1; padding: 28px 32px; display: grid; gap: 24px; }
+.ready { grid-row: 2 / 5; grid-template-columns: 1.1fr 1fr; align-items: center; }
+.ready .who { display: grid; gap: 18px; justify-items: start; }
+.ready .who .avatar { width: 88px; height: 88px; font-size: 32px; }
+.ready .who h3 { margin: 0; font: 700 44px/1.1 var(--sans); letter-spacing: -0.01em; }
+.ready .who .btn-big { min-width: 300px; }
+.ready dl { margin: 0; display: grid; gap: 22px; }
+.ready dt { margin-bottom: 8px; }
+.ready dd { margin: 0; font: 700 32px/1.15 var(--sans); }
+.ready dd .num { color: var(--purple); }
+.ready dd small { display: block; font: 500 17px/1.4 var(--sans); color: var(--text2); margin-top: 4px; }
+.ended { grid-row: 2 / 6; grid-template-columns: 1fr 1fr; align-content: start; }
+.ended h3 { grid-column: 1 / -1; margin: 0; font: 800 44px/1 var(--sans); letter-spacing: -0.01em; }
+.ended .tiles { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.tile { background: var(--s2); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; }
+.tile .v { font: 700 32px/1 var(--mono); }
+.tile .v.pb { color: var(--purple); }
+.tile .s { font: 500 15px/1.3 var(--sans); color: var(--text2); }
+.ended .note { background: var(--s2); border: 1px solid var(--line); border-left: 4px solid var(--amber); border-radius: 10px; padding: 14px 16px; display: grid; gap: 10px; font: 550 20px/1.35 var(--sans); }
+.ended .note.good { border-left-color: var(--green); }
+.ended .go { grid-column: 1 / -1; justify-self: start; }
+.nodata { grid-row: 2 / 6; grid-template-columns: 1.2fr 1fr; align-content: center; }
+.nodata h3 { margin: 0 0 6px; font: 800 40px/1.1 var(--sans); }
+.nodata ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; counter-reset: n; }
+.nodata li { display: grid; grid-template-columns: 48px 1fr; gap: 14px; align-items: center; font: 600 22px/1.3 var(--sans); }
+.nodata li::before { counter-increment: n; content: counter(n); display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--s3); font: 800 20px/1 var(--mono); }
+.nodata li .num { color: var(--accent-text); }
+.nodata .side { display: grid; gap: 12px; justify-items: start; }
+.nodata .side p { margin: 0; font: 500 17px/1.5 var(--sans); color: var(--text2); }
+.pitcard { grid-area: next; display: grid; align-content: center; gap: 18px; padding: 22px 26px; }
+.pitcard .big { font: 800 72px/1 var(--sans); letter-spacing: -0.02em; }
+.pitcard .speed { display: flex; align-items: baseline; gap: 14px; font: 700 64px/1 var(--mono); }
+.pitcard .speed small { font: 600 22px/1 var(--sans); color: var(--text2); }
+.pitcard .speed .lim { color: var(--text2); }
+.stalechip { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%); z-index: 3; display: inline-flex; gap: 12px; align-items: center; padding: 18px 26px; border-radius: 14px; background: var(--s3); border: 1px solid var(--stale); color: var(--text); font: 800 26px/1 var(--sans); box-shadow: 0 12px 40px rgb(0 0 0 / 0.45); }
+.stalechip i { width: 12px; height: 12px; border-radius: 50%; background: var(--stale); }
+.drive[data-state="stale"] > .panel, .drive[data-state="stale"] > .next, .drive[data-state="stale"] > .sect { opacity: 0.45; }
+
+/* ------------------------------------------------------------------------------------------------------------
+   Phone (proposal 5.6 and 7.2): bottom tab bar
+   ------------------------------------------------------------------------------------------------------------ */
+.p-app { display: grid; grid-template-rows: 47px 1fr 84px; height: 844px; }
+.p-ios { display: flex; justify-content: space-between; align-items: end; padding: 0 30px 6px; font: 600 15px/1 var(--sans); }
+.p-body { overflow: hidden; padding: 6px 14px 10px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+.tabbar { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); background: var(--s1); padding-bottom: 28px; }
+.tabbar a { display: grid; place-items: center; align-content: center; gap: 4px; min-height: 56px; color: var(--text2); text-decoration: none; font: 600 11px/1 var(--sans); }
+.tabbar a svg { width: 24px; height: 24px; }
+.tabbar a.on { color: var(--accent-text); }
+.p-status { display: flex; align-items: center; gap: 10px; height: 40px; font: 600 15px/1 var(--sans); }
+.p-status .pill { display: inline-flex; align-items: center; gap: 6px; font: 800 12px/1 var(--sans); letter-spacing: 0.12em; color: var(--live); }
+.p-status .pill i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.p-status .avatar { width: 30px; height: 30px; margin-left: auto; font-size: 12px; }
+.p-delta { padding: 10px 14px 14px; }
+.p-delta .row { display: flex; justify-content: space-between; align-items: baseline; }
+.p-delta .dval { font: 700 84px/1 var(--mono); letter-spacing: -0.05em; text-align: center; margin: 6px 0 2px; }
+.p-delta .dword { text-align: center; font: 800 16px/1 var(--sans); letter-spacing: 0.24em; margin-bottom: 10px; }
+.p-next { padding: 12px 14px; display: grid; gap: 10px; clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 0 100%); position: relative; }
+.p-next::before { content: ""; position: absolute; left: 0; right: 12px; top: 0; height: 3px; background: var(--accent); }
+.p-next .corner { display: flex; align-items: baseline; gap: 12px; }
+.p-next .corner b { font: 800 64px/0.9 var(--sans); letter-spacing: -0.03em; }
+.p-next .corner span { font: 700 28px/1 var(--sans); }
+.p-next .corner .num { margin-left: auto; font: 700 30px/1 var(--mono); }
+.p-next .cue { height: 52px; padding: 0 12px; gap: 10px; }
+.p-next .cue .kind { font-size: 16px; padding: 7px 9px; }
+.p-next .cue .text { font-size: 24px; }
+.p-next .cue .in { font-size: 24px; }
+.p-coach { padding: 10px 14px; border-left: 4px solid var(--amber); display: grid; gap: 8px; }
+.p-coach p { margin: 0; font: 550 17px/1.35 var(--sans); }
+.p-sect { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.p-sect .sbox { padding: 8px 10px 8px 12px; border-left-width: 5px; gap: 6px; }
+.p-sect .sbox .t { font-size: 22px; }
+.p-sect .sbox .top .lbl { font-size: 13px; }
+.p-sect .ttag { font-size: 11px; padding: 3px 5px; }
+.p-radio { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; }
+.p-radio .msg { flex: 1; min-width: 0; font: 550 15px/1.25 var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p-radio .btn-big { min-width: 0; height: 48px; font-size: 14px; padding: 0 12px; }
+.p-head { display: grid; gap: 4px; padding: 4px 2px; }
+.p-head a { font: 600 15px/1 var(--sans); color: var(--accent-text); text-decoration: none; }
+.p-head h3 { margin: 6px 0 0; font: 800 28px/1.1 var(--sans); }
+.p-head .meta { font: 500 15px/1.3 var(--sans); color: var(--text2); display: flex; gap: 8px; align-items: center; }
+.p-head .avatar { width: 22px; height: 22px; font-size: 10px; }
+.pills { display: flex; gap: 6px; overflow: hidden; }
+.pills span { flex: none; display: grid; place-items: center; height: 44px; padding: 0 16px; border-radius: 999px; background: var(--s2); border: 1px solid var(--line); font: 600 15px/1 var(--sans); color: var(--text2); }
+.pills span.on { background: var(--s3); color: var(--text); box-shadow: inset 0 0 0 1px var(--line2); }
+.p-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.p-tiles .tile { padding: 10px 12px; gap: 6px; }
+.p-tiles .tile .v { font-size: 24px; }
+.p-tiles .tile .s { font-size: 13px; }
+.p-card { padding: 12px 14px; display: grid; gap: 10px; }
+.p-card .hd { display: flex; align-items: center; gap: 10px; }
+.p-card .hd b { font: 800 20px/1 var(--sans); }
+.p-card .hd .cn { font: 600 15px/1 var(--sans); color: var(--text2); }
+.p-body > * { flex: none; }
+.p-card p { margin: 0; font: 500 15px/1.45 var(--sans); }
+.p-card .src { font: 500 13px/1.4 var(--sans); color: var(--text3); }
+.p-card .btn-big { min-width: 0; height: 48px; font-size: 15px; justify-self: start; }
+.p-card.work { border-left: 4px solid var(--amber); }
+.p-card.good { border-left: 4px solid var(--green); }
+.glossary { display: inline-grid; place-items: center; width: 44px; height: 44px; margin: -10px -10px -10px auto; border-radius: 50%; font: 800 15px/1 var(--sans); color: var(--text2); }
+.glossary b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--line2); }
+
+/* ------------------------------------------------------------------------------------------------------------
+   Navigation map + visual system (presentation only)
+   ------------------------------------------------------------------------------------------------------------ */
+.ia { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
+.ia .area { background: var(--page-2); border: 1px solid var(--page-line); border-radius: 12px; padding: 16px; }
+.ia .area h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 4px; font-size: 18px; }
+.ia .area h3 svg { width: 24px; height: 24px; color: #ff6a2b; }
+.ia .area .q { color: var(--page-muted); font-size: 14px; margin: 0 0 12px; line-height: 1.4; }
+.ia .area ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ia .area li { display: flex; justify-content: space-between; gap: 10px; padding: 9px 12px; border-radius: 8px; background: #0e1014; font-size: 15px; }
+.ia .area li code { font: 500 12px/1.4 var(--mono); color: var(--page-muted); }
+.ia .area li.def { box-shadow: inset 3px 0 0 #ff6a2b; }
+.legacy { margin-top: 12px; font: 500 13px/1.7 var(--mono); color: var(--page-muted); }
+.legacy b { color: var(--page-text); font-weight: 600; }
+.sys { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+.sw { border-radius: 10px; overflow: hidden; border: 1px solid var(--page-line); background: var(--page-2); }
+.sw i { display: block; height: 52px; }
+.sw div { padding: 8px 10px; font: 500 12px/1.45 var(--mono); color: var(--page-muted); }
+.sw div b { display: block; font: 700 13px/1.4 var(--sans); color: var(--page-text); }
+.scale { margin-top: 14px; background: #050608; border: 1px solid var(--page-line); border-radius: 12px; padding: 18px 20px; display: grid; gap: 10px; }
+.scale div { display: flex; align-items: baseline; gap: 18px; white-space: nowrap; overflow: hidden; }
+.scale code { flex: none; width: 210px; font: 500 12px/1.3 var(--mono); color: var(--page-muted); }
+</style>
+</head>
+<body>
+<div class="doc">
+  <h1>Pitwall: direction C, "Coach-first"</h1>
+  <p>A static mockup of the Drive screen on an iPad in landscape (mounted at the wheel, about 70 cm away), the four-area
+    navigation and the phone layout. This page goes with <code>docs/ui/proposal-coach-first.md</code>, which explains it.</p>
+  <p><span class="sample-note">SAMPLE DATA</span>&nbsp; The Silverstone geometry (5890 m lap, sector lines at 1813 / 4294 m,
+    corner windows and names) comes from Pitwall's verified track sheet. Every time, driver, message and flag on this
+    page is invented for illustration and is not from a real session.</p>
+
+  <div class="controls" role="group" aria-label="Mockup controls">
+    <div class="group" id="stateBtns"><span>Drive state</span>
+      <button data-state="ontrack" aria-pressed="true">On track</button>
+      <button data-state="garage" aria-pressed="false">Garage (pre-session)</button>
+      <button data-state="pit" aria-pressed="false">Pit lane</button>
+      <button data-state="yellow" aria-pressed="false">Yellow flag</button>
+      <button data-state="stale" aria-pressed="false">Telemetry paused</button>
+      <button data-state="ended" aria-pressed="false">Session ended</button>
+      <button data-state="nodata" aria-pressed="false">No data</button>
+    </div>
+    <div class="group" id="themeBtns"><span>Theme</span>
+      <button data-theme="dark" aria-pressed="true">Dark</button>
+      <button data-theme="light" aria-pressed="false">Light</button>
+      <button data-dim aria-pressed="false">Dim (night)</button>
+    </div>
+  </div>
+
+  <!-- ===================================== iPad landscape: Drive > Coach ===================================== -->
+  <div class="fit" data-w="1216" data-h="856">
+    <div class="device ipad">
+      <span class="bezel-tag">SAMPLE DATA</span>
+      <div class="screen" data-theme="dark">
+        <div class="ios-bar"><span>20:14</span><span>Wi-Fi · 87%</span></div>
+        <div class="app">
+          <nav class="rail ontrack" id="rail" aria-label="Areas">
+            <div class="logo"><svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><path d="M5 23 L13 8 L18 18 L21 13 L27 23" stroke="#ff6a2b" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <a class="on" href="#drive" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M3.3 11h6.2M14.5 11h6.2M12 14.5V21"/></svg>Drive</a>
+            <a href="#review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>Review</a>
+            <a href="#setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2.2" fill="var(--s1)"/><circle cx="16" cy="12" r="2.2" fill="var(--s1)"/><circle cx="7" cy="18" r="2.2" fill="var(--s1)"/></svg>Setup</a>
+            <a href="#settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</a>
+            <div></div>
+            <div class="foot"><i class="conn" id="railConn" title="Telemetry live"></i><span class="avatar" style="width:36px;height:36px">JR</span></div>
+          </nav>
+
+          <main class="drive" id="drive" data-state="ontrack">
+            <!-- 1 status bar -->
+            <div class="status">
+              <span class="pill" id="connPill"><i></i><span id="connText">LIVE</span></span>
+              <span class="track" id="trackName">Silverstone</span>
+              <span class="meta" id="sessType">Time trial</span>
+              <span class="lapno" id="lapNo">LAP 7</span>
+              <span class="flagtext"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 21V4M5 4h12l-2.5 4L17 12H5" fill="#0c1016" stroke="#0c1016" stroke-width="2" stroke-linejoin="round"/></svg>YELLOW FLAG · SECTOR 3 · ZONE 16 · 380 m AHEAD</span>
+              <span class="spacer"></span>
+              <span class="subnav" aria-label="Drive pages"><span class="on">Coach</span><span>Car</span><span>Track</span><span>Radio</span></span>
+              <span class="chip"><span class="avatar">JR</span>James<span class="caret">&#9662;</span></span>
+            </div>
+
+            <!-- 2 hero: next corner + cue -->
+            <section class="next" data-in="ontrack yellow stale" aria-label="Next corner">
+              <div class="head">
+                <span class="lbl">Next corner</span>
+                <span class="dir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20V12a5 5 0 0 1 5-5h8"/><path d="M15 3l4 4-4 4"/></svg>Right</span>
+                <span class="tag focus">Focus</span>
+              </div>
+              <div class="corner"><span class="clabel">T15</span><span class="cname">Stowe</span><span class="cdist">320<small>m</small></span></div>
+              <div class="approach" title="Approach: last 400 m before the corner"><i style="width:20%"></i></div>
+              <div class="cue"><span class="kind">BRAKE</span><span class="text">T15 brake</span><span class="in"><small>IN</small>250<small style="margin:0 0 0 4px">m</small></span></div>
+            </section>
+
+            <section class="panel pitcard" data-in="pit" hidden aria-label="Pit lane">
+              <span class="lbl">Pit lane</span>
+              <div class="big">PIT LANE</div>
+              <div class="speed"><span>79</span><span class="lim">/ 80</span><small>km/h · limit from the game</small></div>
+            </section>
+
+            <!-- 3 coach -->
+            <section class="panel coach" data-in="ontrack yellow stale pit" aria-label="Coaching point">
+              <p><span class="tag workon" id="coachTag">Work on · L6</span><span id="coachText">T15: you're braking about 12 m earlier than your reference (lap 9), losing 0.11 s through the corner.</span></p>
+            </section>
+
+            <!-- 5 delta -->
+            <section class="panel delta" data-in="ontrack yellow stale pit" aria-label="Delta to reference">
+              <span class="lbl">Delta to reference</span>
+              <div class="refid"><b>PB</b> · 1:30.986 · 3 Oct (lap 9)</div>
+              <div class="dval ahead" id="dval">&minus;0.214</div>
+              <div class="dword ahead" id="dword">AHEAD</div>
+              <div class="dbar" id="dbar"><span class="tk" style="left:25%"></span><span class="tk" style="left:75%"></span><span class="mid"></span><i class="fill ahead" style="left:39.3%;width:10.7%"></i></div>
+              <div class="dscale" id="dscale"><span>&minus;1.0 s</span><span>0</span><span>+1.0 s</span></div>
+              <div class="proj"><span class="lbl">Projected</span><span class="num" id="proj">1:30.772</span></div>
+            </section>
+
+            <!-- 6 sectors -->
+            <section class="sect" data-in="ontrack yellow stale pit" aria-label="Sectors, this lap">
+              <div class="sbox sb"><div class="top"><span class="lbl">S1</span><span class="ttag">SB</span></div><div class="t">29.318</div><div class="sub">&minus;0.023 vs PB</div></div>
+              <div class="sbox pb"><div class="top"><span class="lbl">S2</span><span class="ttag">PB</span></div><div class="t">36.904</div><div class="sub">&minus;0.077 vs PB</div></div>
+              <div class="sbox run"><div class="top"><span class="lbl">S3</span><span class="lbl" style="font-size:12px">running</span></div><div class="t">3.312</div><div class="runbar"><i style="width:16.7%"></i></div></div>
+            </section>
+
+            <!-- 7 lap times -->
+            <section class="panel laps" data-in="ontrack yellow stale pit" aria-label="Lap times">
+              <div class="row"><span class="lbl">Lap</span><span class="v">1:09.534</span><span class="x"></span></div>
+              <div class="row"><span class="lbl">Last</span><span class="v slow">1:31.512</span><span class="x">+0.526</span></div>
+              <div class="row"><span class="lbl">Best</span><span class="v sb">1:31.390</span><span class="x"><span class="ttag sb" style="--c:var(--green)">SB</span>L5</span></div>
+            </section>
+
+            <!-- 8 lap ribbon -->
+            <section class="panel ribbon" data-in="ontrack yellow stale pit garage" aria-label="Lap ribbon: sectors, corners, braking points, car position">
+              <div class="rib" id="rib"></div>
+            </section>
+
+            <!-- state cards -->
+            <section class="panel statecard ready" data-in="garage" hidden aria-label="Ready">
+              <div class="who">
+                <span class="lbl">Who's in the seat</span>
+                <span class="avatar">JR</span>
+                <h3>James is in the seat</h3>
+                <span class="btn-big">Not you? Switch driver</span>
+              </div>
+              <dl>
+                <div><dt class="lbl">Target at Silverstone</dt><dd>PB <span class="num">1:30.986</span><small>Set on 3 Oct, lap 9. Laps today are compared with it.</small></dd></div>
+                <div><dt class="lbl">Focus today</dt><dd>T15 Stowe · T3 Village<small>The braking calls will concentrate on these corners.</small></dd></div>
+              </dl>
+            </section>
+
+            <section class="panel statecard ended" data-in="ended" hidden aria-label="Session complete">
+              <h3>Session complete</h3>
+              <div class="tiles">
+                <div class="tile"><span class="lbl">Best lap</span><span class="v pb">1:30.874</span><span class="s">Lap 12 · new PB</span></div>
+                <div class="tile"><span class="lbl">On old PB</span><span class="v ahead">&minus;0.112</span><span class="s">Old PB 1:30.986 (3 Oct)</span></div>
+                <div class="tile"><span class="lbl">Clean laps</span><span class="v">10 / 14</span><span class="s">1 invalid, 1 flashback, out- and in-lap</span></div>
+                <div class="tile"><span class="lbl">Spread</span><span class="v">0.840 s</span><span class="s">Slowest to fastest clean lap</span></div>
+              </div>
+              <div class="note"><span class="tag workon" style="justify-self:start">Work on</span>T15: you're braking about 12 m earlier than your reference (lap 9), losing 0.11 s through the corner.</div>
+              <div class="note good"><span class="tag good" style="justify-self:start">Went well</span>T9: good - exit speed is up 6 km/h on your reference and you gained 0.08 s there.</div>
+              <span class="btn-big accent go">Review this session</span>
+            </section>
+
+            <section class="panel statecard nodata" data-in="nodata" hidden aria-label="Waiting for telemetry">
+              <div>
+                <h3>Waiting for the game</h3>
+                <p style="margin:0 0 20px;font:500 17px/1.5 var(--sans);color:var(--text2)">No telemetry has arrived yet. Three things to check:</p>
+                <ol>
+                  <li><span>Turn on UDP telemetry in the game's telemetry settings</span></li>
+                  <li><span>Send it to <span class="num">192.0.2.20</span> port <span class="num">20777</span></span></li>
+                  <li><span>Drive out of the garage: data starts with the first packet</span></li>
+                </ol>
+              </div>
+              <div class="side">
+                <span class="btn-big">Open Setup &rsaquo; Connect</span>
+                <span class="btn-big">Try a demo replay</span>
+                <p>The demo replay is synthetic and badged as synthetic everywhere. It never counts towards anyone's bests.</p>
+              </div>
+            </section>
+
+            <!-- 9 radio strip -->
+            <div class="panel radio" aria-label="Radio">
+              <span class="tag k" style="--k:var(--purple)" id="radioKind">LAP</span>
+              <span class="msg" id="radioMsg">Lap 6: 1:31.512, plus 0.53 on your best.</span>
+              <span class="age" id="radioAge">8 s</span>
+              <span class="mic" id="radioMic"><i></i>Mic live</span>
+              <span class="btn-big" id="radioBtn">HOLD TO TALK</span>
+            </div>
+
+            <div class="stalechip" data-in="stale" hidden><i></i>Telemetry paused · 6 s</div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:14px">Load-bearing layout: a 64 px rail plus a 12-column grid with rows of 48 / flexible (294 px) / 120 / 132 / 56 / 72 px, at
+    1180 × 796 CSS px (an 11" iPad running as a Home Screen app). Glance-critical text is at least 32 px; the delta is 108 px.</p>
+
+  <!-- ===================================== Navigation ===================================== -->
+  <h2>Navigation: four areas instead of ten tabs</h2>
+  <p>On iPad landscape and the Mac, a 64 px left rail; under 768 px wide, a bottom tab bar. Each area has a sub-nav (pills).
+    The driver chip, connection pill and SYNTHETIC badge are always visible. While the radio is live, a mini radio bar
+    follows you into every area. Old links redirect.</p>
+  <div class="ia">
+    <div class="area">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M3.3 11h6.2M14.5 11h6.2M12 14.5V21"/></svg>Drive</h3>
+      <p class="q">What do I do next?</p>
+      <ul><li class="def">Coach <code>#/drive</code></li><li>Car <code>#/drive/car</code></li><li>Track <code>#/drive/track</code></li><li>Radio <code>#/drive/radio</code></li></ul>
+    </div>
+    <div class="area">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>Review</h3>
+      <p class="q">How did it go, what do I work on, am I getting better?</p>
+      <ul><li class="def">Sessions <code>#/review</code></li><li>Coaching <code>#/review/coaching</code></li><li>Progress <code>#/review/progress</code></li><li>Ask <code>#/review/ask</code></li></ul>
+    </div>
+    <div class="area">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2.2" fill="#14161b"/><circle cx="16" cy="12" r="2.2" fill="#14161b"/><circle cx="7" cy="18" r="2.2" fill="#14161b"/></svg>Setup</h3>
+      <p class="q">Are the game, the rig and the car set up right?</p>
+      <ul><li class="def">Connect <code>#/setup/connect</code></li><li>Rig <code>#/setup/rig</code></li><li>Car setups <code>#/setup/car</code></li></ul>
+    </div>
+    <div class="area">
+      <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</h3>
+      <p class="q">How does Pitwall behave, and for whom?</p>
+      <ul><li class="def">Drivers <code>/drivers</code></li><li>Radio &amp; voice <code>/radio</code></li><li>AI engineer <code>/ai</code></li><li>Display <code>/display</code></li><li>System <code>/system</code></li></ul>
+    </div>
+  </div>
+  <div class="legacy">Redirects: <b>#/live</b> &rarr; #/drive · <b>#/radio</b> &rarr; #/drive/radio · <b>#/sessions</b> &rarr; #/review ·
+    <b>#/sessions/&lt;id&gt;</b> &rarr; #/review/s/&lt;id&gt; · <b>#/engineer</b> &rarr; #/review/ask · <b>#/setup</b> &rarr; #/setup/rig ·
+    <b>#/connect</b> &rarr; #/setup/connect · <b>#/profiles</b> &rarr; #/settings/drivers · <b>#/settings</b> &rarr; #/settings/ai ·
+    <b>#/status</b> &rarr; #/settings/system</div>
+
+  <!-- ===================================== Phones ===================================== -->
+  <h2>Phone: bottom tab bar</h2>
+  <p>On a phone, Drive becomes a portrait "pit wall" for whoever is watching, and Review becomes a single column. The
+    Session Summary is shown as a beginner sees it: one "Work on" card, plain words, and "?" glossary buttons.</p>
+  <div class="phones">
+    <figure>
+      <div class="fit" data-w="414" data-h="868">
+        <div class="device phone"><span class="bezel-tag">SAMPLE DATA</span>
+          <div class="screen" data-theme="dark">
+            <div class="p-app">
+              <div class="p-ios"><span>20:14</span><span>87%</span></div>
+              <div class="p-body">
+                <div class="p-status"><span class="pill"><i></i>LIVE</span><b>Silverstone</b><span class="num" style="color:var(--text2)">LAP 7</span><span class="avatar">JR</span></div>
+                <div class="panel p-delta">
+                  <div class="row"><span class="lbl">Delta</span><span class="lbl" style="letter-spacing:.06em"><b style="color:var(--purple)">PB</b> 1:30.986</span></div>
+                  <div class="dval num ahead">&minus;0.214</div>
+                  <div class="dword ahead">AHEAD</div>
+                  <div class="dbar"><span class="tk" style="left:25%"></span><span class="tk" style="left:75%"></span><span class="mid"></span><i class="fill ahead" style="left:39.3%;width:10.7%"></i></div>
+                </div>
+                <div class="panel p-next">
+                  <div class="row" style="display:flex;justify-content:space-between"><span class="lbl">Next corner · right</span><span class="tag focus" style="font-size:11px;padding:4px 6px">Focus</span></div>
+                  <div class="corner"><b>T15</b><span>Stowe</span><span class="num">320 m</span></div>
+                  <div class="cue"><span class="kind">BRAKE</span><span class="text">T15 brake</span><span class="in num">250 m</span></div>
+                </div>
+                <div class="panel p-coach"><span class="tag workon" style="justify-self:start;font-size:11px">Work on · lap 6</span><p>T15: you're braking about 12 m earlier than your reference (lap 9), losing 0.11 s through the corner.</p></div>
+                <div class="p-sect">
+                  <div class="sbox sb"><div class="top"><span class="lbl">S1</span><span class="ttag">SB</span></div><div class="t">29.318</div></div>
+                  <div class="sbox pb"><div class="top"><span class="lbl">S2</span><span class="ttag">PB</span></div><div class="t">36.904</div></div>
+                  <div class="sbox run"><div class="top"><span class="lbl">S3</span></div><div class="t">3.312</div></div>
+                </div>
+                <div class="panel p-radio"><span class="tag k" style="--k:var(--purple);font-size:11px">LAP</span><span class="msg">Lap 6: 1:31.512, plus 0.53 on your best.</span><span class="btn-big">HOLD TO TALK</span></div>
+              </div>
+              <nav class="tabbar" aria-label="Areas">
+                <a class="on" href="#drive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M3.3 11h6.2M14.5 11h6.2M12 14.5V21"/></svg>Drive</a>
+                <a href="#review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>Review</a>
+                <a href="#setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2.2" fill="var(--s1)"/><circle cx="16" cy="12" r="2.2" fill="var(--s1)"/><circle cx="7" cy="18" r="2.2" fill="var(--s1)"/></svg>Setup</a>
+                <a href="#settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</a>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Drive on a phone: delta first, then the next corner with its call, one coaching point, sectors and the radio. The lap ribbon is hidden at this width.</figcaption>
+    </figure>
+
+    <figure>
+      <div class="fit" data-w="414" data-h="868">
+        <div class="device phone"><span class="bezel-tag">SAMPLE DATA</span>
+          <div class="screen" data-theme="dark">
+            <div class="p-app">
+              <div class="p-ios"><span>21:02</span><span>84%</span></div>
+              <div class="p-body">
+                <div class="p-head">
+                  <a href="#review">&lsaquo; Sessions</a>
+                  <h3>Silverstone</h3>
+                  <div class="meta"><span class="avatar">JR</span>James · Time trial · today</div>
+                </div>
+                <div class="pills"><span class="on">Summary</span><span>Laps</span><span>Compare</span><span>Corners</span><span>Ask</span></div>
+                <div class="p-tiles">
+                  <div class="tile"><span class="lbl">Best lap</span><span class="v pb num">1:30.874</span><span class="s">Lap 12 · new PB</span></div>
+                  <div class="tile"><span class="lbl">On old PB</span><span class="v ahead num">&minus;0.112</span><span class="s">was 1:30.986</span></div>
+                  <div class="tile"><span class="lbl">Clean laps</span><span class="v num">10 / 14</span><span class="s">counted towards bests</span></div>
+                  <div class="tile"><span class="lbl">Spread</span><span class="v num">0.840 s</span><span class="s">slowest to fastest</span></div>
+                </div>
+                <div class="panel p-card work">
+                  <div class="hd"><span class="tag workon" style="font-size:11px">Work on</span><b>T15</b><span class="cn">Stowe</span><span class="glossary" title="What is the reference?"><b>?</b></span></div>
+                  <p>You lose about <b class="num">0.11 s</b> per lap here compared with your reference lap.</p>
+                  <p class="src">Engineer: "T15: you're braking about 12 m earlier than your reference (lap 9), losing 0.11 s through the corner."</p>
+                  <span class="btn-big">See it on the lap</span>
+                </div>
+                <div class="panel p-card good">
+                  <div class="hd"><span class="tag good" style="font-size:11px">Went well</span><b>T9</b><span class="cn">Copse</span></div>
+                  <p class="src" style="color:var(--text2)">"T9: good - exit speed is up 6 km/h on your reference and you gained 0.08 s there."</p>
+                </div>
+                <div class="panel p-card">
+                  <div class="hd"><span class="lbl">Lap times</span></div>
+                  <svg viewBox="0 0 340 92" width="100%" height="92" aria-label="Lap times chart (sample)" role="img">
+                    <line x1="0" y1="80" x2="340" y2="80" stroke="var(--line)"/>
+                    <polyline fill="none" stroke="var(--text2)" stroke-width="2" points="20,14 44,25 92,31 116,25 140,36 164,40 212,48 236,51 260,57 284,44"/>
+                    <g fill="var(--text)"><circle cx="20" cy="14" r="4"/><circle cx="44" cy="25" r="4"/><circle cx="92" cy="31" r="4"/><circle cx="116" cy="25" r="4"/><circle cx="140" cy="36" r="4"/><circle cx="164" cy="40" r="4"/><circle cx="212" cy="48" r="4"/><circle cx="236" cy="51" r="4"/><circle cx="284" cy="44" r="4"/></g>
+                    <circle cx="68" cy="44" r="4" fill="none" stroke="var(--text3)" stroke-width="2"/>
+                    <circle cx="260" cy="57" r="6" fill="var(--purple)"/>
+                    <text x="268" y="74" font-size="11" fill="var(--purple)" font-family="ui-monospace, monospace" font-weight="700">PB L12</text>
+                    <text x="2" y="90" font-size="10" fill="var(--text3)" font-family="ui-monospace, monospace">L2</text>
+                    <text x="318" y="90" font-size="10" fill="var(--text3)" font-family="ui-monospace, monospace">L13</text>
+                  </svg>
+                </div>
+              </div>
+              <nav class="tabbar" aria-label="Areas">
+                <a href="#drive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M3.3 11h6.2M14.5 11h6.2M12 14.5V21"/></svg>Drive</a>
+                <a class="on" href="#review"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4v16h16"/><path d="M7 15l4-5 3 3 5-7"/></svg>Review</a>
+                <a href="#setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2.2" fill="var(--s1)"/><circle cx="16" cy="12" r="2.2" fill="var(--s1)"/><circle cx="7" cy="18" r="2.2" fill="var(--s1)"/></svg>Setup</a>
+                <a href="#settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</a>
+              </nav>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Review &rsaquo; Session &rsaquo; Summary as a beginner sees it: four tiles, one "Work on" card (the engineer's sentence quoted verbatim), and "Went well". The lap-times chart (PB in purple, invalid laps hollow) continues below the fold.</figcaption>
+    </figure>
+  </div>
+
+  <!-- ===================================== Visual system ===================================== -->
+  <h2>Visual system (dark tokens)</h2>
+  <p>Each colour has exactly one job. Timing colours always come with a tag (PB / SB), and the delta always comes with
+    its sign and the words AHEAD / BEHIND. Contrast ratios are measured against the <code>#050608</code> background.</p>
+  <div class="sys">
+    <div class="sw"><i style="background:#b97cff"></i><div><b>Purple · PB</b>#b97cff · 7.1:1<br>your all-time best</div></div>
+    <div class="sw"><i style="background:#22d36f"></i><div><b>Green · SB / ahead</b>#22d36f · 10.3:1<br>best this session</div></div>
+    <div class="sw"><i style="background:#ffd23f"></i><div><b>Yellow · slower</b>#ffd23f · 14.0:1<br>also the yellow-flag band</div></div>
+    <div class="sw"><i style="background:#ff4d5e"></i><div><b>Red · behind / brake</b>#ff4d5e · 6.3:1<br>delta behind, brake cue</div></div>
+    <div class="sw"><i style="background:#ff6a2b"></i><div><b>Pitwall orange</b>#ff6a2b · 7.1:1<br>nav, hero edge, focus (dark ink on fills)</div></div>
+    <div class="sw"><i style="background:#ffb020"></i><div><b>Amber · work on / SC</b>#ffb020 · 11.1:1<br>coaching tag, safety car</div></div>
+    <div class="sw"><i style="background:repeating-linear-gradient(45deg,#f472b6 0 8px,#3a1d2e 8px 16px)"></i><div><b>Synthetic</b>#f472b6 + stripes<br>no longer purple</div></div>
+    <div class="sw"><i style="background:#7a8596"></i><div><b>Unknown "-"</b>#7a8596 · 5.4:1<br>(the old faint grey was 3.3:1)</div></div>
+  </div>
+  <div class="scale" aria-label="Drive type scale">
+    <div><code>--d-hero 108 / 700 mono</code><span class="num" style="font:700 108px/1 var(--mono);letter-spacing:-.04em;color:#22d36f">&minus;0.214</span></div>
+    <div><code>--d-xxl 96 / 800</code><span style="font:800 96px/1 var(--sans);letter-spacing:-.03em;color:#eef1f5">T15</span><span style="font:700 44px/1 var(--sans);color:#eef1f5">Stowe <code style="width:auto">--d-xl 44 / 700</code></span></div>
+    <div><code>--d-l 40 / 700 mono</code><span style="font:700 40px/1 var(--mono);color:#b97cff">36.904</span></div>
+    <div><code>--d-m 32 / 700 mono</code><span style="font:700 32px/1 var(--mono);color:#eef1f5">1:31.390</span></div>
+    <div><code>--d-s 26 / 550 (coach)</code><span style="font:550 26px/1.2 var(--sans);color:#eef1f5">braking about 12 m earlier</span></div>
+    <div><code>--label 13 / 700 caps .14em</code><span class="lbl" style="color:#a3adbb">Delta to reference</span></div>
+  </div>
+  <p style="font-size:14px;margin-top:18px">No web fonts: SF Pro and SF Mono come from the system, so the page works offline on the LAN. There are no
+    F1, FIA or team names, logos, liveries or typefaces anywhere in the design; icons are original inline SVG.</p>
+</div>
+
+<script>
+(function () {
+  // ---- lap ribbon (SAMPLE: Silverstone geometry from Pitwall's verified track sheet; car, cues, flag invented) ----
+  var L = 5890;
+  // Sector bands are neutral on Drive: yellow is reserved for "slower" and the yellow flag (proposal 6.2).
+  var sectors = [[0, 1813, "S1", "var(--line2)"], [1813, 4294, "S2", "var(--text3)"], [4294, 5890, "S3", "var(--line2)"]];
+  var corners = [
+    ["T1", 280, 500], ["T2", 500, 690], ["T3", 780, 950], ["T4", 960, 1125], ["T5", 1140, 1350],
+    ["T6", 1800, 2070], ["T7", 2070, 2385], ["T8", 2400, 2715], ["T9", 2950, 3260], ["T10-13", 3520, 4100],
+    ["T14", 4100, 4290], ["T15", 4880, 5260], ["T16", 5420, 5560], ["T17-18", 5560, 5840]
+  ];
+  var focus = { "T3": 1, "T15": 1 };
+  var nextCorner = "T15";
+  var cueTargets = [870, 4810];
+  var carM = 4560;
+  var yellowZone = [4940, 5150];
+  var pct = function (m) { return (m / L * 100).toFixed(3) + "%"; };
+  var rib = document.getElementById("rib");
+  var html = "";
+  sectors.forEach(function (s) {
+    html += '<div class="sec" style="left:' + pct(s[0]) + ';width:' + pct(s[1] - s[0]) + ';--c:' + s[3] + '"><span>' + s[2] + "</span></div>";
+  });
+  html += '<div class="yellow" id="ribYellow" hidden style="left:' + pct(yellowZone[0]) + ';width:' + pct(yellowZone[1] - yellowZone[0]) + '"></div>';
+  corners.forEach(function (c) {
+    var cls = "seg" + (focus[c[0]] ? " focus" : "") + (c[0] === nextCorner ? " nextc" : "");
+    html += '<div class="' + cls + '" style="left:' + pct(c[1]) + ';width:' + pct(c[2] - c[1]) + '" title="' + c[0] + '"></div>';
+    if (focus[c[0]] || c[0] === nextCorner) {
+      html += '<div class="clab' + (focus[c[0]] ? " focus" : "") + (c[0] === nextCorner ? " nextc" : "") + '" style="left:' + pct((c[1] + c[2]) / 2) + '">' + c[0] + "</div>";
+    }
+  });
+  cueTargets.forEach(function (m) { html += '<div class="cue" style="left:' + pct(m) + '" title="Braking call target"></div>'; });
+  html += '<div class="car" id="ribCar" style="left:' + pct(carM) + '" title="Car"></div>';
+  rib.innerHTML = html;
+
+  // ---- states ----
+  var drive = document.getElementById("drive");
+  var rail = document.getElementById("rail");
+  var radio = {
+    live: { kind: "LAP", k: "var(--purple)", msg: "Lap 6: 1:31.512, plus 0.53 on your best.", age: "8 s", mic: "Mic live", micOff: false, btn: "HOLD TO TALK", accent: false },
+    off: { kind: "RADIO", k: "var(--text3)", msg: "Radio off · Go live once per session to hear the engineer", age: "", mic: "Mic off", micOff: true, btn: "GO LIVE", accent: true },
+    pit: { kind: "LAP", k: "var(--purple)", msg: "Lap 6: 1:31.512, plus 0.53 on your best.", age: "41 s", mic: "Mic live", micOff: false, btn: "HOLD TO TALK", accent: false },
+    yellow: { kind: "LAP", k: "var(--purple)", msg: "Lap 6: 1:31.512, plus 0.53 on your best.", age: "12 s", mic: "Mic live", micOff: false, btn: "HOLD TO TALK", accent: false },
+    ended: { kind: "LAP", k: "var(--purple)", msg: "Lap 12: 1:30.874, a new personal best.", age: "2 min", mic: "Mic live", micOff: false, btn: "HOLD TO TALK", accent: false }
+  };
+  function setRadio(r) {
+    var kind = document.getElementById("radioKind");
+    kind.textContent = r.kind; kind.style.setProperty("--k", r.k);
+    document.getElementById("radioMsg").textContent = r.msg;
+    document.getElementById("radioAge").textContent = r.age;
+    var mic = document.getElementById("radioMic");
+    mic.lastChild.textContent = r.mic; mic.classList.toggle("off", r.micOff);
+    var btn = document.getElementById("radioBtn");
+    btn.textContent = r.btn; btn.classList.toggle("accent", r.accent);
+  }
+  function setState(st) {
+    drive.dataset.state = st;
+    drive.querySelectorAll("[data-in]").forEach(function (el) {
+      el.hidden = el.getAttribute("data-in").split(" ").indexOf(st) < 0;
+    });
+    document.getElementById("ribYellow").hidden = st !== "yellow";
+    document.getElementById("ribCar").style.left = pct(st === "pit" ? 5830 : carM);
+    rail.classList.toggle("ontrack", st === "ontrack" || st === "yellow");
+    var pill = document.getElementById("connPill"), txt = document.getElementById("connText");
+    pill.classList.remove("stale", "idle");
+    var conn = document.getElementById("railConn");
+    if (st === "stale") { pill.classList.add("stale"); txt.textContent = "STALE 6 s"; conn.style.background = "var(--stale)"; }
+    else if (st === "nodata") { pill.classList.add("idle"); txt.textContent = "NO DATA"; conn.style.background = "var(--text3)"; }
+    else { txt.textContent = "LIVE"; conn.style.background = ""; }
+    // pit lane: the coach card shows the last lap's summary and the delta is unknown
+    var coachText = document.getElementById("coachText"), coachTag = document.getElementById("coachTag");
+    var dval = document.getElementById("dval"), dword = document.getElementById("dword"), dbar = document.getElementById("dbar"), proj = document.getElementById("proj");
+    if (st === "pit") {
+      coachTag.textContent = "Last lap · L6";
+      coachText.textContent = "1:31.512, +0.526 on your PB. T15: you're braking about 12 m earlier than your reference (lap 9), losing 0.11 s through the corner.";
+      dval.textContent = "-"; dval.className = "dval unk"; dword.textContent = "IN PIT LANE"; dword.className = "dword unk";
+      dbar.style.visibility = "hidden"; document.getElementById("dscale").style.visibility = "hidden"; proj.textContent = "-"; proj.className = "num unk";
+    } else {
+      coachTag.textContent = "Work on · L6";
+      coachText.textContent = "T15: you're braking about 12 m earlier than your reference (lap 9), losing 0.11 s through the corner.";
+      dval.textContent = "−0.214"; dval.className = "dval ahead"; dword.textContent = "AHEAD"; dword.className = "dword ahead";
+      dbar.style.visibility = ""; document.getElementById("dscale").style.visibility = ""; proj.textContent = "1:30.772"; proj.className = "num";
+    }
+    document.getElementById("trackName").innerHTML = st === "nodata" ? 'Track <span class="unk">-</span>' : "Silverstone";
+    document.getElementById("sessType").hidden = st === "nodata";
+    document.getElementById("lapNo").innerHTML = (st === "garage" || st === "nodata") ? 'LAP <span class="unk">-</span>' : (st === "ended" ? "LAP 14" : "LAP 7");
+    if (st === "garage" || st === "nodata") setRadio(radio.off);
+    else if (st === "pit") setRadio(radio.pit);
+    else if (st === "yellow") setRadio(radio.yellow);
+    else if (st === "ended") setRadio(radio.ended);
+    else setRadio(radio.live);
+    document.querySelectorAll("#stateBtns button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.state === st)); });
+  }
+  document.querySelectorAll("#stateBtns button").forEach(function (b) {
+    b.addEventListener("click", function () { setState(b.dataset.state); });
+  });
+
+  // ---- theme ----
+  var dim = false;
+  document.querySelectorAll("#themeBtns button").forEach(function (b) {
+    b.addEventListener("click", function () {
+      if (b.hasAttribute("data-dim")) {
+        dim = !dim; b.setAttribute("aria-pressed", String(dim));
+        document.querySelectorAll(".screen").forEach(function (s) { s.classList.toggle("dim", dim); });
+        return;
+      }
+      document.querySelectorAll(".screen").forEach(function (s) { s.dataset.theme = b.dataset.theme; });
+      document.querySelectorAll("#themeBtns button[data-theme]").forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+    });
+  });
+
+  // ---- scale device frames to the available width ----
+  function fit() {
+    document.querySelectorAll(".fit").forEach(function (f) {
+      var w = +f.dataset.w, h = +f.dataset.h, s = Math.min(1, f.clientWidth / w);
+      var dev = f.querySelector(".device");
+      dev.style.transform = "scale(" + s + ")";
+      dev.style.left = Math.max(0, (f.clientWidth - w * s) / 2) + "px";
+      f.style.height = Math.ceil(h * s) + "px";
+    });
+  }
+  window.addEventListener("resize", fit);
+  setState("ontrack");
+  fit();
+})();
+</script>
+</body>
+</html>

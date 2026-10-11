@@ -1,0 +1,79 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 19
+layout = "Mexico"
+lap_length_m = 4525
+official_turn_count = 17
+sector_starts_m = [2037, 3592]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "PnG lap length 4525 m vs 4304 m for the real circuit: probably F1 25's own m_trackLength (research section 4; unverified) - confirm against a capture. official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1, 2, 3]
+names = [{ text = "Ese Moisés Solana", kind = "unclassified" }]
+game_segment_m = [1160, 1512]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [4, 5]
+names = [{ text = "Ese del Lago", kind = "unclassified" }]
+game_segment_m = [2060, 2300]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [6]
+game_segment_m = [2300, 2470]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [7, 8, 9, 10, 11]
+names = [{ text = "Esses", kind = "unclassified" }]
+game_segment_m = [2660, 3370]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [12]
+game_segment_m = [3740, 3910]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13, 14, 15]
+names = [{ text = "Foro Sol", kind = "unclassified" }]
+game_segment_m = [3910, 4175]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [16]
+game_segment_m = [4175, 4275]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [17]
+names = [{ text = "Nigel Mansell Turn", kind = "unclassified" }]
+game_segment_m = [4275, 4525]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

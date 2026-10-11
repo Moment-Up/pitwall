@@ -1,0 +1,121 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa, commit 72f78aaf19910cea0aaa302cf69905daa6f331f4), MIT licence,
+# Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# NOT hand-reviewed: every turn is verified = false and names are unclassified, so pitwall attaches nothing from
+# this sheet at runtime (identity min tier sheet_verified). Review by hand (FIA circuit map, recorded game
+# telemetry) before setting verified / voice_ok; the importer then leaves this file alone.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 26
+layout = "Zandvoort"
+lap_length_m = 4258
+official_turn_count = 14
+sector_starts_m = [1489, 2967]
+sources = ["pits_n_giggles@72f78aa"]
+notes = "official_turn_count is the highest turn number PnG uses, not checked against an official source."
+
+[[turns]]
+numbers = [1]
+names = [{ text = "Tarzanbocht", kind = "unclassified" }]
+game_segment_m = [200, 480]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [2]
+names = [{ text = "Gerlachbocht", kind = "unclassified" }]
+game_segment_m = [600, 760]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [3]
+names = [{ text = "Hugenholtzbocht", kind = "unclassified" }]
+game_segment_m = [760, 960]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [4]
+names = [{ text = "Hunserug", kind = "unclassified" }]
+game_segment_m = [1027, 1140]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [5]
+game_segment_m = [1150, 1350]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [6]
+names = [{ text = "Slotemakerbocht", kind = "unclassified" }]
+game_segment_m = [1350, 1555]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [7]
+names = [{ text = "Scheivlak", kind = "unclassified" }]
+game_segment_m = [1555, 1830]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [8]
+names = [{ text = "Mastersbocht", kind = "unclassified" }]
+game_segment_m = [1920, 2150]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [9]
+game_segment_m = [2150, 2350]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+notes = "Generic PnG name 'Bocht 9' dropped."
+
+[[turns]]
+numbers = [10]
+game_segment_m = [2400, 2650]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+notes = "Generic PnG name 'Bocht 10' dropped."
+
+[[turns]]
+numbers = [11, 12]
+names = [{ text = "Hans Ernst Bocht", kind = "unclassified" }]
+game_segment_m = [2990, 3270]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [13]
+names = [{ text = "Kumhobocht", kind = "unclassified" }]
+game_segment_m = [3380, 3600]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+
+[[turns]]
+numbers = [14]
+names = [{ text = "Arie Luyendykbocht", kind = "unclassified" }]
+game_segment_m = [3600, 3950]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]

@@ -1,0 +1,654 @@
+{
+ "version": 6480,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 38530,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261010-204720_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 38400,
+   "decoded": 27546,
+   "ignored": 10854,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "EVENT": 180,
+    "SESSION": 216,
+    "PARTICIPANTS": 22,
+    "CAR_SETUPS": 216,
+    "CAR_DAMAGE": 1078,
+    "TYRE_SETS": 2156,
+    "LAP_POSITIONS": 108,
+    "LAP_DATA": 6459,
+    "MOTION": 6459,
+    "MOTION_EX": 6458,
+    "CAR_TELEMETRY": 6458,
+    "CAR_STATUS": 6458,
+    "SESSION_HISTORY": 2132
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "e496861ea793",
+ "session": {
+  "game": "f1_25",
+  "platform": "ps5",
+  "track_id": "f1:11",
+  "track_name": "Monza",
+  "track_length_m": 5798.0,
+  "session_type": "Race",
+  "car_name": "F1 Generic",
+  "weather": {
+   "condition": "clear",
+   "track_temp_c": 37.0,
+   "air_temp_c": 25.0,
+   "rain_percentage": 4.0
+  },
+  "total_laps": 3,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1854465223868000,
+  "session_time_s": 102.451,
+  "speed_kph": 93.0,
+  "throttle": 0.414,
+  "brake": 0.0,
+  "steering": -0.615,
+  "clutch": 0.0,
+  "gear": 2,
+  "rpm": 9455.0,
+  "max_rpm": 13099.0,
+  "drs_open": false,
+  "pos": [
+   -499.18,
+   2.45,
+   -364.77
+  ],
+  "g_lat": 1.91,
+  "g_lon": -0.84,
+  "lap_number": 2,
+  "lap_distance_m": 1006.8,
+  "current_lap_time_ms": 12678,
+  "last_lap_time_ms": 89747,
+  "sector": 0,
+  "lap_invalid": true,
+  "pit_status": 0,
+  "race_position": 1,
+  "tyre_surface_temp_c": [
+   72.0,
+   63.0,
+   65.0,
+   58.0
+  ],
+  "tyre_inner_temp_c": [
+   80.0,
+   80.0,
+   80.0,
+   80.0
+  ],
+  "tyre_pressure_psi": [
+   24.5,
+   24.5,
+   22.0,
+   22.0
+  ],
+  "brake_temp_c": [
+   1004.0,
+   1001.0,
+   987.0,
+   985.0
+  ],
+  "tyre_wear_pct": [
+   4.0,
+   1.0,
+   3.0,
+   3.0
+  ],
+  "tyre_compound": "soft",
+  "tyre_age_laps": 1,
+  "fuel_kg": 7.9,
+  "fuel_remaining_laps_game": 2.66,
+  "ers_store_j": 2914332.0,
+  "brake_bias_front_pct": 58.0,
+  "quality": 0
+ },
+ "delta_s": null,
+ "reference": null,
+ "laps": [
+  {
+   "lap_id": 1,
+   "lap_number": 1,
+   "lap_time_ms": 89747,
+   "sector_times_ms": [
+    30607,
+    28378,
+    30762
+   ],
+   "valid": true,
+   "clean": false,
+   "flags": [
+    "standing_start"
+   ],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.833
+  }
+ ],
+ "observations": [],
+ "events": [
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 102.2679672241211,
+   "t": 1791679772.145769
+  },
+  {
+   "kind": "penalty",
+   "code": "PENA",
+   "session_time_s": 102.2513198852539,
+   "t": 1791679772.1457338
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 101.88423156738281,
+   "t": 1791679772.145119
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 101.36702728271484,
+   "t": 1791679772.1442099
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 101.30033111572266,
+   "t": 1791679772.1440718
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 101.2836685180664,
+   "t": 1791679772.144019
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 100.38282775878906,
+   "t": 1791679772.142195
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 99.86572265625,
+   "t": 1791679772.141338
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 99.81548309326172,
+   "t": 1791679772.14121
+  },
+  {
+   "kind": "other",
+   "code": "SPTP",
+   "session_time_s": 98.66438293457031,
+   "t": 1791679772.139094
+  }
+ ],
+ "marshal_flags": [],
+ "track_model": null,
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:11",
+  "track_length_m": 5798.0,
+  "pit_speed_limit_kph": 80.0,
+  "sector2_start_m": 1897.79,
+  "sector3_start_m": 3726.98,
+  "sector_boundaries_m": [
+   0.0,
+   1897.79,
+   3726.98,
+   5798.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 1897.79,
+    "length_m": 1897.79
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 1897.79,
+    "end_m": 3726.98,
+    "length_m": 1829.18
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 3726.98,
+    "end_m": 5798.0,
+    "length_m": 2071.02
+   }
+  ],
+  "marshal_zones": [
+   {
+    "kind": "marshal",
+    "index": 1,
+    "game_number": 2,
+    "lap_order": 1,
+    "start_m": 445.91,
+    "end_m": 764.81,
+    "length_m": 318.9,
+    "start_frac": 0.076908,
+    "end_frac": 0.13191,
+    "wraps": false,
+    "segments_m": [
+     [
+      445.91,
+      764.81
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 2,
+    "game_number": 3,
+    "lap_order": 2,
+    "start_m": 764.81,
+    "end_m": 1050.47,
+    "length_m": 285.66,
+    "start_frac": 0.13191,
+    "end_frac": 0.181178,
+    "wraps": false,
+    "segments_m": [
+     [
+      764.81,
+      1050.47
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 3,
+    "game_number": 4,
+    "lap_order": 3,
+    "start_m": 1050.47,
+    "end_m": 1348.75,
+    "length_m": 298.28,
+    "start_frac": 0.181178,
+    "end_frac": 0.232623,
+    "wraps": false,
+    "segments_m": [
+     [
+      1050.47,
+      1348.75
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 4,
+    "game_number": 5,
+    "lap_order": 4,
+    "start_m": 1348.75,
+    "end_m": 1577.2,
+    "length_m": 228.45,
+    "start_frac": 0.232623,
+    "end_frac": 0.272024,
+    "wraps": false,
+    "segments_m": [
+     [
+      1348.75,
+      1577.2
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 5,
+    "game_number": 6,
+    "lap_order": 5,
+    "start_m": 1577.2,
+    "end_m": 1972.38,
+    "length_m": 395.19,
+    "start_frac": 0.272024,
+    "end_frac": 0.340183,
+    "wraps": false,
+    "segments_m": [
+     [
+      1577.2,
+      1972.38
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 6,
+    "game_number": 7,
+    "lap_order": 6,
+    "start_m": 1972.38,
+    "end_m": 2369.54,
+    "length_m": 397.16,
+    "start_frac": 0.340183,
+    "end_frac": 0.408683,
+    "wraps": false,
+    "segments_m": [
+     [
+      1972.38,
+      2369.54
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 7,
+    "game_number": 8,
+    "lap_order": 7,
+    "start_m": 2369.54,
+    "end_m": 2792.76,
+    "length_m": 423.22,
+    "start_frac": 0.408683,
+    "end_frac": 0.481676,
+    "wraps": false,
+    "segments_m": [
+     [
+      2369.54,
+      2792.76
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 8,
+    "game_number": 9,
+    "lap_order": 8,
+    "start_m": 2792.76,
+    "end_m": 3075.23,
+    "length_m": 282.47,
+    "start_frac": 0.481676,
+    "end_frac": 0.530395,
+    "wraps": false,
+    "segments_m": [
+     [
+      2792.76,
+      3075.23
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 9,
+    "game_number": 10,
+    "lap_order": 9,
+    "start_m": 3075.23,
+    "end_m": 3405.72,
+    "length_m": 330.48,
+    "start_frac": 0.530395,
+    "end_frac": 0.587395,
+    "wraps": false,
+    "segments_m": [
+     [
+      3075.23,
+      3405.72
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 10,
+    "game_number": 11,
+    "lap_order": 10,
+    "start_m": 3405.72,
+    "end_m": 3587.02,
+    "length_m": 181.31,
+    "start_frac": 0.587395,
+    "end_frac": 0.618665,
+    "wraps": false,
+    "segments_m": [
+     [
+      3405.72,
+      3587.02
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 11,
+    "game_number": 12,
+    "lap_order": 11,
+    "start_m": 3587.02,
+    "end_m": 3803.02,
+    "length_m": 216.0,
+    "start_frac": 0.618665,
+    "end_frac": 0.655919,
+    "wraps": false,
+    "segments_m": [
+     [
+      3587.02,
+      3803.02
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 12,
+    "game_number": 13,
+    "lap_order": 12,
+    "start_m": 3803.02,
+    "end_m": 4424.68,
+    "length_m": 621.66,
+    "start_frac": 0.655919,
+    "end_frac": 0.763139,
+    "wraps": false,
+    "segments_m": [
+     [
+      3803.02,
+      4424.68
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 13,
+    "game_number": 14,
+    "lap_order": 13,
+    "start_m": 4424.68,
+    "end_m": 4983.66,
+    "length_m": 558.98,
+    "start_frac": 0.763139,
+    "end_frac": 0.859547,
+    "wraps": false,
+    "segments_m": [
+     [
+      4424.68,
+      4983.66
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 14,
+    "game_number": 15,
+    "lap_order": 14,
+    "start_m": 4983.66,
+    "end_m": 5307.36,
+    "length_m": 323.7,
+    "start_frac": 0.859547,
+    "end_frac": 0.915377,
+    "wraps": false,
+    "segments_m": [
+     [
+      4983.66,
+      5307.36
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 15,
+    "game_number": 16,
+    "lap_order": 15,
+    "start_m": 5307.36,
+    "end_m": 5481.72,
+    "length_m": 174.36,
+    "start_frac": 0.915377,
+    "end_frac": 0.94545,
+    "wraps": false,
+    "segments_m": [
+     [
+      5307.36,
+      5481.72
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 16,
+    "game_number": 17,
+    "lap_order": 16,
+    "start_m": 5481.72,
+    "end_m": 5772.31,
+    "length_m": 290.59,
+    "start_frac": 0.94545,
+    "end_frac": 0.995569,
+    "wraps": false,
+    "segments_m": [
+     [
+      5481.72,
+      5772.31
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 0,
+    "game_number": 1,
+    "lap_order": 17,
+    "start_m": 5772.31,
+    "end_m": 445.91,
+    "length_m": 471.61,
+    "start_frac": 0.995569,
+    "end_frac": 0.076908,
+    "wraps": true,
+    "segments_m": [
+     [
+      5772.31,
+      5798.0
+     ],
+     [
+      0.0,
+      445.91
+     ]
+    ],
+    "flag": "none"
+   }
+  ],
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": "AI field heads-ups (no reference lap yet)",
+  "ref_lap_number": null,
+  "focus": [
+   "F1",
+   "F2",
+   "zone@3480"
+  ],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [
+   {
+    "corner": "F1",
+    "kind": "marker",
+    "target_m": 680,
+    "text": "heavy braking ahead",
+    "focus": false,
+    "reason": "AI field: 31 car-laps brake from 700 m (heavy)"
+   },
+   {
+    "corner": "F2",
+    "kind": "marker",
+    "target_m": 2032,
+    "text": "heavy braking ahead",
+    "focus": false,
+    "reason": "AI field: 29 car-laps brake from 2050 m (heavy)"
+   },
+   {
+    "corner": "zone@3480",
+    "kind": "marker",
+    "target_m": 3455,
+    "text": "heavy braking ahead",
+    "focus": false,
+    "reason": "AI field: 22 car-laps brake from 3480 m (heavy)"
+   }
+  ],
+  "next": {
+   "corner": "F2",
+   "text": "heavy braking ahead",
+   "kind": "marker",
+   "in_m": 1025
+  },
+  "last": null,
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "edited",
+  "source": "recorded-monza-invalid-lap.json (recorded: pitwall replay (headless, temp DB) of 20261010-204720_udp20777.pwcap)",
+  "moment": "first session at a track, no learned model: the AI field's heads-ups stand in for the driver's calls",
+  "edits": [
+   "cues.reason: 'no reference lap yet' -> 'AI field heads-ups (no reference lap yet)'",
+   "cues.focus: [] -> ['F1', 'F2', 'zone@3480'] (heads-up keys by priority, coach/cues.py _with_fallback in focus mode)",
+   "cues.cues: [] -> three 'heavy braking ahead' MARKER heads-ups (core/track_knowledge.py heads_up_cue_plan shape; onsets placed by hand)",
+   "cues.next: null -> the next heads-up (F2)"
+  ],
+  "notes": "Hand edits for states no capture reaches yet; every changed field is listed. Test data, not game data. The heads-up positions are illustrative, not measured."
+ }
+}

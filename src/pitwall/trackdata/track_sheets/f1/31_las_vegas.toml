@@ -1,0 +1,106 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa),
+# MIT licence, Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# HAND-REVIEWED 2026-10-11 (numbers, windows, directions and names; see checked_against and the turn notes) against
+# the 72f78aa copy (Las_Vegas.json blob 49ea26d4). Evidence and URLs: docs/research/track-sheets-review-g4.md.
+# CROSS-CHECKED 2026-10-11 (FIA 2025 map, field data): numbers, windows and directions confirmed; PnG's nickname
+# 'Sphere Section' removed (single unconfirmed source).
+# The importer leaves this file alone because it contains verified turns.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 31
+layout = "Las Vegas Strip Circuit"
+lap_length_m = 6200
+official_turn_count = 17
+sector_starts_m = [1704, 3377]
+verified_formats = [2025]
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = [
+    "capture:20261010-220510 - real F1 25 v1.26 PS5 race (UDP format 2025), laps 1-3 (lap 1 from the grid) speed/brake/throttle/steering and heading from world position by lap distance; Session packet trackLength 6200 m, S2 start 1703.80 m, S3 start 3376.47 m",
+    "fia:2025-las-vegas-event-notes-map - FIA F1 2025 Las Vegas GP Event Notes, Circuit Map V2 (doc 2, 19 Nov 2025): corners 1-17, S1 line 90 m after T5, S2 line 140 m after T12, DRS detection 1 10 m after T2, DRS activation 1 20 m after T4, DRS detection 2 710 m after T12 drawn at T13, speed trap 140 m before T14, centreline 6.201 km",
+    "fia:2024-las-vegas-event-notes-map - FIA F1 2024 Las Vegas GP Event Notes, Circuit Map and Red Zones (doc 9): the same numbering, sector lines and landmarks as 2025",
+    "f1db:766ef48 circuits/las-vegas.yml - layout las-vegas-1: 17 turns, anti-clockwise, 6.201 km",
+    "formula1.com:barretto-las-vegas-2023 - formula1.com, 10 Nov 2023: the Sphere sits on the inside of Turns 7, 8 and 9",
+    "field-curvature:31 - cross-check 2026-10-11 on the same capture: all 22 cars (60 lap segments), path heading from the Motion packet's world forward vector on a 5 m grid (lap turns +358 deg = anti-clockwise) and field speed minima: every direction, window and FIA anchor (S1 90 m after T5, S2 140 m after T12) confirmed",
+    "en.wikipedia:Las_Vegas_Strip_Circuit - 17 turns, counterclockwise; T1 hairpin, slight left, fast right onto the streets; slow 90-degree right off Koval Lane; sweeping left round the Sphere, left-right, faster left onto Sands Avenue; T10-11 high-speed bends; T12 slow left onto the Strip; T13 slight sweeping left; T14-16 three slow corners; T17 fast left",
+]
+notes = "Windows and grouping are PnG's, unchanged: on the real capture every turn lies in its window, and the game's S2/S3 starts equal PnG's sector values to 0.53 m. Directions are measured (steering sign and heading change from world position; the lap turns -357 deg, anti-clockwise) and match the FIA drawing and Wikipedia: left 1, 2, 6, 7, 9, 11, 12, 13, 14, 16, 17; right 3, 4, 5, 8, 10, 15. Mixed-direction complexes (T1-4, T6-9, T10-11, T14-16) carry no direction. Learned models normally find corners at T1, T3, T5, T7/T8, T9, T12 and T14 only: T2, T4, T6, T10, T11, T13, T15, T16 and T17 are taken without a speed minimum. Splitting the complexes would give finer labels but the learned T14 apex (5220 m) sits 10 m before the T14/T15 direction change, so the PnG grouping is kept. Verified with UDP format 2025 (F1 25 v1.26) only: verified_formats keeps 2026 Season Pack sessions (format 2026) at the seeded tier until a format-2026 capture is checked."
+
+[[turns]]
+numbers = [1, 2, 3, 4]
+game_segment_m = [185, 770]
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-220510", "fia:2025-las-vegas-event-notes-map", "en.wikipedia:Las_Vegas_Strip_Circuit"]
+notes = "Laps 2-3: braking 179-180 m; T1 left, minimum 117-119 km/h at 296-333 m; T2 left at 395-465 m on full throttle (127 -> 166 km/h; the turn the FIA puts DRS detection 1 after); T3 right at 470-650 m with a lift, minimum 182-197 km/h at 550-600 m; T4 right at 650-770 m, flat. Heading -177 deg over T1-2 and +135 deg over T3-4. Learned T1 (334 m) is T1, learned T2 (593 m) is T3."
+
+[[turns]]
+numbers = [5]
+game_segment_m = [1415, 1655]
+direction = "right"
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-220510", "fia:2025-las-vegas-event-notes-map", "en.wikipedia:Las_Vegas_Strip_Circuit"]
+notes = "End of Koval Lane: braking 1442-1447 m, minimum 105-107 km/h at 1594-1606 m, right (+91 deg). FIA puts the S1 line 90 m after T5: game S2 start 1704 m - 90 m = 1614 m, inside this window."
+
+[[turns]]
+numbers = [6, 7, 8, 9]
+game_segment_m = [1685, 2310]
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-220510", "fia:2025-las-vegas-event-notes-map", "en.wikipedia:Las_Vegas_Strip_Circuit", "formula1.com:barretto-las-vegas-2023"]
+notes = "T6 flat sweeping left at 1710-1935 m (200-260 km/h); T7 braking 1937-1940 m, left, minimum 96-103 km/h at 2043-2070 m; T8 right at 2085-2160 m, minimum 95-97 km/h at 2118-2123 m (laps 2-3); T9 braking 2200 m, left, minimum 86-98 km/h at 2227-2282 m. T7 and T8 share one learned minimum (learned T4 at 2121 m, right). PnG's descriptive nickname 'Sphere Section' was removed by the 2026-10-11 cross-check: PnG is its only source (the FIA map names no corners; Wikipedia: the sweeping left encircles the Sphere; formula1.com: the Sphere sits inside T7-9; other guides place 'Sphere' corners at T4 or T5-9), and every name on a verified turn is displayed as fact."
+
+[[turns]]
+numbers = [10, 11]
+game_segment_m = [2630, 3110]
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-220510", "fia:2025-las-vegas-event-notes-map", "en.wikipedia:Las_Vegas_Strip_Circuit"]
+notes = "Both flat (250-295 km/h, no braking): T10 right, +71 to +73 deg, strongest at 2730-2790 m (the bend starts gently at about 2530 m, before this window); T11 left, -52 to -61 deg, strongest at 3050-3110 m, running into the T12 braking zone. No speed minimum."
+
+[[turns]]
+numbers = [12]
+game_segment_m = [3110, 3310]
+direction = "left"
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-220510", "fia:2025-las-vegas-event-notes-map", "en.wikipedia:Las_Vegas_Strip_Circuit"]
+notes = "Onto the Strip: braking 3110 m, minimum 88-95 km/h at 3226-3268 m, left. FIA puts the S2 line 140 m after T12: game S3 start 3377 m - 140 m = 3237 m, inside this window."
+
+[[turns]]
+numbers = [13]
+game_segment_m = [3900, 4230]
+direction = "left"
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-220510", "fia:2025-las-vegas-event-notes-map", "en.wikipedia:Las_Vegas_Strip_Circuit"]
+notes = "Flat-out slight left on the Strip (310-330 km/h): the road bends left by 0.04-0.09 deg/m from 3575 to 4300 m with no distinct apex. The FIA draws T13 at DRS detection 2, 710 m after T12 (about 3946 m), inside this window. Never a speed minimum."
+
+[[turns]]
+numbers = [14, 15, 16]
+game_segment_m = [5030, 5375]
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-220510", "fia:2025-las-vegas-event-notes-map", "en.wikipedia:Las_Vegas_Strip_Circuit"]
+notes = "Braking 5054-5060 m; T14 left, minimum 90-93 km/h at 5219-5220 m (learned T7 at 5220 m); T15 right at 5230-5280 m (+21 deg); T16 left at 5285-5420 m (-41 deg) while accelerating 150 -> 225 km/h, so its tail runs about 45 m past this window."
+
+[[turns]]
+numbers = [17]
+game_segment_m = [5945, 6200]
+direction = "left"
+voice_ok = false
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-220510", "fia:2025-las-vegas-event-notes-map", "en.wikipedia:Las_Vegas_Strip_Circuit"]
+notes = "Flat-out left (300-315 km/h) from about 5980 m through the line and some 60 m beyond it (-40 to -57 deg in total); the window cannot wrap past 6200 m. Never a speed minimum."

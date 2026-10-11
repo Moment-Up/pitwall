@@ -1,0 +1,513 @@
+/*
+ * Drive › Car, Track and Radio (docs/ui/design-spec.md v2, 5.1-5.4; docs/ui/mockup.html `.wall`). Lane DV.
+ *
+ * Unlayered like coach.css (see its header): every selector starts with a `pww` class, and the elements carrying
+ * them use no conflicting Tailwind utilities. Every colour is a token (styles/tokens.css). No shadows and no blur
+ * inside Drive (4.11); bars move by width without a transition (live inputs must never lag the car).
+ */
+
+/* ================================================================================================= frame (5) */
+.pww {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+  gap: 10px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: 52px minmax(0, 1fr);
+  color: var(--foreground);
+}
+.pww[data-layout="car"] { grid-template-rows: 52px minmax(0, 1.25fr) minmax(0, 1fr); }
+.pww-status {
+  grid-column: 1 / -1;
+  height: auto; /* the row sets it */
+}
+/* No text selection, callout or loupe on a long press (as on Coach, coach.css). The radio log and the copy fields are
+ * nothing to copy from the rig; text fields stay editable (iOS will not type into a user-select: none field). */
+.pww {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.pww :is(input, textarea, [contenteditable]) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* Stale / offline: last content dimmed to 45 % (4.7 #1, #3). The status slot (bands) never dims. */
+.pww[data-dim] > .pww-tile { opacity: 0.45; }
+
+.pww-s3 { grid-column: span 3; }
+.pww-s4 { grid-column: span 4; }
+.pww-s5 { grid-column: span 5; }
+.pww-s6 { grid-column: span 6; }
+.pww-s7 { grid-column: span 7; }
+
+/* ================================================================================================= tiles */
+.pww-tile.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  overflow: hidden;
+}
+.pww-head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+.pww-h3 {
+  margin: 0;
+  overflow: hidden;
+  font: 600 16px/1.3 var(--pw-font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pww-head--wrap {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+/* The title keeps its whole width; the chip wraps under it instead of squeezing it into "Tyres & ener…". */
+.pww-head--wrap > .pww-h3 {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+.pww-sub {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pww-foot {
+  flex: none;
+  margin: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pww-foot--wrap { white-space: normal; overflow-wrap: anywhere; }
+.pww-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.pww-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.pww-num {
+  font-family: var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ============================================================================================ car tile (5.1) */
+.pww-big {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.pww-big__v {
+  font: 700 64px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+.pww-big__v[data-gear] { color: var(--accent); }
+.pww-big__u { margin-top: 2px; font-size: 14px; color: var(--muted); }
+.pww-meters { display: grid; gap: 10px; }
+.pww-meter .meter__track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-tertiary);
+}
+.pww-meter .meter__fill {
+  border-radius: 999px;
+  transition: none; /* live inputs never lag the car (5.1, as today's DrivePage) */
+}
+.pww-meter [data-slot="label"] { font: 500 14px/1.2 var(--pw-font-sans); color: var(--muted); }
+.pww-meter .meter__output { font: 700 17px/1 var(--pw-font-num); font-variant-numeric: tabular-nums; }
+.pww-meter--unknown .meter__output { color: var(--pw-faint); }
+.pww-kv {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.pww-kv b {
+  margin-left: 4px;
+  font: 700 17px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+/* ========================================================================================== tyres tile (5.1) */
+.pww-tyres {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pww-tyre {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: var(--surface-secondary);
+}
+.pww-tyre__k {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pww-tyre__w { font-weight: 700; letter-spacing: 0.04em; }
+.pww-tyre__t {
+  font: 700 26px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+}
+.pww-tyre__s {
+  overflow: hidden;
+  font: 600 14px/1.2 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================================================ map tiles (5.1, 5.2) */
+.pww-map {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ============================================================================================ laps tile (5.1) */
+.pww-laps .data-grid { min-width: 0; }
+/* Six columns in a 5-column tile (about 414 px on the 11" iPad): tight cells, 16 px numerals. */
+.pww-laps :is(.table__cell, .table__column) { padding-inline: 6px; }
+.pww-laps :is(.table__cell, .table__column):first-child { padding-left: 8px; }
+.pww-laps :is(.table__cell, .table__column):last-child { padding-right: 8px; }
+.pww-laps .pw-tv { font-size: 16px; }
+.pww-lapno {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.pww-lapno__n { font: 700 16px/1 var(--pw-font-num); font-variant-numeric: tabular-nums; }
+.pww-lapno__why {
+  display: block;
+  max-width: 6em;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pww-mini {
+  --chip-bg: var(--surface-tertiary);
+  --chip-fg: var(--foreground);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.pww-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pww-dref {
+  font: 700 16px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+}
+/* Phones below 600 px: two-line rows instead of the table (5.4). */
+.pww-laprow {
+  display: grid;
+  flex: 1;
+  gap: 2px;
+  min-width: 0;
+}
+.pww-laprow__a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pww-laprow__a .pww-dref { margin-left: auto; }
+.pww-laprow__b {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pww-laprow__b .pw-tv { font-size: 15px; }
+
+/* Read-only lists (coaching points, narrow laps, the radio log): no hover, no pointer (5.1 "read only, no hover"). */
+.pww-readonly .list-view__item {
+  cursor: default;
+}
+.pww-readonly .list-view__item:is(:hover, [data-hovered="true"]) {
+  background-color: transparent;
+}
+
+/* ======================================================================================== coaching tile (5.1) */
+.pww-points .list-view__item { min-height: 56px; cursor: default; }
+.pww-point {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.pww-point__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pww-point__text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.35;
+  white-space: normal;
+}
+.pww-impact {
+  margin-left: auto;
+  font: 700 15px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pww-impact[data-tone="ahead"] { color: var(--pw-ahead); }
+.pww-impact[data-tone="behind"] { color: var(--pw-behind); }
+
+/* ===================================================================================== Track: corner list (5.2) */
+.pww-corners .list-view__item { min-height: 56px; }
+.pww-kbd {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  min-width: 58px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--surface-tertiary);
+  font: 700 14px/1 var(--pw-font-mono);
+  white-space: nowrap;
+}
+.pww-corner__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-weight: 600;
+}
+.pww-corner__sub {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: normal;
+}
+.pww-corner__note { color: var(--foreground); }
+.pww-focus {
+  --chip-bg: transparent;
+  --chip-fg: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.pww-follow {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ======================================================================================== Radio: stage (5.3) */
+.pww-stage.card {
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  overflow-y: auto;
+  text-align: center;
+}
+/* A long engineer answer: only the message gives way. Every other stage item keeps its size (a shrinking 160 px Hold to
+ * talk became an oval and pushed Braking calls off the tile); the text scrolls inside, at least two lines tall, and
+ * "safe" centring starts an overflowing stage at its top instead of cutting it off above. */
+.pww-stage.card { justify-content: safe center; }
+.pww-stage.card > * { flex: none; }
+.pww-stage.card > .pw-radio-msg {
+  flex: 0 1 auto;
+  min-height: calc(32px + 16px + 2 * 1.3 * 28px); /* the chip row and two lines of text: it shrinks no further */
+  max-width: 100%;
+}
+.pww-stage .pw-radio-msg__text {
+  flex: 0 1 auto;
+  min-height: 2.6em;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.pww-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.pww-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.pww-level { --meter-fill: var(--muted); width: min(280px, 100%); }
+.pww-level .meter__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-tertiary);
+}
+.pww-level .meter__fill { border-radius: 999px; transition: none; }
+.pww-level--hot { --meter-fill: var(--accent); }
+.pww-segs {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: 10px 14px;
+}
+.pww-segs__k {
+  font: 500 14px/1.2 var(--pw-font-sans);
+  color: var(--muted);
+  text-align: right;
+}
+.pww-segs__note {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+/* A Drive page: the selection indicator jumps, it never slides (9.5). Pro Segment's own transition is 0.25 s. */
+.pww-segs .segment__indicator { transition: none; }
+.pww-golive-note {
+  max-width: 30rem;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.pww-notice {
+  width: 100%;
+  max-width: 34rem;
+  text-align: left;
+}
+
+/* ========================================================================================== Radio: log (5.3) */
+.pww-log .list-view__item { min-height: 52px; cursor: default; }
+.pww-logrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+.pww-logrow__text {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.pww-logrow__at {
+  flex: none;
+  padding-top: 3px;
+  font: 600 14px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--pw-faint);
+}
+.pww-ask {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+/* iPad mini, Safari with toolbars: compact rows, as on Coach (4.2). */
+@media (max-height: 760px) and (min-width: 1024px) {
+  .pww { padding: 8px; gap: 8px; grid-template-rows: 44px minmax(0, 1fr); }
+  .pww[data-layout="car"] { grid-template-rows: 44px minmax(0, 1.25fr) minmax(0, 1fr); }
+  .pww-tile.card { padding: 12px 14px; gap: 8px; }
+  .pww-big__v { font-size: 52px; }
+}
+
+/* ================================================================= iPad portrait, split view: two columns (5.4) */
+@media (max-width: 1023px) {
+  .pww,
+  .pww[data-layout="car"] {
+    height: auto;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+    grid-auto-rows: auto;
+  }
+  .pww-status { height: 52px; }
+  .pww :is(.pww-s3, .pww-s4, .pww-s5) { grid-column: span 1; }
+  .pww :is(.pww-s6, .pww-s7) { grid-column: 1 / -1; }
+  .pww .pww-wide { grid-column: 1 / -1; }
+  .pww-tile.card { overflow: visible; }
+  /* iPad portrait: the stage grows with its content; about six and a half lines of a long answer, the rest scrolls inside. */
+  .pww-stage .pw-radio-msg__text { max-height: calc(6.5 * 1.3em); }
+  .pww-map { height: 320px; flex: none; }
+  .pww-maptall { height: min(70dvh, 560px); }
+  .pww-scroll { overflow: visible; }
+}
+
+/* ============================================================================================ phones (5.4) */
+@media (max-width: 767px) {
+  .pww,
+  .pww[data-layout="car"] {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 12px 16px;
+    gap: 8px;
+  }
+  .pww > * { flex: none; }
+  .pww-status { height: 44px; }
+  /* As on Coach: the app bar already shows the connection pill; track and session give the room to lap and chips. */
+  .pww-status :is(.pwc-trk, .pwc-meta, .pwc-pill) { display: none; }
+  .pww-big__v { font-size: 56px; }
+  .pww-map { height: 280px; }
+  .pww-maptall { height: 360px; }
+  /* The stage grows with its content here: about three and a half lines of the answer (the cut line says there is more), the rest scrolls inside (the full text is
+   * also in the radio log), so Hold to talk and Braking calls stay on a 390 x 844 screen. */
+  .pww-stage .pw-radio-msg__text { max-height: calc(3.5 * 1.3em); font-size: 24px; }
+  .pww-stage.card { gap: 14px; }
+}
+
+/* Narrow phones: label above each Segment, the Segment as wide as the column and its items sharing it (a 390 px phone
+ * would otherwise scroll sideways: the Braking calls Segment alone is ~340 px). */
+@media (max-width: 480px) {
+  .pww-segs {
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+    gap: 6px;
+  }
+  .pww-segs__k { text-align: left; }
+  .pww-segs .segment { width: 100%; min-width: 0; }
+  .pww-segs .segment__item { flex: 1 1 0; min-width: 0; padding-inline: 8px; }
+  .pww-segs__note { margin-top: 2px; }
+}
+
+/* iPad home-indicator area (Home Screen web app): keep the bottom row clear of it. */
+@media (min-width: 768px) { .pww { padding-bottom: max(12px, env(safe-area-inset-bottom)); } }
+@media (max-height: 760px) and (min-width: 1024px) { .pww { padding-bottom: max(8px, env(safe-area-inset-bottom)); } }

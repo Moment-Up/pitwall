@@ -1,0 +1,267 @@
+{
+ "version": 6,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 682,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:20261010-225601_udp20777.pwcap",
+  "synthetic": false,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 600,
+   "decoded": 524,
+   "ignored": 76,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "EVENT": 524,
+    "SESSION_HISTORY": 20,
+    "FINAL_CLASSIFICATION": 1,
+    "LOBBY_INFO": 55
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "3772fa660eba",
+ "session": {
+  "game": "f1_25",
+  "platform": "unknown",
+  "track_id": "f1:13",
+  "track_name": "Suzuka",
+  "track_length_m": 5809.0,
+  "session_type": "One-Shot Qualifying",
+  "car_name": null,
+  "weather": {
+   "condition": "clear",
+   "track_temp_c": 28.0,
+   "air_temp_c": 19.0,
+   "rain_percentage": 15.0
+  },
+  "total_laps": 1,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1862692695768083,
+  "session_time_s": 0.089,
+  "speed_kph": 135.0,
+  "throttle": 1.0,
+  "brake": 0.0,
+  "steering": 0.0,
+  "clutch": 0.0,
+  "gear": 3,
+  "rpm": 10202.0,
+  "max_rpm": 13099.0,
+  "drs_open": false,
+  "pos": [
+   370.98,
+   -0.14,
+   -140.65
+  ],
+  "g_lat": 0.11,
+  "g_lon": 1.28,
+  "lap_number": 1,
+  "lap_distance_m": -302.6,
+  "current_lap_time_ms": 0,
+  "last_lap_time_ms": null,
+  "sector": 2,
+  "lap_invalid": false,
+  "pit_status": 0,
+  "race_position": 1,
+  "tyre_surface_temp_c": [
+   90.0,
+   90.0,
+   90.0,
+   90.0
+  ],
+  "tyre_inner_temp_c": [
+   90.0,
+   90.0,
+   90.0,
+   90.0
+  ],
+  "tyre_pressure_psi": [
+   24.2,
+   24.2,
+   21.3,
+   21.3
+  ],
+  "brake_temp_c": [
+   27.0,
+   27.0,
+   33.0,
+   33.0
+  ],
+  "tyre_wear_pct": null,
+  "tyre_compound": "soft",
+  "tyre_age_laps": 0,
+  "fuel_kg": 7.0,
+  "fuel_remaining_laps_game": 3.63,
+  "ers_store_j": 3999664.0,
+  "brake_bias_front_pct": 58.0,
+  "quality": 0
+ },
+ "delta_s": null,
+ "reference": null,
+ "laps": [],
+ "observations": [],
+ "events": [
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.2894442
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.289438
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.289391
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.289387
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.289382
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.2893782
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.289373
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.2893682
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.289362
+  },
+  {
+   "kind": "other",
+   "code": "OVTK",
+   "session_time_s": 1.700000029813964e-05,
+   "t": 1791680735.289357
+  }
+ ],
+ "marshal_flags": [],
+ "session_state": "running",
+ "session_state_info": {
+  "state": "running",
+  "cause": null,
+  "since_unix": 1791680735.289,
+  "chequered_flag": false
+ },
+ "coach": null,
+ "track_model": null,
+ "skeleton": {
+  "tier": "game_native",
+  "synthetic": false,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "f1:13",
+  "track_length_m": 5809.0,
+  "pit_speed_limit_kph": 80.0,
+  "sector2_start_m": 2225.65,
+  "sector3_start_m": 4690.02,
+  "sector_boundaries_m": [
+   0.0,
+   2225.65,
+   4690.02,
+   5809.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 2225.65,
+    "length_m": 2225.65
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 2225.65,
+    "end_m": 4690.02,
+    "length_m": 2464.37
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 4690.02,
+    "end_m": 5809.0,
+    "length_m": 1118.98
+   }
+  ],
+  "marshal_zones": null,
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "bests": null,
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": "no reference lap yet",
+  "ref_lap_number": null,
+  "focus": [],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [],
+  "next": null,
+  "last": null,
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 0,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "recorded",
+  "source": "pitwall replay (headless, temp DB) of 20261010-225601_udp20777.pwcap (a local PS5 F1 25 recording from the rig, data/captures, not committed)",
+  "moment": "lap 1, lap clock 0, no completed lap (pre-session / grid)",
+  "trimmed": [
+   "last_comparison"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending. Backend: working tree with D2 (bests), D4 (session_state) and D6 (coach) from lane B, not yet committed; replays never get driver or household bests (bests.scope.records false).",
+  "generated_unix": 1791680735
+ }
+}

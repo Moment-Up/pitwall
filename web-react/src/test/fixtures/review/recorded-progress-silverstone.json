@@ -1,0 +1,151 @@
+{
+ "_fixture": {
+  "source": "GET /api/drivers/1/progress?game=f1_25&track_id=f1:7&car=f1:team:41 (lane B's D5 route run on a read-only copy of the live pitwall service's database)",
+  "recorded": "2026-10-11T03:31:00+01:00",
+  "what": "James at Silverstone in the F1 Generic car: 3 sessions, only the last has clean laps.",
+  "tier": "recorded",
+  "edited": "Computed by lane B's D5 route (src/pitwall/api/routes_drivers.py driver_progress, working tree) on a read-only backup of the live database (sqlite3 .backup of data/pitwall.sqlite3 opened mode=ro), because the live service still runs the code without D5. Real PS5 F1 25 laps; nothing hand-edited."
+ },
+ "response": {
+  "driver_id": 1,
+  "scope": {
+   "game": "f1_25",
+   "track_id": "f1:7",
+   "car_id": "f1:team:41"
+  },
+  "include_synthetic": false,
+  "sessions": [
+   {
+    "session_id": "6f2b51b6af4d",
+    "started_unix": 1791660730.652437,
+    "game": "f1_25",
+    "track_id": "f1:7",
+    "track_name": "Silverstone",
+    "car_id": "f1:team:41",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "synthetic": false,
+    "laps": 2,
+    "clean_laps": 0,
+    "best_clean_ms": null,
+    "median_clean_ms": null,
+    "spread_ms": null,
+    "ref_lap_id": 25,
+    "corners": {},
+    "habits": {}
+   },
+   {
+    "session_id": "1e2779b58be1",
+    "started_unix": 1791660946.216089,
+    "game": "f1_25",
+    "track_id": "f1:7",
+    "track_name": "Silverstone",
+    "car_id": "f1:team:41",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "synthetic": false,
+    "laps": 1,
+    "clean_laps": 0,
+    "best_clean_ms": null,
+    "median_clean_ms": null,
+    "spread_ms": null,
+    "ref_lap_id": 25,
+    "corners": null,
+    "habits": null
+   },
+   {
+    "session_id": "d431ac960dae",
+    "started_unix": 1791660997.824115,
+    "game": "f1_25",
+    "track_id": "f1:7",
+    "track_name": "Silverstone",
+    "car_id": "f1:team:41",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "synthetic": false,
+    "laps": 3,
+    "clean_laps": 2,
+    "best_clean_ms": 103819,
+    "median_clean_ms": 117908,
+    "spread_ms": 28178,
+    "ref_lap_id": 25,
+    "corners": {
+     "T2": 0.49,
+     "T4": 1.359,
+     "T5": 0.375,
+     "T6": -0.065,
+     "T7": 0.185,
+     "T9": 0.094,
+     "T10": 0.544
+    },
+    "habits": {
+     "brake_early": 1,
+     "late_throttle": 1,
+     "low_min_speed": 3,
+     "overspeed_apex": 1
+    }
+   }
+  ],
+  "corner_text": {
+   "f1_25/f1:7": {
+    "T1": {
+     "short": "115 m",
+     "long": "Corner at 115 m"
+    },
+    "T2": {
+     "short": "T1",
+     "long": "Turn 1 (Abbey)"
+    },
+    "T3": {
+     "short": "T3-4",
+     "long": "Turns 3-4 (The Loop)"
+    },
+    "T4": {
+     "short": "T7",
+     "long": "Turn 7 (Luffield)"
+    },
+    "T5": {
+     "short": "T9",
+     "long": "Turn 9 (Copse)"
+    },
+    "T6": {
+     "short": "T10-13 (1)",
+     "long": "Turns 10-13, part 1 (Maggotts and Becketts)"
+    },
+    "T7": {
+     "short": "T10-13 (2)",
+     "long": "Turns 10-13, part 2 (Maggotts and Becketts)"
+    },
+    "T8": {
+     "short": "T10-13 (3)",
+     "long": "Turns 10-13, part 3 (Maggotts and Becketts)"
+    },
+    "T9": {
+     "short": "T15",
+     "long": "Turn 15 (Stowe)"
+    },
+    "T10": {
+     "short": "T16-18",
+     "long": "Turns 16-18 (Club)"
+    }
+   }
+  },
+  "pb_history": [
+   {
+    "game": "f1_25",
+    "track_id": "f1:7",
+    "track_name": "Silverstone",
+    "car_id": "f1:team:41",
+    "car_name": "F1 Generic",
+    "lap_id": 25,
+    "session_id": "d431ac960dae",
+    "lap_number": 2,
+    "lap_ms": 103819,
+    "set_unix": 1791661183.450384,
+    "previous_ms": null,
+    "gain_ms": null,
+    "synthetic": false
+   }
+  ]
+ }
+}

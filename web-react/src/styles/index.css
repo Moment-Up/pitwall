@@ -1,0 +1,634 @@
+/*
+ * Import order matters (HeroUI docs): Tailwind first, then HeroUI OSS styles, then HeroUI Pro styles, then our theme.
+ * Layer order follows HeroUI's own index.css; the theme file goes into the `theme` layer as the HeroUI theming guide
+ * shows for custom themes.
+ *
+ * Below the imports: base rules, the UI kit's component classes (`.pw-*`, src/components/ui, spec 10.6) in the
+ * `components` layer (after HeroUI's, so they win at equal specificity and page utilities still override them), and
+ * a few utilities (.timing, .pw-chamfer, .pw-num, safe areas). Every colour is a token from tokens.css.
+ */
+@layer theme, base, components, utilities;
+
+@import "tailwindcss";
+@import "@heroui/styles";
+/*
+ * HeroUI Pro (licensed; installed by `npx heroui-pro@latest install react` after `login`, see README.md).
+ * Only the Pro components the app renders, not the whole `@heroui-pro/react/css` bundle (68 stylesheets, ~370 KB;
+ * a smaller sheet keeps style recalculation cheap on the iPad at 20 Hz). The per-component files ship unlayered, so
+ * each goes into the `components` layer, where the bundle puts them (our `.pw-*` rules below still win, and page
+ * utilities still override them). The bundle's `--chart-1..5` theme variables are not used here.
+ *
+ * Using a Pro component that is not listed? Add its stylesheet here, plus the ones it renders internally (see the
+ * relative imports in node_modules/@heroui-pro/react/dist/components/<name>/<name>.js), or it renders unstyled.
+ * src/styles/pro-css.test.ts checks this list against the Pro components src imports, both ways.
+ */
+@import "@heroui-pro/react/css/components/action-bar.css" layer(components);
+@import "@heroui-pro/react/css/components/cell-select.css" layer(components);
+@import "@heroui-pro/react/css/components/cell-slider.css" layer(components);
+@import "@heroui-pro/react/css/components/cell-switch.css" layer(components);
+@import "@heroui-pro/react/css/components/chat-conversation.css" layer(components);
+@import "@heroui-pro/react/css/components/chat-loader.css" layer(components);
+@import "@heroui-pro/react/css/components/chat-message.css" layer(components);
+@import "@heroui-pro/react/css/components/chat-source.css" layer(components); /* ChatSource, ChatSources */
+@import "@heroui-pro/react/css/components/hover-card.css" layer(components); /* inside ChatSource */
+@import "@heroui-pro/react/css/components/data-grid.css" layer(components);
+@import "@heroui-pro/react/css/components/table.css" layer(components); /* Pro's tweak to the Table inside DataGrid */
+@import "@heroui-pro/react/css/components/empty-state.css" layer(components);
+@import "@heroui-pro/react/css/components/inline-select.css" layer(components);
+@import "@heroui-pro/react/css/components/item-card.css" layer(components);
+@import "@heroui-pro/react/css/components/item-card-group.css" layer(components);
+@import "@heroui-pro/react/css/components/kpi.css" layer(components);
+@import "@heroui-pro/react/css/components/kpi-group.css" layer(components);
+@import "@heroui-pro/react/css/components/number-value.css" layer(components); /* inside KPI */
+@import "@heroui-pro/react/css/components/trend-chip.css" layer(components); /* TrendChip, and inside KPI */
+@import "@heroui-pro/react/css/components/list-view.css" layer(components);
+@import "@heroui-pro/react/css/components/pressable-feedback.css" layer(components);
+@import "@heroui-pro/react/css/components/prompt-input.css" layer(components);
+@import "@heroui-pro/react/css/components/prompt-suggestion.css" layer(components);
+@import "@heroui-pro/react/css/components/radio-button-group.css" layer(components);
+@import "@heroui-pro/react/css/components/segment.css" layer(components);
+@import "@heroui-pro/react/css/components/sheet.css" layer(components);
+@import "@heroui-pro/react/css/components/stepper.css" layer(components);
+@import "@heroui-pro/react/css/components/timeline.css" layer(components);
+/* `.markdown` rules for review/session/MarkdownBody (react-markdown, not Pro `Markdown`; fenced code is a plain <pre>,
+ * so Pro's code-block.css is not needed until Pro `Markdown` or `CodeBlock` is used) */
+@import "@heroui-pro/react/css/components/markdown.css" layer(components);
+@import "@heroui-pro/react/css/components/area-chart.css" layer(components); /* AreaChart, and inside KPI */
+@import "@heroui-pro/react/css/components/bar-chart.css" layer(components);
+@import "@heroui-pro/react/css/components/line-chart.css" layer(components);
+@import "@heroui-pro/react/css/components/chart-tooltip.css" layer(components); /* chart tooltips, viz/LapTimesChart */
+@import "@heroui-pro/react/css/components/command.css" layer(components); /* ⌘K palette, shell/CommandPalette */
+@import "./tokens.css" layer(theme);
+
+@layer base {
+  html,
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--pw-font-sans);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+}
+
+/* ======================================================================================== UI kit (components) */
+@layer components {
+  /* ---- HeroUI secondary Button: neutral ink (P3: orange is only you, focus and the primary action). HeroUI's
+   * default is `--accent-soft-foreground`, orange text on grey; the mockup's plain `.btn` is foreground on grey. */
+  .button--secondary {
+    --button-fg: var(--foreground);
+  }
+  /* ---- numerals: condensed, tabular; the minus is drawn narrowed so a sign change never moves the digits */
+  .pw-minus {
+    display: inline-block;
+    transform: scaleX(0.62);
+    transform-origin: 70% 50%;
+    margin-right: -0.12em;
+  }
+
+  .pw-unknown {
+    color: var(--pw-faint);
+  }
+
+  /* ---- TimingValue: dark = coloured numerals; light = solid fill with ink (--pw-timing-fill 0 | 1) */
+  .pw-tv {
+    font-family: var(--pw-font-num);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .pw-tv[data-status="rec"] {
+    --pw-tv-c: var(--pw-rec);
+    --pw-tv-fg: var(--pw-rec-fg);
+  }
+  .pw-tv:is([data-status="pb"], [data-status="sb"]) {
+    --pw-tv-c: var(--pw-pb);
+    --pw-tv-fg: var(--pw-pb-fg);
+  }
+  .pw-tv[data-status="slower"] {
+    --pw-tv-c: var(--pw-slower);
+    --pw-tv-fg: var(--pw-slower-fg);
+  }
+  .pw-tv:is([data-status="rec"], [data-status="pb"], [data-status="sb"], [data-status="slower"]) {
+    color: var(--pw-tv-fg);
+    background-color: color-mix(in oklab, var(--pw-tv-c) calc(var(--pw-timing-fill) * 100%), transparent);
+    padding: calc(var(--pw-timing-fill) * 0.08em) calc(var(--pw-timing-fill) * 0.28em);
+    border-radius: 0.3em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .pw-tv[data-status="invalid"] {
+    color: var(--pw-faint);
+  }
+  /* Light tables and lists: slower times stay plain foreground text (spec 4.6); dark keeps the yellow numerals. */
+  .pw-tv[data-context="table"][data-status="slower"] {
+    background-color: transparent;
+    padding: 0;
+    color: color-mix(in oklab, var(--pw-slower) calc((1 - var(--pw-timing-fill)) * 100%), var(--foreground));
+  }
+  .pw-tv[data-tone="ahead"] {
+    color: var(--pw-ahead);
+  }
+  .pw-tv[data-tone="behind"] {
+    color: var(--pw-behind);
+  }
+  .pw-tv[data-tone="level"] {
+    color: var(--foreground);
+  }
+  .pw-tv[data-tone="muted"] {
+    color: var(--muted);
+  }
+  .pw-tv[data-dim] {
+    opacity: 0.6;
+  }
+
+  /* ---- TimingTag (HeroUI Chip): solid timing colour with its ink; INV grey */
+  .pw-ttag {
+    --chip-bg: var(--pw-tag-c, var(--surface-tertiary));
+    --chip-fg: var(--pw-tag-ink, var(--muted));
+    height: 20px;
+    padding: 0 7px;
+    gap: 0;
+    border-radius: 6px;
+    font: 800 11px/1 var(--pw-font-sans);
+    letter-spacing: 0.08em;
+  }
+  .pw-ttag .chip__label {
+    padding: 0;
+  }
+  .pw-ttag[data-status="rec"] {
+    --pw-tag-c: var(--pw-rec);
+    --pw-tag-ink: var(--pw-rec-ink);
+  }
+  .pw-ttag:is([data-status="pb"], [data-status="sb"]) {
+    --pw-tag-c: var(--pw-pb);
+    --pw-tag-ink: var(--pw-pb-ink);
+  }
+  .pw-ttag[data-status="invalid"] {
+    --pw-tag-c: var(--surface-tertiary);
+    --pw-tag-ink: var(--muted);
+  }
+  .pw-ttag[data-size="md"] {
+    height: 24px;
+    padding: 0 9px;
+    border-radius: 7px;
+    font-size: 12px;
+  }
+  .pw-ttag[data-size="lg"] {
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  /* ---- TimingCell (HeroUI Card secondary): tint by status, label + tag, value, sub line or progress */
+  .pw-tcell {
+    --pw-tc-bg: var(--pw-neutral-bg);
+    --pw-tc-fg: var(--foreground);
+    --pw-tc-sub: var(--muted);
+    --pw-tc-size: var(--pw-d-l);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 4px;
+    min-width: 0;
+    padding: 12px 14px 12px 16px;
+    border-radius: 20px;
+    background: var(--pw-tc-bg);
+    color: var(--foreground);
+    box-shadow: none;
+  }
+  .pw-tcell[data-status="rec"] {
+    --pw-tc-bg: var(--pw-rec-bg);
+    --pw-tc-fg: var(--pw-rec-fg);
+  }
+  .pw-tcell:is([data-status="pb"], [data-status="sb"]) {
+    --pw-tc-bg: var(--pw-pb-bg);
+    --pw-tc-fg: var(--pw-pb-fg);
+  }
+  .pw-tcell[data-status="slower"] {
+    --pw-tc-bg: var(--pw-slower-bg);
+    --pw-tc-fg: var(--pw-slower-fg);
+  }
+  .pw-tcell:is([data-status="rec"], [data-status="pb"], [data-status="sb"], [data-status="slower"]) {
+    --pw-tc-sub: var(--pw-tc-fg);
+    /* label ink: foreground on a dark tint, the fill's own ink on a light solid fill */
+    color: color-mix(in oklab, var(--pw-tc-fg) calc(var(--pw-timing-fill) * 100%), var(--foreground));
+  }
+  .pw-tcell[data-status="invalid"] {
+    --pw-tc-fg: var(--pw-faint);
+  }
+  .pw-tcell[data-status="running"] {
+    --pw-tc-bg: var(--surface-secondary);
+    --pw-tc-fg: var(--muted);
+    box-shadow: inset 0 0 0 2px var(--pw-line-strong);
+  }
+  .pw-tcell[data-status="future"] {
+    --pw-tc-fg: var(--pw-faint);
+  }
+  .pw-tcell[data-dim] {
+    opacity: 0.8;
+  }
+  .pw-tcell[data-size="md"] {
+    --pw-tc-size: 32px;
+  }
+  .pw-tcell[data-size="sm"] {
+    --pw-tc-size: 28px;
+    padding: 10px;
+    border-radius: 16px;
+  }
+  .pw-tcell__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+  .pw-tcell__label {
+    min-width: 0;
+    overflow: hidden;
+    font: 600 16px/1.2 var(--pw-font-sans);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pw-tcell__caption {
+    margin-left: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0.8;
+  }
+  .pw-tcell__running {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .pw-tcell__value {
+    align-self: center;
+    font-family: var(--pw-font-num);
+    font-size: var(--pw-tc-size);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    color: var(--pw-tc-fg);
+    white-space: nowrap;
+  }
+  .pw-tcell[data-status="running"] .pw-tcell__value {
+    font-size: calc(var(--pw-tc-size) * 0.8);
+  }
+  .pw-tcell__sub {
+    min-height: 1.25em;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.25;
+    color: var(--pw-tc-sub);
+    opacity: 0.85;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pw-tcell[data-size="sm"] .pw-tcell__sub {
+    display: none;
+  }
+  .pw-tcell__bar {
+    --progress-bar-fill: var(--foreground);
+    gap: 0;
+    align-self: end;
+  }
+  .pw-tcell__bar .progress-bar__track {
+    height: 8px;
+    border-radius: 999px;
+    background: var(--surface-tertiary);
+  }
+  .pw-tcell__bar .progress-bar__fill {
+    border-radius: 999px;
+    transition: none;
+  }
+
+  /* ---- TimingLegend */
+  .pw-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.3;
+    color: var(--muted);
+  }
+  .pw-legend__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pw-legend__swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--pw-slower);
+  }
+
+  /* ---- EvidenceChips: hatched pink SYNTHETIC (purple means timing only), neutral REPLAY */
+  .pw-evidence {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    vertical-align: middle;
+  }
+  .pw-chip-synthetic {
+    --chip-bg: transparent;
+    --chip-fg: var(--pw-synthetic);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--pw-synthetic) 60%, transparent);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+  .pw-chip-replay {
+    --chip-bg: var(--default);
+    --chip-fg: var(--foreground);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  /* ---- CornerTag */
+  .pw-corner {
+    --chip-bg: var(--default);
+    --chip-fg: var(--foreground);
+  }
+  .pw-corner[data-focus] {
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+  }
+  .pw-corner__inner {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.4em;
+    white-space: nowrap;
+  }
+  .pw-corner__label {
+    font-weight: 800;
+    letter-spacing: -0.01em;
+  }
+  .pw-corner__name {
+    font-weight: 500;
+  }
+  .pw-corner__focus {
+    color: var(--accent);
+    font-size: 0.8em;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+  }
+
+  /* ---- Glossary: a 44 px target around a 22 px "?" */
+  .button.pw-gloss {
+    width: var(--pw-touch);
+    min-width: var(--pw-touch);
+    height: var(--pw-touch);
+    padding: 0;
+    border-radius: 999px;
+    vertical-align: middle;
+  }
+  .pw-gloss__dot {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--surface-tertiary);
+    color: var(--muted);
+    font: 700 12px/1 var(--pw-font-sans);
+  }
+  .pw-gloss__pop {
+    max-width: min(320px, calc(100vw - 32px));
+  }
+  .pw-gloss__title {
+    margin: 0 0 4px;
+    font: 600 15px/1.3 var(--pw-font-sans);
+  }
+  .pw-gloss__text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  /* ---- SettingValue */
+  .pw-setting {
+    font-family: var(--pw-font-num);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .pw-setting[data-size="step"] {
+    font-size: 96px;
+  }
+  .pw-setting[data-size="row"] {
+    font-size: 24px;
+  }
+  .pw-setting[data-size="list"] {
+    font-size: 18px;
+  }
+  .pw-setting:is([data-align="start"], [data-align="center"], [data-align="end"]) {
+    display: block;
+  }
+  .pw-setting[data-align="start"] {
+    text-align: start;
+  }
+  .pw-setting[data-align="center"] {
+    text-align: center;
+  }
+  .pw-setting[data-align="end"] {
+    text-align: end;
+  }
+  .pw-setting__unit {
+    margin-inline-start: 0.12em;
+    font: 500 0.3em/1 var(--pw-font-sans);
+    color: var(--muted);
+  }
+  .pw-setting[data-size="step"] .pw-setting__unit {
+    margin-inline-start: 6px;
+    font-size: 28px;
+    font-weight: 600;
+  }
+  .pw-setting[data-size="row"] .pw-setting__unit {
+    margin-inline-start: 3px;
+    font-size: 13px;
+  }
+  .pw-setting[data-size="list"] .pw-setting__unit {
+    margin-inline-start: 2px;
+    font-size: 12px;
+  }
+
+  /* ---- CopyField: label, monospace value, 44 px Copy button (mockup: Setup › Connect) */
+  .pw-copy {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    padding: 6px 6px 6px 12px;
+    border-radius: 14px;
+    background: var(--surface-secondary);
+  }
+  .pw-copy__text {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+  .pw-copy__label {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .pw-copy__value {
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    user-select: all;
+    -webkit-user-select: all;
+  }
+  .pw-copy__value[data-mono] {
+    font-family: var(--pw-font-mono);
+    font-size: 13px;
+  }
+  .button.pw-copy__button {
+    flex: none;
+    min-width: var(--pw-touch);
+    height: var(--pw-touch);
+  }
+
+  /* ---- RangeMarker: track, sources' spread, recommended marker, min / max */
+  .pw-range {
+    position: relative;
+    display: block;
+    min-width: 64px;
+    height: 16px;
+  }
+  .pw-range[data-ends] {
+    height: 26px;
+  }
+  .pw-range__track {
+    position: absolute;
+    top: 6px;
+    right: 0;
+    left: 0;
+    height: 4px;
+    border-radius: 4px;
+    background: var(--surface-tertiary);
+  }
+  .pw-range__spread {
+    position: absolute;
+    top: 4px;
+    left: var(--pw-range-a);
+    width: var(--pw-range-w);
+    min-width: 4px;
+    height: 8px;
+    border-radius: 6px;
+    background: color-mix(in oklab, var(--accent) 30%, transparent);
+  }
+  .pw-range__mark {
+    position: absolute;
+    top: 0;
+    left: var(--pw-range-v);
+    width: 4px;
+    height: 16px;
+    margin-left: -2px;
+    border-radius: 3px;
+    background: var(--accent);
+  }
+  .pw-range__mark[data-outside] {
+    width: 6px;
+    margin-left: -3px;
+    background: transparent;
+    box-shadow: inset 0 0 0 1.5px var(--accent);
+  }
+  .pw-range__min,
+  .pw-range__max {
+    position: absolute;
+    top: 16px;
+    font: 500 10px/1 var(--pw-font-sans);
+    color: var(--pw-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .pw-range__min {
+    left: 0;
+  }
+  .pw-range__max {
+    right: 0;
+  }
+}
+
+/* Sideways scroller (components/ScrollRow.tsx): no scrollbar over the 44 px targets; an end with more content past it
+ * fades out (data-fade), the visible "more this way" cue. Callers set the width (and any edge bleed). */
+@layer components {
+  .pw-scroll-row {
+    --pw-fade: 44px;
+    min-width: 0;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+  .pw-scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+  .pw-scroll-row[data-fade="end"] {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--pw-fade)), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - var(--pw-fade)), transparent);
+  }
+  .pw-scroll-row[data-fade="start"] {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--pw-fade));
+    mask-image: linear-gradient(to right, transparent, #000 var(--pw-fade));
+  }
+  .pw-scroll-row[data-fade="both"] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--pw-fade),
+      #000 calc(100% - var(--pw-fade)),
+      transparent
+    );
+    mask-image: linear-gradient(to right, transparent, #000 var(--pw-fade), #000 calc(100% - var(--pw-fade)), transparent);
+  }
+}
+
+/* ======================================================================================== utilities */
+@layer utilities {
+  /* Live numbers: condensed tabular numerals (the old monospaced .timing, kept for existing call sites). */
+  .timing,
+  .pw-num {
+    font-family: var(--pw-font-num);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+  .pw-num {
+    font-weight: 700;
+  }
+
+  /* The pit-board signature (spec 4.3): the hero card's top-right corner cut at 45 degrees and a 3 px accent edge
+   * along its top. Only the Drive hero and the rig walkthrough's step card use it. */
+  .pw-chamfer {
+    position: relative;
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
+  }
+  .pw-chamfer::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 30px;
+    left: 24px;
+    height: 3px;
+    border-radius: 0 0 3px 3px;
+    background: var(--accent);
+  }
+
+  /* Safe-area padding for the phone bottom tab bar / notch. */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}

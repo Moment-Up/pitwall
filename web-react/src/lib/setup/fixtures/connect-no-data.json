@@ -1,0 +1,432 @@
+{
+ "_fixture": {
+  "source": "GET /api/connect on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded: nothing sending (no_data)",
+  "edited": [
+   "mac.hostname, urls.tailscale_https and the token in urls.lan_with_token replaced (private)",
+   "the Mac's LAN address replaced with a documentation address (192.0.2.10, RFC 5737)"
+  ]
+ },
+ "body": {
+  "mac": {
+   "hostname": "mac.lan",
+   "lan_ip": "192.0.2.10",
+   "lan_addresses": [
+    {
+     "interface": "en1",
+     "ip": "192.0.2.10"
+    }
+   ],
+   "udp_port": 20777,
+   "http_port": 8770
+  },
+  "urls": {
+   "tailscale_https": "https://mac.tail-example.ts.net:8443/",
+   "lan_with_token": "http://192.0.2.10:8770/?token=REDACTED",
+   "local": "http://127.0.0.1:8770/"
+  },
+  "guides": [
+   {
+    "id": "f1_25",
+    "game": "EA SPORTS F1 25 (incl. 2026 Season Pack)",
+    "platforms": [
+     "PS5",
+     "Xbox Series X|S",
+     "PC"
+    ],
+    "supported": true,
+    "menu_path": "Settings > Telemetry Settings",
+    "steps": [
+     {
+      "label": "UDP Telemetry",
+      "value": "On",
+      "copy": false,
+      "note": ""
+     },
+     {
+      "label": "UDP Broadcast Mode",
+      "value": "Off",
+      "copy": false,
+      "note": ""
+     },
+     {
+      "label": "UDP IP Address",
+      "value": "192.0.2.10",
+      "copy": true,
+      "note": "this Mac's LAN address"
+     },
+     {
+      "label": "UDP Port",
+      "value": "20777",
+      "copy": true,
+      "note": ""
+     },
+     {
+      "label": "UDP Send Rate",
+      "value": "60Hz",
+      "copy": false,
+      "note": "20Hz works; 60Hz gives ~1.4 m braking-point precision"
+     },
+     {
+      "label": "UDP Format",
+      "value": "2025",
+      "copy": false,
+      "note": "use 2026 when driving 2026 Season Pack cars; 2024 is not supported"
+     },
+     {
+      "label": "Your Telemetry",
+      "value": "Public",
+      "copy": false,
+      "note": "Restricted hides some data for other cars; your car is unaffected"
+     }
+    ],
+    "extras": [
+     {
+      "label": "Controls > (your wheel) > a spare button",
+      "value": "UDP Action 1",
+      "copy": false,
+      "note": "push-to-talk to the race engineer (hold to talk)"
+     }
+    ],
+    "notes": [
+     "The PS5 and this Mac must be on the same network.",
+     "Packets show up under Live connections within a second of being on track or in the garage."
+    ]
+   },
+   {
+    "id": "gt7",
+    "game": "Gran Turismo 7",
+    "platforms": [
+     "PS5",
+     "PS4"
+    ],
+    "supported": true,
+    "menu_path": "No in-game setting: pitwall asks the console for telemetry (heartbeat to UDP 33739)",
+    "steps": [
+     {
+      "label": "Connect page > Gran Turismo 7",
+      "value": "Enable",
+      "copy": false,
+      "note": "pitwall starts listening on UDP 33740"
+     },
+     {
+      "label": "Console IP",
+      "value": "your PS5's IP address",
+      "copy": false,
+      "note": "PS5 Settings > Network > Connection Status > View Connection Status > IPv4 Address"
+     },
+     {
+      "label": "Packet variant",
+      "value": "C",
+      "copy": false,
+      "note": "C is the richest (adds wheel angle and more); B and ~ also work"
+     }
+    ],
+    "extras": [],
+    "notes": [
+     "Telemetry flows only while the console receives pitwall's heartbeat; it starts within ~2 s.",
+     "Only one app on this Mac can receive GT7 telemetry at a time (UDP 33740): quit SimHub etc. first.",
+     "GT7 does not send lap distance or a track id: pitwall integrates speed (about 1% drift per lap) and recognises the circuit from the start/finish line after the first full lap.",
+     "Implemented from community protocol documentation; not yet tested against a real PS5."
+    ]
+   },
+   {
+    "id": "forza",
+    "game": "Forza Motorsport (2023) / Forza Horizon 4, 5, 6 / FM7",
+    "platforms": [
+     "Xbox",
+     "PC"
+    ],
+    "supported": true,
+    "menu_path": "Settings > Gameplay & HUD > UDP Race Telemetry (Horizon: Settings > HUD and Gameplay)",
+    "steps": [
+     {
+      "label": "Connect page > Forza",
+      "value": "Enable",
+      "copy": false,
+      "note": "pitwall listens on UDP 5301"
+     },
+     {
+      "label": "Data Out",
+      "value": "On",
+      "copy": false,
+      "note": ""
+     },
+     {
+      "label": "Data Out IP Address",
+      "value": "192.0.2.10",
+      "copy": true,
+      "note": "this Mac's LAN address"
+     },
+     {
+      "label": "Data Out IP Port",
+      "value": "5301",
+      "copy": true,
+      "note": "Horizon 6 reserves 5200-5300 for itself"
+     },
+     {
+      "label": "Data Out Packet Format",
+      "value": "Dash",
+      "copy": false,
+      "note": "Forza Motorsport only (Car Dash); Horizon has one"
+     }
+    ],
+    "extras": [],
+    "notes": [
+     "Horizon free roam has no laps: you get live data, but lap analysis needs a circuit race.",
+     "Forza Horizon 5 on PS5: no source confirms Data Out exists there - try it and tell us.",
+     "Implemented from Turn 10 / Playground documentation; not yet tested against a real console."
+    ]
+   },
+   {
+    "id": "ac",
+    "game": "Assetto Corsa (PS4 version on PS5 / PC)",
+    "platforms": [
+     "PS5",
+     "PS4",
+     "PC"
+    ],
+    "supported": true,
+    "menu_path": "No in-game setting: pitwall asks the game for telemetry (handshake to UDP 9996)",
+    "steps": [
+     {
+      "label": "Connect page > Assetto Corsa",
+      "value": "Enable",
+      "copy": false,
+      "note": "nothing to change in the game's menus"
+     },
+     {
+      "label": "Console IP",
+      "value": "your PS5's IP address",
+      "copy": false,
+      "note": "PS5 Settings > Network > Connection Status > View Connection Status > IPv4 Address (PC: the gaming PC's LAN address)"
+     },
+     {
+      "label": "Platform",
+      "value": "PS5",
+      "copy": false,
+      "note": "what runs the game: PS5, PS4 or PC"
+     },
+     {
+      "label": "In the game",
+      "value": "Get on track",
+      "copy": false,
+      "note": "Hotlap, Time Trial, Practice or a race: AC's telemetry server only exists while you are on track, so the stream starts within a few seconds of being on track, not in the menus"
+     }
+    ],
+    "extras": [
+     {
+      "label": "Probe once, on track (Terminal on this Mac, in ~/Projects/pitwall)",
+      "value": "uv run python scripts/probe_ac.py --ip <PS5 IP> --platform ps5 --seconds 60 --out ~/ac-probe-ps5.pwcap",
+      "copy": true,
+      "note": "only to diagnose a console that does not stream. Switch the Assetto Corsa integration Off on this page while the probe runs (two registrations would make the stream look unstable). It sends at most 5 handshakes to the console and records what comes back. Exit code 0 = it streams"
+     }
+    ],
+    "notes": [
+     "PS5 (PS4 version): a probe on 2026-10-11 confirmed that the game answers and streams at 60 Hz, and pitwall decodes that recording, lap time included (one lap). pitwall's own connection, lap storage and coaching are still to be confirmed on a full AC session. Also community-confirmed on PS4 and PC.",
+     "Connect page status: 'refused' = the console answered but nothing listens on 9996: AC is not on track yet (menus, loading); 'handshaking' with no reply = not on track, wrong IP, or Wi-Fi client isolation (try wired).",
+     "Lap distance needs the start/finish line and the track length: on a new track the out-lap has none, the length is estimated 15-25 % of a lap after the first crossing and fixed by the first full lap - the laps before that are not used as references. Tracks driven before have distance from the first metre. The console does not say which layout of a track is loaded: layouts are told apart by length. Steering, tyre temperatures, fuel and sectors are not sent by the game.",
+     "Going back to the pits with a lap-counter reset (or restarting) starts a new session; a lap whose state the game restores afterwards is not counted twice."
+    ]
+   },
+   {
+    "id": "record",
+    "game": "Record another game (e.g. Project Motor Racing)",
+    "platforms": [
+     "PS5",
+     "Xbox",
+     "PC"
+    ],
+    "supported": true,
+    "menu_path": "Project Motor Racing: Settings > Preferences > UDP telemetry (v2.3+ on consoles)",
+    "steps": [
+     {
+      "label": "Connect page > Record another game",
+      "value": "Enable",
+      "copy": false,
+      "note": "pitwall records raw packets only"
+     },
+     {
+      "label": "UDP telemetry",
+      "value": "On",
+      "copy": false,
+      "note": ""
+     },
+     {
+      "label": "UDP host / IP",
+      "value": "192.0.2.10",
+      "copy": true,
+      "note": "this Mac's LAN address"
+     },
+     {
+      "label": "UDP port",
+      "value": "7576",
+      "copy": true,
+      "note": "PMR's default; change both sides together if needed"
+     }
+    ],
+    "extras": [],
+    "notes": [
+     "No live analysis: this records the game's real packets so a decoder can be written and tested.",
+     "Drive a few laps, then tell pitwall's developer the capture file name (Status > Captures)."
+    ]
+   }
+  ],
+  "integrations": [
+   {
+    "key": "f1",
+    "enabled": true,
+    "port": 20777,
+    "console_ip": null,
+    "variant": "C",
+    "platform": null,
+    "name": "EA SPORTS F1 25",
+    "platforms": [
+     "PS5",
+     "Xbox Series X|S",
+     "PC"
+    ],
+    "status": "live_validated (PS5)",
+    "port_editable": true,
+    "needs_console_ip": false,
+    "listening": true,
+    "received": 0,
+    "sources": [],
+    "capture": null,
+    "error": null,
+    "listens": true
+   },
+   {
+    "key": "gt7",
+    "enabled": true,
+    "port": 33740,
+    "console_ip": "192.168.1.100",
+    "variant": "C",
+    "platform": null,
+    "name": "Gran Turismo 7",
+    "platforms": [
+     "PS5",
+     "PS4"
+    ],
+    "status": "community_documented",
+    "port_editable": false,
+    "needs_console_ip": true,
+    "listening": true,
+    "received": 0,
+    "sources": [],
+    "capture": null,
+    "error": null,
+    "listens": true,
+    "heartbeat": {
+     "console_ip": "192.168.1.100",
+     "target": "192.168.1.100:33739",
+     "variant": "C",
+     "running": true,
+     "interval_s": 1.6,
+     "sent": 724,
+     "errors": 0,
+     "last_error": null,
+     "last_sent_s_ago": 0.5
+    }
+   },
+   {
+    "key": "forza",
+    "enabled": false,
+    "port": 5301,
+    "console_ip": null,
+    "variant": "C",
+    "platform": null,
+    "name": "Forza Motorsport / Forza Horizon (Data Out)",
+    "platforms": [
+     "Xbox",
+     "PC"
+    ],
+    "status": "community_documented",
+    "port_editable": true,
+    "needs_console_ip": false,
+    "listening": false,
+    "received": 0,
+    "sources": [],
+    "capture": null,
+    "error": null,
+    "listens": true
+   },
+   {
+    "key": "ac",
+    "enabled": false,
+    "port": 9996,
+    "console_ip": null,
+    "variant": "C",
+    "platform": "ps5",
+    "name": "Assetto Corsa (PS4 version on PS5 / PC)",
+    "platforms": [
+     "PS5",
+     "PS4",
+     "PC"
+    ],
+    "status": "recorded_validated on PS5 (protocol probed live; service laps and coaching to confirm) · community_documented (PS4, PC)",
+    "port_editable": false,
+    "needs_console_ip": true,
+    "listens": false,
+    "listening": false,
+    "received": 0,
+    "sources": [],
+    "capture": null,
+    "error": null,
+    "client": null
+   },
+   {
+    "key": "record",
+    "enabled": false,
+    "port": 7576,
+    "console_ip": null,
+    "variant": "C",
+    "platform": null,
+    "name": "Record another game (raw packets, no analysis)",
+    "platforms": [
+     "PS5",
+     "Xbox",
+     "PC"
+    ],
+    "status": "capture_only",
+    "port_editable": true,
+    "needs_console_ip": false,
+    "listening": false,
+    "received": 0,
+    "sources": [],
+    "capture": null,
+    "error": null,
+    "listens": true
+   }
+  ],
+  "udp": {
+   "listening": true,
+   "port": 20777,
+   "received": 0,
+   "sources": [],
+   "capture": null
+  },
+  "telemetry": {
+   "status": "no_data",
+   "last_packet_age_s": null,
+   "packets": 0,
+   "packets_per_s": 0.0,
+   "rejected": 0,
+   "unrecognised": 0,
+   "source": null,
+   "synthetic": false,
+   "decode": {},
+   "game": null,
+   "track": null,
+   "session_type": null,
+   "platform": null,
+   "packet_format": null,
+   "game_version": null,
+   "hint": null
+  },
+  "radio": [],
+  "radio_enabled": true,
+  "dashboards": 1
+ }
+}

@@ -1,0 +1,3569 @@
+{
+ "_fixture": {
+  "source": "GET /api/carsetup/catalog on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded: the sourced F1 25 car setup catalogue"
+ },
+ "body": {
+  "game": "f1_25",
+  "updated": "2026-10-10",
+  "research_doc": "docs/research/f1-car-setups.md",
+  "caveat": "A setup is a starting point, not a guaranteed fix: rule out technique first (braking point, entry speed, brake release, throttle), then change one thing at a time and compare laps.",
+  "formats": [
+   {
+    "id": "f1_2025",
+    "label": "F1 25 cars (2025 regulations)",
+    "description": "The base-game F1 25 cars: Career, Grand Prix, Time Trial, F1 World (generic car), Braking Point teams.",
+    "latest_handling_patch": {
+     "version": "1.06",
+     "date": "2025-07-07",
+     "note": "Player-car physics: front ride height and floor friction adjusted so underbody scraping costs less top speed (EA notes v1.06, rollout 2025-07-07). Later patches changed only track surfaces (Spain T14 in v1.07; Bahrain T4 in v1.16 and the T10 rumble strip in v1.17, 2026-02-02), compound allocations, the AI and input handling.",
+     "source": "https://racinggames.gg/article/f1-25-patch-v106-player-performance-boost-full-update-details"
+    },
+    "tracks": [
+     {
+      "id": 0,
+      "name": "Melbourne"
+     },
+     {
+      "id": 2,
+      "name": "Shanghai"
+     },
+     {
+      "id": 3,
+      "name": "Sakhir (Bahrain)"
+     },
+     {
+      "id": 4,
+      "name": "Catalunya"
+     },
+     {
+      "id": 5,
+      "name": "Monaco"
+     },
+     {
+      "id": 6,
+      "name": "Montreal"
+     },
+     {
+      "id": 7,
+      "name": "Silverstone"
+     },
+     {
+      "id": 9,
+      "name": "Hungaroring"
+     },
+     {
+      "id": 10,
+      "name": "Spa"
+     },
+     {
+      "id": 11,
+      "name": "Monza"
+     },
+     {
+      "id": 12,
+      "name": "Singapore"
+     },
+     {
+      "id": 13,
+      "name": "Suzuka"
+     },
+     {
+      "id": 14,
+      "name": "Abu Dhabi"
+     },
+     {
+      "id": 15,
+      "name": "Texas"
+     },
+     {
+      "id": 16,
+      "name": "Brazil"
+     },
+     {
+      "id": 17,
+      "name": "Austria"
+     },
+     {
+      "id": 19,
+      "name": "Mexico"
+     },
+     {
+      "id": 20,
+      "name": "Baku (Azerbaijan)"
+     },
+     {
+      "id": 26,
+      "name": "Zandvoort"
+     },
+     {
+      "id": 27,
+      "name": "Imola"
+     },
+     {
+      "id": 29,
+      "name": "Jeddah"
+     },
+     {
+      "id": 30,
+      "name": "Miami"
+     },
+     {
+      "id": 31,
+      "name": "Las Vegas"
+     },
+     {
+      "id": 32,
+      "name": "Losail"
+     },
+     {
+      "id": 39,
+      "name": "Silverstone (Reverse)"
+     },
+     {
+      "id": 40,
+      "name": "Austria (Reverse)"
+     },
+     {
+      "id": 41,
+      "name": "Zandvoort (Reverse)"
+     }
+    ],
+    "notes": [
+     "Engine braking is not a setup item for these cars in F1 25 (it was in F1 24); the UDP packet still sends a constant 50.",
+     "Ballast and fuel load are UDP fields, not setup-sheet items.",
+     "Madrid (track 42) can only be driven with 2026 cars (EA notes v1.22).",
+     "Track-surface patches: Spain setups from before 2025-07-21 (v1.07) and Bahrain setups from before 2026-02-02 (v1.17) predate kerb/bump fixes at those tracks."
+    ]
+   },
+   {
+    "id": "f1_2026",
+    "label": "2026 Season Pack cars (2026 regulations)",
+    "description": "The 2026-regulation cars added to F1 25 by the 2026 Season Pack (June 2026; EA's UDP spec calls them 'F1 26', formula 13).",
+    "latest_handling_patch": {
+     "version": "1.25",
+     "date": "2026-09-07",
+     "note": "Straight Mode now closes unless the throttle is above 90 %, Boost is allowed in the wet with limited deployment, and rapid wheel inputs follow the physics more closely (EA notes v1.25, 2026-09-07). v1.26 (2026-09-16) fixed a career-save crash only.",
+     "source": "https://www.bsimracing.com/f1-25-update-v1-25-released/"
+    },
+    "tracks": [
+     {
+      "id": 0,
+      "name": "Melbourne"
+     },
+     {
+      "id": 2,
+      "name": "Shanghai"
+     },
+     {
+      "id": 3,
+      "name": "Sakhir (Bahrain)"
+     },
+     {
+      "id": 4,
+      "name": "Catalunya"
+     },
+     {
+      "id": 5,
+      "name": "Monaco"
+     },
+     {
+      "id": 6,
+      "name": "Montreal"
+     },
+     {
+      "id": 7,
+      "name": "Silverstone"
+     },
+     {
+      "id": 9,
+      "name": "Hungaroring"
+     },
+     {
+      "id": 10,
+      "name": "Spa"
+     },
+     {
+      "id": 11,
+      "name": "Monza"
+     },
+     {
+      "id": 12,
+      "name": "Singapore"
+     },
+     {
+      "id": 13,
+      "name": "Suzuka"
+     },
+     {
+      "id": 14,
+      "name": "Abu Dhabi"
+     },
+     {
+      "id": 15,
+      "name": "Texas"
+     },
+     {
+      "id": 16,
+      "name": "Brazil"
+     },
+     {
+      "id": 17,
+      "name": "Austria"
+     },
+     {
+      "id": 19,
+      "name": "Mexico"
+     },
+     {
+      "id": 20,
+      "name": "Baku (Azerbaijan)"
+     },
+     {
+      "id": 26,
+      "name": "Zandvoort"
+     },
+     {
+      "id": 29,
+      "name": "Jeddah"
+     },
+     {
+      "id": 30,
+      "name": "Miami"
+     },
+     {
+      "id": 31,
+      "name": "Las Vegas"
+     },
+     {
+      "id": 32,
+      "name": "Losail"
+     },
+     {
+      "id": 42,
+      "name": "Madrid"
+     }
+    ],
+    "notes": [
+     "The setup sheet has the same items, labels and order as the 2025 cars; active aero and Boost are not setup items. No published setup for these cars falls outside the 2025-car ranges, so the same range evidence applies (each format keeps its own setups).",
+     "Imola and the reverse layouts have no confirmed 2026-car setups yet."
+    ]
+   }
+  ],
+  "parameters": [
+   {
+    "key": "front_wing",
+    "label": "Front Wing Aero",
+    "group": "Aerodynamics",
+    "order": 1,
+    "unit": null,
+    "decimals": 0,
+    "higher": "More front downforce gives sharper turn-in and more front grip in medium and fast corners. The cost is drag (lower top speed), and if the front wing is high compared with the rear the rear gets light and oversteery.",
+    "lower": "Less drag and a little more top speed, but less front grip, so the car pushes wide (understeers), mostly in faster corners.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://traxion.gg/f1-25-setup-guide/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 0.0,
+      "max": 50.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": "Both ends are populated in the published setups; identity with the UDP value."
+     },
+     "f1_2026": {
+      "min": 0.0,
+      "max": 50.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": "Both ends are populated in the published setups; identity with the UDP value."
+     }
+    }
+   },
+   {
+    "key": "rear_wing",
+    "label": "Rear Wing Aero",
+    "group": "Aerodynamics",
+    "order": 2,
+    "unit": null,
+    "decimals": 0,
+    "higher": "More rear downforce makes the rear more planted under braking, in fast corners and on exits. It costs top speed, and if it outweighs the front the car understeers.",
+    "lower": "More speed on the straights, but less rear grip, so the rear can step out in fast corners and under power.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-beginner-setup-tips/",
+     "https://driver61.com/sim-racing/how-to-drive-without-traction-control-in-f1-2021/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 0.0,
+      "max": 50.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     },
+     "f1_2026": {
+      "min": 0.0,
+      "max": 50.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     }
+    }
+   },
+   {
+    "key": "diff_on_throttle",
+    "label": "Differential Adjustment On Throttle",
+    "group": "Transmission",
+    "order": 3,
+    "unit": "%",
+    "decimals": 0,
+    "higher": "The rear wheels are locked together more under power. That gives stronger drive out of slow corners and can make the car push wide on exit, but once the rears break loose it snaps into oversteer that is hard to catch.",
+    "lower": "The diff is more open under power, so the car is calmer and less likely to spin on exits. The cost is drive, because the inside wheel can spin up, and very low values can also make it push wide.",
+    "sources": [
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://driver61.com/sim-racing/how-to-drive-without-traction-control-in-f1-2021/",
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://racinggames.gg/article/f1-2021-setup-guide-tips-from-f1-esports-champion-jarno-opmeer",
+     "https://forums.ea.com/discussions/f1-23-en/question-about-the-differential-adjustment-scale/8400097",
+     "https://traxion.gg/f1-25-setup-guide/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 10.0,
+      "max": 100.0,
+      "step": 5.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": "The 5 % step is inferred: every published value is a multiple of 5."
+     },
+     "f1_2026": {
+      "min": 10.0,
+      "max": 100.0,
+      "step": 5.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": "The 5 % step is inferred: every published value is a multiple of 5."
+     }
+    }
+   },
+   {
+    "key": "diff_off_throttle",
+    "label": "Differential Adjustment Off Throttle",
+    "group": "Transmission",
+    "order": 4,
+    "unit": "%",
+    "decimals": 0,
+    "higher": "The rear wheels stay more tied together when you lift or brake, so corner entry is steadier and more predictable. The cost is rotation, so there is more entry understeer.",
+    "lower": "The rear wheels turn more freely off throttle, so the car rotates more on turn-in. It gets nervous, though, and can oversteer on lift-off or under braking.",
+    "sources": [
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-beginner-setup-tips/",
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://racinggames.gg/article/f1-2021-setup-guide-tips-from-f1-esports-champion-jarno-opmeer"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 10.0,
+      "max": 100.0,
+      "step": 5.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "medium",
+      "note": "The 5 % step is inferred; 100 is rarely used."
+     },
+     "f1_2026": {
+      "min": 10.0,
+      "max": 100.0,
+      "step": 5.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "medium",
+      "note": "The 5 % step is inferred; 100 is rarely used."
+     }
+    }
+   },
+   {
+    "key": "front_camber",
+    "label": "Front Camber",
+    "group": "Suspension Geometry",
+    "order": 5,
+    "unit": "deg",
+    "decimals": 2,
+    "higher": "A higher value is LESS negative camber (closer to 0). Braking is steadier and the front tyres run cooler and wear less, but there is less front grip mid-corner.",
+    "lower": "A lower value is MORE negative camber. There is more front grip through corners, but the inner edges heat up and wear faster and braking can get less stable.",
+    "sources": [
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://racinggames.gg/article/f1-24-setups"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": -3.5,
+      "max": -2.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     },
+     "f1_2026": {
+      "min": -3.5,
+      "max": -2.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     }
+    }
+   },
+   {
+    "key": "rear_camber",
+    "label": "Rear Camber",
+    "group": "Suspension Geometry",
+    "order": 6,
+    "unit": "deg",
+    "decimals": 2,
+    "higher": "A higher value is LESS negative camber. Traction and stability under power and braking improve and the rears wear less, but there is less rear grip in long corners.",
+    "lower": "A lower value is MORE negative camber. There is more rear cornering grip, but less traction out of slow corners and more rear tyre heat and wear.",
+    "sources": [
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://driver61.com/sim-racing/how-to-drive-without-traction-control-in-f1-2021/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": -2.0,
+      "max": -1.0,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Minimum -2.00: hundreds of setups sit there and none below. F1Laps' chart axis (-2.2 to -0.7) is carried over from F1 24. Unconfirmed end(s) are the bounds of 635 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": -2.0,
+      "max": -1.2,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Minimum -2.00: hundreds of setups sit there and none below. F1Laps' chart axis (-2.2 to -0.7) is carried over from F1 24. Unconfirmed end(s) are the bounds of 270 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "front_toe",
+    "label": "Front Toe-Out",
+    "group": "Suspension Geometry",
+    "order": 7,
+    "unit": "deg",
+    "decimals": 2,
+    "higher": "More front toe-out gives quicker, sharper turn-in. The cost is drag and front tyre heat and wear, and the car is a little twitchier in a straight line.",
+    "lower": "Less toe means less drag and scrub, so a touch more top speed and tyre life, but turn-in is lazier.",
+    "sources": [
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://traxion.gg/f1-25-setup-guide/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 0.0,
+      "max": 0.2,
+      "step": 0.01,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Front toe-out; minimum 0.00 is the most common value. Unconfirmed end(s) are the bounds of 642 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": 0.0,
+      "max": 0.09,
+      "step": 0.01,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Front toe-out; minimum 0.00 is the most common value. Unconfirmed end(s) are the bounds of 270 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "rear_toe",
+    "label": "Rear Toe-In",
+    "group": "Suspension Geometry",
+    "order": 8,
+    "unit": "deg",
+    "decimals": 2,
+    "higher": "More rear toe-in keeps the rear more settled in a straight line and on power. The cost is drag, rear tyre heat and wear, and less willingness to rotate.",
+    "lower": "Less toe-in means less drag and wear and a car that rotates more easily, but the rear is less settled, especially on exits.",
+    "sources": [
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://driver61.com/sim-racing/how-to-drive-without-traction-control-in-f1-2021/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 0.1,
+      "max": 0.25,
+      "step": 0.01,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Rear toe-in; no published F1 25 setup goes below 0.10 (F1 24 went to 0.00). Unconfirmed end(s) are the bounds of 642 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": 0.1,
+      "max": 0.17,
+      "step": 0.01,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Rear toe-in; no published F1 25 setup goes below 0.10 (F1 24 went to 0.00). Unconfirmed end(s) are the bounds of 270 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "front_suspension",
+    "label": "Front Suspension",
+    "group": "Suspension",
+    "order": 9,
+    "unit": null,
+    "decimals": 0,
+    "higher": "A stiffer front gives sharper response and turn-in on smooth track. It copes worse with bumps and kerbs and tends to understeer mid-corner.",
+    "lower": "A softer front has more grip over bumps and kerbs and feels more forgiving, but responds more slowly and moves around more.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://driver61.com/sim-racing/how-to-drive-without-traction-control-in-f1-2021/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 2.0,
+      "max": 41.0,
+      "step": 1.0,
+      "min_confirmed": false,
+      "max_confirmed": true,
+      "confidence": "medium",
+      "note": "Maximum 41 is a strong cluster; the minimum is not observed (F1 24 and the shared scale suggest 1). Unconfirmed end(s) are the bounds of 648 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": 20.0,
+      "max": 41.0,
+      "step": 1.0,
+      "min_confirmed": false,
+      "max_confirmed": true,
+      "confidence": "medium",
+      "note": "Maximum 41 is a strong cluster; the minimum is not observed (F1 24 and the shared scale suggest 1). Unconfirmed end(s) are the bounds of 307 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "rear_suspension",
+    "label": "Rear Suspension",
+    "group": "Suspension",
+    "order": 10,
+    "unit": null,
+    "decimals": 0,
+    "higher": "A stiffer rear makes the car rotate more readily and respond faster. Rear traction suffers, though, and it can step out over bumps, kerbs and on exits.",
+    "lower": "A softer rear gives better traction and a calmer rear out of slow corners and over kerbs. The car feels lazier and may understeer, and too soft risks bottoming out.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://driver61.com/sim-racing/how-to-drive-without-traction-control-in-f1-2021/",
+     "https://racinggames.gg/article/f1-2021-setup-guide-tips-from-f1-esports-champion-jarno-opmeer",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 1.0,
+      "max": 41.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Minimum 1 is a strong cluster; the maximum is not observed for these cars (the shared scale suggests 41). Unconfirmed end(s) are the bounds of 648 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": 1.0,
+      "max": 41.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Minimum 1 is a strong cluster; the maximum is not observed for these cars (the shared scale suggests 41). Unconfirmed end(s) are the bounds of 307 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "front_arb",
+    "label": "Front Anti-Roll Bar",
+    "group": "Suspension",
+    "order": 11,
+    "unit": null,
+    "decimals": 0,
+    "higher": "A stiffer front bar means less roll and a quicker, sharper response. The front loses grip mid-corner, so there is more understeer.",
+    "lower": "A softer front bar gives more front grip in slow and medium corners, at the cost of slower response and more body roll.",
+    "sources": [
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-beginner-setup-tips/",
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://simracingcockpit.gg/f1-24-setup-guide/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 1.0,
+      "max": 21.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     },
+     "f1_2026": {
+      "min": 1.0,
+      "max": 21.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     }
+    }
+   },
+   {
+    "key": "rear_arb",
+    "label": "Rear Anti-Roll Bar",
+    "group": "Suspension",
+    "order": 12,
+    "unit": null,
+    "decimals": 0,
+    "higher": "A stiffer rear bar helps the car rotate and feel agile. It takes grip from the rear, so the car can snap on exits.",
+    "lower": "A softer rear bar gives more rear grip and traction and a calmer exit, but less rotation, so there is more understeer.",
+    "sources": [
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-beginner-setup-tips/",
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://simracingcockpit.gg/f1-24-setup-guide/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 1.0,
+      "max": 21.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     },
+     "f1_2026": {
+      "min": 1.0,
+      "max": 21.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     }
+    }
+   },
+   {
+    "key": "front_ride_height",
+    "label": "Front Ride Height",
+    "group": "Suspension",
+    "order": 13,
+    "unit": null,
+    "decimals": 0,
+    "higher": "The car copes better with kerbs and bumps and is less likely to bottom out, but makes less downforce and more drag. Raising the front relative to the rear also calms the car, with less rotation.",
+    "lower": "More downforce, less drag and a lower centre of gravity. The risk is bottoming out or hitting kerbs, and a car that turns more sharply but can get nervous.",
+    "sources": [
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://racinggames.gg/article/f1-24-physics-and-handling-changes"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 15.0,
+      "max": 35.0,
+      "step": 1.0,
+      "min_confirmed": false,
+      "max_confirmed": false,
+      "confidence": "low",
+      "note": "No cluster at either end (ride height is a bottoming trade-off); F1 24's 10-40 is not confirmed for F1 25. Unconfirmed end(s) are the bounds of 648 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": 18.0,
+      "max": 28.0,
+      "step": 1.0,
+      "min_confirmed": false,
+      "max_confirmed": false,
+      "confidence": "low",
+      "note": "No cluster at either end (ride height is a bottoming trade-off); F1 24's 10-40 is not confirmed for F1 25. Unconfirmed end(s) are the bounds of 307 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "rear_ride_height",
+    "label": "Rear Ride Height",
+    "group": "Suspension",
+    "order": 14,
+    "unit": null,
+    "decimals": 0,
+    "higher": "More rake helps the car turn in and rotate and ride kerbs, but the rear gets less stable at high speed and drag rises.",
+    "lower": "A flatter car is more stable at speed with less drag, but rotates less, and too low risks bottoming out.",
+    "sources": [
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-beginner-setup-tips/",
+     "https://racinggames.gg/article/f1-2021-setup-guide-tips-from-f1-esports-champion-jarno-opmeer",
+     "https://racinggames.gg/article/f1-24-physics-and-handling-changes"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 40.0,
+      "max": 60.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Minimum 40 is a strong cluster on almost every track; the maximum is unknown (F1 24's 100 is not adopted). Unconfirmed end(s) are the bounds of 648 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": 40.0,
+      "max": 56.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Minimum 40 is a strong cluster on almost every track; the maximum is unknown (F1 24's 100 is not adopted). Unconfirmed end(s) are the bounds of 307 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "brake_pressure",
+    "label": "Brake Pressure",
+    "group": "Brakes",
+    "order": 15,
+    "unit": "%",
+    "decimals": 0,
+    "higher": "More braking force for the same pedal press means shorter stops, but the wheels lock more easily, especially without ABS or on a controller.",
+    "lower": "A more forgiving pedal that locks less, but braking takes longer unless you press harder.",
+    "sources": [
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-brake-settings-explained/",
+     "https://racinggames.gg/article/f1-2021-setup-guide-tips-from-f1-esports-champion-jarno-opmeer"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 85.0,
+      "max": 100.0,
+      "step": 1.0,
+      "min_confirmed": false,
+      "max_confirmed": true,
+      "confidence": "medium",
+      "note": "Maximum 100 is certain; the minimum is unknown (F1 24: 80). Unconfirmed end(s) are the bounds of 648 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": 93.0,
+      "max": 100.0,
+      "step": 1.0,
+      "min_confirmed": false,
+      "max_confirmed": true,
+      "confidence": "medium",
+      "note": "Maximum 100 is certain; the minimum is unknown (F1 24: 80). Unconfirmed end(s) are the bounds of 307 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "brake_bias",
+    "label": "Front Brake Bias",
+    "group": "Brakes",
+    "order": 16,
+    "unit": "%",
+    "decimals": 0,
+    "higher": "More of the braking goes to the front. The car is stable in a straight line, but the fronts lock sooner and it resists turning in (understeer on entry).",
+    "lower": "More braking goes to the rear, so the car rotates into corners better. Rear lock-ups and spins under braking become more likely.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-brake-settings-explained/",
+     "https://racinggames.gg/article/f1-24-setups",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.ea.com/games/f1/f1-25/news/f1-25-2026-season-edition-tips-and-tricks"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 50.0,
+      "max": 60.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Front share. Minimum 50 is a cluster; the maximum is unknown (F1 24: 70). Unconfirmed end(s) are the bounds of 642 published values pitwall has seen."
+     },
+     "f1_2026": {
+      "min": 50.0,
+      "max": 59.0,
+      "step": 1.0,
+      "min_confirmed": true,
+      "max_confirmed": false,
+      "confidence": "medium",
+      "note": "Front share. Minimum 50 is a cluster; the maximum is unknown (F1 24: 70). Unconfirmed end(s) are the bounds of 294 published values pitwall has seen."
+     }
+    }
+   },
+   {
+    "key": "tyre_pressure_fr",
+    "label": "Front Right Tyre Pressure",
+    "group": "Tyres",
+    "order": 17,
+    "unit": "psi",
+    "decimals": 1,
+    "higher": "A smaller contact patch and less rolling resistance give a bit more top speed, and recent sources say the tyre runs cooler and lasts longer. Front grip drops, so there is more understeer in slow corners.",
+    "lower": "A bigger contact patch gives more front grip and turn-in in slow corners, but the tyre heats up and wears faster.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://racinggames.gg/article/f1-25-how-tyre-temperature-and-pressure-work",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 22.5,
+      "max": 29.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": "Each wheel is set separately."
+     },
+     "f1_2026": {
+      "min": 22.5,
+      "max": 29.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": "Each wheel is set separately."
+     }
+    }
+   },
+   {
+    "key": "tyre_pressure_fl",
+    "label": "Front Left Tyre Pressure",
+    "group": "Tyres",
+    "order": 18,
+    "unit": "psi",
+    "decimals": 1,
+    "higher": "A smaller contact patch and less rolling resistance give a bit more top speed, and recent sources say the tyre runs cooler and lasts longer. Front grip drops, so there is more understeer in slow corners.",
+    "lower": "A bigger contact patch gives more front grip and turn-in in slow corners, but the tyre heats up and wears faster.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://racinggames.gg/article/f1-25-how-tyre-temperature-and-pressure-work",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://www.f125game.com/car-setup-fundamentals/f125-basic-setup-explained/",
+     "https://racinggames.gg/article/f1-2021-setup-guide-tips-from-f1-esports-champion-jarno-opmeer"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 22.5,
+      "max": 29.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     },
+     "f1_2026": {
+      "min": 22.5,
+      "max": 29.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     }
+    }
+   },
+   {
+    "key": "tyre_pressure_rr",
+    "label": "Rear Right Tyre Pressure",
+    "group": "Tyres",
+    "order": 19,
+    "unit": "psi",
+    "decimals": 1,
+    "higher": "Less rolling resistance and, per recent sources, cooler and longer-lasting rears. There is less rear grip, so traction out of slow corners suffers and the rear can step out.",
+    "lower": "More rear grip and traction out of slow corners, a common qualifying choice, but the rears heat up and wear faster over a stint.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://racinggames.gg/article/f1-25-how-tyre-temperature-and-pressure-work",
+     "https://www.f125game.com/car-setup-fundamentals/f125-beginner-setup-tips/"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 20.5,
+      "max": 26.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     },
+     "f1_2026": {
+      "min": 20.5,
+      "max": 26.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     }
+    }
+   },
+   {
+    "key": "tyre_pressure_rl",
+    "label": "Rear Left Tyre Pressure",
+    "group": "Tyres",
+    "order": 20,
+    "unit": "psi",
+    "decimals": 1,
+    "higher": "Less rolling resistance and, per recent sources, cooler and longer-lasting rears. There is less rear grip, so traction out of slow corners suffers and the rear can step out.",
+    "lower": "More rear grip and traction out of slow corners, a common qualifying choice, but the rears heat up and wear faster over a stint.",
+    "sources": [
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://racinggames.gg/article/f1-25-how-tyre-temperature-and-pressure-work",
+     "https://www.f125game.com/car-setup-fundamentals/f125-beginner-setup-tips/",
+     "https://racinggames.gg/article/f1-2021-setup-guide-tips-from-f1-esports-champion-jarno-opmeer"
+    ],
+    "ranges": {
+     "f1_2025": {
+      "min": 20.5,
+      "max": 26.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     },
+     "f1_2026": {
+      "min": 20.5,
+      "max": 26.5,
+      "step": 0.1,
+      "min_confirmed": true,
+      "max_confirmed": true,
+      "confidence": "high",
+      "note": null
+     }
+    }
+   }
+  ],
+  "sources": [
+   {
+    "id": "f1laps",
+    "name": "F1Laps community setups",
+    "url": "https://www.f1laps.com/",
+    "kind": "community_db",
+    "terms_url": "https://www.f1laps.com/terms-of-service/",
+    "terms": "robots.txt allows the public setup pages and signals ai-input=yes; llms.txt points agents at the setup database; the terms reserve copyright in the site's materials and say nothing about automated access. Setups are submitted from players' own telemetry. Pitwall cites a few setups per track as attributed facts (values, author, date, link).",
+    "use_policy": "use",
+    "accessed": "2026-10-10",
+    "setups": 349
+   },
+   {
+    "id": "racinggames-gg",
+    "name": "RacingGames.gg (Gfinity)",
+    "url": "https://racinggames.gg/",
+    "kind": "press",
+    "terms_url": "https://racinggames.gg/page/website-terms-of-use/",
+    "terms": "robots.txt allows the articles; the terms allow personal non-commercial use and forbid reproducing content without permission, with no clause on automated access. Only individual setup values are recorded, with attribution and a link; no text is copied.",
+    "use_policy": "use_limited",
+    "accessed": "2026-10-10",
+    "setups": 23
+   },
+   {
+    "id": "ppe-pl",
+    "name": "PPE.pl",
+    "url": "https://www.ppe.pl/",
+    "kind": "press",
+    "terms_url": "https://www.ppe.pl/regulamin_spolecznosci.html",
+    "terms": "robots.txt allows the guide pages; only community rules exist, with no clause on automated access; all rights reserved. Values only, with attribution.",
+    "use_policy": "use_limited",
+    "accessed": "2026-10-10",
+    "setups": 20
+   },
+   {
+    "id": "lastwordongaming",
+    "name": "Last Word On Gaming",
+    "url": "https://lastwordongaming.com/",
+    "kind": "press",
+    "terms_url": null,
+    "terms": "robots.txt only disallows /wp-admin/; no terms-of-use page is published; all rights reserved. Values only, with attribution.",
+    "use_policy": "use_limited",
+    "accessed": "2026-10-10",
+    "setups": 7
+   },
+   {
+    "id": "gamosaurus",
+    "name": "Gamosaurus",
+    "url": "https://www.gamosaurus.com/",
+    "kind": "setup_site",
+    "terms_url": "https://www.gamosaurus.com/mentions-legales",
+    "terms": "robots.txt allows the guide pages; the legal notice has no terms of use; all rights reserved. Values only, with attribution. Its setups are time-trial setups for a wheel.",
+    "use_policy": "use_limited",
+    "accessed": "2026-10-10",
+    "setups": 12
+   },
+   {
+    "id": "derp3339-sheet",
+    "name": "u/derp3339 'F1 game setups (22-26)' public Google Sheet",
+    "url": "https://docs.google.com/spreadsheets/d/1fUZKqMpARGJ1XEvsmGlOtN2_NVPOqLehPNiLH-YyYSI/",
+    "kind": "creator",
+    "terms_url": "https://policies.google.com/terms",
+    "terms": "A public view-only sheet by a league racer; docs.google.com robots.txt allows /spreadsheet paths and Google's terms only bar automated access that ignores such instructions. The content belongs to its author: values only, with attribution.",
+    "use_policy": "use_limited",
+    "accessed": "2026-10-10",
+    "setups": 43
+   }
+  ],
+  "rules": [
+   {
+    "id": "stable_v1",
+    "description": "Stable variant (pitwall-derived when no source publishes one): from the balanced recommendation, one small step each in the directions the guides agree make the car more forgiving: rear wing +1 click (more rear downforce), rear anti-roll bar -1 (softer rear), on-throttle differential -5 % (more open on exit), off-throttle differential +5 % (steadier entry). Guides give directions more reliably than amounts, so the steps are minimal; one F1 25 guide (f125game) disagrees on the on-throttle direction.",
+    "sources": [
+     "https://www.f125game.com/car-setup-fundamentals/f125-beginner-setup-tips/",
+     "https://help.ea.com/en/articles/f1/f1-25/car-setups-guide/",
+     "https://simracingcockpit.gg/f1-24-setup-guide/",
+     "https://driver61.com/sim-racing/how-to-drive-without-traction-control-in-f1-2021/",
+     "https://racinggames.gg/article/f1-24-setups"
+    ]
+   }
+  ],
+  "available": [
+   {
+    "car_format": "f1_2025",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 0,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 0,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 2,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 2,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 2,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 2,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 2,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 2,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 3,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 3,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 4,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 4,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 4,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 4,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 4,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 4,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 4,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 5,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 5,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 5,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 6,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 6,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 6,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 6,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 6,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 6,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 7,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 7,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 7,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 7,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 7,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 7,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 9,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 9,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 9,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 9,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 9,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 9,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 10,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 10,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 10,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 10,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 10,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 10,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 11,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 11,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 11,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 12,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 12,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 12,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 12,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 12,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 12,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 12,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 13,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 13,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 13,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 13,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 13,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 13,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 14,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 14,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 14,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 14,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 14,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 14,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 14,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 15,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 15,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 15,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 15,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 15,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 15,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 16,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 16,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 16,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 16,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 16,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 16,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 17,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 17,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 17,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 17,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 17,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 17,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 19,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 19,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 19,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 19,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 19,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 19,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 20,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 20,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 20,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 20,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 20,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 20,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 20,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 26,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 26,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 26,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 26,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 26,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 26,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 27,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 27,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 27,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 27,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 27,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 27,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 27,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 29,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 29,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 30,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 30,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 30,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 30,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 30,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 30,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 31,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 31,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 31,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 31,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 31,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 31,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 31,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 32,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 32,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 32,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 32,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 32,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 32,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 32,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "aggressive",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 39,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 39,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 39,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 39,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 39,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 39,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 40,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 40,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 40,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 40,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 40,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 40,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 41,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 41,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 41,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 41,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 41,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2025",
+    "track_id": 41,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 0,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 0,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 2,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 2,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 2,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 2,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 2,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 2,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 3,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 3,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 4,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 4,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 4,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 4,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 4,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 4,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 5,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 5,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 6,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 6,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 6,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 6,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 6,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 6,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 7,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 7,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 7,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 7,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 7,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 7,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 9,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 9,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 9,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 9,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 9,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 9,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 10,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 10,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 10,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 10,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 10,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 10,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 11,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 11,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 12,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 12,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 12,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 12,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 12,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 12,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 13,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 13,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 13,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 13,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 13,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 13,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 14,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 14,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 14,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 14,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 15,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 15,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 15,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 15,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 15,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 15,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 16,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 16,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 16,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 16,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 16,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 16,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 17,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 17,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 17,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 17,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 17,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 17,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 19,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 19,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 19,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 19,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 19,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 19,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 20,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 20,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 20,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 20,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 20,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 20,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 26,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 26,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 26,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 26,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 26,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 26,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 29,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 29,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 30,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 30,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 30,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 30,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 30,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 30,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 31,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 31,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 31,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 31,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 31,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 31,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 32,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 32,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 32,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 32,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 32,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 32,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 42,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 42,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 42,
+    "session": "race",
+    "conditions": "wet",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 42,
+    "session": "race",
+    "conditions": "wet",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 42,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f1_2026",
+    "track_id": 42,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   }
+  ]
+ }
+}

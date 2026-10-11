@@ -1,0 +1,891 @@
+/*
+ * Drive › Coach layout and panels (docs/ui/design-spec.md v2, 4.1-4.3, 4.7-4.9, 5.4; docs/ui/mockup.html). Lane DV.
+ *
+ * Unlayered on purpose: this file is imported by the eagerly loaded Coach page, which main.tsx pulls in before
+ * styles/index.css, so an `@layer components` block here would be declared before Tailwind's layer order and land
+ * under the base layer. Unlayered rules beat every layer whatever the order, so they are scoped tightly: every
+ * selector starts with a `pwc` class and the elements carrying them use no conflicting Tailwind utilities.
+ *
+ * Every colour and glance size is a token (styles/tokens.css: --pw-d-* scale with the viewport and Large).
+ * No shadows, no blur, nothing animated except 80 ms linear bars (spec 4.11, 9.5).
+ */
+
+/* ===================================================================================================== grid (4.2) */
+.pwc {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  padding: 12px;
+  gap: 10px;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: 52px minmax(0, 1fr) 120px 132px 56px 72px; /* hero row = 290 px at 1180 x 820 */
+  grid-template-areas:
+    "status status status status status status status status status status status status"
+    "hero   hero   hero   hero   hero   hero   hero   delta  delta  delta  delta  delta"
+    "coach  coach  coach  coach  coach  coach  coach  delta  delta  delta  delta  delta"
+    "sect   sect   sect   sect   sect   sect   sect   laps   laps   laps   laps   laps"
+    "ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon ribbon"
+    "radio  radio  radio  radio  radio  radio  radio  radio  radio  radio  radio  radio";
+  color: var(--foreground);
+}
+.pwc-status {
+  grid-area: status;
+  height: auto; /* the row sets it (52 px, 44 px compact) */
+}
+/* No text selection, callout or loupe on a long press while driving (waking the dimmed rail, a missed tap): they
+ * would cover the hero or the delta. Text fields stay editable (iOS will not type into a user-select: none field). */
+.pwc {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.pwc :is(input, textarea, [contenteditable]) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+.pwc-hero { grid-area: hero; }
+.pwc-coach { grid-area: coach; }
+.pwc-delta { grid-area: delta; }
+.pwc-sect { grid-area: sect; }
+.pwc-laps { grid-area: laps; }
+.pwc-ribbon { grid-area: ribbon; }
+.pwc-radio { grid-area: radio; }
+.pwc-span3 { grid-column: 1 / -1; grid-row: 2 / 4; }
+
+/* Every Drive panel stays inside its slot (P2: nothing moves). No shadows: .pw-drive sets --surface-shadow to a
+ * transparent one (tokens.css); box-shadow itself is left alone, it draws the outline bands and the running cell. */
+.pwc .card {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Stale / offline: last content dimmed to 45 % (4.7 #1, #3). Bands never dim. */
+.pwc[data-dim] :is(.pwc-hero, .pwc-coach, .pwc-sect, .pwc-laps, .pwc-ribbon) {
+  opacity: 0.45;
+}
+
+/* iPad mini, Safari with toolbars: compact rows (4.2). */
+@media (max-height: 760px) and (min-width: 768px) {
+  .pwc {
+    padding: 8px;
+    gap: 8px;
+    grid-template-rows: 44px minmax(0, 1fr) 104px 112px 44px 64px;
+  }
+}
+
+/* ============================================================================================ status slot (4.3 #1) */
+.pwc-line {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.pwc-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  font: 700 15px/1 var(--pw-font-sans);
+}
+.pwc-pill[data-tone="live"] { color: var(--pw-status-live); }
+.pwc-pill[data-tone="stale"] { color: var(--pw-status-stale); }
+.pwc-pill[data-tone="idle"] { color: var(--pw-status-idle); }
+.pwc-pill[data-tone="offline"] { color: var(--pw-status-offline); }
+.pwc-pill__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.pwc-trk {
+  min-width: 0;
+  overflow: hidden;
+  font: 650 20px/1 var(--pw-font-sans);
+  text-overflow: ellipsis;
+}
+.pwc-meta {
+  min-width: 0;
+  overflow: hidden;
+  font: 500 18px/1 var(--pw-font-sans);
+  color: var(--muted);
+  text-overflow: ellipsis;
+}
+.pwc-lapno {
+  flex: none;
+  font: 700 22px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+}
+.pwc-lapno__total { color: var(--pw-faint); }
+/* Band words: 26 px / 800 caps (17' at 70 cm), the detail after them 20 px (4.8 [critic]). When the slot is full the
+ * detail ellipsizes first (its shrink weight is far higher), the words only when even they cannot fit (phones). */
+.pwc-band {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.pwc-band__words {
+  /* Never shrinks while the detail has room: a weighted shrink of even 0.03 px turns on the ellipsis
+     ("SESSION COMPLE…"). max-width caps it at the band, so it ellipsizes only when the words alone do not fit. */
+  flex: none;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  font: 800 var(--pw-d-s, 26px) / 1 var(--pw-font-sans);
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+}
+.pwc-band[data-kind="outline"] .pwc-band__words { letter-spacing: 0.02em; }
+.pwc-band__sub {
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  font: 600 20px/1 var(--pw-font-sans);
+  letter-spacing: 0;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+}
+/* Chips are one line and never clip (4.8: one slot, never stacked; P8: the evidence tier always shows). The track,
+ * the session and the band detail ellipsize before them; the wake chip turns icon-only on bands (StatusContent). */
+.pwc-chips {
+  display: inline-flex;
+  flex: none;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.pwc-chips .pw-evidence { flex-wrap: nowrap; }
+/* Chips on a filled band sit on a solid surface so they keep their contrast (pink on yellow fails). */
+.pwc-onband {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--foreground);
+}
+.pwc-incident {
+  --chip-bg: var(--surface-tertiary);
+  --chip-fg: var(--foreground);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.pwc-wakechip {
+  --chip-bg: color-mix(in oklab, var(--warning) 15%, transparent);
+  --chip-fg: var(--warning);
+}
+.pwc-wakechip--icon {
+  padding-inline: 8px;
+}
+.pwc-wakechip--icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ======================================================================================= hero: next corner (4.3 #2) */
+.pwc-hero.card {
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 10px;
+  padding: 16px 20px;
+  overflow: hidden;
+}
+.pwc-hero[data-layout="two"] { gap: 8px; }
+.pwc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 26px;
+  padding-right: 18px;
+  font: 500 var(--pw-d-label, 15px) / 1.2 var(--pw-font-sans);
+  color: var(--muted);
+}
+.pwc-dir {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pwc-dir svg { width: 18px; height: 18px; }
+.pwc-head .pwc-focus { margin-left: auto; }
+.pwc-focus {
+  --chip-bg: transparent;
+  --chip-fg: var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+.pwc-corner {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  min-width: 0;
+}
+.pwc-clabel {
+  font: 800 var(--pw-d-corner, 112px) / 0.9 var(--pw-font-sans);
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap; /* labels never wrap (4.5) */
+}
+.pwc-cname {
+  min-width: 0;
+  overflow: hidden;
+  font: 700 var(--pw-d-xl, 44px) / 1 var(--pw-font-sans);
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwc-cdist {
+  flex: none;
+  margin-left: auto;
+  font: 700 var(--pw-d-xl, 44px) / 1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pwc-unit {
+  margin-left: 4px;
+  font: 500 20px/1 var(--pw-font-sans);
+  color: var(--muted);
+}
+/* Long corner rule (4.5 [critic]): label 88 px with the distance, then the name at 32 px on one full-width line. */
+.pwc-corner[data-layout="two"] {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: end;
+  column-gap: 20px;
+  row-gap: 2px;
+}
+.pwc-corner[data-layout="two"] .pwc-clabel {
+  font-size: var(--pw-d-corner-long, 88px);
+  line-height: 0.85;
+}
+.pwc-corner[data-layout="two"] .pwc-cname {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  font-size: var(--pw-d-m, 32px);
+  line-height: 1.1;
+}
+.pwc-corner[data-layout="two"] .pwc-cdist {
+  grid-column: 3;
+  grid-row: 1;
+}
+.pwc-empty {
+  align-self: center;
+  margin: 0;
+  font: 500 var(--pw-d-s, 26px) / 1.25 var(--pw-font-sans);
+  color: var(--muted);
+}
+/* Pit lane hero (4.7 #6): PIT 96 px, speed 144 px / limit 56 px km/h. */
+.pwc-pit {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  min-width: 0;
+}
+.pwc-pit__word {
+  font: 800 var(--pw-d-pit, 96px) / 0.9 var(--pw-font-sans);
+  letter-spacing: -0.03em;
+}
+.pwc-pit__speed {
+  font: 700 var(--pw-d-delta, 144px) / 1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+}
+.pwc-pit__speed[data-over] { color: var(--pw-bad); }
+.pwc-pit__limit {
+  font: 700 56px/1 var(--pw-font-num);
+  color: var(--muted);
+}
+.pwc-pit__unit {
+  align-self: flex-end;
+  margin-bottom: 14px;
+  font: 500 22px/1 var(--pw-font-sans);
+  color: var(--muted);
+}
+.pwc-pit__over {
+  align-self: center;
+  font: 800 var(--pw-d-s, 26px) / 1 var(--pw-font-sans);
+  letter-spacing: 0.08em;
+  color: var(--pw-bad);
+}
+
+/* Bars (approach, delta, running sector): transform only, 80 ms linear (4.11). */
+.pwc-bar {
+  gap: 0;
+}
+.pwc-bar .progress-bar__track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--surface-tertiary);
+}
+.pwc-bar__fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: var(--muted);
+  transform-origin: 0 50%;
+  transition: transform var(--pw-motion-bar, 80ms) linear;
+}
+.pwc-bar-spacer { height: 10px; }
+
+/* Cue band (4.3 #3): 80 px, BRAKE chip solid behind-red with dark ink, text and distance 40 px. */
+.pwc-cue {
+  display: flex;
+  align-self: end;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+  height: calc(var(--pw-d-l, 40px) * 2);
+  padding: 0 18px 0 14px;
+  border-radius: 18px;
+  background: color-mix(in oklab, var(--pw-brake) 11%, var(--surface-secondary));
+}
+.pwc-cue[data-kind="marker"] { background: var(--surface-secondary); }
+.pwc-cue__kind {
+  flex: none;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--pw-brake);
+  color: var(--pw-brake-ink, var(--pw-ink));
+  font: 800 24px/1 var(--pw-font-sans);
+  letter-spacing: 0.08em;
+}
+.pwc-cue[data-kind="marker"] .pwc-cue__kind {
+  background: var(--surface-tertiary);
+  color: var(--foreground);
+}
+.pwc-cue__text {
+  min-width: 0;
+  overflow: hidden;
+  font: 700 var(--pw-d-l, 40px) / 1 var(--pw-font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwc-cue__in {
+  flex: none;
+  margin-left: auto;
+  font: 700 var(--pw-d-l, 40px) / 1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pwc-cue__in-word {
+  margin-right: 8px;
+  font: 500 20px/1 var(--pw-font-sans);
+  color: var(--muted);
+}
+.pwc-cue[data-muted] { background: var(--surface-secondary); }
+.pwc-cue__note {
+  min-width: 0;
+  overflow: hidden;
+  font: 600 var(--pw-d-s, 26px) / 1.15 var(--pw-font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwc-cue[data-muted] .pwc-cue__note { color: var(--muted); }
+.pwc-radiooff {
+  --chip-bg: var(--surface-tertiary);
+  --chip-fg: var(--muted);
+  flex: none;
+}
+
+/* ======================================================================================== coach card (4.3 #4) */
+.pwc-coach.card {
+  flex-direction: row;
+  align-items: center;
+  padding: 12px 20px;
+  overflow: hidden;
+}
+.pwc-coach__text {
+  margin: 0;
+  font: 500 var(--pw-d-s, 26px) / 1.22 var(--pw-font-sans);
+}
+/* 30 px at the baseline: --pw-d-s (26) x 1.154, so it scales with the viewport and Large like the rest. */
+.pwc-coach__text[data-size="30"] { font-size: calc(var(--pw-d-s, 26px) * 1.154); }
+.pwc-coach__text[data-size="22"] { font-size: var(--pw-d-xs, 22px); }
+.pwc-coach__text[data-clamp] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+.pwc-coach__tag {
+  height: 30px;
+  margin-right: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  vertical-align: 0.2em;
+}
+.pwc-coach__empty { color: var(--pw-faint); }
+.pwc-coach__evidence {
+  font-size: 17px;
+  color: var(--muted);
+}
+
+/* ============================================================================================ delta (4.3 #5) */
+.pwc-delta.card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+  gap: 0;
+  padding: 18px 22px;
+  overflow: hidden;
+}
+.pwc-delta__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+  font: 500 var(--pw-d-label, 15px) / 1.2 var(--pw-font-sans);
+  color: var(--muted);
+}
+.pwc-refchip {
+  --chip-bg: color-mix(in oklab, var(--pw-ref) 15%, transparent);
+  --chip-fg: var(--pw-ref);
+  min-width: 0;
+  overflow: hidden;
+}
+.pwc-dv {
+  align-self: center;
+  justify-self: center;
+  margin-top: 10px;
+  font: 700 var(--pw-d-delta, 144px) / 1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.pwc-dv[data-tone="ahead"] { color: var(--pw-ahead); }
+.pwc-dv[data-tone="behind"] { color: var(--pw-behind); }
+.pwc-dv[data-tone="level"] { color: var(--foreground); }
+.pwc-dv[data-tone="muted"] { color: var(--muted); }
+.pwc-dv[data-tone="unknown"] { color: var(--pw-faint); }
+.pwc-word {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 22px;
+  margin: -4px 0 18px;
+  font: 800 var(--pw-d-xs, 22px) / 1 var(--pw-font-sans);
+  letter-spacing: 0.24em;
+}
+.pwc-word[data-tone="ahead"] { color: var(--pw-ahead); }
+.pwc-word[data-tone="behind"] { color: var(--pw-behind); }
+.pwc-word[data-tone="muted"] { color: var(--muted); }
+.pwc-word__chip {
+  --chip-bg: var(--surface-tertiary);
+  --chip-fg: var(--foreground);
+  letter-spacing: 0.08em;
+}
+.pwc-reason {
+  margin: 0 0 18px;
+  font: 500 20px/1.25 var(--pw-font-sans);
+  color: var(--muted);
+  text-align: center;
+}
+.pwc-dbar {
+  position: relative;
+  height: 28px;
+  border-radius: 10px;
+  background: var(--surface-secondary);
+}
+.pwc-dbar__mid {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: var(--muted);
+}
+.pwc-dbar__tick {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--pw-line-strong);
+}
+/* Two half-width fills from the centre, scaled (4.11: transform only). */
+.pwc-dbar__fill {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  width: 50%;
+  border-radius: 7px;
+  transition: transform var(--pw-motion-bar, 80ms) linear;
+}
+.pwc-dbar__fill[data-side="ahead"] {
+  right: 50%;
+  transform-origin: 100% 50%;
+  background: var(--pw-ahead);
+}
+.pwc-dbar__fill[data-side="behind"] {
+  left: 50%;
+  transform-origin: 0 50%;
+  background: var(--pw-behind);
+}
+.pwc-dbar[data-tone="muted"] .pwc-dbar__fill { background: var(--muted); }
+.pwc-dbar__chev {
+  position: absolute;
+  top: 50%;
+  font: 800 16px/1 var(--pw-font-sans);
+  transform: translateY(-50%);
+  color: var(--background);
+}
+.pwc-dbar__chev[data-side="ahead"] { left: 6px; }
+.pwc-dbar__chev[data-side="behind"] { right: 6px; }
+.pwc-dscale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font: 500 14px/1 var(--pw-font-sans);
+  color: var(--pw-faint);
+}
+.pwc-proj {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--surface-tertiary);
+  font: 500 var(--pw-d-label, 15px) / 1.2 var(--pw-font-sans);
+  color: var(--muted);
+}
+.pwc-proj__v {
+  font: 700 var(--pw-d-m, 32px) / 1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+
+/* ============================================================================================ sectors (4.3 #6) */
+.pwc-sect {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  min-height: 0;
+}
+.pwc-sect .pw-tcell { min-height: 0; }
+.pwc-sect__caption { display: none; }
+
+/* =========================================================================================== lap times (4.3 #7) */
+.pwc-laps.card {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  padding: 6px 20px;
+}
+.pwc-lrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.pwc-lrow + .pwc-lrow { border-top: 1px solid var(--surface-tertiary); }
+.pwc-lrow__k {
+  flex: none;
+  width: 52px;
+  font: 500 var(--pw-d-label, 15px) / 1.2 var(--pw-font-sans);
+  color: var(--muted);
+}
+.pwc-lrow__v {
+  font-size: var(--pw-d-m, 32px);
+}
+.pwc-lrow__v[data-muted] { color: var(--muted); }
+.pwc-lrow__x {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-left: auto;
+  font: 500 14px/1.2 var(--pw-font-sans);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.pwc-lrow__d {
+  font: 700 22px/1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+}
+.pwc-lrow__d[data-tone="ahead"] { color: var(--pw-ahead); }
+.pwc-lrow__d[data-tone="behind"] { color: var(--pw-behind); }
+.pwc-invalid {
+  --chip-bg: color-mix(in oklab, var(--danger) 15%, transparent);
+  --chip-fg: var(--danger);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+/* ================================================================================================ ribbon (4.3 #8) */
+/* Lane V's LapRibbon draws the strip (its own 12 px side insets) at the row's height. */
+.pwc-ribbon.card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+/* ============================================================================================ radio strip (4.3 #9) */
+.pwc-radio.card {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 0 8px 0 18px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+.pwc-radio__msg {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-width: 0;
+}
+
+/* ================================================================================================ state cards (4.9) */
+.pwc-ready.card {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr 1.1fr;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 0 28px;
+  padding: 24px 28px 18px;
+  overflow: hidden;
+}
+.pwc-ready__h {
+  margin: 0 0 14px;
+  font: 600 15px/1 var(--pw-font-sans);
+  color: var(--muted);
+}
+.pwc-ready__col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.pwc-who {
+  margin: 14px 0 10px;
+  font: 700 var(--pw-d-m, 32px) / 1.15 var(--pw-font-sans);
+}
+.pwc-kv {
+  display: grid;
+  gap: 14px;
+}
+.pwc-kv__k {
+  font-size: 15px;
+  color: var(--muted);
+}
+.pwc-kv__v {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font: 700 30px/1.1 var(--pw-font-num);
+}
+.pwc-kv__v[data-text] { font: 600 18px/1.35 var(--pw-font-sans); }
+.pwc-kv__note { font: 500 16px/1.3 var(--pw-font-sans); color: var(--muted); }
+.pwc-focusrow {
+  display: grid;
+  gap: 10px;
+}
+.pwc-focusrow__f {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pwc-focusrow__f > b {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+}
+.pwc-focusrow__f > span { font-size: 15px; color: var(--muted); }
+.pwc-focusrow__f > .pwc-ready__line { font: 600 17px/1.3 var(--pw-font-sans); }
+.pwc-ready__next {
+  margin: 0 0 6px;
+  font: 500 18px/1.35 var(--pw-font-sans);
+}
+.pwc-ready__foot {
+  grid-column: 1 / -1;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--surface-tertiary);
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.pwc-end.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: start;
+  gap: 14px 18px;
+  padding: 22px 26px;
+  overflow: hidden;
+}
+.pwc-end__kpis { grid-column: 1 / -1; background: var(--surface-secondary); }
+.pwc-end__kpis .kpi { background: transparent; min-width: 0; }
+.pwc-end__v {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: 700 var(--pw-d-l, 40px) / 1 var(--pw-font-num);
+  font-variant-numeric: tabular-nums;
+}
+.pwc-end__s { font-size: 13px; color: var(--muted); }
+/* The word after a gain or gap ("faster", "slower"): text size, so the number stays the figure that reads first. */
+.pwc-end__w { font: 600 18px/1 var(--pw-font-sans); color: var(--muted); align-self: flex-end; padding-bottom: 4px; }
+.pwc-end__actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  align-self: end;
+}
+.pwc-item {
+  --pwc-k: var(--muted);
+  align-items: flex-start;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 20px;
+}
+.pwc-item .item-card__title {
+  font: 650 16px/1.3 var(--pw-font-sans);
+}
+/* The full coaching text (stationary), wrapped: up to 4 lines, never a one-line ellipsis. */
+.pwc-item .item-card__description {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  width: auto;
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.pwc-item[data-tone="warning"] { --pwc-k: var(--warning); }
+.pwc-item[data-tone="success"] { --pwc-k: var(--success); }
+.pwc-item__icon {
+  background: color-mix(in oklab, var(--pwc-k) 16%, transparent);
+  color: var(--pwc-k);
+}
+
+.pwc-nodata.card {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  align-items: center;
+  gap: 28px;
+  padding: 26px 30px;
+  overflow: hidden;
+}
+.pwc-nodata .empty-state {
+  align-items: flex-start;
+  padding: 0;
+  text-align: left;
+}
+.pwc-nodata .empty-state__header { align-items: flex-start; }
+.pwc-nodata .empty-state__title { font: 650 28px/1.2 var(--pw-font-sans); }
+.pwc-nodata .empty-state__description { font-size: 16px; }
+.pwc-nodata .empty-state__content { align-items: stretch; width: 100%; }
+.pwc-nodata .stepper { --stepper-indicator-size: 36px; --stepper-vertical-gap: 18px; }
+.pwc-nodata .stepper__title { font: 650 17px/1.3 var(--pw-font-sans); }
+.pwc-nodata .stepper__description { font-size: 15px; }
+.pwc-nodata__actions {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+
+/* Glove and Drive touch targets (P12). */
+.pwc-glove { min-height: var(--pw-touch-glove, 64px); padding-inline: 28px; font-size: 18px; }
+.pwc-xl { min-height: var(--pw-touch-drive, 56px); padding-inline: 24px; font-size: 17px; }
+
+/* ======================================================================= portrait stack (5.4): phone, iPad portrait */
+@media (max-width: 767px), (max-width: 1023px) and (orientation: portrait) {
+  .pwc {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    padding: 10px 12px 16px;
+    gap: 8px;
+  }
+  .pwc > * { flex: none; }
+  .pwc-status { order: 1; height: 52px; }
+  .pwc-delta { order: 2; }
+  .pwc-hero { order: 3; }
+  .pwc-coach { order: 4; }
+  .pwc-sect { order: 5; }
+  .pwc-laps { order: 6; }
+  .pwc-ribbon { order: 7; }
+  .pwc-radio { order: 8; }
+  .pwc-span3 { order: 2; }
+  .pwc-status .pwc-meta { display: none; } /* the Segment needs the room: track and lap stay */
+  .pwc-ready.card,
+  .pwc-nodata.card { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .pwc-end.card { grid-template-columns: minmax(0, 1fr); }
+  .pwc-delta.card { padding: 12px 16px; }
+  .pwc-dv { margin-top: 8px; }
+  .pwc-sect .pw-tcell { min-height: 112px; }
+  .pwc-laps.card { min-height: 132px; }
+  .pwc-ribbon.card { height: 56px; }
+  .pwc-radio.card { min-height: 72px; }
+}
+
+/* Phone only: smaller glance sizes (5.4), no ribbon, compact radio strip. */
+@media (max-width: 767px) {
+  .pwc-status { height: 44px; }
+  .pwc-status .pwc-trk,
+  .pwc-status .pwc-meta,
+  .pwc-status .pwc-pill { display: none; }
+  .pwc-band__words { font-size: 15px; }
+  .pwc-band__sub { display: none; }
+  .pwc-dv { font-size: clamp(88px, 26vw, 120px); }
+  .pwc-word { margin-bottom: 10px; font-size: 18px; }
+  .pwc-dscale,
+  .pwc-proj { display: none; }
+  .pwc-hero.card { padding: 12px 14px; gap: 8px; }
+  .pwc-corner,
+  .pwc-corner[data-layout="two"] { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+  .pwc-clabel,
+  .pwc-corner[data-layout="two"] .pwc-clabel { font-size: 64px; }
+  .pwc-cname,
+  .pwc-corner[data-layout="two"] .pwc-cname { font-size: 28px; }
+  .pwc-cdist { font-size: 32px; }
+  .pwc-pit__word { font-size: 56px; }
+  .pwc-pit__speed { font-size: 88px; }
+  .pwc-pit__limit { font-size: 36px; }
+  .pwc-cue { height: 52px; gap: 10px; padding: 0 12px 0 8px; }
+  .pwc-cue__kind { padding: 7px 9px; font-size: 15px; }
+  .pwc-cue__text,
+  .pwc-cue__in,
+  .pwc-cue__note { font-size: 24px; }
+  .pwc-coach.card { padding: 12px 14px; }
+  .pwc-coach__text,
+  .pwc-coach__text[data-size] { font-size: 18px; }
+  .pwc-sect .pw-tcell { --pw-tc-size: 28px; min-height: 0; padding: 10px; }
+  .pwc-sect .pw-tcell__sub,
+  .pwc-sect .pw-tcell__caption { display: none; }
+  .pwc-sect__caption {
+    display: block;
+    grid-column: 1 / -1;
+    margin: 0 0 -2px 4px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .pwc-laps.card { min-height: 0; padding: 8px 14px; }
+  .pwc-lrow { min-height: 40px; }
+  .pwc-lrow__v { font-size: 24px; }
+  .pwc-ribbon.card { display: none; }
+  .pwc-radio.card { min-height: 64px; gap: 8px; padding: 0 6px 0 12px; }
+  .pwc-radio .pwc-radio__mic { display: none; }
+  .pwc-radio__msg p { font-size: 15px; }
+  /* Session complete: the four KPI tiles as 2 x 2 (mockup .phone .kpis); four columns overlap at 390 px. */
+  .pwc-end.card { padding: 16px; }
+  .pwc-end__kpis.kpi-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pwc-end__kpis > .kpi-group__separator { display: none; }
+  .pwc-end__v { font-size: 32px; }
+}
+
+/* iPad home-indicator area (Home Screen web app): keep the bottom row clear of it. */
+@media (min-width: 768px) { .pwc { padding-bottom: max(12px, env(safe-area-inset-bottom)); } }
+@media (max-height: 760px) and (min-width: 768px) { .pwc { padding-bottom: max(8px, env(safe-area-inset-bottom)); } }

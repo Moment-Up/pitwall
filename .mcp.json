@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "qwen": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${CLAUDE_PROJECT_DIR:-.}",
+        "--extra",
+        "devtools",
+        "--quiet",
+        "python",
+        "-m",
+        "pitwall.devtools.qwen_mcp"
+      ],
+      "env": {
+        "QWEN_BASE_URL": "${QWEN_BASE_URL:-http://127.0.0.1:8081/v1}"
+      },
+      "timeout": 600000
+    }
+  }
+}

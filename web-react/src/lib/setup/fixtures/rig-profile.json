@@ -1,0 +1,31 @@
+{
+ "_fixture": {
+  "source": "GET /api/rig/profile on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded: PS5, GT DD Pro 5 Nm, stock CSL pedals, no upgrades; James (1) saved Competitive"
+ },
+ "body": {
+  "platform": "ps5",
+  "wheel_base": "fanatec_gt_dd_pro",
+  "torque_nm": 5,
+  "pedals": "csl",
+  "rim": "gt_dd_pro_bundled",
+  "upgrades": [],
+  "drivers": {
+   "1": {
+    "style": "competitive",
+    "strength_scale": null
+   }
+  },
+  "labels": {
+   "platform": "PlayStation 5",
+   "wheel_base": "Fanatec Gran Turismo DD Pro",
+   "torque": "5 Nm (standard 90 W PSU)",
+   "pedals": "Fanatec CSL Pedals (stock, 2 or 3 pedals)",
+   "rim": "Bundled Gran Turismo DD Pro rim"
+  },
+  "boost_kit_fitted": false,
+  "load_cell_fitted": false,
+  "last_hardware_upgrade": null
+ }
+}

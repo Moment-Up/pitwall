@@ -1,0 +1,17 @@
+{
+ "_fixture": {
+  "source": "GET /api/rig/drivers/1/prefs on the live pitwall service (read-only), 2026-10-11",
+  "status": 200,
+  "note": "recorded: James, advanced, Competitive, no force scale"
+ },
+ "body": {
+  "driver_id": 1,
+  "prefs": {
+   "style": "competitive",
+   "strength_scale": null
+  },
+  "skill_level": "advanced",
+  "effective_strength_scale": 1.0,
+  "strength_scale_source": "none"
+ }
+}

@@ -1,0 +1,694 @@
+{
+ "version": 23940,
+ "connection": {
+  "status": "live",
+  "last_packet_age_s": 0.0,
+  "packets": 101024,
+  "packets_per_s": 0.0,
+  "rejected": 0,
+  "unrecognised": 0,
+  "source": "replay:synthetic-coaching-demo-2025.pwcap",
+  "synthetic": true,
+  "decode": {
+   "adapter": "EA SPORTS F1 25 (UDP formats 2025 and 2026)",
+   "packets": 101000,
+   "decoded": 101000,
+   "ignored": 0,
+   "rejected": 0,
+   "errors": 0,
+   "by_type": {
+    "PARTICIPANTS": 81,
+    "SESSION": 783,
+    "EVENT": 2,
+    "MOTION": 23934,
+    "LAP_DATA": 23934,
+    "CAR_TELEMETRY": 23934,
+    "CAR_STATUS": 23934,
+    "CAR_DAMAGE": 3616,
+    "CAR_SETUPS": 782
+   },
+   "last_error": null
+  }
+ },
+ "session_id": "73e72b5d5ebe",
+ "session": {
+  "game": "f1_25",
+  "platform": "unknown",
+  "track_id": "synthetic:coaching-demo",
+  "track_name": "Pitwall Park (synthetic)",
+  "track_length_m": 3964.0,
+  "session_type": "Practice 1",
+  "car_name": "McLaren",
+  "weather": {
+   "condition": "clear",
+   "track_temp_c": 32.0,
+   "air_temp_c": 24.0,
+   "rain_percentage": 0.0
+  },
+  "total_laps": 7,
+  "safety_car_status": "none"
+ },
+ "frame": {
+  "t_recv_ns": 1401483413334,
+  "session_time_s": 394.983,
+  "speed_kph": 268.0,
+  "throttle": 1.0,
+  "brake": 0.0,
+  "steering": 0.0,
+  "clutch": 0.0,
+  "gear": 6,
+  "rpm": 11857.0,
+  "max_rpm": 12500.0,
+  "drs_open": false,
+  "pos": [
+   0.0,
+   0.0,
+   11.15
+  ],
+  "g_lat": 0.0,
+  "g_lon": 0.61,
+  "lap_number": 7,
+  "lap_distance_m": 11.2,
+  "current_lap_time_ms": 150,
+  "last_lap_time_ms": 65626,
+  "sector": 0,
+  "lap_invalid": true,
+  "pit_status": 0,
+  "race_position": 1,
+  "tyre_surface_temp_c": [
+   91.0,
+   92.0,
+   91.0,
+   92.0
+  ],
+  "tyre_inner_temp_c": [
+   97.0,
+   97.0,
+   97.0,
+   97.0
+  ],
+  "tyre_pressure_psi": [
+   23.6,
+   23.6,
+   22.1,
+   22.1
+  ],
+  "brake_temp_c": [
+   350.0,
+   350.0,
+   350.0,
+   350.0
+  ],
+  "tyre_wear_pct": [
+   11.4,
+   12.6,
+   8.4,
+   9.0
+  ],
+  "tyre_compound": "soft",
+  "tyre_age_laps": 6,
+  "fuel_kg": 30.4,
+  "fuel_remaining_laps_game": 19.0,
+  "ers_store_j": 3000000.0,
+  "brake_bias_front_pct": 56.0,
+  "quality": 0
+ },
+ "delta_s": -0.001,
+ "reference": {
+  "lap_id": 1,
+  "lap_number": 1,
+  "lap_time_ms": 65626,
+  "session_id": "73e72b5d5ebe"
+ },
+ "laps": [
+  {
+   "lap_id": 6,
+   "lap_number": 6,
+   "lap_time_ms": 65626,
+   "sector_times_ms": [
+    21911,
+    22464,
+    21251
+   ],
+   "valid": true,
+   "clean": false,
+   "flags": [
+    "flashback"
+   ],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.599
+  },
+  {
+   "lap_id": 5,
+   "lap_number": 5,
+   "lap_time_ms": 66280,
+   "sector_times_ms": [
+    22037,
+    22464,
+    21779
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.6
+  },
+  {
+   "lap_id": 4,
+   "lap_number": 4,
+   "lap_time_ms": 65706,
+   "sector_times_ms": [
+    21911,
+    22464,
+    21331
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.6
+  },
+  {
+   "lap_id": 3,
+   "lap_number": 3,
+   "lap_time_ms": 65967,
+   "sector_times_ms": [
+    22251,
+    22465,
+    21251
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.6
+  },
+  {
+   "lap_id": 2,
+   "lap_number": 2,
+   "lap_time_ms": 65626,
+   "sector_times_ms": [
+    21911,
+    22464,
+    21251
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.6
+  },
+  {
+   "lap_id": 1,
+   "lap_number": 1,
+   "lap_time_ms": 65626,
+   "sector_times_ms": [
+    21911,
+    22464,
+    21251
+   ],
+   "valid": true,
+   "clean": true,
+   "flags": [],
+   "tyre_compound": "soft",
+   "fuel_used_kg": 1.599
+  }
+ ],
+ "observations": [],
+ "events": [
+  {
+   "kind": "flashback",
+   "code": "FLBK",
+   "session_time_s": 358.75,
+   "t": 1791679800.162177
+  },
+  {
+   "kind": "session_started",
+   "code": "SSTA",
+   "session_time_s": 0.0,
+   "t": 1791679799.586355
+  }
+ ],
+ "marshal_flags": [],
+ "track_model": {
+  "game": "f1_25",
+  "track_id": "synthetic:coaching-demo",
+  "track_name": "Pitwall Park (synthetic)",
+  "length_m": 3964.0,
+  "version": 3,
+  "n_laps": 3,
+  "corners": [
+   {
+    "name": "T1",
+    "apex_m": 841.0,
+    "entry_m": 707.0,
+    "exit_m": 856.0,
+    "seg_start_m": 0.0,
+    "seg_end_m": 1080.0,
+    "direction": "right",
+    "ref_min_speed_kph": 72.0,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   },
+   {
+    "name": "T2",
+    "apex_m": 1319.0,
+    "entry_m": 1215.0,
+    "exit_m": 1343.0,
+    "seg_start_m": 1080.0,
+    "seg_end_m": 1593.0,
+    "direction": "right",
+    "ref_min_speed_kph": 99.0,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   },
+   {
+    "name": "T3",
+    "apex_m": 1867.0,
+    "entry_m": 1857.0,
+    "exit_m": 1872.0,
+    "seg_start_m": 1593.0,
+    "seg_end_m": 2467.5,
+    "direction": "left",
+    "ref_min_speed_kph": 82.0,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   },
+   {
+    "name": "T4",
+    "apex_m": 3068.0,
+    "entry_m": 2945.0,
+    "exit_m": 3088.0,
+    "seg_start_m": 2467.5,
+    "seg_end_m": 3378.5,
+    "direction": "right",
+    "ref_min_speed_kph": 114.0,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   },
+   {
+    "name": "T5",
+    "apex_m": 3689.0,
+    "entry_m": 3579.0,
+    "exit_m": 3716.0,
+    "seg_start_m": 3378.5,
+    "seg_end_m": 3964.0,
+    "direction": "right",
+    "ref_min_speed_kph": 132.0,
+    "label": null,
+    "official_numbers": [],
+    "display_name": null,
+    "voice_ok": false,
+    "identity_tier": null,
+    "label_part": null,
+    "identity_match": null
+   }
+  ],
+  "corner_text": {
+   "T1": {
+    "short": "T1",
+    "long": "T1",
+    "voice": "T1"
+   },
+   "T2": {
+    "short": "T2",
+    "long": "T2",
+    "voice": "T2"
+   },
+   "T3": {
+    "short": "T3",
+    "long": "T3",
+    "voice": "T3"
+   },
+   "T4": {
+    "short": "T4",
+    "long": "T4",
+    "voice": "T4"
+   },
+   "T5": {
+    "short": "T5",
+    "long": "T5",
+    "voice": "T5"
+   }
+  }
+ },
+ "skeleton": {
+  "tier": "synthetic",
+  "synthetic": true,
+  "source": "f1_session@2025",
+  "game": "f1_25",
+  "track_id": "synthetic:coaching-demo",
+  "track_length_m": 3964.0,
+  "pit_speed_limit_kph": 80.0,
+  "sector2_start_m": 1321.29,
+  "sector3_start_m": 2642.57,
+  "sector_boundaries_m": [
+   0.0,
+   1321.29,
+   2642.57,
+   3964.0
+  ],
+  "sectors": [
+   {
+    "index": 0,
+    "name": "S1",
+    "start_m": 0.0,
+    "end_m": 1321.29,
+    "length_m": 1321.29
+   },
+   {
+    "index": 1,
+    "name": "S2",
+    "start_m": 1321.29,
+    "end_m": 2642.57,
+    "length_m": 1321.29
+   },
+   {
+    "index": 2,
+    "name": "S3",
+    "start_m": 2642.57,
+    "end_m": 3964.0,
+    "length_m": 1321.43
+   }
+  ],
+  "marshal_zones": [
+   {
+    "kind": "marshal",
+    "index": 1,
+    "game_number": 2,
+    "lap_order": 1,
+    "start_m": 247.75,
+    "end_m": 578.08,
+    "length_m": 330.33,
+    "start_frac": 0.0625,
+    "end_frac": 0.145833,
+    "wraps": false,
+    "segments_m": [
+     [
+      247.75,
+      578.08
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 2,
+    "game_number": 3,
+    "lap_order": 2,
+    "start_m": 578.08,
+    "end_m": 908.42,
+    "length_m": 330.33,
+    "start_frac": 0.145833,
+    "end_frac": 0.229167,
+    "wraps": false,
+    "segments_m": [
+     [
+      578.08,
+      908.42
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 3,
+    "game_number": 4,
+    "lap_order": 3,
+    "start_m": 908.42,
+    "end_m": 1238.75,
+    "length_m": 330.33,
+    "start_frac": 0.229167,
+    "end_frac": 0.3125,
+    "wraps": false,
+    "segments_m": [
+     [
+      908.42,
+      1238.75
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 4,
+    "game_number": 5,
+    "lap_order": 4,
+    "start_m": 1238.75,
+    "end_m": 1569.08,
+    "length_m": 330.33,
+    "start_frac": 0.3125,
+    "end_frac": 0.395833,
+    "wraps": false,
+    "segments_m": [
+     [
+      1238.75,
+      1569.08
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 5,
+    "game_number": 6,
+    "lap_order": 5,
+    "start_m": 1569.08,
+    "end_m": 1899.42,
+    "length_m": 330.33,
+    "start_frac": 0.395833,
+    "end_frac": 0.479167,
+    "wraps": false,
+    "segments_m": [
+     [
+      1569.08,
+      1899.42
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 6,
+    "game_number": 7,
+    "lap_order": 6,
+    "start_m": 1899.42,
+    "end_m": 2229.75,
+    "length_m": 330.33,
+    "start_frac": 0.479167,
+    "end_frac": 0.5625,
+    "wraps": false,
+    "segments_m": [
+     [
+      1899.42,
+      2229.75
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 7,
+    "game_number": 8,
+    "lap_order": 7,
+    "start_m": 2229.75,
+    "end_m": 2560.08,
+    "length_m": 330.33,
+    "start_frac": 0.5625,
+    "end_frac": 0.645833,
+    "wraps": false,
+    "segments_m": [
+     [
+      2229.75,
+      2560.08
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 8,
+    "game_number": 9,
+    "lap_order": 8,
+    "start_m": 2560.08,
+    "end_m": 2890.42,
+    "length_m": 330.33,
+    "start_frac": 0.645833,
+    "end_frac": 0.729167,
+    "wraps": false,
+    "segments_m": [
+     [
+      2560.08,
+      2890.42
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 9,
+    "game_number": 10,
+    "lap_order": 9,
+    "start_m": 2890.42,
+    "end_m": 3220.75,
+    "length_m": 330.33,
+    "start_frac": 0.729167,
+    "end_frac": 0.8125,
+    "wraps": false,
+    "segments_m": [
+     [
+      2890.42,
+      3220.75
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 10,
+    "game_number": 11,
+    "lap_order": 10,
+    "start_m": 3220.75,
+    "end_m": 3551.08,
+    "length_m": 330.33,
+    "start_frac": 0.8125,
+    "end_frac": 0.895833,
+    "wraps": false,
+    "segments_m": [
+     [
+      3220.75,
+      3551.08
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 11,
+    "game_number": 12,
+    "lap_order": 11,
+    "start_m": 3551.08,
+    "end_m": 3881.42,
+    "length_m": 330.33,
+    "start_frac": 0.895833,
+    "end_frac": 0.979167,
+    "wraps": false,
+    "segments_m": [
+     [
+      3551.08,
+      3881.42
+     ]
+    ],
+    "flag": "none"
+   },
+   {
+    "kind": "marshal",
+    "index": 0,
+    "game_number": 1,
+    "lap_order": 12,
+    "start_m": 3881.42,
+    "end_m": 247.75,
+    "length_m": 330.33,
+    "start_frac": 0.979167,
+    "end_frac": 0.0625,
+    "wraps": true,
+    "segments_m": [
+     [
+      3881.42,
+      3964.0
+     ],
+     [
+      0.0,
+      247.75
+     ]
+    ],
+    "flag": "none"
+   }
+  ],
+  "drs_zones": null,
+  "aero_full_zones": null,
+  "aero_partial_zones": null,
+  "active_aero_track_status": null
+ },
+ "cues": {
+  "mode": "focus",
+  "armed": true,
+  "muted": null,
+  "reason": "no braking corrections to focus on",
+  "ref_lap_number": 1,
+  "focus": [],
+  "focus_limits": {
+   "min_confidence": 0.6,
+   "min_impact_s": 0.0,
+   "allowed_kinds": null,
+   "max_corners": 3
+  },
+  "cues": [],
+  "next": null,
+  "last": {
+   "seq": 3,
+   "corner": "T2",
+   "kind": "brake",
+   "target_m": 1215.1,
+   "text": "T2 brake",
+   "focus": true,
+   "reason": null,
+   "lap": 6,
+   "d_m": 1127.6,
+   "speed_kph": 236.0,
+   "aim_m": 1210.1,
+   "latency_ms": 250,
+   "word_offset_ms": 919,
+   "path": "pcm",
+   "status": "pending",
+   "error_m": null,
+   "latency_measured_ms": null,
+   "age_s": 0.1
+  },
+  "timing": {
+   "latency_ms": 250,
+   "path": "pcm",
+   "margin_m": 5.0
+  },
+  "stats": {
+   "fired": 3,
+   "missed": 0,
+   "suppressed": 0,
+   "dropped": 0,
+   "errors": 0
+  }
+ },
+ "_fixture": {
+  "tier": "synthetic",
+  "source": "pitwall replay (headless, temp DB) of synthetic-coaching-demo-2025.pwcap",
+  "moment": "frame.lap_invalid with a delta",
+  "trimmed": [
+   "last_comparison",
+   "track_model.centreline",
+   "track_model.ground_plane",
+   "track_model.source_lap_ids"
+  ],
+  "notes": "cues: a test sink accepted cue events (no radio), so cues.armed is true and last outcomes stay pending.",
+  "generated_unix": 1791679800
+ }
+}

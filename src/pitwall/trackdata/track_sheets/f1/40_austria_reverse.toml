@@ -1,0 +1,95 @@
+# Pitwall track sheet: corner identity (layer L2) for one game layout.
+# Schema and rules: src/pitwall/analysis/track_identity.py.
+# Seeded by scripts/import_track_segments.py from Pits n' Giggles assets/track-segments (pits_n_giggles@72f78aa),
+# MIT licence, Copyright (c) 2024 Ashwin Natarajan - see src/pitwall/trackdata/third_party/pits_n_giggles/.
+# HAND-REVIEWED 2026-10-10 (windows, directions, physical identity and names; see checked_against and the turn notes)
+# against the 72f78aa copy (Austria_Reverse.json blob ba1e5b76). Evidence: docs/research/track-sheets-review-g1.md.
+# CROSS-CHECKED 2026-10-11: windows, directions and physical identity re-confirmed from field data; the turns named
+# with the stale sponsor names Red Bull Mobile, Würth Kurve and Remus were downgraded to seeded (not shown or voiced)
+# because the circuit no longer uses those names (see 17_austria.toml).
+# The importer leaves this file alone because it contains verified turns.
+
+schema_version = 1
+game_family = "f1"
+games = ["f1_25"]
+game_track_id = 40
+layout = "Austria (Reverse)"
+lap_length_m = 4323
+official_turn_count = 0
+reverse_of = 17
+sector_starts_m = [1388, 3120]
+verified_formats = [2025]
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = [
+    "capture:20261010-193550 - real F1 25 v1.26 PS5 race (UDP format 2025), session 14447134091809158913: 3 complete clean laps, speed/brake/throttle/steering/lateral g and world position by lap distance; Session packet trackLength 4323 m, S2 start 1388.55 m, S3 start 3119.52 m",
+    "position-match:40-vs-17 - every reverse sample matched by ground position (X/Z) to the forward Austria lap 2 of capture:20261010-191501 (median 1.3 m, p95 4.7 m apart): forward lap metres = 4323 - reverse metres (same timing line); each reverse window below covers the forward window of the same physical corner",
+    "sheet:17_austria.toml - names of the physical corners as verified for the forward layout (only Niki Lauda Kurve and Rindt Kurve since the 2026-10-11 cross-check)",
+    "field-curvature:40 - cross-check 2026-10-11 on the same capture: all 22 cars (60 lap segments), path heading from the Motion packet's world forward vector on a 5 m grid (lap turns +360 deg, anti-clockwise) and field speed minima; independent position match of the field's median line to the forward layout's (median 1.6 m, p95 3.8 m apart; forward = 4323 - reverse + 2 m) puts every window on the physical corner given in its notes",
+]
+notes = "Reverse layout: there is no official numbering, so the sheet carries names only (the forward layout's names for the same physical corners, matched by world position, not by mirrored metres). Windows are PnG's except Red Bull Mobile, whose end moved from 343 to 383 m (all 3 recorded minima sat at 342-363 m). The game's S2/S3 starts equal PnG's sector values to 0.55 m. Directions are measured on the reverse laps and are the mirror of the forward ones. Names: only the forward sheet's verified names may be shown. The 2026-10-11 cross-check found that the circuit (its 2025 media kit and website) no longer uses Red Bull Mobile (forward T10, now unnamed), Würth Kurve (forward T7, now 'Graz Turn') or Remus (forward T3, now 'Interwetten Turn' on the website), so those three windows were downgraded to seeded: physically confirmed, but not shown or voiced. PnG's 'Rauch' window is forward T6, which the circuit leaves unnamed (Rauch is forward T4), and PnG's 'Schlossgold' window is forward T4 (the circuit's 'Rauch Turn'): both stay seeded. PnG's three unnamed reverse corners (forward T8, T5 and T2) are not listed: a reverse turn needs a name. Verified with UDP format 2025 only."
+
+[[turns]]
+names = [{ text = "Red Bull Mobile", kind = "unclassified", sources = ["pits_n_giggles@72f78aa"] }]
+game_segment_m = [193, 383]
+direction = "left"
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-193550", "position-match:40-vs-17", "field-curvature:40"]
+notes = "Forward T10 driven backwards: braking from about 205-285 m, left steering 225-360 m, minima 110-156 km/h at 342-363 m. PnG's window ended at 343 m, so every recorded minimum sat on or past its end (learned 353 m was an edge match); the end now meets the Rindt window at 383 m. Position match: forward 3980-4130 m (forward T10). Downgraded to seeded by the 2026-10-11 cross-check: window and direction confirmed, but 'Red Bull Mobile' is no longer the circuit's name for this corner (see 17_austria.toml), so it is not shown or voiced."
+
+[[turns]]
+names = [{ text = "Rindt Kurve", kind = "official", sources = ["pits_n_giggles@72f78aa", "sheet:17_austria.toml"] }]
+game_segment_m = [383, 633]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-193550", "position-match:40-vs-17", "field-curvature:40"]
+notes = "Forward T9 driven backwards: part-throttle left at about 450-590 m (lateral g 2-2.9), minima 161-178 km/h at 497-541 m on two laps. Position match: forward 3691-3940 m (forward T9, with 40 m of T10)."
+
+[[turns]]
+names = [{ text = "Würth Kurve", kind = "unclassified", sources = ["pits_n_giggles@72f78aa"] }]
+game_segment_m = [1123, 1383]
+direction = "right"
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-193550", "position-match:40-vs-17", "field-curvature:40"]
+notes = "Forward T7 driven backwards: braking from about 1137-1155 m, right, minima 174-181 km/h at 1207-1312 m. Position match: forward 2941-3200 m (forward T7, with 40 m of T8). Downgraded to seeded by the 2026-10-11 cross-check: window and direction confirmed, but 'Würth Kurve' is no longer the circuit's name for this corner (see 17_austria.toml), so it is not shown or voiced."
+
+[[turns]]
+names = [{ text = "Rauch", kind = "unclassified" }]
+game_segment_m = [1413, 1743]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+notes = "Physically checked but name unresolved, so left seeded: forward T6 driven backwards (position match: forward 2581-2910 m), right, minima 138-159 km/h at 1489-1612 m (direction right). PnG names forward T6 'Rauch', but the FIA 2021 map and the circuit (2025 media kit, website) put 'Rauch' at forward T4 and leave T6 unnamed (see 17_austria.toml): PnG's name is wrong for this window."
+
+[[turns]]
+names = [{ text = "Schlossgold", kind = "unclassified" }]
+game_segment_m = [1983, 2233]
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+notes = "Physically checked but name unresolved, so left seeded: forward T4 driven backwards (position match: forward 2091-2341 m), left hairpin, minima 14-82 km/h at 2078-2162 m (two of three laps spun or locked up). PnG's 'Schlossgold' is not the circuit's name: the FIA 2021 map and the circuit (2025 media kit, website) call forward T4 'Rauch' (sponsor; not shown while the naming policy is open, see 17_austria.toml)."
+
+[[turns]]
+names = [{ text = "Remus", kind = "unclassified", sources = ["pits_n_giggles@72f78aa"] }]
+game_segment_m = [2823, 3083]
+direction = "left"
+voice_ok = false
+verified = false
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-193550", "position-match:40-vs-17", "field-curvature:40"]
+notes = "Forward T3 driven backwards, downhill: braking from about 2790 m, left to full lock, minima 43-57 km/h at 2922-2929 m (a second learned minimum at about 2991 m is the exit). Position match: forward 1241-1501 m (forward T3). Downgraded to seeded by the 2026-10-11 cross-check: window and direction confirmed, but 'Remus' is no longer the circuit's name for this corner (see 17_austria.toml), so it is not shown or voiced."
+
+[[turns]]
+names = [{ text = "Niki Lauda Kurve", kind = "official", sources = ["pits_n_giggles@72f78aa", "sheet:17_austria.toml"] }]
+game_segment_m = [3738, 3963]
+direction = "left"
+voice_ok = true
+verified = true
+sources = ["pits_n_giggles@72f78aa"]
+checked_against = ["capture:20261010-193550", "position-match:40-vs-17", "field-curvature:40"]
+notes = "Forward T1 driven backwards: braking from about 3690-3735 m, left, minima 76-120 km/h at 3809-3896 m. Position match: forward 361-586 m (forward T1)."
