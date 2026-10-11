@@ -1,0 +1,57 @@
+{
+ "_fixture": {
+  "source": "Hand-written from the JSON contract in the lane install design spec, section 7 (UpdateStatus); not a server response",
+  "recorded": "2026-10-11",
+  "what": "A git checkout one release behind.",
+  "tier": "contract"
+ },
+ "response": {
+  "schema": 1,
+  "current": "v0.1.0",
+  "install_kind": "git",
+  "mode": "auto",
+  "checked_unix": 1791817200,
+  "checking": false,
+  "update_available": true,
+  "latest": {
+   "version": "v0.2.0",
+   "published_at": "2026-10-12T09:30:00Z",
+   "url": "https://github.com/Moment-Up/pitwall/releases/tag/v0.2.0",
+   "prerelease": false,
+   "notes": [
+    "One-line installers for macOS, Linux and Windows",
+    "pitwall update: checks the download, backs up the database and restarts the background service",
+    "Settings › System shows when a new version is out",
+    "Drive › Coach keeps the next corner visible during a flashback",
+    "Review › Compare loads long sessions faster",
+    "Radio: the engineer waits for a straight before speaking",
+    "Doctor reports the last update check (offline)",
+    "Community files: issue forms, contributing guide and security policy"
+   ]
+  },
+  "newer": [
+   {
+    "version": "v0.2.0",
+    "published_at": "2026-10-12T09:30:00Z",
+    "url": "https://github.com/Moment-Up/pitwall/releases/tag/v0.2.0",
+    "prerelease": false,
+    "notes": [
+     "One-line installers for macOS, Linux and Windows",
+     "pitwall update: checks the download, backs up the database and restarts the background service",
+     "Settings › System shows when a new version is out",
+     "Drive › Coach keeps the next corner visible during a flashback",
+     "Review › Compare loads long sessions faster",
+     "Radio: the engineer waits for a straight before speaking",
+     "Doctor reports the last update check (offline)",
+     "Community files: issue forms, contributing guide and security policy"
+    ]
+   }
+  ],
+  "error": null,
+  "how": {
+   "command": "git pull",
+   "folder": "/Users/you/Projects/pitwall",
+   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating"
+  }
+ }
+}

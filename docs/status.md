@@ -200,6 +200,23 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
 - **Linux:** still not run with Pitwall itself. CI only builds the dashboards on Ubuntu; the release workflow's
   Linux `verify` job will be the first run of the server on Linux (synthetic telemetry, no game).
 
+<!-- --- lane install --- -->
+## One-line install, `pitwall update`, community files, README GIF (2026-10-11)
+- **One-line installer and `pitwall update`:** unit-tested; recorded-tested end to end on macOS Apple Silicon (local
+  fake GitHub, real packaged zip, Austria fixture streamed before and after an update).
+  `scripts/install/install.sh` (POSIX sh: tests under sh and dash), `install.ps1` (Windows PowerShell 5.1 and 7),
+  `src/pitwall/install/` (`pitwall install-finish`, `pitwall update [--check|--rollback]`), `/api/update` and
+  Settings › System's update card, doctor's offline `update` check, `PITWALL_UPDATE_CHECK=auto|manual|off`.
+- **Release workflow steps:** not yet run on GitHub until the first tag (installer assets, "What changed" from
+  CHANGELOG.md, the `--from-zip` install in verify, the `installer-smoke` job).
+- **Service repoint (launchd / Task Scheduler) and legacy adoption:** unit-tested with fakes only, not run on a real
+  service.
+- **Windows and Linux:** CI only.
+- **README GIF:** recorded tier (real PS5 capture streamed over loopback UDP), not live.
+- Community files: issue forms, PR template, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md. Capability statuses in
+  `capabilities.py` are unchanged.
+<!-- --- end lane install --- -->
+
 ## Next
 1. Dashboard v2 rig acceptance (spec 14.5) on the iPad with live PS5 telemetry. Remove `/next/` and the Svelte
    fallback a week after the switch-over (2026-10-18).

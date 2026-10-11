@@ -108,6 +108,20 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
 SQLite WAL (`data/pitwall.sqlite3`). Lap traces stored as compressed float32 npz blobs (~19 channels).
 Raw packets in `data/captures/*.pwcap` (zstd, ~2.5 MB per 7 min at 60 Hz) for reprocessing.
 
+## Install and update (`install/`)
+<!-- --- lane install --- -->
+The one-line installers (`scripts/install/install.sh`, `install.ps1`) download, check (SHA-256, zip paths) and
+unpack a release into `<home>/pitwall-<version>/`, run `uv sync`, and hand over to that version's own
+`pitwall install-finish` (`install/activate.py`): data folder (`<home>/data`, or a hand-installed release's adopted
+`data/`), SQLite online backup, `.env` carried forward with an absolute `PITWALL_DATA_DIR`, the launchd agent or the
+"Pitwall" task repointed (a service running from elsewhere is never touched; a failed health check puts everything
+back), then `install.json` (`install/layout.py`). `pitwall update` (`install/commands.py`) does the same in Python
+(`install/stage.py`). `install/check.py` keeps the update status (`<data>/update_check.json`) behind `/api/update`
+(`api/routes_update.py`: one GitHub request in a worker thread, never while telemetry is live) and doctor's
+offline "Updates" check. None of it touches ingest, analysis or the language model, and nothing installs from the
+dashboard.
+<!-- --- end lane install --- -->
+
 ## Security
 HTTP binds 0.0.0.0:8770; localhost is trusted, LAN clients need the access token (`pitwall token`), which
 becomes an httpOnly cookie. The dashboards' static files carry no data and are served without a token; every `/api`

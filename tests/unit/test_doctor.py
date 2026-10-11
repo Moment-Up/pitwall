@@ -770,3 +770,39 @@ def test_invalid_environment_is_reported_not_raised(monkeypatch: pytest.MonkeyPa
     assert doctor.main(False, False, echo=out.append) == 1
     assert "FAIL" in out[0]
     assert "http_port" in out[0]
+
+
+# --------------------------------------------------------------------------------------------- updates
+# --- lane install ---
+def _cache(repo: Path, **kw: Any) -> None:
+    data = {"schema": 1, "checked_unix": 1_000_000.0, "ok_unix": 1_000_000.0, "error": None, "releases": []}
+    data.update(kw)
+    (repo / "data").mkdir(exist_ok=True)
+    (repo / "data" / "update_check.json").write_text(json.dumps(data), encoding="utf-8")
+
+
+def test_update_check_reads_only_the_cache(repo: Path) -> None:
+    from pitwall.doctor import check_update
+
+    fake = Fake()
+    report = run(repo, fake)
+    assert by_id(report)["update"].status == "info" and by_id(report)["update"].detail == "not checked yet"
+    assert by_id(report)["update"].fix == "uv run pitwall update --check"
+    assert all(u.startswith("http://127.0.0.1:") for u in fake.http_calls)  # the doctor never asks GitHub
+    (repo / "RELEASE.txt").write_text("Pitwall v0.2.0\n", encoding="utf-8")
+    rel = {"version": "v0.3.0", "published_at": "2026-10-12T09:00:00Z", "prerelease": False, "notes": [], "url": ""}
+    _cache(repo, releases=[rel])
+    ctx = doctor._Ctx(settings(repo), host(repo), fake.probes(), repo, False, {}, None)
+    c = check_update(ctx, now=1_000_000.0 + 3 * 3600)
+    assert c.status == "info" and c.detail == "Pitwall v0.3.0 is available (you have v0.2.0; checked 3 h ago)"
+    assert c.fix == f'cd "{repo}" && uv run pitwall update'
+    _cache(repo, releases=[{**rel, "version": "v0.2.0"}])
+    c = check_update(ctx, now=1_000_000.0 + 120)
+    assert c.status == "ok" and c.detail == "up to date (v0.2.0; checked 2 min ago)"
+    _cache(repo, error="Couldn't reach GitHub (timed out).", checked_unix=1_000_000.0)
+    c = check_update(ctx, now=1_000_000.0 + 5)
+    assert c.status == "info" and c.detail.startswith("last check failed: Couldn't reach GitHub (timed out).")
+    format_text(run(repo, fake)).encode("ascii")
+
+
+# --- end lane install ---

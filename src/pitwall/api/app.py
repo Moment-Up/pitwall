@@ -741,6 +741,11 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_track import router as track_router
 
     app.include_router(track_router)
+    # --- lane install ---
+    from pitwall.api.routes_update import router as update_router
+
+    app.include_router(update_router)
+    # --- end lane install ---
 
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias

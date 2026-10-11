@@ -8,7 +8,13 @@
 #           it: `pitwall serve` must serve the prebuilt React dashboard and store and analyse a SYNTHETIC telemetry
 #           stream sent over loopback UDP. On Windows also install.ps1 (release-folder branch, Node.js off PATH),
 #           pitwall doctor and smoke.ps1 (the recorded F1 25 capture) from the unzipped folder.
-#   publish (ubuntu, tag pushes only, after every verify job passed)  create the GitHub Release with the zip + .sha256
+#   publish (ubuntu, tag pushes only, after every verify job passed)  create the GitHub Release with the zip + .sha256,
+#           the one-line installers (install.sh, install.ps1) and "What changed" from CHANGELOG.md
+#   installer-smoke (windows, macos, ubuntu; after publish)  the real one-line commands against the published release
+#
+# Installers (lane install): build copies scripts/install/install.{sh,ps1} into the artifact; verify also installs the
+# zip with them (--from-zip, --no-service) and checks `pitwall doctor`; stable tags need a CHANGELOG.md section
+# (scripts/changelog_section.py --require), pre-releases fall back to "## Unreleased".
 #
 # - Push a tag v* (e.g. v0.2.0, or v0.2.0-rc.1 for a pre-release; a tag with "-" makes a pre-release): all three.
 # - Run it by hand (Actions > release > Run workflow, or `gh workflow run release.yml -f version=v0.2.0-test.1`):
@@ -72,6 +78,18 @@ jobs:
         with:
           persist-credentials: false
 
+      # --- lane install ---
+      # Stable tags must have a "## vX.Y.Z - <date>" section in CHANGELOG.md; a pre-release uses "## Unreleased".
+      - name: What changed (CHANGELOG.md)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/release"
+          require=""
+          case "$VERSION" in *-*) ;; *) require="--require" ;; esac
+          python3 scripts/changelog_section.py --version "$VERSION" $require > "$RUNNER_TEMP/release/changes.md"
+          echo "What changed in $VERSION:"; cat "$RUNNER_TEMP/release/changes.md"
+      # --- end lane install ---
+
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
@@ -120,6 +138,11 @@ jobs:
           HEROUI_AUTH_TOKEN: ${{ secrets.HEROUI_AUTH_TOKEN }}
         run: uv run --no-project python scripts/package_release.py --version "$VERSION" --out "$RUNNER_TEMP/release"
 
+      # --- lane install ---
+      - name: Add the one-line installers
+        run: cp scripts/install/install.sh scripts/install/install.ps1 "$RUNNER_TEMP/release/"
+      # --- end lane install ---
+
       # A zip that fails verification can still be downloaded from the run and inspected; only publish waits for it.
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -127,6 +150,9 @@ jobs:
           path: |
             ${{ runner.temp }}/release/pitwall-*.zip
             ${{ runner.temp }}/release/pitwall-*.zip.sha256
+            ${{ runner.temp }}/release/install.sh
+            ${{ runner.temp }}/release/install.ps1
+            ${{ runner.temp }}/release/changes.md
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
@@ -254,6 +280,55 @@ jobs:
           powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/smoke.ps1 -HttpPort 8780 -UdpPort 20780 -SkipSynthetic -RequireDashboard
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # --- lane install ---
+      # The one-line installer, offline: --from-zip installs this zip into a fresh home folder (no service), then
+      # `pitwall doctor` from the new version folder must find the prebuilt dashboard and the managed data folder.
+      - name: One-line installer from the zip (install.sh --from-zip; macOS, Linux)
+        if: runner.os != 'Windows'
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          home="$RUNNER_TEMP/install-home"
+          sh "$RUNNER_TEMP/release/install.sh" --from-zip "$RUNNER_TEMP/release/pitwall-$VERSION.zip" \
+            --home "$home" --yes --no-service
+          dir="$home/pitwall-$VERSION"
+          test -f "$dir/.pitwall-ready"
+          test -f "$home/install.json"
+          cat "$home/install.json"
+          (cd "$dir" && .venv/bin/pitwall doctor --no-llm --json > "$RUNNER_TEMP/doctor.json") || true
+          python3 - "$RUNNER_TEMP/doctor.json" "$home/data" <<'PY'
+          import json, os, sys
+          report = json.load(open(sys.argv[1], encoding="utf-8"))
+          checks = {c["id"]: c for c in report["checks"]}
+          assert checks["dashboard"]["status"] == "ok", checks["dashboard"]
+          assert os.path.realpath(report["data_dir"]) == os.path.realpath(sys.argv[2]), (report["data_dir"], sys.argv[2])
+          print("doctor: dashboard ok, data_dir", report["data_dir"])
+          PY
+
+      - name: Windows - one-line installer from the zip (install.ps1 -FromZip; Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        timeout-minutes: 15
+        shell: powershell
+        run: |
+          $rel = Join-Path $env:RUNNER_TEMP 'release'
+          $installHome = Join-Path $env:RUNNER_TEMP 'install-home'
+          $zip = Join-Path $rel "pitwall-$($env:VERSION).zip"
+          powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $rel 'install.ps1') -FromZip $zip -InstallHome $installHome -Yes -Service no
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $dir = Join-Path $installHome "pitwall-$($env:VERSION)"
+          if (-not (Test-Path -LiteralPath (Join-Path $dir '.pitwall-ready'))) { throw 'install.ps1 did not finish the version folder' }
+          Get-Content -LiteralPath (Join-Path $installHome 'install.json')
+          Push-Location -LiteralPath $dir
+          $r = (& .\.venv\Scripts\pitwall.exe doctor --no-llm --json | Out-String) | ConvertFrom-Json
+          Pop-Location
+          $dash = @($r.checks | Where-Object { $_.id -eq 'dashboard' })[0]
+          if ($dash.status -ne 'ok') { throw "doctor dashboard: $($dash.status) - $($dash.detail)" }
+          $want = [IO.Path]::GetFullPath((Join-Path $installHome 'data'))
+          if ([IO.Path]::GetFullPath([string]$r.data_dir) -ne $want) { throw "doctor data_dir $($r.data_dir), expected $want" }
+          Write-Output "doctor: dashboard ok, data_dir $($r.data_dir)"
+          exit 0
+      # --- end lane install ---
+
   publish:
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [build, verify]
@@ -279,12 +354,19 @@ jobs:
           zip="release/pitwall-$VERSION.zip"
           sha="release/pitwall-$VERSION.zip.sha256"
           test -f "$zip" && test -f "$sha"
+          test -f release/install.sh && test -f release/install.ps1
           (cd release && sha256sum -c "pitwall-$VERSION.zip.sha256")
           digest=$(cut -d' ' -f1 "$sha")
           cat > notes.md <<'EOF'
           ## Pitwall __VERSION__
 
-          **Download `pitwall-__VERSION__.zip`** (below), unzip it, and follow
+          **Install with one command.** macOS and Linux:
+          `curl -fsSL https://github.com/__REPO__/releases/latest/download/install.sh | sh`.
+          Windows PowerShell: `irm https://github.com/__REPO__/releases/latest/download/install.ps1 | iex`.
+          Already installed with it? Run `uv run pitwall update` in your Pitwall folder.
+          See [Install with one command](https://github.com/__REPO__/blob/__VERSION__/docs/install.md#install-with-one-command).
+
+          Or **download `pitwall-__VERSION__.zip`** (below), unzip it, and follow
           [Install from a release](https://github.com/__REPO__/blob/__VERSION__/docs/install.md#install-from-a-release)
           in `docs/install.md`.
 
@@ -310,12 +392,65 @@ jobs:
           EOF
           sed -i -e "s|__VERSION__|$VERSION|g" -e "s|__REPO__|$REPO|g" \
             -e "s|__SHA256__|$digest|g" -e "s|__SHA__|$GITHUB_SHA|g" notes.md
+          # "What changed" (CHANGELOG.md, checked in build); `pitwall update` shows these bullet points.
+          if [ -s release/changes.md ]; then
+            { printf '\n## What changed\n\n'; cat release/changes.md; } >> notes.md
+          fi
           prerelease=()
           case "$VERSION" in *-*) prerelease=(--prerelease) ;; esac
           if gh release view "$VERSION" --repo "$REPO" > /dev/null 2>&1; then
             echo "Release $VERSION exists: replacing its assets."
-            gh release upload "$VERSION" "$zip" "$sha" --repo "$REPO" --clobber
+            gh release upload "$VERSION" "$zip" "$sha" release/install.sh release/install.ps1 --repo "$REPO" --clobber
           else
-            gh release create "$VERSION" "$zip" "$sha" --repo "$REPO" --verify-tag \
+            gh release create "$VERSION" "$zip" "$sha" release/install.sh release/install.ps1 --repo "$REPO" --verify-tag \
               --title "Pitwall $VERSION" --notes-file notes.md "${prerelease[@]}"
           fi
+
+  # --- lane install ---
+  # The real one-line commands against the release just published (pinned with --version, so a pre-release works
+  # too), on all three systems, without a background service. No setup-uv: the installer installs uv itself (--yes),
+  # as it would for someone who has never used uv. On Windows this also proves that `irm` of a release asset returns
+  # a string in Windows PowerShell 5.1 (what `irm ... | iex` needs).
+  installer-smoke:
+    name: installer smoke (${{ matrix.os }})
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [build, publish]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - name: curl | sh (macOS, Linux)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$'
+          curl -fsSL "https://github.com/$GITHUB_REPOSITORY/releases/download/$VERSION/install.sh" \
+            | sh -s -- --version "$VERSION" --no-service --yes --home "$RUNNER_TEMP/install-home"
+          test -f "$RUNNER_TEMP/install-home/pitwall-$VERSION/.pitwall-ready"
+          cat "$RUNNER_TEMP/install-home/install.json"
+
+      - name: irm | iex (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          if ($env:VERSION -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$') { throw 'bad version' }
+          $env:PITWALL_INSTALL_YES = '1'
+          $env:PITWALL_INSTALL_VERSION = $env:VERSION
+          $env:PITWALL_INSTALL_SERVICE = 'no'
+          $env:PITWALL_INSTALL_HOME = Join-Path $env:RUNNER_TEMP 'install-home'
+          $script = irm "https://github.com/$($env:GITHUB_REPOSITORY)/releases/download/$($env:VERSION)/install.ps1"
+          if (-not ($script -is [string])) { throw "irm returned $($script.GetType().FullName), not a string" }
+          $script | iex
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path -LiteralPath (Join-Path $env:PITWALL_INSTALL_HOME "pitwall-$($env:VERSION)\.pitwall-ready"))) { throw 'not installed' }
+          Get-Content -LiteralPath (Join-Path $env:PITWALL_INSTALL_HOME 'install.json')
+          exit 0
+  # --- end lane install ---

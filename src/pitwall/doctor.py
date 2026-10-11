@@ -7,6 +7,9 @@ port) and - unless ``--no-llm`` - to the AI provider's base URL from the setting
 them for an instant, without ``SO_REUSEADDR`` on Windows and without it for UDP anywhere, so a program already
 listening is never displaced; when a Pitwall that owns them is running, its own status is reported instead.
 
+Updates (``update``): read from the cache ``pitwall update --check`` and Settings > System write
+(``<data dir>/update_check.json``); the doctor never asks GitHub itself.
+
 Secrets are never read or printed: the access token is only reported present/absent (``uv run pitwall token``
 shows it), API keys are not looked at (the AI check only tests that the endpoint answers), HEROUI_AUTH_TOKEN is
 not touched.
@@ -1319,6 +1322,55 @@ def check_tailscale(ctx: _Ctx) -> Check:
     )
 
 
+# --- lane install ---
+def _ago(seconds: float) -> str:
+    if seconds < 90:
+        return "just now"
+    if seconds < 90 * 60:
+        return f"{round(seconds / 60)} min ago"
+    if seconds < 36 * 3600:
+        return f"{round(seconds / 3600)} h ago"
+    return f"{round(seconds / 86400)} days ago"
+
+
+def check_update(ctx: _Ctx, now: float | None = None) -> Check:
+    """Offline: the update cache only (``pitwall update --check`` and Settings > System write it)."""
+    import time
+
+    from pitwall.install.check import compute_status, read_cache
+    from pitwall.install.versions import current_version, install_kind
+
+    cache = read_cache(ctx.data_dir)
+    current = current_version(ctx.repo_root)
+    kind = install_kind(ctx.repo_root)
+    st = compute_status(
+        cache, current=current, kind=kind, mode="auto", root=ctx.repo_root, platform=_platform_of(ctx.host)
+    )
+    how = st["how"]["command"] if st["how"] else "see docs/install.md, Updating"
+    if cache.checked_unix is None:
+        return _check("update", "Updates", "info", "not checked yet", "uv run pitwall update --check")
+    ago = _ago((time.time() if now is None else now) - cache.checked_unix)
+    if cache.error:
+        return _check(
+            "update", "Updates", "info", f"last check failed: {cache.error} ({ago})", "uv run pitwall update --check"
+        )
+    latest = st["latest"]
+    if st["update_available"] and latest:
+        return _check(
+            "update",
+            "Updates",
+            "info",
+            f"Pitwall {latest['version']} is available (you have {current}; checked {ago})",
+            how,
+        )
+    return _check("update", "Updates", "ok", f"up to date ({current}; checked {ago})")
+
+
+def _platform_of(h: Host) -> str:
+    return {"Darwin": "darwin", "Windows": "win32", "Linux": "linux"}.get(h.system, h.system)
+
+
+# --- end lane install ---
 def _json_obj(text: str) -> dict[str, Any]:
     try:
         data = json.loads(text)
@@ -1378,6 +1430,7 @@ def run_doctor(
     checks.append(check_llm(ctx))
     checks.extend(check_voice(ctx, facts))
     checks.append(check_tailscale(ctx))
+    checks.append(check_update(ctx))  # --- lane install ---
     conn = (ctx.server or {}).get("connection") or {}
     return Report(
         system=h.info(),

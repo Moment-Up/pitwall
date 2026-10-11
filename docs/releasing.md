@@ -60,6 +60,8 @@ Then, before the first tag:
    release workflow runs only for tags pushed to this repository and when started by hand.
 3. **Optional:** a tag ruleset (Settings › Rules) that lets only the owner create `v*` tags, so nobody else can start
    a release.
+4. **Turn on private vulnerability reporting** (Settings › Code security › Private vulnerability reporting), so the
+   link in `SECURITY.md` and in the issue chooser (`.github/ISSUE_TEMPLATE/config.yml`) opens a private report.
 
 ## Before you release
 
@@ -73,6 +75,12 @@ Then, before the first tag:
    `/api/health` and in `RELEASE.txt`), and [status.md](status.md) is up to date.
 5. `docs/install.md` still has its `## Install from a release` section: `RELEASE.txt` and the release notes link to
    it, and `package_release.py` refuses to package without it.
+6. **CHANGELOG.md has the release's section.** Rename `## Unreleased` to `## v0.2.0 - 2026-10-20` (the tag and the
+   date), add a new empty `## Unreleased` above it, and commit. A stable tag without its section stops the workflow
+   at its first steps (`scripts/changelog_section.py --require`); a pre-release (`v0.2.0-rc.1`) uses `## Unreleased`.
+   Write the bullet points for drivers: the release notes show them under "What changed", and so do
+   `pitwall update` and Settings › System before someone updates. Check the text with
+   `python3 scripts/changelog_section.py --version v0.2.0 --require`.
 
 ## Cut a release
 
@@ -101,7 +109,9 @@ notes tell people to use `pitwall-<version>.zip`.
    `scripts/scrub_capture.py --check`: no player's online ID or name, no LAN address in its metadata.
 5. Runs `scripts/package_release.py`, which checks everything again and writes the zip and `.sha256`.
 6. Uploads both as the workflow artifact `pitwall-<version>` (kept 30 days; on a public repository, anyone signed in
-   to GitHub can download a run's artifacts while they are kept).
+   to GitHub can download a run's artifacts while they are kept), with the one-line installers
+   (`scripts/install/install.sh`, `scripts/install/install.ps1`) and the release's "What changed" text
+   (`changes.md`, from CHANGELOG.md; checked before the dashboard is built).
 
 **verify** (a matrix: `windows-latest`, `macos-latest`, `ubuntu-latest`; no checkout, no token). Each runner uses
 only the artifact, as a user would:
@@ -117,15 +127,29 @@ only the artifact, as a user would:
    SYNTHETIC stream sent over loopback UDP, then stop cleanly with an intact database.
 4. Windows only: `install.ps1 -NonInteractive` from the release folder with Node.js taken off `PATH` (it must keep
    `web-react/dist` unchanged and build nothing), `pitwall doctor`, and `smoke.ps1` with the recorded F1 25 capture.
+5. The one-line installer from the zip, offline: `sh install.sh --from-zip ... --home <temp> --yes --no-service`
+   (Windows: `install.ps1 -FromZip ... -Yes -Service no` in Windows PowerShell 5.1), then `pitwall doctor` from the
+   new version folder must report the prebuilt dashboard and the managed data folder `<home>/data`.
 
 This shows the zip installs and runs on GitHub's runners. It is not a test with a game: Windows stays CI-tested on
 Windows (GitHub runners), not yet validated live with a game on a Windows PC.
 
 **publish** (Ubuntu, `contents: write`, tag pushes only, after every verify job passed): downloads the artifact,
-checks the SHA-256 again and runs `gh release create` with the zip, the `.sha256` and notes that say: download the
-zip, unzip it, follow install.md "Install from a release"; the dashboard inside is prebuilt; the zip was verified on
-Windows, macOS and Linux runners (not a game test); HeroUI Pro is used under licence. Re-running the workflow for a
-tag that already has a release replaces its two files and keeps the notes.
+checks the SHA-256 again and runs `gh release create` with four files (the zip, the `.sha256`, `install.sh` and
+`install.ps1`) and notes that say: install with one command (or download the zip and follow install.md "Install
+from a release"); the dashboard inside is prebuilt; the zip was verified on Windows, macOS and Linux runners (not a
+game test); HeroUI Pro is used under licence; then "What changed" from CHANGELOG.md. Re-running the workflow for a
+tag that already has a release replaces its four files and keeps the notes.
+
+**installer-smoke** (Windows, macOS, Linux; after publish): runs the real one-line commands against the published
+release, pinned to the tag (`curl -fsSL .../releases/download/<tag>/install.sh | sh -s -- --version <tag>
+--no-service --yes`; on Windows `irm` + `iex` in Windows PowerShell 5.1, which also proves `irm` returns the script
+as text). It runs without uv preinstalled, so it also covers the installer installing uv. The `releases/latest/...`
+URLs in the docs point at the newest stable release, so a pre-release is only reachable with `--version`.
+
+The one-line installers need `pitwall install-finish`, which exists from v0.2.0: the first release they can install
+is v0.2.0 (they refuse older tags with exit code 2). Test packages for the installers need a version label of at
+least `v0.2.0-...`, for example `v0.2.0-test.1`.
 
 ## Test without releasing
 
@@ -193,6 +217,19 @@ every condition below applies to every release:
 Pitwall itself does not have an open-source licence yet: the README's
 [Licence and credits](../README.md#licence-and-credits) says what people may do with it. Choosing a licence is the
 owner's decision; it never covers HeroUI Pro.
+
+## Future work: signed native installers
+
+The one-line installers check a SHA-256 published in the same release: that proves a download is complete and
+unchanged, not who made it. Options for later, none of them set up yet:
+
+- **macOS `.pkg` or `.dmg`**: needs an Apple Developer ID certificate and notarisation by Apple, or Gatekeeper
+  blocks it.
+- **Windows `.msi` or MSIX**: needs Authenticode signing (a code-signing certificate, or Azure Trusted Signing), or
+  SmartScreen warns about it.
+- **Package managers**: a Homebrew tap and a winget manifest would give signed or reviewed installs and updates.
+- **Sigstore / GitHub artifact attestations** (`actions/attest-build-provenance`): a verifiable statement that a zip
+  was built by this repository's release workflow, which `pitwall update` could check before installing.
 
 ## A bad release
 

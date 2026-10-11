@@ -16,6 +16,7 @@ import { grouped } from "../../lib/format";
 import { router } from "../../lib/router";
 import type { PageProps } from "../../routes";
 import { CapabilitySheet } from "./system/CapabilitySheet";
+import { UpdateCard, UpdateChip } from "./system/UpdateCard"; // lane install: update status
 import {
   capabilityRows,
   captureView,
@@ -363,6 +364,7 @@ export function SystemPage(_props: PageProps) {
         </Card>
 
         <div className="grid min-w-0 grid-cols-1 gap-4">
+          <UpdateCard /* lane install */ />
           <Card>
             <Card.Header>
               <Card.Title className="text-base font-semibold">Server</Card.Title>
@@ -371,7 +373,7 @@ export function SystemPage(_props: PageProps) {
               {h ? (
                 <Facts
                   rows={[
-                    ["Version", <span className="font-mono">{h.version}</span>],
+                    ["Version", <span className="inline-flex flex-wrap items-center gap-2"><span className="font-mono">{h.version}</span><UpdateChip /* lane install */ /></span>],
                     ["Telemetry", telemetryText(h)],
                     ["UDP listener", udpText(h)],
                     ["Replay", replayLine ?? <Unknown label="no replay" />],

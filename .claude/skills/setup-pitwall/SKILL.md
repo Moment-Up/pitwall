@@ -245,7 +245,16 @@ arrived in the last 2 s; Windows `service.ps1 stop` refuses while live, demo inc
 
 ## Updating
 
-- **Release -> newer release** (ask before each action; nobody driving): download, verify and unzip the new release
+- **Installed with the one-line installer, or a release folder** (`install.json` in the parent folder, or
+  `RELEASE.txt` and no `.git`; ask first, nobody driving): in that folder run `uv run pitwall update` (`--check`
+  only looks; the user answers its questions, or add `--yes` once they agreed). It downloads and verifies the new
+  release, backs up the database, keeps the data folder and `.env`, and moves the background service. Exit code 3
+  means someone is driving: try again later, never `--force` anything. A hand-installed release's `data` folder is
+  moved to the parent folder's `data` on the first update, after the user agrees. `uv run pitwall update --rollback`
+  goes back. Docs: `docs/install.md`, "With pitwall update".
+- **From v0.1.0** (no `pitwall update` yet): offer the one-line installer once (`docs/install.md`, "Install with one
+  command") with `--home` set to the folder that holds the release folder; it offers to move the old `data` folder.
+- **Release -> newer release by hand** (if the user prefers) (ask before each action; nobody driving): download, verify and unzip the new release
   next to the current one ([Download the latest release](#download-the-latest-release)). Stop Pitwall (Windows: in
   the old folder `service.ps1 uninstall` if the service is installed; macOS: `scripts/pitwall-service.sh uninstall`).
   Do not run `uv sync`, `install.ps1` or Pitwall in the new folder before the move. If the new folder already has a

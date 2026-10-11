@@ -201,6 +201,14 @@ driving; on for beginners by default).
 Server health, the model server, your captures with Replay buttons, the synthetic demo, the game support matrix
 with its evidence, and the version.
 
+<!-- --- lane install --- -->
+**Updates.** Whether a newer Pitwall is out, what changed in it, and the one command that updates this computer
+(`uv run pitwall update`, or `git pull` in a git checkout), with a "Check now" button. Pitwall asks GitHub at most once
+a day, never while someone is driving (`PITWALL_UPDATE_CHECK=auto`; `manual` or `off` in `.env`). The page never
+updates anything itself: updating replaces the server's own files, so it is always done in a terminal on the computer
+running Pitwall. Drive never shows any of this.
+<!-- --- end lane install --- -->
+
 ## How the coach decides what to say
 
 Everything here is fixed rules applied to your telemetry. No language model is involved.
