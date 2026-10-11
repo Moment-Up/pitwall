@@ -126,9 +126,14 @@ function onePerCorner(items: readonly CoachingItem[]): CoachingItem[] {
   return out;
 }
 
-/** "Work on": corrections, ranked, one per corner. */
-export function workOnItems(analysis: Pick<SessionAnalysis, "observations" | "comparisons"> | null | undefined): CoachingItem[] {
-  return onePerCorner(rankItems(groupObservations(analysis).filter((i) => !i.positive)));
+/** "Work on": corrections, ranked, one per corner. `exclude` (lane motivation): the `corner:kind` key a card above
+ * already shows ("Today's 3 things"), left out of the list; its corner is not refilled by another point. */
+export function workOnItems(
+  analysis: Pick<SessionAnalysis, "observations" | "comparisons"> | null | undefined,
+  exclude?: string | null,
+): CoachingItem[] {
+  const items = onePerCorner(rankItems(groupObservations(analysis).filter((i) => !i.positive)));
+  return exclude ? items.filter((i) => i.key !== exclude) : items;
 }
 
 /** "Went well": positive observations, ranked, one per corner, at most `max` (3). */

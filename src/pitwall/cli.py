@@ -216,6 +216,9 @@ def ask(
     sa = SessionAnalyzer(db).analyse(sid)
     assert sa is not None
     sheet = build_fact_sheet(sa)
+    from pitwall.motivation.facts import add_motivation_facts  # lane motivation
+
+    add_motivation_facts(sheet, db, sa)
 
     use_llm = llm and s.llm_enabled  # PITWALL_LLM_ENABLED=false: deterministic answers, no request to the endpoint
     if llm and not s.llm_enabled:
@@ -690,6 +693,110 @@ def game_clear() -> None:
     else:
         SettingsStore(s.data_dir / "settings.json").replace(games.SECTION, {})
     typer.echo("No game selected.")
+
+
+# ---------------------------------------------------------------- lane motivation: goals, recap, digest (read-only)
+def _motivation_driver(db: object, driver: str | None) -> int:
+    """A driver id from ``--driver NAME|ID``, else the driver in the seat."""
+    from pitwall.storage import repo
+    from pitwall.storage.db import Database
+
+    assert isinstance(db, Database)
+    with db.read() as c:
+        if driver is None:
+            did = repo.active_driver_id(c)
+        elif driver.isdigit():
+            row = repo.get_driver(c, int(driver))
+            did = None if row is None else int(row["id"])
+        else:
+            row = repo.find_driver_by_name(c, driver)
+            did = None if row is None else int(row["id"])
+    if did is None:
+        typer.echo(f"no driver {driver!r}" if driver else "no driver in the seat", err=True)
+        raise typer.Exit(1)
+    return did
+
+
+@app.command()
+def goals(
+    driver: Annotated[str | None, typer.Option("--driver", help="Driver name or id (default: in the seat)")] = None,
+    suggest: Annotated[bool, typer.Option("--suggest", help="Also list suggested goals")] = False,
+    game: str | None = None,
+    track: Annotated[str | None, typer.Option("--track", help="Track id for suggestions")] = None,
+    car: Annotated[str | None, typer.Option("--car", help="Car id for suggestions")] = None,
+) -> None:
+    """List a driver's goals with their progress (and suggestions with --suggest)."""
+    from pitwall.motivation.service import MotivationService
+    from pitwall.storage.db import Database
+
+    db = Database(get_settings().db_path)
+    svc = MotivationService(db)
+    did = _motivation_driver(db, driver)
+    res = svc.goals_response(did, ("active", "achieved", "archived"))
+    if not res["goals"]:
+        typer.echo("no goals")
+    for g in res["goals"]:
+        where = f" ({g['scope_text']})" if g["scope_text"] else ""
+        typer.echo(f"[{g['status']:8}] #{g['id']} {g['title']}{where}: {g['progress']['text']}")
+    if suggest:
+        sug = svc.suggestions_response(did, game=game, track_id=track, car=car)
+        typer.echo("\nSuggested:")
+        for s_ in sug["suggestions"]:
+            where = f" ({s_['scope_text']})" if s_["scope_text"] else ""
+            typer.echo(f"  {s_['title']}{where}: {s_['basis']['text']}")
+        if sug["none_reason"]:
+            typer.echo(f"  ({sug['none_reason']})")
+
+
+@app.command()
+def recap(session_id: Annotated[str | None, typer.Argument()] = None) -> None:
+    """Print a session's 3 things (went well, one to work on, progress); default: the seated driver's latest."""
+    from pitwall.motivation.service import MotivationService
+    from pitwall.storage import repo
+    from pitwall.storage.db import Database
+
+    db = Database(get_settings().db_path)
+    with db.read() as c:
+        sid = session_id or repo.latest_session_id(c, driver_id=repo.active_driver_id(c))
+    if sid is None:
+        typer.echo("no sessions recorded", err=True)
+        raise typer.Exit(1)
+    out = MotivationService(db).recap(sid)
+    if out is None:
+        typer.echo(f"session {sid} not found", err=True)
+        raise typer.Exit(1)
+    simple = bool(out["simple"])
+    for key, label in (("went_well", "Went well"), ("work_on", "One to work on"), ("progress", "Progress")):
+        thing = out["things"][key]
+        if thing is None:
+            typer.echo(f"{label}: - ({out['why_empty'][key]})")
+        else:
+            typer.echo(f"{label}: {thing['text_simple'] if simple else thing['text']}")
+            if thing.get("evidence"):
+                typer.echo(f"    {thing['evidence']}")
+
+
+@app.command()
+def digest(
+    driver: Annotated[str | None, typer.Option("--driver", help="Driver name or id (default: in the seat)")] = None,
+    week: Annotated[str | None, typer.Option("--week", help="Any date in the week, YYYY-MM-DD")] = None,
+    html: Annotated[Path | None, typer.Option("--html", help="Write the printable page here")] = None,
+) -> None:
+    """Print a driver's weekly digest as Markdown, or write the printable HTML page."""
+    from datetime import date
+
+    from pitwall.motivation.html import digest_html
+    from pitwall.motivation.service import MotivationService
+    from pitwall.storage.db import Database
+
+    db = Database(get_settings().db_path)
+    did = _motivation_driver(db, driver)
+    d = MotivationService(db).digest(did, date.fromisoformat(week) if week else None)
+    if html is not None:
+        html.write_text(digest_html(d), encoding="utf-8")
+        typer.echo(f"wrote {html}")
+    else:
+        typer.echo(d["markdown"])
 
 
 @app.callback()

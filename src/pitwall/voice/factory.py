@@ -23,6 +23,7 @@ from pitwall.config import Settings
 from pitwall.core.live import LiveState
 from pitwall.core.session_analysis import SessionAnalyzer
 from pitwall.drivers import DriverService
+from pitwall.motivation.facts import add_motivation_facts  # lane motivation
 from pitwall.storage import repo
 from pitwall.storage.db import Database
 from pitwall.voice.hub import RadioHub
@@ -105,7 +106,9 @@ def build_radio_hub(
         if sa is None:
             return None
         snap = live.snapshot() if live.session_id == sid else None
-        return build_fact_sheet(sa, snap)
+        sheet = build_fact_sheet(sa, snap)
+        add_motivation_facts(sheet, db, sa)  # lane motivation: goals, progress
+        return sheet
 
     return RadioHub(
         live=live,

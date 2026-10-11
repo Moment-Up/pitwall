@@ -1,0 +1,150 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/drivers/2/badges (section 12: under 1:11 at Austria, clean streaks 3 and 5, a clean race, a busy week, first clean laps; no PB or weekly streak yet)",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "driver_id": 2,
+  "simple": false,
+  "include_synthetic": false,
+  "badges": [
+   {
+    "key": "first_clean_lap:f1_25:f1:13",
+    "kind": "first_clean_lap",
+    "level": null,
+    "title": "First clean lap at Suzuka",
+    "title_simple": "Your first clean lap at Suzuka",
+    "detail": null,
+    "earned_unix": 1791656101.0,
+    "session_id": "9a8b7c6d5e40",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "clean_streak:3",
+    "kind": "clean_streak",
+    "level": 3,
+    "title": "3 clean laps in a row",
+    "title_simple": "3 laps in a row that all counted",
+    "detail": null,
+    "earned_unix": 1791657350.0,
+    "session_id": "9a8b7c6d5e4f",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "clean_race:no_penalties",
+    "kind": "clean_race",
+    "level": "no_penalties",
+    "title": "Race finished with no penalties",
+    "title_simple": "A whole race with no penalties",
+    "detail": null,
+    "earned_unix": 1791657350.0,
+    "session_id": "9a8b7c6d5e4f",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "busy_week:3",
+    "kind": "busy_week",
+    "level": 3,
+    "title": "3 sessions in one week",
+    "title_simple": "3 drives in one week",
+    "detail": null,
+    "earned_unix": 1791660478.0,
+    "session_id": "1b2c3d4e5f60",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "first_clean_lap:f1_25:f1:17",
+    "kind": "first_clean_lap",
+    "level": null,
+    "title": "First clean lap at Austria",
+    "title_simple": "Your first clean lap at Austria",
+    "detail": null,
+    "earned_unix": 1791667069.0,
+    "session_id": "4d2c1a0b9e8f",
+    "lap_id": null,
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "synthetic": false
+   },
+   {
+    "key": "clean_streak:5",
+    "kind": "clean_streak",
+    "level": 5,
+    "title": "5 clean laps in a row",
+    "title_simple": "5 laps in a row that all counted",
+    "detail": null,
+    "earned_unix": 1791667069.0,
+    "session_id": "4d2c1a0b9e8f",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "under_time:f1_25:f1:17:f1:team:7:71000",
+    "kind": "under_time",
+    "level": 71000,
+    "title": "First time under 1:11 at Austria",
+    "title_simple": "You beat 1:11 at Austria for the first time",
+    "detail": "1:10.549 in the Haas",
+    "earned_unix": 1791668489.0,
+    "session_id": "332904dbe3de",
+    "lap_id": null,
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "synthetic": false
+   },
+   {
+    "key": "first_clean_lap:gt7:gt7:loc:351",
+    "kind": "first_clean_lap",
+    "level": null,
+    "title": "First clean lap at Brands Hatch",
+    "title_simple": "Your first clean lap at Brands Hatch",
+    "detail": null,
+    "earned_unix": 1791717176.0,
+    "session_id": "c0ffee000001",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   }
+  ],
+  "streaks": {
+   "week_start": "2026-10-05",
+   "weekly": {
+    "current_weeks": 1,
+    "best_weeks": 1,
+    "this_week_sessions": 17
+   },
+   "clean_laps": {
+    "best": 6,
+    "best_session_id": "4d2c1a0b9e8f",
+    "last_session": 2,
+    "last_session_id": "c0ffee000002"
+   },
+   "pb": []
+  }
+ }
+}

@@ -34,6 +34,7 @@ from pitwall.core.runtime import Runtime
 from pitwall.core.session_analysis import SessionAnalyzer
 from pitwall.ingest.capture import CaptureReader
 from pitwall.model.telemetry import TrackZones
+from pitwall.motivation.facts import add_motivation_facts  # lane motivation
 from pitwall.storage import repo
 
 if TYPE_CHECKING:
@@ -546,6 +547,7 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             raise HTTPException(404, "session not found")
         live_snap = r.live.snapshot() if r.live.session_id == sid else None
         sheet = build_fact_sheet(sa, live_snap)
+        await asyncio.to_thread(add_motivation_facts, sheet, r.db, sa)  # lane motivation: goals, progress
         history: list[dict[str, str]] = []
         if settings.store_conversations:
             with r.db.read() as c:
@@ -583,7 +585,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             raise HTTPException(404, "session not found")
         r = rt(request)
         live_snap = r.live.snapshot() if r.live.session_id == session_id else None
-        return [asdict(f) for f in build_fact_sheet(sa, live_snap).facts]
+        sheet = build_fact_sheet(sa, live_snap)
+        await asyncio.to_thread(add_motivation_facts, sheet, r.db, sa)  # lane motivation: goals, progress
+        return [asdict(f) for f in sheet.facts]
 
     # ------------------------------------------------------------------ connect page
     @app.get("/api/connect")
@@ -797,6 +801,10 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_technique import router as technique_router  # feat/technique
 
     app.include_router(technique_router)  # feat/technique
+
+    from pitwall.api.routes_motivation import router as motivation_router  # lane motivation
+
+    app.include_router(motivation_router)
 
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias

@@ -1,0 +1,154 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/sessions/332904dbe3de/recap for an intermediate driver (section 12.8: PB, Turn 6, sessions this week)",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "session_id": "332904dbe3de",
+  "driver_id": 1,
+  "driver_name": "Sam",
+  "simple": false,
+  "synthetic": false,
+  "replay": false,
+  "ended": true,
+  "laps": 10,
+  "clean_laps": 9,
+  "things": {
+   "went_well": {
+    "kind": "went_well",
+    "source": "pb",
+    "text": "New personal best at Austria: 1:10.549 on lap 64, 1.196 s faster than before.",
+    "text_simple": "Your fastest lap ever at Austria: 1:10.549.",
+    "evidence": null,
+    "corner": null,
+    "corner_label": null,
+    "lap_id": 52,
+    "lap_number": 64,
+    "observation_kind": null,
+    "observation_key": null,
+    "goal_id": null,
+    "values": {
+     "lap_ms": 70549,
+     "gain_ms": 1196
+    }
+   },
+   "work_on": {
+    "kind": "work_on",
+    "source": "observation",
+    "text": "Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h), losing 0.23 s through the corner.",
+    "text_simple": "Turn 6: you were 9 km/h slower at the slowest point of the corner.",
+    "evidence": "Seen on 9 of 9 laps compared with your reference",
+    "corner": "T4",
+    "corner_label": "T6",
+    "lap_id": 59,
+    "lap_number": 71,
+    "observation_kind": "low_min_speed",
+    "observation_key": "T4:low_min_speed",
+    "goal_id": null,
+    "values": {}
+   },
+   "progress": {
+    "kind": "progress",
+    "source": "sessions_week",
+    "text": "Session 12 this week, 41 laps so far.",
+    "text_simple": "Your 12th drive this week.",
+    "evidence": null,
+    "corner": null,
+    "corner_label": null,
+    "lap_id": null,
+    "lap_number": null,
+    "observation_kind": null,
+    "observation_key": null,
+    "goal_id": null,
+    "values": {
+     "sessions": 12,
+     "laps": 41
+    }
+   }
+  },
+  "why_empty": {
+   "went_well": null,
+   "work_on": null,
+   "progress": null
+  },
+  "goals_achieved": [],
+  "goals_progress": [
+   {
+    "id": 4,
+    "driver_id": 1,
+    "kind": "lap_time",
+    "status": "active",
+    "target": 70000,
+    "params": {},
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "title": "A lap under 1:10.000",
+    "title_simple": "Beat 1:10.000",
+    "scope_text": "Austria \u00b7 Haas",
+    "source": "suggested",
+    "basis": {
+     "kind": "ideal_lap",
+     "text": "Your best sectors here add up to 1:09.962, 0.587 s quicker than your best lap (1:10.549). Your last new best was 1.196 s quicker than the one before. Target: your best minus the smaller step, rounded to a tenth.",
+     "text_simple": "Your best bits of the lap add up to 1:09.962, so 1:10.000 is within reach.",
+     "values": {
+      "pb_ms": 70549,
+      "ideal_ms": 69962,
+      "recent_gain_ms": 1196,
+      "step_ms": 587
+     },
+     "session_ids": [
+      "4d2c1a0b9e8f",
+      "332904dbe3de"
+     ]
+    },
+    "created_unix": 1791669600.0,
+    "achieved": null,
+    "progress": {
+     "baseline": 70549,
+     "current": 70301,
+     "target": 70000,
+     "fraction": 0.4517,
+     "to_go": 301,
+     "met": false,
+     "best_session_id": "332904dbe3de",
+     "best_lap_id": 61,
+     "sessions_since": 1,
+     "text": "0.301 s to go \u00b7 best since you set it 1:10.301",
+     "text_simple": "About 0.3 s to go"
+    }
+   }
+  ],
+  "badges_earned": [
+   {
+    "key": "under_time:f1_25:f1:17:f1:team:7:71000",
+    "kind": "under_time",
+    "level": 71000,
+    "title": "First time under 1:11 at Austria",
+    "title_simple": "You beat 1:11 at Austria for the first time",
+    "detail": "1:10.549 in the Haas",
+    "earned_unix": 1791668489.0,
+    "session_id": "332904dbe3de",
+    "lap_id": null,
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "synthetic": false
+   }
+  ]
+ }
+}

@@ -24,6 +24,7 @@
 //  * Incident chips need the event to concern the player (LiveEvent.player === true), because F1 reports every
 //    car's penalties, collisions and fastest laps. Flashback (player only by nature) shows unless player === false.
 
+import type { MotivationNote } from "../endpoints/motivation";
 import { badgeFor } from "../live";
 import { forward, gameLength, onLap } from "./geometry";
 import type { LiveEvent, SnapshotNext } from "./types";
@@ -32,6 +33,8 @@ import { ageText, finite } from "./text";
 export type DriveState = "offline" | "no_data" | "stale" | "ended" | "red_flag" | "pit_lane" | "garage" | "on_track";
 export type SafetyCar = "full" | "virtual" | "formation_lap";
 export type IncidentKind = "penalty" | "collision" | "flashback" | "fastest_lap" | "pit_entry" | "pit_exit";
+/** The status slot's 6 s chip: an incident, or (lane motivation) a goal reached on the lap just completed. */
+export type ChipKind = IncidentKind | "goal";
 
 export interface YellowFlag {
   /** The zone's game number (the numbering race control uses). */
@@ -54,7 +57,7 @@ export interface DriveOverlays {
   /** Chequered flag shown. With state on_track: the driver's last lap still runs. With state ended: the session
    * ended by the flag (the slot says CHEQUERED FLAG instead of SESSION COMPLETE). */
   chequered: boolean;
-  chip: { kind: IncidentKind; ageS: number } | null;
+  chip: { kind: ChipKind; ageS: number } | null;
 }
 
 export const NO_OVERLAYS: DriveOverlays = Object.freeze({
@@ -224,12 +227,19 @@ function blueOf(s: SnapshotNext): boolean {
   return knowable ? hits.some((h) => h.inZone) : true;
 }
 
-function chipOf(s: SnapshotNext, nowS: number): DriveOverlays["chip"] {
+function chipOf(s: SnapshotNext, nowS: number, note?: MotivationNote | null): DriveOverlays["chip"] {
   const e = newest(s.events, playerIncident);
-  if (!e) return null;
-  const ageS = nowS - e.t;
-  if (ageS < -2 || ageS > CHIP_SHOW_S) return null; // small negative ages: clock skew between server and device
-  return { kind: e.kind as IncidentKind, ageS: Math.max(0, ageS) };
+  if (e) {
+    const ageS = nowS - e.t;
+    // small negative ages: clock skew between server and device
+    if (ageS >= -2 && ageS <= CHIP_SHOW_S) return { kind: e.kind as IncidentKind, ageS: Math.max(0, ageS) };
+  }
+  // lane motivation: GOAL REACHED for 6 s after the /ws/live note of THIS session; an incident within 6 s wins.
+  if (note && note.session_id === s.session_id && finite(note.t)) {
+    const ageS = nowS - note.t;
+    if (ageS >= -2 && ageS <= CHIP_SHOW_S) return { kind: "goal", ageS: Math.max(0, ageS) };
+  }
+  return null;
 }
 
 export interface DriveStateResult {
@@ -239,12 +249,14 @@ export interface DriveStateResult {
 }
 
 /** One state plus overlays; the first matching state wins (4.7). Overlays combine with red flag, pit lane, garage
- * and on track only. D4 "ended" is a server-kept fact and wins over stale (see the header). */
+ * and on track only. D4 "ended" is a server-kept fact and wins over stale (see the header). `goalNote`: the newest
+ * /ws/live "motivation" note (lane motivation), for the GOAL REACHED chip. */
 export function driveState(
   s: SnapshotNext | null,
   wsConnected: boolean,
   nowS: number,
   memo?: DriveMemo | null,
+  goalNote?: MotivationNote | null,
 ): DriveStateResult {
   const m = nextMemo(s, memo);
   if (!wsConnected) return { state: "offline", overlays: NO_OVERLAYS, memo: m };
@@ -261,7 +273,7 @@ export function driveState(
     blue: blueOf(s),
     invalid: s.frame?.lap_invalid === true,
     chequered: phase.kind === "chequered",
-    chip: chipOf(s, nowS),
+    chip: chipOf(s, nowS, goalNote),
   };
   let state: DriveState = "on_track";
   if (phase.kind === "red_flag") state = "red_flag";
@@ -463,16 +475,17 @@ export function evidence(s: SnapshotNext | null): { synthetic: boolean; replay: 
   };
 }
 
-const CHIP_TEXT: Record<IncidentKind, string> = {
+const CHIP_TEXT: Record<ChipKind, string> = {
   penalty: "PENALTY",
   collision: "CONTACT",
   flashback: "FLASHBACK · lap won't count",
   fastest_lap: "FASTEST LAP",
   pit_entry: "PIT ENTRY",
   pit_exit: "PIT EXIT",
+  goal: "GOAL REACHED",
 };
 
-/** The 6 s incident chip's words. */
-export function chipText(kind: IncidentKind): string {
+/** The 6 s chip's words. */
+export function chipText(kind: ChipKind): string {
   return CHIP_TEXT[kind];
 }

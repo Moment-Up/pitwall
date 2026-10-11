@@ -188,6 +188,11 @@
   font-weight: 800;
   letter-spacing: 0.06em;
 }
+/* lane motivation: GOAL REACHED (6 s, success tone, no animation). */
+.pwc-incident[data-kind="goal"] {
+  --chip-bg: color-mix(in oklab, var(--success) 18%, var(--surface));
+  --chip-fg: var(--success);
+}
 .pwc-wakechip {
   --chip-bg: color-mix(in oklab, var(--warning) 15%, transparent);
   --chip-fg: var(--warning);
@@ -760,6 +765,7 @@
 .pwc-end__actions {
   display: flex;
   grid-column: 1 / -1;
+  align-items: center;
   justify-content: flex-end;
   align-self: end;
 }
@@ -788,6 +794,102 @@
 }
 .pwc-item[data-tone="warning"] { --pwc-k: var(--warning); }
 .pwc-item[data-tone="success"] { --pwc-k: var(--success); }
+
+/* ------------------------------------------------------------------ lane motivation: goals and "3 things" (stopped) */
+/* Ready card, column 2: one goal row under the target / last run. A goal tightens the rows above it so the card keeps
+ * its size at 1180 x 820 (P2). The bar never animates. */
+.pwc-ready__col[data-goal] .pwc-kv { gap: 8px; }
+.pwc-goal {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--surface-tertiary);
+}
+.pwc-goal__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.pwc-goal__icon { flex: none; width: 18px; height: 18px; color: var(--muted); }
+.pwc-goal[data-reached] .pwc-goal__icon { color: var(--success); }
+.pwc-goal__title {
+  min-width: 0;
+  overflow: hidden;
+  font: 650 17px/1.25 var(--pw-font-sans);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwc-goal[data-reached] .pwc-goal__title { color: var(--success); }
+.pwc-goal__scope {
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwc-goal__bar { --progress-bar-fill: var(--foreground); gap: 0; }
+.pwc-goal[data-reached] .pwc-goal__bar { --progress-bar-fill: var(--success); }
+.pwc-goal__bar .progress-bar__track { height: 6px; border-radius: 999px; background: var(--surface-tertiary); }
+.pwc-goal__bar .progress-bar__fill { border-radius: 999px; transition: none; }
+.pwc-goal__text {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.3;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* iPad mini, Safari with toolbars (compact rows, 4.2): the progress words share the title's line, so the row is one
+ * line shorter and the card keeps its size. */
+@media (max-height: 760px) and (min-width: 768px) {
+  .pwc-goal {
+    grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+    gap: 4px 10px;
+    margin-top: 8px;
+    padding-top: 6px;
+  }
+  .pwc-goal__scope { display: none; }
+  .pwc-goal__text { grid-row: 1; grid-column: 2; align-self: center; text-align: right; }
+  .pwc-goal__bar { grid-column: 1 / -1; }
+}
+/* Session complete: three things in one row (spec 9), each up to 4 lines (the .pwc-item clamp). */
+.pwc-end__things {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+.pwc-end__thing-skel { min-height: 118px; }
+.pwc-item[data-tone="neutral"] { --pwc-k: var(--pw-ref); }
+/* The evidence line (or why an item is empty) under the clamped text, one line. */
+.pwc-item__ev {
+  display: block;
+  overflow: hidden;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwc-end__badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+  margin-right: 14px;
+}
+.pwc-end__badge { max-width: 260px; }
+.pwc-end__badge .chip__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pwc-item__icon {
   background: color-mix(in oklab, var(--pwc-k) 16%, transparent);
   color: var(--pwc-k);
@@ -940,6 +1042,12 @@
   .pwc-end__kpis.kpi-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pwc-end__kpis > .kpi-group__separator { display: none; }
   .pwc-end__v { font-size: 32px; }
+  /* lane motivation: the three things stack; badges wrap above Review this session. */
+  .pwc-end__things { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .pwc-item__ev { white-space: normal; }
+  .pwc-end__thing-skel { min-height: 88px; }
+  .pwc-end__actions { flex-wrap: wrap; gap: 10px; }
+  .pwc-end__badges { justify-content: flex-start; margin-right: 0; }
 }
 
 /* iPad home-indicator area (Home Screen web app): keep the bottom row clear of it. */

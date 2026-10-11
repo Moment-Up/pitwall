@@ -42,6 +42,7 @@
 | `capture-writer` | zstd-compress raw packets to `.pwcap` (flush every 1 s) | - |
 | `lap-analysis` | per-lap: persist, track model, reference, compare, coaching | touch live sockets |
 | `db-writer` | all SQLite writes, one transaction per job | - |
+| `motivation` | after a live lap / at session end: mark goals reached (exactly once), notify `motivation` | run on ingest (its note handler only queues, O(1)) |
 | asyncio (uvicorn) | REST, WebSocket snapshots (pull model), LLM calls (async HTTP) | block on DB (uses `to_thread`) |
 
 Backpressure: capture queue (200k packets) and lap queue are bounded; overflow is counted and logged, never
@@ -112,6 +113,17 @@ of a number in the cited facts; citations must exist) -> one corrective retry ->
 Technique facts (topics `line`, `technique`, `balance`) come from `technique/facts.py`; their intents are answered
 deterministically and are radio fast intents (feat/technique).
 
+## Goals, badges and summaries (`motivation/`)
+Pure rules (`rules.py`: clean runs, steady-lap windows, scopes, F1 race outcomes, personal bests, week arithmetic),
+`goals.py`, `suggest.py`, `badges.py`, `recap.py` (Today's 3 things), `digest.py` + `html.py` (weekly digest),
+`service.py` (the database side, shared by the API `api/routes_motivation.py`, the CLI and the worker), `facts.py`
+(engineer facts, topics `goals` and `progress`) and `radio.py` (the goal line). Only goals are stored (table `goals`,
+schema v3); badges, streaks, recaps and digests are derived from laps and events when read, from the driver's real
+driving only (never replays, synthetic only on request). `worker.py` listens to `LiveState` notes (`lap`,
+`event:session_ended`), evaluates on its own thread, flips a goal with one `UPDATE ... WHERE status='active'` and only
+then publishes `live.notify("motivation", note)`: `/ws/live` forwards it as `{"type": "motivation"}` and the radio
+hub queues one `LAP_SUMMARY` line. API reads never write.
+
 ## Dashboard (`web-react/`)
 React 19 + TypeScript (strict) + Vite + Tailwind v4 + HeroUI v3 / HeroUI Pro, built to `docs/ui/design-spec.md` (v2,
 coach-first). FastAPI serves the built `web-react/dist` as static files at `/` and, for a week after the switch-over,
@@ -134,7 +146,8 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
   Session complete card loads it on demand).
 
 ## Storage
-SQLite WAL (`data/pitwall.sqlite3`). Lap traces stored as compressed float32 npz blobs (~19 channels).
+SQLite WAL (`data/pitwall.sqlite3`). Lap traces stored as compressed float32 npz blobs (~19 channels). Schema
+history in `storage/db.py` (v3: `goals`; `sessions.info.total_laps`).
 Raw packets in `data/captures/*.pwcap` (zstd, ~2.5 MB per 7 min at 60 Hz) for reprocessing.
 
 ## Security

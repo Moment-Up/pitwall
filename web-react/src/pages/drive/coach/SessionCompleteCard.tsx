@@ -9,17 +9,45 @@
 // LAZY (React.lazy in SessionCompleteSlot.tsx): Pro KPI imports AreaChart and so Recharts at module level, which
 // must stay out of the eager Drive bundle (spec 4.9, 4.11). Values are TimingValue-style numerals in KPI.Content,
 // never KPI.Value (it animates and formats plain numbers). Stationary: full coaching text, no glance texts.
+//
+// Lane motivation: with the session's recap the two points become "Today's 3 things" (went well, one to work on,
+// progress; "Goal reached" with the cup is the celebration), and up to two badges it earned sit beside the legend.
+// While the recap loads, three same-size skeletons; without it (older server, error) the card is as before.
 
-import { CircleCheck, TriangleExclamation } from "@gravity-ui/icons";
+import { CircleCheck, Medal, TriangleExclamation } from "@gravity-ui/icons";
 import { ItemCard, KPIGroup } from "@heroui-pro/react";
 import { KPI } from "@heroui-pro/react/kpi";
-import { Button, Card } from "@heroui/react";
+import { Button, Card, Chip } from "@heroui/react";
 import type { ReactNode } from "react";
 import { TimingLegend, TimingTag, Unknown } from "../../../components/ui";
 import type { CoachPoint } from "../../../lib/drive/coach";
 import type { EndedCard, EndedChange } from "../../../lib/drive/model";
 import { router } from "../../../lib/router";
 import { TimeText } from "./parts";
+import { ThingsRow, ThingsSkeleton } from "./ThingsRow";
+
+/** Badges shown on the card; the rest are counted ("+3 more"). */
+export const ENDED_BADGES_SHOWN = 2;
+
+function BadgeChips({ badges }: { badges: readonly string[] }) {
+  if (!badges.length) return null;
+  const more = badges.length - ENDED_BADGES_SHOWN;
+  return (
+    <span className="pwc-end__badges" aria-label="Badges earned this session">
+      {badges.slice(0, ENDED_BADGES_SHOWN).map((b) => (
+        <Chip key={b} size="lg" variant="soft" color="success" className="pwc-end__badge">
+          <Medal aria-hidden="true" />
+          <Chip.Label>{b}</Chip.Label>
+        </Chip>
+      ))}
+      {more > 0 && (
+        <Chip size="lg" variant="soft" className="pwc-end__badge">
+          <Chip.Label>+{more} more</Chip.Label>
+        </Chip>
+      )}
+    </span>
+  );
+}
 
 function Tile({ title, tag, children, sub }: { title: string; tag?: ReactNode; children: ReactNode; sub?: string | null }) {
   return (
@@ -98,10 +126,19 @@ export function SessionCompleteCard({ ended, tier, corners }: SessionCompleteCar
           {toRecord ? <Change c={toRecord} label="To the family record" /> : <Unknown />}
         </Tile>
       </KPIGroup>
-      <Point point={ended.workOn} kind="work" corner={corners?.workOn ?? null} />
-      <Point point={ended.wentWell} kind="good" corner={corners?.wentWell ?? null} />
+      {ended.things ? (
+        <ThingsRow things={ended.things} />
+      ) : ended.thingsLoading ? (
+        <ThingsSkeleton />
+      ) : (
+        <>
+          <Point point={ended.workOn} kind="work" corner={corners?.workOn ?? null} />
+          <Point point={ended.wentWell} kind="good" corner={corners?.wentWell ?? null} />
+        </>
+      )}
       <div className="pwc-end__actions">
         <TimingLegend tier={tier} className="mr-auto self-center" />
+        <BadgeChips badges={ended.badges ?? []} />
         <Button
           variant="primary"
           size="lg"

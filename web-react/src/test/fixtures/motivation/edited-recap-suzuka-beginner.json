@@ -1,0 +1,76 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/sessions/<suzuka race>/recap for a beginner (section 12.9: Turn 7 went well, Turn 15 (130R) for a beginner, first session here)",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "session_id": "7e1f0c2d3b4a",
+  "driver_id": 1,
+  "driver_name": "Sam",
+  "simple": true,
+  "synthetic": false,
+  "replay": false,
+  "ended": true,
+  "laps": 5,
+  "clean_laps": 2,
+  "things": {
+   "went_well": {
+    "kind": "went_well",
+    "source": "observation",
+    "text": "Turn 7: good - exit speed is up 21 km/h on your reference and you gained 0.44 s there.",
+    "text_simple": "Turn 7: good exit, you were 21 km/h faster coming out.",
+    "evidence": "Seen on 2 of 3 laps compared with your reference",
+    "corner": "T7",
+    "corner_label": "T7",
+    "lap_id": 303,
+    "lap_number": 4,
+    "observation_kind": "exit_gain",
+    "observation_key": "T7:exit_gain",
+    "goal_id": null,
+    "values": {}
+   },
+   "work_on": {
+    "kind": "work_on",
+    "source": "observation",
+    "text": "Turn 15 (130R): minimum speed is 25 km/h lower than your reference (243 vs 268 km/h), losing 0.31 s through the corner.",
+    "text_simple": "Turn 15 (130R): you were 25 km/h slower at the slowest point of the corner.",
+    "evidence": "Seen on 3 of 3 laps compared with your reference",
+    "corner": "T15",
+    "corner_label": "T15",
+    "lap_id": 304,
+    "lap_number": 5,
+    "observation_kind": "low_min_speed",
+    "observation_key": "T15:low_min_speed",
+    "goal_id": null,
+    "values": {}
+   },
+   "progress": {
+    "kind": "progress",
+    "source": "first_session",
+    "text": "Your first clean laps at Suzuka in the F1 Generic: 1:36.360 is the time to beat next time.",
+    "text_simple": "1:36.360 is your time to beat at Suzuka.",
+    "evidence": null,
+    "corner": null,
+    "corner_label": null,
+    "lap_id": null,
+    "lap_number": null,
+    "observation_kind": null,
+    "observation_key": null,
+    "goal_id": null,
+    "values": {
+     "lap_ms": 96360
+    }
+   }
+  },
+  "why_empty": {
+   "went_well": null,
+   "work_on": null,
+   "progress": null
+  },
+  "goals_achieved": [],
+  "goals_progress": [],
+  "badges_earned": []
+ }
+}

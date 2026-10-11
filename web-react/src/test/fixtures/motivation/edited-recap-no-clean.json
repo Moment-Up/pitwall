@@ -1,0 +1,60 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "A recap of a real session without a clean lap: lap hygiene to work on, nothing went well, sessions this week",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "session_id": "aa11bb22cc33",
+  "driver_id": 1,
+  "driver_name": "Sam",
+  "simple": false,
+  "synthetic": false,
+  "replay": false,
+  "ended": true,
+  "laps": 2,
+  "clean_laps": 0,
+  "things": {
+   "went_well": null,
+   "work_on": {
+    "kind": "work_on",
+    "source": "lap_hygiene",
+    "text": "2 of 2 laps did not count (track limits on 1, a flashback on 1).",
+    "text_simple": "2 laps did not count this time.",
+    "evidence": null,
+    "corner": null,
+    "corner_label": null,
+    "lap_id": null,
+    "lap_number": null,
+    "observation_kind": null,
+    "observation_key": null,
+    "goal_id": null,
+    "values": {}
+   },
+   "progress": {
+    "kind": "progress",
+    "source": "sessions_week",
+    "text": "Session 3 this week, 7 laps so far.",
+    "text_simple": "Your 3rd drive this week.",
+    "evidence": null,
+    "corner": null,
+    "corner_label": null,
+    "lap_id": null,
+    "lap_number": null,
+    "observation_kind": null,
+    "observation_key": null,
+    "goal_id": null,
+    "values": {}
+   }
+  },
+  "why_empty": {
+   "went_well": "No clean lap this time, so nothing to compare yet",
+   "work_on": null,
+   "progress": null
+  },
+  "goals_achieved": [],
+  "goals_progress": [],
+  "badges_earned": []
+ }
+}
