@@ -815,13 +815,28 @@ app.add_typer(ai_pace_app, name="ai-pace")
 def ai_pace_backfill(
     captures: Annotated[Path | None, typer.Option(help="Capture file or folder (default: the data folder's)")] = None,
     dry_run: Annotated[bool, typer.Option(help="Compute and print, write nothing")] = False,
+    force: Annotated[
+        bool, typer.Option("--force", help="Run even though something answers on the HTTP port (not recommended)")
+    ] = False,
 ) -> None:
     """Fill pace vs AI for sessions recorded before it existed, from their raw F1 captures (matched by the game
-    session UID). Never creates sessions; synthetic captures and sessions are skipped."""
+    session UID). Never creates sessions; synthetic captures and sessions are skipped.
+
+    Refuses while anything answers on the configured HTTP port: opening the database here would add a second writer
+    under a running server (and migrate its database with this code), even with --dry-run."""
     from pitwall.core.ai_pace import backfill
+    from pitwall.doctor import client_host
     from pitwall.storage.db import Database, DbWriter
 
     settings = get_settings()
+    base = f"http://{client_host(settings.http_host)}:{settings.http_port}"
+    if not force and _http("GET", f"{base}/api/health", timeout_s=SERVER_PROBE_S) is not None:
+        typer.echo(
+            f"Something answers on {base} (a running Pitwall?): stop the service first, or set PITWALL_DATA_DIR to a "
+            "copy of the data folder. --force runs anyway.",
+            err=True,
+        )
+        raise typer.Exit(1)
     src = captures or settings.capture_dir
     files = sorted(src.glob("*.pwcap")) if src.is_dir() else [src]
     db = Database(settings.db_path)
