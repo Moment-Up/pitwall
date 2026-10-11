@@ -58,6 +58,13 @@ class CornerDeviation:
     brake_early_m: float = 0.0  # starts braking this much earlier (and coasts at apex speed)
     apex_speed_loss_kph: float = 0.0  # minimum speed this much lower than optimum
     throttle_delay_m: float = 0.0  # holds apex speed this much longer before accelerating
+    # --- feat/technique: injected in the synthetic F1 stream only (``F1Scenario.motion_ex``); speed is unchanged ---
+    line_offset_m: float = 0.0  # runs this far towards the outside around the apex (raised cosine, apex +/- 120 m)
+    understeer_deg: tuple[float, float, float] = (0.0, 0.0, 0.0)  # extra front slip angle at entry, mid, exit
+    lockup_s: float = 0.0  # front-left wheel locked (slip ratio -0.35) for this long in the braking zone
+    wheelspin_s: float = 0.0  # rear wheels spinning (slip ratio +0.3) for this long on the exit
+    body_slip_exit_deg: float = 0.0  # body slip during the exit wheelspin window (a slide)
+    # --- end feat/technique ---
 
 
 @dataclass(slots=True)

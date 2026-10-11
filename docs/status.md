@@ -200,6 +200,34 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
 - **Linux:** still not run with Pitwall itself. CI only builds the dashboards on Ubuntu; the release workflow's
   Linux `verify` job will be the first run of the server on Linux (synthetic telemetry, no game).
 
+## Technique analysis: racing line, brake technique, handling balance, setup engineer (branch `feat/technique`, 2026-10-11)
+- Built: F1 MotionEx decode (yaw rate, body slip, per-wheel slip ratio and slip angle; 8 new lap channels, no schema
+  change), `pitwall.technique` (line, inputs, balance, setup map, pedal/assist awareness), `/api/technique`
+  (session, balance, lap pair), engineer facts and intents (`line`, `technique`, `balance`, answered without the
+  LLM on the radio), the experiment result's balance change, `pitwall technique` CLI, the `technique-demo`
+  synthetic scenario. Units and signs: [research/f1-motion-ex-units.md](research/f1-motion-ex-units.md).
+- Evidence tiers (nothing is live-validated):
+  - racing line and brake/throttle technique: **recorded** (F1 25 PS5 races in a scratch replay; the GT7 line on the
+    owner's capture, not committed); the committed recorded tests check MotionEx units and signs on the Monza and
+    Austria excerpts;
+  - wheelspin and handling balance: **recorded** (F1 MotionEx). Miami: Turn 3 mid-corner understeer on 3 of 3 laps
+    including the best lap (verdict car); Silverstone Reverse: Stowe and Village mid-corner understeer verdict car,
+    Club, Vale and Brooklands verdict driving. The thresholds are heuristics;
+  - lock-ups: **synthetic only** (every real capture had ABS on);
+  - setup suggestions: **unit / synthetic**. That a suggested change fixes a symptom is unverified.
+- Integration run (scratch server, LLM off): the Miami and Silverstone Reverse races streamed over loopback UDP with
+  `pitwall send` (the live ingest path decodes every MotionEx packet) and replayed; API, engineer and radio text
+  questions (`line`, `technique`, `balance` answered without the LLM) and the dashboard at iPad and phone sizes were
+  checked against the expectations above. A zeroed CarStatus on the grid (ABS off, TC 0 before the start) no
+  longer hides lap 1's assists.
+- Known limits: slip and balance only for F1 25 (AC, GT7 and Forza do not map slip or yaw yet: unknown); a generic
+  F1 car in UDP format 2025 cannot be told apart from a 2026 car, so the Setup page sends the car format the driver
+  chose (`?car_format=`), and the engineer's "Setup to try" fact states a change only when it is the same on both
+  cars; facts use the stock brake tolerances (the fact builder has no rig profile) and cannot see running
+  experiments.
+- Cross-lane: storing `wheel_slip_fl/fr` switches on the rig check's lock-up metric for new laps; with ABS on it
+  reports "No front lock-ups detected" (still unknown) instead of "not recorded".
+
 ## Next
 1. Dashboard v2 rig acceptance (spec 14.5) on the iPad with live PS5 telemetry. Remove `/next/` and the Svelte
    fallback a week after the switch-over (2026-10-18).

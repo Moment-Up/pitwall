@@ -31,6 +31,7 @@ import {
   VERDICT_LABEL,
   when,
 } from "../../../lib/setup/carsetup";
+import { ExperimentBalance } from "./ExperimentBalance"; // feat/technique
 
 const STEPS = ["Proposed", "Running", "Concluded"] as const;
 
@@ -236,6 +237,8 @@ export function ExperimentCard({ exp, param, sessions, compact = false, onOpen }
             </Chip>
             <span className="text-sm">{cmp.reason}</span>
           </div>
+          {/* feat/technique */}
+          <ExperimentBalance comparison={cmp} />
           <table className="w-full border-separate border-spacing-0 text-sm">
             <thead>
               <tr className="text-muted">

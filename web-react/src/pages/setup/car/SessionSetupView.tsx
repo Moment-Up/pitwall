@@ -51,6 +51,7 @@ import {
 import type { Route } from "../../../lib/route-parse";
 import { ExperimentCard } from "./ExperimentCard";
 import { DiffGrid } from "./DiffGrid";
+import { HandlingBalanceCard } from "./HandlingBalanceCard"; // feat/technique
 import { NewExperimentModal } from "./NewExperimentModal";
 import { Caveat } from "./RecommendationSummary";
 import { Alternatives } from "./UnavailableCard";
@@ -394,6 +395,9 @@ export function SessionSetupView({ sid, route, catalog }: { sid: string; route: 
           ) : null}
         </Card>
       ) : null}
+
+      {/* feat/technique */}
+      <HandlingBalanceCard sid={sid} carFormat={chosen.car_format} session={s.session} catalog={catalog} experiments={expList} onTry={(initial) => setModal((m) => ({ open: true, initial, n: m.n + 1 }))} />
 
       <Card className="gap-3 p-5">
         <Card.Header className="flex-row flex-wrap items-center justify-between gap-3">

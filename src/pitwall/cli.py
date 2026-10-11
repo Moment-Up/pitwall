@@ -10,7 +10,7 @@ import socket
 import sys
 import time
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
@@ -246,6 +246,121 @@ def ask(
                 typer.echo(f"  [{f['id']}] {f['text']}")
 
     asyncio.run(run())
+
+
+# --- feat/technique ----------------------------------------------------------------------------------------------
+@app.command()
+def technique(
+    session_id: Annotated[str | None, typer.Argument(help="Session id, or 'latest' (default)")] = None,
+    ref: Annotated[int | None, typer.Option("--ref", help="Reference lap id (default: the session's own)")] = None,
+    as_json: Annotated[bool, typer.Option("--json", help="Print the API's TechniqueSession JSON")] = False,
+    car_format: Annotated[
+        str | None, typer.Option("--car-format", help="f1_2025 or f1_2026 when the game's generic car is ambiguous")
+    ] = None,
+) -> None:
+    """Racing line, brake/throttle technique, handling balance and setup suggestions for a recorded session."""
+    from pitwall.carsetup.recommend import SetupRequestError, parse_car_format
+    from pitwall.core.session_analysis import SessionAnalyzer
+    from pitwall.storage import repo
+    from pitwall.storage.db import Database
+    from pitwall.technique.session import NoTrackModel, TechniqueAnalyzer, TechniqueNotFound
+
+    s = get_settings()
+    db = Database(s.db_path)
+    with db.read() as c:
+        sid = repo.latest_session_id(c) if session_id in (None, "latest") else session_id
+    if sid is None:
+        typer.echo("no sessions recorded", err=True)
+        raise typer.Exit(1)
+    ta = TechniqueAnalyzer(db, SessionAnalyzer(db), lambda: _stored_rig(s.data_dir / "settings.json"))
+    try:
+        st = ta.analyse(sid, ref)
+    except TechniqueNotFound as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(1) from e
+    except NoTrackModel as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(2) from e
+    try:
+        fmt = parse_car_format(car_format) if car_format else None
+    except SetupRequestError as e:
+        typer.echo(str(e), err=True)
+        raise typer.Exit(2) from e
+    setup = ta.setup(st, fmt)
+    if as_json:
+        typer.echo(json.dumps(st.to_dict(setup), indent=1))
+        return
+    for line in technique_report(st, setup):
+        typer.echo(line)
+
+
+def _stored_rig(path: Path) -> Any:
+    """The rig profile from settings.json, read-only (never moves or rewrites the file); None when unreadable."""
+    from pitwall.rig.recommend import RigProfile
+
+    if not path.exists():
+        return RigProfile.from_stored({})  # never saved: the defaults, as the server uses them
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    rig = data.get("rig") if isinstance(data, dict) else None
+    return RigProfile.from_stored(rig if isinstance(rig, dict) else {})
+
+
+def technique_report(st: Any, setup: Any) -> list[str]:
+    from pitwall.technique.session import SessionTechnique
+    from pitwall.technique.setup_map import SetupEngineer
+
+    assert isinstance(st, SessionTechnique)
+    out = [
+        f"Session {st.session_id} ({st.session.get('track_name') or '?'})"
+        + (" SYNTHETIC" if st.session.get("synthetic") else "")
+        + (f" - reference lap {st.ref_lap_number}" if st.ref_lap_number is not None else " - no reference lap"),
+        f"Pedals: {st.pedals.note}",
+        *[f"Assists: {n}" for n in st.assists.notes],
+    ]
+    for key, av in st.available.items():
+        if not av.ok:
+            out.append(f"{key}: not available - {av.reason}")
+    for c in st.corners:
+        out.append(f"{c.long_name} ({c.direction or '?'}, {c.speed_class or '?'}, apex {c.apex_m:.0f} m)")
+        if c.line is not None:
+            pts = [
+                f"{k} {p.median_offset_m:+.2f} m ({p.laps} laps)"
+                for k, p in c.line.points.items()
+                if p is not None and p.median_offset_m is not None
+            ]
+            side = "tighter +/wider -" if c.line.inside_known else "off the line, side unknown"
+            out.append(f"  line vs reference ({side}): " + (", ".join(pts) or "-"))
+        for lc in c.laps:
+            notes = " ".join(n.text + (" [muted: braking assist]" if n.muted else "") for n in lc.notes) or "-"
+            out.append(f"  lap {lc.lap_number}{' (incident)' if lc.incident else ''}: {notes}")
+        if c.balance is not None:
+            bits = [
+                f"{p} {s.recurring or '-'} (U{s.understeer}/N{s.neutral}/O{s.oversteer}, {s.verdict or 'no verdict'})"
+                for p, s in c.balance.items()
+                if s.laps
+            ]
+            if bits:
+                out.append("  balance: " + ", ".join(bits))
+        for h in c.habits[:2]:
+            out.append(f"  habit: {h.text}")
+    out.append("Symptoms:" if st.symptoms else "Symptoms: none recurring")
+    out.extend(f"  [{x.verdict}] {x.text}" for x in st.symptoms)
+    out.extend(f"  [lock-ups] {x.text}" for x in st.lockups)
+    if isinstance(setup, SetupEngineer):
+        out.append("Setup to try (one change at a time):" if setup.suggestions else "Setup to try: none")
+        for sg in setup.suggestions:
+            blocked = f" - blocked: {sg.blocked}" if sg.blocked else ""
+            out.append(f"  {sg.symptom_id} #{sg.rank}: {sg.label} {sg.from_value} -> {sg.to_value}{blocked}")
+        if setup.note:
+            out.append(f"  note: {setup.note}")
+        out.append(f"  {setup.caveat}")
+    return out
+
+
+# --- end feat/technique ------------------------------------------------------------------------------------------
 
 
 @app.command("llm-check")

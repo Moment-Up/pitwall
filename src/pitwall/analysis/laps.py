@@ -21,6 +21,20 @@ from pitwall.model.telemetry import CarFrame, FrameQuality, Game, LapCompletion
 log = logging.getLogger(__name__)
 FloatArray = npt.NDArray[np.float64]
 
+# --- feat/technique: chassis dynamics (F1 MotionEx), appended to CHANNELS; all-NaN for games that do not send them.
+# Older laps lack them, so readers use ``channels.get(...)``.
+TECHNIQUE_CHANNELS: tuple[str, ...] = (
+    "yaw_rate_rps",  # + = turning right (same sign as steering)
+    "body_slip_rad",
+    "slip_angle_front_abs_rad",  # mean |slip angle| of the two front wheels
+    "slip_angle_rear_abs_rad",
+    "wheel_slip_fl",  # slip ratio per wheel (names match rig.rig_check)
+    "wheel_slip_fr",
+    "wheel_slip_rl",
+    "wheel_slip_rr",
+)
+# --- end feat/technique ---
+
 # Channels stored for every lap (all float64; NaN where the game does not provide the value).
 CHANNELS: tuple[str, ...] = (
     "session_time_s",
@@ -42,8 +56,10 @@ CHANNELS: tuple[str, ...] = (
     "tyre_temp_fr",
     "tyre_temp_rl",
     "tyre_temp_rr",
+    *TECHNIQUE_CHANNELS,  # feat/technique
 )
 
+ASSIST_MIN_KPH = 5.0  # feat/technique: lap assist meta counts frames on the move only (see LapAssembler.feed)
 MAX_GAP_M = 60.0  # a distance step larger than this is either data loss or a game-side distance jump
 MAX_TIME_GAP_S = 1.0  # a session-time gap larger than this (no flashback) means lost packets -> incomplete
 EDGE_TOLERANCE_M = 60.0  # lap must start/end within this distance of the line to count as complete
@@ -107,6 +123,11 @@ class LapTrace:
             return {k: z[k].astype(np.float64) for k in z.files}
 
 
+def _same[T](a: T | None, b: T | None) -> T | None:
+    """``b`` when it equals ``a`` (an assist that stayed the same over the lap), else ``None``."""
+    return b if a is not None and a == b else None
+
+
 def _val(v: float | int | None) -> float:
     return float("nan") if v is None else float(v)
 
@@ -133,6 +154,28 @@ def _frame_row(f: CarFrame) -> tuple[float, ...]:
         _val(tt.fr if tt else None),
         _val(tt.rl if tt else None),
         _val(tt.rr if tt else None),
+        *_technique_row(f),  # feat/technique
+    )
+
+
+_NAN8 = (float("nan"),) * 8
+
+
+def _technique_row(f: CarFrame) -> tuple[float, ...]:
+    """feat/technique: the ``TECHNIQUE_CHANNELS`` values of one frame (NaN when the game did not send them)."""
+    sr, sa = f.wheel_slip_ratio, f.wheel_slip_angle_rad
+    if f.yaw_rate_rps is None and sr is None and sa is None and f.body_slip_rad is None:
+        return _NAN8
+    nan = float("nan")
+    return (
+        _val(f.yaw_rate_rps),
+        _val(f.body_slip_rad),
+        (abs(sa.fl) + abs(sa.fr)) / 2 if sa else nan,
+        (abs(sa.rl) + abs(sa.rr)) / 2 if sa else nan,
+        sr.fl if sr else nan,
+        sr.fr if sr else nan,
+        sr.rl if sr else nan,
+        sr.rr if sr else nan,
     )
 
 
@@ -146,6 +189,9 @@ class _Building:
     stale: int = 0
     first_fuel_kg: float | None = None  # first *available* values: slow packets may lag the first frame
     first_wear: tuple[float, float, float, float] | None = None
+    # feat/technique: first *available* assist states (CarStatus can lag the lap's first frame)
+    first_abs: bool | None = None
+    first_tc: int | None = None
 
 
 class LapAssembler:
@@ -215,6 +261,13 @@ class LapAssembler:
             cur.first_fuel_kg = f.fuel_kg
         if cur.first_wear is None and f.tyre_wear_pct is not None:
             cur.first_wear = f.tyre_wear_pct.as_tuple()
+        # feat/technique: assists from the first frame on the move (real F1 25 sends a zeroed CarStatus - ABS off,
+        # TC 0 - on the grid before the start, which is not a change of assist during the lap)
+        if f.speed_kph is not None and f.speed_kph >= ASSIST_MIN_KPH:
+            if cur.first_abs is None and f.abs_active is not None:
+                cur.first_abs = f.abs_active
+            if cur.first_tc is None and f.traction_control is not None:
+                cur.first_tc = f.traction_control
         cur.rows.append(_frame_row(f))
         cur.last = f
 
@@ -253,6 +306,9 @@ class LapAssembler:
             "wear_end": last.tyre_wear_pct.as_tuple() if last and last.tyre_wear_pct else None,
             "t_recv_start_ns": first.t_recv_ns if first else None,
             "t_recv_end_ns": last.t_recv_ns if last else None,
+            # feat/technique: the lap's assists when they did not change during it (None = changed, or not sent)
+            "abs_active": _same(b.first_abs, last.abs_active if last else None),
+            "traction_control": _same(b.first_tc, last.traction_control if last else None),
         }
         lap = LapTrace(
             lap_number=b.lap_number,

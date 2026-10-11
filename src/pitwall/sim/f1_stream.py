@@ -82,6 +82,10 @@ class F1Scenario:
     seed: int = 7
     packet_format: int = 2025  # 2025 (F1 25) or 2026 (2026 Season Pack layout)
     ai_cars: tuple[AiCarSpec, ...] = ()  # synthetic AI field (layer L0b tests); empty = player only
+    # --- feat/technique: optional MotionEx (ID 13) with real-game signs, and the ABS assist flag (both off by
+    # default, so existing scenarios stream exactly what they did before) ---
+    motion_ex: bool = False
+    abs_on: bool = False
 
     @property
     def layout(self) -> P.F1Layout:
@@ -446,6 +450,122 @@ def _event_packet(sc: F1Scenario, code: str, details: bytes, st: float, frame: i
     return _hdr(P.PacketId.EVENT, sc, st, frame, overall) + code.encode() + details
 
 
+# --- feat/technique: MotionEx with injected technique deviations (SYNTHETIC) ------------------------------------
+TECH_LINE_FULL_M = 40.0  # line offset is full within apex +/- 40 m ...
+TECH_LINE_FADE_M = 120.0  # ... and fades out (raised cosine) by apex +/- 120 m
+TECH_PHASE_SPAN_M = 200.0
+TECH_PHASE_MARGIN_M = 3.0  # understeer regions stay this far inside the analysis' phase boundaries
+TECH_LOCK_SLIP = -0.35
+TECH_SPIN_SLIP = 0.30
+
+
+@dataclass(slots=True)
+class _CornerInjection:
+    """Where one design corner's technique deviations apply on one lap (distance along the lap / lap time)."""
+
+    mid_s: float
+    kappa_sign: float
+    line_offset_m: float
+    understeer: tuple[tuple[float, float, float], ...]  # (from s, to s, extra front slip angle in degrees)
+    lock: tuple[float, float] | None  # lap-time window of the front-left lock
+    spin: tuple[float, float, float, bool] | None  # exit window (lap time): from, to, body slip (deg), wheelspin
+
+
+def _technique_plan(prof: LapProfile, track: TrackGeometry, driver: DriverProfile) -> list[_CornerInjection]:
+    out: list[_CornerInjection] = []
+    for name, start, end in track.corners:
+        dev = driver.deviations.get(name)
+        if dev is None or not (
+            dev.line_offset_m or any(dev.understeer_deg) or dev.lockup_s or dev.wheelspin_s or dev.body_slip_exit_deg
+        ):
+            continue
+        mid = (start + end) / 2
+        ksign = 1.0 if float(np.interp(mid, track.s, track.curvature)) >= 0 else -1.0
+        half = max(10.0, 0.5 * float(np.interp(mid, prof.s, prof.v)))
+        m = TECH_PHASE_MARGIN_M
+        en, mi, ex = dev.understeer_deg
+        regions = tuple(
+            r
+            for r in (
+                (mid - TECH_PHASE_SPAN_M, mid - half - m, en),
+                (mid - half + m, mid + half - m, mi),
+                (mid + half + m, mid + TECH_PHASE_SPAN_M, ex),
+            )
+            if r[2]
+        )
+        lock = None
+        if dev.lockup_s:
+            idx = np.flatnonzero((prof.s >= start - 400) & (prof.s <= mid) & (prof.brake >= 0.10))
+            if len(idx):
+                t_on = float(prof.t[idx[0]])
+                lock = (t_on + 0.2, t_on + 0.2 + dev.lockup_s)
+        spin = None
+        if dev.wheelspin_s or dev.body_slip_exit_deg:
+            idx = np.flatnonzero((prof.s >= mid + half + 5) & (prof.throttle >= 0.2))
+            if len(idx):
+                t0 = float(prof.t[idx[0]])
+                spin = (t0, t0 + (dev.wheelspin_s or 0.3), dev.body_slip_exit_deg, dev.wheelspin_s > 0)
+        out.append(_CornerInjection(mid, ksign, dev.line_offset_m, regions, lock, spin))
+    return out
+
+
+def _line_weight(ds: float) -> float:
+    a = abs(ds)
+    if a <= TECH_LINE_FULL_M:
+        return 1.0
+    if a >= TECH_LINE_FADE_M:
+        return 0.0
+    return 0.5 * (1 + math.cos(math.pi * (a - TECH_LINE_FULL_M) / (TECH_LINE_FADE_M - TECH_LINE_FULL_M)))
+
+
+def _motion_ex_values(
+    plan: list[_CornerInjection],
+    s: float,
+    lap_t: float,
+    v: float,
+    kappa: float,
+    g_lat: float,
+    brake: float,
+    throttle: float,
+) -> dict[str, object]:
+    """MotionEx of the player car (real-game signs: angularVelocityY = -v * curvature, i.e. negative turning right;
+    RL, RR, FL, FR wheel order). Base model: rear slip angle 0.5 deg per g, fronts 1 deg more (neutral)."""
+    us = 0.0
+    lock = False
+    spin = False
+    beta_deg = 0.0
+    for inj in plan:
+        for lo, hi, deg in inj.understeer:
+            if lo <= s <= hi:
+                us += deg
+        if inj.lock is not None and inj.lock[0] <= lap_t <= inj.lock[1] and brake >= 0.05:
+            lock = True
+        if inj.spin is not None and inj.spin[0] <= lap_t <= inj.spin[1]:
+            spin = spin or inj.spin[3]
+            beta_deg = inj.spin[2]
+    sign = 1.0 if kappa >= 0 else -1.0
+    alpha_r = math.radians(0.5 * abs(g_lat))
+    alpha_f = alpha_r + math.radians(1.0 + us)
+    sr_f = -0.05 * brake
+    sr_r = 0.04 * throttle
+    fl = TECH_LOCK_SLIP if lock else sr_f
+    rl = rr = TECH_SPIN_SLIP if spin else sr_r
+    sr = (fl, sr_f, rl, rr)  # FL, FR, RL, RR
+    beta = sign * math.radians(beta_deg)  # tail out: same sign as the rotation (as recorded on real F1 25 slides)
+    return {
+        "wheelSlipRatio": list(_rl_rr_fl_fr(*sr)),
+        "wheelSlipAngle": list(_rl_rr_fl_fr(sign * alpha_f, sign * alpha_f, sign * alpha_r, sign * alpha_r)),
+        "wheelSpeed": list(_rl_rr_fl_fr(*(v * (1 + x) for x in sr))),
+        "localVelocityX": v * math.tan(beta),
+        "localVelocityZ": v,
+        "angularVelocityY": -v * kappa,
+        "chassisYaw": beta,
+    }
+
+
+# --- end feat/technique ---------------------------------------------------------------------------------------
+
+
 @dataclass(slots=True)
 class _Timeline:
     """Continuous driving timeline across laps, sampled by session time."""
@@ -453,6 +573,7 @@ class _Timeline:
     lap_starts: list[float]
     profiles: list[LapProfile]
     track: TrackGeometry
+    plans: list[list[_CornerInjection]] = field(default_factory=list)  # feat/technique: per lap (motion_ex only)
 
     def at(self, t: float) -> tuple[int, float, int]:
         """Return (lap_number 1-based, lap time s, index into the profile grid) at session time t."""
@@ -481,6 +602,11 @@ def generate_f1_session(
         truth.lap_times_ms[lap] = round(prof.lap_time_s * 1000)
     starts = np.concatenate([[0.0], np.cumsum([p.lap_time_s for p in profiles])])
     tl = _Timeline(lap_starts=list(starts[:-1]), profiles=profiles, track=track)
+    if sc.motion_ex:  # feat/technique
+        tl.plans = [
+            _technique_plan(prof, track, sc.driver_by_lap.get(lap, sc.default_driver))
+            for lap, prof in enumerate(profiles, start=1)
+        ]
     ai = _plan_ai(sc, track, vehicle, float(starts[-1]))
     for car in ai:
         truth.ai_brake_onsets_m[car.spec.index] = {
@@ -550,6 +676,13 @@ def _stream(
         x = float(np.interp(s, track.s, track.x))
         z = float(np.interp(s, track.s, track.z))
         heading = float(np.interp(s, track.s, track.heading))
+        plan = tl.plans[lap - 1] if tl.plans else []  # feat/technique: line offset towards the outside
+        for inj in plan:
+            if inj.line_offset_m:
+                off = inj.line_offset_m * _line_weight(s - inj.mid_s)
+                # right normal of heading h (0 = +z, clockwise) is (cos h, -sin h); the outside is opposite the turn
+                x -= inj.kappa_sign * off * math.cos(heading)
+                z += inj.kappa_sign * off * math.sin(heading)
         throttle = lerp(prof.throttle)
         brake = lerp(prof.brake)
         steer = lerp(prof.steering)
@@ -647,7 +780,7 @@ def _stream(
             L.car_status,
             {
                 "tractionControl": 0,
-                "antiLockBrakes": 0,
+                "antiLockBrakes": 1 if sc.abs_on else 0,
                 "fuelMix": 1,
                 "frontBrakeBias": 56,
                 "fuelInTank": fuel,
@@ -665,6 +798,11 @@ def _stream(
             L.max_cars,
         )
         yield pkt(_hdr(P.PacketId.MOTION, sc, t, frame, overall) + motion)
+        if sc.motion_ex:  # feat/technique
+            ex = _motion_ex_values(
+                plan, s, lap_t, v, float(np.interp(s, track.s, track.curvature)), g_lat, brake, throttle
+            )
+            yield pkt(_hdr(P.PacketId.MOTION_EX, sc, t, frame, overall) + P.MOTION_EX.pack(ex), 20)
         yield pkt(_hdr(P.PacketId.LAP_DATA, sc, t, frame, overall) + lapdata, 40)
         yield pkt(_hdr(P.PacketId.CAR_TELEMETRY, sc, t, frame, overall) + telem, 80)
         yield pkt(_hdr(P.PacketId.CAR_STATUS, sc, t, frame, overall) + status, 120)
