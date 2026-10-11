@@ -212,6 +212,8 @@ def compose_cue_clip(
 
 
 type _Ready = tuple[RadioMessage, AudioClip | None, float | None]  # (message, audio, synthesis s; None = no feedback)
+# validation kit (lane validate): a radio observer gets (kind, payload), on the loop
+type RadioObserver = Callable[[str, dict[str, Any]], None]
 
 
 def _urgent(msg: RadioMessage) -> bool:
@@ -361,6 +363,10 @@ class RadioHub:
         self._cue_part_unchecked: set[str] = set()  # neural parts rendered while the check could not run
         self._cue_fallback_parts: dict[str, AudioClip] = {}  # fallback-voice audio for phrases with a pinned part
         self._cue_recheck_mono = 0.0
+        # --- validation kit hooks (lane validate): observers run on the loop and must never raise into the hub ---
+        self.observers: list[RadioObserver] = []
+        self.command_handler: Callable[[str], str | None] | None = None  # radio commands answered before the engineer
+        # --- end validation kit hooks ---
         # TTS engine (voice change, spoken-number check)
         self.verify_tts = verify_tts
         self._persist_voice = persist_voice
@@ -377,6 +383,99 @@ class RadioHub:
         task = asyncio.create_task(coro)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+
+    # --- validation kit hooks (lane validate) -------------------------------------------------------------------
+    # Observers see what the radio did (docs/architecture.md, "Rig validation kit"). With no observer attached the
+    # payload builder is never called: zero cost outside a validation run. Nothing here changes radio behaviour.
+    def add_observer(self, fn: RadioObserver) -> None:
+        if fn not in self.observers:
+            self.observers.append(fn)
+
+    def remove_observer(self, fn: RadioObserver) -> None:
+        if fn in self.observers:
+            self.observers.remove(fn)
+
+    def _observe(self, kind: str, build: Callable[[], dict[str, Any]]) -> None:
+        if not self.observers:
+            return
+        try:
+            payload = build()
+        except Exception:
+            log.exception("radio observer payload %s failed", kind)
+            return
+        payload["t_mono"] = time.monotonic()
+        payload["t_unix"] = time.time()
+        for fn in list(self.observers):
+            try:
+                fn(kind, payload)
+            except Exception:
+                log.exception("radio observer failed (%s)", kind)
+
+    def _frame_brief(self) -> dict[str, Any] | None:
+        f = self.live.frame
+        if f is None:
+            return None
+        return {
+            "lap": f.lap_number,
+            "lap_distance_m": f.lap_distance_m,
+            "session_time_s": f.session_time_s,
+            "speed_kph": f.speed_kph,
+            "brake": f.brake,
+            "steering": f.steering,
+        }
+
+    def _observe_cue(self, ev: CueEvent, status: str, reason: str | None, msg_id: str | None, clip: Any) -> None:
+        def build() -> dict[str, Any]:
+            engines = (
+                {self._cue_part_engine.get(self.to_speech(p)) for p in ev.cue.parts} if clip is not None else set()
+            )
+            engine = None if not engines or None in engines else (engines.pop() if len(engines) == 1 else "mixed")
+            return {
+                "seq": ev.seq,
+                "status": status,
+                "reason": reason,
+                "msg_id": msg_id,
+                "corner": ev.cue.corner,
+                "text": ev.cue.text,
+                "kind": ev.cue.kind.value,
+                "focus": ev.cue.focus,
+                "lap": ev.lap,
+                "fired_lap": ev.fired_lap,
+                "target_m": ev.cue.target_m,
+                "aim_m": ev.aim_m,
+                "d_m": ev.d_m,
+                "speed_kph": ev.v_mps * 3.6,
+                "ttg_s": ev.ttg_s,
+                "latency_s": ev.latency_s,
+                "word_offset_s": ev.word_offset_s,
+                "path": ev.path,
+                "ref_lap_id": ev.ref_lap_id,
+                "engine": engine,
+            }
+
+        self._observe("cue", build)
+
+    async def _validation_command(self, question: str, rec: LatencyRecord, released: float) -> bool:
+        """A validation radio command ("next test", "worked"...) answered deterministically before the engineer.
+        False when there is no handler or the text is not a command (the engineer answers as usual)."""
+        handler = self.command_handler
+        if handler is None:
+            return False
+        try:
+            reply = handler(question)
+        except Exception:
+            log.exception("radio command handler failed")
+            reply = None
+        if reply is None:
+            return False
+        msg = self._msg(MessageKind.CONTROL, Priority.HIGH, reply, bypass=True)
+        msg.meta = {"intent": "validation", "grounded": True, "fallback": True, "facts": []}
+        self.history.appendleft({"role": "engineer", "text": reply, "t": time.time()})
+        self._observe("command", lambda: {"msg_id": msg.id, "question": question, "text": reply})
+        await self.say(msg, rec, released)
+        return True
+
+    # --- end validation kit hooks -------------------------------------------------------------------------------
 
     # ------------------------------------------------------------------ lifecycle
     def start(self) -> None:
@@ -641,6 +740,10 @@ class RadioHub:
         self._broadcast(
             {"type": "transcript", "text": res.text, "stt_ms": res.latency_ms, "audio_s": round(clip.duration_s, 2)}
         )
+        self._observe(  # validation kit hook
+            "transcript",
+            lambda: {"text": res.text, "stt_ms": res.latency_ms, "audio_s": rec.audio_s, "ptt_source": self.ptt_source},
+        )
         self.history.appendleft({"role": "driver", "text": res.text, "t": time.time()})
         if not res.text.strip():
             await self.say(self._msg(MessageKind.CONTROL, Priority.HIGH, "Say again?", bypass=True), rec, released)
@@ -658,6 +761,8 @@ class RadioHub:
         self._busy = True
         self._send_state()
         try:
+            if await self._validation_command(question, rec, released):  # validation kit: radio commands first
+                return
             intent = detect_intent(question)
             # the game the data comes from (live session, else the selection): a question only about data it never
             # sends is answered from what Pitwall knows about the game - no LLM, no "Copy, checking."
@@ -697,6 +802,20 @@ class RadioHub:
                     "facts": [f["id"] for f in ans.facts],
                 }
             self.history.appendleft({"role": "engineer", "text": ans_text, "t": time.time()})
+            self._observe(  # validation kit hook
+                "answer",
+                lambda: {
+                    "msg_id": msg.id,
+                    "question": question,
+                    "text": ans_text,
+                    "intent": ans.intent if ans is not None else intent.name,
+                    "grounded": ans.grounded if ans is not None else None,
+                    "fallback": ans.fallback if ans is not None else True,
+                    "llm": rec.llm,
+                    "use_llm": use_llm,
+                    "engineer_ms": rec.engineer_ms,
+                },
+            )
             await self.say(msg, rec, released)
         finally:
             self._busy = False
@@ -778,6 +897,17 @@ class RadioHub:
             return None
         if verify:
             res = await self._verified(msg.speech, res, msg.kind.value)
+        self._observe(  # validation kit hook
+            "synth",
+            lambda: {
+                "msg_id": msg.id,
+                "kind": msg.kind.value,
+                "engine": res.engine,
+                "neural": res.neural,
+                "synth_ms": res.synth_ms,
+                "fallback_reason": res.fallback_reason,
+            },
+        )
         return res
 
     # ------------------------------------------------------------------ TTS engine: voice, check, diagnostics
@@ -949,6 +1079,7 @@ class RadioHub:
         audio_clients = [c for c in self.clients if not c.device_tts]
         device_clients = [c for c in self.clients if c.device_tts]
         n_bytes = len(clip.pcm) if clip else 0
+        cancelled_id = self.speaking_id  # validation kit: what this message cuts, if anything
         if self.speaking_id is not None:
             self._cancel_speaking()  # newest high-priority message wins
         spoken = n_bytes > 0 or (has_speech and bool(device_clients))
@@ -981,11 +1112,23 @@ class RadioHub:
                 self._pending_latency[msg.id] = (rec, released)
             self.latency.appendleft(rec)
         self._send_state()
+        self._observe(  # validation kit hook
+            "deliver",
+            lambda: {
+                "msg_id": msg.id,
+                "kind": msg.kind.value,
+                "n_bytes": n_bytes,
+                "audio_clients": len(audio_clients),
+                "device_clients": len(device_clients),
+                "cancelled_id": cancelled_id,
+            },
+        )
 
     def _on_playback(
         self, msg_id: str, state: str, client: RadioClient | None = None, output_s: float | None = None
     ) -> None:
         now = time.monotonic()
+        observed = self._pending_latency.get(msg_id) if state == "started" else None  # validation kit hook
         if state == "started":
             pend = self._pending_latency.pop(msg_id, None)
             if pend is not None:
@@ -1003,6 +1146,18 @@ class RadioHub:
             self.speaking_id = None
             self._gate_until = now + GATE_TAIL_S
             self._send_state()
+        self._observe(  # validation kit hook
+            "playback",
+            lambda: {
+                "msg_id": msg_id,
+                "state": state,
+                "client": None if client is None else client.name,
+                "device_tts": None if client is None else client.device_tts,
+                "output_s": output_s,
+                "frame": self._frame_brief(),
+                "latency": None if observed is None else asdict(observed[0]),
+            },
+        )
 
     def _cancel_speaking(self) -> None:
         if self.speaking_id is not None:
@@ -1224,6 +1379,20 @@ class RadioHub:
         if synth_s is not None:
             # latency feedback means synthesis + delivery: the time spent held is not speech latency
             self._dispatched[msg.id] = now - synth_s
+        self._observe(  # validation kit hook
+            "proactive",
+            lambda: {
+                "msg_id": msg.id,
+                "kind": msg.kind.value,
+                "priority": int(msg.priority),
+                "text": msg.text,
+                "lap_number": msg.lap_number,
+                "meta": {"lap_id": msg.meta.get("lap_id"), "observation_id": msg.meta.get("observation_id")},
+                "needs_speak_window": msg.needs_speak_window,
+                "held_s": max(0.0, now - msg.created_mono),
+                "state": asdict(self.driving_state()),
+            },
+        )
         self._deliver(msg, clip, LatencyRecord(kind="proactive", text=msg.text), msg.created_mono)
         if interrupted is not None and interrupted[0].id != msg.id:
             self._rehold(interrupted, now)
@@ -1291,6 +1460,7 @@ class RadioHub:
         if reason is not None:
             self.cues.record_outcome(ev.seq, "dropped", reason)
             log.info("cue %s (lap %d) dropped: %s", ev.cue.text, ev.lap, reason)
+            self._observe_cue(ev, "dropped", reason, None, clip)  # validation kit hook
             return reason
         msg = RadioMessage(
             id=f"m{next(self._ids)}",
@@ -1320,6 +1490,7 @@ class RadioHub:
             self._cue_inflight[msg.id] = ev
         note = "audio not ready: text only" if pcm_needed and clip is None else None
         self.cues.record_outcome(ev.seq, "sent", note)
+        self._observe_cue(ev, "sent", note, msg.id, clip)  # validation kit hook
         return None
 
     def _cue_block_reason(self, ev: CueEvent, now: float) -> str | None:
@@ -1635,6 +1806,17 @@ class RadioHub:
             }
         )
         self.cues.record_timing(ev.seq, error_m=error_m, latency_s=latency)
+        self._observe(  # validation kit hook
+            "cue_timing",
+            lambda: {
+                "seq": ev.seq,
+                "error_m": error_m,
+                "latency_ms": round(latency * 1000),
+                "output_ms": round(out * 1000),
+                "output_reported": output_s is not None,
+                "predicted_latency_ms": round(ev.latency_s * 1000),
+            },
+        )
         log.info(
             "cue %s (lap %d, %.0f km/h): key word %s vs intended, latency %.0f ms incl. %.0f ms output %s "
             "(predicted %.0f ms, %s)",

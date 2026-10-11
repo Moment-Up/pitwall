@@ -6,6 +6,7 @@ import { useDriveLock } from "./components/shell/useDriveLock";
 import { useLapToast } from "./components/shell/useLapToast";
 import { useApi, useCacheInvalidation } from "./hooks/useApi";
 import { useLive, useLiveConnection, useRoute } from "./hooks/stores";
+import { useValidationReporter } from "./hooks/useValidationReporter"; // validation kit (lane validate)
 import { api } from "./lib/api";
 import { router } from "./lib/router";
 import { pageById } from "./routes";
@@ -48,6 +49,7 @@ export function App() {
   useCacheInvalidation();
   useRealSessionFlag();
   useGameSelectedFlag();
+  useValidationReporter(); // validation kit (lane validate): device reports while a run is active, no React state
   // Drive never shows toasts on track (spec 2.6): the toast region is only mounted off track, and the lap toast
   // ("Lap 7 analysed · 2 coaching points", Open) is only raised off track.
   const { onTrack } = useDriveLock();

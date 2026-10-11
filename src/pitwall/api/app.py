@@ -182,6 +182,15 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
                 log.info("radio ready: stt=%s tts=%s", hub.stt.name, hub.tts.name)
             except Exception:
                 log.exception("radio unavailable (voice disabled for this run)")
+        # validation kit (lane validate): rig validation runs, files under data/validation; observes, never blocks
+        app.state.validation = None
+        try:
+            from pitwall.validate.kit import ValidationKit
+
+            app.state.validation = ValidationKit(settings, rt, app.state.hub, asyncio.get_running_loop())
+        except Exception:
+            log.exception("validation kit unavailable (the rest of pitwall runs as usual)")
+        # end validation kit
         if start_udp:
             try:
                 rt.start_udp()
@@ -191,6 +200,11 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         try:
             yield
         finally:
+            if app.state.validation is not None:  # validation kit (lane validate): detach, save the active run
+                try:
+                    await app.state.validation.close()
+                except Exception:
+                    log.exception("validation kit close failed")
             if app.state.radio_detach is not None:
                 app.state.radio_detach()
             if app.state.hub is not None:
@@ -811,6 +825,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
 
     app.include_router(update_router)
     # --- end lane install ---
+    from pitwall.api.routes_validate import router as validate_router  # validation kit (lane validate)
+
+    app.include_router(validate_router)
 
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias

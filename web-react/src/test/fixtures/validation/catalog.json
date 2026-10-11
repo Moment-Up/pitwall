@@ -1,0 +1,359 @@
+{
+  "_fixture": {
+    "source": "hand-written from the lane's design spec section 11 (catalogue and driver-facing copy) and contract.ts",
+    "status": 200,
+    "note": "GET /api/validation/catalog before the backend existed: the copy is the spec's; game_selection is unavailable (no game-selection lane on this server). Replace with a recorded answer once routes_validate.py serves it.",
+    "edited": ["all"]
+  },
+  "body": {
+    "format": 1,
+    "groups": [
+      { "id": "dashboard", "title": "Dashboard at the wheel" },
+      { "id": "radio", "title": "Radio" },
+      { "id": "coaching", "title": "Coaching" },
+      { "id": "games", "title": "Games" },
+      { "id": "drivers", "title": "Drivers" }
+    ],
+    "items": [
+      {
+        "id": "ipad_home_screen",
+        "group": "dashboard",
+        "title": "Home Screen app keeps the screen on",
+        "summary": "The iPad stays awake on Drive while you drive.",
+        "why": "The wake lock has only been checked in a desktop browser, never on the iPad at the wheel.",
+        "est_minutes": 10,
+        "optional": false,
+        "per_driver": false,
+        "scope": "run",
+        "prerequisites": [
+          "Open Pitwall on the iPad from its Home Screen icon (added from the Tailscale address in Safari: Share › Add to Home Screen)."
+        ],
+        "steps": [
+          { "text": "On the iPad, set Settings › Display & Brightness › Auto-Lock to 2 minutes for this test.", "detail": null },
+          { "text": "Open Drive › Coach.", "detail": null },
+          { "text": "Drive for at least 5 minutes without touching the iPad.", "detail": null },
+          { "text": "Watch that the screen stays on and no \"Screen may sleep\" chip appears.", "detail": null },
+          { "text": "Afterwards put Auto-Lock back.", "detail": null }
+        ],
+        "attestations": [
+          { "key": "autolock_2min", "text": "Auto-Lock was set to 2 minutes" },
+          { "key": "did_not_touch", "text": "I did not touch the iPad while driving" }
+        ],
+        "prompt": "Did the screen stay on the whole time?",
+        "radio_brief": "Validation: screen test. Drive five minutes without touching the iPad.",
+        "input_check": null,
+        "informs": [{ "status_md": "Dashboard v2 › Unverified: Home Screen app, wake lock", "capability_row": null }],
+        "rule_text": "Passes when the iPad reports the screen kept on for at least 5 minutes (heuristic) on a Drive page while telemetry is live, opened from the Home Screen, without the page being hidden.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "ipad_glance",
+        "group": "dashboard",
+        "title": "Glance test at 70 cm (each driver)",
+        "summary": "Each driver reads Drive › Coach from quick glances.",
+        "why": "Only a driver in the seat can say whether the screen reads at a glance.",
+        "est_minutes": 15,
+        "optional": false,
+        "per_driver": true,
+        "scope": "window",
+        "prerequisites": ["iPad on its mount at about 70 cm, lights as when you race."],
+        "steps": [
+          { "text": "Drive 3 laps on Drive › Coach.", "detail": null },
+          { "text": "From quick glances, say the next corner and whether a braking call is coming.", "detail": null },
+          { "text": "Say the delta's sign and first digit.", "detail": null },
+          { "text": "Read the coaching point on a straight.", "detail": null },
+          { "text": "Answer: what did you look at first?", "detail": null }
+        ],
+        "attestations": [
+          { "key": "read_corner", "text": "I could read the next corner at a glance" },
+          { "key": "read_delta", "text": "I could read the delta's sign and first digit" },
+          { "key": "read_point", "text": "I could read the coaching point on a straight" }
+        ],
+        "prompt": "Could you read everything at a glance?",
+        "radio_brief": "Validation: glance test. Three laps on Coach, reading the screen in quick glances.",
+        "input_check": null,
+        "informs": [{ "status_md": "Dashboard v2 › glance and family tests (spec 14.5)", "capability_row": null }],
+        "rule_text": "Only the driver can judge this. Pitwall shows the laps each driver completed while the test was open (3 needed, heuristic) and whether an iPad was on Drive › Coach.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "ipad_one_message",
+        "group": "dashboard",
+        "title": "Screen and radio give the same coaching point",
+        "summary": "The coach card shows the point the engineer says.",
+        "why": "One message on two channels has not been seen live yet.",
+        "est_minutes": 15,
+        "optional": false,
+        "per_driver": false,
+        "scope": "run",
+        "prerequisites": ["Radio live (Drive › Radio › Go live), coaching Normal."],
+        "steps": [
+          { "text": "Drive 5 laps.", "detail": null },
+          { "text": "When the engineer gives a coaching point, check the coach card shows the same corner and advice.", "detail": null }
+        ],
+        "attestations": [],
+        "prompt": "Did the card and the radio always agree?",
+        "radio_brief": "Validation: one message. Five laps; check the card matches what I say.",
+        "input_check": null,
+        "informs": [{ "status_md": "Dashboard v2 › D6 not yet seen live", "capability_row": null }],
+        "rule_text": "Passes when at least 3 coaching messages were spoken and each was the point picked for its lap; fails if a spoken point was not the lap's pick.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "ipad_endurance",
+        "group": "dashboard",
+        "title": "One hour on Drive",
+        "summary": "Drive › Coach stays smooth for an hour with the radio live.",
+        "why": "Long sessions on the iPad have not been measured.",
+        "est_minutes": 60,
+        "optional": true,
+        "per_driver": false,
+        "scope": "window",
+        "prerequisites": ["Radio live."],
+        "steps": [{ "text": "Keep Drive › Coach open for an hour of driving with the radio live.", "detail": null }],
+        "attestations": [],
+        "prompt": "Did the screen stay smooth for the whole hour?",
+        "radio_brief": "Validation: one hour on Drive. Keep Coach open and drive.",
+        "input_check": null,
+        "informs": [{ "status_md": "spec 14.5 #7", "capability_row": null }],
+        "rule_text": "Passes with an hour of 10-second windows on Drive, at least 90 % of them at 45 frames a second or more (heuristic), and no page reloads. Memory cannot be read in Safari.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "radio_ptt",
+        "group": "radio",
+        "title": "Push-to-talk over Tailscale with an AirPod",
+        "summary": "Ask the engineer questions from the iPad and the wheel.",
+        "why": "Speech input has only been tested on the Mac, not over Tailscale with an AirPod.",
+        "est_minutes": 10,
+        "optional": false,
+        "per_driver": false,
+        "scope": "run",
+        "prerequisites": [
+          "One AirPod paired with the iPad and in your ear.",
+          "Pitwall opened from the Tailscale address (the Home Screen icon is fine)."
+        ],
+        "steps": [
+          { "text": "Drive › Radio › Go live; allow the microphone.", "detail": null },
+          { "text": "Hold the on-screen talk button, ask \"How are my tyres?\", let go.", "detail": null },
+          { "text": "Hold your wheel's talk button and ask \"Where am I losing the most time?\".", "detail": "F1 25: UDP Action 1." },
+          { "text": "Ask one more question while driving.", "detail": null },
+          { "text": "When you stop, mark each transcript below as heard right or wrong.", "detail": null }
+        ],
+        "attestations": [{ "key": "airpod_used", "text": "The AirPod was the microphone and the speaker" }],
+        "prompt": "Did the engineer hear you and answer sensibly?",
+        "radio_brief": "Validation: push-to-talk. Ask me two questions, one with your wheel button.",
+        "input_check": null,
+        "informs": [
+          { "status_md": "Phase 5 › Speech input (PTT) pending", "capability_row": null },
+          { "status_md": "Dashboard v2 › push-to-talk over Tailscale HTTPS", "capability_row": null }
+        ],
+        "rule_text": "Passes with at least 2 questions heard and answered (heuristic) from an iPad over Tailscale, with an AirPod microphone, and no more than a third answered \"Say again?\" (heuristic). Quick answers should reach your ear within 4 s and engineer answers within 20 s (both heuristic).",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "radio_speak_windows",
+        "group": "radio",
+        "title": "The radio keeps out of braking zones",
+        "summary": "Lap summaries and coaching start and finish on straights.",
+        "why": "Speak windows have only been checked on generated data.",
+        "est_minutes": 15,
+        "optional": false,
+        "per_driver": false,
+        "scope": "run",
+        "prerequisites": ["Radio live, coaching Normal or Detailed."],
+        "steps": [
+          { "text": "Drive 5 or more clean laps and listen.", "detail": null },
+          { "text": "Lap summaries and coaching should start and finish on straights, never into a braking zone or a corner.", "detail": null }
+        ],
+        "attestations": [],
+        "prompt": "Did the radio keep out of braking zones and corners?",
+        "radio_brief": "Validation: speak windows. Five clean laps; tell me if I talk into a corner.",
+        "input_check": null,
+        "informs": [{ "status_md": "Phase 5 › proactive timing synthetic only", "capability_row": null }],
+        "rule_text": "Each message is checked against your inputs while it played: braking (10 % or more) or steering past a quarter (heuristic) is an overlap. Passes with 6 messages measured over 3 laps (heuristic), no overlap and at most one close to a braking zone.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "radio_kokoro",
+        "group": "radio",
+        "title": "Natural engineer voice heard on track",
+        "summary": "The Mac's natural voice reads lap times, coaching and calls.",
+        "why": "The natural voice has not been heard live on the radio.",
+        "est_minutes": 10,
+        "optional": false,
+        "per_driver": false,
+        "scope": "run",
+        "prerequisites": ["Settings › Radio & voice › Engineer voice: this Mac; Mac voice: bm_fable (or another natural voice)."],
+        "steps": [
+          { "text": "Drive 3 or more laps with the radio live.", "detail": null },
+          { "text": "Listen to lap times, coaching and braking calls.", "detail": null },
+          { "text": "Note any word or number that sounded wrong.", "detail": null }
+        ],
+        "attestations": [
+          { "key": "numbers_clear", "text": "Numbers and lap times were clear" },
+          { "key": "sounded_natural", "text": "The voice sounded natural" }
+        ],
+        "prompt": "Did the engineer's voice sound clear and natural?",
+        "radio_brief": "Validation: natural voice. Three laps; note anything that sounds wrong.",
+        "input_check": null,
+        "informs": [{ "status_md": "Neural radio voice › not heard live", "capability_row": null }],
+        "rule_text": "Passes with 5 natural-voice messages played on the iPad (heuristic), no more than 20 % in the fallback voice (heuristic), no voice restarts, and the iPad set to the Mac's voice.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "cues_timing",
+        "group": "coaching",
+        "title": "Braking calls land on time",
+        "summary": "\"Brake\" lands as you reach your braking point.",
+        "why": "Braking calls have not been validated live.",
+        "est_minutes": 20,
+        "optional": false,
+        "per_driver": false,
+        "scope": "run",
+        "prerequisites": ["3 clean laps at this track so you have a reference.", "Radio live."],
+        "steps": [
+          { "text": "Drive › Radio › Braking calls: Off. Drive 3 laps, braking where you normally do.", "detail": null },
+          { "text": "Set Braking calls: All.", "detail": null },
+          { "text": "Drive 3 to 5 laps. Brake where you normally would; notice whether \"brake\" lands as you reach your braking point.", "detail": null },
+          { "text": "Optional: set Focus and drive 2 more laps.", "detail": null }
+        ],
+        "attestations": [{ "key": "never_after_point", "text": "No call came after my braking point" }],
+        "prompt": "Did the calls land at or just before your braking points?",
+        "radio_brief": "Validation: braking calls. Three laps with calls off, then calls on all.",
+        "input_check": null,
+        "informs": [{ "status_md": "Verified vs unverified › Live braking cues: not yet validated live", "capability_row": null }],
+        "rule_text": "A call is late when the word lands more than 5 m past the point the engine aims for. Passes with 8 calls measured over 3 braking zones (heuristic), none late, at most 10 % early (heuristic) and at most 20 % lost in delivery (heuristic). Your braking is matched to each call by distance (within 100 m, heuristic), never by corner name.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "ac_ps5",
+        "group": "games",
+        "title": "Assetto Corsa on the PS5: laps timed and coached",
+        "summary": "Pitwall times and coaches Assetto Corsa laps from the PS5.",
+        "why": "Pitwall's own Assetto Corsa client has not been checked against a PS5.",
+        "est_minutes": 20,
+        "optional": false,
+        "per_driver": false,
+        "scope": "run",
+        "prerequisites": [
+          "Setup › Connect › Assetto Corsa on, platform PS5, the console's address filled in.",
+          "AC (PS4 version) running on the PS5."
+        ],
+        "steps": [
+          { "text": "Start a practice session, one car, one track.", "detail": null },
+          { "text": "Drive out and do at least 4 full laps without pitting.", "detail": null },
+          { "text": "Compare the lap times on Review › Sessions with the game's.", "detail": null },
+          { "text": "Optional, stopped in the pit lane: the input check.", "detail": null }
+        ],
+        "attestations": [{ "key": "times_match", "text": "Pitwall's lap times match the game's to the millisecond" }],
+        "prompt": "Were your laps timed and coached correctly?",
+        "radio_brief": "Validation: Assetto Corsa. Four full laps without pitting.",
+        "input_check": ["centre", "left", "right", "pedals", "reverse"],
+        "informs": [
+          { "status_md": "AC › Unverified: own client and service", "capability_row": "Assetto Corsa (original, PS4 version) · PS5" }
+        ],
+        "rule_text": "Passes when the handshake was answered, packets arrived at 50 a second or more (heuristic) with none rejected, 3 laps were timed of which 2 clean (heuristic), the track length was measured from a full lap, and you confirm the times match.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "gt7_ps5",
+        "group": "games",
+        "title": "Gran Turismo 7 on the PS5",
+        "summary": "Pitwall times and coaches GT7 laps from the PS5.",
+        "why": "GT7 has only been tested with generated data.",
+        "est_minutes": 15,
+        "optional": false,
+        "per_driver": false,
+        "scope": "run",
+        "prerequisites": ["Setup › Connect › Gran Turismo 7 on with the PS5's address."],
+        "steps": [
+          { "text": "Time Trial or a race on one circuit (not a replay).", "detail": null },
+          { "text": "Drive 4 or more laps.", "detail": null },
+          { "text": "Compare lap times with the game's.", "detail": null },
+          { "text": "Optional: the input check.", "detail": null }
+        ],
+        "attestations": [{ "key": "times_match", "text": "Pitwall's lap times match the game's to the millisecond" }],
+        "prompt": "Were your laps timed and coached correctly?",
+        "radio_brief": "Validation: Gran Turismo. Four laps on one circuit.",
+        "input_check": ["centre", "left", "right", "pedals"],
+        "informs": [{ "status_md": "GT7 synthetic only", "capability_row": "Gran Turismo 7 · PS5 / PS4" }],
+        "rule_text": "Passes when the heartbeat reached the PS5, packets arrived at 50 a second or more (heuristic) with none rejected, 3 laps were timed on one circuit of which 2 clean (heuristic), a coaching point was made, and you confirm the times match. Streaming from the menus never counts as laps.",
+        "available": true,
+        "unavailable_reason": null
+      },
+      {
+        "id": "game_selection",
+        "group": "games",
+        "title": "Game choice and the wrong-game banner",
+        "summary": "A banner says when the data comes from another game.",
+        "why": "The wrong-game banner is new.",
+        "est_minutes": 10,
+        "optional": false,
+        "per_driver": false,
+        "scope": "window",
+        "prerequisites": [],
+        "steps": [
+          { "text": "Setup › Game: choose F1 25 on PS5.", "detail": null },
+          { "text": "Start another enabled game (for example GT7) and drive out.", "detail": null },
+          { "text": "Check that a banner says the data is from another game.", "detail": null },
+          { "text": "Choose that game: the banner must go.", "detail": null }
+        ],
+        "attestations": [],
+        "prompt": "Did the banner come and go as described?",
+        "radio_brief": "Validation: game choice. Start another game and look for the banner.",
+        "input_check": null,
+        "informs": [{ "status_md": "Game selection", "capability_row": null }],
+        "rule_text": "Pitwall records when the chosen and detected games differ and when they match again. It passes when that happened live and you say it worked.",
+        "available": false,
+        "unavailable_reason": "This server has no game selection yet."
+      },
+      {
+        "id": "driver_switch",
+        "group": "drivers",
+        "title": "Switching drivers mid-session",
+        "summary": "Each driver's laps end up under their own name.",
+        "why": "Splitting a session on a driver switch has only been checked on generated data.",
+        "est_minutes": 15,
+        "optional": false,
+        "per_driver": false,
+        "scope": "window",
+        "prerequisites": ["Two driver profiles."],
+        "steps": [
+          { "text": "Driver A drives 2 timed laps.", "detail": null },
+          { "text": "Switch to driver B from the driver button on Drive (pit lane or on track).", "detail": null },
+          { "text": "Driver B drives 2 laps.", "detail": null },
+          { "text": "Switch back to A.", "detail": null }
+        ],
+        "attestations": [{ "key": "switched_in_new_ui", "text": "I switched from the new dashboard" }],
+        "prompt": "Did each driver's laps end up under their own name?",
+        "radio_brief": "Validation: driver switch. Two laps each, switching on the Drive driver button.",
+        "input_check": null,
+        "informs": [
+          { "status_md": "Driver profiles › split-on-switch synthetic only", "capability_row": null },
+          { "status_md": "Dashboard v2 › driver switching from the new UI", "capability_row": null }
+        ],
+        "rule_text": "For each switch, Pitwall checks the laps before and after it belong to the right driver, no lap after the switch was stored under the previous driver, and the previous driver's braking plan was not kept.",
+        "available": true,
+        "unavailable_reason": null
+      }
+    ],
+    "voice_commands": [
+      { "phrase": "Start validation", "does": "Starts a run with the default tests." },
+      { "phrase": "Next test", "does": "Moves to the next test." },
+      { "phrase": "Worked", "does": "Marks the current test as worked." },
+      { "phrase": "Didn't work", "does": "Marks the current test as didn't work." },
+      { "phrase": "What's the test?", "does": "Says the current test and how far it has got." },
+      { "phrase": "Finish validation", "does": "Finishes the run and saves the report." }
+    ]
+  }
+}

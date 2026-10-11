@@ -1,0 +1,560 @@
+{
+ "run": {
+  "format": 1,
+  "id": "20261012-193012-a3f1",
+  "label": "First rig run",
+  "status": "active",
+  "version": 418,
+  "started_unix": 1791833412.0,
+  "ended_unix": null,
+  "current_item": "cues_timing",
+  "selected_items": [
+   "ipad_home_screen",
+   "radio_ptt",
+   "cues_timing",
+   "gt7_ps5"
+  ],
+  "radio_prompts": true,
+  "counts": {
+   "pass": 1,
+   "fail": 0,
+   "needs_review": 2,
+   "not_run": 1,
+   "skipped": 0
+  },
+  "tiers": [
+   "live"
+  ],
+  "server": {
+   "pitwall_version": "0.1.0",
+   "git_commit": "a1b2c3d",
+   "os": "darwin",
+   "voice_enabled": true,
+   "llm_enabled": true,
+   "stt": "parakeet",
+   "tts": "kokoro"
+  },
+  "context": {
+   "telemetry": "live",
+   "tier": "live",
+   "game": "f1_25",
+   "platform": "ps5",
+   "track": "Austria",
+   "session_id": "0e13bf6695c7",
+   "packet_format": 2025,
+   "game_version": "1.26",
+   "driver_id": 1,
+   "radio_clients": 1,
+   "cue_mode": "all"
+  },
+  "clients": [
+   {
+    "client_id": "5f1c2a9e-7b3d-4c11-9a2e-0d4b8f6e1a77",
+    "device": "ipad",
+    "standalone": true,
+    "secure_context": true,
+    "origin_kind": "tailscale_https",
+    "safari_version": "18.6",
+    "last_seen_s": 4.2,
+    "route": "drive/coach",
+    "visibility": "visible",
+    "wake": {
+     "wanted": true,
+     "state": "on"
+    },
+    "radio": {
+     "phase": "live",
+     "conn": "open",
+     "mic": "live",
+     "mic_silent": false,
+     "wake": "on",
+     "audio": "running",
+     "audio_session": "play-and-record",
+     "tts_mode": "server",
+     "rtt_ms": 38
+    },
+    "audio_input_kind": "airpods",
+    "gaps": 0,
+    "hidden_transitions": 0,
+    "reloads": 0,
+    "wake_on_streak_s": 1312.0,
+    "fps": null
+   }
+  ],
+  "items": [
+   {
+    "id": "ipad_home_screen",
+    "status": "done",
+    "windows": [
+     {
+      "start_unix": 1791833420.0,
+      "end_unix": 1791833900.0
+     }
+    ],
+    "marks": [
+     {
+      "driver_id": 1,
+      "verdict": "worked",
+      "notes": "",
+      "attestations": {
+       "autolock_2min": true,
+       "did_not_touch": true
+      },
+      "extra": {},
+      "at_unix": 1791833905.0,
+      "source": "screen"
+     }
+    ],
+    "skip_reason": null,
+    "auto": {
+     "verdict": "pass",
+     "reasons": [
+      "Screen kept on for 21:52 on Drive with telemetry live (5:00 needed)"
+     ],
+     "checks": [
+      {
+       "id": "standalone",
+       "label": "Opened from the Home Screen",
+       "status": "met",
+       "value": "yes",
+       "target": "yes",
+       "heuristic": false
+      },
+      {
+       "id": "wake_streak",
+       "label": "Screen kept on while driving",
+       "status": "met",
+       "value": "1312 s",
+       "target": ">= 300 s",
+       "heuristic": true
+      },
+      {
+       "id": "hidden",
+       "label": "Page hidden while driving",
+       "status": "met",
+       "value": "0 times",
+       "target": "0",
+       "heuristic": false
+      }
+     ],
+     "metrics": {
+      "wake_on_streak_s": 1312.0,
+      "gaps": 0,
+      "hidden_transitions": 0,
+      "safari_version": "18.6"
+     },
+     "tier": "live",
+     "updated_unix": 1791833900.0
+    },
+    "result": "pass"
+   },
+   {
+    "id": "radio_ptt",
+    "status": "done",
+    "windows": [
+     {
+      "start_unix": 1791833910.0,
+      "end_unix": 1791834300.0
+     }
+    ],
+    "marks": [
+     {
+      "driver_id": 1,
+      "verdict": "worked",
+      "notes": "Wheel button slower to start than the screen one.",
+      "attestations": {
+       "airpod_used": true
+      },
+      "extra": {},
+      "at_unix": 1791834310.0,
+      "source": "screen"
+     }
+    ],
+    "skip_reason": null,
+    "auto": {
+     "verdict": "inconclusive",
+     "reasons": [
+      "1 round trip from the wheel button, 2 from the screen; 1 answer took 21.4 s (20 s target, heuristic)"
+     ],
+     "checks": [
+      {
+       "id": "roundtrips",
+       "label": "Questions heard and answered",
+       "status": "met",
+       "value": "3",
+       "target": ">= 2",
+       "heuristic": true
+      },
+      {
+       "id": "origin",
+       "label": "Over Tailscale HTTPS",
+       "status": "met",
+       "value": "tailscale_https",
+       "target": "tailscale_https",
+       "heuristic": false
+      },
+      {
+       "id": "airpod",
+       "label": "AirPod microphone",
+       "status": "met",
+       "value": "airpods",
+       "target": "airpods",
+       "heuristic": true
+      },
+      {
+       "id": "llm_latency",
+       "label": "Engineer answers within 20 s",
+       "status": "not_met",
+       "value": "21.4 s",
+       "target": "<= 20 s",
+       "heuristic": true
+      }
+     ],
+     "metrics": {
+      "roundtrips": 3,
+      "screen": 2,
+      "wheel": 1,
+      "say_again": 0,
+      "median_fast_to_playback_ms": 1840,
+      "max_llm_to_playback_ms": 21400
+     },
+     "tier": "live",
+     "updated_unix": 1791834300.0
+    },
+    "result": "needs_review"
+   },
+   {
+    "id": "cues_timing",
+    "status": "current",
+    "windows": [
+     {
+      "start_unix": 1791834320.0,
+      "end_unix": null
+     }
+    ],
+    "marks": [],
+    "skip_reason": null,
+    "auto": {
+     "verdict": "inconclusive",
+     "reasons": [
+      "6 calls measured, 8 needed",
+      "Baseline: 3 laps with calls off"
+     ],
+     "checks": [
+      {
+       "id": "measured",
+       "label": "Calls measured",
+       "status": "not_met",
+       "value": "6",
+       "target": ">= 8",
+       "heuristic": true
+      },
+      {
+       "id": "late",
+       "label": "Calls heard past your braking point",
+       "status": "met",
+       "value": "0",
+       "target": "0",
+       "heuristic": false
+      },
+      {
+       "id": "zones",
+       "label": "Different braking zones",
+       "status": "met",
+       "value": "4",
+       "target": ">= 3",
+       "heuristic": true
+      },
+      {
+       "id": "drops",
+       "label": "Calls lost in delivery",
+       "status": "met",
+       "value": "0 of 7",
+       "target": "<= 20 %",
+       "heuristic": true
+      }
+     ],
+     "metrics": {
+      "fired": 7,
+      "sent": 7,
+      "dropped_delivery": 0,
+      "dropped_expected": 0,
+      "measured": 6,
+      "late": 0,
+      "early": 0,
+      "zones": 4,
+      "median_heard_vs_point_m": -3.1,
+      "median_latency_ms": 312,
+      "median_onset_vs_point_m": 1.8,
+      "median_onset_vs_word_s": 0.11,
+      "baseline_median_onset_vs_point_m": 0.4,
+      "heads_up_fired": 0
+     },
+     "tier": "live",
+     "updated_unix": 1791834620.0
+    },
+    "result": "needs_review"
+   },
+   {
+    "id": "gt7_ps5",
+    "status": "pending",
+    "windows": [],
+    "marks": [],
+    "skip_reason": null,
+    "auto": {
+     "verdict": "no_evidence",
+     "reasons": [
+      "No Gran Turismo 7 data in this run yet"
+     ],
+     "checks": [],
+     "metrics": {},
+     "tier": null,
+     "updated_unix": 1791833412.0
+    },
+    "result": "not_run"
+   }
+  ],
+  "timeline": [
+   {
+    "t_unix": 1791834320.0,
+    "kind": "item",
+    "text": "Braking calls land on time: started"
+   },
+   {
+    "t_unix": 1791834318.0,
+    "kind": "cue_mode",
+    "text": "Braking calls: off"
+   },
+   {
+    "t_unix": 1791833415.0,
+    "kind": "telemetry",
+    "text": "Telemetry live: F1 25 on PS5, Austria"
+   }
+  ],
+  "notes": null,
+  "dropped_records": 0,
+  "evidence": {
+   "cues": [
+    {
+     "t_unix": 1791834512.3,
+     "tier": "live",
+     "session_id": "0e13bf6695c7",
+     "driver_id": 1,
+     "seq": 41,
+     "msg_id": "m212",
+     "lap": 7,
+     "corner": "T3",
+     "kind": "brake",
+     "heads_up": false,
+     "focus": false,
+     "target_m": 1274.8,
+     "aim_m": 1269.8,
+     "d_m": 1176.2,
+     "speed_kph": 291.0,
+     "ttg_s": 1.21,
+     "path": "pcm",
+     "outcome": "sent",
+     "drop_reason": null,
+     "error_m": 1.6,
+     "latency_ms": 318,
+     "heard_m": 1271.4,
+     "heard_vs_point_m": -3.4,
+     "onset_m": 1276.9,
+     "onset_vs_point_m": 2.1,
+     "onset_vs_word_m": 5.5,
+     "onset_vs_word_s": 0.07,
+     "cls": "on_time",
+     "cue_mode": "all"
+    }
+   ],
+   "ptt": [
+    {
+     "t_unix": 1791833990.0,
+     "tier": "live",
+     "session_id": "0e13bf6695c7",
+     "driver_id": 1,
+     "id": "m88",
+     "source": "screen",
+     "client": "ipad",
+     "transcript": "How are my tyres?",
+     "stt_ms": 412,
+     "audio_s": 1.6,
+     "intent": "tyres",
+     "answer": "Tyres look good, the front left is the limit.",
+     "answer_source": "deterministic",
+     "grounded": true,
+     "engineer_ms": 61,
+     "tts_ms": 240,
+     "to_first_audio_ms": 760,
+     "to_playback_ms": 1840,
+     "heard_right": true
+    }
+   ],
+   "proactive": [
+    {
+     "t_unix": 1791834101.0,
+     "tier": "live",
+     "session_id": "0e13bf6695c7",
+     "driver_id": 1,
+     "id": "lap-5-summary",
+     "kind": "lap_summary",
+     "text": "Lap 5, 1:05.7. Purple in sector 2.",
+     "lap": 5,
+     "lap_id": 1205,
+     "observation_id": null,
+     "held_s": 2.4,
+     "state_at_send": {
+      "on_track": true,
+      "brake": 0.0,
+      "steering": 0.02,
+      "speed_kph": 288.0,
+      "ttb_s": 6.8
+     },
+     "engine": "kokoro",
+     "started": true,
+     "start_frame": {
+      "lap": 6,
+      "lap_distance_m": 512.0,
+      "session_time_s": 401.22
+     },
+     "end_frame": {
+      "lap": 6,
+      "lap_distance_m": 731.0,
+      "session_time_s": 403.95
+     },
+     "duration_s": 2.73,
+     "max_brake": 0.0,
+     "max_abs_steering": 0.04,
+     "gap_to_brake_s": 2.1,
+     "cls": "clean",
+     "cut": false
+    }
+   ],
+   "laps": [
+    {
+     "t_unix": 1791834100.0,
+     "tier": "live",
+     "session_id": "0e13bf6695c7",
+     "driver_id": 1,
+     "lap_id": 1204,
+     "lap_number": 5,
+     "lap_time_ms": 65706,
+     "clean": true,
+     "flags": [],
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "cue_mode": "off",
+     "n_observations": 3,
+     "picked_ids": [
+      "T3:brake_early:5"
+     ]
+    }
+   ],
+   "switches": [],
+   "input_phases": [],
+   "game": []
+  }
+ },
+ "report_excerpt": {
+  "format": 1,
+  "generated_unix": 1791834625.0,
+  "in_progress": true,
+  "run": {
+   "id": "20261012-193012-a3f1",
+   "label": "First rig run",
+   "status": "active",
+   "started_unix": 1791833412.0,
+   "ended_unix": null,
+   "current_item": "cues_timing",
+   "counts": {
+    "pass": 1,
+    "fail": 0,
+    "needs_review": 2,
+    "not_run": 1,
+    "skipped": 0
+   },
+   "tiers": [
+    "live"
+   ],
+   "server": {
+    "pitwall_version": "0.1.0",
+    "git_commit": "a1b2c3d",
+    "os": "darwin",
+    "voice_enabled": true,
+    "llm_enabled": true,
+    "stt": "parakeet",
+    "tts": "kokoro"
+   },
+   "notes": null
+  },
+  "tiers": {
+   "live": 412,
+   "recorded": 0,
+   "synthetic": 0,
+   "loopback": 0,
+   "unknown": 3
+  },
+  "items": [
+   {
+    "id": "cues_timing",
+    "title": "Braking calls land on time",
+    "group": "coaching",
+    "result": "needs_review",
+    "marks": [],
+    "auto": {
+     "verdict": "inconclusive",
+     "reasons": [
+      "6 calls measured, 8 needed"
+     ],
+     "checks": [],
+     "metrics": {
+      "measured": 6,
+      "late": 0
+     },
+     "tier": "live",
+     "updated_unix": 1791834620.0
+    },
+    "informs": [
+     {
+      "status_md": "Verified vs unverified › Live braking cues: not yet validated live",
+      "capability_row": null
+     }
+    ],
+    "evidence_tables": [
+     {
+      "title": "Calls",
+      "columns": [
+       "Lap",
+       "Corner",
+       "Word vs point (m)",
+       "Driver braked vs point (m)",
+       "Word to brake (s)",
+       "Outcome"
+      ],
+      "rows": [
+       [
+        7,
+        "T3",
+        -3.4,
+        2.1,
+        0.07,
+        "on time"
+       ]
+      ]
+     }
+    ]
+   }
+  ],
+  "candidates": [
+   {
+    "item_id": "cues_timing",
+    "status_md": "Verified vs unverified › Live braking cues",
+    "capability_row": null,
+    "suggestion": "If you agree with this run, the line may say: validated live on the PS5 (F1 25), with the date and this run id.",
+    "met": false
+   }
+  ],
+  "disclaimer": "This report never changes capability statuses. Review it, then update src/pitwall/capabilities.py and docs/status.md by hand."
+ }
+}

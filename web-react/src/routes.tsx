@@ -131,6 +131,13 @@ export const AREAS: AreaDef[] = [
         summary: "A car setup for this track and how you drive",
         component: lazyPage(() => import("./pages/setup/CarSetupPage"), "CarSetupPage"),
       },
+      // validation kit (lane validate)
+      {
+        id: "validation",
+        label: "Validation",
+        summary: "Live tests on your rig, with evidence",
+        component: lazyPage(() => import("./pages/setup/ValidationPage"), "ValidationPage"),
+      },
     ],
   },
   {
