@@ -197,16 +197,16 @@ def same_scope(a: Scope, b: Scope) -> bool:
 def conflicts(new: NewGoal, active: Sequence[GoalRow], pb_ms: int | None) -> GoalError | None:
     """The checks against stored state (409), run inside the writer job by the service."""
     if len(active) >= MAX_ACTIVE:
-        return conflict("too_many", f"{MAX_ACTIVE} goals are already active: archive or delete one first")
+        return conflict("too_many", f"{MAX_ACTIVE} goals are already active: archive or delete one first.")
     for g in active:
         if g.kind == new.kind and g.params == new.params and same_scope(g.scope, new.scope) and g.target == new.target:
-            return conflict("duplicate", "This goal is already set")
+            return conflict("duplicate", "This goal is already set.")
     if new.kind == "lap_time":
         for g in active:
             if g.kind == "lap_time" and same_scope(g.scope, new.scope):
-                return conflict("duplicate_scope", "There is already a lap-time goal here: archive it first")
+                return conflict("duplicate_scope", "There is already a lap-time goal here: archive it first.")
         if pb_ms is not None and pb_ms < new.target:
-            return conflict("already_beaten", f"Your best here is already {lap_time(pb_ms)}")
+            return conflict("already_beaten", f"Your best here is already {lap_time(pb_ms)}.")
     return None
 
 
@@ -223,6 +223,11 @@ class Hit:
 
 def _scope_sessions(g: GoalRow, history: History) -> list[SessionRow]:
     return [s for s in history.sessions if rules.scope_matches(g.scope, s)]
+
+
+def _counted_since(g: GoalRow, history: History, s: SessionRow) -> bool:
+    """The session has a lap stored after the goal was set."""
+    return any(lap.id > g.after_lap_id for lap in history.laps_of(s.id))
 
 
 def races_since(g: GoalRow, history: History) -> list[tuple[SessionRow, rules.RaceOutcome]]:
@@ -247,8 +252,7 @@ def first_hit(g: GoalRow, history: History) -> Hit | None:
     if g.kind == "race_clean":
         for s, outcome in races_since(g, history):
             if outcome.meets(g.rule):
-                last = next((lap for lap in history.laps_of(s.id) if lap.lap_number == outcome.total_laps), None)
-                return Hit(s.id, None if last is None else last.id, outcome.total_laps, 1.0)
+                return Hit(s.id, outcome.final_lap_id, outcome.final_lap_number, 1.0)
         return None
     for s in _scope_sessions(g, history):
         laps = history.laps_of(s.id)
@@ -383,12 +387,11 @@ class Progress:
 
 
 def _fraction_lower_better(baseline: float | None, current: float | None, target: float, met: bool) -> float | None:
+    """0..1 from the baseline to the target; None (no bar) until something was measured since the goal was set."""
     if met:
         return 1.0
-    if baseline is None:
+    if baseline is None or current is None:
         return None
-    if current is None:
-        return 0.0
     span = baseline - target
     if span <= 0:
         return 0.0
@@ -430,7 +433,10 @@ def progress(g: GoalRow, history: History) -> Progress:
         cur = m.value
         met = cur is not None and cur < target
         to_go = None if cur is None else max(0.0, cur - target)
-        if cur is None:
+        if cur is None and baseline is not None and baseline > target:
+            text = f"{gap_s(baseline - target)} s to go from your best {lap_time(baseline)}"
+            simple = f"{about_s(baseline - target).capitalize()} to go"
+        elif cur is None:
             text, simple = "No clean lap here since you set it", "No clean lap here yet"
         elif met:
             text, simple = f"Reached: {lap_time(cur)}", f"Done: {lap_time(cur)}"
@@ -445,13 +451,13 @@ def progress(g: GoalRow, history: History) -> Progress:
         cur = m.value or 0.0
         met = cur >= target
         if cur <= 0:
-            text, simple = "No clean laps since you set it", "No clean laps yet since you set it"
+            text, simple = "No clean laps since you set it", "No clean laps yet"
         elif met:
             text, simple = f"Reached: {round(cur)} clean laps in a row", f"Done: {round(cur)} clean laps in a row"
         else:
             text = f"Best since you set it: {round(cur)} of {n} laps"
             simple = f"{round(cur)} of {n} clean laps in a row so far"
-        frac = 1.0 if met else min(1.0, cur / target) if target > 0 else None
+        frac = 1.0 if met else None if cur <= 0 or target <= 0 else min(1.0, cur / target)  # no empty bar
         to_go = max(0.0, target - cur)
         return Progress(
             g.baseline, cur, target, frac, to_go, met, m.session_id, m.lap_id, m.sessions_since, text, simple
@@ -462,8 +468,11 @@ def progress(g: GoalRow, history: History) -> Progress:
         cur = m.value
         met = cur is not None and cur <= target
         if cur is None:
-            text = f"No {k} clean laps in a row since you set it"
-            simple = f"No run of {k} clean laps yet since you set it"
+            # race lap 1 never counts for steady laps: say so, or a clean start looks forgotten
+            raced = any(s.is_race for s in _scope_sessions(g, history) if _counted_since(g, history, s))
+            note = " (race lap 1 does not count)" if raced else ""
+            text = f"No run of {k} clean laps to measure since you set it{note}"
+            simple = f"No run of {k} clean laps to measure yet{note}"
         elif met:
             text = f"Reached: {k} laps within {seconds(cur, tenths_when_whole=False)} s"
             simple = f"Done: {k} steady laps"
@@ -484,7 +493,7 @@ def progress(g: GoalRow, history: History) -> Progress:
         where = f"{s.track_name or 'a race'}, {short_date(s.started_unix)}"
         text = simple = f"Done: {where}"
     elif not races:
-        text, simple = "No race finished since you set it", "No race finished yet since you set it"
+        text, simple = "No race recorded from lap 1 to the flag since you set it", "No whole race recorded yet"
     else:
         n = len(races)
         issues = _race_issues([o for _, o in races], g.rule)
@@ -496,7 +505,7 @@ def progress(g: GoalRow, history: History) -> Progress:
         None,
         1.0 if met else 0.0,
         target,
-        1.0 if met else 0.0,
+        1.0 if met else None,  # a race is reached or not: no part-way bar
         0.0 if met else 1.0,
         met,
         met_race[0].id if met_race else None,

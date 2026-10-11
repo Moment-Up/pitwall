@@ -158,7 +158,10 @@ schema v3); badges, streaks, recaps and digests are derived from laps and events
 driving only (never replays, synthetic only on request). `worker.py` listens to `LiveState` notes (`lap`,
 `event:session_ended`), evaluates on its own thread, flips a goal with one `UPDATE ... WHERE status='active'` and only
 then publishes `live.notify("motivation", note)`: `/ws/live` forwards it as `{"type": "motivation"}` and the radio
-hub queues one `LAP_SUMMARY` line. API reads never write.
+hub queues one `LAP_SUMMARY` line. API reads never write. History reads take only the lap columns before `meta`;
+F1 races with a safety car, or with a chequered flag but no stored last lap (a lapped finish), also read two receive
+times from the lap meta (`t_recv_start_ns`, `t_recv_end_ns`, the events' clock) to judge the finish and leave laps
+behind the safety car out of steady laps.
 
 ## Dashboard (`web-react/`)
 React 19 + TypeScript (strict) + Vite + Tailwind v4 + HeroUI v3 / HeroUI Pro, built to `docs/ui/design-spec.md` (v2,

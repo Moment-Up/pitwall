@@ -22,6 +22,8 @@ from pitwall.motivation.model import (
     LapRow,
     Scope,
     SessionRow,
+    count_words,
+    display_car,
     gap_s,
     lap_time,
     short_date,
@@ -75,7 +77,7 @@ def _duration(ms: int) -> str:
     minutes = round(ms / 60_000)
     if minutes < 60:
         return f"{minutes} min"
-    return f"{minutes // 60} h {minutes % 60} min"
+    return f"{minutes // 60} h {minutes % 60} min" if minutes % 60 else f"{minutes // 60} h"
 
 
 def improvements(history: History, start: float, end: float) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -99,44 +101,39 @@ def improvements(history: History, start: float, end: float) -> tuple[list[dict[
         if have is None or best.lap_time_ms < (have[1].lap_time_ms or 0):
             week[key] = (s, best)
     gains: list[dict[str, Any]] = []
-    new_tracks: dict[tuple[str, str], dict[str, Any]] = {}
-    first_seen: dict[tuple[str, str], int] = {}
     for key, (s, lap) in sorted(week.items(), key=lambda kv: kv[1][0].started_unix):
         assert lap.lap_time_ms is not None
-        scope = Scope(game=s.game, track_id=s.track_id, track_name=s.track_name, car_id=s.car_id, car_name=s.car_name)
         prev = before.get(key)
-        item = {
-            "scope": scope.to_dict(),
-            "scope_text": scope.text() or s.track_id or "",
-            "before_ms": prev,
-            "best_ms": lap.lap_time_ms,
-            "gain_ms": None,
-            "new_track": False,
-            "session_id": s.id,
-            "lap_id": lap.id,
-        }
         if prev is not None and lap.lap_time_ms < prev:
-            gains.append({**item, "gain_ms": prev - lap.lap_time_ms})
-        track = (key[0], key[1])
-        first_seen.setdefault(track, len(first_seen))
-        if track not in tracks_before:
-            have_new = new_tracks.get(track)
-            if have_new is None or lap.lap_time_ms < have_new["best_ms"]:
-                track_scope = Scope(game=s.game, track_id=s.track_id, track_name=s.track_name)
-                new_tracks[track] = {
-                    **item,
-                    "scope": track_scope.to_dict(),
-                    "scope_text": track_scope.text() or s.track_id or "",
-                    "new_track": True,
-                }
+            gains.append({**_item(s, lap, prev), "gain_ms": prev - lap.lap_time_ms})
     gains.sort(key=lambda d: (-d["gain_ms"], d["scope_text"]))
-    order = {s.id: i for i, s in enumerate(history.sessions)}
+    # A track driven for the first time: the first session there with a clean lap, its own best, in its own car
+    # (another car's faster lap later in the week is not "the first clean laps").
+    firsts: dict[tuple[str, str], dict[str, Any]] = {}
+    for s in history.sessions:
+        if s.track_id is None or not start <= s.started_unix < end:
+            continue
+        track = (s.game, s.track_id)
+        if track in tracks_before or track in firsts:
+            continue
+        best = rules.fastest_clean(history.laps_of(s.id))
+        if best is not None and best.lap_time_ms is not None:
+            firsts[track] = {**_item(s, best, None), "new_track": True}
+    return gains, list(firsts.values())
 
-    def seen(d: dict[str, Any]) -> tuple[int, int]:
-        return first_seen.get((d["scope"]["game"], d["scope"]["track_id"]), 0), order.get(d["session_id"], 0)
 
-    firsts = sorted(new_tracks.values(), key=seen)
-    return gains, firsts
+def _item(s: SessionRow, lap: LapRow, before_ms: int | None) -> dict[str, Any]:
+    scope = Scope(game=s.game, track_id=s.track_id, track_name=s.track_name, car_id=s.car_id, car_name=s.car_name)
+    return {
+        "scope": scope.to_dict(),
+        "scope_text": scope.text() or s.track_id or "",
+        "before_ms": before_ms,
+        "best_ms": lap.lap_time_ms,
+        "gain_ms": None,
+        "new_track": False,
+        "session_id": s.id,
+        "lap_id": lap.id,
+    }
 
 
 def _headline(counts: _Counts, gains: Sequence[dict[str, Any]], firsts: Sequence[dict[str, Any]]) -> tuple[str, str]:
@@ -192,7 +189,7 @@ def build_digest(
                 "started_unix": s.started_unix,
                 "game": s.game,
                 "track_name": s.track_name,
-                "car_name": s.car_name,
+                "car_name": display_car(s.car_name),
                 "session_type": s.session_type,
                 "laps": len(laps),
                 "clean_laps": sum(1 for lap in laps if lap.clean),
@@ -243,23 +240,39 @@ def build_digest(
 
 
 # ---------------------------------------------------------------------------------------------- markdown
+IMPROVEMENTS_TITLE = "New tracks and improvements"
+
+
 def possessive(name: str) -> str:
     return f"{name}'s"
 
 
-def totals_line(d: dict[str, Any]) -> str:
+def headline_text(d: dict[str, Any]) -> str:
+    """The headline in the driver's wording, as a sentence."""
+    h = str(d["headline_simple"] if d["simple"] else d["headline"])
+    return h if h.endswith(".") else h + "."
+
+
+def totals_line(d: dict[str, Any]) -> str | None:
+    """What the headline does not say already (the same words as the dashboard's week card): ``9 clean laps ·
+    55 min driving · 2 tracks``; None in an empty week."""
     t = d["totals"]
     if not t["sessions"]:
-        return "No driving this week."
-    parts = [
-        f"{t['sessions']} session{'s' if t['sessions'] != 1 else ''}",
-        f"{t['laps']} timed lap{'s' if t['laps'] != 1 else ''} ({t['clean_laps']} clean)",
-        f"{_duration(round(t['lap_time_s'] * 1000))} of timed laps",
-        f"{t['tracks']} track{'s' if t['tracks'] != 1 else ''}",
-    ]
-    p = d["previous_week"]
-    parts.append(f"week before: {p['sessions']} session{'s' if p['sessions'] != 1 else ''}, {p['laps']} laps")
+        return None
+    parts = [count_words(t["clean_laps"], "clean lap")]
+    if t["lap_time_s"] > 0:
+        parts.append(f"{_duration(round(t['lap_time_s'] * 1000))} driving")
+    parts.append(count_words(t["tracks"], "track"))
     return " · ".join(parts)
+
+
+def previous_line(d: dict[str, Any]) -> str | None:
+    """``Week before: 3 sessions, 12 laps, 9 clean``; None when it had no driving."""
+    p = d["previous_week"]
+    if not p["sessions"]:
+        return None
+    sessions, laps = count_words(p["sessions"], "session"), count_words(p["laps"], "lap")
+    return f"Week before: {sessions}, {laps}, {p['clean_laps']} clean"
 
 
 def session_line(r: dict[str, Any]) -> str:
@@ -300,10 +313,13 @@ def markdown(d: dict[str, Any]) -> str:
     start = date.fromisoformat(d["week_start"])
     end = date.fromisoformat(d["week_end"])
     simple = bool(d["simple"])
-    lines = [f"# {possessive(name)} week: {week_range_text(start, end)}", "", totals_line(d), ""]
-    lines.append("## Sessions")
+    lines = [f"# {possessive(name)} week: {week_range_text(start, end)}", ""]
+    for x in (headline_text(d), totals_line(d), previous_line(d)):
+        if x:
+            lines += [md_escape(x), ""]  # one paragraph each
+    lines += ["## Sessions"]
     lines += [f"- {md_escape(session_line(r))}" for r in d["sessions"]] or ["- None this week."]
-    lines += ["", "## Best improvements"]
+    lines += ["", f"## {IMPROVEMENTS_TITLE}"]
     lines += [f"- {md_escape(improvement_line(i))}" for i in d["improvements"]] or ["- None this week."]
     lines += ["", "## Goals"]
     goal_lines = [f"- {md_escape(goal_line(g, simple))}" for g in d["goals"]["achieved"]]

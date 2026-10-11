@@ -28,13 +28,26 @@ def test_first_clean_lap_per_track_and_under_time_across_sessions_only() -> None
     assert under == ["under_time:f1_25:f1:17:f1:team:7:71000"]
     u = got[under[0]]
     assert (u.title, u.title_simple, u.session_id, u.lap_id, u.level) == (
-        "First time under 1:11 at Austria",
-        "You beat 1:11 at Austria for the first time",
+        "First time under 1:11 at Austria in the Haas",
+        "You beat 1:11 at Austria in the Haas for the first time",
         "b",
         b[1].id,
         71_000,
     )
-    assert u.detail == "1:10.549 on lap 2 in the Haas"
+    assert u.detail == "1:10.549 on lap 2"
+
+
+def test_under_time_names_the_car_and_hides_id_only_names() -> None:
+    """Bests are per car: a slower car's first time under 1:19 at Austria is about that car, and says so."""
+    haas = sess("a", T0)
+    generic = [sess(x, T0 + i * 60, car_id="f1:team:41", car_name="F1 Generic") for i, x in ((1, "b"), (2, "c"))]
+    h = history((haas, laps("a", [69_900])), (generic[0], laps("b", [80_400])), (generic[1], laps("c", [78_900])))
+    (u,) = [b for b in B.badges(h) if b.kind == "under_time"]
+    assert u.title == "First time under 1:19 at Austria in the F1 Generic"
+    unknown = [sess(x, T0 + i * 60, car_id="f1:team:214", car_name="Unknown team (id 214)") for i, x in enumerate("de")]
+    h2 = history((unknown[0], laps("d", [80_400])), (unknown[1], laps("e", [78_900])))
+    (u2,) = [b for b in B.badges(h2) if b.kind == "under_time"]
+    assert u2.title == "First time under 1:19 at Austria"  # an id-only name is left out, never shown
 
 
 def test_clean_streak_levels_and_ten_clean() -> None:
@@ -47,7 +60,7 @@ def test_clean_streak_levels_and_ten_clean() -> None:
     assert got["clean_streak:5"].lap_id == run10[4].id
     assert "clean_streak:20" not in got
     assert got["ten_clean_session"].lap_id == run10[9].id
-    assert got["clean_streak:5"].title_simple == "5 laps in a row that all counted"
+    assert got["clean_streak:5"].title_simple == "5 clean laps in a row"  # one word for "clean" everywhere
 
 
 def test_pb_streak_levels() -> None:

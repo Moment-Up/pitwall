@@ -52,10 +52,12 @@ export interface WeekView {
   label: string;
   isCurrent: boolean;
   headline: string;
-  /** "17 sessions · 60 laps, 47 clean · 1 h 12 min of laps · 6 tracks"; null in an empty week. */
+  /** What the headline does not say already, in the printable page's words: "47 clean laps · 1 h 12 min driving ·
+   * 6 tracks"; null in an empty week. */
   totals: string | null;
-  /** "Week before: 3 sessions, 12 laps (9 clean)"; null when it had none. */
+  /** "Week before: 3 sessions, 12 laps, 9 clean"; null when it had none. */
   previous: string | null;
+  /** Every session of the week (the card shows WEEK_SESSIONS_SHOWN, then "Show all"). */
   sessions: WeekSessionRow[];
   moreSessions: number;
   improvements: WeekImprovementRow[];
@@ -82,18 +84,14 @@ export function weekView(d: WeeklyDigest, simpleOverride?: boolean): WeekView {
   const simple = simpleOverride ?? d.simple;
   const t = d.totals;
   const empty = t.sessions === 0;
+  // the headline says the sessions and laps already (motivation/digest.py totals_line: the same words)
   const totals = empty
     ? null
-    : [
-        count(t.sessions, "session"),
-        `${count(t.laps, "lap")}, ${t.clean_laps} clean`,
-        t.lap_time_s > 0 ? `${drivingTime(t.lap_time_s)} of laps` : null,
-        count(t.tracks, "track"),
-      ]
+    : [count(t.clean_laps, "clean lap"), t.lap_time_s > 0 ? `${drivingTime(t.lap_time_s)} driving` : null, count(t.tracks, "track")]
         .filter(Boolean)
         .join(" · ");
   const p = d.previous_week;
-  const previous = p.sessions > 0 ? `Week before: ${count(p.sessions, "session")}, ${count(p.laps, "lap")} (${p.clean_laps} clean)` : null;
+  const previous = p.sessions > 0 ? `Week before: ${count(p.sessions, "session")}, ${count(p.laps, "lap")}, ${p.clean_laps} clean` : null;
   const sessions = [...d.sessions]
     .sort((a, b) => a.started_unix - b.started_unix)
     .map<WeekSessionRow>((s) => ({
@@ -141,7 +139,7 @@ export function weekView(d: WeeklyDigest, simpleOverride?: boolean): WeekView {
     headline: (simple && d.headline_simple ? d.headline_simple : d.headline) || (empty ? "No driving this week." : "-"),
     totals,
     previous,
-    sessions: sessions.slice(0, WEEK_SESSIONS_SHOWN),
+    sessions,
     moreSessions: Math.max(0, sessions.length - WEEK_SESSIONS_SHOWN),
     improvements,
     goals,

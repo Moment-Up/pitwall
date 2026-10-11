@@ -16,7 +16,8 @@
 //   motivationKeys.digest(id, week)         GET  /api/drivers/{id}/digest?week=YYYY-MM-DD
 //   motivationKeys.recap(sid)               GET  /api/sessions/{sid}/recap   (Review; under "session:<sid>", so a lap
 //                                                                              of the live session refreshes it)
-//   motivationKeys.driveRecap(sid, laps, t) the same for Drive's stopped cards (spec 9: refetched per lap / note)
+//   motivationKeys.driveRecap(sid, laps, t, car) the same for Drive's stopped cards (spec 9: refetched per lap / note,
+//                                            and once the session has its car: F1 sends it a few seconds in)
 
 import { ApiError } from "../api";
 import { accessToken, authFetch } from "../auth";
@@ -169,6 +170,7 @@ export type ThingSource =
   | "clean_streak"
   | "in_session_gain"
   | "all_clean"
+  | "drove"
   | "lap_hygiene"
   | "no_clean_lap"
   | "single_clean_lap"
@@ -276,8 +278,8 @@ export interface MotivationNote {
 // ------------------------------------------------------------------------------------------------- client
 
 /** An API error with the server's machine code (409 `{detail, code}`: "already_beaten", "too_many", "duplicate",
- * "duplicate_scope"). `detail` is the server's sentence, shown verbatim; FastAPI's 422 validation list becomes one
- * sentence. */
+ * "duplicate_scope", "still_reached"). `detail` is the server's sentence, shown verbatim; FastAPI's 422 validation
+ * list becomes one sentence. */
 export class MotivationError extends ApiError {
   readonly code: string | null;
   readonly detail: string;
@@ -349,7 +351,8 @@ export const motivationKeys = {
   /** `week` null = this week (the server's default). */
   digest: (driverId: number, week: string | null) => `driver-sessions:${driverId}:digest:${week ?? "current"}`,
   recap: (sessionId: string) => `session:${sessionId}:recap`,
-  driveRecap: (sessionId: string, laps: number, noteT: number | null) => `motivation:recap:${sessionId}:${laps}:${noteT ?? ""}`,
+  driveRecap: (sessionId: string, laps: number, noteT: number | null, carId: string | null = null) =>
+    `motivation:recap:${sessionId}:${laps}:${noteT ?? ""}:${carId ?? ""}`,
 } as const;
 
 /** Paths, for links and the printable page. */
@@ -389,7 +392,8 @@ export const motivationApi = {
     invalidateGoals(driverId);
     return g;
   },
-  /** Archive (`archived`), or back to `active` (from achieved this reopens it and clears the achievement). */
+  /** Archive (`archived`), or back to `active` (from achieved this reopens it and clears the achievement; refused,
+   * 409 "still_reached", while the driver's own driving still reaches it). */
   setStatus: async (driverId: number, goalId: number, status: "active" | "archived") => {
     const g = await send<Goal>(motivationPaths.goal(driverId, goalId), json("PATCH", { status }));
     invalidateGoals(driverId);

@@ -51,7 +51,7 @@ export function BadgesCard({ driverId, driverName, simple }: { driverId: number;
                 <KPI.Content className="min-h-9">
                   {t.value != null ? <span className="pw-num text-[30px] leading-none">{t.value}</span> : <Unknown className="text-[30px]" />}
                 </KPI.Content>
-                <p className="m-0 truncate text-[13px] leading-snug text-muted">{t.sub}</p>
+                <p className="m-0 line-clamp-2 text-[13px] leading-snug text-muted">{t.sub}</p>
               </KPI>
             ))}
           </KPIGroup>

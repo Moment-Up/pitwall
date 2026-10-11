@@ -9,15 +9,16 @@ describe("the week (spec 4.9, section 12.7: 17 sessions, 60 laps, 47 clean)", ()
     expect(v.weekStart).toBe("2026-10-05");
     expect(v.isCurrent).toBe(true);
     expect(v.headline).toBe("17 sessions, 60 laps, a new best at Austria");
-    expect(v.totals).toBe("17 sessions · 60 laps, 47 clean · 1 h 32 min of laps · 12 tracks");
+    // the headline says the sessions and laps; the totals say the rest, in the printable page's words
+    expect(v.totals).toBe("47 clean laps · 1 h 32 min driving · 12 tracks");
     expect(v.previous).toBeNull(); // nothing the week before: no line, not "0 sessions"
     expect(v.empty).toBe(false);
     expect(v.markdown.startsWith("# Sam's week: 5 to 11 October 2026")).toBe(true);
   });
 
-  it("sessions oldest first, 7 shown and the rest counted", () => {
+  it("sessions oldest first, all of them (the card shows 7, then Show all)", () => {
     const v = weekView(mfx.digest());
-    expect(v.sessions).toHaveLength(WEEK_SESSIONS_SHOWN);
+    expect(v.sessions).toHaveLength(WEEK_SESSIONS_SHOWN + 10);
     expect(v.moreSessions).toBe(10);
     expect(v.sessions[0]).toMatchObject({ day: "Sat 10 Oct", title: "Suzuka · Race", car: "F1 Generic", laps: "3 of 3 laps clean", bestMs: 96_360, pb: true });
     // a session without a clean lap keeps its unknown best as unknown
@@ -54,7 +55,7 @@ describe("the week (spec 4.9, section 12.7: 17 sessions, 60 laps, 47 clean)", ()
     const s = weekView(mfx.digest(), true);
     expect(s.headline).toBe("You drove 17 times this week");
     expect(s.goals[1]!.title).toBe("Beat 1:10.000");
-    expect(s.badges).toContain("You beat 1:11 at Austria for the first time");
+    expect(s.badges).toContain("You beat 1:11 at Austria in the Haas for the first time");
   });
 
   it("a week without driving says so and shows nothing invented", () => {

@@ -54,7 +54,7 @@ export function useDriveModel(): DriveModel {
 
   const note = useLive((s) => s.lastMotivation);
   const [lastState, setLastState] = useState<DriveState | null>(null);
-  const r = useRecap(snap?.session_id, snap?.laps.length ?? 0, note, lastState);
+  const r = useRecap(snap?.session_id, snap?.laps.length ?? 0, note, lastState, snap?.bests?.scope?.car_id ?? null);
   const motivation = useMemo<DriveMotivation>(
     () => ({ note: r.note, recap: r.recap, status: r.status }),
     [r.note, r.recap, r.status],

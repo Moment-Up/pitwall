@@ -58,7 +58,7 @@ def test_totals_sessions_and_improvements() -> None:
         1196,
         False,
     )
-    assert (first["scope_text"], first["gain_ms"], first["new_track"]) == ("Suzuka", None, True)
+    assert (first["scope_text"], first["gain_ms"], first["new_track"]) == ("Suzuka · F1 Generic", None, True)
     assert d["headline"] == "2 sessions, 4 laps, a new best at Austria"
     assert d["headline_simple"] == "You drove 2 times this week"
 
@@ -85,22 +85,26 @@ def test_markdown_snapshot() -> None:
     assert md == (
         "# Sam\\_\\*\\[x\\]\\#'s week: 5 to 11 October 2026\n"
         "\n"
-        "2 sessions · 4 timed laps (3 clean) · 5 min of timed laps · 2 tracks · week before: 1 session, 2 laps\n"
+        "2 sessions, 4 laps, a new best at Austria.\n"
+        "\n"
+        "3 clean laps · 5 min driving · 2 tracks\n"
+        "\n"
+        "Week before: 1 session, 2 laps, 2 clean\n"
         "\n"
         "## Sessions\n"
         "- Mon 5 Oct · Austria · Haas · Race · 3 laps (2 clean) · best 1:10.549 (new best)\n"
         "- Tue 6 Oct · Suzuka · F1 Generic · Race · 1 lap (1 clean) · best 1:36.360\n"
         "\n"
-        "## Best improvements\n"
+        "## New tracks and improvements\n"
         "- Austria · Haas: 1:10.549, 1.196 s faster than before\n"
-        "- First clean laps at Suzuka: 1:36.360\n"
+        "- First clean laps at Suzuka · F1 Generic: 1:36.360\n"
         "\n"
         "## Goals\n"
         "- No goals set.\n"
         "\n"
         "## Badges this week\n"
         "- First clean lap at Suzuka (Tue 6 Oct)\n"
-        "- First time under 1:11 at Austria (Mon 5 Oct)\n"
+        "- First time under 1:11 at Austria in the Haas (Mon 5 Oct)\n"
         "- 2 weeks in a row (Mon 5 Oct)\n"
         "\n"
         "## Streaks\n"
@@ -120,9 +124,29 @@ def test_html_escapes_names_and_is_self_contained() -> None:
     assert "You drove 2 times this week" in simple
 
 
+def test_first_laps_at_a_track_are_the_first_session_there_in_its_car() -> None:
+    """Austria first in the F1 Generic (1:18.351), later the same week in the Haas (1:10.549): the first clean laps
+    are the F1 Generic's, and say so."""
+    generic = sess("g", MON, car_id="f1:team:41", car_name="F1 Generic")
+    h = history((generic, laps("g", [78_900, 78_351])), (sess("h", MON + DAY), laps("h", [70_549])))
+    d = build(h)
+    (first,) = d["improvements"]
+    assert (first["scope_text"], first["best_ms"], first["session_id"]) == ("Austria · F1 Generic", 78_351, "g")
+    assert "- First clean laps at Austria · F1 Generic: 1:18.351\n" in d["markdown"]
+
+
+def test_id_only_car_names_are_left_out() -> None:
+    s = sess("u", MON, car_id="f1:team:214", car_name="Unknown team (id 214)")
+    d = build(history((s, laps("u", [70_549]))))
+    assert d["sessions"][0]["car_name"] is None
+    assert d["improvements"][0]["scope_text"] == "Austria"
+    assert "Unknown team" not in d["markdown"]
+
+
 def test_empty_week() -> None:
     d = build(history((sess("old", LAST_WEEK), laps("old", [71_745]))))
     assert d["totals"]["sessions"] == 0 and d["sessions"] == [] and d["improvements"] == []
     assert d["headline"] == d["headline_simple"] == "No driving this week."
     assert "## Sessions\n- None this week." in d["markdown"]
+    assert D.totals_line(d) is None and D.previous_line(d) == "Week before: 1 session, 1 lap, 1 clean"
     assert D.md_escape("a_b*c") == "a\\_b\\*c"

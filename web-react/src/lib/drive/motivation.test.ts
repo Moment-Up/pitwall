@@ -102,7 +102,8 @@ describe("Session complete card: 3 things", () => {
     const recap = { ...mfx.recapReached(), session_id: s.session_id as string };
     const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: driver(), motivation: { note: null, recap, status: "ready" } });
     expect(m.state).toBe("ended");
-    expect(m.ended?.things?.items.map((t) => t.heading)).toEqual(["Went well", "One to work on", "Goal reached"]);
+    // the celebration first, as on the radio
+    expect(m.ended?.things?.items.map((t) => t.heading)).toEqual(["Goal reached", "Went well", "One to work on"]);
     expect(m.ended?.thingsLoading).toBe(false);
     expect(m.ended?.badges).toHaveLength(3);
     // the D6 points are still computed (the fallback), the card chooses

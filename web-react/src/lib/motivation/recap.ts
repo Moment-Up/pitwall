@@ -9,11 +9,11 @@
 import type { Badge, SessionRecap, ThingItem, ThingKind, ThingSource } from "../endpoints/motivation";
 
 export type ThingTone = "success" | "warning" | "neutral";
-export type ThingIcon = "check" | "warning" | "chart" | "cup";
+export type ThingIcon = "check" | "warning" | "chart" | "star";
 
 export interface ThingView {
   kind: ThingKind;
-  /** "Went well", "One to work on", "Progress", or "Goal reached" (the celebration). */
+  /** "Went well", "One to work on", "Progress", or "Goal reached" / "2 goals reached" (the celebration). */
   heading: string;
   /** The server's sentence (its simple wording for simple-wording drivers); "-" when there is none. */
   text: string;
@@ -48,6 +48,9 @@ const BASE: Readonly<Record<ThingKind, { heading: string; tone: ThingTone; icon:
 };
 
 const ORDER: readonly ThingKind[] = ["went_well", "work_on", "progress"];
+/** A goal reached comes first: the radio celebrates before it coaches, and so does the card (on a phone it is the
+ * one item above the fold). */
+const CELEBRATION_ORDER: readonly ThingKind[] = ["progress", "went_well", "work_on"];
 
 function thingView(kind: ThingKind, item: ThingItem | null, why: string | null, simple: boolean): ThingView {
   const base = BASE[kind];
@@ -68,11 +71,12 @@ function thingView(kind: ThingKind, item: ThingItem | null, why: string | null, 
   }
   const reached = kind === "progress" && item.source === "goal_reached";
   const text = (simple && item.text_simple ? item.text_simple : item.text) || "-";
+  const n = typeof item.values?.goals === "number" ? item.values.goals : 1;
   return {
     kind,
-    heading: reached ? "Goal reached" : base.heading,
+    heading: reached ? (n > 1 ? `${n} goals reached` : "Goal reached") : base.heading,
     tone: reached ? "success" : base.tone,
-    icon: reached ? "cup" : base.icon,
+    icon: reached ? "star" : base.icon,
     text,
     evidence: item.evidence,
     source: item.source,
@@ -85,10 +89,11 @@ function thingView(kind: ThingKind, item: ThingItem | null, why: string | null, 
   };
 }
 
-/** The three items of a recap, in the order went well, work on, progress. `simple` = the reader's wording (Review:
- * the viewed driver's density; Drive: the recap's own `simple`). */
+/** The three items of a recap, in the order went well, work on, progress (a goal reached: progress first). `simple`
+ * = the reader's wording (Review: the viewed driver's density; Drive: the recap's own `simple`). */
 export function thingsView(r: SessionRecap, simple: boolean): ThingsView {
-  const items = ORDER.map((k) => thingView(k, r.things?.[k] ?? null, r.why_empty?.[k] ?? null, simple)) as [
+  const order = r.things?.progress?.source === "goal_reached" ? CELEBRATION_ORDER : ORDER;
+  const items = order.map((k) => thingView(k, r.things?.[k] ?? null, r.why_empty?.[k] ?? null, simple)) as [
     ThingView,
     ThingView,
     ThingView,

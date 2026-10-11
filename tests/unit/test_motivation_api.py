@@ -87,7 +87,10 @@ def test_create_list_patch_delete(api: tuple[TestClient, SimpleNamespace], drivi
     assert g["title"] == "A lap under 1:10.000" and g["scope_text"] == "Austria · Haas" and g["status"] == "active"
     assert g["scope"]["track_length_m"] == 4318.0 and g["scope"]["car_id"] == "f1:team:7"
     assert g["progress"]["baseline"] == 70_549 and g["progress"]["current"] is None  # laps before it do not count
-    assert g["progress"]["text"] == "No clean lap here since you set it" and g["achieved"] is None
+    # nothing driven since it was set: no bar, and the gap from the best it was set against
+    assert g["progress"]["fraction"] is None and g["achieved"] is None
+    assert g["progress"]["text"] == "0.549 s to go from your best 1:10.549"
+    assert g["progress"]["text_simple"] == "About 0.5 s to go"
     streak = post(client, sam, kind="clean_streak", target=8).json()
     assert streak["scope_text"] is None and streak["progress"]["baseline"] == 4
     body = client.get(f"/api/drivers/{sam}/goals").json()
@@ -110,7 +113,7 @@ def test_refusals(api: tuple[TestClient, SimpleNamespace], driving: dict[str, An
     sam, jo = driving["sam"], driving["jo"]
     beaten = post(client, sam, kind="lap_time", target=71_000, from_session_id="b")
     assert beaten.status_code == 409
-    assert beaten.json() == {"detail": "Your best here is already 1:10.549", "code": "already_beaten"}
+    assert beaten.json() == {"detail": "Your best here is already 1:10.549.", "code": "already_beaten"}
     assert post(client, sam, kind="lap_time", target=70_000, from_session_id="b").status_code == 201
     assert post(client, sam, kind="lap_time", target=70_000, from_session_id="b").json()["code"] == "duplicate"
     assert post(client, sam, kind="lap_time", target=69_500, from_session_id="b").json()["code"] == "duplicate_scope"
@@ -155,6 +158,25 @@ def test_reassignment_and_reopen(api: tuple[TestClient, SimpleNamespace], drivin
     assert g2["achieved"]["session_owned"] is False
     reopened = client.patch(f"/api/drivers/{sam}/goals/{gid}", json={"status": "active"}).json()
     assert reopened["status"] == "active" and reopened["achieved"] is None
+
+
+def test_reopen_refused_while_own_driving_still_reaches_it(
+    api: tuple[TestClient, SimpleNamespace], driving: dict[str, Any]
+) -> None:
+    """Reopened, a goal the driver's own laps still reach would be reached (and celebrated) again by the same lap."""
+    client, rt = api
+    sam = driving["sam"]
+    gid = post(client, sam, kind="clean_streak", target=2).json()["id"]
+    ids = seed(rt.writer, SeedSession("c", sam, NOW - 60, seed_laps([70_700, 70_650, 70_600])))
+    rt.writer.call(lambda c: repo.mark_goal_achieved(c, gid, unix=NOW, session_id="c", lap_id=ids[1], value=2))
+    r = client.patch(f"/api/drivers/{sam}/goals/{gid}", json={"status": "active"})
+    assert r.status_code == 409 and r.json()["code"] == "still_reached"
+    assert r.json()["detail"] == "Your own driving still reaches this goal. To go for it again, add it as a new goal."
+    (g,) = client.get(f"/api/drivers/{sam}/goals").json()["goals"]
+    assert g["status"] == "achieved" and g["achieved"]["lap_id"] == ids[1]
+    # archived and back: the same refusal (its achievement is kept while archived)
+    assert client.patch(f"/api/drivers/{sam}/goals/{gid}", json={"status": "archived"}).status_code == 200
+    assert client.patch(f"/api/drivers/{sam}/goals/{gid}", json={"status": "active"}).json()["code"] == "still_reached"
 
 
 def test_deleting_a_driver_deletes_their_goals(
@@ -230,7 +252,7 @@ def test_recap(api: tuple[TestClient, SimpleNamespace], driving: dict[str, Any])
     assert r["things"]["went_well"]["source"] == "pb"
     assert (
         r["things"]["went_well"]["text"]
-        == "New personal best at Austria: 1:10.549 on lap 2, 1.196 s faster than before."
+        == "New personal best at Austria in the Haas: 1:10.549 on lap 2, 1.196 s faster than before."
     )
     assert r["things"]["progress"]["source"] == "sessions_week"
     assert [b["key"] for b in r["badges_earned"]] == ["clean_streak:3", "under_time:f1_25:f1:17:f1:team:7:71000"]
@@ -263,6 +285,8 @@ def test_race_recap_and_events(api: tuple[TestClient, SimpleNamespace], driving:
     )
     gid = post(client, sam, kind="race_clean", target=1, params={"rule": "no_contact"}).json()["id"]
     (g,) = [x for x in client.get(f"/api/drivers/{sam}/goals").json()["goals"] if x["id"] == gid]
-    assert g["progress"]["text"] == "No race finished since you set it"  # the race was stored before the goal
+    # the race was stored before the goal; a race is reached or not: no part-way bar
+    assert g["progress"]["text"] == "No race recorded from lap 1 to the flag since you set it"
+    assert g["progress"]["fraction"] is None
     badges = {b["key"] for b in client.get(f"/api/drivers/{sam}/badges").json()["badges"]}
     assert "clean_race:no_penalties" in badges and "clean_race:no_contact" not in badges

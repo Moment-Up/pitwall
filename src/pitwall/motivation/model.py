@@ -134,6 +134,11 @@ class LapRow:
     valid: bool | None
     clean: bool
     flags: frozenset[str]
+    # F1 races with a chequered flag or a safety car only (``service.load_history``): the lap's first and last
+    # receive times (lap meta, same clock as the events) and whether it overlapped the safety car / VSC.
+    t_start_ns: int | None = None
+    t_end_ns: int | None = None
+    safety_car: bool = False
 
     @classmethod
     def from_row(cls, d: Mapping[str, Any]) -> LapRow:
@@ -262,9 +267,10 @@ class Scope:
 
     @property
     def car_label(self) -> str | None:
+        name = display_car(self.car_name)
         if self.car_class:
-            return car_class_label(self.car_class, self.car_name)
-        return self.car_name if self.car_id else None
+            return car_class_label(self.car_class, name)
+        return name if self.car_id else None
 
     @property
     def track_label(self) -> str | None:
@@ -309,6 +315,22 @@ class Scope:
             car_name=self.car_name or car_name,
             track_length_m=self.track_length_m if self.track_length_m is not None else length,
         )
+
+
+UNKNOWN_CAR_PREFIX = "Unknown team"  # F1's label for a team id its spec does not name ("Unknown team (id 214)")
+
+
+def display_car(name: str | None) -> str | None:
+    """A car name a driver can read, or None: an id-only label ("Unknown team (id 214)") is left out."""
+    if not name or name.startswith(UNKNOWN_CAR_PREFIX):
+        return None
+    return name
+
+
+def in_car(name: str | None) -> str:
+    """`` in the Haas`` (empty when the car has no readable name)."""
+    shown = display_car(name)
+    return f" in the {shown}" if shown else ""
 
 
 def game_label(game: str | None) -> str:
@@ -400,9 +422,12 @@ def lap_time(ms: float | None) -> str:
 
 
 def lap_time_radio(ms: float) -> str:
-    """Radio form of a target: ``1:10`` for whole seconds, else ``1:10.3`` (targets are whole tenths)."""
+    """Radio form of a target: ``1:10`` for whole seconds, else ``1:10.3`` (targets are whole tenths); under a minute
+    ``23 seconds`` / ``23.5 seconds`` ("0:23" would be spoken "twenty-three")."""
     total = round(ms)
     m, rem = divmod(total, 60_000)
+    if m == 0:
+        return f"{rem // 1000} seconds" if rem % 1000 == 0 else f"{rem / 1000:.1f} seconds"
     if rem % 1000 == 0:
         return f"{m}:{rem // 1000:02d}"
     return f"{m}:{rem / 1000:04.1f}"

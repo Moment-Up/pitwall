@@ -137,7 +137,9 @@ FAST_INTENTS = frozenset(
         "balance",
         "ai_pace",  # pace vs AI difficulty: radio_phrasing.ai_pace / ai_level
         "ai_level",
-        "goals",  # lane motivation: goal facts (plan decision 1)
+        "goals",  # lane motivation: goal facts (plan decision 1), and the week's counts and badges split from it
+        "week",
+        "badges",
     }
 )
 NO_GAME_REPLY = "Tell me which game you're playing: open Setup, then Game."

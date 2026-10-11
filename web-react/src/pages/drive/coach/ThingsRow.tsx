@@ -1,13 +1,13 @@
 // The Session complete card's "Today's 3 things" (lane motivation, spec 9 Drive › Session complete card). Lane DV.
 //
-//   (✓) Went well            (!) One to work on              (↗) Progress   — or (cup) Goal reached, success tone
+//   (✓) Went well            (!) One to work on              (↗) Progress   — or (star) Goal reached, success tone
 //   New personal best at …   Turn 6: minimum speed is …       Session 12 this week, 41 laps so far.
 //   evidence line            Seen on 9 of 9 laps …
 //
 // Three Pro ItemCards in one row, the server's texts verbatim (line clamp 4). While the recap loads: three same-size
 // Skeletons, so nothing jumps. Imported only by the lazy SessionCompleteCard (its chunk), and stationary only.
 
-import { ChartLine, CircleCheck, Cup, TriangleExclamation } from "@gravity-ui/icons";
+import { ChartLine, CircleCheck, StarFill, TriangleExclamation } from "@gravity-ui/icons";
 import { ItemCard } from "@heroui-pro/react";
 import { Skeleton } from "@heroui/react";
 import type { ReactNode } from "react";
@@ -17,7 +17,7 @@ const ICON: Record<ThingIcon, ReactNode> = {
   check: <CircleCheck aria-hidden="true" />,
   warning: <TriangleExclamation aria-hidden="true" />,
   chart: <ChartLine aria-hidden="true" />,
-  cup: <Cup aria-hidden="true" />,
+  star: <StarFill aria-hidden="true" />,
 };
 
 export function ThingsRow({ things }: { things: ThingsView }) {

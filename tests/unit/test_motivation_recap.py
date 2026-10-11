@@ -135,8 +135,8 @@ def test_went_well_order() -> None:
     # 1. a personal best (beats an earlier session)
     w = build(inp(sb, b, h, observations=pos, compared=2)).went_well
     assert w is not None and w.source == "pb"
-    assert w.text == "New personal best at Austria: 1:10.549 on lap 2, 1.196 s faster than before."
-    assert w.text_simple == "Your fastest lap ever at Austria: 1:10.549."
+    assert w.text == "New personal best at Austria in the Haas: 1:10.549 on lap 2, 1.196 s faster than before."
+    assert w.text_simple == "Your fastest lap ever at Austria in the Haas: 1:10.549."
     # 2. the top positive point (the first session at a track is not a personal best)
     w2 = build(inp(sa, a, h, observations={a[0].id: pos[b[1].id]}, compared=1)).went_well
     assert w2 is not None and w2.source == "observation"
@@ -147,10 +147,14 @@ def test_went_well_order() -> None:
     assert w3 is not None and (w3.source, w3.text) == ("clean_streak", "3 clean laps in a row.")
     # 4. faster from the first clean lap to the best (0.1 s or more)
     d = [lap(1, 73_000, sid="d"), lap(2, 72_000, sid="d", flags=["invalid"]), lap(3, 71_800, sid="d")]
-    sd = sess("d", T0 + 180)
+    sd = sess("d", T0 + 180, session_type="practice")
     w4 = build(inp(sd, d, history((sa, a), (sb, b), (sd, d)))).went_well
     assert w4 is not None and w4.source == "in_session_gain"
     assert w4.text == "Your laps got 1.20 s faster from your first clean lap to your best."
+    #    ... but race lap 1 is from the grid, not a measure of getting faster (not always flagged in F1 25)
+    rd = sess("d", T0 + 180, session_type="race")
+    w4r = build(inp(rd, d, history((sa, a), (sb, b), (rd, d)))).went_well
+    assert w4r is None or w4r.source != "in_session_gain"
     # 5. every lap clean (no gain, no run of 3)
     e = laps("e", [72_000, 72_050])
     se = sess("e", T0 + 240)
@@ -178,8 +182,12 @@ def test_work_on_order() -> None:
     ]
     w = build(inp(sess("b"), bad, None, counts=False)).work_on
     assert w is not None and w.source == "lap_hygiene"
-    assert w.text == "2 of 4 laps did not count (invalidated by the game on 1, a flashback on 1)."
-    assert w.text_simple == "2 laps did not count this time."
+    assert w.text == "2 of 4 laps did not count: 1 invalidated by the game, 1 with a flashback."
+    assert w.text_simple == "2 timed laps did not count this time."
+    one = [lap(1, 71_000, sid="g"), lap(2, 70_000, sid="g", valid=False), lap(3, 71_000, sid="g")]
+    w1 = build(inp(sess("g"), one, None, counts=False)).work_on
+    assert w1 is not None and w1.text == "Lap 2 did not count: the game invalidated it."
+    assert w1.text_simple == "1 timed lap did not count this time."
     incomplete = [lap(1, None, sid="c", flags=["incomplete"]), lap(2, 78_000, sid="c", flags=["incomplete"])]
     w2 = build(inp(sess("c"), incomplete, None, counts=False)).work_on
     assert w2 is not None and w2.source == "no_clean_lap"
@@ -206,8 +214,40 @@ def test_progress_goal_reached_first() -> None:
     )
     p = build(inp(s, a, history((s, a)), goals=[g]), {a[1].id: 7}).progress
     assert p is not None and p.source == "goal_reached" and p.goal_id == 1
-    assert p.text == "Goal reached: a lap under 1:10.000 (1:09.981 on lap 7)."
-    assert p.text_simple == "You reached your goal: beat 1:10.000."
+    # the card's heading says "Goal reached": the text does not repeat it
+    assert p.text == "A lap under 1:10.000 (1:09.981 on lap 7)."
+    assert p.text_simple == "You did it: beat 1:10.000."
+    assert p.values["goals"] == 1
+
+
+def test_progress_celebrates_every_goal_reached() -> None:
+    a = laps("a", [70_400, 69_981, 70_100])
+    s = sess("a")
+    lap_goal = goal(
+        "lap_time",
+        70_000,
+        scope=AUSTRIA_HAAS,
+        status="achieved",
+        achieved_unix=T0 + 100,
+        achieved_session_id="a",
+        achieved_lap_id=a[1].id,
+        achieved_value=69_981,
+    )
+    run = goal(
+        "clean_streak",
+        3,
+        gid=2,
+        status="achieved",
+        achieved_unix=T0 + 200,
+        achieved_session_id="a",
+        achieved_lap_id=a[2].id,
+        achieved_value=3,
+    )
+    p = build(inp(s, a, history((s, a)), goals=[run, lap_goal]), {a[1].id: 2, a[2].id: 3}).progress
+    assert p is not None and p.source == "goal_reached" and p.goal_id == 1  # the first one reached
+    assert p.text == "A lap under 1:10.000 (1:09.981 on lap 2). And 1 more: 3 clean laps in a row."
+    assert p.text_simple == "You did it: beat 1:10.000 and 3 clean laps in a row."
+    assert p.values["goals"] == 2
 
 
 def test_progress_pb_streak_goal_progress_gap_first_and_week() -> None:
@@ -216,7 +256,8 @@ def test_progress_pb_streak_goal_progress_gap_first_and_week() -> None:
     h = history(*pairs)
     s2, l2 = pairs[2]
     p = build(inp(s2, l2, h)).progress
-    assert p is not None and p.source == "pb_streak" and p.text == "New best at Austria in 2 sessions in a row."
+    assert p is not None and p.source == "pb_streak"
+    assert p.text == "New best at Austria in the Haas in 2 sessions in a row."
     # a goal this session moved closer (no PB streak: s1's 71.5 is the first gain)
     s1, l1 = pairs[1]
     g = goal("lap_time", 70_000, scope=AUSTRIA_HAAS, after=pairs[0][1][0].id)
@@ -276,8 +317,29 @@ def test_sessions_that_do_not_count(why: str, kw: dict[str, Any]) -> None:
 
 
 def test_empty_session() -> None:
+    """No timed lap: nothing to say, and not one of the week's sessions (as the digest, badges and streaks count)."""
     rec = build(inp(sess("x"), [], history((sess("x"), [])), counts=True))
-    assert rec.went_well is None and rec.why["went_well"] == R.WHY_NO_LAPS
-    assert rec.work_on is not None and rec.work_on.source == "no_clean_lap"
-    assert rec.progress is not None and rec.progress.source == "sessions_week"
+    assert (rec.went_well, rec.work_on, rec.progress) == (None, None, None)
+    assert rec.why == {"went_well": R.WHY_NO_LAPS, "work_on": R.WHY_NO_LAPS, "progress": R.WHY_NO_LAPS}
+    untimed = [lap(1, None, sid="u", flags=["incomplete"])]
+    rec2 = build(inp(sess("u"), untimed, history((sess("u"), untimed)), counts=True))
+    assert rec2.progress is None and rec2.work_on is None
+
+
+def test_the_week_counts_timed_sessions_only() -> None:
+    a = laps("a", [71_000, 71_100])
+    empty = sess("e", T0 + 60)
+    b = [lap(1, 80_000, sid="b", flags=["invalid"])]
+    sb = sess("b", T0 + 120)
+    p = build(inp(sb, b, history((sess("a"), a), (empty, []), (sb, b)))).progress
+    assert p is not None and p.source == "sessions_week" and p.text == "Session 2 this week, 3 laps so far."
     assert DAY > 0
+
+
+def test_a_beginner_hears_what_they_did_rather_than_nothing() -> None:
+    f = [lap(1, 72_000, sid="f", flags=["invalid"]), lap(2, 73_000, sid="f", flags=["invalid"])]
+    sf = sess("f", T0, track_name="Suzuka")
+    rec = build(inp(sf, f, history((sf, f)), skill="beginner"))
+    assert rec.went_well is not None and rec.went_well.source == "drove"
+    assert rec.went_well.text_simple == "You drove 2 laps at Suzuka."
+    assert build(inp(sf, f, history((sf, f)), skill="advanced")).went_well is None

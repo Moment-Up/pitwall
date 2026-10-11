@@ -188,16 +188,17 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     ("losing_time", re.compile(r"\b(losing time|lose time|where am i (?:slow|losing)|time loss|slow(?:er)?)\b", re.I)),
-    # lane motivation (review #1): narrowed and after losing_time. "What's my target lap time?" stays lap_times, "am I
-    # on target?" general; "how many sessions did I do this week?" is a goal question
+    # lane motivation (review #1): goal words only, after losing_time, so a braking target, the target lap ("what's my
+    # target lap time?" is lap_times), a best lap or a comparison "this week" keep their intents and "am I on target?"
+    # is general ("target" alone is the reference lap's word on the dashboard). The plan's one goals rule, split three
+    # ways for the lane's answers: goals (with "how am I doing this week?"), the week's counts, badges and streaks.
     (
         "goals",
-        re.compile(
-            r"\b(goals?|streaks?|badges?|how am i doing (?:on|with) (?:my|the|that) goals?|how am i doing this week|"
-            r"how many (?:sessions|laps)\b[^.?!]*\bthis week|(?:sessions|laps) this week)\b",
-            re.I,
-        ),
+        re.compile(r"\b(goals?|how am i doing (?:on|with) (?:my|the|that) goals?|how am i doing this week)\b", re.I),
     ),
+    ("week", re.compile(r"\b(how many (?:sessions|laps)\b[^.?!]*\bthis week|(?:sessions|laps) this week)\b", re.I)),
+    ("badges", re.compile(r"\b(streaks?|badges?)\b", re.I)),
+    # end lane motivation
     # More data some games never send (games.INTENT_FEATURES): last, so they only catch questions no rule above
     # matched ("where should I brake at turn 4 in the rain?" stays braking, "which sector am I losing time in?"
     # losing_time, "was that lap slower because of the yellow?" last_lap). Flags and weather before sectors ("a yellow
@@ -224,7 +225,9 @@ _TOPICS: dict[str, set[str]] = {
     "flags": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "setup": {"session", "game", "corners", "observations", "compare", "setup", "balance"},  # balance: feat/technique
     "focus": {"session", "game", "observations", "corners", "reference"},
-    "goals": {"session", "game", "goals", "progress"},  # lane motivation
+    "goals": {"session", "game", "goals", "progress"},  # lane motivation (goals, week, badges)
+    "week": {"session", "game", "progress"},
+    "badges": {"session", "game", "progress"},
     "compare": {"session", "game", "compare", "reference", "laps"},
     "braking": {"session", "game", "corners", "observations", "reference"},
     "lap_times": {"session", "game", "laps", "reference"},
@@ -527,9 +530,12 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
     if n == "focus":
         obs = first("observations")
         return say(obs) if obs else say(first("corners", contains="Biggest"))
-    if n == "goals":  # lane motivation: the goals reached / active (two at most), then this week
-        goal_facts = [f for f in facts if f.topic == "goals"][:2]
-        return say(*goal_facts, first("progress", contains="This week"))
+    if n == "goals":  # lane motivation: the first goal (reached here, else in this scope), then this week
+        return say(first("goals"), first("progress", contains="This week"))
+    if n == "week":
+        return say(first("progress", contains="This week"))
+    if n == "badges":
+        return say(first("progress", contains="Badges"), first("progress", contains="Clean laps in a row"))
     if n == "compare":
         return say(first("compare"), first("reference"))
     if n == "last_lap":

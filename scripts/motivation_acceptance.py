@@ -91,7 +91,7 @@ def retag(rt: Runtime, skill: str) -> int:
             i = order.get(src, 0)
             order[src] = i + 1
             started = (base if base is not None else float(s["started_unix"])) + i
-            repo.rewrite_session_origin(
+            repo.scratch_relabel_session(
                 c, s["id"], source="udp:acceptance", started_unix=started, ended_unix=started + 600
             )
             repo.set_session_driver(c, s["id"], did)

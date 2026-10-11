@@ -86,7 +86,7 @@ def test_no_badges_and_no_race_goal_from_incomplete_laps(replayed: tuple[Runtime
 
     def retag(c: sqlite3.Connection) -> None:  # this test database only: the replays become the driver's driving
         for sid in sids.values():
-            repo.rewrite_session_origin(c, sid, source="udp:recorded", started_unix=1.79e9, ended_unix=1.79e9 + 600)
+            repo.scratch_relabel_session(c, sid, source="udp:recorded", started_unix=1.79e9, ended_unix=1.79e9 + 600)
             repo.set_session_driver(c, sid, driver)
 
     rt.writer.call(retag)

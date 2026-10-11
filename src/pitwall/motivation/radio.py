@@ -28,6 +28,7 @@ from pitwall.voice.scheduler import LAP_ID_KEY, TOPIC_KEY
 from pitwall.voice.types import MessageKind, Priority, RadioMessage
 
 MAX_GOAL_LINES_PER_SESSION = 2
+MAX_NAMED = 2  # goals named in one line; more are counted ("and 1 more")
 RACE_GOAL_TTL_S = 120.0
 _SESSIONS_KEPT = 32
 _COUNT_WORDS = {2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six"}
@@ -85,13 +86,18 @@ def goal_phrase(goal: Mapping[str, Any], simple: bool) -> str | None:
 
 
 def goal_line(goals: Sequence[Mapping[str, Any]], simple: bool) -> str | None:
+    """One short line: ``Goal reached: ...``; several goals name two at most (``... and 1 more``). A beginner always
+    hears ``You did it``."""
     phrases = [p for g in goals if (p := goal_phrase(g, simple))]
     if not phrases:
         return None
     if len(phrases) == 1:
         return f"{'You did it' if simple else 'Goal reached'}: {phrases[0]}."
-    joined = ", ".join(phrases[:-1]) + " and " + phrases[-1]
+    shown, rest = phrases[:MAX_NAMED], len(phrases) - MAX_NAMED
+    joined = f"{', '.join(shown)} and {rest} more" if rest > 0 else " and ".join(shown)
     count = _COUNT_WORDS.get(len(phrases), str(len(phrases)))
+    if simple:
+        return f"You did it: {count.lower()} goals, {joined}."
     return f"{count} goals reached: {joined}."
 
 

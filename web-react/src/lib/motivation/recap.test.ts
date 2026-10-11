@@ -8,7 +8,7 @@ describe("Today's 3 things (spec 4.8): the server's items, laid out", () => {
     expect(v.items.map((t) => t.kind)).toEqual(["went_well", "work_on", "progress"]);
     const [good, work, prog] = v.items;
     expect(good).toMatchObject({ heading: "Went well", tone: "success", icon: "check", source: "pb", empty: false });
-    expect(good.text).toBe("New personal best at Austria: 1:10.549 on lap 64, 1.196 s faster than before.");
+    expect(good.text).toBe("New personal best at Austria in the Haas: 1:10.549 on lap 64, 1.196 s faster than before.");
     expect(work).toMatchObject({ heading: "One to work on", tone: "warning", icon: "warning", lapId: 59, corner: "T4" });
     expect(work.text).toBe(
       "Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h), losing 0.23 s through the corner.",
@@ -20,11 +20,14 @@ describe("Today's 3 things (spec 4.8): the server's items, laid out", () => {
     expect(v.replay).toBe(false);
   });
 
-  it("a goal reached this session is the celebration: Goal reached, the cup, success tone", () => {
-    const prog = thingsView(mfx.recapReached(), false).items[2];
-    expect(prog).toMatchObject({ heading: "Goal reached", icon: "cup", tone: "success", goalId: 4, source: "goal_reached" });
-    expect(prog.text).toBe("Goal reached: a lap under 1:10.000 (1:09.981 on lap 7).");
-    expect(thingsView(mfx.recapReached(), true).items[2].text).toBe("You did it: a lap under 1:10.000.");
+  it("a goal reached this session is the celebration: Goal reached, the star, success tone", () => {
+    const prog = thingsView(mfx.recapReached(), false).items[0]; // the celebration first
+    expect(prog).toMatchObject({ heading: "Goal reached", icon: "star", tone: "success", goalId: 4, source: "goal_reached" });
+    expect(prog.text).toBe("A lap under 1:10.000 (1:09.981 on lap 7).");
+    expect(thingsView(mfx.recapReached(), true).items[0].text).toBe("You did it: beat 1:10.000.");
+    const two = mfx.recapReached();
+    two.things.progress = { ...two.things.progress!, values: { ...two.things.progress!.values, goals: 2 } };
+    expect(thingsView(two, false).items[0].heading).toBe("2 goals reached");
   });
 
   it("simple wording for a beginner", () => {
@@ -53,7 +56,7 @@ describe("Today's 3 things (spec 4.8): the server's items, laid out", () => {
 
   it("a real session without a clean lap: lap hygiene, nothing went well", () => {
     const v = thingsView(mfx.recapNoClean(), true);
-    expect(v.items[1].text).toBe("2 laps did not count this time.");
+    expect(v.items[1].text).toBe("2 timed laps did not count this time.");
     expect(v.items[0].evidence).toBe("No clean lap this time, so nothing to compare yet");
   });
 
@@ -70,9 +73,9 @@ describe("Today's 3 things (spec 4.8): the server's items, laid out", () => {
 
   it("badges this session as words, newest first", () => {
     expect(badgeWords(mfx.recapReached().badges_earned, false)).toEqual([
-      "First time under 1:10 at Austria",
+      "First time under 1:10 at Austria in the Haas",
       "First goal reached",
-      "First time under 1:11 at Austria",
+      "First time under 1:11 at Austria in the Haas",
     ]);
     expect(badgeWords(mfx.recapReached().badges_earned, true)[1]).toBe("Your first goal reached");
     expect(badgeWords(null, false)).toEqual([]);

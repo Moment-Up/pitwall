@@ -11,7 +11,13 @@ Lap classes (a run is the longest stretch of clean laps in one session, in lap-n
   ``standing_start``, ``incomplete``, or no lap time). Anything else that is not clean is neutral too (defensive).
 * **clean** - ``laps.clean``.
 
-A gap in stored lap numbers also ends a run: nobody knows what happened on the missing lap.
+A gap in stored lap numbers also ends a run: nobody knows what happened on the missing lap. For the same reason an
+``incomplete`` lap (lost packets, a lap cut short) ends a run unless it is the session's first or last stored lap
+(joined mid-lap, or the session ended mid-lap) or a pit lap.
+
+Steady-lap windows use stretches of a run (``window_segments``): race lap 1 is left out [H], and a lap behind the
+safety car or the virtual safety car ends a stretch [H] (following it makes laps naturally even). F1 says when the
+safety car comes out and goes in (``SCAR`` events); ``LapRow.safety_car`` marks the laps that overlap it.
 """
 
 from __future__ import annotations
@@ -26,6 +32,7 @@ from pitwall.motivation.model import History, LapRow, Scope, SessionRow, local_d
 
 BREAKER_FLAGS = frozenset({"invalid", "flashback", "distance_jump"})
 NEUTRAL_FLAGS = frozenset({"pit_in", "pit_out", "standing_start", "incomplete"})
+PIT_FLAGS = frozenset({"pit_in", "pit_out"})
 CLEAN, BREAKER, NEUTRAL = "clean", "breaker", "neutral"
 LAYOUT_TOLERANCE = 0.03  # = repo.BESTS_LENGTH_TOLERANCE: layouts that share a track id differ in length
 
@@ -33,6 +40,8 @@ LAYOUT_TOLERANCE = 0.03  # = repo.BESTS_LENGTH_TOLERANCE: layouts that share a t
 # stop go, grid penalty, time penalty, disqualified, removed from formation lap, black flag timer. A warning (5)
 # or a penalty reminder (3) is shown but never counted.
 PENALTY_TYPES = frozenset({0, 1, 2, 4, 6, 7, 17})
+CHEQUERED_FLAG = "chequered_flag"  # EventKind values (F1 CHQF, SCAR)
+SAFETY_CAR = "safety_car"
 WARNING_TYPES = frozenset({3, 5})
 RECENT_GAIN_DAYS = 60  # [H]
 RECENT_GAIN_SESSIONS = 3  # [H]
@@ -47,12 +56,22 @@ def lap_class(lap: LapRow) -> str:
     return CLEAN if lap.clean else NEUTRAL
 
 
+def _breaks_run(lap: LapRow, edges: tuple[int, int]) -> bool:
+    """A breaker, or an ``incomplete`` lap in the middle of a session (what happened on it is unknown)."""
+    cls = lap_class(lap)
+    if cls == BREAKER:
+        return True
+    return "incomplete" in lap.flags and lap.id not in edges and not lap.flags & PIT_FLAGS
+
+
 def runs(laps: Sequence[LapRow], after_lap_id: int = 0) -> list[list[LapRow]]:
-    """Runs of consecutive clean laps of one session (``laps`` in lap order). Only laps with
-    ``id > after_lap_id`` count; breakers and gaps in lap numbers end a run, neutral laps are skipped."""
+    """Runs of consecutive clean laps of one session (``laps``: the session's stored laps in lap order). Only laps
+    with ``id > after_lap_id`` count; breakers, gaps in lap numbers and mid-session incomplete laps end a run, neutral
+    laps are skipped."""
     out: list[list[LapRow]] = []
     cur: list[LapRow] = []
     prev: int | None = None
+    edges = (laps[0].id, laps[-1].id) if laps else (0, 0)
     for lap in laps:
         if lap.id <= after_lap_id:
             continue
@@ -61,7 +80,7 @@ def runs(laps: Sequence[LapRow], after_lap_id: int = 0) -> list[list[LapRow]]:
             cur = []
         prev = lap.lap_number
         cls = lap_class(lap)
-        if cls == BREAKER:
+        if _breaks_run(lap, edges):
             if cur:
                 out.append(cur)
             cur = []
@@ -91,12 +110,29 @@ def run_ending_at(laps: Sequence[LapRow], lap_id: int, after_lap_id: int = 0) ->
     return []
 
 
-def window_laps(run: Sequence[LapRow], session_type: str | None) -> list[LapRow]:
-    """The laps of a run that steady-lap windows may use: race lap 1 is skipped [H] (a standing start is not
-    always flagged in real F1 25 data)."""
-    if session_type == "race":
-        return [lap for lap in run if lap.lap_number != 1]
-    return list(run)
+def standing_start(lap: LapRow, session_type: str | None) -> bool:
+    """Race lap 1 [H]: from the grid, not comparable with flying laps (a standing start is not always flagged in
+    real F1 25 data)."""
+    return session_type == "race" and lap.lap_number == 1
+
+
+def window_segments(run: Sequence[LapRow], session_type: str | None) -> list[list[LapRow]]:
+    """The stretches of a run that steady-lap windows may use: race lap 1 is skipped, a safety-car lap ends a
+    stretch (both [H])."""
+    out: list[list[LapRow]] = []
+    cur: list[LapRow] = []
+    for lap in run:
+        if standing_start(lap, session_type):
+            continue
+        if lap.safety_car:
+            if cur:
+                out.append(cur)
+            cur = []
+            continue
+        cur.append(lap)
+    if cur:
+        out.append(cur)
+    return out
 
 
 @dataclass(slots=True, frozen=True)
@@ -115,12 +151,12 @@ def windows(laps: Sequence[LapRow], k: int, session_type: str | None, after_lap_
     if k < 2:
         return out
     for r in runs(laps, after_lap_id):
-        usable = window_laps(r, session_type)
-        for i in range(len(usable) - k + 1):
-            w = usable[i : i + k]
-            times = [lap.lap_time_ms for lap in w if lap.lap_time_ms is not None]
-            if len(times) == k:
-                out.append(Window(max(times) - min(times), tuple(w)))
+        for usable in window_segments(r, session_type):
+            for i in range(len(usable) - k + 1):
+                w = usable[i : i + k]
+                times = [lap.lap_time_ms for lap in w if lap.lap_time_ms is not None]
+                if len(times) == k:
+                    out.append(Window(max(times) - min(times), tuple(w)))
     return out
 
 
@@ -262,7 +298,10 @@ def pb_scopes(history: History) -> dict[tuple[str, str, str | None], list[Sessio
 class RaceOutcome:
     session_id: str
     race: bool
-    finished: bool  # the race's last lap is stored with a time and is not incomplete
+    # Taken the flag: the race's last lap (``total_laps``) is stored with a time and is not incomplete, or - a lapped
+    # car, a race shortened by a red flag - F1's chequered flag was shown and the player's last stored lap is complete
+    # and ended after it.
+    finished: bool
     from_start: bool  # lap 1 is stored (the session was recorded from the start)
     incidents_known: bool  # every incident event names the player's car (``player_idx``)
     contacts: int
@@ -271,6 +310,8 @@ class RaceOutcome:
     flashbacks: int
     resets: int
     total_laps: int | None
+    final_lap_id: int | None = None  # the lap the player took the flag on (when finished)
+    final_lap_number: int | None = None
 
     @property
     def evaluable(self) -> bool:
@@ -297,13 +338,8 @@ def race_outcome(s: SessionRow, laps: Sequence[LapRow], events: Sequence[Mapping
     have? A race that is not ``evaluable`` counts neither way (unknown stays unknown)."""
     race = s.is_race and s.is_f1
     total = s.total_laps if s.total_laps is not None and s.total_laps > 0 else None
-    finished = (
-        race
-        and total is not None
-        and any(
-            lap.lap_number == total and lap.lap_time_ms is not None and "incomplete" not in lap.flags for lap in laps
-        )
-    )
+    final = _flag_lap(laps, events, total) if race else None
+    finished = final is not None
     from_start = any(lap.lap_number == 1 for lap in laps)
     known = True
     contacts = penalties = warnings = event_flashbacks = 0
@@ -341,7 +377,59 @@ def race_outcome(s: SessionRow, laps: Sequence[LapRow], events: Sequence[Mapping
         flashbacks=max(event_flashbacks, lap_flashbacks),  # one flashback is both an event and a flagged lap
         resets=resets,
         total_laps=total,
+        final_lap_id=None if final is None else final.id,
+        final_lap_number=None if final is None else final.lap_number,
     )
+
+
+def _complete(lap: LapRow) -> bool:
+    return lap.lap_time_ms is not None and "incomplete" not in lap.flags
+
+
+def _flag_lap(laps: Sequence[LapRow], events: Sequence[Mapping[str, Any]], total: int | None) -> LapRow | None:
+    """The lap the player took the chequered flag on, or None (not finished, or unknown)."""
+    if total is not None:
+        last = next((lap for lap in laps if lap.lap_number == total and _complete(lap)), None)
+        if last is not None:
+            return last
+    flag = next((t for e in events if e.get("kind") == CHEQUERED_FLAG and (t := _idx(e.get("t_recv_ns")))), None)
+    if flag is None or not laps:
+        return None
+    last = max(laps, key=lambda lap: lap.lap_number)
+    if _complete(last) and last.t_end_ns is not None and last.t_end_ns >= flag:
+        return last
+    return None
+
+
+def safety_car_spans(events: Sequence[Mapping[str, Any]]) -> list[tuple[int, int | None]]:
+    """When the safety car or the VSC was out (receive clock, ns): from "deployed" to "returned" or "resume race"
+    (F1 ``SCAR`` eventType 0 / 2 / 3; the formation-lap safety car, safetyCarType 3, is before lap 1 and ignored).
+    Still out at the end = open-ended (unknown stays unknown: it counts as out)."""
+    spans: list[tuple[int, int | None]] = []
+    start: int | None = None
+    for e in events:
+        if e.get("kind") != SAFETY_CAR:
+            continue
+        payload = e.get("payload") or {}
+        t = _idx(e.get("t_recv_ns"))
+        what = _idx(payload.get("eventType")) if isinstance(payload, Mapping) else None
+        if t is None or what is None or (isinstance(payload, Mapping) and payload.get("safetyCarType") == 3):
+            continue
+        if what == 0 and start is None:
+            start = t
+        elif what in (2, 3) and start is not None:
+            spans.append((start, t))
+            start = None
+    if start is not None:
+        spans.append((start, None))
+    return spans
+
+
+def behind_safety_car(lap: LapRow, spans: Sequence[tuple[int, int | None]]) -> bool:
+    """The lap overlaps a safety-car span (a lap without its receive times overlaps none: not guessed)."""
+    if lap.t_start_ns is None or lap.t_end_ns is None:
+        return False
+    return any(lap.t_end_ns >= a and (b is None or lap.t_start_ns <= b) for a, b in spans)
 
 
 # ---------------------------------------------------------------------------------------------- weeks

@@ -12,9 +12,11 @@ owner's coaching limits (confidence, impact, allowed kinds; no owner = advanced)
 verbatim. No generated sentence here ever tells the driver to brake later.
 
 Order of choices: went well - personal best, the top positive point, a run of 3+ clean laps, the gain from the
-first clean lap to the best (0.1 s+), every lap clean. Work on - the top corrective point, laps that did not count,
-no clean lap, a single clean lap. Progress (real, owned sessions only) - a goal reached, a PB streak of 2+, a goal
-this session moved closer, the gap to the best here, first clean laps at a track, the session count this week.
+first clean lap to the best (0.1 s+, race lap 1 left out), every lap clean; for a beginner, else the laps driven.
+Work on - the top corrective point, laps that did not count, no clean lap, a single clean lap. Progress (real, owned
+sessions only) - the goals reached, a PB streak of 2+, a goal this session moved closer, the gap to the best here,
+first clean laps at a track, the session count this week. A session with no timed lap has no things at all.
+Personal bests are per game + track + car, and their sentences name the car.
 """
 
 from __future__ import annotations
@@ -32,7 +34,9 @@ from pitwall.motivation.model import (
     LapRow,
     SessionRow,
     about_s,
+    count_words,
     gap_s,
+    in_car,
     lap_time,
     lower_first,
     seconds,
@@ -205,12 +209,13 @@ def went_well(inp: RecapInput, bests: Sequence[rules.SessionBest]) -> Thing | No
     mine = next((b for b in bests if b.session.id == s.id), None)
     if inp.counts and mine is not None and mine.is_pb and mine.previous_ms is not None:
         track = _track(s)
+        car = in_car(s.car_name)  # bests are per car: "at Austria" alone is false after a faster lap in another car
         return Thing(
             "went_well",
             "pb",
-            f"New personal best at {track}: {lap_time(mine.best_ms)} on lap {mine.lap.lap_number}, "
+            f"New personal best at {track}{car}: {lap_time(mine.best_ms)} on lap {mine.lap.lap_number}, "
             f"{gap_s(mine.previous_ms - mine.best_ms)} s faster than before.",
-            f"Your fastest lap ever at {track}: {lap_time(mine.best_ms)}.",
+            f"Your fastest lap ever at {track}{car}: {lap_time(mine.best_ms)}.",
             lap_id=mine.lap.id,
             lap_number=mine.lap.lap_number,
             values={"lap_ms": mine.best_ms, "previous_ms": mine.previous_ms, "gain_ms": mine.gain_ms},
@@ -229,7 +234,12 @@ def went_well(inp: RecapInput, bests: Sequence[rules.SessionBest]) -> Thing | No
             lap_number=run[-1].lap_number,
             values={"run": len(run), "from_lap": run[0].lap_number, "to_lap": run[-1].lap_number},
         )
-    clean = [lap for lap in laps if lap.clean and lap.lap_time_ms is not None]
+    # race lap 1 is a standing start (not always flagged): from the grid it is no measure of getting faster
+    clean = [
+        lap
+        for lap in laps
+        if lap.clean and lap.lap_time_ms is not None and not rules.standing_start(lap, s.session_type)
+    ]
     best = rules.fastest_clean(clean)
     if clean and best is not None and best.lap_time_ms is not None and clean[0].lap_time_ms is not None:
         gain = clean[0].lap_time_ms - best.lap_time_ms
@@ -265,19 +275,30 @@ def _hygiene(laps: Sequence[LapRow]) -> Thing | None:
     invalid = sum(1 for lap in bad if "invalid" in lap.flags or lap.valid is False)
     flashback = sum(1 for lap in bad if "flashback" in lap.flags)
     reset = sum(1 for lap in bad if "distance_jump" in lap.flags)
-    reasons = []
-    if invalid:
-        reasons.append(f"invalidated by the game on {invalid}")
-    if flashback:
-        reasons.append(f"{'a flashback' if flashback == 1 else 'flashbacks'} on {flashback}")
-    if reset:
-        reasons.append(f"{'a reset to the track' if reset == 1 else 'resets to the track'} on {reset}")
     n, total = len(bad), len(counted)
-    did = "lap did" if n == 1 else "laps did"
+    if n == 1:
+        lap = bad[0]
+        if "invalid" in lap.flags or lap.valid is False:
+            why = "the game invalidated it"
+        elif "flashback" in lap.flags:
+            why = "a flashback was used on it"
+        else:
+            why = "the car was reset to the track"
+        text = f"Lap {lap.lap_number} did not count: {why}."
+    else:
+        reasons = []
+        if invalid:
+            reasons.append(f"{invalid} invalidated by the game")
+        if flashback:
+            reasons.append(f"{flashback} with a flashback")
+        if reset:
+            reasons.append(f"{reset} reset to the track")
+        text = f"{n} of {total} laps did not count: {', '.join(reasons)}."
+    did = "timed lap did" if n == 1 else "timed laps did"
     return Thing(
         "work_on",
         "lap_hygiene",
-        f"{n} of {total} {'lap' if total == 1 else 'laps'} did not count ({', '.join(reasons)}).",
+        text,
         f"{n} {did} not count this time.",
         lap_id=bad[0].id,
         lap_number=bad[0].lap_number,
@@ -314,11 +335,16 @@ def work_on(inp: RecapInput) -> Thing | None:
 
 # ---------------------------------------------------------------------------------------------- progress
 def _goal_reached(inp: RecapInput, lap_numbers: Mapping[int, int]) -> Thing | None:
-    reached = [g for g in inp.goals if g.achieved_session_id == inp.session.id and g.achieved_unix is not None]
+    """Every goal this session reached: the first in full, the others named ("And 1 more: ..."), so a second goal is
+    celebrated too. The card's heading already says "Goal reached": the text does not repeat it."""
+    reached = sorted(
+        (g for g in inp.goals if g.achieved_session_id == inp.session.id and g.achieved_unix is not None),
+        key=lambda x: (x.achieved_unix or 0.0, x.id),
+    )
     if not reached:
         return None
-    g = min(reached, key=lambda x: (x.achieved_unix or 0.0, x.id))
-    title, simple_title = G.goal_titles(g)
+    g, others = reached[0], reached[1:]
+    title = G.goal_titles(g)[0]
     n = lap_numbers.get(g.achieved_lap_id) if g.achieved_lap_id is not None else None
     on_lap = f" on lap {n}" if n is not None else ""
     v = g.achieved_value
@@ -330,15 +356,19 @@ def _goal_reached(inp: RecapInput, lap_numbers: Mapping[int, int]) -> Thing | No
         detail = f" ({on_lap.strip()})"
     else:
         detail = ""
+    text = f"{title}{detail}."
+    if others:
+        text += f" And {len(others)} more: {', '.join(lower_first(G.goal_titles(o)[0]) for o in others)}."
+    simple = " and ".join(lower_first(G.goal_titles(x)[1]) for x in reached)
     return Thing(
         "progress",
         "goal_reached",
-        f"Goal reached: {lower_first(title)}{detail}.",
-        f"You reached your goal: {lower_first(simple_title)}.",
+        text,
+        f"You did it: {simple}.",
         lap_id=g.achieved_lap_id,
         lap_number=n,
         goal_id=g.id,
-        values={"target": g.target, "value": v},
+        values={"target": g.target, "value": v, "goals": len(reached)},
     )
 
 
@@ -406,7 +436,7 @@ def progress_thing(inp: RecapInput, bests: Sequence[rules.SessionBest], lap_numb
         return Thing(
             "progress",
             "pb_streak",
-            f"New best at {track} in {n} sessions in a row.",
+            f"New best at {track}{in_car(s.car_name)} in {n} sessions in a row.",
             f"Faster than ever at {track}, {n} times in a row.",
             lap_id=bests[idx].lap.id,
             lap_number=bests[idx].lap.lap_number,
@@ -438,7 +468,7 @@ def progress_thing(inp: RecapInput, bests: Sequence[rules.SessionBest], lap_numb
             values={"best_ms": mine.best_ms, "pb_ms": mine.previous_ms, "gap_ms": gap},
         )
     if mine is not None and mine.previous_ms is None:
-        car = f" in the {s.car_name}" if s.car_name else ""
+        car = in_car(s.car_name)
         return Thing(
             "progress",
             "first_session",
@@ -450,10 +480,8 @@ def progress_thing(inp: RecapInput, bests: Sequence[rules.SessionBest], lap_numb
         )
     week = rules.week_of(s.started_unix)
     upto = history.until(s.id).sessions
-    in_week = [
-        x
-        for x in upto
-        if rules.week_of(x.started_unix) == week and (x.id == s.id or rules.is_timed_session(history.laps_of(x.id)))
+    in_week = [  # timed sessions only, as the digest, badges and streaks count them
+        x for x in upto if rules.week_of(x.started_unix) == week and rules.is_timed_session(history.laps_of(x.id))
     ]
     n_laps = sum(len(rules.timed(history.laps_of(x.id))) for x in in_week)
     n = len(in_week)
@@ -475,18 +503,39 @@ class Recap:
     why: dict[str, str | None]
 
 
+def _drove(inp: RecapInput) -> Thing | None:
+    """A beginner's Went well when nothing else stood out: true, and kind (never "nothing stood out")."""
+    n = len(rules.timed(inp.laps))
+    if not n:
+        return None
+    s = inp.session
+    return Thing(
+        "went_well",
+        "drove",
+        f"You drove {count_words(n, 'timed lap')} at {_track(s)}.",
+        f"You drove {count_words(n, 'lap')} at {_track(s)}.",
+        values={"laps": n},
+    )
+
+
 def build_recap(inp: RecapInput, lap_numbers: Mapping[int, int] | None = None) -> Recap:
-    """The three things for ``inp.session``; ``inp.history`` must already be cut at that session."""
+    """The three things for ``inp.session``; ``inp.history`` must already be cut at that session. A session with no
+    timed lap gets none of them (nothing to say about it, and it is not one of the week's sessions)."""
+    timed = any(lap.lap_time_ms is not None for lap in inp.laps)
+    if not timed:
+        why_none = inp.why_progress or WHY_NO_LAPS
+        return Recap(None, None, None, {"went_well": WHY_NO_LAPS, "work_on": WHY_NO_LAPS, "progress": why_none})
     bests = _scope_bests(inp.history, inp.session) if inp.history is not None else []
     good = went_well(inp, bests)
+    if good is None and inp.limits.simple_wording:
+        good = _drove(inp)
     work = work_on(inp)
     prog = progress_thing(inp, bests, lap_numbers or {})
-    timed = any(lap.lap_time_ms is not None for lap in inp.laps)
     why: dict[str, str | None] = {"went_well": None, "work_on": None, "progress": None}
     if good is None:
-        why["went_well"] = WHY_NOTHING_WELL if timed else WHY_NO_LAPS
+        why["went_well"] = WHY_NOTHING_WELL
     if work is None:
-        why["work_on"] = WHY_NOTHING_WORK if timed else WHY_NO_LAPS
+        why["work_on"] = WHY_NOTHING_WORK
     if prog is None:
-        why["progress"] = inp.why_progress or (WHY_NO_LAPS if not timed else "No progress to show yet")
+        why["progress"] = inp.why_progress or "No progress to show yet"
     return Recap(good, work, prog, why)

@@ -33,6 +33,7 @@ from pitwall.motivation.model import (
     LapRow,
     Scope,
     SessionRow,
+    in_car,
     lap_time,
     lap_time_radio,
     local_date,
@@ -86,7 +87,7 @@ def _car_scope(s: SessionRow) -> Scope:
 
 
 def _in_car(s: SessionRow) -> str:
-    return f" in the {s.car_name}" if s.car_name else ""
+    return in_car(s.car_name)
 
 
 def _badge(
@@ -157,11 +158,13 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                             "under_time",
                             f"under_time:{s.game}:{s.track_id}:{s.car_id}:{boundary}",
                             boundary,
-                            f"First time under {t} at {track}",
-                            f"You beat {t} at {track} for the first time",
+                            # the best is per car: the title names it ("under 1:19 at Austria" alone is false
+                            # for a driver who went faster there in another car)
+                            f"First time under {t} at {track}{_in_car(s)}",
+                            f"You beat {t} at {track}{_in_car(s)} for the first time",
                             s,
                             best,
-                            detail=f"{lap_time(ms)} on lap {best.lap_number}{_in_car(s)}",
+                            detail=f"{lap_time(ms)} on lap {best.lap_number}",
                             scope=_car_scope(s),
                         )
                     )
@@ -192,7 +195,7 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                         f"clean_streak:{level}",
                         level,
                         f"{level} clean laps in a row",
-                        f"{level} laps in a row that all counted",
+                        f"{level} clean laps in a row",
                         s,
                         run[level - 1],
                         detail=f"{track}, laps {run[0].lap_number}-{run[level - 1].lap_number}",
@@ -245,7 +248,7 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
                     )
         if s.is_race and s.is_f1:
             outcome = rules.race_outcome(s, laps, history.events.get(s.id, ()))
-            last = next((lap for lap in laps if lap.lap_number == outcome.total_laps), None)
+            last = next((lap for lap in laps if lap.id == outcome.final_lap_id), None)
             for rule, title, simple in (
                 ("no_penalties", "Race finished with no penalties", "A whole race with no penalties"),
                 (

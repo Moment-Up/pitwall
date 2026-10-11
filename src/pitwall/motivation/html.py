@@ -11,7 +11,16 @@ import html
 from datetime import date
 from typing import Any
 
-from pitwall.motivation.digest import goal_line, improvement_line, possessive, session_line, streak_lines, totals_line
+from pitwall.motivation.digest import (
+    IMPROVEMENTS_TITLE,
+    goal_line,
+    improvement_line,
+    possessive,
+    previous_line,
+    session_line,
+    streak_lines,
+    totals_line,
+)
 from pitwall.motivation.model import short_date, week_range_text
 
 _CSS = """
@@ -59,10 +68,10 @@ def digest_html(d: dict[str, Any]) -> str:
         f"<title>{e(title)}</title><style>{_CSS}</style></head><body>",
         f"<h1>{e(title)}</h1>",
         f'<p class="headline">{e(d["headline_simple"] if simple else d["headline"])}</p>',
-        f'<p class="totals">{e(totals_line(d))}</p>',
+        *(f'<p class="totals">{e(x)}</p>' for x in (totals_line(d), previous_line(d)) if x),
         "<h2>Sessions</h2>",
         _ul([session_line(r) for r in d["sessions"]]),
-        "<h2>Best improvements</h2>",
+        f"<h2>{e(IMPROVEMENTS_TITLE)}</h2>",
         _ul([improvement_line(i) for i in d["improvements"]]),
         "<h2>Goals</h2>",
         _ul(goals) if goals else '<ul><li class="empty">No goals set.</li></ul>',

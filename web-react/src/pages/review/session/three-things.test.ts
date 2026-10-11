@@ -98,7 +98,7 @@ describe("3 things from this session (Summary, after the tiles)", () => {
     expect(text).toContain("3 things from this session");
     // right after the KPI tiles, before the Work on list
     expect(text.indexOf("3 things from this session")).toBeLessThan(text.indexOf("More to work on"));
-    expect(text).toContain("Went well New personal best at Austria: 1:10.549 on lap 64, 1.196 s faster than before.");
+    expect(text).toContain("Went well New personal best at Austria in the Haas: 1:10.549 on lap 64, 1.196 s faster than before.");
     expect(text).toContain("One to work on Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h)");
     expect(text).toContain("Seen on 9 of 9 laps compared with your reference");
     expect(text).toContain("Progress Session 12 this week, 41 laps so far.");
@@ -111,7 +111,7 @@ describe("3 things from this session (Summary, after the tiles)", () => {
 
   it("a goal reached: Goal reached with Open goals", () => {
     const { html, text } = render("intermediate", mfx.recapReached());
-    expect(text).toContain("Goal reached Goal reached: a lap under 1:10.000 (1:09.981 on lap 7).");
+    expect(text).toContain("Goal reached A lap under 1:10.000 (1:09.981 on lap 7).");
     expect(text).toContain("Open goals");
     expect(html).toContain('data-thing="progress" data-source="goal_reached"');
   });
@@ -120,7 +120,7 @@ describe("3 things from this session (Summary, after the tiles)", () => {
     const { text } = render("beginner", mfx.recap());
     honest(text, "beginner");
     expect(text).toContain("Turn 6: you were 9 km/h slower at the slowest point of the corner.");
-    expect(text).toContain("Your fastest lap ever at Austria: 1:10.549.");
+    expect(text).toContain("Your fastest lap ever at Austria in the Haas: 1:10.549.");
     expect(text).not.toContain("One thing to work on"); // the list heading moved into More detail
     expect(text).not.toContain("More to work on");
     expect(text).toContain("More detail: more to work on, what went well, where the time is");

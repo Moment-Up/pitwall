@@ -103,7 +103,7 @@ describe("Ready card: one goal row (state 7)", () => {
     expect(text).toContain("Last run"); // the column keeps its content
   });
 
-  it("a goal reached on the last run: Goal reached with the cup, success tone", () => {
+  it("a goal reached on the last run: Goal reached with the star, success tone", () => {
     const m = model("edited-garage-between-runs", { note: mfx.note(), recap: null, status: "loading" });
     const html = renderToStaticMarkup(createElement(CoachScreen, { model: m }));
     expect(html).toContain('class="pwc-goal" data-reached=""');
@@ -130,19 +130,28 @@ describe("Session complete card: 3 things (state 4)", () => {
     honest(text, "three things");
     expect(html).toContain('class="pwc-end__things"');
     expect((html.match(/data-thing=/g) ?? []).length).toBe(3);
-    expect(text).toContain("Went well New personal best at Austria: 1:10.549 on lap 64, 1.196 s faster than before.");
+    expect(text).toContain("Went well New personal best at Austria in the Haas: 1:10.549 on lap 64, 1.196 s faster than before.");
     expect(text).toContain("One to work on Turn 6: minimum speed is 9 km/h lower");
     expect(text).toContain("losing 0.23 s through the corner. Seen on 9 of 9 laps compared with your reference");
-    expect(html).toContain('<span class="pwc-item__ev">Seen on 9 of 9 laps');
-    expect(text).toContain("Goal reached Goal reached: a lap under 1:10.000 (1:09.981 on lap 7).");
+    expect(html).toContain('<span class="pwc-item__ev">Seen on 9 of 9 laps'); // up to two lines, never cut on one
+    expect(text).toContain("Goal reached A lap under 1:10.000 (1:09.981 on lap 7).");
     expect(html).toMatch(/data-tone="success" data-thing="progress"/);
-    expect(text).toContain("First time under 1:10 at Austria");
+    expect(text).toContain("First time under 1:10 at Austria in the Haas");
     expect(text).toContain("First goal reached");
     expect(text).toContain("+1 more");
-    expect(text).not.toContain("First time under 1:11 at Austria");
+    expect(text).not.toContain("First time under 1:11 at Austria in the Haas");
     expect(text).toContain("Review this session");
     // the D6 points give way to the three things
     expect(text).not.toMatch(/Work on · T6/);
+  });
+
+  it("the seat changed since: whose session it was, and none of its badges for the seated driver", () => {
+    const alex = { ...mfx.recapReached(), driver_id: 99, driver_name: "Alex" };
+    const html = card(ended({ note: null, recap: alex, status: "ready" }));
+    const text = visible(html);
+    expect(html).toContain('<span class="pwc-end__owner">Alex&#x27;s session</span>');
+    expect(text).not.toContain("First goal reached");
+    expect(text).toContain("Goal reached A lap under 1:10.000"); // Alex's own things, under Alex's name
   });
 
   it("a beginner's recap in simple words; empty items are '-' with their reason", () => {

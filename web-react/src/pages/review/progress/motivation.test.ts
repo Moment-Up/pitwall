@@ -137,9 +137,9 @@ describe("Progress with goals, the week and badges", () => {
     // This week
     expect(text).toContain("This week 5 to 11 Oct");
     expect(text).toContain("17 sessions, 60 laps, a new best at Austria");
-    expect(text).toContain("17 sessions · 60 laps, 47 clean · 1 h 32 min of laps · 12 tracks");
-    expect(text).toContain("+10 more");
-    expect(text).toContain("Best improvements Suzuka · F1 Generic First clean laps here: 1:35.412");
+    expect(text).toContain("47 clean laps · 1 h 32 min driving · 12 tracks");
+    expect(text).toContain("Show all 17"); // a button, not a dead "+10 more"
+    expect(text).toContain("New tracks and improvements Suzuka · F1 Generic First clean laps here: 1:35.412");
     expect(text).toContain("Goals this week Reached: Finish a race with no penalties");
     expect(text).toContain("from 50% to 75% of the way");
     expect(text).toContain("Printable page");
@@ -151,7 +151,7 @@ describe("Progress with goals, the week and badges", () => {
     expect(text).toContain("Weeks in a row 1");
     expect(text).toContain("Sessions this week 17");
     expect(text).toContain("Best clean run 6");
-    expect(text).toContain("First time under 1:11 at Austria");
+    expect(text).toContain("First time under 1:11 at Austria in the Haas");
     expect(text).toContain("Show all 8");
     // Layout: goals and the week in a row under the ScopeBar (stacked below lg), before the headline tiles
     expect(html).toMatch(/lg:col-span-7"><div class="card[^"]*"[^>]*data-motivation="goals"/);
@@ -176,7 +176,7 @@ describe("Progress with goals, the week and badges", () => {
     expect(text).toContain("Beat 1:10.000");
     expect(text).toContain("About 0.3 s to go");
     expect(text).toContain("You drove 17 times this week");
-    expect(text).toContain("You beat 1:11 at Austria for the first time");
+    expect(text).toContain("You beat 1:11 at Austria in the Haas for the first time");
     expect(text).not.toContain("A lap under 1:10.000");
   });
 
@@ -288,8 +288,45 @@ describe("Add a goal (GoalSheet)", () => {
     // GT7 has no class Pitwall can trust: no class choice
     expect(form("lap_time", gt7)).not.toContain("In which car?");
     // no track yet, or a synthetic one
-    expect(form("lap_time", null)).toContain("Pick a track above first");
+    expect(form("lap_time", null)).toContain("A lap-time goal is for one track: drive there first");
     expect(form("lap_time", { ...austria, synthetic: true })).toContain("This is a synthetic track: goals only count real driving.");
+  });
+
+  it("Make your own, lap time: a lap-time goal already set here is said up front, and Set this goal is off", () => {
+    const html = renderToStaticMarkup(
+      createElement(GoalSheetBody, {
+        driverId: 1,
+        scope: { ...austria, carClass: null },
+        suggestions: undefined,
+        suggestionsError: null,
+        activeGoals: mfx.goals().goals,
+        simple: false,
+        initialTab: "own",
+        onCreated: () => {},
+      }),
+    );
+    const text = visible(html);
+    expect(text).toContain("You already have a lap-time goal here: A lap under 1:10.000. Archive it to set a new time.");
+    expect(text).not.toContain("Minutes and seconds to a tenth");
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>[^<]*Set this goal/);
+  });
+
+  it("no track yet (a driver with no sessions): the form starts on clean laps, which count anywhere", () => {
+    const text = visible(
+      renderToStaticMarkup(
+        createElement(GoalSheetBody, {
+          driverId: 1,
+          scope: null,
+          suggestions: undefined,
+          suggestionsError: null,
+          simple: true,
+          initialTab: "own",
+          onCreated: () => {},
+        }),
+      ),
+    );
+    expect(text).toContain("Clean laps in a row");
+    expect(text).toContain("Between 2 and 50, anywhere you drive.");
   });
 
   it("Make your own, clean laps, steady laps and clean race", () => {
@@ -298,9 +335,27 @@ describe("Add a goal (GoalSheet)", () => {
     const steady = form("consistency", austria);
     expect(steady).toContain("How many laps in a row? 3 laps 5 laps 10 laps");
     expect(steady).toContain("All within (seconds)");
-    expect(form("race_clean", austria)).toContain("Pitwall can only check this in F1 races, recorded from the start to the flag.");
+    expect(form("race_clean", austria)).toContain("Pitwall can only check this in F1 races recorded from lap 1 to the flag.");
     // not supported by this game
     expect(form("race_clean", gt7)).toContain("Pitwall can only check this in F1 races: this game does not report races.");
+  });
+});
+
+describe("a driver with no sessions yet", () => {
+  it("Progress still offers goals, so a parent can set a first one before the first drive", async () => {
+    cache.clear();
+    cache.set(keys.driverSessions(1), []);
+    cache.set(keys.sessions, []);
+    cache.set(mkeys.goals(1), mfx.goalsEmpty());
+    setDrivers([{ ...driver(1, "Sam", "beginner"), stats: fixtures.drivers().drivers[0]!.stats }]);
+    const text = visible(
+      renderToStaticMarkup(createElement(ProgressPage, { route: parseHash("#/review/progress?driver=1") })),
+    );
+    honest(text, "no sessions");
+    expect(text).toContain("No sessions for Sam yet");
+    expect(text).toContain("Goals None active");
+    expect(text).toContain("Add a goal");
+    expect(text).toContain("Drive a session to see suggestions.");
   });
 });
 
@@ -312,7 +367,8 @@ describe("the week and badges on their own", () => {
     expect(text).toContain("Week 28 Sep to 4 Oct");
     expect(text).toContain("No driving this week.");
     expect(text).not.toContain("Sessions");
-    expect(text).toContain("Printable page");
+    expect(text).not.toContain("Printable page"); // nothing to print or copy
+    expect(text).not.toContain("Copy as text");
   });
 
   it("a driver with no badges yet", () => {

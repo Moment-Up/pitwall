@@ -166,10 +166,12 @@ class SeedLap:
     flags: tuple[str, ...] = ()
     valid: bool | None = None
     sectors: tuple[int | None, int | None, int | None] = (None, None, None)
+    t_ns: tuple[int, int] | None = None  # the lap's first and last receive time (lap meta), when a test needs it
 
 
 def trace(seed: SeedLap) -> LapTrace:
     d = np.linspace(0.0, 4318.0, 8)
+    meta = {} if seed.t_ns is None else {"t_recv_start_ns": seed.t_ns[0], "t_recv_end_ns": seed.t_ns[1]}
     return LapTrace(
         lap_number=seed.n,
         channels={"distance_m": d, "speed_kph": np.full(8, 200.0), "session_time_s": np.linspace(0, 70, 8)},
@@ -177,6 +179,7 @@ def trace(seed: SeedLap) -> LapTrace:
         sector_times_ms=list(seed.sectors),
         valid=seed.valid,
         flags=set(seed.flags),
+        meta=meta,
     )
 
 
@@ -217,7 +220,7 @@ def seed(writer: DbWriter, s: SeedSession) -> list[int]:
     def job(c: sqlite3.Connection) -> list[int]:
         repo.insert_session(c, s.sid, s.game.value, s.source, s.synthetic, None, None, driver_id=s.driver_id)
         repo.update_session_info(c, s.sid, info)
-        repo.rewrite_session_origin(c, s.sid, source=s.source, started_unix=s.started, ended_unix=s.started + 600)
+        repo.scratch_relabel_session(c, s.sid, source=s.source, started_unix=s.started, ended_unix=s.started + 600)
         ids = [repo.insert_lap(c, s.sid, trace(lp), None) for lp in s.laps]
         for e in s.events:
             repo.insert_event(c, s.sid, e)
@@ -230,5 +233,5 @@ def seed_laps(times: Sequence[int | None], first: int = 1, **kw: Any) -> list[Se
     return [SeedLap(first + i, ms, **kw) for i, ms in enumerate(times)]
 
 
-def game_event(kind: EventKind, payload: dict[str, Any]) -> GameEvent:
-    return GameEvent(kind=kind, game=Game.F1_25, t_recv_ns=0, code=None, payload=payload)
+def game_event(kind: EventKind, payload: dict[str, Any], t_recv_ns: int = 0) -> GameEvent:
+    return GameEvent(kind=kind, game=Game.F1_25, t_recv_ns=t_recv_ns, code=None, payload=payload)
