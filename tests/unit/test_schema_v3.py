@@ -29,13 +29,14 @@ def test_fresh_database_has_goals(tmp_path: Path) -> None:
 
 
 def make_v2(path: Path) -> None:
-    """A v2 database as an older build leaves it: no goals table (nor v4's session_ai_pace), version 2, with a driver
-    and a session."""
+    """A v2 database as an older build leaves it: no goals table (nor v4's session_ai_pace and sessions.ai_difficulty),
+    version 2, with a driver and a session."""
     db = Database(path)
     with db.read() as c:
         c.execute("DROP INDEX ix_goals_driver")
         c.execute("DROP TABLE goals")
         c.execute("DROP TABLE session_ai_pace")
+        c.execute("ALTER TABLE sessions DROP COLUMN ai_difficulty")
         c.execute("UPDATE meta SET value='2' WHERE key='schema_version'")
         c.execute("INSERT INTO drivers(name, created_unix, preferences) VALUES('Sam', 0, '{}')")
         repo.insert_session(c, "s1", "f1_25", "udp:20777", False, None, None, driver_id=1)
@@ -48,11 +49,13 @@ def test_v2_database_migrates_and_reopening_is_idempotent(tmp_path: Path) -> Non
     raw = sqlite3.connect(path)
     assert raw.execute("SELECT value FROM meta WHERE key='schema_version'").fetchone()[0] == "2"
     assert raw.execute("SELECT COUNT(*) FROM sqlite_master WHERE name='goals'").fetchone()[0] == 0
+    assert "ai_difficulty" not in {r[1] for r in raw.execute("PRAGMA table_info(sessions)")}
     raw.close()
     db = Database(path)
     assert version(db) == "4" and {"goals", "ix_goals_driver", "session_ai_pace"} <= tables(db)
     with db.read() as c:
         assert repo.get_session(c, "s1") is not None and repo.get_driver(c, 1) is not None
+        assert "ai_difficulty" in {r[1] for r in c.execute("PRAGMA table_info(sessions)")}
     Database(path)  # again: nothing changes
     assert version(Database(path)) == "4"
 

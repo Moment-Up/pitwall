@@ -769,6 +769,14 @@
   justify-content: flex-end;
   align-self: end;
 }
+/* Session complete with the pace vs AI line, landscape (the card is the hero and coach rows' fixed height): the line
+ * gets an auto row of its own and the actions keep the last row, at the bottom when there is room. With the default
+ * rows the line took the last row, which has no height left once the three things are shown, and the actions moved to
+ * an extra row over it (7 px overlap at 1180 x 820 and 1133 x 744). Closer rows and a 14 px line make it fit there. */
+@media (min-width: 1024px), (min-width: 768px) and (orientation: landscape) {
+  .pwc-end.card:has(> [data-ai-line]) { grid-template-rows: auto auto auto 1fr; row-gap: 8px; }
+  .pwc-end.card > [data-ai-line] { font-size: 14px; line-height: 1.25; }
+}
 .pwc-item {
   --pwc-k: var(--muted);
   align-items: flex-start;
