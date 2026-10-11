@@ -825,6 +825,31 @@ simplified and an advanced driver's in full. Anyone can expand.
 like a beginner's). The rule is the **viewed** session's driver; `lib/review/density.ts` takes the session's
 `driver_id`, never `drivers.active`, and has a test for exactly that case.
 
+### 6.11 Goals, badges and the weekly digest (lane motivation)
+
+Data: M1-M5 (section 13). Every number comes from the viewed driver's own real driving (never replays; synthetic
+only behind the development switch, and then flagged). Nothing here is written by a language model.
+
+- **Summary (6.3): Today's 3 things.** Right after the KPI tiles, three item cards: Went well, One to work on,
+  Progress (shown as **Goal reached** when its `source` is `goal_reached`). Wording follows the viewed driver's
+  density (6.10: `text_simple` when `simple`), with the evidence line under the text. Work on with a `lap_id` links
+  to Compare; a progress item with a `goal_id` links to the goals card. An empty item shows `-` and its `why_empty`.
+  Beginners get the existing Work on / Went well blocks under **More detail**; for others the Work on list leaves
+  out the item whose `corner:kind` is `things.work_on.observation_key` and is headed "More to work on".
+- **Progress (6.9): goals, week, badges.** Under the scope bar: the goals card (active goals with a progress bar and
+  text, "Why this target?" for suggested goals, archive / delete / reopen; goals reached in the last 30 days; an
+  empty state with the top two suggestions) and the week card (‹ › week navigation, headline, totals, sessions,
+  improvements, goals moved, badges; **Printable page** opens `/api/drivers/{id}/digest.html`, **Copy as text**
+  copies `markdown`). Then the badges card: streak tiles (weeks in a row, sessions this week, best clean run, PB
+  streak) and the badge grid, newest first. Adding a goal: Suggested (each card sets its `create` body as is) or
+  Make your own (lap time with "this car" / "any {class} car" when the scope has a `car_class`, clean laps 2-50,
+  steady laps 3/5/10 + seconds, clean race with the note "Pitwall can only check this in F1 races"). 409 and 422
+  show the server's `detail` inline. Non-F1 scopes add: "This game does not report track limits, so 'clean' means
+  no pit lap, reset or flashback."
+- **Drive (P1, P2, P10).** On track only the status chip `GOAL REACHED` for 6 s after a `motivation` note of the
+  live session (an incident chip wins). The Ready card's goal row and the Session complete card's three things
+  and badges are fetched only when the car is stopped (`garage` / `ended`). No animation, no sound.
+
 ---
 
 ## 7. Setup
@@ -1574,6 +1599,18 @@ additions. Each is additive, `null` when unknown, follows the evidence tiers, an
 | **D4** | `snapshot.session_state`: `running` / `ended` / `red_flag`, kept server-side from events (`session_started`, `lights_out`, `chequered_flag`, `session_ended`, `red_flag`) | `core/live.py`, tests | Derived from the last 10 events |
 | **D5** | `GET /api/drivers/{id}/progress?game&track_id&car`: per session `{session_id, started_unix, laps, clean_laps, best_clean_ms, median_clean_ms, spread_ms, corners: {corner: mean_time_delta_s}, habits: {kind: count}}` plus PB history. **[critic]** Plus `clean_lap_count` on every `repo.list_sessions` row (one `SUM(l.clean)`; `/api/sessions` and `/api/drivers/{id}/sessions` both use it) | `storage/repo.py`, `api/routes_drivers.py`, tests | Progress shows lap level and the family board only; Coaching has no trends; session rows show `12 laps` |
 | **D6** | `snapshot.coach = {lap_number, picked: [...], by_corner: {...}}`: the observations the radio picks for the latest lap under the seated driver's limits (`drivers.apply_coaching_limits`). Each observation also gains `text_simple` (one idea, plain words) and `short` (≤ 48 characters, for glance use), both written by the deterministic coach from the same facts and never "brake later" on its own | New `coach/selection.py` (shared selection), `core/live.py`, `analysis/coaching.py`, and `voice/proactive.py` switched to the shared selection in the same PR | Drive shows the top observation by priority, which may differ from what the radio said |
+
+**Lane motivation (M1-M5)** - goals, badges, streaks, recaps and the weekly digest; types in
+`web-react/src/lib/endpoints/motivation.ts` mirror the Python exactly (`src/pitwall/motivation/`,
+`api/routes_motivation.py`). Only goals are stored (schema v3); everything else is derived when read.
+
+| Id | Addition | Files | UI without it |
+|---|---|---|---|
+| **M1** | `GET /api/sessions/{sid}/recap` -> `SessionRecap`: `things.{went_well, work_on, progress}` (`ThingItem`: `source`, `text`, `text_simple`, `evidence`, `lap_id`, `observation_key`, `goal_id`, `values`), `why_empty`, `goals_achieved`, `goals_progress`, `badges_earned`, `synthetic`, `replay`, `ended` | `motivation/recap.py`, `motivation/service.py` | Summary and Session complete keep the D6 Work on / Went well |
+| **M2** | `GET/POST /api/drivers/{id}/goals`, `PATCH/DELETE .../goals/{goal_id}`, `GET .../goals/suggestions` -> `GoalsResponse`, `Goal`, `SuggestionsResponse` (409/422 bodies `{detail, code}`). `SuggestionsResponse.scope.car_class` carries the scope car's class when the game reports one (for "any {class} car"), while `car_label` stays the car's name | `motivation/goals.py`, `motivation/suggest.py`, `storage/repo.py` (table `goals`) | No goals card, no goal row on Ready |
+| **M3** | `GET /api/drivers/{id}/badges?synthetic=false` -> `BadgesResponse` (`badges[]` newest first, `streaks`) | `motivation/badges.py` | No badges card or tiles |
+| **M4** | `GET /api/drivers/{id}/digest?week=YYYY-MM-DD` -> `WeeklyDigest` (with `markdown`); `GET .../digest.html` the printable page | `motivation/digest.py`, `motivation/html.py` | No week card |
+| **M5** | `/ws/live` message `{"type": "motivation", "data": MotivationNote}` (`kind: "goals_achieved"`, `session_id`, `lap_id`, `lap_number`, `t`, `goals[]`), sent once when the worker marks goals reached | `motivation/worker.py`, `core/runtime.py` | No `GOAL REACHED` chip |
 
 Not needed: C's B3 (corners already carry `label` and `display_name`). Confirmed: `cues.next.corner` and
 `cues.cues[].corner` are the learned corner names, the keys of `track_model.corners[].name` and `corner_text`.

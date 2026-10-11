@@ -1,0 +1,29 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "A /ws/live {type: \"motivation\"} note: goal 4 reached on lap 7 of the Austria session (section 5 payload)",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "kind": "goals_achieved",
+  "session_id": "332904dbe3de",
+  "driver_id": 1,
+  "lap_id": 61,
+  "lap_number": 7,
+  "t": 1791669000.0,
+  "goals": [
+   {
+    "id": 4,
+    "kind": "lap_time",
+    "title": "A lap under 1:10.000",
+    "title_simple": "Beat 1:10.000",
+    "scope_text": "Austria \u00b7 Haas",
+    "track_name": "Austria",
+    "target": 70000,
+    "params": {},
+    "value": 69981
+   }
+  ]
+ }
+}

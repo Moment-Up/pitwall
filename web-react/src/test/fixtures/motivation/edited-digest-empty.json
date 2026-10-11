@@ -1,0 +1,114 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/drivers/2/digest?week=2026-09-28: a week without driving",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "driver": {
+   "id": 2,
+   "name": "Sam",
+   "skill_level": "intermediate"
+  },
+  "simple": false,
+  "week_start": "2026-09-28",
+  "week_end": "2026-10-04",
+  "is_current_week": false,
+  "generated_unix": 1791738000.0,
+  "include_synthetic": false,
+  "totals": {
+   "sessions": 0,
+   "laps": 0,
+   "clean_laps": 0,
+   "lap_time_s": 0,
+   "tracks": 0
+  },
+  "previous_week": {
+   "sessions": 0,
+   "laps": 0,
+   "clean_laps": 0
+  },
+  "headline": "No driving this week.",
+  "headline_simple": "No driving this week.",
+  "sessions": [],
+  "improvements": [],
+  "goals": {
+   "achieved": [],
+   "active": [
+    {
+     "goal": {
+      "id": 4,
+      "driver_id": 2,
+      "kind": "lap_time",
+      "status": "active",
+      "target": 70000,
+      "params": {},
+      "scope": {
+       "game": "f1_25",
+       "track_id": "f1:17",
+       "track_name": "Austria",
+       "track_length_m": 4318.0,
+       "car_id": "f1:team:7",
+       "car_class": null,
+       "car_label": "Haas"
+      },
+      "title": "A lap under 1:10.000",
+      "title_simple": "Beat 1:10.000",
+      "scope_text": "Austria \u00b7 Haas",
+      "source": "suggested",
+      "basis": {
+       "kind": "ideal_lap",
+       "text": "Your best sectors here add up to 1:09.962, 0.587 s quicker than your best lap (1:10.549). Your last new best was 1.196 s quicker than the one before. Target: your best minus the smaller step, rounded to a tenth.",
+       "text_simple": "Your best bits of the lap add up to 1:09.962, so 1:10.000 is within reach.",
+       "values": {
+        "pb_ms": 70549,
+        "ideal_ms": 69962,
+        "recent_gain_ms": 1196,
+        "step_ms": 587
+       },
+       "session_ids": [
+        "4d2c1a0b9e8f",
+        "332904dbe3de"
+       ]
+      },
+      "created_unix": 1791669600.0,
+      "achieved": null,
+      "progress": {
+       "baseline": 70549,
+       "current": 70301,
+       "target": 70000,
+       "fraction": 0.4517,
+       "to_go": 301,
+       "met": false,
+       "best_session_id": "332904dbe3de",
+       "best_lap_id": 61,
+       "sessions_since": 1,
+       "text": "0.301 s to go \u00b7 best since you set it 1:10.301",
+       "text_simple": "About 0.3 s to go"
+      }
+     },
+     "from_fraction": null,
+     "to_fraction": null
+    }
+   ]
+  },
+  "badges": [],
+  "streaks": {
+   "week_start": "2026-09-28",
+   "weekly": {
+    "current_weeks": 0,
+    "best_weeks": 0,
+    "this_week_sessions": 0
+   },
+   "clean_laps": {
+    "best": 6,
+    "best_session_id": "4d2c1a0b9e8f",
+    "last_session": 2,
+    "last_session_id": "c0ffee000002"
+   },
+   "pb": []
+  },
+  "markdown": "# Sam's week: 28 September to 4 October 2026\n\nNo driving this week.\n"
+ }
+}

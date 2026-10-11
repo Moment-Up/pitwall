@@ -166,6 +166,8 @@ def _session_info_extra(info: SessionInfo) -> dict[str, Any]:
         extra["track_zones"] = info.track_zones.without_flags().to_dict()
     if info.pit_speed_limit_kph is not None:
         extra["pit_speed_limit_kph"] = info.pit_speed_limit_kph
+    if info.total_laps is not None:  # lane motivation: race goals need the race length (F1 sends it)
+        extra["total_laps"] = info.total_laps
     return extra
 
 
@@ -1034,3 +1036,244 @@ def pb_history(
             }
         )
     return out
+
+
+# ---------------- motivation (lane motivation): goals, history reads
+# Goals are the only stored motivation state (``pitwall.motivation``); badges, streaks, recaps and digests are
+# derived from the rows below when read. History reads select only the lap columns before ``meta``: the trace
+# blob's overflow pages are never touched.
+_GOAL_JSON = ("params", "basis")
+_IN_CHUNK = 500
+
+
+def _goal_row(r: sqlite3.Row) -> dict[str, Any]:
+    d = dict(r)
+    for k in _GOAL_JSON:
+        raw = d.get(k)
+        try:
+            d[k] = json.loads(raw) if raw else ({} if k == "params" else None)
+        except json.JSONDecodeError:
+            d[k] = {} if k == "params" else None
+    return d
+
+
+def insert_goal(
+    conn: sqlite3.Connection,
+    *,
+    driver_id: int,
+    kind: str,
+    target: float,
+    params: dict[str, Any],
+    game: str | None,
+    track_id: str | None,
+    track_name: str | None,
+    track_length_m: float | None,
+    car_id: str | None,
+    car_class: str | None,
+    car_name: str | None,
+    baseline: float | None,
+    source: str,
+    basis: dict[str, Any] | None,
+) -> int:
+    """A new active goal; only laps stored after it (``after_lap_id``) count towards it."""
+    cur = conn.execute(
+        """INSERT INTO goals(driver_id, kind, status, target, params, game, track_id, track_length_m, car_id,
+                             car_class, track_name, car_name, baseline, after_lap_id, source, basis, created_unix)
+           VALUES(?,?,'active',?,?,?,?,?,?,?,?,?,?,(SELECT COALESCE(MAX(id), 0) FROM laps),?,?,?)""",
+        (
+            driver_id,
+            kind,
+            target,
+            dumps(params),
+            game,
+            track_id,
+            track_length_m,
+            car_id,
+            car_class,
+            track_name,
+            car_name,
+            baseline,
+            source,
+            None if basis is None else dumps(basis),
+            time.time(),
+        ),
+    )
+    return int(cur.lastrowid or 0)
+
+
+def get_goal(conn: sqlite3.Connection, goal_id: int) -> dict[str, Any] | None:
+    r = conn.execute("SELECT * FROM goals WHERE id=?", (goal_id,)).fetchone()
+    return _goal_row(r) if r else None
+
+
+def list_goals(
+    conn: sqlite3.Connection, driver_id: int, statuses: tuple[str, ...] | None = None
+) -> list[dict[str, Any]]:
+    """A driver's goals: active first, then newest first (``created_unix``, then id)."""
+    q = "SELECT * FROM goals WHERE driver_id=?"
+    args: list[Any] = [driver_id]
+    if statuses is not None:
+        if not statuses:
+            return []
+        q += f" AND status IN ({','.join('?' * len(statuses))})"
+        args += list(statuses)
+    q += " ORDER BY (status = 'active') DESC, created_unix DESC, id DESC"
+    return [_goal_row(r) for r in conn.execute(q, args).fetchall()]
+
+
+def count_goals(conn: sqlite3.Connection, driver_id: int, status: str = "active") -> int:
+    r = conn.execute("SELECT COUNT(*) AS n FROM goals WHERE driver_id=? AND status=?", (driver_id, status)).fetchone()
+    return int(r["n"])
+
+
+def mark_goal_achieved(
+    conn: sqlite3.Connection,
+    goal_id: int,
+    *,
+    unix: float,
+    session_id: str | None,
+    lap_id: int | None,
+    value: float | None,
+) -> bool:
+    """Flip an active goal to achieved. True only for the one call that flipped it (exactly once)."""
+    cur = conn.execute(
+        """UPDATE goals SET status='achieved', achieved_unix=?, achieved_session_id=?, achieved_lap_id=?,
+                            achieved_value=?
+           WHERE id=? AND status='active'""",
+        (unix, session_id, lap_id, value, goal_id),
+    )
+    return cur.rowcount == 1
+
+
+def set_goal_status(conn: sqlite3.Connection, goal_id: int, status: str, *, clear_achievement: bool) -> bool:
+    """Archive / unarchive / reopen. Reopening (``clear_achievement``) forgets the stored achievement."""
+    if clear_achievement:
+        cur = conn.execute(
+            """UPDATE goals SET status=?, achieved_unix=NULL, achieved_session_id=NULL, achieved_lap_id=NULL,
+                                achieved_value=NULL WHERE id=?""",
+            (status, goal_id),
+        )
+    else:
+        cur = conn.execute("UPDATE goals SET status=? WHERE id=?", (status, goal_id))
+    return cur.rowcount == 1
+
+
+def set_goal_baseline_if_unknown(conn: sqlite3.Connection, goal_id: int, baseline: float) -> None:
+    conn.execute("UPDATE goals SET baseline=? WHERE id=? AND baseline IS NULL", (baseline, goal_id))
+
+
+def delete_goal(conn: sqlite3.Connection, goal_id: int) -> bool:
+    return conn.execute("DELETE FROM goals WHERE id=?", (goal_id,)).rowcount == 1
+
+
+def max_lap_id(conn: sqlite3.Connection) -> int:
+    r = conn.execute("SELECT COALESCE(MAX(id), 0) AS m FROM laps").fetchone()
+    return int(r["m"])
+
+
+_MOTIVATION_SESSION_COLS = """s.id, s.started_unix, s.ended_unix, s.game, s.track_id, s.track_name, s.track_length_m,
+    s.car_id, s.car_name, s.session_type, s.synthetic, s.source, s.driver_id,
+    json_extract(s.info, '$.total_laps') AS total_laps, json_extract(s.info, '$.formula') AS formula,
+    json_extract(s.info, '$.car_class') AS car_class"""
+
+
+def motivation_sessions(
+    conn: sqlite3.Connection, driver_id: int, *, include_synthetic: bool = False
+) -> list[dict[str, Any]]:
+    """A driver's real driving (never replays; synthetic only on request), oldest first (``started_unix``, then
+    insertion order), with the race length, F1 formula and Forza car class from ``sessions.info``."""
+    q = f"SELECT {_MOTIVATION_SESSION_COLS} FROM sessions s WHERE s.driver_id=? AND {_DRIVEN}"
+    if not include_synthetic:
+        q += " AND s.synthetic=0"
+    rows = conn.execute(q + " ORDER BY s.started_unix, s.rowid", (driver_id,)).fetchall()
+    return [{**dict(r), "synthetic": bool(r["synthetic"])} for r in rows]
+
+
+def motivation_session(conn: sqlite3.Connection, session_id: str) -> dict[str, Any] | None:
+    """One session row in the ``motivation_sessions`` shape (any source, any owner)."""
+    r = conn.execute(f"SELECT {_MOTIVATION_SESSION_COLS} FROM sessions s WHERE s.id=?", (session_id,)).fetchone()
+    return None if r is None else {**dict(r), "synthetic": bool(r["synthetic"])}
+
+
+def motivation_laps(conn: sqlite3.Connection, session_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    """Lap rows per session in lap order: only the columns before ``meta`` (never ``meta``, ``trace`` or
+    ``created_unix``). The IN list is chunked."""
+    out: dict[str, list[dict[str, Any]]] = {sid: [] for sid in session_ids}
+    for i in range(0, len(session_ids), _IN_CHUNK):
+        chunk = session_ids[i : i + _IN_CHUNK]
+        rows = conn.execute(
+            f"""SELECT id, session_id, lap_number, lap_time_ms, s1_ms, s2_ms, s3_ms, valid, clean, flags FROM laps
+                WHERE session_id IN ({",".join("?" * len(chunk))}) ORDER BY session_id, lap_number""",
+            chunk,
+        ).fetchall()
+        for r in rows:
+            d = dict(r)
+            try:
+                flags = json.loads(d["flags"] or "[]")
+            except json.JSONDecodeError:
+                flags = []
+            d["flags"] = flags if isinstance(flags, list) else []
+            d["clean"] = bool(d["clean"])
+            d["valid"] = None if d["valid"] is None else bool(d["valid"])
+            out.setdefault(d["session_id"], []).append(d)
+    return out
+
+
+def motivation_events(conn: sqlite3.Connection, session_ids: list[str]) -> dict[str, list[dict[str, Any]]]:
+    """Player incident events (collision, penalty, flashback) per session, payload parsed (race sessions only)."""
+    out: dict[str, list[dict[str, Any]]] = {sid: [] for sid in session_ids}
+    for i in range(0, len(session_ids), _IN_CHUNK):
+        chunk = session_ids[i : i + _IN_CHUNK]
+        rows = conn.execute(
+            f"""SELECT session_id, kind, code, payload FROM events
+                WHERE session_id IN ({",".join("?" * len(chunk))}) AND kind IN ('collision', 'penalty', 'flashback')
+                ORDER BY id""",
+            chunk,
+        ).fetchall()
+        for r in rows:
+            try:
+                payload = json.loads(r["payload"] or "{}")
+            except json.JSONDecodeError:
+                payload = {}
+            out.setdefault(r["session_id"], []).append(
+                {"kind": r["kind"], "code": r["code"], "payload": payload if isinstance(payload, dict) else {}}
+            )
+    return out
+
+
+def track_labels(conn: sqlite3.Connection, game: str, track_id: str, car_id: str | None) -> dict[str, Any] | None:
+    """Display labels of a game + track (+ car) from the most recent session that has them (names are not
+    personal: any session will do), with that session's track length."""
+    q = "SELECT track_name, track_length_m, car_name FROM sessions WHERE game=? AND track_id=?"
+    args: list[Any] = [game, track_id]
+    if car_id is not None:
+        q += " AND car_id=?"
+        args.append(car_id)
+    r = conn.execute(q + " ORDER BY started_unix DESC, rowid DESC LIMIT 1", args).fetchone()
+    return None if r is None else dict(r)
+
+
+def lap_numbers(conn: sqlite3.Connection, lap_ids: list[int]) -> dict[int, int]:
+    """Lap id -> lap number (for laps a goal was reached on)."""
+    out: dict[int, int] = {}
+    for i in range(0, len(lap_ids), _IN_CHUNK):
+        chunk = lap_ids[i : i + _IN_CHUNK]
+        for r in conn.execute(
+            f"SELECT id, lap_number FROM laps WHERE id IN ({','.join('?' * len(chunk))})", chunk
+        ).fetchall():
+            out[int(r["id"])] = int(r["lap_number"])
+    return out
+
+
+def rewrite_session_origin(
+    conn: sqlite3.Connection, session_id: str, *, source: str, started_unix: float, ended_unix: float | None
+) -> None:
+    """Scratch databases only (``scripts/motivation_acceptance.py``): make a replayed real session look like live
+    driving at the time it was recorded. Never called by the app."""
+    conn.execute(
+        "UPDATE sessions SET source=?, started_unix=?, ended_unix=? WHERE id=?",
+        (source, started_unix, ended_unix, session_id),
+    )
+
+
+# ---------------- end motivation

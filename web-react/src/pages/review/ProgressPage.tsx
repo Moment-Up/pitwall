@@ -6,6 +6,9 @@
 // has it; an older server answers 404 and the page falls back to lap level, saying what is missing. Synthetic tracks
 // are offered only on request and labelled; replays are never anyone's driving. Order by the VIEWED driver's skill
 // (6.10): corner trends first for advanced drivers; Getting faster?, milestones and the family board first otherwise.
+//
+// Lane motivation: Goals and This week in a row under the ScopeBar; Streaks and badges after Getting faster? (after
+// the second row for advanced drivers). Each card loads on its own and says so when the server is older.
 
 import { Alert, Button, Skeleton } from "@heroui/react";
 import { EmptyState } from "@heroui-pro/react";
@@ -34,15 +37,18 @@ import {
 } from "../../lib/review/progress";
 import { plural } from "../../lib/review/words";
 import type { PageProps } from "../../routes";
+import { BadgesCard } from "./progress/BadgesCard";
 import { ChangesCard } from "./progress/ChangesCard";
 import { FamilyBoardCard } from "./progress/FamilyBoardCard";
 import { FasterCard } from "./progress/FasterCard";
+import { GoalsCard } from "./progress/GoalsCard";
 import { MilestonesCard } from "./progress/MilestonesCard";
 import { ProgressTilesView } from "./progress/ProgressTilesView";
 import { ScopeBar } from "./progress/ScopeBar";
 import { SteadierCard } from "./progress/SteadierCard";
 import { TierNotice } from "./progress/TierNotice";
 import { useReviewScope } from "./progress/useReviewScope";
+import { WeekCard } from "./progress/WeekCard";
 import { useBestsWindow } from "./session/data";
 
 export function ProgressPage({ route }: PageProps) {
@@ -185,6 +191,32 @@ export function ProgressPage({ route }: PageProps) {
   );
   const st = viewed.stats;
 
+  // lane motivation: goals, the week and badges for the VIEWED driver, in their wording.
+  const simple = density.simpleWording;
+  const goalsRow = (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="min-w-0 lg:col-span-7">
+        <GoalsCard
+          driverId={viewed.id}
+          driverName={viewed.name}
+          simple={simple}
+          scope={{
+            game: scope.track.game,
+            trackId: scope.track.trackId,
+            trackLabel: scope.track.label,
+            carId: scope.carId,
+            carLabel: scope.carLabel,
+            synthetic: scope.track.synthetic,
+          }}
+        />
+      </div>
+      <div className="min-w-0 lg:col-span-5">
+        <WeekCard driverId={viewed.id} simple={simple} />
+      </div>
+    </div>
+  );
+  const badgesCard = <BadgesCard driverId={viewed.id} driverName={viewed.name} simple={simple} />;
+
   return (
     <div className="grid grid-cols-1 gap-4">
       <ScopeBar
@@ -196,6 +228,7 @@ export function ProgressPage({ route }: PageProps) {
           </Button>
         }
       />
+      {goalsRow}
       <TierNotice tier={tier} what="Steadiness, corner trends and habit counts" />
       {loading ? (
         <BodySkeleton />
@@ -213,10 +246,19 @@ export function ProgressPage({ route }: PageProps) {
               {changes}
               {faster}
               {second}
+              {badgesCard}
+            </>
+          ) : density.progressCornersFirst ? (
+            <>
+              {faster}
+              {second}
+              {badgesCard}
+              {changes}
             </>
           ) : (
             <>
               {faster}
+              {badgesCard}
               {second}
               {changes}
             </>

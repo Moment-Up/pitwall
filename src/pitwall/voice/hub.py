@@ -84,6 +84,7 @@ from pitwall.coach.cues import (
 )
 from pitwall.compat import is_windows
 from pitwall.core.live import LiveState
+from pitwall.motivation.radio import GoalLineGate, goal_message  # lane motivation
 from pitwall.voice.scheduler import SPEECH_LATENCY_S, speak_window_ok, spoken_word_count
 from pitwall.voice.tts import speech_mismatch
 from pitwall.voice.types import (
@@ -307,6 +308,7 @@ class RadioHub:
         self.coaching_limits: CoachingLimits | None = None  # the seated driver's profile (apply_driver)
         self._last_coached: dict[str, int] = {}  # corner -> lap last coached, for the current session only
         self._last_coached_sid: str | None = None
+        self._goal_lines = GoalLineGate()  # lane motivation: at most 2 goal lines per session
         self.ptt_down = False
         self.ptt_source: str | None = None
         self._ptt_client: RadioClient | None = None
@@ -998,6 +1000,17 @@ class RadioHub:
     def _on_live_note(self, kind: str, payload: dict[str, Any]) -> None:
         if kind == "lap" and self._loop is not None:
             self._loop.call_soon_threadsafe(self._enqueue_lap, payload)
+        elif kind == "motivation" and self._loop is not None:  # lane motivation: a goal was reached
+            self._loop.call_soon_threadsafe(self._enqueue_motivation, payload)
+
+    def _enqueue_motivation(self, payload: dict[str, Any]) -> None:  # lane motivation (event loop only)
+        simple = self.coaching_limits is not None and self.coaching_limits.simple_wording
+        sid = self.live.session_id
+        msg = goal_message(
+            payload, self._goal_lines, sid, simple=simple, to_speech=self.to_speech, voice_enabled=self.voice_enabled
+        )
+        if msg is not None:
+            self.scheduler.enqueue(msg)
 
     def apply_driver(self, driver: Driver | None) -> None:
         """The seated driver changed or edited their profile (``DriverService.attach_radio``; event loop only).

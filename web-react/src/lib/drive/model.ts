@@ -7,6 +7,8 @@
 
 import { changeWords, gapWords, type ChangeText } from "../bests";
 import type { Driver } from "../drivers";
+import { endedMotivation, readyGoal, type DriveMotivation, type ReadyGoalView } from "../motivation/drive";
+import type { ThingsView } from "../motivation/recap";
 import { INTENSITIES, SKILL_LEVELS } from "../drivers";
 import { coachPoint, simpleWording, topPoint, workOnWentWell, type CoachPoint } from "./coach";
 import { cornerAhead, cornerLabelOf, cornerLayout, focusReasonOf, isFocus, officialNameOf, type CornerView } from "./corner";
@@ -26,8 +28,8 @@ import {
   type ConnectionPill,
   type DriveMemo,
   type DriveOverlays,
+  type ChipKind,
   type DriveState,
-  type IncidentKind,
   type StatusLine,
   type StatusSlot,
 } from "./state";
@@ -62,6 +64,9 @@ export interface DriveModelInput {
   prefs?: DrivePrefs;
   /** The previous call's `memo`. */
   memo?: DriveMemo | null;
+  /** Lane motivation: the newest /ws/live goal note (the 6 s GOAL REACHED chip) and, while the car is stopped, the
+   * session's recap (the Ready card's goal row, the Session complete card's three things). Absent = neither. */
+  motivation?: DriveMotivation | null;
 }
 
 export type HeroView =
@@ -93,7 +98,7 @@ export interface StatusView extends StatusSlot {
   pill: ConnectionPill;
   line: StatusLine;
   evidence: { synthetic: boolean; replay: boolean };
-  chip: { kind: IncidentKind; text: string } | null;
+  chip: { kind: ChipKind; text: string } | null;
 }
 
 export interface CoachView extends CoachPoint {
@@ -150,6 +155,8 @@ export interface ReadyCard {
   /** Between runs: "One thing for the next run" (D6 pick or top observation, full text). */
   nextRun: CoachPoint | null;
   footer: string | null;
+  /** Lane motivation: one goal (reached this session, else in this scope), or null. */
+  goal: ReadyGoalView | null;
 }
 
 /** A Session complete tile value: `text` in full ("4.8 s faster", "PB", "-"); `amount` + `word` to draw the number
@@ -175,6 +182,11 @@ export interface EndedCard {
   toRecord: EndedChange | null;
   workOn: CoachPoint | null;
   wentWell: CoachPoint | null;
+  /** Lane motivation: the session's three things (null: show workOn / wentWell), while they load, and the badges it
+   * earned. */
+  things: ThingsView | null;
+  thingsLoading: boolean;
+  badges: string[];
 }
 
 export interface DriveModel {
@@ -361,6 +373,7 @@ function readyCard(
   nowS: number,
   drivers: readonly Driver[],
   simple: boolean,
+  motivation: DriveMotivation | null | undefined,
 ): ReadyCard {
   const skill = driver ? SKILL_LEVELS.find((x) => x.value === driver.preferences.skill_level) : undefined;
   const intensity = driver ? INTENSITIES.find((x) => x.value === driver.preferences.coaching_intensity) : undefined;
@@ -419,10 +432,16 @@ function readyCard(
     today: { focus, callsMode: callsModeText(s.cues) },
     nextRun: between ? topPoint(s, simple) : null,
     footer: footerOf(s),
+    goal: readyGoal(motivation, s.session_id),
   };
 }
 
-function endedCard(s: SnapshotNext, drivers: readonly Driver[], simple: boolean): EndedCard {
+function endedCard(
+  s: SnapshotNext,
+  drivers: readonly Driver[],
+  simple: boolean,
+  motivation: DriveMotivation | null | undefined,
+): EndedCard {
   const bv = bestsOf(s);
   const counts = cleanCounts(s);
   const sb = sessionBest(s, bv);
@@ -470,6 +489,7 @@ function endedCard(s: SnapshotNext, drivers: readonly Driver[], simple: boolean)
         : gap(hh.lap_ms, [holder?.name, finite(hh.lap_ms) ? lapTime(hh.lap_ms) : null].filter(Boolean).join(" · ") || null),
     workOn,
     wentWell,
+    ...endedMotivation(motivation, id),
   };
 }
 
@@ -496,7 +516,7 @@ const EMPTY_COACH: CoachView = {
 export function driveModel(input: DriveModelInput): DriveModel {
   const { snap: s, connected, nowS, driver } = input;
   const drivers = input.drivers ?? (driver ? [driver] : []);
-  const { state, overlays, memo: m0 } = driveState(s, connected, nowS, input.memo ?? EMPTY_MEMO);
+  const { state, overlays, memo: m0 } = driveState(s, connected, nowS, input.memo ?? EMPTY_MEMO, input.motivation?.note);
   const beginner = driver?.preferences.skill_level === "beginner";
   const simple = !!driver?.coaching?.simple_wording;
   const lock = input.prefs?.driveLock ?? "beginners";
@@ -555,8 +575,8 @@ export function driveModel(input: DriveModelInput): DriveModel {
     laps: lapTimesView(s, state, bv ?? undefined),
     ribbon: ribbon(s, state, live?.name ?? null),
     lastCue: lastCueOutcome(s?.cues, s?.track_model),
-    ready: s && state === "garage" ? readyCard(s, driver, nowS, drivers, simple) : null,
-    ended: s && state === "ended" ? endedCard(s, drivers, simple) : null,
+    ready: s && state === "garage" ? readyCard(s, driver, nowS, drivers, simple, input.motivation) : null,
+    ended: s && state === "ended" ? endedCard(s, drivers, simple, input.motivation) : null,
     tier: bv?.tier ?? 1,
     coloured: bv?.coloured ?? true,
     legend: legendOf(s, bv),

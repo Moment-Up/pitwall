@@ -10,6 +10,8 @@
 //   5 890 m · S2 1 813 m · S3 4 294 m · 14 corners learned · names: verified track sheet
 //
 // Go live stays in the radio strip below (one copy on Drive). Unknown values are "-".
+// Lane motivation: one goal row closes column 2 (GoalRow): a goal reached this session (the celebration between
+// runs), else the goal in this session's scope. Same card size and slots.
 
 import { Avatar, Button, Card, Chip } from "@heroui/react";
 import { memo, useState, type ReactNode } from "react";
@@ -19,6 +21,7 @@ import { usePrefs } from "../../../hooks/stores";
 import { inkOn } from "../../../lib/drivers";
 import { prefs } from "../../../lib/prefs";
 import type { ReadyCard as ReadyCardView } from "../../../lib/drive/model";
+import { GoalRow } from "./GoalRow";
 import { TimeText, useMediaQuery } from "./parts";
 import { SeatSwitcher } from "./SeatSwitcher";
 import { radioSeat, sameProps } from "./view";
@@ -107,7 +110,7 @@ function LargeTextHint() {
 }
 
 export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardView }) {
-  const { seat, target, lastRun, today, nextRun } = ready;
+  const { seat, target, lastRun, today, nextRun, goal } = ready;
   const between = ready.phase === "between_runs";
   return (
     <Card className="pwc-ready pw-chamfer pwc-span3">
@@ -131,7 +134,7 @@ export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardVi
       </section>
 
       {between && lastRun ? (
-        <section className="pwc-ready__col" aria-label="Last run">
+        <section className="pwc-ready__col" aria-label="Last run" data-goal={goal ? "" : undefined}>
           <h3 className="pwc-ready__h">Last run</h3>
           <div className="pwc-kv">
             <Kv k="Best lap">
@@ -165,9 +168,10 @@ export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardVi
               {target.reference}
             </Kv>
           </div>
+          {goal && <GoalRow goal={goal} />}
         </section>
       ) : (
-        <section className="pwc-ready__col" aria-label="Target">
+        <section className="pwc-ready__col" aria-label="Target" data-goal={goal ? "" : undefined}>
           <h3 className="pwc-ready__h">Target</h3>
           <div className="pwc-kv">
             <Kv k="Your best here">
@@ -202,6 +206,7 @@ export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardVi
               {target.reference}
             </Kv>
           </div>
+          {goal && <GoalRow goal={goal} />}
         </section>
       )}
 

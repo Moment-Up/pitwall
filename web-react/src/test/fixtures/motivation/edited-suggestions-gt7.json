@@ -1,0 +1,116 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/drivers/2/goals/suggestions for a GT7 scope: a lap time from a recent gain (no sectors, so no ideal lap) and a clean streak; no race goal (GT7 sends no session type)",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "driver_id": 2,
+  "simple": false,
+  "scope": {
+   "game": "gt7",
+   "track_id": "gt7:loc:351",
+   "track_name": "Brands Hatch",
+   "track_length_m": 3908.0,
+   "car_id": "gt7:car:3389",
+   "car_class": null,
+   "car_label": "Porsche 911 GT3 RS"
+  },
+  "none_reason": null,
+  "suggestions": [
+   {
+    "kind": "lap_time",
+    "target": 84500,
+    "params": {},
+    "scope": {
+     "game": "gt7",
+     "track_id": "gt7:loc:351",
+     "track_name": "Brands Hatch",
+     "track_length_m": 3908.0,
+     "car_id": "gt7:car:3389",
+     "car_class": null,
+     "car_label": "Porsche 911 GT3 RS"
+    },
+    "title": "A lap under 1:24.500",
+    "title_simple": "Beat 1:24.500",
+    "scope_text": "Brands Hatch \u00b7 Porsche 911 GT3 RS",
+    "basis": {
+     "kind": "recent_gain",
+     "text": "Your last new best here was 0.612 s quicker than the one before. Target: your best (1:25.012) minus that step, rounded to a tenth.",
+     "text_simple": "You got 0.6 s faster last time, so 1:24.500 is within reach.",
+     "values": {
+      "pb_ms": 85012,
+      "recent_gain_ms": 612
+     },
+     "session_ids": []
+    },
+    "create": {
+     "kind": "lap_time",
+     "target": 84500,
+     "params": {},
+     "game": "gt7",
+     "track_id": "gt7:loc:351",
+     "car_id": "gt7:car:3389",
+     "car_class": null,
+     "source": "suggested",
+     "basis": {
+      "kind": "recent_gain",
+      "text": "Your last new best here was 0.612 s quicker than the one before. Target: your best (1:25.012) minus that step, rounded to a tenth.",
+      "text_simple": "You got 0.6 s faster last time, so 1:24.500 is within reach.",
+      "values": {
+       "pb_ms": 85012,
+       "recent_gain_ms": 612
+      },
+      "session_ids": []
+     }
+    }
+   },
+   {
+    "kind": "clean_streak",
+    "target": 4,
+    "params": {},
+    "scope": {
+     "game": null,
+     "track_id": null,
+     "track_name": null,
+     "track_length_m": null,
+     "car_id": null,
+     "car_class": null,
+     "car_label": null
+    },
+    "title": "4 clean laps in a row",
+    "title_simple": "4 clean laps in a row",
+    "scope_text": null,
+    "basis": {
+     "kind": "best_streak",
+     "text": "Your best run is 3 clean laps in a row (Brands Hatch, Sun 11 Oct)",
+     "text_simple": "Your best is 3 clean laps in a row",
+     "values": {
+      "best": 3
+     },
+     "session_ids": []
+    },
+    "create": {
+     "kind": "clean_streak",
+     "target": 4,
+     "params": {},
+     "game": null,
+     "track_id": null,
+     "car_id": null,
+     "car_class": null,
+     "source": "suggested",
+     "basis": {
+      "kind": "best_streak",
+      "text": "Your best run is 3 clean laps in a row (Brands Hatch, Sun 11 Oct)",
+      "text_simple": "Your best is 3 clean laps in a row",
+      "values": {
+       "best": 3
+      },
+      "session_ids": []
+     }
+    }
+   }
+  ]
+ }
+}

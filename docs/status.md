@@ -200,6 +200,37 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
 - **Linux:** still not run with Pitwall itself. CI only builds the dashboards on Ubuntu; the release workflow's
   Linux `verify` job will be the first run of the server on Linux (synthetic telemetry, no game).
 
+## Goals, streaks and summaries for every driver (lane motivation, schema v3), 2026-10-11
+<!-- lane motivation -->
+- **Built:** goals (lap time, clean laps in a row, steady laps, clean F1 race) with suggestions from the driver's own
+  history, badges and streaks, Today's 3 things per session, the weekly digest (JSON, Markdown, printable HTML), the
+  `motivation` worker and `/ws/live` note, one radio line per reached goal (at most two a session), engineer facts and
+  the `goals` intent, `pitwall goals | recap | digest` (`src/pitwall/motivation/`, `api/routes_motivation.py`).
+- **Evidence: unit and synthetic tested; recorded-tested on F1 25 PS5 captures in scratch (not committed); not
+  validated live.** `scripts/motivation_acceptance.py` replayed 17 of the owner's captures (F1 25, GT7, AC) into a
+  scratch database: 9 evaluable races (6 without a penalty, none without contact), Austria/Haas suggestion "a lap
+  under 1:10.000" (ideal lap 1:09.962), the expected badges and recaps. A scratch `serve` (HTTP 8825 / UDP 20825)
+  fed the 2026-10-10 Austria capture with `pitwall send`: one `motivation` note, the goal "a lap under 1:12.000"
+  reached on lap 63 (1:11.745), one radio line queued. Committed fixtures: `tests/recorded/test_motivation_recorded.py`.
+- **Limits:** race goals are F1 only (GT7, AC and Forza send no session type or penalties) and only for sessions
+  recorded from this version (`total_laps` is stored in `sessions.info` from v3; older races are not evaluable). In
+  GT7, AC and Forza "clean" means no pit lap, reset or flashback (no track-limit data). Race lap 1 is skipped by
+  steady-lap windows because F1 25 flags only some race lap 1s as standing starts.
+- **Migration checked by hand:** a v2 database made by the base commit's code (`git archive 181d85c src`, Austria
+  fixture replayed) opened with this branch: version 3, `goals` and `ix_goals_driver` created, sessions and laps
+  intact, a goal created and a recap served; reopening is idempotent; the old build reopening it writes version 2 and
+  ignores `goals`, and this build sets 3 again with the goal intact.
+- **Read budgets** (scratch, 2 000 sessions / 20 000 laps with 8 KB traces, M4 Max): recap 122 ms, badges 126 ms,
+  digest 137 ms, goals 93 ms; the worker's first lap of a session 94 ms (once), then 0.5 ms a lap.
+- **Dashboard, end to end in scratch (recorded data over real UDP, not a game):** the built React dashboard on a
+  scratch server (LLM off, text-only radio). A seated driver with the goal "a lap under 1:12.000" at Austria/Haas and
+  the 2026-10-10 Austria capture sent with `pitwall send --speed 10`: one `motivation` note, the GOAL REACHED chip on
+  Drive at iPad (1180x820) and phone (390x844) size, the radio line queued, the Session complete card's three things
+  and badge, "Goal reached" in Summary, and the radio question "How am I doing on my goal?" answered from facts.
+  Review Progress (goals, the goal sheet with a server refusal, the week, badges) and Summary checked at both sizes on
+  the replayed captures. The Svelte dashboard still works with a goal note on the socket. Not validated live.
+<!-- end lane motivation -->
+
 ## Next
 1. Dashboard v2 rig acceptance (spec 14.5) on the iPad with live PS5 telemetry. Remove `/next/` and the Svelte
    fallback a week after the switch-over (2026-10-18).

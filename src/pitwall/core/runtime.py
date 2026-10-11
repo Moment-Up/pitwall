@@ -42,6 +42,7 @@ from pitwall.integrations import (
     resolve_configs,
 )
 from pitwall.model.telemetry import Game, Platform, SessionInfo
+from pitwall.motivation.worker import MotivationWorker  # lane motivation
 from pitwall.settings_store import SecretStore, SettingsStore
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
@@ -180,6 +181,7 @@ class Runtime:
         self._replay_field: FieldWorker | None = None
         self.processor = LapProcessor(self.db, self.writer, self.live)
         self.worker = AnalysisWorker(self.processor)
+        self.motivation = MotivationWorker(self.db, self.writer, self.live)  # lane motivation: goals reached
         self.inputs: dict[int, _Input] = {}
         self.ac: _AcInput | None = None  # Assetto Corsa client (when enabled with a console IP)
         self.input_errors: dict[str, str] = {}  # integration key -> last bind/start error (Connect page)
@@ -549,6 +551,7 @@ class Runtime:
             self.inputs.clear()
         self.worker.join()
         self.worker.close()
+        self.motivation.close()  # lane motivation
         self.field.close()
         self.writer.flush()
         self.writer.close()

@@ -1,0 +1,196 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "A recap whose progress item is a goal reached this session, with two badges (edited from edited-recap-austria: the lap-7 time is invented to cross the goal)",
+  "notes": "Lap 7 at 1:09.981 is the lane spec's own example, not a recorded lap. Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "session_id": "332904dbe3de",
+  "driver_id": 1,
+  "driver_name": "Sam",
+  "simple": false,
+  "synthetic": false,
+  "replay": false,
+  "ended": true,
+  "laps": 10,
+  "clean_laps": 9,
+  "things": {
+   "went_well": {
+    "kind": "went_well",
+    "source": "pb",
+    "text": "New personal best at Austria: 1:10.549 on lap 64, 1.196 s faster than before.",
+    "text_simple": "Your fastest lap ever at Austria: 1:10.549.",
+    "evidence": null,
+    "corner": null,
+    "corner_label": null,
+    "lap_id": 52,
+    "lap_number": 64,
+    "observation_kind": null,
+    "observation_key": null,
+    "goal_id": null,
+    "values": {
+     "lap_ms": 70549,
+     "gain_ms": 1196
+    }
+   },
+   "work_on": {
+    "kind": "work_on",
+    "source": "observation",
+    "text": "Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h), losing 0.23 s through the corner.",
+    "text_simple": "Turn 6: you were 9 km/h slower at the slowest point of the corner.",
+    "evidence": "Seen on 9 of 9 laps compared with your reference",
+    "corner": "T4",
+    "corner_label": "T6",
+    "lap_id": 59,
+    "lap_number": 71,
+    "observation_kind": "low_min_speed",
+    "observation_key": "T4:low_min_speed",
+    "goal_id": null,
+    "values": {}
+   },
+   "progress": {
+    "kind": "progress",
+    "source": "goal_reached",
+    "text": "Goal reached: a lap under 1:10.000 (1:09.981 on lap 7).",
+    "text_simple": "You did it: a lap under 1:10.000.",
+    "evidence": null,
+    "corner": null,
+    "corner_label": null,
+    "lap_id": 61,
+    "lap_number": 7,
+    "observation_kind": null,
+    "observation_key": null,
+    "goal_id": 4,
+    "values": {
+     "value": 69981
+    }
+   }
+  },
+  "why_empty": {
+   "went_well": null,
+   "work_on": null,
+   "progress": null
+  },
+  "goals_achieved": [
+   {
+    "id": 4,
+    "driver_id": 1,
+    "kind": "lap_time",
+    "status": "achieved",
+    "target": 70000,
+    "params": {},
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "title": "A lap under 1:10.000",
+    "title_simple": "Beat 1:10.000",
+    "scope_text": "Austria \u00b7 Haas",
+    "source": "suggested",
+    "basis": {
+     "kind": "ideal_lap",
+     "text": "Your best sectors here add up to 1:09.962, 0.587 s quicker than your best lap (1:10.549). Your last new best was 1.196 s quicker than the one before. Target: your best minus the smaller step, rounded to a tenth.",
+     "text_simple": "Your best bits of the lap add up to 1:09.962, so 1:10.000 is within reach.",
+     "values": {
+      "pb_ms": 70549,
+      "ideal_ms": 69962,
+      "recent_gain_ms": 1196,
+      "step_ms": 587
+     },
+     "session_ids": [
+      "4d2c1a0b9e8f",
+      "332904dbe3de"
+     ]
+    },
+    "created_unix": 1791669600.0,
+    "achieved": {
+     "unix": 1791669000.0,
+     "session_id": "332904dbe3de",
+     "lap_id": 61,
+     "lap_number": 7,
+     "value": 69981,
+     "session_owned": true,
+     "text": "Reached: 1:09.981 on lap 7, Sat 10 Oct",
+     "text_simple": "You did it: 1:09.981"
+    },
+    "progress": {
+     "baseline": 70549,
+     "current": 69981,
+     "target": 70000,
+     "fraction": 1.0,
+     "to_go": -19,
+     "met": true,
+     "best_session_id": "332904dbe3de",
+     "best_lap_id": 61,
+     "sessions_since": 1,
+     "text": "Reached: 1:09.981",
+     "text_simple": "You did it: 1:09.981"
+    }
+   }
+  ],
+  "goals_progress": [],
+  "badges_earned": [
+   {
+    "key": "under_time:f1_25:f1:17:f1:team:7:70000",
+    "kind": "under_time",
+    "level": 70000,
+    "title": "First time under 1:10 at Austria",
+    "title_simple": "You beat 1:10 at Austria for the first time",
+    "detail": "1:09.981 in the Haas",
+    "earned_unix": 1791669000.0,
+    "session_id": "332904dbe3de",
+    "lap_id": null,
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "synthetic": false
+   },
+   {
+    "key": "goals_reached:1",
+    "kind": "goals_reached",
+    "level": 1,
+    "title": "First goal reached",
+    "title_simple": "Your first goal reached",
+    "detail": null,
+    "earned_unix": 1791669000.0,
+    "session_id": "332904dbe3de",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "under_time:f1_25:f1:17:f1:team:7:71000",
+    "kind": "under_time",
+    "level": 71000,
+    "title": "First time under 1:11 at Austria",
+    "title_simple": "You beat 1:11 at Austria for the first time",
+    "detail": "1:10.549 in the Haas",
+    "earned_unix": 1791668489.0,
+    "session_id": "332904dbe3de",
+    "lap_id": null,
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "synthetic": false
+   }
+  ]
+ }
+}

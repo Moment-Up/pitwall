@@ -1,0 +1,23 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/drivers/2/goals/suggestions at Silverstone with too little history (section 12: ideal lap = best lap, no recent gain)",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "driver_id": 2,
+  "simple": false,
+  "scope": {
+   "game": "f1_25",
+   "track_id": "f1:7",
+   "track_name": "Silverstone",
+   "track_length_m": 5891.0,
+   "car_id": "f1:generic",
+   "car_class": "f1_25:formula:F1 Generic",
+   "car_label": "F1 Generic"
+  },
+  "suggestions": [],
+  "none_reason": "Not enough history here yet: Pitwall needs your best sectors or a recent improvement to suggest a target"
+ }
+}

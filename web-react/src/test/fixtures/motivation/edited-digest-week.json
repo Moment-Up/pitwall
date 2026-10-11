@@ -1,0 +1,620 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/drivers/2/digest?week=2026-10-05 (section 12.7: 17 sessions with a timed lap, 60 timed laps, 47 clean; every scope new, so no gains)",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "driver": {
+   "id": 2,
+   "name": "Sam",
+   "skill_level": "intermediate"
+  },
+  "simple": false,
+  "week_start": "2026-10-05",
+  "week_end": "2026-10-11",
+  "is_current_week": true,
+  "generated_unix": 1791738000.0,
+  "include_synthetic": false,
+  "totals": {
+   "sessions": 17,
+   "laps": 60,
+   "clean_laps": 47,
+   "lap_time_s": 5530.4,
+   "tracks": 12
+  },
+  "previous_week": {
+   "sessions": 0,
+   "laps": 0,
+   "clean_laps": 0
+  },
+  "headline": "17 sessions, 60 laps, a new best at Austria",
+  "headline_simple": "You drove 17 times this week",
+  "sessions": [
+   {
+    "session_id": "d00000000000",
+    "started_unix": 1791656101.0,
+    "game": "f1_25",
+    "track_name": "Suzuka",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 3,
+    "clean_laps": 3,
+    "best_clean_ms": 96360,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000001",
+    "started_unix": 1791657350.0,
+    "game": "f1_25",
+    "track_name": "Suzuka",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 3,
+    "clean_laps": 3,
+    "best_clean_ms": 95911,
+    "pb": false,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000002",
+    "started_unix": 1791660478.0,
+    "game": "f1_25",
+    "track_name": "Melbourne",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 2,
+    "clean_laps": 2,
+    "best_clean_ms": 95700,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000003",
+    "started_unix": 1791660540.0,
+    "game": "f1_25",
+    "track_name": "Melbourne",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 1,
+    "clean_laps": 0,
+    "best_clean_ms": null,
+    "pb": false,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000004",
+    "started_unix": 1791660997.0,
+    "game": "f1_25",
+    "track_name": "Montreal",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 3,
+    "clean_laps": 3,
+    "best_clean_ms": 75523,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000005",
+    "started_unix": 1791661640.0,
+    "game": "f1_25",
+    "track_name": "Silverstone",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 2,
+    "clean_laps": 1,
+    "best_clean_ms": 90986,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000006",
+    "started_unix": 1791661807.0,
+    "game": "f1_25",
+    "track_name": "Silverstone",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 2,
+    "clean_laps": 2,
+    "best_clean_ms": 90702,
+    "pb": false,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000007",
+    "started_unix": 1791662089.0,
+    "game": "f1_25",
+    "track_name": "Monza",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 3,
+    "clean_laps": 3,
+    "best_clean_ms": 82014,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000008",
+    "started_unix": 1791665956.0,
+    "game": "f1_25",
+    "track_name": "Spa",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 3,
+    "clean_laps": 2,
+    "best_clean_ms": 107403,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000009",
+    "started_unix": 1791666310.0,
+    "game": "f1_25",
+    "track_name": "Bahrain",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 3,
+    "clean_laps": 3,
+    "best_clean_ms": 93210,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "4d2c1a0b9e8f",
+    "started_unix": 1791667069.0,
+    "game": "f1_25",
+    "track_name": "Austria",
+    "car_name": "Haas",
+    "session_type": "race",
+    "laps": 10,
+    "clean_laps": 8,
+    "best_clean_ms": 71745,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "332904dbe3de",
+    "started_unix": 1791668489.0,
+    "game": "f1_25",
+    "track_name": "Austria",
+    "car_name": "Haas",
+    "session_type": "race",
+    "laps": 10,
+    "clean_laps": 9,
+    "best_clean_ms": 70549,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d0000000000c",
+    "started_unix": 1791669361.0,
+    "game": "f1_25",
+    "track_name": "Suzuka",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 5,
+    "clean_laps": 2,
+    "best_clean_ms": 95412,
+    "pb": false,
+    "synthetic": false
+   },
+   {
+    "session_id": "d0000000000d",
+    "started_unix": 1791677167.0,
+    "game": "f1_25",
+    "track_name": "Imola",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 3,
+    "clean_laps": 3,
+    "best_clean_ms": 78830,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d0000000000e",
+    "started_unix": 1791677713.0,
+    "game": "f1_25",
+    "track_name": "Zandvoort",
+    "car_name": "F1 Generic",
+    "session_type": "race",
+    "laps": 3,
+    "clean_laps": 2,
+    "best_clean_ms": 73120,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d0000000000f",
+    "started_unix": 1791717176.0,
+    "game": "gt7",
+    "track_name": "Brands Hatch",
+    "car_name": "Porsche 911 GT3 RS",
+    "session_type": null,
+    "laps": 2,
+    "clean_laps": 1,
+    "best_clean_ms": 85012,
+    "pb": true,
+    "synthetic": false
+   },
+   {
+    "session_id": "d00000000010",
+    "started_unix": 1791719168.0,
+    "game": "gt7",
+    "track_name": "Brands Hatch",
+    "car_name": "Porsche 911 GT3 RS",
+    "session_type": null,
+    "laps": 2,
+    "clean_laps": 0,
+    "best_clean_ms": null,
+    "pb": false,
+    "synthetic": false
+   }
+  ],
+  "improvements": [
+   {
+    "scope": {
+     "game": "f1_25",
+     "track_id": null,
+     "track_name": "Suzuka",
+     "track_length_m": null,
+     "car_id": null,
+     "car_class": null,
+     "car_label": "F1 Generic"
+    },
+    "scope_text": "Suzuka \u00b7 F1 Generic",
+    "before_ms": null,
+    "best_ms": 95412,
+    "gain_ms": null,
+    "new_track": true,
+    "session_id": "d0000000000c",
+    "lap_id": 301
+   },
+   {
+    "scope": {
+     "game": "f1_25",
+     "track_id": null,
+     "track_name": "Austria",
+     "track_length_m": null,
+     "car_id": null,
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "scope_text": "Austria \u00b7 Haas",
+    "before_ms": null,
+    "best_ms": 70549,
+    "gain_ms": null,
+    "new_track": true,
+    "session_id": "332904dbe3de",
+    "lap_id": 52
+   },
+   {
+    "scope": {
+     "game": "f1_25",
+     "track_id": null,
+     "track_name": "Montreal",
+     "track_length_m": null,
+     "car_id": null,
+     "car_class": null,
+     "car_label": "F1 Generic"
+    },
+    "scope_text": "Montreal \u00b7 F1 Generic",
+    "before_ms": null,
+    "best_ms": 75523,
+    "gain_ms": null,
+    "new_track": true,
+    "session_id": "d00000000004",
+    "lap_id": 90
+   },
+   {
+    "scope": {
+     "game": "f1_25",
+     "track_id": null,
+     "track_name": "Monza",
+     "track_length_m": null,
+     "car_id": null,
+     "car_class": null,
+     "car_label": "F1 Generic"
+    },
+    "scope_text": "Monza \u00b7 F1 Generic",
+    "before_ms": null,
+    "best_ms": 82014,
+    "gain_ms": null,
+    "new_track": true,
+    "session_id": "d00000000007",
+    "lap_id": 120
+   }
+  ],
+  "goals": {
+   "achieved": [
+    {
+     "id": 3,
+     "driver_id": 2,
+     "kind": "race_clean",
+     "status": "achieved",
+     "target": 1,
+     "params": {
+      "rule": "no_penalties"
+     },
+     "scope": {
+      "game": "f1_25",
+      "track_id": null,
+      "track_name": null,
+      "track_length_m": null,
+      "car_id": null,
+      "car_class": null,
+      "car_label": null
+     },
+     "title": "Finish a race with no penalties",
+     "title_simple": "Finish a race with no penalties",
+     "scope_text": null,
+     "source": "manual",
+     "basis": null,
+     "created_unix": 1791655200.0,
+     "achieved": {
+      "unix": 1791658500.0,
+      "session_id": "9a8b7c6d5e4f",
+      "lap_id": 12,
+      "lap_number": 3,
+      "value": 1,
+      "session_owned": true,
+      "text": "Done: Suzuka, Sat 10 Oct",
+      "text_simple": "Done: Suzuka, Sat 10 Oct"
+     },
+     "progress": {
+      "baseline": null,
+      "current": 1,
+      "target": 1,
+      "fraction": 1.0,
+      "to_go": null,
+      "met": true,
+      "best_session_id": null,
+      "best_lap_id": null,
+      "sessions_since": 0,
+      "text": "Done: Suzuka, Sat 10 Oct",
+      "text_simple": "Done: Suzuka, Sat 10 Oct"
+     }
+    }
+   ],
+   "active": [
+    {
+     "goal": {
+      "id": 4,
+      "driver_id": 2,
+      "kind": "lap_time",
+      "status": "active",
+      "target": 70000,
+      "params": {},
+      "scope": {
+       "game": "f1_25",
+       "track_id": "f1:17",
+       "track_name": "Austria",
+       "track_length_m": 4318.0,
+       "car_id": "f1:team:7",
+       "car_class": null,
+       "car_label": "Haas"
+      },
+      "title": "A lap under 1:10.000",
+      "title_simple": "Beat 1:10.000",
+      "scope_text": "Austria \u00b7 Haas",
+      "source": "suggested",
+      "basis": {
+       "kind": "ideal_lap",
+       "text": "Your best sectors here add up to 1:09.962, 0.587 s quicker than your best lap (1:10.549). Your last new best was 1.196 s quicker than the one before. Target: your best minus the smaller step, rounded to a tenth.",
+       "text_simple": "Your best bits of the lap add up to 1:09.962, so 1:10.000 is within reach.",
+       "values": {
+        "pb_ms": 70549,
+        "ideal_ms": 69962,
+        "recent_gain_ms": 1196,
+        "step_ms": 587
+       },
+       "session_ids": [
+        "4d2c1a0b9e8f",
+        "332904dbe3de"
+       ]
+      },
+      "created_unix": 1791669600.0,
+      "achieved": null,
+      "progress": {
+       "baseline": 70549,
+       "current": 70301,
+       "target": 70000,
+       "fraction": 0.4517,
+       "to_go": 301,
+       "met": false,
+       "best_session_id": "332904dbe3de",
+       "best_lap_id": 61,
+       "sessions_since": 1,
+       "text": "0.301 s to go \u00b7 best since you set it 1:10.301",
+       "text_simple": "About 0.3 s to go"
+      }
+     },
+     "from_fraction": null,
+     "to_fraction": 0.4517
+    },
+    {
+     "goal": {
+      "id": 5,
+      "driver_id": 2,
+      "kind": "clean_streak",
+      "status": "active",
+      "target": 8,
+      "params": {},
+      "scope": {
+       "game": null,
+       "track_id": null,
+       "track_name": null,
+       "track_length_m": null,
+       "car_id": null,
+       "car_class": null,
+       "car_label": null
+      },
+      "title": "8 clean laps in a row",
+      "title_simple": "8 clean laps in a row",
+      "scope_text": null,
+      "source": "manual",
+      "basis": null,
+      "created_unix": 1791669600.0,
+      "achieved": null,
+      "progress": {
+       "baseline": 6,
+       "current": 6,
+       "target": 8,
+       "fraction": 0.75,
+       "to_go": 2,
+       "met": false,
+       "best_session_id": "332904dbe3de",
+       "best_lap_id": null,
+       "sessions_since": 1,
+       "text": "Best since you set it: 6 of 8 laps",
+       "text_simple": "6 of 8 clean laps in a row so far"
+      }
+     },
+     "from_fraction": 0.5,
+     "to_fraction": 0.75
+    }
+   ]
+  },
+  "badges": [
+   {
+    "key": "first_clean_lap:f1_25:f1:13",
+    "kind": "first_clean_lap",
+    "level": null,
+    "title": "First clean lap at Suzuka",
+    "title_simple": "Your first clean lap at Suzuka",
+    "detail": null,
+    "earned_unix": 1791656101.0,
+    "session_id": "9a8b7c6d5e40",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "clean_streak:3",
+    "kind": "clean_streak",
+    "level": 3,
+    "title": "3 clean laps in a row",
+    "title_simple": "3 laps in a row that all counted",
+    "detail": null,
+    "earned_unix": 1791657350.0,
+    "session_id": "9a8b7c6d5e4f",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "clean_race:no_penalties",
+    "kind": "clean_race",
+    "level": "no_penalties",
+    "title": "Race finished with no penalties",
+    "title_simple": "A whole race with no penalties",
+    "detail": null,
+    "earned_unix": 1791657350.0,
+    "session_id": "9a8b7c6d5e4f",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "busy_week:3",
+    "kind": "busy_week",
+    "level": 3,
+    "title": "3 sessions in one week",
+    "title_simple": "3 drives in one week",
+    "detail": null,
+    "earned_unix": 1791660478.0,
+    "session_id": "1b2c3d4e5f60",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "first_clean_lap:f1_25:f1:17",
+    "kind": "first_clean_lap",
+    "level": null,
+    "title": "First clean lap at Austria",
+    "title_simple": "Your first clean lap at Austria",
+    "detail": null,
+    "earned_unix": 1791667069.0,
+    "session_id": "4d2c1a0b9e8f",
+    "lap_id": null,
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "synthetic": false
+   },
+   {
+    "key": "clean_streak:5",
+    "kind": "clean_streak",
+    "level": 5,
+    "title": "5 clean laps in a row",
+    "title_simple": "5 laps in a row that all counted",
+    "detail": null,
+    "earned_unix": 1791667069.0,
+    "session_id": "4d2c1a0b9e8f",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   },
+   {
+    "key": "under_time:f1_25:f1:17:f1:team:7:71000",
+    "kind": "under_time",
+    "level": 71000,
+    "title": "First time under 1:11 at Austria",
+    "title_simple": "You beat 1:11 at Austria for the first time",
+    "detail": "1:10.549 in the Haas",
+    "earned_unix": 1791668489.0,
+    "session_id": "332904dbe3de",
+    "lap_id": null,
+    "scope": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "track_name": "Austria",
+     "track_length_m": 4318.0,
+     "car_id": "f1:team:7",
+     "car_class": null,
+     "car_label": "Haas"
+    },
+    "synthetic": false
+   },
+   {
+    "key": "first_clean_lap:gt7:gt7:loc:351",
+    "kind": "first_clean_lap",
+    "level": null,
+    "title": "First clean lap at Brands Hatch",
+    "title_simple": "Your first clean lap at Brands Hatch",
+    "detail": null,
+    "earned_unix": 1791717176.0,
+    "session_id": "c0ffee000001",
+    "lap_id": null,
+    "scope": null,
+    "synthetic": false
+   }
+  ],
+  "streaks": {
+   "week_start": "2026-10-05",
+   "weekly": {
+    "current_weeks": 1,
+    "best_weeks": 1,
+    "this_week_sessions": 17
+   },
+   "clean_laps": {
+    "best": 6,
+    "best_session_id": "4d2c1a0b9e8f",
+    "last_session": 2,
+    "last_session_id": "c0ffee000002"
+   },
+   "pb": []
+  },
+  "markdown": "# Sam's week: 5 to 11 October 2026\n\n17 sessions \u00b7 60 laps (47 clean) \u00b7 1 h 32 min of laps \u00b7 12 tracks\n\n## Sessions\n- Sat 10 Oct \u00b7 Suzuka \u00b7 Race \u00b7 F1 Generic: 3 of 3 laps clean, best 1:36.360 (new best)\n- Sat 10 Oct \u00b7 Austria \u00b7 Race \u00b7 Haas: 9 of 10 laps clean, best 1:10.549 (new best)\n- \u2026 15 more\n\n## Best improvements\n- Suzuka \u00b7 F1 Generic: first clean laps here, 1:35.412\n- Austria \u00b7 Haas: first clean laps here, 1:10.549\n- Montreal \u00b7 F1 Generic: first clean laps here, 1:15.523\n\n## Goals\n- Reached: Finish a race with no penalties (Suzuka, Sat 10 Oct)\n- A lap under 1:10.000 (Austria \u00b7 Haas): 0.301 s to go\n\n## Badges this week\n- First time under 1:11 at Austria\n- 5 clean laps in a row\n- Race finished with no penalties\n\n## Streaks\n- Weeks in a row with a session: 1\n- Best run of clean laps: 6\n"
+ }
+}

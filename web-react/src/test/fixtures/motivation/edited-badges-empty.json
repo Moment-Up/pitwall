@@ -1,0 +1,29 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/drivers/3/badges for a driver who has not driven yet",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "driver_id": 3,
+  "simple": true,
+  "include_synthetic": false,
+  "badges": [],
+  "streaks": {
+   "week_start": "2026-10-05",
+   "weekly": {
+    "current_weeks": 0,
+    "best_weeks": 0,
+    "this_week_sessions": 0
+   },
+   "clean_laps": {
+    "best": 0,
+    "best_session_id": null,
+    "last_session": null,
+    "last_session_id": null
+   },
+   "pb": []
+  }
+ }
+}

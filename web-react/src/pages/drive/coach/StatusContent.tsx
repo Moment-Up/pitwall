@@ -82,7 +82,7 @@ function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boo
         wrap(<EvidenceChips synthetic={ev.synthetic} replay={ev.replay} size={size} className="flex-nowrap" />)}
       {status.chip &&
         wrap(
-          <Chip size={size} className="pwc-incident">
+          <Chip size={size} className="pwc-incident" data-kind={status.chip.kind}>
             <Chip.Label>{status.chip.text}</Chip.Label>
           </Chip>,
         )}

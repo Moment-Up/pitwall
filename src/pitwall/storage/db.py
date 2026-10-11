@@ -16,6 +16,7 @@ Schema history:
 * v1 - initial schema.
 * v2 - driver profiles: ``reference_laps.driver_id`` (pinned references are per driver) and indexes for the
   per-driver queries (sessions by driver, reference lookup, a covering index for lap counts and best laps).
+* v3 - goals (lane motivation): table goals + ix_goals_driver; sessions.info gains total_laps (JSON, no DDL).
 """
 
 from __future__ import annotations
@@ -37,7 +38,7 @@ from pitwall.compat import is_windows
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -187,6 +188,30 @@ CREATE TABLE IF NOT EXISTS setup_experiments (
     after_metrics TEXT,
     conclusion TEXT
 );
+
+-- v3 motivation (goals). New table: the index can live in SCHEMA (no ADD COLUMN involved). Goals are personal:
+-- deleting a driver deletes their goals (ON DELETE CASCADE), even when their sessions move to someone else.
+CREATE TABLE IF NOT EXISTS goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    driver_id INTEGER NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
+    kind TEXT NOT NULL,                     -- lap_time | clean_streak | consistency | race_clean
+    status TEXT NOT NULL DEFAULT 'active',  -- active | achieved | archived
+    target REAL NOT NULL,                   -- lap_time: ms; clean_streak: laps; consistency: ms spread; race_clean: 1
+    params TEXT NOT NULL DEFAULT '{}',      -- {"window_laps": 3|5|10} | {"rule": "no_penalties"|"no_contact"}
+    game TEXT, track_id TEXT, track_length_m REAL, car_id TEXT, car_class TEXT,
+    track_name TEXT, car_name TEXT,         -- labels at creation (display only)
+    baseline REAL,                          -- value when set (progress-bar start); NULL until known
+    after_lap_id INTEGER NOT NULL DEFAULT 0,-- MAX(laps.id) at creation: only later laps count
+    source TEXT NOT NULL DEFAULT 'manual',  -- manual | suggested
+    basis TEXT,                             -- JSON GoalBasis of a suggestion
+    created_unix REAL NOT NULL,
+    achieved_unix REAL,
+    achieved_session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,
+    achieved_lap_id INTEGER REFERENCES laps(id) ON DELETE SET NULL,
+    achieved_value REAL
+);
+CREATE INDEX IF NOT EXISTS ix_goals_driver ON goals(driver_id, status);
+-- end v3 motivation
 """
 
 # Columns added after v1: (table, column, declaration). ADD COLUMN with a REFERENCES clause is allowed because the

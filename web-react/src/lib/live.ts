@@ -8,7 +8,8 @@
 //    "none") carries the previous value across - within the same session only, so a new session never shows the
 //    previous one's model or bests (it shows them as unknown until its first static snapshot, <= 5 s);
 //  * a 12 s rolling history of speed/throttle/brake for traces;
-//  * the last `lap` notification.
+//  * the last `lap` notification;
+//  * the last `motivation` notification (lane motivation: goals reached, for Drive's 6 s GOAL REACHED chip).
 // Added for React: ref-counted start()/stop (StrictMode mounts twice) and an immutable state object per update.
 // Added for the iPad: a message watchdog (the server sends at least every 5 s, so 8 s of silence means a half-open
 // socket after Wi-Fi sleep or a Tailscale re-route: drop it and reconnect) and a reconnect-now when the app returns
@@ -21,6 +22,7 @@
 
 import type { ConnectionStatus, Observation, Snapshot } from "./api";
 import { wsUrl } from "./auth";
+import type { MotivationNote } from "./endpoints/motivation";
 import { Store } from "./store";
 
 export interface HistoryPoint {
@@ -41,6 +43,8 @@ export interface LiveState {
   connected: boolean;
   history: readonly HistoryPoint[];
   lastLapEvent: LapEvent | null;
+  /** The newest `{"type": "motivation"}` note (goals reached on a lap or at the flag), or null. */
+  lastMotivation: MotivationNote | null;
 }
 
 /** Connection badge: LIVE (packets flowing), STALE (packets stopped recently), IDLE (no data), OFFLINE (the
@@ -100,7 +104,7 @@ export class LiveStore extends Store<LiveState> {
   private readonly decoder = new TextDecoder();
 
   constructor() {
-    super({ snap: null, connected: false, history: [], lastLapEvent: null });
+    super({ snap: null, connected: false, history: [], lastLapEvent: null, lastMotivation: null });
   }
 
   /** Start the socket (ref-counted). Returns the release function; the socket closes when the last user releases. */
@@ -230,6 +234,7 @@ export class LiveStore extends Store<LiveState> {
       }
       if (msg.type === "snapshot") this.onSnapshot(msg.data as Snapshot);
       else if (msg.type === "lap") this.set({ lastLapEvent: msg.data as LapEvent });
+      else if (msg.type === "motivation") this.set({ lastMotivation: msg.data as MotivationNote });
     };
   }
 

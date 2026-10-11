@@ -79,6 +79,14 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     ("focus", re.compile(r"\b(one thing|work on|focus|improve|tip|advice|what should i)\b", re.I)),
+    # lane motivation: after focus ("what should I work on this week" stays focus), before lap_times ("what's my
+    # target lap time" is a goal question)
+    (
+        "goals",
+        re.compile(
+            r"\b(goals?|targets?|streaks?|badges?|how am i doing|(?:sessions?|laps?) this week|this week)\b", re.I
+        ),
+    ),
     ("compare", re.compile(r"\b(compare|comparison|versus|vs|against my best|to my best|reference)\b", re.I)),
     ("braking", re.compile(r"\b(brak\w*|brake point|where should i brake)\b", re.I)),
     # "how was my last lap / that lap": the lap just driven, not the best one (checked before lap_times)
@@ -94,6 +102,7 @@ _TOPICS: dict[str, set[str]] = {
     "strategy": {"session", "fuel", "tyres", "strategy"},
     "setup": {"session", "corners", "observations", "compare", "setup"},
     "focus": {"session", "observations", "corners", "reference"},
+    "goals": {"session", "goals", "progress"},  # lane motivation
     "compare": {"session", "compare", "reference", "laps"},
     "braking": {"session", "corners", "observations", "reference"},
     "lap_times": {"session", "laps", "reference"},
@@ -325,6 +334,9 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
     if n == "focus":
         obs = first("observations")
         return say(obs) if obs else say(first("corners", contains="Biggest"))
+    if n == "goals":  # lane motivation: the goals reached / active (two at most), then this week
+        goal_facts = [f for f in facts if f.topic == "goals"][:2]
+        return say(*goal_facts, first("progress", contains="This week"))
     if n == "compare":
         return say(first("compare"), first("reference"))
     if n == "last_lap":

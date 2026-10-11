@@ -1,0 +1,17 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-written from the lane spec (docs: motivation design pass, section 6 contract, section 12 prototype numbers)",
+  "what": "GET /api/drivers/2/goals for a driver without goals",
+  "notes": "Fictional driver 'Sam'; track and car names are game data. Test data, not game data and not a server answer."
+ },
+ "response": {
+  "driver_id": 2,
+  "simple": false,
+  "goals": [],
+  "limits": {
+   "max_active": 6,
+   "active": 0
+  }
+ }
+}
