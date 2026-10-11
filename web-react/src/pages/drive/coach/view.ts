@@ -126,6 +126,8 @@ export interface ConnectInfo {
 
 /** The selected game, as far as the no-telemetry card needs it (lib/endpoints/game.ts GameEntry). */
 export interface NoTelemetryGame {
+  /** The game in sentences ("GT7", "Assetto Corsa"). */
+  name: string;
   /** connect.py guide id: "f1_25", "gt7", "forza", "ac", "record". */
   guideId: string | null;
   /** How telemetry gets here (transport.kind). */
@@ -140,17 +142,26 @@ export interface NoTelemetryGame {
 
 /** The no-telemetry card's game from a catalogue entry (null: no entry selected, the card works as before). */
 export function noTelemetryGame(
-  e: Pick<GameEntry, "guide_id" | "transport" | "integration" | "variant"> | null | undefined,
+  e: Pick<GameEntry, "text_name" | "guide_id" | "transport" | "integration" | "variant"> | null | undefined,
 ): NoTelemetryGame | null {
   if (!e) return null;
-  return { guideId: e.guide_id, kind: e.transport.kind, port: e.transport.port, integration: e.integration, variant: e.variant };
+  return {
+    name: e.text_name,
+    guideId: e.guide_id,
+    kind: e.transport.kind,
+    port: e.transport.port,
+    integration: e.integration,
+    variant: e.variant,
+  };
 }
 
 export interface NoTelemetryStep {
   title: string;
   description: string;
-  /** The value the driver types into the game (IP / port), shown in the mono face. */
+  /** The whole title is a value the driver types into the game (IP / port): shown in the mono face. */
   mono: boolean;
+  /** The title in parts when only a value inside it is mono ("Console IP" + "192.168.1.100"); absent = `title`. */
+  parts?: { text: string; mono: boolean }[];
 }
 
 export interface NoTelemetryView {
@@ -161,6 +172,9 @@ export interface NoTelemetryView {
   hint: string | null;
   /** "Listening on UDP 20777", or null when unknown (or nothing listens: Assetto Corsa). */
   listening: string | null;
+  /** Nothing can arrive until the console's IP is entered (Assetto Corsa without one; GT7 with its input off and
+   * no IP): the card leads with that, not with "Waiting for telemetry". */
+  needsIp: boolean;
 }
 
 const IP_PLACEHOLDER = "<this Mac's IP>";
@@ -226,24 +240,45 @@ export function noTelemetryView(c: ConnectInfo | undefined, game: NoTelemetryGam
     const ipStep = step(/^console ip$/i);
     const consoleIp = input?.console_ip ?? null;
     const client = game.kind === "udp_client";
-    const where = ipStep?.note ? ipStep.note : "The console's address on your network";
+    const on = !!input?.enabled;
+    const where = ipStep?.note ? menuPath(ipStep.note) : "The console's address on your network";
+    // GT7 without an IP searches the network only once switched on (Setup › Game: Search the network)
+    const needsIp = !consoleIp && (client || !on);
+    const ipTitle: NoTelemetryStep = consoleIp
+      ? {
+          title: `Console IP ${consoleIp}`,
+          description: where,
+          mono: false,
+          parts: [
+            { text: "Console IP ", mono: false },
+            { text: consoleIp, mono: true },
+          ],
+        }
+      : needsIp
+        ? { title: "Enter the console's IP address", description: `On Setup › Game. ${where}`, mono: false }
+        : { title: "Console IP not set: Pitwall searches the network", description: `Optional. ${where}`, mono: false };
     return {
       steps: [
-        {
-          title: "Enable it on Setup › Connect",
-          description: input?.enabled ? "On" : (enable?.note ? sentenceCase(enable.note) : "Off"),
-          mono: false,
-        },
-        {
-          title: `Console IP ${consoleIp ?? (client ? "-" : "not set")} · ${client ? "no port: Pitwall contacts the console" : `port ${port ?? "-"}`}`,
-          description: !consoleIp && !client ? `Optional: without it Pitwall searches the network for the console. ${where}` : where,
-          mono: true,
-        },
+        on
+          ? {
+              title: `${game.name} input on`,
+              description: enable?.note ? sentenceCase(enable.note) : "Switched on",
+              mono: false,
+            }
+          : {
+              title: `Switch the ${game.name} input on`,
+              description: client
+                ? "On Setup › Connect"
+                : "Entering the console's IP switches it on, or let Pitwall search the network (Setup › Game)",
+              mono: false,
+            },
+        ipTitle,
         { title: "Get on track", description: lastText, mono: false },
       ],
-      current: seen ? 2 : input?.enabled ? 1 : 0,
+      current: seen ? 2 : needsIp && on ? 1 : on ? 2 : 0,
       hint: hintText,
       listening,
+      needsIp,
     };
   }
 
@@ -262,6 +297,7 @@ export function noTelemetryView(c: ConnectInfo | undefined, game: NoTelemetryGam
     current: seen ? 2 : 0,
     hint: hintText,
     listening,
+    needsIp: false,
   };
 }
 

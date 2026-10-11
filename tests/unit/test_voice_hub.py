@@ -502,3 +502,45 @@ async def test_nothing_selected_asks_which_game() -> None:
     assert msg["text"].startswith("Tell me which game you're playing") and msg["kind"] == "control"
     assert "Copy, checking." not in [m["text"] for m in texts(sent, "say")]
     await hub.stop()
+
+
+class RecordingEngineer(RaceEngineer):
+    """Records whether the radio asked for an LLM answer; answers deterministically (no provider)."""
+
+    def __init__(self) -> None:
+        super().__init__(None)
+        self.use_llm: list[tuple[str, bool]] = []
+
+    async def answer(self, question: str, sheet: Any, history: Any = None, use_llm: bool = True) -> Any:
+        self.use_llm.append((question, use_llm))
+        return await super().answer(question, sheet, history, use_llm=False)
+
+
+async def test_f1_questions_about_data_it_sends_go_to_the_llm_path() -> None:
+    """F1 25 sends flags, ERS and sectors: "Any yellow flags?" is not a known "not sent" fact, so it gets the usual
+    LLM path ("Copy, checking." first), and never the canned "complete a few clean laps"."""
+    from pitwall import games
+    from pitwall.ai.facts import build_fact_sheet
+
+    from .test_ai import _game_analysis
+
+    f1_sheet = build_fact_sheet(_game_analysis("f1_25", "ps5"))
+    live = LiveState()
+    live.set_game_selection(games.Selection("f1_25:ps5", 0.0, "dashboard"))
+    eng = RecordingEngineer()
+    hub = RadioHub(live, eng, FakeStt(), FakeTts(), FakeScheduler(), fact_sheet=lambda: f1_sheet, to_speech=lambda s: s)
+    hub.start()
+    sent: list[Any] = []
+
+    async def send(item: Any) -> None:
+        sent.append(item)
+
+    await hub.connect(RadioClient(send=send))
+    for q in ("Any yellow flags?", "How much battery do I have?", "What were my splits?"):
+        hub.ask_text(q)
+        await settle(60)
+        assert (q, True) in eng.use_llm, q
+    said = [m["text"] for m in texts(sent, "say")]
+    assert "Copy, checking." in said
+    assert not any("complete a few clean laps" in t for t in said), said
+    await hub.stop()

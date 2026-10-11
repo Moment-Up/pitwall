@@ -158,7 +158,9 @@ play them even though Pitwall cannot read them. Each platform shows its support 
 [supported games](../README.md#supported-games) table.
 
 Choosing a game switches on its telemetry input and asks for the console's IP address where the game needs one
-(required for Assetto Corsa, optional for GT7). It never switches another game's input off, and it leaves alone an
+(required for Assetto Corsa). Gran Turismo 7's input is switched on once you enter the console's IP; without one it
+would search your whole network for the console, so that happens only when you press *Search the network* (and
+confirm). It never switches another game's input off, and it leaves alone an
 input that is receiving packets at that moment. The choice is kept for the whole rig and survives restarts. A
 driver can also have a usual game (Settings › Drivers › Edit › *Usually plays*): it is selected when that driver
 takes the seat, unless a game is sending telemetry at that moment.

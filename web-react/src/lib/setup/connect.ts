@@ -13,7 +13,9 @@ import type {
   IntegrationUpdate,
   UdpSource,
 } from "../endpoints/connect";
+import type { SupportLevel } from "../endpoints/game";
 import { UNKNOWN } from "../format";
+import { SUPPORT_WORDS, supportTone } from "../game";
 
 /** A sender counts as live while its last packet is younger than this (the Svelte page's rule). */
 export const LIVE_SOURCE_S = 2;
@@ -143,10 +145,13 @@ export interface Evidence {
 export function evidenceOfStatus(status: string | null | undefined): Evidence {
   const detail = (status ?? "").replace(/_/g, " ");
   const s = status ?? "";
-  if (s.startsWith("live_validated")) return { label: "Tested live", tone: "success", detail };
-  if (s.startsWith("recorded_validated")) return { label: "Tested on a recording", tone: "default", detail };
-  if (s.startsWith("community_documented")) return { label: "Untested: community docs", tone: "warning", detail };
-  if (s.startsWith("capture_only")) return { label: "Records only", tone: "default", detail };
+  if (s.startsWith("capture_only")) return { label: "Records packets only", tone: "default", detail };
+  // the same words and tones as Setup › Game (lib/game.ts): one evidence vocabulary across the Setup tabs
+  const level = (Object.keys(SUPPORT_WORDS) as SupportLevel[]).find((l) => s.startsWith(l));
+  if (level) {
+    const tone = supportTone(level);
+    return { label: SUPPORT_WORDS[level], tone: tone === "danger" ? "warning" : tone, detail };
+  }
   return { label: s ? detail : "Unknown", tone: "warning", detail };
 }
 

@@ -18,8 +18,11 @@ import {
   featureOf,
   gameAlertView,
   gameChip,
+  idleInputs,
   mismatchVisibleOnDrive,
   missing,
+  moreGamesLabel,
+  noDataText,
   noSectorsCaption,
   nounsOf,
   pickedId,
@@ -183,7 +186,7 @@ describe("gameChip (rail / app bar)", () => {
   it("a selection: its short label, neutral", () => {
     const v = gameChip(snapGame("gt7"), CAT);
     expect(v).toMatchObject({ text: "GT7", tone: "neutral" });
-    expect(v?.aria).toBe("Game: Gran Turismo 7 (PS5) selected");
+    expect(v?.aria).toBe("Game: Gran Turismo 7 on PS5 selected");
   });
 
   it("another game's data: the effective short label, warn, the server's mismatch words", () => {
@@ -196,7 +199,7 @@ describe("gameChip (rail / app bar)", () => {
     expect(gameChip(snapGame("suggest"), CAT)).toMatchObject({ text: "F1 25", tone: "warn" });
     const syn = gameChip(snapGame("synthetic"), CAT);
     expect(syn).toMatchObject({ text: "F1 25", tone: "neutral" });
-    expect(syn?.aria).toBe("Game: F1 25 (PS5) data on screen; Gran Turismo 7 (PS5) selected");
+    expect(syn?.aria).toBe("Game: F1 25 on PS5 data on screen; Gran Turismo 7 on PS5 selected");
   });
 
   it("a platform / UDP-format mismatch keeps the chip neutral (it is shown on Setup › Game)", () => {
@@ -226,7 +229,7 @@ describe("Drive's mismatch line", () => {
   it("says which data arrives and which game is selected", () => {
     expect(driveMismatch(snapGame("mismatch"), CAT, { speed_kph: 0 })).toEqual({
       text: "F1 25 data · GT7 selected",
-      sub: "change on Setup › Game",
+      sub: "tap to change", // the band is a link to Setup › Game
     });
     expect(driveMismatch(snapGame("mismatch"), CAT, { speed_kph: 150 })).toBeNull();
     expect(driveMismatch(snapGame("variant"), CAT, null)).toBeNull();
@@ -268,8 +271,8 @@ describe("the picker", () => {
       "Built from community docs",
       "Not supported",
     ]);
-    expect(cards.more.find((c) => c.key === "acc")!.platforms[0]!.words).toBe("Partial, not implemented");
-    expect(cards.main.find((c) => c.key === "other")!.platforms[0]!.words).toBe("Record only");
+    expect(cards.more.find((c) => c.key === "acc")!.platforms[0]!.words).toBe("Not in Pitwall yet");
+    expect(cards.main.find((c) => c.key === "other")!.platforms[0]!.words).toBe("Records packets only");
     expect(cards.main.find((c) => c.key === "f1_25")!.platforms[0]!.words).toBe("Tested live");
   });
 
@@ -303,7 +306,8 @@ describe("the feature list (Setup › Game)", () => {
     expect(featureChip(featureOf(AC, "lap_timing")!)).toEqual({ label: "Supported", tone: "success" }); // recorded
     expect(featureChip(featureOf(GT7, "delta")!).label).toBe("Estimated");
     expect(featureChip(featureOf(F1, "session_info")!).label).toBe("Partial");
-    expect(featureChip(featureOf(GT7, "sectors")!).label).toBe("Not sent");
+    // a fact about the game, not a fault: never red (red is kept for behind / brake and failures)
+    expect(featureChip(featureOf(GT7, "sectors")!)).toEqual({ label: "Not sent", tone: "default" });
     expect(featureChip(featureOf(GT7, "fuel")!).label).toBe("Not in Pitwall yet");
     expect(featureChip(featureOf(OTHER, "fuel")!)).toEqual({ label: "Unknown", tone: "default" });
   });
@@ -351,10 +355,14 @@ describe("the feature list (Setup › Game)", () => {
 
   it("PUT actions are the server's messages, toned by kind", () => {
     const lines = actionLines(putResponse().actions);
+    // GT7 without a console IP: the selection is saved, the input stays off (it would search the whole network)
     expect(lines.map((l) => [l.text, l.tone])).toEqual([
-      ["GT7 input switched on (UDP 33740).", "success"],
-      ["Optional: without it Pitwall searches the network for the console.", "warning"],
+      [
+        "Enter the PS5's IP address to switch the GT7 input on. Without one, Pitwall can search the network for the console instead: Search the network on Setup › Game, or switch GT7 on at Setup › Connect.",
+        "warning",
+      ],
     ]);
+    expect(actionLines([{ key: "gt7", action: "enabled", message: "GT7 input switched on (UDP 33740)." }])[0]!.tone).toBe("success");
     expect(actionLines([{ key: "forza", action: "error", message: "Port 33740 is GT7's" }])[0]!.tone).toBe("danger");
   });
 });
@@ -479,5 +487,31 @@ describe("the live binding", () => {
     expect(b?.mismatch?.kind).toBe("game");
     expect(sel({})).toBeUndefined(); // an older server
     expect(sel(null)).toBeUndefined();
+  });
+});
+
+describe("review fixes (game selection round 1)", () => {
+  const CAT = catalogue();
+  it("no-data words for a game Pitwall cannot read; none for one it reads", () => {
+    expect(noDataText(entry("acc:ps5", CAT))).toBe("Pitwall can't read ACC on PS5");
+    expect(noDataText(entry("f1_24:any", CAT))).toBe("Pitwall can't read F1 24");
+    expect(noDataText(entry("other:any", CAT))).toBe("Pitwall can't read this game");
+    expect(noDataText(entry("gt7:ps5", CAT))).toBeNull();
+    expect(noDataText(null)).toBeNull();
+  });
+
+  it("idle inputs: on, receiving nothing, allowed off (never F1, never one receiving)", () => {
+    const rows = [
+      { key: "f1", name: "F1 25", enabled: true, in_use: false, can_disable: false },
+      { key: "gt7", name: "GT7", enabled: true, in_use: false, can_disable: true },
+      { key: "forza", name: "Forza", enabled: true, in_use: true, can_disable: false },
+      { key: "ac", name: "AC", enabled: false, in_use: false, can_disable: true },
+    ];
+    expect(idleInputs(rows).map((r) => r.key)).toEqual(["gt7"]);
+  });
+
+  it("the More games disclosure names what is inside", () => {
+    expect(moreGamesLabel(pickerCards(CAT).more)).toBe("More games: ACC, iRacing, F1 24");
+    expect(moreGamesLabel([])).toBe("More games");
   });
 });

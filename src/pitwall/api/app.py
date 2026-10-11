@@ -10,7 +10,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import orjson
@@ -35,6 +35,9 @@ from pitwall.core.session_analysis import SessionAnalyzer
 from pitwall.ingest.capture import CaptureReader
 from pitwall.model.telemetry import TrackZones
 from pitwall.storage import repo
+
+if TYPE_CHECKING:
+    from pitwall.games import GameEntry
 
 log = logging.getLogger(__name__)
 WEB_DIST = Path(__file__).resolve().parents[3] / "web" / "dist"  # Svelte (frozen): served only if web-react is unbuilt
@@ -93,6 +96,27 @@ class ReferenceRequest(BaseModel):
 class SimulateRequest(BaseModel):
     scenario: str = "coaching-demo"
     packet_format: int = 2025
+
+
+def _unrecognised_hint(r: Runtime, selected: GameEntry | None) -> str:
+    """Connect's hint for packets no decoder recognised: it names the port that saw them and the games decoded there
+    (never the selection, which may not even send to that port), plus where the selected game sends when elsewhere."""
+    from pitwall.games import SHORT_INPUT, transport
+
+    seen = [inp for inp in list(r.inputs.values()) if inp.router is not None and inp.router.unrecognised > 0]
+    if not seen:
+        return "Packets arrived that no Pitwall decoder recognises: check which device/game is sending to Pitwall."
+    inp = min(seen, key=lambda i: i.port)
+    names = " or ".join(SHORT_INPUT.get(k, k) for k in inp.keys)
+    hint = (
+        f"Packets arrived on UDP {inp.port} that aren't {names} telemetry: check which device/game is sending to "
+        "this port."
+    )
+    key = selected.integration if selected is not None else None
+    if selected is not None and key is not None and key != "record" and key not in inp.keys:
+        summary = transport(key, r.integration_configs())["summary"]
+        hint += f" {selected.text_name} doesn't send to this port: {summary}"
+    return hint
 
 
 def create_app(settings: Settings | None = None, start_udp: bool = True) -> FastAPI:
@@ -582,8 +606,7 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         elif "size" in err:
             hint = "Packet sizes don't match the selected format: check the in-game UDP Format setting."
         elif conn.get("unrecognised"):
-            name = selected.text_name if selected is not None and selected.game_key != "other" else "F1 25"
-            hint = f"Packets arrived that aren't {name} telemetry: check which device/game is sending to this port."
+            hint = _unrecognised_hint(r, selected)
         hub = request.app.state.hub
         return {
             **info,

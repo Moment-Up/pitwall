@@ -140,6 +140,20 @@
   text-overflow: ellipsis;
 }
 .pwc-band[data-kind="outline"] .pwc-band__words { letter-spacing: 0.02em; }
+/* The game mismatch band is a link to Setup › Game (StatusContent MismatchBand): the band's own layout, 44 px tall. */
+.pwc-bandlink {
+  display: inline-flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  border-radius: 12px;
+  color: inherit;
+  text-decoration: none;
+  outline: none;
+}
+.pwc-bandlink:focus-visible { box-shadow: 0 0 0 2px var(--focus); }
+.pwc-bandlink .pwc-band__sub { text-decoration: underline; text-underline-offset: 3px; }
 .pwc-band__sub {
   flex: 0 1000 auto;
   min-width: 0;
@@ -878,6 +892,9 @@
   .pwc-status .pwc-pill { display: none; }
   .pwc-band__words { font-size: 15px; }
   .pwc-band__sub { display: none; }
+  /* the game mismatch band keeps how to fix it ("tap to change"), a little smaller, so the words keep their room */
+  .pwc-band[data-band="mismatch"] { gap: 8px; }
+  .pwc-band[data-band="mismatch"] .pwc-band__sub { display: inline; font-size: 13px; }
   .pwc-dv { font-size: clamp(88px, 26vw, 120px); }
   .pwc-word { margin-bottom: 10px; font-size: 18px; }
   .pwc-dscale,

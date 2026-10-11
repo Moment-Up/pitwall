@@ -8,8 +8,10 @@
 //   ② IP 192.168.1.20 · port 20777
 //   ③ Drive out of the garage · Last sender seen: none
 //
-// With a selected game (game selection) the steps follow that game's guide and port; a game Pitwall cannot read gets
-// a "Pitwall can't read ... telemetry" card with Change game instead.
+// With a selected game (game selection) the steps follow that game's guide and port, with a Change game button; a game
+// Pitwall cannot read gets a "Pitwall can't read ... telemetry" card with Change game instead. A game that cannot
+// send anything until its console IP is entered (Assetto Corsa; GT7 with its input off) leads with that:
+//   Assetto Corsa needs the console's IP address              [ Enter console IP ]  -> Setup › Game
 //
 // The demo writes the synthetic coaching demo (POST /api/simulate, as Settings › System does) and replays it at
 // real time (POST /api/replay); it is SYNTHETIC everywhere and never pollutes real track models.
@@ -119,12 +121,25 @@ export function NoTelemetryCard({ entry = null }: { entry?: GameEntry | null }) 
   const connect = useConnectInfo(true);
   if (entry && !readable(entry)) return <UnreadableCard entry={entry} />;
   const view = noTelemetryView(connect, noTelemetryGame(entry));
+  const ipEntry = entry && view.needsIp ? entry : null; // nothing can arrive before the console IP is entered
   return (
     <Card className="pwc-nodata pwc-span3">
       <EmptyState size="lg">
         <EmptyState.Header>
-          <EmptyState.Title>{entry ? `Waiting for ${entry.text_name} telemetry` : "Waiting for telemetry"}</EmptyState.Title>
-          <EmptyState.Description>No packet has arrived yet. Check these three things.</EmptyState.Description>
+          <EmptyState.Title>
+            {ipEntry
+              ? `${ipEntry.text_name} needs the console's IP address`
+              : entry
+                ? `Waiting for ${entry.text_name} telemetry`
+                : "Waiting for telemetry"}
+          </EmptyState.Title>
+          <EmptyState.Description>
+            {ipEntry
+              ? ipEntry.transport.console_ip === "required"
+                ? "Pitwall contacts the console itself, so nothing arrives until it knows the console's address."
+                : "Enter it on Setup › Game, or let Pitwall search the network for the console there."
+              : "No packet has arrived yet. Check these three things."}
+          </EmptyState.Description>
         </EmptyState.Header>
         <EmptyState.Content>
           <Stepper orientation="vertical" size="lg" currentStep={view.current}>
@@ -133,7 +148,19 @@ export function NoTelemetryCard({ entry = null }: { entry?: GameEntry | null }) 
                 <Stepper.Indicator />
                 <Stepper.Content>
                   <Stepper.Title>
-                    {s.mono ? <span className="font-[family-name:var(--pw-font-mono)]">{s.title}</span> : s.title}
+                    {s.parts
+                      ? s.parts.map((p, i) =>
+                          p.mono ? (
+                            <span key={i} className="font-[family-name:var(--pw-font-mono)]">
+                              {p.text}
+                            </span>
+                          ) : (
+                            <span key={i}>{p.text}</span>
+                          ),
+                        )
+                      : s.mono
+                        ? <span className="font-[family-name:var(--pw-font-mono)]">{s.title}</span>
+                        : s.title}
                   </Stepper.Title>
                   <Stepper.Description>{s.description}</Stepper.Description>
                 </Stepper.Content>
@@ -145,9 +172,20 @@ export function NoTelemetryCard({ entry = null }: { entry?: GameEntry | null }) 
         </EmptyState.Content>
       </EmptyState>
       <div className="pwc-nodata__actions">
-        <Button variant="primary" size="lg" className="pwc-glove" onPress={() => router.navigate("/setup/connect")}>
-          Open Setup › Connect
-        </Button>
+        {ipEntry ? (
+          <Button variant="primary" size="lg" className="pwc-glove" onPress={() => router.navigate("/setup/game")}>
+            Enter console IP
+          </Button>
+        ) : (
+          <Button variant="primary" size="lg" className="pwc-glove" onPress={() => router.navigate("/setup/connect")}>
+            Open Setup › Connect
+          </Button>
+        )}
+        {entry && (
+          <Button variant="tertiary" size="lg" className="pwc-xl" onPress={() => router.navigate("/setup/game")}>
+            Change game
+          </Button>
+        )}
         <DemoButton />
       </div>
     </Card>

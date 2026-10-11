@@ -58,8 +58,8 @@ export function GameAlert() {
       <Alert.Content>
         <Alert.Title>{view.text}</Alert.Title>
         {error && <Alert.Description className="text-danger">Could not change the game: {error}</Alert.Description>}
-      </Alert.Content>
-      <div className="flex flex-wrap gap-2">
+        {/* under the words (not beside them): on a phone the text keeps the full width */}
+        <div className="mt-2 flex flex-wrap gap-2">
         {view.kind === "mismatch" ? (
           <>
             <Button variant="primary" className="min-h-11" isPending={pending} onPress={() => void choose(view.switchId)}>
@@ -87,7 +87,8 @@ export function GameAlert() {
             </Button>
           </>
         )}
-      </div>
+        </div>
+      </Alert.Content>
     </Alert>
   );
 }

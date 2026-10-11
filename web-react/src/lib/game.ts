@@ -181,7 +181,7 @@ export function gameChip(snapGame: SnapshotGame | null | undefined, cat: Catalog
     return { text: "Game?", tone: "warn", aria: "No game selected: choose what you're playing on Setup › Game" };
   }
   const shown = (eff ?? sel) as GameEntry;
-  const name = (e: GameEntry) => `${e.label} (${e.platform_label})`;
+  const name = (e: GameEntry) => (e.platform === "any" ? e.label : `${e.label} on ${e.platform_label}`);
   if (snapGame.mismatch?.kind === "game") {
     return { text: shown.short_label, tone: "warn", aria: `Game: ${snapGame.mismatch.text} Change it on Setup › Game` };
   }
@@ -219,6 +219,7 @@ export function mismatchVisibleOnDrive(
 export interface DriveMismatch {
   /** "F1 25 data · GT7 selected" */
   text: string;
+  /** "tap to change": the band is a link to Setup › Game (shown on phones too). */
   sub: string;
 }
 
@@ -234,7 +235,7 @@ export function driveMismatch(
   const det = entryById(cat, m.detected_id ?? snapGame?.detected?.entry_id);
   if (!sel) return null;
   const text = det ? `${det.short_label} data · ${sel.short_label} selected` : `Another game's data · ${sel.short_label} selected`;
-  return { text, sub: "change on Setup › Game" };
+  return { text, sub: "tap to change" };
 }
 
 // ---------------------------------------------------------------------------------------------- the picker
@@ -254,6 +255,8 @@ export interface PickerCard {
   /** game_key ("f1_25", "gt7", "other") */
   key: string;
   title: string;
+  /** The chip label ("ACC", "F1 24"): names the "More games" list. */
+  short: string;
   group: "main" | "more";
   platforms: PickerPlatform[];
   /** The card can switch to the 2026 Season Pack (UDP format 2026). */
@@ -310,6 +313,7 @@ export function pickerCards(cat: Catalogue | null | undefined): { main: PickerCa
     cards.push({
       key,
       title: sorted[0]!.label,
+      short: sorted[0]!.short_label,
       group: list.some((e) => e.group === "main") ? "main" : "more",
       platforms,
       hasSeason2026: platforms.some((p) => p.season2026 !== null),
@@ -322,6 +326,11 @@ export function pickerCards(cat: Catalogue | null | undefined): { main: PickerCa
   const main = cards.filter((c) => c.group === "main").sort((a, b) => order(a, MAIN_CARD_ORDER) - order(b, MAIN_CARD_ORDER));
   const more = cards.filter((c) => c.group === "more").sort((a, b) => order(a, MORE_CARD_ORDER) - order(b, MORE_CARD_ORDER));
   return { main, more };
+}
+
+/** "More games: ACC, iRacing, F1 24" (the disclosure names what is inside, so an ACC player finds it). */
+export function moreGamesLabel(more: readonly Pick<PickerCard, "short">[]): string {
+  return more.length ? `More games: ${more.map((c) => c.short).join(", ")}` : "More games";
 }
 
 /** Which card and platform a selected id belongs to ("f1_25_2026:ps5" -> the F1 25 card, PS5, Season Pack on). */
@@ -360,7 +369,7 @@ export function featureChip(f: Pick<GameFeature, "status" | "short" | "evidence"
     case "partial":
       return { label: f.short === "Estimated" ? "Estimated" : "Partial", tone: "warning" };
     case "not_sent":
-      return { label: "Not sent", tone: "danger" };
+      return { label: "Not sent", tone: "default" }; // a fact about the game, not a fault: never red
     case "not_implemented":
       return { label: "Not in Pitwall yet", tone: "default" };
     default:
@@ -464,6 +473,20 @@ export function unreadableReason(entry: GameEntry): string {
 // ---------------------------------------------------------------------------------------------- PUT results
 
 export type ActionTone = "success" | "warning" | "danger" | "default";
+
+/** Drive's no-data status words when the selected game is one Pitwall cannot read (ACC, iRacing, F1 24, Another
+ * game): "Waiting for telemetry" would promise data that never comes. Null for a game Pitwall reads (or none). */
+export function noDataText(entry: GameEntry | null | undefined): string | null {
+  if (!entry || readable(entry)) return null;
+  if (entry.integration === "record") return "Pitwall can't read this game";
+  return `Pitwall can't read ${entry.text_name}${entry.platform === "any" ? "" : ` on ${entry.platform_label}`}`;
+}
+
+/** Other inputs that are on but receive nothing and can be switched off (the picker offers "Turn off" for them, so
+ * inputs from earlier choices do not pile up). Never F1 (always on), never one receiving packets. */
+export function idleInputs<T extends { enabled: boolean; in_use: boolean; can_disable: boolean }>(inputs: readonly T[]): T[] {
+  return inputs.filter((i) => i.enabled && !i.in_use && i.can_disable);
+}
 
 /** One line per action of a PUT /api/game answer, the server's message verbatim. */
 export function actionLines(actions: readonly GameAction[]): { text: string; tone: ActionTone; key: string }[] {

@@ -211,16 +211,22 @@ with copy buttons and the live connections.
    input." That yes covers sub-step 4. If `game` is not a `pitwall` command (an older Pitwall), use games.md and
    `uv run pitwall capabilities` instead, and the user switches the game on at Setup > Connect.
 3. **Console IP**, only when the entry's `transport.console_ip` is `required` (Assetto Corsa) or `optional` (GT7):
-   ask for it (where to find it: games.md). AC cannot connect without it; GT7 works without it (Pitwall then searches
-   the network for the console), but the IP is more reliable. Only private LAN addresses are accepted.
+   ask for it (where to find it: games.md). AC cannot connect without it. GT7: with the IP, selecting switches the
+   input on; without it, selecting only records the choice, because the input would then search the whole network
+   for the console (a broadcast every 1.6 s). If the user has no IP, ask whether Pitwall may search the network;
+   only on a yes, they switch GT7 on at Setup > Game > Search the network (or Setup > Connect). Only private LAN
+   addresses are accepted.
 4. **Select:** `uv run pitwall game set <id> [--console-ip <ip>] --json`. Tell the user each `actions[].message` in
    plain words: `enabled`, `already_enabled`, `set_platform`, `set_console_ip` = done; `needs_console_ip` = AC still
-   needs it (back to 3), GT7 optional; `skipped_live` = that input is receiving packets right now, change it on
+   needs it (back to 3); GT7 with the input off: no IP was given (back to 3), with the input on: optional (it
+   searches the network); `skipped_live` = that input is receiving packets right now, change it on
    Setup > Connect after the session; `error` = usually a port conflict (troubleshooting.md "Port in use");
    `none` = Pitwall cannot read this game (the message says why), or for `other:any`: offer Setup > Connect >
    Record another game (ask first: it listens on a UDP port and saves every packet to disk).
    `via: "file"` = no Pitwall was running: the choice applies at its next start. Exit code 1 "predates game
-   selection" = the running Pitwall is older than this folder: restart it from here (step 5), then retry. Selecting
+   selection" = the running Pitwall is older than this folder: restart it from here (step 5), then retry. Exit
+   code 1 "something listens on ... retry" = a server answers slowly (or not like Pitwall): nothing was changed;
+   wait a moment and run it again (never edit settings.json by hand while a server may be running). Selecting
    never turns another game's input off. Windows: a newly enabled input listens on a new UDP port, so if doctor's
    `firewall` then warns, the user re-runs `firewall.ps1 add` as administrator (step 5.5).
 5. **Steps and honest support:** `uv run pitwall game show --json`. Give the user `guide.menu_path` and

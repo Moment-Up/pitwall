@@ -149,7 +149,7 @@ class SessionManager:
                 c, sid, game, self.source, synthetic, self.capture_path, t_ns, driver_id=driver
             )
         )
-        self.live.reset_session(sid, self.source, self.synthetic)
+        self.live.reset_session(sid, self.source, self.synthetic, game)
         log.info(
             "session %s started (%s, source=%s, synthetic=%s, driver=%s)",
             sid,
@@ -286,7 +286,7 @@ class SessionManager:
         self.session_id = old
         self.sessions_resumed += 1
         self.writer.submit(lambda c: repo.resume_session(c, old, new))
-        self.live.reset_session(old, self.source, self.synthetic)
+        self.live.reset_session(old, self.source, self.synthetic, self._game)
         self._info_key = None  # re-store the session info on the resumed row
         log.info("session %s resumed after a restart (same game session %s); %s merged into it", old, uid, new)
 

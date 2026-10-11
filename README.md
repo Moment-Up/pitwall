@@ -185,7 +185,7 @@ live session; the live PS5 tests so far used the classic dashboard.
 
 **Setup**
 - Game: tell Pitwall what you play (Setup › Game, or `uv run pitwall game set <id>`). It switches on that game's
-  telemetry input and lists, feature by feature, what the game sends and what it does not, never stronger than
+  telemetry input (GT7: once you give the console's IP, or ask it to search the network) and lists, feature by feature, what the game sends and what it does not, never stronger than
   the [supported games](#supported-games) table. Screens and the engineer then say "Not sent by GT7" instead of
   leaving a gap unexplained or guessing. Tested with unit, synthetic and recorded data; not yet with a live GT7,
   Forza or Assetto Corsa console.
@@ -233,10 +233,10 @@ for the full list with notes.
 | Assetto Corsa | PS4 | Built from community docs | Others have confirmed the protocol on PS4. Not tested by Pitwall on a PS4. |
 | Assetto Corsa | PC | Built from community docs | Not yet tested against the PC game. |
 | Assetto Corsa | Xbox One | Not supported | The Xbox One version has no telemetry. |
-| Assetto Corsa Competizione | PC | Partial, not implemented | Its shared memory can only be read on the gaming PC itself; no reader yet. |
+| Assetto Corsa Competizione | PC | Not in Pitwall yet | Its shared memory can only be read on the gaming PC itself; no reader yet. |
 | Assetto Corsa Competizione | PS5, Xbox Series | Not supported | No telemetry on consoles. Checked on a PS5 on 2026-10-11: nothing listens on its telemetry ports. |
-| iRacing | PC | Partial, not implemented | Its SDK can only be read on the gaming PC itself; no reader yet. |
-| Other games (for example Project Motor Racing) | Any | Record only | Raw packets are saved so a decoder can be written later. No analysis. |
+| iRacing | PC | Not in Pitwall yet | Its SDK can only be read on the gaming PC itself; no reader yet. |
+| Other games (for example Project Motor Racing) | Any | Records packets only | Raw packets are saved so a decoder can be written later. No analysis. |
 
 What one game and platform sends, feature by feature (sector times, tyre wear, fuel, ...), is on Setup › Game and in
 `uv run pitwall game show <id>`; it is built from the same rows and is never stronger than them.

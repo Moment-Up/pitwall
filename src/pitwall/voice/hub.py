@@ -114,24 +114,11 @@ DEVICE_TTS_GRACE_S = 3.0  # device voices speak at an unknown rate: allow more s
 WORDS_PER_S = 2.6
 TICK_S = 0.1
 DELIVERY_LEAD_S = 0.2  # audio already synthesised: transport + device start-up before it is audible
-# Intents whose deterministic answer is already good radio material: answered instantly, no LLM.
+# Intents whose deterministic answer is already good radio material: answered instantly, no LLM. A question only
+# about data the game never sends (games.capability_only: damage in GT7, sectors in Forza, ...) is instant too; the
+# same question about a game that sends the data goes to the LLM like any other.
 FAST_INTENTS = frozenset(
-    {
-        "fuel",
-        "tyres",
-        "lap_times",
-        "last_lap",
-        "strategy",
-        "control_quiet",
-        "control_resume",
-        "radio_check",
-        # data some games never send (games.INTENT_FEATURES): a known fact or a value from the sheet
-        "damage",
-        "ers",
-        "sectors",
-        "flags",
-        "weather",
-    }
+    {"fuel", "tyres", "lap_times", "last_lap", "strategy", "control_quiet", "control_resume", "radio_check"}
 )
 NO_GAME_REPLY = "Tell me which game you're playing: open Setup, then Game."
 NO_SESSION_REPLY = "No session data yet. Get a lap in and ask me again."

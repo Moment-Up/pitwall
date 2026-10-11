@@ -72,6 +72,11 @@ class _Input:
     router: PacketRouter | None  # None for capture-only inputs (raw recording of a game pitwall can't decode yet)
 
 
+def _age_s(mono: float | None) -> float | None:
+    """Seconds since a ``time.monotonic()`` instant (None: never)."""
+    return None if mono is None else round(max(0.0, time.monotonic() - mono), 1)
+
+
 @dataclass(slots=True)
 class _AcInput:
     """The Assetto Corsa client (no bound port): it registers with the game and feeds its own router."""
@@ -444,6 +449,8 @@ class Runtime:
                 "error": self.input_errors.get(key),
                 "listens": True,
             }
+            if inp is not None and inp.router is not None:  # a decoder: how long since it accepted a packet
+                row["decoded_s_ago"] = _age_s(inp.router.last_accepted_mono)
             if key == "gt7":
                 row["heartbeat"] = self.gt7_heartbeat.snapshot() if self.gt7_heartbeat else None
             out.append(row)
@@ -470,6 +477,7 @@ class Runtime:
             "capture": str(client.capture.path) if client is not None and client.capture else None,
             "error": self.input_errors.get("ac"),
             "client": snap,  # state, sent/received, rate, last error, last handshake (car/track)
+            "decoded_s_ago": _age_s(cur.router.last_accepted_mono) if cur is not None else None,
         }
 
     # ------------------------------------------------------------------ replay

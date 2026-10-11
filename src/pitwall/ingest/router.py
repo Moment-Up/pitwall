@@ -22,6 +22,7 @@ class PacketRouter:
         self.live = live
         self._by_port: dict[int, GameAdapter] = {}
         self.unrecognised = 0
+        self.last_accepted_mono: float | None = None  # this input's last decoded packet (input status: "receiving")
 
     def _adapter_for(self, pkt: CapturedPacket) -> GameAdapter | None:
         a = self._by_port.get(pkt.src_port)
@@ -51,6 +52,7 @@ class PacketRouter:
                 log.warning("%s rejected packet (%d so far): %s", adapter.info.name, adapter.stats.rejected, err)
             return
         self.live.on_packet(accepted=True)
+        self.last_accepted_mono = self.live.last_accepted_mono  # one attribute copy (O(1))
         for item in emitted:
             self.sessions.handle(item)
         if adapter.stats.packets % 200 == 0:

@@ -31,11 +31,12 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   bytes, so it rides every snapshot: a lap that sets a record is coloured as set on the next frame, not up to
   5 s later with the static payload.
 * ``game`` (every snapshot, ~200 bytes): the household's selected game (``set_game_selection``, from the settings
-  section ``"game"``), the game detected in the live session (or, before its first session packet, the adapter the
-  router last auto-detected: ``last_detected_game``, written once per newly detected sender port), the effective
-  game, a mismatch (real live data of another game / F1 platform / F1 UDP format) and a live suggestion while
-  nothing is selected (``games.snapshot_block``). Computed on the web thread from attributes the ingest thread
-  already writes; the ingest thread never calls into ``games``.
+  section ``"game"``), the game detected in the live session (before its first session packet: the frame's game, the
+  game that started the session, else the adapter the router last auto-detected: ``last_detected_game``, written
+  once per newly detected sender port), the effective game, a mismatch (real data of another game / F1 platform /
+  F1 UDP format, arriving or paused) and a live suggestion while nothing is selected (``games.snapshot_block``). Its
+  status counts only packets a decoder accepted (``last_accepted_mono``). Computed on the web thread from attributes
+  the ingest thread already writes; the ingest thread never calls into ``games``.
 """
 
 from __future__ import annotations
@@ -73,6 +74,7 @@ CHEQUERED_FLAG_EVENT = "chequered_flag"
 # D4 red flag ends with no event (red_flag_resume): the causes, and the backstop's age
 RED_FLAG_PIT_EXIT = "red_flag_pit_exit"
 RED_FLAG_TIMEOUT = "red_flag_timeout"
+LIVE_S = 2.0  # a packet younger than this: the connection (and a detected game) is "live", else "stale"
 RED_FLAG_TIMEOUT_S = 300.0  # longer than a slow lap back to the pits on any F1 circuit (Spa at 90 km/h: 280 s)
 _IN_PITS = (1, 2)  # CarFrame.pit_status: 1 pitting / in the pit lane, 2 in the pit area
 _NO_SAFETY_CAR = (None, "none")  # unknown counts as none, like the cue engine (coach.cues)
@@ -232,6 +234,8 @@ class LiveState:
         # packet router last auto-detected on a new sender port (written by the ingest thread once per port).
         self._game_selection: games.Selection | None = None
         self.last_detected_game: str | None = None
+        self.session_game: str | None = None  # the game that started the current session (reset_session)
+        self.last_accepted_mono: float | None = None  # last packet a decoder accepted (on_packet): "is data arriving"
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -269,6 +273,8 @@ class LiveState:
         if not accepted:
             self.rejected += 1
         self.last_packet_mono = now
+        if accepted:
+            self.last_accepted_mono = now  # rejected / unrecognised packets never make a detection "live"
         self._pps_count += 1
         span = now - self._pps_window_start
         if span >= 1.0:
@@ -447,11 +453,16 @@ class LiveState:
         s = self.session
         return s.track_length_m if s is not None else None
 
-    def reset_session(self, session_id: str | None, source: str | None, synthetic: bool) -> None:
+    def reset_session(
+        self, session_id: str | None, source: str | None, synthetic: bool, game: str | None = None
+    ) -> None:
+        """A new (or no) session. ``game``: the ``Game`` value of the packet that started it (the session manager's),
+        so the game block names the right game before that session's first info packet arrives."""
         with self._lock:
             self.session_id = session_id
             self.source = source
             self.synthetic = synthetic
+            self.session_game = game if session_id is not None else None
             self.session = None
             self.frame = None
             self.laps.clear()
@@ -482,20 +493,46 @@ class LiveState:
     def game_selection(self) -> games.Selection | None:
         return self._game_selection
 
-    def game_block(self, conn: dict[str, Any] | None = None) -> dict[str, Any]:
-        """``Snapshot.game`` (web thread): selection, detection, effective game, mismatch, live suggestion."""
-        conn = conn if conn is not None else self.connection()
+    def game_block(self) -> dict[str, Any]:
+        """``Snapshot.game`` (web thread): selection, detection, effective game, mismatch, live suggestion.
+
+        The detected game is the live session's, else the game of the frame on screen, else the game that started the
+        session, else (nothing decoded into this session yet) the router's last auto-detection. Its status counts only
+        packets a decoder accepted: stray packets on a port never make an old session "live". A selection made after
+        the data stopped wins over that stale data (the household chose another game); a pause longer than
+        ``games.PAUSED_S`` keeps the detection (the old data on screen is still that game's) but not the mismatch."""
         sel = self._game_selection
         s = self.session
-        adapter_game = s.game.value if s is not None else self.last_detected_game
-        platform = variant = None
-        if s is not None and adapter_game is not None:
-            if s.platform.value != "unknown" and games.platform_on_wire(adapter_game):
+        f = self.frame
+        if s is not None:
+            adapter_game: str | None = s.game.value
+        elif f is not None:
+            adapter_game = f.game.value
+        else:
+            adapter_game = self.session_game or self.last_detected_game
+        platform = variant = configured = None
+        if s is not None and adapter_game is not None and s.platform.value != "unknown":
+            if games.platform_on_wire(adapter_game):
                 platform = s.platform.value
+            else:
+                configured = s.platform.value  # set by configuration (Assetto Corsa): picks the entry, no mismatch
+        if s is not None and adapter_game is not None:
             variant = games.variant_of(adapter_game, s.extra.get("packet_format"))
+        accepted = self.last_accepted_mono
+        age = None if accepted is None else max(0.0, time.monotonic() - accepted)
+        status = "no_data" if age is None else ("live" if age < LIVE_S else "stale")
+        if status == "stale" and age is not None and sel is not None and sel.since_unix > time.time() - age:
+            status = "no_data"  # chosen after the data stopped: the selection is what the household plays now
         real = not self.synthetic and not (self.source or "").startswith("replay:")
         return games.snapshot_block(
-            None if sel is None else sel.id, adapter_game, platform, variant, real, str(conn["status"])
+            None if sel is None else sel.id,
+            adapter_game,
+            platform,
+            variant,
+            real,
+            status,
+            configured,
+            stale_mismatch=age is not None and age < games.PAUSED_S,
         )
 
     def effective_game_id(self) -> str | None:
@@ -506,7 +543,7 @@ class LiveState:
     # ------------------------------------------------------------- readers
     def connection(self) -> dict[str, Any]:
         age = time.monotonic() - self.last_packet_mono if self.last_packet_mono else None
-        status = "no_data" if age is None else ("live" if age < 2.0 else "stale")
+        status = "no_data" if age is None else ("live" if age < LIVE_S else "stale")
         return {
             "status": status,
             "last_packet_age_s": None if age is None else round(age, 2),
@@ -555,7 +592,7 @@ class LiveState:
             out["session_state_info"] = None if st is None else st.to_dict()
             out["coach"] = self.coach.current
             out["bests"] = self.bests  # D2: small, so every snapshot (a record shows as set, not 5 s later)
-            out["game"] = self.game_block(conn)  # small: every snapshot (selection, detection, mismatch)
+            out["game"] = self.game_block()  # small: every snapshot (selection, detection, mismatch)
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

@@ -58,7 +58,7 @@ export function CarSetupPage({ route }: PageProps) {
           <EmptyState.Content>
             <div className="flex flex-wrap justify-center gap-2">
               <Button
-                variant="primary"
+                variant="secondary"
                 className="min-h-11"
                 onPress={() => {
                   saveF1Anyway();

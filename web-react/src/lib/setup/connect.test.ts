@@ -110,9 +110,11 @@ describe("game cards", () => {
 
   it("evidence in words, never upgraded", () => {
     expect(evidenceOfStatus("live_validated (PS5)")).toMatchObject({ label: "Tested live", tone: "success" });
-    expect(evidenceOfStatus(integ("ac").status)).toMatchObject({ label: "Tested on a recording" });
-    expect(evidenceOfStatus("community_documented")).toMatchObject({ label: "Untested: community docs", tone: "warning" });
-    expect(evidenceOfStatus("capture_only").label).toBe("Records only");
+    expect(evidenceOfStatus(integ("ac").status)).toMatchObject({ label: "Tested on a recording", tone: "success" });
+    // the same words and tones as Setup › Game: documentation-built is neutral, never shown as tested
+    expect(evidenceOfStatus("community_documented")).toMatchObject({ label: "Built from community docs", tone: "default" });
+    expect(evidenceOfStatus("spec_implemented")).toMatchObject({ label: "Built from the official spec", tone: "default" });
+    expect(evidenceOfStatus("capture_only").label).toBe("Records packets only");
     expect(evidenceOfStatus("something_new").tone).toBe("warning");
     expect(evidenceOfStatus(null).label).toBe("Unknown");
   });

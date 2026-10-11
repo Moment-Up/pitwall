@@ -65,6 +65,8 @@ export interface DriveModelInput {
   memo?: DriveMemo | null;
   /** Another game's real data while stationary (lib/game.ts driveMismatch); null / absent = none. */
   mismatch?: SlotMismatch | null;
+  /** The no-data status words for a selected game Pitwall cannot read (lib/game.ts noDataText); null = default. */
+  noDataText?: string | null;
 }
 
 export type HeroView =
@@ -511,7 +513,7 @@ export function driveModel(input: DriveModelInput): DriveModel {
   const corner = live ?? (dim ? frozenCorner(s, m0.lastCorner) : null);
   const memo: DriveMemo = live && live.name !== m0.lastCorner ? { ...m0, lastCorner: live.name } : m0;
 
-  const slot = statusSlot(state, overlays, s, input.mismatch ?? null);
+  const slot = statusSlot(state, overlays, s, input.mismatch ?? null, input.noDataText ?? null);
   const status: StatusView = {
     ...slot,
     pill: connectionPill(s, connected),

@@ -244,7 +244,8 @@ export function DriverSheet({
                         </CellSelect.Popover>
                       </CellSelect>
                       <span className="text-xs text-muted">
-                        Selected on Setup › Game when they take the seat, unless a game is already sending telemetry.
+                        When they take the seat, Pitwall selects this game, unless another game is already sending
+                        telemetry.
                       </span>
                     </div>
                   )}

@@ -2,9 +2,12 @@
 // Car & tyres, Session & race, Setup & radio), each with a status chip (Supported / Estimated / Partial / Not sent /
 // Not in Pitwall yet / Unknown) and the server's one-sentence reason, available first inside a group. A tap opens a
 // Pro Sheet with the technical detail (the adapter's field sources, the capability row) and the evidence words.
-// The entry's support note sits under the title. Only evidence from the real game (live or a recording) is green:
-// "Built from community docs" is never shown as working (P8). A "Telemetry fields" disclosure lists the adapter's
-// fields (GET /api/games/{id}) for the curious.
+// Under the title one plain sentence says how far the game is tested (the server's support.summary); the technical
+// note (sources, offsets) is behind "How this was tested". Only evidence from the real game (live or a recording) is
+// green: "Built from community docs" is never shown as working (P8), and "Not sent" is a fact about the game, not a
+// fault, so it is never red. A game with nothing available (ACC on a console, Another game) says so in one sentence
+// with the 23 rows behind a disclosure. A "Telemetry fields" disclosure lists the adapter's fields
+// (GET /api/games/{id}) for the curious.
 
 import { ChevronRight } from "@gravity-ui/icons";
 import { Button, Card, Chip, Disclosure } from "@heroui/react";
@@ -95,7 +98,7 @@ function FieldsList({ id }: { id: string }) {
           <div className="flex flex-wrap items-center gap-2">
             <code className="font-mono text-sm">{name}</code>
             <span className="flex-1" />
-            <Chip size="sm" variant="soft" color={f.status === "not_sent" ? "danger" : supportTone(f.level)}>
+            <Chip size="sm" variant="soft" color={f.status === "not_sent" ? "default" : supportTone(f.level)}>
               <Chip.Label>{FIELD_STATUS[f.status] ?? f.status}</Chip.Label>
             </Chip>
           </div>
@@ -108,11 +111,50 @@ function FieldsList({ id }: { id: string }) {
   );
 }
 
+function FeatureRows({ groups, onOpen }: { groups: ReturnType<typeof featureGroups>; onOpen: (f: GameFeature) => void }) {
+  return (
+    <div className="grid gap-4">
+      {groups.map((g) => (
+        <section key={g.id} aria-label={g.label} className="grid gap-1">
+          <h3 className="m-0 text-sm font-semibold text-muted">{g.label}</h3>
+          <ul className="m-0 grid list-none gap-0 p-0">
+            {g.features.map((f) => {
+              const chip = featureChip(f);
+              return (
+                <li key={f.id} className="border-b border-separator last:border-b-0">
+                  <button
+                    type="button"
+                    onClick={() => onOpen(f)}
+                    className="grid min-h-14 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 rounded-xl px-1 py-2 text-left outline-none hover:bg-surface-secondary focus-visible:ring-2 focus-visible:ring-focus"
+                    aria-label={`${f.label}: ${chip.label}. ${f.reason}`}
+                  >
+                    <span className="text-[15px] font-medium">{f.label}</span>
+                    <Chip size="sm" variant="soft" color={chip.tone}>
+                      <Chip.Label>{chip.label}</Chip.Label>
+                    </Chip>
+                    <ChevronRight aria-hidden="true" className="row-span-2 size-4 text-muted" />
+                    <span className="col-span-2 text-sm text-muted">{f.reason}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+const DISCLOSURE_TRIGGER = "flex min-h-12 w-full items-center justify-between gap-3 text-left text-sm font-semibold";
+
 export function FeaturesCard({ entry, catalogue, wide }: { entry: GameEntry; catalogue: GamesResponse; wide: boolean }) {
   const [open, setOpen] = useState<GameFeature | null>(null);
   const [fieldsOpen, setFieldsOpen] = useState(false);
   const groups = featureGroups(entry, catalogue);
   const n = featureCounts(entry);
+  const nothing = n.available === 0;
+  const summary = entry.support.summary ?? entry.support.note;
+  const total = entry.features.length;
   return (
     <Card className="gap-4 p-5" aria-labelledby="pw-game-sends-title">
       <Card.Header className="gap-1">
@@ -124,52 +166,64 @@ export function FeaturesCard({ entry, catalogue, wide }: { entry: GameEntry; cat
             <Chip.Label>{entry.support.words}</Chip.Label>
           </Chip>
         </div>
-        <Card.Description className="text-sm text-muted">{entry.support.note}</Card.Description>
+        <Card.Description className="text-sm text-muted">{summary}</Card.Description>
         <p className="m-0 text-xs text-muted">
-          {entry.platform_label} · {n.available} available · {n.unavailable} not available
+          {entry.platform_label === "any" ? "Any platform" : entry.platform_label} · {n.available} available ·{" "}
+          {n.unavailable} not available
           {n.unknown ? ` · ${n.unknown} unknown` : ""}
         </p>
+        {!nothing && (
+          <p className="m-0 text-xs text-muted">
+            A green Supported was checked with the real game or a recording; grey means built from documentation and
+            not yet checked.
+          </p>
+        )}
       </Card.Header>
-      <div className="grid gap-4">
-        {groups.map((g) => (
-          <section key={g.id} aria-label={g.label} className="grid gap-1">
-            <h3 className="m-0 text-sm font-semibold text-muted">{g.label}</h3>
-            <ul className="m-0 grid list-none gap-0 p-0">
-              {g.features.map((f) => {
-                const chip = featureChip(f);
-                return (
-                  <li key={f.id} className="border-b border-separator last:border-b-0">
-                    <button
-                      type="button"
-                      onClick={() => setOpen(f)}
-                      className="grid min-h-14 w-full cursor-pointer grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-0.5 rounded-xl px-1 py-2 text-left outline-none hover:bg-surface-secondary focus-visible:ring-2 focus-visible:ring-focus"
-                      aria-label={`${f.label}: ${chip.label}. ${f.reason}`}
-                    >
-                      <span className="text-[15px] font-medium">{f.label}</span>
-                      <Chip size="sm" variant="soft" color={chip.tone}>
-                        <Chip.Label>{chip.label}</Chip.Label>
-                      </Chip>
-                      <ChevronRight aria-hidden="true" className="row-span-2 size-4 text-muted" />
-                      <span className="col-span-2 text-sm text-muted">{f.reason}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
-      </div>
-      <Disclosure isExpanded={fieldsOpen} onExpandedChange={setFieldsOpen} className="border-t border-separator">
-        <Disclosure.Heading>
-          <Disclosure.Trigger className="flex min-h-12 w-full items-center justify-between gap-3 text-left text-sm font-semibold">
-            Telemetry fields
-            <Disclosure.Indicator />
-          </Disclosure.Trigger>
-        </Disclosure.Heading>
-        <Disclosure.Content>
-          <Disclosure.Body className="pb-1">{fieldsOpen && <FieldsList id={entry.id} />}</Disclosure.Body>
-        </Disclosure.Content>
-      </Disclosure>
+      {entry.support.summary && entry.support.note && (
+        <Disclosure className="border-t border-separator">
+          <Disclosure.Heading>
+            <Disclosure.Trigger className={DISCLOSURE_TRIGGER}>
+              How this was tested
+              <Disclosure.Indicator />
+            </Disclosure.Trigger>
+          </Disclosure.Heading>
+          <Disclosure.Content>
+            <Disclosure.Body className="pb-1">
+              <p className="m-0 text-sm break-words text-muted">{entry.support.note}</p>
+            </Disclosure.Body>
+          </Disclosure.Content>
+        </Disclosure>
+      )}
+      {nothing ? (
+        <Disclosure className="border-t border-separator">
+          <Disclosure.Heading>
+            <Disclosure.Trigger className={DISCLOSURE_TRIGGER}>
+              All {total} features
+              <Disclosure.Indicator />
+            </Disclosure.Trigger>
+          </Disclosure.Heading>
+          <Disclosure.Content>
+            <Disclosure.Body className="pb-1">
+              <FeatureRows groups={groups} onOpen={setOpen} />
+            </Disclosure.Body>
+          </Disclosure.Content>
+        </Disclosure>
+      ) : (
+        <FeatureRows groups={groups} onOpen={setOpen} />
+      )}
+      {!nothing && (
+        <Disclosure isExpanded={fieldsOpen} onExpandedChange={setFieldsOpen} className="border-t border-separator">
+          <Disclosure.Heading>
+            <Disclosure.Trigger className={DISCLOSURE_TRIGGER}>
+              Telemetry fields
+              <Disclosure.Indicator />
+            </Disclosure.Trigger>
+          </Disclosure.Heading>
+          <Disclosure.Content>
+            <Disclosure.Body className="pb-1">{fieldsOpen && <FieldsList id={entry.id} />}</Disclosure.Body>
+          </Disclosure.Content>
+        </Disclosure>
+      )}
       <FeatureSheet feature={open} entry={entry} catalogue={catalogue} wide={wide} onClose={() => setOpen(null)} />
     </Card>
   );

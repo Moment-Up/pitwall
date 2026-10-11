@@ -20,6 +20,7 @@
   "support": {
    "level": "recorded_validated",
    "words": "Tested on a recording",
+   "summary": "Checked against real game output recorded on this platform; not yet run end to end.",
    "note": "Protocol validated live on 2026-10-11 by the probe script (scripts/probe_ac.py, ks_audi_r8_plus at ks_silverstone): the handshake is answered (408 B UTF-16), RTCarInfo streams at 59.8 Hz (14,356 packets in 240 s, 0 rejected), isInPit sits at byte 24, RTLap (212 B) decodes on a second SPOT socket. pitwall's decoder and lap logic are validated on that recording (tests/recorded): one real lap crossing, timed 2:18.817 from lastLap in the crossing packet, and a restored state correctly not counted. Not yet run through pitwall's own client and service on the console: no AC lap has been stored, timed or coached end to end, and the service does not subscribe to RTLap. The console does not report the track layout, so layouts share a track id and are told apart by track length only.",
    "capability_row": "ac_ps5"
   },
@@ -137,7 +138,7 @@
     "evidence": null,
     "short": "Not in Pitwall yet",
     "reason": "Pitwall's official corner names cover F1 25 only; Assetto Corsa corners are numbered from your laps.",
-    "detail": "no track sheet lists this game (analysis.track_identity.load_sheets) (row ac_ps5)",
+    "detail": "no hand-checked track sheet for this game (analysis.track_identity.load_sheets) (row ac_ps5)",
     "note": null,
     "fields": []
    },

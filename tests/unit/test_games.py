@@ -37,7 +37,9 @@ def code(f: games.GameFeature) -> str:
     return c
 
 
-# Design spec section 2.6, verbatim.
+# Design spec section 2.6, with two corrections from review: official corner names are partial for F1 25 (only
+# hand-checked track sheets count: track_identity shows verified turns only) and GT7's car setup is "not in Pitwall
+# yet" rather than "not sent" (GT7 sends its gear ratios; Pitwall doesn't read them as a setup).
 GOLDEN_COLUMNS = ("f1_25:ps5", "gt7:ps5", "ac:ps5", "forza_motorsport:pc", "forza_horizon:xbox")
 GOLDEN = """
 lap_timing             S·spec  S·comm  S·rec   P·part  P·part
@@ -46,7 +48,7 @@ delta                  S·spec  P·comm  P·part  P·part  P·part
 braking_cues           S·spec  P·comm  P·part  P·part  P·part
 corner_coaching        S·spec  P·comm  P·part  P·part  P·part
 track_map              S·spec  P·comm  P·part  P·part  P·part
-official_corner_names  S·-     NI      NI      NI      NI
+official_corner_names  P·-     NI      NI      NI      NI
 ai_field               S·rec   NS      NS      NS      NS
 flags                  S·spec  NS      NS      NS      NS
 fuel                   S·spec  NI      NS      NI      NI
@@ -60,7 +62,7 @@ drs                    S·spec  NS      NS      NS      NS
 weather                S·spec  NS      NS      NS      NS
 session_info           P·spec  NS      NS      NS      NS
 field_data             S·rec   NS      NS      NS      NS
-setup_telemetry        S·spec  NS      NS      NS      NS
+setup_telemetry        S·spec  NI      NS      NS      NS
 setup_recommendations  P·-     NI      NI      NI      NI
 wheel_ptt              S·spec  NS      NS      NS      NS
 """
@@ -115,8 +117,8 @@ def test_short_labels_and_entry_words() -> None:
         "f1_25_2026": "F1 25",
         "f1_24": "F1 24",
         "gt7": "GT7",
-        "forza_motorsport": "FM",
-        "forza_horizon": "FH",
+        "forza_motorsport": "Forza M",
+        "forza_horizon": "Forza H",
         "ac": "AC",
         "acc": "ACC",
         "iracing": "iRacing",  # the spec's list; 7 characters
@@ -128,9 +130,18 @@ def test_short_labels_and_entry_words() -> None:
     assert words["ac:ps5"] == "Tested on a recording"
     assert words["gt7:ps4"] == words["ac:pc"] == "Built from community docs"
     assert words["forza_horizon:ps5"] == "Unverified"
-    assert words["acc:pc"] == words["iracing:pc"] == "Partial, not implemented"
+    assert words["acc:pc"] == words["iracing:pc"] == "Not in Pitwall yet"
     assert words["acc:ps5"] == words["ac:xbox"] == words["f1_24:any"] == "Not supported"
-    assert words["other:any"] == "Record only"
+    assert words["other:any"] == "Records packets only"
+    readme = (Path(__file__).resolve().parents[2] / "README.md").read_text(encoding="utf-8")
+    for w in (games.WORDS_PARTIAL_NOT_IMPLEMENTED, games.WORDS_RECORD_ONLY):  # the README table's own words
+        assert f"| {w} |" in readme, w
+    summaries = {e.id: e.support_summary for e in games.entries()}
+    assert summaries["f1_25:ps5"].startswith("Checked end to end with the real game")
+    assert summaries["gt7:ps5"].startswith("Built from community documentation")
+    assert summaries["acc:ps5"] == "ACC on PS5 has no telemetry output."
+    assert summaries["other:any"].startswith("Pitwall doesn't know what this game sends")
+    assert all("Connect page" not in v for v in summaries.values())
 
 
 def test_integrations_guides_and_rig() -> None:
@@ -229,11 +240,20 @@ def test_platform_and_variant_profiles() -> None:
     ps5 = profile("f1_25:ps5")
     pc_like = {**ps5, "ai_field": "S·spec", "field_data": "S·spec"}  # the entry level caps the recorded fields
     assert profile("f1_25:pc") == profile("f1_25:xbox") == pc_like
-    for p in ("ps5", "xbox", "pc"):
-        assert profile(f"f1_25_2026:{p}") == pc_like
+    for p in ("ps5", "xbox", "pc"):  # the corner names were hand-checked with format 2025 only
+        assert profile(f"f1_25_2026:{p}") == {**pc_like, "official_corner_names": "NI"}
     assert profile("gt7:ps4") == profile("gt7:ps5")
     ac_comm = {k: v.replace("·rec", "·comm") for k, v in profile("ac:ps5").items()}
-    assert profile("ac:pc") == profile("ac:ps4") == ac_comm
+    assert profile("ac:ps4") == ac_comm
+    # AC on PC has this data in its shared memory, which Pitwall doesn't read: "not in Pitwall yet", never "not sent"
+    local = set(games.LOCAL_ONLY["ac_pc"])
+    assert profile("ac:pc") == {k: ("NI" if k in local else v) for k, v in ac_comm.items()}
+    assert {k for k, v in ac_comm.items() if v == "NS"} - local == {
+        "ai_field",
+        "field_data",
+        "setup_telemetry",
+        "wheel_ptt",
+    }
     fh_ps5 = profile("forza_horizon:ps5")
     assert all(v in ("NS", "NI", "U") for v in fh_ps5.values())
     assert {k for k, v in fh_ps5.items() if v == "U"} == {
@@ -314,12 +334,19 @@ def test_code_fact_not_implemented() -> None:
     assert GT7_INFO.fields["ers_store_j"].level is S.UNVERIFIED
     for info in (FORZA_MOTORSPORT_INFO, FORZA_HORIZON_INFO):
         assert "fraction" in info.fields["fuel_kg"].source
+    assert "gear ratios" in GT7_INFO.fields["setup"].source  # GT7 sends part of its setup ...
+    from pitwall.adapters.gt7 import adapter as gt7_adapter
+    from pitwall.adapters.gt7 import packets as gt7_packets
+
+    assert "gear_ratios" in {name for name, _ in gt7_packets.BASE_FIELDS}
+    assert "CarSetup" not in Path(gt7_adapter.__file__).read_text(encoding="utf-8")  # ... Pitwall emits no setup
     assert set(games.NOT_IMPLEMENTED) == {
         ("f1_25", "damage"),
         ("gt7", "fuel"),
         ("forza_motorsport", "fuel"),
         ("forza_horizon", "fuel"),
         ("gt7", "ers"),
+        ("gt7", "setup_telemetry"),
     }
 
 
@@ -339,8 +366,18 @@ def test_code_fact_sheets_outlines_and_setups() -> None:
     from pitwall.analysis.track_identity import load_sheets
     from pitwall.carsetup.context import F1_GAMES
 
-    sheet_games = {g for fam in trackdata.sheet_families() for s in load_sheets(fam) for g in s.games}
-    assert games.official_name_games() == sheet_games == {"f1_25"}
+    sheets = [s for fam in trackdata.sheet_families() for s in load_sheets(fam)]
+    verified = [s for s in sheets if any(t.verified for t in s.turns)]  # track_identity shows verified turns only
+    assert {g for s in verified for g in s.games} == games.official_name_games() == {"f1_25"}
+    f1 = [s for s in sheets if "f1_25" in s.games]
+    f1_verified = [s for s in verified if "f1_25" in s.games]
+    assert 0 < len(f1_verified) < len(f1)  # some circuits: partial, never "supported"
+    assert games.official_name_sheets("f1_25", "2025") == (len(f1_verified), len(f1))
+    assert all(s.verified_formats == (2025,) for s in f1_verified)  # format 2026 counts as unchecked
+    assert games.official_name_sheets("f1_25", "2026") == (0, len(f1))
+    names = games.entry("f1_25:ps5").feature("official_corner_names")  # type: ignore[union-attr]
+    assert names.status == "partial" and "some F1 25 circuits" in names.reason
+    assert games.entry("f1_25_2026:pc").feature("official_corner_names").status == "not_implemented"  # type: ignore[union-attr]
     assert games.outline_games() == OUTLINE_GAMES
     assert games.setup_games() == F1_GAMES
 
@@ -379,6 +416,7 @@ def test_capability_matrix_golden() -> None:
         assert n.pop("key") and isinstance(n.pop("platform_ids"), list)
         if n["fields"] is not None:  # section 2.2 declarations are the only additions
             n["fields"] = {k: v for k, v in n["fields"].items() if k in o["fields"]}
+        o = {**o, "notes": o["notes"].replace(" Enable on the Connect page.", "")}  # stale since game selection
         assert o == n, o["game"]
     keys = [r["key"] for r in new]
     assert keys == [r.key for r in PLANNED] and len(set(keys)) == len(keys)
@@ -391,11 +429,16 @@ def test_capability_matrix_golden() -> None:
         (("f1_25", "ps5", "2025", None), "f1_25:ps5"),
         (("f1_25", "ps5", "2026", None), "f1_25_2026:ps5"),
         (("f1_25", "unknown", "2025", "f1_25:pc"), "f1_25:pc"),
-        (("f1_25", "unknown", "2025", None), "f1_25:ps5"),
+        (("f1_25", "unknown", "2025", None), "f1_25:xbox"),  # ambiguous platform: the weakest main entry
         (("gt7", "unknown", None, "gt7:ps4"), "gt7:ps4"),
         (("gt7", "unknown", None, None), "gt7:ps5"),
         (("gt7", None, None, "f1_25:ps5"), "gt7:ps5"),  # a preference that is not a candidate is ignored
         (("ac", "ps4", None, None), "ac:ps4"),
+        (("ac", None, None, None), "ac:ps4"),  # weakest of PS5 (recorded) / PS4 / PC (community): catalogue order
+        (("ac", None, None, None, "pc"), "ac:pc"),  # the configured platform picks the entry
+        (("ac", None, None, "f1_25:ps5", "ps5"), "ac:ps5"),
+        (("ac", None, None, "ac:ps5", "pc"), "ac:pc"),  # the input is set to PC: that is the entry in use
+        (("forza_horizon", None, None, None), "forza_horizon:xbox"),  # FH on PS5 is in "more": never a guess
         (("forza_horizon", "unknown", None, None), "forza_horizon:xbox"),
         (("acc", "pc", None, None), None),  # not implemented: never a detection
         (("synthetic", None, None, None), None),
@@ -453,3 +496,81 @@ def test_games_response_is_json_and_covers_every_entry() -> None:
     assert set(body["support_words"]) == {lvl.value for lvl in SupportLevel}
     assert all("fields" not in e and "guide" not in e for e in body["entries"])
     assert all(len(e["features"]) == 23 for e in body["entries"])
+
+
+# ---------------------------------------------------------------------------------------------- review fixes
+RESEARCH = Path(__file__).resolve().parents[2] / "docs" / "research" / "forza-ac-acc-iracing.md"
+# LOCAL_ONLY["ac_pc"] feature -> what AC's shared memory exposes for it (research doc section 2.1)
+AC_SHARED_MEMORY = {
+    "sectors": "currentSectorIndex, lastSectorTime",
+    "flags": "flag",
+    "fuel": "fuel",
+    "tyre_temps": "tyreTempI/M/O[4]",
+    "tyre_wear": "tyreWear[4]",
+    "tyre_pressures": "wheelsPressure[4]",
+    "brake_temps": "brakeTemp[4]",
+    "damage": "carDamage[5]",
+    "ers": "ERS/KERS fields",
+    "drs": "drs",
+    "weather": "airTemp, roadTemp",
+    "session_info": "session type",
+}
+
+
+def test_ac_pc_local_only_is_pinned_to_the_research() -> None:
+    text = RESEARCH.read_text(encoding="utf-8")
+    shared = text[text.index("### 2.1 Shared memory") : text.index("### 2.2")]
+    assert "Shared memory does not exist on consoles" in text
+    assert set(games.LOCAL_ONLY) == {"ac_pc"} and set(games.LOCAL_ONLY["ac_pc"]) == set(AC_SHARED_MEMORY)
+    for fid, token in AC_SHARED_MEMORY.items():
+        assert token in shared, (fid, token)
+    pc, ps5 = games.entry("ac:pc"), games.entry("ac:ps5")
+    assert pc is not None and ps5 is not None
+    for fid in AC_SHARED_MEMORY:
+        f = pc.feature(fid)
+        assert f.status == "not_implemented" and f.short == "Not in Pitwall yet", fid
+        assert "only in its shared memory" in f.reason and "Assetto Corsa on PC" in f.reason, fid
+        assert ps5.feature(fid).status == "not_sent", fid  # consoles have no shared memory
+    assert pc.feature("weather").reason.startswith("Assetto Corsa on PC has air and track temperatures only")
+    assert not [f.id for f in pc.features if f.status == "not_sent" and f.id in AC_SHARED_MEMORY]
+    assert games.capability_sentence(pc, games.INTENT_FEATURES["tyres"]) == (
+        "Assetto Corsa on PC has tyre temperatures, tyre wear, tyre pressures and brake temperatures only in its "
+        "shared memory, which Pitwall can't read yet (it uses the UDP remote telemetry)."
+    )
+    assert games.capability_only("tyres", pc)  # still a known fact: no LLM, no estimate
+
+
+def test_gt7_setup_wording() -> None:
+    gt7 = games.entry("gt7:ps5")
+    assert gt7 is not None
+    f = gt7.feature("setup_telemetry")
+    assert f.status == "not_implemented" and "only its gear ratios" in f.reason and "doesn't send" not in f.reason
+
+
+def test_where_has_no_double_brackets() -> None:
+    assert games.entry("ac:ps5").where == "Assetto Corsa on PS5 (PS4 version)"  # type: ignore[union-attr]
+    assert games.entry("gt7:ps5").where == "Gran Turismo 7 (PS5)"  # type: ignore[union-attr]
+    assert games.entry("forza_motorsport:pc").where == "Forza Motorsport (2023) on PC"  # type: ignore[union-attr]
+    m = games.mismatch("ac:ps5", {"real": True, "status": "live", "adapter_game": "f1_25", "entry_id": "f1_25:ps5"})
+    assert m is not None and m["text"] == "Receiving F1 25, but Assetto Corsa on PS5 (PS4 version) is selected."
+
+
+def test_history_suggestion_skips_replays_and_synthetic() -> None:
+    rows = [
+        {"game": "ac", "platform": "ps5", "source": "replay:ac_silverstone.pwcap", "synthetic": False},
+        {"game": "f1_25", "platform": "pc", "source": "udp:20777", "synthetic": True},
+        {"game": "gt7", "platform": "unknown", "source": "udp:33740", "synthetic": False},
+    ]
+    assert games.history_suggestion(rows) == {
+        "id": "gt7:ps5",
+        "source": "history",
+        "text": "You last drove Gran Turismo 7.",
+    }
+
+
+def test_a_paused_mismatch_stays_and_old_data_keeps_only_its_detection() -> None:
+    args = ("gt7:ps5", "f1_25", "ps5", "2025", True)
+    assert games.snapshot_block(*args, "stale")["mismatch"]["kind"] == "game"  # type: ignore[index]
+    old = games.snapshot_block(*args, "stale", stale_mismatch=False)
+    assert old["mismatch"] is None and old["effective_id"] == "f1_25:ps5"  # the old data is still that game's
+    assert games.snapshot_block(*args, "no_data")["detected"] is None

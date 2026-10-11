@@ -114,7 +114,7 @@ PLANNED: list[CapabilityRow] = [
         True,
         "Implemented from community protocol docs (Salsa20 written from the published spec; variants A/B/~/C). No lap "
         "distance or track id on the wire: distance is integrated from speed (~1% drift), the circuit is recognised "
-        "from the start/finish line. Synthetic tests only - not yet tested on a real PS5. Enable on the Connect page.",
+        "from the start/finish line. Synthetic tests only - not yet tested on a real PS5.",
         platform_ids=("ps5", "ps4"),
         adapter_game=Game.GT7,
     ),
@@ -153,7 +153,7 @@ PLANNED: list[CapabilityRow] = [
         "clients; the same structures came back from a PS5 (2026-10-11 probe). Inputs, speed, gear, rpm, world "
         "position and lap times; no steering unit, tyres, fuel or sectors. Lap distance = spline position x a "
         "track length estimated after ~15-25 % of a lap and fixed by the first full lap (or a known track). "
-        "Not yet tested against the PC game. Enable on the Connect page.",
+        "Not yet tested against the PC game.",
         platform_ids=("pc",),
         adapter_game=Game.AC,
     ),

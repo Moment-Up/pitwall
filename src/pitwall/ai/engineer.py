@@ -73,11 +73,9 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("fuel", re.compile(r"\b(fuel|petrol|gas|lift and coast)\b", re.I)),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
     ("strategy", re.compile(r"\b(pit|box|strategy|stop window|pit window|undercut|overcut)\b", re.I)),
-    # data some games never send (games.INTENT_FEATURES): "wing" alone stays a setup question
+    # data some games never send (games.INTENT_FEATURES), before setup ("front wing broken"): "wing" alone stays a
+    # setup question
     ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
-    ("ers", re.compile(r"\b(ers|battery|deploy(?:ment)?|hybrid|harvest\w*|overtake mode|drs)\b", re.I)),
-    ("flags", re.compile(r"\b(flags?|yellow|safety car|vsc|marshal)\b", re.I)),
-    ("weather", re.compile(r"\b(weather|rain(?:ing)?|track temp\w*|air temp\w*|forecast)\b", re.I)),
     (
         "setup",
         re.compile(
@@ -89,24 +87,32 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("focus", re.compile(r"\b(one thing|work on|focus|improve|tip|advice|what should i)\b", re.I)),
     ("compare", re.compile(r"\b(compare|comparison|versus|vs|against my best|to my best|reference)\b", re.I)),
     ("braking", re.compile(r"\b(brak\w*|brake point|where should i brake)\b", re.I)),
-    # after braking ("is my braking OK in sector two?" is about braking), before the lap-time intents
-    ("sectors", re.compile(r"\b(sectors?|splits?)\b", re.I)),
     # "how was my last lap / that lap": the lap just driven, not the best one (checked before lap_times)
     ("last_lap", re.compile(r"\b(?:last|previous|latest|that|this) lap\b(?!\s*times\b)", re.I)),
     ("lap_times", re.compile(r"\b(lap ?times?|fastest|best lap|pace|how fast)\b", re.I)),
     ("summary", re.compile(r"\b(summary|summarise|summarize|debrief|how did (?:i|that) go|report)\b", re.I)),
     ("losing_time", re.compile(r"\b(losing time|lose time|where am i (?:slow|losing)|time loss|slow(?:er)?)\b", re.I)),
+    # More data some games never send (games.INTENT_FEATURES): last, so they only catch questions no rule above
+    # matched ("where should I brake at turn 4 in the rain?" stays braking, "which sector am I losing time in?"
+    # losing_time, "was that lap slower because of the yellow?" last_lap). Flags and weather before sectors ("a
+    # yellow in sector 2?").
+    ("ers", re.compile(r"\b(ers|battery|deploy(?:ment)?|hybrid|harvest\w*|overtake mode|drs)\b", re.I)),
+    ("flags", re.compile(r"\b(flags?|yellow|safety car|vsc|marshal)\b", re.I)),
+    ("weather", re.compile(r"\b(weather|rain(?:ing)?|track temp\w*|air temp\w*|forecast)\b", re.I)),
+    ("sectors", re.compile(r"\b(sectors?|splits?)\b", re.I)),
 ]
 
 _TOPICS: dict[str, set[str]] = {
     "fuel": {"session", "game", "fuel", "strategy"},
     "tyres": {"session", "game", "tyres", "strategy"},
     "strategy": {"session", "game", "fuel", "tyres", "strategy"},
-    "damage": {"session", "game"},
-    "ers": {"session", "game", "ers"},
+    # damage / ERS / flags / weather were "general" questions before game selection: same facts (plus ERS), so a game
+    # that sends the data gets the answer it always got; a game that never sends it answers from its "game" fact
+    "damage": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
+    "ers": {"session", "game", "ers", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "sectors": {"session", "game", "laps"},
-    "flags": {"session", "game"},
-    "weather": {"session", "game"},
+    "flags": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
+    "weather": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "setup": {"session", "game", "corners", "observations", "compare", "setup"},
     "focus": {"session", "game", "observations", "corners", "reference"},
     "compare": {"session", "game", "compare", "reference", "laps"},
@@ -340,8 +346,10 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         return say(first("tyres"), first("tyres", contains="surface temps"), game)
     if n == "strategy":
         return say(first("strategy"), first("fuel"), first("tyres"), game)
+    general = (first("laps", contains="Best clean"), first("observations"))  # the answer before these intents
     if n == "ers":
-        return say(first("ers"), game)
+        ers = first("ers")
+        return say(ers, game) if ers is not None or game is not None else say(*general)
     if n == "sectors":
         if game is not None:
             return say(game)
@@ -349,7 +357,9 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
     if n == "weather":
         return say(game) if game is not None else say(first("session"))  # the session fact carries the weather
     if n in ("damage", "flags"):
-        return say(game)
+        # the game sends it but the sheet has no fact about it (F1 flags): the general answer, never "complete a
+        # few clean laps" (more laps would not help)
+        return say(game) if game is not None else say(*general)
     if n in ("corner", "braking", "losing_time", "setup") and intent.corner:
         obs = first("observations", corner=intent.corner)
         return say(first("corners", corner=intent.corner), obs or first("compare", corner=intent.corner))

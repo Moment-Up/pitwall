@@ -237,7 +237,8 @@ export interface LapsTileView {
   empty: string | null;
   /** false: the game sends no sector times, so the S1-S3 columns are left out. */
   sectors: boolean;
-  /** The tile foot's words when it does not ("No sectors from GT7"), else null. */
+  /** The tile foot's words when it does not ("Sectors · Not sent by GT7", the server's short, as on Coach), else
+   * null. */
   noSectors: string | null;
 }
 
@@ -249,7 +250,7 @@ export function lapsTile(s: SnapshotNext | null, max = WALL_LAPS, entry: GameEnt
   const ref = s?.reference ?? null;
   const sub = `current standing · ${ref ? `ref L${ref.lap_number}` : "no reference yet"}`;
   const sectors = !missing(entry, "sectors");
-  const noSectors = sectors || !entry ? null : `No sectors from ${entry.text_name}`;
+  const noSectors = sectors || !entry ? null : `Sectors · ${featureOf(entry, "sectors")?.short ?? "Not sent"}`;
   if (!s || !laps.length) {
     return { rows: [], sub, tier: s ? bestsOf(s).tier : 1, empty: "No completed laps yet", sectors, noSectors };
   }

@@ -132,6 +132,19 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
   selected (mismatch on Review/Setup, on Drive only while stationary) and the one-tap switch to F1 25 PS5 while live. **Not verified:** any live console run of selection or mismatch (GT7, Forza and Assetto Corsa selection
   is tested through the API without sockets only); Setup › Game and the per-game Drive wording on a real iPad; the
   GT7 heartbeat or AC client started by a selection on real hardware.
+- **Review round 1 (2026-10-11):** Assetto Corsa on PC no longer says it "doesn't send" what its Windows shared
+  memory has (fuel, tyres, damage, ERS, DRS, flags, sectors, session type, weather): "Not in Pitwall yet", pinned to
+  the research doc; consoles keep "not sent". The radio/engineer question types for damage, ERS, flags, weather and
+  sectors no longer take over older questions ("brake at turn 4 in the rain" stays braking) and are instant only when
+  the game really lacks the data; F1 questions about data it sends go to the LLM as before. A new session is no longer
+  named after another port's game; an AC stream follows the configured platform; selecting GT7 without a console IP
+  never starts a LAN broadcast; "Official corner names" is partial (8 of 28 F1 25 track sheets hand-checked; none for
+  the 2026 format); `pitwall game set/clear` never write settings.json when a server answers slowly or with an error;
+  the Connect hint names the port's own decoder. Dashboard: the AC/GT7 console IP leads the Drive card and is focused
+  after choosing, a paused game keeps its mismatch (and a game chosen after the data stopped replaces it), the Drive
+  mismatch band opens Setup › Game, "Not sent" is no longer red, games with nothing available collapse their 23 rows,
+  idle inputs from earlier choices can be turned off from the result lines. Headless-browser check on a scratch
+  server (loopback only, GT7 heartbeat and AC client stubbed): the screenshots are in the review scratch folder.
 
 ## Known limitations
 - Corner numbers are learned from speed minima (flat-out kinks are not corners). Official numbering/names apply only

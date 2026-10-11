@@ -1,14 +1,26 @@
 // "What are you playing?" (game-selection spec 5.1, 2.3): one HeroUI Card per game with its platforms as toggle
 // buttons (>= 44 px) and each platform's support words ("Tested live", "Built from community docs", "Not supported"),
 // from the server's catalogue, never stronger than capabilities.py. The selected card has the accent edge and a check.
-// F1 25 carries a switch for the 2026 Season Pack (UDP format 2026). ACC, iRacing and F1 24 sit under "More games".
-// Choosing sends PUT /api/game; the answer's actions (the server's words) are listed under the cards.
+// F1 25 carries a switch for the 2026 Season Pack (UDP format 2026). ACC, iRacing and F1 24 sit under "More games:
+// ACC, iRacing, F1 24". Choosing sends PUT /api/game; the answer's actions (the server's words) are listed under the
+// cards, followed by any other input that is still on but receiving nothing, with a Turn off (after a confirm), so
+// inputs from earlier choices do not pile up.
 
 import { Check, CircleCheck, CircleInfo, TriangleExclamation } from "@gravity-ui/icons";
 import { Button, Card, Chip, Disclosure, Switch } from "@heroui/react";
 import { useEffect, useState } from "react";
-import type { GameAction, GamesResponse } from "../../../lib/endpoints/game";
-import { actionLines, pickedId, pickerCards, pickerSelection, supportTone, type PickerCard } from "../../../lib/game";
+import type { GameAction, GamesResponse, OtherInput } from "../../../lib/endpoints/game";
+import {
+  actionLines,
+  idleInputs,
+  moreGamesLabel,
+  pickedId,
+  pickerCards,
+  pickerSelection,
+  supportTone,
+  type PickerCard,
+} from "../../../lib/game";
+import { TurnOffDialog } from "./InputCard";
 
 export interface GamePickerProps {
   catalogue: GamesResponse;
@@ -19,6 +31,8 @@ export interface GamePickerProps {
   /** The last PUT's actions, for the entry it selected. */
   result: { id: string; actions: GameAction[] } | null;
   error: string | null;
+  /** GET /api/game other_inputs: the ones still on but idle are offered for switching off after a choice. */
+  otherInputs?: readonly OtherInput[];
 }
 
 function GameCardView({
@@ -68,7 +82,7 @@ function GameCardView({
               onPress={() => {
                 if (!on) onChoose(id);
               }}
-              className="h-auto min-h-14 flex-col items-start gap-1 px-3 py-2 text-left"
+              className="h-auto min-h-14 w-full flex-col items-start gap-1 px-3 py-2 text-left sm:w-auto"
               aria-label={`${card.title} on ${p.label}: ${p.words}${on ? " (selected)" : ""}`}
             >
               <span className="text-[15px] leading-tight font-semibold">{p.label}</span>
@@ -104,10 +118,12 @@ function GameCardView({
 const ACTION_ICON = { success: CircleCheck, warning: TriangleExclamation, danger: TriangleExclamation, default: CircleInfo };
 const ACTION_CLASS = { success: "text-success", warning: "text-warning", danger: "text-danger", default: "text-muted" };
 
-export function GamePicker({ catalogue, selectedId, pending, onChoose, result, error }: GamePickerProps) {
+export function GamePicker({ catalogue, selectedId, pending, onChoose, result, error, otherInputs = [] }: GamePickerProps) {
   const { main, more } = pickerCards(catalogue);
   const moreSelected = more.some((c) => pickerSelection({ main: [c], more: [] }, selectedId) !== null);
   const lines = result && result.id === selectedId ? actionLines(result.actions) : [];
+  const idle = lines.length ? idleInputs(otherInputs) : [];
+  const [turnOff, setTurnOff] = useState<OtherInput | null>(null);
   return (
     <Card className="gap-4 p-5" aria-labelledby="pw-game-picker-title">
       <Card.Header className="gap-1">
@@ -128,7 +144,7 @@ export function GamePicker({ catalogue, selectedId, pending, onChoose, result, e
         <Disclosure defaultExpanded={moreSelected} className="border-t border-separator">
           <Disclosure.Heading>
             <Disclosure.Trigger className="flex min-h-12 w-full items-center justify-between gap-3 text-left text-sm font-semibold">
-              More games
+              {moreGamesLabel(more)}
               <Disclosure.Indicator />
             </Disclosure.Trigger>
           </Disclosure.Heading>
@@ -147,7 +163,7 @@ export function GamePicker({ catalogue, selectedId, pending, onChoose, result, e
         </p>
       )}
       {lines.length > 0 && (
-        <ul className="m-0 grid list-none gap-1.5 p-0" aria-label="What Pitwall did" role="status">
+        <ul id="pw-game-result" className="m-0 grid list-none gap-1.5 p-0" aria-label="What Pitwall did" role="status">
           {lines.map((l) => {
             const Icon = ACTION_ICON[l.tone];
             return (
@@ -157,8 +173,18 @@ export function GamePicker({ catalogue, selectedId, pending, onChoose, result, e
               </li>
             );
           })}
+          {idle.map((i) => (
+            <li key={`idle:${i.key}`} className="flex flex-wrap items-center gap-2 text-sm">
+              <CircleInfo aria-hidden="true" className="size-4 shrink-0 text-muted" />
+              <span className="min-w-0 flex-1">The {i.name} input is still on (nothing is arriving).</span>
+              <Button size="sm" variant="outline" className="min-h-11 px-3" onPress={() => setTurnOff(i)}>
+                Turn off
+              </Button>
+            </li>
+          ))}
         </ul>
       )}
+      <TurnOffDialog input={turnOff} onClose={() => setTurnOff(null)} />
     </Card>
   );
 }

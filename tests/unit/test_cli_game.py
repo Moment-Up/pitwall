@@ -94,7 +94,8 @@ def test_list_and_show_json(settings: Settings, monkeypatch: pytest.MonkeyPatch)
     assert set(show) == {"entry", "selected", "guide", "input"}
     assert show["selected"] is True and show["entry"]["id"] == "gt7:ps5"
     assert show["entry"]["fields"]["sector"]["status"] == "not_sent"
-    assert show["guide"]["id"] == "gt7" and show["input"]["key"] == "gt7" and show["input"]["enabled"] is True
+    # no console IP given: the GT7 input stays off (it would search the network), the selection is saved
+    assert show["guide"]["id"] == "gt7" and show["input"]["key"] == "gt7" and show["input"]["enabled"] is False
     other = json.loads(runner.invoke(cli.app, ["game", "show", "acc:ps5", "--json"]).output)
     assert other["selected"] is False and other["guide"] is None and other["input"] is None
     text = runner.invoke(cli.app, ["game", "show"]).output
@@ -140,3 +141,51 @@ def test_an_older_server_is_never_bypassed(settings: Settings, monkeypatch: pyte
     use(monkeypatch, FakeServer({("GET", "/api/health"): HEALTH, ("DELETE", "/api/game"): (404, None)}))
     assert runner.invoke(cli.app, ["game", "clear"]).exit_code == 1
     assert not (settings.data_dir / "settings.json").exists()
+
+
+@pytest.mark.parametrize(
+    ("health", "says"),
+    [
+        ((cli.NO_REPLY, None), "did not answer within 1.5 s"),  # a slow server (timeout)
+        ((401, {"detail": "token required"}), "answered HTTP 401"),
+        ((200, {"hello": "not pitwall"}), "did not answer like Pitwall"),
+    ],
+)
+def test_an_unclear_server_is_never_bypassed(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, health: tuple[int, Any], says: str
+) -> None:
+    """Only a refused connection means "no server": anything else may be a busy Pitwall, so settings.json (which a
+    running server would silently overwrite) is never written and the command asks to retry."""
+    server = use(monkeypatch, FakeServer({("GET", "/api/health"): health}))
+    for args in (["game", "set", "gt7:ps5"], ["game", "clear"]):
+        r = runner.invoke(cli.app, args)
+        assert r.exit_code == 1, (args, r.output)
+        assert says in r.output and "retry" in r.output
+        assert not (settings.data_dir / "settings.json").exists()
+    assert all(c[0] == "GET" for c in server.calls)
+    assert runner.invoke(cli.app, ["game", "list"]).exit_code == 0  # read-only commands still work
+
+
+def test_http_tells_a_refused_connection_from_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    import httpx
+
+    def fake_client(exc: Exception) -> Any:
+        class _Client:
+            def __init__(self, **_k: Any) -> None:
+                return None
+
+            def __enter__(self) -> _Client:
+                return self
+
+            def __exit__(self, *_a: Any) -> None:
+                return None
+
+            def request(self, *_a: Any, **_k: Any) -> Any:
+                raise exc
+
+        return _Client
+
+    monkeypatch.setattr(httpx, "Client", fake_client(httpx.ConnectError("refused")))
+    assert cli._http("GET", "http://127.0.0.1:8797/api/health") is None
+    monkeypatch.setattr(httpx, "Client", fake_client(httpx.ReadTimeout("slow")))
+    assert cli._http("GET", "http://127.0.0.1:8797/api/health") == (cli.NO_REPLY, None)

@@ -4,7 +4,7 @@
 //   const g = useSnapshotGame();           // snapshot.game, a stable object (re-renders only when it changes)
 //   const eff = useEffectiveEntry();       // the game of the data on screen (detected, else selected)
 //   const sel = useSelectedEntry();        // the game the household plays (setup flows)
-//   const st = useGameState();             // GET /api/game, refetched when the selection changes
+//   const st = useGameState(true, 2000);   // GET /api/game, refetched when the selection changes (and polled)
 //   await selectGame({ id: "gt7:ps5" });   // PUT /api/game, then the caches it touches are invalidated
 //
 // With an older server (no /api/games, no snapshot.game) every hook answers undefined / null and pages render as
@@ -49,10 +49,14 @@ export function useSelectedEntry(): GameEntry | null {
 }
 
 /** GET /api/game (selection, input, other inputs, history suggestion). Refetched when snapshot.game.selected_id
- * changes (another device or the CLI chose a game) and after selectGame(). */
-export function useGameState(enabled = true): { data: GameState | undefined; error: Error | null; refresh: () => Promise<void> } {
+ * changes (another device or the CLI chose a game), after selectGame(), and every `pollMs` while the page is visible
+ * (Setup › Game: an input's "receiving" changes on its own). */
+export function useGameState(
+  enabled = true,
+  pollMs?: number,
+): { data: GameState | undefined; error: Error | null; refresh: () => Promise<void> } {
   const selected = useLive((s) => s.snap?.game?.selected_id ?? null);
-  const r = useApi(enabled ? GAME_KEYS.state : null, gameApi.state, { maxAgeMs: 0 });
+  const r = useApi(enabled ? GAME_KEYS.state : null, gameApi.state, { maxAgeMs: 0, intervalMs: pollMs });
   const prev = useRef(selected);
   useEffect(() => {
     if (prev.current === selected) return;

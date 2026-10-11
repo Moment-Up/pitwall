@@ -161,6 +161,15 @@ describe("states (4.7)", () => {
     expect(html).not.toContain("data-car");
   });
 
+  it("stale data of a game chosen away from: the chosen game's card replaces the old session's paused screen", () => {
+    const m = model("recorded-austria-stale");
+    const card = createElement("div", { className: "pwc-nodata" }, "Waiting for GT7 telemetry");
+    const html = render(m, { noData: card, showNoData: true });
+    expect(visible(html)).toContain("Waiting for GT7 telemetry");
+    expect(html).not.toContain("pwc-hero");
+    expect(render(m, { noData: card })).toContain("pwc-hero"); // not chosen away: the paused screen stays
+  });
+
   it("ready (garage): the card with the seat, Not you? Switch driver, and the radio strip below", () => {
     const html = render(model("recorded-d246-suzuka-grid-before-start"));
     const text = visible(html);
@@ -461,11 +470,13 @@ describe("game selection on Coach (spec 5.3): only the sector slot, the delta he
       connected: true,
       nowS: newestT(s) + 1,
       driver: JAMES,
-      mismatch: { text: "F1 25 data · GT7 selected", sub: "change on Setup › Game" },
+      mismatch: { text: "F1 25 data · GT7 selected", sub: "tap to change" },
     });
     expect(m.status.band).toBe("mismatch");
-    const text = visible(slot(render(m)));
+    const html = render(m);
+    const text = visible(slot(html));
     expect(text).toContain("F1 25 data · GT7 selected");
-    expect(text).toContain("change on Setup › Game");
+    expect(text).toContain("tap to change");
+    expect(slot(html)).toMatch(/<a [^>]*href="[^"]*\/setup\/game"/); // the band opens Setup › Game
   });
 });

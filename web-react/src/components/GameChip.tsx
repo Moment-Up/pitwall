@@ -39,7 +39,7 @@ export function GameChip({ variant }: { variant: "rail" | "appbar" }) {
       hold={holdNeeded(lock, "setup", "game")}
       current={false}
       holdClassName="rounded-full"
-      className="relative inline-flex min-h-11 shrink-0 items-center rounded-full px-2 text-[13px] font-semibold text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
+      className="relative inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full px-2 text-[13px] font-semibold text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
     >
       <span className="flex items-center gap-1" title={view.aria} aria-hidden="true">
         {dot}

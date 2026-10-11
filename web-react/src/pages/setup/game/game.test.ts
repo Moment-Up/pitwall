@@ -31,6 +31,7 @@ let UnreadableCard: ComponentType<{ entry: GameEntry; recordOn: boolean | null }
 let GamePickerCard: ComponentType<{ catalogue: GamesResponse; onNotNow: () => void }>;
 let SectorCells: ComponentType<{ sectors: import("../../../lib/drive/timing").SectorCellsView; unavailable?: string | null }>;
 let inputWords: typeof import("./InputCard").inputWords;
+let NoTelemetryCard: ComponentType<{ entry?: GameEntry | null }>;
 
 beforeAll(async () => {
   stubDom();
@@ -42,6 +43,7 @@ beforeAll(async () => {
   inputWords = input.inputWords;
   GamePickerCard = (await import("../../drive/coach/GamePickerCard")).GamePickerCard;
   SectorCells = (await import("../../drive/coach/TimingPanels")).SectorCells as typeof SectorCells;
+  NoTelemetryCard = (await import("../../drive/coach/NoTelemetryCard")).NoTelemetryCard;
   vi.unstubAllGlobals();
 });
 
@@ -74,9 +76,9 @@ describe("Setup › Game picker", () => {
     }
     expect(t).toContain("Tested live");
     expect(t).toContain("Tested on a recording");
-    expect(t).toContain("Record only");
+    expect(t).toContain("Records packets only");
     expect(t).toContain("2026 Season Pack cars (UDP format 2026)");
-    expect(t).toContain("More games");
+    expect(t).toContain("More games: ACC, iRacing, F1 24"); // an ACC player sees where ACC is
     expect(t).not.toContain("Selected");
     // the strongest claim on screen is the server's: nothing reads "works" or "supported" for a docs-only game
     expect(t).not.toMatch(/\bworks\b/i);
@@ -97,8 +99,32 @@ describe("Setup › Game picker", () => {
     const t = text(html);
     expect(t).toContain("Selected");
     expect(html).toContain('aria-label="Gran Turismo 7 on PS5: Built from community docs (selected)"');
-    expect(t).toContain("GT7 input switched on (UDP 33740).");
-    expect(t).toContain("Optional: without it Pitwall searches the network for the console.");
+    expect(t).toContain("Enter the PS5's IP address to switch the GT7 input on.");
+    expect(html).toContain('id="pw-game-result"'); // scrolled into view after a choice
+  });
+
+  it("after a choice, an idle input left on by an earlier choice is offered for switching off", () => {
+    const res = putResponse();
+    const t = text(
+      renderToStaticMarkup(
+        createElement(GamePicker, {
+          catalogue: CAT,
+          selectedId: "gt7:ps5",
+          pending: null,
+          onChoose: noop,
+          result: { id: "gt7:ps5", actions: res.actions },
+          error: null,
+          otherInputs: [
+            { key: "f1", name: "EA SPORTS F1 25", enabled: true, in_use: false, can_disable: false },
+            { key: "forza", name: "Forza", enabled: true, in_use: false, can_disable: true },
+            { key: "ac", name: "Assetto Corsa", enabled: true, in_use: true, can_disable: false },
+          ],
+        }),
+      ),
+    );
+    expect(t).toContain("The Forza input is still on (nothing is arriving). Turn off");
+    expect(t).not.toContain("The EA SPORTS F1 25 input is still on");
+    expect(t).not.toContain("The Assetto Corsa input is still on");
   });
 });
 
@@ -109,7 +135,9 @@ describe("What the game sends", () => {
     clean(html);
     const t = text(html);
     expect(t).toContain("What Gran Turismo 7 sends");
-    expect(t).toContain(gt7.support.note);
+    expect(t).toContain(gt7.support.summary!); // one plain sentence under the title ...
+    expect(t).toContain("How this was tested"); // ... the technical note behind a disclosure
+    expect(t).toContain("A green Supported was checked with the real game or a recording");
     expect(t).toContain("6 available · 17 not available");
     for (const g of ["Timing", "Coaching", "Track", "Car & tyres", "Session & race", "Setup & radio"]) expect(t).toContain(g);
     expect(t).toContain("GT7 doesn't send tyre wear.");
@@ -133,23 +161,40 @@ describe("What the game sends", () => {
     expect(t).toContain("0 available · 0 not available · 23 unknown");
     expect(t).not.toContain("Not sent");
     expect(t).toContain("Pitwall doesn't know what this game sends.");
+    expect(t).toContain("All 23 features"); // 23 identical rows behind one disclosure
+  });
+
+  it("ACC on PS5: one sentence, the rows behind a disclosure, and Not sent is never red", () => {
+    const html = renderToStaticMarkup(createElement(FeaturesCard, { entry: entry("acc:ps5", CAT), catalogue: CAT, wide: true }));
+    const t = text(html);
+    expect(t).toContain("ACC on PS5 has no telemetry output.");
+    expect(t).toContain("All 23 features");
+    expect(t).not.toContain("Telemetry fields");
+    expect(html).not.toMatch(/chip--danger[^>]*>[^<]*<[^>]*>Not sent/);
   });
 });
 
 describe("the input card", () => {
-  it("GT7: optional console IP, the input's state, F1 always on", () => {
+  it("GT7 without an IP: the input stays off until the IP, or an explicit network search", () => {
     const st: GameState = gameState("gt7");
     const html = renderToStaticMarkup(
       createElement(InputCard, { entry: entry("gt7:ps5", CAT), state: st, onConsoleIp: async () => null }),
     );
     clean(html);
     const t = text(html);
-    expect(t).toContain("On · listening on UDP 33740");
+    expect(t).toContain("Off");
     expect(t).toContain("Console IP");
-    expect(t).toContain("Optional: without it Pitwall searches the network for the console.");
+    expect(html).toContain('id="pw-game-console-ip"');
+    expect(t).toContain("Enter it to switch the GT7 input on");
+    expect(t).toContain("Search the network");
     expect(t).toContain("Open Setup › Connect");
     expect(t).toContain("always on");
     expect(t).not.toContain("Turn off");
+    const on = { ...st, input: { ...st.input!, enabled: true, listening: true } };
+    const t2 = text(renderToStaticMarkup(createElement(InputCard, { entry: entry("gt7:ps5", CAT), state: on, onConsoleIp: async () => null })));
+    expect(t2).toContain("On · listening on UDP 33740");
+    expect(t2).toContain("Optional: without it Pitwall searches the network for the console.");
+    expect(t2).not.toContain("Search the network for");
   });
 
   it("Assetto Corsa: the console IP is required; another enabled input may be turned off (after a confirm)", () => {
@@ -170,7 +215,7 @@ describe("the input card", () => {
 
   it("input words never say receiving without packets", () => {
     const gt7 = entry("gt7:ps5", CAT);
-    const input = gameState("gt7").input!;
+    const input = { ...gameState("gt7").input!, enabled: true, listening: true };
     expect(inputWords(input, gt7).text).toBe("On · listening on UDP 33740");
     expect(inputWords({ ...input, in_use: true }, gt7)).toEqual({ text: "Receiving", tone: "success" });
     expect(inputWords({ ...input, enabled: false }, gt7).text).toBe("Off");
@@ -198,8 +243,22 @@ describe("Drive › Coach", () => {
       expect(t).toContain(title);
     }
     expect(t).toContain("Not now");
+    expect(t).toContain("My game isn't listed"); // the way to ACC, iRacing and F1 24 (Setup › Game)
     expect(t).not.toContain("Assetto Corsa Competizione"); // More games live on Setup › Game
     expect(html.match(/pwc-pick__btn/g)?.length).toBe(6);
+  });
+
+  it("Assetto Corsa with no console IP: the card leads with the IP, not with waiting", () => {
+    const t = text(renderToStaticMarkup(createElement(NoTelemetryCard, { entry: entry("ac:ps5", CAT) })));
+    expect(t).toContain("Assetto Corsa needs the console's IP address");
+    expect(t).toContain("Enter console IP");
+    expect(t).toContain("Enter the console's IP address");
+    expect(t).toContain("Change game");
+    expect(t).not.toContain("Waiting for Assetto Corsa telemetry");
+    const f1 = text(renderToStaticMarkup(createElement(NoTelemetryCard, { entry: entry("f1_25:ps5", CAT) })));
+    expect(f1).toContain("Waiting for F1 25 telemetry");
+    expect(f1).toContain("Open Setup › Connect");
+    expect(f1).toContain("Change game");
   });
 
   it("a game without sector times: one muted cell across the slot instead of three dashes", () => {

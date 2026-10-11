@@ -339,6 +339,7 @@ export function statusSlot(
   o: DriveOverlays,
   s: SnapshotNext | null,
   mismatch: SlotMismatch | null = null,
+  noDataText: string | null = null,
 ): StatusSlot {
   const status = (band: SlotBand, text: string, tone: SlotTone | null = null): StatusSlot => ({
     kind: "normal",
@@ -359,7 +360,8 @@ export function statusSlot(
   if (state === "offline") {
     return { kind: "outline", tone: "bad", band: "offline", text: "Offline", sub: "reconnecting…", role: "status" };
   }
-  if (state === "no_data") return status("no_data", "Waiting for telemetry", "neutral");
+  // the selected game is one Pitwall cannot read (lib/game.ts noDataText): no "waiting" for data that never comes
+  if (state === "no_data") return status("no_data", noDataText ?? "Waiting for telemetry", "neutral");
   if (state === "stale") {
     const age = s?.connection.last_packet_age_s;
     const text = finite(age) && age >= 1 ? `No signal · ${ageText(age)}` : "No signal";

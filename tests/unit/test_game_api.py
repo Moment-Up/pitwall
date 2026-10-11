@@ -95,7 +95,8 @@ def check_entry(e: dict[str, Any], *, full: bool = False) -> None:
     assert isinstance(e["implemented"], bool) and isinstance(e["notes"], list)
     assert e["integration"] is None or e["integration"] in INTEGRATIONS
     sup = e["support"]
-    assert set(sup) == {"level", "words", "note", "capability_row"}
+    assert set(sup) == {"level", "words", "summary", "note", "capability_row"}
+    assert isinstance(sup["summary"], str) and sup["summary"]
     assert sup["level"] is None or sup["level"] in LEVELS
     assert isinstance(sup["words"], str) and sup["words"]
     t = e["transport"]
@@ -191,26 +192,39 @@ def test_first_run_and_snapshot_block(client: TestClient) -> None:
 
 def test_select_gt7_enables_its_input_and_never_touches_others(client: TestClient) -> None:
     before_forza = integration(client, "forza")
+    # Without a console IP the GT7 input would search the network (a broadcast heartbeat): never as a side effect of
+    # choosing the game. The selection is saved; the input waits for an IP or an explicit "Search the network".
     body = client.put("/api/game", json={"id": "gt7:ps5"}).json()
     acts = actions_by(body)
-    assert acts["enabled"]["key"] == "gt7"
-    assert acts["needs_console_ip"]["message"].startswith("Optional")
+    assert set(acts) == {"needs_console_ip"}
+    assert acts["needs_console_ip"]["message"].startswith("Enter the PS5's IP address to switch the GT7 input on")
     check_state(body["state"])
     assert body["state"]["selected"]["id"] == "gt7:ps5" and body["state"]["selected"]["source"] == "dashboard"
     assert body["state"]["input"]["key"] == "gt7" and body["state"]["input"]["console_ip_need"] == "optional"
-    assert integration(client, "gt7")["enabled"] is True
+    assert body["state"]["input"]["enabled"] is False and integration(client, "gt7")["enabled"] is False
+    assert (
+        "PS4's IP" in actions_by(client.put("/api/game", json={"id": "gt7:ps4"}).json())["needs_console_ip"]["message"]
+    )
     assert integration(client, "f1")["enabled"] is True
     assert integration(client, "forza") == before_forza
-    assert client.get("/api/live").json()["game"]["selected_id"] == "gt7:ps5"
-    assert client.get("/api/connect").json()["selected_game"] == "gt7:ps5"
+    assert client.get("/api/live").json()["game"]["selected_id"] == "gt7:ps4"
+    assert client.get("/api/connect").json()["selected_game"] == "gt7:ps4"
     # console IP: the integration's own LAN-only gate
     bad = client.put("/api/game", json={"id": "gt7:ps5", "console_ip": "8.8.8.8"})
     assert bad.status_code == 422 and "private" in bad.json()["detail"]
     ok = client.put("/api/game", json={"id": "gt7:ps5", "console_ip": "192.168.1.100"}).json()
+    assert set(actions_by(ok)) == {"enabled", "set_console_ip"}
     assert actions_by(ok)["set_console_ip"]["message"] == "Console IP set to 192.168.1.100."
-    assert "needs_console_ip" not in actions_by(ok)
-    assert integration(client, "gt7")["console_ip"] == "192.168.1.100"
+    assert integration(client, "gt7")["console_ip"] == "192.168.1.100" and integration(client, "gt7")["enabled"]
     assert client.put("/api/game", json={"id": "forza_motorsport:pc", "console_ip": "192.168.1.5"}).status_code == 422
+
+
+def test_gt7_network_search_is_an_explicit_choice(client: TestClient) -> None:
+    """Setup › Game's "Search the network" (after a confirm) and Setup › Connect switch GT7 on without an IP."""
+    assert client.put("/api/integrations/gt7", json={"enabled": True}).status_code == 200
+    acts = actions_by(client.put("/api/game", json={"id": "gt7:ps5"}).json())
+    assert set(acts) == {"already_enabled", "needs_console_ip"}
+    assert acts["needs_console_ip"]["message"].startswith("Optional")
 
 
 def test_select_ac_sets_its_platform_and_asks_for_the_ip(client: TestClient) -> None:
@@ -226,7 +240,7 @@ def test_select_ac_sets_its_platform_and_asks_for_the_ip(client: TestClient) -> 
 
 def test_port_conflict_is_an_action_and_the_selection_is_saved(client: TestClient) -> None:
     assert client.put("/api/integrations/forza", json={"port": 33740}).status_code == 200  # Forza still off
-    client.put("/api/game", json={"id": "gt7:ps5"})  # GT7 on, receiving on 33740
+    client.put("/api/game", json={"id": "gt7:ps5", "console_ip": "192.168.1.100"})  # GT7 on, receiving on 33740
     body = client.put("/api/game", json={"id": "forza_motorsport:pc"}).json()
     acts = actions_by(body)
     assert acts["error"]["key"] == "forza" and "share a port" in acts["error"]["message"]
@@ -270,7 +284,7 @@ def test_a_streaming_input_is_never_modified(client: TestClient, monkeypatch: py
         rows = real(self)
         for r in rows:
             if r["key"] == "ac":
-                r.update(enabled=True, console_ip="192.168.1.50", client={"last_rx_s_ago": 0.4})
+                r.update(enabled=True, console_ip="192.168.1.50", client={"last_rx_s_ago": 0.4}, decoded_s_ago=0.4)
         return rows
 
     monkeypatch.setattr(Runtime, "input_status", busy_ac)
@@ -385,3 +399,61 @@ def test_a_selection_reaches_live_dashboards_without_waiting_for_a_frame(client:
                 break
         assert msg["data"]["game"]["selected_id"] == "forza_horizon:pc"
         assert time.monotonic() - t0 < 4.0  # not the 5 s static push
+
+
+def test_stray_packets_are_not_receiving(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Packets arriving that no decoder accepts keep an input "in use" for safety (never modified under the driver),
+    but the input card never calls that "Receiving"."""
+    real = Runtime.input_status
+
+    def stray_ac(self: Runtime) -> list[dict[str, Any]]:
+        rows = real(self)
+        for r in rows:
+            if r["key"] == "ac":
+                r.update(enabled=True, console_ip="192.168.1.50", client={"last_rx_s_ago": 0.4}, decoded_s_ago=None)
+        return rows
+
+    monkeypatch.setattr(Runtime, "input_status", stray_ac)
+    body = client.put("/api/game", json={"id": "ac:pc"}).json()
+    assert "skipped_live" in actions_by(body)  # packets arrive: still never modified
+    assert body["state"]["input"]["in_use"] is False
+
+
+class _StubListener:
+    received = 7
+    capture = None
+
+    def source_snapshot(self) -> list[dict[str, Any]]:
+        return []
+
+    def stop(self) -> None:
+        return None
+
+
+class _StubRouter:
+    unrecognised = 3
+    last_accepted_mono = None
+
+    def finish(self) -> None:
+        return None
+
+
+def test_connect_hint_names_the_port_that_saw_the_packets(client: TestClient) -> None:
+    """Unrecognised packets on the F1 port are not "GT7 telemetry" just because GT7 is selected: the hint names the
+    port's own decoder, and where the selected game sends instead."""
+    from pitwall.core.runtime import _Input
+
+    rt: Runtime = client.app.state.runtime  # type: ignore[attr-defined]
+    port = rt.integration_configs()["f1"].port
+    rt.inputs[port] = _Input(port, ("f1",), _StubListener(), _StubRouter())  # type: ignore[arg-type]
+    try:
+        rt.live.unrecognised = 3
+        client.put("/api/game", json={"id": "ac:ps5", "ensure_input": False})
+        hint = client.get("/api/connect").json()["telemetry"]["hint"]
+        assert hint.startswith(f"Packets arrived on UDP {port} that aren't F1 25 telemetry")
+        assert "Assetto Corsa doesn't send to this port: Pitwall registers with the game (UDP 9996)" in hint
+        client.put("/api/game", json={"id": "f1_25:ps5", "ensure_input": False})
+        hint = client.get("/api/connect").json()["telemetry"]["hint"]
+        assert "aren't F1 25 telemetry" in hint and "doesn't send to this port" not in hint
+    finally:
+        del rt.inputs[port]

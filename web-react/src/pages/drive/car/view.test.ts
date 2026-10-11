@@ -346,11 +346,11 @@ describe("what the game sends (game selection)", () => {
     const s = fixture("recorded-live-api-gt7-stale");
     const v = lapsTile(s, WALL_LAPS, GT7);
     expect(v.sectors).toBe(false);
-    expect(v.noSectors).toBe("No sectors from GT7");
+    expect(v.noSectors).toBe("Sectors · Not sent by GT7"); // the server's words, as on Coach
     const f1 = lapsTile(fixture("recorded-d246-suzuka-on-track-brake-ahead"), WALL_LAPS, F1);
     expect(f1.sectors).toBe(true);
     expect(f1.noSectors).toBeNull();
-    expect(lapsTile(null, WALL_LAPS, AC)).toMatchObject({ empty: "No completed laps yet", sectors: false, noSectors: "No sectors from Assetto Corsa" });
+    expect(lapsTile(null, WALL_LAPS, AC)).toMatchObject({ empty: "No completed laps yet", sectors: false, noSectors: "Sectors · Not sent by Assetto Corsa" });
   });
 
   it("map foot: the newest event first, else that the game sends no race control", () => {

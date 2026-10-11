@@ -66,7 +66,13 @@ weakest of them; a field the adapter does not declare is unknown, never "not sen
 guides, doctor, engineer answers with no session). What the screens say about live data follows the *effective*
 game: the one detected from the live session (`LiveState.snapshot()` on the web thread, from state the ingest thread
 already writes; the router stores one attribute per newly detected sender port, nothing per packet), else the
-selected one. The selection never filters packets or changes an adapter.
+selected one. Before a session's first info packet the detection is the frame's game, else the game that started the
+session (`reset_session(..., game)`). Its status counts only packets a decoder accepted (`last_accepted_mono`), so
+stray packets never make old data "live"; a selection made after the data stopped wins over that stale data. A
+platform the game does not report (Assetto Corsa) is taken from the input's configuration to pick the entry, never
+for a mismatch; an ambiguous platform resolves to the weakest-evidence main entry. The selection never filters
+packets or changes an adapter. Selecting GT7 switches its input on only with a console IP: without one the input
+broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup › Game "Search the network").
 
 ## Analysis pipeline (deterministic)
 1. **Lap assembly** (`analysis/laps.py`): lap boundaries from the game's lap counter + official lap time;

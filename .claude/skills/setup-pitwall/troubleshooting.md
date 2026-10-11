@@ -34,7 +34,9 @@ The `game` check compares the selected game (`uv run pitwall game show`) with th
 with what is actually arriving. Its `fix` line is the command to run; selecting a game never turns another input off.
 
 - **"... is selected but its telemetry input is off":** run the `fix` (`uv run pitwall game set <id>`), which
-  switches the input on. If the result says the input is busy (`skipped_live`), change it after the session.
+  switches the input on. GT7 needs `--console-ip <IP>` for that (without it the input would search the network: ask
+  the user first, then they switch it on at Setup > Connect). If the result says the input is busy (`skipped_live`),
+  change it after the session.
 - **"Assetto Corsa needs the console's IP":** ask the user for it (games.md), then
   `uv run pitwall game set <id> --console-ip <IP>`. GT7 without an IP is only `info`: Pitwall searches the network
   for the console; set the IP if no telemetry arrives.

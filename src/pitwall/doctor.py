@@ -844,13 +844,10 @@ def check_game(ctx: _Ctx) -> Check:
     enabled = bool(row.get("enabled"))
     ip = row.get("console_ip") if isinstance(row.get("console_ip"), str) else None
     if not enabled:
-        return _check(
-            "game",
-            title,
-            "warn",
-            f"{label} is selected but its telemetry input is off",
-            f"uv run pitwall game set {entry.id}",
-        )
+        fix = f"uv run pitwall game set {entry.id}"
+        if key == "gt7":  # without an IP the input searches the network: only on an explicit request
+            fix += " --console-ip <the console's IP> (or switch GT7 on at Setup > Connect to search the network)"
+        return _check("game", title, "warn", f"{label} is selected but its telemetry input is off", fix)
     if key == "ac" and ip is None:
         return _check(
             "game",

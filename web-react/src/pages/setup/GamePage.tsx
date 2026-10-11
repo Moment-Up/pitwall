@@ -6,13 +6,13 @@
 //   What are you playing?   one card per game, platform buttons with their support words, More games
 //   Telemetry input (state, console IP, Open Connect, other inputs)   │   What GT7 sends (23 features, grouped)
 //
-// Data: GET /api/games (catalogue, once per app load), GET /api/game (refetched when the selection changes), the
-// snapshot's game block; PUT /api/game to select (the server switches that game's input on and answers with what it
+// Data: GET /api/games (catalogue, once per app load), GET /api/game (refetched when the selection changes and every
+// 2 s while visible: an input's "receiving" changes on its own), the snapshot's game block; PUT /api/game to select (the server switches that game's input on and answers with what it
 // did), DELETE /api/game is not offered here (choosing another game is the way to change it). Every support claim is
 // the server's (capabilities.py / AdapterInfo), shown verbatim and never upgraded.
 
 import { Alert, Button, Skeleton } from "@heroui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApi } from "../../hooks/useApi";
 import { selectGame, useGameState, useSnapshotGame } from "../../hooks/useGame";
 import { GAME_KEYS, GAMES_MAX_AGE_MS, GameApiError, gameApi, type GameAction } from "../../lib/endpoints/game";
@@ -35,18 +35,38 @@ function Loading() {
   );
 }
 
+/** GET /api/game poll while Setup › Game is visible (as Setup › Connect polls /api/connect). */
+const STATE_POLL_MS = 2000;
+
+/** After a choice, bring its outcome into view: the IP field when the game still needs one (focused, so the
+ * keyboard opens), else the "What Pitwall did" lines with the input card under them. */
+function revealOutcome(needsIp: boolean): void {
+  const field = needsIp ? document.getElementById("pw-game-console-ip") : null;
+  if (field instanceof HTMLInputElement) {
+    field.scrollIntoView?.({ block: "center", behavior: "smooth" });
+    field.focus({ preventScroll: true });
+    return;
+  }
+  document.getElementById("pw-game-result")?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+}
+
 function errorText(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
 
 export function GamePage(_props: PageProps) {
   const cat = useApi(GAME_KEYS.games, gameApi.games, { maxAgeMs: GAMES_MAX_AGE_MS });
-  const state = useGameState();
+  const state = useGameState(true, STATE_POLL_MS);
   const snapGame = useSnapshotGame();
   const wide = useWide();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ id: string; actions: GameAction[] } | null>(null);
+  // After a choice: reveal its outcome once the new input card has rendered (an effect runs after the commit).
+  const [reveal, setReveal] = useState<{ needsIp: boolean; n: number } | null>(null);
+  useEffect(() => {
+    if (reveal) revealOutcome(reveal.needsIp);
+  }, [reveal]);
 
   const catalogue = cat.data;
   if (!catalogue) {
@@ -80,6 +100,9 @@ export function GamePage(_props: PageProps) {
       const res = await selectGame(consoleIp !== undefined ? { id, console_ip: consoleIp } : { id });
       setResult({ id, actions: res.actions });
       await state.refresh();
+      if (consoleIp === undefined) {
+        setReveal((r) => ({ needsIp: res.actions.some((a) => a.action === "needs_console_ip"), n: (r?.n ?? 0) + 1 }));
+      }
       return null;
     } catch (e) {
       const msg = errorText(e);
@@ -140,6 +163,7 @@ export function GamePage(_props: PageProps) {
         onChoose={(id) => void choose(id)}
         result={result}
         error={error}
+        otherInputs={state.data?.other_inputs}
       />
       {state.error && !state.data && (
         <p role="status" className="m-0 text-sm text-warning">

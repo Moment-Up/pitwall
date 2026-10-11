@@ -6,6 +6,7 @@
 //   ready    ● Live  Silverstone  Ready · Practice
 //   fill     YELLOW FLAG · SECTOR 3 · ZONE 16   380 m ahead          (26 px / 800 caps, detail 20 px)
 //   outline  No signal · 6 s   game paused or in a menu?
+//   mismatch F1 25 data · GT7 selected   tap to change        (outline, a link to Setup › Game: a hold under the lock)
 // Content is swapped, never stacked; the slot's height never changes. Evidence chips stay visible in every state
 // (P8), on a solid surface when the slot is a filled band.
 //
@@ -17,7 +18,9 @@
 import { Display } from "@gravity-ui/icons";
 import { Chip } from "@heroui/react";
 import { memo, type ReactNode } from "react";
+import { LockableNavLink } from "../../../components/shell/LockableNavLink";
 import { navLock } from "../../../components/shell/navLock";
+import { holdNeeded, useDriveLock } from "../../../components/shell/useDriveLock";
 import { EvidenceChips } from "../../../components/ui";
 import { useStore } from "../../../hooks/stores";
 import type { StatusView } from "../../../lib/drive/model";
@@ -91,6 +94,26 @@ function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boo
   );
 }
 
+/** The game mismatch band (shown only while stationary): the whole band opens Setup › Game, through the Drive lock
+ * (a hold while it applies), at least 44 px tall; its "tap to change" stays visible on phones. */
+function MismatchBand({ status }: { status: StatusView }) {
+  const lock = useDriveLock();
+  return (
+    <LockableNavLink
+      path="/setup/game"
+      hold={holdNeeded(lock, "setup", "game")}
+      current={false}
+      holdClassName="rounded-xl"
+      className="pwc-bandlink"
+    >
+      <span className="pwc-band" data-kind={status.kind} data-band="mismatch">
+        <span className="pwc-band__words">{status.text}</span>
+        {status.sub && <span className="pwc-band__sub">{status.sub}</span>}
+      </span>
+    </LockableNavLink>
+  );
+}
+
 export const StatusContent = memo(function StatusContent({ status, maySleep, listening }: StatusContentProps) {
   if (status.kind === "normal") {
     const l = status.line;
@@ -129,10 +152,14 @@ export const StatusContent = memo(function StatusContent({ status, maySleep, lis
   }
   return (
     <>
-      <span className="pwc-band" data-kind={status.kind}>
-        <span className="pwc-band__words">{status.text}</span>
-        {status.sub && <span className="pwc-band__sub">{status.sub}</span>}
-      </span>
+      {status.band === "mismatch" ? (
+        <MismatchBand status={status} />
+      ) : (
+        <span className="pwc-band" data-kind={status.kind}>
+          <span className="pwc-band__words">{status.text}</span>
+          {status.sub && <span className="pwc-band__sub">{status.sub}</span>}
+        </span>
+      )}
       <Chips status={status} maySleep={maySleep} onBand={status.kind === "fill"} />
     </>
   );

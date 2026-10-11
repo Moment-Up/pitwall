@@ -207,16 +207,24 @@ describe("noTelemetryView with a selected game (game selection 5.3 #2)", () => {
     expect(v.steps[1].title).toBe("IP 192.0.2.10 · port 20777");
   });
 
-  it("GT7: enable on Connect, the (optional) console IP and its port, get on track", () => {
+  it("GT7: the input, the console IP (no port: it can't be changed), get on track", () => {
     const off = noTelemetryView(
       { ...base, integrations: [{ key: "gt7", enabled: false, listening: false, console_ip: null, sources: [] }] },
       noTelemetryGame(entry("gt7:ps5", CAT)),
     );
-    expect(off.steps.map((x) => x.title)).toEqual(["Enable it on Setup › Connect", "Console IP not set · port 33740", "Get on track"]);
-    expect(off.steps[0].description).toBe("Pitwall starts listening on UDP 33740");
-    expect(off.steps[1].description).toMatch(/^Optional: without it Pitwall searches the network for the console\./);
+    expect(off.steps.map((x) => x.title)).toEqual(["Switch the GT7 input on", "Enter the console's IP address", "Get on track"]);
+    expect(off.steps[0].description).toBe("Entering the console's IP switches it on, or let Pitwall search the network (Setup › Game)");
+    expect(off.steps[1]).toMatchObject({ mono: false, description: "On Setup › Game. PS5 Settings › Network › Connection Status" });
+    expect(off.needsIp).toBe(true); // nothing can arrive: the card leads with the IP
     expect(off.current).toBe(0);
     expect(off.listening).toBeNull(); // GT7's input is off: nothing listens on 33740
+    const searching = noTelemetryView(
+      { ...base, integrations: [{ key: "gt7", enabled: true, listening: true, console_ip: null, sources: [] }] },
+      noTelemetryGame(entry("gt7:ps5", CAT)),
+    );
+    expect(searching.steps[0]).toMatchObject({ title: "GT7 input on", description: "Pitwall starts listening on UDP 33740" });
+    expect(searching.steps[1].title).toBe("Console IP not set: Pitwall searches the network");
+    expect(searching.needsIp).toBe(false);
     const on = noTelemetryView(
       {
         ...base,
@@ -232,8 +240,12 @@ describe("noTelemetryView with a selected game (game selection 5.3 #2)", () => {
       },
       noTelemetryGame(entry("gt7:ps5", CAT)),
     );
-    expect(on.steps[0].description).toBe("On");
-    expect(on.steps[1].title).toBe("Console IP 192.168.1.100 · port 33740");
+    expect(on.steps[0].title).toBe("GT7 input on");
+    expect(on.steps[1].title).toBe("Console IP 192.168.1.100");
+    expect(on.steps[1].parts).toEqual([
+      { text: "Console IP ", mono: false },
+      { text: "192.168.1.100", mono: true }, // only the value in the mono face
+    ]);
     expect(on.steps[2].description).toBe("Last sender seen: 192.168.1.100 · 4 s ago");
     expect(on.current).toBe(2);
     expect(on.listening).toBe("Listening on UDP 33740");
@@ -244,8 +256,11 @@ describe("noTelemetryView with a selected game (game selection 5.3 #2)", () => {
       { ...base, integrations: [{ key: "ac", enabled: true, listening: false, console_ip: null, sources: [], client: { last_rx_s_ago: null } }] },
       noTelemetryGame(entry("ac:ps5", CAT)),
     );
-    expect(v.steps[1].title).toBe("Console IP - · no port: Pitwall contacts the console");
+    expect(v.steps[0].title).toBe("Assetto Corsa input on");
+    expect(v.steps[1]).toMatchObject({ title: "Enter the console's IP address", mono: false });
+    expect(v.steps[1].description).toBe("On Setup › Game. PS5 Settings › Network › Connection Status");
     expect(v.steps[2]).toEqual({ title: "Get on track", description: "Last sender seen: none", mono: false });
+    expect(v.needsIp).toBe(true);
     expect(v.current).toBe(1);
     expect(v.listening).toBeNull();
     const rx = noTelemetryView(

@@ -48,8 +48,9 @@ Ids: `gt7:ps5`, `gt7:ps4`.
 Nothing to set in the game: Pitwall asks the console for telemetry (heartbeat to UDP 33739, replies to 33740).
 
 1. `uv run pitwall game set gt7:ps5 --console-ip <PS5 IP> --json` switches the GT7 input on (Pitwall listens on UDP
-   33740; Windows: re-run `firewall.ps1 add`) and stores the IP. The IP is optional: without it Pitwall searches the
-   network for the console.
+   33740; Windows: re-run `firewall.ps1 add`) and stores the IP. Without `--console-ip` the selection is saved but
+   the input stays off: with no IP it would search the whole network for the console (a broadcast heartbeat every
+   1.6 s), so that happens only when the user asks for it (Setup > Game > Search the network, or Setup > Connect).
 2. Console IP: PS5 Settings > Network > Connection Status > View Connection Status > IPv4 Address.
 3. Packet variant: C (richest; B and ~ also work).
 
@@ -95,7 +96,9 @@ no firewall rule needed for it).
 
 Connect page status "refused" = the console answered but AC is not on track yet; "handshaking" with no reply = not on
 track, wrong IP, or Wi-Fi client isolation. On a new track the first lap is used to learn the track length. Steering,
-tyre temperatures, fuel and sectors are not sent by the game. A diagnostic probe command is on Setup > Connect.
+tyre temperatures, fuel and sectors are not in the remote telemetry Pitwall reads. On consoles that is all there is;
+on PC the game has them in its shared memory, which Pitwall can't read yet (so say "not in Pitwall yet", not "not
+sent"). A diagnostic probe command is on Setup > Connect.
 
 ## Record another game (raw packets, no analysis) - e.g. Project Motor Racing
 

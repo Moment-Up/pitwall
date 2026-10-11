@@ -312,24 +312,31 @@ game_app = typer.Typer(
 )
 app.add_typer(game_app, name="game")
 SERVER_PROBE_S = 1.5
+NO_REPLY = 0  # _http status: something accepted the connection but no HTTP reply came (timeout, dropped connection)
 
 
 def _http(method: str, url: str, body: dict[str, Any] | None = None, timeout_s: float = 10.0) -> tuple[int, Any] | None:
-    """One request to a local Pitwall; ``None`` when nothing answers. Loopback is trusted (no token); a server bound
-    to a LAN address gets the access token header."""
+    """One request to a local Pitwall. ``None`` only when nothing listens (the connection is refused); a timeout or a
+    dropped connection is ``(NO_REPLY, None)``: a server may be there, just slow (a swapping Mac during a race).
+    Loopback is trusted (no token); a server bound to a LAN address gets the access token header."""
     import httpx
 
     from pitwall.doctor import _is_loopback_host
 
     headers: dict[str, str] = {}
-    host = httpx.URL(url).host
+    try:
+        host = httpx.URL(url).host
+    except (httpx.InvalidURL, ValueError):
+        return None
     if not _is_loopback_host(host):
         headers["x-pitwall-token"] = get_settings().resolve_access_token()
     try:
         with httpx.Client(timeout=timeout_s, trust_env=False, follow_redirects=False) as client:
             r = client.request(method, url, json=body, headers=headers)
-    except (httpx.HTTPError, OSError, ValueError):
-        return None
+    except httpx.ConnectError:
+        return None  # refused (or no such host): nothing is listening
+    except (httpx.HTTPError, OSError):
+        return NO_REPLY, None
     try:
         data = r.json()
     except ValueError:
@@ -337,8 +344,12 @@ def _http(method: str, url: str, body: dict[str, Any] | None = None, timeout_s: 
     return r.status_code, data
 
 
-def _server(s: Settings) -> tuple[str, str] | None:
-    """(base URL, version) of a Pitwall answering on the configured HTTP port, else None."""
+def _server(s: Settings, strict: bool = False) -> tuple[str, str] | None:
+    """(base URL, version) of a Pitwall answering on the configured HTTP port; None when nothing listens there.
+
+    Something that listens but does not answer like Pitwall (a timeout, a 401, another program) is not "no server":
+    with ``strict`` (commands that would otherwise write settings.json under a running server) the command stops with
+    exit code 1; without it (read-only commands) it reads as no server."""
     from pitwall.doctor import client_host
 
     base = f"http://{client_host(s.http_host)}:{s.http_port}"
@@ -348,7 +359,20 @@ def _server(s: Settings) -> tuple[str, str] | None:
     status, data = reply
     if status == 200 and isinstance(data, dict) and isinstance(data.get("connection"), dict):
         return base, str(data.get("version") or "?")
-    return None
+    if not strict:
+        return None
+    if status == NO_REPLY:
+        what = f"did not answer within {SERVER_PROBE_S:g} s"
+    elif status != 200:
+        what = f"answered HTTP {status}"
+    else:
+        what = "did not answer like Pitwall"
+    typer.echo(
+        f"something listens on {base} but {what}: if Pitwall is running there, it may be busy - retry in a moment "
+        "(settings.json is left alone while a server may be running)",
+        err=True,
+    )
+    raise typer.Exit(1)
 
 
 def _stored_sections(s: Settings) -> dict[str, Any]:
@@ -497,13 +521,13 @@ def game_set(
 
     s = get_settings()
     e = _entry_or_bad(entry_id)
-    server = _server(s)
+    server = _server(s, strict=True)
     if server is not None:  # never write settings.json while a server runs: it would overwrite it
         base, version = server
         body = {"id": e.id, "console_ip": console_ip, "ensure_input": not no_input, "source": "cli"}
         reply = _http("PUT", f"{base}/api/game", body)
-        if reply is None:
-            typer.echo(f"the running Pitwall at {base} did not answer", err=True)
+        if reply is None or reply[0] == NO_REPLY:
+            typer.echo(f"the running Pitwall at {base} did not answer: retry in a moment", err=True)
             raise typer.Exit(1)
         status, data = reply
         if status == 404:
@@ -539,7 +563,7 @@ def game_clear() -> None:
     from pitwall.settings_store import SettingsStore
 
     s = get_settings()
-    server = _server(s)
+    server = _server(s, strict=True)
     if server is not None:
         base, version = server
         reply = _http("DELETE", f"{base}/api/game")

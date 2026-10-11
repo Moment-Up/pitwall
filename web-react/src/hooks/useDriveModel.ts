@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { driveModel, type DriveModel } from "../lib/drive/model";
-import { driveMismatch } from "../lib/game";
+import { driveMismatch, noDataText, selectedEntry } from "../lib/game";
 import type { DriveMemo } from "../lib/drive/state";
 import type { SnapshotNext } from "../lib/drive/types";
 import { useActiveDriver, useDrivers, useLive, usePrefs } from "./stores";
@@ -43,10 +43,23 @@ export function useDriveModel(): DriveModel {
     () => driveMismatch(game, catalogue, stopped === "none" ? null : { speed_kph: stopped === "slow" ? 0 : null }),
     [game, catalogue, stopped],
   );
+  // A selected game Pitwall cannot read (ACC, iRacing, ...): the no-data line says so instead of "Waiting".
+  const noData = useMemo(() => noDataText(selectedEntry(catalogue, game)), [catalogue, game]);
 
   const model = useMemo(
-    () => driveModel({ snap, connected, nowS, driver, drivers, prefs: { driveLock }, memo: memo.current, mismatch }),
-    [snap, connected, nowS, driver, drivers, driveLock, mismatch],
+    () =>
+      driveModel({
+        snap,
+        connected,
+        nowS,
+        driver,
+        drivers,
+        prefs: { driveLock },
+        memo: memo.current,
+        mismatch,
+        noDataText: noData,
+      }),
+    [snap, connected, nowS, driver, drivers, driveLock, mismatch, noData],
   );
   useEffect(() => {
     memo.current = model.memo;

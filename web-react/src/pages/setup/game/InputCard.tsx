@@ -1,8 +1,10 @@
 // The selected game's telemetry input on Setup › Game (game-selection spec 5.1): its state from GET /api/game
-// (on / listening / received / error), the console IP when the game needs one (Assetto Corsa: required; GT7:
-// optional, without it Pitwall searches the network), a link to Setup › Connect, and the other inputs that are on.
-// Turning another input off is only ever offered, after a confirm (PUT /api/integrations/{key} {enabled: false});
-// F1 cannot be switched off and an input receiving packets right now is never offered.
+// (on / listening / received / error; GamePage polls it every 2 s), the console IP when the game needs one (Assetto
+// Corsa: required; GT7: with it, choosing the game switches the input on; without it the input would search the whole
+// network, so that is a separate "Search the network" button behind a confirm), a link to Setup › Connect, and the
+// other inputs that are on. Turning another input off is only ever offered, after a confirm (PUT
+// /api/integrations/{key} {enabled: false}); F1 cannot be switched off, an input receiving packets right now is
+// never offered, and the confirm re-checks that with a fresh GET /api/game before it switches anything off.
 //
 // A game Pitwall cannot read gets the server's reason instead; "Another game" can record its packets (after a
 // confirm, PUT /api/integrations/record {enabled: true}: it binds a port and writes captures, so never automatic).
@@ -12,7 +14,7 @@ import { AlertDialog, Button, Card, Chip, Input, Label, TextField } from "@herou
 import { useEffect, useState } from "react";
 import { cache } from "../../../lib/cache";
 import { CONNECT_KEYS, connectApi } from "../../../lib/endpoints/connect";
-import { GAME_KEYS, type GameEntry, type GameInput, type GameState, type OtherInput } from "../../../lib/endpoints/game";
+import { GAME_KEYS, gameApi, type GameEntry, type GameInput, type GameState, type OtherInput } from "../../../lib/endpoints/game";
 import { unreadableReason } from "../../../lib/game";
 import { router } from "../../../lib/router";
 
@@ -87,6 +89,32 @@ async function setInput(key: string, enabled: boolean): Promise<void> {
   cache.invalidate(CONNECT_KEYS.integrations);
 }
 
+/** Switch another input off, after checking with a fresh GET /api/game that it still may be (it can have started
+ * receiving since the page last polled). */
+async function turnOffChecked(input: OtherInput): Promise<void> {
+  const fresh = await gameApi.state();
+  const now = fresh.other_inputs.find((i) => i.key === input.key);
+  if (now && !now.can_disable) {
+    cache.invalidate(GAME_KEYS.state);
+    throw new Error(`${input.name} is receiving packets now, so it stays on.`);
+  }
+  if (now) await setInput(input.key, false);
+}
+
+/** "Turn off {input}?" (used here and by the picker's result lines). */
+export function TurnOffDialog({ input, onClose }: { input: OtherInput | null; onClose: () => void }) {
+  return (
+    <ConfirmDialog
+      open={input !== null}
+      title={input ? `Turn off ${input.name}?` : "Turn off the input?"}
+      body="Pitwall stops listening for that game's telemetry. You can switch it on again on Setup › Connect."
+      confirmLabel="Turn off"
+      onConfirm={() => turnOffChecked(input!)}
+      onClose={onClose}
+    />
+  );
+}
+
 type InputWord = { text: string; tone: "success" | "warning" | "default" | "danger" };
 
 /** The input's state in words (never "receiving" unless packets are arriving now). */
@@ -126,14 +154,7 @@ function OtherInputs({ inputs }: { inputs: OtherInput[] }) {
           </li>
         ))}
       </ul>
-      <ConfirmDialog
-        open={confirm !== null}
-        title={confirm ? `Turn off ${confirm.name}?` : "Turn off the input?"}
-        body="Pitwall stops listening for that game's telemetry. You can switch it on again on Setup › Connect."
-        confirmLabel="Turn off"
-        onConfirm={() => setInput(confirm!.key, false)}
-        onClose={() => setConfirm(null)}
-      />
+      <TurnOffDialog input={confirm} onClose={() => setConfirm(null)} />
     </div>
   );
 }
@@ -151,6 +172,9 @@ export function InputCard({ entry, state, onConsoleIp }: InputCardProps) {
   const [ip, setIp] = useState(input?.console_ip ?? "");
   const [saving, setSaving] = useState(false);
   const [ipError, setIpError] = useState<string | null>(null);
+  const [search, setSearch] = useState(false);
+  // GT7 with its input off and no IP: switching it on would broadcast to the whole network, so it is its own choice.
+  const offerSearch = entry.integration === "gt7" && !!input && !input.enabled && !input.console_ip;
   useEffect(() => {
     setIp(input?.console_ip ?? "");
   }, [input?.console_ip]);
@@ -199,7 +223,13 @@ export function InputCard({ entry, state, onConsoleIp }: InputCardProps) {
           <div className="flex flex-wrap items-end gap-2">
             <TextField className="w-56" value={ip} onChange={(v: string) => setIp(v)} isDisabled={saving} isRequired={need === "required"}>
               <Label>{entry.platform === "pc" ? "Gaming PC's IP" : "Console IP"}</Label>
-              <Input inputMode="decimal" placeholder="e.g. 192.168.1.100" className="min-h-11 font-mono text-base" autoComplete="off" />
+              <Input
+                id="pw-game-console-ip"
+                inputMode="decimal"
+                placeholder="e.g. 192.168.1.100"
+                className="min-h-11 font-mono text-base"
+                autoComplete="off"
+              />
             </TextField>
             <Button type="submit" variant="secondary" className="min-h-11" isPending={saving} isDisabled={!dirty}>
               Save
@@ -208,8 +238,17 @@ export function InputCard({ entry, state, onConsoleIp }: InputCardProps) {
           <p className="m-0 text-sm text-muted">
             {need === "required"
               ? "Required: Pitwall must contact the console to get telemetry. PS5: Settings › Network › Connection Status › View Connection Status › IPv4 Address."
-              : "Optional: without it Pitwall searches the network for the console. Set it if no telemetry arrives."}
+              : offerSearch
+                ? `Enter it to switch the GT7 input on (${entry.platform_label}: Settings › Network › Connection Status). Or let Pitwall search the network for the console.`
+                : "Optional: without it Pitwall searches the network for the console. Set it if no telemetry arrives."}
           </p>
+          {offerSearch && (
+            <div>
+              <Button variant="secondary" className="min-h-11" onPress={() => setSearch(true)}>
+                Search the network
+              </Button>
+            </div>
+          )}
           {ipError && (
             <p role="alert" className="m-0 text-sm text-danger">
               {ipError}
@@ -224,6 +263,14 @@ export function InputCard({ entry, state, onConsoleIp }: InputCardProps) {
         </Button>
       </div>
       <OtherInputs inputs={state.other_inputs} />
+      <ConfirmDialog
+        open={search}
+        title="Search the network for the console?"
+        body="Pitwall switches the GT7 input on and asks every device on your home network for GT7 telemetry (a small broadcast every 1.6 seconds) until the console answers. With the console's IP it talks to the console only."
+        confirmLabel="Search the network"
+        onConfirm={() => setInput("gt7", true)}
+        onClose={() => setSearch(false)}
+      />
     </Card>
   );
 }

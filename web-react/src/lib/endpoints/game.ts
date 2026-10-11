@@ -112,7 +112,7 @@ export interface GameEntry {
   game_key: string;
   /** "Gran Turismo 7" */
   label: string;
-  /** "GT7" (chips, at most 6 characters) */
+  /** "GT7", "Forza M" (chips, at most 7 characters) */
   short_label: string;
   /** "GT7" (sentences) */
   text_name: string;
@@ -126,7 +126,15 @@ export interface GameEntry {
   variant: string | null;
   implemented: boolean;
   integration: GameIntegrationKey | null;
-  support: { level: SupportLevel | null; words: string; note: string; capability_row: string | null };
+  support: {
+    level: SupportLevel | null;
+    words: string;
+    /** One plain sentence on how far it is tested (optional: servers before review round 1 omit it). */
+    summary?: string;
+    /** The capability row's notes (technical: sources, offsets, what was tested). */
+    note: string;
+    capability_row: string | null;
+  };
   transport: {
     kind: TransportKind;
     summary: string;

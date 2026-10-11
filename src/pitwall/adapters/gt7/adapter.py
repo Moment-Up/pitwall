@@ -192,9 +192,9 @@ GT7_INFO = AdapterInfo(
         "ers_store_j": FieldSupport(
             SupportLevel.UNVERIFIED, "variant ~ 0x150 'energy recovery' (units unknown): not mapped"
         ),
-        "track_zones": FieldSupport(_U, "no sectors, marshal zones or race flags (gt7-protocol.md section 7)"),
-        "field_samples": FieldSupport(_U, "telemetry covers the player's car only (gt7-protocol.md section 7)"),
-        "damage": FieldSupport(_U, "not sent (gt7-protocol.md section 7)"),
+        "track_zones": FieldSupport(_U, "no sectors, marshal zones or race flags (gt7-protocol.md section 8)"),
+        "field_samples": FieldSupport(_U, "telemetry covers the player's car only (gt7-protocol.md section 8)"),
+        "damage": FieldSupport(_U, "not sent (gt7-protocol.md section 8)"),
         "buttons": FieldSupport(_U, "no wheel-button data (the 0x8E flags are car state)"),
     },
     notes=(

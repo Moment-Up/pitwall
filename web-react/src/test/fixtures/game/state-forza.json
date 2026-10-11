@@ -8,7 +8,7 @@
   "id": "forza_motorsport:pc",
   "game_key": "forza_motorsport",
   "label": "Forza Motorsport (2023)",
-  "short_label": "FM",
+  "short_label": "Forza M",
   "text_name": "Forza Motorsport",
   "platform": "pc",
   "platform_label": "PC",
@@ -20,6 +20,7 @@
   "support": {
    "level": "community_documented",
    "words": "Built from community docs",
+   "summary": "Built from community documentation and tested with generated data; not yet checked with the real game on this platform.",
    "note": "Implemented from Turn 10's Data Out doc (Sled 232 / Dash 311 / FM2023 331 B): tyre wear and track ordinal. Lap distance from DistanceTraveled. Synthetic tests only - not yet tested on a real console.",
    "capability_row": "forza_motorsport"
   },
@@ -137,7 +138,7 @@
     "evidence": null,
     "short": "Not in Pitwall yet",
     "reason": "Pitwall's official corner names cover F1 25 only; Forza Motorsport corners are numbered from your laps.",
-    "detail": "no track sheet lists this game (analysis.track_identity.load_sheets) (row forza_motorsport)",
+    "detail": "no hand-checked track sheet for this game (analysis.track_identity.load_sheets) (row forza_motorsport)",
     "note": null,
     "fields": []
    },

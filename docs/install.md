@@ -310,8 +310,10 @@ Pitwall running the change applies at once; otherwise at the next start. Choosin
 
 - switches on its telemetry input (F1 25's is always on), so the game's Enable switch on the Connect page is
   already done;
-- asks for the console's IP address where Pitwall needs it: required for Assetto Corsa, optional for Gran Turismo 7
-  (without it Pitwall searches the network for the console). Add `--console-ip <console-ip>` to `game set`;
+- asks for the console's IP address where Pitwall needs it: required for Assetto Corsa. Gran Turismo 7's input is
+  switched on only with its IP (`--console-ip <console-ip>` on `game set`, or the IP field on Setup › Game): without
+  one it would search the whole network for the console, so that is a separate, explicit choice (Setup › Game ›
+  *Search the network*, or Enable on the Connect page);
 - never switches another game's input off;
 - shows what the game sends and what it does not, feature by feature (Setup › Game, or `uv run pitwall game show`),
   so an empty tile for data your game never sends is expected rather than a fault. These lists come from the same

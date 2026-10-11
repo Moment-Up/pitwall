@@ -20,6 +20,7 @@
   "support": {
    "level": "unsupported",
    "words": "Not supported",
+   "summary": "ACC on PS5 has no telemetry output.",
    "note": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply.",
    "capability_row": "acc_console"
   },

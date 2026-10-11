@@ -51,6 +51,7 @@ SCHEMA = 1
 SECTION = "game"  # SettingsStore section: {"selected": id, "since_unix": float, "source": "dashboard" | "cli" | ...}
 SOURCES = ("dashboard", "cli", "driver_default")
 BUSY_S = 10.0  # an input that received a packet this recently is "in use": never modified under the driver
+PAUSED_S = 600.0  # stale data this young is a pause (game menu, replay screen): another game's mismatch stays shown
 
 FeatureStatus = Literal["supported", "partial", "not_sent", "not_implemented", "unknown"]
 AVAILABLE: frozenset[str] = frozenset({"supported", "partial"})
@@ -89,9 +90,24 @@ SUPPORT_WORDS: dict[SupportLevel, str] = {
     S.UNVERIFIED: "Unverified",
     S.UNSUPPORTED: "Not supported",
 }
-WORDS_PARTIAL_NOT_IMPLEMENTED = "Partial, not implemented"
-WORDS_RECORD_ONLY = "Record only"
+WORDS_PARTIAL_NOT_IMPLEMENTED = "Not in Pitwall yet"  # researched (partial), no reader
+WORDS_RECORD_ONLY = "Records packets only"
 OTHER_NOTE = "Raw packets are saved so a decoder can be written later. No analysis."
+# One plain sentence per level for a game Pitwall reads (README "Status words"); ``support.note`` keeps the details.
+SUPPORT_SUMMARY: dict[SupportLevel, str] = {
+    S.LIVE_VALIDATED: "Checked end to end with the real game on this platform.",
+    S.RECORDED_VALIDATED: "Checked against real game output recorded on this platform; not yet run end to end.",
+    S.SPEC_IMPLEMENTED: "Built from the game's official telemetry spec and tested with generated data; not yet "
+    "checked with the real game on this platform.",
+    S.COMMUNITY_DOCUMENTED: "Built from community documentation and tested with generated data; not yet checked with "
+    "the real game on this platform.",
+    S.PARTIAL: "Only partly researched, and Pitwall has no reader for it yet.",
+    S.UNVERIFIED: "Nobody has confirmed that this version sends telemetry.",
+    S.UNSUPPORTED: "Pitwall can't read this game's telemetry.",
+}
+OTHER_SUMMARY = (
+    "Pitwall doesn't know what this game sends. It can record its packets so a decoder can be written later."
+)
 
 PLATFORM_WORDS = {"ps5": "PS5", "ps4": "PS4", "xbox": "Xbox", "pc": "PC"}
 
@@ -111,8 +127,8 @@ _GAMES: dict[str, _GameText] = {
     "f1_25_2026": _GameText("F1 25 (2026 Season Pack)", "F1 25", "F1 25", "f1", "f1_25"),
     "f1_24": _GameText("F1 24 or older", "F1 24", "F1 24", None, None),
     "gt7": _GameText("Gran Turismo 7", "GT7", "GT7", "gt7", "gt7"),
-    "forza_motorsport": _GameText("Forza Motorsport (2023)", "FM", "Forza Motorsport", "forza", "forza"),
-    "forza_horizon": _GameText("Forza Horizon 4 / 5", "FH", "Forza Horizon", "forza", "forza"),
+    "forza_motorsport": _GameText("Forza Motorsport (2023)", "Forza M", "Forza Motorsport", "forza", "forza"),
+    "forza_horizon": _GameText("Forza Horizon 4 / 5", "Forza H", "Forza Horizon", "forza", "forza"),
     "ac": _GameText("Assetto Corsa", "AC", "Assetto Corsa", "ac", "ac"),
     "acc": _GameText("Assetto Corsa Competizione", "ACC", "ACC", None, None),
     "iracing": _GameText("iRacing", "iRacing", "iRacing", None, None),
@@ -237,12 +253,15 @@ NOT_IMPLEMENTED: dict[tuple[str, str], str] = {
     ("forza_motorsport", "fuel"): _FORZA_FUEL,
     ("forza_horizon", "fuel"): _FORZA_FUEL,
     ("gt7", "ers"): "GT7 may send an energy-recovery value of unknown units; Pitwall doesn't read it.",
+    ("gt7", "setup_telemetry"): "GT7 sends only its gear ratios, not the rest of its car setup, and Pitwall doesn't "
+    "read them as a setup.",
 }
 NOT_IMPLEMENTED_FIELD: dict[tuple[str, str], str] = {  # (adapter_game, feature) -> the field whose source is the detail
     ("gt7", "fuel"): "fuel_litres",
     ("forza_motorsport", "fuel"): "fuel_kg",
     ("forza_horizon", "fuel"): "fuel_kg",
     ("gt7", "ers"): "ers_store_j",
+    ("gt7", "setup_telemetry"): "setup",
 }
 F1_DAMAGE_DETAIL = "CarDamage (adapters/f1/packets.py) is decoded; only tyresWear is mapped (adapters/f1/adapter.py)"
 PARTIAL_FACTS: dict[tuple[str, str], str] = {
@@ -252,22 +271,81 @@ PARTIAL_FACTS: dict[tuple[str, str], str] = {
 PARTIAL_REASON: dict[str, str] = {  # a partial field behind a feature (not distance, not a PARTIAL_FACTS entry)
     "lap_timing": "{name} sends lap times, but Pitwall works out where each lap ends, so a lap can stay untimed.",
 }
+# Data the game has, but only through a local interface Pitwall does not read: (capability row key) -> feature id ->
+# the noun to say (None: the feature's own). Assetto Corsa on PC exposes these in its Windows shared memory
+# (docs/research/forza-ac-acc-iracing.md section 2.1, matrix row "AC, PC, shared memory"); Pitwall reads the UDP
+# remote telemetry, which has none of them. Consoles have no shared memory, so there they stay "not sent".
+LOCAL_ONLY: dict[str, dict[str, str | None]] = {
+    "ac_pc": {
+        "sectors": None,
+        "flags": None,
+        "fuel": None,
+        "tyre_temps": None,
+        "tyre_wear": None,
+        "tyre_pressures": None,
+        "brake_temps": None,
+        "damage": None,
+        "ers": None,
+        "drs": None,
+        "weather": "air and track temperatures",
+        "session_info": None,
+    },
+}
+LOCAL_ONLY_INTERFACE: dict[str, str] = {
+    "ac_pc": "shared memory (docs/research/forza-ac-acc-iracing.md section 2.1)",
+}
+
+
+def local_only_reason(e: GameEntry, nouns: Sequence[str]) -> str:
+    """For example: "Assetto Corsa on PC has fuel and tyre wear only in its shared memory, which Pitwall can't read
+    yet (it uses the UDP remote telemetry)."."""
+    return (
+        f"{e.text_name} on {e.platform_label} has {_join(list(nouns)).replace(' or ', ' and ')} only in its shared "
+        "memory, which Pitwall can't read yet (it uses the UDP remote telemetry)."
+    )
+
+
+def _local_only_noun(e: GameEntry, feature_id: str) -> str | None:
+    """The noun when ``feature_id`` is local-only data of ``e`` (see ``LOCAL_ONLY``), else None."""
+    table = LOCAL_ONLY.get(e.row.key) if e.row is not None else None
+    if table is None or feature_id not in table:
+        return None
+    return table[feature_id] or _FEATURE_BY_ID[feature_id].noun
 
 
 @functools.cache
-def official_name_games() -> frozenset[str]:
-    """Game values covered by a shipped track sheet (official corner names): ``analysis.track_identity``."""
+def official_name_sheets(adapter_game: str, variant: str | None = None) -> tuple[int, int]:
+    """(sheets with a hand-checked turn, shipped sheets) for a game and F1 UDP format: ``analysis.track_identity``
+    shows only verified turns by default, and a sheet verified against other wire formats counts as unchecked in a
+    session of this format (its ``verified_formats``)."""
     from pitwall import trackdata
     from pitwall.analysis.track_identity import SheetError, load_sheets
 
-    games: set[str] = set()
+    fmt = int(variant) if variant is not None and variant.isdigit() else None
+    verified = total = 0
     for family in trackdata.sheet_families():
         try:
-            for sheet in load_sheets(family):
-                games.update(sheet.games)
+            sheets = load_sheets(family)
         except SheetError:  # a packaging bug: the test-suite checks the shipped sheets
             log.exception("track sheets for %r are unreadable", family)
-    return frozenset(games)
+            continue
+        for sheet in sheets:
+            if adapter_game not in sheet.games:
+                continue
+            total += 1
+            format_ok = not sheet.verified_formats or fmt is None or fmt in sheet.verified_formats
+            if format_ok and any(t.verified for t in sheet.turns):
+                verified += 1
+    return verified, total
+
+
+def official_name_games() -> frozenset[str]:
+    """Game values with at least one hand-checked track sheet (official corner names shown somewhere)."""
+    return frozenset(
+        e.adapter_game
+        for e in entries()
+        if e.adapter_game is not None and official_name_sheets(e.adapter_game, e.variant)[0] > 0
+    )
 
 
 @functools.cache
@@ -388,12 +466,23 @@ class GameEntry:
         return SUPPORT_WORDS[lvl]
 
     @property
+    def support_summary(self) -> str:
+        """One plain sentence about how far this entry is tested (the dashboard's header; ``support.note`` has the
+        technical details). A game Pitwall cannot read gets the reason why."""
+        lvl = self.level
+        if lvl is None:
+            return OTHER_SUMMARY
+        if not self.implemented:
+            return self.feature("lap_timing").reason
+        return SUPPORT_SUMMARY[lvl]
+
+    @property
     def where(self) -> str:
-        """``"Gran Turismo 7 (PS5)"``; ``"Forza Motorsport (2023) on PC"`` (no double brackets); the label alone for
-        ``any``."""
+        """``"Gran Turismo 7 (PS5)"``; ``"Forza Motorsport (2023) on PC"``, ``"Assetto Corsa on PS5 (PS4 version)"``
+        (no double brackets); the label alone for ``any``."""
         if self.platform == "any":
             return self.label
-        if self.label.endswith(")"):
+        if self.label.endswith(")") or self.platform_label.endswith(")"):
             return f"{self.label} on {self.platform_label}"
         return f"{self.label} ({self.platform_label})"
 
@@ -448,6 +537,7 @@ class GameEntry:
             "support": {
                 "level": None if self.level is None else self.level.value,
                 "words": self.support_words,
+                "summary": self.support_summary,
                 "note": OTHER_NOTE if self.row is None else self.row.notes,
                 "capability_row": None if self.row is None else self.row.key,
             },
@@ -581,19 +671,38 @@ def _feature(e: GameEntry, fd: FeatureDef, level: SupportLevel | None) -> GameFe
         return make("not_implemented", "Not in Pitwall yet", ni, detail + _row_tag(e))
     # 5. code facts
     if fd.id == "official_corner_names":
-        if ag in official_name_games():
+        verified, total = official_name_sheets(ag, e.variant)
+        sheets = f"{verified} of {total} track sheets hand-checked (analysis.track_identity.load_sheets)"
+        if verified and verified == total:
             return make(
                 "supported",
                 "",
-                f"Pitwall ships the official corner names for {name} circuits.",
-                "track sheets (analysis.track_identity.load_sheets)" + _row_tag(e),
+                f"Pitwall ships hand-checked official corner names for {name} circuits.",
+                sheets + _row_tag(e),
             )
+        if verified:
+            return make(
+                "partial",
+                "Partial",
+                f"Pitwall has hand-checked official corner names for some {name} circuits; elsewhere corners are "
+                "numbered from your laps.",
+                sheets + _row_tag(e),
+            )
+        if total and e.variant is not None:
+            return make(
+                "not_implemented",
+                "Not in Pitwall yet",
+                f"Pitwall's official corner names were checked with another UDP format, not format {e.variant}; "
+                "corners are numbered from your laps.",
+                sheets + _row_tag(e),
+            )
+        covered = official_name_games()
+        which = f"cover {_labels(covered)} only" if covered else "cover no game yet"
         return make(
             "not_implemented",
             "Not in Pitwall yet",
-            f"Pitwall's official corner names cover {_labels(official_name_games())} only; {name} corners are "
-            "numbered from your laps.",
-            "no track sheet lists this game (analysis.track_identity.load_sheets)" + _row_tag(e),
+            f"Pitwall's official corner names {which}; {name} corners are numbered from your laps.",
+            "no hand-checked track sheet for this game (analysis.track_identity.load_sheets)" + _row_tag(e),
         )
     if fd.id == "setup_recommendations":
         if ag in setup_games():
@@ -623,6 +732,14 @@ def _feature(e: GameEntry, fd: FeatureDef, level: SupportLevel | None) -> GameFe
         declared.append((k, fs))
     for _k, fs in declared:
         if fs.level is S.UNSUPPORTED:
+            local = _local_only_noun(e, fd.id)
+            if local is not None:  # the game has it, through an interface Pitwall does not read (LOCAL_ONLY)
+                return make(
+                    "not_implemented",
+                    "Not in Pitwall yet",
+                    local_only_reason(e, [local]),
+                    f"{LOCAL_ONLY_INTERFACE[row.key]}; UDP remote telemetry: {fs.source}{_row_tag(e)}",
+                )
             reason = (
                 f"{name} doesn't send the other cars' positions, so there is no AI field braking model."
                 if fd.id == "ai_field"
@@ -830,23 +947,34 @@ def parse_selection(section: Mapping[str, Any] | None) -> Selection | None:
 # ---------------------------------------------------------------------------------------------- detection
 @functools.lru_cache(maxsize=64)
 def resolve(
-    adapter_game: str | None, platform: str | None, variant: str | None, prefer: str | None = None
+    adapter_game: str | None,
+    platform: str | None,
+    variant: str | None,
+    prefer: str | None = None,
+    configured: str | None = None,
 ) -> str | None:
-    """The catalogue entry id for a detected game: implemented entries of ``adapter_game`` (catalogue order), kept to
-    ``variant`` and to ``platform`` when those narrow the list; ``prefer`` (the selection) wins if it is a candidate.
-    Memoised: the live snapshot calls it on the web thread."""
+    """The catalogue entry id for a detected game: implemented entries of ``adapter_game``, kept to ``variant``, to
+    ``platform`` (reported by the game) and to ``configured`` (the platform the input is set to, e.g. Assetto Corsa's:
+    not evidence, so never a mismatch, but it says which entry is in use) when those narrow the list; ``prefer`` (the
+    selection) wins if it is still a candidate. Otherwise, while the platform stays ambiguous, the candidate with the
+    weakest evidence among the main catalogue entries (then catalogue order): an unknown platform never shows
+    stronger support than the weakest it could be. Memoised: the live snapshot calls it on the web thread."""
     if not adapter_game:
         return None
     cands = [e for e in entries() if e.implemented and e.adapter_game == adapter_game]
     if variant:
         narrowed = [e for e in cands if e.variant == variant]
         cands = narrowed or cands
-    if platform and platform not in ("unknown", "any"):
-        narrowed = [e for e in cands if e.platform == platform]
-        cands = narrowed or cands
+    for p in (platform, configured):
+        if p and p not in ("unknown", "any"):
+            narrowed = [e for e in cands if e.platform == p]
+            cands = narrowed or cands
     if prefer is not None and any(e.id == prefer for e in cands):
         return prefer
-    return cands[0].id if cands else None
+    pool = [e for e in cands if e.group == "main"] or cands
+    if not pool:
+        return None
+    return max(pool, key=lambda e: _RANK[e.level] if e.level is not None else len(LEVEL_ORDER)).id
 
 
 @functools.cache
@@ -902,9 +1030,12 @@ def _label_of(adapter_game: str) -> str:
 def mismatch(
     selected_id: str | None, detected: Mapping[str, Any] | None, status: str | None = None
 ) -> dict[str, Any] | None:
-    """D6: real live data from another game, platform (F1) or F1 UDP format than the selection; else None."""
+    """D6: real data from another game, platform (F1) or F1 UDP format than the selection, arriving now or paused
+    (stale: the driver picks up the iPad exactly then); else None."""
     sel = entry(selected_id)
-    if sel is None or not detected or not detected.get("real") or (status or detected.get("status")) != "live":
+    if sel is None or not detected or not detected.get("real"):
+        return None
+    if (status or detected.get("status")) not in ("live", "stale"):
         return None
     det_ag = detected.get("adapter_game")
     det_id = detected.get("entry_id")
@@ -943,9 +1074,10 @@ def live_suggestion(detected: Mapping[str, Any] | None) -> dict[str, Any] | None
 
 
 def history_suggestion(rows: Iterable[Mapping[str, Any]]) -> dict[str, Any] | None:
-    """The most recent real (non-synthetic) session's entry: "You last drove F1 25 on PS5."."""
+    """The most recent real session's entry (not synthetic, not a replay of a recording): "You last drove F1 25 on
+    PS5."."""
     for row in rows:
-        if row.get("synthetic"):
+        if row.get("synthetic") or str(row.get("source") or "").startswith("replay:"):
             continue
         e = entry_for_session(row)
         if e is None:
@@ -962,12 +1094,18 @@ def snapshot_block(
     variant: str | None,
     real: bool,
     status: str,
+    configured: str | None = None,
+    stale_mismatch: bool = True,
 ) -> dict[str, Any]:
-    """``Snapshot.game``: a handful of attribute reads and one memoised lookup (web thread, never ingest)."""
+    """``Snapshot.game``: a handful of attribute reads and one memoised lookup (web thread, never ingest).
+
+    ``status``: of the decoded data ("live" / "stale" / "no_data"). ``configured``: the platform the input is set to
+    when the game does not report it (Assetto Corsa): it picks the entry, never a mismatch. ``stale_mismatch``: a
+    stale detection is a pause (the mismatch stays) rather than data long gone."""
     detected = None
     if adapter_game and adapter_game not in (Game.SYNTHETIC.value, Game.UNKNOWN.value) and status in ("live", "stale"):
         detected = {
-            "entry_id": resolve(adapter_game, platform, variant, selected_id),
+            "entry_id": resolve(adapter_game, platform, variant, selected_id, configured),
             "adapter_game": adapter_game,
             "platform": platform if platform in PLATFORM_WORDS else "unknown",
             "variant": variant,
@@ -979,7 +1117,7 @@ def snapshot_block(
         "selected_id": selected_id,
         "effective_id": effective,
         "detected": detected,
-        "mismatch": mismatch(selected_id, detected, status),
+        "mismatch": mismatch(selected_id, detected, status) if status == "live" or stale_mismatch else None,
         "suggestion": live_suggestion(detected) if selected_id is None else None,
     }
 
@@ -996,6 +1134,17 @@ def busy(row: Mapping[str, Any] | None) -> bool:
     client = row.get("client")
     age = client.get("last_rx_s_ago") if isinstance(client, Mapping) else None
     return isinstance(age, int | float) and age < BUSY_S
+
+
+def receiving(row: Mapping[str, Any] | None) -> bool:
+    """The input's decoder accepted a packet in the last ``BUSY_S`` seconds (``decoded_s_ago``): telemetry is really
+    arriving, not stray packets. Without a decoder (raw recording) any packet counts (``busy``)."""
+    if not row:
+        return False
+    if "decoded_s_ago" not in row:
+        return busy(row)
+    age = row.get("decoded_s_ago")
+    return isinstance(age, int | float) and not isinstance(age, bool) and age < BUSY_S
 
 
 def game_input(e: GameEntry | None, rows: Sequence[Mapping[str, Any]] | None) -> dict[str, Any] | None:
@@ -1020,7 +1169,7 @@ def game_input(e: GameEntry | None, rows: Sequence[Mapping[str, Any]] | None) ->
         "port": port if isinstance(port, int) else None,
         "platform": platform if isinstance(platform, str) else None,
         "error": row.get("error") if isinstance(row.get("error"), str) else None,
-        "in_use": busy(row),
+        "in_use": receiving(row),  # "Receiving" only for decoded telemetry
     }
 
 
@@ -1077,6 +1226,10 @@ def game_state(
 
 # ---------------------------------------------------------------------------------------------- selecting a game
 SHORT_INPUT = {"f1": "F1 25", "gt7": "GT7", "forza": "Forza", "ac": "Assetto Corsa", "record": "Recorder"}
+GT7_NEEDS_IP = (
+    "Enter the {platform}'s IP address to switch the GT7 input on. Without one, Pitwall can search the network for "
+    "the console instead: Search the network on Setup › Game, or switch GT7 on at Setup › Connect."
+)
 
 
 def _action(key: str | None, action: str, message: str) -> dict[str, Any]:
@@ -1128,6 +1281,10 @@ def ensure_input(
             msg += " Set the game's UDP Format to 2026."
         return [_action("f1", "already_enabled", msg)]
     updates: dict[str, Any] = {}
+    if key == "gt7" and not cfg.enabled and console_ip is None and cfg.console_ip is None:
+        # Without a console IP the GT7 input searches the network (a heartbeat broadcast every 1.6 s): only ever on an
+        # explicit request (Setup › Game "Search the network", Setup › Connect), never as a side effect of a choice.
+        return [_action("gt7", "needs_console_ip", GT7_NEEDS_IP.format(platform=e.platform_label))]
     if not cfg.enabled:
         updates["enabled"] = True
     if key == "ac" and cfg.platform != e.platform:
@@ -1212,7 +1369,10 @@ def capability_sentence(e: GameEntry | None, feature_ids: Iterable[str]) -> str 
             parts.append(not_sent[0].reason)
         else:
             parts.append(f"{e.text_name} doesn't send {_join([f.noun for f in not_sent])}.")
-    for reason in dict.fromkeys(f.reason for f in not_impl):
+    local = [n for f in not_impl if (n := _local_only_noun(e, f.id)) is not None]  # one sentence, not one per noun
+    if local:
+        parts.append(local_only_reason(e, local))
+    for reason in dict.fromkeys(f.reason for f in not_impl if _local_only_noun(e, f.id) is None):
         parts.append(reason)
     return " ".join(parts)
 

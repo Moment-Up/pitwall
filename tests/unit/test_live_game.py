@@ -91,8 +91,17 @@ def test_ac_platform_is_configuration_not_evidence() -> None:
     live = live_f1(game=Game.AC, platform=Platform.PS4, source="ac-remote")
     live.set_game_selection(sel("ac:ps5"))
     g = live.snapshot()["game"]
-    assert g["detected"]["platform"] == "unknown" and g["detected"]["entry_id"] == "ac:ps5"
+    # the configured platform picks the entry in use (the AC client is set to PS4), but it is no platform evidence
+    assert g["detected"]["platform"] == "unknown" and g["detected"]["entry_id"] == "ac:ps4"
     assert g["mismatch"] is None
+
+
+def test_an_ac_stream_follows_its_configured_platform() -> None:
+    live = live_f1(game=Game.AC, platform=Platform.PC, source="ac-remote")
+    g = live.snapshot()["game"]
+    assert g["effective_id"] == "ac:pc" and g["suggestion"]["id"] == "ac:pc"  # never the stronger-rated PS5 entry
+    live.set_game_selection(sel("f1_25:ps5"))
+    assert live.snapshot()["game"]["mismatch"]["detected_id"] == "ac:pc"  # "Switch to" picks the PC entry
 
 
 @pytest.mark.parametrize(("source", "synthetic"), [("udp:20796", True), ("replay:austria.pwcap", False)])
@@ -106,12 +115,33 @@ def test_synthetic_or_replay_never_mismatches_but_is_effective(source: str, synt
     assert live.snapshot()["game"]["suggestion"] is None  # never suggest a game from the demo or a replay
 
 
-def test_stale_data_never_mismatches_and_no_data_detects_nothing() -> None:
+def test_a_paused_game_keeps_its_mismatch_and_a_newer_choice_wins_over_old_data() -> None:
     live = live_f1()
-    live.set_game_selection(sel("gt7:ps5"))
-    live.last_packet_mono = time.monotonic() - 5.0
+    live.set_game_selection(sel("gt7:ps5"))  # chosen long before the data
+    live.last_accepted_mono = time.monotonic() - 5.0  # paused: the driver picks up the iPad now
     g = live.snapshot()["game"]
-    assert g["detected"]["status"] == "stale" and g["mismatch"] is None
+    assert g["detected"]["status"] == "stale" and g["mismatch"]["kind"] == "game"
+    live.last_accepted_mono = time.monotonic() - games.PAUSED_S - 1.0  # long gone: the old data stays F1's ...
+    g = live.snapshot()["game"]
+    assert g["effective_id"] == "f1_25:ps5" and g["mismatch"] is None  # ... but nothing says "Receiving"
+    live.last_accepted_mono = time.monotonic() - 30.0
+    live.set_game_selection(games.Selection("gt7:ps5", time.time(), "dashboard"))  # chosen after the data stopped
+    g = live.snapshot()["game"]
+    assert g["detected"] is None and g["effective_id"] == "gt7:ps5" and g["mismatch"] is None
+
+
+def test_stray_packets_never_make_old_data_live() -> None:
+    live = live_f1()
+    live.set_game_selection(sel("ac:ps5"))
+    live.last_accepted_mono = time.monotonic() - 30.0  # the F1 session ended a while ago
+    for _ in range(5):
+        live.on_packet(False)  # another game's packets on the F1 port: rejected
+    assert live.connection()["status"] == "live"  # the port is busy ...
+    g = live.snapshot()["game"]
+    assert g["detected"]["status"] == "stale"  # ... but no F1 telemetry is arriving: not "Receiving F1 25"
+
+
+def test_no_data_detects_nothing() -> None:
     fresh = LiveState()
     fresh.set_game_selection(sel("gt7:ps5"))
     g = fresh.snapshot()["game"]
@@ -122,6 +152,24 @@ def test_stale_data_never_mismatches_and_no_data_detects_nothing() -> None:
         "mismatch": None,
         "suggestion": None,
     }
+
+
+def test_a_new_session_names_its_own_game_not_another_ports() -> None:
+    """The router's detection is per sender port and written once: a new F1 session after GT7 was seen on another
+    port must not read as GT7 before the F1 session packet arrives."""
+    live = LiveState()
+    live.last_detected_game = "gt7"  # GT7 was auto-detected on its port earlier
+    live.set_game_selection(sel("f1_25:ps5"))
+    live.reset_session("s2", "udp:20777", False, "f1_25")  # the session manager starts an F1 session
+    live.on_packet(True)
+    g = live.snapshot()["game"]
+    assert g["detected"]["adapter_game"] == "f1_25" and g["mismatch"] is None and g["effective_id"] == "f1_25:ps5"
+    live.reset_session("s3", "udp:20777", False)  # an older caller without the game: the frame decides
+    live.on_frame(CarFrame(game=Game.F1_25, t_recv_ns=1))
+    g = live.snapshot()["game"]
+    assert g["detected"]["adapter_game"] == "f1_25" and g["mismatch"] is None
+    live.reset_session(None, None, False, "f1_25")
+    assert live.session_game is None
 
 
 def test_router_detection_before_the_first_session_packet() -> None:
@@ -184,3 +232,22 @@ def test_ingest_never_calls_into_games(monkeypatch: pytest.MonkeyPatch) -> None:
     live.on_session(SessionInfo(game=Game.F1_25, platform=Platform.PS5, extra={"packet_format": 2025}))
     assert _CountingLive.detections == 2  # once per newly detected sender port, never per packet
     assert live.last_detected_game == "f1_25"
+
+
+class _Writer:
+    def submit(self, _fn: Any) -> None:
+        return None
+
+
+def test_the_session_manager_tells_live_state_which_game_started_the_session() -> None:
+    from typing import cast
+
+    from pitwall.core.lap_processor import AnalysisWorker
+    from pitwall.core.session import SessionManager
+    from pitwall.storage.db import DbWriter
+
+    live = LiveState()
+    live.last_detected_game = "gt7"
+    sm = SessionManager(cast(DbWriter, _Writer()), live, cast(AnalysisWorker, None), source="udp:20777")
+    sm.handle(CarFrame(game=Game.F1_25, t_recv_ns=1))
+    assert live.session_game == "f1_25" and live.session_id == sm.session_id

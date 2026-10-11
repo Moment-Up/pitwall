@@ -7,9 +7,11 @@
 // /ws/live and the radio store only (P10).
 //
 // Game selection (spec 5.3): with no telemetry and no game selected, the middle card asks "What are you playing?"
-// (until "Not now" on this device); with a selected game the no-telemetry steps follow its guide. The game of the data
-// on screen (detected, else selected) decides the sector slot and the delta header. Until the catalogue loads, or
-// with a server that predates game selection, the page is exactly as before.
+// (until "Not now" on this device); with a selected game the no-telemetry steps follow its guide. A game chosen after
+// the old data stopped (stale, and the server no longer detects that old game) gets its own no-telemetry card too,
+// instead of the old session's paused screen. The game of the data on screen (detected, else selected) decides the
+// sector slot and the delta header. Until the catalogue loads, or with a server that predates game selection, the
+// page is exactly as before.
 
 import { useMemo, useState } from "react";
 import { GamePickerCard, pickerDismissed } from "./coach/GamePickerCard";
@@ -32,11 +34,13 @@ export function CoachPage(_props: PageProps) {
   const model = useDriveModel();
   const delta = useThrottledValue(model.delta, DELTA_INTERVAL_MS, sameView);
   const maySleep = useDriveEffects(model);
-  const noData = model.state === "no_data";
-  const connect = useConnectInfo(noData);
   const catalogue = useGameCatalog();
   const snapGame = useSnapshotGame();
   const selected = selectedEntry(catalogue, snapGame);
+  // stale data of a game no longer detected: the household chose another game after it stopped (games.py)
+  const replaced = model.state === "stale" && !!selected && !!snapGame && snapGame.detected == null;
+  const noData = model.state === "no_data" || replaced;
+  const connect = useConnectInfo(noData);
   const effective = effectiveEntry(catalogue, snapGame);
   const game = useMemo(() => coachGameView(effective), [effective]);
   const [notNow, setNotNow] = useState(pickerDismissed);
@@ -58,6 +62,7 @@ export function CoachPage(_props: PageProps) {
       trackModel={trackModel}
       game={game}
       noData={card}
+      showNoData={replaced}
     />
   );
 }

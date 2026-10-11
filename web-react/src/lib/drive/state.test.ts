@@ -297,6 +297,9 @@ describe("status slot (4.8)", () => {
     expect(statusSlot("offline", O(), null, mm).band).toBe("offline");
     expect(statusSlot("stale", O(), fixture("recorded-austria-stale"), mm).band).toBe("stale");
     expect(statusSlot("no_data", O(), null, mm).band).toBe("no_data");
+    // a selected game Pitwall cannot read: never "Waiting for telemetry" that cannot come
+    expect(statusSlot("no_data", O(), null, null, "Pitwall can't read ACC on PS5").text).toBe("Pitwall can't read ACC on PS5");
+    expect(statusSlot("no_data", O(), null).text).toBe("Waiting for telemetry");
     expect(statusSlot("red_flag", O(), snap(), mm).band).toBe("red");
     expect(statusSlot("on_track", O({ safetyCar: "full" }), s, mm).band).toBe("sc");
     expect(statusSlot("on_track", O({ yellow }), s, mm).band).toBe("yellow");

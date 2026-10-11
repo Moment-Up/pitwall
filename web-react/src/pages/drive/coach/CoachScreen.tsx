@@ -78,6 +78,8 @@ export interface CoachScreenProps {
   game?: CoachGameView;
   /** The no-telemetry card to show instead of the default one (the game picker, or the selected game's steps). */
   noData?: ReactNode;
+  /** Show `noData` although the model has data: the stale data is an old game's, and another game was chosen since. */
+  showNoData?: boolean;
 }
 
 export function CoachScreen({
@@ -88,11 +90,13 @@ export function CoachScreen({
   trackModel = null,
   game = NO_COACH_GAME,
   noData,
+  showNoData = false,
 }: CoachScreenProps) {
   const s = model.status;
   const approach = model.hero.kind === "corner" ? barStep(model.hero.approach) : null;
   let middle;
-  if (model.card === "ready" && model.ready) middle = <ReadyCard ready={model.ready} />;
+  if (showNoData && noData) middle = noData;
+  else if (model.card === "ready" && model.ready) middle = <ReadyCard ready={model.ready} />;
   else if (model.card === "ended" && model.ended) {
     middle = (
       <SessionCompleteSlot ended={model.ended} legendTier={model.tier} corners={endedCorners(model.ended, trackModel)} />

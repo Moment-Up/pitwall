@@ -4,12 +4,13 @@
 // anything off); the next snapshot carries the selection and the card becomes the game's no-telemetry steps.
 //
 // "Not now" hides the picker on this device until the page reloads (sessionStorage, read and written in try/catch)
-// and shows the usual no-telemetry card. Setup › Game has the full picker (every platform, the Season Pack switch,
-// the "More games" list and what each game sends).
+// and shows the usual no-telemetry card. "My game isn't listed" opens Setup › Game, which has the full picker (every
+// platform, the Season Pack switch, the "More games" list with ACC, iRacing and F1 24, and what each game sends).
 
 import { Button, Card, Chip } from "@heroui/react";
 import { useState } from "react";
 import { selectGame } from "../../../hooks/useGame";
+import { router } from "../../../lib/router";
 import type { GamesResponse } from "../../../lib/endpoints/game";
 import { pickerCards, supportTone, type PickerCard } from "../../../lib/game";
 
@@ -63,7 +64,7 @@ export function GamePickerCard({ catalogue, onNotNow }: { catalogue: GamesRespon
         </h2>
         <p className="pwc-pick__sub">
           {card
-            ? "How far each platform is tested is shown under it."
+            ? "How far each platform is tested is shown with it."
             : "Pitwall then knows how to connect your game and what it sends."}
         </p>
       </div>
@@ -110,7 +111,17 @@ export function GamePickerCard({ catalogue, onNotNow }: { catalogue: GamesRespon
           <Button variant="tertiary" size="lg" className="pwc-xl" onPress={() => setCard(null)} isDisabled={pending !== null}>
             Back to games
           </Button>
-        ) : null}
+        ) : (
+          <Button
+            variant="tertiary"
+            size="lg"
+            className="pwc-xl"
+            isDisabled={pending !== null}
+            onPress={() => router.navigate("/setup/game")}
+          >
+            My game isn't listed
+          </Button>
+        )}
         <Button
           variant="tertiary"
           size="lg"

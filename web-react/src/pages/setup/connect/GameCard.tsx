@@ -142,10 +142,9 @@ export function GameCard({ g, guide }: { g: Integration; guide: GameGuide | null
             {senderSummary(g)}
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <Chip size="sm" variant="soft" color={ev.tone}>
+            <Chip size="sm" variant="soft" color={ev.tone} title={ev.detail}>
               <Chip.Label>{ev.label}</Chip.Label>
             </Chip>
-            <span className="text-xs text-faint">{ev.detail}</span>
           </div>
           {g.key === "gt7" && g.enabled ? (
             <p className="m-0 text-sm text-muted">

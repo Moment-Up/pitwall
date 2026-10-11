@@ -557,3 +557,47 @@ async def test_a_fact_is_said_once_even_when_two_slots_pick_it() -> None:
     fs.add("tyres", "Current tyre surface temps FL 70 C, FR 54 C, RL 83 C, RR 76 C.", {"temps": [70, 54, 83, 76]})
     ans = await RaceEngineer(None).answer("How are my tyres?", fs)  # no wear fact: the temps fact fills both slots
     assert ans.text == "Current tyre surface temps FL 70 C, FR 54 C, RL 83 C, RR 76 C."
+
+
+@pytest.mark.parametrize(
+    ("q", "intent", "corner"),
+    [
+        # questions answered by the older intents before game selection keep them (review: new rules come last)
+        ("Where should I brake at turn 4 in the rain?", "braking", "T4"),
+        ("Am I losing time at turn 3 in sector 1?", "losing_time", "T3"),
+        ("Which sector am I losing time in?", "losing_time", None),
+        ("How was my last lap in the rain?", "last_lap", None),
+        ("What setup for rain?", "setup", None),
+        ("Was that lap slower because of the yellow?", "last_lap", None),
+        ("Where do I use DRS on my best lap?", "lap_times", None),
+        # only what no older rule matched
+        ("Did I get a yellow flag in sector 2?", "flags", None),
+        ("Is my front wing damaged?", "damage", None),
+        ("What were my splits?", "sectors", None),
+        ("Where is the DRS zone?", "ers", None),
+    ],
+)
+def test_capability_intents_never_take_over_older_questions(q: str, intent: str, corner: str | None) -> None:
+    got = detect_intent(q)
+    assert (got.name, got.corner) == (intent, corner)
+
+
+async def test_f1_questions_about_data_it_sends_are_never_canned() -> None:
+    """F1 25 sends flags, ERS, sectors and weather: those questions go to the LLM like any other, and the
+    deterministic fallback never tells the driver to "complete a few clean laps" (more laps would not help)."""
+    from pitwall import games
+    from pitwall.ai.facts import build_fact_sheet
+
+    sheet = build_fact_sheet(_game_analysis("f1_25", "ps5"))
+    f1 = games.entry_of_sheet(sheet)
+    assert f1 is not None and f1.id == "f1_25:ps5"
+    for q in ("Any yellow flags?", "Is there a safety car?", "How much battery do I have?", "Where is the DRS zone?"):
+        intent = detect_intent(q).name
+        assert not games.capability_only(intent, f1), q
+        p = FakeProvider(["Nothing in my notes on that yet."])
+        ans = await RaceEngineer(p).answer(q, sheet, use_llm=True)
+        assert len(p.calls) == 1 and ans.model == "fake-model", q
+        det = await RaceEngineer(None).answer(q, sheet)  # the LLM down
+        assert "complete a few clean laps" not in det.text and det.grounded, (q, det.text)
+    det = await RaceEngineer(None).answer("What setup for rain?", sheet)
+    assert det.intent == "setup" and not det.text.startswith("Session:")
