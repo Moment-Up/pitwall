@@ -1,17 +1,20 @@
-// The Ready card (design spec 4.7 #7, 4.9; mockup bigCard "ready"): before the session or between runs, spanning
-// the hero, coach and delta areas. Three columns and a footer:
+// The Ready card (design spec 4.7 #7, 4.9; mockup bigCard "ready"; integration plan 2.5): before the session or
+// between runs, spanning the hero, coach and delta areas, and only while the car is stationary (lib/drive/motion.ts).
+// Three columns and a footer, each slot capped so the card fits 1180 x 820 and 1133 x 744 (iPad mini) full:
 //
-//   Seat                       Target (before the first lap)        Today
-//   (JR) 72 px                 Your best here  1:30.986 · 3 Oct     [FOCUS] T15 Stowe  braking early · 3 of 5
-//   James is in the seat       Family record   1:30.412 (Jo)  D2    Braking calls: Focus corners
-//   [Advanced] [Coaching: …]   Delta reference Lap 4 · today        Radio: [Off]  Go live is in the radio strip
-//   [ Not you? Switch driver ] — or, between runs, "Last run":      — between runs led by "One thing for the next
-//                              best lap as set, clean laps, gained    run" (D6 pick, full text, evidence line)
+//   Seat                       Target (at most 4 rows)               Today (at most 3 blocks)
+//   (JR) 72 px                 Your best here  1:30.986 · 3 Oct      Radio calls: T15, T9
+//   James is in the seat       Family record   1:30.412 (Jo)          [FOCUS] T15 Stowe  braking early · 3 of 5
+//   [Advanced] [Coaching: …]   Delta reference Lap 4 · today          [FOCUS] T9 Copse (hidden on the iPad mini)
+//   [ Not you? Switch driver ] [flag] goal row (one, when in scope)  Braking calls: Focus corners
+//                                                                    Radio: [Off]  Go live is in the radio strip below
 //   5 890 m · S2 1 813 m · S3 4 294 m · 14 corners learned · names: verified track sheet
 //
-// Go live stays in the radio strip below (one copy on Drive). Unknown values are "-".
-// Lane motivation: one goal row closes column 2 (GoalRow): a goal reached this session (the celebration between
-// runs), else the goal in this session's scope. Same card size and slots.
+// Between runs, column 2's first row is "Last run" (the best lap as set, clean laps, gained) in place of "Your best
+// here", and column 3 is "Last lap: <point>" (the last lap's top point, full text: plan 5.1), the Radio calls block
+// with one FOCUS row, and no Radio line (the radio strip below says it). Go live stays in the radio strip (one copy
+// on Drive). Unknown values are "-". The columns never hide what does not fit (no overflow: hidden): the slots are
+// capped instead, and the fit is measured in a browser at both iPad sizes.
 
 import { Avatar, Button, Card, Chip } from "@heroui/react";
 import { memo, useState, type ReactNode } from "react";
@@ -109,11 +112,121 @@ function LargeTextHint() {
   );
 }
 
-export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardView }) {
-  const { seat, target, lastRun, today, nextRun, goal } = ready;
-  const between = ready.phase === "between_runs";
+function TargetColumn({ ready }: { ready: ReadyCardView }) {
+  const { target, lastRun, goal } = ready;
+  const between = ready.phase === "between_runs" && lastRun;
   return (
-    <Card className="pwc-ready pw-chamfer pwc-span3">
+    <section className="pwc-ready__col" aria-label="Target" data-goal={goal ? "" : undefined}>
+      <h3 className="pwc-ready__h">Target</h3>
+      <div className="pwc-kv">
+        {between ? (
+          <Kv k="Last run">
+            {lastRun.best ? (
+              <>
+                <TimeText text={lastRun.best.text} status={lastRun.best.status} label="Best lap of the last run" />
+                {lastRun.best.tag && <TimingTag status={lastRun.best.status} size="md" />}
+                {lastRun.best.lapNumber != null && <span className="pwc-kv__note">L{lastRun.best.lapNumber}</span>}
+              </>
+            ) : (
+              <Unknown />
+            )}
+            <span className="pwc-kv__line">
+              {lastRun.cleanText}
+              {lastRun.gainedText ? ` · ${lastRun.gainedText}` : ""}
+            </span>
+          </Kv>
+        ) : (
+          <Kv k="Your best here">
+            {target.yourBest ? (
+              <>
+                <TimeText text={target.yourBest.text} status={target.yourBest.status} label="Your best here" />
+                {target.yourBest.date && <span className="pwc-kv__note">{target.yourBest.date}</span>}
+              </>
+            ) : (
+              <>
+                <Unknown />
+                <span className="pwc-kv__note">your first clean lap sets it</span>
+              </>
+            )}
+          </Kv>
+        )}
+        <Kv k="Family record">
+          {target.record ? (
+            <>
+              <TimeText text={target.record.text} status={target.record.status} label="Family record" />
+              {target.record.holder && (
+                <span className="pwc-kv__note inline-flex items-center gap-1.5">
+                  <SeatAvatar initials={target.record.holderInitials} colour={target.record.holderColour} size={24} />
+                  {target.record.holder}
+                </span>
+              )}
+            </>
+          ) : (
+            <Unknown />
+          )}
+        </Kv>
+        <Kv k="Delta reference" text>
+          {target.reference}
+        </Kv>
+      </div>
+      {goal && <GoalRow goal={goal} />}
+    </section>
+  );
+}
+
+function TodayColumn({ ready }: { ready: ReadyCardView }) {
+  const { today, lastLap } = ready;
+  const p = lastLap?.point;
+  return (
+    <section className="pwc-ready__col" aria-label="Today">
+      <h3 className="pwc-ready__h">Today</h3>
+      {lastLap && p?.text && (
+        <div className="pwc-ready__last" data-last-lap>
+          <p className="pwc-ready__next">
+            <b className="pwc-ready__lbl">{lastLap.label}:</b>{" "}
+            {p.tag && (
+              <Chip size="md" variant="soft" color={p.tag === "good" ? "success" : "warning"} className="mr-1.5 align-[0.15em]">
+                <Chip.Label>{p.tag === "good" ? "Good" : "Work on"}</Chip.Label>
+              </Chip>
+            )}
+            {p.text}
+          </p>
+          {p.evidence && <p className="pwc-ready__ev">{p.evidence}</p>}
+        </div>
+      )}
+      <div className="pwc-focusrow">
+        {today.radioCalls && (
+          <div className="pwc-focusrow__f">
+            <b className="pwc-ready__line">{today.radioCalls}</b>
+          </div>
+        )}
+        {today.focus.slice(0, today.focusRows).map((f, i) => (
+          <div key={f.name} className="pwc-focusrow__f" data-extra={i > 0 ? "" : undefined}>
+            <b>
+              <Chip size="md" className="pwc-focus">
+                <Chip.Label>FOCUS</Chip.Label>
+              </Chip>
+              {f.label}
+              {f.officialName ? ` ${f.officialName}` : ""}
+            </b>
+            {f.reason && <span>{f.reason}</span>}
+          </div>
+        ))}
+        {today.callsMode && (
+          <div className="pwc-focusrow__f">
+            <b className="pwc-ready__line">{today.callsMode}</b>
+          </div>
+        )}
+        {today.radio && <RadioLine />}
+      </div>
+    </section>
+  );
+}
+
+export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardView }) {
+  const { seat } = ready;
+  return (
+    <Card className="pwc-ready pw-chamfer pwc-span3" data-phase={ready.phase}>
       <section className="pwc-ready__col" aria-label="Seat">
         <h3 className="pwc-ready__h">Seat</h3>
         <SeatAvatar initials={seat.initials} colour={seat.colour} size={72} />
@@ -132,121 +245,8 @@ export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardVi
         </div>
         <SeatSwitcher />
       </section>
-
-      {between && lastRun ? (
-        <section className="pwc-ready__col" aria-label="Last run" data-goal={goal ? "" : undefined}>
-          <h3 className="pwc-ready__h">Last run</h3>
-          <div className="pwc-kv">
-            <Kv k="Best lap">
-              {lastRun.best ? (
-                <>
-                  <TimeText text={lastRun.best.text} status={lastRun.best.status} label="Best lap" />
-                  {lastRun.best.tag && <TimingTag status={lastRun.best.status} size="md" />}
-                  {lastRun.best.lapNumber != null && <span className="pwc-kv__note">L{lastRun.best.lapNumber}</span>}
-                </>
-              ) : (
-                <Unknown />
-              )}
-            </Kv>
-            <Kv k="Clean laps">
-              <span>{lastRun.clean}</span>
-              <span className="pwc-kv__note">of {lastRun.total}</span>
-            </Kv>
-            <Kv k="Gained since the first clean lap">
-              {lastRun.gained?.amount ? (
-                <>
-                  <TimeText text={lastRun.gained.amount} label="Gained" className={lastRun.gained.word === "faster" ? "text-ahead" : ""} />
-                  <span className="pwc-kv__note">{lastRun.gained.word}</span>
-                </>
-              ) : lastRun.gained ? (
-                <span>{lastRun.gained.text}</span>
-              ) : (
-                <Unknown />
-              )}
-            </Kv>
-            <Kv k="Delta reference" text>
-              {target.reference}
-            </Kv>
-          </div>
-          {goal && <GoalRow goal={goal} />}
-        </section>
-      ) : (
-        <section className="pwc-ready__col" aria-label="Target" data-goal={goal ? "" : undefined}>
-          <h3 className="pwc-ready__h">Target</h3>
-          <div className="pwc-kv">
-            <Kv k="Your best here">
-              {target.yourBest ? (
-                <>
-                  <TimeText text={target.yourBest.text} status={target.yourBest.status} label="Your best here" />
-                  {target.yourBest.date && <span className="pwc-kv__note">{target.yourBest.date}</span>}
-                </>
-              ) : (
-                <>
-                  <Unknown />
-                  <span className="pwc-kv__note">your first clean lap sets it</span>
-                </>
-              )}
-            </Kv>
-            <Kv k="Family record">
-              {target.record ? (
-                <>
-                  <TimeText text={target.record.text} status={target.record.status} label="Family record" />
-                  {target.record.holder && (
-                    <span className="pwc-kv__note inline-flex items-center gap-1.5">
-                      <SeatAvatar initials={target.record.holderInitials} colour={target.record.holderColour} size={24} />
-                      {target.record.holder}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <Unknown />
-              )}
-            </Kv>
-            <Kv k="Delta reference" text>
-              {target.reference}
-            </Kv>
-          </div>
-          {goal && <GoalRow goal={goal} />}
-        </section>
-      )}
-
-      <section className="pwc-ready__col" aria-label="Today">
-        <h3 className="pwc-ready__h">{between && nextRun ? "One thing for the next run" : "Today"}</h3>
-        {between && nextRun?.text && (
-          <div className="mb-3.5">
-            <p className="pwc-ready__next">
-              {nextRun.tagText && (
-                <Chip size="md" variant="soft" color={nextRun.tag === "good" ? "success" : "warning"} className="mr-2 align-[0.15em]">
-                  <Chip.Label>{nextRun.tagText}</Chip.Label>
-                </Chip>
-              )}
-              {nextRun.text}
-            </p>
-            {nextRun.evidence && <p className="m-0 text-[15px] text-muted">{nextRun.evidence}</p>}
-          </div>
-        )}
-        <div className="pwc-focusrow">
-          {today.focus.slice(0, between ? 2 : 3).map((f) => (
-            <div key={f.name} className="pwc-focusrow__f">
-              <b>
-                <Chip size="md" className="pwc-focus">
-                  <Chip.Label>FOCUS</Chip.Label>
-                </Chip>
-                {f.label}
-                {f.officialName ? ` ${f.officialName}` : ""}
-              </b>
-              {f.reason && <span>{f.reason}</span>}
-            </div>
-          ))}
-          {today.callsMode && (
-            <div className="pwc-focusrow__f">
-              <b className="pwc-ready__line">{today.callsMode}</b>
-            </div>
-          )}
-          <RadioLine />
-        </div>
-      </section>
-
+      <TargetColumn ready={ready} />
+      <TodayColumn ready={ready} />
       <div className="pwc-ready__foot flex items-center gap-3">
         <span className="min-w-0 truncate">{ready.footer ?? ""}</span>
         <LargeTextHint />

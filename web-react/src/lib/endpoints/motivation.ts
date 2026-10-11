@@ -148,6 +148,8 @@ export interface Badge {
   lap_id: number | null;
   scope: GoalScope | null;
   synthetic: boolean;
+  /** The fact the badge reports (`pb:<lap>`, `first_clean:<game>:<track>:<car>`, …): de-duplication key. */
+  fact_key?: string | null;
 }
 export interface Streaks {
   week_start: string;
@@ -179,6 +181,7 @@ export type ThingSource =
   | "goal_progress"
   | "gap_to_pb"
   | "first_session"
+  | "first_clean"
   | "sessions_week";
 export interface ThingItem {
   kind: ThingKind;
@@ -195,6 +198,8 @@ export interface ThingItem {
   observation_key: string | null;
   goal_id: number | null;
   values: Record<string, number | string | null>;
+  /** The fact the thing reports, as the badges do: de-duplication key (absent from older servers). */
+  fact_key?: string | null;
 }
 export interface SessionRecap {
   session_id: string;
@@ -235,6 +240,13 @@ export interface DigestImprovement {
   new_track: boolean;
   session_id: string;
   lap_id: number;
+  /** Ready-made wording ("1:10.549, 1.196 s faster than before" / "New this week: …"); older servers omit it. */
+  text?: string;
+  /** New tracks: the first clean lap there this week, and how much the week's best gained on it. */
+  first_ms?: number | null;
+  week_gain_ms?: number | null;
+  best_session_id?: string;
+  best_lap_id?: number;
 }
 export interface WeeklyDigest {
   driver: { id: number; name: string; skill_level: string };

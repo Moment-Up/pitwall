@@ -7,7 +7,7 @@ import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { driveModel, type DriveModel } from "../../../lib/drive/model";
-import { driver, fixture, lap, newestT, snap } from "../../../lib/drive/testkit";
+import { driver, fixture, lap, newestT, snap, stopped } from "../../../lib/drive/testkit";
 import type { DriveMotivation } from "../../../lib/motivation/drive";
 import { mfx } from "../../../lib/motivation/testkit";
 import { stubBrowser } from "../../../test/fakes";
@@ -55,8 +55,9 @@ function honest(text: string, what: string): void {
 
 const SAM = driver({ name: "Sam", skill: "intermediate" });
 
+/** The fixture with the car at rest (stopped: the cards are for a stationary car, lib/drive/motion.ts). */
 function model(name: string, motivation: DriveMotivation | null, d = SAM): DriveModel {
-  const s = fixture(name);
+  const s = stopped(fixture(name));
   const sid = s.session_id as string;
   const fix = (m: DriveMotivation | null): DriveMotivation | null =>
     m && {
@@ -124,7 +125,7 @@ describe("Session complete card: 3 things (state 4)", () => {
   const ended = (mot: DriveMotivation | null) => model("recorded-d246-austria-session-ended", mot);
   const card = (m: DriveModel) => renderToStaticMarkup(createElement(SessionCompleteCard, { ended: m.ended!, tier: m.tier }));
 
-  it("three ItemCards: went well, one to work on, goal reached (the celebration); up to 2 badges and +N more", () => {
+  it("three ItemCards: went well, one to work on, goal reached (the celebration); at most 2 badges, none repeated", () => {
     const html = card(ended({ note: null, recap: mfx.recapReached(), status: "ready" }));
     const text = visible(html);
     honest(text, "three things");
@@ -137,9 +138,11 @@ describe("Session complete card: 3 things (state 4)", () => {
     expect(text).toContain("Goal reached A lap under 1:10.000 (1:09.981 on lap 7).");
     expect(html).toMatch(/data-tone="success" data-thing="progress"/);
     expect(text).toContain("First time under 1:10 at Austria in the Haas");
-    expect(text).toContain("First goal reached");
-    expect(text).toContain("+1 more");
-    expect(text).not.toContain("First time under 1:11 at Austria in the Haas");
+    // "First goal reached" only repeats the Goal reached item (plan 2.6); no "+N more" chip: Goals lists them all
+    expect(text).not.toContain("First goal reached");
+    expect(text).toContain("First time under 1:11 at Austria in the Haas");
+    expect(text).not.toMatch(/\+\d+ more/);
+    expect((html.match(/pwc-end__badge"/g) ?? []).length).toBeLessThanOrEqual(2);
     expect(text).toContain("Review this session");
     // the D6 points give way to the three things
     expect(text).not.toMatch(/Work on · T6/);
@@ -202,7 +205,7 @@ describe("glanceability and chunks (spec 4.9, 4.11; lane spec 9)", () => {
   });
 
   it("iPad mini compact rows: the goal row is one line shorter, so the Ready card keeps its size", () => {
-    const compact = CSS.slice(CSS.indexOf("iPad mini, Safari with toolbars (compact rows, 4.2): the progress words"));
+    const compact = CSS.slice(CSS.indexOf("iPad mini, Safari with toolbars (compact rows, 4.2): one FOCUS row"));
     expect(compact).toMatch(/\.pwc-goal__scope \{ display: none; \}/);
     expect(compact).toMatch(/\.pwc-goal__text \{ grid-row: 1; grid-column: 2;/);
   });

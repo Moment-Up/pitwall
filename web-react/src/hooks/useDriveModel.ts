@@ -5,6 +5,11 @@
 // shown) is carried from one call to the next. Panels receive plain view models and are memoised on their content,
 // so a panel re-renders only when its own strings change.
 //
+// Moving or stationary (lib/drive/motion.ts, integration plan 2.1): the model carries a small motion memo with
+// hysteresis (stationary under 3 km/h for 1.5 s, moving over 8 km/h) and gates the cards, the game mismatch band and
+// the full coaching text on it. The mismatch words are worked out here whatever the speed; the model shows them only
+// while the car is stationary.
+//
 // Lane motivation: the newest /ws/live goal note feeds the 6 s GOAL REACHED chip; the session recap is fetched only
 // while the last model was in the garage or ended (pages/drive/coach/useRecap.ts), never on track. The state is kept
 // as React state, so the fetch switches on with one extra render when the state changes (rare), not per snapshot.
@@ -12,6 +17,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { driveModel, type DriveModel } from "../lib/drive/model";
 import { driveMismatch, noDataText, selectedEntry } from "../lib/game";
+import type { Motion } from "../lib/drive/motion";
 import type { DriveMemo, DriveState } from "../lib/drive/state";
 import type { SnapshotNext } from "../lib/drive/types";
 import type { DriveMotivation } from "../lib/motivation/drive";
@@ -38,17 +44,12 @@ export function useDriveModel(): DriveModel {
   const driveLock = usePrefs((p) => p.driveLock);
   const nowS = useSecondTick();
   const memo = useRef<DriveMemo | null>(null);
-  // Another game's real data while the car stands still (game selection): the status slot says so (never a banner).
+  const motion = useRef<Motion | null>(null);
+  // Another game's real data (game selection): the status slot says so while the car is stationary (the model's
+  // motion rule), never as a banner. No frame passed: the speed gate is the model's, with hysteresis.
   const catalogue = useGameCatalog();
   const game = useSnapshotGame();
-  const stopped = useLive((s) => {
-    const v = s.snap?.frame?.speed_kph;
-    return s.snap?.frame == null ? "none" : typeof v === "number" && Number.isFinite(v) && v < 5 ? "slow" : "moving";
-  });
-  const mismatch = useMemo(
-    () => driveMismatch(game, catalogue, stopped === "none" ? null : { speed_kph: stopped === "slow" ? 0 : null }),
-    [game, catalogue, stopped],
-  );
+  const mismatch = useMemo(() => driveMismatch(game, catalogue, null), [game, catalogue]);
   // A selected game Pitwall cannot read (ACC, iRacing, ...): the no-data line says so instead of "Waiting".
   const noData = useMemo(() => noDataText(selectedEntry(catalogue, game)), [catalogue, game]);
 
@@ -70,6 +71,9 @@ export function useDriveModel(): DriveModel {
         drivers,
         prefs: { driveLock },
         memo: memo.current,
+        motion: motion.current,
+        // the device clock with fractions: motion's 1.5 s needs more than the 1 Hz tick
+        clockS: Date.now() / 1000,
         mismatch,
         noDataText: noData,
         motivation,
@@ -78,6 +82,7 @@ export function useDriveModel(): DriveModel {
   );
   useEffect(() => {
     memo.current = model.memo;
+    motion.current = model.motion;
     setLastState((prev) => (prev === model.state ? prev : model.state));
   }, [model]);
   return model;

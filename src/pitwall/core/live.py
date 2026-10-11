@@ -152,6 +152,27 @@ class BestsRequest:
     driver_id: int | None
 
 
+def _event_concerns_player(e: GameEvent) -> bool | None:
+    """Whether an every-car event (penalty, fastest lap, collision) is about the player's car.
+
+    F1 reports these for every car, with the car indexes in the payload and the player's index from the
+    packet header. ``None`` when the game does not say (unknown stays unknown). O(1).
+    """
+    p = e.payload.get("player_idx")
+    if not isinstance(p, int):
+        return None
+    kind = e.kind.value
+    if kind in ("penalty", "fastest_lap"):
+        v = e.payload.get("vehicleIdx")
+        return v == p if isinstance(v, int) else None
+    if kind == "collision":
+        v1, v2 = e.payload.get("vehicle1Idx"), e.payload.get("vehicle2Idx")
+        if not isinstance(v1, int) and not isinstance(v2, int):
+            return None
+        return p in (v1, v2)
+    return None
+
+
 def _wheels(w: Wheels[float] | None, nd: int = 1) -> list[float] | None:
     return None if w is None else [round(v, nd) for v in w.as_tuple()]
 
@@ -349,7 +370,10 @@ class LiveState:
         if e.kind.value == "button":
             return
         now = time.time()
-        item = {"kind": e.kind.value, "code": e.code, "session_time_s": e.session_time_s, "t": now}
+        item: dict[str, Any] = {"kind": e.kind.value, "code": e.code, "session_time_s": e.session_time_s, "t": now}
+        player = _event_concerns_player(e)
+        if player is not None:
+            item["player"] = player  # Drive shows penalty/contact/fastest-lap chips only for the player's own
         self.events.appendleft(item)
         self.session_state = next_session_state(self.session_state, e.kind.value, now)  # O(1), D4
         if e.kind.value == "red_flag":

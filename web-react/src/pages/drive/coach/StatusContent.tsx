@@ -14,16 +14,22 @@
 // and the band detail ellipsize first. On a band (fill or outline) and on a phone the chips step down to md, and there,
 // as while the Drive lock hint shows, "Screen may sleep" is an icon-only chip (its aria-label keeps the words), so the
 // band words and the flag detail keep their room.
+//
+// Chips (integration plan 2.3): this renders exactly what the model's chipsOf gave, never its own precedence.
+//   iPad normal line   line + the transient chip + the persistent chip (DRILL) + evidence + wake
+//   any band, phone    band or line + ONE chip (the transient; on a phone's line, else DRILL) + the evidence as its
+//                      icon (a truth label: hatched, its aria-label keeps the words) + the compact wake chip
 
-import { Display } from "@gravity-ui/icons";
+import { ArrowRotateLeft, Display, Flask } from "@gravity-ui/icons";
 import { Chip } from "@heroui/react";
-import { memo, type ReactNode } from "react";
+import { Fragment, memo, type ReactNode } from "react";
 import { LockableNavLink } from "../../../components/shell/LockableNavLink";
 import { navLock } from "../../../components/shell/navLock";
 import { holdNeeded, useDriveLock } from "../../../components/shell/useDriveLock";
 import { EvidenceChips } from "../../../components/ui";
 import { useStore } from "../../../hooks/stores";
 import type { StatusView } from "../../../lib/drive/model";
+import { slotChips } from "../../../lib/drive/state";
 import { SCREEN_MAY_SLEEP } from "../../../lib/wake";
 import { useMediaQuery } from "./parts";
 import { sameProps } from "./view";
@@ -65,6 +71,39 @@ function WakeChip({ compact, size }: { compact: boolean; size: ChipSize }) {
   );
 }
 
+/** The evidence tier as icon-only chips (a band or a phone): the same hatched SYNTHETIC / neutral REPLAY chips as
+ * EvidenceChips, with the words in their accessible name. */
+function EvidenceIcons({ synthetic, replay, size }: { synthetic: boolean; replay: boolean; size: ChipSize }) {
+  return (
+    <span className="pw-evidence flex-nowrap">
+      {synthetic && (
+        <Chip
+          size={size}
+          className="pw-chip-synthetic pw-hatch-synthetic pwc-evicon"
+          data-evidence="synthetic"
+          aria-label="SYNTHETIC: generated data, not from a game"
+          title="SYNTHETIC: generated data, not from a game"
+          role="img"
+        >
+          <Flask aria-hidden="true" />
+        </Chip>
+      )}
+      {replay && (
+        <Chip
+          size={size}
+          className="pw-chip-replay pwc-evicon"
+          data-evidence="replay"
+          aria-label="REPLAY: a recorded session played back"
+          title="REPLAY: a recorded session played back"
+          role="img"
+        >
+          <ArrowRotateLeft aria-hidden="true" />
+        </Chip>
+      )}
+    </span>
+  );
+}
+
 function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boolean; onBand: boolean }) {
   // Band words (fill or outline) and the 2 s lock hint (~260 px, DriveStatusSlot, lane S) need the room: the wake
   // chip shrinks to its icon.
@@ -72,23 +111,34 @@ function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boo
   // Phones: a 44 px slot about 340 px wide with the lap number (5.4): the same treatment as a band.
   const phone = useMediaQuery(PHONE);
   const band = status.kind !== "normal";
-  const compactWake = band || hint || phone;
+  const tight = band || phone;
+  const compactWake = tight || hint;
   // On a band the chips step down one size (md): the band words and the flag detail ("380 m ahead") come first.
-  const size: ChipSize = band || phone ? "md" : "lg";
+  const size: ChipSize = tight ? "md" : "lg";
   const ev = status.evidence;
-  const any = ev.synthetic || ev.replay || status.chip || maySleep;
+  const chips = slotChips(status.kind, { transient: status.chip, persistent: status.persistent }, phone);
+  const any = ev.synthetic || ev.replay || chips.length > 0 || maySleep;
   if (!any) return null;
   const wrap = (node: ReactNode) => (onBand ? <span className="pwc-onband">{node}</span> : node);
   return (
     <span className="pwc-chips">
       {(ev.synthetic || ev.replay) &&
-        wrap(<EvidenceChips synthetic={ev.synthetic} replay={ev.replay} size={size} className="flex-nowrap" />)}
-      {status.chip &&
         wrap(
-          <Chip size={size} className="pwc-incident" data-kind={status.chip.kind}>
-            <Chip.Label>{status.chip.text}</Chip.Label>
-          </Chip>,
+          tight ? (
+            <EvidenceIcons synthetic={ev.synthetic} replay={ev.replay} size={size} />
+          ) : (
+            <EvidenceChips synthetic={ev.synthetic} replay={ev.replay} size={size} className="flex-nowrap" />
+          ),
         )}
+      {chips.map((c) => (
+        <Fragment key={c.kind}>
+          {wrap(
+            <Chip size={size} className="pwc-incident" data-kind={c.kind}>
+              <Chip.Label>{c.text}</Chip.Label>
+            </Chip>,
+          )}
+        </Fragment>
+      ))}
       {maySleep && wrap(<WakeChip compact={compactWake} size={size} />)}
     </span>
   );

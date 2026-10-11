@@ -97,6 +97,11 @@ function slot(markup: string): string {
   return markup.slice(start, markup.indexOf('data-slot="segment"', start));
 }
 
+/** The evidence tier is in the slot: as words, or as the icon chip whose label carries them. */
+function evidenceShown(markup: string, word: "SYNTHETIC" | "REPLAY"): boolean {
+  return visible(markup).includes(word) || markup.includes(`aria-label="${word}:`);
+}
+
 const BANNED = ["0:00.000", "--:--", "—", "NaN", "undefined", "null", "Infinity", "[object Object]"];
 
 describe("every fixture renders honestly", () => {
@@ -112,8 +117,9 @@ describe("every fixture renders honestly", () => {
         for (const bad of BANNED) expect(text, `${name} ${page} ${connected ? "connected" : "offline"}: ${bad}`).not.toContain(bad);
         expect(html, `${name} ${page}`).toContain("pww-status"); // the Coach status slot on every Drive page
         if (page !== "radio") {
-          if (m.status.evidence.synthetic) expect(visible(slot(html)), `${name} ${page}`).toContain("SYNTHETIC");
-          if (m.status.evidence.replay) expect(visible(slot(html)), `${name} ${page}`).toContain("REPLAY");
+          // in words on the normal line; on a band (offline here) as its icon, the words in its label (plan 2.3)
+          if (m.status.evidence.synthetic) expect(evidenceShown(slot(html), "SYNTHETIC"), `${name} ${page}`).toBe(true);
+          if (m.status.evidence.replay) expect(evidenceShown(slot(html), "REPLAY"), `${name} ${page}`).toBe(true);
         }
       }
     }

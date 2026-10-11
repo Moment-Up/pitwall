@@ -7,7 +7,7 @@ import type { DriveMotivation } from "../motivation/drive";
 import { mfx } from "../motivation/testkit";
 import { driveModel } from "./model";
 import { CHIP_SHOW_S, chipText, driveState } from "./state";
-import { driver, fixture, lap, newestT, snap } from "./testkit";
+import { driver, fixture, lap, newestT, snap, stopped } from "./testkit";
 
 function note(over: Partial<MotivationNote> = {}): MotivationNote {
   return { ...mfx.note(), session_id: "s1", ...over };
@@ -95,9 +95,9 @@ describe("Ready card: one goal row", () => {
 });
 
 describe("Session complete card: 3 things", () => {
-  const ended = () => fixture("recorded-d246-austria-session-ended");
+  const ended = () => stopped(fixture("recorded-d246-austria-session-ended"));
 
-  it("with the recap: three things replace Work on / Went well; badges listed", () => {
+  it("with the recap: three things replace Work on / Went well; each fact once, at most 2 badges", () => {
     const s = ended();
     const recap = { ...mfx.recapReached(), session_id: s.session_id as string };
     const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: driver(), motivation: { note: null, recap, status: "ready" } });
@@ -105,7 +105,9 @@ describe("Session complete card: 3 things", () => {
     // the celebration first, as on the radio
     expect(m.ended?.things?.items.map((t) => t.heading)).toEqual(["Goal reached", "Went well", "One to work on"]);
     expect(m.ended?.thingsLoading).toBe(false);
-    expect(m.ended?.badges).toHaveLength(3);
+    // three earned: "First goal reached" only repeats the Goal reached item (plan 2.6); the two newest of the rest
+    expect(m.ended?.badges).toEqual(["First time under 1:10 at Austria in the Haas", "First time under 1:11 at Austria in the Haas"]);
+    expect(m.ended?.facts).toEqual(["pb:52", "goal:4", "goals_reached"]);
     // the D6 points are still computed (the fallback), the card chooses
     expect(m.ended?.workOn).not.toBeNull();
   });

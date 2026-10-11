@@ -3,7 +3,7 @@ import { live, offlineSnapshot } from "../live";
 import { DEFAULT_PREFS, type Prefs } from "../prefs";
 import { driveModel, type DriveModelInput } from "./model";
 import { EMPTY_MEMO } from "./state";
-import { asLive, driver, fixture, newestT, snap } from "./testkit";
+import { asLive, driver, fixture, newestT, snap, stopped } from "./testkit";
 import { MINUS, THIN } from "./text";
 import type { SnapshotNext } from "./types";
 
@@ -132,7 +132,7 @@ describe("driveModel: each state", () => {
   });
 
   it("session complete shows the card with best lap, clean laps, gain and one Work on / Went well", () => {
-    const m = model(asLive(fixture("recorded-austria-session-ended")));
+    const m = model(stopped(asLive(fixture("recorded-austria-session-ended"))));
     expect(m).toMatchObject({ state: "ended", card: "ended", hero: { kind: "card" } });
     expect(m.status).toMatchObject({ kind: "fill", text: "SESSION COMPLETE", sub: "Austria · Race · 10 laps" });
     expect(m.ended).toMatchObject({
@@ -147,7 +147,12 @@ describe("driveModel: each state", () => {
     expect(m.ended?.workOn?.tag).toBe("work_on");
     expect(m.ended?.wentWell?.tag).toBe("good");
     // the replay itself: the same best lap, uncoloured
-    expect(model(fixture("recorded-austria-session-ended")).ended?.best).toMatchObject({ text: "1:11.745", status: "neutral", tag: null });
+    expect(model(stopped(fixture("recorded-austria-session-ended"))).ended?.best).toMatchObject({ text: "1:11.745", status: "neutral", tag: null });
+    // the recorded moment itself, the car still at 279 km/h: the band says so, the card waits for the stop (plan 2.1)
+    const moving = model(asLive(fixture("recorded-austria-session-ended")));
+    expect(moving).toMatchObject({ state: "ended", card: null, ended: null, stationary: false, status: { band: "complete" } });
+    expect(moving.hero.kind).not.toBe("card");
+    expect(moving.cue.muted).toBe(true);
   });
 
   it("keeps the Session complete card when D4 ended goes stale (F1 stops sending at session_ended)", () => {
@@ -161,7 +166,7 @@ describe("driveModel: each state", () => {
   });
 
   it("lists every reason a lap was not used once", () => {
-    const m = model(fixture("recorded-austria-excerpt-session-ended"));
+    const m = model(stopped(fixture("recorded-austria-excerpt-session-ended")));
     expect(m.ended?.clean).toEqual({ clean: 0, total: 3, text: "0 of 3", sub: "3 not used: incomplete, standing start" });
     expect(m.ended?.best).toBeNull();
     expect(m.ended?.gained.text).toBe("-");
@@ -191,8 +196,12 @@ describe("driveModel: each state", () => {
       aria: "Pit lane: 78 of 80 km/h",
     });
     expect(m.cue.note).toBe("Calls resume on your out lap");
-    expect(m.coach).toMatchObject({ heading: "Next run · from L4", full: true, tag: "work_on", size: 22, clamp: false });
-    expect(m.coach.text).toMatch(/^Turn 9 \(Degner 2\)/);
+    // moving down the pit lane (78 km/h): the same corner's point as a glance; the full text once stopped (plan 2.1)
+    expect(m.stationary).toBe(false);
+    const still = model(stopped(fixture("edited-pit-lane")));
+    expect(m.coach).toMatchObject({ heading: "Next run · from L4", full: false, tag: "work_on", corner: still.coach.corner });
+    expect(still.coach).toMatchObject({ heading: "Next run · from L4", full: true, tag: "work_on", size: 22, clamp: false });
+    expect(still.coach.text).toMatch(/^Turn 9 \(Degner 2\)/);
     expect(m.delta.reason).toBe("No delta in the pit lane");
     const fast = fixture("edited-pit-lane");
     fast.frame = { ...fast.frame!, speed_kph: 84.4 };
@@ -234,7 +243,7 @@ describe("driveModel: each state", () => {
         ],
       },
     });
-    const m = model(s, { driver: alex, nowS: new Date(2026, 9, 11, 14).getTime() / 1000 });
+    const m = model(stopped(s), { driver: alex, nowS: new Date(2026, 9, 11, 14).getTime() / 1000 });
     expect(m).toMatchObject({ state: "garage", card: "ready" });
     expect(m.status).toMatchObject({ kind: "normal", band: "ready", text: "Ready · One-shot qualifying" });
     expect(m.ready).toMatchObject({
@@ -247,8 +256,8 @@ describe("driveModel: each state", () => {
         reference: "none yet: your first clean lap becomes the reference",
       },
       lastRun: null,
-      today: { focus: [], callsMode: "Braking calls: Focus corners" },
-      nextRun: null,
+      today: { focus: [], focusRows: 2, radioCalls: null, callsMode: "Braking calls: Focus corners", radio: true },
+      lastLap: null,
       footer: `5${THIN}809 m · S2 2${THIN}226 m · S3 4${THIN}690 m`,
     });
     expect(model(s, { driver: null }).ready?.seat.line).toBe("Nobody is in the seat");
@@ -269,7 +278,7 @@ describe("driveModel: each state", () => {
     });
     const jo = (b: ReturnType<typeof best>) =>
       driver({ stats: { sessions: 1, laps: 1, clean_laps: 1, tracks: 1, last_session_unix: null, best_laps: [b] } });
-    const s = fixture("recorded-d246-suzuka-grid-before-start"); // no bests block
+    const s = stopped(fixture("recorded-d246-suzuka-grid-before-start")); // no bests block
     s.session = { ...s.session!, car_name: "Ferrari" };
     expect(model(s, { driver: jo(best("Other car")), nowS }).ready?.target.yourBest).toEqual({
       text: "1:30.986",
@@ -284,7 +293,7 @@ describe("driveModel: each state", () => {
       anyCar: false,
     });
     // D2 without a driver best for this car: the same neutral stand-in, never PB
-    const d2 = asLive(fixture("edited-d1-d6"));
+    const d2 = stopped(asLive(fixture("edited-d1-d6")));
     d2.frame = { ...d2.frame!, pit_status: 2 };
     d2.session = { ...d2.session!, car_name: "Ferrari" };
     d2.bests = { ...d2.bests!, driver: null };
@@ -296,7 +305,7 @@ describe("driveModel: each state", () => {
     });
   });
 
-  it("garage between runs leads with the last run and one thing for the next run", () => {
+  it("garage between runs: Last run in column 2; Last lap: <point>, one FOCUS row and no Radio line in column 3", () => {
     const m = model(fixture("edited-garage-between-runs"));
     expect(m.ready).toMatchObject({
       phase: "between_runs",
@@ -308,14 +317,25 @@ describe("driveModel: each state", () => {
         gainedText: "0.15 s faster",
         gained: { amount: "0.15 s", word: "faster" },
       },
-      today: { focus: [{ name: "T7", label: "T11", officialName: "Hairpin", reason: "braking early · 1 of the last 1 lap" }] },
+      today: {
+        focus: [{ name: "T7", label: "T11", officialName: "Hairpin", reason: "braking early · 1 of the last 1 lap" }],
+        focusRows: 1,
+        radioCalls: "Radio calls: T11",
+        callsMode: null,
+        radio: false,
+      },
+      lastLap: { label: "Last lap", point: { tag: "work_on", lap: 4 } },
     });
-    expect(m.ready?.nextRun?.text).toMatch(/^Turn 9 \(Degner 2\)/);
+    expect(m.ready?.lastLap?.point.text).toMatch(/^Turn 9 \(Degner 2\)/);
+    // a point from an older lap than the last one never says "Last lap"
+    const older = fixture("edited-garage-between-runs");
+    older.laps = [{ ...older.laps[0]!, lap_id: 999, lap_number: 5 }, ...older.laps];
+    expect(model(older).ready?.lastLap?.label).toBe("Lap 4");
     expect(m.ready?.footer).toBe(`5${THIN}809 m · S2 2${THIN}226 m · S3 4${THIN}690 m · 11 corners learned · names: verified track sheet`);
   });
 
   it("names the household record and its holder with D2", () => {
-    const s = fixture("edited-d1-d6");
+    const s = stopped(fixture("edited-d1-d6"));
     s.connection = { ...s.connection, source: "udp:20777" };
     s.frame = { ...s.frame!, pit_status: 2 };
     const jo = driver({ id: 2, name: "Jo", preferences: { colour: "#ffb020", initials: "JO", skill_level: "intermediate", coaching_intensity: "normal", voice_enabled: true } });
@@ -327,7 +347,7 @@ describe("driveModel: each state", () => {
 
 describe("driveModel: Session complete with D2", () => {
   it("shows the gaps to your best and the family record, or that this session set them", () => {
-    const s = fixture("edited-d1-d6");
+    const s = stopped(fixture("edited-d1-d6"));
     s.connection = { ...s.connection, source: "udp:20777" };
     s.session_state = "ended";
     const jo = driver({ id: 2, name: "Jo" });
@@ -366,11 +386,17 @@ describe("driveModel: the AI field's heads-ups are an AI reference, never the dr
 
   it("in the garage: no focus corners on the Ready card, the calls line says AI reference, no raw keys", () => {
     for (const name of ["edited-ai-field-suzuka", "edited-ai-field-monza"]) {
-      const s = fixture(name);
+      const s = stopped(fixture(name));
       s.frame = { ...s.frame!, pit_status: 2 };
       const m = model(s);
       expect(m.card, name).toBe("ready");
-      expect(m.ready?.today, name).toEqual({ focus: [], callsMode: "Braking calls: AI reference (heavy braking ahead)" });
+      expect(m.ready?.today, name).toEqual({
+        focus: [],
+        focusRows: m.ready?.phase === "between_runs" ? 1 : 2,
+        radioCalls: null,
+        callsMode: m.ready?.phase === "between_runs" ? null : "Braking calls: AI reference (heavy braking ahead)",
+        radio: m.ready?.phase !== "between_runs",
+      });
       expect(printed(m), name).not.toMatch(/zone@|\bF\d+\b/);
     }
   });
@@ -414,8 +440,15 @@ describe("driveModel: overlays and D-additions", () => {
     expect(m1).toMatchObject({ state: "on_track", status: { band: "chequered", text: "CHEQUERED FLAG", sub: "last lap" } });
     const crossed = structuredClone(s);
     crossed.frame = { ...crossed.frame!, lap_number: 6, lap_distance_m: 30, current_lap_time_ms: 1000 };
-    const m2 = model(crossed, { memo: m1.memo });
-    expect(m2).toMatchObject({ state: "ended", card: "ended", status: { text: "CHEQUERED FLAG" } });
+    const m2 = model(crossed, { memo: m1.memo, motion: m1.motion });
+    // over the line at 165 km/h: the band says CHEQUERED FLAG over the normal screen until the car stops
+    expect(m2).toMatchObject({ state: "ended", card: null, status: { text: "CHEQUERED FLAG" } });
+    // stopped on track: stationary after 1.5 s under 3 km/h (motion.ts), then the card
+    const rest = stopped(structuredClone(crossed));
+    const m3 = model(rest, { memo: m2.memo, motion: m2.motion, clockS: 100 });
+    expect(m3).toMatchObject({ state: "ended", card: null });
+    const m4 = model(rest, { memo: m3.memo, motion: m3.motion, clockS: 101.6 });
+    expect(m4).toMatchObject({ state: "ended", card: "ended", status: { text: "CHEQUERED FLAG" } });
   });
 
   it("with D2/D4/D6 shows the radio's point (short text); tier 2 timing only with driver or household bests", () => {

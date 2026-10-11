@@ -26,6 +26,14 @@ export function asLive<T extends SnapshotNext>(s: T): T {
   return s;
 }
 
+/** The same moment once the car has come to rest (edited: speed 0). The Ready and Session complete cards wait for a
+ * stationary car (motion.ts): recorded "session ended" moments still carry the last frame at racing speed, and the
+ * card shows once the car stops or the data goes quiet. Edits in place and returns it. */
+export function stopped<T extends SnapshotNext>(s: T): T {
+  if (s.frame) s.frame = { ...s.frame, speed_kph: 0 };
+  return s;
+}
+
 /** The newest event time of a snapshot (server clock), or 0. */
 export function newestT(s: SnapshotNext | null): number {
   return Math.max(0, ...(s?.events ?? []).map((e) => e.t));

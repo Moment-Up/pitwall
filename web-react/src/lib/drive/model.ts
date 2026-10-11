@@ -7,9 +7,12 @@
 
 import { changeWords, gapWords, type ChangeText } from "../bests";
 import type { Driver } from "../drivers";
+import type { SessionRecap } from "../endpoints/motivation";
 import { endedMotivation, readyGoal, type DriveMotivation, type ReadyGoalView } from "../motivation/drive";
-import type { ThingsView } from "../motivation/recap";
+import { badgeWords } from "../motivation/recap";
 import { INTENSITIES, SKILL_LEVELS } from "../drivers";
+import { dedupeComplete, recapFacts, type CompleteThings } from "./complete";
+import { motionOf, type Motion } from "./motion";
 import { aiEndLine } from "../review/aipace";
 import { coachPoint, simpleWording, topPoint, workOnWentWell, type CoachPoint } from "./coach";
 import { cornerAhead, cornerLabelOf, cornerLayout, focusReasonOf, isFocus, officialNameOf, type CornerView } from "./corner";
@@ -66,7 +69,12 @@ export interface DriveModelInput {
   prefs?: DrivePrefs;
   /** The previous call's `memo`. */
   memo?: DriveMemo | null;
-  /** Another game's real data while stationary (lib/game.ts driveMismatch); null / absent = none. */
+  /** The previous call's `motion` (moving or stationary, with hysteresis: motion.ts). */
+  motion?: Motion | null;
+  /** Device clock in seconds with fractions, for motion's 1.5 s (default `nowS`). */
+  clockS?: number;
+  /** Another game's real data (lib/game.ts driveMismatch); null / absent = none. Shown only while the car is
+   * stationary (motion.ts): the model gates it. */
   mismatch?: SlotMismatch | null;
   /** The no-data status words for a selected game Pitwall cannot read (lib/game.ts noDataText); null = default. */
   noDataText?: string | null;
@@ -104,7 +112,11 @@ export interface StatusView extends StatusSlot {
   pill: ConnectionPill;
   line: StatusLine;
   evidence: { synthetic: boolean; replay: boolean };
+  /** The transient chip (state.ts chipsOf). */
   chip: { kind: ChipKind; text: string } | null;
+  /** The persistent chip (DRILL, with coachref): the normal line only, and on a band or a phone only when there is
+   * no transient chip. Null until coachref. */
+  persistent: { kind: ChipKind; text: string } | null;
 }
 
 export interface CoachView extends CoachPoint {
@@ -141,6 +153,8 @@ export interface ReadyCard {
     /** "Lap 4 · 1:30.986 · today" or "none yet: your first clean lap becomes the reference". */
     reference: string;
   };
+  /** Between runs, column 2's first row in place of "Your best here" (integration plan 2.5): the best lap as set,
+   * the clean laps and the gain. Null before the first lap. */
   lastRun: {
     best: (TimingText & { lapNumber: number | null }) | null;
     clean: number;
@@ -155,11 +169,21 @@ export interface ReadyCard {
   today: {
     /** The driver's own focus corners; empty while the calls are the AI field's heads-ups (plan.ts). */
     focus: { name: string; label: string; officialName: string | null; reason: string | null }[];
-    /** "Braking calls: Focus corners", or "Braking calls: AI reference (heavy braking ahead)". */
+    /** FOCUS rows shown: 2 before the first lap (the iPad mini's compact rows hide the second, coach.css), 1 between
+     * runs. */
+    focusRows: number;
+    /** The FOCUS block's scope label (plan 5.1): "Radio calls: T7, T1", the live cue plan's focus corners; null
+     * without any, or while the calls are off. */
+    radioCalls: string | null;
+    /** "Braking calls: Focus corners", or "Braking calls: AI reference (heavy braking ahead)". Before the first lap
+     * only (null between runs). */
     callsMode: string | null;
+    /** The "Radio: Off / Live" line: before the first lap only (between runs the radio strip below says it). */
+    radio: boolean;
   };
-  /** Between runs: "One thing for the next run" (D6 pick or top observation, full text). */
-  nextRun: CoachPoint | null;
+  /** Between runs: "Last lap: <point>" (topPoint of the last lap, D6 pick or top observation, full text). `label` is
+   * "Last lap", or "Lap 8" when the point comes from an older lap than the last one (the last lap had none). */
+  lastLap: { label: string; point: CoachPoint } | null;
   footer: string | null;
   /** Lane motivation: one goal (reached this session, else in this scope), or null. */
   goal: ReadyGoalView | null;
@@ -186,13 +210,23 @@ export interface EndedCard {
   toYourBest: EndedChange | null;
   /** The gap to the family record, or "REC" when this session set it. */
   toRecord: EndedChange | null;
+  /** This session set the family record (D2 household.session_id): the fourth tile is "Laps compared" instead of
+   * "To the family record", which would only repeat the Best lap tile's REC (walk finding 2). */
+  recordSetHere: boolean;
+  /** Laps compared with the reference this session (the recap's comparison count), or null when unknown. */
+  lapsCompared: number | null;
+  /** The Best lap tile shows its REC / PB tag: false when Went well already says it (complete.ts). */
+  bestTagShown: boolean;
   workOn: CoachPoint | null;
   wentWell: CoachPoint | null;
-  /** Lane motivation: the session's three things (null: show workOn / wentWell), while they load, the badges it
-   * earned, and whose session it was when not the seated driver's. */
-  things: ThingsView | null;
+  /** Lane motivation: the session's three things, each fact once (complete.ts dedupeComplete; null: show workOn /
+   * wentWell), while they load, the badges it earned (at most 2, none repeating a fact above), and whose session it
+   * was when not the seated driver's. */
+  things: CompleteThings | null;
   thingsLoading: boolean;
   badges: string[];
+  /** The fact keys the card shows, in slot order (complete.ts). */
+  facts: string[];
   /** Pace vs AI, one line: "AI difficulty 35: best lap 3.8 s slower than the typical AI car's best lap · 20th of 20
    * on best laps"; null unless the snapshot's `ai_pace` is an "ok" comparison of this session (aipace.ts aiEndLine). */
   aiLine: string | null;
@@ -200,9 +234,15 @@ export interface EndedCard {
 }
 
 export interface DriveModel {
+  /** The Drive state. "garage" while the car is known to be moving (a game whose garage is only inferred) is
+   * "on_track": the Ready card is for a stationary car (motion.ts). */
   state: DriveState;
   overlays: DriveOverlays;
   memo: DriveMemo;
+  /** Moving or stationary, with hysteresis (motion.ts); pass it back as the next call's `motion`. */
+  motion: Motion;
+  /** The car is stationary: the Ready and Session complete cards, the mismatch band and the full coaching text. */
+  stationary: boolean;
   status: StatusView;
   /** Which full-width card replaces the hero, coach and delta, if any. */
   card: "ready" | "ended" | "no_data" | null;
@@ -377,6 +417,13 @@ function endedChange(c: ChangeText | null, sub: string | null): EndedChange {
   return { text: c.text, amount: c.amount, word: c.word === "level" ? null : c.word, sub };
 }
 
+/** "Last lap" when the point is from the lap just finished (or says no lap), else "Lap 8": the last lap had no point
+ * of its own and the label never claims it did (plan 5.1: Drive Ready, between runs, "Last lap: …"). */
+function lastLapLabel(s: SnapshotNext, p: CoachPoint): string {
+  const last = s.laps[0]?.lap_number;
+  return p.lap == null || !finite(last) || p.lap === last ? "Last lap" : `Lap ${p.lap}`;
+}
+
 function readyCard(
   s: SnapshotNext,
   driver: Driver | null,
@@ -404,6 +451,8 @@ function readyCard(
     officialName: officialNameOf(s.track_model, name),
     reason: focusReasonOf(s.cues, name),
   }));
+  const calls = s.cues && s.cues.mode !== "off" && focus.length ? `Radio calls: ${focus.map((f) => f.label).join(", ")}` : null;
+  const top = between ? topPoint(s, simple) : null;
   return {
     seat: {
       name: driver?.name ?? null,
@@ -439,8 +488,14 @@ function readyCard(
           gained: gainedChange(counts.firstClean, counts.bestClean, 2, counts.clean),
         }
       : null,
-    today: { focus, callsMode: callsModeText(s.cues) },
-    nextRun: between ? topPoint(s, simple) : null,
+    today: {
+      focus,
+      focusRows: between ? 1 : 2,
+      radioCalls: calls,
+      callsMode: between ? null : callsModeText(s.cues),
+      radio: !between,
+    },
+    lastLap: top ? { label: lastLapLabel(s, top), point: top } : null,
     footer: footerOf(s),
     goal: readyGoal(motivation, s.session_id, driver?.id ?? null),
   };
@@ -466,6 +521,17 @@ function endedCard(
   const set = (word: "PB" | "REC"): EndedChange => ({ text: word, amount: null, word: null, sub: "this session set it" });
   const { workOn, wentWell } = workOnWentWell(s, simple);
   const id = s.session_id ?? null;
+  const mot = endedMotivation(motivation, id, seatedId);
+  const recap = motivation?.recap && motivation.recap.session_id === id ? motivation.recap : null;
+  // each fact once (plan 2.6): Went well, the Best lap tag, Progress, badges
+  const tag = sb ? tagOf(st) : null;
+  const facts = dedupeComplete({
+    things: mot.things,
+    facts: recapFacts(recap),
+    best: sb ? { tag, lapId: s.laps[sb.index]?.lap_id ?? null } : null,
+    badges: mot.badges.length && recap ? newestFirst(recap.badges_earned) : [],
+  });
+  const recordSetHere = !!hh && !!id && s.bests?.household?.session_id === id;
   return {
     sessionId: id,
     reviewHref: id ? `#/review/sessions/${id}` : null,
@@ -473,11 +539,12 @@ function endedCard(
       ? {
           text: lapTime(sb.ms),
           status: st,
-          tag: tagOf(st),
+          tag,
           lapNumber: sb.lapNumber,
+          // the tag's words go with the tag: when Went well already said it, neither repeats it
           sub:
             sb.lapNumber != null
-              ? `lap ${sb.lapNumber}${st === "pb" ? " · new personal best" : st === "rec" ? " · new family record" : ""}`
+              ? `lap ${sb.lapNumber}${!facts.bestTag ? "" : st === "pb" ? " · new personal best" : st === "rec" ? " · new family record" : ""}`
               : null,
         }
       : null,
@@ -498,11 +565,31 @@ function endedCard(
       : st === "rec"
         ? set("REC")
         : gap(hh.lap_ms, [holder?.name, finite(hh.lap_ms) ? lapTime(hh.lap_ms) : null].filter(Boolean).join(" · ") || null),
+    recordSetHere,
+    lapsCompared: lapsCompared(recap),
+    bestTagShown: facts.bestTag,
     workOn,
     wentWell,
-    ...endedMotivation(motivation, id, seatedId),
+    ...mot,
+    things: facts.things,
+    badges: recap ? badgeWords(facts.badges, recap.simple) : [],
+    facts: facts.shown,
     aiLine: aiEndLine(s.ai_pace, id),
   };
+}
+
+/** Badges newest first (as badgeWords orders them), so the two shown are the newest. */
+function newestFirst(badges: SessionRecap["badges_earned"]): SessionRecap["badges_earned"] {
+  return [...badges].sort((a, b) => b.earned_unix - a.earned_unix);
+}
+
+/** Laps compared with the reference this session: the recap's comparison count, carried by its observation items
+ * ("Seen on 4 of 9 laps compared with your reference"); null when the recap does not say. */
+function lapsCompared(r: SessionRecap | null): number | null {
+  const counts = [r?.things?.went_well, r?.things?.work_on, r?.things?.progress]
+    .map((t) => t?.values?.compared)
+    .filter((n): n is number => finite(n) && n >= 0);
+  return counts.length ? Math.max(...counts) : null;
 }
 
 /** lap id -> unix time of the seated driver's best laps (dates the reference chip when it is one of them). */
@@ -528,7 +615,14 @@ const EMPTY_COACH: CoachView = {
 export function driveModel(input: DriveModelInput): DriveModel {
   const { snap: s, connected, nowS, driver } = input;
   const drivers = input.drivers ?? (driver ? [driver] : []);
-  const { state, overlays, memo: m0 } = driveState(s, connected, nowS, input.memo ?? EMPTY_MEMO, input.motivation?.note);
+  const ds = driveState(s, connected, nowS, input.memo ?? EMPTY_MEMO, input.motivation?.note);
+  const { overlays, memo: m0 } = ds;
+  // Moving or stationary (plan 2.1): the cards, the mismatch band and the full coaching text are for a stopped car.
+  const pits = ds.state === "garage" || ds.state === "pit_lane";
+  const motion = motionOf(s, input.motion, input.clockS ?? nowS, pits ? "pits" : "track");
+  const still = connected && motion.stationary;
+  // a "garage" the car drives out of (a game whose garage is only inferred: no laps, the lap clock at zero) is track
+  const state: DriveState = ds.state === "garage" && !still ? "on_track" : ds.state;
   const beginner = driver?.preferences.skill_level === "beginner";
   const simple = !!driver?.coaching?.simple_wording;
   const lock = input.prefs?.driveLock ?? "beginners";
@@ -540,20 +634,25 @@ export function driveModel(input: DriveModelInput): DriveModel {
   const corner = live ?? (dim ? frozenCorner(s, m0.lastCorner) : null);
   const memo: DriveMemo = live && live.name !== m0.lastCorner ? { ...m0, lastCorner: live.name } : m0;
 
-  const slot = statusSlot(state, overlays, s, input.mismatch ?? null, input.noDataText ?? null);
+  const slot = statusSlot(state, overlays, s, still ? (input.mismatch ?? null) : null, input.noDataText ?? null);
   const status: StatusView = {
     ...slot,
     pill: connectionPill(s, connected),
     line: statusLine(s),
     evidence: evidence(s),
     chip: overlays.chip ? { kind: overlays.chip.kind, text: chipText(overlays.chip.kind) } : null,
+    persistent: overlays.persistent ? { kind: overlays.persistent.kind, text: chipText(overlays.persistent.kind) } : null,
   };
-  const card = state === "garage" ? "ready" : state === "ended" ? "ended" : state === "no_data" ? "no_data" : null;
-  const hero = heroOf(s, state, corner, dim);
+  // The Ready and Session complete cards wait for the car to stop: after the line at the session's end the band says
+  // SESSION COMPLETE (or CHEQUERED FLAG) over the normal screen until then (a cool-down lap is still driving).
+  const card =
+    state === "no_data" ? "no_data" : !still ? null : state === "garage" ? "ready" : state === "ended" ? "ended" : null;
+  const hero = heroOf(s, state === "ended" && !card ? "on_track" : state, corner, dim);
 
   const pause: CuePause =
     state === "red_flag" ? "red_flag" : state === "pit_lane" ? "pit_lane" : overlays.safetyCar ? "safety_car" : null;
-  const cue: CueBandView = card
+  const cue: CueBandView =
+    card || state === "ended"
     ? { next: null, note: null, muted: true, radioOff: false, ai: false }
     : cueView(s?.cues, corner?.name ?? null, s?.track_model, pause, dim, {
         toApexM: live?.toApexM ?? null,
@@ -567,8 +666,11 @@ export function driveModel(input: DriveModelInput): DriveModel {
       coach = top
         ? { ...top, heading: `Next run${top.lap != null ? ` · from L${top.lap}` : ""}`, full: true }
         : { ...coachPoint(s, null, simple, false), heading: null, full: true };
+      // moving down the pit lane: the same corner's glance text (the full text is for a stopped car, plan 2.1)
+      const glance = !still && top?.corner ? coachPoint(s, top.corner, simple, true) : null;
+      if (glance?.text) coach = { ...glance, heading: coach.heading, full: false };
     } else {
-      coach = { ...coachPoint(s, corner?.name ?? null, simple, true), heading: null, full: false };
+      coach = { ...coachPoint(s, corner?.name ?? null, simple, !still), heading: null, full: still };
     }
   }
 
@@ -577,6 +679,8 @@ export function driveModel(input: DriveModelInput): DriveModel {
     state,
     overlays,
     memo,
+    motion,
+    stationary: still,
     status,
     card,
     hero,
@@ -587,8 +691,8 @@ export function driveModel(input: DriveModelInput): DriveModel {
     laps: lapTimesView(s, state, bv ?? undefined),
     ribbon: ribbon(s, state, live?.name ?? null),
     lastCue: lastCueOutcome(s?.cues, s?.track_model),
-    ready: s && state === "garage" ? readyCard(s, driver, nowS, drivers, simple, input.motivation) : null,
-    ended: s && state === "ended" ? endedCard(s, drivers, simple, input.motivation, driver?.id ?? null) : null,
+    ready: s && card === "ready" ? readyCard(s, driver, nowS, drivers, simple, input.motivation) : null,
+    ended: s && card === "ended" ? endedCard(s, drivers, simple, input.motivation, driver?.id ?? null) : null,
     tier: bv?.tier ?? 1,
     coloured: bv?.coloured ?? true,
     legend: legendOf(s, bv),

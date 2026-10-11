@@ -23,6 +23,11 @@
 //    position and the zones are known, the band shows only while the car is inside a blue zone.
 //  * Incident chips need the event to concern the player (LiveEvent.player === true), because F1 reports every
 //    car's penalties, collisions and fastest laps. Flashback (player only by nature) shows unless player === false.
+//
+// Chips (integration plan 2.3): chipsOf() is stateless. Every candidate younger than its life is eligible and the
+// highest rank wins; nothing is queued, and a lower chip that loses never shows. Ranks: PENALTY, CONTACT, GOAL
+// REACHED, FLASHBACK, PIT ENTRY / PIT EXIT, FASTEST LAP (the reference notice joins at 7 with coachref). The
+// persistent chip (DRILL, coachref) is shown on the normal line only. StatusContent renders exactly what it returns.
 
 import type { MotivationNote } from "../endpoints/motivation";
 import { badgeFor } from "../live";
@@ -57,7 +62,10 @@ export interface DriveOverlays {
   /** Chequered flag shown. With state on_track: the driver's last lap still runs. With state ended: the session
    * ended by the flag (the slot says CHEQUERED FLAG instead of SESSION COMPLETE). */
   chequered: boolean;
-  chip: { kind: ChipKind; ageS: number } | null;
+  /** The transient chip (chipsOf): the highest-ranked candidate still within its life, or null. */
+  chip: DriveChip | null;
+  /** The persistent chip (chipsOf: DRILL with coachref), shown on the normal line only; null until then. */
+  persistent: DriveChip | null;
 }
 
 export const NO_OVERLAYS: DriveOverlays = Object.freeze({
@@ -67,6 +75,7 @@ export const NO_OVERLAYS: DriveOverlays = Object.freeze({
   invalid: false,
   chequered: false,
   chip: null,
+  persistent: null,
 }) as DriveOverlays;
 
 type PhaseKind = "running" | "chequered" | "ended" | "red_flag";
@@ -227,19 +236,81 @@ function blueOf(s: SnapshotNext): boolean {
   return knowable ? hits.some((h) => h.inZone) : true;
 }
 
-function chipOf(s: SnapshotNext, nowS: number, note?: MotivationNote | null): DriveOverlays["chip"] {
-  const e = newest(s.events, playerIncident);
-  if (e) {
-    const ageS = nowS - e.t;
-    // small negative ages: clock skew between server and device
-    if (ageS >= -2 && ageS <= CHIP_SHOW_S) return { kind: e.kind as IncidentKind, ageS: Math.max(0, ageS) };
+/** A status-slot chip and how long ago its fact happened (s, never negative). */
+export interface DriveChip {
+  kind: ChipKind;
+  ageS: number;
+}
+
+export interface DriveChips {
+  /** At most one short-lived chip: the highest rank among the candidates still within their life. */
+  transient: DriveChip | null;
+  /** The persistent chip (DRILL, with coachref); null until then. */
+  persistent: DriveChip | null;
+}
+
+/** Transient chip ranks (plan 2.3): lower wins. A goal beats a flashback, a pit message and a fastest lap; a penalty
+ * and a contact beat a goal (the driver needs to know first). */
+export const CHIP_RANK: Readonly<Record<ChipKind, number>> = Object.freeze({
+  penalty: 1,
+  collision: 2,
+  goal: 3,
+  flashback: 4,
+  pit_entry: 5,
+  pit_exit: 5,
+  fastest_lap: 6,
+});
+
+/** How long each transient chip may show (s). */
+export const CHIP_LIFE_S: Readonly<Record<ChipKind, number>> = Object.freeze({
+  penalty: CHIP_SHOW_S,
+  collision: CHIP_SHOW_S,
+  goal: CHIP_SHOW_S,
+  flashback: CHIP_SHOW_S,
+  pit_entry: CHIP_SHOW_S,
+  pit_exit: CHIP_SHOW_S,
+  fastest_lap: CHIP_SHOW_S,
+});
+
+/** Device and server clocks may disagree by this much: a fact "from the future" by up to 2 s is still fresh. */
+const CLOCK_SKEW_S = 2;
+
+export interface ChipsInput {
+  snap: SnapshotNext;
+  /** Device clock, unix seconds. */
+  nowS: number;
+  /** The newest /ws/live goal note (lane motivation); only a note about this session counts. */
+  note?: MotivationNote | null;
+}
+
+/** The status slot's chips (plan 2.3). Stateless: the same input always gives the same chips. */
+export function chipsOf({ snap: s, nowS, note }: ChipsInput): DriveChips {
+  let best: DriveChip | null = null;
+  const offer = (kind: ChipKind, t: number) => {
+    const ageS = nowS - t;
+    if (ageS < -CLOCK_SKEW_S || ageS > CHIP_LIFE_S[kind]) return;
+    const c = { kind, ageS: Math.max(0, ageS) };
+    if (!best || CHIP_RANK[kind] < CHIP_RANK[best.kind] || (CHIP_RANK[kind] === CHIP_RANK[best.kind] && c.ageS < best.ageS)) {
+      best = c;
+    }
+  };
+  for (const e of s.events) if (playerIncident(e) && finite(e.t)) offer(e.kind as IncidentKind, e.t);
+  // lane motivation: GOAL REACHED after the /ws/live note of THIS session
+  if (note && note.session_id === s.session_id && finite(note.t)) offer("goal", note.t);
+  return { transient: best, persistent: null };
+}
+
+/** The chips the status slot shows (plan 2.3, "Maximum"): on an iPad's normal line the transient chip and the
+ * persistent one (DRILL); on a phone's line one chip, the transient one, else the persistent; on any band only the
+ * transient one (the persistent chip belongs to the normal line). Evidence and wake chips are not counted here: they
+ * always show (on a band or a phone as icons). */
+export function slotChips<C>(kind: StatusSlot["kind"], chips: { transient: C | null; persistent: C | null }, phone: boolean): C[] {
+  if (kind !== "normal") return chips.transient != null ? [chips.transient] : [];
+  if (phone) {
+    const one = chips.transient ?? chips.persistent;
+    return one != null ? [one] : [];
   }
-  // lane motivation: GOAL REACHED for 6 s after the /ws/live note of THIS session; an incident within 6 s wins.
-  if (note && note.session_id === s.session_id && finite(note.t)) {
-    const ageS = nowS - note.t;
-    if (ageS >= -2 && ageS <= CHIP_SHOW_S) return { kind: "goal", ageS: Math.max(0, ageS) };
-  }
-  return null;
+  return [chips.transient, chips.persistent].filter((c): c is C => c != null);
 }
 
 export interface DriveStateResult {
@@ -267,13 +338,15 @@ export function driveState(
   if (phase.kind === "ended") {
     return { state: "ended", overlays: phase.by === "chequered" ? { ...NO_OVERLAYS, chequered: true } : NO_OVERLAYS, memo: m };
   }
+  const chips = chipsOf({ snap: s, nowS, note: goalNote });
   const overlays: DriveOverlays = {
     safetyCar: safetyCar(s),
     yellow: yellowOf(s),
     blue: blueOf(s),
     invalid: s.frame?.lap_invalid === true,
     chequered: phase.kind === "chequered",
-    chip: chipOf(s, nowS, goalNote),
+    chip: chips.transient,
+    persistent: chips.persistent,
   };
   let state: DriveState = "on_track";
   if (phase.kind === "red_flag") state = "red_flag";
@@ -342,10 +415,15 @@ export interface SlotMismatch {
   sub: string | null;
 }
 
-/** The status slot's band for a state and its overlays. Priority (4.8): offline > stale > red > safety car >
- * yellow > blue > pit > session complete > game mismatch > ready > normal. When the data is in doubt no flag is
- * shown; D4's session complete is a kept fact, not a flag, so it shows while stale (driveState). The mismatch is an
- * outline (not interactive, never a banner): it only replaces the status line while stationary. */
+/** The status slot's band for a state and its overlays: the ONE priority order (integration plan 2.2), one band at a
+ * time, the first match wins:
+ *   1 Offline · 2 No data (the selected game can't be read) · 3 No signal (stale) · 4 RED FLAG · 5 SAFETY CAR / VSC ·
+ *   6 YELLOW (sector, zone, distance) · 7 BLUE · 8 PIT LANE · 9 CHEQUERED FLAG (last lap) · 10 SESSION COMPLETE (a
+ *   kept fact: shown while stale) · 11 Game mismatch (outline; stationary only) · 12 Ready (garage) · 13 the normal
+ *   line: track · session · lap / total · position.
+ * Strategy, goals, drills, AI pace and validation never take the band. When the data is in doubt no flag is shown;
+ * D4's session complete is a kept fact, not a flag, so it shows while stale (driveState). The mismatch is an outline
+ * (never a banner) and the caller passes it only while the car is stationary (motion.ts). */
 export function statusSlot(
   state: DriveState,
   o: DriveOverlays,

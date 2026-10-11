@@ -17,6 +17,11 @@
 // While the recap loads, three same-size skeletons; without it (older server, error) the card is as before. When the
 // seat changed since, the card says whose session it was (in the badges' place: the card keeps its size) and shows
 // none of its badges.
+//
+// Each fact once (integration plan 2.6, lib/drive/complete.ts): Went well leads with a new record or best, the Best
+// lap tile drops a tag Went well already said, a Progress item or badge that only repeats a fact above is left out,
+// and at most two badge chips show (Review › Goals lists them all). When this session set the family record, the
+// fourth tile is "Laps compared" instead of "To the family record", which would only repeat the REC tag.
 
 import { CircleCheck, Medal, TriangleExclamation } from "@gravity-ui/icons";
 import { ItemCard, KPIGroup } from "@heroui-pro/react";
@@ -25,30 +30,23 @@ import { Button, Card, Chip } from "@heroui/react";
 import type { ReactNode } from "react";
 import { TimingLegend, TimingTag, Unknown } from "../../../components/ui";
 import type { CoachPoint } from "../../../lib/drive/coach";
+import { ENDED_BADGES_MAX } from "../../../lib/drive/complete";
 import type { EndedCard, EndedChange } from "../../../lib/drive/model";
 import { router } from "../../../lib/router";
 import { TimeText } from "./parts";
 import { ThingsRow, ThingsSkeleton } from "./ThingsRow";
 
-/** Badges shown on the card; the rest are counted ("+3 more"). */
-export const ENDED_BADGES_SHOWN = 2;
-
+/** At most ENDED_BADGES_MAX chips (the model de-duplicates and caps them; this caps again, defensively). */
 function BadgeChips({ badges }: { badges: readonly string[] }) {
   if (!badges.length) return null;
-  const more = badges.length - ENDED_BADGES_SHOWN;
   return (
     <span className="pwc-end__badges" aria-label="Badges earned this session">
-      {badges.slice(0, ENDED_BADGES_SHOWN).map((b) => (
+      {badges.slice(0, ENDED_BADGES_MAX).map((b) => (
         <Chip key={b} size="lg" variant="soft" color="success" className="pwc-end__badge">
           <Medal aria-hidden="true" />
           <Chip.Label>{b}</Chip.Label>
         </Chip>
       ))}
-      {more > 0 && (
-        <Chip size="lg" variant="soft" className="pwc-end__badge">
-          <Chip.Label>+{more} more</Chip.Label>
-        </Chip>
-      )}
     </span>
   );
 }
@@ -63,7 +61,9 @@ function Tile({ title, tag, children, sub }: { title: string; tag?: ReactNode; c
       <KPI.Content>
         <span className="pwc-end__v">{children}</span>
       </KPI.Content>
-      <span className="pwc-end__s">{sub ?? " "}</span>
+      <span className="pwc-end__s" title={sub ?? undefined}>
+        {sub ?? " "}
+      </span>
     </KPI>
   );
 }
@@ -107,13 +107,13 @@ export interface SessionCompleteCardProps {
 }
 
 export function SessionCompleteCard({ ended, tier, corners }: SessionCompleteCardProps) {
-  const { best, clean, gained, toRecord, toYourBest } = ended;
+  const { best, clean, gained, toRecord, toYourBest, lapsCompared } = ended;
   const yourBest = !toYourBest || toYourBest.text === "PB" ? null : toYourBest.word ? `${toYourBest.text} than your best` : "level with your best";
   const recordSub = [toRecord?.sub, yourBest].filter(Boolean).join(" · ");
   return (
     <Card className="pwc-end pwc-span3">
       <KPIGroup className="pwc-end__kpis">
-        <Tile title="Best lap" tag={best?.tag ? <TimingTag status={best.status} size="md" /> : null} sub={best?.sub}>
+        <Tile title="Best lap" tag={best?.tag && ended.bestTagShown ? <TimingTag status={best.status} size="md" /> : null} sub={best?.sub}>
           {best ? <TimeText text={best.text} status={best.status} label="Best lap" /> : <Unknown />}
         </Tile>
         <KPIGroup.Separator />
@@ -126,9 +126,15 @@ export function SessionCompleteCard({ ended, tier, corners }: SessionCompleteCar
           <Change c={gained} label="Gained today" ahead />
         </Tile>
         <KPIGroup.Separator />
-        <Tile title="To the family record" sub={recordSub || null}>
-          {toRecord ? <Change c={toRecord} label="To the family record" /> : <Unknown />}
-        </Tile>
+        {ended.recordSetHere ? (
+          <Tile title="Laps compared" sub="with your reference">
+            {lapsCompared != null ? lapsCompared : <Unknown />}
+          </Tile>
+        ) : (
+          <Tile title="To the family record" sub={recordSub || null}>
+            {toRecord ? <Change c={toRecord} label="To the family record" /> : <Unknown />}
+          </Tile>
+        )}
       </KPIGroup>
       {ended.things ? (
         <ThingsRow things={ended.things} />

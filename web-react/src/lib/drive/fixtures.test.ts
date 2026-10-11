@@ -95,6 +95,7 @@ describe("Drive fixtures", () => {
       invalid: false,
       chequered: false,
       chip: false,
+      persistent: false, // DRILL: with coachref (F9), no fixture has one yet
     };
     for (const name of FIXTURES) {
       const s = fixture(name);
@@ -104,7 +105,7 @@ describe("Drive fixtures", () => {
       for (const k of Object.keys(overlays) as (keyof DriveOverlays)[]) if (r.overlays[k]) overlays[k] = true;
     }
     expect([...states].sort()).toEqual([...ALL_STATES].sort());
-    expect(overlays).toEqual({ safetyCar: true, yellow: true, blue: true, invalid: true, chequered: true, chip: true });
+    expect(overlays).toEqual({ safetyCar: true, yellow: true, blue: true, invalid: true, chequered: true, chip: true, persistent: false });
   });
 });
 

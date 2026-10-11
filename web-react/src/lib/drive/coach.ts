@@ -155,7 +155,7 @@ export function lapPicks(s: SnapshotNext): { picks: ObservationNext[]; source: "
   return { picks: rankedObservations(s), source: "observation" };
 }
 
-/** The last lap's top point, full text (pit lane, "One thing for the next run"). */
+/** The last lap's top point, full text (the pit lane's "Next run", the Ready card's "Last lap: …" between runs). */
 export function topPoint(s: SnapshotNext, simple: boolean): CoachPoint | null {
   const { picks, source } = lapPicks(s);
   const o = picks.find((x) => !x.positive) ?? picks[0];

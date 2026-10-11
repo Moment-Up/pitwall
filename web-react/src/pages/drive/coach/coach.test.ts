@@ -5,7 +5,8 @@ import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { driveModel, type DriveModel } from "../../../lib/drive/model";
-import { FIXTURES, fixture, frame, newestT, snap } from "../../../lib/drive/testkit";
+import { FIXTURES, fixture, frame, newestT, snap, stopped } from "../../../lib/drive/testkit";
+import { imola, olderRecap, recap } from "../../../lib/drive/testkit-imola";
 import type { SnapshotNext } from "../../../lib/drive/types";
 import { aiFixtures } from "../../../lib/review/testkit";
 import type { Driver } from "../../../lib/drivers";
@@ -67,8 +68,8 @@ const JAMES: Driver = {
   stats: { sessions: 0, laps: 0, clean_laps: 0, tracks: 0, last_session_unix: null, best_laps: [] },
 };
 
-function model(name: string, opts: { connected?: boolean; driver?: Driver | null } = {}): DriveModel {
-  const s = fixture(name);
+function model(name: string, opts: { connected?: boolean; driver?: Driver | null; stopped?: boolean } = {}): DriveModel {
+  const s = opts.stopped ? stopped(fixture(name)) : fixture(name);
   const driver = "driver" in opts ? (opts.driver ?? null) : JAMES;
   return driveModel({ snap: s, connected: opts.connected ?? true, nowS: newestT(s) + 1, driver });
 }
@@ -88,6 +89,11 @@ function visible(markup: string): string {
     .replace(/&gt;/g, ">")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** The evidence tier is in the slot: as words, or as the icon chip whose label carries them. */
+function evidenceShown(markup: string, word: "SYNTHETIC" | "REPLAY"): boolean {
+  return visible(markup).includes(word) || markup.includes(`aria-label="${word}:`);
 }
 
 /** The status slot's markup (the first card). */
@@ -112,9 +118,13 @@ describe("every fixture renders honestly", () => {
       // The status slot is always there, and the radio strip always offers its one action.
       expect(html).toContain("pwc-status");
       expect(text).toMatch(/Go live|Listen only|Hold to talk/);
-      // Evidence tiers stay visible (P8).
-      if (m.status.evidence.synthetic) expect(text).toContain("SYNTHETIC");
-      if (m.status.evidence.replay) expect(text).toContain("REPLAY");
+      // Evidence tiers stay visible (P8): in words on the normal line, as their icon on a band (plan 2.3), the words
+      // in the icon's label.
+      if (m.status.evidence.synthetic) expect(evidenceShown(slot(html), "SYNTHETIC"), name).toBe(true);
+      if (m.status.evidence.replay) expect(evidenceShown(slot(html), "REPLAY"), name).toBe(true);
+      if (m.status.kind !== "normal" && (m.status.evidence.synthetic || m.status.evidence.replay)) {
+        expect(slot(html), name).toContain("pwc-evicon");
+      }
     }
   });
 
@@ -173,28 +183,61 @@ describe("states (4.7)", () => {
   });
 
   it("ready (garage): the card with the seat, Not you? Switch driver, and the radio strip below", () => {
-    const html = render(model("recorded-d246-suzuka-grid-before-start"));
+    const html = render(model("recorded-d246-suzuka-grid-before-start", { stopped: true }));
     const text = visible(html);
     expect(text).toContain("James is in the seat");
     expect(text).toContain("Not you? Switch driver");
-    expect(text).toMatch(/Target|Last run/);
+    expect(text).toContain("Target");
+    expect(text).toContain("Your best here");
     expect(text).toContain("Radio:");
+    expect(text).not.toContain("Last lap:"); // only between runs (plan 2.5)
     expect(text).not.toContain("Delta to reference"); // the card spans hero, coach and delta
     expect(html).toContain("pwc-ready pw-chamfer");
   });
 
-  it("ready between runs leads with the last run", () => {
-    const text = visible(render(model("edited-garage-between-runs")));
+  it("no Ready card while the car moves: the formation lap before the start (135 km/h) is on track (plan 2.1)", () => {
+    const m = model("recorded-d246-suzuka-grid-before-start");
+    expect(m.state).toBe("on_track");
+    expect(m.card).toBeNull();
+    const html = render(m);
+    expect(html).not.toContain("pwc-ready");
+    expect(html).toContain("pwc-hero");
+  });
+
+  it("ready between runs: Last run in column 2, Last lap: in column 3, one FOCUS row, no Radio line (plan 2.5)", () => {
+    const m = model("edited-garage-between-runs");
+    const html = render(m);
+    const text = visible(html);
     expect(text).toContain("Last run");
-    expect(text).toContain("Clean laps");
+    expect(text).not.toContain("Your best here"); // Last run takes its row
+    expect(text).toMatch(/\d+ of \d+ clean/);
+    expect(text).toContain("Family record");
+    expect(text).toContain("Delta reference");
+    expect(text).toMatch(/Last lap: (Work on|Good) /);
+    expect(text).not.toContain("Radio:");
+    expect(text).not.toContain("One thing for the next run");
+    expect((html.match(/>FOCUS</g) ?? []).length).toBeLessThanOrEqual(1);
   });
 
   it("nobody in the seat says so", () => {
-    expect(visible(render(model("recorded-suzuka-grid-before-start", { driver: null })))).toContain("Nobody is in the seat");
+    expect(visible(render(model("recorded-suzuka-grid-before-start", { driver: null, stopped: true })))).toContain(
+      "Nobody is in the seat",
+    );
+  });
+
+  it("session complete while still moving: the band says so over the normal screen; the card waits for the stop", () => {
+    const m = model("recorded-d246-austria-session-ended"); // the recorded moment: 279 km/h
+    expect(m.state).toBe("ended");
+    expect(m.card).toBeNull();
+    expect(m.ended).toBeNull();
+    const html = render(m);
+    expect(visible(slot(html))).toMatch(/SESSION COMPLETE|CHEQUERED FLAG/);
+    expect(html).toContain("pwc-hero");
+    expect(model("recorded-d246-austria-stale-ended").card).toBe("ended"); // the data went quiet: stationary
   });
 
   it("session complete: neutral band; the lazy card's fallback keeps the size, and the card itself renders", () => {
-    const m = model("recorded-d246-austria-session-ended");
+    const m = model("recorded-d246-austria-session-ended", { stopped: true });
     const html = render(m);
     expect(visible(slot(html))).toMatch(/SESSION COMPLETE|CHEQUERED FLAG/);
     // A server render shows the same-size fallback until the lazy chunk has loaded once, then the card.
@@ -203,7 +246,7 @@ describe("states (4.7)", () => {
     expect(card).toContain("Best lap");
     expect(card).toContain("Clean laps");
     expect(card).toContain("Gained today");
-    expect(card).toContain("To the family record");
+    expect(card).toMatch(/To the family record|Laps compared/);
     expect(card).toContain("Review this session");
   });
 
@@ -390,7 +433,7 @@ describe("status slot: one line; chips never wrap or clip (4.8, P8)", () => {
 
 describe("Session complete card: Work on / Went well name their corner (mockup)", () => {
   it("by official label and name, resolved through the track model", () => {
-    const s = fixture("recorded-d246-austria-session-ended");
+    const s = stopped(fixture("recorded-d246-austria-session-ended"));
     const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: JAMES });
     expect(m.ended?.workOn?.corner).toBe("T4"); // D6 pick: the learned key "T4" is the official T6
     const corners = endedCorners(m.ended!, s.track_model);
@@ -413,10 +456,68 @@ describe("Session complete card: Work on / Went well name their corner (mockup)"
   });
 });
 
+describe("Session complete card: each fact once (integration plan 2.6, the Imola walk)", () => {
+  function card(r = recap()): string {
+    const m = driveModel({ snap: imola(), connected: true, nowS: 1_791_741_000, driver: JAMES, motivation: { note: null, recap: r, status: "ready" } });
+    return renderToStaticMarkup(createElement(SessionCompleteCard, { ended: m.ended!, tier: m.tier }));
+  }
+
+  it("the record once: REC on the Best lap tile, Laps compared in the fourth tile, no repeat in a badge", () => {
+    const html = card();
+    const text = visible(html);
+    expect(text).toContain("Laps compared 9");
+    expect(text).not.toContain("To the family record");
+    expect(text).not.toContain("this session set it");
+    expect(text).toContain("lap 8 · new family record");
+    expect(text).toContain("Went well First clean laps here in the McLaren: best 1:24.528 on lap 8.");
+    expect(text).not.toContain("Your first clean laps at Imola");
+    expect(text).not.toContain("First clean lap at Imola"); // the badge only repeated Went well
+    expect((html.match(/data-thing=/g) ?? []).length).toBe(3);
+    expect(text).toContain("Review this session");
+  });
+
+  it("the walk's server (a T3 point went well): Progress keeps the first clean laps, the badge still goes", () => {
+    const text = visible(card(olderRecap()));
+    expect(text).toContain("Your first clean laps at Imola in the McLaren");
+    expect(text).not.toContain("First clean lap at Imola");
+  });
+});
+
+describe("Ready card fits (plan 2.5): slots are capped, nothing is hidden", () => {
+  const fs = (
+    globalThis as unknown as { process: { getBuiltinModule(id: "node:fs"): { readFileSync(p: URL, enc: "utf8"): string } } }
+  ).process.getBuiltinModule("node:fs");
+  const CSS = fs.readFileSync(new URL("./coach.css", import.meta.url), "utf8");
+
+  it("no column hides its content (overflow: hidden): the fit is measured, not clipped", () => {
+    const col = /(?:^|\n)\.pwc-ready__col \{([^}]*)\}/.exec(CSS)?.[1] ?? "";
+    expect(col).toMatch(/min-height:\s*0/);
+    expect(col).not.toMatch(/overflow/);
+  });
+
+  it("the iPad mini's compact rows show one FOCUS row before the first lap; the Last lap point keeps 4 lines", () => {
+    const compact = CSS.slice(CSS.indexOf("iPad mini, Safari with toolbars (compact rows, 4.2): one FOCUS row"));
+    expect(compact).toMatch(/\.pwc-focusrow__f\[data-extra\] \{ display: none; \}/);
+    expect(CSS).toMatch(/\.pwc-ready__last \.pwc-ready__next \{[^}]*-webkit-line-clamp: 4;/);
+  });
+
+  it("before the first lap: at most 2 FOCUS rows (the second marked for the mini), Braking calls and the Radio line", () => {
+    const s = stopped(fixture("recorded-d246-suzuka-grid-before-start"));
+    s.cues = { ...s.cues!, focus: ["T1", "T2", "T3"], mode: "focus" };
+    const html = render(driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: JAMES }));
+    expect((html.match(/>FOCUS</g) ?? []).length).toBe(2);
+    expect((html.match(/data-extra=""/g) ?? []).length).toBe(1);
+    const text = visible(html);
+    expect(text).toMatch(/Radio calls: T1, T2, T3/);
+    expect(text).toContain("Braking calls");
+    expect(text).toContain("Radio:");
+  });
+});
+
 describe("Session complete card: pace vs AI (AI pace spec 8)", () => {
   /** The ended Austria fixture with the AI comparison the server would publish for it (contract values). */
   function ended(ai: Partial<NonNullable<SnapshotNext["ai_pace"]>> | null) {
-    const s = fixture("recorded-d246-austria-session-ended");
+    const s = stopped(fixture("recorded-d246-austria-session-ended"));
     const snap: SnapshotNext = { ...s, ai_pace: ai ? { ...aiFixtures.live(), session_id: s.session_id ?? "", ...ai } : null };
     return driveModel({ snap, connected: true, nowS: newestT(s) + 1, driver: JAMES });
   }

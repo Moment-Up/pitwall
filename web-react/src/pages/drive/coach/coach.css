@@ -204,6 +204,14 @@
   width: 18px;
   height: 18px;
 }
+/* The evidence tier as its icon on a band or a phone (plan 2.3): still hatched / neutral, the words in its label. */
+.pwc-evicon {
+  padding-inline: 8px;
+}
+.pwc-evicon svg {
+  width: 18px;
+  height: 18px;
+}
 
 /* ======================================================================================= hero: next corner (4.3 #2) */
 .pwc-hero.card {
@@ -732,6 +740,34 @@
   margin: 0 0 6px;
   font: 500 18px/1.35 var(--pw-font-sans);
 }
+/* Between runs: "Last lap: <point>" (plan 2.5, 5.1): the scope label, the point (full text, stationary), its
+ * evidence. Four lines at most for the point, two for the evidence, so column 3 keeps its size with any text. */
+.pwc-ready__last { margin-bottom: 12px; }
+.pwc-ready__last .pwc-ready__next {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+.pwc-ready__lbl { font-weight: 700; }
+.pwc-ready__ev {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+/* "Last run": the clean laps and the gain on a line of their own under the best lap as set. */
+.pwc-kv__line {
+  flex-basis: 100%;
+  font: 500 16px/1.3 var(--pw-font-sans);
+  color: var(--muted);
+}
 .pwc-ready__foot {
   grid-column: 1 / -1;
   margin-top: 14px;
@@ -759,7 +795,18 @@
   font: 700 var(--pw-d-l, 40px) / 1 var(--pw-font-num);
   font-variant-numeric: tabular-nums;
 }
-.pwc-end__s { font-size: 13px; color: var(--muted); }
+/* A tile's sub line is one line (plan 2.6: the card fits with every slot filled): the most important words lead
+ * ("Thomas · 1:10.412" before "· 0.540 s slower than your best"), the rest ellipsizes (the full words are its title). */
+.pwc-end__s {
+  display: block;
+  flex: none; /* never squeezed by a short tile: overflow shows (and is measured) instead */
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 /* The word after a gain or gap ("faster", "slower"): text size, so the number stays the figure that reads first. */
 .pwc-end__w { font: 600 18px/1 var(--pw-font-sans); color: var(--muted); align-self: flex-end; padding-bottom: 4px; }
 .pwc-end__actions {
@@ -776,6 +823,14 @@
 @media (min-width: 1024px), (min-width: 768px) and (orientation: landscape) {
   .pwc-end.card:has(> [data-ai-line]) { grid-template-rows: auto auto auto 1fr; row-gap: 8px; }
   .pwc-end.card > [data-ai-line] { font-size: 14px; line-height: 1.25; }
+}
+/* iPad mini, Safari with toolbars (compact rows, 4.2): every slot filled (four tiles, the AI line, three things at
+ * their 4-line clamp, two badges) fits the 432 px card only with closer padding (plan 2.6; measured, 8 px short). */
+@media (max-height: 760px) and (min-width: 768px) {
+  .pwc-end.card { padding: 14px 22px; }
+  .pwc-end__kpis .kpi { padding-block: 12px; }
+  .pwc-end__v { font-size: 34px; }
+  .pwc-end__things { gap: 12px; }
 }
 .pwc-item {
   --pwc-k: var(--muted);
@@ -853,9 +908,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* iPad mini, Safari with toolbars (compact rows, 4.2): the progress words share the title's line, so the row is one
- * line shorter and the card keeps its size. */
+/* iPad mini, Safari with toolbars (compact rows, 4.2): one FOCUS row before the first lap (plan 2.5), tighter Ready
+ * card rows, and the goal's progress words share the title's line, so the card keeps its size. */
 @media (max-height: 760px) and (min-width: 768px) {
+  .pwc-focusrow__f[data-extra] { display: none; }
+  .pwc-ready.card { padding: 18px 24px 14px; }
+  .pwc-ready__h { margin-bottom: 10px; }
+  .pwc-kv { gap: 10px; }
+  .pwc-ready__last { margin-bottom: 8px; }
+  .pwc-ready__foot { margin-top: 10px; padding-top: 8px; }
   .pwc-goal {
     grid-template-columns: minmax(0, auto) minmax(0, 1fr);
     gap: 4px 10px;

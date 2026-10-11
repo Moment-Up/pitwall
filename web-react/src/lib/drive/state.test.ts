@@ -1,9 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  CHIP_LIFE_S,
+  CHIP_RANK,
   EMPTY_MEMO,
   NO_OVERLAYS,
   RED_FLAG_MAX_AGE_S,
   chipText,
+  chipsOf,
+  slotChips,
+  type ChipKind,
   connectionPill,
   driveState,
   evidence,
@@ -13,6 +18,7 @@ import {
   statusSlot,
   type DriveOverlays,
 } from "./state";
+import { mfx } from "../motivation/testkit";
 import { driveModel } from "./model";
 import { fixture, frame, lap, newestT, snap } from "./testkit";
 import type { LiveEvent, SnapshotNext } from "./types";
@@ -401,5 +407,112 @@ describe("status line, pill, evidence", () => {
     expect(chipText("collision")).toBe("CONTACT");
     expect(chipText("flashback")).toBe("FLASHBACK · lap won't count");
     expect(chipText("fastest_lap")).toBe("FASTEST LAP");
+  });
+});
+
+describe("one band order (integration plan 2.2): one band at a time, the first match wins", () => {
+  const O = (over: Partial<DriveOverlays> = {}): DriveOverlays => ({ ...NO_OVERLAYS, ...over });
+  const yellow = { zone: 16, sector: 3, aheadM: 384, inZone: false, count: 1 };
+  const mismatch = { text: "F1 25 data · GT7 selected", sub: "tap to change" };
+  const s = fixture("edited-safety-car");
+  const every = O({ safetyCar: "full", yellow, blue: true, chequered: true });
+  // [state, overlays, mismatch, expected band]: each row adds the next-higher match on top of the one below it
+  const ROWS: [Parameters<typeof statusSlot>[0], DriveOverlays, typeof mismatch | null, string][] = [
+    ["on_track", O(), null, "normal"],
+    ["garage", O(), null, "ready"],
+    ["garage", O(), mismatch, "mismatch"],
+    ["ended", O(), mismatch, "complete"],
+    ["on_track", O({ chequered: true }), mismatch, "chequered"],
+    ["pit_lane", O({ chequered: true }), mismatch, "pit"],
+    ["pit_lane", O({ blue: true, chequered: true }), mismatch, "blue"],
+    ["pit_lane", O({ yellow, blue: true, chequered: true }), mismatch, "yellow"],
+    ["pit_lane", every, mismatch, "sc"],
+    ["red_flag", every, mismatch, "red"],
+    ["stale", every, mismatch, "stale"],
+    ["no_data", every, mismatch, "no_data"],
+    ["offline", every, mismatch, "offline"],
+  ];
+  it.each(ROWS)("%s → %s", (state, o, mm, band) => {
+    expect(statusSlot(state, o, s, mm).band).toBe(band);
+  });
+
+  it("strategy, goals, drills, AI pace and validation never take the band: the slot has no such inputs", () => {
+    expect(statusSlot.length).toBeLessThanOrEqual(5); // state, overlays, snapshot, mismatch, no-data words
+  });
+});
+
+describe("chipsOf (integration plan 2.3): stateless, the highest rank within its life wins", () => {
+  const T = 1_791_669_000;
+  const KINDS: ChipKind[] = ["penalty", "collision", "goal", "flashback", "pit_entry", "pit_exit", "fastest_lap"];
+  /** A snapshot with one candidate of `kind`, `age` seconds old (the goal arrives as the /ws/live note). */
+  function input(cands: [ChipKind, number][]) {
+    const events = cands
+      .filter(([k]) => k !== "goal")
+      .map(([k, age]) => ev(k, T - age, { player: true }));
+    const goal = cands.find(([k]) => k === "goal");
+    const note = goal ? { ...mfx.note(), session_id: "s1", t: T - goal[1] } : null;
+    return { snap: snap({ events }), nowS: T, note };
+  }
+
+  it("ranks: penalty, contact, goal, flashback, pit entry / exit, fastest lap", () => {
+    expect(KINDS.map((k) => CHIP_RANK[k])).toEqual([1, 2, 3, 4, 5, 5, 6]);
+    for (const k of KINDS) expect(CHIP_LIFE_S[k], k).toBe(6);
+  });
+
+  it.each(KINDS.flatMap((a) => KINDS.filter((b) => b !== a).map((b) => [a, b] as const)))("%s with %s: the higher rank", (a, b) => {
+    const got = chipsOf(input([[a, 1], [b, 2]])).transient;
+    const want = CHIP_RANK[a] < CHIP_RANK[b] ? a : CHIP_RANK[b] < CHIP_RANK[a] ? b : a; // a tie: the younger (a)
+    expect(got?.kind).toBe(want);
+  });
+
+  it("a goal now beats a flashback, a pit message and a fastest lap; a penalty and a contact beat the goal", () => {
+    for (const k of ["flashback", "pit_entry", "pit_exit", "fastest_lap"] as const) {
+      expect(chipsOf(input([["goal", 3], [k, 0]])).transient?.kind, k).toBe("goal");
+    }
+    for (const k of ["penalty", "collision"] as const) expect(chipsOf(input([["goal", 0], [k, 4]])).transient?.kind, k).toBe(k);
+  });
+
+  it("nothing is queued: once the winner's life ends, a loser still within its own life shows; past it, nothing", () => {
+    const pair = input([["penalty", 5], ["fastest_lap", 1]]);
+    expect(chipsOf(pair).transient).toEqual({ kind: "penalty", ageS: 5 });
+    expect(chipsOf({ ...pair, nowS: T + 2 }).transient).toEqual({ kind: "fastest_lap", ageS: 3 });
+    expect(chipsOf({ ...pair, nowS: T + 6 }).transient).toBeNull();
+    // the same input always gives the same chips (stateless)
+    expect(chipsOf(pair)).toEqual(chipsOf(pair));
+  });
+
+  it("only the player's incidents, only this session's goal note, small clock skew allowed", () => {
+    const other = snap({ events: [ev("penalty", T - 1), ev("collision", T - 1, { player: false }), ev("fastest_lap", T - 1)] });
+    expect(chipsOf({ snap: other, nowS: T }).transient).toBeNull();
+    const elsewhere = input([["goal", 1]]);
+    expect(chipsOf({ ...elsewhere, note: { ...elsewhere.note!, session_id: "other" } }).transient).toBeNull();
+    expect(chipsOf(input([["penalty", -2]])).transient).toEqual({ kind: "penalty", ageS: 0 });
+    expect(chipsOf(input([["penalty", -3]])).transient).toBeNull();
+  });
+
+  it("no persistent chip before coachref (DRILL arrives with F9)", () => {
+    expect(chipsOf(input([["penalty", 1]])).persistent).toBeNull();
+  });
+});
+
+describe("slot chip limits (integration plan 2.3, Maximum)", () => {
+  const t = "T" as const;
+  const p = "DRILL" as const;
+  it("iPad normal line: the transient chip and the persistent one", () => {
+    expect(slotChips("normal", { transient: t, persistent: p }, false)).toEqual([t, p]);
+    expect(slotChips("normal", { transient: null, persistent: p }, false)).toEqual([p]);
+    expect(slotChips("normal", { transient: null, persistent: null }, false)).toEqual([]);
+  });
+  it("a phone's line: one chip, the transient one, else the persistent one", () => {
+    expect(slotChips("normal", { transient: t, persistent: p }, true)).toEqual([t]);
+    expect(slotChips("normal", { transient: null, persistent: p }, true)).toEqual([p]);
+  });
+  it("any band (fill or outline), iPad or phone: the transient chip only", () => {
+    for (const kind of ["fill", "outline"] as const) {
+      for (const phone of [false, true]) {
+        expect(slotChips(kind, { transient: t, persistent: p }, phone)).toEqual([t]);
+        expect(slotChips(kind, { transient: null, persistent: p }, phone)).toEqual([]);
+      }
+    }
   });
 });
