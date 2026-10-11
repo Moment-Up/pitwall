@@ -113,6 +113,8 @@ export interface LapSummary {
   valid: boolean | null;
   clean: boolean;
   flags: string[];
+  /** The driver's last lap of the session (the game reported their result as finished on it); null/absent = unknown. */
+  final?: boolean | null;
   tyre_compound: string | null;
   fuel_used_kg: number | null;
 }

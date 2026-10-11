@@ -48,7 +48,7 @@ describe("driveModel: on track (real Suzuka, braking call ahead)", () => {
   });
 
   it("fills the coach card, delta, sectors, laps and ribbon", () => {
-    expect(m.coach).toMatchObject({ tagText: "Work on · L4", heading: null, full: false, source: "observation" });
+    expect(m.coach).toMatchObject({ tagText: "Work on · last lap", heading: null, full: false, source: "observation" });
     expect(m.delta).toMatchObject({ text: `${MINUS}0.60`, word: "AHEAD", refLabel: "Lap 3 · 1:37.191 · today" });
     expect(m.sectors.caption).toBe("Last lap · L4");
     expect(m.laps.lap.text).toBe("0:39.8");
@@ -420,7 +420,7 @@ describe("driveModel: overlays and D-additions", () => {
 
   it("with D2/D4/D6 shows the radio's point (short text); tier 2 timing only with driver or household bests", () => {
     const m = model(fixture("recorded-d246-suzuka-on-track-brake-ahead"));
-    expect(m.coach).toMatchObject({ source: "d6", size: 30, tagText: "Work on · L4" });
+    expect(m.coach).toMatchObject({ source: "d6", size: 30, tagText: "Work on · last lap" });
     expect(m.coach.text!.length).toBeLessThanOrEqual(48);
     expect(m.tier).toBe(1); // a replay: D2 keeps no records for it
     const live = model(asLive(fixture("edited-d1-d6")));

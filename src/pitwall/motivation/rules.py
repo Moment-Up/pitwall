@@ -92,8 +92,8 @@ def run_ending_at(laps: Sequence[LapRow], lap_id: int, after_lap_id: int = 0) ->
 
 
 def window_laps(run: Sequence[LapRow], session_type: str | None) -> list[LapRow]:
-    """The laps of a run that steady-lap windows may use: race lap 1 is skipped [H] (a standing start is not
-    always flagged in real F1 25 data)."""
+    """The laps of a run that steady-lap windows may use: race lap 1 is skipped [H] (laps stored before 2026-10-11
+    lack the standing-start flag when the F1 25 grid is behind or near the line)."""
     if session_type == "race":
         return [lap for lap in run if lap.lap_number != 1]
     return list(run)

@@ -49,7 +49,7 @@ export function App() {
   useRealSessionFlag();
   useGameSelectedFlag();
   // Drive never shows toasts on track (spec 2.6): the toast region is only mounted off track, and the lap toast
-  // ("Lap 7 analysed · 2 coaching points", Open) is only raised off track.
+  // ("Lap 7 done · 2 coaching points", Open) is only raised off track.
   const { onTrack } = useDriveLock();
   useLapToast(onTrack);
   return (
