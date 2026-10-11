@@ -3,7 +3,7 @@
   "tier": "recorded",
   "source": "scripts/strategy_check.py --json tests/fixtures/recorded/f1_25_2025_ps5_austria_race-excerpt.pwcap",
   "moment": "the engine's view at the end of the Austria excerpt (game session 10376571985058302815)",
-  "notes": "The strategy engine's own output (StrategyEngine fed by F1Adapter, no DB, no radio) over a committed PS5 F1 25 race excerpt, generated from the integrated feat/strategy backend (2026-10-11): regenerate with the same command when the engine changes. Recorded tier: real decoding of a real capture, not live-validated."
+  "notes": "The strategy engine's own output (StrategyEngine fed by F1Adapter, no DB, no radio) over a committed PS5 F1 25 race excerpt, regenerated from the feat/strategy backend after the review fixes (2026-10-11): regenerate with the same command when the engine changes. Recorded tier: real decoding of a real capture, not live-validated."
  },
  "version": 1,
  "mode": "race",
@@ -67,10 +67,10 @@
  },
  "fuel": {
   "fuel_kg": 4.16,
-  "per_lap_kg": 1.301,
+  "per_lap_kg": 1.3,
   "laps_used": 2,
   "margin_laps": 3.2,
-  "margin_kg": 4.16,
+  "margin_kg": 4.17,
   "game_margin_laps": 2.92,
   "status": "ok",
   "lift_coast": null,
@@ -135,12 +135,15 @@
  },
  "calls": [
   {
-   "id": "st-gap-2-1",
+   "id": "st-gap-2-10",
    "topic": "gap",
-   "level": "normal",
+   "level": "detailed",
    "text": "Car behind is within a second.",
+   "text_simple": "Car close behind you.",
+   "audience": "all",
    "lap": 2,
-   "t_unix": 1791743629.608
+   "ttl_s": 20.0,
+   "t_unix": 1791750838.497
   }
  ]
 }

@@ -1,4 +1,7 @@
-"""Schema v3 (race strategy: ``strategy_laps``, ``pit_stops``) on a v2 database, on a scratch file only."""
+"""Schema v3 (race strategy: ``strategy_laps``, ``pit_stops``) on a v2 database, on a scratch file only.
+
+The v2 database is built from the frozen v2 DDL, and the version is read from ``SCHEMA_VERSION``: when the race
+strategy lands next to other new tables it is renumbered (as goals and AI pace were), and this test still holds."""
 
 from __future__ import annotations
 
@@ -6,14 +9,13 @@ import sqlite3
 from pathlib import Path
 
 from pitwall.storage import repo
-from pitwall.storage.db import SCHEMA, SCHEMA_VERSION, Database
-
-V2_SCHEMA = SCHEMA.split("-- --- race strategy (pitwall.strategy)")[0]
+from pitwall.storage.db import SCHEMA_VERSION, Database
+from tests.unit.schema_v2_frozen import V2_DDL
 
 
 def _v2_database(path: Path) -> None:
     conn = sqlite3.connect(path)
-    conn.executescript(V2_SCHEMA)
+    conn.executescript(V2_DDL)
     conn.execute("INSERT INTO meta(key, value) VALUES('schema_version', '2')")
     conn.execute(
         "INSERT INTO sessions(id, game, started_unix, source, synthetic, session_type) "
@@ -38,14 +40,14 @@ def test_v2_database_migrates_to_v3_and_cascades(tmp_path: Path) -> None:
     path = tmp_path / "v2.sqlite"
     _v2_database(path)
     db = Database(path)
-    assert SCHEMA_VERSION == 3
+    assert SCHEMA_VERSION >= 3
     assert {"strategy_laps", "pit_stops"} <= _tables(db)
     with db.read() as c:
-        assert repo.get_meta(c, "schema_version") == "3"
+        assert repo.get_meta(c, "schema_version") == str(SCHEMA_VERSION)
         assert repo.get_session(c, "old1") is not None and len(repo.list_laps(c, "old1")) == 1
     db2 = Database(path)  # reopening is idempotent
     with db2.read() as c:
-        assert repo.get_meta(c, "schema_version") == "3" and len(repo.list_laps(c, "old1")) == 1
+        assert repo.get_meta(c, "schema_version") == str(SCHEMA_VERSION) and len(repo.list_laps(c, "old1")) == 1
         repo.upsert_strategy_lap(c, "old1", 1, {"v": 1, "lap": 1, "position": 5})
         repo.upsert_strategy_lap(c, "old1", 1, {"v": 1, "lap": 1, "position": 4})  # rewrite after a flashback
         stop = {

@@ -48,7 +48,9 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   (every intensity), a `normal` one as kind **`strategy`** (normal and detailed intensity), a `detailed` one as kind
   `info` (detailed only). Their `meta` carries `topic` (`strategy:<topic>`, e.g. `strategy:sc_box`; a newer call on
   the same topic replaces an unsaid one), `strategy_call` (the call id), `level` and `audience`. Calls for experienced
-  drivers are not sent to a driver whose profile asks for simple wording. Max-speed replays make no calls.
+  drivers are not sent to a driver whose profile asks for simple wording, who hears each call's plain words instead
+  (the call's `text_simple`: "Pit this lap or next: your tyres are nearly worn out."). Max-speed replays make no
+  calls.
 - Latency is measured per stage (PTT release -> transcript -> answer -> first audio sent -> playback started).
 - **Server voice** (`voice/tts.py`): Kokoro-82M in a worker process, `say` as automatic fallback, so a message
   is never silent because the neural engine is starting or failed. Neural audio said ahead of time (cue parts,

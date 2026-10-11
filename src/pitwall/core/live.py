@@ -524,7 +524,7 @@ class LiveState:
             out["session_state_info"] = None if st is None else st.to_dict()
             out["coach"] = self.coach.current
             out["bests"] = self.bests  # D2: small, so every snapshot (a record shows as set, not 5 s later)
-            out["strategy"] = self.strategy  # race strategy (pitwall.strategy): < 2 kB, every snapshot
+            out["strategy"] = self.strategy  # race strategy (pitwall.strategy): about 2-3.5 kB, every snapshot
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

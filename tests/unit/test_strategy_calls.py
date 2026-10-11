@@ -37,14 +37,24 @@ def test_safety_car_box_and_stay_out() -> None:
     box = {"pit_loss_s": 10.2, "green_pit_loss_s": 19.4, "stop_needed": True, "this_lap": True, "tier": "heuristic"}
     (c,) = p.plan(ctx(sc_status="full", sc_period=1, sc_box=box, entry_ttl_s=12.0))
     assert c.topic == "sc_box" and c.level == "alert" and c.priority == "high" and c.bypass_quiet
-    assert c.text == "Safety car. Box this lap is an option: a stop costs about 10 s now, 19 under green."
+    assert c.text == "Safety car. Pitting this lap is an option: a stop costs about 10 s now, 19 s under green."
+    assert c.text_simple == "Safety car: a pit stop is cheap now, about 10 seconds instead of 19. You can pit this lap."
     assert c.ttl_s == 12.0 and c.audience == "all"
     assert not p.plan(ctx(sc_status="full", sc_period=1, sc_box=box, t=110.0))  # once per period
     (v,) = p.plan(ctx(sc_status="virtual", sc_period=2, sc_box={**box, "this_lap": False, "pit_loss_s": None}))
-    assert v.text == "Virtual safety car. Box next lap is an option." and v.ttl_s == 60.0
+    assert v.text == "Virtual safety car. Pitting next lap is an option." and v.ttl_s == 60.0
     stay = {**box, "stop_needed": False}
     (s,) = p.plan(ctx(sc_status="full", sc_period=3, sc_box=stay))
     assert s.topic == "sc_stay" and s.level == "normal" and "no stop needed" in s.text
+    assert s.text_simple == "Safety car: your tyres last to the finish, so no pit stop."
+
+
+def test_safety_car_with_the_pit_entry_unknown_names_no_lap() -> None:
+    # no stop seen in this race yet: the pit entry (and so "this lap or next") is unknown
+    box = {"pit_loss_s": None, "green_pit_loss_s": None, "stop_needed": True, "this_lap": None, "tier": "heuristic"}
+    (c,) = CallPlanner().plan(ctx(sc_status="full", sc_period=1, sc_box=box))
+    assert c.text == "Safety car. Pitting is an option." and c.data["this_lap"] is None and c.ttl_s == 60.0
+    assert c.text_simple == "Safety car: a pit stop costs less now."
 
 
 def test_lap_one_allows_only_the_safety_car_and_critical_fuel() -> None:
@@ -70,6 +80,7 @@ def test_lap_one_allows_only_the_safety_car_and_critical_fuel() -> None:
     ("kw", "why"),
     [
         ({"lap": 30}, "final lap"),
+        ({"lap": 28, "laps_remaining": 0.7}, "a lapped player's final lap"),
         ({"player_in_pit": True}, "pit lane"),
         ({"blocked": "formation lap"}, "formation"),
         ({"blocked": "red flag"}, "red flag"),
@@ -109,15 +120,53 @@ def test_pit_window_open_and_last_laps() -> None:
     p = CallPlanner()
     (c,) = p.plan(ctx(lap=18, window=WINDOW))
     assert c.text == "Pit window is open: laps 18 to 22, best around 20."
+    assert c.text_simple == "Pit stop window open: any lap from 18 to 22, best lap 20."
     assert not p.plan(ctx(lap=19, window={**WINDOW, "open_lap": 19}))  # the open lap just follows the current lap
-    (m,) = p.plan(ctx(lap=19, window={"open_lap": 19, "close_lap": 26, "ideal_lap": None}))  # moved 4 laps
-    assert m.text == "Pit window is open: laps 19 to 26."
-    (last,) = p.plan(ctx(lap=25, window={"open_lap": 19, "close_lap": 26, "ideal_lap": None}))
+    assert not p.plan(ctx(lap=19, window={"open_lap": 19, "close_lap": 26, "ideal_lap": None}))  # later: not news
+    p = CallPlanner()
+    p.plan(ctx(lap=18, window={"open_lap": 18, "close_lap": 26, "ideal_lap": None}))
+    (m,) = p.plan(ctx(lap=19, window={"open_lap": 19, "close_lap": 23, "ideal_lap": None}))  # 3 laps earlier: news
+    assert m.text == "Pit window is open: laps 19 to 23."
+    (last,) = p.plan(ctx(lap=22, window={"open_lap": 19, "close_lap": 23, "ideal_lap": None}))
     assert last.level == "alert" and last.text == "Last laps of the tyre window: box this lap or next."
-    assert not p.plan(ctx(lap=25, window={"open_lap": 19, "close_lap": 26, "ideal_lap": None}, t=200.0))
+    assert last.text_simple == "Pit this lap or next: your tyres are nearly worn out."
+    assert not p.plan(ctx(lap=22, window={"open_lap": 19, "close_lap": 23, "ideal_lap": None}, t=200.0))
     p2 = CallPlanner()
     p2.plan(ctx(lap=18, window=WINDOW))
     assert topics(p2.plan(ctx(lap=25, stops_done=1, window={"open_lap": 25, "close_lap": 27}))) == ["pit_window"]
+
+
+def test_a_window_at_the_limit_is_not_announced_again_and_again() -> None:
+    # The tyres reach the limit (no tyre-sets data: the heuristic window, 4 %/lap): the window shrinks to "lap N to N"
+    # and then stays on the current lap. One "open", one "last laps", then nothing (review exp2: "Pit window is open:
+    # laps 19 to 19" every three laps to the flag).
+    p = CallPlanner()
+    seq = {12: (13, 16, False), 13: (13, 16, False), 14: (14, 16, False), 15: (15, 16, False), 16: (16, 16, False)}
+    seq |= {lap: (lap, lap, True) for lap in range(17, 30)}
+    said = []
+    for lap, (o, c, overdue) in seq.items():
+        w = {"open_lap": o, "close_lap": c, "ideal_lap": None, "overdue": overdue, "close_source": "measured"}
+        said += [(lap, x.text) for x in p.plan(ctx(lap=lap, t=100.0 + 80 * lap, window=w))]
+    assert said == [
+        (13, "Pit window is open: laps 13 to 16."),
+        (15, "Last laps of the tyre window: box this lap or next."),
+    ]
+
+
+def test_the_game_figure_says_so_and_waits_after_a_stop() -> None:
+    # just after a stop the game's laps-left figure for a used set is all there is (synthetic: it said "box" at 45 %
+    # wear, 8 %/lap, a set that reached the flag at 61 %): no window call in the stint's first MIN_STINT_LAPS laps
+    w = {"open_lap": 9, "close_lap": 11, "ideal_lap": None, "close_source": "game"}
+    p = CallPlanner()
+    assert not p.plan(ctx(lap=9, stops_done=1, stint_laps=2, window=w))
+    assert not p.plan(ctx(lap=10, stops_done=1, stint_laps=3, window=w))
+    (o,) = p.plan(ctx(lap=12, stops_done=1, stint_laps=5, window={**w, "open_lap": 12, "close_lap": 16}))
+    assert o.text == "Pit window is open: laps 12 to 16, on the game's tyre figure."
+    (last,) = p.plan(ctx(lap=15, stops_done=1, stint_laps=8, window={**w, "open_lap": 12, "close_lap": 16}))
+    assert last.text == "The game's tyre figure says last laps of the window: box this lap or next."
+    # the first stint: the game's figure is called at once, with its source
+    (first,) = CallPlanner().plan(ctx(lap=2, stops_done=0, stint_laps=2, window={**w, "open_lap": 2}))
+    assert first.text == "Pit window is open: laps 2 to 11, on the game's tyre figure."
 
 
 def test_undercut_threat_needs_the_window_and_a_real_threat() -> None:
@@ -138,8 +187,8 @@ def test_undercut_chance_on_the_transition_only() -> None:
     p = CallPlanner()
     cut = {"status": "likely", "gap_s": 1.2}
     (c,) = p.plan(ctx(lap=19, undercut_ahead=cut, gain_s=1.5, window=WINDOW))
-    assert c.text == "Undercut on the car ahead looks on: gap 1.2, new tyres worth about 1.5 a lap."
-    assert c.level == "detailed" and c.audience == "experienced"
+    assert c.text == "Undercut on the car ahead looks on: gap 1.2 s, new tyres worth about 1.5 s a lap."
+    assert c.level == "detailed" and c.audience == "experienced" and c.text_simple is None
     assert not p.plan(ctx(lap=19, undercut_ahead=cut, gain_s=1.5, window=WINDOW, t=101.0))  # still likely
 
 
@@ -153,12 +202,27 @@ def test_neighbour_stop_wording() -> None:
 
 
 def test_gap_within_and_cooldown_per_car() -> None:
+    # detail, not a call to act on (real Austria: four times in ten laps at the normal setting was chatter)
     p = CallPlanner()
     (c,) = p.plan(ctx(lap=5, within_behind=4, drs_behind=True))
-    assert c.text == "Car behind is within a second, DRS range." and c.level == "normal"
+    assert c.text == "Car behind is within a second, DRS range." and c.level == "detailed"
+    assert c.text_simple == "Car close behind you."
     assert not p.plan(ctx(lap=7, within_behind=4))
-    assert p.plan(ctx(lap=7, within_behind=5))[0].text == "Car behind is within a second."
-    assert p.plan(ctx(lap=8, within_behind=4))
+    assert not p.plan(ctx(lap=7, within_behind=5))  # another car, but a "within a second" two laps ago
+    assert p.plan(ctx(lap=8, within_behind=5))[0].text == "Car behind is within a second."
+    assert not p.plan(ctx(lap=14, within_behind=4))
+    assert p.plan(ctx(lap=15, within_behind=4))
+
+
+def test_no_gap_calls_under_a_safety_car_or_vsc() -> None:
+    # the field bunches up behind the safety car; a gap call would also take the lap's slot from "stay out"
+    trends = [{"side": "behind", "car_index": 2, "gap_s": 0.6, "slope": -0.5, "laps": 4, "laps_to_1s": 0.0}]
+    stay = {"pit_loss_s": None, "green_pit_loss_s": None, "stop_needed": False, "this_lap": True, "tier": "heuristic"}
+    for status in ("full", "virtual"):
+        calls = CallPlanner().plan(
+            ctx(sc_status=status, sc_period=1, sc_box=stay, within_behind=2, drs_behind=True, trends=trends)
+        )
+        assert topics(calls) == ["sc_stay"], status
 
 
 def test_gap_trends() -> None:
@@ -168,9 +232,9 @@ def test_gap_trends() -> None:
         {"side": "behind", "car_index": 2, "gap_s": 1.8, "slope": -0.3, "laps": 4, "laps_to_1s": 2.7},
     ]
     (c,) = p.plan(ctx(trends=trends))
-    assert c.text == "Catching the car ahead: 2.4 s, about 0.4 a lap." and c.level == "detailed"
+    assert c.text == "Catching the car ahead: 2.4 s, about 0.4 s a lap." and c.level == "detailed"
     (d,) = p.plan(ctx(lap=11, trends=trends))
-    assert d.text == "Car behind closing: 1.8 s, 0.3 a lap."
+    assert d.text == "Car behind closing: 1.8 s, 0.3 s a lap."
     slow = [{"side": "ahead", "car_index": 7, "gap_s": 2.4, "slope": -0.1, "laps": 4, "laps_to_1s": 14}]
     assert not p.plan(ctx(lap=12, trends=slow))
 
@@ -180,6 +244,7 @@ def test_weather_and_crossover() -> None:
     nc = {"in_min": 10, "weather": "light_rain", "rain_pct": 60, "in_laps": 7}
     (c,) = p.plan(ctx(next_weather=nc, weather_now="clear"))
     assert c.text == "Rain forecast in about 10 minutes, around 7 laps." and c.level == "alert" and not c.bypass_quiet
+    assert c.text_simple == "Rain is coming in about 10 minutes."
     assert not p.plan(ctx(lap=11, next_weather=nc, weather_now="clear", t=250.0))  # 5 minute cooldown
     assert p.plan(ctx(lap=14, next_weather=nc, weather_now="clear", t=401.0))
     dry = CallPlanner().plan(
@@ -188,6 +253,18 @@ def test_weather_and_crossover() -> None:
     assert dry[0].text == "Forecast says dry in about 5 minutes." and dry[0].level == "normal"
     (x,) = CallPlanner().plan(ctx(crossover={"compound": "inter", "gain_s": 0.8}))
     assert x.text == "Game's tyre model now has inters 0.8 s a lap faster than your slicks." and x.level == "alert"
+    assert (
+        x.text_simple == "The game says intermediate rain tyres are now 0.8 seconds a lap faster than your dry tyres."
+    )
+
+
+def test_no_rain_call_for_a_change_after_the_flag() -> None:
+    # review: "L9 Rain forecast in about 10 minutes, around 10 laps" in a 12-lap race (an alert at every setting)
+    nc = {"in_min": 10, "weather": "light_rain", "rain_pct": 60, "in_laps": 10}
+    assert not CallPlanner().plan(ctx(lap=9, total_laps=12, laps_remaining=3.9, next_weather=nc, weather_now="clear"))
+    assert not CallPlanner().plan(ctx(lap=3, total_laps=12, laps_remaining=10.0, next_weather=nc, weather_now="clear"))
+    (c,) = CallPlanner().plan(ctx(lap=2, total_laps=12, laps_remaining=10.5, next_weather=nc, weather_now="clear"))
+    assert c.topic == "weather"
 
 
 def test_budget_one_normal_and_two_detailed_per_lap_and_priority_order() -> None:
@@ -246,6 +323,7 @@ def test_to_dict_contract() -> None:
         "level",
         "priority",
         "text",
+        "text_simple",
         "lap",
         "ttl_s",
         "bypass_quiet",

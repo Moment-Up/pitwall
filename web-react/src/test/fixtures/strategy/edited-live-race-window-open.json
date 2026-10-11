@@ -3,7 +3,10 @@
   "tier": "edited",
   "source": "hand-built StrategyView",
   "moment": "race, lap 20 of 30, P6: pit window open, undercut marginal, car behind in DRS range, fuel tight",
-  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data."
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed)"
+  ]
  },
  "version": 1,
  "mode": "race",
@@ -202,18 +205,24 @@
   {
    "id": "c19-gap",
    "topic": "gap",
-   "level": "normal",
+   "level": "detailed",
    "text": "Car behind is within a second, DRS range.",
+   "text_simple": "Car close behind you.",
+   "audience": "all",
    "lap": 19,
-   "t_unix": 1791700120.0
+   "t_unix": 1791700120.0,
+   "ttl_s": 20.0
   },
   {
    "id": "c18-win",
    "topic": "pit_window",
    "level": "normal",
    "text": "Pit window is open: laps 18 to 22, best around 20.",
+   "text_simple": "Pit stop window open: any lap from 18 to 22, best lap 20.",
+   "audience": "all",
    "lap": 18,
-   "t_unix": 1791700030.0
+   "t_unix": 1791700030.0,
+   "ttl_s": 90.0
   }
  ]
 }

@@ -161,6 +161,7 @@ SETS = [
 
 def test_tyre_sets_player_only_deduplicated() -> None:
     a = F1Adapter(field_hz=0.0)
+    a.decode(lap_packet(0.0, {PLAYER: _row(1)}), 0)  # the session is known: TyreSets only follow one
     out = [e for e in a.decode(tyre_sets_packet(0.0, SETS), 0) if isinstance(e, TyreSetsInfo)]
     assert len(out) == 1
     ts = out[0]
@@ -185,6 +186,7 @@ def test_tyre_sets_player_only_deduplicated() -> None:
 
 def test_tyre_sets_fitted_index_past_the_array_is_unknown() -> None:
     a = F1Adapter(field_hz=0.0)
+    a.decode(lap_packet(0.0, {PLAYER: _row(1)}), 0)
     (ts,) = [e for e in a.decode(tyre_sets_packet(0.0, SETS, fitted_idx=255), 0) if isinstance(e, TyreSetsInfo)]
     assert ts.fitted_index is None
 
@@ -194,6 +196,27 @@ def test_tyre_sets_of_another_session_never_reset_the_session() -> None:
     a.decode(lap_packet(0.0, {PLAYER: _row(1)}), 0)
     assert a.decode(tyre_sets_packet(0.1, SETS, uid=UID + 1), 0) == []
     assert a._session_uid == UID and a.stats.ignored == 1
+
+
+def test_tyre_sets_before_any_session_packet_are_ignored() -> None:
+    # as Session History on the integration branch: a packet that only follows a session never starts one
+    a = F1Adapter(field_hz=0.0)
+    assert a.decode(tyre_sets_packet(0.0, SETS), 0) == []
+    assert a._session_uid is None and a.stats.ignored == 1
+
+
+def test_a_car_with_no_compound_has_no_tyre_age() -> None:
+    # online lobbies may restrict other cars' telemetry: no compound code, and its age field would read "0 laps"
+    a = F1Adapter(field_hz=0.0)
+    status = status_packet(
+        0.0, {0: {"visualTyreCompound": 0, "tyresAgeLaps": 0}, PLAYER: {"visualTyreCompound": 17, "tyresAgeLaps": 4}}
+    )
+    a.decode(status, 0)
+    (rt,) = _timings(a.decode(lap_packet(0.0, {0: _row(1), PLAYER: _row(2)}), 0))
+    other = next(c for c in rt.cars if c.car_index == 0)
+    me = next(c for c in rt.cars if c.is_player)
+    assert (other.tyre_visual, other.tyre_age_laps) == (None, None)
+    assert (me.tyre_visual, me.tyre_age_laps) == ("medium", 4)
 
 
 def test_capability_rows_are_spec_level_only() -> None:

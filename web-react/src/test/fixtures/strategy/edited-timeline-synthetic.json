@@ -3,7 +3,10 @@
   "tier": "edited",
   "source": "hand-built StrategyTimeline",
   "moment": "SYNTHETIC 12-lap race (race-strategy-demo): car ahead stops L5, VSC L7-8, player stops L8, rain L11",
-  "notes": "Modelled on the race-strategy-demo scenario's ground truth (strategy spec 12). Test data, never game evidence."
+  "notes": "Modelled on the race-strategy-demo scenario's ground truth (strategy spec 12). Test data, never game evidence.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed)"
+  ]
  },
  "session_id": "synthetic0001",
  "available": true,
@@ -179,7 +182,10 @@
      "id": "d5-win",
      "topic": "pit_window",
      "level": "normal",
-     "text": "Pit window is open: laps 5 to 10, best around 8."
+     "text": "Pit window is open: laps 5 to 10, best around 8.",
+     "text_simple": "Pit stop window open: any lap from 5 to 10, best lap 8.",
+     "audience": "all",
+     "ttl_s": 90.0
     }
    ]
   },
@@ -222,7 +228,10 @@
      "id": "d6-fuel",
      "topic": "fuel",
      "level": "alert",
-     "text": "Fuel critical: 0.4 laps short. Lift and coast about 2 s a lap, brake at your normal point."
+     "text": "Fuel critical: 0.4 laps short. Lift and coast about 2 s a lap, brake at your normal point.",
+     "text_simple": "Fuel is short. Lift off a little before each braking point, then brake as normal.",
+     "audience": "all",
+     "ttl_s": 120.0
     }
    ]
   },
@@ -265,7 +274,10 @@
      "id": "d7-sc",
      "topic": "sc_box",
      "level": "alert",
-     "text": "Virtual safety car. Box this lap is an option: a stop costs about 11 s now, 19 under green."
+     "text": "Virtual safety car. Pitting this lap is an option: a stop costs about 11 s now, 19 s under green.",
+     "text_simple": "Virtual safety car: a pit stop is cheap now, about 11 seconds instead of 19. You can pit this lap.",
+     "audience": "all",
+     "ttl_s": 60.0
     }
    ]
   },
@@ -336,7 +348,10 @@
      "id": "d9-rain",
      "topic": "weather",
      "level": "alert",
-     "text": "Rain forecast in about 10 minutes, around 7 laps."
+     "text": "Rain forecast in about 4 minutes, around 3 laps.",
+     "text_simple": "Rain is coming in about 4 minutes.",
+     "audience": "all",
+     "ttl_s": 120.0
     }
    ]
   },
@@ -375,7 +390,10 @@
      "id": "d10-threat",
      "topic": "undercut_threat",
      "level": "normal",
-     "text": "Car behind is pitting. Box next lap to cover the undercut."
+     "text": "Car behind is pitting. Box next lap to cover the undercut.",
+     "text_simple": null,
+     "audience": "experienced",
+     "ttl_s": 45.0
     }
    ]
   },
@@ -553,40 +571,55 @@
    "topic": "pit_window",
    "level": "normal",
    "text": "Pit window is open: laps 5 to 10, best around 8.",
+   "text_simple": "Pit stop window open: any lap from 5 to 10, best lap 8.",
+   "audience": "all",
    "lap": 5,
-   "t_unix": 1791702460.0
+   "t_unix": 1791702460.0,
+   "ttl_s": 90.0
   },
   {
    "id": "d6-fuel",
    "topic": "fuel",
    "level": "alert",
    "text": "Fuel critical: 0.4 laps short. Lift and coast about 2 s a lap, brake at your normal point.",
+   "text_simple": "Fuel is short. Lift off a little before each braking point, then brake as normal.",
+   "audience": "all",
    "lap": 6,
-   "t_unix": 1791702552.0
+   "t_unix": 1791702552.0,
+   "ttl_s": 120.0
   },
   {
    "id": "d7-sc",
    "topic": "sc_box",
    "level": "alert",
-   "text": "Virtual safety car. Box this lap is an option: a stop costs about 11 s now, 19 under green.",
+   "text": "Virtual safety car. Pitting this lap is an option: a stop costs about 11 s now, 19 s under green.",
+   "text_simple": "Virtual safety car: a pit stop is cheap now, about 11 seconds instead of 19. You can pit this lap.",
+   "audience": "all",
    "lap": 7,
-   "t_unix": 1791702644.0
+   "t_unix": 1791702644.0,
+   "ttl_s": 60.0
   },
   {
    "id": "d9-rain",
    "topic": "weather",
    "level": "alert",
-   "text": "Rain forecast in about 10 minutes, around 7 laps.",
+   "text": "Rain forecast in about 4 minutes, around 3 laps.",
+   "text_simple": "Rain is coming in about 4 minutes.",
+   "audience": "all",
    "lap": 9,
-   "t_unix": 1791702828.0
+   "t_unix": 1791702828.0,
+   "ttl_s": 120.0
   },
   {
    "id": "d10-threat",
    "topic": "undercut_threat",
    "level": "normal",
    "text": "Car behind is pitting. Box next lap to cover the undercut.",
+   "text_simple": null,
+   "audience": "experienced",
    "lap": 10,
-   "t_unix": 1791702920.0
+   "t_unix": 1791702920.0,
+   "ttl_s": 45.0
   }
  ]
 }

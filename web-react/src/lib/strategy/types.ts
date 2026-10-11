@@ -94,10 +94,19 @@ export interface NeighbourStopView {
 }
 
 export interface PitView {
-  stops_done: number;
+  /** The game's count; null before the first timing tick (unknown, not 0). */
+  stops_done: number | null;
   stop_needed: boolean | null;
   two_stops: boolean | null;
-  window: { open_lap: number; close_lap: number; ideal_lap: number | null; close_source: "measured" | "game"; tier: Tier } | null;
+  window: {
+    open_lap: number;
+    close_lap: number;
+    ideal_lap: number | null;
+    close_source: "measured" | "game";
+    tier: Tier;
+    /** At or past the wear limit already: the window is this lap (absent from older servers). */
+    overdue?: boolean;
+  } | null;
   game_window: { ideal_lap: number; latest_lap: number } | null;
   pit_loss: { median_s: number; range: Range; n: number } | null;
   pit_loss_sc: { full_s: number | null; virtual_s: number | null; tier: Tier } | null;
@@ -124,7 +133,8 @@ export interface SafetyCarView {
     pit_loss_s: number | null;
     green_pit_loss_s: number | null;
     stop_needed: boolean;
-    this_lap: boolean;
+    /** null while the pit entry is unknown (no stop seen in this race yet). */
+    this_lap: boolean | null;
     tier: Tier;
   } | null;
 }
@@ -156,6 +166,13 @@ export interface CallView {
   level: CallLevel;
   /** The backend's words, verbatim (P9). */
   text: string;
+  /** The same call in plain words, for a driver with simple wording; null for calls meant for experienced drivers
+   * only. Absent from older servers. */
+  text_simple?: string | null;
+  /** "experienced": never said to (or shown for) a driver with simple wording. Absent from older servers. */
+  audience?: "all" | "experienced";
+  /** How long the call holds, seconds (a "box this lap" call ends at the pit entry). Absent from older servers. */
+  ttl_s?: number;
   lap: number | null;
   t_unix: number;
 }
@@ -220,7 +237,17 @@ export interface StrategyLapRecord {
   undercut_ahead: CutStatus | null;
   undercut_threat: CutStatus | null;
   tyre_gain_s: number | null;
-  calls: { id: string; topic: string; level: CallLevel; text: string; lap?: number | null; t_unix?: number }[];
+  calls: {
+    id: string;
+    topic: string;
+    level: CallLevel;
+    text: string;
+    text_simple?: string | null;
+    audience?: "all" | "experienced";
+    ttl_s?: number;
+    lap?: number | null;
+    t_unix?: number;
+  }[];
   // Additive fields the engine also writes (strategy/engine.py record): read when present, never required.
   total_laps?: number | null;
   grid_position?: number | null;

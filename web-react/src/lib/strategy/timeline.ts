@@ -11,10 +11,15 @@
 //   5. Calls         lap, level chip, the backend's text verbatim (P9)
 //   6. Tier note
 // Unknown is "-"; game figures say "(game)", Pitwall rules of thumb "(estimate)"; synthetic sessions carry the
-// SYNTHETIC chip (the page) and say so in the note.
+// SYNTHETIC chip (the page) and say so in the note. A number and its unit never break apart (a no-break space), and
+// ranges use an en dash ("12.7–12.9 s"), so a phone never strands "s" or "8" on a line of its own.
+//
+// A race Pitwall joined late (a resumed save: the record starts at lap 62) never saw the stops before it: the game's
+// own stop count on the lap records says how many, so the page never claims "You did not stop in this race".
 
 import { lapTime } from "../drive/text";
 import type { CallView, PitStopRow, StintRow, StrategyLapRecord, StrategyTimeline } from "./types";
+import { callsFor, callWords } from "./view";
 import {
   callChip,
   compoundColour,
@@ -100,6 +105,25 @@ export function timelineState(
   return { kind: "ok", title: "", text: "" };
 }
 
+/** No-break space: between a number and its unit. */
+const NB = "\u00a0";
+/** En dash: in number ranges. */
+const ND = "\u2013";
+
+/** Stops the game counted before Pitwall's record began (a race joined late): the game's own count on the lap
+ * records ("stops") beyond the stops Pitwall saw. 0 when the game's count is not known. */
+export function missedStops(t: Pick<StrategyTimeline, "laps" | "stops">): number {
+  const counts = t.laps.map((l) => l.stops).filter(finite);
+  if (!counts.length) return 0;
+  return Math.max(0, Math.max(...counts) - t.stops.length);
+}
+
+/** The first lap of Pitwall's record (above 1 when it joined late), or null without laps. */
+export function firstRecordedLap(t: Pick<StrategyTimeline, "laps">): number | null {
+  const laps = t.laps.map((l) => l.lap).filter(finite);
+  return laps.length ? Math.min(...laps) : null;
+}
+
 // -------------------------------------------------------------------------------------------------- KPIs
 
 export interface StrategyKpi {
@@ -148,26 +172,23 @@ export function timelineKpis(t: StrategyTimeline, opts: { simple?: boolean } = {
     posSub = start == null ? "Start position not recorded" : "Finish position not recorded";
   }
 
-  // Stops: the player's own.
+  // Stops: the player's own, and the ones the game counted before Pitwall's record began (a race joined late).
   const stops = [...t.stops].sort((a, b) => a.entry_lap - b.entry_lap);
-  const stopsValue = String(stops.length);
-  const stopsSub = stops.length
-    ? stops
-        .map((s) => {
-          const change = compoundChange(s.compound_before, s.compound_after);
-          return `L${s.entry_lap}${change ? ` · ${change}` : ""}`;
-        })
-        .join("; ")
-    : simple
-      ? "You did not stop"
-      : "No pit stop";
+  const missed = missedStops(t);
+  const stopsValue = String(stops.length + missed);
+  const seen = stops.map((s) => {
+    const change = compoundChange(s.compound_before, s.compound_after);
+    return `L${s.entry_lap}${change ? ` · ${change}` : ""}`;
+  });
+  const before = missed > 0 ? `${missed} before lap ${firstRecordedLap(t)} (game)` : null;
+  const stopsSub = before || seen.length ? [before, ...seen].filter(Boolean).join("; ") : simple ? "You did not stop" : "No pit stop";
 
   // Pit loss: this race's measured stops (player and field).
   const pl = t.pit_loss;
-  const plValue = pl && finite(pl.median_s) ? `${one(pl.median_s)} s` : UNKNOWN;
+  const plValue = pl && finite(pl.median_s) ? `${one(pl.median_s)}${NB}s` : UNKNOWN;
   const plSub =
     pl && finite(pl.median_s)
-      ? `${pl.n} measured${pl.n > 1 && finite(pl.range.low) && finite(pl.range.high) ? ` · ${one(pl.range.low)}-${one(pl.range.high)} s` : ""}`
+      ? `${pl.n} measured${pl.n > 1 && finite(pl.range.low) && finite(pl.range.high) ? ` · ${one(pl.range.low)}${ND}${one(pl.range.high)}${NB}s` : ""}`
       : "No pit stop measured in this race";
 
   // Fuel at the flag: the newest lap with this race's own margin; the game's figure otherwise.
@@ -176,11 +197,11 @@ export function timelineKpis(t: StrategyTimeline, opts: { simple?: boolean } = {
   let fuelValue = UNKNOWN;
   let fuelSub = "Needs two green laps";
   if (fuelLap) {
-    fuelValue = `${signedOne(fuelLap.fuel_margin_laps)} laps`;
+    fuelValue = `${signedOne(fuelLap.fuel_margin_laps)}${NB}laps`;
     const final = finite(t.total_laps) && fuelLap.lap >= t.total_laps;
-    fuelSub = final ? "Left at the flag" : `Estimate at lap ${fuelLap.lap}`;
+    fuelSub = final ? "Spare fuel when the race ended" : `Estimate at lap ${fuelLap.lap}`;
   } else if (gameLap) {
-    fuelValue = `${signedOne(gameLap.game_fuel_margin_laps)} laps`;
+    fuelValue = `${signedOne(gameLap.game_fuel_margin_laps)}${NB}laps`;
     fuelSub = `The game's figure at lap ${gameLap.lap}`;
   }
 
@@ -188,7 +209,7 @@ export function timelineKpis(t: StrategyTimeline, opts: { simple?: boolean } = {
     { id: "positions", title: simple ? "Start → finish" : "Positions", value: posValue, sub: posSub },
     { id: "stops", title: "Stops", value: stopsValue, sub: stopsSub },
     { id: "pit_loss", title: "Pit loss", value: plValue, sub: plSub, term: "pit_loss" },
-    { id: "fuel", title: "Fuel at the flag", value: fuelValue, sub: fuelSub, term: "lift_and_coast" },
+    { id: "fuel", title: "Fuel at the flag", value: fuelValue, sub: fuelSub, term: "fuel_margin" },
   ];
 }
 
@@ -310,6 +331,9 @@ export function timelineChart(t: StrategyTimeline): TimelineChartModel {
   const last = laps[laps.length - 1]!.lap;
   const x0 = first - 0.5;
   const x1 = last + 0.5;
+  // The grid slot at the start of lap 1 (a lap's record is its position at the line, so the line would otherwise
+  // start at the end of lap 1: "P20 → P1" drawn from P8). Only when the record starts at lap 1.
+  const grid = first === 1 && finite(t.grid_position) && t.grid_position > 0 ? t.grid_position : null;
   const rows: TimelineRow[] = laps.map((l) => {
     const r: TimelineRow = { lap: l.lap };
     if (finite(l.position) && l.position > 0) r.position = l.position;
@@ -317,6 +341,7 @@ export function timelineChart(t: StrategyTimeline): TimelineChartModel {
     if (finite(l.gap_behind_ms) && l.gap_behind_ms >= 0) r.behind = Math.round(l.gap_behind_ms / 100) / 10;
     return r;
   });
+  if (grid != null) rows.unshift({ lap: x0, position: grid });
   const cars = Math.max(
     1,
     ...laps.map((l) => (finite(l.cars) ? l.cars : 0)),
@@ -340,7 +365,7 @@ export function timelineChart(t: StrategyTimeline): TimelineChartModel {
       start: p.start_lap,
       end,
       short: safetyCarShort(p.status),
-      words: `${safetyCarWord(p.status)} ${p.start_lap === end ? `on lap ${p.start_lap}` : `on laps ${p.start_lap}-${end}`}`,
+      words: `${safetyCarWord(p.status)} ${p.start_lap === end ? `on lap ${p.start_lap}` : `on laps ${p.start_lap}${ND}${end}`}`,
     };
   });
 
@@ -379,10 +404,11 @@ export function timelineChart(t: StrategyTimeline): TimelineChartModel {
     };
   });
 
-  const firstPos = rows.find((r) => r.position != null)?.position;
+  const firstPos = rows.find((r) => r.position != null && r.lap >= first)?.position;
   const lastPos = [...rows].reverse().find((r) => r.position != null)?.position;
   const summary = [
     `Laps ${first} to ${last}.`,
+    grid != null ? `Started P${grid} on the grid.` : null,
     firstPos != null && lastPos != null ? `Position P${firstPos} on lap ${first}, P${lastPos} on lap ${last}.` : null,
     stops.length ? `${plural(stops.length, "pit stop")}: ${stops.map((s) => `lap ${s.lap}`).join(", ")}.` : "No pit stop.",
     bands.length ? `${bands.map((b) => b.words).join("; ")}.` : null,
@@ -431,21 +457,31 @@ export interface StintRowView {
   /** "1.5%/lap" */
   rate: string;
   median: string;
+  /** A stint already running when Pitwall's record began: "Tyres 37 laps old at L62"; null otherwise. */
+  note: string | null;
 }
 
-export function stintRows(stints: readonly StintRow[]): StintRowView[] {
+export function stintRows(stints: readonly StintRow[], laps: readonly StrategyLapRecord[] = []): StintRowView[] {
+  const firstLap = laps.length ? Math.min(...laps.map((l) => l.lap)) : null;
   return [...stints]
     .sort((a, b) => a.start_lap - b.start_lap)
-    .map((s, i) => ({
-      id: `stint${i}`,
-      compound: compoundWord(s.compound) ?? UNKNOWN,
-      colour: compoundColour(s.compound),
-      laps: s.start_lap === s.end_lap ? `L${s.start_lap}` : `L${s.start_lap}-${s.end_lap}`,
-      count: s.laps,
-      wearEnd: finite(s.wear_end_pct) ? `${Math.round(s.wear_end_pct)}%` : UNKNOWN,
-      rate: finite(s.wear_rate_pct_per_lap) ? `${one(s.wear_rate_pct_per_lap)}%/lap` : UNKNOWN,
-      median: lapTime(s.median_lap_ms),
-    }));
+    .map((s, i) => {
+      // joined late: the first stint did not start here, it was already this old (the game's tyre age)
+      const age = i === 0 && firstLap != null && firstLap > 1 && s.start_lap === firstLap
+        ? laps.find((l) => l.lap === firstLap)?.tyre_age_laps
+        : null;
+      return {
+        id: `stint${i}`,
+        compound: compoundWord(s.compound) ?? UNKNOWN,
+        colour: compoundColour(s.compound),
+        laps: s.start_lap === s.end_lap ? `L${s.start_lap}` : `L${s.start_lap}${ND}${s.end_lap}`,
+        count: s.laps,
+        wearEnd: finite(s.wear_end_pct) ? `${Math.round(s.wear_end_pct)}%` : UNKNOWN,
+        rate: finite(s.wear_rate_pct_per_lap) ? `${one(s.wear_rate_pct_per_lap)}%/lap` : UNKNOWN,
+        median: lapTime(s.median_lap_ms),
+        note: finite(age) && age > 0 ? `Tyres ${plural(age, "lap")} old at L${s.start_lap}` : null,
+      };
+    });
 }
 
 /** Exclusion reasons (strategy/pitloss.py) in words; anything new is shown as sent, sentence case. */
@@ -482,7 +518,7 @@ export interface StopRowView {
 }
 
 function secs(v: number | null | undefined): string {
-  return finite(v) ? `${one(v)} s` : UNKNOWN;
+  return finite(v) ? `${one(v)}${NB}s` : UNKNOWN;
 }
 
 export function stopRows(stops: readonly PitStopRow[]): StopRowView[] {
@@ -515,15 +551,30 @@ export interface CallRowView {
   text: string;
 }
 
-export function callRows(calls: readonly (CallView & { lap: number | null })[]): CallRowView[] {
-  return [...calls]
+/** The race's calls in order. ``simple`` (the viewed driver's simple wording): the plain words they heard, and
+ * none of the calls meant for experienced drivers (which never reached them). */
+export function callRows(calls: readonly (CallView & { lap: number | null })[], opts: { simple?: boolean } = {}): CallRowView[] {
+  const simple = !!opts.simple;
+  return callsFor({ calls: [...calls] }, simple)
     .sort((a, b) => (a.lap ?? 0) - (b.lap ?? 0) || (finite(a.t_unix) ? a.t_unix : 0) - (finite(b.t_unix) ? b.t_unix : 0))
     .map((c, i) => ({
       id: c.id || `call${i}`,
       lap: finite(c.lap) ? `L${c.lap}` : UNKNOWN,
       chip: callChip(c.level),
-      text: c.text,
+      text: callWords(c, simple),
     }));
+}
+
+/** Strategy words the calls use, for the glossary buttons beside them (beginners and intermediates, 6.10). */
+export function callTerms(rows: readonly Pick<CallRowView, "text">[]): StrategyTerm[] {
+  const text = rows.map((r) => r.text).join(" ");
+  const found: StrategyTerm[] = [];
+  if (/\bbox\b/i.test(text)) found.push("box");
+  if (/pit (?:stop )?window|tyre window/i.test(text)) found.push("pit_window");
+  if (/undercut/i.test(text)) found.push("undercut");
+  if (/safety car|\bVSC\b/i.test(text)) found.push("safety_car");
+  if (/lift and coast/i.test(text)) found.push("lift_and_coast");
+  return found;
 }
 
 // ------------------------------------------------------------------------------------------------- note

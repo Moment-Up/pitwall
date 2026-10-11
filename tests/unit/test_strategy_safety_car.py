@@ -71,6 +71,9 @@ def test_box_vs_stay_out_and_conditions() -> None:
     stay = _box(sc, stop_needed=False)
     assert stay is not None and stay["stop_needed"] is False
     assert _box(sc, ttl_s=-1.0)["this_lap"] is False  # type: ignore[index]  # past the pit entry: next lap
+    # no stop seen in this race yet: the pit entry is unknown, and "this lap" would be a guess (review: "Box this lap"
+    # with the driver already past Austria's entry)
+    assert _box(sc, ttl_s=None)["this_lap"] is None  # type: ignore[index]
     sc.on_session(session(sc="virtual"), 8)
     assert _box(sc)["pit_loss_s"] == 11.3  # type: ignore[index]
 

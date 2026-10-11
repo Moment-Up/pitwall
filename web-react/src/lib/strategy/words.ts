@@ -164,7 +164,16 @@ export function callChip(level: string | null | undefined): { label: string; ton
 
 // ------------------------------------------------------------------------------------------------ glossary
 
-export type StrategyTerm = "pit_window" | "pit_loss" | "undercut" | "lift_and_coast" | "stint" | "tiers";
+export type StrategyTerm =
+  | "pit_window"
+  | "pit_loss"
+  | "undercut"
+  | "lift_and_coast"
+  | "stint"
+  | "tiers"
+  | "fuel_margin"
+  | "box"
+  | "safety_car";
 
 /** Strategy terms for the `?` buttons (6.10: beginner and intermediate). Terms only, never actions. */
 export const STRATEGY_GLOSSARY: Readonly<Record<StrategyTerm, { title: string; text: string }>> = {
@@ -195,6 +204,22 @@ export const STRATEGY_GLOSSARY: Readonly<Record<StrategyTerm, { title: string; t
   stint: {
     title: "Stint",
     text: "The laps driven on one set of tyres, from the start or a pit stop to the next stop or the flag.",
+  },
+  fuel_margin: {
+    title: "Fuel at the flag",
+    text:
+      "How many laps of fuel would be left when the race ends, at the rate this race has used it. Below zero, the " +
+      "fuel would run out before the flag.",
+  },
+  box: {
+    title: "Box",
+    text: "The radio word for the pit stop: \"box this lap\" means come into the pits at the end of this lap.",
+  },
+  safety_car: {
+    title: "Safety car and VSC",
+    text:
+      "After a crash the field is slowed down: behind a safety car, or with a virtual safety car (VSC) every car " +
+      "keeps to a slower lap. A pit stop costs less time then, because everyone else is slow too.",
   },
   tiers: {
     title: "Measured, game and estimate",

@@ -3,7 +3,10 @@
   "tier": "edited",
   "source": "hand-built StrategyView",
   "moment": "SYNTHETIC session (race-strategy-demo), lap 8 of 12, P4: after the player's stop under the VSC",
-  "notes": "Modelled on the race-strategy-demo scenario's ground truth (strategy spec 12: car ahead pits L5, VSC L7-8, player pits L8). The payload is flagged synthetic as the engine flags synthetic streams. Test data, never game evidence."
+  "notes": "Modelled on the race-strategy-demo scenario's ground truth (strategy spec 12: car ahead pits L5, VSC L7-8, player pits L8). The payload is flagged synthetic as the engine flags synthetic streams. Test data, never game evidence.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed)"
+  ]
  },
  "version": 1,
  "mode": "race",
@@ -127,9 +130,12 @@
    "id": "s8-sc",
    "topic": "sc_box",
    "level": "alert",
-   "text": "Virtual safety car. Box this lap is an option: a stop costs about 11 s now, 19 under green.",
+   "text": "Virtual safety car. Pitting this lap is an option: a stop costs about 11 s now, 19 s under green.",
+   "text_simple": "Virtual safety car: a pit stop is cheap now, about 11 seconds instead of 19. You can pit this lap.",
+   "audience": "all",
    "lap": 7,
-   "t_unix": 1791702000.0
+   "t_unix": 1791702000.0,
+   "ttl_s": 60.0
   }
  ]
 }

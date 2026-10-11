@@ -223,3 +223,51 @@ def test_sc_loss_tier_is_measured_only_when_every_value_is() -> None:
     assert pt.neutral_loss() == {"full_s": 9.8, "virtual_s": None, "tier": "measured"}
     pt.visits = [full, green]
     assert pt.neutral_loss() == {"full_s": 9.8, "virtual_s": pytest.approx(11.4), "tier": "heuristic"}
+
+
+def test_a_flashback_into_a_stop_the_car_has_left_reopens_it() -> None:
+    """Review exp3: a flashback to a moment inside a car's stop (already closed, loss not yet worked out) used to set
+    its pit status to 0; the next tick, the car back in the lane, opened a second "stop" on its out-lap: a 16 s green
+    loss from one stop (true 20 s) and the out-lap's distance as the pit entry (2162 m for a true 4264 m)."""
+
+    def car2(t: float, lap: int, dist: float, pit: int, last_ms: int | None) -> list[CarTiming]:
+        lane = int((t - 999) * 1000) if pit else None
+        return [
+            car(1, 1, player=True, lap=lap, dist=dist, gap_ms=None),
+            car(2, 2, lap=lap, dist=dist, pit=pit, last_ms=last_ms, lane_ms=lane, stop_ms=2500 if pit else None),
+        ]
+
+    pt = PitTracker()
+    for lap in range(2, 10):  # green laps of 80 s
+        for k in range(160):
+            t = (lap - 2) * 80 + k * 0.5 + 360
+            pt.update(timing(t, car2(t, lap, k * 27.0, 0, 80000 if lap > 2 else None)), None)
+    for t, lap, dist, pit, last in (
+        (999.0, 10, 4264.0, 1, 80000),  # pit entry on lap 10
+        (1003.0, 11, 10.0, 1, 84000),  # crosses the line in the lane (in-lap 84 s)
+        (1010.0, 11, 150.0, 2, 84000),
+        (1015.0, 11, 257.0, 0, 84000),  # pit exit
+        (1020.0, 11, 400.0, 0, 84000),
+    ):
+        pt.update(timing(t, car2(t, lap, dist, pit, last)), None)
+    pt.rewind(1006.0)  # back into the lane, after the line
+    for t, lap, dist, pit in ((1006.0, 11, 60.0, 1), (1010.0, 11, 150.0, 2), (1015.0, 11, 257.0, 0)):
+        pt.update(timing(t, car2(t, lap, dist, pit, 84000)), None)
+    for k in range(1, 200):
+        t = 1015.0 + k * 0.5
+        lap = 11 if t < 1099 else 12 if t < 1179 else 13
+        pt.update(timing(t, car2(t, lap, 300.0, 0, {11: 84000, 12: 96000, 13: 80000}[lap])), None)
+    (v,) = pt.visits
+    assert (v.entry_lap, v.exit_lap, v.excluded) == (10, 11, EXCLUDED_FLASHBACK)
+    assert pt.green_loss() is None and pt.pit_entry_m() == 4264.0 and pt.pit_exit_m() == 257.0
+
+
+def test_a_flashback_to_an_earlier_lap_forgets_the_laps_driven_again() -> None:
+    pt = PitTracker()
+    for t, lap, pit, last in ((0.0, 5, 0, None), (80.0, 6, 0, 80000), (160.0, 7, 0, 81000), (170.0, 7, 1, 81000)):
+        pt.update(timing(t, [car(1, 1, player=True, lap=lap), car(2, 2, lap=lap, pit=pit, last_ms=last)]), None)
+    st = pt.cars[2]
+    assert st.times == {5: 80000, 6: 81000} and 7 in st.pitted
+    pt.rewind(100.0)
+    pt.update(timing(100.0, [car(1, 1, player=True, lap=6), car(2, 2, lap=6, last_ms=80000)]), None)
+    assert st.times == {5: 80000} and 7 not in st.pitted and not pt.visits and pt.in_lane(2) is None

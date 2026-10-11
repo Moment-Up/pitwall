@@ -9,9 +9,10 @@
 //   Behind                                    DRS
 //   0.8 s · closing 0.2/lap
 //   Pit window                               OPEN
-//   L38-44 · best ~L41 (game)
+//   L38-44 · best L41 (game)
 //   Undercut · Fuel · Weather (or Safety car under SC / VSC)
-//   L18 · Pit window is open: laps 18 to 22, best around 20.      (the newest call, verbatim)
+//   L18 · Pit window is open: laps 18 to 22, best around 20.      (the newest call, verbatim: up to two lines, so
+//                                                                  "brake at your normal point" is never cut off)
 
 import { memo } from "react";
 import { EvidenceChips } from "../../../components/ui";
@@ -59,6 +60,7 @@ export const StrategyTile = memo(function StrategyTile({ v }: { v: StrategyTileV
       title={v.title}
       aside={aside}
       className="pws"
+      footWrap
       foot={
         <span className="pws-foot" data-level={v.footLevel ?? undefined}>
           {v.foot}

@@ -236,9 +236,12 @@ class SessionManager:
 
     def _to_strategy(self, e: Emitted) -> None:
         """Race strategy (pitwall.strategy): the player's frames, laps, events and session info, after the session
-        manager has handled them (one deque append; button events are left out: frequent and not needed)."""
+        manager has handled them (one deque append). Only what the engine reads goes: button events (frequent, not
+        needed) and any other item type stay out of its queue."""
         sid = self.session_id
         if self.strategy is None or sid is None:
+            return
+        if not isinstance(e, CarFrame | LapCompletion | SessionInfo | GameEvent):
             return
         if isinstance(e, GameEvent) and e.kind == EventKind.BUTTON:
             return

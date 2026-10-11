@@ -92,9 +92,14 @@ def test_measured_pit_loss_matches_the_truth(run: Run) -> None:
 
 def test_one_vsc_box_call_one_rain_call_and_the_undercut_threat(run: Run) -> None:
     (box,) = _calls(run, "sc_box")
-    assert box["lap"] == 7 and box["level"] == "alert" and box["text"].startswith("Virtual safety car. Box this lap")
+    assert box["lap"] == 7 and box["level"] == "alert"
+    assert box["text"].startswith("Virtual safety car. Pitting this lap is an option")
+    assert box["text_simple"].startswith("Virtual safety car: a pit stop is cheap now")
+    # one rain call: the forecast keeps the rain 5 minutes away, and from lap 8 that is after the flag
     (rain,) = _calls(run, "weather")
-    assert rain["lap"] == run.truth.rain_call_lap and rain["text"].startswith("Rain forecast in about 10 minutes")
+    assert rain["lap"] == run.truth.rain_call_lap and rain["text"].startswith("Rain forecast in about 5 minutes")
+    # no window call on the game's figure just after the stop (review M10: "box this lap or next" on lap 10)
+    assert not [c for c in _calls(run, "pit_window") if c["lap"] in (9, 10)]
     (threat,) = _calls(run, "undercut_threat")
     assert threat["lap"] == run.truth.threat_lap and threat["data"]["car_index"] == run.truth.threat_car
     assert all(len(c["text"]) <= 120 and "brake later" not in c["text"] for c in run.calls)

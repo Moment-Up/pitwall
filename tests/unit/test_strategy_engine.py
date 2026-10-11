@@ -337,3 +337,97 @@ def test_lap_first_seen_at_the_line_counts() -> None:
     e.feed(session(total_laps=20))
     drive(e, range(4, 7))  # starts at lap 4, 0 m: seen from the line
     assert e.ledger[4].from_start and e.ledger[4].green
+
+
+def test_a_lapped_player_finishes_a_lap_early_and_is_not_told_fuel_is_short() -> None:
+    """Review exp4: a 10-lap race, 1.5 kg a lap from 14 kg, the leader 1.1 laps ahead. The player's race ends at the
+    first line crossing after the leader takes the flag (lap 9 for the player): the true margin is +0.33 laps, and
+    the engine used to say "Fuel critical: 0.4 laps short. Lift and coast..." on laps 4 and 7."""
+    e = StrategyEngine("lapped", clock=lambda: 0.0)
+    e.feed(session(total_laps=10))
+    t, fuel = 0.0, 14.0
+    calls = []
+    for lap in range(1, 10):
+        for k in range(20):
+            t += 4.0
+            d = k * 215.9
+            fuel -= 1.5 / 20
+            e.feed(frame(t, lap, d, fuel=fuel, game_margin=0.3))
+            leader = car(3, 1, lap=lap + 1, dist=min(4300.0, d + 430.0), gap_ms=None)  # 1.1 laps ahead
+            me = car(1, 18, player=True, lap=lap, dist=d, gap_ms=5000, leader_ms=88000)
+            e.feed(timing(t, [leader, me, car(2, 19, lap=lap, dist=d - 300, gap_ms=5000)]))
+        e.feed(completion(lap, 80000, t + 0.5))
+        calls += [c.text for c in e.take_calls()]
+        if lap == 7:
+            assert e.d.laps_remaining == pytest.approx(2.05, abs=0.05)  # laps 8 and 9, not 8, 9 and 10
+            assert e.view()["fuel"]["status"] == "ok" and e.view()["fuel"]["margin_laps"] > 0
+    assert not [c for c in calls if "Fuel" in c]
+
+
+def test_once_the_leader_has_finished_the_race_ends_at_the_next_line() -> None:
+    e = StrategyEngine("flag")
+    e.feed(session(total_laps=10))
+    e.feed(frame(100.0, 9, 1000.0, fuel=5.0))
+    e.feed(
+        timing(100.0, [car(0, 1, lap=10, result="finished", gap_ms=None), car(1, 2, lap=9, dist=1000.0, player=True)])
+    )
+    assert e.laps_remaining() == pytest.approx(1 - 1000 / 4318, abs=0.01)
+
+
+def test_the_fuel_verdict_is_judged_at_the_line_not_per_tick() -> None:
+    """Review M4: the tile's margin swung -0.4 -> -0.7 -> -0.5 within a lap (flat out, then lifting); the radio judges
+    at the line, and now so does the view. The tank itself stays live."""
+    e = StrategyEngine("fuel")
+    e.feed(session(total_laps=20))
+    t = drive(e, range(1, 5), burn=1.4)
+    tank = e.view()["fuel"]["fuel_kg"]
+    seen, per_tick = set(), set()
+    for k in range(1, 15):  # lap 5: burn hard early in the lap
+        e.feed(frame(t + k * 4.0, 5, 4318 * k / 20, fuel=tank - 0.2 * k))
+        v = e.view()["fuel"]
+        seen.add((v["margin_laps"], v["status"]))
+        per_tick.add(e.d.fuel.margin_laps if e.d.fuel is not None else None)
+        assert v["fuel_kg"] == pytest.approx(tank - 0.2 * k, abs=0.01)  # the tank is live
+    assert len(seen) == 1 and len(per_tick) > 5  # one verdict for the lap; per tick it would have moved
+
+
+def test_window_calls_at_the_wear_limit_are_said_once() -> None:
+    """Review exp2 through the engine: no tyre-sets data, 4 %/lap. The window used to become "laps N to N" every lap
+    past the limit, and "Pit window is open: laps 19 to 19" came every three laps to the flag."""
+    e = StrategyEngine("s4", clock=lambda: 0.0)
+    e.feed(session(total_laps=30))
+    t = 1000.0
+    said: list[tuple[int | None, str]] = []
+    for lap in range(1, 31):
+        for k in range(10):
+            t += 8.0
+            d = k * 430.0
+            w = 5.0 + (lap - 1) * 4.0 + k * 0.4
+            e.feed(frame(t, lap, d, wear=(w, w, w, w), fuel=60 - lap * 1.5 - k * 0.15, game_margin=2.0))
+            e.feed(
+                timing(
+                    t,
+                    [
+                        car(1, 5, player=True, lap=lap, dist=d, gap_ms=3000),
+                        car(2, 6, lap=lap, gap_ms=3000),
+                        car(3, 4, lap=lap, gap_ms=3000),
+                    ],
+                )
+            )
+        e.feed(completion(lap, 80000, t + 1))
+        said += [(c.lap, c.text) for c in e.take_calls() if c.topic == "pit_window"]
+        if lap == 20:
+            assert e.view()["pit"]["window"]["overdue"] is True
+    assert [text for _lap, text in said] == [
+        "Pit window is open: laps 13 to 16.",
+        "Last laps of the tyre window: box this lap or next.",
+    ]
+
+
+def test_stops_done_is_unknown_before_the_first_timing_tick() -> None:
+    e = StrategyEngine("s5")
+    e.feed(session(total_laps=20))
+    e.feed(frame(1.0, 1, 10.0, fuel=30.0))
+    assert e.view()["pit"]["stops_done"] is None
+    e.feed(timing(1.5, [car(1, 1, player=True, lap=1, dist=20.0, stops=0)]))
+    assert e.view()["pit"]["stops_done"] == 0

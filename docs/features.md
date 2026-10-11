@@ -53,12 +53,15 @@ check plus a button to try the synthetic demo.
 The pit wall view: speed, gear, throttle, brake and steering, the track map with the car's position, tyres and
 fuel, the lap table and the last lap's coaching.
 
-In an F1 25 race the inputs tile becomes a **Strategy** tile: the gap to the car ahead and behind (with the trend,
-"within 1 s" and DRS range), the pit window and the best lap to stop, the undercut on the car ahead and the threat
-from behind, the fuel margin to the flag (with how long to lift and coast when you are short), and the weather
-forecast. Under a safety car or VSC the weather row shows what a stop costs now against under green. Numbers that
+In an F1 25 race of 8 laps or more the inputs tile becomes a **Strategy** tile (in a shorter sprint the pit, undercut
+and fuel rows would never change, so the inputs trace keeps its place): the gap to the car ahead and behind (with the
+trend, "close" within a second and DRS range), the pit window and the best lap to stop, the undercut on the car ahead
+and the threat from behind (the laps to go when no stop is needed), the fuel margin to the flag (with how long to
+lift and coast when you are short), and the weather forecast ("after the flag" when a change comes too late to
+matter). Under a safety car or VSC the weather row shows what a stop costs now against under green. Amber is kept
+for what to act on or watch now. The footer shows the newest call while it holds (up to two lines). Numbers that
 come from the game's own tyre model say "(game)", rules of thumb say "(estimate)", and anything not yet known is
-`-`. Race strategy is tested on recorded PS5 races and synthetic ones; **not yet validated live**, and safety car,
+`-`. A driver whose profile asks for simple wording gets plain words ("Laps to go", "close", "lift early"). Race strategy is tested on recorded PS5 races and synthetic ones; **not yet validated live**, and safety car,
 rain and your own pit stop are synthetic only (see [how the race engineer makes strategy
 calls](#how-the-race-engineer-makes-strategy-calls)).
 
@@ -92,10 +95,13 @@ lose the most time under braking. *Markers* says the corner name before every br
 braking zone. *Off* is silent. Braking calls are tested on synthetic and recorded data and **not yet validated
 live on track**.
 
-In a race the engineer also makes **strategy calls**: the safety car or VSC opportunity to box, critical or tight
-fuel, the pit window opening and its last laps, the car behind pitting (cover the undercut), a rain forecast, the
-car behind coming within a second, and, at the detailed setting, the undercut on the car ahead, a car ahead
-pitting and gap trends. They wait for the same calm part of the lap; quiet intensity keeps only the alerts. Ask
+In a race the engineer also makes **strategy calls**: the safety car or VSC opportunity to pit, critical or tight
+fuel, the pit window opening and its last laps, the car behind pitting (cover the undercut), a rain forecast, and,
+at the detailed setting, the car behind coming within a second, the undercut on the car ahead, a car ahead pitting
+and gap trends. They wait for the same calm part of the lap; quiet intensity keeps only the alerts. A driver with
+simple wording hears every call in plain words ("Pit this lap or next: your tyres are nearly worn out.") and never
+the ones meant for experienced drivers. With the radio off, the newest strategy alert still shows in the Coach
+screen's radio strip. Ask
 "when should I pit?", "gap to the car ahead?", "is it going to rain?" or "fuel?" for an instant answer from the
 live strategy. How these are decided: [below](#how-the-race-engineer-makes-strategy-calls).
 
@@ -285,17 +291,18 @@ the per-lap fuel and tyre answers.
 
 | Call | When | Level |
 |---|---|---|
-| Safety car / VSC: box this lap is an option | a stop is needed soon or a new set reaches the flag; once per period | alert |
+| Safety car / VSC: pitting this lap (or next) is an option | a stop is needed soon or a new set reaches the flag; once per period; "this lap" only once a stop in this race has shown where the pit entry is | alert |
 | Safety car: no stop needed | the tyres reach the flag | normal |
 | Fuel critical / tight | at the line, margin below -0.05 / 0.3 laps after two clean laps | alert / normal |
-| Pit window open, last laps of the window | the window opens; the lap before it closes | normal / alert |
+| Pit window open, last laps of the window | the window opens; the lap before it closes; once per stint (again only if the window moves three laps earlier); says so when it is the game's tyre figure, and waits three laps after a stop when only that figure closes the window | normal / alert |
 | Car behind is pitting: cover the undercut | the car behind enters the pit lane while your window is open | normal |
-| Rain forecast / dry forecast | a change to rain (or dry) within 15 minutes | alert / normal |
-| Car behind is within a second (DRS) | it comes within a second; once per car per three laps | normal |
+| Rain forecast / dry forecast | a change to rain (or dry) within 15 minutes, before the flag | alert / normal |
+| Car behind is within a second (DRS) | it comes within a second; once per car per ten laps | detailed |
 | Undercut looks on, a car ahead pitting, gap trends | experienced drivers, detailed setting | detailed |
 
-At most one normal and two detailed calls a lap; nothing on lap 1 (except the safety car and critical fuel), on the
-final lap, in the pit lane, on a formation lap or under a red flag. Evidence: gaps, fuel, tyre wear, the game's tyre
+At most one normal and two detailed calls a lap; nothing on lap 1 (except the safety car and critical fuel), on your
+final lap (a lapped car's race ends a lap early: the laps left count that), in the pit lane, on a formation lap or
+under a red flag, and nothing about the gaps under a safety car or VSC. Evidence: gaps, fuel, tyre wear, the game's tyre
 sets, the forecast and other cars' pit stops are checked on real PS5 races (committed excerpts, and a full-distance
 Austria race by `scripts/strategy_check.py`); safety car, VSC, rain, the inters crossover and your own stop are
 synthetic only (`race-strategy-demo`). Nothing is validated live yet.

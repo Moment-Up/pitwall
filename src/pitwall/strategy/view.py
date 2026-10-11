@@ -3,7 +3,12 @@
 Contract (``web-react/src/lib/strategy/types.ts`` mirrors it; ``version`` 1): every key is always present, unknown
 values are ``null`` (never ``NaN``), units live in the key names, and tiers say where a number comes from:
 ``measured`` (this session's data), ``game`` (the game's own estimate) or ``heuristic`` (a rule of thumb). Kept
-small (well under 2 kB) because it rides every live snapshot.
+small because it rides every live snapshot: about 2-3.5 kB in a race with three calls shown (measured as compact
+JSON: the real Austria and Monza excerpts 2.0-2.1 kB, the full Austria race up to 2.4 kB, the synthetic race with a
+rain forecast and three calls with their plain words 3.1-3.6 kB).
+
+The fuel margin, status and lift and coast are the ones judged at the last lap line (``Derived.fuel_line``): burn
+within a lap is uneven, so a per-tick margin would swing (and the tile with it) while the radio judges at the line.
 """
 
 from __future__ import annotations
@@ -15,6 +20,7 @@ from pitwall.analysis.strategy import MIN_STINT_LAPS, WHEEL_CODES, WHEELS
 from pitwall.strategy.gaps import car_gap_view
 
 if TYPE_CHECKING:
+    from pitwall.strategy.calls import StrategyCall
     from pitwall.strategy.engine import StrategyEngine
 
 VIEW_VERSION = 1
@@ -81,11 +87,24 @@ def build_view(e: StrategyEngine) -> dict[str, Any]:
     )
     if race:
         out.update(gaps=_gaps(e), pit=_pit(e), safety_car=_safety_car(e))
-        out["calls"] = [
-            {"id": c.id, "topic": c.topic, "level": c.level, "text": c.text, "lap": c.lap, "t_unix": round(c.t_unix, 3)}
-            for c in e.recent_calls
-        ]
+        out["calls"] = [call_entry(c) for c in e.recent_calls]
     return clean(out)  # type: ignore[no-any-return]
+
+
+def call_entry(c: StrategyCall) -> dict[str, Any]:
+    """A call as the view and the lap records carry it: the words (and the plain ones), who it is for (a call for
+    experienced drivers is never shown to a driver with simple wording) and how long it holds (``ttl_s``)."""
+    return {
+        "id": c.id,
+        "topic": c.topic,
+        "level": c.level,
+        "text": c.text,
+        "text_simple": c.text_simple,
+        "audience": c.audience,
+        "lap": c.lap,
+        "ttl_s": round(c.ttl_s, 1),
+        "t_unix": round(c.t_unix, 3),
+    }
 
 
 def _gaps(e: StrategyEngine) -> dict[str, Any] | None:
@@ -151,10 +170,10 @@ def _tyres(e: StrategyEngine) -> dict[str, Any] | None:
 
 def _fuel(e: StrategyEngine) -> dict[str, Any] | None:
     d = e.d
-    fe = d.fuel
+    fe = d.fuel_line or d.fuel  # judged at the last lap line (the tank stays live)
     if fe is None:
         return None
-    lnc = d.lift_coast
+    lnc = d.lift_line
     burn = d.burn
     return {
         "fuel_kg": _r(d.fuel_now, 2),
@@ -163,14 +182,14 @@ def _fuel(e: StrategyEngine) -> dict[str, Any] | None:
         "margin_laps": fe.margin_laps,
         "margin_kg": fe.margin_kg,
         "game_margin_laps": _r(d.game_margin, 2),
-        "status": d.fuel_status,
+        "status": d.fuel_line_status if d.fuel_line is not None else d.fuel_status,
         "lift_coast": None
         if lnc is None
         else {
             "save_kg_per_lap": lnc.save_kg_per_lap,
             "seconds_per_lap": lnc.seconds_per_lap,
             "feasible": lnc.feasible,
-            "corners": list(d.lift_corners),
+            "corners": list(d.lift_line_corners),
         },
         "burn_model": None
         if burn is None
@@ -194,6 +213,7 @@ def _pit(e: StrategyEngine) -> dict[str, Any]:
             "ideal_lap": win.get("ideal_lap"),
             "close_source": win["close_source"],
             "tier": win.get("tier", "heuristic"),
+            "overdue": bool(win.get("overdue")),  # at or past the wear limit already: the window is this lap
         }
     extra = e.info.extra if e.info is not None else {}
     gi, gl = extra.get("pit_window_ideal_lap"), extra.get("pit_window_latest_lap")
@@ -205,7 +225,7 @@ def _pit(e: StrategyEngine) -> dict[str, Any]:
     elif d.loss_green is None:
         note = NOTE_NO_PIT_LOSS
     return {
-        "stops_done": 0 if me is None else me.num_pit_stops,
+        "stops_done": None if me is None else me.num_pit_stops,  # unknown before the first timing tick
         "stop_needed": d.stop_needed,
         "two_stops": None if win is None or not win.get("stop_needed_for_tyres") else bool(win.get("two_stops")),
         "window": window,

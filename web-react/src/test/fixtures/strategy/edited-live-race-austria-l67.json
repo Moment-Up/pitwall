@@ -3,7 +3,10 @@
   "tier": "edited",
   "source": "hand-built StrategyView",
   "moment": "race, lap 67 of 71, P4: no stop needed, fuel ok, dry",
-  "notes": "Numbers modelled on the strategy spec's recorded figures for the owner's full-distance Austria race (PS5 F1 25, 20261010-221749 capture, read in place, never committed) and on the committed review fixture recorded-austria-race-session.json (laps 62-71: lap times, fuel, wear, compound, weather). Gaps and positions between the spec's prototype values (L64 ahead 1.67 s / behind 3.85 s; L69 P1 behind 0.95 s) are invented. Not produced by the strategy engine: test data, not game data."
+  "notes": "Numbers modelled on the strategy spec's recorded figures for the owner's full-distance Austria race (PS5 F1 25, 20261010-221749 capture, read in place, never committed) and on the committed review fixture recorded-austria-race-session.json (laps 62-71: lap times, fuel, wear, compound, weather). Gaps and positions between the spec's prototype values (L64 ahead 1.67 s / behind 3.85 s; L69 P1 behind 0.95 s) are invented. Not produced by the strategy engine: test data, not game data.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed)"
+  ]
  },
  "version": 1,
  "mode": "race",
@@ -191,10 +194,13 @@
   {
    "id": "c65-gap",
    "topic": "gap",
-   "level": "normal",
+   "level": "detailed",
    "text": "Car behind is within a second.",
+   "text_simple": "Car close behind you.",
+   "audience": "all",
    "lap": 65,
-   "t_unix": 1791668900.0
+   "t_unix": 1791668900.0,
+   "ttl_s": 20.0
   }
  ]
 }

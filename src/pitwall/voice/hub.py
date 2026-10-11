@@ -1006,14 +1006,15 @@ class RadioHub:
     def _enqueue_strategy(self, payload: dict[str, Any]) -> None:
         """A proactive strategy call: queued for the scheduler's speak windows (``strategy.radio``). Calls meant for
         experienced drivers (undercut, a neighbour pitting, gap trends) are not given to a driver whose profile asks
-        for simple wording."""
+        for simple wording, who hears the call's plain words (``text_simple``) instead of the jargon."""
         try:
             from pitwall.strategy.radio import strategy_message
 
             limits = self.coaching_limits
-            if payload.get("audience") == "experienced" and limits is not None and limits.simple_wording:
+            simple = limits is not None and limits.simple_wording
+            if payload.get("audience") == "experienced" and simple:
                 return
-            self.scheduler.enqueue(strategy_message(payload, time.monotonic()))
+            self.scheduler.enqueue(strategy_message(payload, time.monotonic(), simple=simple))
         except Exception:
             log.exception("strategy call failed")
 

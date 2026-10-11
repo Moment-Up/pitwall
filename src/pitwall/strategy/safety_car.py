@@ -8,7 +8,8 @@ or x 0.6 (VSC), a heuristic (``[H]``, unvalidated in F1 25) that is always label
 The opportunity holds in a race, under a full safety car or a VSC, with at least two laps to go and the player not
 in the pit lane, when a stop is needed and the window opens within five laps or a new set reaches the flag from
 now. With no stop needed it is the "stay out" variant. The pit-entry deadline: ``(pit entry - lap distance) /
-speed - 3 s``; past it the call says "box next lap".
+speed - 3 s``; past it the call says "next lap". The pit entry is learned from the stops seen in this race: until
+then ``this_lap`` is None and the call names no lap.
 """
 
 from __future__ import annotations
@@ -93,6 +94,7 @@ def box_opportunity(
         "pit_loss_s": pit_loss,
         "green_pit_loss_s": green_loss_s,
         "stop_needed": stop_needed,
-        "this_lap": ttl_s is None or ttl_s > 0,
+        # None while the pit entry is unknown (no stop seen in this race yet): "this lap" would be a guess
+        "this_lap": None if ttl_s is None else ttl_s > 0,
         "tier": loss.get("tier", "heuristic"),
     }

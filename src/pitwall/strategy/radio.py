@@ -20,9 +20,11 @@ PRIORITY = {"high": Priority.HIGH, "normal": Priority.NORMAL, "low": Priority.LO
 DEFAULT_TTL_S = 60.0
 
 
-def strategy_message(call: Mapping[str, Any], now_mono: float) -> RadioMessage:
-    """A ``StrategyCall.to_dict()`` (the ``strategy_call`` live notification) as a radio message."""
-    text = str(call["text"])
+def strategy_message(call: Mapping[str, Any], now_mono: float, *, simple: bool = False) -> RadioMessage:
+    """A ``StrategyCall.to_dict()`` (the ``strategy_call`` live notification) as a radio message; ``simple``: the
+    call's plain words (``text_simple``) when it has them (a driver whose profile asks for simple wording)."""
+    plain = call.get("text_simple")
+    text = str(plain) if simple and isinstance(plain, str) and plain else str(call["text"])
     ttl = call.get("ttl_s")
     ttl_s = float(ttl) if isinstance(ttl, int | float) and ttl > 0 else DEFAULT_TTL_S
     lap = call.get("lap")

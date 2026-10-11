@@ -34,7 +34,7 @@ export interface CarScreenProps {
 export function CarScreen({ model, snap, history, nowS, maySleep = false, simple = false, outline = null, prior = null }: CarScreenProps) {
   // Every snapshot arrives as fresh JSON, so the views are cheap to rebuild and each tile is memoised on its
   // content instead: the laps and coaching tiles re-render once a lap, not per frame.
-  const strategy = strategyTile(snap, model, { simple }); // race strategy (pitwall.strategy)
+  const strategy = strategyTile(snap, model, { simple, nowS }); // race strategy (pitwall.strategy)
   return (
     <DriveFrame status={model.status} maySleep={maySleep} layout="car" dim={model.dim} state={model.state}>
       <CarTile v={carTile(snap, model)} />

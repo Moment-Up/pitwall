@@ -16,7 +16,14 @@ if TYPE_CHECKING:
 
 SRC = "strategy"
 WHEEL_WORDS = {"FL": "front left", "FR": "front right", "RL": "rear left", "RR": "rear right"}
-COMPOUND_PLURAL = {"soft": "softs", "medium": "mediums", "hard": "hards", "inter": "inters", "wet": "wets"}
+COMPOUND_PLURAL = {
+    "soft": "softs",
+    "super_soft": "super softs",
+    "medium": "mediums",
+    "hard": "hards",
+    "inter": "inters",
+    "wet": "wets",
+}
 TIER_WORDS = {"measured": "measured", "game": "the game's estimate", "heuristic": "estimate"}
 _SC_WORDS = {"full": "Safety car", "virtual": "Virtual safety car"}
 
@@ -30,6 +37,18 @@ def _n(v: float | None, nd: int = 1) -> str:
 
 def _words(label: str | None) -> str:
     return (label or "unknown").replace("_", " ")
+
+
+def _compound_plural(label: str | None) -> str | None:
+    """The plural for sentences ("mediums"); an unknown label is said as sent ("super_soft" -> "super softs")."""
+    if not label:
+        return None
+    return COMPOUND_PLURAL.get(label) or f"{_words(label)}s"
+
+
+def _laps(n: float | int) -> str:
+    v = _n(n, 0)
+    return f"{v} lap" if v == "1" else f"{v} laps"
 
 
 def add_strategy_facts(fs: FactSheet, view: dict[str, Any] | None) -> bool:
@@ -62,16 +81,19 @@ def _strategy(fs: FactSheet, v: dict[str, Any]) -> None:
     status = sc.get("status")
     if box and status in _SC_WORDS:
         name = _SC_WORDS[status]
-        when = "this lap" if box.get("this_lap") else "next lap"
+        this_lap = box.get("this_lap")  # None: the pit entry is not known yet
+        when = "this lap " if this_lap else "next lap " if this_lap is False else ""
         loss, green = box.get("pit_loss_s"), box.get("green_pit_loss_s")
         data = {"src": SRC, "kind": "sc_box", "status": status, "pit_loss_s": loss, "green_pit_loss_s": green}
         if box.get("stop_needed"):
-            text = f"{name} deployed (since lap {sc.get('since_lap')}): boxing {when} is an option"
-            say = f"{name}. Box {when} is an option"
+            text = f"{name} deployed (since lap {sc.get('since_lap')}): pitting {when}is an option"
+            if this_lap is None:
+                text += " (the pit entry is not known yet: no stop seen in this race)"
+            say = f"{name}. Pitting {when}is an option"
             if loss is not None and green is not None:
                 tier = TIER_WORDS.get(str(box.get("tier")), "estimate")
                 text += f"; a stop costs about {_n(loss)} s now ({tier}) against {_n(green)} s under green (measured)"
-                say += f": a stop costs about {_n(loss, 0)} s now, {_n(green, 0)} under green"
+                say += f": a stop costs about {_n(loss, 0)} s now, {_n(green, 0)} s under green"
             fs.add("strategy", text + ".", data, say=say + ".")
         else:
             fs.add(
@@ -84,9 +106,18 @@ def _strategy(fs: FactSheet, v: dict[str, Any]) -> None:
     if w:
         o, c, i = w.get("open_lap"), w.get("close_lap"), w.get("ideal_lap")
         src = "measured wear" if w.get("close_source") == "measured" else "the game's laps-left figure"
-        text = f"Pit window (tyre-limited): laps {o} to {c}, closing on {src}"
-        say = f"Pit window lap {o} to {c}"
-        if i is not None:
+        if w.get("overdue"):
+            text = f"Pit window (tyre-limited): the tyres are at the wear limit now ({src}): lap {c} is the window"
+            say = "Tyres at the wear limit: the window is this lap"
+        elif o == c:
+            text = f"Pit window (tyre-limited): lap {o} only, closing on {src}"
+            say = f"Pit window: lap {o}"
+        else:
+            text = f"Pit window (tyre-limited): laps {o} to {c}, closing on {src}"
+            say = f"Pit window lap {o} to {c}"
+        if w.get("close_source") == "game":
+            say += ", on the game's tyre figure"
+        if i is not None and o != c:
             text += f"; best around lap {i} (the game's tyre model, estimate)"
             say += f", best around lap {i}"
         if pit.get("two_stops"):
@@ -161,8 +192,7 @@ def _strategy(fs: FactSheet, v: dict[str, Any]) -> None:
                 "gain_high_s": gain.get("high"),
                 "gain_low_s": gain.get("low"),
             },
-            say=f"{word} is {cut['status']}: gap {_n(cut.get('gap_s'))}, new tyres worth about "
-            f"{_n(gain.get('high'))} a lap.",
+            say=_cut_say(word, cut["status"], cut.get("gap_s"), gain.get("high")),
         )
     ns = pit.get("neighbour_stop")
     if ns:
@@ -185,6 +215,16 @@ def _strategy(fs: FactSheet, v: dict[str, Any]) -> None:
         )
 
 
+def _cut_say(word: str, status: str, gap: float | None, gain: float | None) -> str:
+    say = f"{word} is {status}"
+    parts = []
+    if gap is not None:
+        parts.append(f"gap {_n(gap)} s")
+    if gain is not None and gain >= 0.05:
+        parts.append(f"new tyres worth about {_n(gain)} s a lap")
+    return say + (": " + ", ".join(parts) if parts else "") + "."
+
+
 # ---------------------------------------------------------------------------------------------------- gaps
 def _gaps(fs: FactSheet, v: dict[str, Any]) -> None:
     g = v.get("gaps") or {}
@@ -196,22 +236,28 @@ def _gaps(fs: FactSheet, v: dict[str, Any]) -> None:
         settled = "settled" if c.get("settled") else "not settled: last settled value"
         text = f"Gap to the car {side} (car {c.get('car_index')}): {_n(gap, 2)} s ({settled})"
         say = f"Car {side} {_n(gap)}" if side == "behind" else f"Car ahead plus {_n(gap)}"
+        # the radio keeps the qualifier: an unsettled value is the last settled one (a pass, a car in the pit lane)
+        quiet = False  # nothing more to say about a car in the pit lane
         if gap is None:
             say = f"No settled gap to the car {side} yet"
+        elif c.get("in_pit"):
+            say, quiet = f"Car {side} is in the pit lane", True
+        elif not c.get("settled"):
+            say += " (last settled)"
         data: dict[str, Any] = {"src": SRC, "kind": f"gap_{side}", "gap_s": gap, "trend_s_per_lap": trend}
         if trend is not None:
             word = "closing" if trend < 0 else "growing"
             text += f", {word} {_n(abs(trend), 2)} s a lap over {n} laps (measured)"
-            if abs(trend) >= 0.05:
-                say += f", {word} {_n(abs(trend))} a lap"
+            if abs(trend) >= 0.05 and not quiet:
+                say += f", {word} {_n(abs(trend))} s a lap"
         else:
             text += "; not enough laps for a trend yet"
         if c.get("within_1s"):
             text += "; within a second"
-            say += ", within a second"
+            say += "" if quiet else ", within a second"
         if c.get("drs_range"):
             text += " (DRS range)"
-            say += ", DRS range"
+            say += "" if quiet else ", DRS range"
         if c.get("laps_to_1s") is not None:
             text += f"; within a second in about {_n(c['laps_to_1s'])} laps at this rate"
             data["laps_to_1s"] = c["laps_to_1s"]
@@ -256,7 +302,7 @@ def _fuel(fs: FactSheet, v: dict[str, Any], race: bool) -> None:
     text = f"Fuel (measured): using {_n(per, 2)} kg per lap (median of {f.get('laps_used')} green laps)"
     if f.get("fuel_kg") is not None:
         text += f"; {_n(f['fuel_kg'], 1)} kg in the tank"
-    say = f"Using {_n(per, 2)} a lap"
+    say = f"Using {_n(per, 2)} kilos a lap"
     if race and m is not None:
         text += f"; margin to the finish {m:+.1f} laps ({mk:+.1f} kg), status {f.get('status')}"
         say += f", {'plus' if m >= 0 else 'minus'} {_n(abs(m))} laps to the finish"
@@ -289,11 +335,17 @@ def _fuel(fs: FactSheet, v: dict[str, Any], race: bool) -> None:
         if not lnc.get("feasible"):
             text += "; more than a realistic save"
         text += "; lift before the braking point and brake at the normal point"
+        secs = _n(lnc["seconds_per_lap"])
+        say = (
+            f"Lift and coast about {secs} seconds a lap{where}: brake at your normal point."
+            if lnc.get("feasible")
+            else f"Lift and coast would need about {secs} seconds a lap: more than you can realistically save."
+        )
         fs.add(
             "fuel",
             text + ".",
             {"src": SRC, "kind": "lift_coast", "seconds_per_lap": lnc["seconds_per_lap"], "corners": corners},
-            say=f"Lift and coast about {_n(lnc['seconds_per_lap'])} seconds a lap{where}: brake at your normal point.",
+            say=say,
         )
 
 
@@ -303,13 +355,17 @@ def _tyres(fs: FactSheet, v: dict[str, Any]) -> None:
     if not t:
         return
     comp, age = t.get("compound"), t.get("age_laps")
-    plural = COMPOUND_PLURAL.get(str(comp), "Tyres").capitalize()
+    plural = _compound_plural(comp)
     wear = t.get("wear_pct")
-    laps_old = "1 lap old" if age == 1 else f"{age if age is not None else '?'} laps old"
+    laps_old = "new" if age == 0 else "1 lap old" if age == 1 else f"{age if age is not None else '?'} laps old"
     head = f"Tyres: {comp or 'unknown compound'}, {laps_old}"
     if wear:
         head += f"; wear FL {_n(wear[0])}%, FR {_n(wear[1])}%, RL {_n(wear[2])}%, RR {_n(wear[3])}%"
-    say = f"{plural}, {laps_old}" if age is not None else plural
+    if plural is None:
+        # the compound (and with it the age) arrives with the game's car status: nothing to say until then
+        say = "Tyres" if wear else "No tyre data yet"
+    else:
+        say = f"{plural.capitalize()}, {laps_old}" if age is not None else plural.capitalize()
     data: dict[str, Any] = {"src": SRC, "kind": "tyres", "compound": comp, "age_laps": age, "wear": wear}
     lim, rate, to_limit = t.get("limiting_wheel"), t.get("rate_pct_per_lap"), t.get("laps_to_limit")
     limit = t.get("limit_pct")
@@ -317,7 +373,10 @@ def _tyres(fs: FactSheet, v: dict[str, Any]) -> None:
     if wear and all(isinstance(x, int | float) for x in wear):
         k = max(range(4), key=lambda i: wear[i])
         worst = ("FL", "FR", "RL", "RR")[k]
-        say += f". {WHEEL_WORDS[worst].capitalize()} is the most worn at {_n(wear[k])} percent"
+        if wear[k] >= 1:
+            say += f". {WHEEL_WORDS[worst].capitalize()} is the most worn at {_n(wear[k])} percent"
+        else:
+            worst = None
     if t.get("enough_laps") and lim and rate is not None and to_limit:
         rr = t.get("rate_range") or {}
         lo, hi = to_limit.get("low"), to_limit.get("high")
@@ -326,12 +385,17 @@ def _tyres(fs: FactSheet, v: dict[str, Any]) -> None:
             f"{_n(rr.get('low'), 2)}-{_n(rr.get('high'), 2)} with whole-percent wear), "
             f"{_n(limit, 0)}% in about {_n(lo, 0)}-{_n(hi, 0) if hi is not None else 'more'} laps"
         )
-        span = f"about {_n(lo, 0)} to {_n(hi, 0)} laps" if hi is not None else f"at least {_n(lo, 0)} laps"
+        if hi is None:
+            span = f"at least {_laps(lo)}"
+        elif _n(lo, 0) == _n(hi, 0):
+            span = f"about {_laps(lo)}"
+        else:
+            span = f"about {_n(lo, 0)} to {_laps(hi)}"
         if lim == worst:
-            say += f", about {_n(rate)} a lap: {span} to {_n(limit, 0)} percent"
+            say += f", about {_n(rate)} percent a lap: {span} to {_n(limit, 0)} percent"
         else:
             say += (
-                f". {WHEEL_WORDS.get(lim, lim).capitalize()} wears fastest, about {_n(rate)} a lap: {span} to "
+                f". {WHEEL_WORDS.get(lim, lim).capitalize()} wears fastest, about {_n(rate)} percent a lap: {span} to "
                 f"{_n(limit, 0)} percent"
             )
         data.update(rate=rate, laps_to_limit_low=lo, laps_to_limit_high=hi, limit_pct=limit)
@@ -346,17 +410,27 @@ def _tyres(fs: FactSheet, v: dict[str, Any]) -> None:
         gdata: dict[str, Any] = {"src": SRC, "kind": "game_tyres", "game_laps_left": left, "usable": usable}
         if left is not None:
             parts.append(f"this set has {left} laps left" + (f" of a usable {usable}" if usable else ""))
-            sparts.append(f"the game gives this set {left} more laps")
+            if left <= 0:
+                sparts.append("the game says this set is at its limit")
+            else:
+                sparts.append(f"the game gives this set {left} more {'lap' if left == 1 else 'laps'}")
         if new:
             parts.append(
                 f"a new {new['compound']} set is {_n(new['gain_s'], 2)} s a lap faster now"
                 + (f", degrading {_n(new['deg_s_per_lap'], 3)} s a lap per lap" if new.get("deg_s_per_lap") else "")
             )
-            plural_new = COMPOUND_PLURAL.get(new["compound"], new["compound"])
-            sparts.append(f"new {plural_new} are worth about {_n(new['gain_s'])} a lap")
+            gain = new.get("gain_s")
+            if isinstance(gain, int | float) and gain >= 0.05:
+                plural_new = _compound_plural(new["compound"]) or "tyres"
+                sparts.append(f"new {plural_new} are worth about {_n(gain)} s a lap")
             gdata.update(gain_s=new["gain_s"], deg_s_per_lap=new.get("deg_s_per_lap"), new_compound=new["compound"])
         say = "; ".join(sparts)
-        fs.add("tyres", f"{text}: " + "; ".join(parts) + ".", gdata, say=say[0].upper() + say[1:] + ".")
+        fs.add(
+            "tyres",
+            f"{text}: " + "; ".join(parts) + ".",
+            gdata,
+            say=(say[0].upper() + say[1:] + ".") if say else None,
+        )
 
 
 # ---------------------------------------------------------------------------------------------------- weather
@@ -377,11 +451,15 @@ def _weather(fs: FactSheet, v: dict[str, Any]) -> None:
     data: dict[str, Any] = {"src": SRC, "kind": "weather", "rain_pct": rain, "track_temp_c": temp}
     if nc:
         laps = nc.get("in_laps")
+        left = v.get("laps_remaining")
         text += f"; forecast ({acc or 'unknown accuracy'}): {_words(nc.get('weather'))} in {nc['in_min']} minutes"
         say += f". Forecast {_words(nc.get('weather'))} in about {nc['in_min']} minutes"
         if laps is not None:
             text += f" (about {laps} laps)"
             say += f", around {laps} laps"
+            if isinstance(left, int | float) and laps >= left:
+                text += ", after the chequered flag"
+                say += ", after the flag"
         data.update(in_min=nc["in_min"], in_laps=laps)
     else:
         text += f"; forecast ({acc or 'unknown accuracy'}): no change in the next 15 minutes"

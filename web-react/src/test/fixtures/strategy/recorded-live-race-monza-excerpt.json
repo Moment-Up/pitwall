@@ -3,7 +3,7 @@
   "tier": "recorded",
   "source": "scripts/strategy_check.py --json tests/fixtures/recorded/f1_25_2025_ps5_monza_race-excerpt.pwcap",
   "moment": "the engine's view at the end of the Monza excerpt (game session 14715103996819411055)",
-  "notes": "The strategy engine's own output (StrategyEngine fed by F1Adapter, no DB, no radio) over a committed PS5 F1 25 race excerpt, generated from the integrated feat/strategy backend (2026-10-11): regenerate with the same command when the engine changes. Recorded tier: real decoding of a real capture, not live-validated."
+  "notes": "The strategy engine's own output (StrategyEngine fed by F1Adapter, no DB, no radio) over a committed PS5 F1 25 race excerpt, regenerated from the feat/strategy backend after the review fixes (2026-10-11): regenerate with the same command when the engine changes. Recorded tier: real decoding of a real capture, not live-validated."
  },
  "version": 1,
  "mode": "race",

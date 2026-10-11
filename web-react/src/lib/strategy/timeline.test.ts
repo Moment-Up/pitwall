@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest";
 import { timeline } from "./testkit";
 import {
   callRows,
+  callTerms,
   excludedWords,
   isRaceSession,
+  missedStops,
   stintRows,
   stopRows,
   strategyGame,
@@ -76,8 +78,8 @@ describe("KPIs", () => {
     expect(k.map((x) => [x.title, x.value, x.sub])).toEqual([
       ["Positions", "P9 → P1", "Gained 8 places from lap 62"],
       ["Stops", "0", "No pit stop"],
-      ["Pit loss", "18.9 s", "1 measured"],
-      ["Fuel at the flag", "+2.3 laps", "Left at the flag"],
+      ["Pit loss", "18.9\u00a0s", "1 measured"],
+      ["Fuel at the flag", "+2.3\u00a0laps", "Spare fuel when the race ended"],
     ]);
   });
 
@@ -85,8 +87,9 @@ describe("KPIs", () => {
     const k = timelineKpis(timeline("edited-timeline-synthetic"));
     expect(k[0]).toMatchObject({ value: "P4 → P3", sub: "Gained 1 place" });
     expect(k[1]).toMatchObject({ value: "1", sub: "L8 · Medium → Hard" });
-    expect(k[2]).toMatchObject({ value: "19.1 s", sub: "2 measured · 19.0-19.1 s", term: "pit_loss" });
-    expect(k[3]).toMatchObject({ value: "0.0 laps", sub: "Left at the flag" });
+    // a number and its unit never break apart, a range has an en dash (phones: "12.7-12.9\ns" stranded the unit)
+    expect(k[2]).toMatchObject({ value: "19.1\u00a0s", sub: "2 measured · 19.0\u201319.1\u00a0s", term: "pit_loss" });
+    expect(k[3]).toMatchObject({ value: "0.0\u00a0laps", sub: "Spare fuel when the race ended", term: "fuel_margin" });
   });
 
   it("unknown stays unknown; a race in progress says where its numbers are from", () => {
@@ -99,7 +102,7 @@ describe("KPIs", () => {
     // the server sends the last record's position as finish_position: still "to lap 66" until the flag
     expect(timelineKpis({ ...t, finish_position: 4 })[0]).toMatchObject({ sub: "Gained 5 places from lap 62 to lap 66" });
     expect(k[2]).toMatchObject({ value: "-", sub: "No pit stop measured in this race" });
-    expect(k[3]).toMatchObject({ value: "+2.2 laps", sub: "The game's figure at lap 66" });
+    expect(k[3]).toMatchObject({ value: "+2.2\u00a0laps", sub: "The game's figure at lap 66" });
     t.laps = t.laps.map((l) => ({ ...l, game_fuel_margin_laps: null, position: null }));
     const none = timelineKpis(t);
     expect(none[0]).toMatchObject({ value: "-", sub: "Start position not recorded" });
@@ -114,6 +117,19 @@ describe("KPIs", () => {
     const g = timeline("edited-timeline-synthetic");
     g.finish_position = 4;
     expect(timelineKpis(g)[0]).toMatchObject({ value: "P4 → P4", sub: "Same place as the start" });
+  });
+
+  it("a race joined late: the stops the game counted before Pitwall's record began", () => {
+    // real Austria from lap 62: the game said 2 stops (and 37-lap-old tyres), Review said "Stops 0 · No pit stop"
+    const t = timeline("edited-timeline-austria");
+    t.laps = t.laps.map((l) => ({ ...l, stops: 2 }));
+    expect(missedStops(t)).toBe(2);
+    expect(timelineKpis(t)[1]).toMatchObject({ value: "2", sub: "2 before lap 62 (game)" });
+    expect(stintRows(t.stints, t.laps)[0]!.note).toBe("Tyres 37 laps old at L62");
+    expect(stintRows(t.stints)[0]!.note).toBeNull(); // without the records nothing is claimed
+    const seen = timeline("edited-timeline-synthetic");
+    expect(missedStops(seen)).toBe(0); // the game's count matches the stops seen
+    expect(stintRows(seen.stints, seen.laps)[0]!.note).toBeNull(); // the record starts at lap 1
   });
 
   it("beginner wording: plain titles", () => {
@@ -132,13 +148,15 @@ describe("recorded: the Austria excerpt timeline (the engine's records over the 
       ["P14 → P20", "Lost 6 places from lap 1"],
       ["0", "No pit stop"],
       ["-", "No pit stop measured in this race"],
-      ["+3.2 laps", "Left at the flag"],
+      ["+3.2\u00a0laps", "Spare fuel when the race ended"],
     ]);
     const m = timelineChart(t);
     expect(m.rows[0]).toEqual({ lap: 1, position: 14, behind: 0.1 }); // no settled gap ahead on lap 1: no value
     expect(m.stints.map((s) => s.label)).toEqual(["Soft · 3 laps"]);
     expect(stintRows(t.stints)[0]).toMatchObject({ wearEnd: "16%", rate: "5.0%/lap", median: "1:23.352" });
-    expect(callRows(t.calls).map((c) => `${c.lap} ${c.chip.label} ${c.text}`)).toEqual(["L2 STRATEGY Car behind is within a second."]);
+    // "within a second" is detail (the detailed radio setting) since the review: INFO
+    expect(callRows(t.calls).map((c) => `${c.lap} ${c.chip.label} ${c.text}`)).toEqual(["L2 INFO Car behind is within a second."]);
+    expect(callRows(t.calls, { simple: true }).map((c) => c.text)).toEqual(["Car close behind you."]);
   });
 });
 
@@ -169,7 +187,7 @@ describe("the race timeline chart", () => {
   it("synthetic demo: the player's stop as a dashed mark with its compounds, the VSC band in words", () => {
     const m = timelineChart(timeline("edited-timeline-synthetic"));
     expect(m.stops).toEqual([{ lap: 8, label: "M → H", words: "Pit stop on lap 8, Medium → Hard" }]);
-    expect(m.bands).toEqual([{ start: 7, end: 8, short: "VSC", words: "Virtual safety car on laps 7-8" }]);
+    expect(m.bands).toEqual([{ start: 7, end: 8, short: "VSC", words: "Virtual safety car on laps 7\u20138" }]);
     expect(m.stints.map((s) => s.label)).toEqual(["Medium · 8 laps", "Hard · 4 laps"]);
     expect(m.stints.map((s) => s.short)).toEqual(["M · 8", "H · 4"]); // phones
     expect(m.weather.map((w) => w.short)).toEqual(["Clear", "Light rain"]);
@@ -177,13 +195,16 @@ describe("the race timeline chart", () => {
     expect(m.stints[0]!.widthPct + m.stints[1]!.widthPct).toBeCloseTo(100, 6);
     expect(m.positionTicks).toEqual([1, 2, 3, 4, 5, 6]);
     expect(m.summary).toContain("1 pit stop: lap 8.");
-    expect(m.summary).toContain("Virtual safety car on laps 7-8.");
+    expect(m.summary).toContain("Virtual safety car on laps 7\u20138.");
+    // the line starts on the grid slot (a lap's record is its position at the line)
+    expect(m.rows[0]).toEqual({ lap: 0.5, position: 4 });
+    expect(m.summary).toContain("Started P4 on the grid.");
   });
 
   it("an open safety car period runs to the last lap; no laps is an empty chart", () => {
     const t = timeline("edited-timeline-synthetic");
     t.safety_car_periods = [{ status: "full", start_lap: 11, end_lap: null }];
-    expect(timelineChart(t).bands).toEqual([{ start: 11, end: 12, short: "SC", words: "Safety car on laps 11-12" }]);
+    expect(timelineChart(t).bands).toEqual([{ start: 11, end: 12, short: "SC", words: "Safety car on laps 11\u201312" }]);
     t.laps = [];
     expect(timelineChart(t).empty).toBe(true);
   });
@@ -198,8 +219,8 @@ describe("the race timeline chart", () => {
 describe("tables and calls", () => {
   it("stints with wear and median lap", () => {
     expect(stintRows(timeline("edited-timeline-synthetic").stints)).toEqual([
-      { id: "stint0", compound: "Medium", colour: "var(--pw-flag-yellow)", laps: "L1-8", count: 8, wearEnd: "31%", rate: "3.4%/lap", median: "1:31.700" },
-      { id: "stint1", compound: "Hard", colour: "var(--foreground)", laps: "L9-12", count: 4, wearEnd: "9%", rate: "2.1%/lap", median: "1:31.200" },
+      { id: "stint0", compound: "Medium", colour: "var(--pw-flag-yellow)", laps: "L1\u20138", count: 8, wearEnd: "31%", rate: "3.4%/lap", median: "1:31.700", note: null },
+      { id: "stint1", compound: "Hard", colour: "var(--foreground)", laps: "L9\u201312", count: 4, wearEnd: "9%", rate: "2.1%/lap", median: "1:31.200", note: null },
     ]);
   });
 
@@ -210,9 +231,9 @@ describe("tables and calls", () => {
       car: "You",
       entry: "L8",
       exit: "L8",
-      lane: "21.0 s",
-      stationary: "2.6 s",
-      loss: "11.4 s",
+      lane: "21.0\u00a0s",
+      stationary: "2.6\u00a0s",
+      loss: "11.4\u00a0s",
       compounds: "Medium → Hard",
       note: "Under the virtual safety car",
       used: true,
@@ -222,7 +243,7 @@ describe("tables and calls", () => {
     expect(field[2]).toMatchObject({ exit: "-", loss: "-", note: "Not counted: out lap not completed", used: false });
     const austria = stopRows(timeline("edited-timeline-austria").field_stops);
     expect(austria[0]).toMatchObject({ car: "Car 7", loss: "-", note: "Not counted: long stop (repair?)", compounds: "-" });
-    expect(austria[1]).toMatchObject({ car: "Car 14", entry: "L65", exit: "L66", lane: "20.0 s", stationary: "3.4 s", loss: "18.9 s", note: null });
+    expect(austria[1]).toMatchObject({ car: "Car 14", entry: "L65", exit: "L66", lane: "20.0\u00a0s", stationary: "3.4\u00a0s", loss: "18.9\u00a0s", note: null });
   });
 
   it("exclusion reasons in words (strategy/pitloss.py EXCLUDED_*); anything new as sent", () => {
@@ -265,10 +286,24 @@ describe("tables and calls", () => {
         ...m.stints.map((s) => s.label),
         ...m.weather.map((s) => s.label),
         m.summary,
-        ...stintRows(t.stints).flatMap((r) => Object.values(r).map(String)),
+        ...stintRows(t.stints, t.laps).flatMap((r) => Object.values(r).filter((x) => x != null).map(String)),
         ...stopRows([...t.stops, ...t.field_stops]).flatMap((r) => [r.car, r.entry, r.exit, r.lane, r.stationary, r.loss, r.compounds, r.note ?? ""]),
       ];
       for (const s of all) honest(s, name);
     }
+  });
+});
+
+describe("calls for this driver", () => {
+  it("simple wording: the plain words heard, never the calls meant for experienced drivers (review M1)", () => {
+    const calls = [
+      { id: "a", topic: "pit_window", level: "alert" as const, text: "Last laps of the tyre window: box this lap or next.", text_simple: "Pit this lap or next: your tyres are nearly worn out.", audience: "all" as const, lap: 9, t_unix: 1 },
+      { id: "b", topic: "undercut_threat", level: "normal" as const, text: "Car behind is pitting. Box next lap to cover the undercut.", text_simple: null, audience: "experienced" as const, lap: 10, t_unix: 2 },
+      { id: "c", topic: "fuel", level: "alert" as const, text: "Fuel critical: 0.4 laps short.", lap: 11, t_unix: 3 }, // an older server: no plain words
+    ];
+    expect(callRows(calls).map((c) => c.text)).toEqual([calls[0]!.text, calls[1]!.text, calls[2]!.text]);
+    expect(callRows(calls, { simple: true }).map((c) => c.text)).toEqual([calls[0]!.text_simple, calls[2]!.text]);
+    expect(callTerms(callRows(calls))).toEqual(["box", "pit_window", "undercut"]);
+    expect(callTerms([{ text: "Virtual safety car. Pitting this lap is an option." }])).toEqual(["safety_car"]);
   });
 });

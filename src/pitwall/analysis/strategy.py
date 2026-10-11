@@ -190,7 +190,8 @@ def tyre_estimate(
 def _stint_tyre_estimate(laps: list[dict[str, Any]], limit_pct: float, exclude_laps: Collection[int]) -> TyreEstimate:
     """Wear projection over the current stint: per wheel, rate = sum of (wear_end - wear_start) over the stint's green
     laps / n. Consecutive laps telescope, so the whole-percent quantisation of the game's wear costs at most one
-    step over the whole stint: ``rate_low/high = (sum -/+ 1) / n`` bound the limiting wheel's rate."""
+    step per run of consecutive green laps (a safety-car, pit or flashback lap in between starts another run):
+    ``rate_low/high = (sum -/+ runs) / n`` bound the limiting wheel's rate."""
     start = stint_start_lap(laps)
     ordered = sorted((lap for lap in laps if lap.get("lap_number") is not None), key=lambda lap: int(lap["lap_number"]))
     stint = [lap for lap in ordered if start is not None and int(lap["lap_number"]) >= start]
@@ -205,6 +206,8 @@ def _stint_tyre_estimate(laps: list[dict[str, Any]], limit_pct: float, exclude_l
             now = w
     sums = [0.0, 0.0, 0.0, 0.0]
     n = 0
+    runs = 0  # runs of consecutive laps summed: each costs up to one whole-percent step
+    prev: int | None = None
     for lap in _green_laps(stint, exclude_laps):
         m = lap.get("meta") or {}
         ws, we = _wear4(m.get("wear_start")), _wear4(m.get("wear_end"))
@@ -215,6 +218,10 @@ def _stint_tyre_estimate(laps: list[dict[str, Any]], limit_pct: float, exclude_l
             continue
         sums = [a + d for a, d in zip(sums, inc, strict=True)]
         n += 1
+        num = int(lap["lap_number"])
+        if prev is None or num != prev + 1:
+            runs += 1
+        prev = num
     base = TyreEstimate(
         compound=compound,
         age_laps=age,
@@ -237,8 +244,8 @@ def _stint_tyre_estimate(laps: list[dict[str, Any]], limit_pct: float, exclude_l
         return base
     laps_left, k = min(cands)
     base.limiting_wheel = WHEELS[k]
-    rate_low = max(0.0, (sums[k] - 1.0) / n)
-    rate_high = (sums[k] + 1.0) / n
+    rate_low = max(0.0, (sums[k] - runs) / n)
+    rate_high = (sums[k] + runs) / n
     base.rate_low_pct_per_lap = round(rate_low, 3)
     base.rate_high_pct_per_lap = round(rate_high, 3)
     if base.enough_laps:
@@ -270,11 +277,16 @@ def pit_window(
     new_set_life_laps: float | None = None,
     game_laps_left: float | None = None,
     ideal_lap: int | None = None,
+    in_lap_now: bool = False,
 ) -> dict[str, Any] | None:
     """One-stop window from tyre life; None when not a race or data is insufficient. "Box on lap s" means lap s is
     the in-lap. The window closes at the earlier of the measured projection (``tyres.laps_to_limit``) and the game's
     laps-left figure (``close_source``); it opens when a new set reaches the flag (``new_set_life_laps``), else three
-    laps before the close (heuristic). A window that would open after it closes is a two-stop case."""
+    laps before the close (heuristic). A window that would open after it closes is a two-stop case.
+
+    ``in_lap_now``: the current lap can still be the in-lap (the live strategy engine), so the heuristic window may
+    open on it; by default it opens on the next lap at the earliest. ``overdue``: the tyres are at or past the limit
+    already (the window is "this lap" and nothing later)."""
     if not current_lap or not total_laps:
         return None
     measured = tyres.laps_to_limit
@@ -293,6 +305,7 @@ def pit_window(
         "close_source": source,
         "new_set_life_laps": new_set_life_laps,
         "game_laps_left": game_laps_left,
+        "overdue": life <= 0,
     }
     if latest >= total_laps:
         return {
@@ -306,7 +319,7 @@ def pit_window(
         earliest = max(current_lap, total_laps - math.floor(new_set_life_laps))
         tier = "game"
     else:
-        earliest = max(current_lap + 1, latest - 3)
+        earliest = max(current_lap + (0 if in_lap_now else 1), latest - 3)
         tier = "heuristic"
     two_stops = earliest > latest
     if two_stops:

@@ -11,7 +11,8 @@ Ground truth (``StrategyTruth``):
 * a VSC runs for two minutes from the player's lap 7 (1000 m), into lap 8; every car slows to 60 % of its racing
   speed;
 * the player (car 3) pits at the end of lap 8 (just after the VSC) for a used soft set the game gives two laps;
-* the forecast changes to light rain 10 minutes ahead on the player's lap 9;
+* the forecast changes to light rain 5 minutes ahead (about 5 laps) on the player's lap 4, and keeps it 5 minutes
+  away to the end: the rain call comes on lap 4; from lap 8 the change falls after the chequered flag (no call);
 * the player is short of fuel by 0.4 laps (fuel burn ``b0 + b1 * throttle`` with known ``b1``), so lift and coast
   has a known answer at the start of lap 6;
 * the car behind the player at lap 10 (car 6) pits at the end of lap 10.
@@ -57,7 +58,8 @@ WEAR_MEDIUM = (6.0, 5.5, 4.0, 4.2)  # % per lap, FL FR RL RR
 WEAR_SOFT = (8.0, 7.5, 6.0, 6.0)
 USED_SOFT_WEAR = (30.0, 30.0, 28.0, 28.0)
 USED_SOFT_AGE = 3
-RAIN_FROM_LAP = 9
+RAIN_FROM_LAP = 4
+RAIN_IN_MIN = 5  # the forecast's rain stays this far ahead (it never arrives: a forecast, not the weather)
 VSC_START = (7, 1000.0)  # (player lap, lap distance)
 VSC_S = 120.0  # ends during the player's lap 8, before its pit entry
 COMPOUND_CODE = {"soft": 16, "medium": 17, "hard": 18, "inter": 7, "wet": 8}
@@ -413,7 +415,7 @@ def _forecast(lap: int) -> list[dict[str, int]]:
     rain = lap >= RAIN_FROM_LAP
     out = []
     for off in (0, 5, 10, 15, 30):
-        w = 3 if rain and off >= 10 else 0
+        w = 3 if rain and off >= RAIN_IN_MIN else 0
         out.append(
             {
                 "sessionType": 15,

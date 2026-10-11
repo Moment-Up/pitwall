@@ -137,6 +137,11 @@ class PitTracker:
                 st.lap = c.lap_number
                 self._lap_done(c.car_index, st)
             elif st.lap is None or c.lap_number < st.lap:
+                if st.lap is not None:
+                    # rewound (flashback): the laps from this one on are driven again, so what was seen of them goes
+                    st.times = {k: v for k, v in st.times.items() if k < c.lap_number}
+                    st.neutral = {k: v for k, v in st.neutral.items() if k <= c.lap_number}
+                    st.pitted = {k for k in st.pitted if k <= c.lap_number}
                 st.lap = c.lap_number  # rewound (flashback) or first lap seen
             lap = c.lap_number
             if neutral is not None and _SEVERITY[neutral] > _SEVERITY[st.neutral.get(lap)]:
@@ -273,7 +278,9 @@ class PitTracker:
 
     def rewind(self, t: float) -> None:
         """A flashback to session time ``t``: visits that started after it are dropped (they are driven again), one
-        that it cuts into is marked (``EXCLUDED_FLASHBACK`` once finalised)."""
+        that it cuts into is marked (``EXCLUDED_FLASHBACK`` once finalised). A stop the car had already left the pit
+        lane from, with ``t`` before that exit, is re-opened: the car is back in the lane, and the next tick must not
+        take that for a new pit entry (a one-lap "stop" on the out-lap, with the out-lap's distance as its entry)."""
         for st in self.cars.values():
             v = st.visit
             if v is not None and v.t_entry > t:
@@ -281,10 +288,23 @@ class PitTracker:
             elif v is not None:
                 v.rewound = True
             st.pit_status = 0 if st.visit is None else st.pit_status
+        keep: list[PitVisit] = []
         for v in self.visits:
+            if v.t_entry > t:
+                continue  # driven again after the rewind
+            car = self.cars.get(v.car_index)
+            if v.t_exit is not None and t < v.t_exit and car is not None and car.visit is None:
+                v.exit_lap = v.exit_m = v.t_exit = None
+                v.laps_ms = []
+                v.pit_loss_ms = v.pace_after_ms = None
+                v.rewound = True
+                v.final = v.post_done = False
+                car.visit, car.pit_status = v, 1
+                continue
             if not v.final and v.t_entry <= t <= (v.t_exit or t) + 1e-6:
                 v.rewound = True
-        self.visits = [v for v in self.visits if v.t_entry <= t]  # driven again after the rewind
+            keep.append(v)
+        self.visits = keep
 
     def end_session(self) -> list[PitVisit]:
         """Stops whose loss could not be worked out before the session ended are written as excluded."""

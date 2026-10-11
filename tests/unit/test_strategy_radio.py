@@ -117,3 +117,30 @@ def test_hub_drops_experienced_calls_for_simple_wording() -> None:
     enqueue(hub, call("normal", "undercut_threat", audience="experienced"))  # type: ignore[arg-type]
     enqueue(hub, call("normal", "gap"))  # type: ignore[arg-type]
     assert [m.meta["topic"] for m in hub.scheduler.pending()] == ["strategy:neighbour_stop", "strategy:gap"]
+
+
+def test_simple_wording_hears_the_plain_words() -> None:
+    """Review H3: only the experienced-only calls were filtered, so "Box this lap or next", "Lift and coast" and "DRS
+    range" reached a child. A driver with simple wording now hears each call's ``text_simple``."""
+    from pitwall.voice.hub import RadioHub
+
+    class FakeHub:
+        coaching_limits: Any = None
+
+        def __init__(self) -> None:
+            self.scheduler = RadioScheduler("detailed")
+
+    plain = "Pit this lap or next: your tyres are nearly worn out."
+    jargon = "Last laps of the tyre window: box this lap or next."
+    c = call("alert", "pit_window", text=jargon, text_simple=plain)
+    assert strategy_message(c, 0.0).text == jargon
+    m = strategy_message(c, 0.0, simple=True)
+    assert m.text == plain and m.speech == plain
+    assert (
+        strategy_message(call("alert", "fuel", text_simple=None), 0.0, simple=True).text == "A alert call about fuel."
+    )
+    hub = FakeHub()
+    hub.coaching_limits = _Limits()
+    RadioHub._enqueue_strategy(hub, c)  # type: ignore[arg-type]
+    (said,) = hub.scheduler.pending()
+    assert said.text == plain

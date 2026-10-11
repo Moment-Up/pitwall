@@ -179,8 +179,8 @@ def test_practice_view() -> None:
     practice.update(mode="practice", gaps=None, pit=None, safety_car=None)
     fs = _sheet(practice)
     assert strategy_radio_answer("strategy", fs) == (
-        "No pit window in practice. Mediums, 12 laps old. Front right is the most worn at 21 percent, about 1.5 a lap: "
-        "about 31 to 35 laps to 70 percent."
+        "No pit window in practice. Mediums, 12 laps old. Front right is the most worn at 21 percent, about 1.5 percent "
+        "a lap: about 31 to 35 laps to 70 percent."
     )
     assert not [f for f in fs.facts if f.topic == "gaps"]
 
@@ -233,11 +233,11 @@ def test_instant_phrasings() -> None:
     fs = _sheet(VIEW)
     answers = {i: strategy_radio_answer(i, fs) for i in ("strategy", "gaps", "fuel", "tyres", "weather")}
     assert answers["strategy"] == (
-        "Pit window lap 38 to 44, best around lap 41. Undercut on the car ahead is marginal: gap 1.8, new tyres "
-        "worth about 0.9 a lap."
+        "Pit window lap 38 to 44, best around lap 41. Undercut on the car ahead is marginal: gap 1.8 s, new tyres "
+        "worth about 0.9 s a lap."
     )
-    assert answers["gaps"] == "Car ahead plus 1.8, closing 0.3 a lap. Car behind 0.8, within a second, DRS range."
-    assert answers["fuel"] == "Using 1.41 a lap, plus 0.4 laps to the finish."
+    assert answers["gaps"] == "Car ahead plus 1.8, closing 0.3 s a lap. Car behind 0.8, within a second, DRS range."
+    assert answers["fuel"] == "Using 1.41 kilos a lap, plus 0.4 laps to the finish."
     assert answers["weather"] == "Light cloud, rain 7 percent. Forecast: no change for the next 15 minutes."
     for text in answers.values():
         assert text is not None
@@ -257,7 +257,7 @@ def test_short_of_fuel_answer_brings_lift_and_coast() -> None:
     fs = _sheet(short)
     ans = strategy_radio_answer("fuel", fs)
     assert ans == (
-        "Using 1.41 a lap, minus 0.3 laps to the finish. Lift and coast about 2.1 seconds a lap before T3 and T4: "
+        "Using 1.41 kilos a lap, minus 0.3 laps to the finish. Lift and coast about 2.1 seconds a lap before T3 and T4: "
         "brake at your normal point."
     )
     _grounded(ans, fs)
@@ -279,8 +279,12 @@ def test_safety_car_answer_and_not_enough_laps() -> None:
     }
     fs = _sheet(sc)
     ans = strategy_radio_answer("strategy", fs)
-    assert ans == "Virtual safety car. Box this lap is an option: a stop costs about 11 s now, 19 under green."
+    assert ans == "Virtual safety car. Pitting this lap is an option: a stop costs about 11 s now, 19 s under green."
     _grounded(ans, fs)
+    unknown = copy.deepcopy(sc)
+    unknown["safety_car"]["box"]["this_lap"] = None  # no stop seen yet: the pit entry is unknown
+    ans = strategy_radio_answer("strategy", _sheet(unknown))
+    assert ans == "Virtual safety car. Pitting is an option: a stop costs about 11 s now, 19 s under green."
     early = copy.deepcopy(VIEW)
     early["pit"].update(window=None, stop_needed=None)
     assert strategy_radio_answer("strategy", _sheet(early)).startswith(  # type: ignore[union-attr]
@@ -329,3 +333,68 @@ def test_one_lap_old_tyres_in_the_singular() -> None:
     ans = strategy_radio_answer("tyres", fs)
     assert ans is not None and "1 lap old" in ans and "1 laps" not in ans
     _grounded(ans, fs)
+
+
+def test_unsettled_gaps_keep_their_qualifier_on_the_radio() -> None:
+    # review: the radio said "Car ahead plus 1.4." while that car was in the pit lane
+    v = copy.deepcopy(VIEW)
+    v["gaps"]["ahead"].update(settled=False, in_pit=True)
+    v["gaps"]["behind"].update(settled=False)
+    ans = strategy_radio_answer("gaps", _sheet(v))
+    assert ans == "Car ahead is in the pit lane. Car behind 0.8 (last settled), within a second, DRS range."
+    _grounded(ans, _sheet(v))
+
+
+def _tyre_say(**over: Any) -> str:
+    v = copy.deepcopy(VIEW)
+    v["tyres"].update(over)
+    ans = strategy_radio_answer("tyres", _sheet(v))
+    assert ans is not None
+    return ans
+
+
+def test_tyre_wording_on_real_data() -> None:
+    # review M7, from real Melbourne (super soft) and the first lap of a late-joined Austria race
+    assert _tyre_say(compound=None, age_laps=None, wear_pct=None, new_set=None, game_laps_left=None).startswith(
+        "No tyre data yet."
+    )
+    assert _tyre_say(compound="super_soft", age_laps=0, enough_laps=False).startswith("Super softs, new.")
+    one = _tyre_say(laps_to_limit={"low": 7.2, "high": 7.4})
+    assert "about 7 laps to 70 percent" in one and "7 to 7" not in one
+    assert "The game gives this set 1 more lap;" in _tyre_say(game_laps_left=1)
+    assert "The game says this set is at its limit" in _tyre_say(game_laps_left=0)
+    flat = _tyre_say(new_set={"compound": "hard", "gain_s": 0.02, "deg_s_per_lap": None, "tier": "game"})
+    assert "worth" not in flat
+    fresh = _tyre_say(wear_pct=[0.0, 0.4, 0.0, 0.0], enough_laps=False)
+    assert "most worn" not in fresh
+
+
+def test_one_lap_and_overdue_windows_and_rain_after_the_flag() -> None:
+    v = copy.deepcopy(VIEW)
+    v["pit"]["window"] = {"open_lap": 41, "close_lap": 41, "ideal_lap": 41, "close_source": "game", "tier": "game"}
+    assert strategy_radio_answer("strategy", _sheet(v)).startswith(  # type: ignore[union-attr]
+        "Pit window: lap 41, on the game's tyre figure."
+    )
+    v["pit"]["window"]["overdue"] = True
+    assert strategy_radio_answer("strategy", _sheet(v)).startswith(  # type: ignore[union-attr]
+        "Tyres at the wear limit: the window is this lap"
+    )
+    w = copy.deepcopy(VIEW)
+    w["laps_remaining"] = 3.9
+    w["weather"]["next_change"] = {"in_min": 10, "weather": "light_rain", "rain_pct": 60, "in_laps": 10}
+    ans = strategy_radio_answer("weather", _sheet(w))
+    assert ans is not None and ans.endswith("around 10 laps, after the flag.")
+
+
+def test_lift_and_coast_beyond_a_realistic_save_says_so() -> None:
+    v = copy.deepcopy(VIEW)
+    v["fuel"].update(
+        margin_laps=-1.2,
+        status="short",
+        lift_coast={"save_kg_per_lap": 0.4, "seconds_per_lap": 8.5, "feasible": False, "corners": []},
+    )
+    ans = strategy_radio_answer("fuel", _sheet(v))
+    assert ans is not None and ans.endswith(
+        "Lift and coast would need about 8.5 seconds a lap: more than you can realistically save."
+    )
+    _grounded(ans, _sheet(v))

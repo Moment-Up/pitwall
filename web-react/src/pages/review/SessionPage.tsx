@@ -153,8 +153,15 @@ export function SessionPage({ id, tab, route }: { id: string; tab: SessionTab; r
         <Tabs.ListContainer className="pointer-coarse:[&>button]:hidden!">
           <Tabs.List aria-label="Session views">
             {tabs.map((t) => (
-              // Tighter on phones, so all five tabs fit a 390 px screen (Ask was cut off past Corners).
-              <Tabs.Tab key={t} id={t} className="min-h-11 min-w-0 px-2.5 text-[15px] sm:min-w-20 sm:px-4">
+              // Tighter on phones, so all five tabs fit a 390 px screen (Ask was cut off past Corners). Race strategy
+              // (pitwall.strategy): a race has six, so on a phone Ask leaves the strip (the "Ask the engineer" button
+              // above opens it) and the five left take their own width at 14 px (345 of 358 px; equal 76 px tabs did
+              // not fit "Strategy").
+              <Tabs.Tab
+                key={t}
+                id={t}
+                className={`min-h-11 min-w-0 px-2.5 text-[15px] sm:min-w-20 sm:px-4${tabs.length > 5 ? (t === "ask" ? " max-sm:hidden" : " max-sm:w-auto max-sm:px-2 max-sm:text-[14px]") : ""}`}
+              >
                 {TAB_LABEL[t]}
                 <Tabs.Indicator />
               </Tabs.Tab>

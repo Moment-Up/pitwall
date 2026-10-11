@@ -3,7 +3,10 @@
   "tier": "edited",
   "source": "hand-built StrategyView",
   "moment": "race, lap 7 of 12, P3, virtual safety car: a stop is cheap, the car ahead is in the pit lane",
-  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data. The VSC pit-loss factor (0.6) is the spec's unvalidated heuristic."
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data. The VSC pit-loss factor (0.6) is the spec's unvalidated heuristic.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed)"
+  ]
  },
  "version": 1,
  "mode": "race",
@@ -194,17 +197,23 @@
    "id": "c7-sc",
    "topic": "sc_box",
    "level": "alert",
-   "text": "Virtual safety car. Box this lap is an option: a stop costs about 11 s now, 19 under green.",
+   "text": "Virtual safety car. Pitting this lap is an option: a stop costs about 11 s now, 19 s under green.",
+   "text_simple": "Virtual safety car: a pit stop is cheap now, about 11 seconds instead of 19. You can pit this lap.",
+   "audience": "all",
    "lap": 7,
-   "t_unix": 1791701500.0
+   "t_unix": 1791701500.0,
+   "ttl_s": 60.0
   },
   {
    "id": "c7-nb",
    "topic": "neighbour_stop",
    "level": "detailed",
    "text": "Car ahead is pitting: it rejoins about 4 s behind you.",
+   "text_simple": null,
+   "audience": "experienced",
    "lap": 7,
-   "t_unix": 1791701490.0
+   "t_unix": 1791701490.0,
+   "ttl_s": 30.0
   }
  ]
 }

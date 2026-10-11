@@ -461,7 +461,7 @@ class F1Adapter:
             self.stats.ignored += 1
             return out
         uid = h["sessionUID"]
-        if pid in _FOLLOWERS and uid and self._session_uid and uid != self._session_uid:
+        if pid in _FOLLOWERS and (self._session_uid is None or (uid and uid != self._session_uid)):
             # race strategy (pitwall.strategy): a packet that only follows a session (TyreSets) never starts one,
             # for the same reason as above (a stale-UID packet must not flush the session's caches)
             self.stats.ignored += 1
@@ -614,6 +614,8 @@ class F1Adapter:
             if status is not None:
                 vis_code, age = status[i]
                 visual = enums.VISUAL_COMPOUNDS.get(vis_code)
+                if visual is None:
+                    age = None  # no compound (restricted online telemetry?): its age would read "0 laps", made up
             cars.append(
                 CarTiming(
                     car_index=i,
@@ -1049,4 +1051,4 @@ _HANDLERS = {
     P.PacketId.TYRE_SETS: F1Adapter._on_tyre_sets,  # race strategy (pitwall.strategy)
 }
 # race strategy (pitwall.strategy): decoded only within the current session; never reset it (see ``decode``)
-_FOLLOWERS = frozenset({P.PacketId.TYRE_SETS})
+_FOLLOWERS = frozenset({P.PacketId.TYRE_SETS, P.PacketId.SESSION_HISTORY})  # SESSION_HISTORY: when decoded

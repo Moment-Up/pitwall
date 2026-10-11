@@ -153,3 +153,24 @@ def test_lift_and_coast_target() -> None:
     assert lift_coast_target(-0.4, 1.08, 7.0, None) is None  # no burn model: unknown
     far = lift_coast_target(-3.0, 1.4, 2.0, model)
     assert far is not None and not far.feasible  # more than 6 s a lap
+
+
+def test_quantisation_bounds_grow_with_each_break_in_the_green_laps() -> None:
+    # Consecutive laps telescope (one whole-percent step over the run); a safety-car lap in between starts a second
+    # run, and with it a second step: (sum -/+ runs) / n.
+    laps = laps_meta(_stint(1, 9, (1.5, 1.4, 1.0, 1.0), w0=(9.0, 9.0, 8.0, 8.0)))
+    te = tyre_estimate(laps, 70.0, stint_only=True, exclude_laps=frozenset({1, 5}))  # runs 2-4 and 6-9
+    assert te.laps_used == 7
+    total = te.wear_rate_pct_per_lap[0] * 7  # type: ignore[index]
+    assert te.rate_low_pct_per_lap == pytest.approx((total - 2) / 7, abs=1e-3)
+    assert te.rate_high_pct_per_lap == pytest.approx((total + 2) / 7, abs=1e-3)
+
+
+def test_pit_window_at_the_limit_is_overdue_and_may_open_on_the_current_lap() -> None:
+    fe = fuel_estimate([], None, None, None)
+    w = pit_window(15, 30, _te(0.0), fe, in_lap_now=True)
+    assert w is not None and w["overdue"] and (w["window_open_lap"], w["window_close_lap"]) == (15, 15)
+    w = pit_window(13, 30, _te(3.4), fe, in_lap_now=True)  # heuristic: three laps before the close, this lap at most
+    assert w is not None and not w["overdue"] and (w["window_open_lap"], w["window_close_lap"]) == (13, 16)
+    legacy = pit_window(13, 30, _te(3.4), fe)  # other callers keep "the next lap at the earliest"
+    assert legacy is not None and legacy["window_open_lap"] == 14

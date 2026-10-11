@@ -19,6 +19,7 @@ rebuilt, gap samples, pit visits and fuel windows after it are dropped, and reco
 
 from __future__ import annotations
 
+import math
 import statistics
 import time
 from collections import deque
@@ -58,7 +59,7 @@ from pitwall.strategy.gaps import GapEvent, GapTracker, laps_to_within
 from pitwall.strategy.pitloss import PitTracker
 from pitwall.strategy.safety_car import SafetyCarState, box_opportunity, entry_ttl_s
 from pitwall.strategy.tyres import GameTyres
-from pitwall.strategy.view import build_view
+from pitwall.strategy.view import build_view, call_entry
 from pitwall.strategy.weather import WeatherTracker
 
 REWIND_S = 0.5  # the game clock going back more than this is a flashback / restart
@@ -148,6 +149,13 @@ class Derived:
     fuel_status: str = "unknown"
     lift_coast: LiftCoast | None = None
     lift_corners: list[str] = field(default_factory=list)
+    # The fuel verdict as judged at the last lap line (the first tick of the lap, again when the lap's time came in):
+    # burn within a lap is uneven (flat out, then lifting), so the per-tick margin swings; the view and the calls use
+    # this one, the tank (``fuel_now``) stays live.
+    fuel_line: FuelEstimate | None = None
+    fuel_line_status: str = "unknown"
+    lift_line: LiftCoast | None = None
+    lift_line_corners: list[str] = field(default_factory=list)
     burn: BurnModel | None = None
     tyres: TyreEstimate | None = None
     game_gain: tuple[str, float, float | None] | None = None
@@ -208,6 +216,7 @@ class StrategyEngine:
         self._calls_lap: int | None = None  # the player's lap at the last call planning (lap-start triggers)
         self.d = Derived()
         self._dirty = True
+        self._fuel_key: tuple[int | None, int] | None = None  # (lap, green laps used) of the line-judged fuel
         self.recent_calls: deque[StrategyCall] = deque(maxlen=CALLS_SHOWN)
         self._calls_by_lap: dict[int, list[StrategyCall]] = {}
         self._pending_calls: list[StrategyCall] = []
@@ -420,7 +429,20 @@ class StrategyEngine:
         frac = 0.0
         if f is not None and f.lap_distance_m is not None and self.track_length_m and f.lap_distance_m > 0:
             frac = min(1.0, f.lap_distance_m / self.track_length_m)
-        return max(0.0, self.total_laps - self._lap + 1 - frac)
+        base = self.total_laps - self._lap + 1 - frac
+        to_line = 1.0 - frac
+        cars = () if self.timing is None else self.timing.cars
+        if any(c.result_status == "finished" for c in cars):
+            return max(0.0, min(base, to_line))  # the flag is out: the race ends at the next line
+        # Lapped: the race ends at the first line crossing after the leader takes the flag (the leader's laps left,
+        # in its own laps, at about the player's pace).
+        lead = next((c for c in cars if c.position == 1 and c.result_status == "active"), None)
+        if lead is not None and not lead.is_player and self.track_length_m:
+            lead_frac = min(1.0, max(0.0, lead.lap_distance_m) / self.track_length_m)
+            lead_left = self.total_laps - lead.lap_number + 1 - lead_frac
+            if lead_left < base:
+                base = to_line + max(0, math.ceil(lead_left - to_line - 1e-9))
+        return max(0.0, base)
 
     def _derive(self) -> Derived:
         if not self._dirty:
@@ -436,10 +458,19 @@ class StrategyEngine:
         d.fuel = fuel_estimate(laps, d.fuel_now, d.game_margin, d.laps_remaining, exclude_laps=excl)
         d.fuel_status = fuel_status(d.fuel.margin_laps, d.fuel.laps_used) if self.mode == "race" else "unknown"
         d.burn = self.burn.model()
-        if self.mode == "race":
-            d.lift_coast = lift_coast_target(d.fuel.margin_laps, d.fuel.per_lap_kg, d.laps_remaining, d.burn)
-            if d.lift_coast is not None:
-                d.lift_corners = lift_corners(self.track_model() if self.track_model else None)
+        prev = self.d
+        key = (d.lap, d.fuel.laps_used)
+        if key == self._fuel_key and prev.fuel_line is not None:
+            d.fuel_line, d.fuel_line_status = prev.fuel_line, prev.fuel_line_status
+            d.lift_coast, d.lift_corners = d.lift_line, d.lift_line_corners = prev.lift_line, prev.lift_line_corners
+        else:
+            if self.mode == "race":
+                d.lift_coast = lift_coast_target(d.fuel.margin_laps, d.fuel.per_lap_kg, d.laps_remaining, d.burn)
+                if d.lift_coast is not None:
+                    d.lift_corners = lift_corners(self.track_model() if self.track_model else None)
+            self._fuel_key = key
+            d.fuel_line, d.fuel_line_status = d.fuel, d.fuel_status
+            d.lift_line, d.lift_line_corners = d.lift_coast, d.lift_corners
         d.tyres = tyre_estimate(laps, WEAR_LIMIT_PCT, stint_only=True, exclude_laps=excl)
         times = self.green_lap_times()
         if times:
@@ -464,6 +495,7 @@ class StrategyEngine:
                 new_set_life_laps=d.new_set_life,
                 game_laps_left=d.game_laps_left,
                 ideal_lap=ideal,
+                in_lap_now=True,  # the current lap can still be the in-lap
             )
         d.stop_needed = None if d.window is None else bool(d.window["stop_needed_for_tyres"])
         d.gain = cuts.tyre_gain(d.game_gain, self.pits.measured_gains())
@@ -541,7 +573,10 @@ class StrategyEngine:
                 "open_lap": win["window_open_lap"],
                 "close_lap": win["window_close_lap"],
                 "ideal_lap": win.get("ideal_lap"),
+                "overdue": bool(win.get("overdue")),
+                "close_source": win.get("close_source"),
             }
+        start = None if d.tyres is None else d.tyres.stint_start_lap
         new_lap = self._lap is not None and self._lap != self._calls_lap
         self._calls_lap = self._lap
         ctx = CallContext(
@@ -552,16 +587,17 @@ class StrategyEngine:
             laps_remaining=d.laps_remaining,
             player_in_pit=bool((f is not None and f.pit_status) or (me is not None and me.pit_status)),
             blocked=self.blocked(),
-            stops_done=0 if me is None else me.num_pit_stops,
+            stops_done=None if me is None else me.num_pit_stops,
+            stint_laps=None if start is None or self._lap is None else self._lap - start + 1,
             sc_status=self.sc.neutral,
             sc_period=self.sc.period,
             sc_box=d.sc_box,
             entry_ttl_s=d.entry_ttl,
-            fuel_margin_laps=None if d.fuel is None else d.fuel.margin_laps,
-            fuel_status=d.fuel_status,
+            fuel_margin_laps=None if d.fuel_line is None else d.fuel_line.margin_laps,
+            fuel_status=d.fuel_line_status,
             lift_coast=None
-            if d.lift_coast is None
-            else {"seconds_per_lap": d.lift_coast.seconds_per_lap, "corners": d.lift_corners},
+            if d.lift_line is None
+            else {"seconds_per_lap": d.lift_line.seconds_per_lap, "corners": d.lift_line_corners},
             window=window,
             undercut_ahead=d.undercut,
             undercut_threat=d.threat,
@@ -637,10 +673,7 @@ class StrategyEngine:
             window = {"open": win["window_open_lap"], "close": win["window_close_lap"], "ideal": win.get("ideal_lap")}
         weather = self.weather.view(d.lap_time_s)
         nc = weather["next_change"]
-        calls = [
-            {"id": c.id, "topic": c.topic, "level": c.level, "text": c.text, "lap": c.lap, "t_unix": round(c.t_unix, 3)}
-            for c in self._calls_by_lap.get(lap, [])
-        ]
+        calls = [call_entry(c) for c in self._calls_by_lap.get(lap, [])]
         return {
             "v": RECORD_VERSION,
             "lap": lap,

@@ -62,8 +62,9 @@ function visible(markup: string): string {
 }
 
 describe("Drive › Car: the strategy tile takes the Inputs slot in a race only", () => {
-  it("no data (an older server) and not supported by this game: the Inputs tile, unchanged", () => {
-    for (const v of [undefined, null, liveView("edited-live-off-unsupported-game"), liveView("edited-live-practice")]) {
+  it("no data (an older server), not supported by this game, or a sprint: the Inputs tile, unchanged", () => {
+    const sprint = liveView("recorded-live-race-austria-excerpt"); // 3 laps (review L2)
+    for (const v of [undefined, null, liveView("edited-live-off-unsupported-game"), liveView("edited-live-practice"), sprint]) {
       const html = render(withStrategy(v));
       expect(html).toContain("Inputs · last 12 s");
       expect(html).not.toContain("pws-rows");
@@ -79,18 +80,20 @@ describe("Drive › Car: the strategy tile takes the Inputs slot in a race only"
     expect(text).toContain("Strategy L20/30 · P6");
     expect(text).toContain("Ahead +1.8 s · closing 0.3/lap");
     expect(text).toContain("Behind DRS 0.8 s · closing 0.2/lap");
-    expect(text).toContain("Pit window OPEN L18-22 · best ~L20 (game)");
+    expect(text).toContain("Pit window OPEN L18-22 · best L20 (game)");
     expect(text).toContain("Undercut THREAT ahead marginal · behind threat");
     expect(text).toContain("Fuel TIGHT +0.2 laps");
     expect(text).toContain("Weather Dry for 15 min");
     expect(text).toContain("L19 · Car behind is within a second, DRS range.");
+    // the newest call may take two lines, so the end of an instruction is never cut off (review H1)
+    expect(html).toContain('class="pww-foot pww-foot--wrap"');
     // band words carry the meaning; amber is only their background (P4)
     expect(html).toContain('class="pws-tag" data-tone="warn">DRS</span>');
     expect(html).toContain('aria-label="Car behind: 0.8 seconds, closing 0.2 seconds a lap, in DRS range, 0 stops"');
   });
 
   it("unknown is '-' (the kit's Unknown), never 0, from the first tick of a race", () => {
-    const html = render(withStrategy(bareRace()));
+    const html = render(withStrategy(bareRace({ total_laps: 52 })));
     expect(html.match(/class="pws-row"/g)).toHaveLength(6);
     expect(html.match(/pw-unknown/g)?.length).toBeGreaterThanOrEqual(6);
     expect(visible(html)).not.toMatch(/\b0\.0 (s|laps)\b/);
@@ -100,7 +103,7 @@ describe("Drive › Car: the strategy tile takes the Inputs slot in a race only"
     const html = render(withStrategy(liveView("edited-live-race-vsc")));
     expect(html).toMatch(/data-row="ahead" data-tone="plain" data-dim=""/);
     expect(html).toContain("last settled value");
-    expect(visible(html)).toContain("Safety car VSC Stop ≈11 s, green 19 s (estimate)");
+    expect(visible(html)).toContain("Safety car VSC Stop 11 s · green 19 s (estimate)");
   });
 
   it("synthetic: the hatched SYNTHETIC chip in the tile header", () => {
@@ -113,16 +116,20 @@ describe("Drive › Car: the strategy tile takes the Inputs slot in a race only"
     const text = visible(render(withStrategy(liveView("edited-live-race-window-open")), { simple: true }));
     expect(text).toContain("Car ahead +1.8 s · you gain 0.3 s a lap");
     expect(text).toContain("Pit stop OPEN Stop lap 18-22 · best 20 (game)");
-    expect(text).toContain("Pit first Car behind could pass you");
+    expect(text).toContain("Car behind CLOSE 0.8 s · it gains 0.2 s a lap"); // no "DRS"
+    expect(text).toContain("Laps to go 11"); // instead of "Pit first"
     expect(text).toContain("Fuel TIGHT Only 0.2 laps spare");
     expect(text).not.toMatch(/Undercut|marginal/);
+    const tile = render(withStrategy(liveView("edited-live-race-window-open")), { simple: true });
+    expect(tile).not.toMatch(/class="pws-tag"[^>]*>DRS</); // the band word is CLOSE (other tiles may say DRS)
   });
 
   it("offline: the tile stays (last known, dimmed by the wall) and says so", () => {
     const s = withStrategy(liveView("edited-live-race-austria-l67"));
     const html = render(s, { connected: false });
     expect(html).toContain('data-dim=""');
-    expect(visible(html)).toContain("Last known · L65 · Car behind is within a second.");
+    // the last known values; the newest call (lap 65, two laps ago) no longer holds
+    expect(visible(html)).toContain("Last known · No new strategy calls");
   });
 
   it("the Tyres & energy line uses this race's measured fuel margin", () => {

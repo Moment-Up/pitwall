@@ -2,8 +2,11 @@
  "_fixture": {
   "tier": "edited",
   "source": "hand-built StrategyView",
-  "moment": "race, lap 9 of 12, P2: fuel short with a lift-and-coast target, rain forecast in 10 min",
-  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data."
+  "moment": "race, lap 9 of 12, P2: fuel short with a lift-and-coast target, rain forecast in 5 min (before the flag)",
+  "notes": "Invented values for a state no capture reaches (no rain, no safety car, no player stop in any capture). Test data, not game data.",
+  "edits": [
+   "Calls carry the review fixes' wording and fields (text_simple, audience, ttl_s; 'within a second' is detailed); the rain forecast moved to 5 minutes / 3 laps ahead, before the flag (7 laps was after it)"
+  ]
  },
  "version": 1,
  "mode": "race",
@@ -130,7 +133,7 @@
    },
    {
     "in_min": 5,
-    "weather": "overcast",
+    "weather": "light_rain",
     "rain_pct": 48,
     "in_laps": 3
    },
@@ -148,10 +151,10 @@
    }
   ],
   "next_change": {
-   "in_min": 10,
+   "in_min": 5,
    "weather": "light_rain",
-   "rain_pct": 72,
-   "in_laps": 7
+   "rain_pct": 48,
+   "in_laps": 3
   },
   "crossover": null
  },
@@ -161,16 +164,22 @@
    "topic": "fuel",
    "level": "alert",
    "text": "Fuel critical: 0.3 laps short. Lift and coast about 2 s a lap, brake at your normal point.",
+   "text_simple": "Fuel is short. Lift off a little before each braking point, then brake as normal.",
+   "audience": "all",
    "lap": 9,
-   "t_unix": 1791701900.0
+   "t_unix": 1791701900.0,
+   "ttl_s": 120.0
   },
   {
    "id": "c9-rain",
    "topic": "weather",
    "level": "alert",
-   "text": "Rain forecast in about 10 minutes, around 7 laps.",
+   "text": "Rain forecast in about 5 minutes, around 3 laps.",
+   "text_simple": "Rain is coming in about 5 minutes.",
+   "audience": "all",
    "lap": 9,
-   "t_unix": 1791701880.0
+   "t_unix": 1791701880.0,
+   "ttl_s": 120.0
   }
  ]
 }

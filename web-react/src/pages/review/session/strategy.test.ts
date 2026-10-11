@@ -130,7 +130,7 @@ describe("Strategy tab: a race", () => {
       "Positions P9 → P1 Gained 8 places from lap 62",
       "Stops 0 No pit stop",
       "Pit loss 18.9 s 1 measured",
-      "Fuel at the flag +2.3 laps Left at the flag",
+      "Fuel at the flag +2.3 laps Spare fuel when the race ended",
       "Race timeline",
       "Stints",
       "You did not stop in this race.",
@@ -153,7 +153,7 @@ describe("Strategy tab: a race", () => {
   it("recorded: the engine's timeline over the committed Austria excerpt renders without inventing anything", () => {
     const text = visible(view(austria(), timeline("recorded-timeline-austria-excerpt"), { level: "advanced" }));
     honest(text, "recorded excerpt");
-    for (const t of ["P14 → P20", "Lost 6 places from lap 1", "No pit stop measured in this race", "+3.2 laps", "Soft", "L1-3 · 3"]) {
+    for (const t of ["P14 → P20", "Lost 6 places from lap 1", "No pit stop measured in this race", "+3.2 laps", "Soft", "L1\u20133 · 3"]) {
       expect(text).toContain(t);
     }
     expect(text).not.toContain("Other cars' stops");
@@ -167,7 +167,7 @@ describe("Strategy tab: a race", () => {
     expect(html).toContain('data-evidence="synthetic"');
     expect(text).toContain("Stops 1 L8 · Medium → Hard");
     expect(text).toContain("Under the virtual safety car");
-    expect(text).toContain("Shaded laps: Virtual safety car on laps 7-8.");
+    expect(text).toContain("Shaded laps: Virtual safety car on laps 7\u20138.");
     expect(text).toContain("Synthetic session: generated data, not from a game.");
     expect(text).toContain("Fuel critical: 0.4 laps short. Lift and coast about 2 s a lap, brake at your normal point.");
     expect(text).not.toMatch(/brake\w* later/i);
@@ -184,9 +184,9 @@ describe("Strategy tab: a race", () => {
     expect(text).toContain("Stops 1 L8 · Medium → Soft");
     expect(text).toContain("Not counted: safety car for only part of the stop");
     expect(text).toContain("Pit loss 12.8 s 2 measured");
-    expect(text).toContain("Shaded laps: Virtual safety car on laps 7-8.");
+    expect(text).toContain("Shaded laps: Virtual safety car on laps 7\u20138.");
     expect(text).toContain("Other cars' stops (measured) · 2");
-    expect(text).toContain("Virtual safety car. Box this lap is an option");
+    expect(text).toContain("Virtual safety car. Pitting this lap is an option");
     expect(text).toContain("Car behind is pitting. Box next lap to cover the undercut.");
     expect(text).toContain("Synthetic session: generated data, not from a game.");
     expect(text).not.toMatch(/brake\w* later/i);
@@ -206,6 +206,30 @@ describe("Strategy tab: a race", () => {
     expect(visible(advanced)).not.toContain("Your position lap by lap");
   });
 
+  it("a race joined late: the stops the game counted before the record, never 'You did not stop' (review H2)", () => {
+    const t = timeline("edited-timeline-austria");
+    t.laps = t.laps.map((l) => ({ ...l, stops: 2 }));
+    const text = visible(view(austria(), t)).replace(/ \? /g, " ");
+    expect(text).toContain("Stops 2 2 before lap 62 (game)");
+    expect(text).toContain("The game counts 2 stops before Pitwall's record began on lap 62.");
+    expect(text).not.toContain("You did not stop");
+    expect(text).toContain("Tyres 37 laps old at L62");
+  });
+
+  it("calls for a beginner: the plain words they heard, no experienced-only calls, the radio's words explained", () => {
+    const t = timeline("edited-timeline-synthetic");
+    const b = view(austria(), t, { level: "beginner" });
+    const text = visible(b);
+    expect(text).not.toContain("cover the undercut"); // meant for experienced drivers: never said to a beginner
+    expect(text).toContain("Fuel is short. Lift off a little before each braking point, then brake as normal.");
+    expect(text).toContain("Which ones you heard depends on the radio setting and the driver's level.");
+    expect(b).toContain('data-call-terms=""');
+    expect(b).toContain('aria-label="What is pit window?"');
+    expect(b).toContain('aria-label="What is safety car and VSC?"');
+    const advanced = visible(view(austria(), t, { level: "advanced" }));
+    expect(advanced).toContain("Car behind is pitting. Box next lap to cover the undercut.");
+  });
+
   it("phone: tables become two-line rows (ListView), no DataGrid", () => {
     const wide = view(austria(), timeline("edited-timeline-synthetic"));
     expect(wide).toContain('data-slot="data-grid"');
@@ -213,6 +237,7 @@ describe("Strategy tab: a race", () => {
     expect(narrow).not.toContain('data-slot="data-grid"');
     expect(narrow).toContain('data-narrow=""');
     expect(visible(narrow)).toContain("Wear 31% at the end · 3.4%/lap · median 1:31.700");
+    expect(visible(narrow)).toContain("You in L8 · out L8"); // the stops list says which lap is which (review L13)
   });
 });
 
@@ -226,8 +251,10 @@ describe("Session page: the Strategy tab is listed for races only", () => {
   }
 
   it("a race lists Strategy between Corners and Ask", () => {
-    const text = visible(page(austria(), "summary"));
-    expect(text).toMatch(/Summary Laps Compare Corners Strategy Ask/);
+    const html = page(austria(), "summary");
+    expect(visible(html)).toMatch(/Summary Laps Compare Corners Strategy Ask/);
+    // six tabs do not fit a 390 px phone: Ask leaves the strip there (the "Ask the engineer" button opens it)
+    expect(html).toMatch(/max-sm:hidden[^>]*>Ask|data-key="ask"[^>]*max-sm:hidden/);
   });
 
   it("a practice session does not; a direct link still opens the tab with the reason", () => {

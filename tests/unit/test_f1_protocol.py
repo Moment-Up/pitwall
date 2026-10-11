@@ -169,8 +169,8 @@ def test_can_decode_detects_both_formats_and_ignores_garbage() -> None:
 
 def test_ignored_packet_types_are_counted_not_errors() -> None:
     a = F1Adapter()
-    # Session History is still ignored (TyreSets is decoded since the race strategy engineer)
-    a.decode(_header(2025, int(P.PacketId.SESSION_HISTORY)) + b"\0" * (1460 - 29), 0)
+    # Lap Positions is ignored (spec 5.15, 1131 bytes; TyreSets is decoded since the race strategy engineer)
+    a.decode(_header(2025, int(P.PacketId.LAP_POSITIONS)) + b"\0" * (1131 - 29), 0)
     assert a.stats.ignored == 1 and a.stats.errors == 0
 
 

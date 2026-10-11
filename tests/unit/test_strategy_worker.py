@@ -128,3 +128,37 @@ def test_reset_session_clears_the_view() -> None:
     assert live.snapshot()["strategy"] == {"mode": "race"}
     live.reset_session("s2", "udp:20777", False)
     assert live.snapshot()["strategy"] is None
+
+
+def test_the_session_forwards_only_what_the_engine_reads() -> None:
+    """``SessionManager._to_strategy``: frames, lap completions, session info and game events (not buttons). Any
+    other item type (another lane's, after a merge) stays out of the strategy queue."""
+    from typing import cast
+
+    from pitwall.core.lap_processor import AnalysisWorker
+    from pitwall.core.session import SessionManager
+    from pitwall.model.telemetry import EventKind, Game, GameEvent
+    from pitwall.storage.db import DbWriter
+
+    class Sink:
+        def __init__(self) -> None:
+            self.items: list[Any] = []
+
+        def submit(self, session_id: str, item: Any) -> bool:
+            self.items.append(item)
+            return True
+
+        def end_session(self, session_id: str) -> None:
+            pass
+
+    sink = Sink()
+    sm = SessionManager(
+        cast(DbWriter, FakeWriter()), LiveState(), cast(AnalysisWorker, FakeWriter()), source="test", strategy=sink
+    )
+    sm.session_id = "s1"
+    f, lc, info = frame(1.0, 1, 10.0), completion(1, 80000, 80.0), session(total_laps=5)
+    flbk = GameEvent(game=Game.F1_25, t_recv_ns=1, session_time_s=2.0, kind=EventKind.FLASHBACK, code="FLBK")
+    button = GameEvent(game=Game.F1_25, t_recv_ns=1, session_time_s=2.0, kind=EventKind.BUTTON, code="BUTN")
+    for item in (f, lc, info, flbk, button, object()):
+        sm._to_strategy(item)  # type: ignore[arg-type]
+    assert sink.items == [f, lc, info, flbk]

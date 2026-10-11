@@ -4,21 +4,38 @@
 import { Button, Popover } from "@heroui/react";
 import { STRATEGY_GLOSSARY, type StrategyTerm } from "../../../../lib/strategy/words";
 
-export function StrategyGlossary({ term, className = "" }: { term: StrategyTerm; className?: string }) {
+/** `word`: a labelled button ("Box ?") for a row of terms, instead of the bare `?` beside a title. */
+export function StrategyGlossary({ term, word, className = "" }: { term: StrategyTerm; word?: string; className?: string }) {
   const entry = STRATEGY_GLOSSARY[term];
+  // "What is pit loss?", "What is safety car and VSC?" (only the first letter lowered: acronyms stay as written)
+  const question = `What is ${entry.title.charAt(0).toLowerCase()}${entry.title.slice(1)}?`;
   return (
     <Popover>
-      <Button
-        isIconOnly
-        variant="ghost"
-        size="sm"
-        aria-label={`What is ${entry.title.toLowerCase()}?`}
-        className={`pw-gloss ${className}`}
-      >
-        <span aria-hidden="true" className="pw-gloss__dot">
-          ?
-        </span>
-      </Button>
+      {word ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={question}
+          className={`min-h-11 gap-1.5 px-2 text-sm font-medium text-muted ${className}`}
+        >
+          {word}
+          <span aria-hidden="true" className="pw-gloss__dot">
+            ?
+          </span>
+        </Button>
+      ) : (
+        <Button
+          isIconOnly
+          variant="ghost"
+          size="sm"
+          aria-label={question}
+          className={`pw-gloss ${className}`}
+        >
+          <span aria-hidden="true" className="pw-gloss__dot">
+            ?
+          </span>
+        </Button>
+      )}
       <Popover.Content placement="top" className="pw-gloss__pop">
         <Popover.Dialog>
           <Popover.Heading className="pw-gloss__title">{entry.title}</Popover.Heading>

@@ -79,8 +79,8 @@ losing 0.12 s"). Recorded tier: `tests/fixtures/recorded/f1_25_2025_ps5_austria_
   (`tests/recorded/test_carsetup_real.py`); no recommended setup has been driven or validated by pitwall.
   See `docs/research/f1-car-setups.md`.
 
-- **Race strategy engineer** (`pitwall/strategy`, schema v3, Drive › Car strategy tile, Review › Strategy,
-  `/api/strategy/live`, `/api/sessions/{sid}/strategy`, strategy radio calls and intents): **unit + synthetic;
+- **Race strategy engineer** (`pitwall/strategy`, tables `strategy_laps` / `pit_stops`, Drive › Car strategy tile,
+  Review › Strategy, `/api/strategy/live`, `/api/sessions/{sid}/strategy`, strategy radio calls and intents): **unit + synthetic;
   recorded** for decoding (every car's LapData as `RaceTiming`, the player's TyreSets), gaps, fuel, tyre wear,
   TyreSets, forecast and AI pit-stop timing (committed PS5 Austria and Monza excerpts; the full 71-lap Austria race
   checked manually with `scripts/strategy_check.py`: car 14's stop measures 18.9 s, burn model b1 0.0236 kg/s
@@ -95,7 +95,13 @@ losing 0.12 s"). Recorded tier: `tests/fixtures/recorded/f1_25_2025_ps5_austria_
   check, the Drive tile and Review › Strategy rendered at iPad and phone sizes, and the radio answered the
   strategy, gaps, fuel, tyres and weather intents instantly (no LLM); the synthetic race's VSC box, rain, fuel and
   undercut-threat calls were said in speak windows at normal intensity. **Not live-validated**;
-  `capabilities.py` is unchanged.
+  `capabilities.py` is unchanged. Review fixes (2026-10-11, unit + synthetic, the recorded fixtures regenerated): a
+  flashback into a stop re-opens it (no phantom one-lap stop), a lapped player's race ends a lap early (no false
+  "fuel critical"), the fuel verdict is judged at the line, pit-window calls are said once (not "laps 19 to 19"
+  every three laps) and wait three laps after a stop when only the game's figure closes the window, no rain call
+  for a change after the flag, no gap calls under SC / VSC ("within a second" is detail now), "this lap" only once
+  the pit entry is known; every call has plain words for simple wording (radio, tile, Review), the tile is shown in
+  races of 8 laps or more, and the Coach radio strip shows the newest strategy alert while the radio is off.
 
 ## Dashboard v2 (React + HeroUI, `web-react/`), 2026-10-11
 

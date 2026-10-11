@@ -77,10 +77,22 @@
   min-width: 0;
 }
 .pws-foot[data-level="alert"] { color: var(--warning); }
+/* The newest call takes up to two lines: a one-line ellipsis cut "Lift and coast abou…" before "brake at your normal
+   point", and "box this lap or n…" before the end of the instruction. */
+.pws .pww-foot--wrap {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
-/* iPad mini, Safari with toolbars: compact rows, as the rest of the wall. */
+/* iPad mini, Safari with toolbars: compact rows, as the rest of the wall. A row's two lines fit its 34 px (label 14 +
+   value 19 + 1), so a two-line footer never meets the last value. */
 @media (max-height: 760px) and (min-width: 1024px) {
   .pws-rows { grid-template-rows: repeat(6, minmax(34px, 1fr)); }
+  .pws-row { row-gap: 1px; }
+  .pws-row__k { font-size: 12px; line-height: 14px; }
+  .pws-tag { line-height: 14px; }
   .pws-row__v { font-size: 17px; line-height: 19px; }
 }
 
@@ -89,4 +101,5 @@
   .pws-rows { grid-template-rows: repeat(6, 46px); }
   /* the wall scrolls here, so the newest call can take its whole text */
   .pws .pww-foot { white-space: normal; }
+  .pws .pww-foot--wrap { display: block; -webkit-line-clamp: unset; }
 }

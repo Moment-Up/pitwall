@@ -5,7 +5,8 @@
 //   2. Race timeline   position (↑ better) and gaps, stops, SC / VSC bands, stint bar, weather row
 //   3. Stints          Pro DataGrid (two-line ListView rows below 600 px)
 //   4. Pit stops       yours, then "Other cars' stops (measured)" in a Disclosure, exclusions in words
-//   5. Strategy calls  Pro ListView: lap, level chip, the backend's text verbatim (P9)
+//   5. Strategy calls  Pro ListView: lap, level chip, the backend's text verbatim (P9): for a driver with simple
+//                      wording the plain words they heard, and not the calls meant for experienced drivers
 //   6. Tier note       measured / (game) / (estimate), SYNTHETIC when the session is
 // Density follows the viewed session's driver (6.10): beginners get plain titles and the glossary `?`s.
 
@@ -22,7 +23,10 @@ import { strategyApi, strategyKeys } from "../../../lib/endpoints/strategy";
 import type { Density } from "../../../lib/review/density";
 import {
   callRows,
+  callTerms,
+  firstRecordedLap,
   isRaceSession,
+  missedStops,
   stintRows,
   stopRows,
   strategyGame,
@@ -37,13 +41,14 @@ import {
   type TimelineState,
 } from "../../../lib/strategy/timeline";
 import type { StrategyTimeline } from "../../../lib/strategy/types";
+import { STRATEGY_GLOSSARY } from "../../../lib/strategy/words";
 import { useMedia } from "../useMedia";
 import { StrategyGlossary } from "./strategy/StrategyGlossary";
 import { StrategyTimelineChart } from "./strategy/StrategyTimelineChart";
 
 export interface StrategyTabProps {
   session: SessionDetail;
-  density: Pick<Density, "glossary" | "level" | "chartCaptions">;
+  density: Pick<Density, "glossary" | "level" | "chartCaptions"> & Partial<Pick<Density, "simpleWording">>;
 }
 
 /** Loads the timeline (races of a game the engine reads only) and renders the view. */
@@ -141,7 +146,16 @@ function Cell({ text }: { text: string }) {
 
 const STINT_COLUMNS: DataGridColumn<StintRowView>[] = [
   { id: "compound", header: "Tyre", isRowHeader: true, cell: (r) => <CompoundCell name={r.compound} colour={r.colour} /> },
-  { id: "laps", header: "Laps", cell: (r) => <Cell text={`${r.laps} · ${r.count}`} /> },
+  {
+    id: "laps",
+    header: "Laps",
+    cell: (r) => (
+      <span className="grid">
+        <Cell text={`${r.laps} · ${r.count}`} />
+        {r.note && <span className="text-[13px] leading-snug text-muted">{r.note}</span>}
+      </span>
+    ),
+  },
   { id: "wear", header: "Wear at the end", align: "end", cell: (r) => <Cell text={r.wearEnd} /> },
   { id: "rate", header: "Wear rate", align: "end", cell: (r) => <Cell text={r.rate} /> },
   { id: "median", header: "Median lap", align: "end", cell: (r) => <Cell text={r.median} /> },
@@ -163,7 +177,7 @@ function StintsTable({ rows, narrow }: { rows: StintRowView[]; narrow: boolean }
                   </span>
                 </ListView.Title>
                 <ListView.Description className="whitespace-normal text-[13px] leading-snug">
-                  Wear {r.wearEnd} at the end · {r.rate} · median {r.median}
+                  {r.note ? `${r.note} · ` : ""}Wear {r.wearEnd} at the end · {r.rate} · median {r.median}
                 </ListView.Description>
               </div>
             </ListView.ItemContent>
@@ -196,7 +210,7 @@ function StopsTable({ rows, narrow, label }: { rows: StopRowView[]; narrow: bool
                 <ListView.Title className="flex flex-wrap items-baseline gap-x-2">
                   <span className="font-semibold">{r.car}</span>
                   <span className="pw-num text-muted">
-                    {r.entry} · {r.exit}
+                    in {r.entry} · out {r.exit}
                   </span>
                   <span className="pw-num">pit loss {r.loss}</span>
                 </ListView.Title>
@@ -213,6 +227,20 @@ function StopsTable({ rows, narrow, label }: { rows: StopRowView[]; narrow: bool
     );
   }
   return <DataGrid aria-label={label} data={rows} columns={STOP_COLUMNS} getRowId={(r) => r.id} variant="secondary" rowHeight={44} />;
+}
+
+/** The strategy words the calls use, each a labelled glossary button (beginners and intermediates, 6.10). */
+function CallTerms({ rows }: { rows: CallRowView[] }) {
+  const terms = callTerms(rows);
+  if (!terms.length) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-x-1" data-call-terms="">
+      <span className="text-sm text-muted">Words on the radio:</span>
+      {terms.map((t) => (
+        <StrategyGlossary key={t} term={t} word={STRATEGY_GLOSSARY[t].title} />
+      ))}
+    </div>
+  );
 }
 
 function CallsList({ rows }: { rows: CallRowView[] }) {
@@ -250,12 +278,14 @@ function TimelineBody({
   narrow: boolean;
 }) {
   const simple = density.level === "beginner";
+  const wording = density.simpleWording ?? simple; // what this driver heard on the radio
   const kpis = useMemo(() => timelineKpis(timeline, { simple }), [timeline, simple]);
   const chart = useMemo(() => timelineChart(timeline), [timeline]);
-  const stints = useMemo(() => stintRows(timeline.stints), [timeline.stints]);
+  const stints = useMemo(() => stintRows(timeline.stints, timeline.laps), [timeline.stints, timeline.laps]);
   const mine = useMemo(() => stopRows(timeline.stops), [timeline.stops]);
   const field = useMemo(() => stopRows(timeline.field_stops), [timeline.field_stops]);
-  const calls = useMemo(() => callRows(timeline.calls), [timeline.calls]);
+  const calls = useMemo(() => callRows(timeline.calls, { simple: wording }), [timeline.calls, wording]);
+  const missed = missedStops(timeline);
   const g = density.glossary;
   const captions = density.chartCaptions;
 
@@ -285,9 +315,15 @@ function TimelineBody({
         </Section>
 
         <Section title="Pit stops" aside={g ? <StrategyGlossary term="pit_loss" /> : undefined}>
+          {missed > 0 && (
+            <p className="m-0 text-sm text-muted" data-missed-stops="">
+              The game counts {missed === 1 ? "1 stop" : `${missed} stops`} before Pitwall's record began on lap{" "}
+              {firstRecordedLap(timeline)}.
+            </p>
+          )}
           {mine.length ? (
             <StopsTable rows={mine} narrow={narrow} label="Your pit stops" />
-          ) : (
+          ) : missed > 0 ? null : (
             <p className="m-0 text-sm text-muted">You did not stop in this race.</p>
           )}
           {field.length > 0 && (
@@ -311,7 +347,15 @@ function TimelineBody({
         </Section>
       </div>
 
-      <Section title="Strategy calls" caption={captions ? "What the engineer said on the radio, word for word." : null}>
+      <Section
+        title="Strategy calls"
+        caption={
+          captions
+            ? "The engineer's strategy calls in this race, word for word. Which ones you heard depends on the radio setting and the driver's level."
+            : null
+        }
+      >
+        {g && <CallTerms rows={calls} />}
         <CallsList rows={calls} />
       </Section>
 

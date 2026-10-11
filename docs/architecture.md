@@ -88,7 +88,8 @@ ground plane declared by the adapter (`AdapterInfo.ground_plane`). Field provena
 8. **Race strategy** (`pitwall/strategy/`, worker thread, off the ingest path): gaps with a settle rule against the
    game's own glitches, every car's pit visits and the measured pit loss, undercut / rejoin, safety car / VSC,
    forecast, and rate-limited proactive calls through the radio scheduler. Per-lap `StrategyLapRecord`s and pit
-   stops are stored (schema v3) for Review › Strategy. Live view in every snapshot (`strategy`, < 2 kB).
+   stops are stored (tables `strategy_laps`, `pit_stops`) for Review › Strategy. Live view in every snapshot
+   (`strategy`, about 2-3.5 kB).
 
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw
@@ -119,7 +120,8 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
   Session complete card loads it on demand).
 
 ## Storage
-SQLite WAL (`data/pitwall.sqlite3`), schema v3 (v3 added `strategy_laps` and `pit_stops`). Lap traces stored as compressed float32 npz blobs (~19 channels).
+SQLite WAL (`data/pitwall.sqlite3`); the race strategy added the tables `strategy_laps` and `pit_stops` (schema
+history in `storage/db.py`). Lap traces stored as compressed float32 npz blobs (~19 channels).
 Raw packets in `data/captures/*.pwcap` (zstd, ~2.5 MB per 7 min at 60 Hz) for reprocessing.
 
 ## Security

@@ -68,13 +68,8 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ),
     ("control_resume", re.compile(r"\b(resume|start talking|talk to me again|you can talk|coaching on)\b", re.I)),
     ("fuel", re.compile(r"\b(fuel|petrol|gas|lift and coast)\b", re.I)),
-    # --- race strategy (pitwall.strategy): weather before tyres ("inters"), gaps after strategy ---
-    (
-        "weather",
-        re.compile(
-            r"\b(weather|rain(?:ing)?|wet|forecast|inters?|intermediates?|drying|track temp(?:erature)?)\b", re.I
-        ),
-    ),
+    # race strategy (pitwall.strategy): only the wet-tyre and forecast words before tyres ("should I go on inters")
+    ("weather", re.compile(r"\b(inters?|intermediates?|forecast)\b", re.I)),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
     (
         "strategy",
@@ -84,15 +79,6 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
             re.I,
         ),
     ),
-    (
-        "gaps",
-        re.compile(
-            r"\b(gap(?!\s+to\s+(?:my|the)\s+(?:best|reference|pb|personal))s?|interval|car (?:ahead|behind|in front)|"
-            r"behind me|in front of me|how far (?:ahead|behind|back)|catching|drs|within a second|position)\b",
-            re.I,
-        ),
-    ),
-    # --- end race strategy ---
     (
         "setup",
         re.compile(
@@ -109,6 +95,19 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("lap_times", re.compile(r"\b(lap ?times?|fastest|best lap|pace|how fast)\b", re.I)),
     ("summary", re.compile(r"\b(summary|summarise|summarize|debrief|how did (?:i|that) go|report)\b", re.I)),
     ("losing_time", re.compile(r"\b(losing time|lose time|where am i (?:slow|losing)|time loss|slow(?:er)?)\b", re.I)),
+    # --- race strategy (pitwall.strategy): last, so they only take questions no rule above matched ("a good wet
+    # setup" stays setup, "my pace in the wet" lap_times, "losing time to the car ahead" losing_time) ---
+    ("weather", re.compile(r"\b(weather|rain(?:ing)?|wet|drying|track temp(?:erature)?)\b", re.I)),
+    (
+        "gaps",
+        re.compile(
+            r"\b(gap(?!\s+to\s+(?:my|the)\s+(?:best|reference|pb|personal))s?|interval|car (?:ahead|behind|in front)|"
+            r"behind me|in front of me|how far (?:ahead|behind|back)|catching|drs|within a second|"
+            r"(?:what|which) position am i|my (?:race )?position|race position|what place am i|p\d{1,2})\b",
+            re.I,
+        ),
+    ),
+    # --- end race strategy ---
 ]
 
 _TOPICS: dict[str, set[str]] = {
