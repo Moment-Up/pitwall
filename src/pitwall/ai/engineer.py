@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -76,6 +77,16 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     # data some games never send (games.INTENT_FEATURES), before setup ("front wing broken"): "wing" alone stays a
     # setup question
     ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
+    # --- feat/technique: handling balance (before setup: "understeer" asks how the car handled) ---
+    (
+        "balance",
+        re.compile(
+            r"\b(under-?steer\w*|over-?steer\w*|(?<!brake )balance|push(?:es|ing)? wide|snap(?:py|s)?|loose|"
+            r"rear (?:end )?(?:steps?|stepping|kicks?|kicking) out|(?:won't|doesn't) turn(?: in)?)\b",
+            re.I,
+        ),
+    ),
+    # --- end feat/technique ---
     (
         "setup",
         re.compile(
@@ -84,8 +95,28 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
             re.I,
         ),
     ),
+    # --- feat/technique: racing line (after setup) ---
+    (
+        "line",
+        re.compile(
+            r"\b(racing line|(?:my|the|your) line|wider|tighter|run(?:ning)? wide|apex(?:es)?(?!\s*speed)|"
+            r"turn[- ]in point|track[- ]out)\b",
+            re.I,
+        ),
+    ),
+    # --- end feat/technique ---
     ("focus", re.compile(r"\b(one thing|work on|focus|improve|tip|advice|what should i)\b", re.I)),
     ("compare", re.compile(r"\b(compare|comparison|versus|vs|against my best|to my best|reference)\b", re.I)),
+    # --- feat/technique: brake and throttle technique (after compare, before braking) ---
+    (
+        "technique",
+        re.compile(
+            r"\b(trail[- ]?brak\w*|lock(?:ing|ed|s)?[- ]?ups?|wheel ?spin\w*|traction|coast(?:ing)?|"
+            r"on the (?:power|throttle)|brake release|releas\w+ the brake|smooth\w*)\b",
+            re.I,
+        ),
+    ),
+    # --- end feat/technique ---
     ("braking", re.compile(r"\b(brak\w*|brake point|where should i brake)\b", re.I)),
     # "how was my last lap / that lap": the lap just driven, not the best one (checked before lap_times)
     ("last_lap", re.compile(r"\b(?:last|previous|latest|that|this) lap\b(?!\s*times\b)", re.I)),
@@ -113,7 +144,7 @@ _TOPICS: dict[str, set[str]] = {
     "sectors": {"session", "game", "laps"},
     "flags": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "weather": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
-    "setup": {"session", "game", "corners", "observations", "compare", "setup"},
+    "setup": {"session", "game", "corners", "observations", "compare", "setup", "balance"},  # balance: feat/technique
     "focus": {"session", "game", "observations", "corners", "reference"},
     "compare": {"session", "game", "compare", "reference", "laps"},
     "braking": {"session", "game", "corners", "observations", "reference"},
@@ -122,6 +153,11 @@ _TOPICS: dict[str, set[str]] = {
     "summary": {"session", "game", "laps", "corners", "observations", "fuel", "tyres"},
     "losing_time": {"session", "game", "corners", "compare", "observations", "reference"},
     "corner": {"session", "game", "reference"},
+    # --- feat/technique ---
+    "line": {"session", "game", "line", "reference"},
+    "technique": {"session", "game", "technique", "reference", "observations"},
+    "balance": {"session", "game", "balance", "setup"},
+    # --- end feat/technique ---
     "general": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
 }
 
@@ -360,6 +396,10 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         # the game sends it but the sheet has no fact about it (F1 flags): the general answer, never "complete a
         # few clean laps" (more laps would not help)
         return say(game) if game is not None else say(*general)
+    # --- feat/technique: racing line, technique and balance answers (before the generic corner branch) ---
+    if n in ("line", "technique", "balance"):
+        return _technique_answer(n, intent.corner, facts, sheet, first, say)
+    # --- end feat/technique ---
     if n in ("corner", "braking", "losing_time", "setup") and intent.corner:
         obs = first("observations", corner=intent.corner)
         return say(first("corners", corner=intent.corner), obs or first("compare", corner=intent.corner))
@@ -402,6 +442,8 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
             first("observations"),
             diff or first("setup", contains="Recommended") or first("setup", contains="Setup recommendation: none"),
             first("setup", contains="Something to test") if diff else None,
+            first("balance", contains="Handling summary"),  # feat/technique (absent: no change)
+            first("balance", contains="Setup to try"),  # feat/technique
             game,
         )
     if n == "summary":
@@ -413,3 +455,49 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
             first("fuel"),
         )
     return say(first("laps", contains="Best clean"), first("observations"))
+
+
+# --- feat/technique --------------------------------------------------------------------------------------------
+def _technique_answer(
+    n: str,
+    corner: str | None,
+    facts: list[Fact],
+    sheet: FactSheet,
+    first: Callable[..., Fact | None],
+    say: Callable[..., str],
+) -> str:
+    """Deterministic answers for the ``line``, ``technique`` and ``balance`` intents (``pitwall.technique.facts``)."""
+    keys = sheet.corners_for(corner) if corner else set()
+
+    def at_corner(topic: str, contains: str | None = None) -> list[Fact]:
+        out = []
+        for f in facts:
+            if f.topic != topic or (contains is not None and contains not in f.text):
+                continue
+            listed = {str(c).lower() for c in f.data.get("corners", ()) if isinstance(c, str)}
+            if (f.corner or "").lower() in keys or listed & keys:
+                out.append(f)
+        return out
+
+    if n == "line":
+        hit = at_corner("line")[:1] if corner else []
+        return say(*hit) if hit else say(first("line", contains="Biggest line") or first("line"))
+    if n == "technique":
+        hit = at_corner("technique")[:2] if corner else []
+        if hit:
+            return say(*hit)
+
+        # the session facts (no corner): a corner's technique fact can mention wheelspin too
+        def session_fact(prefix: str) -> Fact | None:
+            return next((f for f in facts if f.topic == "technique" and f.text.startswith(prefix)), None)
+
+        return say(session_fact("Braking assist"), session_fact("Lock-ups"), session_fact("Wheelspin"))
+    if corner:
+        sym = [f for f in at_corner("balance") if "Setup to try" not in f.text]
+        if sym:
+            setup = at_corner("balance", contains="Setup to try")
+            return say(sym[0], setup[0] if setup else None)
+    return say(first("balance", contains="Handling summary"), first("balance", contains="Setup to try"))
+
+
+# --- end feat/technique ---

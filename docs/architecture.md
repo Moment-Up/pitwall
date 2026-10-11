@@ -92,6 +92,16 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
    confidence vs habit consistency reported separately; later braking never suggested on its own.
 7. **Strategy** (`analysis/strategy.py`): fuel/lap median over green laps, wear-rate regression, tyre-limited
    pit window.
+8. **Technique** (`technique/`, feat/technique; on request, cached in memory, never stored): racing line as
+   lateral offsets from the driver's own reference lap (`line.py`: coarse + fine nearest-point matching, inside side
+   from the reference's curvature, so any frame handedness works); brake/throttle technique per corner on native
+   samples with pedal-aware notes (`inputs.py`, `rig.py`); handling balance per corner phase from front-minus-rear
+   tyre slip angle at the limit, slides from tail-out body slip or counter-steer, car-or-driving verdict from the
+   best lap (`balance.py`); one-parameter setup suggestions for car symptoms that feed `carsetup.experiments`
+   (`setup_map.py`). `session.py` orchestrates (`analyse_session` pure for facts, `TechniqueAnalyzer` with the DB
+   for `/api/technique`), `thresholds.py` lists every threshold with a heuristic flag. Inputs: the lap trace's
+   `TECHNIQUE_CHANNELS` (F1 MotionEx yaw rate, body slip, axle slip angles, per-wheel slip ratio; NaN for other
+   games), decoded by the F1 adapter in one `unpack_from` per MotionEx packet; nothing else on the live path.
 
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw
@@ -99,6 +109,8 @@ telemetry). `ai/engineer.py`: rule-based intent (works offline; control commands
 topic-filtered facts -> LLM with strict system prompt -> `ai/grounding.py` (every number must be a rounding
 of a number in the cited facts; citations must exist) -> one corrective retry -> deterministic fallback.
 `ai/providers.py`: OpenAI-compatible provider with model discovery and a circuit breaker.
+Technique facts (topics `line`, `technique`, `balance`) come from `technique/facts.py`; their intents are answered
+deterministically and are radio fast intents (feat/technique).
 
 ## Dashboard (`web-react/`)
 React 19 + TypeScript (strict) + Vite + Tailwind v4 + HeroUI v3 / HeroUI Pro, built to `docs/ui/design-spec.md` (v2,

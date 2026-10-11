@@ -28,6 +28,7 @@ import {
 import type { Density } from "../../../lib/review/density";
 import { comparePath } from "../../../lib/review/links";
 import { timeSigned, timeWords } from "../../../lib/review/compare";
+import { CornerTechnique, useCornerTechnique, type CornerTechniqueCtx } from "./technique/CornerTechnique"; // feat/technique
 
 const SHOWN = 3;
 
@@ -58,10 +59,13 @@ function CornerCardView({
   card,
   signed,
   onCompare,
+  technique,
 }: {
   card: CornerCard;
   signed: boolean;
   onCompare: (c: CornerCard) => void;
+  /** feat/technique: line, inputs and balance for this corner. */
+  technique?: CornerTechniqueCtx;
 }) {
   const [all, setAll] = useState(false);
   const lines = averageLines(card.summary);
@@ -93,6 +97,8 @@ function CornerCardView({
       ) : (
         <p className="m-0 text-sm text-muted">No session averages for this corner.</p>
       )}
+      {/* feat/technique */}
+      {technique && <CornerTechnique corner={card.key} ctx={technique} />}
       {card.observations.length > 0 ? (
         <div className="grid gap-2">
           <span className="text-sm font-medium">{spoken ? `The coach spoke here on ${spoken.toLowerCase()}` : "The coach spoke here"}</span>
@@ -146,6 +152,7 @@ export function CornersTab({ session, analysis, density }: CornersTabProps) {
   const [filter, setFilter] = useState<CornersFilter>(counts.work > 0 || !cards.length ? "work" : "all");
   const shown = filterCards(cards, filter);
   const lengthM = session.track_length_m ?? null;
+  const technique = useCornerTechnique(session.id, density); // feat/technique
 
   const onCompare = (c: CornerCard) =>
     router.navigate(
@@ -182,7 +189,7 @@ export function CornersTab({ session, analysis, density }: CornersTabProps) {
       {shown.length ? (
         <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((c) => (
-            <CornerCardView key={c.key} card={c} signed={density.signedBadges} onCompare={onCompare} />
+            <CornerCardView key={c.key} card={c} signed={density.signedBadges} onCompare={onCompare} technique={technique} />
           ))}
         </div>
       ) : (

@@ -125,6 +125,12 @@ class CarFrame:
     yaw_rad: float | None = None
     pitch_rad: float | None = None
     roll_rad: float | None = None
+    # --- feat/technique: chassis dynamics (F1 MotionEx). None = not sent by this game / packet, or stale ---
+    yaw_rate_rps: float | None = None  # + = rotating clockwise seen from above (turning right): same sign as steering
+    body_slip_rad: float | None = None  # angle between heading and direction of travel (sign per adapter; use |x|)
+    wheel_slip_ratio: Wheels[float] | None = None  # (wheel - car speed) / car speed: < 0 braking (-1 locked), > 0 spin
+    wheel_slip_angle_rad: Wheels[float] | None = None  # per wheel; sign per adapter docs (analysis uses magnitudes)
+    # --- end feat/technique ---
 
     # --- lap -----------------------------------------------------------------------------------
     lap_number: int | None = None  # current lap, 1-based

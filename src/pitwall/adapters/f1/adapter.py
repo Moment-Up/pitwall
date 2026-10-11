@@ -101,6 +101,28 @@ F1_25_INFO = AdapterInfo(
         "track_zones": FieldSupport(
             _S, "Session sector 2/3 starts (m) + MarshalZone[21]; format 2026 adds DRS and active-aero zones"
         ),
+        # --- feat/technique: MotionEx (packet 13), player car only ---
+        "yaw_rate_rps": FieldSupport(
+            _S,
+            "-MotionEx.angularVelocityY (rad/s; game sign is + for left turns, flipped so + = right like steering); "
+            "units/sign checked on the recorded PS5 Monza excerpt (tests/recorded/test_technique_recorded.py)",
+        ),
+        "body_slip_rad": FieldSupport(
+            _S,
+            "MotionEx.chassisYaw (rad, = atan2(localVelocityX, localVelocityZ)); units/sign checked on the recorded "
+            "PS5 Monza excerpt (tests/recorded/test_technique_recorded.py)",
+        ),
+        "wheel_slip_ratio": FieldSupport(
+            _S,
+            "MotionEx.wheelSlipRatio (RL,RR,FL,FR -> FL..RR; unitless, < 0 braking, > 0 wheelspin; EA states no "
+            "unit); units/sign checked on the recorded PS5 Monza excerpt (tests/recorded/test_technique_recorded.py)",
+        ),
+        "wheel_slip_angle_rad": FieldSupport(
+            _S,
+            "MotionEx.wheelSlipAngle (RL,RR,FL,FR -> FL..RR; rad, EA states no unit); units/sign checked on the "
+            "recorded PS5 Monza excerpt (tests/recorded/test_technique_recorded.py)",
+        ),
+        # --- end feat/technique ---
         "field_samples": FieldSupport(
             SupportLevel.RECORDED_VALIDATED,
             "Motion + LapData + CarTelemetry of every racing car, <= 10 Hz per car (FieldSample). Recorded: real PS5 "
@@ -140,6 +162,9 @@ MAX_FIELD_HZ = 60.0
 FIELD_MAX_FRAME_SKEW = 2  # Motion / LapData used for a field tick must be this close to the telemetry frame
 FIELD_TICK_TOLERANCE_S = 0.005  # game clock jitter allowed when a tick falls due (a 60 Hz frame is 16.7 ms)
 FIELD_REWIND_S = 0.05  # the game clock going back by more than this (flashback, restart) re-arms the tick at once
+# feat/technique: MotionEx (player car only, sent at the Motion rate) merged into a CarFrame only when this close to
+# the telemetry frame; older data leaves the chassis-dynamics fields None (no quality flag: they are optional extras)
+MOTION_EX_MAX_FRAME_SKEW = 2
 SAFETY_CAR_NONE = 0  # Session.safetyCarStatus: 0 none, 1 full, 2 virtual, 3 formation lap
 SAFETY_CAR_KNOWN = frozenset({0, 1, 2, 3})
 
@@ -310,6 +335,9 @@ class F1Adapter:
         self._ai_controlled: tuple[bool | None, ...] = ()
         self._safety_car: bool | None = None
         self._field_last_t: float | None = None
+        # feat/technique: latest MotionEx of the player car (decoded once per packet; merged into the next CarFrame)
+        self._motion_ex: dict[str, Any] | None = None
+        self._motion_ex_frame = -1
 
     # ------------------------------------------------------------------ structural validation
     def can_decode(self, data: bytes) -> bool:
@@ -395,6 +423,12 @@ class F1Adapter:
         self._gscale = h["layout"].gforce_scale
         self._motion_frame = h["frameIdentifier"]
         self._motion_raw = data  # all cars, for the next field tick: a reference, not a copy
+
+    def _on_motion_ex(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
+        """feat/technique: MotionEx (ID 13) is player-car-only extra motion data. One cached ``unpack_from``; it
+        emits nothing and is merged into the next CarFrame (``_merge_motion_ex``)."""
+        self._motion_ex = P.MOTION_EX.unpack_from(data, P.HEADER.size)
+        self._motion_ex_frame = h["frameIdentifier"]
 
     def _on_lap_data(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
         idx = h["playerCarIndex"]
@@ -496,6 +530,14 @@ class F1Adapter:
             gs = self._gscale
             f.g_lat, f.g_lon, f.g_vert = m["gForceLateral"] * gs, m["gForceLongitudinal"] * gs, m["gForceVertical"] * gs
             f.yaw_rad, f.pitch_rad, f.roll_rad = m["yaw"], m["pitch"], m["roll"]
+        ex = self._motion_ex  # feat/technique
+        if ex is not None and abs(frame_id - self._motion_ex_frame) <= MOTION_EX_MAX_FRAME_SKEW:
+            # Real F1 25 (PS5): angularVelocityY is d(yaw)/dt and negative in right turns; flipped so that + = right,
+            # the same sign as steering. Wheel arrays are RL, RR, FL, FR.
+            f.yaw_rate_rps = -ex["angularVelocityY"]
+            f.body_slip_rad = ex["chassisYaw"]
+            f.wheel_slip_ratio = Wheels.from_rl_rr_fl_fr(list(ex["wheelSlipRatio"]))
+            f.wheel_slip_angle_rad = Wheels.from_rl_rr_fl_fr(list(ex["wheelSlipAngle"]))
         lap = self._lap
         if lap is not None:
             if self._lap_frame != frame_id:
@@ -794,6 +836,7 @@ _EVENT_KIND: dict[str, EventKind] = {
 
 _HANDLERS = {
     P.PacketId.MOTION: F1Adapter._on_motion,
+    P.PacketId.MOTION_EX: F1Adapter._on_motion_ex,  # feat/technique
     P.PacketId.SESSION: F1Adapter._on_session,
     P.PacketId.LAP_DATA: F1Adapter._on_lap_data,
     P.PacketId.EVENT: F1Adapter._on_event,

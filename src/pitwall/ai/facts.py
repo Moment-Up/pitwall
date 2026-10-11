@@ -30,6 +30,7 @@ from pitwall.analysis.track import TrackModel
 from pitwall.analysis.track_identity import corner_texts, resolve_corner_ref
 from pitwall.carsetup.facts import session_setup_facts
 from pitwall.core.session_analysis import SessionAnalysis
+from pitwall.technique.facts import technique_facts  # feat/technique
 
 
 def fmt_lap(ms: int | None) -> str:
@@ -442,6 +443,10 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     for topic, text, data in session_setup_facts(s, sa.setup, driver.get("skill_level")):
         fs.add(topic, text, data)
 
+    # --- feat/technique: racing line, brake/throttle technique, handling balance (pitwall.technique) ---
+    for t in technique_facts(sa):
+        fs.add(*t[:3], corner=t[3], say=t[4])
+    # --- end feat/technique ---
     # ---------------------------------------------------------------- what this game does not send (pitwall.games)
     # Known in advance, never "not yet known". Last, so a long sheet's selection limit (FactSheet.select) never
     # pushes laps, corners or observations out for them.

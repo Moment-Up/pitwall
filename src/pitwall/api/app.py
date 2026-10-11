@@ -794,6 +794,10 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
 
     app.include_router(game_router)
 
+    from pitwall.api.routes_technique import router as technique_router  # feat/technique
+
+    app.include_router(technique_router)  # feat/technique
+
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias
     # for a week after the switch-over: the same files, so old /next/ links and Home Screen icons keep working, and a

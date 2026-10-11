@@ -658,8 +658,11 @@ export function valueProblem(p: ParameterInfo | undefined, fmt: CarFormat | null
   return null;
 }
 
-/** The parameter's value in a session's stored setup (numbers only), or null. */
+/** The parameter's value in a session's stored setup (a number, or its {value} as the API sends it), or null. */
 export function setupValue(params: Record<string, unknown> | null | undefined, key: string): number | null {
   const v = params?.[key];
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
+  // feat/technique: the stored setup sends {key, value, unit, ...} per parameter (GET /api/carsetup/sessions/{sid}
+  // `setup.params`), so "yours" read "-" in the experiment modal; plain numbers still work.
+  const n = typeof v === "object" && v !== null && "value" in v ? (v as { value: unknown }).value : v;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
 }

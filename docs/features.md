@@ -125,6 +125,36 @@ lap, a map coloured by where the time went, and per-corner detail. Laps that can
 car, track, wet or dry, or assists) are refused; smaller differences such as tyre compound or fuel give a warning.
 This screenshot uses the light theme.
 
+<!-- feat/technique -->
+### Technique: racing line, brake and throttle, handling balance
+
+Everything here compares you with **your own reference lap**, never with an "ideal" line: Pitwall does not know the
+track edges, so the maps show where each lap went.
+
+- **Compare** adds a technique card for the two laps: both lines on a map (zoom to any corner at true scale, with
+  numbered markers at the biggest differences, e.g. "T3 apex: 1.5 m wider than your reference"), a chart of how far
+  you were tighter (+) or wider (-) through the focused corner, a table of your inputs against the reference
+  (brake peak and time to peak, how you released the brake, brake still on at turn-in, trail braking, coasting,
+  throttle pick-up, the ramp to full throttle and lifts, lock-ups and wheelspin) and how the car handled on entry,
+  mid-corner and exit.
+- **Corners** adds a "Line, inputs and balance" section to each corner card: the line at turn-in, apex and track-out
+  over the session, habits that repeat ("on 3 of 4 laps"), lock-up and wheelspin counts, and the handling chips.
+- Notes describe what happened; they never tell you to brake later or earlier.
+- Brake differences take your pedals into account: a stock CSL brake measures pedal travel, so only bigger
+  differences are called out; a load cell shows finer ones. With the game's braking assist on, brake notes are
+  greyed out (the game adds its own braking); with ABS on, lock-ups are not analysed.
+- Handling balance (F1 25 only: it needs the game's tyre slip data) compares the front and rear tyres' slip angles
+  at the limit. A problem must recur, and it counts as the car's only if it also shows on your best lap that
+  session; otherwise it points at how the corner was driven. The thresholds are Pitwall's heuristics and the
+  "How this is measured" sheet lists them.
+- `uv run pitwall technique [SESSION_ID|latest] [--ref LAP_ID] [--car-format f1_2025|f1_2026] [--json]` prints the
+  same analysis in the terminal.
+
+Evidence: racing line and brake/throttle are tested on recorded F1 (PS5) laps, and the line on a GT7 capture;
+balance and wheelspin on recorded F1 tyre slip data; lock-ups on synthetic data only (every real capture had ABS
+on). Nothing has been checked during a live session yet.
+<!-- /feat/technique -->
+
 ### Coaching
 
 ![Review › Coaching plan](screenshots/10-review-coaching-plan.png)
@@ -219,6 +249,16 @@ for the 2026 Season Pack cars, never mixed). Choose the track, session, weather 
 its confidence, and disagreements between sources are called out. You can compare your own setup with the
 recommendation and try one change at a time. No recommended setup has yet been driven and checked by Pitwall.
 
+<!-- feat/technique -->
+**How the car handled** (session view): the handling symptoms that recur and also show on your best lap, with the
+corners and laps, and a setup change to try for each, e.g. "Front Anti-Roll Bar 9 → 7". Each suggestion changes one
+parameter by a small step from your stored setup and opens the experiment form, already filled in, with **Try
+this**; after your next session the experiment's result also says how the balance moved. Symptoms that did not
+show on your best lap are listed as driving points, without setup suggestions. Tyre pressures, camber, toe and ride
+heights are never suggested. A setup change is something to try, not a guaranteed fix. Setup suggestions are for
+F1 25 only and have not been driven and checked yet.
+<!-- /feat/technique -->
+
 ## Settings
 
 ### Drivers
@@ -292,6 +332,12 @@ the relevant facts from the stored session analysis, numbers them, and sends the
 answer cites must exist, and every number in it must be a rounding of a number in the cited facts (or in the facts
 it was given, if it cites none). An answer that fails gets one retry; after that, Pitwall answers from the facts
 itself. Commands such as "stop talking" never go to the model.
+
+<!-- feat/technique -->
+The engineer also answers questions about your line ("how's my line through turn 3"), your technique ("am I locking
+up", "trail braking at T5", "wheelspin") and the car's balance ("I've got understeer in turn 3"). These answers come
+straight from the facts, so the radio gives them at once, without the AI model.
+<!-- /feat/technique -->
 
 It works with a local model (llama.cpp, LM Studio, Ollama, MLX or any OpenAI-compatible server) or a cloud model
 (Anthropic Claude, OpenAI, OpenRouter, Google Gemini, Groq, Mistral or another OpenAI-compatible service). Cloud

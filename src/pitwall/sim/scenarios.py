@@ -33,7 +33,37 @@ def coaching_demo() -> F1Scenario:
     )
 
 
-SCENARIOS = {"coaching-demo": coaching_demo}
+def technique_demo() -> F1Scenario:
+    """feat/technique: six laps at 'Pitwall Park' with MotionEx (real-game signs) and known technique deviations
+    (design corner names; on this track design-T8 is learned as T5):
+
+    every lap: 5 deg extra front slip angle mid-corner at design-T8 (a car symptom: it shows on the best lap too)
+    lap 1-2, 6: otherwise clean (lap 1 or the fastest clean lap is the reference)
+    lap 3:   runs 2.0 m wider (towards the outside) around the apex of design-T3
+    lap 4:   front-left wheel locked for 0.3 s braking into design-T1 (ABS off)
+    lap 5:   0.5 s of wheelspin with 6 deg of body slip on the exit of design-T8 (one lap only: not recurring)
+    """
+    us = (0.0, 5.0, 0.0)
+
+    def lap(**extra: CornerDeviation) -> DriverProfile:
+        return DriverProfile(deviations={"T8": CornerDeviation(understeer_deg=us), **extra})
+
+    return F1Scenario(
+        laps=6,
+        default_driver=lap(),
+        driver_by_lap={
+            3: lap(T3=CornerDeviation(line_offset_m=2.0)),
+            4: lap(T1=CornerDeviation(lockup_s=0.3)),
+            5: DriverProfile(
+                deviations={"T8": CornerDeviation(understeer_deg=us, wheelspin_s=0.5, body_slip_exit_deg=6.0)}
+            ),
+        },
+        motion_ex=True,
+        abs_on=False,
+    )
+
+
+SCENARIOS = {"coaching-demo": coaching_demo, "technique-demo": technique_demo}
 
 
 def write_synthetic_capture(path: Path, scenario: F1Scenario | None = None, name: str = "coaching-demo") -> GroundTruth:

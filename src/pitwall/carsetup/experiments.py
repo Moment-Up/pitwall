@@ -21,6 +21,7 @@ computes the comparison from existing analysis only:
 
 from __future__ import annotations
 
+import logging
 import math
 import statistics
 from dataclasses import dataclass
@@ -35,6 +36,7 @@ from pitwall.core.session_analysis import SessionAnalyzer
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
 
+log = logging.getLogger(__name__)
 Status = Literal["proposed", "running", "concluded", "abandoned"]
 Verdict = Literal["faster", "slower", "no_clear_difference", "inconclusive"]
 STATUSES: tuple[Status, ...] = ("proposed", "running", "concluded", "abandoned")
@@ -345,6 +347,16 @@ def conclude(db: Database, writer: DbWriter, analyzer: SessionAnalyzer, cat: Cat
         "corners": corners,
         "setup_check": check,
     }
+    # --- feat/technique: handling balance before vs after (optional; never blocks concluding) ---
+    try:
+        from pitwall.technique.session import TechniqueAnalyzer
+
+        comparison["balance"] = TechniqueAnalyzer(db, analyzer).balance_change(
+            exp["before_session_id"], exp["after_session_id"]
+        )
+    except Exception:
+        log.exception("handling balance comparison failed for experiment %s", exp_id)
+    # --- end feat/technique ---
     text = _conclusion(p, exp, before, after, comparison)
     writer.call(
         lambda c: repo.update_setup_experiment(

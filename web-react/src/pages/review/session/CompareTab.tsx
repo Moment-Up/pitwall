@@ -40,6 +40,7 @@ import { CompareMap, CornerCardsList, CornerExplainer, CornerTable, useCursorCor
 import { LapPicker } from "./compare/LapPicker";
 import { errorText, useCompare, useTrace } from "./data";
 import { PinReference } from "./PinReference";
+import { TechniqueComparePanel } from "./technique/TechniqueComparePanel"; // feat/technique
 
 export interface CompareTabProps {
   session: SessionDetail;
@@ -287,6 +288,8 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
             <CornerTable corners={corners} density={density} selected={focus?.key ?? null} onSelect={toCorner} />
           </>
         )}
+        {/* feat/technique */}
+        <TechniqueComparePanel session={session} refLapId={pair.ref} lapId={pair.lap} sync={sync} density={density} phone={phone} />
       </div>
     );
   }
