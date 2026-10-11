@@ -167,6 +167,27 @@ for the 2026 Season Pack cars, never mixed). Choose the track, session, weather 
 its confidence, and disagreements between sources are called out. You can compare your own setup with the
 recommendation and try one change at a time. No recommended setup has yet been driven and checked by Pitwall.
 
+### Validation
+<!-- validation kit (lane validate) -->
+A checklist of the live tests still pending on the rig (PS5, wheel, iPad at the wheel, one AirPod), for when you
+are in the seat with the game running. Each test says why it matters, what to do step by step, and how it is
+measured. While you drive, Pitwall collects evidence by itself (braking calls and your braking points, radio
+messages against your brake and steering, push-to-talk round trips, the iPad's screen and wake lock, laps and
+sessions of each game); you then tap **Worked** or **Didn't work**, tick what you checked and add a note.
+
+- **Evidence tiers:** a test can only pass on live data from the console. Replays, synthetic streams and recordings
+  sent from the Mac itself are shown but never count.
+- **Results:** each test combines Pitwall's verdict with yours; when they disagree it says "needs review". The
+  thresholds that are first guesses are marked heuristic.
+- **Radio commands** (optional): "start validation", "next test", "worked", "didn't work", "what's the test",
+  "finish validation". The radio can also say each test's brief in a calm moment (on by default, never into a
+  braking zone, never in quiet mode).
+- **Reports** are saved on the Mac (`data/validation/`) as JSON and Markdown; review them with `pitwall validate list`,
+  `show` or `report`. They never change what Pitwall claims to support: the maintainer updates that by hand.
+- **Privacy:** reports keep device facts only (no IP addresses, no microphone names, no driver names: "Driver #2").
+  Your push-to-talk transcripts are included; `--redact-transcripts` (or `?redact_transcripts=true`) removes them.
+<!-- end validation kit -->
+
 ## Settings
 
 ### Drivers

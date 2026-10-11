@@ -109,6 +109,39 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
   demo replay button and driver switching from the new UI. Purple (household record) needs D2 live; until the
   service runs the new backend only green SB and yellow appear.
 
+## Rig validation kit (branch `feat/validate`, 2026-10-11)
+<!-- validation kit (lane validate) -->
+Setup › Validation and `pitwall validate` turn the pending live checks into a guided checklist with evidence
+(`src/pitwall/validate/`, `/api/validation`, docs/validation.md "Rig validation kit"). 12 tests: Home Screen app and
+wake lock, glance test (each driver), one coaching message, one hour on Drive (optional), push-to-talk over Tailscale
+with an AirPod, speak windows, the natural voice, braking-call timing, AC on the PS5, GT7 on the PS5, the game-choice
+banner (only when the game-selection feature is present) and driver switching. Each test gets an automatic verdict
+from fixed rules (thresholds that are first guesses are labelled heuristic) plus the driver's Worked / Didn't work;
+disagreement is "needs review". Reports are files only: `<data_dir>/validation/<run_id>/{run.json, report.json,
+report.md}` (no database change).
+- **Evidence tiers are kept apart:** every record is tagged live / recorded / synthetic / loopback (a recording sent
+  with `pitwall send`) / unknown, and only live evidence can pass. **The kit never changes a capability status:** the
+  report lists candidates for the maintainer as text (the package cannot import `capabilities.py`; a test checks it).
+- **Never in the time-critical path:** the only code on the ingest thread is one membership test on the game-event
+  kind; the cue engine, scheduler and Drive are unchanged. The radio hub gained an observer hook (one delimited
+  block, nine one-line calls, zero cost without an observer) and an optional command handler. The LLM never sees
+  validation state; the radio commands ("start validation", "next test", "worked", "didn't work", "what's the
+  test", "finish validation") are answered by fixed rules before the engineer.
+- **Evidence tier of the kit itself: unit + synthetic + recorded replays (+ the dashboard in a desktop browser).
+  Not yet used on the rig.** Checked on 2026-10-11 against an isolated scratch server: the committed recorded excerpts
+  replay as `recorded` and nothing passes; a synthetic stream and a recorded excerpt sent over loopback UDP are
+  labelled `synthetic` and `loopback`; a scratch copy of the owner's real GT7 capture (`20261011-124608_udp33740`)
+  shows variant C, 0 rejected, 21 GT7 sessions of which 17-18 are menus / loading ("streaming, not driving") and the
+  laps 1:45.151 / 1:45.596 / 1:43.358 on the derived 3.80 km circuit (the game's best lap equals Pitwall's when
+  sampled live); the owner's real F1 race capture (`20261010-221749_udp20777`, calls on all) matches 84 of 86 calls
+  to a braking onset within 100 m (onset minus point: median +0.1 m, p10 -11.1 m, p90 +15.7 m). These are replays:
+  they do not upgrade any status above. Also checked there: the radio commands through the typed-question path on a
+  text-only radio (no speech recognition, no voice; ordinary questions such as "how are my tyres" and "radio check"
+  still reach the engineer), and Setup › Validation in headless Chromium at 1180 × 820, 820 × 1180 and 390 × 844 in
+  both themes (start, verdicts, a confirmation, a note, next, skip, finish, reports, Open report, Download JSON; no
+  sideways scroll, no console errors; device reports arrive as `browser` / `localhost` and stop after finish).
+<!-- end validation kit -->
+
 ## Known limitations
 - Corner numbers are learned from speed minima (flat-out kinks are not corners). Official numbering/names apply only
   where a track sheet is hand-verified (Austria so far).
@@ -208,5 +241,5 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
 4. Assetto Corsa: a full multi-lap session on the PS5 through the service (laps stored and timed, lap coaching,
    full-lap track length, R gear, steer unit); a layout-aware track id if the console ever names the layout.
 5. Track knowledge wrap-up: verify all corner sheets, AI-field model, outline + heavy-stop prior.
-6. Live validation on the PS5 of: cues, profiles split, GT7.
+6. Live validation on the PS5 of: cues, profiles split, GT7. Run it with Setup › Validation (rig validation kit).
 7. New adapters: Project Motor Racing (after a PS5 capture), GT Sport, F1 24/23, pcars2/AMS2; Windows relay.

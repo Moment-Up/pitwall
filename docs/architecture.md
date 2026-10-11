@@ -104,6 +104,21 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
   Drive › Coach is in the first bundle and every other page loads lazily; Recharts stays out of the Drive bundle (the
   Session complete card loads it on demand).
 
+## Rig validation kit (`validate/`)
+<!-- validation kit (lane validate) -->
+`ValidationKit` (created in the app lifespan, `app.state.validation`) runs one validation run at a time on the asyncio
+loop; `/api/validation` (`api/routes_validate.py`) and `pitwall validate` (`validate/cli.py`) sit on top. While a run
+is active its `Collector` subscribes to `LiveState` (game events on the ingest thread: one frozenset test and, for six
+rare kinds, a `call_soon_threadsafe`; lap notifications on the analysis thread: a few fields copied), to
+`DriverService` and to the radio hub's observer hook (`RadioHub.add_observer`; nine hook calls in `voice/hub.py`
+build their payload only when an observer is attached, and an observer error is logged, never raised into the hub).
+A 2 Hz sampler reads telemetry status, session, tier and cue mode; lap traces (braking onsets, brake and steering
+under each proactive message) and game sessions / driver switches are read with existing `storage/repo.py`
+functions in worker threads. Rules are pure (`validate/rules.py`, `validate/evidence.py`). State is saved as files
+only, `<data_dir>/validation/<run_id>/` (atomic writes, at most every 2 s), so no schema change. Radio commands are
+answered by `RadioHub.command_handler` before the engineer; the LLM never sees validation state.
+<!-- end validation kit -->
+
 ## Storage
 SQLite WAL (`data/pitwall.sqlite3`). Lap traces stored as compressed float32 npz blobs (~19 channels).
 Raw packets in `data/captures/*.pwcap` (zstd, ~2.5 MB per 7 min at 60 Hz) for reprocessing.

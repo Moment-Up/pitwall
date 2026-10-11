@@ -11,6 +11,25 @@ Three evidence tiers - never mix them up:
 A capability may be marked `live_validated` in `src/pitwall/capabilities.py` only after the live steps pass
 on that platform.
 
+## Rig validation kit
+<!-- validation kit (lane validate) -->
+The live tests still pending (docs/status.md) are run from **Setup › Validation** on the iPad, in the seat:
+
+1. Start a run (all available tests that are not optional; the one-hour test is opt-in). Or say "start validation"
+   on the radio.
+2. For each test, follow its steps; Pitwall collects the evidence as you drive. Then tap **Worked** or **Didn't
+   work**, tick the boxes and add a note. "Next test" moves on; "Skip for now" leaves a test out.
+3. **Finish and save**: `data/validation/<run_id>/report.md` and `report.json` are written.
+4. Review: `uv run pitwall validate list`, `uv run pitwall validate show latest`, `uv run pitwall validate report
+   latest --out report.md` (`--json`, `--redact-transcripts`).
+5. If you agree with a test's evidence, add a row to the Results log below and upgrade `src/pitwall/capabilities.py`
+   and docs/status.md **by hand**. The report's "What this run can support" section names the lines; the kit itself
+   never changes a status.
+
+Only live evidence (telemetry from the console on the network) can pass; replays (`recorded`), synthetic streams and
+`pitwall send` over loopback are shown and labelled but never count.
+<!-- end validation kit -->
+
 ## Live validation: F1 25 on PS5 (repeat for Xbox / PC)
 
 1. On the Mac: `uv run pitwall serve`. Note the printed `Game telemetry: UDP <mac-ip>:20777`.

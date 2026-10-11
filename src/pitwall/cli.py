@@ -16,8 +16,10 @@ import typer
 
 from pitwall.compat import recv_clock_ns, this_machine
 from pitwall.config import Settings, get_settings
+from pitwall.validate.cli import validate_app  # validation kit (lane validate)
 
 app = typer.Typer(add_completion=False, help="Pitwall - AI sim racing coach & race engineer", no_args_is_help=True)
+app.add_typer(validate_app, name="validate")  # validation kit (lane validate)
 
 
 def _windows_safe_output() -> None:

@@ -32,7 +32,7 @@ export const AREA_IDS: readonly AreaId[] = ["drive", "review", "setup", "setting
 export const AREA_PAGES: Readonly<Record<AreaId, readonly string[]>> = {
   drive: ["coach", "car", "track", "radio"],
   review: ["sessions", "coaching", "progress", "ask"],
-  setup: ["connect", "rig", "car"],
+  setup: ["connect", "rig", "car", "validation"], // "validation": validation kit (lane validate)
   settings: ["drivers", "radio", "ai", "display", "system"],
 };
 

@@ -45,6 +45,10 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   *speak window* (not braking, not cornering, enough time before the next braking zone), respect quiet mode
   ("stop talking for 3 laps") and coaching intensity, and expire when no longer actionable.
 - Latency is measured per stage (PTT release -> transcript -> answer -> first audio sent -> playback started).
+- **Validation commands** (rig validation kit, server side only, no protocol change): while the kit is loaded, a
+  question that fully matches "start validation", "next test", "worked", "didn't work", "what's the test" or
+  "finish validation" is answered by fixed rules before the engineer, as a `control` message (`meta.intent` =
+  `validation`). Anything else reaches the engineer as before.
 - **Server voice** (`voice/tts.py`): Kokoro-82M in a worker process, `say` as automatic fallback, so a message
   is never silent because the neural engine is starting or failed. Neural audio said ahead of time (cue parts,
   proactive messages) is checked by playing it through the STT: if a number or key word does not survive it is
