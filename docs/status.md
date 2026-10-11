@@ -218,15 +218,24 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
 - Integration run (scratch server, LLM off): the Miami and Silverstone Reverse races streamed over loopback UDP with
   `pitwall send` (the live ingest path decodes every MotionEx packet) and replayed; API, engineer and radio text
   questions (`line`, `technique`, `balance` answered without the LLM) and the dashboard at iPad and phone sizes were
-  checked against the expectations above. A zeroed CarStatus on the grid (ABS off, TC 0 before the start) no
-  longer hides lap 1's assists.
+  checked against the expectations above. A lap's ABS and traction control are the value seen on at least 90 % of
+  its moving frames (else unknown): a zeroed CarStatus on the grid, or for the first seconds of a session joined at
+  speed (TC 0 for 2.4 s at 281 km/h), no longer hides the lap's assists; a switch mid-lap still makes it unknown.
+- Review fixes (2026-10-11, unit / synthetic / recorded-tested): a chosen `ref_lap_id` must exist (404) and be on the
+  session's game, track and layout (422); speed classes come from the track model, never the chosen reference;
+  line and inputs say "no other lap compared" instead of "within 1 m everywhere"; standing starts and laps more than
+  7 % off the best clean lap stay out of the balance and the habits; the "car" verdict is about the session's best
+  clean lap only; "ABS off" only when every lap had it off; no brake bias or pressure suggestion with the braking
+  assist on; no setup facts for synthetic sessions; one short spoken sentence per technique fact, answers led by
+  what was asked (lock-ups, wheelspin, trail braking, oversteer...) and corners by curated name.
 - Known limits: slip and balance only for F1 25 (AC, GT7 and Forza do not map slip or yaw yet: unknown); a generic
   F1 car in UDP format 2025 cannot be told apart from a 2026 car, so the Setup page sends the car format the driver
   chose (`?car_format=`), and the engineer's "Setup to try" fact states a change only when it is the same on both
   cars; facts use the stock brake tolerances (the fact builder has no rig profile) and cannot see running
   experiments.
-- Cross-lane: storing `wheel_slip_fl/fr` switches on the rig check's lock-up metric for new laps; with ABS on it
-  reports "No front lock-ups detected" (still unknown) instead of "not recorded".
+- Cross-lane: storing `wheel_slip_fl/fr` switches on the rig check's lock-up metric for new laps; with ABS on for
+  every lap it now says "ABS on: the game prevents lock-ups." (still unknown) rather than "No front lock-ups
+  detected" (`rig/rig_check.py`, delimited feat/technique line).
 
 ## Next
 1. Dashboard v2 rig acceptance (spec 14.5) on the iPad with live PS5 telemetry. Remove `/next/` and the Svelte

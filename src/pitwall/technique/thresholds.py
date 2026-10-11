@@ -20,7 +20,14 @@ class Threshold:
     text: str
 
     def to_dict(self) -> dict[str, Any]:
-        return {"key": self.key, "value": self.value, "unit": self.unit, "heuristic": self.heuristic, "text": self.text}
+        return {
+            "key": self.key,
+            "value": self.value,
+            "unit": self.unit,
+            "heuristic": self.heuristic,
+            "text": self.text,
+            "group": GROUP_OF.get(self.key, "other"),
+        }
 
 
 # ---------------------------------------------------------------------------------------------- racing line
@@ -97,6 +104,7 @@ COUNTERSTEER_YAW_RPS = 0.10
 COUNTERSTEER_MIN_S = 0.15
 RECURRING_MIN_LAPS = 2
 RECURRING_MIN_FRAC = 0.5
+BALANCE_PACE_FRAC = 1.07  # a lap slower than this times the best clean lap is not at the limit (107 % rule)
 WITH_BRAKING_PEDAL = 0.2
 WITH_BRAKING_FRAC = 0.5
 SPEED_SLOW_KPH = 120.0
@@ -297,7 +305,7 @@ THRESHOLDS: tuple[Threshold, ...] = (
         "s",
         True,
         "Counter-steer: steering against the rotation "
-        "(steer at least 5%, rotation at least 0.1 rad/s) for at least this long.",
+        "(steer at least 5 %, rotation at least 0.1 rad/s) for at least this long.",
     ),
     Threshold(
         "RECURRING_MIN_LAPS",
@@ -307,11 +315,19 @@ THRESHOLDS: tuple[Threshold, ...] = (
         "A handling symptom recurs when it shows on at least this many laps and on at least half the laps with data.",
     ),
     Threshold(
+        "BALANCE_PACE_FRAC",
+        BALANCE_PACE_FRAC,
+        "ratio",
+        True,
+        "Laps slower than this times your best clean lap (a safety car, a cool-down) and standing starts are left out "
+        "of the handling balance and the habits: they are not driven at the limit.",
+    ),
+    Threshold(
         "SPEED_SLOW_KPH",
         SPEED_SLOW_KPH,
         "km/h",
         True,
-        "Corners slower than this are slow; 200 km/h and above are fast (reference minimum speed).",
+        "Corners slower than this are slow; 200 km/h and above are fast (the track model's minimum speed).",
     ),
     Threshold(
         "PEAK_TOL_HALL",
@@ -342,6 +358,28 @@ THRESHOLDS: tuple[Threshold, ...] = (
         "Brake timing difference called out with a load cell brake.",
     ),
 )
+
+
+# The "How this is measured" sheet's headings: where each section of ``THRESHOLDS`` starts (they are in this order).
+GROUP_STARTS: dict[str, str] = {
+    "LINE_SMOOTH_M": "line",
+    "PEAK_FRAC": "inputs",
+    "LOCKUP_SLIP": "slip",
+    "AT_LIMIT_FRAC": "balance",
+    "PEAK_TOL_HALL": "pedals",
+}
+
+
+def _groups() -> dict[str, str]:
+    out: dict[str, str] = {}
+    group = "other"
+    for t in THRESHOLDS:
+        group = GROUP_STARTS.get(t.key, group)
+        out[t.key] = group
+    return out
+
+
+GROUP_OF: dict[str, str] = _groups()
 
 
 def threshold_infos() -> list[dict[str, Any]]:

@@ -181,7 +181,11 @@ class PhaseSummary:
         }
 
 
-def summarise(rows: Sequence[LapPhase]) -> PhaseSummary:
+def summarise(rows: Sequence[LapPhase], session_best: int | None = None) -> PhaseSummary:
+    """A corner phase over the session. ``session_best``: the lap id of the session's best clean lap. The verdict is
+    about *that* lap: when it has no class here (an incident at this corner, no data at the limit), there is no
+    verdict, rather than calling the fastest remaining lap "your best lap". Without it, the fastest clean lap of the
+    rows is the best."""
     with_cls = [r for r in rows if r.pb.cls is not None]
     n = len(with_cls)
     counts = {c: sum(1 for r in with_cls if r.pb.cls == c) for c in ("understeer", "neutral", "oversteer")}
@@ -191,8 +195,11 @@ def summarise(rows: Sequence[LapPhase]) -> PhaseSummary:
         k = counts[c]
         if k >= T.RECURRING_MIN_LAPS and k >= T.RECURRING_MIN_FRAC * n and (recurring is None or k > counts[recurring]):
             recurring = c
-    clean = [r for r in with_cls if r.clean and r.lap_time_ms]
-    best = min(clean, key=lambda r: int(r.lap_time_ms or 0)) if clean else None
+    if session_best is not None:
+        best = next((r for r in with_cls if r.lap_id == session_best), None)
+    else:
+        clean = [r for r in with_cls if r.clean and r.lap_time_ms]
+        best = min(clean, key=lambda r: int(r.lap_time_ms or 0)) if clean else None
     best_cls = best.pb.cls if best is not None else None
     verdict: Verdict | None = None
     if recurring is not None and best_cls is not None:

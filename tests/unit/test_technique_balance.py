@@ -154,6 +154,16 @@ def test_the_best_lap_decides_car_or_driving() -> None:
     assert driving.best_lap_number == 3
 
 
+def test_the_verdict_is_about_the_sessions_best_lap_only() -> None:
+    """The session's best clean lap had an incident at this corner (no row here): no verdict, rather than calling the
+    fastest remaining lap "your best lap"."""
+    rows = _rows(["understeer", "understeer", "understeer"], best=3)
+    assert summarise(rows, session_best=3).verdict == "car"
+    without_best = summarise(rows[:2], session_best=3)
+    assert without_best.recurring == "understeer" and without_best.verdict is None and without_best.best_lap is None
+    assert summarise(rows[:2]).verdict == "car"  # no session best given: the fastest clean row (old behaviour)
+
+
 def test_speed_classes() -> None:
     assert [speed_class(x) for x in (80, 119.9, 120, 199, 200, None)] == [
         "slow",

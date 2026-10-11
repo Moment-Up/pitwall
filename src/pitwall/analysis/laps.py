@@ -60,6 +60,7 @@ CHANNELS: tuple[str, ...] = (
 )
 
 ASSIST_MIN_KPH = 5.0  # feat/technique: lap assist meta counts frames on the move only (see LapAssembler.feed)
+ASSIST_COVER_FRAC = 0.9  # feat/technique: an assist value must cover this share of the moving frames to be the lap's
 MAX_GAP_M = 60.0  # a distance step larger than this is either data loss or a game-side distance jump
 MAX_TIME_GAP_S = 1.0  # a session-time gap larger than this (no flashback) means lost packets -> incomplete
 EDGE_TOLERANCE_M = 60.0  # lap must start/end within this distance of the line to count as complete
@@ -123,9 +124,14 @@ class LapTrace:
             return {k: z[k].astype(np.float64) for k in z.files}
 
 
-def _same[T](a: T | None, b: T | None) -> T | None:
-    """``b`` when it equals ``a`` (an assist that stayed the same over the lap), else ``None``."""
-    return b if a is not None and a == b else None
+def _dominant[T](counts: dict[T, int]) -> T | None:
+    """feat/technique: the assist value seen on at least ``ASSIST_COVER_FRAC`` of the lap's moving frames that sent
+    one, else ``None`` (changed during the lap, or never sent)."""
+    total = sum(counts.values())
+    if total <= 0:
+        return None
+    value, n = max(counts.items(), key=lambda kv: kv[1])
+    return value if n >= ASSIST_COVER_FRAC * total else None
 
 
 def _val(v: float | int | None) -> float:
@@ -189,9 +195,9 @@ class _Building:
     stale: int = 0
     first_fuel_kg: float | None = None  # first *available* values: slow packets may lag the first frame
     first_wear: tuple[float, float, float, float] | None = None
-    # feat/technique: first *available* assist states (CarStatus can lag the lap's first frame)
-    first_abs: bool | None = None
-    first_tc: int | None = None
+    # feat/technique: moving frames per assist value (O(1) per frame; CarStatus can lag or be zeroed at a start)
+    abs_moving: dict[bool, int] = field(default_factory=dict)
+    tc_moving: dict[int, int] = field(default_factory=dict)
 
 
 class LapAssembler:
@@ -261,13 +267,13 @@ class LapAssembler:
             cur.first_fuel_kg = f.fuel_kg
         if cur.first_wear is None and f.tyre_wear_pct is not None:
             cur.first_wear = f.tyre_wear_pct.as_tuple()
-        # feat/technique: assists from the first frame on the move (real F1 25 sends a zeroed CarStatus - ABS off,
-        # TC 0 - on the grid before the start, which is not a change of assist during the lap)
+        # feat/technique: assists counted on frames on the move only. Real F1 25 sends a zeroed CarStatus (ABS off,
+        # TC 0) on the grid and for the first seconds of a session joined at speed; neither is a change of assist
         if f.speed_kph is not None and f.speed_kph >= ASSIST_MIN_KPH:
-            if cur.first_abs is None and f.abs_active is not None:
-                cur.first_abs = f.abs_active
-            if cur.first_tc is None and f.traction_control is not None:
-                cur.first_tc = f.traction_control
+            if f.abs_active is not None:
+                cur.abs_moving[f.abs_active] = cur.abs_moving.get(f.abs_active, 0) + 1
+            if f.traction_control is not None:
+                cur.tc_moving[f.traction_control] = cur.tc_moving.get(f.traction_control, 0) + 1
         cur.rows.append(_frame_row(f))
         cur.last = f
 
@@ -306,9 +312,10 @@ class LapAssembler:
             "wear_end": last.tyre_wear_pct.as_tuple() if last and last.tyre_wear_pct else None,
             "t_recv_start_ns": first.t_recv_ns if first else None,
             "t_recv_end_ns": last.t_recv_ns if last else None,
-            # feat/technique: the lap's assists when they did not change during it (None = changed, or not sent)
-            "abs_active": _same(b.first_abs, last.abs_active if last else None),
-            "traction_control": _same(b.first_tc, last.traction_control if last else None),
+            # feat/technique: the lap's assists, when one value covers 90 % of the moving frames (None = changed
+            # during the lap, or not sent)
+            "abs_active": _dominant(b.abs_moving),
+            "traction_control": _dominant(b.tc_moving),
         }
         lap = LapTrace(
             lap_number=b.lap_number,

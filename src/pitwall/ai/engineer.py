@@ -15,8 +15,9 @@ from __future__ import annotations
 import logging
 import re
 import time
+import unicodedata
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from pitwall.ai.facts import LAST_LAP_PREFIX, Fact, FactSheet
@@ -31,6 +32,7 @@ class Intent:
     name: str
     corner: str | None = None
     quiet_laps: int | None = None
+    topic: str | None = None  # feat/technique: what a technique / balance question is about ("lock", "oversteer")
 
 
 _WORDS_TO_NUM = {
@@ -76,7 +78,7 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         "balance",
         re.compile(
             r"\b(under-?steer\w*|over-?steer\w*|(?<!brake )balance|push(?:es|ing)? wide|snap(?:py|s)?|loose|"
-            r"rear (?:end )?(?:steps?|stepping|kicks?|kicking) out|(?:won't|doesn't) turn(?: in)?)\b",
+            r"rear(?: end)?(?: is| was|['\u2019]s)? (?:step|kick)\w* out|(?:won't|doesn't) turn(?: in)?)\b",
             re.I,
         ),
     ),
@@ -89,13 +91,13 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
             re.I,
         ),
     ),
-    # --- feat/technique: racing line (after setup) ---
+    # --- feat/technique: racing line (after setup; a braking question stays a braking question) ---
     (
         "line",
         re.compile(
-            r"\b(racing line|(?:my|the|your) line|wider|tighter|run(?:ning)? wide|apex(?:es)?(?!\s*speed)|"
-            r"turn[- ]in point|track[- ]out)\b",
-            re.I,
+            r"^(?!.*\bbrak).*?\b(racing line|my line|line (?:through|at|into)|wider|tighter|run(?:ning)? wide|"
+            r"apex(?:es)?(?!\s*speed)|turn[- ]in point|track[- ]out)\b",
+            re.I | re.S,
         ),
     ),
     # --- end feat/technique ---
@@ -106,7 +108,8 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         "technique",
         re.compile(
             r"\b(trail[- ]?brak\w*|lock(?:ing|ed|s)?[- ]?ups?|wheel ?spin\w*|traction|coast(?:ing)?|"
-            r"on the (?:power|throttle)|brake release|releas\w+ the brake|smooth\w*)\b",
+            r"on the (?:power|throttle)|brake release|releas\w+ the brake|"
+            r"smooth(?:er|ly)? (?:on|with) the (?:brakes?|throttle|pedals?))\b",
             re.I,
         ),
     ),
@@ -123,7 +126,7 @@ _TOPICS: dict[str, set[str]] = {
     "fuel": {"session", "fuel", "strategy"},
     "tyres": {"session", "tyres", "strategy"},
     "strategy": {"session", "fuel", "tyres", "strategy"},
-    "setup": {"session", "corners", "observations", "compare", "setup", "balance"},  # balance: feat/technique
+    "setup": {"session", "corners", "observations", "compare", "setup"},
     "focus": {"session", "observations", "corners", "reference"},
     "compare": {"session", "compare", "reference", "laps"},
     "braking": {"session", "corners", "observations", "reference"},
@@ -139,6 +142,7 @@ _TOPICS: dict[str, set[str]] = {
     # --- end feat/technique ---
     "general": {"session", "laps", "corners", "observations", "reference", "fuel", "tyres"},
 }
+_TOPICS["setup"] = _TOPICS["setup"] | {"balance"}  # feat/technique: the handling balance's "Setup to try"
 
 
 def detect_intent(question: str) -> Intent:
@@ -160,6 +164,8 @@ def detect_intent(question: str) -> Intent:
                 return Intent(name, quiet_laps=laps)
             if corner and name in ("braking", "losing_time", "general", "compare", "setup"):
                 return Intent(name if name != "general" else "corner", corner=corner)
+            if name in _SUBTOPICS:  # feat/technique
+                return Intent(name, corner=corner, topic=_subtopic(name, q))
             return Intent(name, corner=corner)
     if corner:
         return Intent("corner", corner=corner)
@@ -225,6 +231,7 @@ class RaceEngineer:
                 fallback=False,
                 latency_ms=int((time.perf_counter() - t0) * 1000),
             )
+        intent = named_corner(intent, question, sheet)  # feat/technique: "Stowe", "the Hairpin"
         facts = self._select(intent, sheet)
         det = deterministic_answer(intent, facts, sheet)
         if not use_llm or self.provider is None:
@@ -355,7 +362,7 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         return say(first("strategy"), first("fuel"), first("tyres"))
     # --- feat/technique: racing line, technique and balance answers (before the generic corner branch) ---
     if n in ("line", "technique", "balance"):
-        return _technique_answer(n, intent.corner, facts, sheet, first, say)
+        return _technique_answer(intent, facts, sheet, first, say)
     # --- end feat/technique ---
     if n in ("corner", "braking", "losing_time", "setup") and intent.corner:
         obs = first("observations", corner=intent.corner)
@@ -399,8 +406,7 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
             first("observations"),
             diff or first("setup", contains="Recommended") or first("setup", contains="Setup recommendation: none"),
             first("setup", contains="Something to test") if diff else None,
-            first("balance", contains="Handling summary"),  # feat/technique (absent: no change)
-            first("balance", contains="Setup to try"),  # feat/technique
+            first("balance", contains="Setup to try"),  # feat/technique: the handling balance's one change (short)
         )
     if n == "summary":
         return say(
@@ -414,46 +420,207 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
 
 
 # --- feat/technique --------------------------------------------------------------------------------------------
+# What a technique or balance question is about (``Intent.topic``): the answer leads with that fact.
+_SUBTOPICS: dict[str, tuple[tuple[str, re.Pattern[str]], ...]] = {
+    "technique": (
+        ("lock", re.compile(r"\block(?:ing|ed|s)?[- ]?ups?\b", re.I)),
+        ("spin", re.compile(r"\b(?:wheel ?spin\w*|traction|on the power)\b", re.I)),
+        ("trail", re.compile(r"\btrail[- ]?brak\w*", re.I)),
+        ("release", re.compile(r"\b(?:brake release|releas\w+ the brake)\b", re.I)),
+        ("coast", re.compile(r"\bcoast(?:ing)?\b", re.I)),
+        ("brake", re.compile(r"\bsmooth(?:er|ly)? (?:on|with) the brakes?\b", re.I)),
+        ("throttle", re.compile(r"\bthrottle\b", re.I)),
+    ),
+    "balance": (
+        ("oversteer", re.compile(r"\b(?:over-?steer\w*|loose|snap\w*|rear\b.*\bout)\b", re.I | re.S)),
+        ("understeer", re.compile(r"\b(?:under-?steer\w*|push\w* wide|(?:won't|doesn't) turn)\b", re.I)),
+    ),
+}
+# technique sub-topics answered from the corner notes: the note metrics they cover, and how they are said
+_TOPIC_METRICS: dict[str, tuple[str, ...]] = {
+    "trail": ("trail_overlap", "brake_at_turn_in"),
+    "release": ("release",),
+    "brake": ("release", "trail_overlap", "brake_at_turn_in", "brake_peak", "time_to_peak"),
+    "coast": ("coast",),
+    "throttle": ("throttle_pickup", "throttle_ramp", "throttle_lifts"),
+}
+_TOPIC_WORDS = {
+    "trail": "trail braking",
+    "release": "brake release",
+    "brake": "braking",
+    "coast": "coasting",
+    "throttle": "throttle",
+}
+_BRAKE_TOPICS = frozenset({"trail", "release", "brake"})
+_NAMED_CORNER_INTENTS = frozenset({"line", "technique", "balance"})
+
+
+def _subtopic(name: str, question: str) -> str | None:
+    return next((t for t, rx in _SUBTOPICS.get(name, ()) if rx.search(question)), None)
+
+
+def _fold(text: str) -> str:
+    plain = "".join(ch for ch in unicodedata.normalize("NFKD", text) if not unicodedata.combining(ch))
+    return " ".join(re.sub(r"[^0-9a-z]+", " ", plain.lower()).split())
+
+
+def named_corner(intent: Intent, question: str, sheet: FactSheet) -> Intent:
+    """A line / technique / balance question naming a corner ("at Stowe", "through the Hairpin") but no turn number:
+    the track model's curated corner name that the question contains (the longest when several do)."""
+    if intent.corner is not None or intent.name not in _NAMED_CORNER_INTENTS or sheet.model is None:
+        return intent
+    words = set(_fold(question).split())
+    best: list[str] = []
+    name = None
+    for c in sheet.model.corners:
+        parts = _fold(c.display_name or "").split()
+        if parts and set(parts) <= words and len(parts) > len(best):
+            best, name = parts, c.display_name
+    return replace(intent, corner=name) if name else intent
+
+
 def _technique_answer(
-    n: str,
-    corner: str | None,
+    intent: Intent,
     facts: list[Fact],
     sheet: FactSheet,
     first: Callable[..., Fact | None],
     say: Callable[..., str],
 ) -> str:
-    """Deterministic answers for the ``line``, ``technique`` and ``balance`` intents (``pitwall.technique.facts``)."""
+    """Deterministic answers for the ``line``, ``technique`` and ``balance`` intents (``pitwall.technique.facts``),
+    led by what was asked (``Intent.topic``): "am I locking up" answers lock-ups, "trail braking at T5" the trail
+    braking at T5, "the rear is loose at T8" says whether oversteer showed there."""
+    n, corner, topic = intent.name, intent.corner, intent.topic
     keys = sheet.corners_for(corner) if corner else set()
+    if corner and sheet.model is not None and not keys:
+        corner = None  # no such corner at this track: answer for the session
 
-    def at_corner(topic: str, contains: str | None = None) -> list[Fact]:
+    def at_corner(topic_: str, contains: str | None = None) -> list[Fact]:
         out = []
         for f in facts:
-            if f.topic != topic or (contains is not None and contains not in f.text):
+            if f.topic != topic_ or (contains is not None and contains not in f.text):
                 continue
             listed = {str(c).lower() for c in f.data.get("corners", ()) if isinstance(c, str)}
             if (f.corner or "").lower() in keys or listed & keys:
                 out.append(f)
         return out
 
+    def session_fact(prefix: str) -> Fact | None:
+        return next((f for f in facts if f.topic == "technique" and f.text.startswith(prefix)), None)
+
     if n == "line":
         hit = at_corner("line")[:1] if corner else []
-        return say(*hit) if hit else say(first("line", contains="Biggest line") or first("line"))
-    if n == "technique":
-        hit = at_corner("technique")[:2] if corner else []
         if hit:
             return say(*hit)
+        summary = first("line", contains="Biggest line")
+        if corner and summary is not None:
+            measured = {str(k).lower() for k in summary.data.get("measured_keys", ())}
+            notable = {str(k).lower() for k in summary.data.get("notable_keys", ())}
+            if keys & measured and not keys & notable:  # compared there, nothing 1 m or more off
+                return say(replace(summary, say=f"At {corner} your line was within 1 m of your reference."))
+        return say(summary or first("line"))
+    if n == "technique":
+        return _technique_topic_answer(topic, corner, keys, facts, at_corner, session_fact, say)
+    return _balance_answer(topic, corner, facts, at_corner, first, say)
 
-        # the session facts (no corner): a corner's technique fact can mention wheelspin too
-        def session_fact(prefix: str) -> Fact | None:
-            return next((f for f in facts if f.topic == "technique" and f.text.startswith(prefix)), None)
 
-        return say(session_fact("Braking assist"), session_fact("Lock-ups"), session_fact("Wheelspin"))
+def _technique_topic_answer(
+    topic: str | None,
+    corner: str | None,
+    keys: set[str],
+    facts: list[Fact],
+    at_corner: Callable[..., list[Fact]],
+    session_fact: Callable[[str], Fact | None],
+    say: Callable[..., str],
+) -> str:
+    def kinds(f: Fact) -> set[str]:
+        return {str(k) for k in f.data.get("kinds", ())}
+
+    slip_none = session_fact("Lock-ups and wheelspin")  # the game sends no tyre slip (or an old session)
+    if topic == "lock":
+        hit = [f for f in at_corner("technique") if "lockup" in kinds(f)][:1] if corner else []
+        return say(*hit, session_fact("Lock-ups"))
+    if topic == "spin":
+        hit = [f for f in at_corner("technique") if "wheelspin" in kinds(f)][:1] if corner else []
+        return say(*hit, session_fact("Wheelspin") or slip_none)
+    if topic in _TOPIC_METRICS:
+        words = _TOPIC_WORDS[topic]
+        assist = session_fact("Braking assist")
+        if topic in _BRAKE_TOPICS and assist is not None:
+            return say(replace(assist, say=f"The braking assist is on, so I can't judge your {words}."))
+        metrics = set(_TOPIC_METRICS[topic])
+        pool = at_corner("technique") if corner else [f for f in facts if f.topic == "technique" and f.corner]
+        hit = [f for f in pool if kinds(f) & metrics]
+        if hit:  # only the sentence about what was asked (a corner's fact can say three things)
+            return say(_topic_sentence(hit[0], metrics))
+        summary = session_fact("Brake and throttle vs reference")
+        if summary is not None and "not available" in summary.text:
+            return say(summary)  # no reference yet, or nothing compared with it: the reason
+        if summary is not None:
+            differs: dict[str, list[str]] = summary.data.get("differs_keys", {})
+            measured = {str(k).lower() for k in summary.data.get("measured_keys", ())}
+            close = set(summary.data.get("close", ()))
+            known = metrics & (close | set(differs))
+            if not known:  # never measured (no steering from this game, no braking at all...): say so
+                where = f" at {corner}" if corner else ""
+                return say(replace(summary, say=f"I couldn't measure your {words}{where} against your reference."))
+            if corner and keys & measured:
+                off = any(keys & {str(k).lower() for k in differs.get(m, ())} for m in metrics)
+                how = "differed from" if off else "was close to"
+                return say(replace(summary, say=f"At {corner} on your latest lap, your {words} {how} your reference."))
+            if not corner and not any(differs.get(m) for m in metrics):
+                said = f"On your latest laps, your {words} was close to your reference at every corner I compared."
+                return say(replace(summary, say=said))
     if corner:
-        sym = [f for f in at_corner("balance") if "Setup to try" not in f.text]
-        if sym:
-            setup = at_corner("balance", contains="Setup to try")
-            return say(sym[0], setup[0] if setup else None)
-    return say(first("balance", contains="Handling summary"), first("balance", contains="Setup to try"))
+        hit = at_corner("technique")[:2]
+        if hit:
+            return say(*hit)
+    # the session facts (no corner): a corner's technique fact can mention wheelspin too
+    return say(session_fact("Braking assist"), session_fact("Lock-ups"), session_fact("Wheelspin"))
+
+
+def _topic_sentence(f: Fact, metrics: set[str]) -> Fact:
+    """A corner's technique fact said as the one sentence about ``metrics`` (its habit, else its latest lap's note)."""
+    name = f.data.get("corner_name") or f.corner
+    habit = next((v for m, v in f.data.get("habit_simple", {}).items() if m in metrics), None)
+    if habit:
+        return replace(f, say=f"At {name}, {habit[:1].lower()}{habit[1:]}")
+    note = next((v for m, v in f.data.get("simple", {}).items() if m in metrics), None)
+    lap = f.data.get("lap")
+    if note and lap is not None:
+        return replace(f, say=f"At {name}, on lap {lap}, {note[:1].lower()}{note[1:]}")
+    return f
+
+
+def _balance_answer(
+    topic: str | None,
+    corner: str | None,
+    facts: list[Fact],
+    at_corner: Callable[..., list[Fact]],
+    first: Callable[..., Fact | None],
+    say: Callable[..., str],
+) -> str:
+    summary = first("balance", contains="Handling summary")
+    setups = [f for f in facts if f.topic == "balance" and "Setup to try" in f.text]
+
+    def setup_for(sym: Fact) -> Fact | None:
+        return next((f for f in setups if f.data.get("corners") == sym.data.get("corners")), None)
+
+    symptoms = [f for f in facts if f.topic == "balance" and "laps_total" in f.data]
+    if corner:
+        symptoms = [f for f in at_corner("balance") if "laps_total" in f.data]
+    if topic is not None:
+        match = [f for f in symptoms if topic in f.text]
+        if match:
+            return say(match[0], setup_for(match[0]))
+        if summary is not None and "not available" not in summary.text and "needs at least" not in summary.text:
+            where = f" at {corner}" if corner else " that keeps coming back"
+            lead = f"I don't see {topic}{where}."
+            if corner:
+                return say(replace(summary, say=lead), symptoms[0] if symptoms else None)
+            return say(replace(summary, say=f"{lead} {summary.plain}"))
+    if corner and symptoms:
+        return say(symptoms[0], setup_for(symptoms[0]))
+    return say(summary, setups[0] if setups else None)
 
 
 # --- end feat/technique ---

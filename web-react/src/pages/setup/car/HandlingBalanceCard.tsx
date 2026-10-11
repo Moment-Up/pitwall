@@ -7,7 +7,12 @@
 //     blocked suggestion shows its reason instead;
 //   - DRIVING symptoms (not on the best lap) muted, with "See it on the lap" (Compare at the corner) and never a
 //     setup suggestion;
-//   - the catalogue caveat verbatim. Non-F1 sessions: suggestions are for F1 25 only. No slip data: said so.
+//   - the catalogue caveat verbatim. Non-F1 sessions: suggestions are for F1 25 only. No slip data: said so, in a
+//     compact card (no "measured from tyre slip" over "this game sends no tyre slip").
+// The card shows what was measured, not the title again; "Why" only when it says more than the catalogue's effect.
+// Car format unknown: one line pointing at the chooser above, and each change as "15 → lower". Beginners: the plain
+// words first ("Pushed wide mid-corner (understeer)"), both possibilities said (a child's best lap is a weak
+// control), and the changes behind a "Setup changes to try" disclosure, the first as the main option.
 // Balance thresholds are heuristics and the card says so. A server without feat/technique (404) hides the card.
 
 import { Button, Card, Chip, Disclosure, Skeleton } from "@heroui/react";
@@ -27,8 +32,18 @@ import {
 import { apexGameM } from "../../../lib/review/compare";
 import { comparePath } from "../../../lib/review/links";
 import { router } from "../../../lib/router";
-import { symptomViews, unavailableReasons, type SymptomView } from "../../../lib/technique/view";
-import { SPEED_CLASS_WORDS, suggestionChange, symptomLapsText, symptomTitle } from "../../../lib/technique/words";
+import { FORMAT_UNKNOWN, symptomViews, unavailableReasons, type SymptomView } from "../../../lib/technique/view";
+import {
+  sameIdea,
+  SPEED_CLASS_WORDS,
+  suggestionChange,
+  suggestionDirection,
+  symptomBeginnerLine,
+  symptomLapsText,
+  symptomMeasure,
+  symptomTitle,
+  symptomTitleSimple,
+} from "../../../lib/technique/words";
 import { useTechniqueBalance } from "../../review/session/technique/data";
 import { Caveat } from "./RecommendationSummary";
 
@@ -79,6 +94,70 @@ async function seeOnLap(sid: string, corner: string | undefined): Promise<void> 
   router.navigate(comparePath(sid, { at }));
 }
 
+type SuggestionView = SymptomView["suggestions"][number];
+
+function SuggestionItem({
+  x,
+  params,
+  titles,
+  onTry,
+}: {
+  x: SuggestionView;
+  params: Map<string, CarSetupCatalog["parameters"][number]>;
+  titles: Map<string, string>;
+  onTry: (i: TryInitial) => void;
+}) {
+  const initial = tryInitial(x);
+  const p = params.get(x.parameter);
+  const change = x.formatUnknown ? suggestionDirection(x, p) : suggestionChange(x, p);
+  if (x.duplicateOf) {
+    const first = titles.get(x.duplicateOf);
+    return (
+      <li className="px-3 py-1 text-sm text-muted" data-suggestion={x.parameter} data-duplicate="">
+        <span className="pw-num text-base text-foreground">{change}</span> · also listed above
+        {first ? ` for ${lowerFirst(first)}` : ""}
+      </li>
+    );
+  }
+  const showWhy = !sameIdea(x.why, x.effect);
+  return (
+    <li className="rounded-2xl bg-surface px-3 py-1.5" data-suggestion={x.parameter}>
+      <Disclosure>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span className="pw-num text-xl">{change}</span>
+          {x.forFormat && <span className="text-xs text-muted">for the {x.forFormat === "f1_2026" ? "2026" : "2025"} car you chose</span>}
+          <Disclosure.Heading className="m-0">
+            <Disclosure.Trigger className="flex min-h-11 items-center gap-1 text-sm text-muted">
+              Why
+              <Disclosure.Indicator className="size-4" />
+            </Disclosure.Trigger>
+          </Disclosure.Heading>
+          <span className="ml-auto flex items-center">
+            {initial ? (
+              <Button variant="secondary" className="min-h-11" onPress={() => onTry(initial)}>
+                Try this
+              </Button>
+            ) : x.formatUnknown ? null : (
+              <Chip size="sm" variant="soft" color="default" className="h-auto min-h-7 py-1" data-blocked="">
+                <Chip.Label className="whitespace-normal">{x.blockedNow ?? "Cannot be tried from this session"}</Chip.Label>
+              </Chip>
+            )}
+          </span>
+        </div>
+        <Disclosure.Content>
+          <Disclosure.Body style={{ padding: 0 }} className="grid gap-1 pb-2 text-sm">
+            {showWhy && <p className="m-0">{x.why}</p>}
+            <p className="m-0 text-muted">
+              <span className="font-medium">What {x.direction === "lower" ? "lower" : "higher"} does: </span>
+              {x.effect}
+            </p>
+          </Disclosure.Body>
+        </Disclosure.Content>
+      </Disclosure>
+    </li>
+  );
+}
+
 function SymptomCard({
   view,
   params,
@@ -90,18 +169,31 @@ function SymptomCard({
   params: Map<string, CarSetupCatalog["parameters"][number]>;
   /** Symptom id -> its title ("Entry understeer at T3"), for changes listed under an earlier symptom. */
   titles: Map<string, string>;
+  /** Beginner: plain words, both possibilities, the changes behind a disclosure. */
   simple: boolean;
   onTry: (i: TryInitial) => void;
 }) {
   const s = view.symptom;
+  const list = (items: readonly SuggestionView[]) => (
+    <ul className="m-0 grid list-none gap-1.5 p-0">
+      {items.map((x) => (
+        <SuggestionItem key={x.parameter} x={x} params={params} titles={titles} onTry={onTry} />
+      ))}
+    </ul>
+  );
+  const [main, ...others] = view.suggestions;
   return (
     <Card variant="secondary" className="gap-3 p-4" data-symptom={s.id}>
-      <ItemCard variant="transparent" className="items-start p-0">
+      {/* stacked on a phone: the title gets the full width, the corner tags go under it */}
+      <ItemCard variant="transparent" className="flex-col items-start gap-2 p-0 sm:flex-row">
         <ItemCard.Content>
           <ItemCard.Title className="text-base font-semibold whitespace-normal">
-            {symptomTitle(s)} <span className="text-sm font-normal text-muted">· {SPEED_CLASS_WORDS[s.speed_class]}</span>
+            {simple ? symptomTitleSimple(s) : symptomTitle(s)}{" "}
+            {!simple && <span className="text-sm font-normal text-muted">· {SPEED_CLASS_WORDS[s.speed_class]}</span>}
           </ItemCard.Title>
-          <ItemCard.Description className="text-sm whitespace-normal text-muted">{symptomLapsText(s)}</ItemCard.Description>
+          <ItemCard.Description className="text-sm whitespace-normal text-muted">
+            {simple ? symptomBeginnerLine(s) : symptomLapsText(s)}
+          </ItemCard.Description>
         </ItemCard.Content>
         <ItemCard.Action className="flex flex-wrap items-center gap-1.5">
           {s.corner_labels.map((l) => (
@@ -109,66 +201,36 @@ function SymptomCard({
           ))}
         </ItemCard.Action>
       </ItemCard>
-      <p className="m-0 text-[15px] leading-relaxed">{simple && s.text_simple ? s.text_simple : s.text}</p>
-      {view.suggestions.length ? (
+      {/* what was measured, not the title again (beginners: the line above says it in words) */}
+      {!simple && <p className="m-0 text-[15px] leading-relaxed">{symptomMeasure(s.text)}</p>}
+      {!view.suggestions.length ? (
+        <p className="m-0 text-sm text-muted">No single change to suggest for this one.</p>
+      ) : simple ? (
+        <Disclosure>
+          <Disclosure.Heading className="m-0">
+            <Disclosure.Trigger className="flex min-h-11 items-center gap-1 text-sm font-semibold text-muted">
+              Setup changes to try
+              <Disclosure.Indicator className="size-4" />
+            </Disclosure.Trigger>
+          </Disclosure.Heading>
+          <Disclosure.Content>
+            <Disclosure.Body style={{ padding: 0 }} className="grid gap-2 pb-1">
+              <span className="text-sm text-muted">The main one to try (one change, then compare a session):</span>
+              {list([main!])}
+              {others.length > 0 && (
+                <>
+                  <span className="text-sm text-muted">Other options</span>
+                  {list(others)}
+                </>
+              )}
+            </Disclosure.Body>
+          </Disclosure.Content>
+        </Disclosure>
+      ) : (
         <div className="grid gap-2">
           <span className="text-sm font-semibold text-muted">Setup to try (one change, then compare a session)</span>
-          <ul className="m-0 grid list-none gap-1.5 p-0">
-            {view.suggestions.map((x) => {
-              const initial = tryInitial(x);
-              const change = suggestionChange(x, params.get(x.parameter));
-              if (x.duplicateOf) {
-                const first = titles.get(x.duplicateOf);
-                return (
-                  <li key={x.parameter} className="px-3 py-1 text-sm text-muted" data-suggestion={x.parameter} data-duplicate="">
-                    <span className="pw-num text-base text-foreground">{change}</span> · also listed above
-                    {first ? ` for ${lowerFirst(first)}` : ""}
-                  </li>
-                );
-              }
-              return (
-                <li key={x.parameter} className="rounded-2xl bg-surface px-3 py-1.5" data-suggestion={x.parameter}>
-                  <Disclosure>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <span className="pw-num text-xl">{change}</span>
-                      {x.forFormat && (
-                        <span className="text-xs text-muted">for the {x.forFormat === "f1_2026" ? "2026" : "2025"} car you chose</span>
-                      )}
-                      <Disclosure.Heading className="m-0">
-                        <Disclosure.Trigger className="flex min-h-11 items-center gap-1 text-sm text-muted">
-                          Why
-                          <Disclosure.Indicator className="size-4" />
-                        </Disclosure.Trigger>
-                      </Disclosure.Heading>
-                      <span className="ml-auto flex items-center">
-                        {initial ? (
-                          <Button variant="secondary" className="min-h-11" onPress={() => onTry(initial)}>
-                            Try this
-                          </Button>
-                        ) : (
-                          <Chip size="sm" variant="soft" color="default" className="h-auto min-h-7 py-1" data-blocked="">
-                            <Chip.Label className="whitespace-normal">{x.blockedNow ?? "Cannot be tried from this session"}</Chip.Label>
-                          </Chip>
-                        )}
-                      </span>
-                    </div>
-                    <Disclosure.Content>
-                      <Disclosure.Body style={{ padding: 0 }} className="grid gap-1 pb-2 text-sm">
-                        <p className="m-0">{x.why}</p>
-                        <p className="m-0 text-muted">
-                          <span className="font-medium">What {x.direction === "lower" ? "lower" : "higher"} does: </span>
-                          {x.effect}
-                        </p>
-                      </Disclosure.Body>
-                    </Disclosure.Content>
-                  </Disclosure>
-                </li>
-              );
-            })}
-          </ul>
+          {list(view.suggestions)}
         </div>
-      ) : (
-        <p className="m-0 text-sm text-muted">No single change to suggest for this one.</p>
       )}
     </Card>
   );
@@ -182,7 +244,7 @@ function DrivingList({ items, sid, simple }: { items: readonly BalanceSymptom[];
       <span className="text-sm font-semibold text-muted">Not on your best lap: more about how the corner was driven</span>
       <ul className="m-0 grid list-none gap-2 p-0">
         {items.map((s) => (
-          <li key={s.id} className="grid gap-1 rounded-2xl border border-separator px-3 py-2 opacity-80" data-symptom={s.id}>
+          <li key={s.id} className="grid gap-1 rounded-2xl border border-separator px-3 py-2" data-symptom={s.id}>
             <span className="flex flex-wrap items-center gap-2 text-sm text-muted">
               {symptomTitle(s)} · {symptomLapsText(s)}
               {s.corner_labels.map((l) => (
@@ -222,15 +284,14 @@ function Body({
 }: HandlingBalanceCardProps & { data: TechniqueBalance }) {
   const simple = session.driver?.skill_level === "beginner";
   const params = new Map(catalog.parameters.map((p) => [p.key, p]));
-  const noSlip = !data.available.slip.ok || !data.available.balance.ok;
   const notF1 = !data.setup && !session.game?.startsWith("f1");
-  if (noSlip && !data.symptoms.length) {
+  if (nothingMeasured(data)) {
     const reason = unavailableReasons(data.available, ["balance", "slip"])[0];
     return (
-      <div className="grid gap-2">
-        <p className="m-0 text-[15px]">{notF1 ? (reason ?? NO_SLIP_TEXT) : NO_SLIP_TEXT}</p>
-        {notF1 && <p className="m-0 text-sm text-muted">{NOT_F1_TEXT}</p>}
-      </div>
+      <p className="m-0 text-[15px]">
+        {notF1 ? (reason ?? NO_SLIP_TEXT) : NO_SLIP_TEXT}
+        {notF1 && <span className="text-sm text-muted"> {NOT_F1_TEXT}</span>}
+      </p>
     );
   }
   const titles = new Map(data.symptoms.map((x) => [x.id, `${symptomTitle(x)} at ${x.corner_labels.join(", ")}`]));
@@ -241,8 +302,11 @@ function Body({
     carFormat,
     params,
   });
+  const all = car.flatMap((v) => v.suggestions);
+  const formatUnknown = all.length > 0 && all.every((x) => x.formatUnknown);
   return (
     <div className="grid gap-3">
+      {formatUnknown && <p className="m-0 text-sm font-medium">{FORMAT_UNKNOWN}</p>}
       {session.synthetic && (
         <p className="m-0 text-sm text-muted">
           Generated data: these symptoms were put there by the simulator, so they say nothing about your car. Suggestions are
@@ -266,17 +330,25 @@ function Body({
   );
 }
 
+/** No slip or balance data and no symptom: the card is one line of why, without "measured from tyre slip". */
+function nothingMeasured(data: TechniqueBalance): boolean {
+  return (!data.available.slip.ok || !data.available.balance.ok) && !data.symptoms.length;
+}
+
 export function HandlingBalanceCard(props: HandlingBalanceCardProps) {
   const res = useTechniqueBalance(props.sid, props.carFormat);
   if (!res.data && res.error && techniqueErrorKind(res.error) === "missing") return null;
+  const compact = !!res.data && nothingMeasured(res.data);
   return (
-    <Card className="gap-4 p-5" aria-label="How the car handled">
+    <Card className={compact ? "gap-2 p-5" : "gap-4 p-5"} aria-label="How the car handled">
       <Card.Header className="flex-row flex-wrap items-start justify-between gap-3 p-0">
         <div className="grid gap-0.5">
           <Card.Title className="text-base font-semibold">How the car handled</Card.Title>
-          <Card.Description className="text-sm text-muted">
-            Measured from tyre slip at the limit; the thresholds are Pitwall's heuristics.
-          </Card.Description>
+          {!compact && (
+            <Card.Description className="text-sm text-muted">
+              Measured from tyre slip at the limit; the thresholds are Pitwall's heuristics.
+            </Card.Description>
+          )}
         </div>
         <EvidenceChips synthetic={props.session.synthetic} size="md" />
       </Card.Header>

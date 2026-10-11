@@ -59,3 +59,24 @@ export function pointTicks(c: Pick<CompareCornerTechnique, "points" | "window">)
   }
   return out;
 }
+
+/**
+ * The x-axis labels of the point ticks: ticks closer than `minFrac` of the window share one label at the first of them
+ * ("Apex · Track-out"), so the chart never drops one (a short corner can have its apex and track-out 6 m apart). The
+ * dashed lines stay at every point.
+ */
+export function tickLabels(
+  ticks: readonly { d: number; label: string }[],
+  a: number,
+  b: number,
+  minFrac = 0.15,
+): { d: number; label: string }[] {
+  const gap = Math.abs(b - a) * minFrac;
+  const out: { d: number; label: string }[] = [];
+  for (const t of [...ticks].sort((x, y) => x.d - y.d)) {
+    const last = out[out.length - 1];
+    if (last && t.d - last.d < gap) last.label = `${last.label} · ${t.label}`;
+    else out.push({ d: t.d, label: t.label });
+  }
+  return out;
+}

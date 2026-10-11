@@ -14,8 +14,9 @@ Endpoints
 
 Everything is deterministic (``pitwall.technique``); nothing here calls an LLM, nothing is stored. The analyzer is
 created on first use from the app's database, ``SessionAnalyzer`` and the rig profile in the settings store, so the
-app's lifespan is untouched. Work runs in a thread. Errors: unknown session or lap 404; no track model for the track
-yet 409. Numbers are rounded (m 0.01, deg 0.1, s 0.01, fractions 0.01) and non-finite values are ``null``.
+app's lifespan is untouched. Work runs in a thread. Errors: unknown session, lap or reference lap 404; no track model
+for the track yet 409; a ``ref_lap_id`` from another game, track or layout 422. Numbers are rounded (m 0.01,
+deg 0.1, s 0.01, fractions 0.01) and non-finite values are ``null``.
 """
 
 from __future__ import annotations
@@ -30,7 +31,7 @@ from fastapi.responses import JSONResponse
 
 from pitwall.carsetup.catalog import CarFormat
 from pitwall.carsetup.recommend import SetupRequestError, parse_car_format
-from pitwall.technique.session import NoTrackModel, TechniqueAnalyzer, TechniqueNotFound
+from pitwall.technique.session import NoTrackModel, TechniqueAnalyzer, TechniqueBadReference, TechniqueNotFound
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/technique", tags=["technique"])
@@ -78,6 +79,8 @@ async def _run(fn: Any, *args: Any) -> _Json:
         raise HTTPException(404, str(e)) from e
     except NoTrackModel as e:
         raise HTTPException(409, str(e)) from e
+    except TechniqueBadReference as e:
+        raise HTTPException(422, str(e)) from e
 
 
 def _car_format(raw: str | None) -> CarFormat | None:

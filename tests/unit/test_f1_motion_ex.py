@@ -152,7 +152,8 @@ def test_assembler_stores_the_technique_channels_and_assist_meta() -> None:
 
 def test_games_without_slip_store_nan_and_changed_assists_are_unknown() -> None:
     frames = _lap_frames(slip=False)
-    frames[-1].abs_active = False  # ABS switched during the lap: not one value for the lap
+    for f in frames[150:]:
+        f.abs_active = False  # ABS switched off for the last quarter of the lap: not one value for the lap
     lap = _assemble(frames)
     assert all(np.isnan(lap.channels[k]).all() for k in TECHNIQUE_CHANNELS)
     assert lap.meta["abs_active"] is None and lap.meta["traction_control"] == 2
@@ -168,9 +169,29 @@ def test_a_zeroed_car_status_on_the_grid_does_not_hide_the_lap_assists() -> None
     assert lap.meta["abs_active"] is True and lap.meta["traction_control"] == 2
     frames = _lap_frames(slip=False)
     frames[0].speed_kph = 0.0
-    frames[-1].traction_control = 1  # changed on the move: not one value for the lap
+    for f in frames[100:]:
+        f.traction_control = 1  # changed on the move, half the lap each: not one value for the lap
     lap = _assemble(frames)
     assert lap.meta["abs_active"] is True and lap.meta["traction_control"] is None
+
+
+def test_a_session_joined_at_speed_with_tc_zero_for_a_moment_keeps_the_lap_assist() -> None:
+    """Real F1 25 (captures 20261010-221749 and 20261011-183245): a lap first seen at 281 km/h gets CarStatus TC 0
+    for 2.4 s, then TC 2 for the rest of the lap. One value covering 90 % of the moving frames is the lap's."""
+    frames = _lap_frames(slip=False, n=600)
+    for f in frames[:15]:  # 0.25 s of a 10 s lap at 60 Hz, on the move
+        f.traction_control, f.abs_active = 0, False
+    lap = _assemble(frames)
+    assert lap.meta["traction_control"] == 2 and lap.meta["abs_active"] is True
+    frames = _lap_frames(slip=False, n=600)
+    for f in frames[:90]:  # 15 % of the lap: too much to call it one value
+        f.traction_control = 0
+    assert _assemble(frames).meta["traction_control"] is None
+    frames = _lap_frames(slip=False, n=50, abs_on=None)
+    for f in frames:
+        f.traction_control = None
+    lap = _assemble(frames)  # never sent: unknown
+    assert lap.meta["abs_active"] is None and lap.meta["traction_control"] is None
 
 
 def test_old_laps_without_the_channels_still_load() -> None:

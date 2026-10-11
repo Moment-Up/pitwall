@@ -263,7 +263,7 @@ def technique(
     from pitwall.core.session_analysis import SessionAnalyzer
     from pitwall.storage import repo
     from pitwall.storage.db import Database
-    from pitwall.technique.session import NoTrackModel, TechniqueAnalyzer, TechniqueNotFound
+    from pitwall.technique.session import NoTrackModel, TechniqueAnalyzer, TechniqueBadReference, TechniqueNotFound
 
     s = get_settings()
     db = Database(s.db_path)
@@ -278,7 +278,7 @@ def technique(
     except TechniqueNotFound as e:
         typer.echo(str(e), err=True)
         raise typer.Exit(1) from e
-    except NoTrackModel as e:
+    except (NoTrackModel, TechniqueBadReference) as e:
         typer.echo(str(e), err=True)
         raise typer.Exit(2) from e
     try:

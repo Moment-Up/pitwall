@@ -69,6 +69,8 @@ export interface LineMapProps {
 
 const REF = "var(--pw-ref)";
 const CMP = "var(--pw-cmp)";
+/** A marker's invisible tap target is at least this radius on screen (a 44 px target). */
+const MIN_TARGET_RADIUS_PX = 22;
 
 function CursorDots({
   sync,
@@ -134,6 +136,9 @@ export const LineMap = memo(function LineMap({
   }
   const zoomed = w0 != null && w1 != null;
   const u = markUnit(view);
+  // Screen pixels per world unit (preserveAspectRatio "meet"), once the box is measured: tap targets in pixels.
+  const pxPerUnit = measured && box.width > 0 ? Math.min(box.width / view.w, height / view.h) : null;
+  const hitR = Math.max(u * 3.6, pxPerUnit ? MIN_TARGET_RADIUS_PX / pxPerUnit : 0);
   const bar = scaleBar(view, zoomed ? 10 : niceBarM(view.w));
   const font = u * 1.5;
   const onKey = (n: number) => (e: KeyboardEvent<SVGGElement>) => {
@@ -168,16 +173,28 @@ export const LineMap = memo(function LineMap({
         {/* Whole lap: the reference as a wide casing under your lap's line. Zoomed: both thin, so a metre shows. */}
         <path d={refPath} fill="none" stroke={REF} strokeWidth={zoomed ? 2.5 : 4.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" opacity={0.9} data-line="ref" />
         <path d={lapPath} fill="none" stroke={CMP} strokeWidth={zoomed ? 1.5 : 1.75} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" data-line="lap" />
-        {shownPoints.map((p, i) => (
-          <g key={p.label} data-point={p.label}>
-            <circle cx={p.pt[0]} cy={p.pt[1]} r={u * 0.55} fill="var(--surface)" stroke={REF} strokeWidth={u * 0.3} />
-            <text x={labels[i]!.x} y={labels[i]!.y} textAnchor={labels[i]!.anchor} fontSize={font * 0.85} fill="var(--muted)">
-              {p.label}
-            </text>
-          </g>
+        {shownPoints.map((p) => (
+          <circle key={p.label} data-point={p.label} cx={p.pt[0]} cy={p.pt[1]} r={u * 0.55} fill="var(--surface)" stroke={REF} strokeWidth={u * 0.3} />
         ))}
-        {/* The chart cursor under the markers, so a marker's number stays readable when the cursor sits on it. */}
+        {/* The chart cursor under the markers and the point labels, so neither is hidden when the cursor sits on it. */}
         {sync && <CursorDots sync={sync} refPts={refPts} lapPts={lapPts} step={step} view={view} u={u} />}
+        {shownPoints.map((p, i) => (
+          <text
+            key={p.label}
+            data-point-label={p.label}
+            x={labels[i]!.x}
+            y={labels[i]!.y}
+            textAnchor={labels[i]!.anchor}
+            fontSize={font * 0.85}
+            fill="var(--muted)"
+            stroke="var(--background)"
+            strokeWidth={u * 0.25}
+            paintOrder="stroke"
+            pointerEvents="none"
+          >
+            {p.label}
+          </text>
+        ))}
         {/* Markers point at corners on the whole lap; zoomed, the corner itself is the subject (a marker would cover
             the very metres being compared). */}
         {!zoomed && markers.map((m, i) => {
@@ -198,8 +215,8 @@ export const LineMap = memo(function LineMap({
               style={onMarker ? { cursor: "pointer" } : undefined}
               data-marker={m.n}
             >
-              {/* An invisible 44 px-ish target around the drawn marker. */}
-              <circle cx={pt[0]} cy={pt[1]} r={u * 3.6} fill="transparent" />
+              {/* An invisible target of at least 44 px around the drawn marker. */}
+              <circle cx={pt[0]} cy={pt[1]} r={hitR} fill="transparent" data-target="" />
               {moved && (
                 <>
                   <line x1={truePt[0]} y1={truePt[1]} x2={pt[0]} y2={pt[1]} stroke="var(--accent)" strokeWidth={1} vectorEffect="non-scaling-stroke" />

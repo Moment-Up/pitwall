@@ -66,6 +66,8 @@ export interface ThresholdInfo {
   unit: string;
   heuristic: boolean;
   text: string;
+  /** The sheet's heading (servers before the review fix send none: "other"). */
+  group?: "line" | "inputs" | "slip" | "balance" | "pedals" | "other";
 }
 
 export interface SlipEvents {

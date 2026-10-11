@@ -14,7 +14,8 @@ export interface TechniqueDensity {
   offsetChart: boolean;
   /** The mini line map on the Corners cards (intermediate and advanced). */
   miniMap: boolean;
-  /** "Line, inputs and balance" on the Corners cards starts collapsed (beginners). */
+  /** "Line, inputs and balance" on the Corners cards starts collapsed (beginners, and every level on a phone: open, the
+   * sections made an advanced driver's Corners tab twelve screens long). */
   cornerCollapsed: boolean;
   /** Balance chips also show the measured slip difference in degrees (advanced). */
   balanceDegrees: boolean;
@@ -29,14 +30,17 @@ export interface TechniqueDensity {
 const BEGINNER_ROWS: readonly InputRow[] = ["release", "coast", "throttle_pickup", "slip"];
 const INTERMEDIATE_ROWS: readonly InputRow[] = [...BEGINNER_ROWS, "brake_peak", "brake_at_turn_in", "trail_overlap", "throttle_ramp"];
 
-export function techniqueDensity(d: Pick<Density, "level" | "glossary" | "simpleWording" | "signedBadges">): TechniqueDensity {
+export function techniqueDensity(
+  d: Pick<Density, "level" | "glossary" | "simpleWording" | "signedBadges">,
+  phone = false,
+): TechniqueDensity {
   const level = d.level;
   return {
     level,
     inputRows: level === "beginner" ? BEGINNER_ROWS : level === "intermediate" ? INTERMEDIATE_ROWS : INPUT_ROWS_ALL,
     offsetChart: level !== "beginner",
     miniMap: level !== "beginner",
-    cornerCollapsed: level === "beginner",
+    cornerCollapsed: level === "beginner" || phone,
     balanceDegrees: level === "advanced",
     glossary: d.glossary,
     simpleWording: d.simpleWording,

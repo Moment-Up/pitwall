@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import type { SetupExperiment } from "../endpoints/carsetup";
 import { densityFor } from "../review/density";
 import { driver } from "../review/testkit";
-import { offsetDomain, offsetRows, offsetTick, pointTicks } from "./chart";
+import { offsetDomain, offsetRows, offsetTick, pointTicks, tickLabels } from "./chart";
 import { techniqueDensity } from "./density";
 import { techniqueFixtures } from "./testkit";
 import {
@@ -13,7 +13,9 @@ import {
   biggestOffset,
   brakingAssistNote,
   compareWindowM,
+  cornerAtCursor,
   defaultFocus,
+  FORMAT_UNKNOWN,
   markerItems,
   rowMuted,
   shownNotes,
@@ -35,6 +37,28 @@ describe("Compare focus and markers", () => {
     expect(defaultFocus({ ...cmp, markers: [] }, null)).toBe("T3"); // biggest time loss (+0.12 s)
     expect(defaultFocus({ ...cmp, corners: cmp.corners.map((c) => ({ ...c, incident: c.corner === "T3" })), markers: [] }, null)).toBe("T4");
     expect(defaultFocus(null)).toBeNull();
+  });
+
+  it("the corner under the cursor follows the cursor (Compare's corner table moves it); none on a straight", () => {
+    const cmp = techniqueFixtures.austriaCompare();
+    expect(cornerAtCursor(cmp, 3790)).toBe("T6");
+    for (const c of cmp.corners) {
+      if (c.incident || c.points.apex == null) continue;
+      expect(cornerAtCursor(cmp, c.points.apex), c.corner).toBe(c.corner); // its own apex always selects it
+    }
+    expect(cornerAtCursor(cmp, -500)).toBeNull();
+    expect(cornerAtCursor(cmp, null)).toBeNull();
+    expect(cornerAtCursor({ corners: cmp.corners.map((c) => ({ ...c, incident: true })) }, 3790)).toBeNull();
+  });
+
+  it("with no line marker, a corner with something to say (a lock-up) comes before the biggest time loss", () => {
+    const cmp = techniqueFixtures.austriaCompare();
+    const quiet = cmp.corners.map((c) => ({ ...c, notes: [] }));
+    const lock = { metric: "lockup" as const, lap_value: 1, ref_value: 0, delta: 1, unit: "events", notable: true, muted: false, laps: null, laps_total: null, text: "Locked a wheel 1 time under braking vs 0 on your reference.", text_simple: "You locked a wheel under braking." };
+    const last = quiet[quiet.length - 1]!;
+    const corners = quiet.map((c) => (c === last ? { ...c, notes: [lock], time_delta_s: -0.05 } : c));
+    expect(defaultFocus({ corners, markers: [] }, null)).toBe(last.corner);
+    expect(defaultFocus({ corners: quiet, markers: [] }, null)).toBe("T3"); // nothing to say anywhere: the biggest loss
   });
 
   it("markers are numbered in the API's order with its sentence (simple wording for beginners)", () => {
@@ -154,18 +178,18 @@ describe("setup suggestions", () => {
         ...x,
         to_value: null,
         blocked,
-        hypothesis: x.hypothesis.replace(/ -> [^:]+:/, " -> unknown:"),
+        hypothesis: x.hypothesis.replace(/ → [^:]+:/, " → unknown:"),
       })),
     };
     const none = symptomViews(b.symptoms, setup, { params });
-    expect(none.car[0]!.suggestions[0]!.blockedNow).toBe(blocked);
+    expect(none.car[0]!.suggestions[0]!).toMatchObject({ blockedNow: FORMAT_UNKNOWN, formatUnknown: true });
     const v = symptomViews(b.symptoms, setup, { params, carFormat: "f1_2025" });
     const arb = v.car[0]!.suggestions[0]!;
-    expect(arb).toMatchObject({ parameter: "front_arb", to_value: 13, blockedNow: null, forFormat: "f1_2025" });
-    expect(arb.hypothesis).toMatch(/^Front Anti-Roll Bar 15 -> 13: /);
+    expect(arb).toMatchObject({ parameter: "front_arb", to_value: 13, blockedNow: null, forFormat: "f1_2025", formatUnknown: false });
+    expect(arb.hypothesis).toMatch(/^Front Anti-Roll Bar 15 → 13: /);
     const diff = v.car[1]!.suggestions.find((x) => x.parameter === "diff_on_throttle")!;
     expect(diff.to_value).toBe(80);
-    expect(diff.hypothesis).toMatch(/ -> 80 %: /);
+    expect(diff.hypothesis).toMatch(/ → 80 %: /);
     // at the range end there is nothing to try
     const susp = v.car[1]!.suggestions.find((x) => x.parameter === "rear_suspension")!;
     expect(susp.blockedNow).toBe("Rear Suspension is already at its minimum for this car.");
@@ -195,7 +219,7 @@ describe("availability", () => {
   it("reasons for what is missing, notes for what is there", () => {
     const gt7 = techniqueFixtures.gt7Session();
     expect(unavailableReasons(gt7.available, ["slip", "balance", "setup"])).toEqual([
-      "This game does not send tyre slip to Pitwall yet, so wheelspin, lock-ups and balance are unknown.",
+      "Pitwall does not read tyre slip from this game yet, so wheelspin, lock-ups and balance are unknown.",
       "Setup suggestions are for F1 25 only.",
     ]);
     expect(availabilityNotes(gt7.available, ["line", "inputs"])).toHaveLength(2);
@@ -245,5 +269,32 @@ describe("offset chart data", () => {
     expect(offsetTick(0)).toBe("0");
     const t4 = techniqueFixtures.austriaCompare().corners.find((c) => c.corner === "T3")!;
     expect(pointTicks(t4).map((t) => t.label)).toEqual(["Turn-in", "Apex", "Track-out"]);
+    // GT7 T5: apex and track-out 6 m apart in a 200 m window share one label instead of losing "Apex"
+    const close = [
+      { d: 100, label: "Turn-in" },
+      { d: 150, label: "Apex" },
+      { d: 156, label: "Track-out" },
+    ];
+    expect(tickLabels(close, 60, 260)).toEqual([
+      { d: 100, label: "Turn-in" },
+      { d: 150, label: "Apex · Track-out" },
+    ]);
+    expect(tickLabels(close.slice(0, 2), 60, 260)).toHaveLength(2);
+  });
+});
+
+describe("how this is measured", () => {
+  it("a curvature reads as a radius; thresholds by heading, heuristics first; every note once", async () => {
+    const { thresholdValue, thresholdGroups, sheetNotes } = await import("../../pages/review/session/technique/MeasuredSheet");
+    expect(thresholdValue({ value: 0.0005, unit: "1/m" })).toBe("radius 2 km");
+    expect(thresholdValue({ value: 0.01, unit: "1/m" })).toBe("radius 100 m");
+    expect(thresholdValue({ value: 0.6, unit: "fraction" })).toBe("60 %");
+    const t = (key: string, group: "line" | "balance" | undefined, heuristic: boolean) => ({ key, value: 1, unit: "m", heuristic, text: key, group });
+    const groups = thresholdGroups([t("LINE_SMOOTH_M", "line", false), t("LINE_NOTABLE_M", "line", true), t("US_DIFF_DEG", "balance", true), t("OLD", undefined, true)]);
+    expect(groups.map((g) => g.title)).toEqual(["Racing line", "Handling balance", "Other"]);
+    expect(groups[0]!.heuristic.map((x) => x.key)).toEqual(["LINE_NOTABLE_M"]);
+    expect(groups[0]!.rules.map((x) => x.key)).toEqual(["LINE_SMOOTH_M"]);
+    const note = "Braking assist is on (medium): the game adds its own braking.";
+    expect(sheetNotes([[note, null], ["Stock CSL brake."], [note]])).toEqual([note, "Stock CSL brake."]);
   });
 });

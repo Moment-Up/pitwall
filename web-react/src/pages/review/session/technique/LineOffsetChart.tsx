@@ -9,7 +9,7 @@ import { memo, useCallback, useMemo, type PointerEvent } from "react";
 import { ReferenceLine, usePlotArea, useXAxisInverseScale, useXAxisScale } from "recharts";
 import { useCursor } from "../../../../components/viz/useCursor";
 import type { CompareCornerTechnique } from "../../../../lib/endpoints/technique";
-import { offsetDomain, offsetRows, offsetTick, pointTicks } from "../../../../lib/technique/chart";
+import { offsetDomain, offsetRows, offsetTick, pointTicks, tickLabels } from "../../../../lib/technique/chart";
 import type { CursorSync } from "../../../../lib/viz/cursor";
 
 const MARGIN = { top: 8, right: 12, bottom: 0, left: 0 } as const;
@@ -72,7 +72,9 @@ export const LineOffsetChart = memo(function LineOffsetChart({ corner, sync = nu
   if (rows.length < 2) return <p className="m-0 text-sm text-muted">No line offsets measured through this corner.</p>;
   const a = rows[0]!.d;
   const b = rows[rows.length - 1]!.d;
-  const tickName = (v: number) => ticks.find((t) => Math.abs(t.d - v) < 0.5)?.label ?? "";
+  // close points share one label, so the axis never drops one (every tick is drawn: interval 0)
+  const labels = tickLabels(ticks, a, b);
+  const tickName = (v: number) => labels.find((t) => Math.abs(t.d - v) < 0.5)?.label ?? "";
   const title = known
     ? "Metres tighter (+) or wider (−) than the reference line"
     : "Metres off the reference line (the inside of this corner is unknown)";
@@ -85,8 +87,9 @@ export const LineOffsetChart = memo(function LineOffsetChart({ corner, sync = nu
           dataKey="d"
           type="number"
           domain={[a, b]}
-          ticks={ticks.map((t) => t.d)}
+          ticks={labels.map((t) => t.d)}
           tickFormatter={tickName}
+          interval={0}
           allowDataOverflow
         />
         <LineChart.YAxis width={44} domain={dom.domain} ticks={dom.ticks} tickFormatter={offsetTick} allowDataOverflow />

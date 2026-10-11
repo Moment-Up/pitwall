@@ -17,8 +17,10 @@ from pitwall.storage.db import Database, DbWriter
 from pitwall.technique.balance import BalanceSymptom
 from pitwall.technique.setup_map import (
     CANDIDATES,
+    FORMAT_UNKNOWN,
     LOCKUP_CANDIDATES,
     NEVER_SUGGESTED,
+    NOTE_BRAKING_ASSIST,
     LockupSymptom,
     qualifies,
     suggest,
@@ -92,7 +94,7 @@ def test_mid_understeer_moves_the_front_bar_two_clicks_softer(cat: Catalog) -> N
     assert (first.parameter, first.direction, first.from_value, first.to_value) == ("front_arb", "lower", 9.0, 7.0)
     assert first.steps == 2 and first.blocked is None and first.rank == 1
     assert first.effect == cat.param("front_arb").lower  # type: ignore[union-attr]
-    assert first.hypothesis.startswith("Front Anti-Roll Bar 9 -> 7: At T4 and T11")
+    assert first.hypothesis.startswith("Front Anti-Roll Bar 9 → 7: At T4 and T11")
     assert len(first.hypothesis) <= 500 and "Expected:" in first.hypothesis
     assert [s.parameter for s in eng.suggestions] == ["front_arb", "front_wing", "rear_arb"]
     diff = suggest([_sym(phase="entry")], [], cat=cat, car_format="f1_2025", stored=STORED).suggestions[0]
@@ -129,7 +131,7 @@ def test_conflicting_directions_drop_the_parameter(cat: Catalog) -> None:
 
 def test_unknown_car_format_and_setup_leave_no_target(cat: Catalog) -> None:
     unknown_fmt = suggest([_sym()], [], cat=cat, car_format=None, stored=STORED)
-    assert all(s.to_value is None and s.blocked for s in unknown_fmt.suggestions)
+    assert all(s.to_value is None and s.blocked == FORMAT_UNKNOWN for s in unknown_fmt.suggestions)
     assert unknown_fmt.suggestions[0].from_value == 9.0
     no_setup = suggest([_sym()], [], cat=cat, car_format="f1_2025", stored=None)
     assert not no_setup.setup_known and all(s.from_value is None and s.to_value is None for s in no_setup.suggestions)
@@ -148,6 +150,24 @@ def test_driving_symptoms_and_pressures_camber_toe_ride_height_are_never_suggest
     every = [c.key for cands in [*CANDIDATES.values(), *LOCKUP_CANDIDATES.values()] for c in cands]
     assert not set(every) & NEVER_SUGGESTED
     assert {"tyre_pressure_fl", "front_camber", "rear_toe", "front_ride_height"} <= NEVER_SUGGESTED
+
+
+def test_braking_assist_drops_brake_settings_and_symptoms_under_braking(cat: Catalog) -> None:
+    """With the game's braking assist on the brake figures are not all the driver's (technique.rig): no brake bias or
+    pressure change, nothing that needs the symptom under braking, and a note that says why."""
+    entry = _sym(phase="entry", speeds=("slow",), with_braking=True)
+    twice = LockupSymptom("lockups-front", "front", ["T1", "T5"], ["T1", "T5"], 2, 2, "x", "The fronts locked.")
+    eng = suggest([entry], [twice], cat=cat, car_format="f1_2025", stored=STORED, braking_assist=True)
+    params = [s.parameter for s in eng.suggestions]
+    assert "brake_bias" not in params and "brake_pressure" not in params and params[0] == "diff_off_throttle"
+    assert not any(s.symptom_id == "lockups-front" for s in eng.suggestions)
+    assert eng.note and NOTE_BRAKING_ASSIST in eng.note
+    without = suggest([entry], [twice], cat=cat, car_format="f1_2025", stored=STORED)
+    assert "brake_bias" in [s.parameter for s in without.suggestions] and NOTE_BRAKING_ASSIST not in (
+        without.note or ""
+    )
+    mid = suggest([_sym()], [], cat=cat, car_format="f1_2025", stored=STORED, braking_assist=True)
+    assert NOTE_BRAKING_ASSIST not in (mid.note or "")  # nothing brake-related was dropped: no note
 
 
 def test_lock_ups_qualify_only_when_they_recur(cat: Catalog) -> None:

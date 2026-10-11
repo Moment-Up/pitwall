@@ -14,6 +14,7 @@ import {
   INPUT_ROW_LABEL,
   inputDifference,
   inputValue,
+  refWorded,
   type InputRow,
 } from "../../../../lib/technique/words";
 import { TechniqueGlossary } from "./TechniqueGlossary";
@@ -31,7 +32,14 @@ export function inputRows(
   rows: readonly InputRow[],
   ref: CornerInputs | null,
   lap: CornerInputs | null,
-  opts: { notes?: readonly TechniqueNote[]; assists?: AssistInfo | null; pedals?: PedalInfo | null; simple?: boolean },
+  opts: {
+    notes?: readonly TechniqueNote[];
+    assists?: AssistInfo | null;
+    pedals?: PedalInfo | null;
+    simple?: boolean;
+    /** How the page names the reference in sentences ("your target lap" for beginners). */
+    refWord?: string;
+  },
 ): Row[] {
   const tol = opts.pedals ? { peak: opts.pedals.peak_tol, time: opts.pedals.time_tol_s } : DEFAULT_TOLERANCES;
   return rows.map((key) => ({
@@ -39,7 +47,7 @@ export function inputRows(
     label: INPUT_ROW_LABEL[key],
     ref: inputValue(key, ref),
     lap: inputValue(key, lap),
-    diff: inputDifference(key, ref, lap, { notes: opts.notes, simple: opts.simple, tol }),
+    diff: refWorded(inputDifference(key, ref, lap, { notes: opts.notes, simple: opts.simple, tol }), opts.refWord ?? "your reference"),
     muted: rowMuted(key, opts.assists, opts.notes),
   }));
 }
@@ -61,6 +69,8 @@ export interface CornerInputsTableProps {
   phone?: boolean;
   /** "Reference" / "Your target lap". */
   refTitle?: string;
+  /** The reference in sentences: "the reference" / "your target lap". */
+  refWord?: string;
   /** Why inputs are unknown (no reference lap yet); shown instead of the table. */
   reason?: string | null;
 }
@@ -76,9 +86,11 @@ export function CornerInputsTable({
   glossary,
   phone = false,
   refTitle = "Reference",
+  refWord = "the reference",
   reason,
 }: CornerInputsTableProps) {
-  const data = inputRows(rows, refInputs, lapInputs, { notes, assists, pedals, simple });
+  const data = inputRows(rows, refInputs, lapInputs, { notes, assists, pedals, simple, refWord });
+  const shown = new Set(rows);
   const anyMuted = data.some((r) => r.muted);
   const assist = anyMuted ? brakingAssistNote(assists) : null;
   const columns: DataGridColumn<Row>[] = [
@@ -101,12 +113,13 @@ export function CornerInputsTable({
     <section className="grid gap-2" aria-label="Brake and throttle">
       <div className="flex flex-wrap items-center gap-1">
         <h4 className="m-0 mr-1 text-sm font-semibold">Brake and throttle</h4>
+        {/* only for the rows this level shows: no "Trail braking ?" without its row */}
         {glossary && (
           <>
-            <TechniqueGlossary term="trail_braking" labelled />
-            <TechniqueGlossary term="coasting" labelled />
-            <TechniqueGlossary term="wheelspin" labelled />
-            <TechniqueGlossary term="lockup" labelled />
+            {shown.has("trail_overlap") && <TechniqueGlossary term="trail_braking" labelled />}
+            {shown.has("coast") && <TechniqueGlossary term="coasting" labelled />}
+            {shown.has("slip") && <TechniqueGlossary term="wheelspin" labelled />}
+            {shown.has("slip") && <TechniqueGlossary term="lockup" labelled />}
           </>
         )}
       </div>
@@ -115,7 +128,7 @@ export function CornerInputsTable({
       ) : phone ? (
         <ul className="m-0 grid list-none gap-2 p-0">
           {data.map((r) => (
-            <li key={r.key} className={`grid gap-0.5 rounded-2xl bg-surface-secondary px-3 py-2 ${r.muted ? "opacity-80" : ""}`} data-row={r.key}>
+            <li key={r.key} className="grid gap-0.5 rounded-2xl bg-surface-secondary px-3 py-2" data-row={r.key} data-muted={r.muted ? "" : undefined}>
               <span className={`text-sm font-medium ${r.muted ? "text-faint" : ""}`}>
                 {r.label}
                 {r.muted && <span className="text-xs font-normal"> · braking assist on</span>}

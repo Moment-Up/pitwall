@@ -107,13 +107,25 @@ export function offsetWords(offset: number | null | undefined, insideKnown: bool
   return `${m} ${offset < 0 ? "wider" : "tighter"} than ${ref}`;
 }
 
-/** A short offset for tables and chips: "1.5 m wider", "0.4 m tighter", "1.2 m off". Unknown -> "-". */
-export function offsetShort(offset: number | null | undefined, insideKnown: boolean): string {
+/**
+ * A short offset for tables, tiles and chips: "1.5 m wider", "1.2 m off"; under LINE_NOTABLE_M "about the same" (the
+ * same driver's laps differ by that much anyway; the exact value stays in the tooltip and the chart). Unknown -> "-".
+ */
+export function offsetShort(offset: number | null | undefined, insideKnown: boolean, notableM = LINE_NOTABLE_M): string {
   if (!finite(offset)) return UNKNOWN;
   const abs = Math.abs(offset);
-  if (abs < 0.05) return "same line";
+  if (abs < notableM) return "about the same";
   if (!insideKnown) return `${abs.toFixed(1)} m off`;
   return `${abs.toFixed(1)} m ${offset < 0 ? "wider" : "tighter"}`;
+}
+
+/**
+ * The backend's sentences say "your reference"; a beginner's page calls it "your target lap" (refWordFor). `ref` is
+ * the page's sentence form; anything else is returned unchanged.
+ */
+export function refWorded(text: string, ref: string): string {
+  if (ref === "your reference" || ref === "the reference") return text;
+  return text.replace(/\byour reference( lap)?\b/g, ref);
 }
 
 /** Whether an offset is big enough to call a different line (LINE_NOTABLE_M). */
@@ -130,12 +142,19 @@ export function linePointSummaryText(
   s: LinePointSummary | null | undefined,
   insideKnown: boolean,
   notableM = LINE_NOTABLE_M,
+  opts: { simple?: boolean; ref?: string } = {},
 ): string | null {
   if (!s || !s.laps) return null;
   const label = POINT_LABEL[key];
   const med = s.median_offset_m;
   if (!finite(med)) return null;
   const abs = Math.abs(med).toFixed(1);
+  if (opts.simple && Math.abs(med) < notableM) {
+    // beginners: words, not a median in metres
+    const close = s.laps - s.laps_wider - s.laps_tighter;
+    const when = close === s.laps ? "every lap" : close * 2 > s.laps ? "most laps" : `${close} of ${plural(s.laps, "lap")}`;
+    return `${label}: about the same as ${opts.ref ?? "your reference"} on ${when}`;
+  }
   if (!insideKnown) return `${label}: ${abs} m off the reference line (median of ${plural(s.laps, "lap")})`;
   if (med <= -notableM) return `${label}: ${abs} m wider on ${s.laps_wider} of ${plural(s.laps, "lap")}`;
   if (med >= notableM) return `${label}: ${abs} m tighter on ${s.laps_tighter} of ${plural(s.laps, "lap")}`;
@@ -435,21 +454,67 @@ export function phaseSummaryText(phase: Phase, s: PhaseSummary | null | undefine
             : "";
     return `${label}: ${BALANCE_TERM[s.recurring]} on ${n} of ${plural(s.laps, "lap")}${tail}`;
   }
-  // No class recurs: say what was seen most, without a verdict.
-  const counts: [BalanceClass, number][] = [
-    ["neutral", s.neutral],
-    ["understeer", s.understeer],
-    ["oversteer", s.oversteer],
-  ];
+  // No class recurs: what was seen, every class named, without a verdict ("mixed" when none is a clear majority).
+  const counts = (
+    [
+      ["neutral", s.neutral],
+      ["understeer", s.understeer],
+      ["oversteer", s.oversteer],
+    ] as [BalanceClass, number][]
+  ).filter(([, n]) => n > 0);
   counts.sort((a, b) => b[1] - a[1]);
+  if (!counts.length) return null;
   const [top, n] = counts[0]!;
-  if (!n) return null;
-  return `${label}: ${BALANCE_TERM[top]} on ${n} of ${plural(s.laps, "lap")}`;
+  const rest = counts.slice(1).map(([c, k]) => `${k} ${BALANCE_TERM[c]}`);
+  if (n * 2 > s.laps) {
+    return `${label}: ${BALANCE_TERM[top]} on ${n} of ${plural(s.laps, "lap")}${rest.length ? ` (${rest.join(", ")})` : ""}`;
+  }
+  return `${label}: mixed (${counts.map(([c, k]) => `${k} ${BALANCE_TERM[c]}`).join(", ")}) over ${plural(s.laps, "lap")}`;
 }
 
 /** "Mid-corner understeer", "Exit oversteer". */
 export function symptomTitle(s: Pick<BalanceSymptom, "phase" | "cls">): string {
   return `${PHASE_TITLE[s.phase]} ${s.cls}`;
+}
+
+const PHASE_IN: Readonly<Record<Phase, string>> = { entry: "on entry", mid: "mid-corner", exit: "on the exit" };
+
+/** A beginner's title, the plain words first: "Pushed wide mid-corner (understeer)". */
+export function symptomTitleSimple(s: Pick<BalanceSymptom, "phase" | "cls">): string {
+  return s.cls === "understeer" ? `Pushed wide ${PHASE_IN[s.phase]} (understeer)` : `Rear stepped out ${PHASE_IN[s.phase]} (oversteer)`;
+}
+
+/**
+ * A beginner's line under a car symptom: a child's best lap is a weak control, so it says both possibilities. "On every
+ * lap, including your best: it could be the car or how the corner is approached."
+ */
+export function symptomBeginnerLine(s: Pick<BalanceSymptom, "laps" | "laps_total">): string {
+  const when = s.laps >= s.laps_total ? "On every lap" : `On ${s.laps} of ${plural(s.laps_total, "lap")}`;
+  return `${when}, including your best: it could be the car or how the corner is approached.`;
+}
+
+/**
+ * What was measured, without the title the card already shows: the backend's sentence after its first ": " ("At the
+ * limit the front tyres ran 6.4° more slip angle than the rears (heuristic threshold 3°)."). The whole sentence when it
+ * has no such part.
+ */
+export function symptomMeasure(text: string): string {
+  const i = text.indexOf(": ");
+  return i > 0 && i + 2 < text.length ? sentence(text.slice(i + 2)) : text;
+}
+
+function contentWords(t: string): Set<string> {
+  return new Set(t.toLowerCase().split(/[^a-z-]+/).filter((w) => w.length >= 4));
+}
+
+/** Whether two sentences say much the same (the "Why" and the catalogue's effect often do): shared content words. */
+export function sameIdea(a: string, b: string, min = 0.45): boolean {
+  const x = contentWords(a);
+  const y = contentWords(b);
+  if (!x.size || !y.size) return false;
+  let both = 0;
+  for (const w of x) if (y.has(w)) both++;
+  return both / (x.size + y.size - both) >= min;
 }
 
 /** "3 of 3 laps, including your best" (car) or "2 of 3 laps, not on your best lap" (driving). */
@@ -464,6 +529,12 @@ export const VERDICT_WORDS: Readonly<Record<"car" | "driving", string>> = {
 };
 
 // ---------------------------------------------------------------------------------------------------- setup
+
+/** A suggestion sized by nothing yet (the car format is unknown): "Front Anti-Roll Bar 15 → lower". */
+export function suggestionDirection(s: Pick<SetupSuggestion, "label" | "from_value" | "unit" | "direction">, p?: ParameterInfo): string {
+  const from = finite(s.from_value) ? `${p ? s.from_value.toFixed(p.decimals) : String(s.from_value)}${(p?.unit ?? s.unit) ? ` ${p?.unit ?? s.unit}` : ""}` : UNKNOWN;
+  return `${s.label} ${from.startsWith("-") ? `${MINUS}${from.slice(1)}` : from} → ${s.direction}`;
+}
 
 /** A suggestion's change in menu units: "Front Anti-Roll Bar 9 → 7", "Front Brake Bias 58 % → 57 %". */
 export function suggestionChange(s: Pick<SetupSuggestion, "label" | "from_value" | "to_value" | "unit">, p?: ParameterInfo): string {
