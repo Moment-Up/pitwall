@@ -64,7 +64,8 @@ function RowList({
           key={r.key}
           id={r.key}
           textValue={[r.title, r.detail, r.reason].filter(Boolean).join(", ")}
-          className="min-h-14 gap-3 rounded-2xl px-3 py-2"
+          /* pe-9: room for the selection tick (placed absolutely at the end), so a long reason never runs under it */
+          className="min-h-14 gap-3 rounded-2xl py-2 ps-3 pe-9"
         >
           {r.holder ? <HolderAvatar holder={r.holder} size={28} /> : <span aria-hidden="true" className="w-7 shrink-0" />}
           <RowBody row={r} />
