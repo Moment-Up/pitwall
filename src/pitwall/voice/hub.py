@@ -128,6 +128,11 @@ FAST_INTENTS = frozenset(
         "radio_check",
         "control_quiet",
         "control_resume",
+        # coachref: drill commands and status, and "who am I compared with?" (deterministic, no LLM)
+        "drill_start",
+        "drill_status",
+        "drill_stop",
+        "reference",
         # race strategy (pitwall.strategy) and the session's own facts: deterministic, short radio answers
         "fuel",
         "tyres",

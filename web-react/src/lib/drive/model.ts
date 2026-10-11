@@ -20,10 +20,29 @@ import { callsModeText, cueView, lastCueOutcome, type CueBandView, type CuePause
 import { deltaView, referenceLabel, type DeltaView } from "./delta";
 import { gameLength } from "./geometry";
 import { driverFocus } from "./plan";
+// --- coachref ---
+import {
+  activeDrill,
+  drillBlock,
+  drillChip,
+  drillCoach,
+  drillCorner,
+  drillTrack,
+  endedDrill,
+  raceLapsLeft,
+  sheetCorners,
+  type DrillBlockView,
+  type DrillChipView,
+  type EndedDrillView,
+  type SheetCorner,
+} from "./drill";
+import { refControlView, type RefControlView } from "./reference";
+// --- /coachref ---
 import { ribbon, type RibbonView } from "./ribbon";
 import {
   EMPTY_MEMO,
   chipText,
+  type ChipNotice,
   connectionPill,
   driveState,
   evidence,
@@ -81,6 +100,8 @@ export interface DriveModelInput {
   /** Lane motivation: the newest /ws/live goal note (the 6 s GOAL REACHED chip) and, while the car is stopped, the
    * session's recap (the Ready card's goal row, the Session complete card's three things). Absent = neither. */
   motivation?: DriveMotivation | null;
+  /** coachref: the reference notice while it shows (lib/drive/notice.ts), ranked with the short-lived chips. */
+  notice?: ChipNotice | null;
 }
 
 export type HeroView =
@@ -99,6 +120,8 @@ export type HeroView =
       approach: number | null;
       focus: boolean;
       focusReason: string | null;
+      /** coachref: the corner is the running drill's (a DRILL chip replaces FOCUS). */
+      drill?: boolean;
       /** The live position is not current (stale, offline): last content, dimmed. */
       frozen: boolean;
       corner: CornerView;
@@ -231,6 +254,21 @@ export interface EndedCard {
    * on best laps"; null unless the snapshot's `ai_pace` is an "ok" comparison of this session (aipace.ts aiEndLine). */
   aiLine: string | null;
   owner: string | null;
+  /** coachref: the drill driven in this session ("Drill T12 · Brake point: 2 of 2 on the point (2 of 5 laps)"). */
+  drill?: EndedDrillView | null;
+}
+
+/** coachref: the drill on Drive (status chip, Ready card block, the drill sheet's corners). */
+export interface DriveDrillView {
+  chip: DrillChipView | null;
+  /** null on a server without coachref. */
+  block: DrillBlockView | null;
+  /** The drill sheet's corners (Ready card only; empty elsewhere). */
+  corners: SheetCorner[];
+  /** The live game and track (Ready card only): the sheet lists a stored model's corners when `corners` is empty. */
+  track: { game: string; trackId: string } | null;
+  /** A race's laps left (Ready card only): the drill sheet's laps default fits them. */
+  lapsLeft: number | null;
 }
 
 export interface DriveModel {
@@ -273,6 +311,10 @@ export interface DriveModel {
   dim: boolean;
   beginner: boolean;
   simpleWording: boolean;
+  /** coachref: the delta reference control (available false on a server without coachref). */
+  ref: RefControlView;
+  /** coachref: the drill. */
+  drill: DriveDrillView;
 }
 
 const NO_MODEL = "Corners appear after your first clean lap";
@@ -575,6 +617,7 @@ function endedCard(
     badges: recap ? badgeWords(facts.badges, recap.simple) : [],
     facts: facts.shown,
     aiLine: aiEndLine(s.ai_pace, id),
+    drill: endedDrill(s), // coachref
   };
 }
 
@@ -615,7 +658,11 @@ const EMPTY_COACH: CoachView = {
 export function driveModel(input: DriveModelInput): DriveModel {
   const { snap: s, connected, nowS, driver } = input;
   const drivers = input.drivers ?? (driver ? [driver] : []);
-  const ds = driveState(s, connected, nowS, input.memo ?? EMPTY_MEMO, input.motivation?.note);
+  const dChip = drillChip(s); // coachref: a running drill is the status slot's persistent chip
+  const ds = driveState(s, connected, nowS, input.memo ?? EMPTY_MEMO, input.motivation?.note, {
+    notice: input.notice ?? null,
+    drill: dChip != null,
+  });
   const { overlays, memo: m0 } = ds;
   // Moving or stationary (plan 2.1): the cards, the mismatch band and the full coaching text are for a stopped car.
   const pits = ds.state === "garage" || ds.state === "pit_lane";
@@ -640,24 +687,32 @@ export function driveModel(input: DriveModelInput): DriveModel {
     pill: connectionPill(s, connected),
     line: statusLine(s),
     evidence: evidence(s),
-    chip: overlays.chip ? { kind: overlays.chip.kind, text: chipText(overlays.chip.kind) } : null,
+    chip: overlays.chip ? { kind: overlays.chip.kind, text: chipText(overlays.chip.kind, overlays.chip.text) } : null,
     persistent: overlays.persistent ? { kind: overlays.persistent.kind, text: chipText(overlays.persistent.kind) } : null,
   };
   // The Ready and Session complete cards wait for the car to stop: after the line at the session's end the band says
   // SESSION COMPLETE (or CHEQUERED FLAG) over the normal screen until then (a cool-down lap is still driving).
   const card =
     state === "no_data" ? "no_data" : !still ? null : state === "garage" ? "ready" : state === "ended" ? "ended" : null;
-  const hero = heroOf(s, state === "ended" && !card ? "on_track" : state, corner, dim);
+  let hero = heroOf(s, state === "ended" && !card ? "on_track" : state, corner, dim);
+  // --- coachref: the running drill's corner wears a DRILL chip instead of FOCUS ---
+  const dCorner = drillCorner(s);
+  if (hero.kind === "corner" && dCorner != null && hero.corner.name === dCorner) hero = { ...hero, drill: true };
 
   const pause: CuePause =
     state === "red_flag" ? "red_flag" : state === "pit_lane" ? "pit_lane" : overlays.safetyCar ? "safety_car" : null;
   const cue: CueBandView =
     card || state === "ended"
     ? { next: null, note: null, muted: true, radioOff: false, ai: false }
-    : cueView(s?.cues, corner?.name ?? null, s?.track_model, pause, dim, {
-        toApexM: live?.toApexM ?? null,
-        lapLengthM: gameLength(s),
-      });
+    : cueView(
+        s?.cues,
+        corner?.name ?? null,
+        s?.track_model,
+        pause,
+        dim,
+        { toApexM: live?.toApexM ?? null, lapLengthM: gameLength(s) },
+        s?.reference != null, // coachref: a reference before the first lap
+      );
 
   let coach: CoachView = EMPTY_COACH;
   if (s && !card) {
@@ -669,8 +724,15 @@ export function driveModel(input: DriveModelInput): DriveModel {
       // moving down the pit lane: the same corner's glance text (the full text is for a stopped car, plan 2.1)
       const glance = !still && top?.corner ? coachPoint(s, top.corner, simple, true) : null;
       if (glance?.text) coach = { ...glance, heading: coach.heading, full: false };
+      // --- coachref: a running drill's last point (the full text when stopped) ---
+      const running = activeDrill(s);
+      const dc = running ? drillCoach(s, running.corner, simpleWording(s, simple), !still) : null;
+      if (dc) coach = { ...dc, heading: null, full: still };
     } else {
       coach = { ...coachPoint(s, corner?.name ?? null, simple, !still), heading: null, full: still };
+      // --- coachref: while a drill runs the card talks about the drill corner only ---
+      const dc = drillCoach(s, corner?.name ?? null, simpleWording(s, simple), !still);
+      if (dc) coach = { ...dc, heading: null, full: still };
     }
   }
 
@@ -703,5 +765,15 @@ export function driveModel(input: DriveModelInput): DriveModel {
     dim,
     beginner,
     simpleWording: s ? simpleWording(s, simple) : simple,
+    // the picker opens only while the car is stationary (plan 2.1: motion.ts replaces coachref's own speed rule)
+    ref: refControlView(s, { beginner, drivers, locked: connected && !still }),
+    drill: {
+      chip: card ? null : dChip,
+      // The Ready card's (garage only: nothing to compute per snapshot on track).
+      block: state === "garage" ? drillBlock(s) : null,
+      corners: state === "garage" ? sheetCorners(s) : [],
+      track: state === "garage" ? drillTrack(s) : null,
+      lapsLeft: state === "garage" ? raceLapsLeft(s) : null,
+    },
   };
 }

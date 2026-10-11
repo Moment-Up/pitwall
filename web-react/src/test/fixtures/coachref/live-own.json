@@ -1,0 +1,43 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "hand-written from the coachref spec 6.2 / 6.3 (no backend yet)",
+    "moment": "Live: the default (no choice stored), James's own best",
+    "notes": "Replace with a dump from a scratch server (spec 13 A7) once the backend lands. Demo names only."
+  },
+  "reference": {
+    "lap_id": 5,
+    "lap_number": 3,
+    "lap_time_ms": 97191,
+    "session_id": "e3e0d6df9e22",
+    "kind": "own_best",
+    "own": true,
+    "pinned": false,
+    "driver_id": 1,
+    "driver_name": "James",
+    "set_unix": 1791140400.0,
+    "label": "Your best",
+    "label_to": "your best",
+    "ref_name": null,
+    "brake_clamped": false,
+    "frozen": false
+  },
+  "coachref": {
+    "driver_id": 1,
+    "choice": {
+      "driver_id": 1,
+      "kind": "own_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "scope": "all_tracks",
+      "game": null,
+      "track_id": null,
+      "label": "Your best",
+      "updated_unix": null
+    },
+    "used_kind": "own_best",
+    "reason": null,
+    "pending": false,
+    "drill": null
+  }
+}

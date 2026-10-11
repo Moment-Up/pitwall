@@ -1,0 +1,21 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "real F1 25 PS5 captures (the owner's, not committed) streamed over loopback UDP into an isolated scratch Pitwall server (integrator e2e, coachref lane); demo drivers Ann and Ben stand in for the household",
+  "moment": "PUT /api/coachref/choice {kind: driver_best, target: Ben} with no live session of Ann's"
+ },
+ "body": {
+  "choice": {
+   "driver_id": 1,
+   "kind": "driver_best",
+   "target_driver_id": 2,
+   "lap_id": null,
+   "scope": "all_tracks",
+   "game": null,
+   "track_id": null,
+   "label": "Ben's best",
+   "updated_unix": 1791744185.084076
+  },
+  "applies": "next_session"
+ }
+}

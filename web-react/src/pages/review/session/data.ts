@@ -15,6 +15,7 @@ import {
   type SessionBests,
 } from "../../../lib/bests";
 import { reviewApi, reviewKeys, SESSION_LIST_LIMIT, type SessionListRow } from "../../../lib/endpoints/review";
+import { coachrefApi, coachrefKeys, compareWithReference } from "../../../lib/endpoints/coachref";
 
 export function useSession(id: string | null) {
   return useApi(id ? reviewKeys.session(id) : null, () => reviewApi.session(id as string));
@@ -48,6 +49,25 @@ export function useCompare(ref: number | null, lap: number | null) {
     maxAgeMs: 60_000,
   });
 }
+
+// --- coachref ---
+/** Two laps compared through /api/coachref/compare: the /api/compare body plus who A belongs to (`reference`), with
+ * the coach's observations named after another driver's lap. Falls back to /api/compare on a server without it.
+ * Same cache key as useCompare: the body is a superset, and neither depends on the driver's reference choice. */
+export function useRefCompare(ref: number | null, lap: number | null) {
+  const ok = ref != null && lap != null && ref !== lap;
+  return useApi(ok ? reviewKeys.compare(ref, lap) : null, () => compareWithReference(ref as number, lap as number), {
+    maxAgeMs: 60_000,
+  });
+}
+
+/** Picker A's family laps for lap B (compatible ones, the others with a reason); an error leaves the old group. */
+export function useCandidates(lapId: number | null) {
+  return useApi(lapId != null ? coachrefKeys.candidates(lapId) : null, () => coachrefApi.candidates(lapId as number), {
+    maxAgeMs: 60_000,
+  });
+}
+// --- /coachref ---
 
 /** The stored engineer conversation of a session. */
 export function useHistory(sessionId: string | null) {

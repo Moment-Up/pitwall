@@ -1,0 +1,180 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "hand-written from the coachref spec 6.2 / 6.3 (no backend yet)",
+    "moment": "Live: brake-point drill at T11 Hairpin running (2 of 5), Sam's best frozen for it",
+    "notes": "Replace with a dump from a scratch server (spec 13 A7) once the backend lands. Demo names only."
+  },
+  "reference": {
+    "lap_id": 812,
+    "lap_number": 3,
+    "lap_time_ms": 90412,
+    "session_id": "b2",
+    "kind": "driver_best",
+    "own": false,
+    "pinned": false,
+    "driver_id": 2,
+    "driver_name": "Sam",
+    "set_unix": 1791054000.0,
+    "label": "Sam's best",
+    "label_to": "Sam's best",
+    "ref_name": "Sam",
+    "brake_clamped": true,
+    "frozen": true
+  },
+  "coachref": {
+    "driver_id": 1,
+    "choice": {
+      "driver_id": 1,
+      "kind": "driver_best",
+      "target_driver_id": 2,
+      "lap_id": null,
+      "scope": "all_tracks",
+      "game": null,
+      "track_id": null,
+      "label": "Sam's best",
+      "updated_unix": 1791140000.0
+    },
+    "used_kind": "driver_best",
+    "reason": null,
+    "pending": false,
+    "drill": {
+      "id": 14,
+      "driver_id": 1,
+      "session_id": "e3e0d6df9e22",
+      "game": "f1_25",
+      "track_id": "f1:13",
+      "car_id": "f1:team:41",
+      "corner": "T7",
+      "corner_label": "T11",
+      "corner_voice": "Turn 11",
+      "kind": "brake_point",
+      "skill_label": "Brake point",
+      "source": "work_on",
+      "laps_target": 5,
+      "target": 2787.8,
+      "tolerance": 5.0,
+      "unit": "m",
+      "baseline": null,
+      "target_text": "Brake within 5 m of Sam's braking point",
+      "note": "Braking assist is on, so the game helps with braking: these brake points are partly the assist's.",
+      "reference": {
+        "lap_id": 812,
+        "kind": "driver_best",
+        "driver_name": "Sam",
+        "label": "Sam's best"
+      },
+      "status": "active",
+      "stop_reason": null,
+      "started_unix": 1791140400.0,
+      "ended_unix": null,
+      "attempts": [
+        {
+          "attempt": 1,
+          "lap_id": 901,
+          "lap_number": 6,
+          "value": 2786.7,
+          "target": 2787.8,
+          "delta": -1.1,
+          "outcome": "hit",
+          "reason": null,
+          "corner_time_s": 4.21,
+          "corner_time_delta_s": 0.03,
+          "text": "Turn 11 drill, 1 of 5: on the point, 1 m early. 1 hit.",
+          "short": "Drill 1/5: on the point, 1 m early \u00b7 1 hit"
+        },
+        {
+          "attempt": 2,
+          "lap_id": 902,
+          "lap_number": 7,
+          "value": 2799.2,
+          "target": 2787.8,
+          "delta": 11.4,
+          "outcome": "miss",
+          "reason": null,
+          "corner_time_s": 4.21,
+          "corner_time_delta_s": 0.03,
+          "text": "Turn 11 drill, 2 of 5: 11 m past the point. 1 hit.",
+          "short": "Drill 2/5: 11 m past the point \u00b7 1 hit"
+        }
+      ],
+      "hits": 1,
+      "scored": 2,
+      "best": 2786.7,
+      "best_delta": -1.1,
+      "trend": null,
+      "summary_text": null,
+      "synthetic": false
+    }
+  },
+  "coach": {
+    "lap_number": 7,
+    "lap_id": 902,
+    "ref_lap_number": 3,
+    "skill_level": "advanced",
+    "simple_wording": false,
+    "radio_quiet": false,
+    "picked": [
+      {
+        "id": "drill14:a2",
+        "kind": "drill",
+        "corner": "T7",
+        "lap_number": 7,
+        "ref_lap_number": 3,
+        "value": 11.4,
+        "unit": "m",
+        "impact_s": null,
+        "confidence": 1.0,
+        "text": "Turn 11 drill, 2 of 5: 11 m past the point. 1 hit.",
+        "text_simple": "Turn 11 drill, 2 of 5: past the point.",
+        "short": "Drill 2/5: 11 m past the point \u00b7 1 hit",
+        "consistency": null,
+        "positive": false,
+        "priority": 1000000.0,
+        "corner_label": "T11",
+        "corner_voice": "Turn 11",
+        "ref_name": "Sam",
+        "drill": {
+          "id": 14,
+          "attempt": 2,
+          "of": 5,
+          "hits": 1,
+          "outcome": "miss",
+          "done": false
+        }
+      }
+    ],
+    "by_corner": {
+      "T7": {
+        "id": "drill14:a2",
+        "kind": "drill",
+        "corner": "T7",
+        "lap_number": 7,
+        "ref_lap_number": 3,
+        "value": 11.4,
+        "unit": "m",
+        "impact_s": null,
+        "confidence": 1.0,
+        "text": "Turn 11 drill, 2 of 5: 11 m past the point. 1 hit.",
+        "text_simple": "Turn 11 drill, 2 of 5: past the point.",
+        "short": "Drill 2/5: 11 m past the point \u00b7 1 hit",
+        "consistency": null,
+        "positive": false,
+        "priority": 1000000.0,
+        "corner_label": "T11",
+        "corner_voice": "Turn 11",
+        "ref_name": "Sam",
+        "drill": {
+          "id": 14,
+          "attempt": 2,
+          "of": 5,
+          "hits": 1,
+          "outcome": "miss",
+          "done": false
+        }
+      }
+    },
+    "drill_only": true
+  },
+  "cues_drill_corner": "T7"
+}

@@ -156,6 +156,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         app.state.engineer = RaceEngineer(provider, settings.llm_max_tokens, settings.llm_temperature)
         # The radio answers with the fast "radio" model (same provider object, so it hot-swaps too).
         radio_engineer = RaceEngineer(provider.for_purpose("radio"), settings.llm_max_tokens, settings.llm_temperature)
+        # --- coachref --- drill intents ("start a drill on turn 3") are answered by core.coachref, never the LLM
+        app.state.engineer.drill_handler = rt.coachref.radio_command
+        radio_engineer.drill_handler = rt.coachref.radio_command
         app.state.hub = None
         app.state.radio_detach = None
 
@@ -836,6 +839,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_strategy import router as strategy_router  # race strategy (pitwall.strategy)
 
     app.include_router(strategy_router)
+    from pitwall.api.routes_coachref import router as coachref_router  # --- coachref ---
+
+    app.include_router(coachref_router)
     from pitwall.api.routes_validate import router as validate_router  # validation kit (lane validate)
 
     app.include_router(validate_router)

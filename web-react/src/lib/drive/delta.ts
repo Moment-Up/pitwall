@@ -5,6 +5,7 @@
 // state without a live delta: "-" with one reason line. A frozen delta must never look current.
 
 import type { DriveOverlays, DriveState } from "./state";
+import { waitingText } from "./reference";
 import type { SnapshotNext } from "./types";
 import { MINUS, UNKNOWN, ageText, dayText, finite, lapTime, lapTimeHundredths } from "./text";
 
@@ -48,8 +49,9 @@ export function deltaTone(v: number): "ahead" | "behind" | "level" {
   return v < -DELTA_NEUTRAL_S ? "ahead" : v > DELTA_NEUTRAL_S ? "behind" : "level";
 }
 
-/** The reference chip text. The date of a reference from another session comes from the seated driver's best
- * laps when one of them is that lap (`refDates`: lap id -> unix time); otherwise it says "another session". */
+/** The reference chip text. The date of a reference from another session is the descriptor's `set_unix` (coachref),
+ * else the seated driver's best laps when one of them is that lap (`refDates`: lap id -> unix time); otherwise it
+ * says "another session". */
 export function referenceLabel(
   s: SnapshotNext | null,
   nowS: number,
@@ -61,7 +63,7 @@ export function referenceLabel(
   if (finite(r.lap_time_ms)) parts.push(lapTime(r.lap_time_ms));
   if (r.session_id === s?.session_id) parts.push("today");
   else {
-    const set = refDates?.get(r.lap_id);
+    const set = r.set_unix ?? refDates?.get(r.lap_id);
     parts.push(dayText(set, nowS) ?? "another session");
   }
   return parts.join(" · ");
@@ -87,7 +89,11 @@ function unknownReason(s: SnapshotNext | null, state: DriveState): string | null
     case "ended":
       return null;
     default: {
-      if (!s?.reference) return NO_REFERENCE;
+      if (!s?.reference) {
+        // coachref: another driver's lap is chosen and not in place yet: the Ready card's words (waitingText).
+        const waiting = waitingText(s?.coachref?.choice);
+        return waiting ? `No reference yet: ${waiting}` : NO_REFERENCE;
+      }
       const ds = s.frame?.driver_status;
       if (ds === "out_lap") return "Out lap";
       if (ds === "in_lap") return "In lap";

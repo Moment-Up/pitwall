@@ -20,6 +20,7 @@ from tests.unit.test_ai import _game_analysis
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "intents.json"
 QUESTIONS: list[dict[str, Any]] = json.loads(FIXTURE.read_text(encoding="utf-8"))["questions"]
 CONTROL = {"radio_check", "control_quiet", "control_resume"}
+DRILL = {"drill_start", "drill_status", "drill_stop"}  # coachref: answered by RaceEngineer.drill_handler
 
 
 @pytest.mark.parametrize("row", QUESTIONS, ids=[r["question"] for r in QUESTIONS])
@@ -31,10 +32,24 @@ def test_route(row: dict[str, Any]) -> None:
 def test_the_fixture_is_well_formed() -> None:
     questions = [r["question"].casefold() for r in QUESTIONS]
     assert len(questions) == len(set(questions)) >= 90
-    known = set(_TOPICS) | CONTROL
+    known = set(_TOPICS) | CONTROL | DRILL
     assert {r["intent"] for r in QUESTIONS} <= known
-    # coachref's drill rules (and their rows) join with F9: no question may start or stop a drill before then
-    assert not any(r["intent"].startswith("drill") for r in QUESTIONS)
+
+
+_QUESTION_WORDS = ("how", "what", "when", "why", "where", "which", "who", "is", "are", "do i", "does", "did", "should")
+
+
+def test_a_question_never_starts_or_stops_a_drill() -> None:
+    """Plan 4.1/4.2: only a command starts or stops a drill; any question about one asks for its status, and a
+    negation ("don't start a drill") does neither."""
+    drill_rows = [r for r in QUESTIONS if "drill" in r["question"].casefold()]
+    assert {r["intent"] for r in drill_rows} >= DRILL
+    for r in drill_rows:
+        q = r["question"].casefold()
+        if q.startswith(_QUESTION_WORDS):
+            assert r["intent"] == "drill_status", r
+        if "don't" in q or "do not" in q:
+            assert r["intent"] not in DRILL, r
 
 
 def test_every_rule_of_the_table_is_exercised() -> None:
@@ -63,6 +78,6 @@ async def test_every_question_has_a_grounded_deterministic_answer() -> None:
         ans = await engineer.answer(row["question"], sheet, use_llm=False)
         assert ans.intent == row["intent"], row
         assert ans.text.strip(), row
-        if ans.intent not in CONTROL:
+        if ans.intent not in CONTROL | DRILL:
             assert ans.fallback and ans.grounded, row
             assert check_grounding(ans.cited_text, sheet.facts).ok, row

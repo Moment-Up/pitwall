@@ -55,6 +55,8 @@ function OptionBody({ o, compact = false }: { o: LapOption; compact?: boolean })
 
 export function LapPicker({ label, reference = false, options, value, onChange, disabledId, className }: LapPickerProps) {
   const selected = options.find((o) => o.id === value) ?? null;
+  // coachref: family laps that cannot be compared stay listed, disabled, with the server's reason as their detail.
+  const disabled = [...(disabledId != null ? [disabledId] : []), ...options.filter((o) => o.disabled).map((o) => o.id)];
   return (
     <Select
       aria-label={label}
@@ -62,7 +64,7 @@ export function LapPicker({ label, reference = false, options, value, onChange, 
       onChange={(k: Key | null) => {
         if (k != null) onChange(Number(k));
       }}
-      disabledKeys={disabledId != null ? [String(disabledId)] : undefined}
+      disabledKeys={disabled.length ? disabled.map(String) : undefined}
       className={className}
     >
       <Label className="sr-only">{label}</Label>

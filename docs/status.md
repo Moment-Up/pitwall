@@ -58,6 +58,35 @@ losing 0.12 s"). Recorded tier: `tests/fixtures/recorded/f1_25_2025_ps5_austria_
 - **Driver profiles** (`drivers.py`, schema v2): per-driver sessions, references, PBs, coaching limits; the radio
   and cues follow the seated driver. Split-on-switch verified on synthetic streams only.
 - **Live braking cues** (`coach/cues.py`): synthetic/recorded-verified; **not yet validated live**.
+- **Reference choice and practice drills** (coachref, `core/coachref.py`, `coach/drills.py`,
+  `coach/reference_wording.py`, `/api/coachref`, schema v3): unit + synthetic + recorded-tested
+  (`scripts/coachref_check.py` on the owner's F1 25 PS5 captures, replayed into a scratch database: Las Vegas,
+  Melbourne F2, Silverstone (Reverse), Austria (Reverse), plus Silverstone and Miami with two clean laps); **not
+  live-validated**. Braking clamp verified on real laps: Silverstone (Reverse) T5 Maggotts and Becketts call at
+  1960.8 m instead of the other lap's 1982.1 m (a call 21.3 m later than the driver had braked, prevented); Austria
+  (Reverse) 1140.9 m instead of 1155.8 m; Melbourne F2 T9 4030.2 m; Las Vegas T12 3108.7 m. Brake-point drill at
+  Austria (Reverse) 2929 m against the other lap's earlier point (2787.8 m), on copies of two recorded laps re-fed
+  as attempts (`scripts/coachref_check.py`, not laps driven for a drill): +1.1 m past the point with the corner
+  0.2 s slower (a miss: an attempt past the point is a hit only when the corner was faster), +11.5 m (an incident
+  there), +1.1 m again; Las Vegas T1 +0.5 m and 0.01 s faster, a hit. Drill tolerances and steps are heuristics
+  (`coach/drills.py`). Review fixes (unit-tested; the conditions and candidate ones also on the Las Vegas capture):
+  radio drill commands act only on an imperative (a question asks for the status, a negation does nothing); a lap
+  in other conditions (car, layout, wet/dry, assists) stops the drill and never uses its frozen reference; grid
+  starts, resets, stale data and safety-car laps are no attempts and no baselines; another driver's ten fastest
+  laps in other conditions no longer hide a comparable one; a request refused as busy never takes effect later; the
+  chosen reference is published before the first lap (and again when F1's real assists replace the defaults of
+  the first packets); the last result waits for its driver until Done; "who am I compared with?" names the
+  reference. No committed recorded fixture has a complete lap, so `tests/recorded/test_coachref_real.py` skips
+  today. End to end on an isolated scratch server (real F1 25 captures streamed over loopback UDP, demo drivers,
+  headless browser at iPad and phone sizes): Drive's `Delta to` control and picker, the moving lock, the reference
+  before the first lap, no braking calls on a first lap against another driver, the fallback reason, drills from
+  the drill sheet and the radio, the drill chip / hero / coach card, the Session complete drill line, a drill
+  carried into the next session and stopped by a driver change (result kept until Done), Review › Coaching's
+  Drills, Review › Session "Drill this" and Review › Compare "Drive against this lap". The dashboard's contract
+  test runs on bodies recorded from an earlier build of that server
+  (`web-react/src/test/fixtures/coachref-recorded/`: key sets and values; some sentences have since been reworded).
+  Follow-up: AC's ABS/TC and F1's formula are checked for other drivers' laps only; own references keep the older
+  rule.
 - **Track knowledge**: game-native skeleton (sectors, marshal zones; DRS/aero for 2026) verified on the real
   Austria capture; official corner identity verified for Austria only (other sheets seeded, not shown). Field model
   (AI cars), outline and physics prior: planned (research doc section 8).

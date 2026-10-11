@@ -96,7 +96,9 @@ export function CoachScreen({
   const approach = model.hero.kind === "corner" ? barStep(model.hero.approach) : null;
   let middle;
   if (showNoData && noData) middle = noData;
-  else if (model.card === "ready" && model.ready) middle = <ReadyCard ready={model.ready} />;
+  else if (model.card === "ready" && model.ready) {
+    middle = <ReadyCard ready={model.ready} refControl={model.ref} drill={model.drill} beginner={model.beginner} />;
+  }
   else if (model.card === "ended" && model.ended) {
     middle = (
       <SessionCompleteSlot ended={model.ended} legendTier={model.tier} corners={endedCorners(model.ended, trackModel)} />
@@ -108,14 +110,14 @@ export function CoachScreen({
       <>
         <HeroPanel hero={heroText(model.hero)} approach={approach} cue={model.cue} />
         <CoachCard coach={model.coach} />
-        <DeltaPanel delta={estimatedDelta(delta ?? model.delta, game.deltaEstimated)} />
+        <DeltaPanel delta={estimatedDelta(delta ?? model.delta, game.deltaEstimated)} refControl={model.ref} />
       </>
     );
   }
   return (
     <div className="pwc" data-state={model.state} data-dim={model.dim ? "" : undefined}>
       <DriveStatusSlot kind={s.kind} tone={s.tone} role={s.role} className="pwc-status">
-        <StatusContent status={s} maySleep={maySleep} listening={listening} />
+        <StatusContent status={s} maySleep={maySleep} listening={listening} drill={model.drill.chip} />
       </DriveStatusSlot>
       {middle}
       <SectorCells sectors={model.sectors} unavailable={game.sectors} />

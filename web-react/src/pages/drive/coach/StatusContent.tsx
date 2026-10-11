@@ -29,8 +29,10 @@ import { holdNeeded, useDriveLock } from "../../../components/shell/useDriveLock
 import { EvidenceChips } from "../../../components/ui";
 import { useStore } from "../../../hooks/stores";
 import type { StatusView } from "../../../lib/drive/model";
+import type { DrillChipView } from "../../../lib/drive/drill";
 import { slotChips } from "../../../lib/drive/state";
 import { SCREEN_MAY_SLEEP } from "../../../lib/wake";
+import { DrillStatusChip } from "./DrillResult";
 import { useMediaQuery } from "./parts";
 import { sameProps } from "./view";
 
@@ -42,6 +44,8 @@ export interface StatusContentProps {
   maySleep: boolean;
   /** "Listening on UDP 20777" (no telemetry), when /api/connect has said so. */
   listening?: string | null;
+  /** coachref: the running drill's chip (the persistent chip: the normal line only, plan 2.3). */
+  drill?: DrillChipView | null;
 }
 
 function Pill({ status }: { status: StatusView }) {
@@ -104,7 +108,18 @@ function EvidenceIcons({ synthetic, replay, size }: { synthetic: boolean; replay
   );
 }
 
-function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boolean; onBand: boolean }) {
+function Chips({
+  status,
+  maySleep,
+  onBand,
+  drill = null,
+}: {
+  status: StatusView;
+  maySleep: boolean;
+  onBand: boolean;
+  /** coachref: the running drill's chip, drawn where the model put the persistent DRILL chip. */
+  drill?: DrillChipView | null;
+}) {
   // Band words (fill or outline) and the 2 s lock hint (~260 px, DriveStatusSlot, lane S) need the room: the wake
   // chip shrinks to its icon.
   const hint = useStore(navLock, (s) => s.hint);
@@ -132,10 +147,16 @@ function Chips({ status, maySleep, onBand }: { status: StatusView; maySleep: boo
         )}
       {chips.map((c) => (
         <Fragment key={c.kind}>
-          {wrap(
-            <Chip size={size} className="pwc-incident" data-kind={c.kind}>
-              <Chip.Label>{c.text}</Chip.Label>
-            </Chip>,
+          {c.kind === "drill" ? (
+            drill && <DrillStatusChip chip={drill} />
+          ) : c.kind === "notice" ? (
+            wrap(<span className="pwc-notice">{c.text}</span>)
+          ) : (
+            wrap(
+              <Chip size={size} className="pwc-incident" data-kind={c.kind}>
+                <Chip.Label>{c.text}</Chip.Label>
+              </Chip>,
+            )
           )}
         </Fragment>
       ))}
@@ -164,7 +185,7 @@ function MismatchBand({ status }: { status: StatusView }) {
   );
 }
 
-export const StatusContent = memo(function StatusContent({ status, maySleep, listening }: StatusContentProps) {
+export const StatusContent = memo(function StatusContent({ status, maySleep, listening, drill = null }: StatusContentProps) {
   if (status.kind === "normal") {
     const l = status.line;
     if (status.band === "no_data") {
@@ -173,7 +194,7 @@ export const StatusContent = memo(function StatusContent({ status, maySleep, lis
           <Pill status={status} />
           <span className="pwc-meta">{status.text}</span>
           {listening && <span className="pwc-meta">{listening}</span>}
-          <Chips status={status} maySleep={maySleep} onBand={false} />
+          <Chips status={status} maySleep={maySleep} onBand={false} drill={drill} />
         </>
       );
     }
@@ -183,7 +204,7 @@ export const StatusContent = memo(function StatusContent({ status, maySleep, lis
           <Pill status={status} />
           <span className={`pwc-trk ${l.track === "-" ? "text-faint" : ""}`}>{l.track}</span>
           <span className="pwc-meta">{status.text}</span>
-          <Chips status={status} maySleep={maySleep} onBand={false} />
+          <Chips status={status} maySleep={maySleep} onBand={false} drill={drill} />
         </>
       );
     }
@@ -196,7 +217,7 @@ export const StatusContent = memo(function StatusContent({ status, maySleep, lis
           {l.lap} <span className="pwc-lapno__total">/ {l.lapTotal ?? "-"}</span>
         </span>
         {l.position && <span className="pwc-lapno">{l.position}</span>}
-        <Chips status={status} maySleep={maySleep} onBand={false} />
+        <Chips status={status} maySleep={maySleep} onBand={false} drill={drill} />
       </>
     );
   }

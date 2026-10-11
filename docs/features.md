@@ -61,6 +61,29 @@ check plus a button to try the synthetic demo.
 (an incident chip wins over it); nothing else moves on track. The Ready card between runs shows one goal with its
 progress bar (a goal reached this session first, then a lap-time goal for this track), and the Session complete
 card shows [Today's 3 things](#todays-3-things) and up to two new badges. No animation and no sound.
+**Delta to.** The label above the delta is a control: what the delta, braking calls, corner comparison and lap
+coaching measure against. *Your best* (the default), the *Family record*, another driver's best (*Sam's best*) or
+a saved lap. Only compatible laps are offered (same game, track, layout, car, wet or dry, and assists); a choice
+that is not available says why, for example "Sam's laps here used a different braking assist". The choice is kept
+per driver, for every track or for one track. It changes while the car is stopped; on track only *Back to your
+best* is offered, and it applies from the next lap. A choice made before the session is in place from the first
+lap when Pitwall knows the track and the car. Against another driver's lap the coaching names them ("Sam carries 6
+km/h more through the slowest point"), and braking calls never go later than your own braking point at that corner;
+a corner where you have no braking point of your own gets no call. Ask the radio "who am I compared with?" to hear
+it.
+
+**Practice drills.** From the Ready card (or a Work on point in Review, or the radio) pick a corner and a skill:
+brake point (within 5 m before the point; past it counts only when the corner was faster), minimum speed (3 km/h
+more than usual, never above the best speed driven there), exit speed, or entry speed (consistency, measured
+against your own laps). For the next laps (5 by default) the radio and the braking calls talk only about that
+corner, Drive shows a `DRILL · T3 · 3/5 · 2 ✓` chip, and each lap gives one line ("Turn 3 drill, 2 of 5: on the
+point. 2 hits."). Race starts from the grid, resets to the track, pit laps and safety-car laps are not counted, and
+a change of car, wet or dry, or assists ends the drill. The Ready card then shows the result (hits, the best attempt
+and the trend) until you press Done, also after a driver change. Drills run in your own live session at a track
+Pitwall has learnt (three clean laps). The tolerances and steps are heuristics from recorded F1 25 laps.
+
+Reference choice and drills are tested on synthetic data and on recorded F1 25 laps replayed through the pipeline;
+they are **not yet validated live**.
 
 ### Car
 
@@ -103,7 +126,9 @@ Linux, Intel Macs); typed questions work everywhere.
 
 The engineer speaks on its own too: a summary after each lap and a coaching point, but only in a calm part of the
 lap (off the brake, steering nearly straight, with time to finish before the next braking zone). "Stop talking for
-two laps" and "You can talk again" work as you would expect. This timing is tested on replayed sessions; it has
+two laps" and "You can talk again" work as you would expect. "Start a drill on turn 3", "How's my drill going?" and
+"Stop the drill" are answered at once, without the language model; during a drill the radio says only the drill
+line each lap, with no lap summary. This timing is tested on replayed sessions; it has
 not yet been heard in a live session.
 
 The engineer knows what your game sends. Ask about data the game does not send, or that Pitwall does not read yet,
@@ -164,7 +189,9 @@ by how much time they cost.
 Compare puts two laps side by side when they share the car, track and conditions: time gained or lost along the
 lap, a map coloured by where the time went, and per-corner detail. Laps that cannot be fairly compared (different
 car, track, wet or dry, or assists) are refused; smaller differences such as tyre compound or fuel give a warning.
-This screenshot uses the light theme.
+The reference can be another family member's best compatible lap: the page then says "vs Sam's best" and the
+corner notes name Sam. Summaries, Work on and Progress always stay on your own laps. This screenshot uses the light
+theme.
 
 <!-- feat/technique -->
 ### Technique: racing line, brake and throttle, handling balance
@@ -202,7 +229,8 @@ on). Nothing has been checked during a live session yet.
 ![Review › Coaching plan](screenshots/10-review-coaching-plan.png)
 
 The coaching plan for a driver, track and car: the corners to work on now with their trend over sessions, habits
-that repeat, and what the radio will focus on.
+that repeat, and what the radio will focus on. Below them, the **Drills** list: each drill's corner, skill, hits,
+best attempt, trend and the reference it was measured against.
 
 ### Progress
 
@@ -443,8 +471,10 @@ Everything here is fixed rules applied to your telemetry. No language model is i
 
 1. **Clean laps only.** Laps with a flashback, a pit stop, missing packets or a game-declared invalid lap are kept
    but never used as a reference or to learn the track.
-2. **Your own reference.** Each lap is compared with your fastest compatible clean lap: same game, track, car,
-   wet or dry, and assists.
+2. **Your chosen reference.** Each lap is compared with your chosen reference: by default your own fastest
+   compatible clean lap; or the family record, another driver's best or a saved lap. Compatible laps only: same
+   game, track, layout, car, wet or dry, and assists (and, for other drivers' laps, AC's ABS and traction control
+   and F1's car class). Replays and synthetic sessions always use your own laps.
 3. **By distance, not time.** Both laps are resampled to a 1 m grid by lap distance, so the delta is known at every
    metre. Corners are found where speed drops on the median of your clean laps, and the lap is split into segments
    around them, so the corner deltas add up to the lap delta.
@@ -458,7 +488,9 @@ Everything here is fixed rules applied to your telemetry. No language model is i
 6. **Never "brake later".** Braking later than your reference is called over-driving when it costs exit speed;
    praise is only for a faster exit that gained time. Braking cues err early: a cue that would land after your
    reference braking point is dropped rather than said late, and no cue is given when you arrive faster than on
-   the reference lap.
+   the reference lap. With another driver's lap, braking calls never go later than your own braking point at that
+   corner; a corner where you have none gets no call. On recorded F1 25 laps this prevented a call 21 m later than
+   the driver had ever braked (Silverstone reversed, Maggotts and Becketts).
 7. **Incidents are not technique.** A corner that cost 2 s or more, or an apex below half the reference speed, is
    treated as a spin, contact or slow-down. It is mentioned once and never coached.
 8. **Matched to the driver.** The skill level sets the floors and the rules allowed. A beginner hears at most one

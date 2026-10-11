@@ -1,7 +1,7 @@
 // A "Work on" card (spec 6.3 #2, 10.4): the corner (official label and name), a 120 px map with the corner
 // highlighted, the coach's text verbatim (`text_simple` for simple wording), the evidence line, and three actions:
 // See it on the lap (Compare at the apex), Why? (the comparison's numbers in plain words, a Disclosure) and Ask the
-// engineer (pre-filled). Beginners: 18 px text and no signed badge (the evidence line says the amount in words).
+// engineer (pre-filled); coachref adds Drill this while the driver is live at this track (DrillThisButton). Beginners: 18 px text and no signed badge (the evidence line says the amount in words).
 
 import { Button, Card, Chip, Disclosure } from "@heroui/react";
 import { CornerTag } from "../../../components/ui";
@@ -14,6 +14,7 @@ import type { Density } from "../../../lib/review/density";
 import { askPath, comparePath, workOnQuestion } from "../../../lib/review/links";
 import { signedSeconds, whyText } from "../../../lib/review/words";
 import { CornerMap } from "./CornerMap";
+import { DrillThisButton } from "./DrillThisButton";
 
 export interface WorkOnCardProps {
   item: CoachingItem;
@@ -92,6 +93,8 @@ export function WorkOnCard({ item, sessionId, model, refLapId, density, gameLeng
             >
               Ask the engineer
             </Button>
+            {/* --- coachref: start a practice drill on this corner (only while this driver is live here) --- */}
+            <DrillThisButton sessionId={sessionId} corner={item.corner} observationKind={item.latest.kind} />
           </div>
           <Disclosure.Content>
             <Disclosure.Body style={{ padding: 0 }} className="rounded-2xl bg-surface-secondary px-4 py-3 text-sm leading-relaxed text-muted">

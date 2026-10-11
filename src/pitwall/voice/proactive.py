@@ -19,7 +19,10 @@ said; this module decides what is worth saying:
   minimum speed 8 km/h down."), and only on the first point for a corner, never as the cost of one cause.
 * **Radio brevity** - coaching is rebuilt from the observation's structured fields instead of reading the long
   dashboard sentence. Wording stays descriptive (compared with the reference); it never tells the driver to
-  brake later.
+  brake later. Against another driver's lap (coachref) the point names them (``ref_name``: "braking 12 m earlier
+  than Sam") and the lap summary says the reference's radio label ("plus 0.792 to Sam's best").
+* **Practice drills** (coachref) - while a drill runs the lap's coach block says ``drill_only``: no lap summary and
+  no other point, only the drill attempt (a ``kind: "drill"`` point, spoken verbatim from its text).
 * **Still actionable** - lap messages expire ``LAP_MESSAGE_TTL_S`` after creation, a simple bound for "before
   the driver is well into the next lap". They carry ``lap_number`` and ``meta["lap_id"]``, so a later lap
   supersedes them and the scheduler's per-lap budget survives lap numbers restarting each session. Fuel calls are
@@ -126,12 +129,13 @@ def _lap_summary(
         head.append("personal best")
     shown, spoken = list(head), list(head)
     delta = _reference_delta_ms(lap, ms, reference)
+    to_ref = (reference or {}).get("label_to") or "your reference"  # --- coachref --- e.g. "Sam's best"
     if delta == 0:
-        shown.append("level with your reference")
-        spoken.append("level with your reference")
+        shown.append(f"level with {to_ref}")
+        spoken.append(f"level with {to_ref}")
     elif delta is not None:
-        shown.append(f"{'plus' if delta > 0 else 'minus'} {abs(delta) / 1000:.3f} to your reference")
-        spoken.append(f"{delta / 1000:+.3f}s to your reference")
+        shown.append(f"{'plus' if delta > 0 else 'minus'} {abs(delta) / 1000:.3f} to {to_ref}")
+        spoken.append(f"{delta / 1000:+.3f}s to {to_ref}")
     flags = set(lap.get("flags") or ())
     notes = []
     if lap.get("valid") is False or "invalid" in flags:
@@ -170,23 +174,29 @@ def coaching_text(obs: Mapping[str, Any], detailed: bool = False, with_impact: b
     ev: Mapping[str, Any] = evidence if isinstance(evidence, Mapping) else {}
     exit_kph = _num(ev.get("exit_speed_delta_kph"))
     positive = bool(obs.get("positive"))
+    raw_name = obs.get("ref_name")  # --- coachref --- another driver's lap: name them
+    ref_name = raw_name if isinstance(raw_name, str) and raw_name else None
+    ref = ref_name or "your reference"
 
     core: str | None = None
     if v is not None:
         if kind == "brake_early":
-            core = f"braking {abs(v):.0f} m earlier than your reference"
+            core = f"braking {abs(v):.0f} m earlier than {ref}"
         elif kind == "brake_late_overdrive":
             slower = f" but exiting {abs(exit_kph):.0f} km/h slower" if exit_kph is not None else ", no faster out"
             core = f"braking {abs(v):.0f} m later{slower}"
         elif kind == "low_min_speed":
-            core = f"minimum speed {abs(v):.0f} km/h down"
+            if ref_name:
+                core = f"{ref_name} was {abs(v):.0f} km/h faster in the middle of the corner"
+            else:
+                core = f"minimum speed {abs(v):.0f} km/h down"
         elif kind == "overspeed_apex":
             hurt = f", exit {abs(exit_kph):.0f} km/h down" if exit_kph is not None else ", hurting the exit"
             core = f"{abs(v):.0f} km/h too much into the apex{hurt}"
         elif kind == "late_throttle":
-            core = f"full throttle {abs(v):.0f} m later than your reference"
+            core = f"full throttle {abs(v):.0f} m later than {ref}"
         elif kind == "coasting":
-            core = f"{abs(v):.0f} m more coasting than your reference"
+            core = f"{abs(v):.0f} m more coasting than {ref}"
         elif kind == "exit_gain":
             core = f"good exit, {abs(v):.0f} km/h up"
     if core is None:
@@ -258,6 +268,9 @@ def lap_messages(
     out: list[RadioMessage] = []
 
     summary = _lap_summary(lap, best_clean_ms, reference)
+    drilling = _block_for(coach, lap)  # --- coachref --- a practice drill: only its point, no lap summary
+    if drilling is not None and drilling.get("drill_only"):
+        summary = None
     if summary is not None:
         ms = lap.get("lap_time_ms")
         delta = _reference_delta_ms(lap, ms, reference) if isinstance(ms, int) else None

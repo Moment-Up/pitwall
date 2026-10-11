@@ -1,0 +1,284 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "real F1 25 PS5 captures (the owner's, not committed) streamed over loopback UDP into an isolated scratch Pitwall server (integrator e2e, coachref lane); demo drivers Ann and Ben stand in for the household",
+  "moment": "GET /api/coachref/options at Austria after Ben's session was edited to another braking assist (spec 13 A5)"
+ },
+ "body": {
+  "driver_id": 1,
+  "context": {
+   "game": "f1_25",
+   "track_id": "f1:17",
+   "track_name": "Austria",
+   "car_id": "f1:team:7",
+   "car_name": "Haas",
+   "track_length_m": 4323.0
+  },
+  "choice": {
+   "driver_id": 1,
+   "kind": "driver_best",
+   "target_driver_id": 2,
+   "lap_id": null,
+   "scope": "all_tracks",
+   "game": null,
+   "track_id": null,
+   "label": "Ben's best",
+   "updated_unix": 1791744185.084076
+  },
+  "has_track_override": false,
+  "options": [
+   {
+    "kind": "own_best",
+    "target_driver_id": null,
+    "lap_id": null,
+    "label": "Your best",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 20,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791744852.767436,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "fe7dde9226e4",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "household_best",
+    "target_driver_id": null,
+    "lap_id": null,
+    "label": "Family record",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 20,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791744852.767436,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "fe7dde9226e4",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "driver_best",
+    "target_driver_id": 2,
+    "lap_id": null,
+    "label": "Ben's best",
+    "available": false,
+    "reason": "Ben's laps here used a different braking assist",
+    "warnings": [],
+    "lap": null,
+    "selected": true
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 20,
+    "label": "Lap 65 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 20,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791744852.767436,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "fe7dde9226e4",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 29,
+    "label": "Lap 65 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 29,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791745715.686002,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "8cf0190a69bb",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 37,
+    "label": "Lap 65 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 37,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791746106.285324,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "773953e2625e",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 45,
+    "label": "Lap 65 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 45,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791746712.794414,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "d668a78f980e",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 54,
+    "label": "Lap 65 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 54,
+     "lap_number": 65,
+     "lap_time_ms": 73616,
+     "set_unix": 1791747459.978086,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "af677e21c16c",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 22,
+    "label": "Lap 67 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 22,
+     "lap_number": 67,
+     "lap_time_ms": 76268,
+     "set_unix": 1791744883.383276,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "fe7dde9226e4",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 31,
+    "label": "Lap 67 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 31,
+     "lap_number": 67,
+     "lap_time_ms": 76268,
+     "set_unix": 1791745746.304518,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "8cf0190a69bb",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 39,
+    "label": "Lap 67 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 39,
+     "lap_number": 67,
+     "lap_time_ms": 76268,
+     "set_unix": 1791746136.911277,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "773953e2625e",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 47,
+    "label": "Lap 67 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 47,
+     "lap_number": 67,
+     "lap_time_ms": 76268,
+     "set_unix": 1791746743.3998961,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "d668a78f980e",
+     "car_name": "Haas"
+    },
+    "selected": false
+   },
+   {
+    "kind": "lap",
+    "target_driver_id": null,
+    "lap_id": 56,
+    "label": "Lap 67 · Ann",
+    "available": true,
+    "reason": null,
+    "warnings": [],
+    "lap": {
+     "lap_id": 56,
+     "lap_number": 67,
+     "lap_time_ms": 76268,
+     "set_unix": 1791747490.603727,
+     "driver_id": 1,
+     "driver_name": "Ann",
+     "session_id": "af677e21c16c",
+     "car_name": "Haas"
+    },
+    "selected": false
+   }
+  ],
+  "applies": "next_lap"
+ }
+}

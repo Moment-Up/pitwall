@@ -447,6 +447,32 @@ describe("Session complete card: Work on / Went well name their corner (mockup)"
     expect(bare).not.toContain("Work on ·");
   });
 
+  it("coachref: a drill driven in this session takes the Work on slot, never both (plan 2.6)", () => {
+    const s = stopped(fixture("recorded-d246-austria-session-ended"));
+    const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: JAMES });
+    const drill = { title: "Drill T12 · Brake point", line: "2 of 2 on the point (2 of 5 laps)" };
+    const html = (ended: object) => visible(renderToStaticMarkup(createElement(SessionCompleteCard, { ended: { ...m.ended!, ...ended }, tier: m.tier })));
+    const noWork = html({ workOn: null, drill });
+    expect(noWork).toContain("Drill T12 · Brake point 2 of 2 on the point (2 of 5 laps)");
+    expect(noWork).not.toContain("No point to work on");
+    const both = html({ drill });
+    expect(both).toContain("Drill T12 · Brake point");
+    expect(both).not.toContain("Work on");
+    // with the recap's three things: the drill replaces its Work on item, Went well and Progress stay
+    const things = {
+      items: [
+        { kind: "went_well", heading: "Went well", text: "New personal best", tone: "good", icon: "check", source: "pb", empty: false },
+        { kind: "work_on", heading: "One to work on", text: "T5: braking early", tone: "warn", icon: "warning", source: "observation", empty: false },
+        { kind: "progress", heading: "Progress", text: "Session 3 this week", tone: "neutral", icon: "chart", source: "sessions_week", empty: false },
+      ],
+    };
+    const row = html({ drill, things });
+    expect(row).toContain("New personal best");
+    expect(row).toContain("Drill T12 · Brake point");
+    expect(row).not.toContain("T5: braking early");
+    expect(row).toContain("Session 3 this week");
+  });
+
   it("cornerTitle: label and official name; the learned key resolves to the official label; null without a corner", () => {
     const tm = fixture("recorded-d246-austria-session-ended").track_model;
     expect(cornerTitle(tm, "T1")).toBe("T1 Niki Lauda Kurve");

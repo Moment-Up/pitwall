@@ -17,7 +17,8 @@ import { confidenceWord, finite } from "./text";
 export type CoachTextSize = 30 | 26 | 22;
 
 export interface CoachPoint {
-  tag: "work_on" | "good" | null;
+  /** "drill": a practice drill's attempt (coachref, lib/drive/drill.ts). */
+  tag: "work_on" | "good" | "drill" | null;
   lap: number | null;
   /** "Work on · L6" / "Good · L6". */
   tagText: string | null;
@@ -164,7 +165,10 @@ export function topPoint(s: SnapshotNext, simple: boolean): CoachPoint | null {
 
 /** One Work on and one Went well (Session complete card). */
 export function workOnWentWell(s: SnapshotNext, simple: boolean): { workOn: CoachPoint | null; wentWell: CoachPoint | null } {
-  const { picks, source } = lapPicks(s);
+  const { picks: all, source } = lapPicks(s);
+  // coachref: a drill attempt's point is a drill result, not a Work on (the drill's own card and Review › Coaching
+  // show it).
+  const picks = all.filter((o) => o.kind !== "drill");
   const sw = simpleWording(s, simple);
   const w = picks.find((x) => !x.positive);
   const g = picks.find((x) => x.positive);

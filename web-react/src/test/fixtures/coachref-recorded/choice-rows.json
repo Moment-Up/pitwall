@@ -1,0 +1,42 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "real F1 25 PS5 captures (the owner's, not committed) streamed over loopback UDP into an isolated scratch Pitwall server (integrator e2e, coachref lane); demo drivers Ann and Ben stand in for the household",
+  "moment": "GET /api/coachref/choice?game&track_id after Review › Compare's Use for my delta (a saved lap of Ben's)"
+ },
+ "body": {
+  "all_tracks": {
+   "driver_id": 1,
+   "kind": "driver_best",
+   "target_driver_id": 2,
+   "lap_id": null,
+   "scope": "all_tracks",
+   "game": null,
+   "track_id": null,
+   "label": "Ben's best",
+   "updated_unix": 1791744185.084076
+  },
+  "track": {
+   "driver_id": 1,
+   "kind": "lap",
+   "target_driver_id": null,
+   "lap_id": 3,
+   "scope": "track",
+   "game": "f1_25",
+   "track_id": "f1:31",
+   "label": "Ben · lap 3 · 11 Oct",
+   "updated_unix": 1791748015.04136
+  },
+  "effective": {
+   "driver_id": 1,
+   "kind": "lap",
+   "target_driver_id": null,
+   "lap_id": 3,
+   "scope": "track",
+   "game": "f1_25",
+   "track_id": "f1:31",
+   "label": "Ben · lap 3 · 11 Oct",
+   "updated_unix": 1791748015.04136
+  }
+ }
+}

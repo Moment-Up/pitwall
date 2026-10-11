@@ -5,7 +5,8 @@
 //      latest point verbatim, a TrendChip over the last sessions once D5 sends corner means, See it;
 //   2. "Repeats lap after lap" (was "Habits": the coach's consistency strings), "Radio calls next run" (was "The radio
 //      will focus on": the live cue plan, only while they are in the seat at this track) and what was recently fixed
-//      (D5).
+//      (D5);
+//   3. its practice drills here (coachref, plan/DrillsCard.tsx).
 //
 // The plan is read from the newest session here that was compared with the reference (D5), else the newest session.
 // Coaching text is the coach's own (analysis/coaching.py); this page adds neutral words only. Density by the VIEWED
@@ -34,6 +35,8 @@ import { lapsText } from "../../lib/review/kpis";
 import { sessionTypeLabel, whenText } from "../../lib/review/words";
 import type { PageProps } from "../../routes";
 import { AiLevelCard } from "./plan/AiLevelCard";
+import { drillsQuery } from "../../lib/review/drills";
+import { DrillsCard } from "./plan/DrillsCard";
 import { HabitsCard } from "./plan/HabitsCard";
 import { RadioFocusCard } from "./plan/RadioFocusCard";
 import { WorkingOnCard } from "./plan/WorkingOnCard";
@@ -211,6 +214,14 @@ export function CoachingPage({ route }: PageProps) {
               glossary={density.glossary}
             />
           </div>
+
+          {/* --- coachref: practice drills at this track (+ car) --- */}
+          <DrillsCard
+            query={drillsQuery(viewed.id, scope)}
+            model={model}
+            gameLengthM={row?.track_length_m ?? null}
+            simple={density.simpleWording}
+          />
         </>
       )}
     </div>

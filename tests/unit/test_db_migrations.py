@@ -1,12 +1,13 @@
-"""Schema migrations: every older database (v2, v3 goals, v4 AI pace, the AI pace branch's "v3") reaches the current
-version (v5, race strategy) in place, idempotently and safely.
+"""Schema migrations: every older database (v2, v3 goals, v4 AI pace, v5 race strategy, the AI pace branch's "v3")
+reaches the current version (v6, coachref) in place, idempotently and safely.
 
 ``V2_SCHEMA`` / ``V2_INDEXES`` are frozen copies of ``storage/db.py`` at commit 181d85c (the last v2 build; same as
 0a8a911 on the old history), ``V3_GOALS`` the DDL that v3 (goals, commit 61a8721 / aded8ab) added on top, and
-``V3_AI_PACE`` what v4 (pace vs AI, 14158d7 / 593f31a) added: never update them; they are what the owner's real
-databases look like before a migration. Pace vs AI was developed as "v3" next to goals and renumbered v4 when both
+``V3_AI_PACE`` what v4 (pace vs AI, 14158d7 / 593f31a) added and ``V5_STRATEGY`` what v5 (race strategy, c417d9c)
+added: never update them; they are what the owner's real databases look like before a migration. Pace vs AI was developed as "v3" next to goals and renumbered v4 when both
 landed, so an AI-pace-only "v3" database (the development branch's own scratch databases) must reach the current
-version too (it gains goals). Race strategy (v5) adds new tables only (``STRATEGY``), so every state gains them.
+version too (it gains goals). Race strategy (v5, ``STRATEGY``) and coachref (v6, ``COACHREF``: reference choices and
+drills) add new tables only, so every state gains them.
 """
 
 from __future__ import annotations
@@ -229,8 +230,37 @@ CREATE TABLE IF NOT EXISTS session_ai_pace (
 );
 """
 
+V5_STRATEGY = """
+-- v5 race strategy (pitwall.strategy): new tables only, so they and their index can live in SCHEMA.
+CREATE TABLE IF NOT EXISTS strategy_laps (
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    lap_number INTEGER NOT NULL,
+    data TEXT NOT NULL DEFAULT '{}',          -- StrategyLapRecord JSON (pitwall.strategy.engine)
+    updated_unix REAL NOT NULL,
+    PRIMARY KEY (session_id, lap_number)
+);
+CREATE TABLE IF NOT EXISTS pit_stops (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL REFERENCES sessions(id) ON DELETE CASCADE,
+    car_index INTEGER NOT NULL,
+    is_player INTEGER NOT NULL DEFAULT 0,
+    entry_lap INTEGER NOT NULL, exit_lap INTEGER,
+    entry_lap_distance_m REAL, exit_lap_distance_m REAL,
+    lane_time_ms INTEGER, stationary_ms INTEGER,
+    laps_ms TEXT NOT NULL DEFAULT '[]',
+    pace_before_ms INTEGER, pace_after_ms INTEGER, pit_loss_ms INTEGER,
+    neutralised TEXT, excluded TEXT,
+    compound_before TEXT, compound_after TEXT,
+    session_time_s REAL, created_unix REAL NOT NULL,
+    UNIQUE(session_id, car_index, entry_lap)
+);
+CREATE INDEX IF NOT EXISTS ix_pit_stops_session ON pit_stops(session_id);
+-- end v5 race strategy
+"""
+
 TABLES = ("drivers", "sessions", "laps", "events", "setups", "observations", "reference_laps", "track_models")
 STRATEGY = {"strategy_laps", "pit_stops", "ix_pit_stops_session"}  # v5 race strategy: new tables only
+COACHREF = {"reference_choices", "drills", "ix_drills_driver"}  # v6 coachref: new tables only
 CURRENT = str(SCHEMA_VERSION)
 
 
@@ -309,6 +339,22 @@ def make_v4_db(path: Path) -> None:
         c.commit()
 
 
+def make_v5_db(path: Path) -> None:
+    """A database as the v5 build (race strategy, c417d9c) left it: the v4 data plus the strategy tables with a lap."""
+    make_v4_db(path)
+    with closing(sqlite3.connect(path)) as c:
+        c.executescript(V5_STRATEGY)
+        c.execute("UPDATE meta SET value='5' WHERE key='schema_version'")
+        c.execute("INSERT INTO strategy_laps(session_id, lap_number, data, updated_unix) VALUES('old1', 1, '{}', 1.0)")
+        c.commit()
+
+
+def _coachref_empty(path: Path) -> None:
+    with closing(sqlite3.connect(path)) as c:
+        assert c.execute("SELECT COUNT(*) FROM reference_choices").fetchone()[0] == 0
+        assert c.execute("SELECT COUNT(*) FROM drills").fetchone()[0] == 0
+
+
 def _sound(path: Path) -> None:
     """``integrity_check`` is ok and no foreign key is broken."""
     with closing(sqlite3.connect(path)) as c:
@@ -343,7 +389,7 @@ def _names(path: Path) -> set[str]:
 
 
 def test_v2_database_migrates_to_current_idempotently(tmp_path: Path) -> None:
-    """v2 -> v5 in one open: goals (v3), AI pace (v4) and race strategy (v5), the old rows untouched."""
+    """v2 -> v6 in one open: goals (v3), AI pace (v4), race strategy (v5) and coachref (v6), the old rows untouched."""
     path = tmp_path / "v2.sqlite3"
     make_v2_db(path)
     before = _counts(path)
@@ -353,9 +399,10 @@ def test_v2_database_migrates_to_current_idempotently(tmp_path: Path) -> None:
         Database(path)
         assert _counts(path) == before
         assert _version(path) == CURRENT
-        assert {"goals", "ix_goals_driver", "session_ai_pace"} | STRATEGY <= _names(path)
+        assert {"goals", "ix_goals_driver", "session_ai_pace"} | STRATEGY | COACHREF <= _names(path)
         _sound(path)
         _strategy_empty(path)
+        _coachref_empty(path)
         with closing(sqlite3.connect(path)) as c:
             cols = [r[1] for r in c.execute("PRAGMA table_info(sessions)")]
             assert cols.count("ai_difficulty") == 1 and cols[-1] == "ai_difficulty"
@@ -363,12 +410,12 @@ def test_v2_database_migrates_to_current_idempotently(tmp_path: Path) -> None:
             assert [tuple(r)[:-1] for r in c.execute("SELECT * FROM sessions ORDER BY id")] == rows_before
             assert c.execute("SELECT COUNT(*) FROM session_ai_pace").fetchone()[0] == 0  # no backfill
             assert c.execute("SELECT COUNT(*) FROM goals").fetchone()[0] == 0
-    assert SCHEMA_VERSION == 5
+    assert SCHEMA_VERSION == 6
 
 
 def test_v3_goals_database_gains_ai_pace_and_strategy(tmp_path: Path) -> None:
-    """v3 (goals, the owner's live database) -> v5: the AI pace column and table and the race strategy tables; goals
-    and old rows untouched."""
+    """v3 (goals, the 0.1.0 database) -> v6: the AI pace column and table, the race strategy tables and the coachref
+    tables; goals and old rows untouched."""
     path = tmp_path / "v3.sqlite3"
     make_v3_goals_db(path)
     with closing(sqlite3.connect(path)) as c:
@@ -379,11 +426,12 @@ def test_v3_goals_database_gains_ai_pace_and_strategy(tmp_path: Path) -> None:
     for _ in range(3):
         Database(path)
         assert _version(path) == CURRENT
-        assert {"session_ai_pace", "goals", "ix_goals_driver"} | STRATEGY <= _names(path)
+        assert {"session_ai_pace", "goals", "ix_goals_driver"} | STRATEGY | COACHREF <= _names(path)
         assert _counts(path) == before
         assert _table_info(path, "goals") == goals_layout
         _sound(path)
         _strategy_empty(path)
+        _coachref_empty(path)
         with closing(sqlite3.connect(path)) as c:
             assert [tuple(r) for r in c.execute("SELECT * FROM goals ORDER BY id")] == goals_before
             assert [tuple(r)[:-1] for r in c.execute("SELECT * FROM sessions ORDER BY id")] == rows_before
@@ -396,14 +444,14 @@ def test_v3_goals_database_gains_ai_pace_and_strategy(tmp_path: Path) -> None:
 
 
 def test_v3_ai_pace_database_gains_goals(tmp_path: Path) -> None:
-    """The AI pace development branch's "v3" -> v5: goals and the race strategy tables are created; the stored AI
-    pace is kept."""
+    """The AI pace development branch's "v3" -> v6: goals, the race strategy and the coachref tables are created; the
+    stored AI pace is kept."""
     path = tmp_path / "v3ai.sqlite3"
     make_v3_ai_pace_db(path)
     for _ in range(2):
         Database(path)
         assert _version(path) == CURRENT
-        assert {"goals", "ix_goals_driver", "session_ai_pace"} | STRATEGY <= _names(path)
+        assert {"goals", "ix_goals_driver", "session_ai_pace"} | STRATEGY | COACHREF <= _names(path)
         _sound(path)
         assert [r[1] for r in _table_info(path, "sessions")].count("ai_difficulty") == 1
     db = Database(path)
@@ -414,19 +462,21 @@ def test_v3_ai_pace_database_gains_goals(tmp_path: Path) -> None:
         assert row is not None and row["status"] == "ok" and row["ai_laps"] == 300
 
 
-@pytest.mark.parametrize("make", [make_v2_db, make_v3_goals_db, make_v3_ai_pace_db, make_v4_db])
+@pytest.mark.parametrize("make", [make_v2_db, make_v3_goals_db, make_v3_ai_pace_db, make_v4_db, make_v5_db])
 def test_fresh_and_migrated_layouts_are_identical(tmp_path: Path, make: Callable[[Path], None]) -> None:
     old, fresh = tmp_path / "old.sqlite3", tmp_path / "fresh.sqlite3"
     make(old)
     Database(old)
     Database(fresh)
-    for table in ("sessions", "session_ai_pace", "goals", "laps", "reference_laps", "strategy_laps", "pit_stops"):
+    tables = ("sessions", "session_ai_pace", "goals", "laps", "reference_laps", "strategy_laps", "pit_stops")
+    for table in (*tables, "reference_choices", "drills"):
         assert _table_info(old, table) == _table_info(fresh, table), table
     assert _names(old) == _names(fresh)  # every table and index, nothing more
 
 
-def test_v4_database_gains_strategy_only(tmp_path: Path) -> None:
-    """v4 (goals + pace vs AI) -> v5: the race strategy tables and index; every other row and layout untouched."""
+def test_v4_database_gains_strategy_and_coachref_only(tmp_path: Path) -> None:
+    """v4 (goals + pace vs AI) -> v6: the race strategy and coachref tables and indexes; every other row and layout
+    untouched."""
     path = tmp_path / "v4.sqlite3"
     make_v4_db(path)
     before = _counts(path)
@@ -437,13 +487,36 @@ def test_v4_database_gains_strategy_only(tmp_path: Path) -> None:
     for _ in range(3):
         Database(path)
         assert _version(path) == CURRENT
-        assert {n for n in _names(path) - names if not n.startswith("sqlite_autoindex_")} == STRATEGY
+        assert {n for n in _names(path) - names if not n.startswith("sqlite_autoindex_")} == STRATEGY | COACHREF
         assert _counts(path) == before
         _sound(path)
         _strategy_empty(path)
+        _coachref_empty(path)
         with closing(sqlite3.connect(path)) as c:
             assert {t: [tuple(r) for r in c.execute(f"SELECT * FROM {t}")] for t in dump_before} == dump_before
             assert [tuple(r) for r in c.execute("SELECT * FROM sessions ORDER BY id")] == sessions_before
+
+
+def test_v5_database_gains_coachref_only(tmp_path: Path) -> None:
+    """v5 (race strategy) -> v6: the reference choices and drills tables and their index; every other row untouched."""
+    path = tmp_path / "v5.sqlite3"
+    make_v5_db(path)
+    before = _counts(path)
+    names = _names(path)
+    with closing(sqlite3.connect(path)) as c:
+        dump = {
+            t: [tuple(r) for r in c.execute(f"SELECT * FROM {t}")]
+            for t in ("goals", "session_ai_pace", "strategy_laps")
+        }
+    for _ in range(3):
+        Database(path)
+        assert _version(path) == CURRENT
+        assert {n for n in _names(path) - names if not n.startswith("sqlite_autoindex_")} == COACHREF
+        assert _counts(path) == before
+        _sound(path)
+        _coachref_empty(path)
+        with closing(sqlite3.connect(path)) as c:
+            assert {t: [tuple(r) for r in c.execute(f"SELECT * FROM {t}")] for t in dump} == dump
 
 
 def test_strategy_rows_on_a_migrated_database(tmp_path: Path) -> None:

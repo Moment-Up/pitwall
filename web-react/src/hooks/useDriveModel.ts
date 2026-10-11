@@ -13,16 +13,20 @@
 // Lane motivation: the newest /ws/live goal note feeds the 6 s GOAL REACHED chip; the session recap is fetched only
 // while the last model was in the garage or ended (pages/drive/coach/useRecap.ts), never on track. The state is kept
 // as React state, so the fetch switches on with one extra render when the state changes (rare), not per snapshot.
+//
+// Coachref: the reference notice ("Delta to Sam's best from the next lap", lib/drive/notice.ts) is read here, so the
+// model ranks it with the other short-lived chips (integration plan 2.3).
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { driveModel, type DriveModel } from "../lib/drive/model";
+import { driveNotice, type DriveNoticeState } from "../lib/drive/notice";
 import { driveMismatch, noDataText, selectedEntry } from "../lib/game";
 import type { Motion } from "../lib/drive/motion";
 import type { DriveMemo, DriveState } from "../lib/drive/state";
 import type { SnapshotNext } from "../lib/drive/types";
 import type { DriveMotivation } from "../lib/motivation/drive";
 import { useRecap } from "../pages/drive/coach/useRecap";
-import { useActiveDriver, useDrivers, useLive, usePrefs } from "./stores";
+import { useActiveDriver, useDrivers, useLive, usePrefs, useStore } from "./stores";
 import { useGameCatalog, useSnapshotGame } from "./useGame";
 
 /** Device clock in whole unix seconds, ticking once a second while mounted. */
@@ -54,6 +58,11 @@ export function useDriveModel(): DriveModel {
   const noData = useMemo(() => noDataText(selectedEntry(catalogue, game)), [catalogue, game]);
 
   const note = useLive((s) => s.lastMotivation);
+  const noticeState = useStore(driveNotice, (s: DriveNoticeState) => s);
+  const notice = useMemo(
+    () => (noticeState.text ? { text: noticeState.text, t: noticeState.t, lifeS: noticeState.lifeS } : null),
+    [noticeState],
+  );
   const [lastState, setLastState] = useState<DriveState | null>(null);
   const r = useRecap(snap?.session_id, snap?.laps.length ?? 0, note, lastState, snap?.bests?.scope?.car_id ?? null);
   const motivation = useMemo<DriveMotivation>(
@@ -77,8 +86,9 @@ export function useDriveModel(): DriveModel {
         mismatch,
         noDataText: noData,
         motivation,
+        notice,
       }),
-    [snap, connected, nowS, driver, drivers, driveLock, mismatch, noData, motivation],
+    [snap, connected, nowS, driver, drivers, driveLock, mismatch, noData, motivation, notice],
   );
   useEffect(() => {
     memo.current = model.memo;

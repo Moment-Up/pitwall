@@ -29,6 +29,11 @@ Schema history:
   creates them on any older database: v2 gains goals, AI pace and strategy; v3 (goals, the live database) AI pace
   and strategy; v4 strategy only. Developed as "v3" on its lane and renumbered when it landed after goals and AI pace;
   such a lane database (strategy tables, no goals or AI pace) gains the rest. Nothing reads ``meta.schema_version``.
+* v6 - coachref: ``reference_choices`` (what each driver's live delta measures against, per driver and optionally
+  per track) and ``drills`` plus ``ix_drills_driver``. New tables only, so ``SCHEMA`` creates them on any older
+  database: v2 gains goals, AI pace, strategy and coachref; v3 (the 0.1.0 database) AI pace, strategy and coachref;
+  v4 strategy and coachref; v5 coachref only. Developed as "v3" on its lane and renumbered when it landed last; such
+  a lane database (coachref tables only) gains the rest.
 """
 
 from __future__ import annotations
@@ -50,7 +55,7 @@ from pitwall.compat import is_windows
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -276,6 +281,56 @@ CREATE TABLE IF NOT EXISTS pit_stops (
 );
 CREATE INDEX IF NOT EXISTS ix_pit_stops_session ON pit_stops(session_id);
 -- end v5 race strategy
+-- v6 coachref: what each driver's live delta measures against, and practice drills (core/coachref.py)
+CREATE TABLE IF NOT EXISTS reference_choices (
+    driver_id INTEGER NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
+    game TEXT NOT NULL DEFAULT '',          -- '' + '' = every track (the driver's default)
+    track_id TEXT NOT NULL DEFAULT '',
+    kind TEXT NOT NULL,                     -- own_best | household_best | driver_best | lap
+    target_driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
+    lap_id INTEGER REFERENCES laps(id) ON DELETE SET NULL,
+    updated_unix REAL NOT NULL,
+    PRIMARY KEY (driver_id, game, track_id)
+);
+CREATE TABLE IF NOT EXISTS drills (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
+    session_id TEXT REFERENCES sessions(id) ON DELETE SET NULL,   -- session it started in
+    game TEXT NOT NULL,
+    track_id TEXT NOT NULL,
+    track_length_m REAL,
+    car_id TEXT,
+    track_model_version INTEGER,
+    corner TEXT NOT NULL,                   -- learned corner key (join key)
+    corner_label TEXT,                      -- official short label at start ("T3"), display only
+    corner_voice TEXT,                      -- radio form at start ("Turn 3")
+    apex_m REAL,
+    kind TEXT NOT NULL,                     -- brake_point | min_speed | exit_speed | entry_speed
+    source TEXT NOT NULL,                   -- work_on | manual | radio
+    observation_kind TEXT,
+    laps_target INTEGER NOT NULL,
+    target REAL,                            -- m (brake_point) or km/h
+    tolerance REAL NOT NULL,                -- m or km/h (speed drills: the step)
+    unit TEXT NOT NULL,                     -- 'm' | 'km/h'
+    baseline REAL,
+    ref_lap_id INTEGER REFERENCES laps(id) ON DELETE SET NULL,
+    ref_kind TEXT,
+    ref_driver_id INTEGER REFERENCES drivers(id) ON DELETE SET NULL,
+    status TEXT NOT NULL,                   -- active | completed | stopped | abandoned
+    stop_reason TEXT,
+    started_unix REAL NOT NULL,
+    ended_unix REAL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    scored INTEGER NOT NULL DEFAULT 0,
+    hits INTEGER NOT NULL DEFAULT 0,
+    best_value REAL,
+    best_delta REAL,
+    trend TEXT,
+    laps TEXT NOT NULL DEFAULT '[]',        -- JSON DrillAttempt[] (<= 10)
+    detail TEXT NOT NULL DEFAULT '{}'       -- JSON: target_source, frozen reference and clamp, texts, note
+);
+CREATE INDEX IF NOT EXISTS ix_drills_driver ON drills(driver_id, started_unix);
+-- end v6 coachref
 """
 
 # Columns added after v1: (table, column, declaration). ADD COLUMN with a REFERENCES clause is allowed because the
@@ -363,8 +418,9 @@ class Database:
             try:
                 with closing(self.connect()) as conn:
                     # One write transaction taken up front: creating a table that an older database lacks (v3: goals,
-                    # v4: session_ai_pace) is a write, and as autocommit statements concurrent openers could get
-                    # "database is locked" at once (a read upgraded to a write is not retried); BEGIN IMMEDIATE waits.
+                    # v4: session_ai_pace, v5: strategy, v6: coachref) is a write, and as autocommit statements
+                    # concurrent openers could get "database is locked" at once (a read upgraded to a write is not
+                    # retried); BEGIN IMMEDIATE waits.
                     conn.executescript(f"BEGIN IMMEDIATE;\n{SCHEMA}\nCOMMIT;")
                     _migrate(conn)
                 return

@@ -8,7 +8,7 @@ import {
   chipText,
   chipsOf,
   slotChips,
-  type ChipKind,
+  type TransientKind,
   connectionPill,
   driveState,
   evidence,
@@ -443,9 +443,9 @@ describe("one band order (integration plan 2.2): one band at a time, the first m
 
 describe("chipsOf (integration plan 2.3): stateless, the highest rank within its life wins", () => {
   const T = 1_791_669_000;
-  const KINDS: ChipKind[] = ["penalty", "collision", "goal", "flashback", "pit_entry", "pit_exit", "fastest_lap"];
+  const KINDS: TransientKind[] = ["penalty", "collision", "goal", "flashback", "pit_entry", "pit_exit", "fastest_lap"];
   /** A snapshot with one candidate of `kind`, `age` seconds old (the goal arrives as the /ws/live note). */
-  function input(cands: [ChipKind, number][]) {
+  function input(cands: [TransientKind, number][]) {
     const events = cands
       .filter(([k]) => k !== "goal")
       .map(([k, age]) => ev(k, T - age, { player: true }));
@@ -490,8 +490,26 @@ describe("chipsOf (integration plan 2.3): stateless, the highest rank within its
     expect(chipsOf(input([["penalty", -3]])).transient).toBeNull();
   });
 
-  it("no persistent chip before coachref (DRILL arrives with F9)", () => {
+  it("no persistent chip without a running drill; DRILL while one runs, whatever the transient chip", () => {
     expect(chipsOf(input([["penalty", 1]])).persistent).toBeNull();
+    expect(chipsOf({ ...input([["penalty", 1]]), drill: true })).toEqual({
+      transient: { kind: "penalty", ageS: 1 },
+      persistent: { kind: "drill", ageS: 0 },
+    });
+    expect(chipsOf({ ...input([]), drill: true }).persistent?.kind).toBe("drill");
+  });
+
+  it("coachref's reference notice ranks last (7) and lives its own 2 or 6 s, with its own words", () => {
+    expect(CHIP_RANK.notice).toBe(7);
+    const notice = { text: "Delta to Sam's best from the next lap", t: T - 1, lifeS: 6 };
+    expect(chipsOf({ ...input([]), notice }).transient).toEqual({ kind: "notice", ageS: 1, text: notice.text });
+    // every other chip beats it
+    for (const k of KINDS) expect(chipsOf({ ...input([[k, 2]]), notice }).transient?.kind, k).toBe(k);
+    // the 2 s hint is gone after 2 s
+    const hint = { text: "Change the reference when stopped", t: T - 3, lifeS: 2 };
+    expect(chipsOf({ ...input([]), notice: hint }).transient).toBeNull();
+    expect(chipText("notice", hint.text)).toBe(hint.text);
+    expect(chipText("drill")).toBe("DRILL");
   });
 });
 

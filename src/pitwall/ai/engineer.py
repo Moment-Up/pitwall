@@ -14,10 +14,14 @@
   (``voice.hub``), so ``deterministic_answer`` covers every intent with something worth saying.
 * ``_RULES`` is one ordered table (first match wins). ``tests/fixtures/intents.json`` pins where each of its questions
   goes (``tests/unit/test_engineer_intents_table.py``); a change to the table updates that fixture.
+* Practice drills (coachref): "start a drill on turn 3", "how's my drill going", "stop the drill" are control
+  intents answered by ``RaceEngineer.drill_handler`` (``core.coachref.CoachRef.radio_command``) at once, never by
+  the LLM; without a handler the engineer says drills are not available.
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import time
@@ -69,11 +73,50 @@ _CORNER_RE = re.compile(r"\b(?:(?:turn|corner)\s*(\d{1,2}|" + "|".join(_WORDS_TO
 # One ordered intent table (v0.2.0 plan 4.1): the first match wins. Every lane's intents in one order, so a question
 # that names two things goes where a driver means it ("inters" is weather before tyres, "damaged after the contact
 # with the car ahead" is damage before gaps, "my position on the brake" is braking, not race position). The coachref
-# drill rules join at the top (after radio_check) when that lane lands.
+# drill rules sit at the top, after radio_check: they name corners and say "stop".
 _AI = r"(?:ai|a\.?\s?i\.?|computer|bots?)"
+# --- coachref --- radio drill commands (``RaceEngineer.drill_handler``) and "who am I compared with?".
+# Only an imperative starts or stops a drill ("start a drill on turn 3", "please stop the drill", "drill turn 3",
+# "no, stop the drill"); a question that mentions a drill ("how did the drill go?", "should I do a drill at turn 4?")
+# asks for its status, and a negation ("don't start a drill", "do not stop the drill") does neither.
+_DRILL_LEAD = (
+    r"^\s*(?:(?:no|nope|yes|yeah|ok(?:ay)?|right|copy)\s*[,.!]+\s*)?"  # "No, stop the drill"
+    r"(?!.*?\b(?:don[\u2019']?t|do\s+not|not|never|no)\b.*?\bdrill\b)"  # no negation before "drill"
+    r"(?:(?:please|ok(?:ay)?|right|now|can\s+you|could\s+you|will\s+you|would\s+you|let[\u2019']?s|let\s+me|"
+    r"i\s+want\s+to|i[\u2019']?d\s+like\s+to|i\s+would\s+like\s+to|can\s+i|could\s+i)\s+)*"
+)
+_DRILL_STATUS = re.compile(
+    r"^\s*(?:how|what|when|why|was|were|did|does|do\s+(?:i|we|you)|is|are|should|which|who|where|has|have)\b.*\bdrill"
+    r"|\b(?:how[\u2019']?s|how is|how am i doing (?:on|with|in)|status of|progress (?:on|of))\b"
+    r"(?:\s+\w+){0,2}\s+drill\b"
+    r"|\bdrill (?:status|progress)\b",
+    re.I,
+)
+_DRILL_STOP = re.compile(_DRILL_LEAD + r"(?:stop|end|cancel|finish|abort|quit)\b(?:\s+\w+){0,2}\s+drill\b", re.I)
+_DRILL_START = re.compile(
+    _DRILL_LEAD + r"(?:(?:start|begin|run|do|set\s+up|give\s+me)\b(?:\s+\w+){0,3}\s+drill\b"
+    r"|drill\s+(?:on|at|for|turn|corner|t\s?\d))",
+    re.I,
+)
+# "who am I compared with?", "what's the reference?": names the live reference (facts: "Live delta ... reference").
+# Questions about time, a corner or the AI stay with their own rules ("what did I lose against the reference").
+_REFERENCE_WHO = re.compile(
+    r"^(?!.*\b(?:los[et]|losing|gain\w*|faster|slower|quicker|time|gap|delta|turn|corner|t\s?\d{1,2}|ai|computer|"
+    r"bots?|fuel|tyres?|tires?|setup|pit)\b)"
+    r".*\b(?:who|what|which)\S*(?:\s+\S+){0,4}?\s+(?:compared|comparing|racing|against|reference)\b",
+    re.I,
+)
+# --- coachref ---
 
 _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("radio_check", re.compile(r"\b(radio check|can you hear me|do you (?:read|copy)(?: me)?|mic check)\b", re.I)),
+    # --- coachref --- practice drills and the live reference, before "quiet", "focus" and a bare corner (they name
+    # corners and stop). A question that mentions a drill asks for its status; only an imperative starts or stops one.
+    ("drill_status", _DRILL_STATUS),
+    ("drill_stop", _DRILL_STOP),
+    ("drill_start", _DRILL_START),
+    ("reference", _REFERENCE_WHO),
+    # --- coachref ---
     (
         "control_quiet",
         re.compile(
@@ -230,7 +273,7 @@ _TOPICS: dict[str, set[str]] = {
     "sectors": {"session", "game", "laps"},
     "flags": {"session", "game", "flags", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "setup": {"session", "game", "corners", "observations", "compare", "setup", "balance"},  # balance: feat/technique
-    "focus": {"session", "game", "observations", "corners", "reference"},
+    "focus": {"session", "game", "observations", "corners", "reference", "drill"},  # drill: coachref
     "goals": {"session", "game", "goals", "progress"},  # lane motivation (goals, week, badges)
     "week": {"session", "game", "progress"},
     "badges": {"session", "game", "progress"},
@@ -238,11 +281,24 @@ _TOPICS: dict[str, set[str]] = {
     "braking": {"session", "game", "corners", "observations", "reference"},
     "lap_times": {"session", "game", "laps", "reference"},
     "last_lap": {"session", "game", "laps", "reference", "compare"},
-    "summary": {"session", "game", "laps", "corners", "observations", "fuel", "tyres", "ai", "goals", "strategy"},
+    "summary": {
+        "session",
+        "game",
+        "laps",
+        "corners",
+        "observations",
+        "fuel",
+        "tyres",
+        "ai",
+        "goals",
+        "strategy",
+        "drill",
+    },
     "ai_pace": {"session", "game", "ai"},  # pace vs AI difficulty
     "ai_level": {"session", "game", "ai"},
     "losing_time": {"session", "game", "corners", "compare", "observations", "reference"},
     "corner": {"session", "game", "reference"},
+    "reference": {"session", "game", "reference", "laps"},  # coachref: "who am I compared with?"
     # --- feat/technique ---
     "line": {"session", "game", "line", "reference"},
     "technique": {"session", "game", "technique", "reference", "observations"},
@@ -327,11 +383,17 @@ class EngineerAnswer:
     cited_text: str = ""  # the answer as grounded, with its [F12] citations (internal: audits, debugging)
 
 
+DRILL_INTENTS = frozenset({"drill_start", "drill_status", "drill_stop"})  # --- coachref ---
+DrillHandler = Callable[[Intent, str], tuple[str, dict[str, Any]]]
+
+
 class RaceEngineer:
     def __init__(self, provider: LLMProvider | None, max_tokens: int = 350, temperature: float = 0.2) -> None:
         self.provider = provider
         self.max_tokens = max_tokens
         self.temperature = temperature
+        # --- coachref --- drill intents go here (blocking: run in a worker thread), never to the LLM
+        self.drill_handler: DrillHandler | None = None
 
     async def answer(
         self, question: str, sheet: FactSheet, history: list[dict[str, str]] | None = None, use_llm: bool = True
@@ -340,6 +402,8 @@ class RaceEngineer:
         intent = detect_intent(question)
         if intent.name in ("control_quiet", "control_resume"):
             return self._control(intent, t0)
+        if intent.name in DRILL_INTENTS:  # --- coachref ---
+            return await self._drill(intent, question, t0)
         if intent.name == "radio_check":
             text = "Loud and clear. Radio check OK."
             return EngineerAnswer(
@@ -397,6 +461,32 @@ class RaceEngineer:
     def _select(intent: Intent, sheet: FactSheet) -> list[Fact]:
         topics = _TOPICS.get(intent.name, _TOPICS["general"])
         return sheet.select(topics, corner=intent.corner)
+
+    # --- coachref ---
+    async def _drill(self, intent: Intent, question: str, t0: float) -> EngineerAnswer:
+        """A practice-drill command: answered by the deterministic handler, never the LLM (no facts used)."""
+        handler = self.drill_handler
+        if handler is None:
+            text, control = "Drills aren't available right now.", {"action": intent.name, "drill_id": None}
+        else:
+            try:
+                text, control = await asyncio.to_thread(handler, intent, question)
+            except Exception:
+                log.exception("drill command failed")
+                text, control = "I couldn't do that with the drill just now.", {"action": intent.name, "drill_id": None}
+        return EngineerAnswer(
+            text=text,
+            speech=text,
+            intent=intent.name,
+            corner=intent.corner,
+            facts=[],
+            grounded=True,
+            fallback=False,
+            latency_ms=int((time.perf_counter() - t0) * 1000),
+            control=control,
+        )
+
+    # --- coachref ---
 
     def _control(self, intent: Intent, t0: float) -> EngineerAnswer:
         if intent.name == "control_quiet":
@@ -546,6 +636,8 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         return say(first("progress", contains="Badges"), first("progress", contains="Clean laps in a row"))
     if n == "compare":
         return say(first("compare"), first("reference"))
+    if n == "reference":  # --- coachref --- the live delta's reference (ai.facts "Live delta ..."), else the session's
+        return say(first("reference", contains="Live delta") or first("reference"))
     if n == "last_lap":
         last = first("laps", contains=LAST_LAP_PREFIX)
         lap = last.data.get("lap") if last is not None else None

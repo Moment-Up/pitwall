@@ -1,0 +1,46 @@
+{
+ "_fixture": {
+  "tier": "recorded",
+  "source": "real F1 25 PS5 captures (the owner's, not committed) streamed over loopback UDP into an isolated scratch Pitwall server (integrator e2e, coachref lane); demo drivers Ann and Ben stand in for the household",
+  "moment": "POST /api/coachref/drills from the Drive drill sheet on the Las Vegas grid (snapshot coachref.drill right after)"
+ },
+ "body": {
+  "id": 1,
+  "driver_id": 1,
+  "session_id": "c6a33a3fff36",
+  "game": "f1_25",
+  "track_id": "f1:31",
+  "car_id": "f1:team:41",
+  "corner": "T6",
+  "corner_label": "T12",
+  "corner_voice": "Turn 12",
+  "kind": "brake_point",
+  "skill_label": "Brake point",
+  "source": "manual",
+  "laps_target": 5,
+  "target": 3110.078486540241,
+  "tolerance": 5.0,
+  "unit": "m",
+  "baseline": null,
+  "target_text": "Brake within 5 m of Ben's braking point",
+  "note": "Braking assist is on, so the game helps with braking: these brake points are partly the assist's.",
+  "reference": {
+   "lap_id": 3,
+   "kind": "driver_best",
+   "driver_name": "Ben",
+   "label": "Ben's best"
+  },
+  "status": "active",
+  "stop_reason": null,
+  "started_unix": 1791744509.883459,
+  "ended_unix": null,
+  "attempts": [],
+  "hits": 0,
+  "scored": 0,
+  "best": null,
+  "best_delta": null,
+  "trend": null,
+  "summary_text": null,
+  "synthetic": false
+ }
+}

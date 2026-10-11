@@ -1,0 +1,20 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "hand-written from the coachref spec 6.2 / 6.3 (no backend yet)",
+    "moment": "PUT /choice while moving: applies from the next lap",
+    "notes": "Replace with a dump from a scratch server (spec 13 A7) once the backend lands. Demo names only."
+  },
+  "choice": {
+    "driver_id": 1,
+    "kind": "driver_best",
+    "target_driver_id": 2,
+    "lap_id": null,
+    "scope": "all_tracks",
+    "game": null,
+    "track_id": null,
+    "label": "Sam's best",
+    "updated_unix": 1791140000.0
+  },
+  "applies": "next_lap"
+}

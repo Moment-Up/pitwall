@@ -22,11 +22,17 @@ const ICON: Record<ThingIcon, ReactNode> = {
 };
 
 /** The things after de-duplication (lib/drive/complete.ts): usually three, two when Progress only repeated a fact the
- * card already shows. The row keeps three columns either way, so the card never changes size. */
-export function ThingsRow({ things }: { things: { items: readonly ThingView[] } }) {
+ * card already shows. The row keeps three columns either way, so the card never changes size. `workOn`: what takes
+ * the Work on slot instead of the recap's item (coachref: the result of a drill driven in this session, plan 2.6). */
+export function ThingsRow({ things, workOn = null }: { things: { items: readonly ThingView[] }; workOn?: ReactNode }) {
   return (
     <div className="pwc-end__things" role="list" aria-label="Today's 3 things">
-      {things.items.map((t) => (
+      {things.items.map((t) =>
+        t.kind === "work_on" && workOn ? (
+          <div key={t.kind} role="listitem" className="contents" data-thing="work_on" data-source="drill">
+            {workOn}
+          </div>
+        ) : (
         <ItemCard
           key={t.kind}
           role="listitem"
@@ -43,7 +49,8 @@ export function ThingsRow({ things }: { things: { items: readonly ThingView[] } 
             {t.evidence && <span className="pwc-item__ev">{t.evidence}</span>}
           </ItemCard.Content>
         </ItemCard>
-      ))}
+        ),
+      )}
     </div>
   );
 }

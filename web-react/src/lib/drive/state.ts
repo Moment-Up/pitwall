@@ -26,8 +26,9 @@
 //
 // Chips (integration plan 2.3): chipsOf() is stateless. Every candidate younger than its life is eligible and the
 // highest rank wins; nothing is queued, and a lower chip that loses never shows. Ranks: PENALTY, CONTACT, GOAL
-// REACHED, FLASHBACK, PIT ENTRY / PIT EXIT, FASTEST LAP (the reference notice joins at 7 with coachref). The
-// persistent chip (DRILL, coachref) is shown on the normal line only. StatusContent renders exactly what it returns.
+// REACHED, FLASHBACK, PIT ENTRY / PIT EXIT, FASTEST LAP, then coachref's reference notice ("Delta to Sam's best from
+// the next lap" 6 s, "Change the reference when stopped" 2 s). The persistent chip is coachref's DRILL while a drill
+// runs, shown on the normal line only. StatusContent renders exactly what it returns.
 
 import type { MotivationNote } from "../endpoints/motivation";
 import { badgeFor } from "../live";
@@ -38,8 +39,11 @@ import { ageText, finite } from "./text";
 export type DriveState = "offline" | "no_data" | "stale" | "ended" | "red_flag" | "pit_lane" | "garage" | "on_track";
 export type SafetyCar = "full" | "virtual" | "formation_lap";
 export type IncidentKind = "penalty" | "collision" | "flashback" | "fastest_lap" | "pit_entry" | "pit_exit";
-/** The status slot's 6 s chip: an incident, or (lane motivation) a goal reached on the lap just completed. */
-export type ChipKind = IncidentKind | "goal";
+/** The status slot's short-lived chip: an incident, (lane motivation) a goal reached on the lap just completed, or
+ * (coachref) the reference notice. */
+export type TransientKind = IncidentKind | "goal" | "notice";
+/** Every chip kind: the transient ones and the persistent DRILL chip (coachref). */
+export type ChipKind = TransientKind | "drill";
 
 export interface YellowFlag {
   /** The zone's game number (the numbering race control uses). */
@@ -64,7 +68,7 @@ export interface DriveOverlays {
   chequered: boolean;
   /** The transient chip (chipsOf): the highest-ranked candidate still within its life, or null. */
   chip: DriveChip | null;
-  /** The persistent chip (chipsOf: DRILL with coachref), shown on the normal line only; null until then. */
+  /** The persistent chip (chipsOf: DRILL while a coachref drill runs), shown on the normal line only. */
   persistent: DriveChip | null;
 }
 
@@ -236,22 +240,31 @@ function blueOf(s: SnapshotNext): boolean {
   return knowable ? hits.some((h) => h.inZone) : true;
 }
 
-/** A status-slot chip and how long ago its fact happened (s, never negative). */
+/** A status-slot chip and how long ago its fact happened (s, never negative). `text`: the notice's own words. */
 export interface DriveChip {
   kind: ChipKind;
   ageS: number;
+  text?: string;
 }
 
 export interface DriveChips {
   /** At most one short-lived chip: the highest rank among the candidates still within their life. */
   transient: DriveChip | null;
-  /** The persistent chip (DRILL, with coachref); null until then. */
+  /** The persistent chip: DRILL while a coachref drill runs, else null. */
   persistent: DriveChip | null;
+}
+
+/** coachref's reference notice (lib/drive/notice.ts): its words, when it was shown (device clock, unix s) and for how
+ * long (2 s for the locked hint, 6 s for a change from the next lap). */
+export interface ChipNotice {
+  text: string;
+  t: number;
+  lifeS: number;
 }
 
 /** Transient chip ranks (plan 2.3): lower wins. A goal beats a flashback, a pit message and a fastest lap; a penalty
  * and a contact beat a goal (the driver needs to know first). */
-export const CHIP_RANK: Readonly<Record<ChipKind, number>> = Object.freeze({
+export const CHIP_RANK: Readonly<Record<TransientKind, number>> = Object.freeze({
   penalty: 1,
   collision: 2,
   goal: 3,
@@ -259,10 +272,11 @@ export const CHIP_RANK: Readonly<Record<ChipKind, number>> = Object.freeze({
   pit_entry: 5,
   pit_exit: 5,
   fastest_lap: 6,
+  notice: 7,
 });
 
-/** How long each transient chip may show (s). */
-export const CHIP_LIFE_S: Readonly<Record<ChipKind, number>> = Object.freeze({
+/** How long each transient chip may show (s). The notice's own life (2 or 6 s) comes with it (ChipNotice.lifeS). */
+export const CHIP_LIFE_S: Readonly<Record<TransientKind, number>> = Object.freeze({
   penalty: CHIP_SHOW_S,
   collision: CHIP_SHOW_S,
   goal: CHIP_SHOW_S,
@@ -270,6 +284,7 @@ export const CHIP_LIFE_S: Readonly<Record<ChipKind, number>> = Object.freeze({
   pit_entry: CHIP_SHOW_S,
   pit_exit: CHIP_SHOW_S,
   fastest_lap: CHIP_SHOW_S,
+  notice: CHIP_SHOW_S,
 });
 
 /** Device and server clocks may disagree by this much: a fact "from the future" by up to 2 s is still fresh. */
@@ -281,23 +296,29 @@ export interface ChipsInput {
   nowS: number;
   /** The newest /ws/live goal note (lane motivation); only a note about this session counts. */
   note?: MotivationNote | null;
+  /** coachref's reference notice, while it shows (lib/drive/notice.ts). */
+  notice?: ChipNotice | null;
+  /** A coachref drill runs: the persistent DRILL chip. */
+  drill?: boolean;
 }
 
 /** The status slot's chips (plan 2.3). Stateless: the same input always gives the same chips. */
-export function chipsOf({ snap: s, nowS, note }: ChipsInput): DriveChips {
+export function chipsOf({ snap: s, nowS, note, notice = null, drill = false }: ChipsInput): DriveChips {
   let best: DriveChip | null = null;
-  const offer = (kind: ChipKind, t: number) => {
+  const offer = (kind: TransientKind, t: number, lifeS: number = CHIP_LIFE_S[kind], text?: string) => {
     const ageS = nowS - t;
-    if (ageS < -CLOCK_SKEW_S || ageS > CHIP_LIFE_S[kind]) return;
-    const c = { kind, ageS: Math.max(0, ageS) };
-    if (!best || CHIP_RANK[kind] < CHIP_RANK[best.kind] || (CHIP_RANK[kind] === CHIP_RANK[best.kind] && c.ageS < best.ageS)) {
-      best = c;
-    }
+    if (ageS < -CLOCK_SKEW_S || ageS > lifeS) return;
+    const c: DriveChip = text != null ? { kind, ageS: Math.max(0, ageS), text } : { kind, ageS: Math.max(0, ageS) };
+    const rank = CHIP_RANK[kind];
+    const bestRank = best ? CHIP_RANK[best.kind as TransientKind] : Infinity;
+    if (!best || rank < bestRank || (rank === bestRank && c.ageS < best.ageS)) best = c;
   };
   for (const e of s.events) if (playerIncident(e) && finite(e.t)) offer(e.kind as IncidentKind, e.t);
   // lane motivation: GOAL REACHED after the /ws/live note of THIS session
   if (note && note.session_id === s.session_id && finite(note.t)) offer("goal", note.t);
-  return { transient: best, persistent: null };
+  // coachref: the reference notice, last in rank (a newer notice replaces it in its store)
+  if (notice && notice.text && finite(notice.t)) offer("notice", notice.t, notice.lifeS, notice.text);
+  return { transient: best, persistent: drill ? { kind: "drill", ageS: 0 } : null };
 }
 
 /** The chips the status slot shows (plan 2.3, "Maximum"): on an iPad's normal line the transient chip and the
@@ -321,13 +342,15 @@ export interface DriveStateResult {
 
 /** One state plus overlays; the first matching state wins (4.7). Overlays combine with red flag, pit lane, garage
  * and on track only. D4 "ended" is a server-kept fact and wins over stale (see the header). `goalNote`: the newest
- * /ws/live "motivation" note (lane motivation), for the GOAL REACHED chip. */
+ * /ws/live "motivation" note (lane motivation), for the GOAL REACHED chip; `coachref`: the reference notice and
+ * whether a drill runs (the DRILL chip). */
 export function driveState(
   s: SnapshotNext | null,
   wsConnected: boolean,
   nowS: number,
   memo?: DriveMemo | null,
   goalNote?: MotivationNote | null,
+  coachref: { notice?: ChipNotice | null; drill?: boolean } = {},
 ): DriveStateResult {
   const m = nextMemo(s, memo);
   if (!wsConnected) return { state: "offline", overlays: NO_OVERLAYS, memo: m };
@@ -338,7 +361,7 @@ export function driveState(
   if (phase.kind === "ended") {
     return { state: "ended", overlays: phase.by === "chequered" ? { ...NO_OVERLAYS, chequered: true } : NO_OVERLAYS, memo: m };
   }
-  const chips = chipsOf({ snap: s, nowS, note: goalNote });
+  const chips = chipsOf({ snap: s, nowS, note: goalNote, notice: coachref.notice, drill: coachref.drill });
   const overlays: DriveOverlays = {
     safetyCar: safetyCar(s),
     yellow: yellowOf(s),
@@ -554,6 +577,8 @@ export function evidence(s: SnapshotNext | null): { synthetic: boolean; replay: 
 }
 
 const CHIP_TEXT: Record<ChipKind, string> = {
+  notice: "", // coachref: the notice's own words (DriveChip.text)
+  drill: "DRILL", // coachref: the chip itself shows the drill (DrillStatusChip)
   penalty: "PENALTY",
   collision: "CONTACT",
   flashback: "FLASHBACK · lap won't count",
@@ -563,7 +588,7 @@ const CHIP_TEXT: Record<ChipKind, string> = {
   goal: "GOAL REACHED",
 };
 
-/** The 6 s chip's words. */
-export function chipText(kind: ChipKind): string {
-  return CHIP_TEXT[kind];
+/** A chip's words: the notice's own text, else the kind's. */
+export function chipText(kind: ChipKind, text?: string): string {
+  return text || CHIP_TEXT[kind];
 }

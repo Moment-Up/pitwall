@@ -22,6 +22,7 @@ from pitwall.adapters.base import GameAdapter
 from pitwall.analysis.brake_prior import BrakeEnvelope, PriorRefresher
 from pitwall.analysis.field_model import FieldSnapshot
 from pitwall.config import Settings
+from pitwall.core.coachref import CoachRef
 from pitwall.core.lap_processor import AnalysisWorker, LapProcessor
 from pitwall.core.live import LiveState
 from pitwall.core.session import SessionManager
@@ -193,6 +194,12 @@ class Runtime:
         self.processor = LapProcessor(self.db, self.writer, self.live)
         self.worker = AnalysisWorker(self.processor)
         self.motivation = MotivationWorker(self.db, self.writer, self.live)  # lane motivation: goals reached
+        # --- coachref --- reference choice + practice drills; their changes run on the lap-analysis thread
+        self.coachref = CoachRef(
+            self.db, self.writer, self.live, self.drivers, run_task=self.worker.submit_task, processor=self.processor
+        )
+        self.processor.coachref = self.coachref
+        # --- coachref ---
         self.inputs: dict[int, _Input] = {}
         self.ac: _AcInput | None = None  # Assetto Corsa client (when enabled with a console IP)
         self.input_errors: dict[str, str] = {}  # integration key -> last bind/start error (Connect page)
@@ -596,6 +603,7 @@ class Runtime:
             for inp in self.inputs.values():
                 self._stop_input(inp)
             self.inputs.clear()
+        self.coachref.close()  # --- coachref ---
         self.worker.join()
         self.worker.close()
         self.motivation.close()  # lane motivation

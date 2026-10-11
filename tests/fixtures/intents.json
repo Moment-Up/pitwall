@@ -1,5 +1,5 @@
 {
-  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. The coachref drill rows join with F9.",
+  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge.",
   "questions": [
     {"question": "How am I doing so far?", "intent": "summary", "corner": null, "from": "review"},
     {"question": "What's my gap to the AI?", "intent": "ai_pace", "corner": null, "from": "review"},
@@ -163,6 +163,30 @@
     {"question": "Radio check", "intent": "radio_check", "corner": null, "from": "F1"},
     {"question": "Can you hear me?", "intent": "radio_check", "corner": null, "from": "F1"},
     {"question": "Ok you can talk again", "intent": "control_resume", "corner": null, "from": "F1"},
-    {"question": "Resume coaching please", "intent": "control_resume", "corner": null, "from": "F1"}
+    {"question": "Resume coaching please", "intent": "control_resume", "corner": null, "from": "F1"},
+    {"question": "Start a drill on turn 3", "intent": "drill_start", "corner": "T3", "from": "coachref"},
+    {"question": "Let's do a drill on turn 5", "intent": "drill_start", "corner": "T5", "from": "coachref"},
+    {"question": "Drill turn 3", "intent": "drill_start", "corner": "T3", "from": "coachref"},
+    {"question": "Okay, start a drill at turn 7", "intent": "drill_start", "corner": "T7", "from": "coachref"},
+    {"question": "Could you start a brake point drill on turn 4?", "intent": "drill_start", "corner": "T4", "from": "coachref"},
+    {"question": "Can you stop the drill?", "intent": "drill_stop", "corner": null, "from": "coachref"},
+    {"question": "Stop the drill", "intent": "drill_stop", "corner": null, "from": "coachref"},
+    {"question": "Please stop the drill", "intent": "drill_stop", "corner": null, "from": "coachref"},
+    {"question": "No, stop the drill", "intent": "drill_stop", "corner": null, "from": "coachref"},
+    {"question": "How am I doing on the drill?", "intent": "drill_status", "corner": null, "from": "coachref"},
+    {"question": "What's the target for the drill?", "intent": "drill_status", "corner": null, "from": "coachref"},
+    {"question": "Is my drill target close?", "intent": "drill_status", "corner": null, "from": "coachref"},
+    {"question": "Do I have a drill running?", "intent": "drill_status", "corner": null, "from": "coachref"},
+    {"question": "How do I do the turn 3 drill?", "intent": "drill_status", "corner": "T3", "from": "coachref"},
+    {"question": "How do I finish the drill?", "intent": "drill_status", "corner": null, "from": "coachref"},
+    {"question": "What drill should I do?", "intent": "drill_status", "corner": null, "from": "coachref"},
+    {"question": "How's my drill going?", "intent": "drill_status", "corner": null, "from": "coachref"},
+    {"question": "How did the drill go?", "intent": "drill_status", "corner": null, "from": "coachref"},
+    {"question": "Should I do a drill at turn 4?", "intent": "drill_status", "corner": "T4", "from": "coachref"},
+    {"question": "Don't start a drill", "intent": "general", "corner": null, "from": "coachref"},
+    {"question": "Do not stop the drill", "intent": "general", "corner": null, "from": "coachref"},
+    {"question": "Who am I compared with?", "intent": "reference", "corner": null, "from": "coachref"},
+    {"question": "What's the reference?", "intent": "reference", "corner": null, "from": "coachref"},
+    {"question": "Which lap am I compared against?", "intent": "reference", "corner": null, "from": "coachref"}
   ]
 }

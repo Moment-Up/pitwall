@@ -15,6 +15,11 @@
 // with one FOCUS row, and no Radio line (the radio strip below says it). Go live stays in the radio strip (one copy
 // on Drive). Unknown values are "-". The columns never hide what does not fit (no overflow: hidden): the slots are
 // capped instead, and the fit is measured in a browser at both iPad sizes.
+//
+// Coachref (plan 2.5, F9): "Delta reference" is the reference control (Sam's best ⌄) on a server with coachref, the
+// static line otherwise. Column 3 becomes the Drill block while a drill runs or its result waits for Done (no FOCUS
+// rows: the plan is the drill corner only); between runs a suggested drill ("Drill T3 · Brake point") joins the
+// "Last lap:" point it comes from, in place of the FOCUS row.
 
 import { Avatar, Button, Card, Chip } from "@heroui/react";
 import { memo, useState, type ReactNode } from "react";
@@ -23,9 +28,12 @@ import { micChipView, shallowEqual, useRadio } from "../../../components/radio";
 import { usePrefs } from "../../../hooks/stores";
 import { inkOn } from "../../../lib/drivers";
 import { prefs } from "../../../lib/prefs";
-import type { ReadyCard as ReadyCardView } from "../../../lib/drive/model";
+import type { DriveDrillView, ReadyCard as ReadyCardView } from "../../../lib/drive/model";
+import type { RefControlView } from "../../../lib/drive/reference";
+import { DrillBlock } from "./DrillResult";
 import { GoalRow } from "./GoalRow";
 import { TimeText, useMediaQuery } from "./parts";
+import { RefControl } from "./RefPicker";
 import { SeatSwitcher } from "./SeatSwitcher";
 import { radioSeat, sameProps } from "./view";
 
@@ -112,7 +120,28 @@ function LargeTextHint() {
   );
 }
 
-function TargetColumn({ ready }: { ready: ReadyCardView }) {
+/** coachref: "Delta reference" as the control (Sam's best ⌄) with the lap it resolves to and the braking note;
+ * on a server without coachref, the static line. */
+function ReferenceKv({ refControl, text }: { refControl: RefControlView | null | undefined; text: string }) {
+  if (!refControl?.available) {
+    return (
+      <Kv k="Delta reference" text>
+        {text}
+      </Kv>
+    );
+  }
+  return (
+    <div className="pwc-refready">
+      <div className="pwc-kv__k">Delta reference</div>
+      <RefControl view={refControl} variant="ready" />
+      <span className="pwc-kv__note">{refControl.waiting ?? text}</span>
+      {refControl.reason && <span className="pwc-refready__note">{refControl.reason}</span>}
+      {refControl.brakeNote && <span className="pwc-refready__note">{refControl.brakeNote}</span>}
+    </div>
+  );
+}
+
+function TargetColumn({ ready, refControl }: { ready: ReadyCardView; refControl: RefControlView | null }) {
   const { target, lastRun, goal } = ready;
   const between = ready.phase === "between_runs" && lastRun;
   return (
@@ -165,22 +194,45 @@ function TargetColumn({ ready }: { ready: ReadyCardView }) {
             <Unknown />
           )}
         </Kv>
-        <Kv k="Delta reference" text>
-          {target.reference}
-        </Kv>
+        <ReferenceKv refControl={refControl} text={target.reference} />
       </div>
       {goal && <GoalRow goal={goal} />}
     </section>
   );
 }
 
-function TodayColumn({ ready }: { ready: ReadyCardView }) {
+/** What column 3 holds besides the plan (coachref): the Drill block and how many FOCUS rows still fit. */
+function todayDrill(
+  phase: ReadyCardView["phase"],
+  drill: DriveDrillView | null | undefined,
+): { block: DriveDrillView["block"]; drilling: boolean; focusRows: number | null } {
+  const block = drill?.block ?? null;
+  if (block && block.kind !== "none") return { block, drilling: true, focusRows: 0 }; // the drill corner only
+  // between runs a suggested drill joins the last lap's point, in place of the FOCUS row
+  if (block && phase === "between_runs" && block.suggestion) return { block, drilling: false, focusRows: 0 };
+  return { block: null, drilling: false, focusRows: null };
+}
+
+function TodayColumn({
+  ready,
+  drill,
+  beginner,
+}: {
+  ready: ReadyCardView;
+  drill: DriveDrillView | null;
+  beginner: boolean;
+}) {
   const { today, lastLap } = ready;
   const p = lastLap?.point;
+  const d = todayDrill(ready.phase, drill);
+  const rows = d.focusRows ?? today.focusRows;
   return (
     <section className="pwc-ready__col" aria-label="Today">
-      <h3 className="pwc-ready__h">Today</h3>
-      {lastLap && p?.text && (
+      <h3 className="pwc-ready__h">{d.drilling ? "Drill" : "Today"}</h3>
+      {d.block && d.drilling && drill && (
+        <DrillBlock block={d.block} corners={drill.corners} track={drill.track} lapsLeft={drill.lapsLeft} beginner={beginner} />
+      )}
+      {!d.drilling && lastLap && p?.text && (
         <div className="pwc-ready__last" data-last-lap>
           <p className="pwc-ready__next">
             <b className="pwc-ready__lbl">{lastLap.label}:</b>{" "}
@@ -194,13 +246,16 @@ function TodayColumn({ ready }: { ready: ReadyCardView }) {
           {p.evidence && <p className="pwc-ready__ev">{p.evidence}</p>}
         </div>
       )}
+      {d.block && !d.drilling && drill && (
+        <DrillBlock block={d.block} corners={drill.corners} track={drill.track} lapsLeft={drill.lapsLeft} beginner={beginner} />
+      )}
       <div className="pwc-focusrow">
-        {today.radioCalls && (
+        {!d.drilling && today.radioCalls && (
           <div className="pwc-focusrow__f">
             <b className="pwc-ready__line">{today.radioCalls}</b>
           </div>
         )}
-        {today.focus.slice(0, today.focusRows).map((f, i) => (
+        {today.focus.slice(0, rows).map((f, i) => (
           <div key={f.name} className="pwc-focusrow__f" data-extra={i > 0 ? "" : undefined}>
             <b>
               <Chip size="md" className="pwc-focus">
@@ -223,7 +278,16 @@ function TodayColumn({ ready }: { ready: ReadyCardView }) {
   );
 }
 
-export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardView }) {
+export interface ReadyCardProps {
+  ready: ReadyCardView;
+  /** coachref: the delta reference control (Target column). */
+  refControl?: RefControlView | null;
+  /** coachref: the Drill block (Today column). */
+  drill?: DriveDrillView | null;
+  beginner?: boolean;
+}
+
+export const ReadyCard = memo(function ReadyCard({ ready, refControl = null, drill = null, beginner = false }: ReadyCardProps) {
   const { seat } = ready;
   return (
     <Card className="pwc-ready pw-chamfer pwc-span3" data-phase={ready.phase}>
@@ -245,8 +309,8 @@ export const ReadyCard = memo(function ReadyCard({ ready }: { ready: ReadyCardVi
         </div>
         <SeatSwitcher />
       </section>
-      <TargetColumn ready={ready} />
-      <TodayColumn ready={ready} />
+      <TargetColumn ready={ready} refControl={refControl} />
+      <TodayColumn ready={ready} drill={drill} beginner={beginner} />
       <div className="pwc-ready__foot flex items-center gap-3">
         <span className="min-w-0 truncate">{ready.footer ?? ""}</span>
         <LargeTextHint />

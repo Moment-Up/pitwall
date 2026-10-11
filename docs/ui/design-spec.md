@@ -596,6 +596,62 @@ export function driveModel(input: { snap: SnapshotNext | null; connected: boolea
   build check greps the Drive chunk for `recharts` and fails if it is there.
 - **Budget:** no long task over 50 ms in 10 minutes of iPad Safari profiling; memory flat over one hour.
 
+### 4.12 Coachref additions: reference choice and practice drills
+
+Backend: `core/coachref.py`, `/api/coachref` (JSON contract in the coachref design spec, section 6). Copy is plain
+British English and backend texts are shown verbatim (P9). Every setting is made stationary or behind the moving lock.
+
+- **Delta panel (4.3 #5).** The label row is a reference control: a ghost `Button` 56 px high, 22 px text
+  `Delta to · {label} ▾` (`snapshot.reference.label`, else the choice's label, else "Your best"; beginners
+  `vs {label_to} lap`: own `vs your best lap`, the radio's name for it), then the existing chip (`Lap 7 · 1:36.953 ·
+  3 Oct`, a 20 px initials avatar when not own). Under the number, when `coachref.reason` is set, a muted line
+  `"Using your best: {reason}"` (at most two lines, so the fallback is never cut off); `coachref.pending` adds a
+  15 px muted `From next lap` tag; `Held for the drill` only while the drill runs. A choice saved before the session
+  is resolved and published as soon as the session's game, track, layout and car are known (before the first lap);
+  until then the Ready card and the delta panel say the same words, `{label} from the end of your first lap`, and the
+  cue band says "Braking calls start after your first lap".
+- **Moving lock** (pure, tested): locked when `connection.status == "live"`, `frame.pit_status` not 1/2, no
+  PAUSED / NOT_RACING quality bit and `speed_kph` null or >= 30. A locked tap offers only a one-row Popover **Back to
+  your best** (PUT `own_best` at the effective choice's scope; applies from the next lap; the Popover closes by itself
+  after 5 s, as it covers the delta) when the choice is not own, else the status-slot hint "Change the reference
+  when stopped" (2 s).
+- **Picker** (unlocked; `Popover` on iPad, Pro `Sheet` on phone; rows >= 56 px from `GET /options`): Your best,
+  Family record, one row per other driver (unavailable rows disabled with the reason in 15 px), `A saved lap…`
+  (nested list of the `lap` options) and a `Switch` **Only at {track}** (off = every track); it refreshes every 2 s
+  while open (the game's car, assists and temperatures arrive in a session's first seconds) and shows warnings as
+  sentences ("Track temperature differs by 18 °C"). `applies`: `now` closes silently, `next_lap` shows `{Label} from
+  next lap` (6 s, two lines at most on a phone), `after_drill` `{Label} after the drill`.
+- **Ready card (4.9).** Target column: the same control at 64 px; when the choice is not own, add "Braking calls use
+  your own braking points where {name} brakes later" (15 px). Today column, top block **Drill**: with a D6 pick,
+  `Drill {label} · {skill}` (64 px primary, its mapped kind, 5 laps, POST `/drills` `source: "work_on"`) and
+  `Choose a corner…` (56 px secondary); an unavailable kind shows its reason (15 px muted). Active:
+  `Drill · T3 · Brake point · 2 of 5 done · 1 hit`, the `target_text` and **Stop drill** (56 px). Just ended
+  (`coachref.drill.status != "active"`): **Drill result** (hits / scored, best, trend chip `Closer` / `Steady` /
+  `Drifting` / `Rising` / `Dropping`, attempt dots filled = hit, ring = miss, dash = unmeasured, each with an
+  `aria-label`), **Again** and **Done** (POST `/drills/{id}/dismiss`: the result stays published for its driver, also
+  after a driver change or in a later session, until Done). The card still never grows: when the reference control,
+  its lap and the braking note make a column taller than the card (between runs), that column scrolls inside the
+  card.
+- **Drill sheet** (stationary; Pro `Sheet` phone, `Modal` iPad): corner list (official label and name, `FOCUS` /
+  `Work on` chips, 56 px rows), skill `Segment` from `GET /drills/options?corner=` (disabled kinds show their reason,
+  with `target_text` and `note`), laps `Segment` 3 / 5 / 8 / 10 (in a race it starts on the largest that fits the
+  laps left, at least 3), tolerance `Segment` from `tolerance_choices` (brake point: `Window before the point` 3 m /
+  5 m / 10 m: past the point counts only when the corner was faster), **Start drill** (64 px primary; on a phone it
+  stays in view at the bottom and the corner list does not scroll on its own). A corner without an official name
+  shows its long form ("Turns 6-9, part 2"). The close button is 44 px. A 409 shows its sentence inline.
+- **While driving.** Status slot (4.8): a fixed-width chip (<= 220 px, 22 px / 600, 44 px tall)
+  `DRILL · T3 · 3/5 · 2 ✓` (accent-soft like `FOCUS`; a darker accent text in the light theme for contrast), replaced
+  by an incident chip for its 6 s; a tap opens a Popover with the `target_text` and **Stop drill** (allowed while
+  moving; it closes by itself after 5 s). Hero: a `DRILL` chip in place of `FOCUS` on the drill corner. Cue band
+  unchanged (the plan holds only the drill corner, `cues.drill_corner`). Coach card while
+  `coachref.drill.status == "active"`: the drill corner's `coach.by_corner[corner]` when its `kind == "drill"` (tag
+  `Drill`: the text counts the attempt; `short` moving, `text` stationary), else muted `Drill on {label}: first
+  attempt on your next lap`; other corners muted `Drill on {label}: other corners are quiet`. With no corner ahead
+  yet (a new session's first lap: the live track model comes with its first lap) the card shows the drill's progress
+  line, not "Coaching starts after your first clean lap". The Session complete card never shows a drill attempt as
+  its Work on point; a drill driven in the session takes an empty slot instead: `Drill T12 · Brake point: 2 of 2 on
+  the point (2 of 5 laps)`.
+
 ---
 
 ## 5. Drive › Car, Track, Radio; phones and other sizes
@@ -706,7 +762,12 @@ The beginner's page. Top to bottom (general to specific):
    `−1.20`: to a beginner a minus reads as a loss); **Steadiness** ("your clean laps
    were within 1.4 s of each other", max − min of clean laps). Advanced profiles add **Best sectors combined** and
    **Gap to your best ever / family record** (D2).
-2. **Work on** (1 / 3 / 5 cards for beginner / intermediate / advanced, "Show more" for the rest). Source:
+2. **Work on** (1 / 3 / 5 cards for beginner / intermediate / advanced, "Show more" for the rest). **[coachref]**
+   A fourth action **Drill this** (44 px, secondary) when the live session is running (telemetry live, not ended),
+   the same game + track (+ car when known), its seated owner is this session's driver and the observation kind maps
+   to a drill kind. It asks `GET /drills/options?corner=` first: a kind that cannot run there shows the reason
+   (15 px muted) instead of the button. POST `/drills` (`source: "work_on"`); 201 -> `Drill started: {target_text}`,
+   409 -> the sentence inline, scrolled into view. Source:
    `analysis.observations`, non-positive, ranked by `priority` then `impact_s`, preferring a repeated `consistency`.
    Each card (HeroUI `Card`): corner chip (official label and name), a 120 px mini map with the corner highlighted, the
    coach's text verbatim (`text_simple` for simple-wording profiles), an evidence line ("Seen on 3 of your last 5
@@ -744,7 +805,14 @@ call behind an inline confirmation.
 - **Pickers:** two 56 px HeroUI `Select`s: **A · Reference** (cyan `--pw-ref` dot) and **B · Your lap**. Options
   list lap time, sectors (standing colours) and status words. Only clean laps can be A, as today. A can also be
   **another driver's best lap** here (family compare: their `stats.best_laps`; `/api/compare` accepts any two lap ids
-  and keeps its compatibility checks).
+  and keeps its compatibility checks). **[coachref]** Picker A's **Family** group comes from `GET
+  /api/coachref/candidates?lap_id={B}` (`Your best here` and each driver's best *compatible* lap; unavailable ones
+  disabled with the reason), and every pair loads `GET /api/coachref/compare` (a superset of `/api/compare` with
+  `reference`): when `reference.own` is false, the picker title, chart captions and corner explainer say
+  `reference.label` ("Sam's best") instead of "the reference", and the observation is the reworded one. A small
+  **Drive against this lap** button next to A (another driver's lap, B's driver viewed) PUTs `/choice {kind: "lap",
+  lap_id}` after an inline confirmation that names the one lap it stays on: "Drive against Alex's lap 3 (1:36.953) at
+  Las Vegas? It stays on this lap."
 - **Compatibility** (`comparison.compatibility`): warnings as a HeroUI `Alert` (warning) above the charts; a block
   shows its reason instead of the charts.
 - **Charts** (Pro charts, Recharts `syncId` so one cursor drives all; data from `/api/laps/{id}/trace?step=5`):
@@ -792,6 +860,7 @@ Per driver (Pro `Segment` with avatars) and per track + car (`Select`s):
 | **Habits** | Observations that carry a `consistency` string ("4 of the last 5 laps"), verbatim | `analysis.observations` |
 | **Recently fixed** | Corners whose average loss fell below the coaching threshold | D5 |
 | **The radio will focus on** | `cues.focus` with `cues.cues[].reason` | Live snapshot when this driver is in the seat and a plan exists; else `-` with the reason |
+| **Drills** (coachref) | After Habits: rows (56 px) `{corner_label} {corner name} · {skill_label} · {hits} of {scored} on the point`, then `date · Best: {best} · vs {reference.label} · Stopped after 2 of 5 laps: the driver changed`, a trend chip and a chevron; tap -> Sheet with `target_text`, `note`, per-attempt rows (against the point in words; speeds for speed drills) and **See it on the lap**. Empty: "No drills here yet. Start one from Drive before a run, or say "start a drill on turn 3"." | `GET /api/coachref/drills?driver_id=&game=&track_id=&car_id=` |
 
 ### 6.9 Progress (`#/review/progress`)
 

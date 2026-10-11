@@ -13,7 +13,7 @@ import { sameProps } from "./view";
 
 export const CoachCard = memo(function CoachCard({ coach }: { coach: CoachView }) {
   const chipText = coach.heading ?? coach.tagText;
-  const tone = coach.heading ? "warning" : coach.tag === "good" ? "success" : "warning";
+  const tone = coach.heading ? "warning" : coach.tag === "good" ? "success" : coach.tag === "drill" ? "accent" : "warning";
   return (
     <Card className="pwc-coach">
       <p className="pwc-coach__text" data-size={coach.text ? coach.size : 26} data-clamp={coach.clamp ? "" : undefined}>

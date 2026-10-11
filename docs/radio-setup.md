@@ -110,11 +110,19 @@ To compare voices by ear, open `/api/voicelab` on the iPad (`PITWALL_VOICELAB_DI
 
 "How are my tyres?" · "What's my fuel situation?" · "Where am I losing time?" · "Where should I brake for
 turn one?" · "Compare that lap to my best." · "Give me one thing to work on." · "Stop talking for two laps." ·
-"You can talk again."
+"You can talk again." · "Start a drill on turn 3." · "How's my drill going?" · "Stop the drill." · "Who am I
+compared with?"
 
-Fuel, tyres, lap times and radio control are answered instantly from telemetry. Analysis questions go to the
-language model if you set one up (Settings › AI engineer): the engineer says "Copy, checking" and answers a few
-seconds later. Without a model, the answer is built from the facts.
+Fuel, tyres, lap times, radio control, practice drills and "who am I compared with?" are answered instantly, without
+the language model. Only a command starts or stops a drill ("start a drill on turn 3", "please stop the drill"): a
+question about a drill ("how did the drill go?", "should I do a drill at turn 4?") gets its status, and "don't stop
+the drill" changes nothing. A
+drill keeps the radio on its corner: one line a lap ("Turn 3 drill, 2 of 5: on the point. 2 hits."), no lap
+summary and braking calls for that corner only, until it ends or you stop it. Name the skill to choose it ("a
+braking drill", "minimum speed", "exit", "entry") and the length ("for three laps", 3 to 10).
+
+Analysis questions go to the language model if you set one up (Settings › AI engineer): the engineer says "Copy,
+checking" and answers a few seconds later. Without a model, the answer is built from the facts.
 
 ## Troubleshooting
 

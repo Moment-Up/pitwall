@@ -36,6 +36,15 @@ corners (``analysis.track_identity``), ``CueLabel`` carries the official label (
 so a real F1 25 race replay had learned "T2" = Turn 3): a cue must never say a number the track view does not
 show. A corner with no speakable label gets a plain "brake" call; an unmapped model keeps the learned names.
 
+Another driver's lap as the reference (coachref)
+-----------------------------------------------
+When the driver chose another driver's lap (``core.coachref``), the comparison carries ``brake_clamp_m``: the
+driver's *own* braking point per corner. Every braking zone is then ``min(their point, your own point)``, and a
+corner where the driver has no measured point of their own gets no cue at all (``NO_OWN_POINTS`` when that leaves
+nothing; the AI field's heads-ups may stand in, as early markers, never as targets). So a faster driver's later
+braking point is never called. During a practice drill (``set_drill_corner``) the plan holds only the drill corner
+(in focus mode it is the focus corner, whatever the observation history says) and the field's heads-ups are off.
+
 Cues belong to one driver's reference. Clearing the reference (``on_reference(None, None)``: the session's owner
 has no reference lap) or a different driver in the seat (``set_driver``) drops the comparison, the focus history
 and the plan, so one driver is never called to another driver's braking points.
@@ -118,6 +127,7 @@ __all__ = [
     "estimate_word_offset",
     "parse_cue_mode",
     "reference_braking_zones",
+    "reference_onset_ok",
     "select_focus_corners",
 ]
 
@@ -146,9 +156,10 @@ BEGINNER_FOCUS_CORNERS = 1  # a beginner's profile allows one coaching point a l
 NO_REFERENCE = "no reference lap yet"
 NO_DRIVER_REFERENCE = "no reference lap for this driver"
 NEW_DRIVER = "new driver: waiting for a lap against their reference"
+NO_OWN_POINTS = "no braking points of your own yet"  # --- coachref --- another driver's lap, none of the driver's
 # Empty-plan reasons that mean "nothing of the driver's own to call": only then may the AI field's heads-ups
 # (core.track_knowledge, layer L0b) stand in. A reference that exists but gives no cue keeps silence.
-FALLBACK_REASONS = frozenset({NO_REFERENCE, NO_DRIVER_REFERENCE, NEW_DRIVER})
+FALLBACK_REASONS = frozenset({NO_REFERENCE, NO_DRIVER_REFERENCE, NEW_DRIVER, NO_OWN_POINTS})
 
 # ---------------------------------------------------------------------------------------------- firing
 MARGIN_M = 5.0  # the key word aims this far before the reference point; it may use the margin, never pass the point
@@ -424,8 +435,13 @@ def estimate_word_offset(parts: Sequence[str], key_index: int, word_s: float = D
 
 
 def reference_braking_zones(comparison: Mapping[str, Any], length_m: float) -> list[BrakingZone]:
-    """Measured reference braking points per corner (``LapComparison.to_dict()['corners'][i]['ref']``)."""
+    """Measured reference braking points per corner (``LapComparison.to_dict()['corners'][i]['ref']``).
+
+    With ``comparison['brake_clamp_m']`` (coachref: the reference is another driver's lap) each point is the earlier
+    of the reference's and the driver's own, and a corner without a point of the driver's own is left out."""
     zones: dict[str, BrakingZone] = {}
+    clamp = comparison.get("brake_clamp_m")  # --- coachref ---
+    clamp_map = clamp if isinstance(clamp, Mapping) else None
     for cd in comparison.get("corners") or ():
         if not isinstance(cd, Mapping):
             continue
@@ -440,6 +456,13 @@ def reference_braking_zones(comparison: Mapping[str, Any], length_m: float) -> l
         entry, vmin = _num(ref.get("entry_speed_kph")), _num(ref.get("min_speed_kph"))
         if entry is not None and vmin is not None and entry - vmin < MIN_REF_SPEED_DROP_KPH:
             continue
+        if clamp_map is not None:  # --- coachref --- never later than the driver's own braking point
+            own = _num(clamp_map.get(corner))
+            if own is None:
+                continue
+            b = min(b, own)
+            if b < 0.0:
+                continue
         zones.setdefault(corner, BrakingZone(corner, b, peak, entry, vmin))
     return sorted(zones.values(), key=lambda z: z.brake_m)
 
@@ -527,6 +550,17 @@ def _already_slowing(app: CueApproach) -> bool:
     return v0 < REAPPLY_SPEED_RATIO * max(window, default=v0)
 
 
+# --- coachref ---
+def reference_onset_ok(trace: DistanceTrace, target_m: float, length_m: float, lap_s: float | None) -> bool:
+    """Whether ``target_m`` is a braking *onset* on the reference trace by the cue planner's own test (an approach
+    table exists and the reference was not already slowing there): the drill planner uses the same rule."""
+    app = _approach_table(trace, target_m, length_m, lap_s)
+    return app is not None and not _already_slowing(app)
+
+
+# --- coachref ---
+
+
 def cue_labels(track_model: Mapping[str, Any] | None) -> dict[str, CueLabel]:
     """``{learned corner name: CueLabel}`` from the live track model payload (``track_model_payload``: corners with
     their identity fields plus ``corner_text``). Empty when the model carries no identity (no sheet, unverified
@@ -574,6 +608,7 @@ def build_cue_plan(
     max_focus: int = MAX_FOCUS_CORNERS,
     focus_limits: FocusLimits = DEFAULT_FOCUS_LIMITS,
     labels: Mapping[str, CueLabel] | None = None,
+    only_corner: str | None = None,
 ) -> CuePlan:
     """Plan the cues for the current reference.
 
@@ -584,7 +619,8 @@ def build_cue_plan(
     point the reference reached while already slowing is a re-application and gets no cue. ``history`` is the
     recent laps' observations for focus mode, filtered by the driver's ``focus_limits``. ``labels``
     (``cue_labels``) name the corners as the track view does; without one a corner keeps its learned name. Never
-    raises on malformed input: an empty plan's ``reason`` says why there are no cues.
+    raises on malformed input: an empty plan's ``reason`` says why there are no cues. ``only_corner`` (a practice
+    drill, coachref) keeps that corner alone: in focus mode it is the focus corner whatever the history says.
     """
     m = parse_cue_mode(mode)
     if m == "off":
@@ -620,6 +656,18 @@ def build_cue_plan(
         if app is not None and not _already_slowing(app):
             tables[z.corner] = app
             zones.append(z)
+    # --- coachref ---
+    if only_corner is not None:
+        zones = [z for z in zones if z.corner == only_corner]
+        if not zones:
+            lab = (labels or {}).get(only_corner)
+            return empty(f"drill: no braking call at {lab.text if lab else only_corner}")
+    clamp = comparison.get("brake_clamp_m")
+    if not zones and isinstance(clamp, Mapping):
+        unclamped = reference_braking_zones({**comparison, "brake_clamp_m": None}, length)
+        if unclamped and all(_num(clamp.get(z.corner)) is None for z in unclamped):
+            return empty(NO_OWN_POINTS)  # another driver's lap and no braking point of the driver's own
+    # --- coachref ---
     if not zones:
         return empty("no measured braking zones on the reference lap")
 
@@ -648,7 +696,10 @@ def build_cue_plan(
     specs: list[CueSpec] = []
     focus: tuple[str, ...] = ()
     if m == "focus":
-        picked = select_focus_corners(history, by_corner, max_focus, focus_limits)
+        if only_corner is not None:  # --- coachref --- a drill: its corner is the focus, evidence or not
+            picked = [(only_corner, "drill")]
+        else:
+            picked = select_focus_corners(history, by_corner, max_focus, focus_limits)
         focus = tuple(c for c, _ in picked)
         said = spoken_names(focus, fallback_voice=False)
         for corner, why in picked:
@@ -814,6 +865,7 @@ class CueEngine:
         self._generation = 0
         self._plan: CuePlan = CuePlan.empty(self._mode, "cues off" if self._mode == "off" else NO_REFERENCE)
         self._fallback: CuePlan | None = None  # AI-field heads-ups (set_fallback_plan), used only without own cues
+        self._drill_corner: str | None = None  # --- coachref --- a practice drill's corner (set_drill_corner)
         # pushed by the radio hub (atomic swaps)
         self._timing = CueTiming()
         self._sink: Callable[[CueEvent], None] | None = None
@@ -1017,10 +1069,28 @@ class CueEngine:
             self._fallback = plan
         self._replan()
 
+    # --- coachref ---
+    @property
+    def drill_corner(self) -> str | None:
+        return self._drill_corner
+
+    def set_drill_corner(self, corner: str | None) -> None:
+        """A practice drill (``core.coachref``): plan only ``corner`` (``None`` ends it) and replan. Kept across
+        ``reset_session`` (a drill may continue in the next session); the field's heads-ups stay off meanwhile."""
+        with self._plan_lock:
+            if corner == self._drill_corner:
+                return
+            self._drill_corner = corner
+        self._replan()
+
+    # --- coachref ---
+
     def _with_fallback(self, plan: CuePlan) -> CuePlan:
         """``plan``, or the field heads-ups when ``plan`` is empty for lack of the driver's own reference
         (``_plan_lock`` held). ``CuePlan.focus`` of a heads-up plan is its priority order (largest speed drop)."""
         fb = self._fallback
+        if self._drill_corner is not None:  # --- coachref --- a drill: only its corner, never the field's
+            return plan
         if fb is None or plan.cues or plan.mode == "off" or plan.reason not in FALLBACK_REASONS:
             return plan
         reason = f"AI field heads-ups ({plan.reason})"
@@ -1089,6 +1159,7 @@ class CueEngine:
             mode, comparison, length = self._mode, self._comparison, self._length_m
             history, reference, trace = list(self._history), self._reference, self._trace
             limits, empty_reason, labels = self._focus_limits, self._empty_reason, self._labels
+            drill_corner = self._drill_corner  # --- coachref ---
             ref_id = comparison.get("ref_lap_id") if comparison is not None else None
             if isinstance(ref_id, int) and (reference is None or reference.get("lap_id") != ref_id):
                 reference, trace = self._traces.get(ref_id, (None, None))
@@ -1106,6 +1177,7 @@ class CueEngine:
                     max_focus=self.max_focus,
                     focus_limits=limits,
                     labels=labels,
+                    only_corner=drill_corner,  # --- coachref ---
                 )
         except Exception:
             self.errors += 1
@@ -1421,6 +1493,7 @@ class CueEngine:
             "ref_lap_number": plan.ref_lap_number,
             "focus": list(plan.focus),
             "focus_limits": self._focus_limits.to_dict(),
+            "drill_corner": self._drill_corner,  # --- coachref ---
             "cues": [c.to_dict() for c in plan.cues],
             "next": None
             if nxt is None

@@ -1,0 +1,94 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "hand-written from the coachref spec 6.2 / 6.3 (no backend yet)",
+    "moment": "Drill options in the synthetic demo",
+    "notes": "Replace with a dump from a scratch server (spec 13 A7) once the backend lands. Demo names only."
+  },
+  "corner": "T7",
+  "corner_label": "T11",
+  "corner_voice": "Turn 11",
+  "available": false,
+  "reason": "Drills run on your own live driving.",
+  "laps_choices": [
+    3,
+    5,
+    8,
+    10
+  ],
+  "default_laps": 5,
+  "kinds": [
+    {
+      "kind": "brake_point",
+      "skill_label": "Brake point",
+      "available": false,
+      "reason": "Drills run on your own live driving.",
+      "target": 2787.8,
+      "unit": "m",
+      "tolerance": 5.0,
+      "baseline": null,
+      "target_text": "Brake within 5 m of Sam's braking point",
+      "note": "Braking assist is on, so the game helps with braking: these brake points are partly the assist's.",
+      "tolerance_choices": [
+        3,
+        5,
+        10
+      ],
+      "suggested": true
+    },
+    {
+      "kind": "min_speed",
+      "skill_label": "Minimum speed",
+      "available": false,
+      "reason": "Drills run on your own live driving.",
+      "target": null,
+      "unit": "km/h",
+      "tolerance": 3.0,
+      "baseline": 71.0,
+      "target_text": null,
+      "note": null,
+      "tolerance_choices": [
+        2,
+        3,
+        5
+      ],
+      "suggested": false
+    },
+    {
+      "kind": "exit_speed",
+      "skill_label": "Exit speed",
+      "available": false,
+      "reason": "Drills run on your own live driving.",
+      "target": 151.0,
+      "unit": "km/h",
+      "tolerance": 3.0,
+      "baseline": 148.0,
+      "target_text": "Exit speed 151 km/h or more (usually 148)",
+      "note": null,
+      "tolerance_choices": [
+        2,
+        3,
+        5
+      ],
+      "suggested": false
+    },
+    {
+      "kind": "entry_speed",
+      "skill_label": "Entry speed",
+      "available": false,
+      "reason": "Drills run on your own live driving.",
+      "target": 239.0,
+      "unit": "km/h",
+      "tolerance": 5.0,
+      "baseline": 239.0,
+      "target_text": "Arrive at 239 km/h, within 5 km/h",
+      "note": null,
+      "tolerance_choices": [
+        3,
+        5,
+        8
+      ],
+      "suggested": false
+    }
+  ]
+}

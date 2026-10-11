@@ -45,6 +45,10 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   merge: ``/ws/live`` sends it with the 5 s static payload and whenever ``strategy_rev`` changed (a new view, or a new
   session), and leaves the key out otherwise (the client keeps the previous value within the session). Every other
   caller (REST, fact sheets) gets it in every snapshot.
+* ``coachref`` (every snapshot, small): the seated driver's reference choice, what the analysis used for the last
+  lap (``used_kind``, ``reason`` when the choice could not be honoured), whether a change waits for the next lap
+  (``pending``) and the practice drill (``drill``: running, or the result of the one that just ended). Published by
+  ``core.coachref.CoachRef`` with one attribute swap. ``reference`` gains the descriptor of how it was chosen.
 """
 
 from __future__ import annotations
@@ -63,6 +67,7 @@ from pitwall import games
 from pitwall.analysis.distance import DistanceTrace
 from pitwall.analysis.track_skeleton import build_track_skeleton
 from pitwall.coach.cues import CoachingProfile, CueEngine, CuePlan, cue_labels
+from pitwall.coach.drills import with_drill
 from pitwall.coach.selection import CoachSelection
 from pitwall.core.track_knowledge import TrackKnowledge, TrackKnowledgeResolver, heads_up_cue_plan
 from pitwall.drivers import CoachingLimits
@@ -268,6 +273,7 @@ class LiveState:
         self.last_accepted_mono: float | None = None  # last packet a decoder accepted (on_packet): "is data arriving"
         self.strategy: dict[str, Any] | None = None  # race strategy (pitwall.strategy): StrategyView of this session
         self.strategy_rev = 0  # bumped when ``strategy`` changes (a new view, a new session): /ws/live sends it then
+        self.coachref: dict[str, Any] | None = None  # --- coachref --- (core.coachref.CoachRef publishes it)
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -386,10 +392,20 @@ class LiveState:
         lap: dict[str, Any],
         observations: list[dict[str, Any]],
         comparison: dict[str, Any] | None,
+        drill: dict[str, Any] | None = None,
     ) -> None:
         compat = (comparison or {}).get("compatibility")
         compared = isinstance(compat, dict) and bool(compat.get("ok"))
-        coach = self.coach.select(lap, observations, compared)  # once per lap: the radio speaks this pick
+        # once per lap: the radio speaks this pick. --- coachref --- while a drill runs (``drill``, from
+        # CoachRef.after_lap) the lap's one point is the drill's: shown on the coach card when the lap was an attempt,
+        # the previous card kept when it was not (an out lap)
+        coach = self.coach.select(lap, observations, compared and drill is None)
+        if drill is not None:
+            point = drill.get("point")
+            coach = with_drill(coach, point if isinstance(point, dict) else None, str(drill.get("corner") or ""))
+            if isinstance(point, dict):
+                self.coach.set_current(coach)
+        # --- coachref ---
         with self._lock:
             self.laps.appendleft(lap)
             self.observations = observations
@@ -487,7 +503,21 @@ class LiveState:
         if fn is None or req is None:
             return
         # the length only decides the layout: an estimate refining every packet (AC, GT7) is not a new context
-        key = (req.session_id, req.game, req.track_id, req.car_id, req.track_length_m is not None, req.driver_id)
+        key: tuple[Any, ...] = (
+            req.session_id,
+            req.game,
+            req.track_id,
+            req.car_id,
+            req.track_length_m is not None,
+            req.driver_id,
+        )
+        # --- coachref --- and the conditions that decide which reference laps compare (wet/dry, assists): F1 sends
+        # default assists (0) in a session's first packets, and a reference chosen before the first lap
+        # (core.coachref.CoachRef.on_context) must be resolved again when the real ones arrive. Session packets only.
+        s = self.session
+        if s is not None:
+            key += (s.weather.condition, tuple(sorted((str(k), repr(v)) for k, v in s.assists.items())))
+        # --- coachref ---
         if key == self._bests_requested:
             return
         self._bests_requested = key
@@ -649,6 +679,7 @@ class LiveState:
             out["ai_pace"] = self.ai_pace  # LiveAiPace: small, every snapshot
             if include_strategy:  # race strategy: /ws/live sends it only when it changed (``strategy_rev``) or static
                 out["strategy"] = self.strategy
+            out["coachref"] = self.coachref  # --- coachref --- reference choice + drill (small, every snapshot)
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

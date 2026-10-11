@@ -1,0 +1,145 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "hand-written from the coachref spec 6.2 / 6.3 (no backend yet)",
+    "moment": "James seated at Suzuka, Sam's best chosen for every track; Jo's laps used another braking assist",
+    "notes": "Replace with a dump from a scratch server (spec 13 A7) once the backend lands. Demo names only."
+  },
+  "driver_id": 1,
+  "context": {
+    "game": "f1_25",
+    "track_id": "f1:13",
+    "track_name": "Suzuka",
+    "car_id": "f1:team:41",
+    "car_name": "Ferrari",
+    "track_length_m": 5807.0
+  },
+  "choice": {
+    "driver_id": 1,
+    "kind": "driver_best",
+    "target_driver_id": 2,
+    "lap_id": null,
+    "scope": "all_tracks",
+    "game": null,
+    "track_id": null,
+    "label": "Sam's best",
+    "updated_unix": 1791140000.0
+  },
+  "has_track_override": false,
+  "applies": "now",
+  "options": [
+    {
+      "kind": "own_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "label": "Your best",
+      "available": true,
+      "reason": null,
+      "warnings": [],
+      "lap": {
+        "lap_id": 805,
+        "lap_number": 3,
+        "lap_time_ms": 90986,
+        "set_unix": 1791140400.0,
+        "driver_id": 1,
+        "driver_name": "James",
+        "session_id": "a1",
+        "car_name": "Ferrari"
+      },
+      "selected": false
+    },
+    {
+      "kind": "household_best",
+      "target_driver_id": null,
+      "lap_id": null,
+      "label": "Family record",
+      "available": true,
+      "reason": null,
+      "warnings": [],
+      "lap": {
+        "lap_id": 812,
+        "lap_number": 3,
+        "lap_time_ms": 90412,
+        "set_unix": 1791054000.0,
+        "driver_id": 2,
+        "driver_name": "Sam",
+        "session_id": "b2",
+        "car_name": "Ferrari"
+      },
+      "selected": false
+    },
+    {
+      "kind": "driver_best",
+      "target_driver_id": 3,
+      "lap_id": null,
+      "label": "Jo's best",
+      "available": false,
+      "reason": "Jo's laps here used a different braking assist",
+      "warnings": [],
+      "lap": null,
+      "selected": false
+    },
+    {
+      "kind": "driver_best",
+      "target_driver_id": 2,
+      "lap_id": null,
+      "label": "Sam's best",
+      "available": true,
+      "reason": null,
+      "warnings": [
+        "Different tyre compound (soft vs medium)"
+      ],
+      "lap": {
+        "lap_id": 812,
+        "lap_number": 3,
+        "lap_time_ms": 90412,
+        "set_unix": 1791054000.0,
+        "driver_id": 2,
+        "driver_name": "Sam",
+        "session_id": "b2",
+        "car_name": "Ferrari"
+      },
+      "selected": true
+    },
+    {
+      "kind": "lap",
+      "target_driver_id": null,
+      "lap_id": 812,
+      "label": "Lap 3 \u00b7 Sam",
+      "available": true,
+      "reason": null,
+      "warnings": [],
+      "lap": {
+        "lap_id": 812,
+        "lap_number": 3,
+        "lap_time_ms": 90412,
+        "set_unix": 1791054000.0,
+        "driver_id": 2,
+        "driver_name": "Sam",
+        "session_id": "b2",
+        "car_name": "Ferrari"
+      },
+      "selected": false
+    },
+    {
+      "kind": "lap",
+      "target_driver_id": null,
+      "lap_id": 790,
+      "label": "Lap 6 \u00b7 James",
+      "available": true,
+      "reason": null,
+      "warnings": [],
+      "lap": {
+        "lap_id": 790,
+        "lap_number": 6,
+        "lap_time_ms": 91204,
+        "set_unix": 1790967600.0,
+        "driver_id": 1,
+        "driver_name": "James",
+        "session_id": "a0",
+        "car_name": "Ferrari"
+      },
+      "selected": false
+    }
+  ]
+}

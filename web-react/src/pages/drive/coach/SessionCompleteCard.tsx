@@ -7,6 +7,8 @@
 //   AI difficulty 35: best lap 3.8 s slower than the typical AI car's best lap · 20th of 20 on best laps
 //   REC / PB / SB legend                                                     [ Review this session ]
 //   (the AI line, a row of its own, only when the session has an AI comparison; no live AI widget)
+// coachref (plan 2.6): when a drill ran in this session, its result takes the Work on slot (never both):
+//   (◎) Drill T12 · Brake point: 2 of 2 on the point (2 of 5 laps)
 //
 // LAZY (React.lazy in SessionCompleteSlot.tsx): Pro KPI imports AreaChart and so Recharts at module level, which
 // must stay out of the eager Drive bundle (spec 4.9, 4.11). Values are TimingValue-style numerals in KPI.Content,
@@ -23,7 +25,7 @@
 // and at most two badge chips show (Review › Goals lists them all). When this session set the family record, the
 // fourth tile is "Laps compared" instead of "To the family record", which would only repeat the REC tag.
 
-import { CircleCheck, Medal, TriangleExclamation } from "@gravity-ui/icons";
+import { CircleCheck, Medal, Target, TriangleExclamation } from "@gravity-ui/icons";
 import { ItemCard, KPIGroup } from "@heroui-pro/react";
 import { KPI } from "@heroui-pro/react/kpi";
 import { Button, Card, Chip } from "@heroui/react";
@@ -87,6 +89,21 @@ function Point({ point, kind, corner }: { point: CoachPoint | null; kind: "work"
   );
 }
 
+/** coachref: the drill driven in this session (lib/drive/drill.ts endedDrill). */
+function DrillItem({ title, line }: { title: string; line: string }) {
+  return (
+    <ItemCard variant="secondary" className="pwc-item" data-tone="accent">
+      <ItemCard.Icon className="pwc-item__icon">
+        <Target aria-hidden="true" />
+      </ItemCard.Icon>
+      <ItemCard.Content>
+        <ItemCard.Title>{title}</ItemCard.Title>
+        <ItemCard.Description>{line}</ItemCard.Description>
+      </ItemCard.Content>
+    </ItemCard>
+  );
+}
+
 /** A gain or gap the one way every page says it (lib/bests.ts changeWords): the amount large, the word beside it
  * ("4.8 s faster", "0.29 s slower"); "PB" / "REC" / "level" as words; "-" unknown. */
 function Change({ c, label, ahead = false }: { c: EndedChange; label: string; ahead?: boolean }) {
@@ -108,6 +125,8 @@ export interface SessionCompleteCardProps {
 
 export function SessionCompleteCard({ ended, tier, corners }: SessionCompleteCardProps) {
   const { best, clean, gained, toRecord, toYourBest, lapsCompared } = ended;
+  const drill = ended.drill ?? null;
+  const drillItem = drill ? <DrillItem title={drill.title} line={drill.line} /> : null;
   const yourBest = !toYourBest || toYourBest.text === "PB" ? null : toYourBest.word ? `${toYourBest.text} than your best` : "level with your best";
   const recordSub = [toRecord?.sub, yourBest].filter(Boolean).join(" · ");
   return (
@@ -137,12 +156,12 @@ export function SessionCompleteCard({ ended, tier, corners }: SessionCompleteCar
         )}
       </KPIGroup>
       {ended.things ? (
-        <ThingsRow things={ended.things} />
+        <ThingsRow things={ended.things} workOn={drillItem} />
       ) : ended.thingsLoading ? (
         <ThingsSkeleton />
       ) : (
         <>
-          <Point point={ended.workOn} kind="work" corner={corners?.workOn ?? null} />
+          {drillItem ?? <Point point={ended.workOn} kind="work" corner={corners?.workOn ?? null} />}
           <Point point={ended.wentWell} kind="good" corner={corners?.wentWell ?? null} />
         </>
       )}

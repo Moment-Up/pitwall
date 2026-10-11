@@ -1619,3 +1619,305 @@ def list_pit_stops(c: sqlite3.Connection, session_id: str) -> list[dict[str, Any
             d["laps_ms"] = []
         out.append(d)
     return out
+
+
+# ---------------------------------------------------------------- coachref (schema v6)
+# Reference choices (what a driver's live delta measures against) and practice drills; the rules live in
+# ``core.coachref`` and ``coach.drills``, these functions only store and read rows.
+_DRILL_UPDATABLE = frozenset(
+    {
+        "status",
+        "stop_reason",
+        "ended_unix",
+        "attempts",
+        "scored",
+        "hits",
+        "best_value",
+        "best_delta",
+        "trend",
+        "laps",
+        "detail",
+    }
+)
+_DRILL_COLUMNS = (
+    "driver_id",
+    "session_id",
+    "game",
+    "track_id",
+    "track_length_m",
+    "car_id",
+    "track_model_version",
+    "corner",
+    "corner_label",
+    "corner_voice",
+    "apex_m",
+    "kind",
+    "source",
+    "observation_kind",
+    "laps_target",
+    "target",
+    "tolerance",
+    "unit",
+    "baseline",
+    "ref_lap_id",
+    "ref_kind",
+    "ref_driver_id",
+    "status",
+    "stop_reason",
+    "started_unix",
+    "ended_unix",
+    "attempts",
+    "scored",
+    "hits",
+    "best_value",
+    "best_delta",
+    "trend",
+    "laps",
+    "detail",
+)
+
+
+def _choice_row(r: sqlite3.Row | None) -> dict[str, Any] | None:
+    return None if r is None else dict(r)
+
+
+def reference_choice_rows(
+    conn: sqlite3.Connection, driver_id: int, game: str | None, track_id: str | None
+) -> dict[str, dict[str, Any] | None]:
+    """``{"all_tracks": row | None, "track": row | None}`` for a driver (``track`` only when game and track are
+    given). Rows: ``driver_id, game, track_id, kind, target_driver_id, lap_id, updated_unix``."""
+    q = "SELECT * FROM reference_choices WHERE driver_id=? AND game=? AND track_id=?"
+    all_tracks = _choice_row(conn.execute(q, (driver_id, "", "")).fetchone())
+    track = None
+    if game and track_id:
+        track = _choice_row(conn.execute(q, (driver_id, game, track_id)).fetchone())
+    return {"all_tracks": all_tracks, "track": track}
+
+
+def set_reference_choice(
+    conn: sqlite3.Connection,
+    driver_id: int,
+    kind: str,
+    *,
+    game: str = "",
+    track_id: str = "",
+    target_driver_id: int | None = None,
+    lap_id: int | None = None,
+) -> dict[str, Any]:
+    """Upsert a driver's choice for one track (``game``/``track_id``) or every track (both ``''``)."""
+    conn.execute(
+        """INSERT INTO reference_choices(driver_id, game, track_id, kind, target_driver_id, lap_id, updated_unix)
+           VALUES(?,?,?,?,?,?,?)
+           ON CONFLICT(driver_id, game, track_id) DO UPDATE SET kind=excluded.kind,
+             target_driver_id=excluded.target_driver_id, lap_id=excluded.lap_id, updated_unix=excluded.updated_unix""",
+        (driver_id, game, track_id, kind, target_driver_id, lap_id, time.time()),
+    )
+    row = conn.execute(
+        "SELECT * FROM reference_choices WHERE driver_id=? AND game=? AND track_id=?", (driver_id, game, track_id)
+    ).fetchone()
+    return dict(row)
+
+
+def delete_reference_choice(conn: sqlite3.Connection, driver_id: int, game: str, track_id: str) -> bool:
+    cur = conn.execute(
+        "DELETE FROM reference_choices WHERE driver_id=? AND game=? AND track_id=?", (driver_id, game, track_id)
+    )
+    return cur.rowcount > 0
+
+
+_WET_CONDITIONS = ("light_rain", "heavy_rain", "storm")  # analysis.compare.check_compatibility's wet set
+_MATCHED_ASSISTS = ("braking", "gearbox", "abs", "tc")  # check_compatibility + core.coachref.extra_blocking
+
+
+def _scalar(v: object) -> bool:
+    return isinstance(v, str | int | float) and v == v  # bool is an int; NaN != NaN
+
+
+def _compat_sql(match: dict[str, Any] | None) -> tuple[str, list[Any]]:
+    """SQL predicates (each with a leading AND) dropping the laps ``core.coachref.comparable`` would block for the
+    live context ``match``: wet/dry, the braking / gearbox / ABS / TC assists and F1's formula. Only known values on
+    both sides block (unknown never excludes a lap), exactly as the Python check, which still runs on every row."""
+    if not match:
+        return "", []
+    sql: list[str] = []
+    args: list[Any] = []
+    weather = match.get("weather")
+    if isinstance(weather, dict):
+        weather = weather.get("condition")
+    if isinstance(weather, str) and weather:
+        cond = "json_extract(s.weather, '$.condition')"
+        sql.append(f" AND (COALESCE({cond}, '') = '' OR ({cond} IN ({', '.join('?' * len(_WET_CONDITIONS))})) = ?)")
+        args += [*_WET_CONDITIONS, int(weather in _WET_CONDITIONS)]
+    assists = match.get("assists")
+    if isinstance(assists, dict):
+        for key in _MATCHED_ASSISTS:
+            v = assists.get(key)
+            if v is not None and _scalar(v):
+                path = f"json_extract(s.assists, '$.{key}')"
+                sql.append(f" AND ({path} IS NULL OR {path} = ?)")
+                args.append(v)
+    formula = match.get("formula")
+    if formula is not None and _scalar(formula):
+        sql.append(" AND (json_extract(s.info, '$.formula') IS NULL OR json_extract(s.info, '$.formula') = ?)")
+        args.append(formula)
+    return "".join(sql), args
+
+
+def reference_candidates(
+    conn: sqlite3.Connection,
+    game: str,
+    track_id: str,
+    car_id: str | None,
+    track_length_m: float | None,
+    *,
+    per_driver: int = 10,
+    exclude_lap_id: int | None = None,
+    driver_id: int | None = None,
+    match: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Clean laps of real driving by any driver (or ``driver_id``) at a game + track (+ car) + layout, the fastest
+    ``per_driver`` per driver, fastest first (ties: lower lap id). Never synthetic, never replays, never unowned.
+    ``car_id=None`` lists every car and ``track_length_m=None`` every layout (``core.coachref`` uses that only to
+    say *why* a driver has no comparable lap). ``match`` (a live lap context): laps in other conditions (wet/dry,
+    assists, formula: ``_compat_sql``) are left out *before* the per-driver limit, so a driver's ten fastest laps in
+    other conditions never hide a slower comparable one. Rows: ``lap_id, lap_number, lap_time_ms, s1_ms..s3_ms,
+    session_id, created_unix, meta, setup_fp, driver_id, driver_name, game, track_id, car_id, car_name,
+    track_length_m, weather, assists, formula, started_unix``."""
+    where = [
+        "l.clean=1",
+        "l.lap_time_ms IS NOT NULL",
+        "l.lap_time_ms > 0",
+        "s.game=?",
+        "s.track_id=?",
+        "s.synthetic=0",
+        _DRIVEN,
+        "s.driver_id IS NOT NULL",
+    ]
+    args: list[Any] = [game, track_id]
+    if car_id is not None:
+        where.append("s.car_id=?")
+        args.append(car_id)
+    if exclude_lap_id is not None:
+        where.append("l.id != ?")
+        args.append(exclude_lap_id)
+    if driver_id is not None:
+        where.append("s.driver_id=?")
+        args.append(driver_id)
+    layout, layout_args = _layout_sql(track_length_m)
+    conds, cond_args = _compat_sql(match)
+    rows = conn.execute(
+        f"""SELECT * FROM (
+              SELECT l.id AS lap_id, l.lap_number, l.lap_time_ms, l.s1_ms, l.s2_ms, l.s3_ms, l.session_id,
+                     l.created_unix, l.meta, l.setup_fp, s.driver_id, d.name AS driver_name, s.game, s.track_id,
+                     s.car_id, s.car_name, s.track_length_m, s.weather, s.assists,
+                     json_extract(s.info, '$.formula') AS formula, s.started_unix,
+                     ROW_NUMBER() OVER (PARTITION BY s.driver_id ORDER BY l.lap_time_ms ASC, l.id ASC) AS rn
+              FROM laps l JOIN sessions s ON s.id = l.session_id JOIN drivers d ON d.id = s.driver_id
+              WHERE {" AND ".join(where)}{layout}{conds})
+           WHERE rn <= ? ORDER BY lap_time_ms ASC, lap_id ASC""",
+        [*args, *layout_args, *cond_args, per_driver],
+    ).fetchall()
+    out = []
+    for r in rows:
+        d = dict(r)
+        d.pop("rn", None)
+        d["meta"] = json.loads(d["meta"] or "{}")
+        d["weather"] = json.loads(d["weather"] or "{}")
+        d["assists"] = json.loads(d["assists"] or "{}")
+        out.append(d)
+    return out
+
+
+def lap_with_context(conn: sqlite3.Connection, lap_id: int) -> dict[str, Any] | None:
+    """A lap (no trace) with its session's context and its driver's name: ``lap_id, lap_number, lap_time_ms,
+    s1_ms..s3_ms, clean, valid, flags, meta, setup_fp, session_id, created_unix, driver_id, driver_name, game,
+    track_id, track_name, track_length_m, car_id, car_name, weather, assists, formula, synthetic, source,
+    started_unix``. None for an unknown lap."""
+    r = conn.execute(
+        """SELECT l.id AS lap_id, l.lap_number, l.lap_time_ms, l.s1_ms, l.s2_ms, l.s3_ms, l.clean, l.valid, l.flags,
+                  l.meta, l.setup_fp, l.session_id, l.created_unix, s.driver_id, d.name AS driver_name, s.game,
+                  s.track_id, s.track_name, s.track_length_m, s.car_id, s.car_name, s.weather, s.assists,
+                  json_extract(s.info, '$.formula') AS formula, s.synthetic, s.source, s.started_unix
+           FROM laps l JOIN sessions s ON s.id = l.session_id LEFT JOIN drivers d ON d.id = s.driver_id
+           WHERE l.id=?""",
+        (lap_id,),
+    ).fetchone()
+    if r is None:
+        return None
+    d = dict(r)
+    d["clean"] = bool(d["clean"])
+    d["valid"] = None if d["valid"] is None else bool(d["valid"])
+    d["synthetic"] = bool(d["synthetic"])
+    d["flags"] = json.loads(d["flags"] or "[]")
+    d["meta"] = json.loads(d["meta"] or "{}")
+    d["weather"] = json.loads(d["weather"] or "{}")
+    d["assists"] = json.loads(d["assists"] or "{}")
+    return d
+
+
+def _drill_row(r: sqlite3.Row) -> dict[str, Any]:
+    d = dict(r)
+    d["laps"] = json.loads(d.get("laps") or "[]")
+    d["detail"] = json.loads(d.get("detail") or "{}")
+    return d
+
+
+def insert_drill(conn: sqlite3.Connection, row: dict[str, Any]) -> int:
+    """Insert a drill (``coach.drills.spec_row``); ``laps`` / ``detail`` are stored as JSON. Returns its id."""
+    cols = [c for c in _DRILL_COLUMNS if c in row]
+    vals = [dumps(row[c]) if c in ("laps", "detail") else row[c] for c in cols]
+    cur = conn.execute(f"INSERT INTO drills({', '.join(cols)}) VALUES({','.join('?' * len(cols))})", vals)
+    return int(cur.lastrowid or 0)
+
+
+def update_drill(conn: sqlite3.Connection, drill_id: int, **fields: Any) -> None:
+    """Update a drill's changing columns (``coach.drills.state_fields``); ``laps`` / ``detail`` are stored as JSON."""
+    bad = set(fields) - _DRILL_UPDATABLE
+    if bad:
+        raise ValueError(f"not updatable: {sorted(bad)}")
+    if not fields:
+        return
+    cols = sorted(fields)
+    vals = [dumps(fields[c]) if c in ("laps", "detail") else fields[c] for c in cols]
+    conn.execute(f"UPDATE drills SET {', '.join(f'{c}=?' for c in cols)} WHERE id=?", [*vals, drill_id])
+
+
+def get_drill(conn: sqlite3.Connection, drill_id: int) -> dict[str, Any] | None:
+    r = conn.execute("SELECT * FROM drills WHERE id=?", (drill_id,)).fetchone()
+    return _drill_row(r) if r else None
+
+
+def list_drills(
+    conn: sqlite3.Connection,
+    driver_id: int | None = None,
+    game: str | None = None,
+    track_id: str | None = None,
+    car_id: str | None = None,
+    *,
+    include_empty: bool = False,
+    limit: int = 20,
+) -> list[dict[str, Any]]:
+    """Drills newest first, optionally one driver / game / track / car. ``abandoned`` drills (stopped with no
+    attempt) only with ``include_empty``."""
+    where: list[str] = []
+    args: list[Any] = []
+    for col, val in (("driver_id", driver_id), ("game", game), ("track_id", track_id), ("car_id", car_id)):
+        if val is not None:
+            where.append(f"{col}=?")
+            args.append(val)
+    if not include_empty:
+        where.append("status != 'abandoned'")
+    sql = "SELECT * FROM drills" + (f" WHERE {' AND '.join(where)}" if where else "")
+    rows = conn.execute(sql + " ORDER BY started_unix DESC, id DESC LIMIT ?", [*args, limit]).fetchall()
+    return [_drill_row(r) for r in rows]
+
+
+def stop_active_drills(conn: sqlite3.Connection, reason: str, now: float) -> int:
+    """End every drill still marked active (service start-up: drills never survive a restart). A drill with
+    attempts becomes ``stopped``, one without ``abandoned``. Returns how many were ended."""
+    cur = conn.execute(
+        """UPDATE drills SET status = CASE WHEN attempts > 0 THEN 'stopped' ELSE 'abandoned' END,
+               stop_reason=?, ended_unix=? WHERE status='active'""",
+        (reason, now),
+    )
+    return int(cur.rowcount)

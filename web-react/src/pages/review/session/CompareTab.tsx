@@ -1,5 +1,6 @@
 // Session › Compare (spec 6.5, `…/compare?ref=<lap_id>&lap=<lap_id>&at=<metres>`): two laps on one distance axis.
-// Pickers A (reference: clean laps, the analysis' reference, family bests at this track) and B (your lap); the
+// Pickers A (reference: clean laps, the analysis' reference, family laps at this track: with coachref the compatible
+// ones from /api/coachref/candidates, the others disabled with the reason) and B (your lap); the
 // server's compatibility checks (warnings above the charts, a block instead of them); the charts with one cursor;
 // on iPad a right column with the map following the cursor, the corner explainer and the corner table. Phone:
 // pickers, corners as cards, the delta chart, other charts behind "Show telemetry".
@@ -23,7 +24,7 @@ import {
   lossGainText,
   parseCompareQuery,
   refOptions,
-  refWordFor,
+  refWordsFor,
   segmentDeltas,
   totalText,
   type CompareCorner,
@@ -38,9 +39,10 @@ import { useMedia } from "../useMedia";
 import { CompareCharts } from "./compare/CompareCharts";
 import { CompareMap, CornerCardsList, CornerExplainer, CornerTable, useCursorCorner } from "./compare/CornerPanels";
 import { LapPicker } from "./compare/LapPicker";
-import { errorText, useCompare, useTrace } from "./data";
+import { errorText, useCandidates, useRefCompare, useTrace } from "./data";
 import { PinReference } from "./PinReference";
 import { TechniqueComparePanel } from "./technique/TechniqueComparePanel"; // feat/technique
+import { UseForDelta } from "./compare/UseForDelta";
 
 export interface CompareTabProps {
   session: SessionDetail;
@@ -51,6 +53,7 @@ export interface CompareTabProps {
 
 export function CompareTab({ session, analysis, density, query }: CompareTabProps) {
   const drivers = useDrivers((s) => s.drivers);
+  const seatedId = useDrivers((s) => s.activeId);
   const phone = !useMedia("(min-width: 768px)");
   const wide = useMedia("(min-width: 1024px)");
   const q = parseCompareQuery(query);
@@ -58,7 +61,10 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
   const pair = defaultPair(rows, analysis?.ref_lap_id, q);
   const refTrace = useTrace(pair.ref);
   const lapTrace = useTrace(pair.lap);
-  const cmp = useCompare(pair.ref, pair.lap);
+  // coachref: /api/coachref/compare (who A belongs to; observations named after another driver's lap) and picker A's
+  // family laps for lap B (compatible ones; the others disabled with the reason).
+  const cmp = useRefCompare(pair.ref, pair.lap);
+  const cands = useCandidates(pair.lap);
 
   // One cursor per visit; it starts at the route's `at` and writes back to it once it rests.
   const initialAt = useRef(q.at);
@@ -93,7 +99,9 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
   const ribbon = useMemo(() => ribbonFromTrack({ skeleton, model, lengthM }), [skeleton, model, lengthM]);
   const segDelta = useMemo(() => segmentDeltas(corners), [corners]);
 
-  const words = refWordFor(density.level);
+  const refDesc = cmp.data?.reference ?? null;
+  const otherRef = refDesc && refDesc.own === false ? refDesc : null;
+  const words = refWordsFor(density.level, otherRef);
   const aOptions = useMemo(
     () =>
       refOptions({
@@ -102,8 +110,9 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
         analysisRef: analysis?.ref_lap,
         drivers,
         selectedTrace: refTrace.data ?? null,
+        candidates: cands.data ?? null,
       }),
-    [rows, session, analysis, drivers, refTrace.data],
+    [rows, session, analysis, drivers, refTrace.data, cands.data],
   );
   const bOptions = useMemo(() => lapOptions(rows), [rows]);
   const comparison = cmp.data?.comparison ?? null;
@@ -151,6 +160,20 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
         <EvidenceChips synthetic={session.synthetic} source={session.source} size="lg" />
         {pinnable && aRow && (
           <PinReference lapId={aRow.id} lapNumber={aRow.lapNumber} session={session} label="Pin A as reference" />
+        )}
+        {otherRef && pair.ref != null && session.driver_id != null && compat?.ok && (
+          <UseForDelta
+            key={pair.ref}
+            lapId={pair.ref}
+            driverId={session.driver_id}
+            self={session.driver_id === seatedId}
+            driverName={drivers.find((d) => d.id === session.driver_id)?.name ?? session.driver_name ?? null}
+            trackName={session.track_name}
+            refLabel={otherRef.label}
+            holder={otherRef.driver_name}
+            lapNumber={otherRef.lap_number}
+            lapTimeMs={otherRef.lap_time_ms}
+          />
         )}
       </div>
     </div>
@@ -221,9 +244,10 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
         corner={focus}
         observations={cmp.data?.observations}
         lapNumber={lapNumber}
-        refLapNumber={refNumber}
+        refLapNumber={otherRef ? null : refNumber}
         signed={density.signedBadges}
         simple={density.simpleWording}
+        refLabel={otherRef ? otherRef.label_to || otherRef.label : null}
       />
     );
     body = (
