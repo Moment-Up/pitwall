@@ -385,7 +385,15 @@ def test_code_fact_sheets_outlines_and_setups() -> None:
 def test_adapter_declarations_added_for_documented_absences() -> None:
     old = {(r["game"], r["platform"]): r for r in json.loads(GOLDEN_MATRIX.read_text(encoding="utf-8"))}
     added = {
-        Game.F1_25: {"session_type", "buttons"},
+        # session_type/buttons: game selection; the MotionEx slip and yaw channels: technique analysis
+        Game.F1_25: {
+            "session_type",
+            "buttons",
+            "yaw_rate_rps",
+            "body_slip_rad",
+            "wheel_slip_ratio",
+            "wheel_slip_angle_rad",
+        },
         Game.GT7: {"drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons"},
         Game.FORZA_MOTORSPORT: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
         Game.FORZA_HORIZON: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
