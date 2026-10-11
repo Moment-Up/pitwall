@@ -184,8 +184,9 @@ track edges, so the maps show where each lap went.
   greyed out (the game adds its own braking); with ABS on, lock-ups are not analysed.
 - Handling balance (F1 25 only: it needs the game's tyre slip data) compares the front and rear tyres' slip angles
   at the limit. A problem must recur, and it counts as the car's only if it also shows on your best lap that
-  session; otherwise it points at how the corner was driven. The thresholds are Pitwall's heuristics and the
-  "How this is measured" sheet lists them.
+  session; otherwise it points at how the corner was driven. Standing starts and laps more than 7 % off your best
+  clean lap (a safety car, a cool-down) are left out: they are not driven at the limit. The thresholds are
+  Pitwall's heuristics and the "How this is measured" sheet lists them by topic.
 - `uv run pitwall technique [SESSION_ID|latest] [--ref LAP_ID] [--car-format f1_2025|f1_2026] [--json]` prints the
   same analysis in the terminal.
 
@@ -346,8 +347,10 @@ corners and laps, and a setup change to try for each, e.g. "Front Anti-Roll Bar 
 parameter by a small step from your stored setup and opens the experiment form, already filled in, with **Try
 this**; after your next session the experiment's result also says how the balance moved. Symptoms that did not
 show on your best lap are listed as driving points, without setup suggestions. Tyre pressures, camber, toe and ride
-heights are never suggested. A setup change is something to try, not a guaranteed fix. Setup suggestions are for
-F1 25 only and have not been driven and checked yet.
+heights are never suggested, and with the game's braking assist on neither are brake bias and brake pressure (the
+assist adds its own braking). A setup change is something to try, not a guaranteed fix. Setup suggestions are for
+F1 25 only and have not been driven and checked yet; a synthetic session shows its symptoms but offers nothing to
+try.
 <!-- /feat/technique -->
 
 ### Validation
@@ -539,8 +542,10 @@ itself. Commands such as "stop talking" never go to the model.
 
 <!-- feat/technique -->
 The engineer also answers questions about your line ("how's my line through turn 3"), your technique ("am I locking
-up", "trail braking at T5", "wheelspin") and the car's balance ("I've got understeer in turn 3"). These answers come
-straight from the facts, so the radio gives them at once, without the AI model.
+up", "trail braking at T5", "wheelspin") and the car's balance ("I've got understeer in turn 3", "the rear is loose
+at Stowe": corners by number or by name). These answers come straight from the facts, so the radio gives them at
+once, without the AI model, in one short sentence led by what you asked ("2 lock-ups, most at Turn 1."). With the
+game's braking assist on it says it cannot judge your braking.
 <!-- /feat/technique -->
 
 It works with a local model (llama.cpp, LM Studio, Ollama, MLX or any OpenAI-compatible server) or a cloud model

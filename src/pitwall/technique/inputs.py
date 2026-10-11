@@ -357,7 +357,7 @@ def corner_inputs(
 
 # ---------------------------------------------------------------------------------------------- notes
 def _pct(x: float) -> str:
-    return f"{x * 100:.0f}%"
+    return f"{x * 100:.0f} %"
 
 
 def _s(x: float) -> str:
@@ -611,10 +611,13 @@ HABIT_TEXT: dict[str, tuple[str, str]] = {
     "brake_peak": ("pressed the brake harder", "pressed the brake less hard"),
     "time_to_peak": ("built up the brake more gradually", "built up the brake more quickly"),
     "coast": ("spent longer off both pedals", "spent less time off both pedals"),
-    "throttle_pickup": ("got back on the throttle later after the slowest point", "got back on the throttle sooner"),
+    "throttle_pickup": (
+        "got back on the throttle later after the slowest point",
+        "got back on the throttle sooner after the slowest point",
+    ),
     "throttle_ramp": ("took longer to reach full throttle", "reached full throttle more quickly"),
     "throttle_lifts": ("lifted off the throttle on the exit more", "lifted off the throttle less"),
-    "lockup": ("locked a wheel under braking", "locked a wheel less"),
+    "lockup": ("locked a wheel under braking more often", "locked a wheel under braking less often"),
     "wheelspin": ("had more wheelspin on the exit", "had less wheelspin on the exit"),
 }
 

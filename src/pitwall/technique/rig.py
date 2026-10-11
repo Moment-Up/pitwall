@@ -90,16 +90,32 @@ def pedal_info(pedals: str | None, ref_pedals: str | None = None, *, ref_known: 
     )
 
 
+NOTE_ABS = "ABS is on: the game prevents lock-ups, so lock-ups are not analysed."
+ABS_OFF = "ABS off"
+ABS_OFF_OR_UNKNOWN = "ABS off or unknown; laps with ABS on are not analysed"
+
+
 @dataclass(slots=True)
 class AssistInfo:
     abs: bool | None
     traction_control: int | None
     braking_assist: int | None
     notes: list[str] = field(default_factory=list)
+    abs_unknown_laps: int = 0  # laps whose ABS state is unknown (not sent, or changed during the lap)
 
     @property
     def brake_notes_muted(self) -> bool:
         return bool(self.braking_assist)
+
+    @property
+    def abs_off_known(self) -> bool:
+        """ABS was off on every lap (so measured lock-ups were all with ABS off)."""
+        return self.abs is False and self.abs_unknown_laps == 0
+
+    @property
+    def abs_words(self) -> str:
+        """How lock-up texts name the ABS state: "ABS off" only when it was off on every lap."""
+        return ABS_OFF if self.abs_off_known else ABS_OFF_OR_UNKNOWN
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -107,6 +123,7 @@ class AssistInfo:
             "traction_control": self.traction_control,
             "braking_assist": self.braking_assist,
             "notes": list(self.notes),
+            "abs_unknown_laps": self.abs_unknown_laps,
         }
 
 
@@ -132,11 +149,15 @@ def assist_info(
             "yours. Brake notes are shown greyed out and are never used for advice."
         )
     if abs_on:
-        notes.append("ABS is on: the game prevents lock-ups, so lock-ups are not analysed.")
+        notes.append(NOTE_ABS)
     if tc:
         notes.append(f"Traction control on ({TC_WORDS.get(tc, str(tc))}): it limits wheelspin on the exit.")
     if game == "gt7":
         notes.append("GT7 may report throttle and brake after its own assists, so inputs may not be exactly yours.")
     return AssistInfo(
-        abs=None if abs_on is None else bool(abs_on), traction_control=tc, braking_assist=braking, notes=notes
+        abs=None if abs_on is None else bool(abs_on),
+        traction_control=tc,
+        braking_assist=braking,
+        notes=notes,
+        abs_unknown_laps=sum(1 for m in metas if m.get("abs_active") is None),
     )

@@ -43,22 +43,47 @@ function inWindow(c: CompareCornerTechnique, m: number): boolean {
 }
 
 /**
+ * The corner whose window holds Compare's shared cursor (game lap metres), or null (on a straight, nothing selected).
+ * Where two windows overlap (a chicane) the corner whose apex is nearest wins. Incidents are never picked.
+ */
+export function cornerAtCursor(cmp: Pick<TechniqueCompare, "corners"> | null | undefined, cursorM: number | null | undefined): string | null {
+  if (!cmp || !finite(cursorM)) return null;
+  let best: CompareCornerTechnique | null = null;
+  let bestGap = Infinity;
+  for (const c of cmp.corners) {
+    if (c.incident || !inWindow(c, cursorM)) continue;
+    const apex = c.points.apex;
+    const gap = finite(apex) ? Math.abs(apex - cursorM) : Infinity;
+    if (!best || gap < bestGap) {
+      best = c;
+      bestGap = gap;
+    }
+  }
+  return best?.corner ?? null;
+}
+
+function worstOf(cs: readonly CompareCornerTechnique[]): CompareCornerTechnique | null {
+  let worst: CompareCornerTechnique | null = null;
+  for (const c of cs) if (finite(c.time_delta_s) && (!worst || c.time_delta_s > (worst.time_delta_s as number))) worst = c;
+  return worst;
+}
+
+/**
  * The corner Compare's technique panel opens on: the corner under the shared cursor (the route's `at`), else the
- * first marker's corner (the biggest line difference), else the corner that lost most time, else the first.
- * Incidents never become the default.
+ * first marker's corner (the biggest line difference), else a corner with something to say (a shown note, such as a
+ * lock-up; the one that lost most time), else the corner that lost most time, else the first. Incidents never become
+ * the default.
  */
 export function defaultFocus(cmp: Pick<TechniqueCompare, "corners" | "markers"> | null | undefined, cursorM?: number | null): string | null {
   if (!cmp || !cmp.corners.length) return null;
   const usable = cmp.corners.filter((c) => !c.incident);
-  if (finite(cursorM)) {
-    const at = usable.find((c) => inWindow(c, cursorM));
-    if (at) return at.corner;
-  }
+  const at = cornerAtCursor(cmp, cursorM);
+  if (at) return at;
   const marker = cmp.markers.find((m) => usable.some((c) => c.corner === m.corner));
   if (marker) return marker.corner;
-  let worst: CompareCornerTechnique | null = null;
-  for (const c of usable) if (finite(c.time_delta_s) && (!worst || c.time_delta_s > (worst.time_delta_s as number))) worst = c;
-  return (worst ?? usable[0] ?? cmp.corners[0])!.corner;
+  const noted = usable.filter((c) => shownNotes(c.notes).length > 0);
+  if (noted.length) return (worstOf(noted) ?? noted[0])!.corner;
+  return (worstOf(usable) ?? usable[0] ?? cmp.corners[0])!.corner;
 }
 
 export interface MarkerItem {
@@ -194,6 +219,8 @@ export interface SymptomView {
     forFormat: CarFormat | null;
     /** The same change is already listed under an earlier symptom (its id): shown once, with its button there. */
     duplicateOf: string | null;
+    /** Only the car format is missing to size it (neither the server nor the page knows it): "15 → lower". */
+    formatUnknown: boolean;
   })[];
 }
 
@@ -230,6 +257,8 @@ export function alreadyTrying(experiments: readonly SetupExperiment[], sid: stri
 }
 
 export const ALREADY_TRYING = "Already in your experiments from this session";
+/** Every suggestion's blocked reason when the car format is unknown: one line on the card instead. */
+export const FORMAT_UNKNOWN = "Choose the car format at the top of this page to size these changes.";
 
 /**
  * Car symptoms with their suggestions (rank order), driving symptoms with none (spec §4.3: driving symptoms never get
@@ -268,20 +297,23 @@ export function symptomViews(
           const to = valueForFormat(x, p, opts.carFormat);
           if (to !== null && finite(x.from_value)) {
             forFormat = opts.carFormat;
-            out = { ...x, to_value: to, hypothesis: x.hypothesis.replace(/ -> unknown:/, ` -> ${menuText(to, p)}:`) };
+            out = { ...x, to_value: to, hypothesis: x.hypothesis.replace(/ (?:->|→) unknown:/, ` → ${menuText(to, p)}:`) };
             blockedNow =
               Math.abs(to - x.from_value) < 1e-9
                 ? `${x.label} is already at its ${x.direction === "lower" ? "minimum" : "maximum"} for this car.`
                 : null;
           }
         }
+        // the server said it does not know the car format (null, not merely absent) and the page could not size it
+        const formatUnknown = out.to_value === null && setup?.car_format === null && forFormat === null;
+        if (formatUnknown) blockedNow = FORMAT_UNKNOWN;
         if (!blockedNow && opts.synthetic) blockedNow = "Synthetic session: generated data, not your car";
         if (!blockedNow && opts.sid && opts.experiments && alreadyTrying(opts.experiments, opts.sid, x.parameter)) blockedNow = ALREADY_TRYING;
         if (!blockedNow && (out.to_value === null || out.from_value === null)) blockedNow = "Your setup for this session is unknown";
         const key = `${x.parameter}:${x.direction}`;
         const duplicateOf = listed.get(key) ?? null;
         if (!duplicateOf) listed.set(key, s.id);
-        return { ...out, blockedNow, forFormat, duplicateOf };
+        return { ...out, blockedNow, forFormat, duplicateOf, formatUnknown };
       });
     car.push({ symptom: s, suggestions });
   }

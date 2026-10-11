@@ -5,13 +5,15 @@
 //     shared chart cursor shows a dot on both lines. Pitwall does not know the track edges and never draws them.
 //   - The focused corner: offsets at turn-in / apex / track-out in words, the line offset chart (intermediate and
 //     advanced), how the car handled (BalanceChips) and brake and throttle (CornerInputsTable, rows by density).
-//   - Every corner as a row; tapping one focuses it and moves Compare's cursor to its apex.
+//   - Every corner as a row; tapping one focuses it and moves Compare's cursor to its apex. The focus follows the
+//     shared cursor: a corner picked in Compare's own corner table (which moves the cursor) is the one shown here too.
+//     On a phone the corners are chips right under the map, and picking one scrolls its detail into view.
 // Everything compares the driver's own two laps: descriptions, never advice (P9). A server without feat/technique
 // answers 404 and the card stays hidden; the API's reasons are shown for parts that are not available.
 
 import { Alert, Button, Card, Skeleton } from "@heroui/react";
 import { DataGrid, type DataGridColumn } from "@heroui-pro/react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { CornerTag, EvidenceChips, Unknown } from "../../../../components/ui";
 import { LineMap } from "../../../../components/viz/LineMap";
 import type { SessionDetail } from "../../../../lib/endpoints/review";
@@ -29,6 +31,7 @@ import {
   biggestOffset,
   brakingAssistNote,
   compareWindowM,
+  cornerAtCursor,
   defaultFocus,
   markerItems,
   shownNotes,
@@ -36,7 +39,7 @@ import {
   zoomPoints,
   type MarkerItem,
 } from "../../../../lib/technique/view";
-import { offsetShort, offsetWords, POINT_LABEL } from "../../../../lib/technique/words";
+import { notableOffset, offsetShort, offsetWords, POINT_LABEL, refWorded } from "../../../../lib/technique/words";
 import type { CursorSync } from "../../../../lib/viz/cursor";
 import { BalanceChips } from "./BalanceChips";
 import { CornerInputsTable } from "./CornerInputsTable";
@@ -155,16 +158,24 @@ function CornerRows({
       <div className="flex flex-wrap gap-2" role="group" aria-label="Corners">
         {corners.map((c) => {
           const big = biggestOffset(c);
+          const noted = !c.incident && shownNotes(c.notes).length > 0;
           return (
             <Button
               key={c.corner}
               variant={c.corner === focus ? "primary" : "secondary"}
-              className="min-h-11"
+              className="min-h-11 min-w-11"
               aria-pressed={c.corner === focus}
               onPress={() => onSelect(c)}
+              data-noted={noted ? "" : undefined}
             >
               <span className="pw-num font-semibold">{cornerLabel(c)}</span>
-              {!c.incident && big && Math.abs(big.offset) >= 1 && <span className="text-xs">{offsetShort(big.offset, c.inside_known)}</span>}
+              {!c.incident && big && notableOffset(big.offset) && <span className="text-xs">{offsetShort(big.offset, c.inside_known)}</span>}
+              {noted && (
+                <>
+                  <i aria-hidden="true" className="inline-block size-1.5 rounded-full bg-accent" />
+                  <span className="sr-only">, brake or throttle differences</span>
+                </>
+              )}
             </Button>
           );
         })}
@@ -191,10 +202,11 @@ function CornerRows({
             cell: (c: CompareCornerTechnique) => {
               const big = biggestOffset(c);
               if (c.incident) return <span className="text-sm text-muted">incident · not compared</span>;
-              return big ? (
-                <span className="text-sm whitespace-normal">{`${POINT_LABEL[big.point]}: ${offsetShort(big.offset, c.inside_known)}`}</span>
-              ) : (
-                <Unknown />
+              if (!big) return <Unknown />;
+              return (
+                <span className="text-sm whitespace-normal">
+                  {notableOffset(big.offset) ? `${POINT_LABEL[big.point]}: ${offsetShort(big.offset, c.inside_known)}` : "About the same line"}
+                </span>
               );
             },
           } satisfies DataGridColumn<CompareCornerTechnique>,
@@ -282,7 +294,7 @@ function Detail({
             <ul className="m-0 grid list-none gap-1.5 p-0" aria-label="What was different">
               {notes.map((n) => (
                 <li key={n.metric} className="rounded-2xl bg-surface-secondary px-3 py-2 text-sm leading-relaxed">
-                  {td.simpleWording && n.text_simple ? n.text_simple : n.text}
+                  {refWorded(td.simpleWording && n.text_simple ? n.text_simple : n.text, refWord)}
                 </li>
               ))}
             </ul>
@@ -306,6 +318,7 @@ function Detail({
             glossary={td.glossary}
             phone={phone}
             refTitle={refTitle}
+            refWord={refWord}
             reason={inputsReason}
           />
         </>
@@ -330,7 +343,14 @@ function PanelForPair({
   const [zoomed, setZoomed] = useState(false);
   // The default focus is taken once per answer, from the cursor at that moment (the route's `at`).
   const initial = useMemo(() => defaultFocus(data, sync.get()), [data, sync]);
+  // ...then it follows the shared cursor: Compare's own corner table moves the cursor, and this panel with it
+  const atCursor = useSyncExternalStore(
+    sync.subscribe,
+    () => (data ? cornerAtCursor(data, sync.get()) : null),
+    () => null,
+  );
   const markers = useMemo(() => markerItems(data, td.simpleWording), [data, td.simpleWording]);
+  const detailRef = useRef<HTMLDivElement>(null);
 
   if (!data) {
     if (q.error) {
@@ -364,7 +384,7 @@ function PanelForPair({
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <EvidenceChips synthetic={data.synthetic} />
-        <MeasuredButton sessionId={session.id} />
+        <MeasuredButton sessionId={session.id} showKeys={td.level === "advanced"} />
       </div>
     </Card.Header>
   );
@@ -383,7 +403,7 @@ function PanelForPair({
     );
   }
 
-  const focus = picked ?? initial;
+  const focus = atCursor ?? picked ?? initial;
   const c = data.corners.find((x) => x.corner === focus) ?? null;
   const zoom = zoomed && c ? compareWindowM(c) : null;
   const select = (corner: string) => {
@@ -392,6 +412,8 @@ function PanelForPair({
     const hit = data.corners.find((x) => x.corner === corner);
     const apex = hit?.points.apex;
     if (apex != null) sync.set(apex);
+    // phone: the detail sits above the chips the driver just tapped
+    if (phone) requestAnimationFrame(() => detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
   const lineReason = unavailableReasons(data.available, ["line"])[0] ?? null;
   // The assists in a line (ABS, traction control, another game's post-assist pedals); the braking assist sentence sits
@@ -440,6 +462,14 @@ function PanelForPair({
     </section>
   );
 
+  const every =
+    data.corners.length > 0 ? (
+      <section className="grid gap-2" aria-label="Every corner">
+        <h4 className="m-0 text-sm font-semibold">Every corner</h4>
+        <CornerRows corners={data.corners} focus={focus} td={td} phone={phone} onSelect={(x) => select(x.corner)} />
+        {!phone && <p className="m-0 text-xs text-muted">Tap a corner to zoom the map to it and move the cursor there.</p>}
+      </section>
+    ) : null;
   return (
     <Card className="gap-4 p-4 md:p-5" aria-label="Line and technique">
       {header}
@@ -448,7 +478,9 @@ function PanelForPair({
       )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
         <div className="min-w-0 lg:col-span-6">{map}</div>
-        <div className="min-w-0 lg:col-span-6">
+        {/* phone: the corner chips right under the map and its markers, before the (long) detail */}
+        {phone && every}
+        <div ref={detailRef} className="min-w-0 scroll-mt-4 lg:col-span-6">
           {c ? (
             <Detail c={c} data={data} td={td} sync={sync} refTitle={words.picker} refWord={words.sentence} phone={phone} />
           ) : (
@@ -456,13 +488,7 @@ function PanelForPair({
           )}
         </div>
       </div>
-      {data.corners.length > 0 && (
-        <section className="grid gap-2" aria-label="Every corner">
-          <h4 className="m-0 text-sm font-semibold">Every corner</h4>
-          <CornerRows corners={data.corners} focus={focus} td={td} phone={phone} onSelect={(x) => select(x.corner)} />
-          {!phone && <p className="m-0 text-xs text-muted">Tap a corner to zoom the map to it and move the cursor there.</p>}
-        </section>
-      )}
+      {!phone && every}
     </Card>
   );
 }

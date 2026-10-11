@@ -159,13 +159,16 @@ describe("Compare: line and technique", () => {
     expect(text).toContain("against your target lap (lap 64)");
     for (const t of ["Brake release", "Coasting", "Throttle pick-up", "Wheelspin and lock-ups"]) expect(text).toContain(t);
     for (const t of ["Brake pressure (peak)", "Time to full brake", "Throttle lifts", "Braking while turning"]) expect(text).not.toContain(t);
-    expect(text).toContain("you were off both pedals for longer than on your reference");
+    // the backend's sentences say "your target lap" too, like the headers (never "reference" next to "target lap")
+    expect(text).toContain("you were off both pedals for longer than on your target lap");
+    expect(text).not.toContain("your reference");
     expect(text).toContain("You ran wider at the apex of T4");
     expect(text).not.toContain("Metres tighter (+)");
     expect(text).not.toContain("+7.4°");
     expect(html).toContain("What is understeer?");
     expect(html).toContain("What is line offset?");
     expect(html).toContain("What is coasting?");
+    expect(html).not.toContain("What is trail braking?"); // its row is not shown to beginners
     expect(text).toContain("0.12 s lost");
     expect(text).not.toContain("+0.12 s");
   });
@@ -188,11 +191,28 @@ describe("Compare: line and technique", () => {
     expect(html).not.toContain('aria-label="Line and technique by corner"');
     expect(html).toContain("height:240px");
     expect(visible(html)).not.toContain("Tap a corner to zoom");
+    // the chips sit right under the map and its markers, before the corner's long detail
+    expect(html.indexOf('aria-label="Every corner"')).toBeGreaterThan(html.indexOf('aria-label="Racing line"'));
+    expect(html.indexOf('aria-label="Every corner"')).toBeLessThan(html.indexOf("in detail"));
+    // chips with something to say carry a dot; every chip is at least 44 px wide
+    expect(html).toContain("data-noted");
+    expect(html).toContain("min-w-11");
+  });
+
+  it("line differences under 1 m read 'about the same', the exact value in the tooltip", () => {
+    const cmp = techniqueFixtures.austriaCompare();
+    const t4 = cmp.corners.find((c) => c.corner === "T3")!;
+    t4.offsets = { turn_in: -0.4, apex: -1.8, track_out: 0.7 };
+    seedCompare(cmp);
+    const html = renderPanel();
+    expect(visible(html)).toContain("about the same");
+    expect(visible(html)).not.toMatch(/0\.[47] m (?:wider|tighter)(?! than)/);
+    expect(html).toContain('title="0.7 m tighter than the reference"');
   });
 
   it("another game: no slip data, so balance gives the reason; no line gives its reason", () => {
     const cmp = techniqueFixtures.austriaCompare();
-    const reason = "This game does not send tyre slip to Pitwall yet, so wheelspin, lock-ups and balance are unknown.";
+    const reason = "Pitwall does not read tyre slip from this game yet, so wheelspin, lock-ups and balance are unknown.";
     cmp.available.slip = { ok: false, reason, note: null };
     cmp.available.balance = { ok: false, reason, note: null };
     cmp.available.line = { ok: false, reason: "No positions for this lap.", note: null };
@@ -274,6 +294,31 @@ describe("Corners: line, inputs and balance", () => {
     expect(html).toContain('data-line="lap"');
   });
 
+  it("a phone starts every level collapsed (the open sections made the tab twelve screens long)", () => {
+    expect(techniqueDensity(level("advanced"), true).cornerCollapsed).toBe(true);
+    expect(techniqueDensity(level("advanced"), false).cornerCollapsed).toBe(false);
+  });
+
+  it("the mini map only when the drawn lap differs by 1 m or more; each section says which laps it covers", () => {
+    const data = techniqueFixtures.austriaSession();
+    const corner = data.corners.find((c) => {
+      const lap = c.laps.find((l) => l.lap_id === c.line?.view?.lap_id);
+      return !!lap?.line && Object.values(lap.line).some((v) => v != null && Math.abs(v) >= 1);
+    })!;
+    const ctx = (d: TechniqueSession): CornerTechniqueCtx => ({ state: { data: d, error: null }, td: techniqueDensity(level("advanced")) });
+    const html = renderToStaticMarkup(createElement(CornerTechnique, { corner: corner.corner, ctx: ctx(data) }));
+    expect(html).toContain('data-line="lap"');
+    expect(visible(html)).toMatch(/Line against your reference \(lap 64\) · \d+ laps? compared/);
+    expect(visible(html)).toMatch(/How the car handled · \d+ laps? at racing pace/);
+    const close = {
+      ...data,
+      corners: data.corners.map((c) =>
+        c === corner ? { ...c, laps: c.laps.map((l) => ({ ...l, line: l.line ? { turn_in: 0.2, apex: -0.6, track_out: 0.3 } : null })) } : c,
+      ),
+    };
+    expect(renderToStaticMarkup(createElement(CornerTechnique, { corner: corner.corner, ctx: ctx(close) }))).not.toContain('data-line="lap"');
+  });
+
   it("beginner: collapsed, no mini map, simple habits", () => {
     seedSession();
     const s = austria();
@@ -281,7 +326,7 @@ describe("Corners: line, inputs and balance", () => {
     expect(html).toContain("Line, inputs and balance");
     expect(html).toMatch(/aria-expanded="false"[^>]*>Line, inputs and balance/);
     expect(html).not.toContain('data-line="lap"');
-    expect(visible(html)).toContain("you were off both pedals for longer than on your reference on 5 of 8 laps");
+    expect(visible(html)).toContain("you were off both pedals for longer than on your target lap on 5 of 8 laps");
   });
 
   it("muted habits (brake figures with the game's braking assist on) are not listed on the card", () => {
@@ -302,7 +347,7 @@ describe("Corners: line, inputs and balance", () => {
     const text = visible(renderToStaticMarkup(createElement(CornerTechnique, { corner: "C1", ctx })));
     honest(text, "gt7 corner");
     expect(text).toContain("Apex: 1.1 m wider on 2 of 2 laps");
-    expect(text).toContain("This game does not send tyre slip to Pitwall yet");
+    expect(text).toContain("Pitwall does not read tyre slip from this game yet");
     expect(text).not.toContain("ABS on");
   });
 

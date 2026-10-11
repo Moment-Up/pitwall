@@ -6,6 +6,8 @@ Rules:
   cover at least two corners, or one corner on at least three laps, or one corner strongly (at least 6 degrees of
   understeer, or a slide on every lap). A symptom the best lap did not have points at the driving: no setup.
 * Lock-ups qualify only with ABS off, and only when they recur at two or more corners or on three or more laps.
+* With the game's braking assist on, the brake figures are not all the driver's (``technique.rig``): brake bias and
+  brake pressure are never suggested then, nor anything that needs the symptom to happen under braking.
 * Each suggestion changes **one** parameter by a trial step in menu units (wings 2 clicks, differentials 10 %,
   anti-roll bars 2, suspension 3, brake bias 1 %, brake pressure 3 %), from the session's latest stored setup,
   snapped to the car format's range. It feeds the existing experiments flow (``carsetup.experiments.propose``).
@@ -57,6 +59,11 @@ TRIAL_STEP: dict[str, float] = {
     "brake_bias": 1,
     "brake_pressure": 3,
 }
+BRAKE_KEYS: frozenset[str] = frozenset({"brake_bias", "brake_pressure"})
+NOTE_BRAKING_ASSIST = (
+    "Brake bias and pressure are not suggested while the game's braking assist is on (it adds its own braking)."
+)
+FORMAT_UNKNOWN = "Choose the car format at the top of this page to size this change."
 ALL: frozenset[str] = frozenset({"slow", "medium", "fast"})
 SLOW_MED: frozenset[str] = frozenset({"slow", "medium"})
 MED_FAST: frozenset[str] = frozenset({"medium", "fast"})
@@ -303,8 +310,10 @@ def lockup_qualifies(s: LockupSymptom) -> bool:
     return len(s.corners) >= T.LOCKUP_RECUR_CORNERS or s.laps >= T.LOCKUP_RECUR_LAPS
 
 
-def _applicable(c: Candidate, s: BalanceSymptom) -> bool:
+def _applicable(c: Candidate, s: BalanceSymptom, braking_assist: bool = False) -> bool:
     if c.key in NEVER_SUGGESTED:
+        return False
+    if braking_assist and (c.needs_braking or c.key in BRAKE_KEYS):
         return False
     if c.needs_braking and not s.with_braking:
         return False
@@ -320,17 +329,25 @@ def suggest(
     car_format: CarFormat | None,
     stored: Mapping[str, float] | None,
     testing: frozenset[str] = frozenset(),
+    braking_assist: bool = False,
 ) -> SetupEngineer:
     """Suggestions for the qualifying symptoms. ``stored``: menu values of the session's latest setup (None =
-    unknown). ``testing``: parameters with an experiment already proposed or running from this session."""
+    unknown). ``testing``: parameters with an experiment already proposed or running from this session.
+    ``braking_assist``: the game's braking assist was on (no brake bias or pressure changes)."""
     wanted: list[tuple[str, str, list[Candidate]]] = []  # (symptom id, simple text, candidates)
+    brake_dropped = False
     for s in symptoms:
         if not qualifies(s):
             continue
-        cands = [c for c in CANDIDATES.get((s.phase, s.cls), ()) if _applicable(c, s)]
+        all_c = CANDIDATES.get((s.phase, s.cls), ())
+        cands = [c for c in all_c if _applicable(c, s, braking_assist)]
+        brake_dropped |= braking_assist and any(c.key in BRAKE_KEYS for c in all_c if _applicable(c, s))
         wanted.append((s.id, s.text_simple, cands[: T.MAX_SUGGESTIONS_PER_SYMPTOM]))
     for lk in lockups:
         if lockup_qualifies(lk):
+            if braking_assist:
+                brake_dropped = True  # every lock-up candidate is a brake setting
+                continue
             wanted.append((lk.id, lk.text_simple, list(LOCKUP_CANDIDATES[lk.axle])))
     # a parameter two symptoms want moved in opposite directions is dropped from both
     dirs: dict[str, set[str]] = {}
@@ -339,6 +356,8 @@ def suggest(
             dirs.setdefault(c.key, set()).add(c.direction)
     conflicts = sorted(k for k, d in dirs.items() if len(d) > 1)
     notes: list[str] = []
+    if brake_dropped:
+        notes.append(NOTE_BRAKING_ASSIST)
     if conflicts:
         labels = [(p.label if (p := cat.param(k)) else k) for k in conflicts]
         notes.append(
@@ -390,7 +409,7 @@ def _suggestion(
     blocked: str | None = None
     steps = step / rng.step if rng is not None and rng.step > 0 else step
     if car_format is None:
-        blocked = "The car format is unknown (2025 or 2026 car): choose it in Setup › Car setup."
+        blocked = FORMAT_UNKNOWN
     elif rng is None:
         blocked = f"{p.label} has no known range for this car format."
     elif from_v is None:
@@ -405,7 +424,7 @@ def _suggestion(
             to_v = None
     if blocked is None and c.key in testing:
         blocked = f"An experiment with {p.label} is already proposed or running from this session."
-    hypothesis = f"{p.label} {p.fmt(from_v)} -> {p.fmt(to_v)}: {simple} Expected: {effect}"
+    hypothesis = f"{p.label} {p.fmt(from_v)} → {p.fmt(to_v)}: {simple} Expected: {effect}"
     if len(hypothesis) > 500:
         hypothesis = hypothesis[:497].rstrip() + "..."
     return SetupSuggestion(

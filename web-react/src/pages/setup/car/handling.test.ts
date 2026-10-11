@@ -138,7 +138,7 @@ describe("How the car handled", () => {
     const arb = v.car[0]!.suggestions[0]!;
     const initial = mod.tryInitial(arb)!;
     expect(initial).toMatchObject({ key: "front_arb", to: 13 });
-    expect(initial.hypothesis).toMatch(/^Front Anti-Roll Bar 15 -> 13: The car pushed wide in the middle of T2 and T7/);
+    expect(initial.hypothesis).toMatch(/^Front Anti-Roll Bar 15 → 13: The car pushed wide in the middle of T2 and T7/);
     expect(initial.hypothesis!.length).toBeLessThanOrEqual(500);
     expect(mod.tryInitial(v.car[1]!.suggestions.find((x) => x.parameter === "rear_arb")!)).toBeNull();
     expect(mod.tryInitial({ parameter: "x", to_value: null, hypothesis: "" })).toBeNull();
@@ -159,7 +159,11 @@ describe("How the car handled", () => {
       },
     };
     const before = visible(render(unknown));
-    expect(before).toContain("The car format is unknown (2025 or 2026 car)");
+    // one line pointing at the chooser above (not the same reason on every suggestion), each change as a direction
+    expect(before.match(/Choose the car format at the top of this page to size these changes\./g)).toHaveLength(1);
+    expect(before).toContain("Front Anti-Roll Bar 15 → lower");
+    expect(before).toContain("Front Wing Aero 10 → higher");
+    expect(before).not.toContain("The car format is unknown");
     expect(before).not.toContain("Try this");
     const after = visible(render(unknown, { carFormat: "f1_2025" }));
     expect(after).toContain("Front Anti-Roll Bar 15 → 13");
@@ -175,18 +179,39 @@ describe("How the car handled", () => {
     expect(setupValue({ x: { value: "a" } }, "x")).toBeNull();
   });
 
-  it("beginner: the simple sentences", () => {
-    const text = visible(render(techniqueFixtures.suzukaBalance(), { session: session({ driver: { id: 2, name: "Alex", skill_level: "beginner" } }) }));
-    expect(text).toContain("The car pushed wide in the middle of T2 and T7 on 3 of 3 laps, even on your best lap.");
+  it("beginner: plain words first, both possibilities said, the changes behind a disclosure", () => {
+    const html = render(techniqueFixtures.suzukaBalance(), { session: session({ driver: { id: 2, name: "Alex", skill_level: "beginner" } }) });
+    const text = visible(html);
+    expect(text).toContain("Pushed wide mid-corner (understeer)");
+    expect(text).toContain("On every lap, including your best: it could be the car or how the corner is approached.");
+    expect(text).toContain("Setup changes to try");
+    expect(text).not.toContain("Mid-corner understeer");
     expect(text).not.toContain("heuristic threshold 3°");
+    expect(html).toMatch(/aria-expanded="false"[^>]*>Setup changes to try/);
+  });
+
+  it("advanced: what was measured, not the title again; 'Why' only when it says more than the effect", () => {
+    const b = techniqueFixtures.suzukaBalance();
+    const text = visible(render(b));
+    expect(text).toContain("At the limit the front tyres ran 6.4° more slip angle than the rears (heuristic threshold 3°).");
+    expect(text).not.toContain("Mid-corner understeer at T2 and T7 (medium speed) on 3 of 3 laps");
+    const same = b.setup!.suggestions[0]!;
+    const echo = { ...b, setup: { ...b.setup!, suggestions: [{ ...same, why: "A softer front bar gives more front grip in slow and medium corners." }] } };
+    const echoed = visible(render(echo));
+    expect(echoed.match(/softer front bar gives more front grip/g)).toHaveLength(1); // the effect only
   });
 
   it("another game: the reason and 'for F1 25 only', nothing to try", () => {
     const text = visible(render(techniqueFixtures.gt7Balance(), { session: session({ game: "gt7" }) }, "4e0c2a1b7f30"));
     honest(text, "gt7");
-    expect(text).toContain("This game does not send tyre slip to Pitwall yet");
+    expect(text).toContain("Pitwall does not read tyre slip from this game yet");
     expect(text).toContain(mod.NOT_F1_TEXT);
     expect(text).not.toContain("Try this");
+  });
+
+  it("nothing measured: a one-line card, never 'measured from tyre slip' above 'no tyre slip'", () => {
+    const text = visible(render(techniqueFixtures.gt7Balance(), { session: session({ game: "gt7" }) }, "4e0c2a1b7f30"));
+    expect(text).not.toContain("Measured from tyre slip at the limit");
   });
 
   it("an F1 session recorded before slip data: says so", () => {
@@ -232,14 +257,14 @@ describe("Experiments: how the handling changed", () => {
     const e = concluded();
     (e.after_metrics!.comparison as unknown as Record<string, unknown>).balance = techniqueFixtures.experimentBalance();
     const text = visible(renderToStaticMarkup(createElement(ExperimentCard, { exp: e, param: undefined, sessions: [] })));
-    expect(text).toContain("How the handling changed");
+    expect(text).toContain("Handling before and after");
     expect(text).toContain("T2 mid-corner: understeer on 3 of 3 laps before, 1 of 4 after");
     expect(text).toContain("Balance is measured with heuristic thresholds; one session each side is a small sample.");
   });
 
   it("an older server (no balance) changes nothing", () => {
     const text = visible(renderToStaticMarkup(createElement(ExperimentCard, { exp: concluded(), param: undefined, sessions: [] })));
-    expect(text).not.toContain("How the handling changed");
+    expect(text).not.toContain("Handling before and after");
   });
 });
 

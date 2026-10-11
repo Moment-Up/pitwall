@@ -11,6 +11,7 @@ import {
   INPUT_ROWS_ALL,
   lapsUsedText,
   linePointSummaryText,
+  refWorded,
   lockupWords,
   offsetShort,
   offsetWords,
@@ -83,6 +84,18 @@ describe("line offsets", () => {
     expect(offsetShort(-1.84, true)).toBe("1.8 m wider");
     expect(offsetShort(1.2, false)).toBe("1.2 m off");
     expect(offsetShort(undefined, true)).toBe("-");
+    // under 1 m is lap-to-lap spread: not "wider" or "tighter" (the exact value stays in the tooltip)
+    expect(offsetShort(-0.7, true)).toBe("about the same");
+    expect(offsetShort(0.4, false)).toBe("about the same");
+    expect(offsetShort(-1.0, true)).toBe("1.0 m wider");
+  });
+
+  it("a beginner's page calls the reference 'your target lap' in the backend's sentences too", () => {
+    expect(refWorded("You let off the brake more slowly than on your reference.", "your target lap")).toBe(
+      "You let off the brake more slowly than on your target lap.",
+    );
+    expect(refWorded("Peak brake 75 % vs 95 % on your reference lap.", "your target lap")).toBe("Peak brake 75 % vs 95 % on your target lap.");
+    expect(refWorded("1.5 m wider than your reference", "the reference")).toBe("1.5 m wider than your reference");
   });
 
   it("session summaries: the median and the laps beyond 1 m, or 'about the same'", () => {
@@ -97,6 +110,17 @@ describe("line offsets", () => {
     );
     expect(linePointSummaryText("apex", { median_offset_m: 0.9, laps: 2, laps_wider: 0, laps_tighter: 0 }, false)).toBe(
       "Apex: 0.9 m off the reference line (median of 2 laps)",
+    );
+    // beginners: words, not a median
+    const simple = { simple: true, ref: "your target lap" };
+    expect(linePointSummaryText("turn_in", { median_offset_m: 0.3, laps: 4, laps_wider: 1, laps_tighter: 0 }, true, 1, simple)).toBe(
+      "Turn-in: about the same as your target lap on most laps",
+    );
+    expect(linePointSummaryText("apex", { median_offset_m: 0.8, laps: 2, laps_wider: 0, laps_tighter: 0 }, true, 1, simple)).toBe(
+      "Apex: about the same as your target lap on every lap",
+    );
+    expect(linePointSummaryText("apex", { median_offset_m: -1.2, laps: 4, laps_wider: 3, laps_tighter: 0 }, true, 1, simple)).toBe(
+      "Apex: 1.2 m wider on 3 of 4 laps",
     );
     expect(linePointSummaryText("apex", null, true)).toBeNull();
     expect(linePointSummaryText("apex", { median_offset_m: null, laps: 2, laps_wider: 0, laps_tighter: 0 }, true)).toBeNull();
@@ -195,6 +219,9 @@ describe("balance", () => {
       "Entry: understeer on 2 of 3 laps, not on your best lap",
     );
     expect(phaseSummaryText("exit", summary())).toBe("Exit: balanced on 3 of 3 laps");
+    // nothing recurs: every class seen is named, "mixed" without a clear majority
+    expect(phaseSummaryText("entry", summary({ laps: 2, neutral: 1, understeer: 1 }))).toBe("Entry: mixed (1 balanced, 1 understeer) over 2 laps");
+    expect(phaseSummaryText("exit", summary({ laps: 9, neutral: 8, understeer: 1 }))).toBe("Exit: balanced on 8 of 9 laps (1 understeer)");
     expect(phaseSummaryText("exit", summary({ laps: 0, neutral: 0 }))).toBeNull();
   });
 

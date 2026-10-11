@@ -770,12 +770,14 @@ def _m_lockup(laps: Sequence[LapTrace], spec: RigCheckSpec) -> MetricResult:
             onsets += 1
             at_full += int(b[s] >= FULL)
     value = 100.0 * at_full / onsets if onsets else None
+    # feat/technique: with ABS on for every lap the game prevents lock-ups, so none detected says nothing
+    abs_on = bool(laps) and all(lap.meta.get("abs_active") is True for lap in laps)
     return _result(
         spec,
         value,
         f"{at_full} of {onsets} front lock-ups started with the brake at 100%.",
         samples=onsets,
-        reason_unknown="No front lock-ups detected.",
+        reason_unknown="ABS on: the game prevents lock-ups." if abs_on else "No front lock-ups detected.",
     )
 
 

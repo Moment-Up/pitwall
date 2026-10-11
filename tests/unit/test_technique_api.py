@@ -147,6 +147,24 @@ def test_errors(client: TestClient, data: tuple[Path, dict[str, str]]) -> None:
     assert bad.status_code == 422
 
 
+def test_a_chosen_reference_lap_must_exist_and_be_on_the_same_track(
+    client: TestClient, data: tuple[Path, dict[str, str]]
+) -> None:
+    """An unknown reference lap is 404, never "no reference lap yet"; one from another game or track is 422, never
+    analysed against this track's model (it changed speed classes and setup suggestions)."""
+    root, sids = data
+    sid = sids["technique-demo"]
+    for bad in (999999, -5, 0):
+        r = client.get(f"/api/technique/sessions/{sid}?ref_lap_id={bad}")
+        assert r.status_code == 404 and "reference lap not found" in r.json()["detail"], bad
+    gt7_lap = _laps(root, sids["gt7-demo"])[0]["id"]
+    r = client.get(f"/api/technique/sessions/{sid}?ref_lap_id={gt7_lap}")
+    assert r.status_code == 422 and "another game or track" in r.json()["detail"]
+    own = _laps(root, sid)[0]["id"]
+    body = client.get(f"/api/technique/sessions/{sid}?ref_lap_id={own}").json()
+    assert body["ref_lap_id"] == own and body["available"]["line"]["ok"] is True
+
+
 def test_session_payload_follows_the_contract(client: TestClient, data: tuple[Path, dict[str, str]]) -> None:
     _, sids = data
     body = client.get(f"/api/technique/sessions/{sids['technique-demo']}").json()
@@ -163,7 +181,7 @@ def test_session_payload_follows_the_contract(client: TestClient, data: tuple[Pa
         "note",
     }
     assert body["pedals"]["pedals"] == "csl"  # the default rig profile (never saved): stock CSL pedals
-    assert set(body["assists"]) == {"abs", "traction_control", "braking_assist", "notes"}
+    assert set(body["assists"]) == {"abs", "traction_control", "braking_assist", "notes", "abs_unknown_laps"}
     c = body["corners"][0]
     assert set(c) >= CORNER_KEYS and set(c["points"]) == {"turn_in", "apex", "track_out"}
     assert set(c["ref"]) == {"inputs", "balance"} and set(c["ref"]["inputs"]) >= INPUT_KEYS
@@ -195,6 +213,8 @@ def test_compare_payload_and_markers(client: TestClient, data: tuple[Path, dict[
     assert set(body) >= COMPARE_KEYS and body["compatible"] is True and body["synthetic"] is True
     assert body["lines"]["step_m"] == 5 and len(body["lines"]["ref_xz"]) == len(body["lines"]["lap_xz"])
     assert body["markers"] and all(m["offset_m"] == pytest.approx(-2.0, abs=0.2) for m in body["markers"])
+    corners = [m["corner"] for m in body["markers"]]
+    assert len(corners) == len(set(corners))  # one marker per corner: the biggest difference there
     assert "wider than your reference" in body["markers"][0]["text"]
     corner = next(c for c in body["corners"] if c["corner"] == body["markers"][0]["corner"])
     assert (
@@ -221,7 +241,7 @@ def test_non_f1_sessions_have_no_setup_and_no_slip(client: TestClient, data: tup
     body = client.get(f"/api/technique/sessions/{sids['gt7-demo']}").json()
     assert body["game"] == "gt7" and body["setup"] is None
     assert body["available"]["slip"]["ok"] is False
-    assert body["available"]["slip"]["reason"].startswith("This game does not send tyre slip to Pitwall yet")
+    assert body["available"]["slip"]["reason"].startswith("Pitwall does not read tyre slip from this game yet")
     assert body["available"]["setup"]["reason"] == "Setup suggestions are for F1 25 only."
     assert body["symptoms"] == []
     for c in body["corners"]:

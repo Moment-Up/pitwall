@@ -976,6 +976,19 @@ def test_lockup_reason_points_at_the_wheel_slip_question() -> None:
     assert "wheel slip" in q13.question
 
 
+def test_lockups_with_abs_on_every_lap_are_unknown_not_none() -> None:
+    """feat/technique stores wheel slip, which switches this metric on for new laps. With ABS on (every lap's meta)
+    the game prevents lock-ups: still unknown, and it says why rather than "No front lock-ups detected"."""
+    lap = standard_lap()
+    for w in ("fl", "fr", "rl", "rr"):
+        lap.channels[f"wheel_slip_{w}"] = np.zeros(len(lap.channels["brake"]))
+    lap.meta["abs_active"] = True
+    m = metric([lap], "lockup_at_full_brake_share")
+    assert m.value is None and m.reason_unknown == "ABS on: the game prevents lock-ups."
+    lap.meta["abs_active"] = None  # unknown ABS: the old wording
+    assert metric([lap], "lockup_at_full_brake_share").reason_unknown == "No front lock-ups detected."
+
+
 def test_peak_drift_sees_the_session_start_stops() -> None:
     """Review minor: a skipped press-fully routine shows in the first stops, which sit on the (standing-start, not
     clean) first lap. Those stops count for the drift check even when the lap policy leaves that lap out."""

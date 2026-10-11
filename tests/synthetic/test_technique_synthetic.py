@@ -167,4 +167,5 @@ def test_a_concluded_experiment_carries_the_balance_change(tmp_path: Path) -> No
     assert balance["available"] is True and "heuristic" in balance["note"]
     change = next(c for c in balance["changes"] if c["phase"] == "mid")
     assert change["before"]["recurring"] == "understeer" and change["after"]["recurring"] == "understeer"
-    assert change["delta_deg"] == pytest.approx(0.0, abs=0.1) and "understeer on 6 of 6 laps before" in change["words"]
+    assert change["delta_deg"] == pytest.approx(0.0, abs=0.1) and change["changed"] is False
+    assert "no change (understeer on 6 of 6 laps both times)" in change["words"]

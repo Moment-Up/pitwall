@@ -32,6 +32,7 @@ from pitwall.analysis.compare import (
     check_compatibility,
     compare,
     compat_meta,
+    lengths_compatible,
 )
 from pitwall.analysis.laps import LapFlag
 from pitwall.analysis.track import Corner, TrackModel
@@ -69,7 +70,7 @@ from pitwall.technique.line import (
     reference_line,
     steer_points,
 )
-from pitwall.technique.rig import AssistInfo, PedalInfo, assist_info, pedal_info
+from pitwall.technique.rig import NOTE_ABS, AssistInfo, PedalInfo, assist_info, pedal_info
 from pitwall.technique.samples import Native, m2, native, rnd, runs, xz_list
 from pitwall.technique.setup_map import LockupSymptom, SetupEngineer, suggest
 from pitwall.technique.thresholds import threshold_infos
@@ -89,7 +90,7 @@ FLAG_REASONS = {
 F1_GAMES = frozenset({"f1_25"})
 NO_REFERENCE = "No reference lap yet: drive a clean lap at this track first."
 NO_SLIP = "No tyre slip data in this session (recorded before Pitwall stored it, or the game does not send it)."
-NO_SLIP_GAME = "This game does not send tyre slip to Pitwall yet, so wheelspin, lock-ups and balance are unknown."
+NO_SLIP_GAME = "Pitwall does not read tyre slip from this game yet, so wheelspin, lock-ups and balance are unknown."
 
 
 def no_slip_reason(game: object) -> str:
@@ -113,6 +114,22 @@ class NoTrackModel(RuntimeError):
         super().__init__("no track model yet for this track (complete a clean lap first)")
 
 
+class TechniqueBadReference(ValueError):
+    """A reference lap that cannot be the session's reference: another game, track or layout (HTTP 422)."""
+
+
+def check_reference(sess: Mapping[str, Any], ref_sess: Mapping[str, Any] | None) -> None:
+    """Raise unless a chosen reference lap's session is on the session's game, track and layout. A reference from
+    elsewhere would be "analysed" against the wrong track model: corner speeds, speed classes and setup gating would
+    all come from another circuit."""
+    if ref_sess is None:
+        raise TechniqueNotFound("reference lap not found")
+    if ref_sess.get("game") != sess.get("game") or ref_sess.get("track_id") != sess.get("track_id"):
+        raise TechniqueBadReference("the reference lap is from another game or track")
+    if not lengths_compatible(ref_sess.get("track_length_m"), sess.get("track_length_m")):
+        raise TechniqueBadReference("the reference lap is from another layout of this track")
+
+
 @dataclass(slots=True)
 class Availability:
     ok: bool
@@ -130,6 +147,8 @@ class LapEntry:
     clean: bool
     usable: bool
     reason: str | None
+    # why a usable lap is left out of the handling balance and the habits (standing start, well off the pace)
+    balance_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -138,6 +157,7 @@ class LapEntry:
             "clean": self.clean,
             "usable": self.usable,
             "reason": self.reason,
+            "balance_reason": self.balance_reason,
         }
 
 
@@ -160,6 +180,7 @@ class LapCornerTechnique:
     balance: dict[Phase, PhaseBalance | None] | None
     all_notes: list[TechniqueNote] = field(default_factory=list)  # every note with both values (habits, facts)
     lap_time_ms: int | None = None
+    representative: bool = True  # at racing pace (not a standing start, not well off the pace): balance, habits
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -389,6 +410,33 @@ def lap_entries(sa: SessionAnalysis, analyses: Mapping[int, LapAnalysis]) -> lis
     return out
 
 
+def _pace_exclusions(sa: SessionAnalysis, entries: list[LapEntry]) -> tuple[dict[int, str], int | None]:
+    """Usable laps left out of the handling balance and the habits, with why, and the session's best clean lap (the
+    fastest clean timed lap that is not left out). A standing start is not driven at the limit like a flying lap, and
+    a lap well off the pace (a safety car, a cool-down) is not at the limit at all: neither says how the car handles.
+    """
+    rows = {int(lap["id"]): lap for lap in sa.laps}
+    timed = [e for e in entries if e.usable and e.clean and rows[e.lap_id].get("lap_time_ms")]
+    times = [int(rows[e.lap_id]["lap_time_ms"]) for e in timed]
+    best_ms = min(times) if times else None
+    out: dict[int, str] = {}
+    for e in entries:
+        if not e.usable:
+            continue
+        lap = rows[e.lap_id]
+        ms = lap.get("lap_time_ms")
+        if LapFlag.STANDING_START in (lap.get("flags") or ()):
+            out[e.lap_id] = "standing start"
+        elif best_ms and ms and int(ms) > T.BALANCE_PACE_FRAC * best_ms:
+            out[e.lap_id] = f"more than {(T.BALANCE_PACE_FRAC - 1) * 100:.0f} % off your best clean lap"
+    best = [
+        (int(rows[e.lap_id]["lap_time_ms"]), e.lap_id)
+        for e in entries
+        if e.usable and e.clean and e.lap_id not in out and rows[e.lap_id].get("lap_time_ms")
+    ]
+    return out, (min(best)[1] if best else None)
+
+
 # ---------------------------------------------------------------------------------------------- session analysis
 _CACHE: OrderedDict[tuple[Any, ...], SessionTechnique] = OrderedDict()
 _CACHE_LOCK = threading.Lock()
@@ -440,6 +488,9 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
             analyses.setdefault(k, v)
     entries = lap_entries(sa, analyses)
     usable = {e.lap_id: e for e in entries if e.usable}
+    off_pace, best_lap_id = _pace_exclusions(sa, entries)
+    for e in entries:
+        e.balance_reason = off_pace.get(e.lap_id)
     rows = {int(lap["id"]): lap for lap in sa.laps}
     ref_id = sa.ref_lap_id if sa.ref_lap_id in sa.analyses else None
     ref_an = analyses.get(ref_id) if ref_id is not None else None
@@ -467,10 +518,30 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
         "balance": Availability(
             has_balance,
             None if has_balance else no_data,
-            "Measured from tyre slip at the limit; the thresholds are Pitwall's heuristics." if has_balance else None,
+            "Measured from tyre slip at the limit; the thresholds are Pitwall's heuristics."
+            + (
+                f" Standing starts and laps more than {(T.BALANCE_PACE_FRAC - 1) * 100:.0f} % off your best clean lap "
+                "are left out."
+                if off_pace
+                else ""
+            )
+            if has_balance
+            else None,
         ),
         "setup": Availability(False, None),
     }
+    # line and inputs need at least one lap compared with the reference (a reference alone compares nothing)
+    others = [lid for lid in usable if lid != ref_id]
+    if ref_an is not None and not any(_compared_ok(sa, lid) for lid in others):
+        blocked = next((sa.comparisons[lid] for lid in others if lid in sa.comparisons), None)
+        ref_no = sa.ref_lap.get("lap_number") if sa.ref_lap else None
+        why = (
+            f"Not compared with your reference lap (lap {ref_no}): " + "; ".join(blocked.compatibility.blocking) + "."
+            if blocked is not None and blocked.compatibility.blocking
+            else f"No other lap compared with your reference lap (lap {ref_no}) yet."
+        )
+        available["line"] = Availability(False, why)
+        available["inputs"] = Availability(False, why)
     if s.get("game") not in F1_GAMES:
         available["setup"] = Availability(False, "Setup suggestions are for F1 25 only.")
     elif not has_balance:
@@ -478,7 +549,7 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
     else:
         available["setup"] = Availability(True, None, "One change at a time, then compare a session.")
     if has_slip and assists.abs:
-        available["slip"].note = "ABS on: the game prevents lock-ups, so lock-ups are not analysed."
+        available["slip"].note = NOTE_ABS  # the assists' own sentence: one wording wherever it shows
 
     corners: list[TechniqueCorner] = []
     lockup_rows: dict[str, dict[str, set[int]]] = {"front": {}, "rear": {}}  # axle -> corner -> lap ids
@@ -523,6 +594,8 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
         ref_min = (
             ref_cm.min_speed_kph if ref_cm is not None and ref_cm.min_speed_kph is not None else c.ref_min_speed_kph
         )
+        # the corner's speed class from the track model, never from the chosen reference lap: it gates setup changes
+        sc = speed_class(c.ref_min_speed_kph)
         ref_inputs: CornerInputs | None = None
         ref_bal: dict[Phase, PhaseBalance | None] | None = None
         if ref_an is not None and ref_nat is not None:
@@ -585,6 +658,7 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
                     balance=bal,
                     all_notes=all_notes,
                     lap_time_ms=row.get("lap_time_ms"),
+                    representative=lid not in off_pace,
                 )
             )
             lk = inputs.lockup
@@ -610,21 +684,24 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
                         wheelspin=bool(lc.inputs and lc.inputs.wheelspin.events),
                     )
                     for lc in lap_rows
-                    if not lc.incident and lc.balance is not None and (pb := lc.balance.get(p)) is not None
+                    if lc.representative
+                    and not lc.incident
+                    and lc.balance is not None
+                    and (pb := lc.balance.get(p)) is not None
                 ]
-                summ = summarise(prow)
+                summ = summarise(prow, best_lap_id)
                 bal_summary[p] = summ
                 phase_items.append(
                     CornerPhaseInput(
                         corner=c.name,
                         corner_label=ct.long if ct else c.name,
-                        speed_class=speed_class(ref_min),
+                        speed_class=sc,
                         phase=p,
                         summary=summ,
                         rows=prow,
                     )
                 )
-        compared = [lc.all_notes for lc in lap_rows if lc.all_notes]
+        compared = [lc.all_notes for lc in lap_rows if lc.all_notes and lc.representative]
         label, name = _corner_label(c)
         corners.append(
             TechniqueCorner(
@@ -633,7 +710,7 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
                 name=name,
                 direction=c.direction,
                 apex_m=float(apex),
-                speed_class=speed_class(ref_min),
+                speed_class=sc,
                 ref_min_speed_kph=ref_min,
                 points={"turn_in": turn_in, "apex": float(apex), "track_out": track_out},
                 ref_inputs=ref_inputs,
@@ -646,7 +723,7 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
                 inside=inside,
             )
         )
-    lockups = _lockup_symptoms(lockup_rows, lockup_events, texts)
+    lockups = _lockup_symptoms(lockup_rows, lockup_events, texts, assists.abs_words)
     return SessionTechnique(
         session=s,
         ref_lap_id=ref_id,
@@ -716,7 +793,7 @@ def _line_summary(
 
 
 def _lockup_symptoms(
-    rows: dict[str, dict[str, set[int]]], events: dict[str, int], texts: Mapping[str, CornerText]
+    rows: dict[str, dict[str, set[int]]], events: dict[str, int], texts: Mapping[str, CornerText], abs_words: str
 ) -> list[LockupSymptom]:
     out: list[LockupSymptom] = []
     axles: tuple[Literal["front", "rear"], ...] = ("front", "rear")
@@ -737,7 +814,7 @@ def _lockup_symptoms(
                 laps=laps,
                 events=events[axle],
                 text=f"{axle.capitalize()} lock-ups under braking at {where}: {events[axle]} in total over {laps} "
-                f"lap{'s' if laps != 1 else ''} (ABS off).",
+                f"lap{'s' if laps != 1 else ''} ({abs_words}).",
                 text_simple=f"The {axle} wheels locked under braking at {where}.",
             )
         )
@@ -768,7 +845,15 @@ def setup_engineer(
             if p is not None:
                 stored[k] = p.menu_value(v)
     fmt = car_format or ctx.car_format
-    eng = suggest(st.symptoms, st.lockups, cat=cat, car_format=fmt, stored=stored, testing=testing)
+    eng = suggest(
+        st.symptoms,
+        st.lockups,
+        cat=cat,
+        car_format=fmt,
+        stored=stored,
+        testing=testing,
+        braking_assist=bool(st.assists.braking_assist),
+    )
     if not st.available["balance"].ok:
         eng.note = st.available["balance"].reason
     return eng
@@ -801,15 +886,21 @@ class TechniqueAnalyzer:
         return pedal_info(pedals, self._pedals_at(ref_sess.get("started_unix")), ref_known=pedals is not None)
 
     def analyse(self, session_id: str, ref_lap_id: int | None = None) -> SessionTechnique:
+        """``ref_lap_id``: a reference lap chosen instead of the session's own; unknown is ``TechniqueNotFound``, one
+        from another game, track or layout ``TechniqueBadReference``."""
         sa = self.sessions.analyse(session_id, ref_lap_id)
         if sa is None:
             raise TechniqueNotFound(f"session {session_id} not found")
-        if sa.model is None:
-            raise NoTrackModel()
+        if ref_lap_id is not None and sa.ref_lap is None:
+            raise TechniqueNotFound("reference lap not found")
         ref_sess = None
         if sa.ref_lap is not None:
             with self.db.read() as c:
                 ref_sess = repo.get_session(c, sa.ref_lap["session_id"])
+        if ref_lap_id is not None:
+            check_reference(sa.session, ref_sess)
+        if sa.model is None:
+            raise NoTrackModel()
         pedals = self._pedals(sa.session, ref_sess)
         key = (*_cache_key(sa, pedals), "db")
         with self._lock:
@@ -886,6 +977,8 @@ class TechniqueAnalyzer:
             if sa_ is None or sb is None:
                 raise TechniqueNotFound("lap not found")
             model = repo.load_track_model(c, sa_["game"], sa_["track_id"]) if sa_.get("track_id") else None
+        if model is not None and not lengths_compatible(model.length_m, sa_.get("track_length_m")):
+            model = None  # the stored model is of another layout under the same track id (AC consoles)
         if model is None:
             raise NoTrackModel()
         pedals = pedal_info(
@@ -1031,6 +1124,12 @@ def compare_pair(
                 (abs(v), loss or 0.0, _marker(c.name, label, k, at, v, inside != 0, pa, pb, cname, cshort))
             )
     candidates.sort(key=lambda x: (-round(x[0], 2), -x[1]))
+    seen: set[str] = set()
+    per_corner: list[dict[str, Any]] = []  # the biggest difference of each corner (markers never repeat a corner)
+    for _, _, m in candidates:
+        if m["corner"] not in seen:
+            seen.add(m["corner"])
+            per_corner.append(m)
     lines = None
     if line_ok:
         _, ra_a, ra_b = polyline(ra.dtrace, plane, T.LINE_POLYLINE_STEP_M)
@@ -1038,7 +1137,7 @@ def compare_pair(
         lines = {"step_m": T.LINE_POLYLINE_STEP_M, "ref_xz": xz_list(ra_a, ra_b), "lap_xz": xz_list(rb_a, rb_b)}
     base.update(
         lines=lines,
-        markers=[m for _, _, m in candidates[: T.LINE_MAX_MARKERS]],
+        markers=per_corner[: T.LINE_MAX_MARKERS],
         corners=corners,
         available={
             "line": Availability(
@@ -1095,12 +1194,22 @@ BALANCE_CHANGE_MIN_DEG = 1.5
 MAX_BALANCE_CHANGES = 6
 
 
+def _summary_class(s: PhaseSummary) -> str:
+    return s.recurring or ("neutral" if s.neutral * 2 >= s.laps else "mixed")
+
+
 def _summary_words(s: PhaseSummary) -> str:
     if s.laps == 0:
         return "no data"
-    cls = s.recurring or ("neutral" if s.neutral * 2 >= s.laps else "mixed")
+    cls = _summary_class(s)
     count = {"understeer": s.understeer, "oversteer": s.oversteer, "neutral": s.neutral}.get(cls)
-    return f"{cls} on {count} of {s.laps} laps" if count is not None else f"mixed over {s.laps} laps"
+    word = "balanced" if cls == "neutral" else cls
+    return f"{word} on {count} of {s.laps} laps" if count is not None else f"mixed over {s.laps} laps"
+
+
+def _deg(v: float) -> str:
+    """Signed degrees with a real minus sign (U+2212)."""
+    return f"{v:+.1f}°".replace("-", "\u2212")
 
 
 def balance_changes(before: SessionTechnique, after: SessionTechnique) -> list[dict[str, Any]]:
@@ -1123,10 +1232,18 @@ def balance_changes(before: SessionTechnique, after: SessionTechnique) -> list[d
             )
             if not (sb.recurring or sa_.recurring or (delta is not None and abs(delta) >= BALANCE_CHANGE_MIN_DEG)):
                 continue
-            words = f"{cb.long_name} {PHASE_SIMPLE[p]}: {_summary_words(sb)} before, {_summary_words(sa_)} after"
-            if delta is not None and sb.median_slip_diff_deg is not None and sa_.median_slip_diff_deg is not None:
-                b_deg, a_deg = sb.median_slip_diff_deg, sa_.median_slip_diff_deg
-                words += f" (front minus rear slip angle {b_deg:+.1f}° -> {a_deg:+.1f}°)"
+            wb, wa = _summary_words(sb), _summary_words(sa_)
+            unchanged = _summary_class(sb) == _summary_class(sa_) and (
+                delta is None or abs(delta) < BALANCE_CHANGE_MIN_DEG
+            )
+            if unchanged:
+                how = f"no change ({wb} both times)" if wb == wa else f"little change ({wb} before, {wa} after)"
+                words = f"{cb.long_name} {PHASE_SIMPLE[p]}: {how}"
+            else:
+                words = f"{cb.long_name} {PHASE_SIMPLE[p]}: {wb} before, {wa} after"
+                if delta is not None and sb.median_slip_diff_deg is not None and sa_.median_slip_diff_deg is not None:
+                    b_deg, a_deg = sb.median_slip_diff_deg, sa_.median_slip_diff_deg
+                    words += f" (front minus rear slip angle {_deg(b_deg)} → {_deg(a_deg)})"
             rows.append(
                 (
                     abs(delta) if delta is not None else 0.0,
@@ -1137,9 +1254,10 @@ def balance_changes(before: SessionTechnique, after: SessionTechnique) -> list[d
                         "before": sb.to_dict(),
                         "after": sa_.to_dict(),
                         "delta_deg": rnd(delta, 1),
+                        "changed": not unchanged,
                         "words": words + ".",
                     },
                 )
             )
-    rows.sort(key=lambda r: -r[0])
+    rows.sort(key=lambda r: (not r[1]["changed"], -r[0]))  # real changes first, then the biggest moves
     return [r for _, r in rows[:MAX_BALANCE_CHANGES]]
