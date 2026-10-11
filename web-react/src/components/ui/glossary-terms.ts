@@ -116,4 +116,16 @@ export const GLOSSARY: Readonly<Record<GlossaryTerm, GlossaryEntry>> = {
     title: "Replay",
     text: "A recorded session played back through Pitwall. It never sets best times.",
   },
+  typical_ai_car: {
+    title: "Typical AI car",
+    text:
+      "The middle of the AI field on pace: the median of the AI cars' best clean laps this session, so half of " +
+      "the AI cars were faster and half slower. Opening race laps, pit laps and laps under a safety car are left out.",
+  },
+  ai_difficulty: {
+    title: "AI difficulty",
+    text:
+      "The game's AI level for the session, from 0 to 110, as the game reports it. A higher level makes the AI " +
+      "cars faster. The same level can feel very different from one track or car class to another.",
+  },
 };

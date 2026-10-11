@@ -7,6 +7,9 @@
 // The plan is read from the newest session here that was compared with the reference (D5), else the newest session.
 // Coaching text is the coach's own (analysis/coaching.py); this page adds neutral words only. Density by the VIEWED
 // driver's profile (6.10): simple wording and 18 px text for beginners.
+//
+// "Suggested AI level" (AI pace spec 8) when the server has a suggestion for this driver at this track (the same
+// request as Progress's "Against the AI"); left out on a server without AI pace.
 
 import { ChartLine, Speedometer } from "@gravity-ui/icons";
 import { Alert, Button, Card, Skeleton } from "@heroui/react";
@@ -14,6 +17,7 @@ import { EmptyState } from "@heroui-pro/react";
 import { useMemo } from "react";
 import { useLive } from "../../hooks/stores";
 import { router } from "../../lib/router";
+import { suggestionsFor } from "../../lib/review/aipace";
 import { apexGameM } from "../../lib/review/compare";
 import { densityFor } from "../../lib/review/density";
 import { sessionPath } from "../../lib/review/links";
@@ -22,11 +26,13 @@ import { DEFAULT_THRESHOLD_S } from "../../lib/review/progress";
 import { lapsText } from "../../lib/review/kpis";
 import { sessionTypeLabel, whenText } from "../../lib/review/words";
 import type { PageProps } from "../../routes";
+import { AiLevelCard } from "./plan/AiLevelCard";
 import { HabitsCard } from "./plan/HabitsCard";
 import { RadioFocusCard } from "./plan/RadioFocusCard";
 import { WorkingOnCard } from "./plan/WorkingOnCard";
 import { ScopeBar } from "./progress/ScopeBar";
 import { TierNotice } from "./progress/TierNotice";
+import { useAiPace } from "./progress/useAiPace";
 import { useReviewScope } from "./progress/useReviewScope";
 import { useAnalysis } from "./session/data";
 
@@ -39,6 +45,15 @@ export function CoachingPage({ route }: PageProps) {
   // Only what the radio focus needs, as a string: snapshots arrive 20 times a second.
   const focusKey = useLive((st) => liveFocusKey(st.snap as Parameters<typeof liveFocusKey>[0], st.connected));
   const threshold = viewed?.coaching?.min_impact_s ?? DEFAULT_THRESHOLD_S;
+  // The suggested AI level here (the same request as Progress's "Against the AI").
+  const ai = useAiPace(viewed?.id ?? null, scope);
+  const aiSuggestions = useMemo(
+    () =>
+      scope && ai.data && !ai.missing
+        ? suggestionsFor(ai.data.suggestions, { game: scope.track.game, trackId: scope.track.trackId })
+        : [],
+    [scope, ai.data, ai.missing],
+  );
 
   const view = useMemo(() => {
     if (!scope || !viewed) return null;
@@ -178,6 +193,7 @@ export function CoachingPage({ route }: PageProps) {
               thresholdS={threshold}
               glossary={density.glossary}
             />
+            {aiSuggestions.length > 0 && <AiLevelCard suggestions={aiSuggestions} glossary={density.glossary} />}
           </div>
         </>
       )}

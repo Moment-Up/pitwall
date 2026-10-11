@@ -1,0 +1,58 @@
+{
+  "_fixture": {
+    "source": "GET /api/sessions/42393e6e3919 (`ai_pace`) from a scratch pitwall server (branch ai-pace, data dir in scratch, LLM and voice off) whose database holds only read-only copies of the owner's real PS5 F1 25 capture 20261010-191501 streamed over local UDP with `pitwall send` (the live pitwall service and its data were not touched).",
+    "recorded": "2026-10-11T18:01:04+01:00",
+    "what": "Austria race at AI 35 in F1 World cars (the same race as contract-session-austria): the real backend's ai_pace.",
+    "tier": "recorded"
+  },
+  "response": {
+    "status": "ok",
+    "ai_difficulty": 35,
+    "car_class": "F1 World",
+    "weather_class": "dry",
+    "online": false,
+    "ai_cars": 19,
+    "ai_laps": 38,
+    "ai_ref_ms": 74579,
+    "ai_best_ms": 72730,
+    "ai_p25_ms": 73802,
+    "ai_p75_ms": 75516,
+    "ai_median_lap_ms": 75196,
+    "ai_bests_ms": [
+      72730,
+      72858,
+      72942,
+      73015,
+      73474,
+      74130,
+      74302,
+      74330,
+      74571,
+      74579,
+      74728,
+      75189,
+      75223,
+      75509,
+      75523,
+      75882,
+      76209,
+      77187,
+      78237
+    ],
+    "driver_best_ms": 78351,
+    "driver_best_lap_id": 2,
+    "driver_median_ms": null,
+    "driver_clean_laps": 1,
+    "gap_ms": 3772,
+    "gap_pct": 5.06,
+    "gap_to_best_ai_ms": 5621,
+    "race_pace_gap_pct": null,
+    "field_rank": 20,
+    "field_size": 20,
+    "excluded": {
+      "race_lap_1": 19
+    },
+    "method_version": 1,
+    "updated_unix": 1791737480.931705
+  }
+}

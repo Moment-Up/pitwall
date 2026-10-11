@@ -54,7 +54,8 @@ per-lap processing 7-18 ms; decode <30 us/packet.
 
 ## Data model
 `model/telemetry.py`: `CarFrame` (high-rate, player car), `SessionInfo` (slow), `GameEvent` (discrete),
-`CarSetup`, `LapCompletion`. Units in field names; `None` = unknown; `Wheels` always FL, FR, RL, RR; per-game
+`CarSetup`, `LapCompletion`, `FieldSample` (all cars, field model) and `CarLapHistory` (one car's lap list as the
+game reports it, F1 Session History; emitted only when it changed). Units in field names; `None` = unknown; `Wheels` always FL, FR, RL, RR; per-game
 ground plane declared by the adapter (`AdapterInfo.ground_plane`). Field provenance per game in
 `AdapterInfo.fields` -> `/api/capabilities`.
 
@@ -103,6 +104,17 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
    for `/api/technique`), `thresholds.py` lists every threshold with a heuristic flag. Inputs: the lap trace's
    `TECHNIQUE_CHANNELS` (F1 MotionEx yaw rate, body slip, axle slip angles, per-wheel slip ratio; NaN for other
    games), decoded by the F1 adapter in one `unpack_from` per MotionEx packet; nothing else on the live path.
+9. **Pace vs AI difficulty** (F1 only; game telemetry only). Ingest thread: the F1 adapter turns Session History
+   into `CarLapHistory` when a car's lap list changes (a byte-slice compare per packet) and reports
+   `SessionInfo.ai_difficulty` only when the Session tail is filled in (gearboxAssist 1-3); `core/ai_pace.py`
+   `AiPaceCollector` keeps the latest lap list per car, the difficulty readings, weather, safety car periods and
+   flashbacks of one *game* session (O(1) per item, reset on a new game session UID). After every lap of the player
+   and at the session's end `SessionManager` hands a bounded snapshot (`AiPaceJob`) to the analysis worker's queue
+   without blocking (dropped when full); `AiPaceProcessor` summarises it (`analysis/ai_pace.py`: eligible AI laps,
+   the typical AI car = median of the AI cars' best laps, gap and rank), stores `session_ai_pace` through the writer
+   and publishes `snapshot.ai_pace`. `analysis/ai_level.py` turns a driver's stored points into a suggested AI level
+   on request (`GET /api/drivers/{id}/ai-pace`, the engineer's facts). Synthetic sessions and replays are stored but
+   never feed a driver's series or suggestions.
 
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw
@@ -146,8 +158,10 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
   Session complete card loads it on demand).
 
 ## Storage
-SQLite WAL (`data/pitwall.sqlite3`). Lap traces stored as compressed float32 npz blobs (~19 channels). Schema
-history in `storage/db.py` (v3: `goals`; `sessions.info.total_laps`).
+SQLite WAL (`data/pitwall.sqlite3`), schema v4 (`storage/db.py`: v2 driver profiles, v3 `goals` and
+`sessions.info.total_laps`, v4 `sessions.ai_difficulty` and `session_ai_pace`; every migration is additive and
+idempotent, run in one `BEGIN IMMEDIATE` transaction on open). Lap traces stored as compressed float32 npz blobs
+(~19 channels).
 Raw packets in `data/captures/*.pwcap` (zstd, ~2.5 MB per 7 min at 60 Hz) for reprocessing.
 
 ## Security

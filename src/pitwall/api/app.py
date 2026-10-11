@@ -339,6 +339,7 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
                 raise HTTPException(404, "session not found")
             s["laps"] = repo.list_laps(c, sid)
             s["setup"] = repo.latest_setup(c, sid)
+            s["ai_pace"] = repo.get_session_ai_pace(c, sid)  # SessionAiPace; null = not applicable / not recorded
         sk = skeleton_from_session_row(s)  # game-native sectors/zones; flags are never restored from storage
         s["skeleton"] = sk.to_dict() if sk else None
         from pitwall.games import entry_for_session

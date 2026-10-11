@@ -28,7 +28,7 @@ import type {
 } from "../endpoints/review";
 import { lapTime } from "../format";
 import { isReplaySource } from "./kpis";
-import { dayInSentence, dayTitle, finite, plural, spreadSeconds, timeOfDay } from "./words";
+import { dayInSentence, dayTitle, finite, plural, sessionLabels, spreadSeconds } from "./words";
 
 /** `?car=any`: every car at the track. */
 export const ANY_CAR = "any";
@@ -262,12 +262,8 @@ export function pointsFromProgress(p: Pick<DriverProgress, "sessions">): Session
   }));
 }
 
-/** Axis labels for sessions: the day ("Today", "3 Oct"), with the time when a day has more than one session
- * ("Yesterday 19:41"). */
-export function sessionLabels(points: readonly Pick<SessionPoint, "startedUnix">[], nowMs: number): string[] {
-  const days = points.map((p) => dayTitle(p.startedUnix, nowMs));
-  return days.map((d, i) => (days.indexOf(d) !== days.lastIndexOf(d) ? `${d} ${timeOfDay(points[i]!.startedUnix)}` : d));
-}
+/** Axis labels for sessions (words.ts; kept here for the pages that import it from Progress). */
+export { sessionLabels };
 
 /** Distinct cars among points (unknown counts as its own). */
 export function carsOf(points: readonly SessionPoint[]): number {

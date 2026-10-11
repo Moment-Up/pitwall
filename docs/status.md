@@ -1,8 +1,9 @@
 # Development status
 
-_Last updated: 2026-10-11 (public launch prep: release zips, install docs, Windows; earlier the same day: dashboard v2
-React + HeroUI switch-over prep; previously 2026-10-10 evening: profiles, setup, cues, multi-game, track knowledge,
-cloud AI)._
+_Last updated: 2026-10-11 (pace vs AI difficulty ported onto the public history as schema v4; earlier the same day:
+game selection, technique, goals; public launch prep: release zips, install docs, Windows; dashboard v2 React +
+HeroUI switch-over prep; previously 2026-10-10 evening: profiles, setup, cues, multi-game, track knowledge, cloud
+AI)._
 
 ## Milestone 1 acceptance criteria
 
@@ -295,6 +296,44 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
   Review Progress (goals, the goal sheet with a server refusal, the week, badges) and Summary checked at both sizes on
   the replayed captures. The Svelte dashboard still works with a goal note on the socket. Not validated live.
 <!-- end lane motivation -->
+
+## Pace vs AI difficulty (branch `ai-pace`, schema v4, 2026-10-11)
+- Built: the driver's best clean lap against the typical AI car of the same session (the median of the AI cars' best
+  representative laps), from the game's own telemetry only: F1 Session History (packet 11, every car's lap list)
+  and `Session.aiDifficulty`. No website data. `sessions.ai_difficulty` and the `session_ai_pace` table (schema
+  v4 - developed as v3 next to goals and renumbered when both landed; additive migration, no backfill: older
+  sessions stay unknown; `pitwall ai-pace backfill --captures DIR` fills them from raw captures, never creating
+  sessions). Per driver x track x car class x session category x weather
+  over time (`GET /api/drivers/{id}/ai-pace`), a suggested AI level in three tiers (measured fit over at least two
+  levels five apart, an estimate from the driver's own slope at other tracks, or direction only), engineer facts and
+  two deterministic radio intents ("how am I doing against the AI?", "what AI level should I use?"), Review ›
+  Session summary tile, Review › Progress "Against the AI", Review › Coaching "Suggested AI level", and one line on
+  Drive's Session complete card. Code: `adapters/f1/adapter.py` (`_on_session_history`), `core/ai_pace.py`
+  (ingest-side collector, worker processor, backfill), `analysis/ai_pace.py`, `analysis/ai_level.py`.
+- Ingest stays O(1): a Session History packet costs a byte-slice compare; a car's lap list is decoded and emitted
+  about once per lap (about 4 % of history packets). The summary runs on the analysis worker after every lap of the
+  player and at the session's end; a full queue drops the AI job (never a lap).
+- What real data showed (six PS5 F1 25 captures, 2026-10-10/11): the first 2-3 Session packets of every session have
+  an unfilled tail (aiDifficulty 0, gearboxAssist 0), so a reading only counts when gearboxAssist is 1-3, and the
+  session's level needs 10 readings with a 90 % share; F1 25 fills in the other cars' final laps at once when the
+  driver skips to the results (two of four races), which the completion-timing check rejects; scenario modes
+  pre-fill history laps (rejected as not observed); online lobbies report the lobby's level; Session History of the
+  previous session arrives at the start of a new one and is ignored.
+- **Evidence tier: recorded + synthetic + desktop browser.** Recorded fixtures (Austria excerpt: level 35, 19 AI cars,
+  every LapData lap time equals the history time; Monza excerpt: too few AI cars), an opt-in acceptance test on the
+  full captures (`PW_AIPACE_REAL_CAPTURES=<dir>`: exact ms for Austria +5.06 % / rank 20 of 20, Silverstone +7.67 %,
+  Melbourne F2 -3.26 % / rank 1 of 22, the Austria scenario -4.96 % / -6.51 %, Monza and the online Suzuka lobby
+  too few AI cars), a synthetic pipeline test with known injected laps, and the captures streamed over loopback UDP
+  into a scratch server and checked in headless Chromium at iPad and phone sizes. **Unverified:** a live session
+  through the service, a real safety car or VSC (the SC exclusion is synthetic-only evidence), time trial, the
+  format 2026 Season Pack (spec-only), and the measured / estimated suggestion tiers on real data (every track and
+  class the owner has raced so far has a single level, so every real suggestion is direction only).
+- Follow-ups: the field model still treats slots past numActiveCars as unknown (a real scenario had an active AI car
+  in slot 18 with numActiveCars 17; the AI pace path uses the slot flag); assists stored from the unfilled Session
+  tail at the start of a session should get the same gearboxAssist guard; car-performance mode and career R&D are not
+  in the suggestion key (they only widen the fit's spread); the suggestion assumes the gap is linear in level over
+  the measured span; a pause longer than the idle timeout splits a session and the second part loses its earlier
+  AI laps (`not_observed`).
 
 ## Next
 1. Dashboard v2 rig acceptance (spec 14.5) on the iPad with live PS5 telemetry. Remove `/next/` and the Svelte

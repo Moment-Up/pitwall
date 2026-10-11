@@ -1,0 +1,62 @@
+{
+  "_fixture": {
+    "source": "AI pace design spec section 6 contract shape; values from the spec prototype (spec_algo.py, section 3.5 rules) run on a read-only copy of the owner's real PS5 F1 25 capture 20261011-011513_udp20777.pwcap (Melbourne F2 race, 3 laps); session id, start time, track and car from the live pitwall service's session list (recorded-sessions-list.json). Not yet an API response: the backend route did not exist when this was written.",
+    "recorded": "2026-10-11T17:30:00+01:00",
+    "what": "GET /api/sessions/1e7271f70c5e `ai_pace`: Melbourne F2 race at AI 35, the driver 3.2 s faster than the typical AI car, 1st of 22; 20 AI final laps the game filled in at the finish were left out (timing).",
+    "tier": "contract",
+    "edited": "driver_best_lap_id is illustrative (the lap id depends on the database); the driver-side values (3 clean laps, median 1:35.749) are Pitwall's, as the real backend stored them."
+  },
+  "response": {
+    "status": "ok",
+    "method_version": 1,
+    "updated_unix": 1791678260.0,
+    "ai_difficulty": 35,
+    "car_class": "F2",
+    "weather_class": "dry",
+    "online": false,
+    "ai_cars": 21,
+    "ai_laps": 22,
+    "ai_ref_ms": 98807,
+    "ai_best_ms": 97396,
+    "ai_p25_ms": 98651,
+    "ai_p75_ms": 98915,
+    "ai_median_lap_ms": 98789,
+    "ai_bests_ms": [
+      97396,
+      97642,
+      97657,
+      97909,
+      98606,
+      98651,
+      98665,
+      98762,
+      98767,
+      98771,
+      98807,
+      98815,
+      98846,
+      98874,
+      98875,
+      98915,
+      98919,
+      99067,
+      99157,
+      99441,
+      99722
+    ],
+    "driver_best_ms": 95588,
+    "driver_best_lap_id": 5,
+    "driver_median_ms": 95749,
+    "driver_clean_laps": 3,
+    "gap_ms": -3219,
+    "gap_pct": -3.26,
+    "gap_to_best_ai_ms": -1808,
+    "race_pace_gap_pct": -3.08,
+    "field_rank": 1,
+    "field_size": 22,
+    "excluded": {
+      "race_lap_1": 21,
+      "timing_inconsistent": 20
+    }
+  }
+}

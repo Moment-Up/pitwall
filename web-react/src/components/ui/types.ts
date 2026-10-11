@@ -166,7 +166,9 @@ export type GlossaryTerm =
   | "braking_call"
   | "focus_corner"
   | "synthetic"
-  | "replay";
+  | "replay"
+  | "typical_ai_car"
+  | "ai_difficulty";
 
 export interface GlossaryProps {
   term: GlossaryTerm;

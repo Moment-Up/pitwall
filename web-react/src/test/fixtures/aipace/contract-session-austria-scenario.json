@@ -1,0 +1,60 @@
+{
+  "_fixture": {
+    "source": "AI pace design spec section 6 contract shape; values from the spec prototype (spec_algo.py, section 3.5 rules) run on a read-only copy of the owner's real PS5 F1 25 capture 20261010-221749_udp20777.pwcap (Austria 71-lap race scenario from lap 62, second run); session id, start time, track and car from the live pitwall service's session list (recorded-sessions-list.json). Not yet an API response: the backend route did not exist when this was written.",
+    "recorded": "2026-10-11T17:30:00+01:00",
+    "what": "GET /api/sessions/332904dbe3de `ai_pace` (the review fixture recorded-austria-race-session): AI 31 in F1 Modern cars, the driver 4.9 s faster than the typical AI car, 1st of 18; laps 1-61 pre-filled by the scenario are not observed.",
+    "tier": "contract",
+    "edited": "driver_best_lap_id 52 is this session's lap in the live database (lap 64, 1:10.549); every other value equals the real backend's answer for the same capture (recorded-session-* and recorded-driver-*)."
+  },
+  "response": {
+    "status": "ok",
+    "method_version": 1,
+    "updated_unix": 1791669320.0,
+    "ai_difficulty": 31,
+    "car_class": "F1 Modern",
+    "weather_class": "dry",
+    "online": false,
+    "ai_cars": 17,
+    "ai_laps": 117,
+    "ai_ref_ms": 75459,
+    "ai_best_ms": 73228,
+    "ai_p25_ms": 75011,
+    "ai_p75_ms": 75903,
+    "ai_median_lap_ms": 76102,
+    "ai_bests_ms": [
+      73228,
+      73428,
+      74914,
+      74974,
+      75011,
+      75177,
+      75263,
+      75418,
+      75459,
+      75603,
+      75761,
+      75856,
+      75903,
+      75959,
+      76120,
+      76644,
+      77251
+    ],
+    "driver_best_ms": 70549,
+    "driver_best_lap_id": 52,
+    "driver_median_ms": 71718,
+    "driver_clean_laps": 9,
+    "gap_ms": -4910,
+    "gap_pct": -6.51,
+    "gap_to_best_ai_ms": -2679,
+    "race_pace_gap_pct": -5.76,
+    "field_rank": 1,
+    "field_size": 18,
+    "excluded": {
+      "not_observed": 94,
+      "flashback": 19,
+      "timing_inconsistent": 16,
+      "pit_in_out": 2
+    }
+  }
+}

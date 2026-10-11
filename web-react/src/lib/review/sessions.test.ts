@@ -105,6 +105,12 @@ describe("rows and tracks", () => {
       rowSubtitle(row("b", at(11, 7, 5), { session_type_raw: null, session_type: "unknown", car_name: null, lap_count: 1 })),
     ).toBe("1 lap · 07:05");
     expect(rowSubtitle(row("c", at(11, 7, 5), { clean_lap_count: 9 }))).toBe("Practice · F1 Generic · 9 of 12 clean · 07:05");
+    // the game's AI difficulty when it reported one (AI pace); unknown is left out, 0 is a level
+    expect(rowSubtitle(row("d", at(11, 19, 15), { session_type_raw: "Race", ai_difficulty: 35, lap_count: 3 }))).toBe(
+      "Race · F1 Generic · 3 laps · 19:15 · AI 35",
+    );
+    expect(rowSubtitle(row("e", at(11, 19, 15), { ai_difficulty: 0, lap_count: 3 }))).toBe("Practice · F1 Generic · 3 laps · 19:15 · AI 0");
+    expect(rowSubtitle(row("f", at(11, 19, 15), { ai_difficulty: null, lap_count: 3 }))).toBe("Practice · F1 Generic · 3 laps · 19:15");
   });
 
   it("track options are per game + track id, most sessions first", () => {

@@ -37,6 +37,9 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   F1 UDP format, arriving or paused) and a live suggestion while nothing is selected (``games.snapshot_block``). Its
   status counts only packets a decoder accepted (``last_accepted_mono``). Computed on the web thread from attributes
   the ingest thread already writes; the ingest thread never calls into ``games``.
+* ``ai_pace`` (every snapshot): the live session's pace vs the AI (``LiveAiPace``: status, AI difficulty, the typical
+  AI car's best lap, the driver's best clean lap, the gap and rank), published by ``core.ai_pace.AiPaceProcessor``
+  after every lap of the player and at the session's end; ``None`` until then and for non-F1 games.
 """
 
 from __future__ import annotations
@@ -221,6 +224,7 @@ class LiveState:
         self._red_flag_pitted = False  # D4: the player's car has been in the pits since the red flag
         self.coach = CoachSelection()  # D6: one coaching selection for the screen and the radio
         self.bests: dict[str, Any] | None = None  # D2 (repo.lap_bests), static payload
+        self.ai_pace: dict[str, Any] | None = None  # LiveAiPace (core.ai_pace), every snapshot
         self._bests_requester: Callable[[BestsRequest], None] | None = None
         self._bests_requested: tuple[Any, ...] | None = None
         self._driver_id: int | None = None  # seated driver (on_driver)
@@ -424,6 +428,12 @@ class LiveState:
             if session_id == self.session_id:
                 self.bests = bests
 
+    def set_ai_pace(self, session_id: str, payload: dict[str, Any] | None) -> None:
+        """Publish the pace vs the AI of ``session_id`` (analysis thread); dropped if another session went live."""
+        with self._lock:
+            if session_id == self.session_id:
+                self.ai_pace = payload
+
     def bests_request(self) -> BestsRequest | None:
         """The live session's bests context, or None while the session or its track is unknown."""
         s, sid = self.session, self.session_id
@@ -479,6 +489,7 @@ class LiveState:
             self.session_state = None if session_id is None else SessionState(SESSION_RUNNING, None, time.time())
             self._red_flag_pitted = False
             self.bests = None
+            self.ai_pace = None
             self._bests_requested = None  # the next session packet asks for the new session's bests
             self._heads_up_key = None  # the cue engine drops its heads-ups on reset; the next knowledge re-installs
         self.coach.reset()
@@ -593,6 +604,7 @@ class LiveState:
             out["coach"] = self.coach.current
             out["bests"] = self.bests  # D2: small, so every snapshot (a record shows as set, not 5 s later)
             out["game"] = self.game_block()  # small: every snapshot (selection, detection, mismatch)
+            out["ai_pace"] = self.ai_pace  # LiveAiPace: small, every snapshot
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

@@ -10,6 +10,7 @@ import type { Driver } from "../drivers";
 import { endedMotivation, readyGoal, type DriveMotivation, type ReadyGoalView } from "../motivation/drive";
 import type { ThingsView } from "../motivation/recap";
 import { INTENSITIES, SKILL_LEVELS } from "../drivers";
+import { aiEndLine } from "../review/aipace";
 import { coachPoint, simpleWording, topPoint, workOnWentWell, type CoachPoint } from "./coach";
 import { cornerAhead, cornerLabelOf, cornerLayout, focusReasonOf, isFocus, officialNameOf, type CornerView } from "./corner";
 import { callsModeText, cueView, lastCueOutcome, type CueBandView, type CuePause, type LastCueOutcome } from "./cues";
@@ -192,6 +193,9 @@ export interface EndedCard {
   things: ThingsView | null;
   thingsLoading: boolean;
   badges: string[];
+  /** Pace vs AI, one line: "Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20"; null unless
+   * the snapshot's `ai_pace` is an "ok" comparison of this session (lib/review/aipace.ts aiEndLine). */
+  aiLine: string | null;
 }
 
 export interface DriveModel {
@@ -495,6 +499,7 @@ function endedCard(
     workOn,
     wentWell,
     ...endedMotivation(motivation, id),
+    aiLine: aiEndLine(s.ai_pace, id),
   };
 }
 

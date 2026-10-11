@@ -212,9 +212,11 @@ class ReplaySource:
                 if not self.loop or self._stop.is_set():
                     break
         finally:
-            self.done.set()
-            if self.on_done:
-                self.on_done()
+            try:
+                if self.on_done:
+                    self.on_done()  # ends the session (last lap, final AI pace job): part of the replay
+            finally:
+                self.done.set()  # after on_done, so a waiter sees everything the replay produced
 
     def _play_once(self) -> None:
         t0_cap: int | None = None

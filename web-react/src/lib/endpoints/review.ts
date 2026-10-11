@@ -21,6 +21,8 @@
 //   reviewKeys.progress(id, q)        GET /api/drivers/{id}/progress?…         (D5: Progress, Coaching plan; under
 //                                     "driver-sessions:" so laps and driver switches refresh it)
 //   reviewKeys.familyProgress(ids, q) the same for every family driver, corners=false (family board)
+//   reviewKeys.aiPace(id, q)          GET /api/drivers/{id}/ai-pace?…          (pace vs AI difficulty: Progress
+//                                     "Against the AI", Coaching "Suggested AI level"; under "driver-sessions:")
 //
 // `api.ts` stays frozen (lane S); the response types Review needs beyond it live here. Fields that a backend
 // addition brings are optional (`clean_lap_count` is D5, `text_simple` / `short` are D6): unknown stays unknown.
@@ -53,6 +55,9 @@ export interface SessionListRow extends SessionRow {
   /** D5: clean laps in the session. Absent before D5 (rows then read "12 laps"). */
   clean_lap_count?: number | null;
   info?: Record<string, unknown> | null;
+  /** AI pace: the game's AI difficulty for the session (F1 Session.aiDifficulty, 0-110). Null = not reported (or a
+   * game without AI difficulty); absent on a server without AI pace. */
+  ai_difficulty?: number | null;
 }
 
 /** GET /api/sessions/{id}: the row, its laps (lap number order), the latest setup and the game-native skeleton. */
@@ -60,6 +65,163 @@ export interface SessionDetail extends SessionListRow {
   laps: LapRow[];
   setup: unknown;
   skeleton?: unknown;
+  /** AI pace for this session; null = not applicable or not recorded (a non-F1 session, one from before the
+   * feature); absent on a server without AI pace. */
+  ai_pace?: SessionAiPace | null;
+}
+
+// ---------------------------------------------------------------------------------------------------- AI pace
+// Pace vs AI difficulty (contract frozen in the AI pace design spec, section 6). Only the game's own telemetry: the
+// AI cars' lap times from F1's Session History, the difficulty from the Session packet. Unknown stays unknown: a
+// status other than "ok" carries null metrics, never an estimate. Synthetic sessions get a row (flagged by the
+// session) but never feed a driver's series or suggestions (the server filters them out).
+
+export type AiPaceStatus = "ok" | "no_driver_lap" | "too_few_ai_cars" | "unknown_difficulty" | "difficulty_changed" | "time_trial";
+export type SessionCategory = "race" | "qualifying" | "practice" | "time_trial" | "unknown";
+export type WeatherClass = "dry" | "wet" | "mixed";
+export type AiExclusion =
+  | "race_lap_1"
+  | "not_observed"
+  | "invalid"
+  | "pit_in_out"
+  | "safety_car"
+  | "flashback"
+  | "timing_inconsistent"
+  | "slow_car";
+
+/** One session against the AI (`session_ai_pace`). Gaps are the driver minus the AI: negative = the driver faster. */
+export interface SessionAiPace {
+  status: AiPaceStatus;
+  method_version: number;
+  updated_unix: number;
+  ai_difficulty: number | null;
+  car_class: string | null;
+  weather_class: WeatherClass | null;
+  online: boolean | null;
+  ai_cars: number;
+  ai_laps: number;
+  /** The typical AI car: the median of the AI cars' best representative laps. */
+  ai_ref_ms: number | null;
+  ai_best_ms: number | null;
+  ai_p25_ms: number | null;
+  ai_p75_ms: number | null;
+  /** Races only. */
+  ai_median_lap_ms: number | null;
+  /** Sorted, one per AI car (no identities). */
+  ai_bests_ms: number[];
+  driver_best_ms: number | null;
+  driver_best_lap_id: number | null;
+  driver_median_ms: number | null;
+  driver_clean_laps: number;
+  /** driver_best - ai_ref; negative = driver faster. */
+  gap_ms: number | null;
+  gap_pct: number | null;
+  gap_to_best_ai_ms: number | null;
+  race_pace_gap_pct: number | null;
+  field_rank: number | null;
+  field_size: number | null;
+  excluded: Partial<Record<AiExclusion, number>>;
+}
+
+/** One session of a driver's series against the AI (real driving only: never synthetic, never a replay). */
+export interface AiPacePoint {
+  session_id: string;
+  started_unix: number;
+  game: string;
+  track_id: string;
+  track_name: string | null;
+  car_id: string | null;
+  car_name: string | null;
+  car_class: string | null;
+  session_category: SessionCategory;
+  weather_class: WeatherClass | null;
+  online: boolean | null;
+  status: "ok" | "no_driver_lap";
+  ai_difficulty: number;
+  ai_ref_ms: number;
+  ai_best_ms: number;
+  ai_cars: number;
+  driver_best_ms: number | null;
+  gap_ms: number | null;
+  gap_pct: number | null;
+  field_rank: number | null;
+  field_size: number | null;
+}
+
+export interface AiLevelKey {
+  game: string;
+  track_id: string;
+  track_name: string | null;
+  car_class: string | null;
+  session_category: SessionCategory;
+  weather_class: WeatherClass | null;
+}
+
+/** A suggested AI level for one key. `text` is the server's deterministic sentence; every number in it is a field. */
+export interface AiLevelSuggestion {
+  key: AiLevelKey;
+  basis: "measured" | "estimate_other_tracks" | "direction_only";
+  level: number | null;
+  range: [number, number] | null;
+  bound: "at_least" | "at_most" | null;
+  confidence: "high" | "medium" | "low" | null;
+  /** Against `latest_level`. */
+  direction: "higher" | "lower" | "about_right" | null;
+  note: "levels_disagree" | null;
+  latest_level: number;
+  latest_gap_pct: number | null;
+  target_gap_pct: number;
+  sessions_used: number;
+  levels_used: number[];
+  slope_pct_per_level: number | null;
+  slope_sources: string[];
+  text: string;
+}
+
+/** `GET /api/drivers/{id}/ai-pace`. Suggestions use all of the driver's points (other tracks' slopes); the scope
+ * filters `points` and which keys are returned. */
+export interface DriverAiPace {
+  driver_id: number;
+  method_version: number;
+  target_gap_pct: number;
+  scope: { game: string | null; track_id: string | null; car_class: string | null; category: SessionCategory | null };
+  /** Oldest first. */
+  points: AiPacePoint[];
+  /** One per key present in points, newest first. */
+  suggestions: AiLevelSuggestion[];
+}
+
+/** The live snapshot's `ai_pace` (small, in every snapshot, like `bests`). */
+export interface LiveAiPace {
+  session_id: string;
+  status: AiPaceStatus;
+  synthetic: boolean;
+  ai_difficulty: number | null;
+  ai_cars: number;
+  ai_ref_ms: number | null;
+  driver_best_ms: number | null;
+  gap_ms: number | null;
+  gap_pct: number | null;
+  field_rank: number | null;
+  field_size: number | null;
+}
+
+/** What an AI pace request covers (all optional; `limit` default 200, `target_gap_pct` default 0, -5..5). */
+export interface AiPaceQuery {
+  game?: string | null;
+  track_id?: string | null;
+  car_class?: string | null;
+  category?: SessionCategory | null;
+  limit?: number;
+  target_gap_pct?: number;
+}
+
+/** Default AI pace window and target (the server's defaults). */
+export const AI_PACE_LIMIT = 200;
+export const AI_TARGET_GAP_PCT = 0;
+
+function aiPaceScopeKey(q: AiPaceQuery): string {
+  return `${q.game ?? ""}|${q.track_id ?? ""}|${q.car_class ?? ""}|${q.category ?? ""}|${q.limit ?? AI_PACE_LIMIT}|${q.target_gap_pct ?? AI_TARGET_GAP_PCT}`;
 }
 
 /** A learned corner with its official identity (analysis/track_identity.py via track_model_payload). */
@@ -319,6 +481,9 @@ export const reviewKeys = {
   /** D5 for every family driver at one scope (the family board). Same prefix rule. */
   familyProgress: (driverIds: readonly number[], q: ProgressQuery) =>
     `driver-sessions:family:${driverIds.join(",")}:progress:${progressScopeKey(q)}`,
+  /** A driver's pace against the AI and the suggested level (Progress, Coaching plan). Under "driver-sessions:" so a
+   * completed lap or a driver switch refreshes it. */
+  aiPace: (driverId: number, q: AiPaceQuery) => `driver-sessions:${driverId}:ai-pace:${aiPaceScopeKey(q)}`,
 } as const;
 
 async function req<T>(path: string, init?: RequestInit): Promise<T> {
@@ -383,6 +548,9 @@ export const reviewApi = {
     Promise.all(driverIds.map(async (id) => [id, await reviewApi.progress(id, q)] as const)).then(
       (pairs) => new Map<number, DriverProgress>(pairs),
     ),
+  /** A driver's sessions against the AI and the suggested AI level per key. A server without AI pace answers 404
+   * (`isMissingRoute`): the pages then leave the AI cards out. */
+  driverAiPace: (driverId: number, q: AiPaceQuery = {}) => req<DriverAiPace>(aiPaceUrl(driverId, q)),
   /** Ask the race engineer (grounded on the session's facts, or a deterministic answer). */
   ask: (question: string, sessionId: string | null, useLlm = true) =>
     post<EngineerAnswer>("/api/engineer/ask", { question, session_id: sessionId, use_llm: useLlm }),
@@ -402,6 +570,19 @@ export function progressUrl(driverId: number, q: ProgressQuery = {}): string {
   if (q.limit != null) p.set("limit", String(q.limit));
   const qs = p.toString();
   return `/api/drivers/${driverId}/progress${qs ? `?${qs}` : ""}`;
+}
+
+/** `/api/drivers/{id}/ai-pace?…` (only the parts that are set). */
+export function aiPaceUrl(driverId: number, q: AiPaceQuery = {}): string {
+  const p = new URLSearchParams();
+  if (q.game) p.set("game", q.game);
+  if (q.track_id) p.set("track_id", q.track_id);
+  if (q.car_class) p.set("car_class", q.car_class);
+  if (q.category) p.set("category", q.category);
+  if (q.limit != null) p.set("limit", String(q.limit));
+  if (q.target_gap_pct != null) p.set("target_gap_pct", String(q.target_gap_pct));
+  const qs = p.toString();
+  return `/api/drivers/${driverId}/ai-pace${qs ? `?${qs}` : ""}`;
 }
 
 /** A 404 or 405 from FastAPI's own router ("Not Found" / "Method Not Allowed"): the server predates the route. A 404

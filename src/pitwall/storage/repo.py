@@ -1277,3 +1277,174 @@ def rewrite_session_origin(
 
 
 # ---------------- end motivation
+
+
+# ---------------------------------------------------------------- pace vs AI difficulty (core.ai_pace)
+_AI_PACE_COLUMNS = (
+    "status",
+    "ai_difficulty",
+    "car_class",
+    "weather_class",
+    "online",
+    "ai_cars",
+    "ai_laps",
+    "ai_ref_ms",
+    "ai_best_ms",
+    "ai_p25_ms",
+    "ai_p75_ms",
+    "ai_median_lap_ms",
+    "ai_bests_ms",
+    "driver_best_ms",
+    "driver_best_lap_id",
+    "driver_median_ms",
+    "driver_clean_laps",
+    "gap_ms",
+    "gap_pct",
+    "gap_to_best_ai_ms",
+    "race_pace_gap_pct",
+    "field_rank",
+    "field_size",
+    "excluded",
+    "run_id",
+    "method_version",
+    "updated_unix",
+)
+_AI_PACE_JSON = frozenset({"ai_bests_ms", "excluded"})
+# The JSON shape of ``SessionAiPace`` (``GET /api/sessions/{sid}``): every stored column but the run id.
+_AI_PACE_API = tuple(c for c in _AI_PACE_COLUMNS if c != "run_id")
+# Points of a driver's AI pace series: statuses whose AI metrics are filled.
+AI_PACE_POINT_STATUSES = ("ok", "no_driver_lap")
+
+
+def set_session_ai_difficulty(conn: sqlite3.Connection, session_id: str, value: int | None) -> None:
+    """The game's AI difficulty of a session as resolved so far (``core.ai_pace``); None = unknown / changed."""
+    conn.execute("UPDATE sessions SET ai_difficulty=? WHERE id=?", (value, session_id))
+
+
+def set_session_ai_difficulty_if_unknown(conn: sqlite3.Connection, session_id: str, value: int) -> None:
+    """Backfill: set a session's AI difficulty only where none is stored yet (a live value always wins)."""
+    conn.execute("UPDATE sessions SET ai_difficulty=? WHERE id=? AND ai_difficulty IS NULL", (value, session_id))
+
+
+def session_lap_times(conn: sqlite3.Connection, session_id: str) -> list[dict[str, Any]]:
+    """A session's laps for the AI pace summary: ``{id, lap_number, lap_time_ms, clean, t_recv_start_ns,
+    t_recv_end_ns}`` in lap order. Never reads the trace blob (the receive times come from ``meta``)."""
+    rows = conn.execute(
+        "SELECT id, lap_number, lap_time_ms, clean, meta FROM laps WHERE session_id=? ORDER BY lap_number",
+        (session_id,),
+    ).fetchall()
+    out: list[dict[str, Any]] = []
+    for r in rows:
+        try:
+            meta = json.loads(r["meta"] or "{}")
+        except json.JSONDecodeError:
+            meta = {}
+        meta = meta if isinstance(meta, dict) else {}
+        t0, t1 = meta.get("t_recv_start_ns"), meta.get("t_recv_end_ns")
+        out.append(
+            {
+                "id": int(r["id"]),
+                "lap_number": int(r["lap_number"]),
+                "lap_time_ms": None if r["lap_time_ms"] is None else int(r["lap_time_ms"]),
+                "clean": bool(r["clean"]),
+                "t_recv_start_ns": t0 if isinstance(t0, int) else None,
+                "t_recv_end_ns": t1 if isinstance(t1, int) else None,
+            }
+        )
+    return out
+
+
+def upsert_session_ai_pace(conn: sqlite3.Connection, session_id: str, row: dict[str, Any]) -> bool:
+    """Store a session's AI pace summary; True when it was written.
+
+    A row of the same run (``run_id``: one per collector, i.e. per game session in one process) always replaces the
+    previous one. A row of another run (the service restarted mid-session, a backfill) replaces it only when it is
+    based on at least as many AI laps: a run that saw less of the session never overwrites a better row.
+    """
+    values = [
+        dumps(row.get(c, [] if c == "ai_bests_ms" else {})) if c in _AI_PACE_JSON else row.get(c)
+        for c in _AI_PACE_COLUMNS
+    ]
+    online = row.get("online")
+    values[_AI_PACE_COLUMNS.index("online")] = None if online is None else int(bool(online))
+    cols = ", ".join(_AI_PACE_COLUMNS)
+    marks = ",".join("?" * (len(_AI_PACE_COLUMNS) + 1))
+    sets = ", ".join(f"{c}=excluded.{c}" for c in _AI_PACE_COLUMNS)
+    cur = conn.execute(
+        f"""INSERT INTO session_ai_pace(session_id, {cols}) VALUES({marks})
+            ON CONFLICT(session_id) DO UPDATE SET {sets}
+            WHERE excluded.run_id = session_ai_pace.run_id OR excluded.ai_laps >= session_ai_pace.ai_laps""",
+        [session_id, *values],
+    )
+    return cur.rowcount > 0
+
+
+def _ai_pace_api(d: dict[str, Any]) -> dict[str, Any]:
+    out = {c: d.get(c) for c in _AI_PACE_API}
+    for c in _AI_PACE_JSON:
+        try:
+            out[c] = json.loads(d.get(c) or ("[]" if c == "ai_bests_ms" else "{}"))
+        except json.JSONDecodeError:
+            out[c] = [] if c == "ai_bests_ms" else {}
+    out["online"] = None if d.get("online") is None else bool(d["online"])
+    return out
+
+
+def get_session_ai_pace(conn: sqlite3.Connection, session_id: str) -> dict[str, Any] | None:
+    """``SessionAiPace`` of a session (JSON columns decoded, ``online`` as a bool), or None when not recorded."""
+    r = conn.execute("SELECT * FROM session_ai_pace WHERE session_id=?", (session_id,)).fetchone()
+    return None if r is None else _ai_pace_api(dict(r))
+
+
+def driver_ai_pace_points(
+    conn: sqlite3.Connection,
+    driver_id: int,
+    *,
+    game: str | None = None,
+    track_id: str | None = None,
+    car_class: str | None = None,
+    category: str | None = None,
+    limit: int = 500,
+) -> list[dict[str, Any]]:
+    """One ``AiPacePoint`` per session of the driver's own real driving (never synthetic, never replays) whose AI
+    metrics are filled and whose AI difficulty and track are known: the newest ``limit``, returned oldest first."""
+    where = [
+        f"s.driver_id=? AND {_DRIVEN} AND s.synthetic=0 AND s.track_id IS NOT NULL",
+        "a.status IN ('ok','no_driver_lap') AND a.ai_difficulty IS NOT NULL AND a.ai_ref_ms IS NOT NULL",
+    ]
+    args: list[Any] = [driver_id]
+    for col, value in (
+        ("s.game", game),
+        ("s.track_id", track_id),
+        ("a.car_class", car_class),
+        ("s.session_type", category),
+    ):
+        if value is not None:
+            where.append(f"{col}=?")
+            args.append(value)
+    rows = conn.execute(
+        f"""SELECT s.id AS session_id, s.started_unix, s.game, s.track_id, s.track_name, s.car_id, s.car_name,
+                  s.session_type, a.car_class, a.weather_class, a.online, a.status, a.ai_difficulty, a.ai_ref_ms,
+                  a.ai_best_ms, a.ai_cars, a.driver_best_ms, a.gap_ms, a.gap_pct, a.field_rank, a.field_size
+           FROM session_ai_pace a JOIN sessions s ON s.id = a.session_id
+           WHERE {" AND ".join(where)}
+           ORDER BY s.started_unix DESC, s.rowid DESC LIMIT ?""",
+        [*args, limit],
+    ).fetchall()
+    out: list[dict[str, Any]] = []
+    for r in reversed(rows):
+        d = dict(r)
+        d["session_category"] = d.pop("session_type") or "unknown"
+        d["online"] = None if d["online"] is None else bool(d["online"])
+        out.append(d)
+    return out
+
+
+def sessions_for_game_uid(conn: sqlite3.Connection, game_session_uid: str) -> list[dict[str, Any]]:
+    """Real (non-synthetic) sessions recorded for one game session UID, oldest first (``pitwall ai-pace backfill``)."""
+    rows = conn.execute(
+        """SELECT id, source, synthetic, started_unix, session_type, driver_id FROM sessions
+           WHERE game_session_uid=? AND synthetic=0 ORDER BY started_unix, rowid""",
+        (game_session_uid,),
+    ).fetchall()
+    return [dict(r) for r in rows]

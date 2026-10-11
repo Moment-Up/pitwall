@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pitwall import games
-from pitwall.ai.facts import LAST_LAP_PREFIX, Fact, FactSheet
+from pitwall.ai.facts import AI_LEVEL_PREFIX, AI_PACE_PREFIX, LAST_LAP_PREFIX, Fact, FactSheet
 from pitwall.ai.grounding import GroundingResult, check_grounding, display_text
 from pitwall.ai.providers import LLMProvider, LLMUnavailable
 
@@ -71,6 +71,23 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     ("control_resume", re.compile(r"\b(resume|start talking|talk to me again|you can talk|coaching on)\b", re.I)),
+    # pace vs AI difficulty: before "pace" (lap_times), "vs" (compare) and "what should i" (focus)
+    (
+        "ai_level",
+        re.compile(
+            r"\b(?:ai|a\.?\s?i\.?)\s+(?:level|difficulty|setting|skill)s?\b|\b(?:what|which)\s+(?:ai\s+)?difficulty\b"
+            r"|\bdifficulty\s+(?:should|level)\b|\b(?:turn|put|set|bump)\s+(?:the\s+)?(?:ai|a\.?\s?i\.?)\s+(?:up|down)\b",
+            re.I,
+        ),
+    ),
+    (
+        "ai_pace",
+        re.compile(
+            r"\b(?:against|vs\.?|versus|compared?\s+(?:to|with)|than|beat(?:ing)?)\s+(?:the\s+)?"
+            r"(?:ai|a\.?\s?i\.?|computer|bots?)\b|\b(?:ai|a\.?\s?i\.?)\s+(?:pace|cars?|drivers?|field)\b",
+            re.I,
+        ),
+    ),
     ("fuel", re.compile(r"\b(fuel|petrol|gas|lift and coast)\b", re.I)),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
     ("strategy", re.compile(r"\b(pit|box|strategy|stop window|pit window|undercut|overcut)\b", re.I)),
@@ -159,7 +176,9 @@ _TOPICS: dict[str, set[str]] = {
     "braking": {"session", "game", "corners", "observations", "reference"},
     "lap_times": {"session", "game", "laps", "reference"},
     "last_lap": {"session", "game", "laps", "reference", "compare"},
-    "summary": {"session", "game", "laps", "corners", "observations", "fuel", "tyres"},
+    "summary": {"session", "game", "laps", "corners", "observations", "fuel", "tyres", "ai"},
+    "ai_pace": {"session", "game", "ai"},  # pace vs AI difficulty
+    "ai_level": {"session", "game", "ai"},
     "losing_time": {"session", "game", "corners", "compare", "observations", "reference"},
     "corner": {"session", "game", "reference"},
     # --- feat/technique ---
@@ -384,6 +403,10 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         return " ".join(f"{f.plain} [{f.id}]" for f in chosen)
 
     n = intent.name
+    if n == "ai_pace":
+        return say(first("ai", contains=AI_PACE_PREFIX))
+    if n == "ai_level":
+        return say(first("ai", contains=AI_LEVEL_PREFIX) or first("ai", contains=AI_PACE_PREFIX))
     game = first("game", group=n) if n in games.INTENT_FEATURES else None  # what this game never sends
     if n == "fuel":
         return say(first("fuel"), game)

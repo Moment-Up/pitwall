@@ -70,6 +70,16 @@ def build_report(sa: SessionAnalysis) -> dict[str, Any]:
                 + (f", {o['consistency']}" if o.get("consistency") else "")
                 + ")_"
             )
+    ai = sa.ai_pace
+    if ai is not None and ai.get("status") == "ok" and ai.get("gap_ms") is not None:
+        gap = int(ai["gap_ms"]) / 1000
+        md.append(
+            f"\n**Pace vs AI (difficulty {ai['ai_difficulty']}):** best clean lap {fmt_lap(ai['driver_best_ms'])} vs "
+            f"the typical AI car's {fmt_lap(ai['ai_ref_ms'])}: {abs(gap):.3f}s {'slower' if gap > 0 else 'faster'} "
+            f"({float(ai['gap_pct']):+.2f}%), {ai['field_rank']} of {ai['field_size']} on best laps."
+        )
+    elif ai is not None:
+        md.append(f"\n**Pace vs AI:** {str(ai.get('status')).replace('_', ' ')}.")
     md.append("\n## Fuel & tyres\n")
     if fuel.per_lap_kg is not None:
         md.append(f"- Fuel: {fuel.per_lap_kg:.2f} kg/lap (median of {fuel.laps_used} green laps)")
@@ -86,5 +96,6 @@ def build_report(sa: SessionAnalysis) -> dict[str, Any]:
         "observations": corrective[:12],
         "fuel": asdict(fuel),
         "tyres": asdict(tyres),
+        "ai_pace": sa.ai_pace,
         "markdown": "\n".join(md),
     }

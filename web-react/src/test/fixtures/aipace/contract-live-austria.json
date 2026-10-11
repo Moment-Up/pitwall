@@ -1,0 +1,21 @@
+{
+  "_fixture": {
+    "source": "AI pace design spec section 6 contract shape; values from the spec prototype (spec_algo.py, section 3.5 rules) run on a read-only copy of the owner's real PS5 F1 25 capture 20261010-191501_udp20777.pwcap (Austria race, 3 laps); session id, start time, track and car from the live pitwall service's session list (recorded-sessions-list.json). Not yet an API response: the backend route did not exist when this was written.",
+    "recorded": "2026-10-11T17:30:00+01:00",
+    "what": "snapshot.ai_pace (LiveAiPace) for the Austria race at AI 35 once the session ended.",
+    "tier": "contract"
+  },
+  "response": {
+    "session_id": "e2c05b9f70f3",
+    "synthetic": false,
+    "status": "ok",
+    "ai_difficulty": 35,
+    "ai_cars": 19,
+    "ai_ref_ms": 74579,
+    "driver_best_ms": 78351,
+    "gap_ms": 3772,
+    "gap_pct": 5.06,
+    "field_rank": 20,
+    "field_size": 20
+  }
+}

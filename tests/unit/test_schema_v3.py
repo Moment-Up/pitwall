@@ -1,5 +1,6 @@
 """Schema v3 (lane motivation): the goals table, the migration from a v2 database, and ``total_laps`` in
-``sessions.info``."""
+``sessions.info``. The current version is v4 (pace vs AI difficulty, ``test_db_v4_migration.py``): a database opened
+today is stamped 4, with goals."""
 
 from __future__ import annotations
 
@@ -21,18 +22,20 @@ def tables(db: Database) -> set[str]:
         return {r[0] for r in c.execute("SELECT name FROM sqlite_master WHERE type IN ('table', 'index')")}
 
 
-def test_fresh_database_is_v3(tmp_path: Path) -> None:
+def test_fresh_database_has_goals(tmp_path: Path) -> None:
     db = Database(tmp_path / "fresh.sqlite3")
-    assert SCHEMA_VERSION == 3 and version(db) == "3"
+    assert SCHEMA_VERSION == 4 and version(db) == "4"
     assert {"goals", "ix_goals_driver"} <= tables(db)
 
 
 def make_v2(path: Path) -> None:
-    """A v2 database as an older build leaves it: no goals table, version 2, with a driver and a session."""
+    """A v2 database as an older build leaves it: no goals table (nor v4's session_ai_pace), version 2, with a driver
+    and a session."""
     db = Database(path)
     with db.read() as c:
         c.execute("DROP INDEX ix_goals_driver")
         c.execute("DROP TABLE goals")
+        c.execute("DROP TABLE session_ai_pace")
         c.execute("UPDATE meta SET value='2' WHERE key='schema_version'")
         c.execute("INSERT INTO drivers(name, created_unix, preferences) VALUES('Sam', 0, '{}')")
         repo.insert_session(c, "s1", "f1_25", "udp:20777", False, None, None, driver_id=1)
@@ -47,11 +50,11 @@ def test_v2_database_migrates_and_reopening_is_idempotent(tmp_path: Path) -> Non
     assert raw.execute("SELECT COUNT(*) FROM sqlite_master WHERE name='goals'").fetchone()[0] == 0
     raw.close()
     db = Database(path)
-    assert version(db) == "3" and {"goals", "ix_goals_driver"} <= tables(db)
+    assert version(db) == "4" and {"goals", "ix_goals_driver", "session_ai_pace"} <= tables(db)
     with db.read() as c:
         assert repo.get_session(c, "s1") is not None and repo.get_driver(c, 1) is not None
     Database(path)  # again: nothing changes
-    assert version(Database(path)) == "3"
+    assert version(Database(path)) == "4"
 
 
 def test_deleting_a_driver_deletes_their_goals(tmp_path: Path) -> None:

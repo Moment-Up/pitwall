@@ -116,9 +116,11 @@ export function groupByDay(rows: readonly SessionListRow[], nowMs: number): DayG
   return groups;
 }
 
-/** The row's second line: "Race · Haas · 10 laps · 19:41" (unknown parts left out). */
+/** The row's second line: "Race · Haas · 10 laps · 19:41 · AI 35" (unknown parts left out; "AI 35" is the game's
+ * AI difficulty, when it reported one, last so a narrow list truncates it before the rest). */
 export function rowSubtitle(row: SessionListRow): string {
-  const parts = [sessionTypeLabel(row), row.car_name?.trim() || null, lapsText(row), timeOfDay(row.started_unix)];
+  const ai = typeof row.ai_difficulty === "number" && Number.isFinite(row.ai_difficulty) ? `AI ${row.ai_difficulty}` : null;
+  const parts = [sessionTypeLabel(row), row.car_name?.trim() || null, lapsText(row), timeOfDay(row.started_unix), ai];
   return parts.filter((p): p is string => !!p).join(" · ");
 }
 

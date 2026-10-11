@@ -262,6 +262,13 @@ export function timeOfDay(unixS: number): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
+/** Axis labels for sessions: the day ("Today", "3 Oct"), with the time when a day has more than one session
+ * ("Yesterday 19:41"). */
+export function sessionLabels(points: readonly { startedUnix: number }[], nowMs: number): string[] {
+  const days = points.map((p) => dayTitle(p.startedUnix, nowMs));
+  return days.map((d, i) => (days.indexOf(d) !== days.lastIndexOf(d) ? `${d} ${timeOfDay(points[i]!.startedUnix)}` : d));
+}
+
 /** "Today · 19:40", "3 Oct · 19:15". */
 export function whenText(unixS: number, nowMs: number): string {
   return `${dayTitle(unixS, nowMs)} · ${timeOfDay(unixS)}`;

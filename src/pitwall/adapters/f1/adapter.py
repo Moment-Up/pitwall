@@ -20,6 +20,7 @@ from pitwall.adapters.f1 import packets as P
 from pitwall.adapters.structdef import StructDef
 from pitwall.model.telemetry import (
     CarFrame,
+    CarLapHistory,
     CarSetup,
     Emitted,
     EventKind,
@@ -28,6 +29,7 @@ from pitwall.model.telemetry import (
     FrameQuality,
     Game,
     GameEvent,
+    HistoryLap,
     LapCompletion,
     MarshalZone,
     Platform,
@@ -130,6 +132,17 @@ F1_25_INFO = AdapterInfo(
             "Vegas, Miami, Melbourne): 16-19 AI cars with analog brake and full-lap distance; AI pit stops seen in "
             "the pit lane (Austria, 2 stops); format 2026 synthetic only",
         ),
+        "ai_difficulty": FieldSupport(
+            SupportLevel.RECORDED_VALIDATED,
+            "Session.aiDifficulty; real PS5 F1 25 values 31/35/41 (offline and online lobby); the first ~1.5 s of "
+            "every session has an unfilled tail (gearboxAssist 0) and is ignored; time trial unverified; format 2026 "
+            "spec-only",
+        ),
+        "lap_history": FieldSupport(
+            SupportLevel.RECORDED_VALIDATED,
+            "Session History lap times equal LapData last-lap times on 4 real races; F1 25 fills in remaining cars' "
+            "final laps when the driver skips to results (detected by timing)",
+        ),
     },
     notes=(
         "Decodes UDP formats 2025 (F1 25) and 2026 (2026 Season Pack); format 2024 is rejected.",
@@ -167,6 +180,25 @@ FIELD_REWIND_S = 0.05  # the game clock going back by more than this (flashback,
 MOTION_EX_MAX_FRAME_SKEW = 2
 SAFETY_CAR_NONE = 0  # Session.safetyCarStatus: 0 none, 1 full, 2 virtual, 3 formation lap
 SAFETY_CAR_KNOWN = frozenset({0, 1, 2, 3})
+
+# --- AI difficulty / lap history (AI pace, core.ai_pace) --------------------------------------------------------------
+AI_DIFFICULTY_MAX = 110  # Session.aiDifficulty "0-110" (spec appendix)
+# Session.gearboxAssist: 1 manual, 2 manual & suggested gear, 3 auto. Real PS5 F1 25 sends 0 (not a defined value)
+# together with aiDifficulty 0 in the first 2-3 Session packets of every session, before the tail is filled in.
+GEARBOX_ASSIST_DEFINED = frozenset({1, 2, 3})
+NETWORK_GAME: dict[int, bool] = {0: False, 1: True}
+LAP_VALID_BIT = 0x01  # LapHistoryData.lapValidBitFlags: 0x01 lap valid (0x02/0x04/0x08 sectors 1-3 valid)
+STINT_END_CURRENT = 255  # TyreStintHistoryData.endLap of the tyre currently fitted
+# Session History byte layout (spec section 5.11): head at 29, laps at 36 (stride 14), stints at 1436 (stride 3).
+HIST_CAR = P.HEADER.size  # 29: m_carIdx
+HIST_NUM_LAPS = HIST_CAR + 1  # 30
+HIST_NUM_STINTS = HIST_CAR + 2  # 31
+HIST_BEST_LAP = HIST_CAR + 3  # 32: m_bestLapTimeLapNum
+HIST_LAPS = P.HEADER.size + P.SESSION_HISTORY_HEAD.size  # 36
+HIST_LAP_SIZE = P.LAP_HISTORY.size  # 14
+HIST_STINTS = HIST_LAPS + P.NUM_LAP_HISTORY * HIST_LAP_SIZE  # 1436
+HIST_STINT_SIZE = P.TYRE_STINT_HISTORY.size  # 3
+_LAP_HISTORY_STRUCT = P.LAP_HISTORY.struct
 
 _FIELD_MOTION = ("worldPositionX", "worldPositionY", "worldPositionZ", "gForceLongitudinal")
 _FIELD_LAP = (
@@ -284,6 +316,18 @@ def _track_zones(marshal: list[dict[str, Any]], tail: dict[str, Any], packet_for
     )
 
 
+class _CarHist:
+    """Session History state of one car (ingest thread only)."""
+
+    __slots__ = ("first_seen_lap", "key", "laps", "raw")
+
+    def __init__(self, first_seen_lap: int) -> None:
+        self.first_seen_lap = first_seen_lap  # numLaps when first seen: those laps were not observed from the start
+        self.key: tuple[object, ...] | None = None  # change key of the last emission
+        self.raw: list[bytes] = []  # 14-byte LapHistoryData entries, laps 1..numLaps
+        self.laps: list[HistoryLap] = []
+
+
 class F1Adapter:
     """Stateful decoder for one F1 25 telemetry stream (one game instance).
 
@@ -338,6 +382,9 @@ class F1Adapter:
         # feat/technique: latest MotionEx of the player car (decoded once per packet; merged into the next CarFrame)
         self._motion_ex: dict[str, Any] | None = None
         self._motion_ex_frame = -1
+        # AI pace: per-slot AI flags (always decoded) and the per-car Session History state
+        self._ai_flags_raw: tuple[bool | None, ...] = ()
+        self._hist: dict[int, _CarHist] = {}
 
     # ------------------------------------------------------------------ structural validation
     def can_decode(self, data: bytes) -> bool:
@@ -397,6 +444,11 @@ class F1Adapter:
             self.stats.ignored += 1
             return out
         uid = h["sessionUID"]
+        if pid is P.PacketId.SESSION_HISTORY and (self._session_uid is None or (uid and uid != self._session_uid)):
+            # Session History never starts or resets a session: real F1 25 (PS5, Suzuka capture) sends 20 history
+            # packets of the PREVIOUS session (its UID) at the start of a new one. uid 0 belongs to the current session.
+            self.stats.ignored += 1
+            return out
         if uid and self._session_uid and uid != self._session_uid:
             # A new session: drop per-session caches so nothing leaks across sessions.
             # (uid 0 is sent from menus and must not flush state.)
@@ -662,14 +714,18 @@ class F1Adapter:
         part = pd.unpack_from(data, P.HEADER.size + P.PARTICIPANTS_HEAD.size + idx * pd.size)
         self._team_id = part["teamId"]
         self._platform = enums.PLATFORMS.get(part["platform"], Platform.UNKNOWN)
+        # Who is AI (every 5 s), one byte per slot. Slots past numActiveCars are zero-filled, so their "0" is unknown,
+        # not "human". numActiveCars is not a slot count, though: in a real F1 25 scenario it read 18, then 17, while
+        # slots 0-19 were all occupied (retired cars keep their slots), so a flag of 1 means AI in any slot.
+        fs = _FIELD_STRUCTS[h["layout"].packet_format]
+        n_active = P.PARTICIPANTS_HEAD.unpack_from(data, P.HEADER.size)["numActiveCars"]
+        start = P.HEADER.size + P.PARTICIPANTS_HEAD.size
+        flags = [r[0] for r in fs.participant.iter_unpack(memoryview(data)[start : start + fs.participant_bytes])]
+        self._ai_flags_raw = tuple(True if f == 1 else (False if i < n_active else None) for i, f in enumerate(flags))
         if self.field_period_s is not None:
-            # Who is AI (every 5 s): the field model learns from AI cars only by default (human opponents' data is a
-            # privacy question). Slots past numActiveCars are zero-filled, so their "0" is unknown, not "human".
-            fs = _FIELD_STRUCTS[h["layout"].packet_format]
-            n_active = P.PARTICIPANTS_HEAD.unpack_from(data, P.HEADER.size)["numActiveCars"]
-            start = P.HEADER.size + P.PARTICIPANTS_HEAD.size
-            rows = fs.participant.iter_unpack(memoryview(data)[start : start + fs.participant_bytes])
-            self._ai_controlled = tuple(bool(r[0]) if i < n_active else None for i, r in enumerate(rows))
+            # The field model learns from AI cars only by default (human opponents' data is a privacy question).
+            # Unchanged rule (slots >= numActiveCars unknown); see docs follow-up on retired cars' slots.
+            self._ai_controlled = tuple(bool(f) if i < n_active else None for i, f in enumerate(flags))
 
     def _on_session(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
         head = P.SESSION_HEAD.unpack_from(data, P.SESSION_HEAD_OFFSET)
@@ -687,6 +743,10 @@ class F1Adapter:
             for i in range(n_fc)
         ]
         tail = h["layout"].session_tail.unpack_from(data, P.SESSION_TAIL_OFFSET)
+        # The tail is unfilled (gearboxAssist 0, aiDifficulty 0) in the first Session packets of every session.
+        tail_ok = tail["gearboxAssist"] in GEARBOX_ASSIST_DEFINED
+        ai_raw = tail["aiDifficulty"]
+        ai_difficulty = ai_raw if tail_ok and 0 <= ai_raw <= AI_DIFFICULTY_MAX else None
 
         self._paused = bool(head["gamePaused"])
         self._spectating = bool(head["isSpectating"])
@@ -733,7 +793,11 @@ class F1Adapter:
                 safety_car_status=enums.SAFETY_CAR_STATUS.get(mid["safetyCarStatus"]),
                 formula=enums.FORMULA.get(head["formula"]),
                 track_zones=_track_zones(marshal, tail, h["packetFormat"]),
+                ai_difficulty=ai_difficulty,
+                session_time_s=float(h["sessionTime"]),
+                network_game=NETWORK_GAME.get(mid["networkGame"]),
                 extra={
+                    "game_mode": tail["gameMode"],  # raw Session.gameMode (e.g. 4 Grand Prix, 7 Online Custom)
                     "game_paused": self._paused,
                     "is_spectating": self._spectating,
                     # Deprecated: superseded by the typed ``track_zones``; kept (raw) for one release because
@@ -756,6 +820,87 @@ class F1Adapter:
                         for s in forecast
                     ],
                 },
+            )
+        )
+
+    def _on_session_history(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
+        """One car's lap list (Session History, cycled through the cars at 20 Hz): emit ``CarLapHistory`` on change.
+
+        Cost on the ingest thread per packet: a few byte reads, one slice of at most ~1.4 kB, a dict lookup and a
+        bytes compare. The change key covers the completed laps, the lap time of the lap in progress (it is filled in
+        at the flag without numLaps moving), the tyre stints and the car's AI flag; the lap in progress's sector
+        updates are left out, so a car is decoded and emitted about once per lap. Only the 14-byte entries that
+        changed are decoded again.
+        """
+        car = data[HIST_CAR]
+        if car >= h["layout"].max_cars:
+            return
+        n = min(data[HIST_NUM_LAPS], P.NUM_LAP_HISTORY)
+        n_st = min(data[HIST_NUM_STINTS], P.NUM_TYRE_STINTS)
+        flags = self._ai_flags_raw
+        ai = flags[car] if car < len(flags) else None
+        last = HIST_LAPS + HIST_LAP_SIZE * (n - 1) if n else HIST_LAPS
+        key = (
+            ai,
+            data[HIST_CAR : HIST_CAR + 3],
+            data[HIST_LAPS:last],
+            data[last : last + 4] if n else b"",
+            data[HIST_STINTS : HIST_STINTS + HIST_STINT_SIZE * n_st],
+        )
+        st = self._hist.get(car)
+        if st is None:
+            st = self._hist[car] = _CarHist(first_seen_lap=n)
+        elif key == st.key:
+            return
+        st.key = key
+        t_s = float(h["sessionTime"])
+        del st.raw[n:]  # a flashback can shrink numLaps
+        del st.laps[n:]
+        for i in range(n):
+            off = HIST_LAPS + HIST_LAP_SIZE * i
+            raw = data[off : off + HIST_LAP_SIZE]
+            if i < len(st.raw) and st.raw[i] == raw:
+                continue
+            ms, s1ms, s1m, s2ms, s2m, s3ms, s3m, bits = _LAP_HISTORY_STRUCT.unpack(raw)
+            prev = st.laps[i] if i < len(st.laps) else None
+            if not ms:
+                done: float | None = None
+                lap = HistoryLap(i + 1, None, (None, None, None), None, None)
+            else:
+                same = prev is not None and prev.lap_time_ms == ms
+                done = prev.completed_session_time_s if same and prev is not None else t_s
+                lap = HistoryLap(
+                    i + 1,
+                    ms,
+                    (_mins_ms(s1m, s1ms) or None, _mins_ms(s2m, s2ms) or None, _mins_ms(s3m, s3ms) or None),
+                    bool(bits & LAP_VALID_BIT),
+                    done,
+                )
+            if i < len(st.raw):
+                st.raw[i] = raw
+                st.laps[i] = lap
+            else:
+                st.raw.append(raw)
+                st.laps.append(lap)
+        pit: set[int] = set()
+        for k in range(n_st):
+            end = data[HIST_STINTS + HIST_STINT_SIZE * k]
+            if 1 <= end < STINT_END_CURRENT:  # 255 = the current tyre; 0 = not a lap (seen in a real scenario)
+                pit.update((end, end + 1))
+        uid = h["sessionUID"] or self._session_uid
+        out.append(
+            CarLapHistory(
+                game=Game.F1_25,
+                t_recv_ns=t,
+                session_time_s=t_s,
+                session_uid=str(uid) if uid else None,
+                car_index=car,
+                ai_controlled=ai,
+                is_player=car == h["playerCarIndex"],
+                first_seen_lap=st.first_seen_lap,
+                laps=tuple(st.laps),
+                pit_laps=frozenset(pit),
+                best_lap_number=data[HIST_BEST_LAP] or None,
             )
         )
 
@@ -845,4 +990,5 @@ _HANDLERS = {
     P.PacketId.CAR_TELEMETRY: F1Adapter._on_car_telemetry,
     P.PacketId.CAR_STATUS: F1Adapter._on_car_status,
     P.PacketId.CAR_DAMAGE: F1Adapter._on_car_damage,
+    P.PacketId.SESSION_HISTORY: F1Adapter._on_session_history,
 }

@@ -333,6 +333,12 @@ class SessionInfo:
     # Typed game-native skeleton (sectors, marshal/DRS/aero zones). Kept last with a default so adapters that build
     # SessionInfo by keyword are unaffected. None = this game/adapter does not report a skeleton.
     track_zones: TrackZones | None = None
+    # Game AI difficulty 0-110 (F1 Session.aiDifficulty); None = not (yet) reported or out of the spec's range.
+    # F1 25 sends an unfilled Session tail for the first ~1.5 s of every session (aiDifficulty 0, gearboxAssist 0):
+    # the adapter reports None then, never that 0.
+    ai_difficulty: int | None = None
+    session_time_s: float | None = None  # game session clock of the packet (F1 header sessionTime)
+    network_game: bool | None = None  # F1 Session.networkGame (0 offline / 1 online); None = unknown
 
 
 class EventKind(StrEnum):
@@ -442,5 +448,40 @@ class FieldSample:
     safety_car: bool | None = None  # any safety car / VSC / formation lap in the session; None = not yet known
 
 
+@dataclass(slots=True, frozen=True)
+class HistoryLap:
+    """One lap of a car's lap list as the game reports it (F1: Session History ``LapHistoryData``)."""
+
+    lap_number: int  # 1-based
+    lap_time_ms: int | None  # None = not complete (0 on the wire)
+    sector_times_ms: tuple[int | None, int | None, int | None]  # None = not set; all None while the lap is incomplete
+    valid: bool | None  # lapValidBitFlags & 0x01; None while incomplete
+    # Game session time (header sessionTime) of the first packet that showed this lap time; set again when the time
+    # changes, None while the lap is incomplete. Pitwall's own observation, not a game field: the timing check of
+    # ``analysis.ai_pace`` compares the gap between consecutive completions with the lap time.
+    completed_session_time_s: float | None
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class CarLapHistory:
+    """The game's own lap list for one car (F1: Session History, packet ID 11). Emitted only when it changed.
+
+    Input of the AI pace comparison (``core.ai_pace``): never persisted as such, never starts a session. Human
+    opponents (``ai_controlled`` False) and cars whose control is unknown are never used for AI statistics.
+    """
+
+    game: Game
+    t_recv_ns: int
+    session_time_s: float
+    session_uid: str | None
+    car_index: int
+    ai_controlled: bool | None  # True = AI; False = human; None = unknown (no Participants packet yet / empty slot)
+    is_player: bool
+    first_seen_lap: int  # numLaps of the first packet seen for this car: laps <= it were NOT observed from their start
+    laps: tuple[HistoryLap, ...]  # laps 1..numLaps (the last one usually in progress)
+    pit_laps: frozenset[int]  # e and e+1 for each tyre-stint endLap e with 1 <= e <= 254 (0 and 255 ignored)
+    best_lap_number: int | None  # bestLapTimeLapNum; 0 -> None
+
+
 # Union of everything an adapter can emit after decoding one packet.
-type Emitted = CarFrame | SessionInfo | GameEvent | CarSetup | LapCompletion | FieldSample
+type Emitted = CarFrame | SessionInfo | GameEvent | CarSetup | LapCompletion | FieldSample | CarLapHistory

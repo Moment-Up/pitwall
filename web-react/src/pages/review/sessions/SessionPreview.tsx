@@ -66,7 +66,7 @@ export function SessionPreview({ row }: { row: SessionListRow }) {
           <OpenButton row={row} />
         </div>
         {session ? (
-          <KpiTiles session={session} density={{ kpiTiles: 4, glossary: density.glossary }} />
+          <KpiTiles session={session} density={{ kpiTiles: 4, glossary: density.glossary }} ai={false} />
         ) : error ? (
           <p className="m-0 text-sm text-bad">This session could not be loaded: {error.message}</p>
         ) : (

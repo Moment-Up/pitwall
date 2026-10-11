@@ -24,6 +24,12 @@ never override a later re-tag of its own (``SeatState.owner``).
 Replays are nobody's driving: a replay manager ignores the seat and its sessions are stored without a driver.
 Without a driver source (headless tools) live sessions are still tagged: ``repo.insert_session`` falls back to the
 persisted active driver.
+
+Pace vs AI (``core.ai_pace``): the other cars' lap lists (``CarLapHistory``) and the session's AI difficulty are
+collected per *game* session (O(1) per item). The collector is reset when the game session UID changes, never when a
+pitwall session ends (a driver split keeps the game session); after every lap of the player and when the session ends
+its snapshot goes to the analysis worker, which stores ``session_ai_pace``. ``sessions.ai_difficulty`` is written
+whenever the resolved level of the session changes.
 """
 
 from __future__ import annotations
@@ -33,13 +39,16 @@ import time
 from collections.abc import Mapping
 from typing import Any, Protocol
 
+from pitwall.analysis.ai_pace import DIFFICULTY_UNKNOWN
 from pitwall.analysis.laps import LapAssembler, LapTrace
+from pitwall.core.ai_pace import AiPaceCollector
 from pitwall.core.lap_processor import AnalysisWorker, LapJob
 from pitwall.core.live import LiveState
 from pitwall.drivers import SeatState
 from pitwall.model.synthetic import SYNTHETIC_SESSION_UID
 from pitwall.model.telemetry import (
     CarFrame,
+    CarLapHistory,
     CarSetup,
     Emitted,
     EventKind,
@@ -120,6 +129,8 @@ class SessionManager:
         # same session (same session UID) the restart must not split the driver's race: see ``_maybe_resume``.
         self._resume: Mapping[str, Any] | None = None if repo.is_replay_source(source) else resume_candidate
         self.sessions_resumed = 0
+        self._ai = AiPaceCollector()  # pace vs AI inputs of the current game session (core.ai_pace)
+        self._ai_written: tuple[str | None, int | None] = (None, None)  # (session id, ai_difficulty) last stored
 
     def set_ground_plane(self, plane: tuple[str, str]) -> None:
         self._ground_plane = plane
@@ -137,6 +148,7 @@ class SessionManager:
         self._game = game
         self._laps_in_session = 0
         self._last_frame_ns = None
+        self._ai_written = (sid, None)  # a new row's ai_difficulty is NULL
         driver: int | None = None
         if self.drivers is not None:
             seat = self.drivers.seat
@@ -163,6 +175,7 @@ class SessionManager:
         if self.session_id is None:
             return
         self._assembler.flush()
+        self._submit_ai(final=True)  # the collector is kept: a new pitwall session of the same game session reuses it
         sid, t_end = self.session_id, self._last_t_ns
         self.writer.submit(lambda c: repo.end_session(c, sid, t_end))
         if self.field is not None:
@@ -178,6 +191,11 @@ class SessionManager:
             # never persisted. Straight to the field worker (a lock-free append) or nowhere.
             if self.field is not None:
                 self.field.submit(e)
+            return
+        if isinstance(e, CarLapHistory):
+            # A car's lap list (pace vs AI): never starts a session or counts as activity; O(1) dict store.
+            if self.session_id is not None:
+                self._ai.on_history(e)
             return
         self._last_t_ns = e.t_recv_ns
         if self.drivers is not None:
@@ -238,6 +256,10 @@ class SessionManager:
         if self.session_id is None:
             self._start(info.game.value, info.t_recv_ns)
         self._game_uid = uid or self._game_uid
+        if uid and uid != self._ai.game_uid:
+            self._ai.reset(uid)  # after any end() above: the old session's final AI job used the old collector
+        self._ai.on_info(info)
+        self._store_ai_difficulty()
         if self._resume is not None and uid:
             cand, self._resume = self._resume, None  # only the first session after start-up can be a resume
             self._maybe_resume(cand, uid)
@@ -287,6 +309,7 @@ class SessionManager:
         self.sessions_resumed += 1
         self.writer.submit(lambda c: repo.resume_session(c, old, new))
         self.live.reset_session(old, self.source, self.synthetic, self._game)
+        self._ai_written = (old, None)  # never erase the resumed row's level with this run's early "unknown"
         self._info_key = None  # re-store the session info on the resumed row
         log.info("session %s resumed after a restart (same game session %s); %s merged into it", old, uid, new)
 
@@ -356,8 +379,27 @@ class SessionManager:
         self._setup_fp = setup.fingerprint()
         self.writer.submit(lambda c: repo.insert_setup(c, sid, setup))
 
+    def _store_ai_difficulty(self) -> None:
+        """Write ``sessions.ai_difficulty`` when the resolved level of this pitwall session changed. Too few
+        readings so far ("unknown") never writes: a fresh row is NULL already, and a resumed one keeps its level."""
+        sid = self.session_id
+        level, status = self._ai.difficulty
+        if sid is None or status == DIFFICULTY_UNKNOWN or self._ai_written == (sid, level):
+            return
+        self._ai_written = (sid, level)
+        self.writer.submit(lambda c: repo.set_session_ai_difficulty(c, sid, level))
+
+    def _submit_ai(self, *, final: bool) -> None:
+        """Hand the AI pace inputs to the analysis worker (never blocks; F1 only: other games collect nothing)."""
+        sid = self.session_id
+        if sid is None or not self._ai.has_data:
+            return
+        self.worker.submit_ai_pace(self._ai.job(sid, synthetic=self.synthetic, final=final))
+
     def _on_event(self, e: GameEvent) -> None:
         self.live.on_event(e)
+        if e.kind == EventKind.FLASHBACK:
+            self._ai.on_flashback(e)
         if e.kind == EventKind.BUTTON:
             status = e.payload.get("buttonStatus")
             if isinstance(status, int):
@@ -388,6 +430,7 @@ class SessionManager:
             "setup_fp": self._setup_fp,
         }
         self.worker.submit(LapJob(session_id=sid, lap=lap, context=ctx, ground_plane=self._ground_plane))
+        self._submit_ai(final=False)
 
 
 def _ends_session(e: Emitted, game_uid: str | None) -> bool:

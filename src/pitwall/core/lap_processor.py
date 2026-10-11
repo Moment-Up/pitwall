@@ -44,6 +44,7 @@ from pitwall.analysis.distance import to_distance_domain
 from pitwall.analysis.laps import LapFlag, LapTrace
 from pitwall.analysis.track import TrackModel, build_track_model
 from pitwall.analysis.track_identity import corner_texts, identify, track_model_payload
+from pitwall.core.ai_pace import AiPaceJob, AiPaceProcessor
 from pitwall.core.live import BestsRequest, LiveState
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
@@ -353,19 +354,35 @@ def _lap_summary(lap: LapTrace, lap_id: int) -> dict[str, Any]:
 
 
 class AnalysisWorker:
-    """Runs ``LapProcessor`` on a background thread with a bounded queue (laps are never dropped)."""
+    """Runs ``LapProcessor`` on a background thread with a bounded queue (laps are never dropped).
+
+    The same FIFO queue carries the pace vs AI jobs (``AiPaceJob``, ``core.ai_pace``): a lap's ``insert_lap`` runs
+    before the AI pace job submitted right after it, so the summary always sees that lap. An AI pace job is never
+    worth blocking ingest for: on a full queue it is dropped (``ai_dropped``) and the next lap or the session's end
+    supersedes it.
+    """
 
     def __init__(self, processor: LapProcessor) -> None:
         self.processor = processor
-        self._q: queue.Queue[LapJob | BestsRequest | None] = queue.Queue(maxsize=1000)
+        self.ai_pace = AiPaceProcessor(processor.db, processor.writer, processor.live)
+        self._q: queue.Queue[LapJob | BestsRequest | AiPaceJob | None] = queue.Queue(maxsize=1000)
         self._thread = threading.Thread(target=self._run, name="lap-analysis", daemon=True)
         self.errors = 0
+        self.ai_dropped = 0
         self._thread.start()
         if processor.live is not None:
             processor.live.set_bests_requester(self.request_bests)
 
     def submit(self, job: LapJob) -> None:
         self._q.put(job)
+
+    def submit_ai_pace(self, job: AiPaceJob) -> None:
+        """Called on the ingest thread: queue an AI pace summary, never blocking (see the class docstring)."""
+        try:
+            self._q.put_nowait(job)
+        except queue.Full:
+            self.ai_dropped += 1
+            log.warning("analysis queue full: AI pace job for %s dropped", job.session_id)
 
     def request_bests(self, req: BestsRequest) -> None:
         """Called on the ingest thread: queue a bests refresh, never blocking (a full queue drops it; the next
@@ -383,6 +400,8 @@ class AnalysisWorker:
                     return
                 if isinstance(job, BestsRequest):
                     self.processor.refresh_bests(job)
+                elif isinstance(job, AiPaceJob):
+                    self.ai_pace.process(job)
                 else:
                     self.processor.process(job)
             except Exception:

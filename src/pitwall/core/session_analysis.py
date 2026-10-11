@@ -9,6 +9,12 @@ the edit, and a setup changed in the garage reaches the setup facts before the n
 re-assignment changes the owner of the session itself (a new key) and can change the reference of the owner's
 other sessions, so the API calls ``invalidate()`` after one. The cache is bounded (``CACHE_ENTRIES``, oldest
 first): every new lap of a live session is a new key, and an analysis holds every lap's distance-domain trace.
+
+Pace vs AI: ``ai_pace`` is the session's stored ``session_ai_pace`` row (``repo.get_session_ai_pace``; its
+``updated_unix`` is part of the cache key, so a new summary after a lap is never hidden by a cached analysis) and
+``ai_suggestion`` the suggested AI level at this session's track, car class, category and weather
+(``analysis.ai_level``) from the owner's own real driving. The suggestion exists only for driven (not replayed),
+non-synthetic sessions that have a driver.
 """
 
 from __future__ import annotations
@@ -19,6 +25,7 @@ from typing import Any
 
 import numpy as np
 
+from pitwall.analysis.ai_level import AiLevelKey, suggest_for_key
 from pitwall.analysis.coaching import is_incident, observations_for_comparison
 from pitwall.analysis.compare import (
     CornerDelta,
@@ -39,7 +46,7 @@ from pitwall.storage import repo
 from pitwall.storage.db import Database
 
 CACHE_ENTRIES = 32
-_CacheKey = tuple[str, int, int | None, int | None, tuple[tuple[str, Any], ...], int | None]
+_CacheKey = tuple[str, int, int | None, int | None, tuple[tuple[str, Any], ...], int | None, float | None]
 
 
 @dataclass(slots=True)
@@ -77,6 +84,10 @@ class SessionAnalysis:
     personal_best: dict[str, Any] | None = None
     # the session's latest stored car setup (``repo.latest_setup``) for the setup facts; None until the game sent one
     setup: dict[str, Any] | None = None
+    # pace vs AI (``repo.get_session_ai_pace``, ``SessionAiPace``) and the suggested AI level for this session's key
+    # (``analysis.ai_level``); None when not applicable / not recorded
+    ai_pace: dict[str, Any] | None = None
+    ai_suggestion: dict[str, Any] | None = None
 
     @property
     def latest_compared_lap_id(self) -> int | None:
@@ -117,6 +128,7 @@ class SessionAnalyzer:
             drow = repo.get_driver(c, driver_id) if driver_id is not None else None
             profile = Driver.from_row(drow).summary() if drow is not None else None
             setup = repo.latest_setup(c, session_id)
+            ai_pace = repo.get_session_ai_pace(c, session_id)
             key: _CacheKey = (
                 session_id,
                 len(laps),
@@ -124,6 +136,7 @@ class SessionAnalyzer:
                 driver_id,
                 tuple(sorted(profile.items())) if profile is not None else (),
                 setup["id"] if setup is not None else None,  # a garage setup change before the next lap
+                None if ai_pace is None else ai_pace.get("updated_unix"),  # a new AI pace summary
             )
             with self._lock:
                 if key in self._cache:
@@ -152,6 +165,8 @@ class SessionAnalyzer:
             ref_row = repo.get_lap(c, ref_lap_id, with_trace=False) if ref_lap_id else None
             out = SessionAnalysis(session=sess, laps=laps, model=model, ref_lap_id=ref_lap_id, ref_lap=ref_row)
             out.setup = setup
+            out.ai_pace = ai_pace
+            out.ai_suggestion = _ai_suggestion(c, sess, ai_pace, driver_id)
             if driver_id is not None:
                 out.driver = profile
                 if sess.get("track_id"):
@@ -235,6 +250,30 @@ class SessionAnalyzer:
                 )
             )
         return rows
+
+
+def _ai_suggestion(
+    c: Any, sess: dict[str, Any], ai_pace: dict[str, Any] | None, driver_id: int | None
+) -> dict[str, Any] | None:
+    """The suggested AI level for this session's key from the owner's own real driving (never for a replay, a
+    synthetic session or a session without a driver)."""
+    if (
+        ai_pace is None
+        or driver_id is None
+        or sess.get("synthetic")
+        or repo.is_replay_source(str(sess.get("source") or ""))
+        or not sess.get("track_id")
+    ):
+        return None
+    key = AiLevelKey(
+        game=str(sess["game"]),
+        track_id=str(sess["track_id"]),
+        car_class=ai_pace.get("car_class"),
+        session_category=str(sess.get("session_type") or "unknown"),
+        weather_class=ai_pace.get("weather_class"),
+    )
+    points = repo.driver_ai_pace_points(c, driver_id, game=key.game, car_class=key.car_class)
+    return suggest_for_key(key, points)
 
 
 def session_ctx(sess: dict[str, Any]) -> dict[str, Any]:

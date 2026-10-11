@@ -178,6 +178,10 @@ live session; the live PS5 tests so far used the classic dashboard.
 - Coaching plan (corners to work on, habits, what the radio will focus on) and Progress across sessions. These
   two pages are new and not yet used in a live session.
 - Ask the engineer about any session, on screen or with `pitwall ask`. `pitwall report` prints a Markdown report.
+- Pace against the AI (F1 25): your best clean lap against the typical AI car's at the AI difficulty you raced,
+  per track and car class over time, and a suggested AI level once you have raced a track at two or more levels.
+  Uses only the game's own telemetry. Tested on recorded PS5 sessions, not yet live; the screens are in the new
+  dashboard, and the engineer and radio answer "how am I doing against the AI?" with either dashboard.
 
 **Track knowledge**
 - Corners are learned from your own clean laps. In F1 25, sectors and marshal zones come from the game.
@@ -317,6 +321,7 @@ If you hold a HeroUI Pro licence, sign in and build the new dashboard:
 | `pitwall ask "Where am I losing time?" [--session ID] [--no-llm] [--show-facts]` | Ask the engineer about the latest session (uses the `.env` model unless `PITWALL_LLM_ENABLED=false` or `--no-llm`) |
 | `pitwall llm-check` | Find and test the model server set in `.env` or the environment (not one chosen in the settings page) |
 | `pitwall doctor [--json] [--no-llm]` | Check this computer's setup (ports, firewall, dashboard, voice, AI, telemetry) with a fix for each problem |
+| `pitwall ai-pace backfill [--captures DIR] [--dry-run]` | Fill pace against the AI for older F1 sessions from their raw captures |
 | `pitwall capabilities` | Print the game and platform support matrix |
 | `pitwall token` | Print the access token URL for phones and tablets |
 

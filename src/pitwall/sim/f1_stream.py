@@ -7,6 +7,13 @@ truth; they are never evidence of compatibility with the real game.
 Optional AI field (``F1Scenario.ai_cars``, layer L0b tests): synthetic AI cars drive their own laps of the same
 track with known injected braking points (``GroundTruth.ai_brake_onsets_m``), and can be parked in the garage, do an
 out lap or drive through the pit lane. Without AI cars the stream is byte-for-byte what it was before.
+
+Optional pace vs AI inputs (``core.ai_pace`` tests), all off by default (the stream is then unchanged):
+``ai_difficulty`` (Session.aiDifficulty with a filled tail, except in the first two Session packets, like real F1 25),
+``session_history`` (one Session History packet every 1/20 s, cycling through the AI cars, from the generated lap
+times: ``GroundTruth.ai_lap_times_ms``), ``safety_car_periods`` (Session.safetyCarStatus "full" in those session-time
+spans) and ``skip_results_after_player_finish`` (when the player finishes, every AI car's lap in progress is filled in
+at once, as F1 25 does when the driver skips to the results: ``GroundTruth.ai_simulated_laps``).
 """
 
 from __future__ import annotations
@@ -54,6 +61,7 @@ class AiCarSpec:
     ai_controlled: bool = True
     gap_ahead_ms: int = 0  # LapData deltaToCarInFront (0 = not reported)
     lap_index_seed: int = 0  # varies solve_lap's per-lap noise between cars
+    invalid_laps: frozenset[int] = frozenset()  # Session History: these laps lack the lap-valid bit
 
 
 @dataclass(slots=True)
@@ -86,6 +94,11 @@ class F1Scenario:
     # default, so existing scenarios stream exactly what they did before) ---
     motion_ex: bool = False
     abs_on: bool = False
+    # pace vs AI (see the module docstring); defaults keep the stream byte-for-byte unchanged
+    ai_difficulty: int | None = None  # Session.aiDifficulty (+ gearboxAssist 3) from the third Session packet on
+    session_history: bool = False  # Session History packets for the AI cars, cycling at 20 Hz
+    safety_car_periods: tuple[tuple[float, float], ...] = ()  # (start, end) session time with safetyCarStatus 1
+    skip_results_after_player_finish: bool = False  # AI laps in progress are filled in at once at the player's finish
 
     @property
     def layout(self) -> P.F1Layout:
@@ -103,6 +116,12 @@ class GroundTruth:
     # AI field: car index -> lap -> design corner -> braking onset (lap distance, m) actually driven
     ai_brake_onsets_m: dict[int, dict[int, dict[str, float]]] = field(default_factory=dict)
     ai_lap_kinds: dict[int, dict[int, str]] = field(default_factory=dict)  # car -> lap -> "flying" | "out" | "pit"
+    # Session History (session_history): car -> lap -> lap time (ms) of every lap whose time the stream reported,
+    # its session time of completion (as driven; for a simulated lap, when it was filled in) and the laps filled in
+    # at once at the player's finish (skip_results_after_player_finish)
+    ai_lap_times_ms: dict[int, dict[int, int]] = field(default_factory=dict)
+    ai_lap_end_s: dict[int, dict[int, float]] = field(default_factory=dict)
+    ai_simulated_laps: dict[int, frozenset[int]] = field(default_factory=dict)
 
 
 def _hdr(pid: P.PacketId, sc: F1Scenario, session_time: float, frame: int, overall: int) -> bytes:
@@ -346,8 +365,17 @@ def _flat_pairs(zones: tuple[FracZone, ...] | None, max_count: int) -> list[floa
 
 
 def _session_packet(
-    sc: F1Scenario, track: TrackGeometry, st: float, frame: int, overall: int, zones: TrackZones | None = None
+    sc: F1Scenario,
+    track: TrackGeometry,
+    st: float,
+    frame: int,
+    overall: int,
+    zones: TrackZones | None = None,
+    *,
+    filled: bool = True,
 ) -> bytes:
+    """``filled=False``: the unfilled tail real F1 25 sends at the start of a session (aiDifficulty 0, gearboxAssist
+    0); only matters when ``sc.ai_difficulty`` is set (otherwise the tail never carries either)."""
     zones = zones or synthetic_track_zones(track, sc.packet_format)
     marshal = (zones.marshal_zones or ())[: P.NUM_MARSHAL_ZONES]
     head = P.SESSION_HEAD.pack(
@@ -370,7 +398,8 @@ def _session_packet(
         P.MARSHAL_ZONE.pack({"zoneStart": z.start_frac, "zoneFlag": _MARSHAL_FLAG_CODES.get(z.flag or "", -1)})
         for z in marshal
     ) + P.MARSHAL_ZONE.pack({}) * (P.NUM_MARSHAL_ZONES - len(marshal))
-    mid = P.SESSION_MID.pack({"numWeatherForecastSamples": 1})
+    sc_on = any(a <= st < b for a, b in sc.safety_car_periods)
+    mid = P.SESSION_MID.pack({"numWeatherForecastSamples": 1, **({"safetyCarStatus": 1} if sc_on else {})})
     fc = P.WEATHER_FORECAST_SAMPLE.pack(
         {"sessionType": sc.session_type, "weather": 0, "trackTemperature": 32, "airTemperature": 24}
     ) + P.WEATHER_FORECAST_SAMPLE.pack({}) * (P.NUM_WEATHER_SAMPLES - 1)
@@ -380,6 +409,8 @@ def _session_packet(
         "brakingAssist": 0,
         "dynamicRacingLine": 0,
     }
+    if sc.ai_difficulty is not None and filled:
+        tail_values |= {"aiDifficulty": sc.ai_difficulty, "gearboxAssist": 3}
     if "numDRSZones" in dict(sc.layout.session_tail.fields):  # format 2026 tail
         full, partial, drs = zones.aero_full_zones_frac, zones.aero_partial_zones_frac, zones.drs_zones_frac
         tail_values |= {
@@ -566,6 +597,70 @@ def _motion_ex_values(
 # --- end feat/technique ---------------------------------------------------------------------------------------
 
 
+_HISTORY_PERIOD_S = 0.05  # Session History: one packet every 1/20 s, cycling through the cars (EA spec 5.11)
+_LAP_VALID_ALL = 0x0F  # lap + three sectors valid
+_LAP_INVALID = 0x0E  # sectors valid, lap-valid bit clear
+
+
+def _ai_lap_ends(car: _AiCar) -> list[float]:
+    return [start + prof.lap_time_s for start, prof in zip(car.lap_starts, car.profiles, strict=True)]
+
+
+def _history_packet(
+    sc: F1Scenario,
+    car: _AiCar,
+    t: float,
+    frame: int,
+    overall: int,
+    truth: GroundTruth,
+    *,
+    simulate_in_progress: bool = False,
+) -> bytes:
+    """One Session History packet of ``car`` at session time ``t`` (SYNTHETIC). Laps completed by ``t`` carry their
+    generated time; the lap in progress is the last entry with time 0, unless ``simulate_in_progress`` fills it in at
+    once (the results skip). A car whose laps are all done reports them all, the last one timed (numLaps stays)."""
+    spec = car.spec
+    ends = _ai_lap_ends(car)
+    done = sum(1 for e in ends if e <= t)
+    started = bool(car.lap_starts) and t >= car.lap_starts[0]
+    n = 0 if not started else (done if done == len(ends) else done + 1)
+    times = truth.ai_lap_times_ms.setdefault(spec.index, {})
+    end_s = truth.ai_lap_end_s.setdefault(spec.index, {})
+    laps = b""
+    for k in range(n):
+        timed = k < done or (simulate_in_progress and k == done)
+        ms = round(car.profiles[k].lap_time_s * 1000) if timed else 0
+        if timed and (k + 1) not in times:
+            times[k + 1] = ms
+            end_s[k + 1] = ends[k] if k < done else t
+        third = ms // 3
+        laps += P.LAP_HISTORY.pack(
+            {
+                "lapTimeInMS": ms,
+                "sector1TimeMSPart": third % 60000 if timed else 0,
+                "sector1TimeMinutesPart": third // 60000 if timed else 0,
+                "sector2TimeMSPart": third % 60000 if timed else 0,
+                "sector2TimeMinutesPart": third // 60000 if timed else 0,
+                "sector3TimeMSPart": (ms - 2 * third) % 60000 if timed else 0,
+                "sector3TimeMinutesPart": (ms - 2 * third) // 60000 if timed else 0,
+                "lapValidBitFlags": (_LAP_INVALID if (k + 1) in spec.invalid_laps else _LAP_VALID_ALL) if timed else 0,
+            }
+        )
+    laps += P.LAP_HISTORY.pack({}) * (P.NUM_LAP_HISTORY - n)
+    stint_ends = sorted(p for p in spec.pit_laps if p < n or (p == n and done == n))
+    stints = [{"endLap": e, "tyreActualCompound": 18, "tyreVisualCompound": 16} for e in stint_ends]
+    stints.append({"endLap": 255, "tyreActualCompound": 18, "tyreVisualCompound": 16})
+    stints = stints[: P.NUM_TYRE_STINTS]
+    stint_bytes = b"".join(P.TYRE_STINT_HISTORY.pack(v) for v in stints)
+    stint_bytes += P.TYRE_STINT_HISTORY.pack({}) * (P.NUM_TYRE_STINTS - len(stints))
+    timed_ms = {k: times[k] for k in times if k <= n}
+    best = min(timed_ms, key=lambda k: (timed_ms[k], k)) if timed_ms else 0
+    head = P.SESSION_HISTORY_HEAD.pack(
+        {"carIdx": spec.index, "numLaps": n, "numTyreStints": len(stints), "bestLapTimeLapNum": best}
+    )
+    return _hdr(P.PacketId.SESSION_HISTORY, sc, t, frame, overall) + head + laps + stint_bytes
+
+
 @dataclass(slots=True)
 class _Timeline:
     """Continuous driving timeline across laps, sampled by session time."""
@@ -635,12 +730,17 @@ def _stream(
     last_slow = -1.0
     last_damage = -1.0
     last_part = -10.0
+    last_hist = -1.0
+    hist_cars = [car for car in ai if car.profiles] if sc.session_history else []
+    hist_i = 0
+    session_packets = 1  # the first Session packet below
+    unfilled = 2  # real F1 25: the first 2-3 Session packets of a session carry an unfilled tail
 
     def pkt(data: bytes, offset_us: float = 0.0) -> CapturedPacket:
         return CapturedPacket(int(wall + offset_us * 1000), 20777, data)
 
     yield pkt(_participants_packet(sc, 0.0, 0, 0))
-    yield pkt(_session_packet(sc, track, 0.0, 0, 0, truth.track_zones), 50)
+    yield pkt(_session_packet(sc, track, 0.0, 0, 0, truth.track_zones, filled=unfilled < 1), 50)
     yield pkt(_event_packet(sc, "SSTA", b"", 0.0, 0, 0), 100)
 
     while t < session_end - 1e-9:
@@ -812,8 +912,15 @@ def _stream(
             yield pkt(_hdr(P.PacketId.CAR_DAMAGE, sc, t, frame, overall) + dmg, 160)
         if t - last_slow >= 0.5 or t < last_slow:
             last_slow = t
-            yield pkt(_session_packet(sc, track, t, frame, overall, truth.track_zones), 200)
+            session_packets += 1
+            filled = session_packets > unfilled
+            yield pkt(_session_packet(sc, track, t, frame, overall, truth.track_zones, filled=filled), 200)
             yield pkt(_setups_packet(sc, t, frame, overall), 240)
+        if hist_cars and (t - last_hist >= _HISTORY_PERIOD_S - 1e-9 or t < last_hist):
+            last_hist = t
+            car = hist_cars[hist_i % len(hist_cars)]
+            hist_i += 1
+            yield pkt(_history_packet(sc, car, t, frame, overall, truth), 260)
         if t - last_part >= 5.0 or t < last_part:
             last_part = t
             yield pkt(_participants_packet(sc, t, frame, overall), 280)
@@ -839,4 +946,14 @@ def _stream(
         sc.layout.max_cars,
     ) + P.LAP_DATA_TAIL.pack({"timeTrialPBCarIdx": 255, "timeTrialRivalCarIdx": 255})
     yield pkt(_hdr(P.PacketId.LAP_DATA, sc, t, frame, overall) + lapdata)
+    if hist_cars and sc.skip_results_after_player_finish:
+        # The driver skips to the results: every AI car's lap in progress gets its time at once (F1 25, real
+        # Melbourne / Monza captures), far sooner than the car could have driven it.
+        for k, car in enumerate(hist_cars):
+            ends = _ai_lap_ends(car)
+            done = sum(1 for e in ends if e <= t)
+            if 0 < done + 1 <= len(ends) and t >= car.lap_starts[0]:
+                truth.ai_simulated_laps[car.spec.index] = frozenset({done + 1})
+            data = _history_packet(sc, car, t, frame, overall, truth, simulate_in_progress=True)
+            yield pkt(data, 10 + 3 * k)  # before SEND (offset 100): the session is still live
     yield pkt(_event_packet(sc, "SEND", b"", t, frame, overall), 100)

@@ -9,6 +9,9 @@
 //
 // Lane motivation: Goals and This week in a row under the ScopeBar; Streaks and badges after Getting faster? (after
 // the second row for advanced drivers). Each card loads on its own and says so when the server is older.
+// "Against the AI" (AI pace spec 8) follows Getting faster? in every order (before Streaks and badges): the driver's
+// sessions against the game's AI at this track (`/api/drivers/{id}/ai-pace`), left out on a server without it and for
+// games without AI difficulty.
 
 import { Alert, Button, Skeleton } from "@heroui/react";
 import { EmptyState } from "@heroui-pro/react";
@@ -18,6 +21,7 @@ import { useApi } from "../../hooks/useApi";
 import { sessionBadges, type BestBadge, type ScopeRow } from "../../lib/bests";
 import { reviewApi, reviewKeys, type DriverProgress } from "../../lib/endpoints/review";
 import { router } from "../../lib/router";
+import { showAiCard } from "../../lib/review/aipace";
 import { densityFor } from "../../lib/review/density";
 import {
   bestSteps,
@@ -37,6 +41,7 @@ import {
 } from "../../lib/review/progress";
 import { plural } from "../../lib/review/words";
 import type { PageProps } from "../../routes";
+import { AiPaceCard } from "./progress/AiPaceCard";
 import { BadgesCard } from "./progress/BadgesCard";
 import { ChangesCard } from "./progress/ChangesCard";
 import { FamilyBoardCard } from "./progress/FamilyBoardCard";
@@ -47,6 +52,7 @@ import { ProgressTilesView } from "./progress/ProgressTilesView";
 import { ScopeBar } from "./progress/ScopeBar";
 import { SteadierCard } from "./progress/SteadierCard";
 import { TierNotice } from "./progress/TierNotice";
+import { useAiPace } from "./progress/useAiPace";
 import { useReviewScope } from "./progress/useReviewScope";
 import { WeekCard } from "./progress/WeekCard";
 import { useBestsWindow } from "./session/data";
@@ -69,6 +75,10 @@ export function ProgressPage({ route }: PageProps) {
     () => (d5 && viewedId != null && ids.length <= 1 ? new Map([[viewedId, d5]]) : (familyReq.data ?? null)),
     [d5, viewedId, ids.length, familyReq.data],
   );
+
+  // Pace against the AI at this track (any car: the card groups by car class). Shared with the Coaching plan.
+  const ai = useAiPace(viewedId, scope);
+  const syntheticIds = useMemo(() => new Set((s.rows ?? []).filter((r) => r.synthetic).map((r) => r.id)), [s.rows]);
 
   // Each session's REC / PB under the one rule (lib/bests.ts), found in everyone's newest sessions (plus this
   // driver's own rows, which reach further back for them); null until the window is loaded.
@@ -168,6 +178,21 @@ export function ProgressPage({ route }: PageProps) {
       </div>
     </div>
   );
+  const aiCard = showAiCard(scope.track.game, ai.data, ai.missing) ? (
+    <AiPaceCard
+      key={`${viewed.id}|${scope.track.game}|${scope.track.trackId}`}
+      game={scope.track.game}
+      trackId={scope.track.trackId}
+      trackLabel={scope.track.label}
+      data={ai.data}
+      error={ai.error}
+      syntheticTrack={scope.track.synthetic}
+      syntheticIds={syntheticIds}
+      poss={s.who.poss}
+      caption={caption}
+      glossary={density.glossary}
+    />
+  ) : null;
   const familyCard = <FamilyBoardCard board={view.board} scopeLabel={label} seatedId={s.seatedId} />;
   const steadierCard = (
     <SteadierCard points={points} sentence={view.steadier} available={!!d5} caption={caption} glossary={density.glossary} />
@@ -245,12 +270,14 @@ export function ProgressPage({ route }: PageProps) {
             <>
               {changes}
               {faster}
+              {aiCard}
               {second}
               {badgesCard}
             </>
           ) : density.progressCornersFirst ? (
             <>
               {faster}
+              {aiCard}
               {second}
               {badgesCard}
               {changes}
@@ -258,6 +285,7 @@ export function ProgressPage({ route }: PageProps) {
           ) : (
             <>
               {faster}
+              {aiCard}
               {badgesCard}
               {second}
               {changes}

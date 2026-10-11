@@ -14,6 +14,9 @@ Endpoints
     GET    /api/drivers/{id}/progress?game&track_id&car&synthetic&limit&corners
                                                    per-session progress + PB history (dashboard D5, see
                                                    ``driver_progress``)
+    GET    /api/drivers/{id}/ai-pace?game&track_id&car_class&category&limit&target_gap_pct
+                                                   pace vs AI difficulty over time + suggested AI level per
+                                                   track / car class / category / weather (``driver_ai_pace``)
 
 Handlers are plain ``def``: FastAPI runs them in its thread pool, so the blocking ``DbWriter.call`` round trips
 never stall the event loop that also serves the live WebSocket. Service errors map to 404 (unknown driver or
@@ -39,6 +42,8 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Query, Request, status
 from pydantic import BaseModel, ConfigDict, Field
 
+from pitwall.analysis import ai_level
+from pitwall.analysis.ai_pace import AI_PACE_METHOD_VERSION
 from pitwall.analysis.track_identity import corner_texts
 from pitwall.core.session_analysis import SessionAnalysis, SessionAnalyzer
 from pitwall.drivers import (
@@ -56,6 +61,8 @@ router = APIRouter(prefix="/api/drivers", tags=["drivers"])
 _service_lock = threading.Lock()
 
 PROGRESS_CORNER_SESSIONS = 30  # newest sessions given corner trends per request (a session analysis ~3 ms/lap)
+AI_PACE_SUGGESTION_POINTS = 500  # a driver's newest AI pace points used for suggestions (all tracks: other slopes)
+_CATEGORY = r"^(race|qualifying|practice|time_trial|unknown)$"
 _COLOUR = r"^#[0-9a-fA-F]{6}$"
 _INITIALS = r"^[A-Za-z0-9]{1,3}$"
 Intensity = Annotated[str, Field(pattern="^(quiet|normal|detailed)$")]
@@ -360,4 +367,41 @@ def driver_progress(
         "sessions": sessions,
         "corner_text": texts,
         "pb_history": history,
+    }
+
+
+# ---------------------------------------------------------------------------------------------- pace vs AI
+@router.get("/{driver_id}/ai-pace")
+def driver_ai_pace(
+    request: Request,
+    driver_id: int,
+    game: str | None = None,
+    track_id: str | None = None,
+    car_class: str | None = None,
+    category: Annotated[str | None, Query(pattern=_CATEGORY)] = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 200,
+    target_gap_pct: Annotated[float, Query(ge=ai_level.TARGET_GAP_MIN, le=ai_level.TARGET_GAP_MAX)] = 0.0,
+) -> dict[str, Any]:
+    """Pace vs AI difficulty over time (``DriverAiPace``). ``points``: one per session of the driver's own real
+    driving (never synthetic, never replays) whose AI metrics are known, oldest first, within the optional scope.
+    ``suggestions``: the suggested AI level per (game, track, car class, category, weather) present in ``points``,
+    newest first, computed from all of the driver's points (so slopes measured at other tracks are available);
+    ``target_gap_pct`` (-5..5) is the wanted gap to the typical AI car (positive: the AI slightly faster)."""
+    svc = driver_service(request)
+    try:
+        svc.get(driver_id)
+    except DriverError as e:
+        raise _http(e) from e
+    with request.app.state.runtime.db.read() as c:
+        points = repo.driver_ai_pace_points(
+            c, driver_id, game=game, track_id=track_id, car_class=car_class, category=category, limit=limit
+        )
+        every = repo.driver_ai_pace_points(c, driver_id, limit=AI_PACE_SUGGESTION_POINTS)
+    return {
+        "driver_id": driver_id,
+        "method_version": AI_PACE_METHOD_VERSION,
+        "target_gap_pct": target_gap_pct,
+        "scope": {"game": game, "track_id": track_id, "car_class": car_class, "category": category},
+        "points": points,
+        "suggestions": ai_level.suggestions(every, points, target_gap_pct=target_gap_pct),
     }

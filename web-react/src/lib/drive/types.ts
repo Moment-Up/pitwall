@@ -10,6 +10,9 @@
 //  * skeleton.marshal_zones[].flag is the flag at the last static push (every 5 s): live flags are marshal_flags.
 
 import type { Corner, Frame, LapSummary, Observation, Snapshot, TrackModel } from "../api";
+import type { LiveAiPace } from "../endpoints/review";
+
+export type { LiveAiPace };
 
 /** One timing scope's bests (D2, storage/repo.py lap_bests): lap and the three sectors, clean laps only, each
  * sector best on its own. The ids say which lap set each best. */
@@ -165,6 +168,9 @@ export interface SnapshotNext extends Snapshot {
   session_state_info?: SessionStateInfo | null;
   /** D6 */
   coach?: CoachBlock | null;
+  /** AI pace: this session against the AI (null until the analysis worker has a summary, and for games without AI
+   * difficulty). Its `session_id` says which session it belongs to. */
+  ai_pace?: LiveAiPace | null;
 }
 
 /** Drive lock setting (Settings > Display; lib/prefs.ts DriveLock, lane S). */

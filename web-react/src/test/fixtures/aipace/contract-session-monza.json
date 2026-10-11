@@ -1,0 +1,40 @@
+{
+  "_fixture": {
+    "source": "AI pace design spec section 6 contract shape; values from the spec prototype (spec_algo.py, section 3.5 rules) run on a read-only copy of the owner's real PS5 F1 25 capture 20261010-205007_udp20777.pwcap (Monza race, capture starts in lap 2); session id, start time, track and car from the live pitwall service's session list (recorded-sessions-list.json). Not yet an API response: the backend route did not exist when this was written.",
+    "recorded": "2026-10-11T17:30:00+01:00",
+    "what": "GET /api/sessions/33d6d86134af `ai_pace`: too few AI cars with a representative lap (3 of the 5 needed): every AI metric is null.",
+    "tier": "contract"
+  },
+  "response": {
+    "status": "too_few_ai_cars",
+    "method_version": 1,
+    "updated_unix": 1791661999.0,
+    "ai_difficulty": 35,
+    "car_class": "F1 World",
+    "weather_class": "dry",
+    "online": false,
+    "ai_cars": 3,
+    "ai_laps": 3,
+    "ai_ref_ms": null,
+    "ai_best_ms": null,
+    "ai_p25_ms": null,
+    "ai_p75_ms": null,
+    "ai_median_lap_ms": null,
+    "ai_bests_ms": [],
+    "driver_best_ms": 88663,
+    "driver_best_lap_id": null,
+    "driver_median_ms": null,
+    "driver_clean_laps": 1,
+    "gap_ms": null,
+    "gap_pct": null,
+    "gap_to_best_ai_ms": null,
+    "race_pace_gap_pct": null,
+    "field_rank": null,
+    "field_size": null,
+    "excluded": {
+      "race_lap_1": 19,
+      "not_observed": 19,
+      "timing_inconsistent": 16
+    }
+  }
+}

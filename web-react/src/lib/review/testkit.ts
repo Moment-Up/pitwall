@@ -6,7 +6,10 @@ import type { Driver } from "../drivers";
 import type { LapTrace } from "../api";
 import type {
   CompareResponse,
+  DriverAiPace,
   DriverProgress,
+  LiveAiPace,
+  SessionAiPace,
   EngineerHistoryRow,
   SessionAnalysis,
   SessionDetail,
@@ -50,6 +53,51 @@ export const fixtures = {
   /** D5 for James at Silverstone in the F1 Generic car (only the last of 3 sessions has clean laps). */
   progressSilverstone: () => load<DriverProgress>("recorded-progress-silverstone"),
 };
+
+// AI pace contract fixtures (src/test/fixtures/aipace): the frozen contract's shapes (AI pace design spec 6) filled
+// with real values from the spec's prototype over the owner's real PS5 F1 25 captures; tier "contract" until the
+// backend route records real responses. The "recorded-" files are the real backend's answers for the same captures
+// (a scratch server of this branch fed the captures over local UDP), and tests pin the contract fixtures to them.
+interface AiFixtureFile<T> {
+  _fixture: { source: string; recorded: string; what: string; tier: "contract" | "recorded"; edited?: string };
+  response: T;
+}
+
+const AI = import.meta.glob<AiFixtureFile<unknown>>("../../test/fixtures/aipace/*.json", { eager: true, import: "default" });
+
+function loadAi<T>(name: string): T {
+  const f = Object.entries(AI).find(([p]) => p.endsWith(`/${name}.json`))?.[1];
+  if (!f) throw new Error(`no AI pace fixture ${name}`);
+  return structuredClone(f.response) as T;
+}
+
+export const aiFixtures = {
+  /** Austria race (e2c05b9f70f3) at AI 35 in F1 World cars: 3.8 s slower than the typical AI car, 20th of 20. */
+  austria: () => loadAi<SessionAiPace>("contract-session-austria"),
+  /** The review fixture's session (332904dbe3de, Austria scenario in the Haas) at AI 31: 4.9 s faster, 1st of 18. */
+  austriaScenario: () => loadAi<SessionAiPace>("contract-session-austria-scenario"),
+  /** Melbourne F2 race (1e7271f70c5e) at AI 35: 3.2 s faster, 1st of 22. */
+  melbourne: () => loadAi<SessionAiPace>("contract-session-melbourne"),
+  /** Monza race (33d6d86134af): too few AI cars seen (3 of 5). */
+  monza: () => loadAi<SessionAiPace>("contract-session-monza"),
+  /** snapshot.ai_pace for the Austria race. */
+  live: () => loadAi<LiveAiPace>("contract-live-austria"),
+  /** GET /api/drivers/1/ai-pace (no scope): 5 races, 4 direction-only suggestions. */
+  driverAll: () => loadAi<DriverAiPace>("contract-driver-all"),
+  /** GET /api/drivers/1/ai-pace?game=f1_25&track_id=f1:17: Austria in F1 World (AI 35) and F1 Modern (AI 31 twice). */
+  driverAustria: () => loadAi<DriverAiPace>("contract-driver-austria"),
+  /** The real backend's answers for the same captures (a scratch server of this branch; other session ids). */
+  recorded: {
+    sessionAustria: () => loadAi<SessionAiPace>("recorded-session-austria"),
+    driverAustria: () => loadAi<DriverAiPace>("recorded-driver-austria"),
+    driverAll: () => loadAi<DriverAiPace>("recorded-driver-all"),
+  },
+};
+
+/** Every AI pace fixture's provenance block. */
+export function aiFixtureBlocks(): { name: string; block: AiFixtureFile<unknown>["_fixture"] }[] {
+  return Object.entries(AI).map(([p, f]) => ({ name: p.split("/").pop() ?? p, block: f._fixture }));
+}
 
 /** Every fixture file's provenance block (tests check each says where it came from). */
 export function fixtureBlocks(): { name: string; block: FixtureFile<unknown>["_fixture"] }[] {

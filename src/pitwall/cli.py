@@ -799,6 +799,40 @@ def digest(
         typer.echo(d["markdown"])
 
 
+ai_pace_app = typer.Typer(help="Pace vs AI difficulty", no_args_is_help=True)
+app.add_typer(ai_pace_app, name="ai-pace")
+
+
+@ai_pace_app.command("backfill")
+def ai_pace_backfill(
+    captures: Annotated[Path | None, typer.Option(help="Capture file or folder (default: the data folder's)")] = None,
+    dry_run: Annotated[bool, typer.Option(help="Compute and print, write nothing")] = False,
+) -> None:
+    """Fill pace vs AI for sessions recorded before it existed, from their raw F1 captures (matched by the game
+    session UID). Never creates sessions; synthetic captures and sessions are skipped."""
+    from pitwall.core.ai_pace import backfill
+    from pitwall.storage.db import Database, DbWriter
+
+    settings = get_settings()
+    src = captures or settings.capture_dir
+    files = sorted(src.glob("*.pwcap")) if src.is_dir() else [src]
+    db = Database(settings.db_path)
+    writer = DbWriter(db)
+    try:
+        results = backfill(db, writer, files, dry_run=dry_run)
+    finally:
+        writer.close()
+    for r in results:
+        gap = "-" if r.gap_ms is None else f"{r.gap_ms / 1000:+.3f}s"
+        state = "dry run" if dry_run else ("written" if r.written else "kept (stored row has more AI laps)")
+        typer.echo(
+            f"{r.session_id}  {r.capture}  {r.status:20} difficulty={r.ai_difficulty} ai_cars={r.ai_cars} "
+            f"gap={gap}  {state}"
+        )
+    if not results:
+        typer.echo("no matching sessions in these captures")
+
+
 @app.callback()
 def _main() -> None:
     _windows_safe_output()

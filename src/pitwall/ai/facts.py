@@ -15,6 +15,10 @@ Game capabilities (``pitwall.games``): the session fact names the game by its ca
 group (fuel, tyres, strategy, damage, ERS, sectors, flags, weather, setup) with data the game does not send - or
 that Pitwall does not read yet - gets one ``game`` fact ("GT7 doesn't send tyre wear, ..."). Data that will never
 arrive is never described as "not yet known": the fuel fact says that only for a game that sends fuel.
+
+Pace vs AI (topic ``ai``): the session's pace against the typical AI car (``SessionAnalysis.ai_pace``) and, for a
+driver's own real driving, the suggested AI level at this track (``SessionAnalysis.ai_suggestion``). Every number in
+their driver-facing sentences is in the fact's text or data; an unknown AI level or too few AI laps is stated as such.
 """
 
 from __future__ import annotations
@@ -119,6 +123,22 @@ def _signed(
 
 
 LAST_LAP_PREFIX = "Last completed lap"
+AI_PACE_PREFIX = "Pace vs AI this session"
+AI_LEVEL_PREFIX = "AI level"
+AI_PACE_REASONS = {
+    "too_few_ai_cars": "too few AI laps were seen: Pitwall needs clean laps from at least 5 AI cars",
+    "unknown_difficulty": "the game has not reported the AI difficulty",
+    "difficulty_changed": "the AI difficulty changed during the session",
+    "time_trial": "a time trial has no AI opponents",
+}
+AI_LEVEL_BASIS = {"measured": "measured", "estimate_other_tracks": "estimated from other tracks"}
+_ORDINAL_SUFFIX = {1: "st", 2: "nd", 3: "rd"}
+
+
+def ordinal(n: int) -> str:
+    """1st, 2nd, 3rd, 4th, 11th, 12th, 13th, 21st, 22nd ..."""
+    suffix = "th" if 10 <= n % 100 <= 20 else _ORDINAL_SUFFIX.get(n % 10, "th")
+    return f"{n}{suffix}"
 
 
 def last_completed_lap(laps: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -162,6 +182,107 @@ def _add_last_lap(fs: FactSheet, last: dict[str, Any], best: dict[str, Any] | No
             text += f"; {abs(gap_s):.3f}s {'slower' if slower else 'faster'} than the best clean lap (lap {b})"
             say += f", {abs(gap_s):.3f}s {'off' if slower else 'quicker than'} your best clean lap (lap {b})"
     fs.add("laps", text + ".", data, say=say + ".")
+
+
+def _add_ai_pace(fs: FactSheet, a: dict[str, Any], synthetic: bool) -> None:
+    """Topic ``ai``: the session's pace vs the typical AI car (``SessionAiPace``)."""
+    status = a.get("status")
+    d = a.get("ai_difficulty")
+    ref, best, db = a.get("ai_ref_ms"), a.get("ai_best_ms"), a.get("driver_best_ms")
+    n = a.get("ai_cars")
+    note = " NOTE: SYNTHETIC data." if synthetic else ""
+    data: dict[str, Any] = {"status": status, "ai_difficulty": d, "ai_cars": n}
+    if status == "ok" and ref and best and db and a.get("gap_ms") is not None:
+        gap_s = int(a["gap_ms"]) / 1000
+        rank, size = a.get("field_rank"), a.get("field_size")
+        word = "slower" if gap_s > 0 else "faster" if gap_s < 0 else "the same time"
+        amount = f"{abs(gap_s):.3f}s {word}" if gap_s else "the same time"
+        data.update(
+            gap_s=gap_s,
+            gap_pct=a.get("gap_pct"),
+            rank=rank,
+            field_size=size,
+            ai_ref_s=int(ref) / 1000,
+            ai_best_s=int(best) / 1000,
+            driver_best_s=int(db) / 1000,
+        )
+        text = (
+            f"{AI_PACE_PREFIX}: AI difficulty {d}; your best clean lap {fmt_lap(int(db))} vs the typical AI car's "
+            f"best lap {fmt_lap(int(ref))} (median of {n} AI cars; fastest AI {fmt_lap(int(best))}): {amount} "
+            f"({float(a.get('gap_pct') or 0.0):+.2f}%), {rank} of {size} on best laps."
+        )
+        versus = (
+            "level with the typical AI car"
+            if abs(gap_s) < 0.05
+            else f"{abs(gap_s):.1f} seconds {word} than the typical AI car"
+        )
+        say = (
+            f"Against the AI at difficulty {d}, your best lap is {versus}: "
+            f"{ordinal(int(rank or 0))} of {size} on best laps."
+        )
+        fs.add("ai", text + note, data, say=say)
+        return
+    if status == "no_driver_lap" and ref and best:
+        data.update(ai_ref_s=int(ref) / 1000, ai_best_s=int(best) / 1000)
+        text = (
+            f"{AI_PACE_PREFIX}: AI difficulty {d}; the typical AI car's best lap is {fmt_lap(int(ref))} (median of "
+            f"{n} AI cars; fastest {fmt_lap(int(best))}); no clean lap of yours to compare yet."
+        )
+        say = f"At AI {d} the typical AI car's best lap is a {fmt_lap(int(ref))}. Set a clean lap and I can compare."
+        fs.add("ai", text + note, data, say=say)
+        return
+    reason = AI_PACE_REASONS.get(str(status), "not enough data")
+    text = f"{AI_PACE_PREFIX}: not available ({reason})."
+    fs.add("ai", text + note, data, say=text)
+
+
+def _add_ai_level(fs: FactSheet, s: dict[str, Any], sug: dict[str, Any]) -> None:
+    """Topic ``ai``: the suggested AI level at this track (``AiLevelSuggestion``); its ``text`` is the driver's
+    sentence, and every number in it is in this fact's text or data."""
+    key = sug.get("key") or {}
+    track = key.get("track_name") or s.get("track_name") or "this track"
+    rng = sug.get("range") or [None, None]
+    levels = ", ".join(str(v) for v in sug.get("levels_used") or [])
+    data: dict[str, Any] = {
+        "level": sug.get("level"),
+        "range_lo": rng[0],
+        "range_hi": rng[1],
+        "sessions_used": sug.get("sessions_used"),
+        "latest_level": sug.get("latest_level"),
+        "latest_gap_pct": sug.get("latest_gap_pct"),
+        "slope_pct_per_level": sug.get("slope_pct_per_level"),
+        "basis": sug.get("basis"),
+        "confidence": sug.get("confidence"),
+        "direction": sug.get("direction"),
+        "bound": sug.get("bound"),
+    }
+    if sug.get("level") is not None:
+        plural = {"race": "races", "qualifying": "qualifying sessions", "practice": "practice sessions"}
+        category = plural.get(str(key.get("session_category")), "sessions")
+        basis = AI_LEVEL_BASIS.get(str(sug.get("basis")), str(sug.get("basis")))
+        bound = {"at_least": " or higher", "at_most": " or lower"}.get(str(sug.get("bound")), "")
+        sources = ", ".join(sug.get("slope_sources") or [])
+        text = (
+            f"{AI_LEVEL_PREFIX} suggestion at {track} ({key.get('car_class') or 'unknown class'} {category}, "
+            f"{key.get('weather_class') or 'unknown weather'}): {sug['level']}{bound} (range {rng[0]}-{rng[1]}; "
+            f"{basis} from {sug.get('sessions_used')} sessions at levels {levels}"
+            + (f", slope from {sources}" if sources else "")
+            + f"; confidence {sug.get('confidence')})."
+        )
+    else:
+        g = sug.get("latest_gap_pct")
+        gap = f"{float(g):+.2f}%" if isinstance(g, int | float) else "unknown"
+        if len(sug.get("levels_used") or []) > 1:
+            text = (
+                f"{AI_LEVEL_PREFIX} suggestion at {track}: none yet; difficulties {levels} raced here show no "
+                f"consistent trend, latest gap to the typical AI car {gap} at difficulty {sug.get('latest_level')}."
+            )
+        else:
+            text = (
+                f"{AI_LEVEL_PREFIX} suggestion at {track}: none yet; only difficulty {sug.get('latest_level')} raced "
+                f"here, gap to the typical AI car {gap}."
+            )
+    fs.add("ai", text, data, say=str(sug.get("text") or text))
 
 
 def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) -> FactSheet:
@@ -442,6 +563,12 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     # ---------------------------------------------------------------- car setup (pitwall.carsetup)
     for topic, text, data in session_setup_facts(s, sa.setup, driver.get("skill_level")):
         fs.add(topic, text, data)
+
+    # ---------------------------------------------------------------- pace vs AI (core.ai_pace, analysis.ai_level)
+    if sa.ai_pace is not None:
+        _add_ai_pace(fs, sa.ai_pace, synthetic)
+    if sa.ai_suggestion is not None:
+        _add_ai_level(fs, s, sa.ai_suggestion)
 
     # --- feat/technique: racing line, brake/throttle technique, handling balance (pitwall.technique) ---
     for t in technique_facts(sa):

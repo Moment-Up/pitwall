@@ -6,6 +6,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { driveModel, type DriveModel } from "../../../lib/drive/model";
 import { FIXTURES, fixture, frame, newestT, snap } from "../../../lib/drive/testkit";
+import type { SnapshotNext } from "../../../lib/drive/types";
+import { aiFixtures } from "../../../lib/review/testkit";
 import type { Driver } from "../../../lib/drivers";
 import { stubBrowser } from "../../../test/fakes";
 import type { CoachScreenProps } from "./CoachScreen";
@@ -408,6 +410,46 @@ describe("Session complete card: Work on / Went well name their corner (mockup)"
     expect(cornerTitle(tm, "T4")).toBe("T6");
     expect(cornerTitle(tm, null)).toBeNull();
     expect(cornerTitle(null, "T4")).toBe("T4");
+  });
+});
+
+describe("Session complete card: pace vs AI (AI pace spec 8)", () => {
+  /** The ended Austria fixture with the AI comparison the server would publish for it (contract values). */
+  function ended(ai: Partial<NonNullable<SnapshotNext["ai_pace"]>> | null) {
+    const s = fixture("recorded-d246-austria-session-ended");
+    const snap: SnapshotNext = { ...s, ai_pace: ai ? { ...aiFixtures.live(), session_id: s.session_id ?? "", ...ai } : null };
+    return driveModel({ snap, connected: true, nowS: newestT(s) + 1, driver: JAMES });
+  }
+
+  it("one line when the session has an ok comparison: the gap in words and the rank", () => {
+    const m = ended({});
+    expect(m.ended?.aiLine).toBe("Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20");
+    const card = visible(renderToStaticMarkup(createElement(SessionCompleteCard, { ended: m.ended!, tier: m.tier })));
+    expect(card).toContain("Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20");
+    expect(card).toContain("Review this session");
+  });
+
+  it("no line without a comparison, for another session, or for a status other than ok; no live AI widget", () => {
+    for (const m of [ended(null), ended({ session_id: "another" }), ended({ status: "too_few_ai_cars" }), ended({ status: "unknown_difficulty", ai_difficulty: null })]) {
+      expect(m.ended?.aiLine).toBeNull();
+      const card = visible(renderToStaticMarkup(createElement(SessionCompleteCard, { ended: m.ended!, tier: m.tier })));
+      expect(card).not.toContain("Against the AI");
+    }
+    // on track, Drive shows nothing about the AI
+    const onTrack = fixture("recorded-suzuka-on-track-brake-ahead");
+    const live = driveModel({
+      snap: { ...onTrack, ai_pace: { ...aiFixtures.live(), session_id: onTrack.session_id ?? "" } },
+      connected: true,
+      nowS: newestT(onTrack) + 1,
+      driver: JAMES,
+    });
+    expect(visible(render(live))).not.toContain("typical AI car");
+  });
+
+  it("synthetic data says so", () => {
+    expect(ended({ synthetic: true }).ended?.aiLine).toBe(
+      "Against the AI (35): 3.8 s slower than the typical AI car · 20th of 20 · synthetic data",
+    );
   });
 });
 

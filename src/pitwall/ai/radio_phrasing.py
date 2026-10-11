@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from pitwall.ai.facts import LAST_LAP_PREFIX, FactSheet, fmt_lap
+from pitwall.ai.facts import AI_LEVEL_PREFIX, AI_PACE_PREFIX, LAST_LAP_PREFIX, FactSheet, fmt_lap
 
 WHEEL_NAMES = ("front left", "front right", "rear left", "rear right")
 COMPOUND_PLURAL = {"soft": "Softs", "medium": "Mediums", "hard": "Hards", "inter": "Inters", "wet": "Wets"}
@@ -103,11 +103,57 @@ def capability(group: str) -> Callable[[FactSheet], str | None]:
     return phrase
 
 
+def ai_pace(sheet: FactSheet) -> str | None:
+    """Against the AI: the gap to the typical AI car and the position on best laps (or why there is none)."""
+    f = next((f for f in sheet.facts if f.topic == "ai" and f.text.startswith(AI_PACE_PREFIX)), None)
+    if f is None:
+        return None
+    d = f.data
+    if d.get("status") == "ok" and d.get("gap_s") is not None:
+        gap = float(d["gap_s"])
+        if abs(gap) < 0.05:
+            versus = "level with the typical AI car"
+        else:
+            versus = f"{abs(gap):.1f} {'off' if gap > 0 else 'up on'} the typical AI car"
+        return (
+            f"Against the AI at {d['ai_difficulty']}: {versus}, position {d['rank']} of {d['field_size']} on best laps."
+        )
+    if d.get("status") == "no_driver_lap" and d.get("ai_ref_s") is not None:
+        ref = fmt_lap(round(float(d["ai_ref_s"]) * 1000))
+        return f"Typical AI best at {d['ai_difficulty']} is a {ref}. No clean lap yet to compare."
+    return f.plain
+
+
+def ai_level(sheet: FactSheet) -> str | None:
+    """The suggested AI level here, or which way to move it when there is no level yet."""
+    f = next((f for f in sheet.facts if f.topic == "ai" and f.text.startswith(AI_LEVEL_PREFIX)), None)
+    if f is None:
+        return ai_pace(sheet)
+    d = f.data
+    if d.get("level") is not None:
+        bound = {"at_least": " or higher", "at_most": " or lower"}.get(str(d.get("bound")), "")
+        msg = f"Try AI {d['level']}{bound} here."
+        return msg + " Rough estimate." if d.get("confidence") == "low" else msg
+    level, g = d.get("latest_level"), d.get("latest_gap_pct")
+    if d.get("direction") == "about_right":
+        return f"AI {level} looks about right here."
+    if not isinstance(g, int | float):
+        return f.plain
+    pace = "slower" if g > 0 else "faster"
+    move = "lower" if d.get("direction") == "lower" else "higher"
+    return (
+        f"Not enough levels yet. At {level} you're {abs(g):.1f} percent {pace} than the AI here. "
+        f"Try a {move} level, then I can suggest one."
+    )
+
+
 PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
     "tyres": tyres,
     "fuel": fuel,
     "lap_times": lap_times,
     "last_lap": last_lap,
+    "ai_pace": ai_pace,
+    "ai_level": ai_level,
     **{g: capability(g) for g in ("damage", "ers", "sectors", "flags", "weather")},
 }
 

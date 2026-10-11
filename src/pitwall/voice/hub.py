@@ -121,6 +121,7 @@ DELIVERY_LEAD_S = 0.2  # audio already synthesised: transport + device start-up 
 FAST_INTENTS = frozenset(
     {"fuel", "tyres", "lap_times", "last_lap", "strategy", "control_quiet", "control_resume", "radio_check"}
     | {"line", "technique", "balance"}  # feat/technique: deterministic, corner-aware answers (no phraser)
+    | {"ai_pace", "ai_level"}  # pace vs AI difficulty: radio_phrasing.ai_pace / ai_level
 )
 NO_GAME_REPLY = "Tell me which game you're playing: open Setup, then Game."
 NO_SESSION_REPLY = "No session data yet. Get a lap in and ask me again."
