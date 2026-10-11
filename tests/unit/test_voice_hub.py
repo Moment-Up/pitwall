@@ -73,6 +73,13 @@ class FakeScheduler:
     def pending(self) -> list[RadioMessage]:
         return list(self.queue)
 
+    def drop_driver_messages(self) -> int:
+        kinds = (MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.COACHING)
+        kept = [m for m in self.queue if m.kind not in kinds]
+        dropped = len(self.queue) - len(kept)
+        self.queue[:] = kept
+        return dropped
+
 
 def sheet() -> FactSheet:
     fs = FactSheet()

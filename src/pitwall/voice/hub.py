@@ -8,6 +8,11 @@ Blocking work (STT, TTS, fact-sheet building) runs in worker threads. Telemetry 
 or analysis threads and are marshalled onto the loop with ``call_soon_threadsafe``. Each client has its own
 outbound queue, so a slow device can never stall the hub or other clients.
 
+Questions: a fast intent (``FAST_INTENTS``), a question only about data the game never sends, and *every* question
+while the car is moving (``MOVING_KPH``) get the deterministic answer at once, with no "Copy, checking." and no LLM.
+The LLM explains only when the car is stationary (and in Review › Ask). The radio policy for unprompted messages
+(intensity, order, the per-lap talk budget, the seat-change drop) is ``voice.scheduler``'s.
+
 Without a server STT engine (``NullStt``: Parakeet cannot run, or it is switched off) the state carries
 ``stt_reason``. On Windows - where that is the normal case - a push-to-talk utterance then gets an error frame naming
 the reason plus a short spoken ``NO_STT_REPLY`` instead of "Say again?". macOS keeps its behaviour (the utterance
@@ -86,7 +91,7 @@ from pitwall.coach.cues import (
 from pitwall.compat import is_windows
 from pitwall.core.live import LiveState
 from pitwall.motivation.radio import GoalLineGate, goal_message  # lane motivation
-from pitwall.voice.scheduler import SPEECH_LATENCY_S, speak_window_ok, spoken_word_count
+from pitwall.voice.scheduler import DRIVER_LAP_KINDS, SPEECH_LATENCY_S, speak_window_ok, spoken_word_count
 from pitwall.voice.tts import speech_mismatch
 from pitwall.voice.types import (
     MIC_SAMPLE_RATE,
@@ -142,6 +147,11 @@ FAST_INTENTS = frozenset(
         "badges",
     }
 )
+# While the car is moving every answer is deterministic (plan decision 2): with the local LLM at about 15 tokens a
+# second on a shared server, an explained answer can take 20 s or more to arrive mid-lap. The LLM still explains
+# when the car is stationary, and in Review › Ask. Moving = on track at this speed or more (or speed unknown on
+# track); the same threshold as Drive's moving state (web-react lib/drive/motion.ts).
+MOVING_KPH = 8.0
 NO_GAME_REPLY = "Tell me which game you're playing: open Setup, then Game."
 NO_SESSION_REPLY = "No session data yet. Get a lap in and ask me again."
 
@@ -334,6 +344,8 @@ class RadioHub:
         self.intensity: str = start_intensity if start_intensity in ("quiet", "normal", "detailed") else "normal"
         live.coach.set_radio_intensity(self.intensity)
         self.coaching_limits: CoachingLimits | None = None  # the seated driver's profile (apply_driver)
+        self._seat_known = False  # apply_driver has been called (the first call only says who is in the seat)
+        self._seated_id: int | None = None
         self._last_coached: dict[str, int] = {}  # corner -> lap last coached, for the current session only
         self._last_coached_sid: str | None = None
         self._goal_lines = GoalLineGate()  # lane motivation: at most 2 goal lines per session
@@ -787,7 +799,7 @@ class RadioHub:
             # sends is answered from what Pitwall knows about the game - no LLM, no "Copy, checking."
             entry = games.entry(self.live.effective_game_id())
             cap = games.capability_only(intent.name, entry)
-            use_llm = intent.name not in FAST_INTENTS and not cap
+            use_llm = intent.name not in FAST_INTENTS and not cap and not self.moving()
             if use_llm:
                 # real engineers acknowledge immediately; the LLM answer takes several seconds
                 await self.say(
@@ -839,6 +851,15 @@ class RadioHub:
         finally:
             self._busy = False
             self._send_state()
+
+    def moving(self) -> bool:
+        """The car is on track and moving (``MOVING_KPH``): answers are deterministic, never the LLM. On track with
+        an unknown speed counts as moving (unknown is not stationary)."""
+        state = self.driving_state()
+        if not state.on_track:
+            return False
+        speed = state.speed_kph
+        return speed is None or not (math.isfinite(speed) and speed < MOVING_KPH)
 
     def _apply_control(self, ans: EngineerAnswer | None) -> None:
         if ans is None or not ans.control:
@@ -1223,8 +1244,20 @@ class RadioHub:
         """The seated driver changed or edited their profile (``DriverService.attach_radio``; event loop only).
 
         Their coaching amount, voice switch and skill limits now drive the radio. A spoken "quiet until lap N"
-        is a temporary override and is left alone.
+        is a temporary override and is left alone. When somebody else takes the seat, the unsaid lap summaries,
+        goal lines and coaching points about the previous driver's laps are dropped (queued and held alike); alerts
+        and strategy calls are about the car and stay.
         """
+        seated = None if driver is None else driver.id
+        if self._seat_known and seated != self._seated_id:
+            dropped = self.scheduler.drop_driver_messages()
+            held = self._held
+            if held is not None and held[0].kind in DRIVER_LAP_KINDS:
+                self._held = None
+                dropped += 1
+            if dropped:
+                log.info("seat change: %d unsaid message(s) about the previous driver's laps dropped", dropped)
+        self._seat_known, self._seated_id = True, seated
         self.coaching_limits = None if driver is None else driver.coaching
         if driver is not None:
             self._set_intensity(driver.preferences.coaching_intensity)

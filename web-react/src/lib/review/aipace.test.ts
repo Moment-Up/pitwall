@@ -629,10 +629,10 @@ describe("a race that could not be compared is said so, never 'no races'", () =>
 });
 
 describe("Ask offers the AI question only for a session raced against the AI", () => {
-  it("adds it after the first three", () => {
+  it("adds it before the summary", () => {
     expect(askSuggestions()).toEqual(SUGGESTIONS);
     const ai = askSuggestions({ aiPace: true });
     expect(ai).toHaveLength(SUGGESTIONS.length + 1);
-    expect(ai[3]).toBe(AI_SUGGESTION);
+    expect(ai.at(-2)).toBe(AI_SUGGESTION);
   });
 });

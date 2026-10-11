@@ -13,7 +13,6 @@ from pitwall.voice.proactive import (
     LAP_MESSAGE_TTL_S,
     coaching_text,
     fmt_lap_time,
-    fuel_alert,
     intensity_ack,
     lap_messages,
     lap_summary_text,
@@ -349,7 +348,7 @@ def test_quiet_intensity_only_answers_controls_alerts() -> None:
     s.enqueue(mk("alert", MessageKind.ALERT))
     s.enqueue(mk("ctl", MessageKind.CONTROL, window=False))
     s.enqueue(mk("ans", MessageKind.ANSWER, window=False))
-    assert drain(s) == ["alert", "ctl", "ans"]
+    assert drain(s) == ["ctl", "ans", "alert"]  # same priority: answers and acknowledgements rank first
     assert {m.id for m in s.pending()} == {"sum", "coach", "info"}  # kept: the setting may change
     s.set_intensity("normal")
     assert drain(s, start=100.0) == ["sum", "coach"]
@@ -364,7 +363,8 @@ def test_normal_intensity_one_coaching_point_per_lap() -> None:
     assert drain(s) == ["sum4", "c4a"]
     assert {m.id for m in s.pending()} == {"c4b", "info"}
     s.enqueue(mk("c5", MessageKind.COACHING, lap=5, created=100.0))
-    assert drain(s, start=100.0) == ["c5"]  # a new lap has its own budget (and superseded c4b)
+    # a new lap has its own budget (and superseded c4b); said while driving the next lap
+    assert drain(s, replace(CALM, lap_number=6), start=100.0) == ["c5"]
     assert [m.id for m in s.pending()] == ["info"]
 
 
@@ -482,7 +482,7 @@ def test_later_lap_summary_supersedes_unspoken_one() -> None:
     assert s.enqueue(mk("sum4", lap=4))
     assert s.enqueue(mk("c4", MessageKind.COACHING, lap=4))
     assert s.enqueue(mk("sum5", lap=5))
-    assert [m.id for m in s.pending()] == ["c4", "sum5"]  # coaching only superseded by later coaching
+    assert [m.id for m in s.pending()] == ["sum5", "c4"]  # coaching only superseded by later coaching
     assert s.enqueue(mk("c5", MessageKind.COACHING, lap=5))
     assert [m.id for m in s.pending()] == ["sum5", "c5"]
 
@@ -713,9 +713,9 @@ def test_coaching_budget_survives_lap_numbers_restarting_in_a_new_session() -> N
 
 def test_reset_session_forgets_the_old_session() -> None:
     s = RadioScheduler("normal")
-    for n in range(1, 4):
+    for n in range(1, 4):  # each point said while driving the next lap
         s.enqueue(mk(f"a{n}", MessageKind.COACHING, lap=n, text=f"Point {n}.", created=10.0 * n))
-        assert drain(s, start=10.0 * n) == [f"a{n}"]
+        assert drain(s, replace(CALM, lap_number=n + 1), start=10.0 * n) == [f"a{n}"]
     s.enqueue(mk("a-sum", lap=3, text="Lap 3.", created=40.0))  # still queued at the session change
     s.set_quiet(until_lap=9)
     assert s.reset_session() == 1
@@ -723,7 +723,7 @@ def test_reset_session_forgets_the_old_session() -> None:
     for n in range(1, 4):  # same lap numbers, same sentences, well inside the repeat window
         t = 40.0 + 5.0 * n
         assert s.enqueue(mk(f"b{n}", MessageKind.COACHING, lap=n, text=f"Point {n}.", created=t))
-        assert drain(s, start=t) == [f"b{n}"]
+        assert drain(s, replace(CALM, lap_number=n + 1), start=t) == [f"b{n}"]
 
 
 def test_reset_session_keeps_standing_preferences() -> None:
@@ -963,40 +963,15 @@ def test_lap_messages_rejects_unknown_intensity() -> None:
         lap_messages(lap(), [], None, None, "max", 0.0)
 
 
-# ================================================================ proactive: fuel and control
-@pytest.mark.parametrize("margin", [None, math.nan, math.inf, 0.3, 2.5])
-def test_no_fuel_alert_with_comfortable_or_unknown_margin(margin: float | None) -> None:
-    assert fuel_alert(margin, 0.0) is None
-
-
-def test_fuel_tight_and_critical() -> None:
-    tight = fuel_alert(0.24, 10.0, lap_number=12)
-    assert tight is not None
-    assert tight.text == "Fuel is tight: plus 0.2 laps to the finish."
-    assert tight.kind is MessageKind.ALERT and tight.priority is Priority.NORMAL and not tight.bypass_quiet
-    assert tight.id == "fuel-tight-lap12" and tight.lap_number == 12
-    assert tight.meta["topic"] == "fuel"
-
-    limit = fuel_alert(-0.02, 10.0)
-    assert limit is not None and limit.text == "Fuel is tight: right on the limit to the finish."
-
-    short = fuel_alert(-0.8, 10.0)
-    assert short is not None
-    assert short.text == "Fuel critical: 0.8 laps short to the finish."
-    assert short.priority is Priority.HIGH and short.bypass_quiet and short.needs_speak_window
-    assert short.expires_mono is not None and short.expires_mono > short.created_mono
-    critical = fuel_alert(-0.6, 10.0, lap_number=12)
-    assert critical is not None and critical.id == "fuel-crit-lap12" != tight.id
-    assert critical.meta["topic"] == "fuel"
-
-
-def test_critical_fuel_replaces_held_tight_alert_on_the_same_lap() -> None:
-    """Review case: a tight alert held by quiet mode used to block the same lap's critical one (same id)."""
+# ================================================================ proactive: topics and control
+def test_newer_topic_message_replaces_one_held_by_quiet_mode() -> None:
+    """Review case: a "fuel is tight" held by quiet mode used to block the same lap's critical call. Fuel calls are
+    race strategy's now (``strategy.radio``, topic ``strategy:fuel``); the topic rule is the scheduler's."""
     s = RadioScheduler()
     s.set_quiet(until_lap=20)
-    tight = fuel_alert(0.2, 0.0, lap_number=12)
-    critical = fuel_alert(-0.6, 5.0, lap_number=12)
-    assert tight is not None and critical is not None
+    meta: dict[str, object] = {"topic": "strategy:fuel"}
+    tight = mk("fuel-tight", MessageKind.ALERT, text="Fuel is tight.", lap=12, meta=meta)
+    critical = mk("fuel-crit", MessageKind.ALERT, Priority.HIGH, "Fuel critical.", 5.0, lap=12, bypass=True, meta=meta)
     assert s.enqueue(tight)
     on_lap_12 = replace(CALM, lap_number=12)
     assert s.next_message(on_lap_12, 1.0, speaking=False) is None  # held by quiet mode

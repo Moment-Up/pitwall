@@ -102,10 +102,11 @@ def test_goal_reached_on_the_live_path(app_rig: tuple[Any, TestClient, Runtime, 
     (stored,) = client.get(f"/api/drivers/{driver.id}/goals").json()["goals"]
     assert stored["status"] == "achieved" and stored["achieved"]["session_id"] == sid
     assert rt.motivation.notes == 1  # exactly once
-    if hub is not None:  # the radio queued one goal line (a later lap's summary supersedes it if still unsaid)
+    if hub is not None:  # the radio queued one goal line
         lines = [m for m in queued if m.id.startswith("goal-")]
         assert [m.text for m in lines] == ["Goal reached: 2 clean laps in a row."]
-        assert lines[0].meta["lap_id"] == note["lap_id"] and lines[0].kind.value == "lap_summary"
+        # a GOAL with no lap identity: it never holds the lap's coaching back (the radio policy, voice.scheduler)
+        assert lines[0].kind.value == "goal" and "lap_id" not in lines[0].meta
     recap = client.get(f"/api/sessions/{sid}/recap").json()
     assert recap["synthetic"] and recap["things"]["progress"] is None
     assert recap["why_empty"]["progress"] == "Synthetic sessions do not count towards progress"

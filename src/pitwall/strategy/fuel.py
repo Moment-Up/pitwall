@@ -26,8 +26,8 @@ MAX_WINDOW_S = 1.5  # a longer gap between frames is packet loss: no window
 MAX_RATE_KG_S = 0.2  # [R] above this is a refuel / reset, not burn
 KEEP_WINDOWS = 900
 MIN_SPEED_KPH = 50.0
-FUEL_TIGHT_LAPS = 0.3  # = voice.proactive.FUEL_TIGHT_LAPS
-FUEL_LIMIT_LAPS = 0.05  # = voice.proactive.FUEL_LIMIT_LAPS
+FUEL_TIGHT_LAPS = 0.3  # margin below this (but not short) is worth a heads-up (the radio's only fuel alerts)
+FUEL_LIMIT_LAPS = 0.05  # |margin| below this reads as "right on the limit"
 MIN_GREEN_LAPS = 2
 LNC_CORNERS = 3
 _BAD = (

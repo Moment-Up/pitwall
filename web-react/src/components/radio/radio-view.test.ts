@@ -57,6 +57,9 @@ describe("kindChip", () => {
     ["lap_summary", "LAP", "accent"],
     ["cue", "CUE", "danger"],
     ["alert", "ALERT", "warning"],
+    ["strategy", "STRATEGY", "ref"],
+    ["goal", "GOAL", "success"],
+    ["validation", "TEST", "default"],
     ["transcript", "YOU", "default"],
     ["you", "YOU", "default"],
     ["error", "ERROR", "danger"],
@@ -64,9 +67,11 @@ describe("kindChip", () => {
     expect(kindChip(kind)).toEqual({ label, tone });
   });
 
-  it("an unknown or missing kind is a neutral RADIO chip", () => {
-    expect(kindChip("brand_new_kind")).toEqual({ label: "RADIO", tone: "default" });
+  it("a kind from a newer server is labelled INFO; a missing kind is a neutral RADIO chip", () => {
+    expect(kindChip("brand_new_kind")).toEqual({ label: "INFO", tone: "default" });
+    expect(kindChip("toString")).toEqual({ label: "INFO", tone: "default" }); // not an inherited property
     expect(kindChip(null)).toEqual({ label: "RADIO", tone: "default" });
+    expect(kindChip(undefined)).toEqual({ label: "RADIO", tone: "default" });
   });
 });
 

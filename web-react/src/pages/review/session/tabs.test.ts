@@ -220,7 +220,7 @@ describe("Ask (6.7)", () => {
     expect(text).toContain("LLM · grounded");
     expect(text).toContain("Grounded on 1 fact");
     expect(text).toContain("Answers are grounded on the session's facts, or replaced by a deterministic answer.");
-    for (const q of ["Where am I losing the most time?", "What went well?"]) expect(text).toContain(q);
+    for (const q of ["Where am I losing the most time?", "Give me a summary of this session."]) expect(text).toContain(q);
     // ?q= pre-fills, it is not sent
     expect(html).toContain("Why am I losing time at Stowe (T15)?");
     expect(text).not.toContain("The engineer is thinking");

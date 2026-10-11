@@ -16,6 +16,10 @@ group (fuel, tyres, strategy, damage, ERS, sectors, flags, weather, setup) with 
 that Pitwall does not read yet - gets one ``game`` fact ("GT7 doesn't send tyre wear, ..."). Data that will never
 arrive is never described as "not yet known": the fuel fact says that only for a game that sends fuel.
 
+Flags (topic ``flags``): while the session is live, for a game that sends flags, the safety car / VSC status and the
+marshal zones showing a yellow flag now (``LiveState``: ``session.safety_car_status``, ``marshal_flags``). Unknown
+stays unknown: no fact without a live session packet, and no "no yellow flags" without one.
+
 Pace vs AI (topic ``ai``): the session's pace against the typical AI car (``SessionAnalysis.ai_pace``) and, for a
 driver's own real driving, the suggested AI level at this track (``SessionAnalysis.ai_suggestion``). Every number in
 their driver-facing sentences is in the fact's text or data; an unknown AI level or too few AI laps is stated as such.
@@ -189,6 +193,66 @@ def _add_last_lap(fs: FactSheet, last: dict[str, Any], best: dict[str, Any] | No
     fs.add("laps", text + ".", data, say=say + ".")
 
 
+FLAGS_PREFIX = "Flags now:"
+_SC_NOW = {
+    "full": ("the safety car is out", "Safety car deployed."),
+    "virtual": ("the virtual safety car is out", "Virtual safety car deployed."),
+    "formation_lap": ("formation lap behind the safety car", "Formation lap, behind the safety car."),
+}
+
+
+def _zones_text(zones: list[int]) -> str:
+    nums = [str(z) for z in zones]
+    joined = nums[0] if len(nums) == 1 else ", ".join(nums[:-1]) + " and " + nums[-1]
+    return f"marshal zone{'s' if len(nums) > 1 else ''} {joined}"
+
+
+def _add_flags(fs: FactSheet, live: dict[str, Any] | None, entry: games.GameEntry | None) -> None:
+    """The flags now (topic ``flags``): the safety car or VSC, and the marshal zones showing a yellow flag. Only while
+    the session is live (an old session packet is not "now"), and only for a game that sends flags."""
+    if not live or (entry is not None and not entry.feature("flags").available):
+        return
+    conn = live.get("connection")
+    sess = live.get("session")
+    if not isinstance(conn, dict) or conn.get("status") != "live" or not isinstance(sess, dict):
+        return
+    sc = sess.get("safety_car_status")
+    if not isinstance(sc, str):
+        return  # no session packet yet: nothing is known about the flags
+    raw = live.get("marshal_flags")
+    zones = raw if isinstance(raw, list) else []
+    yellow = sorted(
+        {
+            z["game_number"]
+            for z in zones
+            if isinstance(z, dict) and z.get("flag") == "yellow" and isinstance(z.get("game_number"), int)
+        }
+    )
+    known = sc in _SC_NOW or sc == "none"
+    if not known and not yellow:
+        return
+    parts: list[str] = []
+    said: list[str] = []
+    if sc in _SC_NOW:
+        parts.append(_SC_NOW[sc][0])
+        said.append(_SC_NOW[sc][1])
+    elif sc == "none":
+        parts.append("no safety car or virtual safety car")
+        said.append("No safety car.")
+    if yellow:
+        parts.append(f"yellow flag in {_zones_text(yellow)}")
+        said.append(f"Yellow flag in {_zones_text(yellow)}.")
+    elif isinstance(raw, list):
+        parts.append("no yellow flags reported")
+        said.append("No yellow flags reported.")
+    fs.add(
+        "flags",
+        f"{FLAGS_PREFIX} {'; '.join(parts)}.",
+        {"safety_car": sc, "yellow_zones": yellow},
+        say=" ".join(said),
+    )
+
+
 def _add_ai_pace(fs: FactSheet, a: dict[str, Any], synthetic: bool) -> None:
     """Topic ``ai``: the session's pace vs the typical AI car (``SessionAiPace``)."""
     status = a.get("status")
@@ -350,6 +414,7 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
         + (" NOTE: this is SYNTHETIC test data, not a real driving session." if synthetic else ""),
         session_data,
     )
+    _add_flags(fs, live, entry)  # early: never pushed out of a long sheet's selection (FactSheet.select)
 
     # ---------------------------------------------------------------- laps
     timed = [lap for lap in sa.laps if lap.get("lap_time_ms")]

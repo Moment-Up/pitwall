@@ -10,6 +10,10 @@
   fact ids, observation labels or confidence scores (``grounding.display_text``).
 * A question only about data the game does not send (or Pitwall does not read yet: ``games.capability_only``, e.g.
   tyres in Assetto Corsa) is answered deterministically from the sheet's ``game`` facts, without the LLM.
+* The radio asks with ``use_llm=False`` for its fast intents and for every question while the car is moving
+  (``voice.hub``), so ``deterministic_answer`` covers every intent with something worth saying.
+* ``_RULES`` is one ordered table (first match wins). ``tests/fixtures/intents.json`` pins where each of its questions
+  goes (``tests/unit/test_engineer_intents_table.py``); a change to the table updates that fixture.
 """
 
 from __future__ import annotations
@@ -138,7 +142,9 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         "balance",
         re.compile(
             r"\b(under-?steer\w*|over-?steer\w*|(?<!brake )balance|push(?:es|ing)? wide|snap(?:py|s)?|loose|"
-            r"rear(?: end)?(?: is| was|['\u2019]s)? (?:step|kick)\w* out|(?:won't|doesn't) turn(?: in)?)\b",
+            r"rear(?: end)?(?: is| was|['\u2019]s)? (?:step|kick)\w* out|(?:won't|doesn't) turn(?: in)?|"
+            # "how did the car handle?", "how's the handling?" (Review › Ask suggests the first)
+            r"(?:the|my) car handl\w*|how(?:['\u2019]s| is| was) (?:the|my) handling)\b",
             re.I,
         ),
     ),
@@ -222,7 +228,7 @@ _TOPICS: dict[str, set[str]] = {
     "damage": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "ers": {"session", "game", "ers", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "sectors": {"session", "game", "laps"},
-    "flags": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
+    "flags": {"session", "game", "flags", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "setup": {"session", "game", "corners", "observations", "compare", "setup", "balance"},  # balance: feat/technique
     "focus": {"session", "game", "observations", "corners", "reference"},
     "goals": {"session", "game", "goals", "progress"},  # lane motivation (goals, week, badges)
@@ -514,9 +520,11 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         if game is not None:
             return say(game)
         return say(first("laps", contains="Theoretical"), first("laps", contains="Best clean"))
+    if n == "flags" and first("flags") is not None:  # the safety car and yellow flags now (a live session)
+        return say(first("flags"))
     if n in ("damage", "flags"):
-        # the game sends it but the sheet has no fact about it (F1 flags): the general answer, never "complete a
-        # few clean laps" (more laps would not help)
+        # the game sends it but the sheet has no fact about it (F1 damage, flags after the session): the general
+        # answer, never "complete a few clean laps" (more laps would not help)
         return say(game) if game is not None else say(*general)
     # --- feat/technique: racing line, technique and balance answers (before the generic corner branch) ---
     if n in ("line", "technique", "balance"):

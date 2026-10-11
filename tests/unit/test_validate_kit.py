@@ -75,8 +75,8 @@ async def test_briefs_are_rate_limited_and_wait_for_a_speak_window(kit: tuple[Va
     k, radio = kit
     run = k.start_run(["ipad_home_screen", "radio_ptt", "gt7_ps5"], None, True)
     (brief,) = radio.queued
-    assert brief.text == BY_ID["ipad_home_screen"].radio_brief and brief.kind is MessageKind.CONTROL
-    assert brief.priority is Priority.NORMAL and brief.needs_speak_window and not brief.bypass_quiet
+    assert brief.text == BY_ID["ipad_home_screen"].radio_brief and brief.kind is MessageKind.VALIDATION
+    assert brief.priority is Priority.LOW and brief.needs_speak_window and not brief.bypass_quiet
     assert brief.meta == {"topic": "validation"} and brief.expires_mono == pytest.approx(
         brief.created_mono + PROMPT_TTL_S
     )

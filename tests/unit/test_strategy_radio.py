@@ -116,7 +116,8 @@ def test_hub_drops_experienced_calls_for_simple_wording() -> None:
     hub.coaching_limits = _Limits()
     enqueue(hub, call("normal", "undercut_threat", audience="experienced"))  # type: ignore[arg-type]
     enqueue(hub, call("normal", "gap"))  # type: ignore[arg-type]
-    assert [m.meta["topic"] for m in hub.scheduler.pending()] == ["strategy:neighbour_stop", "strategy:gap"]
+    # in dispatch order: the normal call (STRATEGY) before the detailed one (INFO)
+    assert [m.meta["topic"] for m in hub.scheduler.pending()] == ["strategy:gap", "strategy:neighbour_stop"]
 
 
 def test_simple_wording_hears_the_plain_words() -> None:

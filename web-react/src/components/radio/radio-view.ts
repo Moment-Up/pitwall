@@ -23,7 +23,8 @@ export interface KindChip {
 /**
  * Message and log kinds -> chip. Spec 4.3 names ENGINEER, LAP, CUE, ALERT; the colours follow the mockup (LAP
  * accent, CUE danger = the brake colour, ALERT warning, ENGINEER the info blue). One table, so a colour decision is
- * a one-line change.
+ * a one-line change. The v0.2.0 radio policy (voice/scheduler.py) adds STRATEGY (race calls), GOAL (a goal reached)
+ * and TEST (a rig validation prompt).
  */
 export const KIND_CHIP: Record<LogKind, KindChip> = {
   answer: { label: "ENGINEER", tone: "ref" },
@@ -34,14 +35,20 @@ export const KIND_CHIP: Record<LogKind, KindChip> = {
   coaching: { label: "COACH", tone: "default" },
   info: { label: "INFO", tone: "default" },
   strategy: { label: "STRATEGY", tone: "ref" }, // race strategy calls (pitwall.strategy)
+  goal: { label: "GOAL", tone: "success" }, // a goal reached (pitwall.motivation)
+  validation: { label: "TEST", tone: "default" }, // a rig validation prompt (pitwall.validate)
   transcript: { label: "YOU", tone: "default" },
   you: { label: "YOU", tone: "default" },
   error: { label: "ERROR", tone: "danger" },
   system: { label: "SYSTEM", tone: "default" },
 };
 
+/** A kind this dashboard does not know yet (a newer server): it is still spoken, and labelled INFO. */
+const UNKNOWN_KIND: KindChip = { label: "INFO", tone: "default" };
+
 export function kindChip(kind: LogKind | string | null | undefined): KindChip {
-  return (kind && KIND_CHIP[kind as LogKind]) || { label: "RADIO", tone: "default" };
+  if (!kind) return { label: "RADIO", tone: "default" };
+  return Object.prototype.hasOwnProperty.call(KIND_CHIP, kind) ? KIND_CHIP[kind as LogKind] : UNKNOWN_KIND;
 }
 
 /** Age of a message for the strip: `now`, `8 s`, `3 min`, `2 h`. Unknown time -> `-`. */

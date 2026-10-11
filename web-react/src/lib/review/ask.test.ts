@@ -9,6 +9,9 @@ import {
   historyEntries,
   historySource,
   latencyText,
+  ASK,
+  askSuggestions,
+  MAX_SUGGESTIONS,
   SUGGESTIONS,
   topicLabel,
 } from "./ask";
@@ -93,9 +96,39 @@ describe("conversation model", () => {
   });
 
   it("suggestions are phrased the way the engineer's intent rules read them", () => {
-    expect(SUGGESTIONS).toContain("Where am I losing the most time?");
-    expect(SUGGESTIONS).toContain("What went well?");
-    expect(SUGGESTIONS.some((s) => /summary/i.test(s))).toBe(true);
+    expect(SUGGESTIONS).toEqual(["Where am I losing the most time?", "Give me one thing to work on.", "Give me a summary of this session."]);
+  });
+});
+
+describe("suggested questions (plan 4.7)", () => {
+  it("the base three, then what the session has, in priority order, at most six", () => {
+    expect(askSuggestions()).toEqual([ASK.losing, ASK.workOn, ASK.summary]);
+    expect(askSuggestions({ technique: true })).toEqual([ASK.losing, ASK.workOn, ASK.handling, ASK.line, ASK.summary]);
+    expect(askSuggestions({ strategy: true, aiPace: true })).toEqual([ASK.losing, ASK.workOn, ASK.pit, ASK.gapAhead, ASK.ai, ASK.summary]);
+    expect(askSuggestions({ goals: true })).toEqual([ASK.losing, ASK.workOn, ASK.goals, ASK.summary]);
+    const all = askSuggestions({ technique: true, strategy: true, aiPace: true, goals: true });
+    expect(all).toHaveLength(MAX_SUGGESTIONS);
+    expect(all).toEqual([ASK.losing, ASK.workOn, ASK.handling, ASK.line, ASK.pit, ASK.gapAhead]);
+  });
+
+  it("each one reaches the intent that answers it (tests/fixtures/intents.json, checked against the engineer)", () => {
+    type Row = { question: string; intent: string };
+    const fs = (
+      globalThis as unknown as { process: { getBuiltinModule(id: "node:fs"): { readFileSync(p: URL, enc: "utf8"): string } } }
+    ).process.getBuiltinModule("node:fs");
+    const rows = (JSON.parse(fs.readFileSync(new URL("../../../../tests/fixtures/intents.json", import.meta.url), "utf8")) as { questions: Row[] }).questions;
+    const intent = new Map(rows.map((r) => [r.question.toLowerCase(), r.intent]));
+    expect(Object.fromEntries(Object.entries(ASK).map(([k, q]) => [k, intent.get(q.toLowerCase())]))).toEqual({
+      losing: "losing_time",
+      workOn: "focus",
+      handling: "balance",
+      line: "line",
+      pit: "strategy",
+      gapAhead: "gaps",
+      ai: "ai_pace",
+      goals: "goals",
+      summary: "summary",
+    });
   });
 });
 

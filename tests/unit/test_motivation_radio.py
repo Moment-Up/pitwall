@@ -1,5 +1,5 @@
-"""The radio line for a reached goal: wording, the scheduler rules it inherits (LAP_SUMMARY), the per-session cap,
-the seat check, voice off, and the hub wiring (``motivation`` notes)."""
+"""The radio line for a reached goal: wording, the radio policy it follows (GOAL), the per-session cap, the seat
+check, voice off, and the hub wiring (``motivation`` notes)."""
 
 from __future__ import annotations
 
@@ -76,12 +76,12 @@ def test_message_shape_and_ttl() -> None:
     m = goal_message(note(LAP), gate, "s1", simple=False, to_speech=to_speech, now_mono=100.0)
     assert m is not None
     assert (m.kind, m.priority, m.needs_speak_window, m.bypass_quiet) == (
-        MessageKind.LAP_SUMMARY,
+        MessageKind.GOAL,
         Priority.NORMAL,
         True,
         False,
     )
-    assert m.id == "goal-s1-4" and m.meta["topic"] == "goal:s1" and m.meta["lap_id"] == 187
+    assert m.id == "goal-s1-4" and m.meta["topic"] == "goal:s1" and "lap_id" not in m.meta  # no lap identity
     assert m.meta["goal_ids"] == [4] and m.expires_mono == 145.0 and m.lap_number == 7
     race = goal_message(note(RACE, lap_id=None), gate, "s1", simple=False, to_speech=to_speech, now_mono=100.0)
     assert race is not None and race.expires_mono == 220.0  # said after the flag, off track
@@ -129,14 +129,16 @@ def test_scheduler_says_it_after_the_summary_and_before_the_coaching() -> None:
     assert said == ["lap187-summary", "goal-s1-4", "lap187-c"]
 
 
-def test_quiet_intensity_holds_it_and_a_later_lap_supersedes_it() -> None:
+def test_quiet_intensity_holds_it_and_the_next_laps_summary_goes_first() -> None:
     sched = RadioScheduler("quiet", min_gap_s=0.0)
     m = goal_message(note(LAP), GoalLineGate(), "s1", simple=False, to_speech=to_speech, now_mono=10.0)
     assert m is not None and sched.enqueue(m)
     assert sched.next_message(OFF_TRACK, 11.0, False) is None
     sched.set_intensity("normal")
-    sched.enqueue(summary(188, 12.0))  # the next lap's summary: the unsaid goal line is stale now
-    assert [x.id for x in sched.pending()] == ["lap188-summary"]
+    sched.enqueue(summary(188, 12.0))  # the next lap's summary: the goal line (no lap identity) waits behind it
+    assert [x.id for x in sched.pending()] == ["lap188-summary", "goal-s1-4"]
+    said = [sched.next_message(OFF_TRACK, t, False) for t in (20.0, 30.0)]
+    assert [x.id for x in said if x is not None] == ["lap188-summary", "goal-s1-4"]
     loud = RadioScheduler("normal", min_gap_s=0.0)
     loud.set_quiet(indefinite=True)
     loud.enqueue(m)

@@ -327,10 +327,10 @@ class ValidationKit:
         self._pending_prompt = None
         self._last_prompt_mono = mono
         self._prompt_ids += 1
-        msg = RadioMessage(
+        msg = RadioMessage(  # the radio policy's VALIDATION kind: every intensity, last in line, never the gap
             id=f"v{self._prompt_ids}",
-            kind=MessageKind.CONTROL,
-            priority=Priority.NORMAL,
+            kind=MessageKind.VALIDATION,
+            priority=Priority.LOW,
             text=text,
             speech=hub.to_speech(text),
             created_mono=mono,

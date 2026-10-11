@@ -983,6 +983,19 @@ describe("device voice (Web Speech)", () => {
     ]);
   });
 
+  it("speaks every kind: goal, validation and a kind this dashboard does not know yet", async () => {
+    const { radio, ws, env } = await goLive({ speech: true, voices: VOICES, settings: { version: 2, voiceSource: "device" } });
+    for (const [id, kind] of [["g1", "goal"], ["v1", "validation"], ["n1", "brand_new_kind"]] as const) {
+      ws.text({ type: "say", id, kind, text: `text ${id}`, speech: `speech ${id}`, sample_rate: 24000, n_bytes: 0, device_tts: true });
+      const u = FakeUtterance.instances.at(-1)!;
+      expect(u.text).toBe(`speech ${id}`);
+      expect(env.speech.speak).toHaveBeenCalledWith(u);
+      expect(radio.get().log.at(-1)).toMatchObject({ kind, id });
+      u.onstart?.();
+      u.onend?.();
+    }
+  });
+
   it("a Mac-voice device ignores device_tts and stays text only", async () => {
     const { ws, env } = await goLive({ speech: true, voices: VOICES, settings: { version: 2, voiceSource: "server" } });
     ws.text({ type: "say", id: "m1", kind: "answer", text: "x", speech: "x", sample_rate: 24000, n_bytes: 0, device_tts: true });

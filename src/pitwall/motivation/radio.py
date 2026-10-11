@@ -1,10 +1,12 @@
 """The radio line for a reached goal: one short, deterministic sentence (no LLM, never about braking).
 
-``goal_message`` turns a ``motivation`` note (``motivation.worker``) into a ``RadioMessage`` of kind
-``LAP_SUMMARY`` (normal priority, speak window, never bypassing quiet), so the scheduler's existing rules apply
-unchanged: normal and detailed intensity say it, quiet intensity and a spoken "quiet for N laps" hold it until it
-expires, voice off drops it; it follows that lap's summary (same priority, first in first out) and the lap's
-coaching waits behind it (celebrate, then coach); a later lap's summary supersedes it if it is still unsaid.
+``goal_message`` turns a ``motivation`` note (``motivation.worker``) into a ``RadioMessage`` of kind ``GOAL``
+(normal priority, speak window, never bypassing quiet), so the radio's one policy (``voice.scheduler``) applies:
+normal and detailed intensity say it, quiet intensity and a spoken "quiet for N laps" hold it until it expires,
+voice off drops it. It follows the lap's summary and a strategy call and comes before the coaching point (the
+scheduler's ``KIND_RANK``), and it counts toward the per-lap talk budget on track. It carries no lap identity
+(``meta["lap_id"]``), so it never holds the lap's coaching back and a later lap's summary does not supersede it;
+``meta["topic"] = "goal:<session>"`` makes a newer goal line replace an unsaid one. A seat change drops it unsaid.
 
 Lap goals expire after ``LAP_MESSAGE_TTL_S`` like the lap's other messages; race goals (judged at the flag, off
 track) after two minutes. ``GoalLineGate`` (owned by the hub, event loop only) allows at most
@@ -24,7 +26,7 @@ from typing import Any
 
 from pitwall.motivation.model import LONG_TRACK_NAME, lap_time_radio, seconds
 from pitwall.voice.proactive import LAP_MESSAGE_TTL_S
-from pitwall.voice.scheduler import LAP_ID_KEY, TOPIC_KEY
+from pitwall.voice.scheduler import TOPIC_KEY
 from pitwall.voice.types import MessageKind, Priority, RadioMessage
 
 MAX_GOAL_LINES_PER_SESSION = 2
@@ -128,7 +130,7 @@ def goal_message(
     lap_number = note.get("lap_number")
     return RadioMessage(
         id=f"goal-{sid}-{'-'.join(ids)}",
-        kind=MessageKind.LAP_SUMMARY,
+        kind=MessageKind.GOAL,
         priority=Priority.NORMAL,
         text=text,
         speech=to_speech(text),
@@ -137,5 +139,5 @@ def goal_message(
         lap_number=lap_number if isinstance(lap_number, int) and not isinstance(lap_number, bool) else None,
         bypass_quiet=False,
         needs_speak_window=True,
-        meta={LAP_ID_KEY: lap_id, TOPIC_KEY: f"goal:{sid}", "goal_ids": [g.get("id") for g in goals]},
+        meta={TOPIC_KEY: f"goal:{sid}", "goal_ids": [g.get("id") for g in goals]},
     )

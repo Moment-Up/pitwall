@@ -29,23 +29,56 @@ export interface ChatEntry {
   error?: boolean;
 }
 
-/** Questions to start with. Phrased the way the engineer's intent rules read them (ai/engineer.py): "losing the most
- * time" asks for the biggest losses, "one thing to work on" for the focus point, "summary" for the debrief. */
-export const SUGGESTIONS: readonly string[] = [
-  "Where am I losing the most time?",
-  "What went well?",
-  "Give me one thing to work on.",
-  "Compare my latest lap to the reference.",
-  "Give me a summary of this session.",
-];
+/** Questions to start with, each phrased the way the engineer's intent rules read it (ai/engineer.py; every one is a
+ * row of tests/fixtures/intents.json): "losing the most time" asks for the biggest losses, "one thing to work on" for
+ * the focus point, "how did the car handle" for the handling balance, "summary" for the debrief. */
+export const ASK = {
+  losing: "Where am I losing the most time?",
+  workOn: "Give me one thing to work on.",
+  handling: "How did the car handle?",
+  line: "Where was my line different?",
+  pit: "When should I pit?",
+  gapAhead: "What's the gap to the car ahead?",
+  ai: "How am I doing against the AI?",
+  goals: "How am I doing on my goals?",
+  summary: "Give me a summary of this session.",
+} as const;
+
+/** At most this many suggestions show (one row of pills on an iPad). */
+export const MAX_SUGGESTIONS = 6;
 
 /** The pace vs AI question ("against the AI" is an ai_pace intent; the answer also names the suggested AI level). */
-export const AI_SUGGESTION = "How am I doing against the AI?";
+export const AI_SUGGESTION: string = ASK.ai;
 
-/** The questions to start with for a session: the AI one only when the session was raced against the AI. */
-export function askSuggestions(opts: { aiPace?: boolean } = {}): readonly string[] {
-  return opts.aiPace ? [...SUGGESTIONS.slice(0, 3), AI_SUGGESTION, ...SUGGESTIONS.slice(3)] : SUGGESTIONS;
+/** What the session (and the driver) has, so that every suggestion can be answered. */
+export interface AskSuggestionOptions {
+  /** Raced against the AI (F1 sessions with an AI difficulty). */
+  aiPace?: boolean;
+  /** Technique data: the racing line and the handling balance were measured. */
+  technique?: boolean;
+  /** A race with strategy records (pit window, gaps). */
+  strategy?: boolean;
+  /** The driver has goals. */
+  goals?: boolean;
 }
+
+/**
+ * The questions to start with for a session (v0.2.0 plan 4.7), at most `MAX_SUGGESTIONS`, in this priority: where the
+ * time goes and one thing to work on; with technique data, the handling and the line; in a race with strategy
+ * records, the pit and the gap ahead; raced against the AI, the AI; with goals, the goals; then the summary.
+ */
+export function askSuggestions(opts: AskSuggestionOptions = {}): readonly string[] {
+  const out: string[] = [ASK.losing, ASK.workOn];
+  if (opts.technique) out.push(ASK.handling, ASK.line);
+  if (opts.strategy) out.push(ASK.pit, ASK.gapAhead);
+  if (opts.aiPace) out.push(ASK.ai);
+  if (opts.goals) out.push(ASK.goals);
+  out.push(ASK.summary);
+  return out.slice(0, MAX_SUGGESTIONS);
+}
+
+/** The questions for a session with nothing extra (no technique, strategy, AI or goals). */
+export const SUGGESTIONS: readonly string[] = askSuggestions();
 
 /** Where a stored answer came from: the history keeps `fallback` and `model`, not the grounding issues, so an LLM
  * failure and "LLM off" both read as deterministic. */

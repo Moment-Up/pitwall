@@ -1,4 +1,4 @@
-"""Deterministic radio message builders: lap summaries, coaching points, fuel alerts and control acks.
+"""Deterministic radio message builders: lap summaries, coaching points and control acks.
 
 No LLM is involved: every sentence is a template filled with numbers the analysis already validated, so these
 messages work with the LLM down and cannot invent facts. The scheduler decides when (and whether) each one is
@@ -22,8 +22,8 @@ said; this module decides what is worth saying:
   brake later.
 * **Still actionable** - lap messages expire ``LAP_MESSAGE_TTL_S`` after creation, a simple bound for "before
   the driver is well into the next lap". They carry ``lap_number`` and ``meta["lap_id"]``, so a later lap
-  supersedes them and the scheduler's per-lap budget survives lap numbers restarting each session. Fuel alerts
-  share ``meta["topic"] = "fuel"``, so the newest estimate replaces an unsaid older one.
+  supersedes them and the scheduler's per-lap budget survives lap numbers restarting each session. Fuel calls are
+  race strategy's (``strategy.radio``): it is the only source of fuel alerts.
 
 ``lap`` and ``observations`` have the shapes ``LiveState.on_lap_result`` publishes (``lap_processor._lap_summary``
 and ``Observation.to_dict``). ``speech`` is ``voice.speech.to_speech`` of the display text (lap times, corner
@@ -39,7 +39,7 @@ from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 from pitwall.coach.selection import pick_points, record_coached
-from pitwall.voice.scheduler import LAP_ID_KEY, TOPIC_KEY, Intensity, parse_intensity
+from pitwall.voice.scheduler import LAP_ID_KEY, Intensity, parse_intensity
 from pitwall.voice.speech import to_speech
 from pitwall.voice.types import MessageKind, Priority, RadioMessage
 
@@ -48,10 +48,7 @@ if TYPE_CHECKING:
 
 LAP_MESSAGE_TTL_S = 45.0
 CONTROL_TTL_S = 10.0  # an acknowledgement that arrives late is just confusing
-FUEL_ALERT_TTL_S = 120.0
 MIN_COACHING_CONFIDENCE = 0.6
-FUEL_TIGHT_LAPS = 0.3  # margin below this (but not short) is worth a heads-up
-FUEL_LIMIT_LAPS = 0.05  # |margin| below this reads as "right on the limit"
 CORRECTIVE_PER_LAP: dict[Intensity, int] = {"quiet": 0, "normal": 1, "detailed": 2}
 POSITIVE_PER_LAP: dict[Intensity, int] = {"quiet": 0, "normal": 0, "detailed": 1}
 HABIT_RATIO = 0.6  # detailed mode mentions consistency when the deviation shows up this often
@@ -319,42 +316,6 @@ def lap_messages(
             )
         )
     return out
-
-
-def fuel_alert(fuel_margin_laps: float | None, now_mono: float, lap_number: int | None = None) -> RadioMessage | None:
-    """Alert when the fuel margin to the finish is short or tight (``strategy.FuelEstimate.margin_laps``).
-
-    Short on fuel bypasses quiet mode (the driver needs it regardless) but still waits for a speak window: it is
-    important, not a split-second safety call. The id names the severity, so a critical alert is never mistaken
-    for a duplicate of the same lap's tight one; the shared topic lets the newest alert replace an unsaid one.
-    """
-    m = _num(fuel_margin_laps)
-    if m is None or m >= FUEL_TIGHT_LAPS:
-        return None
-    critical = m <= -FUEL_LIMIT_LAPS
-    severity = "crit" if critical else "tight"
-    msg_id = f"fuel-{severity}-lap{lap_number}" if lap_number is not None else f"fuel-{severity}-{next(_ids)}"
-    meta: dict[str, object] = {TOPIC_KEY: "fuel", "fuel_margin_laps": round(m, 2)}
-    if critical:
-        text = f"Fuel critical: {abs(m):.1f} laps short to the finish."
-        return _message(
-            msg_id,
-            MessageKind.ALERT,
-            Priority.HIGH,
-            text,
-            now_mono,
-            FUEL_ALERT_TTL_S,
-            lap_number=lap_number,
-            bypass_quiet=True,
-            meta=meta,
-        )
-    if abs(m) < FUEL_LIMIT_LAPS:
-        text = "Fuel is tight: right on the limit to the finish."
-    else:
-        text = f"Fuel is tight: plus {m:.1f} laps to the finish."
-    return _message(
-        msg_id, MessageKind.ALERT, Priority.NORMAL, text, now_mono, FUEL_ALERT_TTL_S, lap_number=lap_number, meta=meta
-    )
 
 
 def _control(text: str, now_mono: float, meta: dict[str, object]) -> RadioMessage:

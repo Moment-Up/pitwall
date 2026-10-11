@@ -81,6 +81,9 @@ class DetailedTts(Protocol):
 
 
 class MessageKind(StrEnum):
+    """What a radio message is. The radio policy (``voice.scheduler``: intensity filter, dispatch order, per-lap talk
+    budget) is decided by kind; the device shows the kind as the message's label."""
+
     ANSWER = "answer"  # reply to a driver question
     CONTROL = "control"  # acknowledgement of a control command ("radio quiet for 3 laps")
     CUE = "cue"  # time-critical driving cue (phase 6: predictive braking)
@@ -89,6 +92,8 @@ class MessageKind(StrEnum):
     COACHING = "coaching"  # post-lap coaching observation
     INFO = "info"  # low-priority info
     STRATEGY = "strategy"  # race strategy call (pitwall.strategy.radio): normal and detailed intensity
+    GOAL = "goal"  # a goal reached (pitwall.motivation.radio): after the lap time, never holding its coaching back
+    VALIDATION = "validation"  # a rig validation prompt (pitwall.validate.kit) while the driver runs a validation
 
 
 class Priority(IntEnum):

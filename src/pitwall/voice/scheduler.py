@@ -3,11 +3,38 @@
 The product brief ranks coaching by urgency, confidence, performance impact, driver preferences, workload,
 track position and whether the advice is still actionable. Confidence and impact are decided upstream when a
 message is built (``proactive.py`` only emits observations that clear a confidence bar, ordered by impact);
-this module enforces the rest at dispatch time:
+this module enforces the rest at dispatch time. It is the radio's one arbitration policy: every proactive source
+(lap summaries and coaching, goal lines, strategy calls, validation prompts) goes through it.
 
-* **Urgency** - ``Priority`` orders the queue (FIFO within a priority). ``URGENT`` skips quiet mode, the speak
-  window and the inter-message gap: by definition it is worth interrupting the driver for, and "urgent calls
-  only" is what the quiet-mode acknowledgement promises.
+**Message kinds** (``MessageKind``) and who builds them. "Budget" = counts toward the per-lap talk budget; every
+proactive kind waits for a speak window except urgent alerts and cues:
+
+* ALERT - urgent alerts (red flag; skip quiet mode, the window and the gap) and the strategy alert calls
+  (``strategy.radio``; the safety-car box-or-stay call and critical fuel bypass quiet mode). No budget.
+* CUE - braking cues (their own timing). ANSWER, CONTROL - answers and acknowledgements (bypass quiet mode). No budget.
+* LAP_SUMMARY, COACHING - ``voice.proactive`` (a later lap supersedes them). Budget; coaching is also capped per
+  analysed lap.
+* STRATEGY (normal calls), INFO (detailed calls) - ``strategy.radio``, topic ``strategy:<topic>``. Budget.
+* GOAL - ``motivation.radio``, topic ``goal:<session>``, no lap identity. Budget.
+* VALIDATION - ``validate.kit`` prompts during a validation run, topic ``validation``. No budget; said last.
+
+* **Intensity** (``ALLOWED_KINDS``) - quiet: answers, acknowledgements, alerts, cues and validation prompts (the
+  driver opted into a validation run); normal adds the lap summary, goal lines, coaching and strategy calls; detailed
+  adds INFO (strategy detail). Quiet intensity is "alerts and answers only", as its acknowledgement promises.
+* **Urgency and order** - the queue is ordered by ``Priority``, then by ``KIND_RANK``, then first in first out. So
+  a race lap is said in this order: the lap time, the strategy call, the goal line, the coaching point (practice and
+  qualifying have no strategy calls: lap time, goal line, coaching). ``URGENT`` skips quiet mode, the speak window
+  and the inter-message gap: by definition it is worth interrupting the driver for, and "urgent calls only" is what
+  the quiet-mode acknowledgement promises.
+* **Per-lap talk budget** (``TALK_PER_LAP``) - while the car is on track, at most 2 (normal) or 4 (detailed)
+  messages of the ``BUDGETED`` kinds (lap summary, goal line, strategy call, coaching point, INFO) are said per
+  driving lap: the lap the car is on when they are said (``DrivingState.lap_number``; the message's own lap
+  identity when that is unknown). A message that does not fit stays queued until it expires or is superseded, and
+  is said from the next lap's allowance if it is still alive then. Off track (garage, menus, paused) there is no
+  budget: the speak window is open anyway, and the flag-time goal line or the last lap's summary must not be
+  starved. Alerts, urgent calls, cues, answers, acknowledgements and validation prompts never count. The coaching
+  cap per analysed lap (``COACHING_PER_LAP``) still applies on top, and so do the strategy planner's own limits and
+  the goal lines' per-session cap.
 * **Interrupting** - while the radio is talking, only an ``URGENT`` message or a ``CUE`` is handed out, and only
   when it outranks the message on air (urgent > cue > everything else). The caller cancels the current playback
   and says it, so a red flag does not wait for a 6 s lap summary to finish and a braking cue does not land after
@@ -20,29 +47,32 @@ this module enforces the rest at dispatch time:
   kinds are exempt and rely on id dedupe: driver-initiated answers/acks (the driver asked), cues (short and
   repetitive by nature) and urgent alerts (a second incident is news).
 * **Order within a lap** - a lap's coaching waits while that lap's summary is still queued and allowed. A short
-  straight therefore never puts the coaching point before the lap time it explains.
+  straight therefore never puts the coaching point before the lap time it explains. A goal line is a GOAL with no
+  lap identity, so it never holds its lap's coaching back.
 * **Driver preferences** - quiet mode ("stop talking for 3 laps") suppresses everything that has neither
-  ``bypass_quiet`` nor urgency. The coaching *intensity* (quiet / normal / detailed) filters by message kind
-  and caps coaching points per lap. The cap is counted per lap *identity*: ``meta["lap_id"]`` when the builder
-  sets it, else the lap number.
+  ``bypass_quiet`` nor urgency. The coaching *intensity* (quiet / normal / detailed) filters by message kind,
+  sets the talk budget and caps coaching points per lap. The coaching cap is counted per lap *identity*:
+  ``meta["lap_id"]`` when the builder sets it, else the lap number.
+* **Seat change** - ``drop_driver_messages`` drops the queued lap summaries, goal lines and coaching points (they
+  are about the previous driver's laps) and keeps alerts, strategy calls and INFO (they are about the car).
 * **Workload / track position** - ``needs_speak_window`` messages wait for a calm part of the lap: off the
   brake, near-straight steering, and enough time before the next braking zone to finish the sentence with a
   margin to spare. That time covers audio reaching the driver (``speech_latency_s``: whole-message synthesis
   plus transport) as well as the sentence itself. Off track (menus, pits, paused) any moment is fine. Unknown
   inputs on track are *not* assumed calm.
-* **Pacing** - proactive messages keep ``min_gap_s`` of silence after anything the radio said. The scheduler
-  cannot hear playback, so "said" is bounded both by the caller's ``speaking`` flag and by the estimated end of
-  the audio from dispatch (covers callers that poll only while idle).
+* **Pacing** - proactive messages (validation prompts included) keep ``min_gap_s`` of silence after anything the
+  radio said. The scheduler cannot hear playback, so "said" is bounded both by the caller's ``speaking`` flag and
+  by the estimated end of the audio from dispatch (covers callers that poll only while idle).
 
 Speech duration is estimated from *spoken* words. ``to_speech`` leaves most numbers as digits for the TTS engine,
 and "0.08" is four spoken words, not one. At 2.6 words/s the estimate is 2-31% longer than ``say -v Daniel -r 200``
 on real radio lines [measured]. It errs towards not talking into a braking zone.
 
-Messages filtered by quiet mode or intensity stay queued (the setting may change) until they expire or are
-superseded. The queue is bounded by ``max_pending``. Every public method takes a lock, because messages are
-enqueued from the lap-analysis side while the radio hub polls ``next_message`` from its own loop. On a session
-change the caller calls ``reset_session``. The queue, the coaching budget, the repeat filter and a lap-bounded
-quiet period all belong to the old session.
+Messages filtered by quiet mode, intensity or the talk budget stay queued (the setting may change, the next lap
+brings a new allowance) until they expire or are superseded. The queue is bounded by ``max_pending``. Every public
+method takes a lock, because messages are enqueued from the lap-analysis side while the radio hub polls
+``next_message`` from its own loop. On a session change the caller calls ``reset_session``. The queue, the
+coaching and talk budgets, the repeat filter and a lap-bounded quiet period all belong to the old session.
 
 The caller must report ``speaking=True`` from the moment a returned message is handed to TTS until playback
 ended or was cancelled.
@@ -82,10 +112,15 @@ LAP_ID_KEY = "lap_id"  # meta key: unique lap identity (lap numbers restart ever
 
 DRIVER_INITIATED = frozenset({MessageKind.ANSWER, MessageKind.CONTROL})
 SUPERSEDABLE = frozenset({MessageKind.LAP_SUMMARY, MessageKind.COACHING})
+# about the seated driver's own laps: dropped when somebody else takes the seat (``drop_driver_messages``)
+DRIVER_LAP_KINDS = frozenset({MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.COACHING})
 
-# CUE (predictive braking, phase 6) is its own opt-in feature, so coaching intensity does not filter it.
-_QUIET_KINDS = frozenset({MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.ALERT, MessageKind.CUE})
-_NORMAL_KINDS = _QUIET_KINDS | {MessageKind.LAP_SUMMARY, MessageKind.COACHING, MessageKind.STRATEGY}  # + strategy
+# CUE (predictive braking, phase 6) is its own opt-in feature, so coaching intensity does not filter it. A validation
+# prompt is said at every intensity: the driver started the validation run, and the kit only queues during one.
+_QUIET_KINDS = frozenset(
+    {MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.ALERT, MessageKind.CUE, MessageKind.VALIDATION}
+)
+_NORMAL_KINDS = _QUIET_KINDS | {MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.COACHING, MessageKind.STRATEGY}
 _DETAILED_KINDS = _NORMAL_KINDS | {MessageKind.INFO}
 ALLOWED_KINDS: dict[Intensity, frozenset[MessageKind]] = {
     "quiet": _QUIET_KINDS,
@@ -93,6 +128,29 @@ ALLOWED_KINDS: dict[Intensity, frozenset[MessageKind]] = {
     "detailed": _DETAILED_KINDS,
 }
 COACHING_PER_LAP: dict[Intensity, int | None] = {"quiet": 0, "normal": 1, "detailed": None}
+
+# Dispatch order within a priority (then first in first out): in a race lap the lap time, then the strategy call,
+# then the goal line, then the coaching point. Validation prompts go last, when nothing else is eligible.
+KIND_RANK: dict[MessageKind, int] = {
+    MessageKind.CUE: 0,
+    MessageKind.ANSWER: 0,
+    MessageKind.CONTROL: 0,
+    MessageKind.ALERT: 1,
+    MessageKind.LAP_SUMMARY: 2,
+    MessageKind.STRATEGY: 3,
+    MessageKind.GOAL: 4,
+    MessageKind.COACHING: 5,
+    MessageKind.INFO: 6,
+    MessageKind.VALIDATION: 7,
+}
+
+# Unprompted messages said per driving lap while on track (the driver's workload at speed). Urgent calls, alerts,
+# cues, answers, acknowledgements and validation prompts never count.
+TALK_PER_LAP: dict[Intensity, int] = {"quiet": 0, "normal": 2, "detailed": 4}
+BUDGETED = frozenset(
+    {MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.STRATEGY, MessageKind.COACHING, MessageKind.INFO}
+)
+_TALK_LAPS_KEPT = 8
 
 LapKey = tuple[str, int | str | None]
 
@@ -155,6 +213,11 @@ def _repeat_filtered(msg: RadioMessage) -> bool:
     return msg.kind not in DRIVER_INITIATED and msg.kind is not MessageKind.CUE and not _urgent(msg)
 
 
+def _budgeted(msg: RadioMessage) -> bool:
+    """Counts toward the per-lap talk budget (urgent calls never do, whatever their kind)."""
+    return msg.kind in BUDGETED and not _urgent(msg)
+
+
 def _interrupt_rank(msg: RadioMessage) -> int:
     """How strongly a message may cut into playback: 2 urgent, 1 cue, 0 never."""
     if _urgent(msg):
@@ -201,6 +264,8 @@ class RadioScheduler:
         "_quiet",
         "_recent_text",
         "_seq",
+        "_talk_lap",
+        "_talk_spent",
         "max_pending",
         "min_gap_s",
         "repeat_window_s",
@@ -230,6 +295,8 @@ class RadioScheduler:
         self._on_air: RadioMessage | None = None  # last message handed out; presumed playing while speaking
         self._recent_text: dict[str, float] = {}  # normalised text -> monotonic time it was dispatched
         self._coaching_spoken: dict[LapKey, int] = {}  # lap identity -> coaching points dispatched for it
+        self._talk_spent: dict[LapKey, int] = {}  # driving lap -> budgeted messages dispatched on track during it
+        self._talk_lap: int | None = None  # the driving lap the talk budget is counting
 
     # ------------------------------------------------------------------ preferences
     @property
@@ -333,8 +400,8 @@ class RadioScheduler:
     def reset_session(self) -> int:
         """Forget the previous session; returns how many queued messages were dropped.
 
-        Queued messages, the per-lap coaching budget and the repeat filter belong to the old session, and so
-        does a lap-bounded quiet period (lap numbers restart at 1). Indefinite quiet ("until you call me") is the
+        Queued messages, the per-lap coaching and talk budgets and the repeat filter belong to the old session, and
+        so does a lap-bounded quiet period (lap numbers restart at 1). Indefinite quiet ("until you call me") is the
         driver's standing instruction and is kept, as are intensity, the latency allowance and pacing (the radio
         may still be talking).
         """
@@ -342,10 +409,21 @@ class RadioScheduler:
             n = len(self._pending)
             self._pending.clear()
             self._coaching_spoken.clear()
+            self._talk_spent.clear()
+            self._talk_lap = None
             self._recent_text.clear()
             if self._quiet is not None and not self._quiet.indefinite:
                 self._quiet = None
             return n
+
+    def drop_driver_messages(self) -> int:
+        """Somebody else took the seat: drop the queued lap summaries, goal lines and coaching points (they are about
+        the previous driver's laps); keep alerts, strategy calls and INFO (they are about the car). Returns how many
+        were dropped."""
+        with self._lock:
+            n = len(self._pending)
+            self._pending = [e for e in self._pending if e[1].kind not in DRIVER_LAP_KINDS]
+            return n - len(self._pending)
 
     # ------------------------------------------------------------------ dispatch
     def next_message(self, state: DrivingState, now_mono: float, speaking: bool) -> RadioMessage | None:
@@ -356,6 +434,10 @@ class RadioScheduler:
         """
         with self._lock:
             self._prune(now_mono)
+            if state.lap_number is not None and state.lap_number != self._talk_lap:
+                # a new driving lap, or lap numbers restarting in the next session: a new allowance
+                self._talk_lap = state.lap_number
+                self._talk_spent.clear()
             if self._quiet is not None and not self._quiet.active(state.lap_number):
                 self._quiet = None
             quiet = self._quiet is not None
@@ -386,7 +468,7 @@ class RadioScheduler:
 
     # ------------------------------------------------------------------ internals (lock held)
     def _ordered(self) -> list[tuple[int, RadioMessage]]:
-        return sorted(self._pending, key=lambda e: (-e[1].priority, e[0]))
+        return sorted(self._pending, key=lambda e: (-e[1].priority, KIND_RANK.get(e[1].kind, len(KIND_RANK)), e[0]))
 
     def _allowed(self, msg: RadioMessage, quiet: bool) -> bool:
         """Quiet mode and intensity: the filters that hold a message whatever the moment."""
@@ -405,6 +487,9 @@ class RadioScheduler:
             cap = COACHING_PER_LAP[self._intensity]
             if cap is not None and self._coaching_spoken.get(self._budget_key(msg, state), 0) >= cap:
                 return False
+        spent = self._talk_spent.get(self._talk_key(msg, state), 0)
+        if state.on_track and _budgeted(msg) and spent >= TALK_PER_LAP[self._intensity]:
+            return False  # this lap's allowance is used up: wait for the next lap (or expiry)
         urgent = _urgent(msg)
         gap_exempt = urgent or msg.kind in DRIVER_INITIATED or msg.kind is MessageKind.CUE
         if not gap_exempt and not gap_ok:
@@ -423,10 +508,22 @@ class RadioScheduler:
             self._coaching_spoken[key] = self._coaching_spoken.get(key, 0) + 1
             while len(self._coaching_spoken) > _COACHING_LAPS_KEPT:
                 del self._coaching_spoken[next(iter(self._coaching_spoken))]
+        if state.on_track and _budgeted(msg):
+            key = self._talk_key(msg, state)
+            self._talk_spent[key] = self._talk_spent.get(key, 0) + 1
+            while len(self._talk_spent) > _TALK_LAPS_KEPT:
+                del self._talk_spent[next(iter(self._talk_spent))]
 
     @staticmethod
     def _budget_key(msg: RadioMessage, state: DrivingState) -> LapKey:
         return _lap_identity(msg) or ("n", state.lap_number)
+
+    @staticmethod
+    def _talk_key(msg: RadioMessage, state: DrivingState) -> LapKey:
+        """The driving lap a budgeted message is said on: the car's lap now, else the message's own lap identity."""
+        if state.lap_number is not None:
+            return ("lap", state.lap_number)
+        return _lap_identity(msg) or ("lap", None)
 
     def _prune(self, now: float) -> None:
         self._prune_recent(now)

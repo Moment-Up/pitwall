@@ -26,7 +26,7 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
 |---|---|
 | `{"type":"state", "ptt":bool, "listening":bool, "speaking":bool, "quiet":{"until_lap":int\|null,"indefinite":bool}, "intensity":str, "stt":str, "stt_reason":str\|null, "tts":str, "tts_voice":str\|null, "tts_voices":[str], "tts_active":str, "tts_ready":bool, "tts_neural":bool, "tts_status":str\|null, "telemetry":"live"\|"stale"\|"no_data", "ptt_source":"screen"\|"wheel"\|null, "cue_mode":str}` | Sent on connect and on every change, including when the voice engine comes up, goes down or changes voice. `stt` is the speech recognition engine (`parakeet`, `whispercpp`, `none`); `stt_reason` says why there is none (null when there is one). `tts` is the configured engine (`kokoro`, `say`, `sapi` on Windows, `none`); `tts_active` is what renders messages right now (`kokoro`, or `say` while the Kokoro worker starts/restarts or is not installed); `tts_status` is the worker's state (`starting`, `ready`, `restarting`, `unavailable`, `stopped`; null for `say`); `tts_voices` lists the selectable server voices (empty for `say`). |
 | `{"type":"transcript","text":"...","stt_ms":int,"audio_s":float}` | What the server heard (after PTT release). Empty text = nothing understood. |
-| `{"type":"say","id":"m12","kind":"answer"\|"control"\|"cue"\|"alert"\|"lap_summary"\|"coaching"\|"strategy"\|"info","text":"display text","speech":"spoken text","sample_rate":24000,"n_bytes":int,"meta":{...}}` | A message follows. Immediately followed by one or more **binary** frames of int16 LE mono PCM at `sample_rate` totalling `n_bytes`, then `say_end`. If TTS is unavailable `n_bytes` is 0 (display only). **`sample_rate` is per message and must be honoured**: 24 000 Hz with Kokoro (and with its `say` fallback, rendered at 24 kHz so cue parts from both engines join), 22 050 Hz with the plain `say` engine. Kokoro audio arrives trimmed to ~40 ms of silence at each end, at about -17 dBFS speech RMS with peaks at most -3 dBFS. |
+| `{"type":"say","id":"m12","kind":"answer"\|"control"\|"cue"\|"alert"\|"lap_summary"\|"coaching"\|"strategy"\|"goal"\|"validation"\|"info","text":"display text","speech":"spoken text","sample_rate":24000,"n_bytes":int,"meta":{...}}` | A message follows. Immediately followed by one or more **binary** frames of int16 LE mono PCM at `sample_rate` totalling `n_bytes`, then `say_end`. If TTS is unavailable `n_bytes` is 0 (display only). A client speaks every `say` frame whatever its `kind`; a kind it does not know (a newer server) is only labelled `INFO`. **`sample_rate` is per message and must be honoured**: 24 000 Hz with Kokoro (and with its `say` fallback, rendered at 24 kHz so cue parts from both engines join), 22 050 Hz with the plain `say` engine. Kokoro audio arrives trimmed to ~40 ms of silence at each end, at about -17 dBFS speech RMS with peaks at most -3 dBFS. |
 | `{"type":"say_end","id":"m12"}` | End of audio for `m12`. |
 | `{"type":"cancel","id":"m12"}` | Stop playing `m12` (barge-in or superseded). |
 | `{"type":"pong","t":12345.6,"server_ms":int}` | Echo for round-trip measurement. |
@@ -41,9 +41,27 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   engineer never answers itself. PTT down during playback = barge-in: server sends `cancel` and listens.
 - **Mic stays open** for the whole session on the device (opening/closing it per PTT breaks AirPods routing
   on iOS); gating happens on the server.
-- **Proactive messages** (lap summary, coaching, alerts) are queued by priority and only spoken in a
-  *speak window* (not braking, not cornering, enough time before the next braking zone), respect quiet mode
-  ("stop talking for 3 laps") and coaching intensity, and expire when no longer actionable.
+- **Proactive messages** (lap summary, coaching, goal lines, strategy calls, alerts, validation prompts) go through one
+  policy (`voice/scheduler.py`). They are queued by priority, then kind, and only spoken in a *speak window* (not
+  braking, not cornering, enough time before the next braking zone); they respect quiet mode ("stop talking for 3
+  laps") and coaching intensity, and expire when no longer actionable.
+  - **Intensity:** `quiet` says answers, acknowledgements, alerts, cues and validation prompts; `normal` adds the lap
+    summary, goal lines, coaching and `strategy` calls; `detailed` adds `info`.
+  - **Order within a priority:** in a race lap the lap time, then the strategy call, then the goal line, then the
+    coaching point; validation prompts last.
+  - **Talk budget:** while the car is on track, at most 2 (`normal`) or 4 (`detailed`) messages of the kinds
+    `lap_summary`, `goal`, `strategy`, `coaching` and `info` per lap. One that does not fit waits for the next lap
+    (until it expires). Off track there is no budget. Alerts, urgent calls, cues, answers, acknowledgements and
+    validation prompts never count; the safety-car box-or-stay call and critical fuel also bypass quiet mode.
+  - **Seat change:** when another driver takes the seat, unsaid `lap_summary`, `goal` and `coaching` messages about
+    the previous driver's laps are dropped; alerts and strategy calls (about the car) stay.
+- **Goal lines** (kind **`goal`**, `pitwall/motivation`): one short line when the driver reaches a goal, at most two a
+  session, never with a lap time. `meta.topic` is `goal:<session id>`.
+- **Validation prompts** (kind **`validation`**, rig validation kit): spoken only while the driver runs a validation
+  with radio prompts on, at every intensity, at least 30 s apart and never within 2 s of another message.
+  `meta.topic` is `validation`.
+- **Answers while moving:** while the car is on track at 8 km/h or more, every answer is deterministic (no LLM and no
+  "Copy, checking."); the LLM explains only when the car is stationary, and in Review › Ask.
 - **Strategy calls** (race strategy engineer, `pitwall/strategy`): an `alert` level call is sent as kind `alert`
   (every intensity), a `normal` one as kind **`strategy`** (normal and detailed intensity), a `detailed` one as kind
   `info` (detailed only). Their `meta` carries `topic` (`strategy:<topic>`, e.g. `strategy:sc_box`; a newer call on

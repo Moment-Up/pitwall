@@ -42,8 +42,20 @@ import { accessToken, forgetToken, wsUrl } from "./auth";
 import { Store } from "./store";
 
 export type Intensity = "quiet" | "normal" | "detailed";
-/** "strategy": the race engineer's proactive strategy calls (voice/types.py MessageKind.STRATEGY, pitwall.strategy). */
-export type SayKind = "answer" | "control" | "cue" | "alert" | "lap_summary" | "coaching" | "info" | "strategy";
+/** "strategy": the race engineer's proactive strategy calls (voice/types.py MessageKind.STRATEGY, pitwall.strategy);
+ * "goal": a goal reached (MessageKind.GOAL); "validation": a rig validation prompt (MessageKind.VALIDATION). Every
+ * `say` frame is spoken whatever its kind: a kind this dashboard does not know is only labelled INFO. */
+export type SayKind =
+  | "answer"
+  | "control"
+  | "cue"
+  | "alert"
+  | "lap_summary"
+  | "coaching"
+  | "info"
+  | "strategy"
+  | "goal"
+  | "validation";
 export type LogKind = SayKind | "transcript" | "you" | "error" | "system";
 export type Phase = "idle" | "starting" | "live";
 export type ConnStatus = "offline" | "connecting" | "open" | "waiting";

@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from pitwall.ai.facts import AI_LEVEL_PREFIX, AI_PACE_PREFIX, LAST_LAP_PREFIX, FactSheet, fmt_lap
+from pitwall.ai.facts import AI_LEVEL_PREFIX, AI_PACE_PREFIX, FLAGS_PREFIX, LAST_LAP_PREFIX, FactSheet, fmt_lap
 
 WHEEL_NAMES = ("front left", "front right", "rear left", "rear right")
 COMPOUND_PLURAL = {"soft": "Softs", "medium": "Mediums", "hard": "Hards", "inter": "Inters", "wet": "Wets"}
@@ -103,6 +103,21 @@ def capability(group: str) -> Callable[[FactSheet], str | None]:
     return phrase
 
 
+def flags_now(sheet: FactSheet) -> str | None:
+    """The safety car and yellow flags now (the sheet's live ``flags`` fact, already short)."""
+    f = next((f for f in sheet.facts if f.topic == "flags" and f.text.startswith(FLAGS_PREFIX)), None)
+    return None if f is None else f.plain
+
+
+def _either(*fns: Callable[[FactSheet], str | None]) -> Callable[[FactSheet], str | None]:
+    """The first phrasing that has something to say."""
+
+    def phrase(sheet: FactSheet) -> str | None:
+        return next((said for fn in fns if (said := fn(sheet)) is not None), None)
+
+    return phrase
+
+
 def ai_pace(sheet: FactSheet) -> str | None:
     """Against the AI: the gap to the typical AI car and the position on best laps (or why there is none)."""
     f = next((f for f in sheet.facts if f.topic == "ai" and f.text.startswith(AI_PACE_PREFIX)), None)
@@ -166,20 +181,22 @@ def _strategy_first(
     return phrase
 
 
-# One explicit table (plan 4.5): race strategy for the race questions, then pace vs AI, then the game's capability
-# sentence for data it never sends.
+# One explicit table (plan 4.5): race strategy for the race questions (the safety car: strategy's box-or-stay call,
+# else the flags now), then pace vs AI, then the game's capability sentence for data it never sends. An intent with
+# no phrasing here (or a phrasing with nothing to say) is answered with ``engineer.deterministic_answer``.
 PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
     "fuel": _strategy_first("fuel", fuel),
     "tyres": _strategy_first("tyres", tyres),
     "strategy": _strategy_first("strategy", None),
     "gaps": _strategy_first("gaps", capability("gaps")),
     "weather": _strategy_first("weather", capability("weather")),
-    "safety_car": _strategy_first("safety_car", capability("safety_car")),
+    "safety_car": _strategy_first("safety_car", _either(flags_now, capability("safety_car"))),
+    "flags": _either(flags_now, capability("flags")),
     "lap_times": lap_times,
     "last_lap": last_lap,
     "ai_pace": ai_pace,
     "ai_level": ai_level,
-    **{g: capability(g) for g in ("damage", "ers", "sectors", "flags")},
+    **{g: capability(g) for g in ("damage", "ers", "sectors")},
 }
 
 
