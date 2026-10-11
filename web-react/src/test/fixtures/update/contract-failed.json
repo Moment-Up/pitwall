@@ -1,0 +1,25 @@
+{
+ "_fixture": {
+  "source": "Hand-written from the JSON contract in the lane install design spec, section 7 (UpdateStatus); not a server response",
+  "recorded": "2026-10-11",
+  "what": "The last check failed (GitHub timed out) 10 minutes before the tests' clock.",
+  "tier": "contract"
+ },
+ "response": {
+  "schema": 1,
+  "current": "v0.1.0",
+  "install_kind": "managed",
+  "mode": "auto",
+  "checked_unix": 1791827400,
+  "checking": false,
+  "update_available": null,
+  "latest": null,
+  "newer": [],
+  "error": "Couldn't reach GitHub (timed out).",
+  "how": {
+   "command": "cd \"/Users/you/Pitwall/pitwall-v0.1.0\" && uv run pitwall update",
+   "folder": "/Users/you/Pitwall/pitwall-v0.1.0",
+   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating"
+  }
+ }
+}

@@ -1,0 +1,26 @@
+{
+ "_fixture": {
+  "source": "GET /api/update from an isolated test server (127.0.0.1:8830, PITWALL_UPDATE_CHECK=manual, fresh data folder, run from the lane's git worktree) before any check",
+  "recorded": "2026-10-11T18:41:40+01:00",
+  "what": "Never checked, manual mode, git checkout.",
+  "tier": "server",
+  "edited": "how.folder replaced with /Users/you/Projects/pitwall (the test machine's path); how.docs_url changed from #updating to #a-git-clone, as the server sends it for a git checkout since the review fixes (2026-10-11)"
+ },
+ "response": {
+  "schema": 1,
+  "current": "v0.1.0",
+  "install_kind": "git",
+  "mode": "manual",
+  "checked_unix": null,
+  "checking": false,
+  "update_available": null,
+  "latest": null,
+  "newer": [],
+  "error": null,
+  "how": {
+   "command": "git pull",
+   "folder": "/Users/you/Projects/pitwall",
+   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#a-git-clone"
+  }
+ }
+}

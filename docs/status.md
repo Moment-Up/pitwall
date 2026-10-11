@@ -348,6 +348,26 @@ is `no-cache`, hashed assets immutable; responses over 1 kB are gzip-compressed.
   the measured span; a pause longer than the idle timeout splits a session and the second part loses its earlier
   AI laps (`not_observed`).
 
+<!-- --- lane install --- -->
+## One-line install, `pitwall update`, community files, README GIF (2026-10-11)
+- **One-line installer and `pitwall update`:** unit-tested; recorded-tested end to end on macOS Apple Silicon (local
+  fake GitHub, real packaged zip, Austria fixture streamed before and after an update).
+  `scripts/install/install.sh` (POSIX sh: tests under sh and dash), `install.ps1` (Windows PowerShell 5.1 and 7),
+  `src/pitwall/install/` (`pitwall install-finish`, `pitwall update [--check|--rollback]`), `/api/update` and
+  Settings › System's update card, doctor's offline `update` check, `PITWALL_UPDATE_CHECK=auto|manual|off`.
+- **Release workflow steps:** not yet run on GitHub until the first tag (installer assets, "What changed" from
+  CHANGELOG.md, the `--from-zip` install in verify, the `installer-smoke` job).
+- **Service repoint (launchd / Task Scheduler) and legacy adoption:** unit-tested with fakes only, not run on a real
+  service. The review fixes (service script exit codes, the new version's own tag before success, a second "nobody
+  drives" check just before the switch, a paused game counting as driving for 2 minutes, a failed move-back that
+  leaves the old service stopped, renamed release folders, `~` and conflicting data folders, downgrades) are
+  unit-tested with the same fakes.
+- **Windows and Linux:** CI only.
+- **README GIF:** recorded tier (real PS5 capture streamed over loopback UDP), not live.
+- Community files: issue forms, PR template, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md. Capability statuses in
+  `capabilities.py` are unchanged.
+<!-- --- end lane install --- -->
+
 ## Next
 1. Dashboard v2 rig acceptance (spec 14.5) on the iPad with live PS5 telemetry. Remove `/next/` and the Svelte
    fallback a week after the switch-over (2026-10-18).

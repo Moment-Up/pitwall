@@ -2,7 +2,11 @@
 
 A local-first sim racing coach and race engineer for the iPad next to your wheel.
 
-![Drive › Coach on track at Austria: the next corner, a braking cue for T3, the live delta to the reference lap and the coaching point from the previous lap](docs/screenshots/01-drive-coach.png)
+<!-- --- lane install --- -->
+<picture><source media="(prefers-reduced-motion: reduce)" srcset="docs/screenshots/01-drive-coach.png"><img src="docs/screenshots/00-drive-coach-live.gif" alt="Animated: Drive › Coach during 14 seconds of a real F1 25 race lap at Austria, recorded on a PS5 and streamed to Pitwall: from T1 to the T3 hairpin, the next corner counting down with the brake call for T3, the live delta to the reference lap (lap 64, 1:10.549) moving from behind to ahead and back, and the point from the previous lap (T3: braked later, 4 km/h slower out)."></picture>
+
+<sub>A recorded session streamed to Pitwall over UDP, captured in a desktop browser at iPad size; radio and language model off.</sub>
+<!-- --- end lane install --- -->
 
 ## What it is
 
@@ -18,9 +22,28 @@ fully with the model switched off.
 
 ## Install
 
-There are three ways to install Pitwall. The first is the easiest.
+<!-- --- lane install --- -->
+The quickest is one command, from v0.2.0 (not released yet: until then, download a release by hand as in 1. below).
+It downloads and checks the latest release, installs it into `~/Pitwall` and keeps your sessions there when you
+update with `uv run pitwall update`.
 
-### 1. Download a release (recommended)
+macOS and Linux:
+
+```bash
+curl -fsSL https://github.com/Moment-Up/pitwall/releases/latest/download/install.sh | sh
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://github.com/Moment-Up/pitwall/releases/latest/download/install.ps1 | iex
+```
+
+What it does and its options: [Install with one command](docs/install.md#install-with-one-command). Or install it
+one of these three ways:
+
+### 1. Download a release by hand
+<!-- --- end lane install --- -->
 
 Each release on the [Releases page](https://github.com/Moment-Up/pitwall/releases) has one zip,
 `pitwall-<version>.zip`, with the new dashboard already built. You need only [uv](https://docs.astral.sh/uv/) (it

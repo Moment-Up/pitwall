@@ -1,0 +1,25 @@
+{
+ "_fixture": {
+  "source": "Hand-written from the JSON contract in the lane install design spec, section 7 (UpdateStatus); not a server response",
+  "recorded": "2026-10-11",
+  "what": "PITWALL_UPDATE_CHECK=off: the server never contacts GitHub.",
+  "tier": "contract"
+ },
+ "response": {
+  "schema": 1,
+  "current": "v0.1.0",
+  "install_kind": "managed",
+  "mode": "off",
+  "checked_unix": null,
+  "checking": false,
+  "update_available": null,
+  "latest": null,
+  "newer": [],
+  "error": null,
+  "how": {
+   "command": "cd \"/Users/you/Pitwall/pitwall-v0.1.0\" && uv run pitwall update",
+   "folder": "/Users/you/Pitwall/pitwall-v0.1.0",
+   "docs_url": "https://github.com/Moment-Up/pitwall/blob/main/docs/install.md#updating"
+  }
+ }
+}

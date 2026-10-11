@@ -2,9 +2,10 @@
 
 This guide takes you from a fresh computer to coaching on track. There are three ways to install Pitwall:
 
-1. **[Install from a release](#install-from-a-release)** (recommended). Download one zip with the new dashboard
-   already built. You need only [uv](https://docs.astral.sh/uv/): no Node.js and no HeroUI Pro licence. macOS,
-   Windows and Linux.
+1. **[Install with one command](#install-with-one-command)** (recommended, from v0.2.0) or **[from a
+   release by hand](#install-from-a-release)**. Both install one zip with the new dashboard already built. You need
+   only [uv](https://docs.astral.sh/uv/) (the one-line installer offers to install it): no Node.js and no HeroUI Pro
+   licence. macOS, Windows and Linux.
 2. **[Set up with Claude Code](#set-up-with-claude-code).** Unzip a release (or clone the repository), open the
    folder in Claude Code and run `/setup-pitwall`. It does the steps below with you. Written for macOS and Windows
    (not yet run end to end on a Windows PC).
@@ -18,6 +19,7 @@ been run with a game (release zips are checked on a Linux CI runner with synthet
 [platform notes](#platform-notes) and the README's [platform table](../README.md#platforms) have the details.
 
 - [What you need](#what-you-need)
+- [Install with one command](#install-with-one-command)
 - [Install from a release](#install-from-a-release)
 - [Set up with Claude Code](#set-up-with-claude-code)
 - [Install from source](#install-from-source)
@@ -54,6 +56,73 @@ been run with a game (release zips are checked on a Linux CI runner with synthet
   local model server or a cloud API key for the engineer's explanations.
 - Only to install from source: git and Node.js 22.12 or later (the classic dashboard also builds on 20.19 or
   later), and a HeroUI Pro licence if you want to build the new dashboard.
+
+## Install with one command
+
+<!-- --- lane install --- -->
+From v0.2.0 (not released yet: until then, [install from a release](#install-from-a-release)), each release also
+has two installers. They download the latest release, check it, install it into a folder of its own and keep your
+sessions in one data folder that every later version uses.
+
+macOS and Linux (in Terminal):
+
+```bash
+curl -fsSL https://github.com/Moment-Up/pitwall/releases/latest/download/install.sh | sh
+```
+
+Windows (in PowerShell, not as administrator):
+
+```powershell
+irm https://github.com/Moment-Up/pitwall/releases/latest/download/install.ps1 | iex
+```
+
+What it does, in order:
+
+1. Finds the latest release on GitHub (pre-releases only with `--pre`) and checks there is 2 GB free.
+2. Stops if a game is streaming to a Pitwall on this computer (someone may be driving); `--wait-idle 120` waits up
+   to two hours instead.
+3. Finds [uv](https://docs.astral.sh/uv/), or asks whether to install it from astral.sh (with `--yes` it does so
+   without asking). It never edits your shell profile or PATH.
+4. Downloads `pitwall-<version>.zip` and its `.sha256`, checks the SHA-256 and every path in the zip (nothing
+   outside its folder, no links), and unpacks it into `~/Pitwall/pitwall-<version>/` (Windows:
+   `%LOCALAPPDATA%\Pitwall\pitwall-<version>\`).
+5. Runs `uv sync --locked --all-extras` there and checks that the server's modules import.
+6. Hands over to the new version's `pitwall install-finish`, which makes the data folder (`~/Pitwall/data`, private
+   to your account), backs up the database if there is one, writes `.env` (or carries yours forward), offers to start
+   Pitwall in the background at login (macOS and Windows) and prints the dashboard address, the phone link command
+   and the address and port to set in your game.
+
+Running it again is safe: an installed version is not downloaded again, and an interrupted install carries on.
+
+Options (macOS and Linux: after `sh -s --`, for example `curl -fsSL <url> | sh -s -- --yes`; Windows: set
+`$env:PITWALL_INSTALL_YES='1'` and the like before `irm`, or run
+`& ([scriptblock]::Create((irm <url>))) -Yes`):
+
+| install.sh | install.ps1 / environment | What |
+|---|---|---|
+| `--yes` | `-Yes` / `PITWALL_INSTALL_YES=1` | Yes to every question (installing uv, moving data, the background service) |
+| `--version v0.2.0` | `-Version` / `PITWALL_INSTALL_VERSION` | Install that release |
+| `--home DIR` | `-InstallHome` / `PITWALL_INSTALL_HOME` | Another install folder |
+| `--service`, `--no-service` | `-Service yes\|no` / `PITWALL_INSTALL_SERVICE` | Start at login, or not (default: ask) |
+| `--wait-idle MIN` | `-WaitIdle` / `PITWALL_INSTALL_WAIT_IDLE` | Wait while someone is driving instead of stopping |
+| `--pre` | `-Pre` / `PITWALL_INSTALL_PRE=1` | Allow pre-releases |
+| `--from-zip PATH` | `-FromZip` / `PITWALL_INSTALL_FROM_ZIP` | Install a zip you downloaded (its `.sha256` must be next to it) |
+
+Exit codes: 0 done (or already installed), 1 error, 2 not supported here (or a release older than v0.2.0, which you
+install [by hand](#install-from-a-release)), 3 someone is driving, 4 it needs you (a question without a terminal,
+low disk, a data folder it will not guess about), 5 the download failed its check.
+
+If you already run a release you installed by hand in `~/Pitwall` (for example `~/Pitwall/pitwall-v0.1.0` with its
+`data` folder inside), the installer offers to move that data folder to `~/Pitwall/data`, so every version uses it;
+it leaves a note in the old folder. It never deletes a version folder, a data folder or a `.env`, and it never
+touches a background service that runs Pitwall from a folder outside `~/Pitwall`.
+
+**What the check proves.** The SHA-256 comes from the same release, so it proves the download is complete and
+unchanged, not who made it. Signed installers are future work ([releasing.md](releasing.md)). If you prefer to
+look before you run it, download `install.sh` (or `install.ps1`) from the release page and read it first: everything
+is in one file. Status: unit-tested and run end to end on a Mac with Apple Silicon against a local test server;
+Windows and Linux are tested in CI only.
+<!-- --- end lane install --- -->
 
 ## Install from a release
 
@@ -133,7 +202,8 @@ Pitwall on spare ports with a temporary data folder, streams a synthetic session
 PASS or FAIL. It does not touch your data or a running Pitwall, and it says nothing about a game. Every release is
 checked this way on Windows, macOS and Linux runners before it is published ([releasing.md](releasing.md)).
 
-To move to a newer release later, see [From one release to the next](#from-one-release-to-the-next).
+To move to a newer release later, use [`pitwall update`](#with-pitwall-update) (or
+[by hand](#from-one-release-to-the-next-by-hand)).
 
 ## Set up with Claude Code
 
@@ -623,7 +693,47 @@ without a game. The Connect page lists the address of the default network connec
 
 The database is upgraded automatically when Pitwall starts.
 
-### From one release to the next
+<!-- --- lane install --- -->
+### With `pitwall update`
+
+If you installed with the [one-line installer](#install-with-one-command), or from a release zip by hand, update in
+the folder you run Pitwall from (between sessions):
+
+```bash
+cd ~/Pitwall/pitwall-v0.2.0 && uv run pitwall update        # Windows: cd "$env:LOCALAPPDATA\Pitwall\pitwall-v0.2.0"; uv run pitwall update
+```
+
+It lists what changed in each newer release, asks before it does anything, then installs the new version next to
+the current one exactly as the installer does: download, SHA-256, `uv sync`, a database backup in
+`<data>/backups/`, your `.env` carried forward, and the background service moved to the new version (it waits up to
+90 s until the new version itself answers, not the old one, and puts everything back if it does not). Your data
+folder stays where it is. It refuses while someone is driving: telemetry live, or a game that sent some less than 2
+minutes ago (a paused game sends nothing) (exit code 3; `--wait-idle 120` waits up to 2 hours instead). It checks
+again just before the switch, and the service scripts refuse too if a session starts in between.
+
+On macOS, starting or moving the background service stops every `pitwall serve` this account runs (from any folder,
+on any port), so the service can use its ports. Without the service, a Pitwall you started by hand is never stopped:
+the summary tells you to restart it.
+
+- `uv run pitwall update --check` only looks: it asks GitHub for the latest release and prints it.
+- `--version v0.2.1` installs a specific release (an older one asks first, in the installers too); `--pre` includes
+  pre-releases (automatic when you run a pre-release).
+- The background service stays as you have it: one you use moves to the new version, and none is added.
+  `--service` also installs one (start at login); `--no-service` leaves it on the old version.
+- `--rollback` goes back to the previous version (its folder is kept). The database may already have columns the
+  newer version added; older versions ignore them, and the backup from before the update is in `<data>/backups/`.
+- A release folder you installed by hand is adopted on its first update: its `data` folder moves to `~/Pitwall/data`
+  (the parent folder's `data`) after you agree.
+- **Coming from v0.1.0**, which has no `pitwall update` yet: run the [one-line installer](#install-with-one-command)
+  once. With your release in `~/Pitwall/pitwall-v0.1.0` (as these docs suggested) it finds it, offers to move its
+  `data` folder to `~/Pitwall/data` and moves its background service; elsewhere, pass `--home` with the folder that
+  holds your release folder. From then on, `pitwall update` works.
+- Settings › System shows when a new version is out and the command to run; it never updates by itself.
+
+Old version folders are never deleted automatically: the summary lists the ones you can delete.
+<!-- --- end lane install --- -->
+
+### From one release to the next (by hand)
 
 1. Stop Pitwall between sessions: Ctrl+C, or the background service (macOS:
    `scripts/pitwall-service.sh uninstall`; Windows: `scripts\windows\service.ps1 uninstall`, run in the old
@@ -674,7 +784,28 @@ deploy script; you do not need it.
 ## Your data
 
 Your sessions and settings are in the data folder (`data/` in the folder you start Pitwall from, or
-`PITWALL_DATA_DIR`). Downloaded speech models live in `~/.cache/huggingface` (Parakeet) and
+`PITWALL_DATA_DIR`). With the [one-line installer](#install-with-one-command) it is `~/Pitwall/data`
+(Windows: `%LOCALAPPDATA%\Pitwall\data`), outside the version folders:
+
+```
+~/Pitwall/
+  install.json          which version is current, the previous one and the data folder (written by the installers)
+  data/                 your sessions and settings: never moved or deleted by an update
+  pitwall-v0.2.0/       the current version, with its own .env (PITWALL_DATA_DIR points at ../data, as a full path)
+  pitwall-v0.1.0/       the previous version, kept for --rollback
+```
+
+Before each update the database is copied to `data/backups/pitwall-before-<version>-<date>.sqlite3` and checked;
+backups are never deleted automatically.
+
+**Update checks.** With `PITWALL_UPDATE_CHECK=auto` (the default) Settings › System asks GitHub for the latest
+release at most once a day, and only while nobody is driving: one HTTPS request to api.github.com, which sees your
+IP address and the Pitwall version, and nothing else is sent. `manual` asks only when you press "Check now" or run
+`uv run pitwall update --check`; `off` means Pitwall never contacts GitHub on its own. Nothing is checked until
+someone opens Settings › System or runs a command, and `pitwall doctor` only reads the last result
+(`data/update_check.json`, which `uv run pitwall update` also refreshes).
+
+Downloaded speech models live in `~/.cache/huggingface` (Parakeet) and
 `~/Library/Application Support/pitwall` (the natural voice). The background service's logs are in
 `~/Library/Logs/pitwall` (macOS) or `%LOCALAPPDATA%\pitwall\logs` (Windows).
 

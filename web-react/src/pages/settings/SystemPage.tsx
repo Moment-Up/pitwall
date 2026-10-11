@@ -16,6 +16,7 @@ import { grouped } from "../../lib/format";
 import { router } from "../../lib/router";
 import type { PageProps } from "../../routes";
 import { CapabilitySheet } from "./system/CapabilitySheet";
+import { UpdateCard, UpdateChip, VersionText } from "./system/UpdateCard"; // lane install: update status
 import {
   capabilityRows,
   captureView,
@@ -214,7 +215,7 @@ export function SystemPage(_props: PageProps) {
       )}
 
       <KPIGroup className="max-md:grid max-md:grid-cols-2" role="group" aria-label="System health">
-        <Metric title="Server" sub={h ? `Pitwall ${h.version}` : undefined}>
+        <Metric title="Server" sub={h ? <>Pitwall <VersionText /* lane install */ fallback={h.version} /></> : undefined}>
           {h ? (
             <StatusChip tone="success">Running</StatusChip>
           ) : health.error ? (
@@ -371,7 +372,7 @@ export function SystemPage(_props: PageProps) {
               {h ? (
                 <Facts
                   rows={[
-                    ["Version", <span className="font-mono">{h.version}</span>],
+                    ["Version", <span className="inline-flex flex-wrap items-center gap-2"><span className="font-mono"><VersionText /* lane install */ fallback={h.version} /></span><UpdateChip /* lane install */ /></span>],
                     ["Telemetry", telemetryText(h)],
                     ["UDP listener", udpText(h)],
                     ["Replay", replayLine ?? <Unknown label="no replay" />],
@@ -390,6 +391,7 @@ export function SystemPage(_props: PageProps) {
               )}
             </Card.Content>
           </Card>
+          <UpdateCard /* lane install: below the Server card */ />
           <Card>
             <Card.Header>
               <Card.Title className="text-base font-semibold">Local LLM</Card.Title>

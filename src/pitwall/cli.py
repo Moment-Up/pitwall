@@ -19,6 +19,12 @@ from pitwall.config import Settings, get_settings
 
 app = typer.Typer(add_completion=False, help="Pitwall - AI sim racing coach & race engineer", no_args_is_help=True)
 
+# --- lane install ---
+from pitwall.install.commands import register as _register_install_commands  # noqa: E402
+
+_register_install_commands(app)  # `pitwall update` and the hidden `pitwall install-finish`
+# --- end lane install ---
+
 
 def _windows_safe_output() -> None:
     """Windows: stdout/stderr redirected to a file or pipe use the ANSI code page (cp1252), which cannot encode
