@@ -283,9 +283,9 @@ circuits; `tests/recorded/test_gt7_ps5_real.py` pins excerpts of them) are given
 3. Reverse/neutral encoding in the gear nibble. **Open.** Gear 0 appeared only in spins: 4 episodes (875 packets),
    each straight after a spin in 2nd or 3rd gear, with the throttle pedal released (at most 4 of 255), the in-gear
    flag clear and the clutch out in 477 of the 552 live packets (gears 1-3 had the in-gear flag set over 90 % of the
-   time), and the car sliding backwards relative to its body at up to 30.5 m/s (0x4C read at most 15.5 m/s: it
-   collapses in a spin). That fits "no gear engaged during a spin" as well as reverse. R and N were never selected,
-   and 15 never appeared. Still to do: a capture selecting N and R.
+   time), and the car sliding at up to 30.5 m/s, mostly sideways: backwards along its own axis at most 15.5 m/s
+   (the highest 0x4C reading too; at the 30.5 m/s packet only 5.2 m/s). That fits "no gear engaged during a spin"
+   as well as reverse. R and N were never selected, and 15 never appeared. Still to do: a capture selecting N and R.
 4. Sign convention of the steering wheel rotation at 0x128, and units of sway/heave/surge. **Sign answered:** radians,
    left positive - it agreed with the variant C road-wheel angles on 22,643 of 22,643 packets (road wheel = 0.068 x
    0x128 on 3 cars, a 1:14.7 ratio) - but 0x128 is clamped at exactly ±π while the road wheels keep turning. The
