@@ -1,0 +1,782 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/templates/fanatec_csl_elite_mclaren_gt3_v2: hand-normalised from the Fanatec table (Xbox: rotary switches none, encoders folded)."
+ },
+ "body": {
+  "id": "w_eee6ec5e",
+  "rev": 0,
+  "name": "McLaren GT3 V2",
+  "template": "fanatec_csl_elite_mclaren_gt3_v2",
+  "template_version": "2026-10-12",
+  "shape": "round",
+  "platforms": [
+   "ps",
+   "xbox",
+   "pc"
+  ],
+  "parts": [
+   {
+    "id": "rim",
+    "kind": "rim",
+    "name": "CSL Elite Steering Wheel McLaren GT3 V2"
+   }
+  ],
+  "controls": [
+   {
+    "id": "b3",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 3",
+    "zone": "left_thumb",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "triangle",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "y",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "4",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "b4",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 4",
+    "zone": "left_thumb",
+    "order": 1,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "square",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "x",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "1",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "b1",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 1",
+    "zone": "left_top",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "l3",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "lsb",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "12",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "b2_N",
+    "part": "rim",
+    "kind": "button",
+    "label": "N",
+    "zone": "left_lower",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "create",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "view",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "9",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "b8",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 8",
+    "zone": "right_thumb",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "circle",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "b",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "3",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "b9",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 9",
+    "zone": "right_thumb",
+    "order": 1,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "cross",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "a",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "2",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "b6",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 6",
+    "zone": "right_top",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "r3",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "rsb",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "11",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "b7_P",
+    "part": "rim",
+    "kind": "button",
+    "label": "P",
+    "zone": "right_lower",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "options",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "menu",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "10",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "b10",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 10",
+    "zone": "centre_bottom",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "ps",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "xbox",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "25",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "funky5",
+    "part": "rim",
+    "kind": "funky_7way",
+    "label": "FunkySwitch",
+    "zone": "left_lower",
+    "order": 1,
+    "reach": null,
+    "push": true,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "GSB 1",
+       "cw": "GSB 2",
+       "ccw": "GSB 3"
+      }
+     },
+     "xbox": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "enc11",
+    "part": "rim",
+    "kind": "encoder",
+    "label": "Left encoder",
+    "zone": "left_thumb",
+    "order": 2,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "game_specific",
+      "value": "GSB 4/5",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ],
+      "per_slot": {
+       "cw": "GSB 4",
+       "ccw": "GSB 5"
+      }
+     },
+     "xbox": {
+      "kind": "folded",
+      "value": "lt/rt",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "34/32",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ],
+      "per_slot": {
+       "cw": "34",
+       "ccw": "32"
+      }
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "enc12",
+    "part": "rim",
+    "kind": "encoder",
+    "label": "Right encoder",
+    "zone": "right_thumb",
+    "order": 2,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "game_specific",
+      "value": "GSB 6/7",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ],
+      "per_slot": {
+       "cw": "GSB 6",
+       "ccw": "GSB 7"
+      }
+     },
+     "xbox": {
+      "kind": "folded",
+      "value": "lt/rt",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "33/31",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ],
+      "per_slot": {
+       "cw": "33",
+       "ccw": "31"
+      }
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "mps18",
+    "part": "rim",
+    "kind": "multi_position",
+    "label": "Left rotary switch",
+    "zone": "left_lower",
+    "order": 2,
+    "reach": null,
+    "push": false,
+    "positions": 12,
+    "mps_mode": "enc",
+    "signals": {
+     "ps": {
+      "kind": "game_specific",
+      "value": "GSB 8/9",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "none",
+      "value": null,
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "37/38",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ],
+      "per_slot": {
+       "cw": "37",
+       "ccw": "38"
+      }
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "mps19",
+    "part": "rim",
+    "kind": "multi_position",
+    "label": "Right rotary switch",
+    "zone": "right_lower",
+    "order": 1,
+    "reach": null,
+    "push": false,
+    "positions": 12,
+    "mps_mode": "enc",
+    "signals": {
+     "ps": {
+      "kind": "game_specific",
+      "value": "GSB 20/21",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "none",
+      "value": null,
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "49/50",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ],
+      "per_slot": {
+       "cw": "49",
+       "ccw": "50"
+      }
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "paddles_l",
+    "part": "rim",
+    "kind": "shift_paddle",
+    "label": "Left shift paddle",
+    "zone": "back_left",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "l1",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "lb",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "6",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "paddles_r",
+    "part": "rim",
+    "kind": "shift_paddle",
+    "label": "Right shift paddle",
+    "zone": "back_right",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "ps": {
+      "kind": "pad",
+      "value": "r1",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "xbox": {
+      "kind": "pad",
+      "value": "rb",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     },
+     "pc": {
+      "kind": "hid_button",
+      "value": "5",
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "ap_l",
+    "part": "rim",
+    "kind": "analogue_paddle",
+    "label": "Left clutch paddle",
+    "zone": "back_left",
+    "order": 1,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "hid_axis",
+      "value": null,
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "ap_r",
+    "part": "rim",
+    "kind": "analogue_paddle",
+    "label": "Right clutch paddle",
+    "zone": "back_right",
+    "order": 1,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "hid_axis",
+      "value": null,
+      "evidence": "V",
+      "source_ids": [
+       "FAN-MCL"
+      ]
+     }
+    },
+    "evidence": "V",
+    "note": ""
+   },
+   {
+    "id": "sel15",
+    "part": "rim",
+    "kind": "mode_selector",
+    "label": "Paddle mode switch",
+    "zone": "centre",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {},
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "tuning",
+    "part": "rim",
+    "kind": "device_menu",
+    "label": "Tuning Menu button",
+    "zone": "centre_top",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {},
+    "evidence": "V",
+    "note": ""
+   }
+  ],
+  "created_unix": 0,
+  "updated_unix": 0
+ }
+}

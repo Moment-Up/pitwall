@@ -1,0 +1,40 @@
+{
+  "assignments": [
+    "tc.fixed -> stick_blue:None (game_fixed, ev U)",
+    "brake_bias.fixed -> stick_red:None (game_fixed, ev U)",
+    "engine_map.fixed -> stick_green:None (game_fixed, ev U)",
+    "diff.fixed -> stick_yellow:None (game_fixed, ev U)",
+    "mfd.up -> menu_stick:up (recommended, ev A)",
+    "mfd.down -> menu_stick:down (recommended, ev A)",
+    "mfd.left -> menu_stick:left (recommended, ev A)",
+    "mfd.right -> menu_stick:right (recommended, ev A)",
+    "overtake.press -> face_triangle:press (recommended, ev A)",
+    "drs_aero.press -> face_square:press (recommended, ev A)",
+    "look.press -> face_circle:press (recommended, ev U)",
+    "lights.press -> face_cross:press (recommended, ev U)",
+    "camera.press -> tab_l2:press (recommended, ev A)"
+  ],
+  "pitwall_ptt": {
+    "path": "screen"
+  },
+  "not_on_wheel": [
+    "abs (pause_menu)",
+    "stability (pause_menu)",
+    "wing (no)",
+    "ride_height (no)",
+    "reset (no)"
+  ],
+  "not_in_game": [
+    "pit_limiter",
+    "ptt_game"
+  ],
+  "unplaced": [],
+  "reserved": [
+    "ps (system)",
+    "hub_left (system)",
+    "hub_right (system)",
+    "paddle_left (gear_down)",
+    "paddle_right (gear_up)",
+    "tuning (wheel_menu)"
+  ]
+}

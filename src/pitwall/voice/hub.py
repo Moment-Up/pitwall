@@ -78,7 +78,8 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 
 from pitwall import games
-from pitwall.ai.engineer import EngineerAnswer, RaceEngineer, detect_intent
+from pitwall.ai.engineer import CONTROLS_INTENT, EngineerAnswer, RaceEngineer, detect_intent
+from pitwall.ai.facts import FactSheet
 from pitwall.ai.radio_phrasing import radio_answer
 from pitwall.coach.cues import (
     DEFAULT_CUE_MODE,
@@ -157,6 +158,7 @@ FAST_INTENTS = frozenset(
         "goals",  # lane motivation: goal facts (plan decision 1), and the week's counts and badges split from it
         "week",
         "badges",
+        "controls_where",  # Setup › Controls: "which button is brake bias?" from the saved layout (no session needed)
     }
 )
 # While the car is moving every answer is deterministic (plan decision 2): with the local LLM at about 15 tokens a
@@ -275,6 +277,12 @@ class _CueLatency:
         self.n += 1
 
 
+def ptt_action_number(name: str) -> int:
+    """'udp_action_N' -> N (validated by ``ptt_button_mask``)."""
+    ptt_button_mask(name)
+    return int(name[len("udp_action_") :])
+
+
 def ptt_button_mask(name: str) -> int:
     """'udp_action_1'..'udp_action_12' -> BUTN bit mask."""
     prefix = "udp_action_"
@@ -364,6 +372,11 @@ class RadioHub:
         self.to_speech = to_speech
         self.lap_messages = lap_messages
         self.ptt_mask = ptt_button_mask(ptt_button)
+        # Which UDP Actions wheel push-to-talk listens to: the deploy setting until Setup › Controls hands over the
+        # seated driver's F1 25 layout (``set_ptt_actions``; the setting stays as a fallback there).
+        self.ptt_actions: list[int] = [ptt_action_number(ptt_button)]
+        self.ptt_label: str | None = None
+        self._wheel_ptt_paused_until = 0.0  # Setup › Controls button test: wheel presses do not open the radio
         self.max_utterance_s = max_utterance_s
         self.clients: set[RadioClient] = set()
         self.voice_enabled = True
@@ -642,6 +655,9 @@ class RadioHub:
             **self._tts_state(),
             "telemetry": self.live.connection()["status"],
             "ptt_source": self.ptt_source,
+            "ptt_actions": list(self.ptt_actions),  # additive: the UDP Actions wheel push-to-talk listens to
+            "ptt_label": self.ptt_label,  # additive: the control's name in the seated driver's layout, if known
+            "wheel_ptt_paused": self.wheel_ptt_paused(),
             "clients": len(self.clients),
             "cue_mode": self.cues.mode,
         }
@@ -762,7 +778,39 @@ class RadioHub:
         if self._loop is not None:
             self._loop.call_soon_threadsafe(self._on_button, status)
 
+    def set_ptt_actions(self, actions: Sequence[int], label: str | None = None) -> None:
+        """Listen to these UDP Actions for wheel push-to-talk (Setup › Controls, on the loop). A held wheel
+        transmission whose button is no longer one of them ends."""
+        mask = 0
+        kept: list[int] = []
+        for n in actions:
+            if isinstance(n, int) and 1 <= n <= 12 and n not in kept:
+                kept.append(n)
+                mask |= UDP_ACTION_BASE << (n - 1)
+        if not mask:
+            return  # never leave the radio with no wheel button at all
+        self.ptt_mask = mask
+        self.ptt_actions = kept
+        self.ptt_label = label
+        if self.ptt_down and self.ptt_source == "wheel" and not ((self._last_button_status or 0) & mask):
+            self._ptt_up(source="wheel")
+        self._send_state()
+
+    def suspend_wheel_ptt(self, on: bool, for_s: float = 15.0) -> None:
+        """Pause wheel push-to-talk while Setup › Controls tests buttons (re-armed by the test while the page polls;
+        it lapses on its own ``for_s`` after the last call, so a closed page never leaves the radio deaf)."""
+        self._wheel_ptt_paused_until = time.monotonic() + for_s if on else 0.0
+        if on and self.ptt_down and self.ptt_source == "wheel":
+            self._ptt_up(source="wheel")
+        self._send_state()
+
+    def wheel_ptt_paused(self) -> bool:
+        return time.monotonic() < self._wheel_ptt_paused_until
+
     def _on_button(self, status: int) -> None:
+        if self.wheel_ptt_paused():
+            self._last_button_status = status
+            return
         pressed = bool(status & self.ptt_mask)
         was = bool((self._last_button_status or 0) & self.ptt_mask)
         self._last_button_status = status
@@ -838,6 +886,8 @@ class RadioHub:
                 )
             t0 = time.perf_counter()
             sheet = await asyncio.to_thread(self.fact_sheet)
+            if sheet is None and intent.name == CONTROLS_INTENT:
+                sheet = FactSheet()  # the saved button layout answers it, before the first lap too
             if sheet is None and cap and entry is not None:
                 sheet = games.capability_sheet(entry)  # no session yet: the game's capabilities are still known
             no_game = False
@@ -857,6 +907,8 @@ class RadioHub:
             self._apply_control(ans)
             kind = MessageKind.CONTROL if (ans and ans.control) or no_game else MessageKind.ANSWER
             msg = self._msg(kind, Priority.HIGH, ans_text, bypass=True)
+            if ans is not None and ans.intent == CONTROLS_INTENT:
+                msg.speech = self.to_speech(ans.speech)  # "+" and "−" as words
             if ans is not None:
                 msg.meta = {
                     "intent": ans.intent,

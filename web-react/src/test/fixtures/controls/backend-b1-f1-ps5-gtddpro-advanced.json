@@ -1,0 +1,1558 @@
+{
+ "_fixture": {
+  "source": "backend-b1 fixture: produced by calling src/pitwall/controls (catalog/templates/recommend/steps) directly in Python on the feat/controls worktree before the API existed. Not an HTTP answer; regenerate by calling those modules again.",
+  "status": 200,
+  "note": "template fanatec_gt_dd_pro_wheel, f1_25 on ps5, advanced"
+ },
+ "body": {
+  "wheel": {
+   "id": "w_d8c01858",
+   "rev": 0,
+   "name": "GT DD Pro wheel",
+   "template": "fanatec_gt_dd_pro_wheel",
+   "template_version": "2026-10-12/1",
+   "shape": "round",
+   "platforms": [
+    "ps",
+    "pc"
+   ],
+   "parts": [
+    {
+     "id": "rim",
+     "kind": "rim",
+     "name": "GT DD Pro wheel"
+    }
+   ],
+   "controls": [
+    {
+     "id": "face_triangle",
+     "part": "rim",
+     "kind": "button",
+     "label": "Triangle",
+     "zone": "right_thumb",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "triangle",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "face_square",
+     "part": "rim",
+     "kind": "button",
+     "label": "Square",
+     "zone": "right_thumb",
+     "order": 2,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "square",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "face_circle",
+     "part": "rim",
+     "kind": "button",
+     "label": "Circle",
+     "zone": "right_thumb",
+     "order": 3,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "circle",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "face_cross",
+     "part": "rim",
+     "kind": "button",
+     "label": "Cross",
+     "zone": "right_thumb",
+     "order": 4,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "cross",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "tab_l2",
+     "part": "rim",
+     "kind": "button",
+     "label": "L2 tab",
+     "zone": "left_top",
+     "order": 0,
+     "reach": "stretch",
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "l2",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "tab_r2",
+     "part": "rim",
+     "kind": "button",
+     "label": "R2 tab",
+     "zone": "right_top",
+     "order": 0,
+     "reach": "stretch",
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "r2",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "tab_l3",
+     "part": "rim",
+     "kind": "button",
+     "label": "L3 tab",
+     "zone": "centre_bottom",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "l3",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "ps",
+     "part": "rim",
+     "kind": "button",
+     "label": "PS button",
+     "zone": "centre_bottom",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "ps",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "tab_r3",
+     "part": "rim",
+     "kind": "button",
+     "label": "R3 tab",
+     "zone": "centre_bottom",
+     "order": 2,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "r3",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "hub_left",
+     "part": "rim",
+     "kind": "button",
+     "label": "Left hub button",
+     "zone": "centre_top",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Under the L2 tab. Research: probably Create (from its shape; Fanatec doesn't name it)."
+    },
+    {
+     "id": "hub_right",
+     "part": "rim",
+     "kind": "button",
+     "label": "Right hub button (≡)",
+     "zone": "centre_top",
+     "order": 2,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Under the R2 tab. Research: probably Options (from its shape; Fanatec doesn't name it)."
+    },
+    {
+     "id": "menu_stick",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Menu stick",
+     "zone": "left_lower",
+     "order": 0,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "dpad",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "per_slot": {
+        "up": "dpad_up",
+        "down": "dpad_down",
+        "left": "dpad_left",
+        "right": "dpad_right",
+        "push": "unknown:"
+       },
+       "seen": null
+      }
+     },
+     "evidence": "V",
+     "note": "Fanatec calls it the D-Pad. That it sends the D-pad is assumed in the research."
+    },
+    {
+     "id": "stick_green",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Green-ring stick",
+     "zone": "left_top",
+     "order": 1,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "game_specific",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "COMM-FAN-GTSTICKS"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+    },
+    {
+     "id": "stick_blue",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Blue-ring stick",
+     "zone": "left_thumb",
+     "order": 0,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "game_specific",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "COMM-FAN-GTSTICKS"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+    },
+    {
+     "id": "stick_red",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Red-ring stick",
+     "zone": "right_top",
+     "order": 1,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "game_specific",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "COMM-FAN-GTSTICKS"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+    },
+    {
+     "id": "stick_yellow",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Yellow-ring stick",
+     "zone": "right_thumb",
+     "order": 0,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "game_specific",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "COMM-FAN-GTSTICKS"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+    },
+    {
+     "id": "paddle_left",
+     "part": "rim",
+     "kind": "shift_paddle",
+     "label": "Left shift paddle",
+     "zone": "back_left",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Research: likely L1 (unverified)."
+    },
+    {
+     "id": "paddle_right",
+     "part": "rim",
+     "kind": "shift_paddle",
+     "label": "Right shift paddle",
+     "zone": "back_right",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Research: likely R1 (unverified)."
+    },
+    {
+     "id": "tuning",
+     "part": "rim",
+     "kind": "device_menu",
+     "label": "Tuning Menu button",
+     "zone": "centre_top",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "none",
+       "value": null,
+       "evidence": "V",
+       "source_ids": [
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      },
+      "ps": {
+       "kind": "none",
+       "value": null,
+       "evidence": "V",
+       "source_ids": [
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "V",
+     "note": ""
+    }
+   ],
+   "created_unix": 0.0,
+   "updated_unix": 0.0
+  },
+  "rec": {
+   "game": "f1_25",
+   "platform": "ps5",
+   "wheel_id": "w_d8c01858",
+   "preset": "advanced",
+   "driver_id": 1,
+   "catalogue_version": "2026-10-12/1",
+   "status": "research_only",
+   "assignments": [
+    {
+     "key": "ptt_pitwall.hold",
+     "function": "ptt_pitwall",
+     "action": "hold",
+     "control_id": "face_triangle",
+     "slot": "press",
+     "udp_action": 1,
+     "origin": "recommended",
+     "check": null,
+     "label": "Talk to Pitwall",
+     "native": "UDP Action 1",
+     "menu_group": "UDP Custom Actions",
+     "control_label": "Triangle",
+     "signal": {
+      "kind": "pad",
+      "value": "triangle",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Talk to Pitwall on Triangle: a plain button you can hold with your thumb. Map it to UDP Action 1 in F1 25 so Pitwall sees it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_udp_wheel_ps",
+      "repo_f1_spec",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": "BUTN bit (UDP Action 1)"
+    },
+    {
+     "key": "mfd.up",
+     "function": "mfd",
+     "action": "up",
+     "control_id": "menu_stick",
+     "slot": "up",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box up",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "menu_group": "Control Scheme",
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: F1 25 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "ea25_mfd_pad_ps",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "mfd.down",
+     "function": "mfd",
+     "action": "down",
+     "control_id": "menu_stick",
+     "slot": "down",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box down",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "menu_group": "Control Scheme",
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: F1 25 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "ea25_mfd_pad_ps",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "mfd.left",
+     "function": "mfd",
+     "action": "left",
+     "control_id": "menu_stick",
+     "slot": "left",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box left",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "menu_group": "Control Scheme",
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: F1 25 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "ea25_mfd_pad_ps",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "mfd.right",
+     "function": "mfd",
+     "action": "right",
+     "control_id": "menu_stick",
+     "slot": "right",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box right",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "menu_group": "Control Scheme",
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: F1 25 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "ea25_mfd_pad_ps",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "mfd.select",
+     "function": "mfd",
+     "action": "select",
+     "control_id": "menu_stick",
+     "slot": "push",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box (open)",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "menu_group": "Control Scheme",
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: F1 25 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "ea25_mfd_pad_ps",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923).",
+      "What this control sends on PlayStation isn't known: check it in the game."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "drs_aero.press",
+     "function": "drs_aero",
+     "action": "press",
+     "control_id": "face_square",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "DRS / active aero",
+     "native": "Activate/Deactivate DRS/S Mode (2026 cars: Active Aero Corner <-> Straight Line Mode)",
+     "menu_group": "Control Scheme",
+     "control_label": "Square",
+     "signal": {
+      "kind": "pad",
+      "value": "square",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "DRS / active aero on Square: you use it often, so it's under your thumb.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "ea_tips_2026",
+      "repo_f1_spec",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [
+      "2025 cars: DRS, in DRS zones",
+      "2026 cars: Active Aero Straight Line Mode, only in zones; the game returns to Corner Mode when you turn, brake or lift"
+     ],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": "drs_open"
+    },
+    {
+     "key": "overtake.press",
+     "function": "overtake",
+     "action": "press",
+     "control_id": "face_circle",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Overtake / boost",
+     "native": "Overtake/Boost",
+     "menu_group": "Control Scheme",
+     "control_label": "Circle",
+     "signal": {
+      "kind": "pad",
+      "value": "circle",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Overtake / boost on Circle: you need it at a precise moment, so it's under your thumb.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "ea_tips_2026",
+      "repo_f1_spec",
+      "ea_f122_able",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [
+      "2026 cars: Overtake Mode once unlocked at the Detection Line"
+     ],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "brake_bias.inc",
+     "function": "brake_bias",
+     "action": "inc",
+     "control_id": "tab_l3",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Brake bias +",
+     "native": "Brake Bias Increase / Decrease (MFD shortcut)",
+     "menu_group": "MFD Shortcuts",
+     "control_label": "L3 tab",
+     "signal": {
+      "kind": "pad",
+      "value": "l3",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Brake bias on L3 tab (+) and R3 tab (-): two buttons side by side.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea25_mfd_pad_ps",
+      "ea26_mfd_wheel_ps",
+      "ea25_mfd_wheel_xbox",
+      "repo_f1_spec",
+      "ea_patch_120",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": "brake_bias_front_pct"
+    },
+    {
+     "key": "brake_bias.dec",
+     "function": "brake_bias",
+     "action": "dec",
+     "control_id": "tab_r3",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Brake bias −",
+     "native": "Brake Bias Increase / Decrease (MFD shortcut)",
+     "menu_group": "MFD Shortcuts",
+     "control_label": "R3 tab",
+     "signal": {
+      "kind": "pad",
+      "value": "r3",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Brake bias on L3 tab (+) and R3 tab (-): two buttons side by side.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea25_mfd_pad_ps",
+      "ea26_mfd_wheel_ps",
+      "ea25_mfd_wheel_xbox",
+      "repo_f1_spec",
+      "ea_patch_120",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": "brake_bias_front_pct"
+    },
+    {
+     "key": "ers_mode.inc",
+     "function": "ers_mode",
+     "action": "inc",
+     "control_id": "tab_r2",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "ERS / hybrid mode +",
+     "native": "ERS Mode Increase / Decrease (MFD shortcut)",
+     "menu_group": "MFD Shortcuts",
+     "control_label": "R2 tab",
+     "signal": {
+      "kind": "pad",
+      "value": "r2",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "ERS / hybrid mode on R2 tab (+) and L2 tab (-): the same button on each side of the wheel.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea25_mfd_pad_ps",
+      "ea26_mfd_wheel_ps",
+      "ea_tips_2026",
+      "repo_f1_spec",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": "ers_deploy_mode"
+    },
+    {
+     "key": "ers_mode.dec",
+     "function": "ers_mode",
+     "action": "dec",
+     "control_id": "tab_l2",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "ERS / hybrid mode −",
+     "native": "ERS Mode Increase / Decrease (MFD shortcut)",
+     "menu_group": "MFD Shortcuts",
+     "control_label": "L2 tab",
+     "signal": {
+      "kind": "pad",
+      "value": "l2",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "ERS / hybrid mode on R2 tab (+) and L2 tab (-): the same button on each side of the wheel.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea25_mfd_pad_ps",
+      "ea26_mfd_wheel_ps",
+      "ea_tips_2026",
+      "repo_f1_spec",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": "ers_deploy_mode"
+    },
+    {
+     "key": "radio_menu.press",
+     "function": "radio_menu",
+     "action": "press",
+     "control_id": "face_cross",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Team radio menu",
+     "native": "Radio/Voice Commands",
+     "menu_group": "Control Scheme",
+     "control_label": "Cross",
+     "signal": {
+      "kind": "pad",
+      "value": "cross",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Team radio menu on Cross: you use it now and then, so it's under your thumb.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "pit_limiter.press",
+     "function": "pit_limiter",
+     "action": "press",
+     "control_id": "face_square",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Pit limiter",
+     "native": "Pit Limiter",
+     "menu_group": "Control Scheme",
+     "control_label": "Square",
+     "signal": {
+      "kind": "pad",
+      "value": "square",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Pit limiter on the same button as DRS: F1 25 does this by default (pit limiter in the pit lane, DRS on track).",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "ea26_pad_ps",
+      "ea26_wheel_ps",
+      "repo_f1_spec",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+     ],
+     "pitwall_sees": "CarStatus.m_pitLimiterStatus (in the spec, not mapped yet)"
+    }
+   ],
+   "pitwall_ptt": {
+    "path": "udp_action",
+    "udp_action": 1,
+    "control_id": "face_triangle",
+    "text": "Hold Triangle to talk to Pitwall: map it to UDP Action 1 in F1 25 (Controls > your wheel's preset > UDP Custom Actions)."
+   },
+   "not_on_wheel": [
+    {
+     "function": "tc",
+     "label": "Traction control",
+     "why": "pause_menu",
+     "text": "In F1 25, traction control and ABS are assists you set in the menu, not while driving."
+    },
+    {
+     "function": "abs",
+     "label": "ABS",
+     "why": "pause_menu",
+     "text": "In F1 25, traction control and ABS are assists you set in the menu, not while driving."
+    },
+    {
+     "function": "wing",
+     "label": "Wing",
+     "why": "no",
+     "text": "Wing angles are a setup item in every game researched. F1 25 2026 cars switch Active Aero to Straight Line Mode on the DRS/S Mode button inside the zones only; other games have DRS on cars that have it."
+    },
+    {
+     "function": "ride_height",
+     "label": "Ride height / weight jacker",
+     "why": "no",
+     "text": "No game Pitwall knows lets you change ride height while driving. F1 25 and GT7 only show it in the car setup; iRacing's weight jacker on some oval cars is the closest thing."
+    }
+   ],
+   "not_in_game": [
+    {
+     "function": "stability",
+     "label": "Stability control",
+     "text": "F1 25 has no stability control."
+    },
+    {
+     "function": "lights",
+     "label": "Lights",
+     "text": "F1 25 has no light, wiper or ignition controls."
+    }
+   ],
+   "unplaced": [
+    {
+     "function": "diff",
+     "label": "Differential",
+     "text": "No free control left for Differential. Use the MFD."
+    },
+    {
+     "function": "engine_map",
+     "label": "Engine map / fuel mix",
+     "text": "No free control left for Engine map / fuel mix. Use the MFD."
+    },
+    {
+     "function": "look",
+     "label": "Look back / left / right",
+     "text": "No free control left for Look back / left / right. Add a control, or swap it for something you use less."
+    },
+    {
+     "function": "reset",
+     "label": "Flashback / rewind / reset",
+     "text": "No free control left for Flashback / rewind / reset. Add a control, or swap it for something you use less."
+    },
+    {
+     "function": "pit_request",
+     "label": "Pit request",
+     "text": "No free control left for Pit request. Add a control, or swap it for something you use less."
+    }
+   ],
+   "reserved": [
+    {
+     "control_id": "ps",
+     "as": "system",
+     "label": "Console button"
+    },
+    {
+     "control_id": "hub_left",
+     "as": "system",
+     "label": "Console button"
+    },
+    {
+     "control_id": "hub_right",
+     "as": "system",
+     "label": "Console button"
+    },
+    {
+     "control_id": "paddle_left",
+     "as": "gear_down",
+     "label": "Gear down"
+    },
+    {
+     "control_id": "paddle_right",
+     "as": "gear_up",
+     "label": "Gear up"
+    },
+    {
+     "control_id": "tuning",
+     "as": "wheel_menu",
+     "label": "The wheel's own menu"
+    }
+   ],
+   "notes": [
+    "Not used in F1 25: Green-ring stick, Blue-ring stick, Red-ring stick, Yellow-ring stick. Community sources say only Gran Turismo 7 reads this control (unverified). Use Test › Identify to check in F1 25.",
+    "Pitwall suggests where things go, never the values to use."
+   ]
+  },
+  "guide": {
+   "where": "Controls > [your wheel's preset]",
+   "where_evidence": "V",
+   "intro": [
+    "In F1 25, open Controls > [your wheel's preset].",
+    "EA's controls hub lists driving controls, MFD shortcuts and UDP custom actions per device; the exact screen names on the console are not re-checked [U].",
+    "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923).",
+    "F1 25 may drop or swap an action that was already on a button when you rebind it (unverified): check the list after each change."
+   ],
+   "steps": [
+    {
+     "n": 1,
+     "group": "Control Scheme",
+     "native": "Activate/Deactivate DRS/S Mode (2026 cars: Active Aero Corner <-> Straight Line Mode)",
+     "label": "DRS / active aero (Activate/Deactivate DRS/S Mode)",
+     "physical": "Press SQUARE (Square)",
+     "evidence": "A",
+     "note": "2025 cars: DRS, in DRS zones 2026 cars: Active Aero Straight Line Mode, only in zones; the game returns to Corner Mode when you turn, brake or lift"
+    },
+    {
+     "n": 2,
+     "group": "Control Scheme",
+     "native": "Overtake/Boost",
+     "label": "Overtake / boost",
+     "physical": "Press CIRCLE (Circle)",
+     "evidence": "A",
+     "note": "2026 cars: Overtake Mode once unlocked at the Detection Line"
+    },
+    {
+     "n": 3,
+     "group": "Control Scheme",
+     "native": "Pit Limiter",
+     "label": "Pit limiter",
+     "physical": "Press SQUARE (Square)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 4,
+     "group": "Control Scheme",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "label": "MFD / black box down (MFD Menu Down)",
+     "physical": "Push MENU STICK down (D-pad down)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 5,
+     "group": "Control Scheme",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "label": "MFD / black box left (MFD Menu Left)",
+     "physical": "Push MENU STICK left (D-pad left)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 6,
+     "group": "Control Scheme",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "label": "MFD / black box right (MFD Menu Right)",
+     "physical": "Push MENU STICK right (D-pad right)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 7,
+     "group": "Control Scheme",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "label": "MFD / black box (open) (MFD)",
+     "physical": "Press MENU STICK in",
+     "evidence": "A",
+     "note": "What this control sends isn't known: check it in the game."
+    },
+    {
+     "n": 8,
+     "group": "Control Scheme",
+     "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+     "label": "MFD / black box up (MFD Menu Up)",
+     "physical": "Push MENU STICK up (D-pad up)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 9,
+     "group": "Control Scheme",
+     "native": "Radio/Voice Commands",
+     "label": "Team radio menu",
+     "physical": "Press CROSS (Cross)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 10,
+     "group": "MFD Shortcuts",
+     "native": "ERS Mode Increase / Decrease (MFD shortcut)",
+     "label": "ERS / hybrid mode − (ERS Mode Decrease)",
+     "physical": "Press L2 TAB (L2)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 11,
+     "group": "MFD Shortcuts",
+     "native": "ERS Mode Increase / Decrease (MFD shortcut)",
+     "label": "ERS / hybrid mode + (ERS Mode Increase)",
+     "physical": "Press R2 TAB (R2)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 12,
+     "group": "MFD Shortcuts",
+     "native": "Brake Bias Increase / Decrease (MFD shortcut)",
+     "label": "Brake bias − (Brake Bias Decrease)",
+     "physical": "Press R3 TAB (R3)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 13,
+     "group": "MFD Shortcuts",
+     "native": "Brake Bias Increase / Decrease (MFD shortcut)",
+     "label": "Brake bias + (Brake Bias Increase)",
+     "physical": "Press L3 TAB (L3)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 14,
+     "group": "UDP Custom Actions",
+     "native": "UDP Action 1",
+     "label": "Talk to Pitwall",
+     "physical": "Press TRIANGLE (Triangle)",
+     "evidence": "A",
+     "note": null
+    }
+   ],
+   "outro": [
+    "Open Test to check each button reaches Pitwall."
+   ]
+  }
+ }
+}

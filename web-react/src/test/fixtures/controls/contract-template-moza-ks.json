@@ -1,0 +1,437 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/templates/moza_ks: counts only, every control unplaced."
+ },
+ "body": {
+  "id": "w_66cda425",
+  "rev": 0,
+  "name": "MOZA KS",
+  "template": "moza_ks",
+  "template_version": "2026-10-12",
+  "shape": "round",
+  "platforms": [
+   "pc"
+  ],
+  "parts": [
+   {
+    "id": "rim",
+    "kind": "rim",
+    "name": "MOZA KS steering wheel"
+   }
+  ],
+  "controls": [
+   {
+    "id": "c_1",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 1",
+    "zone": "unplaced",
+    "order": 0,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_2",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 2",
+    "zone": "unplaced",
+    "order": 1,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_3",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 3",
+    "zone": "unplaced",
+    "order": 2,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_4",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 4",
+    "zone": "unplaced",
+    "order": 3,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_5",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 5",
+    "zone": "unplaced",
+    "order": 4,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_6",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 6",
+    "zone": "unplaced",
+    "order": 5,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_7",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 7",
+    "zone": "unplaced",
+    "order": 6,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_8",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 8",
+    "zone": "unplaced",
+    "order": 7,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_9",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 9",
+    "zone": "unplaced",
+    "order": 8,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_10",
+    "part": "rim",
+    "kind": "button",
+    "label": "Button 10",
+    "zone": "unplaced",
+    "order": 9,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_11",
+    "part": "rim",
+    "kind": "multi_position",
+    "label": "Rotary 1",
+    "zone": "unplaced",
+    "order": 10,
+    "reach": null,
+    "push": false,
+    "positions": 12,
+    "mps_mode": "unknown",
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_12",
+    "part": "rim",
+    "kind": "multi_position",
+    "label": "Rotary 2",
+    "zone": "unplaced",
+    "order": 11,
+    "reach": null,
+    "push": false,
+    "positions": 12,
+    "mps_mode": "unknown",
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_13",
+    "part": "rim",
+    "kind": "multi_position",
+    "label": "Rotary 3",
+    "zone": "unplaced",
+    "order": 12,
+    "reach": null,
+    "push": false,
+    "positions": 12,
+    "mps_mode": "unknown",
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_14",
+    "part": "rim",
+    "kind": "encoder",
+    "label": "Encoder 1",
+    "zone": "unplaced",
+    "order": 13,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_15",
+    "part": "rim",
+    "kind": "encoder",
+    "label": "Encoder 2",
+    "zone": "unplaced",
+    "order": 14,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_16",
+    "part": "rim",
+    "kind": "shift_paddle",
+    "label": "Shift paddle 1",
+    "zone": "unplaced",
+    "order": 15,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   },
+   {
+    "id": "c_17",
+    "part": "rim",
+    "kind": "shift_paddle",
+    "label": "Shift paddle 2",
+    "zone": "unplaced",
+    "order": 16,
+    "reach": null,
+    "push": false,
+    "positions": null,
+    "mps_mode": null,
+    "signals": {
+     "pc": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "A",
+      "source_ids": [
+       "MOZA-KS"
+      ]
+     }
+    },
+    "evidence": "A",
+    "note": ""
+   }
+  ],
+  "created_unix": 0,
+  "updated_unix": 0
+ }
+}

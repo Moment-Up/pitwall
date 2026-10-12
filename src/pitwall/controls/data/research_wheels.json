@@ -1,0 +1,476 @@
+{
+  "schema": "pitwall.controls.draft/1",
+  "researched": "2026-10-12",
+  "status": "research-only guidance. Nothing here is validated; only the F1 live button test (BUTN/UDP Action) can verify a control in-app, and only the owner's live test validates it.",
+  "evidence_labels": {
+    "V": "stated in an official manual, quick guide, product page or platform doc (read directly)",
+    "A": "inferred from official figures/tables or several official statements; not stated in words",
+    "U": "community, retailer or press source, or not checked; treat as unverified",
+    "D": "pitwall design proposal (derivation), not a hardware fact"
+  },
+  "model": {
+    "layers": [
+      "physical control on the rim/hub/module (what the driver touches)",
+      "signal the base/hub reports to the host, per platform (PS / Xbox / PC)",
+      "game binding (what the game does with that signal; may be none)",
+      "pitwall visibility (telemetry button bit, telemetry effect, PC HID, or nothing)"
+    ],
+    "control_kinds": {
+      "button": "momentary push; press/release",
+      "shift_paddle": "momentary paddle; a button with a gear role",
+      "toggle_latching": "maintained 2-position switch; reports a held state (or a pulse per change, device-specific)",
+      "toggle_momentary": "spring-return rocker/toggle (up/down); reports as two buttons",
+      "encoder": "endless detented rotary or thumb wheel; reports CW and CCW as two short button pulses; optional push button",
+      "multi_position": "absolute N-position rotary (8/12-way); presentation depends on a mode (see mps_modes)",
+      "funky_7way": "4 directions + push + rotate (Fanatec FunkySwitch, Moza/Simagic 7-way); directions usually D-pad/hat, push a button, rotation an encoder pair",
+      "dpad_hat": "4/8-way pad, hat or 5-way stick (D-stick) with optional centre push",
+      "thumbstick": "analogue 2-axis stick, usually with push",
+      "analogue_paddle": "analogue axis 0..1 (clutch, dual clutch, handbrake, throttle, brake or free axis); role set by a mode",
+      "mode_selector": "hardware switch that changes the rim's own behaviour; no output to the game",
+      "device_menu": "control consumed by the hardware (tuning/settings/display menus); no output to the game",
+      "virtual_layer": "selector that makes the same physical controls emit different signals (layers); state usually invisible to the host"
+    },
+    "signal_kinds": {
+      "pad": "a standard console pad input. PS: cross, circle, square, triangle, l1, r1, l2, r2, l3, r3, options, create, ps, dpad_up/down/left/right. Xbox: a, b, x, y, lb, rb, lt, rt, lsb, rsb, view, menu, xbox, dpad_*, next_gear, previous_gear",
+      "game_specific": "extra console input that only games with explicit support read (Fanatec 'GSB n' on PS and Xbox; Logitech items marked '*'; Thrustmaster encoders E1-E4 and mini-sticks on PS)",
+      "folded": "console input shared with other controls (e.g. Thrustmaster encoders become D-pad on Xbox; two different rim buttons both send A); the game cannot tell them apart",
+      "hid_button": "PC button number as printed by the maker (1-based)",
+      "hid_hat": "PC point-of-view hat direction",
+      "hid_axis": "PC axis (X, Y, Z, Rx, Ry, Rz, Slider0, Slider1)",
+      "none": "no output on that platform"
+    },
+    "mps_modes": {
+      "enc": "two buttons, one per rotation direction (Fanatec ENC) [V]",
+      "pulse": "one button per position, sent as a single pulse on change (Fanatec PULSE) [V]",
+      "constant": "one button per position, held while in that position (Fanatec CONST) [V]",
+      "auto": "the game chooses (Fanatec AUTO; needs game support) [V]",
+      "moza_knob": "MOZA knobs: 'button or dial' modes (support spec sheet, via search) [A]",
+      "binary_coded": "N positions encoded as combinations of a few buttons; DIY/community pattern, no brand source found [U]",
+      "axis_bands": "positions read as bands of one analogue axis (resistor ladder); DIY/community pattern, no brand source found [U]"
+    },
+    "platform_rules": [
+      {"brand": "Fanatec", "rule": "PlayStation is unlocked by a PS-licensed base; Xbox by an Xbox-licensed steering wheel or hub; combine both for both consoles; any Fanatec rim on a PS-licensed base works on PS", "evidence": "V", "sources": ["FAN-PLAT", "FAN-PSFAQ"]},
+      {"brand": "Fanatec", "rule": "rim features can depend on the base: the GT DD Pro wheel's four extra 5-way sticks are not available on ClubSport V2 / CSL Elite (V1.1) bases", "evidence": "V", "sources": ["FAN-GTDDP-PROD"]},
+      {"brand": "Logitech", "rule": "separate PS/PC and Xbox/PC versions (G923, PRO, RS50, RS Wheel Hub PC vs Xbox); some wheel buttons need game support on console; PRO/RS50 can re-enumerate as an older wheel (G923 / PRO compatibility mode)", "evidence": "V", "sources": ["LOG-G923PS", "LOG-G923XB", "LOG-PROXB", "LOG-RSHUB", "LOG-RS50PS"]},
+      {"brand": "Thrustmaster", "rule": "the base sets the platform (T248 PS vs T248X Xbox; T-GT II PS; TS-PC Racer PC); add-on rims fit several bases; on Xbox 'some features (encoders, number of action buttons) are limited by the console protocol'", "evidence": "V", "sources": ["TM-T248X", "TM-SF1000", "TM-TSPC"]},
+      {"brand": "MOZA", "rule": "PC by default; Xbox only with the Xbox-licensed R3 bundle or the ESX wheel; PlayStation not supported by current bases; PS5 bases (R5S Pro, R16S Ultra) announced Sept 2026, pending Sony approval", "evidence": "V", "sources": ["MOZA-BASEFAQ", "MOZA-XBFAQ", "MOZA-TGS26"]},
+      {"brand": "Asetek", "rule": "Xbox partnership announced; Xbox needs an Xbox-compatible base and an Xbox-compatible wheel; which models qualify not checked; no PS", "evidence": "A", "sources": ["ASETEK-XBOX"]},
+      {"brand": "Simucube / Simagic / Cammus", "rule": "PC only as far as found (Simucube docs only mention PC software; Simagic/Cammus PC-only per retailers)", "evidence": "U", "sources": ["SC-REMAP", "COMM-CAMMUS"]}
+    ],
+    "console_limits": [
+      {"platform": "xbox", "fact": "Windows.Gaming.Input RacingWheelButtons: PreviousGear, NextGear, D-pad x4, Button1-16 (button assignment varies per controller and is meant for a user mapping UI)", "evidence": "V", "sources": ["MS-RWB"]},
+      {"platform": "xbox", "fact": "GDK GameInputRacingWheelButtons: Menu, View, PreviousGear, NextGear, D-pad x4; A/B/X/Y, shoulders and thumbstick clicks are copied from the gamepad report", "evidence": "V", "sources": ["MS-GIRWB"]},
+      {"platform": "xbox", "fact": "extra rim controls are folded onto the standard set or dropped: T248X encoders -> D-pad; SF1000 duplicates A/Y/LB/RB and loses DAP position 4; Fanatec MPS no output, encoders -> LT/RT; MOZA ESX disables some buttons; LSB/RSB only in some games (Thrustmaster, MOZA)", "evidence": "V", "sources": ["TM-T248X", "TM-SF1000", "FAN-MCL", "FAN-FV25X", "MOZA-XBFAQ"]},
+      {"platform": "ps", "fact": "beyond the DualSense-style set, wheels expose extra inputs that only supporting games read (Fanatec GSB, Logitech '*', Thrustmaster encoders/mini-sticks). Sony's wheel input spec is not public", "evidence": "V (per maker) / U (Sony spec)", "sources": ["FAN-MCL", "LOG-G923PS", "TM-T248PS", "TM-SF1000"]},
+      {"platform": "pc", "fact": "DirectInput DIJOYSTATE2: 128 buttons, 4 POV hats, 6 axes + 2 sliders. WinMM JOYINFOEX: 32 buttons, 6 axes, 1 POV. Older games can miss buttons above 32 (e.g. Fanatec MPS 37-76, PBMR 99/100)", "evidence": "V (APIs) / U (which games)", "sources": ["MS-DIJS2", "MS-JOYINFOEX", "COMM-SC32"]},
+      {"platform": "pc", "fact": "Simucube Link Hub appears as one game controller with 128 buttons and 8 axes; each wheel's buttons are auto-mapped to slots; unmapped buttons produce no input", "evidence": "V", "sources": ["SC-REMAP"]}
+    ],
+    "pitwall_visibility": {
+      "telemetry_button": "F1 25 Event BUTN buttonStatus: pad-equivalent bits (Cross/A ... Right Stick dirs, Special) plus UDP Action 1-12 (0x00100000 << n-1). UDP Actions are bound in the game's controls to any input the game can see. Only verifiable path.",
+      "telemetry_effect": "a setting/state changed in telemetry, so some control was used, but not which one: F1 brake bias, ERS mode, fuel mix, pit limiter, DRS/active aero; GT7 handbrake and headlight flags; Forza handbrake axis; PC sims (ACC TC/ABS/map/BB via shared memory, iRacing driver-control variables) need a Windows relay",
+      "platform_hint": "F1 Participants m_platform (1 Steam, 3 PlayStation, 4 Xbox, 6 Origin) picks the PS/Xbox/PC column; GT7 is always PlayStation",
+      "pc_hid": "only when the game and pitwall run on the same Windows PC; not implemented",
+      "pitwall_own": "on-screen PTT exists; a Bluetooth keyboard-type remote paired to the iPad could send key events to the dashboard page [D, untested]",
+      "never": "on console pitwall never sees the wheel itself, its rim id, unbound game-specific buttons, encoder layers or hardware mode selectors"
+    }
+  },
+  "templates": [
+    {
+      "id": "fanatec_gt_dd_pro_wheel",
+      "brand": "Fanatec",
+      "name": "Steering wheel for Gran Turismo DD Pro (bundled, QR2 Lite or QR1 Lite)",
+      "type": "rim",
+      "platforms": {"ps": "with a PS-licensed base (GT DD Pro base)", "pc": "yes", "xbox": "no (not Xbox-licensed) [A]"},
+      "counts": {"buttons": 11, "dpad_hat": 1, "five_way_sticks_extra": 4, "shift_paddles": 2, "device_menu": 1, "multi_position": 0, "analogue_paddles": 0, "encoders": 0},
+      "controls": [
+        {"id": "face", "kind": "button", "count": 4, "label": "triangle/circle/cross/square", "ps": "pad", "evidence": "A", "note": "positions from Fanatec video frames (walkthrough section 1)"},
+        {"id": "l2_r2_tabs", "kind": "button", "count": 2, "ps": "pad l2/r2", "evidence": "A"},
+        {"id": "l3_r3_tabs", "kind": "button", "count": 2, "ps": "pad l3/r3", "evidence": "A"},
+        {"id": "ps", "kind": "button", "ps": "pad ps", "evidence": "A"},
+        {"id": "hub_buttons", "kind": "button", "count": 2, "label": "small round buttons under L2/R2 tabs (Create/Options shapes)", "ps": "probably pad create/options", "evidence": "A", "note": "names not confirmed by Fanatec"},
+        {"id": "menu_stick", "kind": "dpad_hat", "label": "5-way stick for menu navigation ('D-Pad')", "ps": "pad dpad (assumed)", "evidence": "V for the control, A for the signal"},
+        {"id": "extra_sticks", "kind": "dpad_hat", "count": 4, "label": "four additional 5-way sticks (coloured rings)", "ps": "game_specific", "evidence": "V for the control; U for the signal", "note": "community: preset-only in GT7, not mappable elsewhere; unavailable on older bases [V]"},
+        {"id": "paddles", "kind": "shift_paddle", "count": 2, "ps": "unknown (likely l1/r1) [U]"},
+        {"id": "tuning", "kind": "device_menu", "label": "Tuning Menu button (tiny, left of the OLED)", "ps": "none", "evidence": "V"}
+      ],
+      "notes": ["No MPS and no analogue paddles: the base manual says those Tuning Menu items are not supported by the included wheel [V]", "OLED + RevLED strip; telemetry output 'where supported' [V]", "Fanatec publishes no button-number table for this wheel [A]"],
+      "sources": ["FAN-GTDDP-PROD", "FAN-GTDDP-MAN", "WALKTHROUGH", "COMM-FAN-GTSTICKS"]
+    },
+    {
+      "id": "fanatec_csl_elite_mclaren_gt3_v2",
+      "brand": "Fanatec",
+      "name": "CSL Elite Steering Wheel McLaren GT3 V2 (QR2 Lite)",
+      "type": "rim",
+      "platforms": {"pc": "yes", "xbox": "yes (Xbox column in the guide)", "ps": "with a PS-licensed base"},
+      "counts": {"buttons": 9, "funky_7way": 1, "encoders": 2, "multi_position": 2, "shift_paddles": 2, "analogue_paddles": 2, "mode_selector": 1, "device_menu": 1},
+      "controls": [
+        {"id": "b1", "kind": "button", "pc": 12, "xbox": "lsb", "ps": "l3"},
+        {"id": "b2_N", "kind": "button", "pc": 9, "xbox": "view", "ps": "create"},
+        {"id": "b3", "kind": "button", "pc": 4, "xbox": "y", "ps": "triangle"},
+        {"id": "b4", "kind": "button", "pc": 1, "xbox": "x", "ps": "square"},
+        {"id": "b6", "kind": "button", "pc": 11, "xbox": "rsb", "ps": "r3"},
+        {"id": "b7_P", "kind": "button", "pc": 10, "xbox": "menu", "ps": "options"},
+        {"id": "b8", "kind": "button", "pc": 3, "xbox": "b", "ps": "circle"},
+        {"id": "b9", "kind": "button", "pc": 2, "xbox": "a", "ps": "cross"},
+        {"id": "b10", "kind": "button", "pc": 25, "xbox": "guide", "ps": "ps"},
+        {"id": "funky5", "kind": "funky_7way", "ps": "dirs dpad; push GSB 1; rotate GSB 2/3", "pc": "not in table [U]", "xbox": "not in table [U]"},
+        {"id": "enc11", "kind": "encoder", "pc": "34/32", "xbox": "lt/rt (folded)", "ps": "GSB 4/5"},
+        {"id": "enc12", "kind": "encoder", "pc": "33/31", "xbox": "lt/rt (folded)", "ps": "GSB 6/7"},
+        {"id": "paddles13_14", "kind": "shift_paddle", "pc": "6/5", "xbox": "lb/rb", "ps": "l1/r1"},
+        {"id": "ap16_17", "kind": "analogue_paddle", "count": 2, "pc": "A: clutch bite point (S0); B: handbrake+clutch (S0+S1); C: brake+throttle (RZ+Y); D: mappable (RX/RY)"},
+        {"id": "sel15", "kind": "mode_selector", "label": "centre rotary selecting paddle mode A-D", "evidence": "A (table row 15 + figure)"},
+        {"id": "mps18", "kind": "multi_position", "positions": 12, "pc": "ENC 37/38; PULSE/CONST 37-48", "ps": "GSB 8/9; GSB 8-19", "xbox": "none"},
+        {"id": "mps19", "kind": "multi_position", "positions": 12, "pc": "ENC 49/50; PULSE/CONST 49-60", "ps": "GSB 20/21; GSB 20-31", "xbox": "none"},
+        {"id": "tuning", "kind": "device_menu"}
+      ],
+      "evidence": "V (Fanatec quick guide table and figure; values as published, Xbox LT/RT for both encoders looks odd but is what the table says)",
+      "sources": ["FAN-MCL"]
+    },
+    {
+      "id": "fanatec_cs_formula_v25",
+      "brand": "Fanatec",
+      "name": "ClubSport Steering Wheel Formula V2.5 and V2.5 X",
+      "type": "rim",
+      "platforms": {"pc": "yes", "ps": "with a PS-licensed base", "xbox": "V2.5 X only"},
+      "counts": {"buttons": 11, "funky_7way": 1, "thumbstick": 1, "thumb_encoders": 2, "toggle_momentary": 2, "multi_position": 2, "shift_paddles": 2, "mode_selector": 1, "device_menu": 1, "analogue_paddles": "0 (2 with Podium Advanced Paddle Module) [A]"},
+      "controls": [
+        {"id": "funky1", "kind": "funky_7way", "pc": "dirs+press 25; rotate 23/24", "ps": "dirs+press GSB 1; rotate GSB 2/3", "xbox": "dirs+press 'A' (as published); rotate none"},
+        {"id": "stick2", "kind": "thumbstick", "pc": "press 26", "ps": "V2.5: GSB 4; V2.5 X table: 'GUIDE' (as published)", "xbox": "'HORN' (as published)"},
+        {"id": "face_and_menu", "kind": "button", "count": 11, "map": "3 PS/Guide 22; 4 Create/View 9; 5 Options/Menu 10; 6 R3/RSB 11; 8 L2/LT 8; 9 L3/LSB 12; 10 R2/RT 7; 13 Cross/A 2; 15 Circle/B 3; 16 Triangle/Y 4; 17 Square/X 1"},
+        {"id": "thumb7_14", "kind": "encoder", "count": 2, "pc": "27/21 and 36/35", "ps": "GSB 5/6 and 11/12", "xbox": "none"},
+        {"id": "toggle11_12", "kind": "toggle_momentary", "count": 2, "pc": "34/32 and 33/31 (up/down)", "ps": "GSB 7/8 and 9/10", "xbox": "lt/rt (folded)", "evidence": "V signals; 'toggle' identity A (retailer specs)"},
+        {"id": "paddles18_19", "kind": "shift_paddle", "pc": "6/5", "ps": "l1/r1", "xbox": "lb/rb"},
+        {"id": "mps20", "kind": "multi_position", "positions": 12, "pc": "ENC 37/38; 37-48", "ps": "GSB 13/14; 13-24", "xbox": "none"},
+        {"id": "mps21", "kind": "multi_position", "positions": 12, "pc": "ENC 49/50; 49-60", "ps": "GSB 25/26; 25-36", "xbox": "none"},
+        {"id": "centre22", "kind": "mode_selector", "label": "middle switch, 'No output to game'; selects analogue paddle function with the Podium Advanced Paddle Module", "evidence": "V"},
+        {"id": "tuning", "kind": "device_menu"}
+      ],
+      "sources": ["FAN-FV25", "FAN-FV25X", "FAN-ENC"]
+    },
+    {
+      "id": "fanatec_csl_p1_v2",
+      "brand": "Fanatec",
+      "name": "CSL Steering Wheel P1 V2",
+      "type": "rim",
+      "platforms": {"pc": "yes", "ps": "with a PS-licensed base", "xbox": "no in this table (an Xbox variant exists, not read) [U]"},
+      "counts": {"buttons": 12, "dpad_hat": 1, "shift_paddles": 2, "device_menu": 1},
+      "controls": [
+        {"id": "buttons", "kind": "button", "count": 12, "map": "1 L2/8; 2 R2/7; 3 GSB 1/12; 4 GSB 2/11; 5 Options/10; 6 Create/9; 7 Cross/2; 8 Circle/3; 9 Square/1; 10 Triangle/4; 11 GSB 3/27; 12 PS/22 (PS/PC)"},
+        {"id": "paddles", "kind": "shift_paddle", "map": "13 L1/6; 14 R1/5"},
+        {"id": "dstick15", "kind": "dpad_hat", "pc": "dirs + push 25", "ps": "dirs + push GSB 4"},
+        {"id": "tuning", "kind": "device_menu"}
+      ],
+      "notes": ["3 of 12 buttons are game-specific on PS"],
+      "sources": ["FAN-P1V2"]
+    },
+    {
+      "id": "fanatec_csl_elite_wrc",
+      "brand": "Fanatec",
+      "name": "CSL Elite Steering Wheel WRC (QR2 Lite)",
+      "type": "rim",
+      "platforms": {"pc": "yes", "xbox": "yes (Xbox-labelled buttons in Fanatec's photo) [A]", "ps": "with a PS-licensed base"},
+      "counts": {"buttons": "12 + Tuning (same numbered layout as P1 V2) [A]", "dpad_hat": 1, "shift_paddles": 2, "device_menu": 1},
+      "notes": ["Fanatec's WRC quick-guide page shows the P1 V2 mapping image (PC/PS columns only); Xbox labels printed on the buttons: LSB, View, Menu, Xbox, LT, RSB, RT, A, B, X, Y and a horn-symbol button [A]", "3-digit LED display"],
+      "sources": ["FAN-WRC"]
+    },
+    {
+      "id": "fanatec_cs_f1_esports_v2",
+      "brand": "Fanatec",
+      "name": "ClubSport Steering Wheel F1 Esports V2",
+      "type": "rim",
+      "platforms": {"pc": "yes", "ps": "PS-ready (needs PS-licensed base)", "xbox": "no"},
+      "counts": {"buttons": 11, "funky_7way": 1, "thumbstick": 1, "shift_paddles": 2, "device_menu": 1, "vibration_motors": 2},
+      "controls": [
+        {"id": "buttons", "kind": "button", "count": 11, "map": "1 Cross/2; 2 Circle/3; 3 Triangle/4; 4 Square/1; 5 Options/10; 6 Create/9; 7 R3/11; 8 L3/12; 9 R2/7; 10 L2/8; 13 PS/22"},
+        {"id": "paddles", "kind": "shift_paddle", "map": "11 R1/5; 12 L1/6"},
+        {"id": "stick14", "kind": "thumbstick", "pc": "press 26", "ps": "press = cross (folded with button 1)"},
+        {"id": "funky15", "kind": "funky_7way", "pc": "dirs; press 25; rotate 23/24", "ps": "dirs; press = cross (folded); rotate GSB 1/2"},
+        {"id": "tuning", "kind": "device_menu"}
+      ],
+      "notes": ["On PS three controls send Cross: a game or the F1 BUTN bit cannot tell them apart"],
+      "sources": ["FAN-F1V2", "SRCH-F1V2-SPECS"]
+    },
+    {
+      "id": "fanatec_podium_button_module_rally",
+      "brand": "Fanatec",
+      "name": "Podium Button Module Rally (for Podium Hub / ClubSport Universal Hub V2)",
+      "type": "button_module",
+      "platforms": {"pc": "yes", "ps": "with a PS-licensed base", "xbox": "with an Xbox-licensed hub"},
+      "counts": {"buttons": 9, "dpad_hat": 2, "multi_position": 3},
+      "controls": [
+        {"id": "pad1", "kind": "dpad_hat", "pc": "dirs + push 25", "ps": "dirs + push cross", "xbox": "dirs + push a"},
+        {"id": "pad2", "kind": "dpad_hat", "pc": "up 100, left 12, down 99, right 11; push 26", "ps": "up GSB, left L3, down GSB, right R3; push cross", "xbox": "all GSB; push a"},
+        {"id": "buttons", "kind": "button", "count": 9, "map": "3 PS/Guide/22; 4 Circle/B/3; 5 Triangle/Y/4; 6 R2/GSB/7; 7 L2/GSB/8; 8 Cross/A/2; 9 Square/X/1; 10 Options/Menu/10; 11 Create/View/9"},
+        {"id": "mps12_13_14", "kind": "multi_position", "count": 3, "positions": 12, "pc": "ENC 37/38 or 37-48; ENC 65/66 or 65-76; ENC 49/50 or 49-60", "ps": "GSB only", "xbox": "GSB only"}
+      ],
+      "notes": ["Fanatec marks some Xbox outputs as GSB too", "PC numbers above 32 (37-76, 99, 100) are invisible to 32-button APIs"],
+      "sources": ["FAN-PBMR", "FAN-ENC"]
+    },
+    {
+      "id": "logitech_g923_ps",
+      "brand": "Logitech",
+      "name": "G923 Racing Wheel for PS5/PS4/PC",
+      "type": "wheel_bundle",
+      "platforms": {"ps": "yes", "pc": "yes", "xbox": "no (separate Xbox version)"},
+      "counts": {"buttons": "14 incl. L2/R2, L3, R3, +/-, 4 face, Create, Options, PS", "dpad_hat": 1, "encoders": "1 (24-point selection dial with button)", "shift_paddles": 2},
+      "controls": [
+        {"id": "paddles", "kind": "shift_paddle", "count": 2},
+        {"id": "dpad", "kind": "dpad_hat"},
+        {"id": "l2_r2", "kind": "button", "count": 2, "ps": "pad"},
+        {"id": "l3", "kind": "button", "ps": "game_specific ('requires supported games')"},
+        {"id": "r3", "kind": "button", "ps": "game_specific"},
+        {"id": "plus_minus", "kind": "button", "count": 2, "ps": "game_specific"},
+        {"id": "face", "kind": "button", "count": 4, "ps": "pad"},
+        {"id": "create_options_ps", "kind": "button", "count": 3, "ps": "pad"},
+        {"id": "dial", "kind": "encoder", "positions": 24, "push": true, "ps": "not starred in the PS guide (support unclear) [U]"}
+      ],
+      "notes": ["Guide footnote: starred buttons need supported games on PS5/PS4; assignable in any game on PC (in-game or G HUB)"],
+      "sources": ["LOG-G923PS"]
+    },
+    {
+      "id": "logitech_g923_xbox",
+      "brand": "Logitech",
+      "name": "G923 Racing Wheel for Xbox/PC",
+      "type": "wheel_bundle",
+      "platforms": {"xbox": "yes", "pc": "yes", "ps": "no"},
+      "controls": [
+        {"id": "bumpers", "kind": "shift_paddle", "count": 2, "xbox": "lb/rb"},
+        {"id": "dpad", "kind": "dpad_hat", "xbox": "dpad"},
+        {"id": "view_menu_xbox", "kind": "button", "count": 3, "xbox": "pad"},
+        {"id": "face", "kind": "button", "count": 4, "xbox": "a/b/x/y"},
+        {"id": "lsb_rsb", "kind": "button", "count": 2, "xbox": "game_specific"},
+        {"id": "plus_minus", "kind": "button", "count": 2, "xbox": "game_specific"},
+        {"id": "dial", "kind": "encoder", "push": true, "xbox": "game_specific"}
+      ],
+      "notes": ["Guide footnote: starred items require supported games on Xbox One; assignable in any game on PC"],
+      "sources": ["LOG-G923XB"]
+    },
+    {
+      "id": "logitech_pro_racing_wheel_xbox",
+      "brand": "Logitech",
+      "name": "PRO Racing Wheel (Xbox/PC version; a PS/PC version exists, not read)",
+      "type": "wheel_bundle",
+      "platforms": {"xbox": "yes", "pc": "yes", "ps": "PS version exists [U]"},
+      "counts": {"buttons": "11 (X, Y, LT, A, B, RT, View, LSB, Menu, RSB, Xbox)", "dpad_hat": 1, "encoders": "2 adjustment dials with push", "shift_paddles": 2, "analogue_paddles": 2},
+      "controls": [
+        {"id": "dials", "kind": "encoder", "count": 2, "push": true, "note": "also drive the base's settings menu; starred in the guide"},
+        {"id": "dual_clutch", "kind": "analogue_paddle", "count": 2, "modes": "Clutch, Gas, Brake, Handbrake, Axis A, Axis B", "xbox": "handbrake / Axis A / Axis B may not respond: needs developer support"}
+      ],
+      "notes": ["G923 compatibility mode re-enumerates the wheel as a G923; dual clutch paddles then only work as gas/brake", "Peripheral ports accept Logitech racing peripherals only"],
+      "sources": ["LOG-PROXB"]
+    },
+    {
+      "id": "logitech_rs_wheel_hub",
+      "brand": "Logitech",
+      "name": "RS Wheel Hub (PC version, Xbox version; RS50 PS/PC system uses it with PS labels)",
+      "type": "hub",
+      "platforms": {"pc": "yes", "ps": "on a compatible PS Logitech base (RS50 PS)", "xbox": "Xbox hub variant on an Xbox base"},
+      "counts": {"buttons": 13, "dpad_hat": 1, "encoders": "2 thumb dials with push", "shift_paddles": 2},
+      "controls": [
+        {"id": "face", "kind": "button", "count": 4, "pc": "A 1, X 2, B 3, Y 4", "ps": "cross, square, circle, triangle"},
+        {"id": "lt_rt", "kind": "button", "count": 2, "pc": "LT 8, RT 7", "ps": "l2, r2"},
+        {"id": "lsb_rsb", "kind": "button", "count": 2, "pc": "LSB 12, RSB 11", "ps": "l3, r3"},
+        {"id": "g1_xbox", "kind": "button", "pc": 28, "ps": "ps"},
+        {"id": "view", "kind": "button", "pc": 9, "ps": "create"},
+        {"id": "menu", "kind": "button", "pc": 10, "ps": "options"},
+        {"id": "gl", "kind": "button", "pc": 29, "ps": "game_specific (newer titles only)", "xbox": "game_specific"},
+        {"id": "gr_share", "kind": "button", "pc": 30, "ps": "game_specific (GR)", "xbox": "Share on Xbox hub"},
+        {"id": "dial_left", "kind": "encoder", "push": true, "pc": "22/23 rotate, 24 push", "evidence": "A (icon reading)"},
+        {"id": "dial_right", "kind": "encoder", "push": true, "pc": "25/26 rotate, 27 push (push needs newer titles on console)", "evidence": "A (icon reading)"},
+        {"id": "dpad", "kind": "dpad_hat"},
+        {"id": "paddles", "kind": "shift_paddle", "count": 2, "ps": "l1 (down) / r1 (up) on RS50 PS"}
+      ],
+      "notes": ["Third-party rims can be bolted on (350 mm max recommended)", "Platform LED: green PC, blue PS, white Xbox", "On console, starred buttons only work in newer titles that support them"],
+      "sources": ["LOG-RSHUB", "LOG-RS50PS"]
+    },
+    {
+      "id": "thrustmaster_t248",
+      "brand": "Thrustmaster",
+      "name": "T248 (PS5/PS4/PC) and T248X (Xbox/PC) - Thrustmaster's 'hybrid' wheel family [A]",
+      "type": "wheel_bundle",
+      "platforms": {"ps": "T248", "xbox": "T248X", "pc": "both"},
+      "counts": {"shift_paddles": 2, "dpad_hat": 1, "toggle_momentary": 2, "virtual_layer": "E1-E4 (4 virtual encoders, each +, -, push)", "device_menu": 2},
+      "controls": [
+        {"id": "paddles", "kind": "shift_paddle", "pc": "1/2", "xbox": "lb/rb"},
+        {"id": "selector_left", "kind": "virtual_layer", "label": "encoder selector: up = next layer E1..E4, down = push (P)"},
+        {"id": "selector_right", "kind": "toggle_momentary", "label": "+/- encoder switch"},
+        {"id": "encoders_virtual", "kind": "encoder", "count": 4, "pc": "E1+/- 14/15, E2 17/16, E3 19/18, E4 21/20; pushes 11, 12, 24, 25 (from mapping figure) [A]", "ps": "game_specific: only games compatible with Thrustmaster encoders (F1 2020, F1 2021, GT Sport, ACC, upcoming)", "xbox": "folded: left switch D-pad right/left, right switch D-pad up/down"},
+        {"id": "lsb_rsb", "kind": "button", "count": 2, "pc": "10/9", "xbox": "game_specific (only some upcoming games)"},
+        {"id": "share_x2", "kind": "button", "count": 2, "pc": "22/23", "xbox": "both 'Share' (folded)"},
+        {"id": "mode_display", "kind": "device_menu", "count": 2, "note": "menus consume the directional buttons while open; DISPLAY not on Xbox"}
+      ],
+      "notes": ["On PC both show as 'Thrustmaster Advanced Racer'", "T248X manual: some features (encoders, number of action buttons) are limited by the console protocol"],
+      "sources": ["TM-T248PS", "TM-T248X"]
+    },
+    {
+      "id": "thrustmaster_t_gt_ii",
+      "brand": "Thrustmaster",
+      "name": "T-GT II (PS5/PS4/PC)",
+      "type": "wheel_bundle",
+      "platforms": {"ps": "yes", "pc": "yes", "xbox": "no"},
+      "counts": {"shift_paddles": 2, "dpad_hat": 1, "encoders": "4 rotary selectors with push", "thumbstick": "2 mini-sticks", "buttons": "L2, R2, 4 face, Create, Options, PS (+ L3/R3 on the base)"},
+      "controls": [
+        {"id": "rotaries", "kind": "encoder", "count": 4, "push": true, "pc": "E1 15/14/16, E2 18/17/19, E3 21/20/22, E4 24/23/25", "ps": "E1-E4 (+, -, push): game_specific [A]"},
+        {"id": "ministicks", "kind": "thumbstick", "count": 2, "ps": "'Left Stick' / 'Right Stick'", "pc": "not numbered in the generic mapping [U]"},
+        {"id": "base_switch", "kind": "mode_selector", "label": "base USB slide switch OTHER/GT (GT enables T-DFB effects in GT games)", "evidence": "V"}
+      ],
+      "sources": ["TM-TGT2"]
+    },
+    {
+      "id": "thrustmaster_sf1000_addon",
+      "brand": "Thrustmaster",
+      "name": "Formula Wheel Add-On Ferrari SF1000 Edition (rim for TX, TS-XW, T300, T-GT, TS-PC bases)",
+      "type": "rim",
+      "platforms": {"pc": "yes", "ps": "on a PS base (T300/T-GT)", "xbox": "on an Xbox base (TX/TS-XW), reduced"},
+      "counts": {"buttons": "up to 25 action buttons (marketing)", "shift_paddles": 2, "encoders": "2 thumb encoders + 2 rotary encoders with push (GRIP, ENG)", "dpad_hat": 1, "analogue_paddles": 2, "mode_selector": "E8 4-position (P1-P4) DAP selector", "unmapped": "3 central rotaries, PHASE rotary and a Y/N toggle are not in the generic mappings [A]"},
+      "controls": [
+        {"id": "thumb_encoders", "kind": "encoder", "count": 2, "pc": "14/15 and 17/16", "ps": "E1+/-, E2+/- (game_specific)", "xbox": "both D-pad up/down (folded)"},
+        {"id": "grip_eng", "kind": "encoder", "count": 2, "push": true, "pc": "18/24/19 and 20/25/21", "ps": "E3-/E3p/E3+, E4-/E4p/E4+ (game_specific)", "xbox": "both D-pad left/right (folded)"},
+        {"id": "dap", "kind": "analogue_paddle", "count": 2, "pc": "P1 Y/RZ; P2 Slider0/RY; P3 Slider0/Slider0; P4 RX/RY", "ps": "P1 brake/gas; P2 clutch/handbrake; P3 clutch/clutch; P4 left/right view (needs ministick-compatible game)", "xbox": "P1-P3 as PS; P4 nothing"}
+      ],
+      "notes": ["Xbox mapping sends A from two buttons (N, P), Y from two, LB and RB from a button and a paddle each", "T300 + SF1000 is recognised on PS as a T-GT base or Thrustmaster Advanced Racer", "Screen 'UDP mode' reads the game's UDP telemetry over Wi-Fi: may compete with pitwall for F1's UDP output [A]"],
+      "sources": ["TM-SF1000"]
+    },
+    {
+      "id": "thrustmaster_ts_pc_racer",
+      "brand": "Thrustmaster",
+      "name": "TS-PC Racer (PC only) and its bundled wheel",
+      "type": "wheel_bundle",
+      "platforms": {"pc": "yes", "ps": "no", "xbox": "no"},
+      "counts": {"shift_paddles": 2, "dpad_hat": 1, "encoders": "1 rotary switch with push", "buttons": "not counted [U]", "device_menu": 1},
+      "notes": ["Base accepts all Thrustmaster detachable wheels (599XX EVO 30, Ferrari F1, 458 Challenge, Leather 28 GT, Open Wheel)", "T300 rims are the same add-on family; inventories not researched; use the custom template"],
+      "sources": ["TM-TSPC"]
+    },
+    {
+      "id": "moza_es_esx",
+      "brand": "MOZA",
+      "name": "ES / ESX steering wheel",
+      "type": "rim",
+      "platforms": {"pc": "yes", "xbox": "ESX only (R3 bundle or supported bases); PC/Xbox mode by holding S1+S2 for 5 s", "ps": "no"},
+      "counts": {"buttons": 22, "thumbstick_or_joystick": 2, "shift_paddles": 2},
+      "notes": ["Xbox mode: some buttons disabled by the Xbox Steering Wheel Development Agreement; working: A, B, X, Y, LB, RB, LT, RT, D-pad, Menu, View, Xbox; paddles LB/RB; LSB/RSB only in some games", "All buttons work in PC mode", "Standalone ES is not Xbox-compatible"],
+      "sources": ["MOZA-ESX", "MOZA-XBFAQ"]
+    },
+    {
+      "id": "moza_cs_v2p",
+      "brand": "MOZA",
+      "name": "CS V2P steering wheel",
+      "type": "rim",
+      "platforms": {"pc": "yes", "xbox": "no [A]", "ps": "no"},
+      "counts": {"buttons": 6, "encoders": 2, "thumbstick_or_joystick": 2, "shift_paddles": 2},
+      "notes": ["Wireless ('Invisible Connect') with MOZA bases"],
+      "sources": ["MOZA-CSV2P"]
+    },
+    {
+      "id": "moza_gs_v2p",
+      "brand": "MOZA",
+      "name": "GS V2P GT wheel",
+      "type": "rim",
+      "platforms": {"pc": "yes", "xbox": "no [A]", "ps": "no"},
+      "counts": {"buttons": 10, "encoders": 5, "thumb_encoders": "2 (push)", "thumbstick_or_joystick": 2, "shift_paddles": 2, "analogue_paddles": 2},
+      "notes": ["Dual clutch modes: combined axis / independent axis / button", "Not compatible with R9 V1, R16 V1, R21 V1"],
+      "sources": ["MOZA-GSV2P"]
+    },
+    {
+      "id": "moza_ks",
+      "brand": "MOZA",
+      "name": "KS steering wheel",
+      "type": "rim",
+      "platforms": {"pc": "yes", "xbox": "no [A]", "ps": "no"},
+      "counts": {"buttons": 10, "multi_position_or_encoder": "3 (12-position)", "thumb_encoders": "2 (20-position)", "thumbstick_or_joystick": "2 (push)", "shift_paddles": 2, "analogue_paddles": 2},
+      "notes": ["70 programmable input signals (maker)", "Dual clutch modes: combined axis / independent axis / button", "Knob modes 'button or dial' (support spec via search) [A]"],
+      "sources": ["MOZA-KS"]
+    },
+    {
+      "id": "moza_fsr2",
+      "brand": "MOZA",
+      "name": "FSR2 formula wheel",
+      "type": "rim",
+      "platforms": {"pc": "yes", "xbox": "no [A]", "ps": "no"},
+      "counts": {"buttons": 10, "encoders": 2, "thumb_encoders": 3, "funky_7way": 2, "shift_paddles": 2, "analogue_paddles": 2},
+      "notes": ["4.3-inch touchscreen", "MOZA's own pages disagree on encoder counts (2 vs 5 rotary, 3 vs 2 thumb) [U]"],
+      "sources": ["MOZA-FSR2"]
+    },
+    {
+      "id": "simagic_gt_neo",
+      "brand": "Simagic",
+      "name": "GT NEO",
+      "type": "rim",
+      "platforms": {"pc": "yes", "xbox": "no [U]", "ps": "no [U]"},
+      "counts": {"buttons": 10, "funky_7way": "2 (listed as '7-way multi-position rotary switch')", "encoders": 4, "thumb_encoders": 2, "shift_paddles": "4 paddle modules"},
+      "sources": ["SIMAGIC-GTNEO"]
+    },
+    {
+      "id": "simucube_tahko_gt21",
+      "brand": "Simucube",
+      "name": "Tahko GT-21 (wireless)",
+      "type": "rim",
+      "platforms": {"pc": "yes [A]"},
+      "counts": {"funky_7way": 1, "device_menu": "Simucube button", "shift_paddles": 2, "other": "not listed in text [U]"},
+      "notes": ["Buttons arrive through the base/Link Hub as one 128-button, 8-axis controller"],
+      "sources": ["SC-TAHKO", "SC-REMAP"]
+    },
+    {
+      "id": "cammus_c12",
+      "brand": "Cammus",
+      "name": "C12 (integrated base and wheel)",
+      "type": "wheel_bundle",
+      "platforms": {"pc": "yes [U]", "ps": "no [U]", "xbox": "no [U]"},
+      "counts": {"buttons": "10 backlit [U]", "multi_position": "2 x 12-position [U]", "thumbstick": "1 analogue + 1 directional [U]", "encoders": "2 front + 2 side [U]"},
+      "sources": ["COMM-CAMMUS"]
+    },
+    {
+      "id": "custom",
+      "brand": "any",
+      "name": "Custom rim / button box (user counts each control kind; no maker data)",
+      "type": "custom",
+      "notes": ["Fallback for any rim, hub, button box or controller; in F1 the live 'press to identify' check (BUTN bits / UDP Action) fills in what the game actually sees [D]"]
+    }
+  ],
+  "sources": {
+    "FAN-PLAT": {"title": "Fanatec, Platform compatibility explained", "url": "https://www.fanatec.com/us/en/s/platform-compatibility", "kind": "official"},
+    "FAN-PSFAQ": {"title": "Fanatec help, PlayStation Compatibility FAQ (updated 2026-07-30)", "url": "https://help.fanatec.com/hc/en-us/articles/49324482078481-PlayStation-Compatibility-FAQ", "kind": "official"},
+    "FAN-GTDDP-PROD": {"title": "Fanatec GT DD Pro 5 Nm QR2L bundle page (features, compatibility)", "url": "https://www.fanatec.com/eu/en/p/sim-racing-bundles/crd-9020007-eu/gran-turismo-dd-pro-5nm-qr2l-eu", "kind": "official"},
+    "FAN-GTDDP-MAN": {"title": "GT DD Pro manual EN Rev.04 (p19 5.6) and Explorer manual (MPS/AP definitions)", "url": "https://www.fanatec.com/us/en/explorer/products/racing-wheels-wheel-bases/gran-turismo-dd-pro/", "kind": "official"},
+    "FAN-MCL": {"title": "Fanatec Explorer, CSL Elite Steering Wheel McLaren GT3 V2 quick guide", "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/csl-elite-steering-wheel-mclaren-qr2-lite/", "kind": "official"},
+    "FAN-FV25": {"title": "Fanatec Explorer, ClubSport Steering Wheel Formula V2.5 manual", "url": "https://www.fanatec.com/us/en/explorer/products/steering-wheel/wheel-cs-f-v25-qr-2/", "kind": "official"},
+    "FAN-FV25X": {"title": "Fanatec Explorer, ClubSport Steering Wheel Formula V2.5 X manual", "url": "https://www.fanatec.com/us/en/explorer/products/steering-wheel/wheel-cs-f-v25x-qr-2/", "kind": "official"},
+    "FAN-P1V2": {"title": "Fanatec Explorer, CSL Steering Wheel P1 V2 quick guide", "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/csl-sw-p1-v2/", "kind": "official"},
+    "FAN-WRC": {"title": "Fanatec Explorer, CSL Elite Steering Wheel WRC quick guide", "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/csl-e-sw-wrc-qr2l/", "kind": "official"},
+    "FAN-F1V2": {"title": "Fanatec Explorer, ClubSport Steering Wheel F1 Esports V2 quick guide", "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/clubsport-steering-wheel-f1-esports-v2-qr2-wheel-side/", "kind": "official"},
+    "FAN-PBMR": {"title": "Fanatec Explorer, Podium Button Module Rally quick guide", "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/p-bm-r/", "kind": "official"},
+    "FAN-ENC": {"title": "Fanatec Explorer, Using Rotary Encoders on your Fanatec Steering Wheel", "url": "https://www.fanatec.com/us/en/explorer/products/steering-wheel/rotary-encoders-on-fanatec-steering-wheel/", "kind": "official"},
+    "WALKTHROUGH": {"title": "pitwall docs/research/gt-dd-pro-ps5-walkthrough.md section 1", "url": "docs/research/gt-dd-pro-ps5-walkthrough.md", "kind": "internal"},
+    "LOG-G923PS": {"title": "Logitech G923 PS5/PS4 setup guide p6", "url": "https://www.logitech.com/assets/66156/3/g923-trueforce-racing-wheel-ps5-qsg.pdf", "kind": "official"},
+    "LOG-G923XB": {"title": "Logitech G923 Xbox One/PC setup guide p6", "url": "https://www.logitech.com/assets/65932/2/g923-racing-wheel-qsg.pdf", "kind": "official"},
+    "LOG-PROXB": {"title": "Logitech PRO Racing Wheel Xbox/PC setup guide p7-8, 14, 17", "url": "https://www.logitech.com/assets/70072/3/pro_racing_wheel_for_xb_&_pc_web_qsg_samr.pdf", "kind": "official"},
+    "LOG-RSHUB": {"title": "Logitech RS Wheel Hub setup guide p3-8", "url": "https://www.logitech.com/assets/70193/2/rs_wheel_hub_web_qsg_emea.pdf", "kind": "official"},
+    "LOG-RS50PS": {"title": "Logitech RS50 System/Base PS and PC setup guide p7-9", "url": "https://www.logitech.com/content/dam/support/simulation/rs50/rs50-ps-and-pc-setup-guide-amr.pdf", "kind": "official"},
+    "TM-T248PS": {"title": "Thrustmaster T248 (PS) user manual p2, p13", "url": "https://ts.thrustmaster.com/download/accessories/Manuals/T248/T248PS_User_manual.pdf", "kind": "official"},
+    "TM-T248X": {"title": "Thrustmaster T248X user manual p2, p13-14 and generic mapping", "url": "https://ts.thrustmaster.com/download/accessories/Manuals/T248/T248X_User_manual.pdf", "kind": "official"},
+    "TM-TGT2": {"title": "Thrustmaster T-GT II user manual p2, p11 and generic mapping", "url": "https://ts.thrustmaster.com/download/pictures/PCMAC/TGT_II/T-GT_II_Mapping.pdf", "kind": "official"},
+    "TM-SF1000": {"title": "Thrustmaster Formula Wheel Add-On Ferrari SF1000 user manual p9-11 and button mapping", "url": "https://ts.thrustmaster.com/download/pictures/PCMAC/SF1000/Ferrari_SF1000_button_mapping.pdf", "kind": "official"},
+    "TM-TSPC": {"title": "Thrustmaster TS-PC Racer user manual p2, compatible wheels list", "url": "https://ts.thrustmaster.com/download/accessories/Manuals/TSPCRacer/TSPCRacer_User_Manual.pdf", "kind": "official"},
+    "MOZA-BASEFAQ": {"title": "MOZA support, Wheel Base FAQs", "url": "https://support.mozaracing.com/support/solutions/articles/70000627811-wheel-base-faqs", "kind": "official"},
+    "MOZA-XBFAQ": {"title": "MOZA support, Xbox FAQ", "url": "https://support.mozaracing.com/en/support/solutions/articles/70000663979-xbox-faq", "kind": "official"},
+    "MOZA-ESX": {"title": "MOZA ESX steering wheel product page", "url": "https://mozaracing.com/products/esx-steering-wheel", "kind": "official"},
+    "MOZA-KS": {"title": "MOZA KS steering wheel product page", "url": "https://mozaracing.com/products/ks-gt-wheel", "kind": "official"},
+    "MOZA-CSV2P": {"title": "MOZA CS V2P product page", "url": "https://mozaracing.com/products/cs-v2p-wheel", "kind": "official"},
+    "MOZA-GSV2P": {"title": "MOZA GS V2P product page", "url": "https://mozaracing.com/products/gs-v2p-gt-wheel", "kind": "official"},
+    "MOZA-FSR2": {"title": "MOZA FSR2 product page", "url": "https://mozaracing.com/products/fsr2-formula-wheel", "kind": "official"},
+    "MOZA-TGS26": {"title": "MOZA news, PS5 racing wheels at TGS 2026", "url": "https://mozaracing.com/blogs/news/moza-tgs-2026", "kind": "official"},
+    "SC-REMAP": {"title": "Simucube docs, Tuner steering wheel input button remap", "url": "https://docs.simucube.com/TunerSoftware/steeringwheel/inputbuttonremap.html", "kind": "official"},
+    "SC-TAHKO": {"title": "Simucube docs, Tahko wheels", "url": "https://docs.simucube.com/Wheels/Tahko/Tahko.html", "kind": "official"},
+    "SIMAGIC-GTNEO": {"title": "Simagic GT NEO user manual", "url": "https://image.simagic.com/profile/upload/2024/05/15/SIMAGIC_GTNEO_UM.pdf", "kind": "official"},
+    "ASETEK-XBOX": {"title": "Asetek press release, SimSports partnership with Xbox", "url": "https://www.asetek.com/press-releases/asetek-simsports-announces-partnership-with-xbox/", "kind": "official"},
+    "MS-RWB": {"title": "Microsoft Learn, RacingWheelButtons (Windows.Gaming.Input)", "url": "https://learn.microsoft.com/en-us/uwp/api/windows.gaming.input.racingwheelbuttons", "kind": "official"},
+    "MS-GIRWB": {"title": "Microsoft Learn, GameInputRacingWheelButtons (GDK)", "url": "https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/input/gameinput/enums/gameinputracingwheelbuttons", "kind": "official"},
+    "MS-DIJS2": {"title": "Microsoft Learn, DIJOYSTATE2", "url": "https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416628(v=vs.85)", "kind": "official"},
+    "MS-JOYINFOEX": {"title": "Microsoft Learn, JOYINFOEX", "url": "https://learn.microsoft.com/en-us/windows/win32/api/joystickapi/ns-joystickapi-joyinfoex", "kind": "official"},
+    "EA-F1": {"title": "EA F1 25 UDP spec (pitwall copy): Event BUTN, Appendix 8.9, Participants m_platform", "url": "docs/research/f1-udp-spec.md", "kind": "official"},
+    "SRCH-F1V2-SPECS": {"title": "Fanatec F1 Esports V2 listing (11 buttons, 7-way FunkySwitch, analogue joystick), via search extract", "url": "https://fanatec.com/eu-en/clubsport-steering-wheel-f1-esports-v2", "kind": "official (not opened)"},
+    "COMM-FAN-GTSTICKS": {"title": "Fanatec forum threads on GT DD Pro coloured sticks (community)", "url": "https://forum.fanatec.com/discussion/comment/96212", "kind": "community"},
+    "COMM-SC32": {"title": "Simucube community: oldest games read only the first 32 buttons (community)", "url": "https://community.granitedevices.com/t/simbin-games-and-simucube-2/7851", "kind": "community"},
+    "COMM-CAMMUS": {"title": "OverTake, Cammus C12 article (community/press) and retailer FAQs", "url": "https://overtake.gg/news/comments/78515", "kind": "community"}
+  }
+}

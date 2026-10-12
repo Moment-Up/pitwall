@@ -427,9 +427,10 @@ In the game: **Settings › Telemetry Settings**.
 Packets appear on the Connect page within a second of being on track or in the garage. PC and Xbox use the same
 settings but have not been tested yet.
 
-For wheel push-to-talk: **Settings › Controls ›** your wheel, and assign a spare button to **UDP Action 1**.
-Pitwall reads the button through the telemetry stream. Use `PITWALL_VOICE_PTT_BUTTON=udp_action_2` (up to 12) for
-a different action.
+For wheel push-to-talk: in F1 25, **Controls > (your wheel's preset) > UDP Custom Actions**, and assign a spare button
+to **UDP Action 1** (or the action Pitwall's Setup › Controls shows for the driver in the seat). Pitwall reads the
+button through the telemetry stream; Setup › Controls maps your other buttons and tests them.
+`PITWALL_VOICE_PTT_BUTTON=udp_action_2` (up to 12) changes the fallback action.
 
 ### Gran Turismo 7 (tested live on PS5; PS4 untested)
 
@@ -594,7 +595,7 @@ voice), and typed questions always work.
 - **Microphone:** the device you talk into needs HTTPS (see
   [Tailscale](#with-https-through-tailscale-needed-for-the-microphone)) or must be the computer itself.
 - **Push-to-talk:** hold the on-screen button, the Space bar on a Mac's Drive pages, or a wheel button mapped to
-  UDP Action 1 in F1 25.
+  a UDP Action in F1 25 (UDP Action 1 by default; Setup › Controls).
 
 Say "radio check" to test it. [radio-setup.md](radio-setup.md) lists what you can ask.
 

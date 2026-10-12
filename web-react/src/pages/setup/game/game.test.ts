@@ -165,6 +165,14 @@ describe("What the game sends", () => {
     expect(text(html)).toContain("F1 25 sends car damage, but Pitwall reads only tyre wear from it so far.");
   });
 
+  it("the wheel push-to-talk row links to Setup › Controls (Map your buttons)", () => {
+    for (const id of ["f1_25:ps5", "gt7:ps5"]) {
+      const html = renderToStaticMarkup(createElement(FeaturesCard, { entry: entry(id, CAT), catalogue: CAT, wide: true }));
+      expect(html, id).toMatch(/<a[^>]*href="#\/setup\/controls"[^>]*>Map your buttons<\/a>/);
+      expect(html.match(/Map your buttons/g)?.length, id).toBe(1);
+    }
+  });
+
   it("another game: every feature unknown, nothing claimed", () => {
     const html = renderToStaticMarkup(createElement(FeaturesCard, { entry: entry("other:any", CAT), catalogue: CAT, wide: false }));
     const t = text(html);

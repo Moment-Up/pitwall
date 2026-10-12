@@ -175,7 +175,20 @@ class ValidationKit:
         )
 
     def catalog(self) -> dict[str, Any]:
-        return catalog_json(self.availability())
+        return catalog_json(self.availability(), ptt_words=self.ptt_words())
+
+    def ptt_words(self) -> str:
+        """The UDP Action(s) wheel push-to-talk listens to now (Setup › Controls), for the radio_ptt step."""
+        controls = getattr(self.rt, "controls", None)
+        if controls is None:
+            return "UDP Action 1"
+        try:
+            from pitwall.controls.ptt import ptt_text
+
+            return ptt_text(controls.ptt_now())
+        except Exception:
+            log.exception("validation: could not read the effective push-to-talk")
+            return "UDP Action 1"
 
     def _attach(self) -> None:
         if self.collector is None:
@@ -250,7 +263,7 @@ class ValidationKit:
             attest: dict[str, bool] = {}
             for m in it.marks:
                 attest.update(m.attestations)
-            ctx = E.AutoContext(now, it.windows, attest, ok, reason, tts, restarts, p95)
+            ctx = E.AutoContext(now, it.windows, attest, ok, reason, tts, restarts, p95, run.controls_layout)
             auto = E.compute_auto(it.id, vs, ctx)
             result = R.item_result(auto, it.marks, cat.per_driver, it.status == "skipped")
             if not auto.same_as(it.auto) or result != it.result:

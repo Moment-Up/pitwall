@@ -26,7 +26,7 @@ target, default `http://127.0.0.1:8770`), `PITWALL_DEV_PORT` (default 5174; `vit
 | Path | What |
 | --- | --- |
 | `src/routes.tsx` | Information architecture (spec 2.1, 12.1): Drive · Review · Setup · Settings and their pages. The single registry for the rail, the tab bar, the sub-nav Segments and the page components (Coach eager, the rest `React.lazy`) |
-| `src/lib/route-parse.ts` | Pure route parsing: page ids per area, defaults, legacy and interim redirects (2.4), landing rules (2.5), page params (`parseSessionParam`, `parseRigParam`, `parseCarSetupParam`), `withQuery` |
+| `src/lib/route-parse.ts` | Pure route parsing: page ids per area, defaults, legacy and interim redirects (2.4), landing rules (2.5), page params (`parseSessionParam`, `parseRigParam`, `parseControlsParam`, `parseCarSetupParam`), `withQuery` |
 | `src/lib/router.ts` | Hash router store: canonicalises legacy hashes with `replaceState` (keeps `?token=`), remembers each area's last page (`pitwall-area-pages`), `navigate` / `replace` / `goArea` |
 | `src/lib/prefs.ts` | Per-device display preferences (theme, Drive always dark, night, colour vision, Drive text size, dim navigation, Drive lock); applies them to `<html>`. `theme.ts` re-exports it |
 | `src/lib/cache.ts`, `src/hooks/useApi.ts` | Request cache (dedupe, `invalidate(prefix)`, refetch on focus) and its hook `useApi(key, fetcher, { intervalMs?, enabled? })` |

@@ -1,0 +1,35 @@
+{
+  "assignments": [
+    "ptt_pitwall.hold -> face_triangle:press (recommended, ev A)",
+    "drs_aero.press -> face_square:press (recommended, ev A)",
+    "overtake.press -> face_circle:press (recommended, ev A)",
+    "look.press -> face_cross:press (recommended, ev A)",
+    "pit_limiter.press -> tab_l2:press (recommended, ev A)",
+    "reset.press -> tab_r2:press (recommended, ev A)"
+  ],
+  "pitwall_ptt": {
+    "path": "udp_action",
+    "udp_action": 1,
+    "control_id": "face_triangle"
+  },
+  "not_on_wheel": [
+    "tc (pause_menu)",
+    "abs (pause_menu)",
+    "wing (no)",
+    "ride_height (no)"
+  ],
+  "not_in_game": [
+    "stability",
+    "lights"
+  ],
+  "unplaced": [],
+  "reserved": [
+    "ps (system)",
+    "hub_left (system)",
+    "hub_right (system)",
+    "paddle_left (gear_down)",
+    "paddle_right (gear_up)",
+    "tuning (wheel_menu)",
+    "menu_stick (mfd)"
+  ]
+}

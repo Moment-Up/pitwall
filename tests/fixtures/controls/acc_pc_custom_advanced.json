@@ -1,0 +1,31 @@
+{
+  "assignments": [
+    "tc.inc -> enc_l:cw (recommended, ev H)",
+    "tc.dec -> enc_l:ccw (recommended, ev H)",
+    "brake_bias.inc -> enc_r:cw (recommended, ev H)",
+    "brake_bias.dec -> enc_r:ccw (recommended, ev H)",
+    "mfd.select -> b1:press (recommended, ev H)",
+    "abs.inc -> b2:press (recommended, ev H)",
+    "abs.dec -> b3:press (recommended, ev H)",
+    "look.press -> b4:press (recommended, ev U)",
+    "pit_limiter.press -> b5:press (recommended, ev U)",
+    "lights.press -> b6:press (recommended, ev H)",
+    "wipers.press -> b7:press (recommended, ev H)",
+    "ignition.press -> b8:press (recommended, ev H)"
+  ],
+  "pitwall_ptt": {
+    "path": "screen"
+  },
+  "not_on_wheel": [],
+  "not_in_game": [
+    "stability",
+    "drs_aero",
+    "ride_height"
+  ],
+  "unplaced": [
+    "mfd",
+    "ignition",
+    "engine_map"
+  ],
+  "reserved": []
+}

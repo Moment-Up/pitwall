@@ -34,10 +34,13 @@ build from source without a HeroUI Pro licence, has its Radio page at `…:8443/
    address above.
 4. **AirPods hopping**: on your iPhone and Mac, Bluetooth -> AirPods (i) -> *Connect to This iPhone/Mac* ->
    **When Last Connected to This iPhone/Mac**, so the AirPod stays on the iPad during a session.
-5. **Wheel push-to-talk (F1 25)**: Settings -> Controls -> your wheel -> assign a spare button to
-   **UDP Action 1**. Pitwall receives presses through the game's telemetry (`BUTN` event); hold to talk,
-   release to send. Change the action with `PITWALL_VOICE_PTT_BUTTON=udp_action_2` etc.
-   UDP telemetry must be on (see [F1 25 settings](install.md#f1-25-tested-live-on-ps5)).
+5. **Wheel push-to-talk (F1 25)**: in F1 25, **Controls > (your wheel's preset) > UDP Custom Actions**, assign a
+   spare button to **UDP Action 1** (or the action Pitwall's **Setup › Controls** shows for the driver in the seat).
+   Pitwall receives presses through the game's telemetry (`BUTN` event); hold to talk, release to send. The radio
+   follows the seated driver's saved F1 25 layout without a restart; `PITWALL_VOICE_PTT_BUTTON=udp_action_2` (etc.)
+   changes the fallback action, which keeps working too. Setup › Controls › Test shows whether the button reaches
+   Pitwall. UDP telemetry must be on (see [F1 25 settings](install.md#f1-25-tested-live-on-ps5)). In other games
+   Pitwall can't see wheel buttons: use the on-screen button (or Space on a keyboard).
 
 ## Each session
 
@@ -150,7 +153,8 @@ messages are dropped. At quiet intensity drill points show on the screen only. F
 - *No microphone permission prompt / mic unavailable*: you are on http:// - use the https Tailscale URL.
 - *Audio comes out of the iPad speaker*: reconnect the AirPod to the iPad, then tap Go live again.
 - *Wheel button does nothing*: check UDP telemetry is reaching Pitwall (the connection pill on Drive says
-  **Live**) and that the button is mapped to UDP Action 1 in the game's controls.
+  **Live**) and that the button is mapped to the UDP Action Setup › Controls shows (UDP Action 1 by default) in the
+  game's controls; Setup › Controls › Test shows what F1 25 reports when you press it.
 - *Push-to-talk is heard but not understood*: the computer has no speech recognition (see the
   [table above](#voices-and-speech-recognition-by-platform)); `uv run pitwall doctor` shows the voice setup. Type the
   question instead.

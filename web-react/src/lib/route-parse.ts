@@ -33,7 +33,8 @@ export const AREA_PAGES: Readonly<Record<AreaId, readonly string[]>> = {
   drive: ["coach", "car", "track", "radio"],
   // "goals": goals, the week, streaks and badges, off Progress (integration plan 1.1, decision 6)
   review: ["sessions", "coaching", "progress", "goals", "ask"],
-  setup: ["game", "connect", "rig", "car", "validation"], // "validation": validation kit (lane validate)
+  // "controls": Controls and button mapping (feat/controls); "validation": validation kit (lane validate)
+  setup: ["game", "connect", "rig", "controls", "car", "validation"],
   settings: ["drivers", "radio", "ai", "display", "system"],
 };
 
@@ -250,6 +251,22 @@ export function parseRigParam(param: string | null): { view: RigView; section: s
   if (v !== "walk") return { view: v, section: null, n: null };
   const step = n !== undefined && /^\d+$/.test(n) && Number(n) > 0 ? Number(n) : null;
   return { view: "walk", section: section ? section : null, n: section ? step : null };
+}
+
+export type ControlsView = "layout" | "map" | "test" | "wheel";
+export const CONTROLS_VIEWS: readonly ControlsView[] = ["layout", "map", "test", "wheel"];
+
+/**
+ * `#/setup/controls[/map[/<n>]|/test|/wheel[/<wheel id>]]` -> { view, n, wheelId }. Layout is the default view; `n` is
+ * the 1-based Map it step (null when absent or not a positive integer) and `wheelId` the wheel My wheel edits (null:
+ * the page's wheel; "new": a blank one, "Build my own").
+ */
+export function parseControlsParam(param: string | null): { view: ControlsView; n: number | null; wheelId: string | null } {
+  const [view, arg] = (param ?? "").split("/");
+  const v: ControlsView = (CONTROLS_VIEWS as readonly (string | undefined)[]).includes(view) ? (view as ControlsView) : "layout";
+  const n = v === "map" && arg !== undefined && /^\d+$/.test(arg) && Number(arg) > 0 ? Number(arg) : null;
+  const wheelId = v === "wheel" && arg ? arg : null;
+  return { view: v, n, wheelId };
 }
 
 /** `#/setup/car[/session/<id>]` -> { sessionId } (null = the recommendation view; its inputs are in the query). */

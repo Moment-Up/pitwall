@@ -19,6 +19,7 @@ from pitwall.coach.cues import FALLBACK_REASONS, MARGIN_M, MIN_REF_BRAKE_PEAK
 from pitwall.validate.model import (
     AutoState,
     AutoVerdict,
+    ButtonRecord,
     Check,
     CheckStatus,
     CueRecord,
@@ -1134,6 +1135,58 @@ def game_selection_verdict(transitions: Sequence[GameTransition], now: float) ->
         metrics,
         now,
     )
+
+
+def _udp_number(name: str) -> int | None:
+    prefix = "UDP Action "
+    return int(name[len(prefix) :]) if name.startswith(prefix) and name[len(prefix) :].isdigit() else None
+
+
+def wheel_buttons_verdict(
+    buttons: Sequence[ButtonRecord], layout: Mapping[str, object] | None, now: float
+) -> AutoState:
+    """Setup › Controls (spec 6): every UDP Action in the seated driver's F1 25 layout seen at least once from the
+    live game during the run passes; only some seen is inconclusive. Never fails on its own (the driver says)."""
+    raw = layout.get("udp_actions") if layout is not None else None
+    expected = sorted({int(x) for x in raw if isinstance(x, int)}) if isinstance(raw, list) else []
+    seen = sorted({n for b in buttons for name in b.pressed if (n := _udp_number(name)) is not None})
+    metrics: dict[str, float | int | str | None] = {
+        "presses": len(buttons),
+        "expected": len(expected),
+        "seen": len([n for n in expected if n in seen]),
+    }
+    checks = [
+        check(f"udp_action_{n}", f"UDP Action {n} seen", n in seen, "yes" if n in seen else "no", "yes")
+        for n in expected
+    ]
+    if layout is None:
+        return state(
+            "no_evidence",
+            ["No F1 25 layout for the driver in the seat: save one in Setup › Controls"],
+            checks,
+            metrics,
+            now,
+        )
+    if not expected:
+        return state("no_evidence", ["The F1 25 layout has no UDP Action buttons"], checks, metrics, now)
+    if not buttons:
+        return state("no_evidence", ["No F1 25 button presses seen yet"], checks, metrics, now)
+    missing = [n for n in expected if n not in seen]
+    if not missing:
+        return state(
+            "pass",
+            [f"Every UDP Action in your layout reached Pitwall ({n_of(len(expected), 'button')})"],
+            checks,
+            metrics,
+            now,
+        )
+    got = [n for n in expected if n in seen]
+    why = (
+        f"Seen: {', '.join(f'UDP Action {n}' for n in got)}; not yet: {', '.join(f'UDP Action {n}' for n in missing)}"
+        if got
+        else "Presses seen, but none of your layout's UDP Actions yet"
+    )
+    return state("inconclusive", [why], checks, metrics, now)
 
 
 def switch_ok(s: SwitchRecord) -> tuple[bool | None, list[str]]:

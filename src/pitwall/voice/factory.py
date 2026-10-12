@@ -58,7 +58,10 @@ def build_radio_hub(
     db: Database,
     analyzer: SessionAnalyzer,
     drivers: DriverService | None = None,
+    ptt: dict[str, Any] | None = None,
 ) -> RadioHub:
+    """``ptt``: Setup › Controls' effective push-to-talk (``controls.ptt.effective_ptt``) to start from; the app keeps
+    the hub on it afterwards (``ControlsService.attach_radio``). Without it the deploy setting alone applies."""
     stt: Any = _NullStt()
     tts: Any = _NullTts()
     to_speech: Callable[[str], str] = lambda s: s  # noqa: E731
@@ -110,7 +113,7 @@ def build_radio_hub(
         add_motivation_facts(sheet, db, sa)  # lane motivation: goals, progress
         return sheet
 
-    return RadioHub(
+    hub = RadioHub(
         live=live,
         engineer=engineer,
         stt=stt,
@@ -125,6 +128,10 @@ def build_radio_hub(
         verify_tts=settings.tts_verify,
         persist_voice=lambda voice: save_voice_choice(voice_file, settings.tts_engine, voice),
     )
+    acts = (ptt or {}).get("udp_actions")
+    if isinstance(acts, list) and acts:
+        hub.set_ptt_actions([int(n) for n in acts if isinstance(n, int)], (ptt or {}).get("label"))
+    return hub
 
 
 VOICE_FILE = "radio_voice.json"

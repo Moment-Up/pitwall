@@ -222,6 +222,7 @@ def frame_to_dict(f: CarFrame) -> dict[str, Any]:
         "fuel_remaining_laps_game": r(f.fuel_remaining_laps_game, 2),
         "ers_store_j": r(f.ers_store_j, 0),
         "brake_bias_front_pct": f.brake_bias_front_pct,
+        "ers_deploy_mode": f.ers_deploy_mode,  # F1 enum (adapters.f1.enums.ERS_DEPLOY_MODE): Setup › Controls "now"
         "quality": int(f.quality),
     }
 
@@ -305,6 +306,7 @@ class LiveState:
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
+        self.button_origin = "live"  # origin of the last on_button call (controls probe; see on_button)
 
     # ------------------------------------------------------------- notifications
     def subscribe(self, fn: Callable[[str, dict[str, Any]], None]) -> None:
@@ -322,7 +324,10 @@ class LiveState:
         if fn in self._button_listeners:
             self._button_listeners.remove(fn)
 
-    def on_button(self, status: int) -> None:
+    def on_button(self, status: int, origin: str = "live") -> None:
+        """A game's button bit-flags. ``origin`` ("live" | "replay" | "synthetic") is stored before the fan-out, so a
+        listener (the controls button probe) can tell a replayed press from a live one; the radio hub ignores it."""
+        self.button_origin = origin
         for fn in list(self._button_listeners):
             with contextlib.suppress(Exception):
                 fn(status)

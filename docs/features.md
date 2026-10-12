@@ -145,7 +145,7 @@ been checked by hand, which so far is Austria.
 ![Drive › Radio](screenshots/06-drive-radio.png)
 
 The race engineer. Tap **Go live** once (the browser needs a tap before it plays audio), then hold the button,
-the Space bar on a Mac, or a wheel button mapped to F1 25's UDP Action 1, and ask. Questions about fuel, tyres,
+the Space bar on a Mac, or a wheel button mapped to an F1 25 UDP Action (Setup › Controls), and ask. Questions about fuel, tyres,
 lap times, flags and the safety car, gaps, strategy, technique, pace against the AI, goals, drills and radio control
 are answered at once from telemetry. While the car is moving every answer is built from the facts at once, never by
 the language model and never with "Copy, checking". Stopped, analysis questions go to the language model if there is
@@ -425,6 +425,20 @@ Lighter force for younger or newer drivers goes in their own slot.
 The **rig check** reads your last session's telemetry (19 measures) to see whether the hardware reports what you
 do. Its thresholds are heuristics from one rig, and the load-cell checks are unverified. Details:
 [rig-setup.md](rig-setup.md).
+
+### Controls
+
+Which button does what, for any wheel and any researched game (F1 25, Gran Turismo 7, Assetto Corsa, ACC, Forza,
+iRacing, Le Mans Ultimate, rFactor 2, Automobilista 2, RaceRoom, AC EVO, or another game you name). Start from one of
+23 researched wheels, rims and button boxes (Fanatec, Logitech, Thrustmaster, MOZA, Simagic, Simucube, Cammus) or build
+your own. **Layout** suggests a place for each function with one line of reasoning (frequent adjustments on encoders
+and under your thumbs, Talk to Pitwall on a plain thumb button) and lists what the game doesn't let you change while
+driving (ride height in any game, GT7's ASM and ABS, F1 25's traction control and ABS). **Map it** walks you through
+the game's controls screen one card at a time, with the game's own name for each action. **Test** (F1 25 only) shows
+what the game reports when you press each mapped button, and **Identify** what any control sends; other games don't
+send button presses. The radio's wheel push-to-talk follows your saved F1 25 layout, and the engineer answers "which
+button is brake bias?". Print the card or copy it as text. Everything is research only, with its evidence shown;
+nothing is validated until you test it on your rig. Details: [controls.md](controls.md).
 
 ### Car setup
 

@@ -22,7 +22,7 @@ describe("page registry (src/routes.tsx)", () => {
     expect(Object.fromEntries(AREAS.map((a) => [a.label, a.pages.map((p) => p.label)]))).toEqual({
       Drive: ["Coach", "Car", "Track", "Radio"],
       Review: ["Sessions", "Coaching", "Progress", "Goals", "Ask"],
-      Setup: ["Game", "Connect", "Rig", "Car setup", "Validation"],
+      Setup: ["Game", "Connect", "Rig", "Controls", "Car setup", "Validation"],
       Settings: ["Drivers", "Radio & voice", "AI engineer", "Display", "System"],
     });
   });

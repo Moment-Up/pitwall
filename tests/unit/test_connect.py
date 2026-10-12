@@ -41,3 +41,19 @@ def test_unsupported_games_point_to_github_issues() -> None:
     record = next(g for g in guides if any("open an issue" in n for n in g.notes))
     assert any(connect.ISSUES_URL in n for n in record.notes)
     assert connect.ISSUES_URL == "https://github.com/Moment-Up/pitwall/issues"
+
+
+def test_the_f1_push_to_talk_step_uses_the_effective_action_and_the_researched_path() -> None:
+    """Setup › Controls: the Connect guide names the UDP Action(s) wheel push-to-talk listens to and EA's menu path
+    (Controls > your wheel's preset > UDP Custom Actions); without a layout the deploy setting applies."""
+    s = Settings(_env_file=None)  # type: ignore[call-arg]
+    f1 = next(g for g in connect.game_guides("192.168.1.10", s) if g.id == "f1_25")
+    step = f1.extras[0]
+    assert step.label == connect.PTT_MENU_PATH == "Controls > (your wheel's preset) > UDP Custom Actions"
+    assert step.value == "UDP Action 1"
+    ptt = {"udp_actions": [3, 1], "from": "layout", "label": "Right thumb button"}
+    f1 = next(g for g in connect.game_guides("192.168.1.10", s, ptt_info=ptt) if g.id == "f1_25")
+    assert f1.extras[0].value == "UDP Action 3 or 1" and "Right thumb button" in f1.extras[0].note
+    info = connect.connect_info(s, None, "tok", [], ptt)
+    f1d = next(g for g in info["guides"] if g["id"] == "f1_25")
+    assert f1d["extras"][0]["value"] == "UDP Action 3 or 1"

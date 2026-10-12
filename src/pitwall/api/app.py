@@ -160,6 +160,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         # --- coachref --- drill intents ("start a drill on turn 3") are answered by core.coachref, never the LLM
         app.state.engineer.drill_handler = rt.coachref.radio_command
         radio_engineer.drill_handler = rt.coachref.radio_command
+        # Setup › Controls: "which button is brake bias?" from the seated driver's saved layout, never the LLM
+        app.state.engineer.controls_handler = rt.controls.answer
+        radio_engineer.controls_handler = rt.controls.answer
         app.state.hub = None
         app.state.radio_detach = None
 
@@ -173,11 +176,19 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             from pitwall.voice.factory import build_radio_hub
 
             try:
-                hub = build_radio_hub(settings, rt.live, radio_engineer, rt.db, app.state.analyzer, rt.drivers)
+                hub = build_radio_hub(
+                    settings, rt.live, radio_engineer, rt.db, app.state.analyzer, rt.drivers, ptt=rt.controls.ptt_now()
+                )
                 hub.start()
                 app.state.hub = hub
                 # The radio follows whoever is in the seat: their coaching amount, voice switch and skill limits.
                 loop = asyncio.get_running_loop()
+                # Setup › Controls: wheel push-to-talk follows the seated driver's F1 25 layout (no restart), and the
+                # button test pauses it. Both are marshalled onto the hub's loop.
+                rt.controls.attach_radio(
+                    lambda acts, label: loop.call_soon_threadsafe(hub.set_ptt_actions, acts, label),
+                    lambda on: loop.call_soon_threadsafe(hub.suspend_wheel_ptt, on),
+                )
 
                 def radio_follows(d: Any) -> None:
                     loop.call_soon_threadsafe(hub.apply_driver, d)
@@ -211,6 +222,7 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
                     log.exception("validation kit close failed")
             if app.state.radio_detach is not None:
                 app.state.radio_detach()
+            rt.controls.attach_radio(None, None)
             if app.state.hub is not None:
                 await app.state.hub.stop()
             rt.close()
@@ -549,6 +561,11 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
 
             entry = games.entry(r.live.effective_game_id())
             intent = detect_intent(body.question)
+            if intent.name == "controls_where":  # Setup › Controls: the saved layout answers it, no session needed
+                from pitwall.ai.facts import FactSheet
+
+                ctl = await request.app.state.engineer.answer(body.question, FactSheet(), [], use_llm=False)
+                return {"session_id": None, **asdict(ctl)}
             if games.capability_only(intent.name, entry) and entry is not None:
                 cap = await request.app.state.engineer.answer(
                     body.question, games.capability_sheet(entry), [], use_llm=False
@@ -616,7 +633,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         from pitwall.connect import connect_info
 
         r = rt(request)
-        info = await asyncio.to_thread(connect_info, settings, tailscale_dns, token, r.input_status())
+        info = await asyncio.to_thread(
+            connect_info, settings, tailscale_dns, token, r.input_status(), r.controls.ptt_now()
+        )
         conn = r.live.connection()
         sess = r.live.session
         decode = conn.get("decode") or {}
@@ -840,6 +859,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_validate import router as validate_router  # validation kit (lane validate)
 
     app.include_router(validate_router)
+    from pitwall.api.routes_controls import router as controls_router  # Setup › Controls
+
+    app.include_router(controls_router)
 
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias

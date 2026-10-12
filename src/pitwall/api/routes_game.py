@@ -81,7 +81,9 @@ def entry_guide(rt: Runtime, entry: games.GameEntry) -> dict[str, Any] | None:
     ac_ip = ac.get("console_ip") if isinstance(ac.get("console_ip"), str) else None
     ac_platform = ac.get("platform") if isinstance(ac.get("platform"), str) else None
     ip = primary_lan_ip() or f"<{this_machine()}'s IP>"
-    guide = next((g for g in game_guides(ip, rt.settings, ac_ip, ac_platform) if g.id == entry.guide_id), None)
+    controls = getattr(rt, "controls", None)  # Setup › Controls: the effective push-to-talk action
+    ptt = controls.ptt_now() if controls is not None else None
+    guide = next((g for g in game_guides(ip, rt.settings, ac_ip, ac_platform, ptt) if g.id == entry.guide_id), None)
     return None if guide is None else asdict(guide)
 
 

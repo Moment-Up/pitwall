@@ -25,6 +25,7 @@ from pitwall.analysis.laps import LapTrace
 from pitwall.validate import rules as R
 from pitwall.validate.model import (
     AutoState,
+    ButtonRecord,
     ClientSample,
     ClientState,
     CueRecord,
@@ -532,6 +533,7 @@ class View:
     decode: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)
     inputs: Mapping[str, Mapping[str, Any]] | None = None
     tiers: TierPred = lambda _t: True
+    buttons: list[ButtonRecord] = field(default_factory=list)  # Setup › Controls (wheel_buttons)
 
 
 def make_view(ev: Evidence, clients: Sequence[ClientState], tiers: TierPred, live: bool) -> View:
@@ -552,6 +554,7 @@ def make_view(ev: Evidence, clients: Sequence[ClientState], tiers: TierPred, liv
         decode=ev.decode,
         inputs=ev.inputs if live else None,
         tiers=tiers,
+        buttons=[r for r in ev.buttons if tiers(r.tier)],
     )
 
 
@@ -565,6 +568,7 @@ class AutoContext:
     tts_name: str | None = None
     tts_restarts: int | None = None
     synth_p95_ms: float | None = None
+    controls_layout: Mapping[str, Any] | None = None  # Run.controls_layout (wheel_buttons)
 
 
 def in_windows(t: float, windows: Sequence[Window], now: float) -> bool:
@@ -696,6 +700,10 @@ def _switch(v: View, ctx: AutoContext) -> AutoState:
     return R.switch_verdict([s for s in v.switches if in_windows(s.t_unix, ctx.windows, ctx.now)], ctx.now)
 
 
+def _wheel_buttons(v: View, ctx: AutoContext) -> AutoState:
+    return R.wheel_buttons_verdict(v.buttons, ctx.controls_layout, ctx.now)
+
+
 def _n_game(game: str) -> Count:
     return lambda v, _c: sum(1 for s in v.sessions if s.game == game)
 
@@ -722,6 +730,7 @@ RULES: dict[str, tuple[Rule, Count]] = {
     "gt7_ps5": (_gt7, _n_game("gt7")),
     "game_selection": (_game_sel, lambda v, c: sum(1 for t in v.game if in_windows(t.t_unix, c.windows, c.now))),
     "driver_switch": (_switch, lambda v, c: sum(1 for s in v.switches if in_windows(s.t_unix, c.windows, c.now))),
+    "wheel_buttons": (_wheel_buttons, lambda v, _c: len(v.buttons)),
 }
 
 
@@ -735,7 +744,7 @@ def _not_live(t: str) -> bool:
 
 def _tiers_of(v: View) -> list[Tier]:
     out: list[Tier] = []
-    for group in (v.cues, v.ptt, v.proactive, v.laps, v.switches, v.synth, v.sessions, v.game, v.phases):
+    for group in (v.cues, v.ptt, v.proactive, v.laps, v.switches, v.synth, v.sessions, v.game, v.phases, v.buttons):
         out += [r.tier for r in group]
     out += [s.tier for c in v.clients for s in c.samples if v.tiers(s.tier)]
     return out

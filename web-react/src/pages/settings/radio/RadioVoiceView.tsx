@@ -6,7 +6,7 @@
 // Pure: everything comes in as props (the radio state, the Mac's HTTP status, the store's actions), so the render
 // tests drive it with plain objects. RadioVoicePage wires it to the stores.
 
-import { Alert, Button } from "@heroui/react";
+import { Alert, Button, Link } from "@heroui/react";
 import { GoLiveButton, micChipView } from "../../../components/radio";
 import type { VoiceStatus } from "../../../lib/endpoints/settings";
 import type { RadioState, RadioStore, VoiceSource } from "../../../lib/radio";
@@ -91,12 +91,15 @@ export interface RadioVoiceViewProps {
   actions: RadioActions;
   /** Show the Go live button in the banner (false in render tests that check the copy only). */
   goLive?: boolean;
+  /** How push-to-talk works (Setup › Controls): "Wheel in F1 25: UDP Action 3 (Circle) · iPad button · Space", and
+   * where to change it. Undefined while unknown (an older server, or not loaded yet): the row is left out. */
+  ptt?: { line: string; href: string };
 }
 
 const SPEED_MIN = 0.8;
 const SPEED_MAX = 1.3;
 
-export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, goLive = true }: RadioVoiceViewProps) {
+export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, goLive = true, ptt }: RadioVoiceViewProps) {
   const link = linkState(r);
   const linkUp = link === "open";
   const mac = macState(linkUp ? r.server : null, status);
@@ -248,6 +251,13 @@ export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, g
               choices={COACHING}
               onChange={(c) => actions.setIntensity(c)}
             />
+            {ptt ? (
+              <CellRow title="Push to talk" hint={ptt.line}>
+                <Link href={ptt.href} className="inline-flex min-h-11 items-center text-sm font-medium">
+                  Map your buttons
+                </Link>
+              </CellRow>
+            ) : null}
             <DiagnosticsRow
               mac={mac}
               summary={diagnosticsSummary({ source, deviceTtsCapable: deviceTts, noun, mac, link, micLabel: micChipView(r).label })}

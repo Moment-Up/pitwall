@@ -113,6 +113,15 @@ _REFERENCE_WHO = re.compile(
     re.I,
 )
 # --- coachref ---
+# Setup › Controls: "which button is brake bias?", "where is DRS on my wheel?", "button for the pit limiter?" (never
+# "what brake bias should I run?", which stays a setup question). Answered from the saved layout, never the LLM.
+_CONTROL_WORDS = r"(?:buttons?|switch(?:es)?|dials?|knobs?|rotar(?:y|ies)|encoders?|paddles?|sticks?|toggles?|rockers?)"
+_CONTROLS_WHERE = re.compile(
+    r"\b(?:which|what)\s+(?:\w+\s+)?" + _CONTROL_WORDS + r"\b"
+    r"|\bwhere(?:['\u2019]s|\s+is|\s+are|\s+do\s+i\s+find)\b.{0,40}?\bon\s+(?:my|the)\s+(?:wheel|rim|button\s*box)\b"
+    r"|\b" + _CONTROL_WORDS + r"\s+for\b",
+    re.I,
+)
 
 _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("radio_check", re.compile(r"\b(radio check|can you hear me|do you (?:read|copy)(?: me)?|mic check)\b", re.I)),
@@ -123,6 +132,7 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("drill_start", _DRILL_START),
     ("reference", _REFERENCE_WHO),
     # --- coachref ---
+    ("controls_where", _CONTROLS_WHERE),  # Setup › Controls (RaceEngineer.controls_handler)
     (
         "control_quiet",
         re.compile(
@@ -401,6 +411,8 @@ class EngineerAnswer:
 
 DRILL_INTENTS = frozenset({"drill_start", "drill_status", "drill_stop"})  # --- coachref ---
 DrillHandler = Callable[[Intent, str], tuple[str, dict[str, Any]]]
+CONTROLS_INTENT = "controls_where"  # Setup › Controls
+ControlsHandler = Callable[[Intent, str], str]
 
 
 class RaceEngineer:
@@ -410,6 +422,8 @@ class RaceEngineer:
         self.temperature = temperature
         # --- coachref --- drill intents go here (blocking: run in a worker thread), never to the LLM
         self.drill_handler: DrillHandler | None = None
+        # Setup › Controls: "which button is brake bias?" (controls.service.ControlsService.answer; blocking)
+        self.controls_handler: ControlsHandler | None = None
 
     async def answer(
         self,
@@ -427,6 +441,8 @@ class RaceEngineer:
             return self._control(intent, t0)
         if intent.name in DRILL_INTENTS:  # --- coachref ---
             return await self._drill(intent, question, t0)
+        if intent.name == CONTROLS_INTENT:
+            return await self._controls(intent, question, t0)
         if intent.name == "radio_check":
             text = "Loud and clear. Radio check OK."
             return EngineerAnswer(
@@ -510,6 +526,29 @@ class RaceEngineer:
         )
 
     # --- coachref ---
+
+    async def _controls(self, intent: Intent, question: str, t0: float) -> EngineerAnswer:
+        """Which control does what, from the seated driver's saved layout: deterministic, never the LLM."""
+        handler = self.controls_handler
+        if handler is None:
+            text = "Button layouts aren't available right now."
+        else:
+            try:
+                text = await asyncio.to_thread(handler, intent, question)
+            except Exception:
+                log.exception("controls answer failed")
+                text = "I can't read your button layouts right now."
+        speech = re.sub(r"\s\+\s", " plus ", re.sub(r"\s\u2212\s", " minus ", f" {text} ")).strip()
+        return EngineerAnswer(
+            text=text,
+            speech=speech,
+            intent=intent.name,
+            corner=None,
+            facts=[],
+            grounded=True,
+            fallback=False,
+            latency_ms=int((time.perf_counter() - t0) * 1000),
+        )
 
     def _control(self, intent: Intent, t0: float) -> EngineerAnswer:
         if intent.name == "control_quiet":

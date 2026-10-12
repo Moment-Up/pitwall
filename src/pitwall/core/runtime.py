@@ -22,6 +22,7 @@ from pitwall.adapters.base import GameAdapter
 from pitwall.analysis.brake_prior import BrakeEnvelope, PriorRefresher
 from pitwall.analysis.field_model import FieldSnapshot
 from pitwall.config import Settings
+from pitwall.controls.service import ControlsService
 from pitwall.core.coachref import CoachRef
 from pitwall.core.lap_processor import AnalysisWorker, LapProcessor
 from pitwall.core.live import LiveState
@@ -216,6 +217,15 @@ class Runtime:
         )
         self._seated = self.drivers.active_id
         self.drivers.subscribe(self._on_driver)
+        # Setup › Controls: the F1 button probe (ingest thread, O(1)), the button test and push-to-talk that follows
+        # the seated driver's F1 25 layout. Built whether or not voice is on (the app attaches the radio hub).
+        self.controls = ControlsService(self.store, self.live, self.drivers, settings.voice_ptt_button)
+        self.controls.senders = self._f1_senders
+
+    def _f1_senders(self) -> list[dict[str, Any]]:
+        """Who is sending to the F1 port (Setup › Controls: a loopback sender is not a console)."""
+        inp = self.inputs.get(self.integration_configs()["f1"].port)
+        return [dict(s) for s in inp.listener.source_snapshot()] if inp is not None else []
 
     # ------------------------------------------------------------------ live UDP (all games)
     @property
@@ -592,6 +602,7 @@ class Runtime:
     def close(self) -> None:
         self._unsubscribe()
         self._unsubscribe_game()
+        self.controls.close()
         self.drivers.unsubscribe(self._on_driver)
         self.stop_replay()
         with self._ilock:

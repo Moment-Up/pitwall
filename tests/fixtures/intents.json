@@ -1,5 +1,5 @@
 {
-  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge. final-review = the v0.2.0 final review: race questions never go to the reference rule, drill commands led by 'alright', 'yes', 'can we', rain questions before strategy, 'what place am I?'.",
+  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge. final-review = the v0.2.0 final review: race questions never go to the reference rule, drill commands led by 'alright', 'yes', 'can we', rain questions before strategy, 'what place am I?'. controls = Setup › Controls: \"which button is ...?\" from the saved layout (a question about a brake bias value stays setup).",
   "questions": [
     {"question": "How am I doing so far?", "intent": "summary", "corner": null, "from": "review"},
     {"question": "What's my gap to the AI?", "intent": "ai_pace", "corner": null, "from": "review"},
@@ -204,6 +204,14 @@
     {"question": "Will it rain before my pit window?", "intent": "weather", "corner": null, "from": "final-review"},
     {"question": "Is the track drying, should I stay out?", "intent": "weather", "corner": null, "from": "final-review"},
     {"question": "Where am I losing time in the rain?", "intent": "losing_time", "corner": null, "from": "final-review"},
-    {"question": "What place am I?", "intent": "gaps", "corner": null, "from": "final-review"}
+    {"question": "What place am I?", "intent": "gaps", "corner": null, "from": "final-review"},
+    {"question": "Which button is brake bias?", "intent": "controls_where", "corner": null, "from": "controls"},
+    {"question": "What button do I press for DRS?", "intent": "controls_where", "corner": null, "from": "controls"},
+    {"question": "Where is brake bias on my wheel?", "intent": "controls_where", "corner": null, "from": "controls"},
+    {"question": "Which dial is the differential?", "intent": "controls_where", "corner": null, "from": "controls"},
+    {"question": "Button for the pit limiter?", "intent": "controls_where", "corner": null, "from": "controls"},
+    {"question": "Which button is push to talk?", "intent": "controls_where", "corner": null, "from": "controls"},
+    {"question": "Where's the ERS mode on my wheel?", "intent": "controls_where", "corner": null, "from": "controls"},
+    {"question": "What brake bias should I run?", "intent": "setup", "corner": null, "from": "controls"}
   ]
 }

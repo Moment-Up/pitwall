@@ -184,6 +184,16 @@ class SessionManager:
             driver,
         )
 
+    @property
+    def button_origin(self) -> str:
+        """Origin of this stream's button presses for ``LiveState.on_button``: a replay or a synthetic stream shares
+        live state with the real one, so the controls button test must not count its presses."""
+        if self.synthetic:
+            return "synthetic"
+        if self.source.startswith("replay:"):
+            return "replay"
+        return "live"
+
     def end(self) -> None:
         if self.session_id is None:
             return
@@ -231,7 +241,7 @@ class SessionManager:
             # menus send button events with no session: drive PTT but don't create an empty session
             self.live.on_event(e)
             if e.kind == EventKind.BUTTON and isinstance(e.payload.get("buttonStatus"), int):
-                self.live.on_button(e.payload["buttonStatus"])
+                self.live.on_button(e.payload["buttonStatus"], self.button_origin)
             return
         if self.session_id is None:
             self._start(e.game.value, e.t_recv_ns)
@@ -439,7 +449,7 @@ class SessionManager:
         if e.kind == EventKind.BUTTON:
             status = e.payload.get("buttonStatus")
             if isinstance(status, int):
-                self.live.on_button(status)  # wheel push-to-talk etc.
+                self.live.on_button(status, self.button_origin)  # wheel push-to-talk, the controls button test
             return  # very frequent; not useful to persist
         sid = self.session_id
         assert sid is not None

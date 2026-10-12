@@ -225,6 +225,32 @@ def test_team_names_match_the_spec_appendix(spec_doc: str) -> None:
     assert enums.team_name(8) == "McLaren" and enums.team_name(162) == "DAMS '24"
 
 
+# ---------------------------------------------------------------- appendix 8.9: BUTN button flags
+def _spec_button_flags(spec_doc: str) -> dict[int, str]:
+    text = section(spec_doc, "### 8.9 Button flags", "### 8.10")
+    out: dict[int, str] = {}
+    for line in text.splitlines():
+        if not line.startswith("| 0x"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        for bit, name in zip(cells[0::2], cells[1::2], strict=True):
+            out[int(bit, 16)] = name
+    return out
+
+
+def test_button_flags_match_the_spec_appendix(spec_doc: str) -> None:
+    from pitwall.adapters.f1 import enums
+
+    spec = _spec_button_flags(spec_doc)
+    assert len(spec) == 32 and sorted(spec) == [1 << i for i in range(32)]
+    assert spec == enums.BUTTON_FLAGS  # all 32 bits, named exactly as the spec names them
+    assert all(enums.udp_action_bit(n) == 0x00100000 << (n - 1) for n in range(1, 13))
+    assert enums.BUTTON_FLAGS[enums.udp_action_bit(3)] == "UDP Action 3"
+    assert enums.button_names(0x48000) == ["Right Stick Left", "Right Stick Down"]
+    with pytest.raises(ValueError):
+        enums.udp_action_bit(13)
+
+
 def test_session_car_name_comes_from_the_team_table() -> None:
     """Synthetic packets, only to exercise the id -> name mapping (no game-compatibility claim)."""
     from pitwall.sim.f1_stream import F1Scenario, generate_f1_session

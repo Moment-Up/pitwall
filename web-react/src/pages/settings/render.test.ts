@@ -120,6 +120,14 @@ describe("Settings › Radio & voice", () => {
     }
   });
 
+  it("push to talk (Setup › Controls): the wheel's UDP Action, the iPad and Space, with a link; left out while unknown", () => {
+    const t = text(render({ ptt: { line: "Wheel in F1 25: UDP Action 3 (Circle) and UDP Action 1 · iPad button · Space", href: "#/setup/controls" } }));
+    expect(t).toContain("Push to talk");
+    expect(t).toContain("Wheel in F1 25: UDP Action 3 (Circle) and UDP Action 1 · iPad button · Space");
+    expect(t).toContain("Map your buttons");
+    expect(text(render())).not.toContain("Map your buttons");
+  });
+
   it("radio off with no status yet: nothing guessed (no mode selected, Mac voice '-')", () => {
     const m = render({ status: undefined });
     const t = text(m);

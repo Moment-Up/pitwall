@@ -1,0 +1,1428 @@
+{
+ "_fixture": {
+  "source": "backend-b1 fixture: produced by calling src/pitwall/controls (catalog/templates/recommend/steps) directly in Python on the feat/controls worktree before the API existed. Not an HTTP answer; regenerate by calling those modules again.",
+  "status": 200,
+  "note": "template fanatec_gt_dd_pro_wheel, gt7 on ps5, advanced"
+ },
+ "body": {
+  "wheel": {
+   "id": "w_d8c01858",
+   "rev": 0,
+   "name": "GT DD Pro wheel",
+   "template": "fanatec_gt_dd_pro_wheel",
+   "template_version": "2026-10-12/1",
+   "shape": "round",
+   "platforms": [
+    "ps",
+    "pc"
+   ],
+   "parts": [
+    {
+     "id": "rim",
+     "kind": "rim",
+     "name": "GT DD Pro wheel"
+    }
+   ],
+   "controls": [
+    {
+     "id": "face_triangle",
+     "part": "rim",
+     "kind": "button",
+     "label": "Triangle",
+     "zone": "right_thumb",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "triangle",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "face_square",
+     "part": "rim",
+     "kind": "button",
+     "label": "Square",
+     "zone": "right_thumb",
+     "order": 2,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "square",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "face_circle",
+     "part": "rim",
+     "kind": "button",
+     "label": "Circle",
+     "zone": "right_thumb",
+     "order": 3,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "circle",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "face_cross",
+     "part": "rim",
+     "kind": "button",
+     "label": "Cross",
+     "zone": "right_thumb",
+     "order": 4,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "cross",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "tab_l2",
+     "part": "rim",
+     "kind": "button",
+     "label": "L2 tab",
+     "zone": "left_top",
+     "order": 0,
+     "reach": "stretch",
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "l2",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "tab_r2",
+     "part": "rim",
+     "kind": "button",
+     "label": "R2 tab",
+     "zone": "right_top",
+     "order": 0,
+     "reach": "stretch",
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "r2",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "tab_l3",
+     "part": "rim",
+     "kind": "button",
+     "label": "L3 tab",
+     "zone": "centre_bottom",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "l3",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "ps",
+     "part": "rim",
+     "kind": "button",
+     "label": "PS button",
+     "zone": "centre_bottom",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "ps",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "tab_r3",
+     "part": "rim",
+     "kind": "button",
+     "label": "R3 tab",
+     "zone": "centre_bottom",
+     "order": 2,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "r3",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "hub_left",
+     "part": "rim",
+     "kind": "button",
+     "label": "Left hub button",
+     "zone": "centre_top",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Under the L2 tab. Research: probably Create (from its shape; Fanatec doesn't name it)."
+    },
+    {
+     "id": "hub_right",
+     "part": "rim",
+     "kind": "button",
+     "label": "Right hub button (≡)",
+     "zone": "centre_top",
+     "order": 2,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Under the R2 tab. Research: probably Options (from its shape; Fanatec doesn't name it)."
+    },
+    {
+     "id": "menu_stick",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Menu stick",
+     "zone": "left_lower",
+     "order": 0,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "pad",
+       "value": "dpad",
+       "evidence": "A",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "per_slot": {
+        "up": "dpad_up",
+        "down": "dpad_down",
+        "left": "dpad_left",
+        "right": "dpad_right",
+        "push": "unknown:"
+       },
+       "seen": null
+      }
+     },
+     "evidence": "V",
+     "note": "Fanatec calls it the D-Pad. That it sends the D-pad is assumed in the research."
+    },
+    {
+     "id": "stick_green",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Green-ring stick",
+     "zone": "left_top",
+     "order": 1,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "game_specific",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "COMM-FAN-GTSTICKS"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+    },
+    {
+     "id": "stick_blue",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Blue-ring stick",
+     "zone": "left_thumb",
+     "order": 0,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "game_specific",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "COMM-FAN-GTSTICKS"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+    },
+    {
+     "id": "stick_red",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Red-ring stick",
+     "zone": "right_top",
+     "order": 1,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "game_specific",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "COMM-FAN-GTSTICKS"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+    },
+    {
+     "id": "stick_yellow",
+     "part": "rim",
+     "kind": "dpad_hat",
+     "label": "Yellow-ring stick",
+     "zone": "right_thumb",
+     "order": 0,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "game_specific",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "COMM-FAN-GTSTICKS"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+    },
+    {
+     "id": "paddle_left",
+     "part": "rim",
+     "kind": "shift_paddle",
+     "label": "Left shift paddle",
+     "zone": "back_left",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Research: likely L1 (unverified)."
+    },
+    {
+     "id": "paddle_right",
+     "part": "rim",
+     "kind": "shift_paddle",
+     "label": "Right shift paddle",
+     "zone": "back_right",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      },
+      "ps": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [
+        "WALKTHROUGH",
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": "Research: likely R1 (unverified)."
+    },
+    {
+     "id": "tuning",
+     "part": "rim",
+     "kind": "device_menu",
+     "label": "Tuning Menu button",
+     "zone": "centre_top",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "none",
+       "value": null,
+       "evidence": "V",
+       "source_ids": [
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      },
+      "ps": {
+       "kind": "none",
+       "value": null,
+       "evidence": "V",
+       "source_ids": [
+        "FAN-GTDDP-MAN"
+       ],
+       "seen": null
+      }
+     },
+     "evidence": "V",
+     "note": ""
+    }
+   ],
+   "created_unix": 0.0,
+   "updated_unix": 0.0
+  },
+  "rec": {
+   "game": "gt7",
+   "platform": "ps5",
+   "wheel_id": "w_d8c01858",
+   "preset": "advanced",
+   "driver_id": 1,
+   "catalogue_version": "2026-10-12/1",
+   "status": "research_only",
+   "assignments": [
+    {
+     "key": "tc.fixed",
+     "function": "tc",
+     "action": "fixed",
+     "control_id": "stick_blue",
+     "slot": null,
+     "udp_action": null,
+     "origin": "game_fixed",
+     "check": null,
+     "label": "Traction control fixed",
+     "native": "TCS (MFD page)",
+     "menu_group": null,
+     "control_label": "Blue-ring stick",
+     "signal": {
+      "kind": "game_specific",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [
+       "COMM-FAN-GTSTICKS"
+      ],
+      "seen": null
+     },
+     "reason": "Traction control: Gran Turismo 7 sets the blue-ring stick itself, so Pitwall can't change it (which colour does what is community-reported).",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "gt7m_mfd",
+      "gt7m_assist",
+      "fan_pvgt_gt7",
+      "fan_forum_gt7_extra",
+      "og_gt7_pad",
+      "repo_gt7",
+      "COMM-FAN-GTSTICKS"
+     ],
+     "conditions": [
+      "through the MFD's TCS page"
+     ],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "brake_bias.fixed",
+     "function": "brake_bias",
+     "action": "fixed",
+     "control_id": "stick_red",
+     "slot": null,
+     "udp_action": null,
+     "origin": "game_fixed",
+     "check": null,
+     "label": "Brake bias fixed",
+     "native": "Brake Balance (MFD page)",
+     "menu_group": null,
+     "control_label": "Red-ring stick",
+     "signal": {
+      "kind": "game_specific",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [
+       "COMM-FAN-GTSTICKS"
+      ],
+      "seen": null
+     },
+     "reason": "Brake bias: Gran Turismo 7 sets the red-ring stick itself, so Pitwall can't change it (which colour does what is community-reported).",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "gt7m_mfd",
+      "fan_forum_gt7_extra",
+      "COMM-FAN-GTSTICKS"
+     ],
+     "conditions": [
+      "only cars with a Brake Controller part fitted"
+     ],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "engine_map.fixed",
+     "function": "engine_map",
+     "action": "fixed",
+     "control_id": "stick_green",
+     "slot": null,
+     "udp_action": null,
+     "origin": "game_fixed",
+     "check": null,
+     "label": "Engine map / fuel mix fixed",
+     "native": "Fuel Map (MFD page; 1 = power, higher = leaner)",
+     "menu_group": null,
+     "control_label": "Green-ring stick",
+     "signal": {
+      "kind": "game_specific",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [
+       "COMM-FAN-GTSTICKS"
+      ],
+      "seen": null
+     },
+     "reason": "Engine map / fuel mix: Gran Turismo 7 sets the green-ring stick itself, so Pitwall can't change it (which colour does what is community-reported).",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "gt7m_mfd",
+      "gt7m_pit",
+      "fan_pvgt_gt7",
+      "fan_forum_gt7_extra",
+      "COMM-FAN-GTSTICKS"
+     ],
+     "conditions": [
+      "only in events with fuel use on"
+     ],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "diff.fixed",
+     "function": "diff",
+     "action": "fixed",
+     "control_id": "stick_yellow",
+     "slot": null,
+     "udp_action": null,
+     "origin": "game_fixed",
+     "check": null,
+     "label": "Differential fixed",
+     "native": "Front/Rear Torque Distribution (MFD page)",
+     "menu_group": null,
+     "control_label": "Yellow-ring stick",
+     "signal": {
+      "kind": "game_specific",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [
+       "COMM-FAN-GTSTICKS"
+      ],
+      "seen": null
+     },
+     "reason": "Differential: Gran Turismo 7 sets the yellow-ring stick itself, so Pitwall can't change it (which colour does what is community-reported).",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "gt7m_mfd",
+      "fan_pvgt_gt7",
+      "fan_forum_gt7_extra",
+      "COMM-FAN-GTSTICKS"
+     ],
+     "conditions": [
+      "four-wheel-drive cars only"
+     ],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "mfd.up",
+     "function": "mfd",
+     "action": "up",
+     "control_id": "menu_stick",
+     "slot": "up",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box up",
+     "native": "MFD Selection Left/Right, MFD Up/Down",
+     "menu_group": null,
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: Gran Turismo 7 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "gt7m_mfd",
+      "fan_pvgt_gt7",
+      "og_gt7_pad",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "mfd.down",
+     "function": "mfd",
+     "action": "down",
+     "control_id": "menu_stick",
+     "slot": "down",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box down",
+     "native": "MFD Selection Left/Right, MFD Up/Down",
+     "menu_group": null,
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: Gran Turismo 7 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "gt7m_mfd",
+      "fan_pvgt_gt7",
+      "og_gt7_pad",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "mfd.left",
+     "function": "mfd",
+     "action": "left",
+     "control_id": "menu_stick",
+     "slot": "left",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box left",
+     "native": "MFD Selection Left/Right, MFD Up/Down",
+     "menu_group": null,
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: Gran Turismo 7 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "gt7m_mfd",
+      "fan_pvgt_gt7",
+      "og_gt7_pad",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "mfd.right",
+     "function": "mfd",
+     "action": "right",
+     "control_id": "menu_stick",
+     "slot": "right",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "MFD / black box right",
+     "native": "MFD Selection Left/Right, MFD Up/Down",
+     "menu_group": null,
+     "control_label": "Menu stick",
+     "signal": {
+      "kind": "pad",
+      "value": "dpad",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "per_slot": {
+       "up": "dpad_up",
+       "down": "dpad_down",
+       "left": "dpad_left",
+       "right": "dpad_right",
+       "push": "unknown:"
+      },
+      "seen": null
+     },
+     "reason": "MFD on Menu stick: Gran Turismo 7 uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "gt7m_mfd",
+      "fan_pvgt_gt7",
+      "og_gt7_pad",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "overtake.press",
+     "function": "overtake",
+     "action": "press",
+     "control_id": "face_triangle",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Overtake / boost",
+     "native": "Nitro / Overtake",
+     "menu_group": null,
+     "control_label": "Triangle",
+     "signal": {
+      "kind": "pad",
+      "value": "triangle",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Overtake / boost on Triangle: you need it at a precise moment, so it's under your thumb.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "gt7m_screen",
+      "og_gt7_pad",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [
+      "only cars with Nitro or an overtake system"
+     ],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "drs_aero.press",
+     "function": "drs_aero",
+     "action": "press",
+     "control_id": "face_square",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "DRS / active aero",
+     "native": "DRS (via the Overtake indicator/button on cars that have it)",
+     "menu_group": null,
+     "control_label": "Square",
+     "signal": {
+      "kind": "pad",
+      "value": "square",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "DRS / active aero on Square: you use it often, so it's under your thumb.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "gt7m_screen",
+      "og_gt7_pad",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [
+      "DRS cars only; which button is unverified"
+     ],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "look.press",
+     "function": "look",
+     "action": "press",
+     "control_id": "face_circle",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Look back / left / right",
+     "native": "Look back (rear view)",
+     "menu_group": null,
+     "control_label": "Circle",
+     "signal": {
+      "kind": "pad",
+      "value": "circle",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Look back / left / right on Circle: you use it now and then, so it's under your thumb.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "U",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "og_gt7_pad",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "lights.press",
+     "function": "lights",
+     "action": "press",
+     "control_id": "face_cross",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Lights",
+     "native": "Headlights toggle; turn signals / hazards",
+     "menu_group": null,
+     "control_label": "Cross",
+     "signal": {
+      "kind": "pad",
+      "value": "cross",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Lights on Cross: you use it rarely, so it's under your thumb.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "U",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "og_gt7_pad",
+      "repo_gt7",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "camera.press",
+     "function": "camera",
+     "action": "press",
+     "control_id": "tab_l2",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Change camera",
+     "native": "Change view",
+     "menu_group": null,
+     "control_label": "L2 tab",
+     "signal": {
+      "kind": "pad",
+      "value": "l2",
+      "evidence": "A",
+      "source_ids": [
+       "WALKTHROUGH",
+       "FAN-GTDDP-MAN"
+      ],
+      "seen": null
+     },
+     "reason": "Change camera on L2 tab: you rarely need it, so it's on a control you have to reach for.",
+     "evidence": "A",
+     "evidence_parts": {
+      "game": "V",
+      "wheel": "A"
+     },
+     "source_ids": [
+      "gt7m_views",
+      "WALKTHROUGH",
+      "FAN-GTDDP-MAN"
+     ],
+     "conditions": [],
+     "warnings": [
+      "GT7's preset for this wheel may already use this control."
+     ],
+     "pitwall_sees": null
+    }
+   ],
+   "pitwall_ptt": {
+    "path": "screen",
+    "text": "Gran Turismo 7 doesn't send wheel button presses, so Pitwall can't see your wheel. Talk to Pitwall with the iPad's talk button, or hold Space on a keyboard."
+   },
+   "not_on_wheel": [
+    {
+     "function": "abs",
+     "label": "ABS",
+     "why": "pause_menu",
+     "text": "GT7's stability control (ASM) and ABS are only in the pause menu, under Assistance Settings. They can't go on a button."
+    },
+    {
+     "function": "stability",
+     "label": "Stability control",
+     "why": "pause_menu",
+     "text": "GT7's stability control (ASM) and ABS are only in the pause menu, under Assistance Settings. They can't go on a button."
+    },
+    {
+     "function": "wing",
+     "label": "Wing",
+     "why": "no",
+     "text": "Wing angles are a setup item in every game researched. F1 25 2026 cars switch Active Aero to Straight Line Mode on the DRS/S Mode button inside the zones only; other games have DRS on cars that have it."
+    },
+    {
+     "function": "ride_height",
+     "label": "Ride height / weight jacker",
+     "why": "no",
+     "text": "No game Pitwall knows lets you change ride height while driving. F1 25 and GT7 only show it in the car setup; iRacing's weight jacker on some oval cars is the closest thing."
+    },
+    {
+     "function": "reset",
+     "label": "Flashback / rewind / reset",
+     "why": "no",
+     "text": "In GT7, Retry is in the pause menu, not on a button."
+    }
+   ],
+   "not_in_game": [
+    {
+     "function": "pit_limiter",
+     "label": "Pit limiter",
+     "text": "GT7 has no pit limiter button: the game takes control in the pit lane."
+    },
+    {
+     "function": "ptt_game",
+     "label": "The game's own push-to-talk",
+     "text": "GT7 has no push-to-talk of its own (voice chat is on the PS5)."
+    }
+   ],
+   "unplaced": [],
+   "reserved": [
+    {
+     "control_id": "ps",
+     "as": "system",
+     "label": "Console button"
+    },
+    {
+     "control_id": "hub_left",
+     "as": "system",
+     "label": "Console button"
+    },
+    {
+     "control_id": "hub_right",
+     "as": "system",
+     "label": "Console button"
+    },
+    {
+     "control_id": "paddle_left",
+     "as": "gear_down",
+     "label": "Gear down"
+    },
+    {
+     "control_id": "paddle_right",
+     "as": "gear_up",
+     "label": "Gear up"
+    },
+    {
+     "control_id": "tuning",
+     "as": "wheel_menu",
+     "label": "The wheel's own menu"
+    }
+   ],
+   "notes": [
+    "Pitwall suggests where things go, never the values to use."
+   ]
+  },
+  "guide": {
+   "where": "the game's button assignment screen for your wheel",
+   "where_evidence": "A",
+   "intro": [
+    "In Gran Turismo 7, open the game's button assignment screen for your wheel.",
+    "The official manual says each listed wheel has its own button assignment screen; the exact menu path was not researched.",
+    "GT7's preset for this wheel may already use this control.",
+    "Nothing to map for Traction control, Brake bias, Engine map / fuel mix, Differential: Gran Turismo 7 sets those itself."
+   ],
+   "steps": [
+    {
+     "n": 1,
+     "group": null,
+     "native": "Nitro / Overtake",
+     "label": "Overtake / boost",
+     "physical": "Press TRIANGLE (Triangle)",
+     "evidence": "A",
+     "note": "only cars with Nitro or an overtake system"
+    },
+    {
+     "n": 2,
+     "group": null,
+     "native": "DRS (via the Overtake indicator/button on cars that have it)",
+     "label": "DRS / active aero (Nitro / Overtake (unverified for DRS))",
+     "physical": "Press SQUARE (Square)",
+     "evidence": "A",
+     "note": "DRS cars only; which button is unverified"
+    },
+    {
+     "n": 3,
+     "group": null,
+     "native": "MFD Selection Left/Right, MFD Up/Down",
+     "label": "MFD / black box down (MFD Down)",
+     "physical": "Push MENU STICK down (D-pad down)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 4,
+     "group": null,
+     "native": "MFD Selection Left/Right, MFD Up/Down",
+     "label": "MFD / black box left (MFD Selection Left)",
+     "physical": "Push MENU STICK left (D-pad left)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 5,
+     "group": null,
+     "native": "MFD Selection Left/Right, MFD Up/Down",
+     "label": "MFD / black box right (MFD Selection Right)",
+     "physical": "Push MENU STICK right (D-pad right)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 6,
+     "group": null,
+     "native": "MFD Selection Left/Right, MFD Up/Down",
+     "label": "MFD / black box up (MFD Up)",
+     "physical": "Push MENU STICK up (D-pad up)",
+     "evidence": "A",
+     "note": null
+    },
+    {
+     "n": 7,
+     "group": null,
+     "native": "Headlights toggle; turn signals / hazards",
+     "label": "Lights (Headlights)",
+     "physical": "Press CROSS (Cross)",
+     "evidence": "U",
+     "note": null
+    },
+    {
+     "n": 8,
+     "group": null,
+     "native": "Look back (rear view)",
+     "label": "Look back / left / right (Look Back)",
+     "physical": "Press CIRCLE (Circle)",
+     "evidence": "U",
+     "note": null
+    },
+    {
+     "n": 9,
+     "group": null,
+     "native": "Change view",
+     "label": "Change camera (Change View)",
+     "physical": "Press L2 TAB (L2)",
+     "evidence": "A",
+     "note": null
+    }
+   ],
+   "outro": [
+    "Check each one on track: Pitwall can't see your wheel in Gran Turismo 7."
+   ]
+  }
+ }
+}

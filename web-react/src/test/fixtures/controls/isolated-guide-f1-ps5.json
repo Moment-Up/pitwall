@@ -1,0 +1,148 @@
+{
+ "_fixture": {
+  "source": "isolated-server answer: GET on an isolated `pitwall serve` (127.0.0.1:8904, scratch data dir, LLM and voice off, UDP on 127.0.0.1:20904 with no game) from the feat/controls worktree while the backend was in progress, after the dashboard saved the recommended F1 25 PS5 layout for the GT DD Pro template. Not a live rig.",
+  "status": 200,
+  "note": "GET /api/controls/layouts/l_5e6d806d/guide?platform=ps5"
+ },
+ "body": {
+  "where": "Controls > [your wheel's preset]",
+  "where_evidence": "V",
+  "intro": [
+   "In F1 25, open Controls > [your wheel's preset].",
+   "EA's controls hub lists driving controls, MFD shortcuts and UDP custom actions per device; the exact screen names on the console are not re-checked [U].",
+   "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923).",
+   "F1 25 may drop or swap an action that was already on a button when you rebind it (unverified): check the list after each change."
+  ],
+  "steps": [
+   {
+    "n": 1,
+    "group": "Control Scheme",
+    "native": "Activate/Deactivate DRS/S Mode (2026 cars: Active Aero Corner <-> Straight Line Mode)",
+    "label": "DRS / active aero (Activate/Deactivate DRS/S Mode)",
+    "physical": "Press SQUARE (Square)",
+    "evidence": "A",
+    "note": "2025 cars: DRS, in DRS zones 2026 cars: Active Aero Straight Line Mode, only in zones; the game returns to Corner Mode when you turn, brake or lift"
+   },
+   {
+    "n": 2,
+    "group": "Control Scheme",
+    "native": "Overtake/Boost",
+    "label": "Overtake / boost",
+    "physical": "Press CIRCLE (Circle)",
+    "evidence": "A",
+    "note": "2026 cars: Overtake Mode once unlocked at the Detection Line"
+   },
+   {
+    "n": 3,
+    "group": "Control Scheme",
+    "native": "Pit Limiter",
+    "label": "Pit limiter",
+    "physical": "Press SQUARE (Square)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 4,
+    "group": "Control Scheme",
+    "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+    "label": "MFD / black box down (MFD Menu Down)",
+    "physical": "Push MENU STICK down (D-pad down)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 5,
+    "group": "Control Scheme",
+    "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+    "label": "MFD / black box left (MFD Menu Left)",
+    "physical": "Push MENU STICK left (D-pad left)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 6,
+    "group": "Control Scheme",
+    "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+    "label": "MFD / black box right (MFD Menu Right)",
+    "physical": "Push MENU STICK right (D-pad right)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 7,
+    "group": "Control Scheme",
+    "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+    "label": "MFD / black box (open) (MFD)",
+    "physical": "Press MENU STICK in",
+    "evidence": "A",
+    "note": "What this control sends isn't known: check it in the game."
+   },
+   {
+    "n": 8,
+    "group": "Control Scheme",
+    "native": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+    "label": "MFD / black box up (MFD Menu Up)",
+    "physical": "Push MENU STICK up (D-pad up)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 9,
+    "group": "Control Scheme",
+    "native": "Radio/Voice Commands",
+    "label": "Team radio menu",
+    "physical": "Press CROSS (Cross)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 10,
+    "group": "MFD Shortcuts",
+    "native": "ERS Mode Increase / Decrease (MFD shortcut)",
+    "label": "ERS / hybrid mode − (ERS Mode Decrease)",
+    "physical": "Press L2 TAB (L2)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 11,
+    "group": "MFD Shortcuts",
+    "native": "ERS Mode Increase / Decrease (MFD shortcut)",
+    "label": "ERS / hybrid mode + (ERS Mode Increase)",
+    "physical": "Press R2 TAB (R2)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 12,
+    "group": "MFD Shortcuts",
+    "native": "Brake Bias Increase / Decrease (MFD shortcut)",
+    "label": "Brake bias − (Brake Bias Decrease)",
+    "physical": "Press R3 TAB (R3)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 13,
+    "group": "MFD Shortcuts",
+    "native": "Brake Bias Increase / Decrease (MFD shortcut)",
+    "label": "Brake bias + (Brake Bias Increase)",
+    "physical": "Press L3 TAB (L3)",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 14,
+    "group": "UDP Custom Actions",
+    "native": "UDP Action 1",
+    "label": "Talk to Pitwall",
+    "physical": "Press TRIANGLE (Triangle)",
+    "evidence": "A",
+    "note": null
+   }
+  ],
+  "outro": [
+   "Open Test to check each button reaches Pitwall."
+  ]
+ }
+}

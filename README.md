@@ -201,8 +201,11 @@ live session; the live PS5 tests so far used the classic dashboard.
   synthetic and recorded data, **not yet validated live on track**.
 
 **Radio and voice engineer**
-- Push-to-talk on screen or on a wheel button (F1 25 "UDP Action" buttons). The wheel button is read live from
-  F1 25 on PS5; asking a question by push-to-talk has not yet been tested by a driver.
+- Push-to-talk on screen or on a wheel button (F1 25 "UDP Action" buttons: Controls > (your wheel's preset) > UDP
+  Custom Actions; UDP Action 1 unless Setup › Controls says otherwise). The wheel button is read live from F1 25 on
+  PS5; asking a question by push-to-talk has not yet been tested by a driver.
+- Setup › Controls: which button does what on any wheel (23 researched templates or your own) in any researched
+  game, with step-by-step mapping cards and a printable card. Research only; F1 25 buttons can be tested in the app.
 - Fuel, tyres, lap times and radio commands are answered at once from telemetry. Analysis questions go to the
   language model if you have one, and to a fact-based answer if you do not.
 - Lap summaries, strategy calls, goal lines and coaching wait for a calm part of the lap: off the brake, steering

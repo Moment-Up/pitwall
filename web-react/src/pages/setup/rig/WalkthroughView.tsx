@@ -9,12 +9,12 @@
 // The plan comes from lib/setup/walkthrough.ts (research how-to steps + the recommendation's steps and rows). The
 // position lives in the route (replace, no history entry per step); ticks live on this device per driver and game.
 
-import { Alert, Button, Card } from "@heroui/react";
+import { Alert, Button, Card, Link } from "@heroui/react";
 import { Stepper } from "@heroui-pro/react";
 import { useEffect, useMemo, useState } from "react";
 import { useRadio } from "../../../components/radio";
 import type { GameId, Hardware, Recommendation } from "../../../lib/endpoints/rig";
-import { router } from "../../../lib/router";
+import { href, router } from "../../../lib/router";
 import { GAME_LABEL, hardwareLine, rigPath, type RigQuery } from "../../../lib/setup/rig";
 import {
   WALKTHROUGH,
@@ -82,6 +82,9 @@ export function WalkthroughView({ rec, hw, game, driverId, driverName, query, se
   const prev = neighbour(plan, pos, -1);
   const next = neighbour(plan, pos, 1);
   const run = guideRun(sec, item);
+  // Buttons are Setup › Controls' job (feat/controls): link to it where the walkthrough finds the controls and at the
+  // end of the in-game section.
+  const buttonsLink = (item.kind === "guide" && item.guide.id === "controls") || (sec.id === "ingame" && pos.i === sec.items.length - 1);
   const afterRun = (): WalkPos | null => {
     const lastOfRun = sec.items.indexOf(run.at(-1)!);
     return neighbour(plan, { s: pos.s, i: lastOfRun }, 1);
@@ -192,7 +195,15 @@ export function WalkthroughView({ rec, hw, game, driverId, driverName, query, se
             router.navigate(rigPath("check", query));
           }}
         />
-        <Card className="gap-2 p-2 lg:sticky lg:top-20">
+        {buttonsLink ? (
+          <Card className="flex flex-row flex-wrap items-center justify-between gap-2 px-5 py-3 lg:col-start-1" data-testid="rig-buttons-link">
+            <span className="text-[15px]">Which button does what in the game?</span>
+            <Link href={href(`/setup/controls?game=${game}`)} className="inline-flex min-h-11 items-center font-medium">
+              Buttons: Setup › Controls
+            </Link>
+          </Card>
+        ) : null}
+        <Card className="gap-2 p-2 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1">
           <p className="m-0 px-3 pt-2 text-sm font-semibold text-muted">
             {sec.title} · {sectionCounts(sec, ticks).done} of {sec.items.length} done
           </p>

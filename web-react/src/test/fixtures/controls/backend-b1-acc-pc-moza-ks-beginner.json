@@ -1,0 +1,920 @@
+{
+ "_fixture": {
+  "source": "backend-b1 fixture: produced by calling src/pitwall/controls (catalog/templates/recommend/steps) directly in Python on the feat/controls worktree before the API existed. Not an HTTP answer; regenerate by calling those modules again.",
+  "status": 200,
+  "note": "template moza_ks, acc on pc, beginner"
+ },
+ "body": {
+  "wheel": {
+   "id": "w_66cda425",
+   "rev": 0,
+   "name": "MOZA KS",
+   "template": "moza_ks",
+   "template_version": "2026-10-12/1",
+   "shape": "d",
+   "platforms": [
+    "pc"
+   ],
+   "parts": [
+    {
+     "id": "rim",
+     "kind": "rim",
+     "name": "Wheel"
+    }
+   ],
+   "controls": [
+    {
+     "id": "button_1",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 1",
+     "zone": "unplaced",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_2",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 2",
+     "zone": "unplaced",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_3",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 3",
+     "zone": "unplaced",
+     "order": 2,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_4",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 4",
+     "zone": "unplaced",
+     "order": 3,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_5",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 5",
+     "zone": "unplaced",
+     "order": 4,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_6",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 6",
+     "zone": "unplaced",
+     "order": 5,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_7",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 7",
+     "zone": "unplaced",
+     "order": 6,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_8",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 8",
+     "zone": "unplaced",
+     "order": 7,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_9",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 9",
+     "zone": "unplaced",
+     "order": 8,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "button_10",
+     "part": "rim",
+     "kind": "button",
+     "label": "Button 10",
+     "zone": "unplaced",
+     "order": 9,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "multi_position_1",
+     "part": "rim",
+     "kind": "multi_position",
+     "label": "Rotary switch 1",
+     "zone": "unplaced",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": 12,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "multi_position_2",
+     "part": "rim",
+     "kind": "multi_position",
+     "label": "Rotary switch 2",
+     "zone": "unplaced",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": 12,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "multi_position_3",
+     "part": "rim",
+     "kind": "multi_position",
+     "label": "Rotary switch 3",
+     "zone": "unplaced",
+     "order": 2,
+     "reach": null,
+     "push": false,
+     "positions": 12,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "encoder_1",
+     "part": "rim",
+     "kind": "encoder",
+     "label": "Encoder 1",
+     "zone": "unplaced",
+     "order": 0,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "encoder_2",
+     "part": "rim",
+     "kind": "encoder",
+     "label": "Encoder 2",
+     "zone": "unplaced",
+     "order": 1,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "thumbstick_1",
+     "part": "rim",
+     "kind": "thumbstick",
+     "label": "Thumbstick 1",
+     "zone": "unplaced",
+     "order": 0,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "thumbstick_2",
+     "part": "rim",
+     "kind": "thumbstick",
+     "label": "Thumbstick 2",
+     "zone": "unplaced",
+     "order": 1,
+     "reach": null,
+     "push": true,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "shift_paddle_1",
+     "part": "rim",
+     "kind": "shift_paddle",
+     "label": "Left shift paddle",
+     "zone": "back_left",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "shift_paddle_2",
+     "part": "rim",
+     "kind": "shift_paddle",
+     "label": "Right shift paddle",
+     "zone": "back_right",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "analogue_paddle_1",
+     "part": "rim",
+     "kind": "analogue_paddle",
+     "label": "Left analogue paddle",
+     "zone": "back_left",
+     "order": 0,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    },
+    {
+     "id": "analogue_paddle_2",
+     "part": "rim",
+     "kind": "analogue_paddle",
+     "label": "Right analogue paddle",
+     "zone": "back_right",
+     "order": 1,
+     "reach": null,
+     "push": false,
+     "positions": null,
+     "mps_mode": null,
+     "signals": {
+      "pc": {
+       "kind": "unknown",
+       "value": null,
+       "evidence": "U",
+       "source_ids": [],
+       "seen": null
+      }
+     },
+     "evidence": "A",
+     "note": ""
+    }
+   ],
+   "created_unix": 0.0,
+   "updated_unix": 0.0
+  },
+  "rec": {
+   "game": "acc",
+   "platform": "pc",
+   "wheel_id": "w_66cda425",
+   "preset": "beginner",
+   "driver_id": 1,
+   "catalogue_version": "2026-10-12/1",
+   "status": "research_only",
+   "assignments": [
+    {
+     "key": "tc.inc",
+     "function": "tc",
+     "action": "inc",
+     "control_id": "encoder_1",
+     "slot": "cw",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Traction control +",
+     "native": "IncreaseTC / DecreaseTC; MFD Electronics page",
+     "menu_group": null,
+     "control_label": "Encoder 1",
+     "signal": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [],
+      "seen": null
+     },
+     "reason": "Traction control on Encoder 1: you change it during a race, and turning one encoder gives + and - under your thumb.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "acc_r7",
+      "acc_107",
+      "simrace_config",
+      "repo_acc_shm"
+     ],
+     "conditions": [],
+     "warnings": [
+      "The game's own preset may already use this control.",
+      "What this control sends on PC isn't known: check it in the game."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "tc.dec",
+     "function": "tc",
+     "action": "dec",
+     "control_id": "encoder_1",
+     "slot": "ccw",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Traction control −",
+     "native": "IncreaseTC / DecreaseTC; MFD Electronics page",
+     "menu_group": null,
+     "control_label": "Encoder 1",
+     "signal": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [],
+      "seen": null
+     },
+     "reason": "Traction control on Encoder 1: you change it during a race, and turning one encoder gives + and - under your thumb.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "acc_r7",
+      "acc_107",
+      "simrace_config",
+      "repo_acc_shm"
+     ],
+     "conditions": [],
+     "warnings": [
+      "The game's own preset may already use this control.",
+      "What this control sends on PC isn't known: check it in the game."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "pit_limiter.press",
+     "function": "pit_limiter",
+     "action": "press",
+     "control_id": "button_1",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Pit limiter",
+     "native": "PitLimiter",
+     "menu_group": null,
+     "control_label": "Button 1",
+     "signal": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [],
+      "seen": null
+     },
+     "reason": "Pit limiter on Button 1: you use it at each stop, and this is the best free control left.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "U",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "simrace_config",
+      "repo_acc_shm"
+     ],
+     "conditions": [],
+     "warnings": [
+      "The game's own preset may already use this control.",
+      "What this control sends on PC isn't known: check it in the game."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "lights.press",
+     "function": "lights",
+     "action": "press",
+     "control_id": "button_2",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Lights",
+     "native": "CycleCarLightStages, flashing lights, rain light, indicators",
+     "menu_group": null,
+     "control_label": "Button 2",
+     "signal": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [],
+      "seen": null
+     },
+     "reason": "Lights on Button 2: you rarely need it, so it's on a control you have to reach for.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "acc_r7",
+      "acc_107",
+      "simrace_config"
+     ],
+     "conditions": [],
+     "warnings": [
+      "The game's own preset may already use this control.",
+      "What this control sends on PC isn't known: check it in the game."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "wipers.press",
+     "function": "wipers",
+     "action": "press",
+     "control_id": "button_3",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Wipers",
+     "native": "CycleWiper",
+     "menu_group": null,
+     "control_label": "Button 3",
+     "signal": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [],
+      "seen": null
+     },
+     "reason": "Wipers on Button 3: you rarely need it, so it's on a control you have to reach for.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "acc_r7",
+      "acc_107",
+      "simrace_config"
+     ],
+     "conditions": [],
+     "warnings": [
+      "The game's own preset may already use this control.",
+      "What this control sends on PC isn't known: check it in the game."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "ignition.press",
+     "function": "ignition",
+     "action": "press",
+     "control_id": "button_4",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Ignition / starter",
+     "native": "Ignition, Starter (also on MFD)",
+     "menu_group": null,
+     "control_label": "Button 4",
+     "signal": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [],
+      "seen": null
+     },
+     "reason": "Ignition / starter on Button 4: you rarely need it, so it's on a control you have to reach for.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "acc_r7",
+      "simrace_config"
+     ],
+     "conditions": [],
+     "warnings": [
+      "The game's own preset may already use this control.",
+      "What this control sends on PC isn't known: check it in the game."
+     ],
+     "pitwall_sees": null
+    },
+    {
+     "key": "ignition.hold",
+     "function": "ignition",
+     "action": "hold",
+     "control_id": "button_5",
+     "slot": "press",
+     "udp_action": null,
+     "origin": "recommended",
+     "check": null,
+     "label": "Ignition / starter",
+     "native": "Ignition, Starter (also on MFD)",
+     "menu_group": null,
+     "control_label": "Button 5",
+     "signal": {
+      "kind": "unknown",
+      "value": null,
+      "evidence": "U",
+      "source_ids": [],
+      "seen": null
+     },
+     "reason": "Ignition / starter on Button 5: you rarely need it, so it's on a control you have to reach for.",
+     "evidence": "U",
+     "evidence_parts": {
+      "game": "A",
+      "wheel": "U"
+     },
+     "source_ids": [
+      "acc_r7",
+      "simrace_config"
+     ],
+     "conditions": [],
+     "warnings": [
+      "The game's own preset may already use this control.",
+      "What this control sends on PC isn't known: check it in the game."
+     ],
+     "pitwall_sees": null
+    }
+   ],
+   "pitwall_ptt": {
+    "path": "screen",
+    "text": "Assetto Corsa Competizione doesn't send wheel button presses, so Pitwall can't see your wheel. Talk to Pitwall with the iPad's talk button, or hold Space on a keyboard."
+   },
+   "not_on_wheel": [],
+   "not_in_game": [
+    {
+     "function": "stability",
+     "label": "Stability control",
+     "text": "No stability control was found for ACC's GT3 and GT4 cars."
+    },
+    {
+     "function": "drs_aero",
+     "label": "DRS / active aero",
+     "text": "ACC has no DRS or active aero."
+    },
+    {
+     "function": "ride_height",
+     "label": "Ride height / weight jacker",
+     "text": "No game Pitwall knows lets you change ride height while driving. F1 25 and GT7 only show it in the car setup; iRacing's weight jacker on some oval cars is the closest thing."
+    }
+   ],
+   "unplaced": [
+    {
+     "function": "engine_map",
+     "label": "Engine map / fuel mix",
+     "text": "Engine map / fuel mix: Assetto Corsa Competizione changes it on its MFD pages, so it needs no button of its own."
+    }
+   ],
+   "reserved": [
+    {
+     "control_id": "shift_paddle_1",
+     "as": "gear_down",
+     "label": "Gear down"
+    },
+    {
+     "control_id": "shift_paddle_2",
+     "as": "gear_up",
+     "label": "Gear up"
+    },
+    {
+     "control_id": "analogue_paddle_1",
+     "as": "clutch",
+     "label": "Clutch / analogue paddle"
+    },
+    {
+     "control_id": "analogue_paddle_2",
+     "as": "clutch",
+     "label": "Clutch / analogue paddle"
+    }
+   ],
+   "notes": [
+    "Pitwall suggests where things go, never the values to use."
+   ]
+  },
+  "guide": {
+   "where": "the game's Controls screen",
+   "where_evidence": null,
+   "intro": [
+    "In Assetto Corsa Competizione, open the game's Controls screen (exact menu path not researched).",
+    "The game's own preset may already use this control."
+   ],
+   "steps": [
+    {
+     "n": 1,
+     "group": null,
+     "native": "IncreaseTC / DecreaseTC; MFD Electronics page",
+     "label": "Traction control − (Decrease TC)",
+     "physical": "Turn ENCODER 1 anticlockwise",
+     "evidence": "U",
+     "note": "What this control sends isn't known: check it in the game."
+    },
+    {
+     "n": 2,
+     "group": null,
+     "native": "IncreaseTC / DecreaseTC; MFD Electronics page",
+     "label": "Traction control + (Increase TC)",
+     "physical": "Turn ENCODER 1 clockwise",
+     "evidence": "U",
+     "note": "What this control sends isn't known: check it in the game."
+    },
+    {
+     "n": 3,
+     "group": null,
+     "native": "CycleCarLightStages, flashing lights, rain light, indicators",
+     "label": "Lights (Cycle light stages)",
+     "physical": "Press BUTTON 2",
+     "evidence": "U",
+     "note": "What this control sends isn't known: check it in the game."
+    },
+    {
+     "n": 4,
+     "group": null,
+     "native": "CycleWiper",
+     "label": "Wipers (Cycle wiper)",
+     "physical": "Press BUTTON 3",
+     "evidence": "U",
+     "note": "What this control sends isn't known: check it in the game."
+    },
+    {
+     "n": 5,
+     "group": null,
+     "native": "Ignition, Starter (also on MFD)",
+     "label": "Ignition / starter (Starter)",
+     "physical": "Press BUTTON 5",
+     "evidence": "U",
+     "note": "What this control sends isn't known: check it in the game."
+    },
+    {
+     "n": 6,
+     "group": null,
+     "native": "Ignition, Starter (also on MFD)",
+     "label": "Ignition / starter (Ignition)",
+     "physical": "Press BUTTON 4",
+     "evidence": "U",
+     "note": "What this control sends isn't known: check it in the game."
+    },
+    {
+     "n": 7,
+     "group": null,
+     "native": "PitLimiter",
+     "label": "Pit limiter (Pit limiter)",
+     "physical": "Press BUTTON 1",
+     "evidence": "U",
+     "note": "What this control sends isn't known: check it in the game."
+    }
+   ],
+   "outro": [
+    "Check each one on track: Pitwall can't see your wheel in Assetto Corsa Competizione."
+   ]
+  }
+ }
+}

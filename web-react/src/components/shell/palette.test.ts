@@ -18,6 +18,9 @@ describe("⌘K page search", () => {
     for (const q of ["strategy", "fuel", "pit"]) expect(find(q), q).toContain("drive/car");
     expect(find("validate")).toContain("setup/validation");
     expect(find("FFB")).toContain("setup/rig");
+    for (const q of ["buttons", "button box", "push to talk", "PTT", "brake bias", "encoder", "funky switch", "UDP Action"]) {
+      expect(find(q), q).toContain("setup/controls");
+    }
     expect(find("update")).toContain("settings/system");
     expect(find("usual game")).toContain("settings/drivers");
   });

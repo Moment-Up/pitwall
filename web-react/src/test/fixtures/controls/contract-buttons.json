@@ -1,0 +1,42 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/buttons (assumed shape: {seq, feed})."
+ },
+ "body": {
+  "seq": 3,
+  "feed": [
+   {
+    "seq": 1,
+    "t_unix": 1791830001.0,
+    "status": 512,
+    "pressed": [
+     "L1 or LB"
+    ],
+    "released": [],
+    "origin": "live"
+   },
+   {
+    "seq": 2,
+    "t_unix": 1791830001.2,
+    "status": 0,
+    "pressed": [],
+    "released": [
+     "L1 or LB"
+    ],
+    "origin": "live"
+   },
+   {
+    "seq": 3,
+    "t_unix": 1791830002.0,
+    "status": 32768,
+    "pressed": [
+     "Right Stick Left"
+    ],
+    "released": [],
+    "origin": "synthetic"
+   }
+  ]
+ }
+}

@@ -1,0 +1,165 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/recommendation?game=other&game_name=F1%2024&functions=brake_bias,drs_aero&platform=ps5&wheel_id=w_1a2b3c4d."
+ },
+ "body": {
+  "game": "other",
+  "platform": "ps5",
+  "wheel_id": "w_1a2b3c4d",
+  "preset": "advanced",
+  "driver_id": 1,
+  "catalogue_version": "2026-10-12/1",
+  "status": "research_only",
+  "assignments": [
+   {
+    "key": "brake_bias.inc",
+    "function": "brake_bias",
+    "action": "inc",
+    "control_id": "r2",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Brake bias +",
+    "native": "brake bias, brake balance, bias forward/rearward, BB+/BB-, balance up/down",
+    "menu_group": null,
+    "control_label": "R2",
+    "signal": {
+     "kind": "pad",
+     "value": "r2",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Brake bias on R2 (+) and L2 (−): the best free buttons left.",
+    "evidence": null,
+    "evidence_parts": {
+     "game": null,
+     "wheel": "A"
+    },
+    "source_ids": [],
+    "conditions": [],
+    "warnings": [
+     "Pitwall has no research for this game: check the name in the game's Controls screen."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "brake_bias.dec",
+    "function": "brake_bias",
+    "action": "dec",
+    "control_id": "l2",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Brake bias −",
+    "native": "brake bias, brake balance, bias forward/rearward, BB+/BB-, balance up/down",
+    "menu_group": null,
+    "control_label": "L2",
+    "signal": {
+     "kind": "pad",
+     "value": "l2",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Brake bias on R2 (+) and L2 (−): the best free buttons left.",
+    "evidence": null,
+    "evidence_parts": {
+     "game": null,
+     "wheel": "A"
+    },
+    "source_ids": [],
+    "conditions": [],
+    "warnings": [
+     "Pitwall has no research for this game: check the name in the game's Controls screen."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "drs_aero.press",
+    "function": "drs_aero",
+    "action": "press",
+    "control_id": "face_triangle",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "DRS / active aero",
+    "native": "DRS, S Mode, straight line mode, active aero, rear flap",
+    "menu_group": null,
+    "control_label": "Triangle",
+    "signal": {
+     "kind": "pad",
+     "value": "triangle",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "DRS / active aero on Triangle: you need it at a precise moment, so it's under your thumb.",
+    "evidence": null,
+    "evidence_parts": {
+     "game": null,
+     "wheel": "A"
+    },
+    "source_ids": [],
+    "conditions": [],
+    "warnings": [
+     "Pitwall has no research for this game: check the name in the game's Controls screen."
+    ],
+    "pitwall_sees": null
+   }
+  ],
+  "pitwall_ptt": {
+   "path": "screen",
+   "text": "F1 24 doesn't send wheel button presses, so Pitwall can't see your wheel. Talk to Pitwall with the iPad's talk button, or hold Space on a keyboard."
+  },
+  "not_on_wheel": [],
+  "not_in_game": [],
+  "unplaced": [],
+  "reserved": [
+   {
+    "control_id": "ps",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "hub_left",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "hub_right",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "paddle_left",
+    "as": "gear_down",
+    "label": "Gear down"
+   },
+   {
+    "control_id": "paddle_right",
+    "as": "gear_up",
+    "label": "Gear up"
+   },
+   {
+    "control_id": "tuning",
+    "as": "wheel_menu",
+    "label": "The wheel's own menu (Tuning, MODE, Settings)"
+   }
+  ],
+  "notes": [
+   "Other game: Pitwall has no research for it. F1 25's layout can be a starting point (not checked for F1 24)."
+  ]
+ }
+}

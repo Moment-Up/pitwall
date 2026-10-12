@@ -1,0 +1,700 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/recommendation?game=f1_25&platform=ps5&wheel_id=w_1a2b3c4d&driver_id=1&preset=advanced (the spec's worked example)."
+ },
+ "body": {
+  "game": "f1_25",
+  "platform": "ps5",
+  "wheel_id": "w_1a2b3c4d",
+  "preset": "advanced",
+  "driver_id": 1,
+  "catalogue_version": "2026-10-12/1",
+  "status": "research_only",
+  "assignments": [
+   {
+    "key": "ptt_pitwall.hold",
+    "function": "ptt_pitwall",
+    "action": "hold",
+    "control_id": "face_circle",
+    "slot": "press",
+    "udp_action": 1,
+    "origin": "recommended",
+    "check": null,
+    "label": "Talk to Pitwall",
+    "native": "UDP Action 1",
+    "menu_group": "UDP Custom Actions",
+    "control_label": "Circle",
+    "signal": {
+     "kind": "pad",
+     "value": "circle",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Talk to Pitwall on Circle: a plain button you can hold with your thumb. Map it to UDP Action 1 in F1 25 so Pitwall sees it.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_udp_wheel_ps",
+     "repo_f1_spec"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": "BUTN bit 0x00100000 << (N-1)"
+   },
+   {
+    "key": "drs_aero.press",
+    "function": "drs_aero",
+    "action": "press",
+    "control_id": "face_triangle",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "DRS / active aero",
+    "native": "Activate/Deactivate DRS/S Mode",
+    "menu_group": "Control Scheme",
+    "control_label": "Triangle",
+    "signal": {
+     "kind": "pad",
+     "value": "triangle",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "DRS / active aero on Triangle: you need it at a precise moment, so it's under your thumb.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps",
+     "ea_tips_2026",
+     "repo_f1_spec"
+    ],
+    "conditions": [
+     "2025 cars: DRS, in DRS zones",
+     "2026 cars: Active Aero Straight Line Mode, only in zones; the game returns to Corner Mode when you turn, brake or lift"
+    ],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": "drs_open"
+   },
+   {
+    "key": "overtake.press",
+    "function": "overtake",
+    "action": "press",
+    "control_id": "face_square",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Overtake / boost",
+    "native": "Overtake/Boost",
+    "menu_group": "Control Scheme",
+    "control_label": "Square",
+    "signal": {
+     "kind": "pad",
+     "value": "square",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Overtake / boost on Square: you need it at a precise moment, so it's under your thumb.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps",
+     "ea_tips_2026",
+     "repo_f1_spec",
+     "ea_f122_able"
+    ],
+    "conditions": [
+     "2026 cars: Overtake Mode once unlocked at the Detection Line"
+    ],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "brake_bias.inc",
+    "function": "brake_bias",
+    "action": "inc",
+    "control_id": "r2",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Brake bias +",
+    "native": "Brake Bias Increase",
+    "menu_group": "MFD Shortcuts",
+    "control_label": "R2",
+    "signal": {
+     "kind": "pad",
+     "value": "r2",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Brake bias on R2 (+) and L2 (−): the best free buttons left.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea25_mfd_pad_ps",
+     "ea26_mfd_wheel_ps",
+     "ea25_mfd_wheel_xbox",
+     "repo_f1_spec",
+     "ea_patch_120"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": "brake_bias_front_pct"
+   },
+   {
+    "key": "brake_bias.dec",
+    "function": "brake_bias",
+    "action": "dec",
+    "control_id": "l2",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Brake bias −",
+    "native": "Brake Bias Decrease",
+    "menu_group": "MFD Shortcuts",
+    "control_label": "L2",
+    "signal": {
+     "kind": "pad",
+     "value": "l2",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Brake bias on R2 (+) and L2 (−): the best free buttons left.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea25_mfd_pad_ps",
+     "ea26_mfd_wheel_ps",
+     "ea25_mfd_wheel_xbox",
+     "repo_f1_spec",
+     "ea_patch_120"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": "brake_bias_front_pct"
+   },
+   {
+    "key": "ers_mode.inc",
+    "function": "ers_mode",
+    "action": "inc",
+    "control_id": "r3",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "ERS / hybrid mode +",
+    "native": "ERS Mode Increase",
+    "menu_group": "MFD Shortcuts",
+    "control_label": "R3",
+    "signal": {
+     "kind": "pad",
+     "value": "r3",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "ERS / hybrid mode on R3 (+) and L3 (−): the best free buttons left.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea25_mfd_pad_ps",
+     "ea26_mfd_wheel_ps",
+     "ea_tips_2026",
+     "repo_f1_spec"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": "ers_deploy_mode"
+   },
+   {
+    "key": "ers_mode.dec",
+    "function": "ers_mode",
+    "action": "dec",
+    "control_id": "l3",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "ERS / hybrid mode −",
+    "native": "ERS Mode Decrease",
+    "menu_group": "MFD Shortcuts",
+    "control_label": "L3",
+    "signal": {
+     "kind": "pad",
+     "value": "l3",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "ERS / hybrid mode on R3 (+) and L3 (−): the best free buttons left.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea25_mfd_pad_ps",
+     "ea26_mfd_wheel_ps",
+     "ea_tips_2026",
+     "repo_f1_spec"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": "ers_deploy_mode"
+   },
+   {
+    "key": "pit_limiter.press",
+    "function": "pit_limiter",
+    "action": "press",
+    "control_id": "face_triangle",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Pit limiter",
+    "native": "Pit Limiter",
+    "menu_group": "Control Scheme",
+    "control_label": "Triangle",
+    "signal": {
+     "kind": "pad",
+     "value": "triangle",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Pit limiter on the same button as DRS: F1 25 does this by default (pit limiter in the pit lane, DRS on track).",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps",
+     "repo_f1_spec"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": "CarStatus.m_pitLimiterStatus (in the spec, not mapped yet)"
+   },
+   {
+    "key": "mfd.up",
+    "function": "mfd",
+    "action": "up",
+    "control_id": "menu_stick",
+    "slot": "up",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "MFD / black box up",
+    "native": "MFD Menu Up",
+    "menu_group": "Control Scheme",
+    "control_label": "Menu stick",
+    "signal": {
+     "kind": "pad",
+     "value": "dpad",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ],
+     "per_slot": {
+      "up": "dpad_up",
+      "down": "dpad_down",
+      "left": "dpad_left",
+      "right": "dpad_right"
+     }
+    },
+    "reason": "MFD on Menu stick: the game uses it for its pages, and the stick's four directions move through them.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps",
+     "ea25_mfd_pad_ps"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "mfd.down",
+    "function": "mfd",
+    "action": "down",
+    "control_id": "menu_stick",
+    "slot": "down",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "MFD / black box down",
+    "native": "MFD Menu Down",
+    "menu_group": "Control Scheme",
+    "control_label": "Menu stick",
+    "signal": {
+     "kind": "pad",
+     "value": "dpad",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ],
+     "per_slot": {
+      "up": "dpad_up",
+      "down": "dpad_down",
+      "left": "dpad_left",
+      "right": "dpad_right"
+     }
+    },
+    "reason": "MFD on Menu stick: the game uses it for its pages, and the stick's four directions move through them.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps",
+     "ea25_mfd_pad_ps"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "mfd.left",
+    "function": "mfd",
+    "action": "left",
+    "control_id": "menu_stick",
+    "slot": "left",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "MFD / black box left",
+    "native": "MFD Menu Left",
+    "menu_group": "Control Scheme",
+    "control_label": "Menu stick",
+    "signal": {
+     "kind": "pad",
+     "value": "dpad",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ],
+     "per_slot": {
+      "up": "dpad_up",
+      "down": "dpad_down",
+      "left": "dpad_left",
+      "right": "dpad_right"
+     }
+    },
+    "reason": "MFD on Menu stick: the game uses it for its pages, and the stick's four directions move through them.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps",
+     "ea25_mfd_pad_ps"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "mfd.right",
+    "function": "mfd",
+    "action": "right",
+    "control_id": "menu_stick",
+    "slot": "right",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "MFD / black box right",
+    "native": "MFD Menu Right",
+    "menu_group": "Control Scheme",
+    "control_label": "Menu stick",
+    "signal": {
+     "kind": "pad",
+     "value": "dpad",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ],
+     "per_slot": {
+      "up": "dpad_up",
+      "down": "dpad_down",
+      "left": "dpad_left",
+      "right": "dpad_right"
+     }
+    },
+    "reason": "MFD on Menu stick: the game uses it for its pages, and the stick's four directions move through them.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps",
+     "ea25_mfd_pad_ps"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "radio_menu.press",
+    "function": "radio_menu",
+    "action": "press",
+    "control_id": "face_cross",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Team radio menu",
+    "native": "Radio/Voice Commands",
+    "menu_group": "Control Scheme",
+    "control_label": "Cross",
+    "signal": {
+     "kind": "pad",
+     "value": "cross",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Team radio menu on Cross: you press it a few times a race.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps"
+    ],
+    "conditions": [],
+    "warnings": [
+     "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "look.press",
+    "function": "look",
+    "action": "press",
+    "control_id": "stick_blue",
+    "slot": "up",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Look back / left / right",
+    "native": "Look Back",
+    "menu_group": "Control Scheme",
+    "control_label": "Blue stick",
+    "signal": {
+     "kind": "game_specific",
+     "value": null,
+     "evidence": "U",
+     "source_ids": [
+      "COMM-FAN-GTSTICKS"
+     ]
+    },
+    "reason": "Look back / left / right on Blue stick: you rarely need it, so it's on a control you have to reach for.",
+    "evidence": "U",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "U"
+    },
+    "source_ids": [
+     "ea26_pad_ps",
+     "ea26_wheel_ps"
+    ],
+    "conditions": [],
+    "warnings": [
+     "Works only if F1 25 reads this wheel's extra buttons (unverified)."
+    ],
+    "pitwall_sees": null
+   }
+  ],
+  "pitwall_ptt": {
+   "path": "udp_action",
+   "udp_action": 1,
+   "control_id": "face_circle",
+   "text": "Hold Circle to talk to Pitwall. In F1 25 it must be mapped to UDP Action 1."
+  },
+  "not_on_wheel": [
+   {
+    "function": "tc",
+    "label": "Traction control",
+    "why": "pause_menu",
+    "text": "In F1 25, traction control and ABS are assists you set in the menu, not while driving."
+   },
+   {
+    "function": "abs",
+    "label": "ABS",
+    "why": "pause_menu",
+    "text": "In F1 25, traction control and ABS are assists you set in the menu, not while driving."
+   },
+   {
+    "function": "wing",
+    "label": "Wing",
+    "why": "no",
+    "text": "Wing angles are a setup item in every game researched. F1 25 2026 cars switch Active Aero to Straight Line Mode on the DRS/S Mode button inside the zones only; other games have DRS on cars that have it."
+   },
+   {
+    "function": "ride_height",
+    "label": "Ride height / weight jacker",
+    "why": "no",
+    "text": "No game Pitwall knows lets you change ride height while driving. F1 25 and GT7 only show it in the car setup; iRacing's weight jacker on some oval cars is the closest thing."
+   }
+  ],
+  "not_in_game": [
+   {
+    "function": "stability",
+    "label": "Stability control",
+    "text": "F1 25 has no stability control."
+   },
+   {
+    "function": "lights",
+    "label": "Lights",
+    "text": "F1 25 has no lights control."
+   }
+  ],
+  "unplaced": [
+   {
+    "function": "diff",
+    "label": "Differential",
+    "text": "No free control left for Differential. Use the MFD."
+   },
+   {
+    "function": "engine_map",
+    "label": "Engine map / fuel mix",
+    "text": "No free control left for Engine map / fuel mix. Use the MFD."
+   },
+   {
+    "function": "reset",
+    "label": "Flashback / rewind / reset",
+    "text": "No free control left for Flashback / rewind / reset. Use the MFD."
+   },
+   {
+    "function": "pit_request",
+    "label": "Pit request",
+    "text": "No free control left for Pit request. Use the MFD."
+   }
+  ],
+  "reserved": [
+   {
+    "control_id": "ps",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "hub_left",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "hub_right",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "paddle_left",
+    "as": "gear_down",
+    "label": "Gear down"
+   },
+   {
+    "control_id": "paddle_right",
+    "as": "gear_up",
+    "label": "Gear up"
+   },
+   {
+    "control_id": "tuning",
+    "as": "wheel_menu",
+    "label": "The wheel's own menu (Tuning, MODE, Settings)"
+   }
+  ],
+  "notes": [
+   "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults).",
+   "Pit limiter shares the DRS button, as F1 25 does by default."
+  ]
+ }
+}

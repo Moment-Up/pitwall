@@ -241,8 +241,8 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
 `web-react/README.md` has the layout and the switch-over details.
 
 - **Routes** are hash routes `#/<area>/<page>[/<param>][?<query>]` over four areas: Drive (Coach, Car, Track,
-  Radio), Review (Sessions, Coaching, Progress, Goals, Ask), Setup (Game, Connect, Rig, Car setup, Validation; it opens
-  on Game) and Settings (Drivers, Radio & voice, AI engineer, Display, System). Every Svelte hash (`#/live`, `#/radio?token=…`, `#/sessions/<id>`,
+  Radio), Review (Sessions, Coaching, Progress, Goals, Ask), Setup (Game, Connect, Rig, Controls, Car setup, Validation;
+  it opens on Game) and Settings (Drivers, Radio & voice, AI engineer, Display, System). Every Svelte hash (`#/live`, `#/radio?token=…`, `#/sessions/<id>`,
   ...) is rewritten in place, keeping its query (`src/lib/route-parse.ts`).
 - **Data:** one `/ws/live` socket for the whole app (snapshots at 20 Hz, the static payload every 5 s), the radio's
   `/ws/radio`, and REST through typed endpoint modules (`src/lib/endpoints/`) behind a request cache that a completed
@@ -268,6 +268,22 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
 - **Two car class encodings** until the 0.2.1 single source: goals and badges store `car_class` as
   `"<game>:formula:<name>"`, pace against the AI as the game's class name (`"F1 World"`); they are never joined.
 
+## Controls and button mapping (`controls/`)
+Setup › Controls ([controls.md](controls.md)): which button does what, for any wheel and researched game. The
+catalogue (`controls/catalog.py`) joins two verbatim research files with Pitwall's overlay and validates them at load
+(every research row covered, sources resolve, presets assignable mid-race, kinds, zones and slots valid). Wheels,
+layouts and per-driver choices live in the SettingsStore section `"controls"` (no SQLite change; `rev` per object, 409
+when stale). Recommendations (`recommend.py`), "Map it" steps (`steps.py`) and the printable card (`card.py`) are pure
+and deterministic. Only F1 25 lets Pitwall see a button: `ControlsService` (`controls/service.py`, built by `Runtime`
+whether or not voice is on) subscribes a `ButtonProbe` to `LiveState.subscribe_buttons` (ingest thread: a sequence
+number and one store into a 64-slot ring, no lock, no I/O). `SessionManager` labels each press `live`, `replay` or
+`synthetic` (`LiveState.on_button(status, origin)`) so replays never count. The button test advances when the
+dashboard polls; live results are written into the layout's `assignment.check`. Push-to-talk follows the seated
+driver's F1 25 layout: `PttFollower` recomputes on a change of the `"controls"` or `"game"` section or the seat and
+hands the UDP Actions to `RadioHub.set_ptt_actions` on the hub's loop (the deploy setting stays as a fallback); the
+test pauses wheel push-to-talk (`suspend_wheel_ptt`, which lapses on its own). The engineer's `controls_where` intent
+("which button is brake bias?") is answered by `ControlsService.answer`, never the LLM.
+
 ## Rig validation kit (`validate/`)
 <!-- validation kit (lane validate) -->
 `ValidationKit` (created in the app lifespan, `app.state.validation`) runs one validation run at a time on the asyncio
@@ -278,7 +294,9 @@ rare kinds, a `call_soon_threadsafe`; lap notifications on the analysis thread: 
 build their payload only when an observer is attached, and an observer error is logged, never raised into the hub).
 A 2 Hz sampler reads telemetry status, session, tier and cue mode; lap traces (braking onsets, brake and steering
 under each proactive message) and game sessions / driver switches are read with existing `storage/repo.py`
-functions in worker threads. Rules are pure (`validate/rules.py`, `validate/evidence.py`). State is saved as files
+functions in worker threads. Rules are pure (`validate/rules.py`, `validate/evidence.py`). Setup › Controls'
+`wheel_buttons` reads the controls probe's ring on the sampler tick (never on the ingest thread) into the additive
+`evidence.buttons`, and copies the seated driver's F1 25 layout into the additive `run.controls_layout`. State is saved as files
 only, `<data_dir>/validation/<run_id>/` (atomic writes, at most every 2 s), so no schema change. Radio commands are
 answered by `RadioHub.command_handler` before the engineer; the LLM never sees validation state.
 <!-- end validation kit -->

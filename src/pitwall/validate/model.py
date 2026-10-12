@@ -359,6 +359,22 @@ class ClientState:
 
 
 @dataclass(slots=True)
+class ButtonRecord:
+    """One F1 25 button press seen by Setup › Controls' probe (additive ``evidence.buttons``). ``origin`` is the
+    probe's (live | replay | synthetic); ``tier`` the kit's for that moment (a live press over loopback is
+    ``loopback``)."""
+
+    t_unix: float
+    tier: Tier
+    session_id: str | None
+    driver_id: int | None
+    seq: int
+    status: int
+    pressed: list[str] = field(default_factory=list)
+    origin: str = "live"
+
+
+@dataclass(slots=True)
 class ServerInfo:
     pitwall_version: str
     git_commit: str | None
@@ -384,6 +400,7 @@ class Evidence:
     lap_onsets: dict[str, list[float]] = field(default_factory=dict)
     inputs: dict[str, dict[str, Any]] = field(default_factory=dict)
     decode: dict[str, dict[str, Any]] = field(default_factory=dict)
+    buttons: list[ButtonRecord] = field(default_factory=list)  # additive: Setup › Controls (wheel_buttons)
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> Evidence:
@@ -400,6 +417,7 @@ class Evidence:
             lap_onsets={str(k): [float(x) for x in v] for k, v in (d.get("lap_onsets") or {}).items()},
             inputs=dict(d.get("inputs") or {}),
             decode=dict(d.get("decode") or {}),
+            buttons=[load(ButtonRecord, r) for r in d.get("buttons") or []],
         )
 
     def contract_dict(self) -> dict[str, Any]:
@@ -422,11 +440,12 @@ class Evidence:
             "lap_onsets": self.lap_onsets,
             "inputs": self.inputs,
             "decode": self.decode,
+            "buttons": [dump(r) for r in self.buttons],
         }
 
     def tier_counts(self) -> dict[Tier, int]:
         counts: dict[Tier, int] = dict.fromkeys(TIERS, 0)
-        for group in (self.cues, self.ptt, self.proactive, self.laps, self.switches, self.synth):
+        for group in (self.cues, self.ptt, self.proactive, self.laps, self.switches, self.synth, self.buttons):
             for r in group:
                 t = getattr(r, "tier", "unknown")
                 counts[t if t in counts else "unknown"] += 1
@@ -454,6 +473,7 @@ LIMITS: dict[str, int] = {
     "client_samples": 2000,
     "timeline": 2000,
     "lap_onsets": 2000,
+    "buttons": 2000,
 }
 
 
@@ -481,6 +501,8 @@ class Run:
     session_tiers: dict[str, Tier] = field(default_factory=dict)
     session_extra: dict[str, dict[str, Any]] = field(default_factory=dict)  # freshest live SessionInfo extras
     prompted: list[str] = field(default_factory=list)
+    # additive: the seated driver's F1 25 layout from Setup › Controls (its UDP Actions), copied when it changes
+    controls_layout: dict[str, Any] | None = None
 
     def item(self, item_id: str) -> ItemState | None:
         return next((it for it in self.items if it.id == item_id), None)
@@ -512,6 +534,7 @@ class Run:
             "session_tiers": self.session_tiers,
             "session_extra": self.session_extra,
             "prompted": self.prompted,
+            "controls_layout": self.controls_layout,
         }
 
     def to_dict(self) -> dict[str, Any]:
@@ -539,6 +562,7 @@ class Run:
             "session_tiers": self.session_tiers,
             "session_extra": self.session_extra,
             "prompted": list(self.prompted),
+            "controls_layout": self.controls_layout,
         }
 
 
@@ -572,6 +596,7 @@ def run_from_dict(d: Any) -> Run:
             session_tiers=dict(d.get("session_tiers") or {}),
             session_extra={str(k): dict(v) for k, v in (d.get("session_extra") or {}).items() if isinstance(v, dict)},
             prompted=[str(x) for x in d.get("prompted") or []],
+            controls_layout=d.get("controls_layout") if isinstance(d.get("controls_layout"), dict) else None,
         )
     except (KeyError, TypeError) as e:
         raise ValueError(f"malformed validation run: {e!r}") from e

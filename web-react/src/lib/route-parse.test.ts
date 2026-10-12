@@ -10,6 +10,7 @@ import {
   landingPage,
   legacyRedirect,
   parseCarSetupParam,
+  parseControlsParam,
   parseHash,
   parseRigParam,
   parseSessionParam,
@@ -240,6 +241,33 @@ describe("page params", () => {
     ["other/s9", { sessionId: null }],
   ])("car setup %j", (param, out) => {
     expect(parseCarSetupParam(param)).toEqual(out);
+  });
+
+  it.each([
+    [null, { view: "layout", n: null, wheelId: null }],
+    ["layout", { view: "layout", n: null, wheelId: null }],
+    ["map", { view: "map", n: null, wheelId: null }],
+    ["map/4", { view: "map", n: 4, wheelId: null }],
+    ["map/0", { view: "map", n: null, wheelId: null }],
+    ["map/x", { view: "map", n: null, wheelId: null }],
+    ["test", { view: "test", n: null, wheelId: null }],
+    ["test/3", { view: "test", n: null, wheelId: null }],
+    ["wheel", { view: "wheel", n: null, wheelId: null }],
+    ["wheel/w_1a2b3c4d", { view: "wheel", n: null, wheelId: "w_1a2b3c4d" }],
+    ["nope", { view: "layout", n: null, wheelId: null }],
+  ])("controls %j", (param, out) => {
+    expect(parseControlsParam(param)).toEqual(out);
+  });
+
+  it("Setup lists Controls between Rig and Car setup, and its routes parse", () => {
+    expect(AREA_PAGES.setup).toEqual(["game", "connect", "rig", "controls", "car", "validation"]);
+    expect(parseHash("#/setup/controls/map/2?game=gt7&platform=ps5")).toEqual({
+      area: "setup",
+      page: "controls",
+      param: "map/2",
+      path: "/setup/controls/map/2",
+      query: "game=gt7&platform=ps5",
+    });
   });
 });
 

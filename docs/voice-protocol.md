@@ -24,7 +24,7 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
 
 | Frame | Meaning |
 |---|---|
-| `{"type":"state", "ptt":bool, "listening":bool, "speaking":bool, "quiet":{"until_lap":int\|null,"indefinite":bool}, "intensity":str, "stt":str, "stt_reason":str\|null, "tts":str, "tts_voice":str\|null, "tts_voices":[str], "tts_active":str, "tts_ready":bool, "tts_neural":bool, "tts_status":str\|null, "telemetry":"live"\|"stale"\|"no_data", "ptt_source":"screen"\|"wheel"\|null, "cue_mode":str}` | Sent on connect and on every change, including when the voice engine comes up, goes down or changes voice. `stt` is the speech recognition engine (`parakeet`, `whispercpp`, `none`); `stt_reason` says why there is none (null when there is one). `tts` is the configured engine (`kokoro`, `say`, `sapi` on Windows, `none`); `tts_active` is what renders messages right now (`kokoro`, or `say` while the Kokoro worker starts/restarts or is not installed); `tts_status` is the worker's state (`starting`, `ready`, `restarting`, `unavailable`, `stopped`; null for `say`); `tts_voices` lists the selectable server voices (empty for `say`). |
+| `{"type":"state", "ptt":bool, "listening":bool, "speaking":bool, "quiet":{"until_lap":int\|null,"indefinite":bool}, "intensity":str, "stt":str, "stt_reason":str\|null, "tts":str, "tts_voice":str\|null, "tts_voices":[str], "tts_active":str, "tts_ready":bool, "tts_neural":bool, "tts_status":str\|null, "telemetry":"live"\|"stale"\|"no_data", "ptt_source":"screen"\|"wheel"\|null, "ptt_actions":[int], "ptt_label":str\|null, "wheel_ptt_paused":bool, "cue_mode":str}` | Sent on connect and on every change, including when the voice engine comes up, goes down or changes voice. `stt` is the speech recognition engine (`parakeet`, `whispercpp`, `none`); `stt_reason` says why there is none (null when there is one). `tts` is the configured engine (`kokoro`, `say`, `sapi` on Windows, `none`); `tts_active` is what renders messages right now (`kokoro`, or `say` while the Kokoro worker starts/restarts or is not installed); `tts_status` is the worker's state (`starting`, `ready`, `restarting`, `unavailable`, `stopped`; null for `say`); `tts_voices` lists the selectable server voices (empty for `say`). |
 | `{"type":"transcript","text":"...","stt_ms":int,"audio_s":float}` | What the server heard (after PTT release). Empty text = nothing understood. |
 | `{"type":"say","id":"m12","kind":"answer"\|"control"\|"cue"\|"alert"\|"lap_summary"\|"coaching"\|"strategy"\|"goal"\|"validation"\|"info","text":"display text","speech":"spoken text","sample_rate":24000,"n_bytes":int,"meta":{...}}` | A message follows. Immediately followed by one or more **binary** frames of int16 LE mono PCM at `sample_rate` totalling `n_bytes`, then `say_end`. If TTS is unavailable `n_bytes` is 0 (display only). A client speaks every `say` frame whatever its `kind`; a kind it does not know (a newer server) is only labelled `INFO`. **`sample_rate` is per message and must be honoured**: 24 000 Hz with Kokoro (and with its `say` fallback, rendered at 24 kHz so cue parts from both engines join), 22 050 Hz with the plain `say` engine. Kokoro audio arrives trimmed to ~40 ms of silence at each end, at about -17 dBFS speech RMS with peaks at most -3 dBFS. |
 | `{"type":"say_end","id":"m12"}` | End of audio for `m12`. |
@@ -34,8 +34,12 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
 
 ## Behaviour
 
-- **Push-to-talk** sources: on-screen button, or a wheel button mapped in F1 25 to a *UDP Action* (default
-  UDP Action 1), received through the game's `BUTN` telemetry event. PTT down starts an utterance; release
+- **Push-to-talk** sources: on-screen button, or a wheel button mapped in F1 25 to a *UDP Action*, received through
+  the game's `BUTN` telemetry event. The actions follow the seated driver's F1 25 layout in Setup › Controls
+  (`ptt_actions` in `state`, additive, with `ptt_label` the control's name when known), plus the deploy setting
+  `PITWALL_VOICE_PTT_BUTTON` (default UDP Action 1) as a fallback; a change applies at once, and a held wheel
+  transmission whose action leaves the set ends. While Setup › Controls tests buttons, wheel push-to-talk is paused
+  (`wheel_ptt_paused`, additive; it lapses on its own if the page stops polling). PTT down starts an utterance; release
   ends it (max 12 s). Audio while PTT is up is discarded (not stored, not transcribed).
 - **Half-duplex gate**: while the device is playing a message (+300 ms tail) mic audio is discarded, so the
   engineer never answers itself. PTT down during playback = barge-in: server sends `cancel` and listens.

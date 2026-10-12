@@ -10,12 +10,16 @@
 // (GET /api/games/{id}) for the curious.
 
 import { ChevronRight } from "@gravity-ui/icons";
-import { Button, Card, Chip, Disclosure } from "@heroui/react";
+import { Button, Card, Chip, Disclosure, Link } from "@heroui/react";
 import { Sheet } from "@heroui-pro/react";
 import { useEffect, useState } from "react";
 import { useApi } from "../../../hooks/useApi";
 import { GAME_KEYS, gameApi, type GameEntry, type GameFeature, type GamesResponse } from "../../../lib/endpoints/game";
 import { evidenceWords, featureChip, featureCounts, featureGroups, SUPPORT_WORDS, supportTone } from "../../../lib/game";
+import { href } from "../../../lib/router";
+
+/** Setup › Controls (feat/controls): which button does what, linked from the wheel push-to-talk row. */
+const CONTROLS_HREF = href("/setup/controls");
 
 const FIELD_STATUS: Record<string, string> = { sent: "Sent", partial: "Partial", not_sent: "Not sent", unknown: "Unknown" };
 
@@ -135,6 +139,11 @@ function FeatureRows({ groups, onOpen }: { groups: ReturnType<typeof featureGrou
                     <ChevronRight aria-hidden="true" className="row-span-2 size-4 text-muted" />
                     <span className="col-span-2 text-sm text-muted">{f.reason}</span>
                   </button>
+                  {f.id === "wheel_ptt" ? (
+                    <Link href={CONTROLS_HREF} className="mb-1 inline-flex min-h-11 items-center px-1 text-sm font-medium" data-testid="map-buttons-link">
+                      Map your buttons
+                    </Link>
+                  ) : null}
                 </li>
               );
             })}

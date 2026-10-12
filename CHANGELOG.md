@@ -9,6 +9,19 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
+- Setup › Controls: which button does what, for any wheel and any game. Not yet tested on the rig: research only.
+- Wheels: 23 researched wheels, rims and button boxes (Fanatec, Logitech, Thrustmaster, MOZA, Simagic, Simucube,
+  Cammus), or build your own. Research only.
+- Games: 11 researched games or "Other game". Each button gets a reason, steps to map it in the game and a card to
+  print. Research only.
+- Setup › Controls lists what a game won't let you change while driving: ride height in any game, GT7's ASM and ABS,
+  F1 25's TC and ABS. Research only.
+- F1 25: Setup › Controls › Test checks your UDP Action buttons and a brake bias change; Identify shows what each
+  control sends. Other games don't send button presses. Tested on recordings, not live.
+- Radio push-to-talk follows your saved F1 25 layout without a restart (UDP Action 1 keeps working). Tested on
+  synthetic data, not live.
+- Ask the engineer "which button is brake bias?": it answers from your saved layout. Tested on synthetic data.
+
 ## v0.2.1 - 2026-10-12
 
 - Gran Turismo 7 on PS5 is tested live (the owner's races on 2026-10-11, lap times equal to the game's). PS4 is

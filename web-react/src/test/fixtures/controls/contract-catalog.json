@@ -1,0 +1,5114 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/catalog: the draft overlay translated mechanically (11 games, 30 functions, 24 templates).",
+  "edited": [
+   "diagram.shapes.box: the integrator's button-box geometry (the box zone is the body), as in the overlay"
+  ]
+ },
+ "body": {
+  "version": "2026-10-12/1",
+  "status": "Research only: nothing here is validated on your rig.",
+  "functions": [
+   {
+    "id": "brake_bias",
+    "label": "Brake bias",
+    "short": "BB",
+    "group": "brakes",
+    "shape": "pair",
+    "freq": "often",
+    "synonyms": [
+     "brake bias",
+     "brake balance",
+     "bias forward/rearward",
+     "BB+/BB-",
+     "balance up/down"
+    ]
+   },
+   {
+    "id": "brake_migration",
+    "label": "Brake migration",
+    "short": "BMIG",
+    "group": "brakes",
+    "shape": "pair",
+    "freq": "sometimes",
+    "synonyms": [
+     "brake migration"
+    ]
+   },
+   {
+    "id": "tc",
+    "label": "Traction control",
+    "short": "TC",
+    "group": "electronics",
+    "shape": "pair",
+    "freq": "often",
+    "synonyms": [
+     "traction control",
+     "TC",
+     "TCS",
+     "TC up/down",
+     "TC map"
+    ]
+   },
+   {
+    "id": "tc_cut_slip",
+    "label": "TC cut / slip",
+    "short": "TC2",
+    "group": "electronics",
+    "shape": "pair",
+    "freq": "sometimes",
+    "synonyms": [
+     "TC2",
+     "TC cut",
+     "power cut",
+     "slip angle",
+     "traction control 2"
+    ]
+   },
+   {
+    "id": "tc_toggle",
+    "label": "Traction control on/off",
+    "short": "TC on/off",
+    "group": "electronics",
+    "shape": "toggle",
+    "freq": "rare",
+    "synonyms": [
+     "toggle traction control"
+    ]
+   },
+   {
+    "id": "abs",
+    "label": "ABS",
+    "short": "ABS",
+    "group": "electronics",
+    "shape": "pair",
+    "freq": "sometimes",
+    "synonyms": [
+     "ABS",
+     "anti-lock",
+     "antilock brake system"
+    ]
+   },
+   {
+    "id": "stability",
+    "label": "Stability control",
+    "short": "ESC",
+    "group": "electronics",
+    "shape": "pair",
+    "freq": "rare",
+    "synonyms": [
+     "stability control",
+     "ESP",
+     "ESC",
+     "ASM",
+     "active stability management"
+    ]
+   },
+   {
+    "id": "engine_map",
+    "label": "Engine map / fuel mix",
+    "short": "MAP",
+    "group": "power",
+    "shape": "pair",
+    "freq": "sometimes",
+    "synonyms": [
+     "engine map",
+     "fuel mix",
+     "fuel map",
+     "mixture",
+     "motor map"
+    ]
+   },
+   {
+    "id": "engine_braking",
+    "label": "Engine braking",
+    "short": "EB",
+    "group": "power",
+    "shape": "pair",
+    "freq": "sometimes",
+    "synonyms": [
+     "engine braking",
+     "engine brake"
+    ]
+   },
+   {
+    "id": "diff",
+    "label": "Differential",
+    "short": "DIFF",
+    "group": "power",
+    "shape": "pair",
+    "freq": "sometimes",
+    "synonyms": [
+     "differential",
+     "diff",
+     "torque split",
+     "torque distribution",
+     "diff entry/mid/exit"
+    ]
+   },
+   {
+    "id": "ers_mode",
+    "label": "ERS / hybrid mode",
+    "short": "ERS",
+    "group": "power",
+    "shape": "pair",
+    "freq": "often",
+    "synonyms": [
+     "ERS mode",
+     "deploy mode",
+     "MGU-K deploy",
+     "hybrid mode"
+    ]
+   },
+   {
+    "id": "regen",
+    "label": "Regeneration",
+    "short": "REGEN",
+    "group": "power",
+    "shape": "pair",
+    "freq": "sometimes",
+    "synonyms": [
+     "regen",
+     "regeneration",
+     "MGU-K recovery"
+    ]
+   },
+   {
+    "id": "overtake",
+    "label": "Overtake / boost",
+    "short": "OVT",
+    "group": "power",
+    "shape": "hold",
+    "freq": "often",
+    "synonyms": [
+     "overtake",
+     "boost",
+     "push to pass",
+     "P2P",
+     "KERS",
+     "nitro"
+    ]
+   },
+   {
+    "id": "drs_aero",
+    "label": "DRS / active aero",
+    "short": "DRS",
+    "group": "aero",
+    "shape": "toggle",
+    "freq": "often",
+    "synonyms": [
+     "DRS",
+     "S Mode",
+     "straight line mode",
+     "active aero",
+     "rear flap"
+    ]
+   },
+   {
+    "id": "wing",
+    "label": "Wing",
+    "short": "WING",
+    "group": "aero",
+    "shape": "pair",
+    "freq": "rare",
+    "synonyms": [
+     "wing front/rear",
+     "wing angle"
+    ]
+   },
+   {
+    "id": "arb",
+    "label": "Anti-roll bar",
+    "short": "ARB",
+    "group": "chassis",
+    "shape": "pair",
+    "freq": "sometimes",
+    "synonyms": [
+     "anti-roll bar",
+     "ARB",
+     "anti-sway",
+     "sway bar"
+    ]
+   },
+   {
+    "id": "ride_height",
+    "label": "Ride height / weight jacker",
+    "short": "RH",
+    "group": "chassis",
+    "shape": "pair",
+    "freq": "rare",
+    "synonyms": [
+     "ride height",
+     "body height",
+     "weight jacker"
+    ]
+   },
+   {
+    "id": "turbo",
+    "label": "Turbo boost",
+    "short": "TURBO",
+    "group": "power",
+    "shape": "pair",
+    "freq": "rare",
+    "synonyms": [
+     "turbo",
+     "boost level"
+    ]
+   },
+   {
+    "id": "pit_limiter",
+    "label": "Pit limiter",
+    "short": "PIT",
+    "group": "car",
+    "shape": "toggle",
+    "freq": "stop",
+    "synonyms": [
+     "pit limiter",
+     "speed limiter",
+     "pit speed limiter"
+    ]
+   },
+   {
+    "id": "lights",
+    "label": "Lights",
+    "short": "LIGHTS",
+    "group": "car",
+    "shape": "cycle",
+    "freq": "rare",
+    "synonyms": [
+     "headlights",
+     "lights",
+     "flash",
+     "high beam",
+     "rain light"
+    ]
+   },
+   {
+    "id": "wipers",
+    "label": "Wipers",
+    "short": "WIPE",
+    "group": "car",
+    "shape": "cycle",
+    "freq": "rare",
+    "synonyms": [
+     "wipers",
+     "tear-off",
+     "tear off visor"
+    ]
+   },
+   {
+    "id": "radio_menu",
+    "label": "Team radio menu",
+    "short": "RADIO",
+    "group": "comms",
+    "shape": "menu",
+    "freq": "sometimes",
+    "synonyms": [
+     "radio",
+     "voice commands",
+     "pit menu"
+    ]
+   },
+   {
+    "id": "ptt_game",
+    "label": "The game's own push-to-talk",
+    "short": "GAME PTT",
+    "group": "comms",
+    "shape": "hold",
+    "freq": "sometimes",
+    "synonyms": [
+     "push to talk",
+     "voice chat",
+     "mic mute"
+    ]
+   },
+   {
+    "id": "ptt_pitwall",
+    "label": "Talk to Pitwall",
+    "short": "PITWALL",
+    "group": "comms",
+    "shape": "hold",
+    "freq": "often",
+    "synonyms": [
+     "Pitwall push-to-talk",
+     "UDP Action",
+     "UDP custom action"
+    ]
+   },
+   {
+    "id": "mfd",
+    "label": "MFD / black box",
+    "short": "MFD",
+    "group": "info",
+    "shape": "menu",
+    "freq": "often",
+    "synonyms": [
+     "MFD",
+     "multi-function display",
+     "black box",
+     "ICM",
+     "pit menu",
+     "quick actions"
+    ]
+   },
+   {
+    "id": "look",
+    "label": "Look back / left / right",
+    "short": "LOOK",
+    "group": "view",
+    "shape": "momentary",
+    "freq": "sometimes",
+    "synonyms": [
+     "look back",
+     "glance",
+     "rear view"
+    ]
+   },
+   {
+    "id": "camera",
+    "label": "Change camera",
+    "short": "CAM",
+    "group": "view",
+    "shape": "momentary",
+    "freq": "rare",
+    "synonyms": [
+     "camera",
+     "change view",
+     "next camera"
+    ]
+   },
+   {
+    "id": "ignition",
+    "label": "Ignition / starter",
+    "short": "IGN",
+    "group": "car",
+    "shape": "toggle",
+    "freq": "rare",
+    "synonyms": [
+     "ignition",
+     "starter",
+     "engine start"
+    ]
+   },
+   {
+    "id": "reset",
+    "label": "Flashback / rewind / reset",
+    "short": "REWIND",
+    "group": "other",
+    "shape": "momentary",
+    "freq": "rare",
+    "synonyms": [
+     "flashback",
+     "rewind",
+     "reset to track",
+     "retry"
+    ]
+   },
+   {
+    "id": "pit_request",
+    "label": "Pit request",
+    "short": "BOX",
+    "group": "car",
+    "shape": "momentary",
+    "freq": "rare",
+    "synonyms": [
+     "pit request",
+     "manual pitstop",
+     "request pit"
+    ]
+   }
+  ],
+  "reserved": [
+   {
+    "id": "gear_up",
+    "label": "Gear up",
+    "kind": "shift_paddle"
+   },
+   {
+    "id": "gear_down",
+    "label": "Gear down",
+    "kind": "shift_paddle"
+   },
+   {
+    "id": "clutch",
+    "label": "Clutch / analogue paddle",
+    "kind": "analogue_paddle"
+   },
+   {
+    "id": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)",
+    "kind": "button"
+   },
+   {
+    "id": "wheel_menu",
+    "label": "The wheel's own menu (Tuning, MODE, Settings)",
+    "kind": "device_menu"
+   },
+   {
+    "id": "mode_switch",
+    "label": "The wheel's mode switch",
+    "kind": "mode_selector"
+   }
+  ],
+  "kinds": {
+   "button": {
+    "label": "Button",
+    "slots": [
+     "press"
+    ],
+    "pairs": []
+   },
+   "shift_paddle": {
+    "label": "Gear paddle",
+    "slots": [
+     "press"
+    ],
+    "pairs": []
+   },
+   "toggle_latching": {
+    "label": "Toggle switch (stays put)",
+    "slots": [
+     "on",
+     "off"
+    ],
+    "pairs": []
+   },
+   "toggle_momentary": {
+    "label": "Rocker (springs back)",
+    "slots": [
+     "up",
+     "down"
+    ],
+    "pairs": [
+     [
+      "up",
+      "down"
+     ]
+    ]
+   },
+   "encoder": {
+    "label": "Rotary encoder (turns endlessly)",
+    "slots": [
+     "cw",
+     "ccw",
+     "push"
+    ],
+    "pairs": [
+     [
+      "cw",
+      "ccw"
+     ]
+    ]
+   },
+   "multi_position": {
+    "label": "Rotary switch (8 or 12 positions)",
+    "slots": [
+     "cw",
+     "ccw",
+     "pos_n"
+    ],
+    "pairs": [
+     [
+      "cw",
+      "ccw"
+     ]
+    ]
+   },
+   "funky_7way": {
+    "label": "Funky switch (4 ways, push, turn)",
+    "slots": [
+     "up",
+     "down",
+     "left",
+     "right",
+     "push",
+     "cw",
+     "ccw"
+    ],
+    "pairs": [
+     [
+      "cw",
+      "ccw"
+     ],
+     [
+      "up",
+      "down"
+     ],
+     [
+      "left",
+      "right"
+     ]
+    ]
+   },
+   "dpad_hat": {
+    "label": "D-pad / hat / 5-way stick",
+    "slots": [
+     "up",
+     "down",
+     "left",
+     "right",
+     "push"
+    ],
+    "pairs": [
+     [
+      "up",
+      "down"
+     ],
+     [
+      "left",
+      "right"
+     ]
+    ]
+   },
+   "thumbstick": {
+    "label": "Thumbstick / joystick",
+    "slots": [
+     "up",
+     "down",
+     "left",
+     "right",
+     "push"
+    ],
+    "pairs": [
+     [
+      "up",
+      "down"
+     ],
+     [
+      "left",
+      "right"
+     ]
+    ]
+   },
+   "analogue_paddle": {
+    "label": "Analogue paddle (clutch, handbrake)",
+    "slots": [
+     "axis"
+    ],
+    "pairs": []
+   },
+   "mode_selector": {
+    "label": "Mode switch (wheel only, nothing reaches the game)",
+    "slots": [],
+    "pairs": []
+   },
+   "device_menu": {
+    "label": "Wheel menu button (wheel only)",
+    "slots": [],
+    "pairs": []
+   },
+   "virtual_layer": {
+    "label": "Layer switch (same controls send other signals)",
+    "slots": [],
+    "pairs": []
+   }
+  },
+  "zones": [
+   {
+    "id": "left_thumb",
+    "label": "Left, by your thumb",
+    "reach": "thumb"
+   },
+   {
+    "id": "right_thumb",
+    "label": "Right, by your thumb",
+    "reach": "thumb"
+   },
+   {
+    "id": "left_top",
+    "label": "Left, upper spoke",
+    "reach": "thumb"
+   },
+   {
+    "id": "right_top",
+    "label": "Right, upper spoke",
+    "reach": "thumb"
+   },
+   {
+    "id": "left_lower",
+    "label": "Left, lower spoke",
+    "reach": "stretch"
+   },
+   {
+    "id": "right_lower",
+    "label": "Right, lower spoke",
+    "reach": "stretch"
+   },
+   {
+    "id": "centre_top",
+    "label": "Centre, top",
+    "reach": "stretch"
+   },
+   {
+    "id": "centre",
+    "label": "Centre",
+    "reach": "stretch"
+   },
+   {
+    "id": "centre_bottom",
+    "label": "Centre, bottom",
+    "reach": "stretch"
+   },
+   {
+    "id": "back_left",
+    "label": "Behind the wheel, left",
+    "reach": "finger"
+   },
+   {
+    "id": "back_right",
+    "label": "Behind the wheel, right",
+    "reach": "finger"
+   },
+   {
+    "id": "box",
+    "label": "Button box",
+    "reach": "hand_off"
+   },
+   {
+    "id": "hub",
+    "label": "Base / hub",
+    "reach": "hand_off"
+   },
+   {
+    "id": "unplaced",
+    "label": "Not placed yet",
+    "reach": "unknown"
+   }
+  ],
+  "games": [
+   {
+    "id": "f1_25",
+    "label": "F1 25",
+    "telemetry_keys": [
+     "f1_25",
+     "f1_25_2026"
+    ],
+    "platforms": [
+     "ps5",
+     "ps4",
+     "xbox",
+     "pc"
+    ],
+    "button_path": "f1_butn",
+    "menu": {
+     "where": "Controls > [your wheel's preset]",
+     "evidence": "V",
+     "groups": [
+      "Control Scheme",
+      "MFD Shortcuts",
+      "UDP Custom Actions"
+     ],
+     "note": "EA's controls hub lists driving controls, MFD shortcuts and UDP custom actions per device; the exact screen names on the console are not re-checked [U]"
+    },
+    "research_depth": {
+     "bindings": "official (EA controls hubs, base and 2026)",
+     "behaviour": "official (EA tips, patch notes)",
+     "telemetry": "official (EA UDP spec in repo)",
+     "gt_dd_pro_defaults": "not found (EA: listed devices have bindings in place, but EA publishes only the G923 example)"
+    },
+    "functions": [
+     {
+      "function": "drs_aero",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "2025 cars: DRS, in DRS zones",
+       "2026 cars: Active Aero Straight Line Mode, only in zones; the game returns to Corner Mode when you turn, brake or lift"
+      ],
+      "actions": {
+       "press": "Activate/Deactivate DRS/S Mode"
+      },
+      "native_name": "Activate/Deactivate DRS/S Mode (2026 cars: Active Aero Corner <-> Straight Line Mode)",
+      "menu_group": "Control Scheme",
+      "shares_with": [
+       "pit_limiter"
+      ],
+      "pitwall_sees": "drs_open",
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps",
+       "ea_tips_2026",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "overtake",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "2026 cars: Overtake Mode once unlocked at the Detection Line"
+      ],
+      "actions": {
+       "press": "Overtake/Boost"
+      },
+      "native_name": "Overtake/Boost",
+      "menu_group": "Control Scheme",
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps",
+       "ea_tips_2026",
+       "repo_f1_spec",
+       "ea_f122_able"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ers_mode",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "ERS Mode Increase",
+       "dec": "ERS Mode Decrease"
+      },
+      "native_name": "ERS Mode Increase / Decrease (MFD shortcut)",
+      "menu_group": "MFD Shortcuts",
+      "shares_with": [],
+      "pitwall_sees": "ers_deploy_mode",
+      "evidence": "V",
+      "source_ids": [
+       "ea25_mfd_pad_ps",
+       "ea26_mfd_wheel_ps",
+       "ea_tips_2026",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "brake_bias",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Brake Bias Increase",
+       "dec": "Brake Bias Decrease"
+      },
+      "native_name": "Brake Bias Increase / Decrease (MFD shortcut)",
+      "menu_group": "MFD Shortcuts",
+      "shares_with": [],
+      "pitwall_sees": "brake_bias_front_pct",
+      "evidence": "V",
+      "source_ids": [
+       "ea25_mfd_pad_ps",
+       "ea26_mfd_wheel_ps",
+       "ea25_mfd_wheel_xbox",
+       "repo_f1_spec",
+       "ea_patch_120"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "diff",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Differential Increase",
+       "dec": "Differential Decrease"
+      },
+      "native_name": "Differential Increase / Decrease (MFD shortcut)",
+      "menu_group": "MFD Shortcuts",
+      "shares_with": [],
+      "pitwall_sees": "setup.diff_on_throttle (live update after a change unverified)",
+      "evidence": "V",
+      "source_ids": [
+       "ea25_mfd_pad_ps",
+       "ea26_mfd_wheel_ps",
+       "ea25_mfd_wheel_xbox",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "engine_map",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Fuel Mix Increase",
+       "dec": "Fuel Mix Decrease"
+      },
+      "native_name": "Fuel Mix Increase / Decrease (MFD shortcut)",
+      "menu_group": "MFD Shortcuts",
+      "shares_with": [],
+      "pitwall_sees": "CarStatus.m_fuelMix (in the spec, not mapped by the adapter yet)",
+      "evidence": "V",
+      "source_ids": [
+       "ea25_mfd_pad_ps",
+       "ea26_mfd_wheel_ps",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Pit Limiter"
+      },
+      "native_name": "Pit Limiter",
+      "menu_group": "Control Scheme",
+      "shares_with": [
+       "drs_aero"
+      ],
+      "pitwall_sees": "CarStatus.m_pitLimiterStatus (in the spec, not mapped yet)",
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "tc",
+      "in_race": "pause_menu",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Traction Control assist (Off / Medium / Full)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea_tips_2026",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "pause_menu",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "ABS assist (Off / On)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "wing",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Front/rear wing (car setup)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ride_height",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Front/rear ride height (car setup)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "mfd",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "select": "MFD",
+       "up": "MFD Menu Up",
+       "down": "MFD Menu Down",
+       "left": "MFD Menu Left",
+       "right": "MFD Menu Right"
+      },
+      "native_name": "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (Car Setup, Pit Setup, Damage, Engine State, Temperature)",
+      "menu_group": "Control Scheme",
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps",
+       "ea25_mfd_pad_ps"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "radio_menu",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Radio/Voice Commands"
+      },
+      "native_name": "Radio/Voice Commands",
+      "menu_group": "Control Scheme",
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ptt_game",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "hold": "Push to Talk"
+      },
+      "native_name": "Push to Talk (game voice commands / chat)",
+      "menu_group": "Control Scheme",
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ptt_pitwall",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "hold": "UDP Action N"
+      },
+      "native_name": "UDP Action 1-12",
+      "menu_group": "UDP Custom Actions",
+      "shares_with": [],
+      "pitwall_sees": "BUTN bit 0x00100000 << (N-1)",
+      "evidence": "V",
+      "source_ids": [
+       "ea26_udp_wheel_ps",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "look",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Look Back"
+      },
+      "native_name": "Look Forward/Back/Left/Right",
+      "menu_group": "Control Scheme",
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "camera",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Next Camera"
+      },
+      "native_name": "Next Camera",
+      "menu_group": "Control Scheme",
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "reset",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "not in online or ranked modes"
+      ],
+      "actions": {
+       "press": "Replay/Rewind"
+      },
+      "native_name": "Replay/Rewind (flashback)",
+      "menu_group": "Control Scheme",
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps",
+       "repo_f1_spec"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_request",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Manual Pitstop"
+      },
+      "native_name": "Manual Pitstop",
+      "menu_group": "Control Scheme",
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps",
+       "ea26_wheel_ps"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ea26_pad_ps"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "ptt_pitwall",
+      "drs_aero",
+      "overtake",
+      "pit_limiter",
+      "reset",
+      "look"
+     ],
+     "advanced": [
+      "ptt_pitwall",
+      "drs_aero",
+      "overtake",
+      "brake_bias",
+      "ers_mode",
+      "diff",
+      "engine_map",
+      "pit_limiter",
+      "mfd",
+      "radio_menu",
+      "look",
+      "reset",
+      "pit_request"
+     ]
+    }
+   },
+   {
+    "id": "gt7",
+    "label": "Gran Turismo 7",
+    "telemetry_keys": [
+     "gt7"
+    ],
+    "platforms": [
+     "ps5",
+     "ps4"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the game's button assignment screen for your wheel",
+     "evidence": "A",
+     "groups": [],
+     "note": "the official manual says each listed wheel has its own button assignment screen; the exact menu path was not researched"
+    },
+    "research_depth": {
+     "bindings": "official manual names the MFD and assist items but publishes no action list; pad defaults community",
+     "behaviour": "official manual",
+     "telemetry": "community (repo gt7-protocol.md)",
+     "gt_dd_pro_defaults": "official Fanatec (sticks pre-assigned, not reassignable on PVGT/DD1 for quick-access MFD); colour-to-function community"
+    },
+    "functions": [
+     {
+      "function": "tc",
+      "in_race": "yes",
+      "binding": "mfd",
+      "conditions": [
+       "through the MFD's TCS page"
+      ],
+      "actions": {},
+      "native_name": "TCS (MFD page)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "gt7m_mfd",
+       "gt7m_assist",
+       "fan_pvgt_gt7",
+       "fan_forum_gt7_extra",
+       "og_gt7_pad",
+       "repo_gt7"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "brake_bias",
+      "in_race": "conditional",
+      "binding": "mfd",
+      "conditions": [
+       "only cars with a Brake Controller part fitted"
+      ],
+      "actions": {},
+      "native_name": "Brake Balance (MFD page)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "gt7m_mfd",
+       "fan_forum_gt7_extra"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "engine_map",
+      "in_race": "conditional",
+      "binding": "mfd",
+      "conditions": [
+       "only in events with fuel use on"
+      ],
+      "actions": {},
+      "native_name": "Fuel Map (MFD page; 1 = power, higher = leaner)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "gt7m_mfd",
+       "gt7m_pit",
+       "fan_pvgt_gt7",
+       "fan_forum_gt7_extra"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "diff",
+      "in_race": "conditional",
+      "binding": "mfd",
+      "conditions": [
+       "four-wheel-drive cars only"
+      ],
+      "actions": {},
+      "native_name": "Front/Rear Torque Distribution (MFD page)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "gt7m_mfd",
+       "fan_pvgt_gt7",
+       "fan_forum_gt7_extra"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "pause_menu",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "ABS (Default / Weak / Off) - Assistance Settings",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "gt7m_assist",
+       "gt7m_pause",
+       "repo_gt7"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "pause_menu",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Active Stability Management (ASM) On/Off - Assistance Settings",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "gt7m_assist",
+       "gt7m_pause",
+       "repo_gt7"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "overtake",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "only cars with Nitro or an overtake system"
+      ],
+      "actions": {
+       "press": "Nitro / Overtake"
+      },
+      "native_name": "Nitro / Overtake",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "gt7m_screen",
+       "og_gt7_pad"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "drs_aero",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "DRS cars only; which button is unverified"
+      ],
+      "actions": {
+       "press": "Nitro / Overtake (unverified for DRS)"
+      },
+      "native_name": "DRS (via the Overtake indicator/button on cars that have it)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "gt7m_screen",
+       "og_gt7_pad"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "wing",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Downforce (Car Settings)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "gt7m_carsettings"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ride_height",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Body height (Car Settings)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "gt7m_carsettings",
+       "repo_gt7"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none (pit lane is automatic)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "gt7m_pit"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "mfd",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "left": "MFD Selection Left",
+       "right": "MFD Selection Right",
+       "up": "MFD Up",
+       "down": "MFD Down"
+      },
+      "native_name": "MFD Selection Left/Right, MFD Up/Down",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "gt7m_mfd",
+       "fan_pvgt_gt7",
+       "og_gt7_pad"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Headlights"
+      },
+      "native_name": "Headlights toggle; turn signals / hazards",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "og_gt7_pad",
+       "repo_gt7"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "look",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Look Back"
+      },
+      "native_name": "Look back (rear view)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "og_gt7_pad"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "camera",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Change View"
+      },
+      "native_name": "Change view",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "gt7m_views"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ptt_game",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none found",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": null,
+      "source_ids": [
+       "gt7m_options"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ptt_pitwall",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "repo_gt7"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "reset",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none (Retry from pause menu)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "gt7m_pause"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "mfd",
+      "overtake",
+      "look"
+     ],
+     "advanced": [
+      "mfd",
+      "overtake",
+      "drs_aero",
+      "lights",
+      "look",
+      "camera"
+     ]
+    }
+   },
+   {
+    "id": "ac",
+    "label": "Assetto Corsa",
+    "telemetry_keys": [
+     "ac"
+    ],
+    "platforms": [
+     "ps5",
+     "ps4",
+     "xbox",
+     "pc"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the game's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": "binding names are from the PC version (community); the console list was not found"
+    },
+    "research_depth": {
+     "bindings": "community (PC controls.ini names via CSP); console binding list not found",
+     "behaviour": "not found (official)",
+     "telemetry": "repo (UDP spec + PS5 probe)"
+    },
+    "functions": [
+     {
+      "function": "tc",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "TC up",
+       "dec": "TC down"
+      },
+      "native_name": "TCUP / TCDN",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls",
+       "repo_ac_udp",
+       "repo_ac_shm"
+      ],
+      "platform_note": "PC names; console unverified"
+     },
+     {
+      "function": "abs",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "ABS up",
+       "dec": "ABS down"
+      },
+      "native_name": "ABSUP / ABSDN",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls",
+       "repo_ac_udp",
+       "repo_ac_shm"
+      ],
+      "platform_note": "PC names; console unverified"
+     },
+     {
+      "function": "brake_bias",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Brake balance up",
+       "dec": "Brake balance down"
+      },
+      "native_name": "BALANCEUP / BALANCEDN",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls",
+       "repo_ac_shm"
+      ],
+      "platform_note": "PC names; console unverified"
+     },
+     {
+      "function": "engine_braking",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with adjustable engine braking"
+      ],
+      "actions": {
+       "inc": "Engine brake up",
+       "dec": "Engine brake down"
+      },
+      "native_name": "ENGINE_BRAKE_UP / _DN",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "turbo",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with adjustable turbo"
+      ],
+      "actions": {
+       "inc": "Turbo up",
+       "dec": "Turbo down"
+      },
+      "native_name": "TURBOUP / TURBODN",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ers_mode",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "hybrid / KERS cars"
+      ],
+      "actions": {
+       "inc": "MGU-K delivery up",
+       "dec": "MGU-K delivery down"
+      },
+      "native_name": "MGUK_DELIVERY_UP/DN, MGUK_RECOVERY_UP/DN, MGUH_MODE, KERS",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls",
+       "repo_ac_shm"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "drs_aero",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "DRS cars"
+      ],
+      "actions": {
+       "press": "DRS"
+      },
+      "native_name": "DRS",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls",
+       "repo_ac_shm"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Headlights"
+      },
+      "native_name": "ACTION_HEADLIGHTS, ACTION_HEADLIGHTS_FLASH, ACTION_HORN",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "look",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Glance back"
+      },
+      "native_name": "GLANCELEFT / GLANCERIGHT / GLANCEBACK",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "unverified",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Stability control assist (menu)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "engine_map",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none found",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "csp_ac_controls"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "unverified",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none in controls.ini",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "repo_ac_udp"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ptt_pitwall",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "repo_ac_udp"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "tc",
+      "abs",
+      "look"
+     ],
+     "advanced": [
+      "tc",
+      "abs",
+      "brake_bias",
+      "engine_braking",
+      "ers_mode",
+      "drs_aero",
+      "turbo",
+      "lights",
+      "look"
+     ]
+    }
+   },
+   {
+    "id": "acc",
+    "label": "Assetto Corsa Competizione",
+    "telemetry_keys": [
+     "acc"
+    ],
+    "platforms": [
+     "pc",
+     "ps5",
+     "xbox",
+     "ps4"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the game's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": "exact menu path not researched; Kunos release notes describe the bindings; console defaults were not found"
+    },
+    "research_depth": {
+     "bindings": "Kunos release notes (via news mirrors) + community controls.json names",
+     "behaviour": "Kunos release notes",
+     "telemetry": "PC shared memory (Kunos doc, repo); console: none"
+    },
+    "functions": [
+     {
+      "function": "tc",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Increase TC",
+       "dec": "Decrease TC"
+      },
+      "native_name": "IncreaseTC / DecreaseTC; MFD Electronics page",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "acc_r7",
+       "acc_107",
+       "simrace_config",
+       "repo_acc_shm"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Increase ABS",
+       "dec": "Decrease ABS"
+      },
+      "native_name": "MFD Electronics page (+ bindings, community: not observed in one controls.json)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "acc_r7",
+       "acc_107",
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "brake_bias",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Increase brake bias",
+       "dec": "Decrease brake bias"
+      },
+      "native_name": "IncreaseBrakeBias / DecreaseBrakeBias; MFD",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "acc_r7",
+       "simrace_config",
+       "repo_acc_shm"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "engine_map",
+      "in_race": "yes",
+      "binding": "mfd",
+      "conditions": [
+       "MFD Electronics page"
+      ],
+      "actions": {},
+      "native_name": "Engine map (MFD Electronics page)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "acc_r7",
+       "acc_107"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Cycle light stages"
+      },
+      "native_name": "CycleCarLightStages, flashing lights, rain light, indicators",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "acc_r7",
+       "acc_107",
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "wipers",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Cycle wiper"
+      },
+      "native_name": "CycleWiper",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "acc_r7",
+       "acc_107",
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ignition",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Ignition",
+       "hold": "Starter"
+      },
+      "native_name": "Ignition, Starter (also on MFD)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "acc_r7",
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Pit limiter"
+      },
+      "native_name": "PitLimiter",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "repo_acc_shm"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "mfd",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "select": "Cycle MFD",
+       "up": "MFD up",
+       "down": "MFD down",
+       "left": "MFD left",
+       "right": "MFD right"
+      },
+      "native_name": "CycleHudMfd + navigation; direct-to-page bindings (realtime, standings, electronics, pitstop) since 1.5.2",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "acc_r7",
+       "acc_152"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "drs_aero",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "look",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Look left / right"
+      },
+      "native_name": "LookLeft / LookRight",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ptt_pitwall",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "repo_acc_shm"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "pit_limiter",
+      "lights",
+      "wipers",
+      "ignition",
+      "tc"
+     ],
+     "advanced": [
+      "tc",
+      "abs",
+      "brake_bias",
+      "mfd",
+      "pit_limiter",
+      "lights",
+      "wipers",
+      "ignition",
+      "look"
+     ]
+    }
+   },
+   {
+    "id": "forza_motorsport",
+    "label": "Forza Motorsport / Horizon",
+    "telemetry_keys": [
+     "forza_motorsport",
+     "forza_horizon"
+    ],
+    "platforms": [
+     "xbox",
+     "pc",
+     "ps5"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the game's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": "Forza support documents rebinding and Quick Actions; the exact menu path was not researched"
+    },
+    "research_depth": {
+     "bindings": "official (Forza support: rebinding, quick actions)",
+     "behaviour": "official (assist descriptions)",
+     "telemetry": "repo (Data Out)"
+    },
+    "functions": [
+     {
+      "function": "tc",
+      "in_race": "unverified",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Traction Control assist (On / Sport / Off)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "fm_access",
+       "repo_forza"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "unverified",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Stability Control assist (On / Sport / Off)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "fm_access"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "unverified",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Braking assist incl. ABS On / ABS Off",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "fm_access"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "mfd",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "up": "Quick Action 1",
+       "right": "Quick Action 2",
+       "down": "Quick Action 3",
+       "left": "Quick Action 4"
+      },
+      "native_name": "Quick Actions 1-4 (D-pad): mic mute / telemetry page / telemetry toggle / quick chat",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "fm_access"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_request",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Pit Entry Assist / Reset to Track"
+      },
+      "native_name": "Pit Entry Assist / Reset to Track",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "fm_access"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "reset",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "single player"
+      ],
+      "actions": {
+       "press": "Rewind"
+      },
+      "native_name": "Rewind",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "fm7_ctrl"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "look",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Look Back"
+      },
+      "native_name": "Look Straight Back, Free Look",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "fm7_ctrl"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ptt_game",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Mic mute (Quick Action 1)"
+      },
+      "native_name": "Mic mute (Quick Action 1); Text-to-speech entry",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "fm_access"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "reset",
+      "look"
+     ],
+     "advanced": [
+      "reset",
+      "look",
+      "mfd",
+      "pit_request"
+     ]
+    }
+   },
+   {
+    "id": "iracing",
+    "label": "iRacing",
+    "telemetry_keys": [
+     "iracing"
+    ],
+    "platforms": [
+     "pc"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the sim's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": "iRacing's own page lists keyboard defaults (most car controls not assigned); the exact menu path was not researched"
+    },
+    "research_depth": {
+     "bindings": "official (keyboard template) + community (full action names)",
+     "behaviour": "official",
+     "telemetry": "irsdk (official SDK, var names via pyirsdk MIT and irdashies)"
+    },
+    "functions": [
+     {
+      "function": "brake_bias",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Brake bias increase",
+       "dec": "Brake bias decrease"
+      },
+      "native_name": "BrakeBiasInc / BrakeBiasDec (default = and -)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "ir_keys",
+       "irdashies_cs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "tc",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with TC"
+      ],
+      "actions": {
+       "inc": "TC increase",
+       "dec": "TC decrease"
+      },
+      "native_name": "TractionControlInc/Dec, TractionControl2Inc/Dec, TractionControlToggle",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "irdashies_cs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with ABS"
+      ],
+      "actions": {
+       "inc": "ABS increase",
+       "dec": "ABS decrease"
+      },
+      "native_name": "ABSInc / ABSDec / ABSToggle",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "pyirsdk_vars",
+       "irdashies_cs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "engine_map",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with a fuel mixture control"
+      ],
+      "actions": {
+       "inc": "Fuel mixture increase",
+       "dec": "Fuel mixture decrease"
+      },
+      "native_name": "FuelMixtureInc/Dec; EngineBrakingInc/Dec; BoostLevelInc/Dec",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "irdashies_cs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ers_mode",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "hybrid / push-to-pass cars"
+      ],
+      "actions": {
+       "inc": "MGU-K deploy mode increase",
+       "dec": "MGU-K deploy mode decrease"
+      },
+      "native_name": "MGUKDeployModeInc/Dec, MGUKRegenGainInc/Dec; PushToPass",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "pyirsdk_vars",
+       "irdashies_cs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "arb",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with adjustable bars"
+      ],
+      "actions": {
+       "inc": "Anti-roll front increase",
+       "dec": "Anti-roll front decrease"
+      },
+      "native_name": "AntiRollFrontInc/Dec, AntiRollRearInc/Dec",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "irdashies_cs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "wing",
+      "in_race": "unverified",
+      "binding": "direct",
+      "conditions": [
+       "some cars"
+      ],
+      "actions": {
+       "inc": "Wing increase",
+       "dec": "Wing decrease"
+      },
+      "native_name": "WingFrontInc/Dec, WingRearInc/Dec",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ride_height",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "weight jacker on some oval cars, not ride height"
+      ],
+      "actions": {
+       "inc": "Weight jacker increase",
+       "dec": "Weight jacker decrease"
+      },
+      "native_name": "weight jacker (dcWeightJackerRight) on some oval cars",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "irdashies_cs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "diff",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with in-car diff controls"
+      ],
+      "actions": {
+       "inc": "Diff entry increase",
+       "dec": "Diff entry decrease"
+      },
+      "native_name": "DiffEntry/Middle/Exit Inc/Dec",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "irdashies_cs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "drs_aero",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "DRS cars"
+      ],
+      "actions": {
+       "press": "DRS"
+      },
+      "native_name": "DRS",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Pit speed limiter"
+      },
+      "native_name": "Pit Speed Limiter (default A)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ir_keys",
+       "ir_limiter",
+       "pyirsdk_vars"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ignition",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Ignition",
+       "hold": "Starter"
+      },
+      "native_name": "Ignition (I), Starter (S)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ir_keys",
+       "pyirsdk_vars"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Headlight flash"
+      },
+      "native_name": "Headlight Flash",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ir_keys"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "wipers",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Wipers / tear-off"
+      },
+      "native_name": "Toggle/Trigger windshield wipers, Tear-off visor",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "pyirsdk_vars"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "mfd",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "select": "Black box",
+       "up": "Select previous",
+       "down": "Select next",
+       "left": "Decrement",
+       "right": "Increment"
+      },
+      "native_name": "Black box F1-F10 (F8 In-Car Adjustments), select prev/next, increment/decrement/toggle selected",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ir_keys"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ptt_game",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "hold": "Voice chat push to talk"
+      },
+      "native_name": "Voice Chat Push to Talk (not assigned)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ir_keys"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "look",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Look left / right"
+      },
+      "native_name": "Look Left (Z) / Look Right (X)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "ir_keys"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "no",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "none",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "pit_limiter",
+      "ignition",
+      "brake_bias",
+      "ptt_game"
+     ],
+     "advanced": [
+      "brake_bias",
+      "tc",
+      "abs",
+      "engine_map",
+      "ers_mode",
+      "arb",
+      "diff",
+      "drs_aero",
+      "pit_limiter",
+      "ignition",
+      "mfd",
+      "ptt_game",
+      "lights",
+      "wipers",
+      "look"
+     ]
+    }
+   },
+   {
+    "id": "lmu",
+    "label": "Le Mans Ultimate",
+    "telemetry_keys": [],
+    "platforms": [
+     "pc"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the game's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": "the official guide explains binding; the exact menu path is not copied here"
+    },
+    "research_depth": {
+     "bindings": "official guide (how) + community (action names)",
+     "behaviour": "official guide",
+     "telemetry": "official SharedMemory header ships since V1.2; field names community"
+    },
+    "functions": [
+     {
+      "function": "tc",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Traction Control Up",
+       "dec": "Traction Control Down"
+      },
+      "native_name": "Traction Control Up/Down, Traction Control 2 Up/Down (power cut), Slip Angle Up/Down; MFD Electronics",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "lmu_tc",
+       "simrace_config",
+       "irdashies_lmu"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "LMGT3 cars; other classes use the ABS assist"
+      ],
+      "actions": {
+       "inc": "Antilock Brake System Up",
+       "dec": "Antilock Brake System Down"
+      },
+      "native_name": "Antilock Brake System Up/Down (LMGT3 car ABS); ABS assist for other classes (menu)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "lmu_abs",
+       "lmu_assists",
+       "simrace_config",
+       "irdashies_lmu"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "brake_bias",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Bias Forward",
+       "dec": "Bias Rearward"
+      },
+      "native_name": "Bias Forward / Bias Rearward",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "irdashies_lmu"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "brake_migration",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "Hypercars"
+      ],
+      "actions": {
+       "inc": "Brake Migration Forward",
+       "dec": "Brake Migration Rearward"
+      },
+      "native_name": "Brake Migration Forward / Rearward",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "irdashies_lmu"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "engine_map",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Increment Motor Map",
+       "dec": "Decrement Motor Map"
+      },
+      "native_name": "Increment/Decrement Motor Map (electric motor map), Mixture",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "lmu_hyper",
+       "simrace_config",
+       "irdashies_lmu"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "regen",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "hybrids"
+      ],
+      "actions": {
+       "inc": "Increment Regeneration",
+       "dec": "Decrement Regeneration"
+      },
+      "native_name": "Increment/Decrement Regeneration",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "lmu_hyper",
+       "simrace_config",
+       "irdashies_lmu"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "arb",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with adjustable bars"
+      ],
+      "actions": {
+       "inc": "Inc Front ARB",
+       "dec": "Dec Front ARB"
+      },
+      "native_name": "Inc/Dec Front ARB, Inc/Dec Rear ARB",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "irdashies_lmu"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "unverified",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Stability Control assist (menu)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "lmu_assists"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Speed Limiter"
+      },
+      "native_name": "Speed Limiter; Auto Pit Speed Limiter assist",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "lmu_wheel",
+       "lmu_assists",
+       "irdashies_lmu"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Headlights"
+      },
+      "native_name": "Headlights, Headlights Pulse, Horn; Auto Headlights assist",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "lmu_wheel",
+       "lmu_assists",
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "wipers",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Wipers"
+      },
+      "native_name": "Wipers; Auto Windscreen Wipers assist",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "lmu_wheel",
+       "lmu_assists"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ignition",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Ignition",
+       "hold": "Starter"
+      },
+      "native_name": "Ignition, Starter; Auto Start Engine assist",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "lmu_assists",
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "mfd",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "select": "Next MFD",
+       "up": "MFD Up",
+       "down": "MFD Down",
+       "left": "MFD Decrease",
+       "right": "MFD Increase"
+      },
+      "native_name": "Driver Overlay Next/Previous MFD + up/down/increase/decrease; Pit Request",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "lmu_mfd",
+       "lmu_tc",
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "drs_aero",
+      "in_race": "unverified",
+      "binding": "none",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Rear Flap (rF2 vocabulary)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "look",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Rear Look"
+      },
+      "native_name": "Look Left / Look Right / Rear Look",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "pit_limiter",
+      "lights",
+      "wipers",
+      "tc",
+      "brake_bias"
+     ],
+     "advanced": [
+      "tc",
+      "abs",
+      "brake_bias",
+      "brake_migration",
+      "engine_map",
+      "regen",
+      "arb",
+      "pit_limiter",
+      "lights",
+      "wipers",
+      "ignition",
+      "mfd",
+      "look"
+     ]
+    }
+   },
+   {
+    "id": "rf2",
+    "label": "rFactor 2",
+    "telemetry_keys": [],
+    "platforms": [
+     "pc"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the sim's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": null
+    },
+    "research_depth": {
+     "bindings": "community",
+     "behaviour": "official developer docs (onboard TC/ABS)",
+     "telemetry": "official InternalsPlugin header (via plugin mirror)"
+    },
+    "functions": [
+     {
+      "function": "tc",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "only cars that allow onboard changes"
+      ],
+      "actions": {
+       "inc": "Traction control map up",
+       "dec": "Traction control map down"
+      },
+      "native_name": "Onboard TC map (+ power cut and slip angle maps, 2022)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "s397_tcabs",
+       "rf2_internals"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "only cars that allow onboard changes"
+      ],
+      "actions": {
+       "inc": "ABS map up",
+       "dec": "ABS map down"
+      },
+      "native_name": "Onboard ABS map",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "s397_tcabs",
+       "rf2_internals"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "unverified",
+      "binding": "menu",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Stability control assist (menu)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "rf2_internals"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "brake_bias",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Brake bias forward",
+       "dec": "Brake bias rearward"
+      },
+      "native_name": "Brake bias",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "A",
+      "source_ids": [
+       "rf2_internals"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "drs_aero",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with a rear flap"
+      ],
+      "actions": {
+       "press": "Rear flap"
+      },
+      "native_name": "Rear Flap",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "rf2_internals"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Speed limiter"
+      },
+      "native_name": "Speed limiter",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "rf2_internals"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Headlights"
+      },
+      "native_name": "Headlights",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "rf2_internals"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ers_mode",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with an electric boost motor; binding unverified"
+      ],
+      "actions": {},
+      "native_name": "Electric boost motor",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "rf2_internals"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "pit_limiter",
+      "brake_bias"
+     ],
+     "advanced": [
+      "brake_bias",
+      "tc",
+      "abs",
+      "drs_aero",
+      "pit_limiter",
+      "lights"
+     ]
+    }
+   },
+   {
+    "id": "ams2",
+    "label": "Automobilista 2",
+    "telemetry_keys": [],
+    "platforms": [
+     "pc"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the game's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": null
+    },
+    "research_depth": {
+     "bindings": "community (installed-file names, wiki)",
+     "behaviour": "community",
+     "telemetry": "repo (PCARS2 UDP) + community"
+    },
+    "functions": [
+     {
+      "function": "brake_bias",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Increase Brake Bias",
+       "dec": "Decrease Brake Bias"
+      },
+      "native_name": "Increase / Decrease Brake Bias; ICM",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "ams2_wiki",
+       "repo_pcars2"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "tc",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with TC"
+      ],
+      "actions": {
+       "inc": "Onboard Traction Control Increase",
+       "dec": "Onboard Traction Control Decrease"
+      },
+      "native_name": "Onboard Traction Control Increase/Decrease; Toggle Traction Control; ICM",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "ams2_wiki"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with ABS"
+      ],
+      "actions": {
+       "inc": "Increase Abs Strength",
+       "dec": "Decrease Abs Strength"
+      },
+      "native_name": "Increase / Decrease Abs Strength; Toggle ABS",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "repo_pcars2"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "unverified",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Toggle Stability Control"
+      },
+      "native_name": "Toggle Stability Control",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ers_mode",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "hybrid cars"
+      ],
+      "actions": {
+       "inc": "ERS Mode Increase"
+      },
+      "native_name": "ERS Mode Increase / Overtake",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "ams2_wiki"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "drs_aero",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "DRS cars"
+      ],
+      "actions": {
+       "press": "DRS"
+      },
+      "native_name": "DRS",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "ams2_wiki",
+       "repo_pcars2"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "arb",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with adjustable bars"
+      ],
+      "actions": {
+       "inc": "Increase Front Anti Roll Bar",
+       "dec": "Decrease Front Anti Roll Bar"
+      },
+      "native_name": "Increase/Decrease Front/Rear Anti Roll Bars; Weight Jacker",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Toggle Pit Speed Limiter"
+      },
+      "native_name": "Toggle Pit Speed Limiter",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "repo_pcars2"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "HeadLights"
+      },
+      "native_name": "HeadLights, High Beam",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "repo_pcars2"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "mfd",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "select": "ICM Cycle",
+       "up": "ICM up",
+       "down": "ICM down",
+       "left": "ICM left",
+       "right": "ICM right"
+      },
+      "native_name": "ICM menu up/down/left/right, ICM Cycle; Request Pit Stop",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "ams2_wiki"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "pit_limiter",
+      "brake_bias"
+     ],
+     "advanced": [
+      "brake_bias",
+      "tc",
+      "abs",
+      "ers_mode",
+      "drs_aero",
+      "arb",
+      "pit_limiter",
+      "lights",
+      "mfd"
+     ]
+    }
+   },
+   {
+    "id": "r3e",
+    "label": "RaceRoom",
+    "telemetry_keys": [],
+    "platforms": [
+     "pc"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the game's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": "bindings were not found; telemetry only says these settings exist"
+    },
+    "research_depth": {
+     "bindings": "community / not found",
+     "behaviour": "not found",
+     "telemetry": "official (r3e.h, Unlicense)"
+    },
+    "functions": [
+     {
+      "function": "tc",
+      "in_race": "unverified",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Traction control setting",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "unverified",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {},
+      "native_name": "ABS setting",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "unverified",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {},
+      "native_name": "ESP aid (off/low/medium/high)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "brake_bias",
+      "in_race": "unverified",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Brake bias",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "engine_map",
+      "in_race": "unverified",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Engine map, engine brake",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "overtake",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "push-to-pass cars"
+      ],
+      "actions": {},
+      "native_name": "Push to pass",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "drs_aero",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "DRS cars"
+      ],
+      "actions": {},
+      "native_name": "DRS",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Pit limiter",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Headlights",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "ignition",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {},
+      "native_name": "Ignition / starter",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "V",
+      "source_ids": [
+       "r3e_h"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "pit_limiter"
+     ],
+     "advanced": [
+      "brake_bias",
+      "tc",
+      "abs",
+      "engine_map",
+      "overtake",
+      "drs_aero",
+      "pit_limiter"
+     ]
+    }
+   },
+   {
+    "id": "ac_evo",
+    "label": "Assetto Corsa EVO",
+    "telemetry_keys": [],
+    "platforms": [
+     "pc"
+    ],
+    "button_path": "none",
+    "menu": {
+     "where": "the game's Controls screen",
+     "evidence": null,
+     "groups": [],
+     "note": null
+    },
+    "research_depth": {
+     "bindings": "community (installed enum names)",
+     "behaviour": "not found (official)",
+     "telemetry": "community (GPL reader of Kunos shared memory: names only, do not copy)"
+    },
+    "functions": [
+     {
+      "function": "tc",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Traction control +",
+       "dec": "Traction control -"
+      },
+      "native_name": "TractionControl cycle +/- and direct 1-10; TC cut",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "acevo_structs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "abs",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "ABS +",
+       "dec": "ABS -"
+      },
+      "native_name": "ABS cycle +/- and direct",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "acevo_structs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "stability",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with ESC"
+      ],
+      "actions": {
+       "inc": "ESC +",
+       "dec": "ESC -"
+      },
+      "native_name": "ESC cycle +/- and ESC direct (1-10)",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "acevo_structs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "brake_bias",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Brake bias +",
+       "dec": "Brake bias -"
+      },
+      "native_name": "Brake Bias cycle +/-",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "acevo_structs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "engine_map",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "inc": "Engine map +",
+       "dec": "Engine map -"
+      },
+      "native_name": "Engine map cycle / direct",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "acevo_structs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "overtake",
+      "in_race": "conditional",
+      "binding": "direct",
+      "conditions": [
+       "cars with ERS overtake or DRS"
+      ],
+      "actions": {
+       "press": "ERS overtake"
+      },
+      "native_name": "Ers Overtake; DRS Toggle",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "acevo_structs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "pit_limiter",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Pit limiter"
+      },
+      "native_name": "Pit Limiter Toggle; Ignition Toggle; Starter",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "acevo_structs"
+      ],
+      "platform_note": null
+     },
+     {
+      "function": "lights",
+      "in_race": "yes",
+      "binding": "direct",
+      "conditions": [],
+      "actions": {
+       "press": "Lights"
+      },
+      "native_name": "Light cycle, flashing, rain lights, indicators, hazards, horn, wipers cycle",
+      "menu_group": null,
+      "shares_with": [],
+      "pitwall_sees": null,
+      "evidence": "U",
+      "source_ids": [
+       "simrace_config",
+       "acevo_structs"
+      ],
+      "platform_note": null
+     }
+    ],
+    "presets": {
+     "beginner": [
+      "pit_limiter",
+      "tc",
+      "abs"
+     ],
+     "advanced": [
+      "tc",
+      "abs",
+      "stability",
+      "brake_bias",
+      "engine_map",
+      "overtake",
+      "pit_limiter",
+      "lights"
+     ]
+    }
+   }
+  ],
+  "other_game": {
+   "steps": [
+    "Open the game's Controls (sometimes Controller, Wheel or Bindings) menu.",
+    "Pick your wheel or its preset if the game lists one.",
+    "For each row on Pitwall's card, find the game's action with that meaning (the names it may use are listed) and press the control on your wheel.",
+    "Save, then check each one on track. Pitwall can't see your wheel in this game."
+   ]
+  },
+  "templates": [
+   {
+    "id": "fanatec_gt_dd_pro_wheel",
+    "brand": "Fanatec",
+    "name": "Steering wheel for Gran Turismo DD Pro (bundled, QR2 Lite or QR1 Lite)",
+    "type": "rim",
+    "platforms": {
+     "ps": "with a PS-licensed base (GT DD Pro base)",
+     "pc": "yes",
+     "xbox": "no (not Xbox-licensed) [A]"
+    },
+    "completeness": "full",
+    "shape": "round"
+   },
+   {
+    "id": "fanatec_csl_elite_mclaren_gt3_v2",
+    "brand": "Fanatec",
+    "name": "CSL Elite Steering Wheel McLaren GT3 V2 (QR2 Lite)",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "xbox": "yes (Xbox column in the guide)",
+     "ps": "with a PS-licensed base"
+    },
+    "completeness": "full",
+    "shape": "round"
+   },
+   {
+    "id": "fanatec_cs_formula_v25",
+    "brand": "Fanatec",
+    "name": "ClubSport Steering Wheel Formula V2.5 and V2.5 X",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "ps": "with a PS-licensed base",
+     "xbox": "V2.5 X only"
+    },
+    "completeness": "full",
+    "shape": "formula"
+   },
+   {
+    "id": "fanatec_csl_p1_v2",
+    "brand": "Fanatec",
+    "name": "CSL Steering Wheel P1 V2",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "ps": "with a PS-licensed base",
+     "xbox": "no in this table (an Xbox variant exists, not read) [U]"
+    },
+    "completeness": "full",
+    "shape": "formula"
+   },
+   {
+    "id": "fanatec_csl_elite_wrc",
+    "brand": "Fanatec",
+    "name": "CSL Elite Steering Wheel WRC (QR2 Lite)",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "xbox": "yes (Xbox-labelled buttons in Fanatec's photo) [A]",
+     "ps": "with a PS-licensed base"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "fanatec_cs_f1_esports_v2",
+    "brand": "Fanatec",
+    "name": "ClubSport Steering Wheel F1 Esports V2",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "ps": "PS-ready (needs PS-licensed base)",
+     "xbox": "no"
+    },
+    "completeness": "full",
+    "shape": "formula"
+   },
+   {
+    "id": "fanatec_podium_button_module_rally",
+    "brand": "Fanatec",
+    "name": "Podium Button Module Rally (for Podium Hub / ClubSport Universal Hub V2)",
+    "type": "button_module",
+    "platforms": {
+     "pc": "yes",
+     "ps": "with a PS-licensed base",
+     "xbox": "with an Xbox-licensed hub"
+    },
+    "completeness": "full",
+    "shape": "box"
+   },
+   {
+    "id": "logitech_g923_ps",
+    "brand": "Logitech",
+    "name": "G923 Racing Wheel for PS5/PS4/PC",
+    "type": "wheel_bundle",
+    "platforms": {
+     "ps": "yes",
+     "pc": "yes",
+     "xbox": "no (separate Xbox version)"
+    },
+    "completeness": "full",
+    "shape": "round"
+   },
+   {
+    "id": "logitech_g923_xbox",
+    "brand": "Logitech",
+    "name": "G923 Racing Wheel for Xbox/PC",
+    "type": "wheel_bundle",
+    "platforms": {
+     "xbox": "yes",
+     "pc": "yes",
+     "ps": "no"
+    },
+    "completeness": "full",
+    "shape": "round"
+   },
+   {
+    "id": "logitech_pro_racing_wheel_xbox",
+    "brand": "Logitech",
+    "name": "PRO Racing Wheel (Xbox/PC version; a PS/PC version exists, not read)",
+    "type": "wheel_bundle",
+    "platforms": {
+     "xbox": "yes",
+     "pc": "yes",
+     "ps": "PS version exists [U]"
+    },
+    "completeness": "full",
+    "shape": "round"
+   },
+   {
+    "id": "logitech_rs_wheel_hub",
+    "brand": "Logitech",
+    "name": "RS Wheel Hub (PC version, Xbox version; RS50 PS/PC system uses it with PS labels)",
+    "type": "hub",
+    "platforms": {
+     "pc": "yes",
+     "ps": "on a compatible PS Logitech base (RS50 PS)",
+     "xbox": "Xbox hub variant on an Xbox base"
+    },
+    "completeness": "full",
+    "shape": "d"
+   },
+   {
+    "id": "thrustmaster_t248",
+    "brand": "Thrustmaster",
+    "name": "T248 (PS5/PS4/PC) and T248X (Xbox/PC) - Thrustmaster's 'hybrid' wheel family [A]",
+    "type": "wheel_bundle",
+    "platforms": {
+     "ps": "T248",
+     "xbox": "T248X",
+     "pc": "both"
+    },
+    "completeness": "full",
+    "shape": "round"
+   },
+   {
+    "id": "thrustmaster_t_gt_ii",
+    "brand": "Thrustmaster",
+    "name": "T-GT II (PS5/PS4/PC)",
+    "type": "wheel_bundle",
+    "platforms": {
+     "ps": "yes",
+     "pc": "yes",
+     "xbox": "no"
+    },
+    "completeness": "full",
+    "shape": "round"
+   },
+   {
+    "id": "thrustmaster_sf1000_addon",
+    "brand": "Thrustmaster",
+    "name": "Formula Wheel Add-On Ferrari SF1000 Edition (rim for TX, TS-XW, T300, T-GT, TS-PC bases)",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "ps": "on a PS base (T300/T-GT)",
+     "xbox": "on an Xbox base (TX/TS-XW), reduced"
+    },
+    "completeness": "full",
+    "shape": "formula"
+   },
+   {
+    "id": "thrustmaster_ts_pc_racer",
+    "brand": "Thrustmaster",
+    "name": "TS-PC Racer (PC only) and its bundled wheel",
+    "type": "wheel_bundle",
+    "platforms": {
+     "pc": "yes",
+     "ps": "no",
+     "xbox": "no"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "moza_es_esx",
+    "brand": "MOZA",
+    "name": "ES / ESX steering wheel",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "xbox": "ESX only (R3 bundle or supported bases); PC/Xbox mode by holding S1+S2 for 5 s",
+     "ps": "no"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "moza_cs_v2p",
+    "brand": "MOZA",
+    "name": "CS V2P steering wheel",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "xbox": "no [A]",
+     "ps": "no"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "moza_gs_v2p",
+    "brand": "MOZA",
+    "name": "GS V2P GT wheel",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "xbox": "no [A]",
+     "ps": "no"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "moza_ks",
+    "brand": "MOZA",
+    "name": "KS steering wheel",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "xbox": "no [A]",
+     "ps": "no"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "moza_fsr2",
+    "brand": "MOZA",
+    "name": "FSR2 formula wheel",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "xbox": "no [A]",
+     "ps": "no"
+    },
+    "completeness": "counts",
+    "shape": "formula"
+   },
+   {
+    "id": "simagic_gt_neo",
+    "brand": "Simagic",
+    "name": "GT NEO",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes",
+     "xbox": "no [U]",
+     "ps": "no [U]"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "simucube_tahko_gt21",
+    "brand": "Simucube",
+    "name": "Tahko GT-21 (wireless)",
+    "type": "rim",
+    "platforms": {
+     "pc": "yes [A]"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "cammus_c12",
+    "brand": "Cammus",
+    "name": "C12 (integrated base and wheel)",
+    "type": "wheel_bundle",
+    "platforms": {
+     "pc": "yes [U]",
+     "ps": "no [U]",
+     "xbox": "no [U]"
+    },
+    "completeness": "counts",
+    "shape": "round"
+   },
+   {
+    "id": "custom",
+    "brand": "any",
+    "name": "Custom rim / button box (user counts each control kind; no maker data)",
+    "type": "custom",
+    "platforms": {},
+    "completeness": "counts",
+    "shape": "round"
+   }
+  ],
+  "not_possible": [
+   {
+    "topic": "ride_height",
+    "text": "No game Pitwall knows lets you change ride height while driving. F1 25 and GT7 only show it in the car setup; iRacing's weight jacker on some oval cars is the closest thing."
+   },
+   {
+    "topic": "aero",
+    "text": "Wing angles are a setup item in every game researched. F1 25 2026 cars switch Active Aero to Straight Line Mode on the DRS/S Mode button inside the zones only; other games have DRS on cars that have it."
+   },
+   {
+    "topic": "gt7_asm",
+    "text": "GT7's stability control (ASM) and ABS are only in the pause menu, under Assistance Settings. They can't go on a button."
+   },
+   {
+    "topic": "f1_tc_abs",
+    "text": "In F1 25, traction control and ABS are assists you set in the menu, not while driving."
+   },
+   {
+    "topic": "wheel_ptt_no_telemetry",
+    "text": "{game} doesn't send wheel button presses, so Pitwall can't see your wheel. Talk to Pitwall with the iPad's talk button, or hold Space on a keyboard."
+   },
+   {
+    "topic": "live_values",
+    "text": "Pitwall can show the current value only where the game sends it: F1 25 brake bias and ERS mode. GT7 only says when TCS is working, not its level; Assetto Corsa on console only says whether TC and ABS are on and working."
+   }
+  ],
+  "evidence_labels": {
+   "V": "From the maker's or publisher's own manual, product page or support page.",
+   "A": "Inferred from official figures or tables; not said in words.",
+   "U": "From a community source, or not checked.",
+   "D": "Pitwall's suggestion, not a fact about the game or the wheel.",
+   "H": "Entered by you.",
+   "seen": "Pitwall saw this in F1 25's button data during a test. It is still not validated."
+  },
+  "sources": {
+   "ea26_pad_ps": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-driving-controls-controller-playstation",
+    "community": false
+   },
+   "ea26_wheel_ps": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-driving-controls-wheel-playstation",
+    "community": false
+   },
+   "ea26_wheel_xbox": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-driving-controls-wheel-xbox",
+    "community": false
+   },
+   "ea26_wheel_pc": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-driving-controls-wheel-pc",
+    "community": false
+   },
+   "ea26_pad_xbox": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-driving-controls-controller-xbox",
+    "community": false
+   },
+   "ea26_kb_pc": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-driving-controls-keyboard-pc",
+    "community": false
+   },
+   "ea26_mfd_wheel_ps": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-mfd-shortcuts-wheel-playstation",
+    "community": false
+   },
+   "ea25_mfd_pad_ps": {
+    "url": "https://www.ea.com/games/f1/f1-25/f1-25-controls-hub/mfd-shortcuts-controller-playstation",
+    "community": false
+   },
+   "ea25_mfd_wheel_xbox": {
+    "url": "https://www.ea.com/games/f1/f1-25/f1-25-controls-hub/mfd-shortcuts-controls-wheel-xbox",
+    "community": false
+   },
+   "ea26_udp_wheel_ps": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-udp-custom-actions-wheel-playstation",
+    "community": false
+   },
+   "ea26_devices_ps": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-supported-devices-playstation",
+    "community": false
+   },
+   "ea26_devices_pc": {
+    "url": "https://www.ea.com/games/f1/f1-25/26-season-update-controls-hub/26-season-update-supported-devices-pc",
+    "community": false
+   },
+   "ea_tips_2026": {
+    "url": "https://www.ea.com/games/f1/f1-25/news/f1-25-2026-season-pack-tips-and-tricks",
+    "community": false
+   },
+   "ea_patch_120": {
+    "url": "https://www.ea.com/games/f1/f1-25/news/f1-25-2026-season-pack-patch-notes-v120",
+    "community": false
+   },
+   "ea_f122_able": {
+    "url": "https://www.ea.com/able/resources/f1-22/pc/controls",
+    "community": false
+   },
+   "repo_f1_spec": {
+    "url": "docs/research/f1-udp-spec.md (EA Data Output spec PDFs, 2025 v3 and 2026 v1.2)",
+    "community": false
+   },
+   "fan_f1_25": {
+    "url": "https://www.fanatec.com/uk/en/explorer/games/f1-2024/how-to-configure-your-racing-wheel-for-f1-25/",
+    "community": false
+   },
+   "gt7m_mfd": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/race/04",
+    "community": false
+   },
+   "gt7m_assist": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/drivingoption/03",
+    "community": false
+   },
+   "gt7m_pause": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/race/05",
+    "community": false
+   },
+   "gt7m_screen": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/race/02",
+    "community": false
+   },
+   "gt7m_pit": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/race/07",
+    "community": false
+   },
+   "gt7m_views": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/race/03",
+    "community": false
+   },
+   "gt7m_options": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/option/01",
+    "community": false
+   },
+   "gt7m_wheels": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/controller/02",
+    "community": false
+   },
+   "gt7m_carsettings": {
+    "url": "https://www.gran-turismo.com/gb/gt7/manual/drivingoption/02",
+    "community": false
+   },
+   "fan_pvgt_gt7": {
+    "url": "https://www.fanatec.com/uk/en/explorer/products/steering-wheel/using-the-csl-elite-steering-wheel-porsche-vision-gt-in-gran-turismo-7/",
+    "community": false
+   },
+   "fan_forum_gt7_extra": {
+    "url": "https://forum.fanatec.com/discussion/28493/gran-turismo-7-extra-buttons-mapping",
+    "community": true
+   },
+   "og_gt7_pad": {
+    "url": "https://outsidergaming.com/gran-turismo-7-controls-guide-for-ps4-ps5-and-gameplay-tips-for-beginners/",
+    "community": true
+   },
+   "repo_gt7": {
+    "url": "docs/research/gt7-protocol.md section 4.1 (flags at 0x8E)",
+    "community": false
+   },
+   "csp_ac_controls": {
+    "url": "https://github.com/ac-custom-shaders-patch/acc-extension-config/blob/master/config/data_controls_props.ini",
+    "community": true
+   },
+   "repo_ac_udp": {
+    "url": "docs/research/protocols/ac-remote-udp.md section 3.3",
+    "community": false
+   },
+   "repo_ac_shm": {
+    "url": "docs/research/forza-ac-acc-iracing.md section 2.1",
+    "community": false
+   },
+   "acc_r7": {
+    "url": "https://www.gtplanet.net/forum/threads/assetto-corsa-competizione-early-access-release-7-is-out.386589/",
+    "community": true
+   },
+   "acc_107": {
+    "url": "https://www.gtplanet.net/forum/threads/assetto-corsa-competizione-update-1-0-7-new-tire-model-mid-session-saving-and-more.389137/",
+    "community": true
+   },
+   "acc_152": {
+    "url": "https://www.onlineracedriver.com/2020/07/28/assetto-corsa-competizione-update-v1-5-2-released",
+    "community": true
+   },
+   "repo_acc_shm": {
+    "url": "docs/research/forza-ac-acc-iracing.md sections 3.1 and 3.3",
+    "community": false
+   },
+   "fm_access": {
+    "url": "https://support.forza.net/hc/en-us/articles/46524064744851-Forza-Motorsport-Accessibility-Support",
+    "community": false
+   },
+   "fm_wheel": {
+    "url": "https://support.forza.net/hc/en-us/articles/21423900676371-Forza-Motorsport-Advanced-Wheel-Tuning",
+    "community": false
+   },
+   "fm7_ctrl": {
+    "url": "https://support.forza.net/hc/en-us/articles/360005421793-FM7-Controller-Settings",
+    "community": false
+   },
+   "fh5_wheel": {
+    "url": "https://support.forza.net/hc/en-us/articles/4409761195923-FH5-Wheel-Setup-and-Tuning",
+    "community": false
+   },
+   "repo_forza": {
+    "url": "docs/research/forza-ac-acc-iracing.md section 1",
+    "community": false
+   },
+   "ir_keys": {
+    "url": "https://www.iracing.com/keyboard-shortcuts/",
+    "community": false
+   },
+   "ir_limiter": {
+    "url": "https://support.iracing.com/support/solutions/articles/31000166946-pit-speed-limiters",
+    "community": false
+   },
+   "pyirsdk_vars": {
+    "url": "https://github.com/kutu/pyirsdk/blob/master/vars.txt",
+    "community": true
+   },
+   "irdashies_cs": {
+    "url": "https://github.com/tariknz/irdashies/blob/main/src/types/carSystems.ts",
+    "community": true
+   },
+   "lmu_tc": {
+    "url": "https://guide.lemansultimate.com/hc/en-gb/articles/13182869047311-How-do-I-configure-my-traction-control-in-Le-Mans-Ultimate",
+    "community": false
+   },
+   "lmu_bind": {
+    "url": "https://guide.lemansultimate.com/hc/en-gb/articles/13182838936975-How-do-I-assign-buttons-in-Le-Mans-Ultimate",
+    "community": false
+   },
+   "lmu_mfd": {
+    "url": "https://guide.lemansultimate.com/hc/en-gb/articles/13202210967055-Understanding-the-MFD-Multi-Function-Display",
+    "community": false
+   },
+   "lmu_assists": {
+    "url": "https://guide.lemansultimate.com/hc/en-gb/articles/13162741614607-Driving-Assists",
+    "community": false
+   },
+   "lmu_wheel": {
+    "url": "https://guide.lemansultimate.com/hc/en-gb/articles/13152295737359-How-to-set-up-your-wheel-and-pedals",
+    "community": false
+   },
+   "lmu_hyper": {
+    "url": "https://guide.lemansultimate.com/hc/en-gb/articles/13152322265231-Hypercar-Category-LMH-LMDh",
+    "community": false
+   },
+   "lmu_abs": {
+    "url": "https://guide.lemansultimate.com/hc/en-gb/articles/13211078435983-ABS-Anti-Lock-Braking-System-for-LMGT3-Cars",
+    "community": false
+   },
+   "lmu_v12": {
+    "url": "https://guide.lemansultimate.com/hc/en-gb/articles/14556121957775-V1-2-Update-2",
+    "community": false
+   },
+   "irdashies_lmu": {
+    "url": "https://github.com/tariknz/irdashies/blob/main/src/app/lmu/mapTelemetry.ts",
+    "community": true
+   },
+   "s397_tcabs": {
+    "url": "https://docs.studio-397.com/x/D4CB",
+    "community": false
+   },
+   "rf2_internals": {
+    "url": "https://github.com/TheIronWolfModding/rF2SharedMemoryMapPlugin/blob/master/Include/InternalsPlugin.hpp (Studio 397 header copy inside a GPL-3.0 repo: facts only, do not copy)",
+    "community": true
+   },
+   "repo_pcars2": {
+    "url": "docs/research/protocols/pcars2-udp.md (sCarFlags, sBrakeBias)",
+    "community": false
+   },
+   "ams2_wiki": {
+    "url": "https://automobilista2.wiki.gg/wiki/Features",
+    "community": true
+   },
+   "asetek_ams2": {
+    "url": "https://www.asetek.com/simsports/wp-content/uploads/2024/05/Input-Guide-Automobilista-2.pdf",
+    "community": false
+   },
+   "r3e_h": {
+    "url": "https://github.com/sector3studios/r3e-api/blob/master/sample-c/src/r3e.h",
+    "community": true
+   },
+   "simucube_roles": {
+    "url": "https://github.com/Simucube/sc-api/blob/master/data/device_info_enums.json",
+    "community": true
+   },
+   "simrace_config": {
+    "url": "https://github.com/dillonkirsch/simrace_config/blob/main/src/sim_controls_manager/control_names.py",
+    "community": true
+   },
+   "acevo_structs": {
+    "url": "https://github.com/vazhure/vAzhureRacingHub/blob/main/KunosPlugin/ACEVO_Structs.cs (GPL-3.0: field names only, do not copy)",
+    "community": true
+   },
+   "fan_buttons": {
+    "url": "https://www.fanatec.com/uk/en/explorer/products/steering-wheel/what-can-i-use-the-buttons-on-my-sim-racing-steering-wheel-for/",
+    "community": false
+   },
+   "fan_gt_racing": {
+    "url": "https://www.fanatec.com/uk/en/explorer/games/gaming-tips/configure-your-steering-wheel-for-gt-racing/",
+    "community": false
+   },
+   "FAN-PLAT": {
+    "url": "https://www.fanatec.com/us/en/s/platform-compatibility",
+    "community": false,
+    "title": "Fanatec, Platform compatibility explained"
+   },
+   "FAN-PSFAQ": {
+    "url": "https://help.fanatec.com/hc/en-us/articles/49324482078481-PlayStation-Compatibility-FAQ",
+    "community": false,
+    "title": "Fanatec help, PlayStation Compatibility FAQ (updated 2026-07-30)"
+   },
+   "FAN-GTDDP-PROD": {
+    "url": "https://www.fanatec.com/eu/en/p/sim-racing-bundles/crd-9020007-eu/gran-turismo-dd-pro-5nm-qr2l-eu",
+    "community": false,
+    "title": "Fanatec GT DD Pro 5 Nm QR2L bundle page (features, compatibility)"
+   },
+   "FAN-GTDDP-MAN": {
+    "url": "https://www.fanatec.com/us/en/explorer/products/racing-wheels-wheel-bases/gran-turismo-dd-pro/",
+    "community": false,
+    "title": "GT DD Pro manual EN Rev.04 (p19 5.6) and Explorer manual (MPS/AP definitions)"
+   },
+   "FAN-MCL": {
+    "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/csl-elite-steering-wheel-mclaren-qr2-lite/",
+    "community": false,
+    "title": "Fanatec Explorer, CSL Elite Steering Wheel McLaren GT3 V2 quick guide"
+   },
+   "FAN-FV25": {
+    "url": "https://www.fanatec.com/us/en/explorer/products/steering-wheel/wheel-cs-f-v25-qr-2/",
+    "community": false,
+    "title": "Fanatec Explorer, ClubSport Steering Wheel Formula V2.5 manual"
+   },
+   "FAN-FV25X": {
+    "url": "https://www.fanatec.com/us/en/explorer/products/steering-wheel/wheel-cs-f-v25x-qr-2/",
+    "community": false,
+    "title": "Fanatec Explorer, ClubSport Steering Wheel Formula V2.5 X manual"
+   },
+   "FAN-P1V2": {
+    "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/csl-sw-p1-v2/",
+    "community": false,
+    "title": "Fanatec Explorer, CSL Steering Wheel P1 V2 quick guide"
+   },
+   "FAN-WRC": {
+    "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/csl-e-sw-wrc-qr2l/",
+    "community": false,
+    "title": "Fanatec Explorer, CSL Elite Steering Wheel WRC quick guide"
+   },
+   "FAN-F1V2": {
+    "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/clubsport-steering-wheel-f1-esports-v2-qr2-wheel-side/",
+    "community": false,
+    "title": "Fanatec Explorer, ClubSport Steering Wheel F1 Esports V2 quick guide"
+   },
+   "FAN-PBMR": {
+    "url": "https://www.fanatec.com/eu/en/explorer/products/steering-wheel/p-bm-r/",
+    "community": false,
+    "title": "Fanatec Explorer, Podium Button Module Rally quick guide"
+   },
+   "FAN-ENC": {
+    "url": "https://www.fanatec.com/us/en/explorer/products/steering-wheel/rotary-encoders-on-fanatec-steering-wheel/",
+    "community": false,
+    "title": "Fanatec Explorer, Using Rotary Encoders on your Fanatec Steering Wheel"
+   },
+   "WALKTHROUGH": {
+    "url": "docs/research/gt-dd-pro-ps5-walkthrough.md",
+    "community": true,
+    "title": "pitwall docs/research/gt-dd-pro-ps5-walkthrough.md section 1"
+   },
+   "LOG-G923PS": {
+    "url": "https://www.logitech.com/assets/66156/3/g923-trueforce-racing-wheel-ps5-qsg.pdf",
+    "community": false,
+    "title": "Logitech G923 PS5/PS4 setup guide p6"
+   },
+   "LOG-G923XB": {
+    "url": "https://www.logitech.com/assets/65932/2/g923-racing-wheel-qsg.pdf",
+    "community": false,
+    "title": "Logitech G923 Xbox One/PC setup guide p6"
+   },
+   "LOG-PROXB": {
+    "url": "https://www.logitech.com/assets/70072/3/pro_racing_wheel_for_xb_&_pc_web_qsg_samr.pdf",
+    "community": false,
+    "title": "Logitech PRO Racing Wheel Xbox/PC setup guide p7-8, 14, 17"
+   },
+   "LOG-RSHUB": {
+    "url": "https://www.logitech.com/assets/70193/2/rs_wheel_hub_web_qsg_emea.pdf",
+    "community": false,
+    "title": "Logitech RS Wheel Hub setup guide p3-8"
+   },
+   "LOG-RS50PS": {
+    "url": "https://www.logitech.com/content/dam/support/simulation/rs50/rs50-ps-and-pc-setup-guide-amr.pdf",
+    "community": false,
+    "title": "Logitech RS50 System/Base PS and PC setup guide p7-9"
+   },
+   "TM-T248PS": {
+    "url": "https://ts.thrustmaster.com/download/accessories/Manuals/T248/T248PS_User_manual.pdf",
+    "community": false,
+    "title": "Thrustmaster T248 (PS) user manual p2, p13"
+   },
+   "TM-T248X": {
+    "url": "https://ts.thrustmaster.com/download/accessories/Manuals/T248/T248X_User_manual.pdf",
+    "community": false,
+    "title": "Thrustmaster T248X user manual p2, p13-14 and generic mapping"
+   },
+   "TM-TGT2": {
+    "url": "https://ts.thrustmaster.com/download/pictures/PCMAC/TGT_II/T-GT_II_Mapping.pdf",
+    "community": false,
+    "title": "Thrustmaster T-GT II user manual p2, p11 and generic mapping"
+   },
+   "TM-SF1000": {
+    "url": "https://ts.thrustmaster.com/download/pictures/PCMAC/SF1000/Ferrari_SF1000_button_mapping.pdf",
+    "community": false,
+    "title": "Thrustmaster Formula Wheel Add-On Ferrari SF1000 user manual p9-11 and button mapping"
+   },
+   "TM-TSPC": {
+    "url": "https://ts.thrustmaster.com/download/accessories/Manuals/TSPCRacer/TSPCRacer_User_Manual.pdf",
+    "community": false,
+    "title": "Thrustmaster TS-PC Racer user manual p2, compatible wheels list"
+   },
+   "MOZA-BASEFAQ": {
+    "url": "https://support.mozaracing.com/support/solutions/articles/70000627811-wheel-base-faqs",
+    "community": false,
+    "title": "MOZA support, Wheel Base FAQs"
+   },
+   "MOZA-XBFAQ": {
+    "url": "https://support.mozaracing.com/en/support/solutions/articles/70000663979-xbox-faq",
+    "community": false,
+    "title": "MOZA support, Xbox FAQ"
+   },
+   "MOZA-ESX": {
+    "url": "https://mozaracing.com/products/esx-steering-wheel",
+    "community": false,
+    "title": "MOZA ESX steering wheel product page"
+   },
+   "MOZA-KS": {
+    "url": "https://mozaracing.com/products/ks-gt-wheel",
+    "community": false,
+    "title": "MOZA KS steering wheel product page"
+   },
+   "MOZA-CSV2P": {
+    "url": "https://mozaracing.com/products/cs-v2p-wheel",
+    "community": false,
+    "title": "MOZA CS V2P product page"
+   },
+   "MOZA-GSV2P": {
+    "url": "https://mozaracing.com/products/gs-v2p-gt-wheel",
+    "community": false,
+    "title": "MOZA GS V2P product page"
+   },
+   "MOZA-FSR2": {
+    "url": "https://mozaracing.com/products/fsr2-formula-wheel",
+    "community": false,
+    "title": "MOZA FSR2 product page"
+   },
+   "MOZA-TGS26": {
+    "url": "https://mozaracing.com/blogs/news/moza-tgs-2026",
+    "community": false,
+    "title": "MOZA news, PS5 racing wheels at TGS 2026"
+   },
+   "SC-REMAP": {
+    "url": "https://docs.simucube.com/TunerSoftware/steeringwheel/inputbuttonremap.html",
+    "community": false,
+    "title": "Simucube docs, Tuner steering wheel input button remap"
+   },
+   "SC-TAHKO": {
+    "url": "https://docs.simucube.com/Wheels/Tahko/Tahko.html",
+    "community": false,
+    "title": "Simucube docs, Tahko wheels"
+   },
+   "SIMAGIC-GTNEO": {
+    "url": "https://image.simagic.com/profile/upload/2024/05/15/SIMAGIC_GTNEO_UM.pdf",
+    "community": false,
+    "title": "Simagic GT NEO user manual"
+   },
+   "ASETEK-XBOX": {
+    "url": "https://www.asetek.com/press-releases/asetek-simsports-announces-partnership-with-xbox/",
+    "community": false,
+    "title": "Asetek press release, SimSports partnership with Xbox"
+   },
+   "MS-RWB": {
+    "url": "https://learn.microsoft.com/en-us/uwp/api/windows.gaming.input.racingwheelbuttons",
+    "community": false,
+    "title": "Microsoft Learn, RacingWheelButtons (Windows.Gaming.Input)"
+   },
+   "MS-GIRWB": {
+    "url": "https://learn.microsoft.com/en-us/gaming/gdk/docs/reference/input/gameinput/enums/gameinputracingwheelbuttons",
+    "community": false,
+    "title": "Microsoft Learn, GameInputRacingWheelButtons (GDK)"
+   },
+   "MS-DIJS2": {
+    "url": "https://learn.microsoft.com/en-us/previous-versions/windows/desktop/ee416628(v=vs.85)",
+    "community": false,
+    "title": "Microsoft Learn, DIJOYSTATE2"
+   },
+   "MS-JOYINFOEX": {
+    "url": "https://learn.microsoft.com/en-us/windows/win32/api/joystickapi/ns-joystickapi-joyinfoex",
+    "community": false,
+    "title": "Microsoft Learn, JOYINFOEX"
+   },
+   "EA-F1": {
+    "url": "docs/research/f1-udp-spec.md",
+    "community": false,
+    "title": "EA F1 25 UDP spec (pitwall copy): Event BUTN, Appendix 8.9, Participants m_platform"
+   },
+   "SRCH-F1V2-SPECS": {
+    "url": "https://fanatec.com/eu-en/clubsport-steering-wheel-f1-esports-v2",
+    "community": true,
+    "title": "Fanatec F1 Esports V2 listing (11 buttons, 7-way FunkySwitch, analogue joystick), via search extract"
+   },
+   "COMM-FAN-GTSTICKS": {
+    "url": "https://forum.fanatec.com/discussion/comment/96212",
+    "community": true,
+    "title": "Fanatec forum threads on GT DD Pro coloured sticks (community)"
+   },
+   "COMM-SC32": {
+    "url": "https://community.granitedevices.com/t/simbin-games-and-simucube-2/7851",
+    "community": true,
+    "title": "Simucube community: oldest games read only the first 32 buttons (community)"
+   },
+   "COMM-CAMMUS": {
+    "url": "https://overtake.gg/news/comments/78515",
+    "community": true,
+    "title": "OverTake, Cammus C12 article (community/press) and retailer FAQs"
+   }
+  },
+  "diagram": {
+   "viewbox": [
+    400,
+    300
+   ],
+   "shapes": {
+    "round": {
+     "outline": "M200 8 A116 116 0 1 1 199.9 8 Z M200 52 A72 72 0 1 0 200.1 52 Z",
+     "zones": {
+      "left_top": [
+       62,
+       52,
+       86,
+       52
+      ],
+      "right_top": [
+       252,
+       52,
+       86,
+       52
+      ],
+      "left_thumb": [
+       34,
+       108,
+       96,
+       56
+      ],
+      "right_thumb": [
+       270,
+       108,
+       96,
+       56
+      ],
+      "left_lower": [
+       62,
+       168,
+       86,
+       52
+      ],
+      "right_lower": [
+       252,
+       168,
+       86,
+       52
+      ],
+      "centre_top": [
+       152,
+       30,
+       96,
+       52
+      ],
+      "centre": [
+       152,
+       86,
+       96,
+       64
+      ],
+      "centre_bottom": [
+       152,
+       154,
+       96,
+       60
+      ],
+      "back_left": [
+       0,
+       92,
+       30,
+       88
+      ],
+      "back_right": [
+       370,
+       92,
+       30,
+       88
+      ],
+      "box": [
+       0,
+       246,
+       132,
+       54
+      ],
+      "hub": [
+       134,
+       246,
+       132,
+       54
+      ],
+      "unplaced": [
+       268,
+       246,
+       132,
+       54
+      ]
+     }
+    },
+    "d": {
+     "outline": "M84 20 H316 Q368 20 368 72 V168 Q368 232 300 232 H100 Q32 232 32 168 V72 Q32 20 84 20 Z",
+     "zones": {
+      "left_top": [
+       62,
+       52,
+       86,
+       52
+      ],
+      "right_top": [
+       252,
+       52,
+       86,
+       52
+      ],
+      "left_thumb": [
+       34,
+       108,
+       96,
+       56
+      ],
+      "right_thumb": [
+       270,
+       108,
+       96,
+       56
+      ],
+      "left_lower": [
+       62,
+       168,
+       86,
+       52
+      ],
+      "right_lower": [
+       252,
+       168,
+       86,
+       52
+      ],
+      "centre_top": [
+       152,
+       30,
+       96,
+       52
+      ],
+      "centre": [
+       152,
+       86,
+       96,
+       64
+      ],
+      "centre_bottom": [
+       152,
+       154,
+       96,
+       60
+      ],
+      "back_left": [
+       0,
+       92,
+       30,
+       88
+      ],
+      "back_right": [
+       370,
+       92,
+       30,
+       88
+      ],
+      "box": [
+       0,
+       246,
+       132,
+       54
+      ],
+      "hub": [
+       134,
+       246,
+       132,
+       54
+      ],
+      "unplaced": [
+       268,
+       246,
+       132,
+       54
+      ]
+     }
+    },
+    "formula": {
+     "outline": "M60 40 H340 Q378 40 378 84 V196 Q378 232 340 226 L292 214 H108 L60 226 Q22 232 22 196 V84 Q22 40 60 40 Z",
+     "zones": {
+      "left_top": [
+       62,
+       52,
+       86,
+       52
+      ],
+      "right_top": [
+       252,
+       52,
+       86,
+       52
+      ],
+      "left_thumb": [
+       34,
+       108,
+       96,
+       56
+      ],
+      "right_thumb": [
+       270,
+       108,
+       96,
+       56
+      ],
+      "left_lower": [
+       62,
+       168,
+       86,
+       52
+      ],
+      "right_lower": [
+       252,
+       168,
+       86,
+       52
+      ],
+      "centre_top": [
+       152,
+       30,
+       96,
+       52
+      ],
+      "centre": [
+       152,
+       86,
+       96,
+       64
+      ],
+      "centre_bottom": [
+       152,
+       154,
+       96,
+       60
+      ],
+      "back_left": [
+       0,
+       92,
+       30,
+       88
+      ],
+      "back_right": [
+       370,
+       92,
+       30,
+       88
+      ],
+      "box": [
+       0,
+       246,
+       132,
+       54
+      ],
+      "hub": [
+       134,
+       246,
+       132,
+       54
+      ],
+      "unplaced": [
+       268,
+       246,
+       132,
+       54
+      ]
+     }
+    },
+    "box": {
+     "outline": "M30 24 H370 V228 H30 Z",
+     "zones": {
+      "box": [
+       34,
+       28,
+       332,
+       120
+      ],
+      "left_top": [
+       34,
+       152,
+       108,
+       22
+      ],
+      "centre_top": [
+       146,
+       152,
+       108,
+       22
+      ],
+      "right_top": [
+       258,
+       152,
+       108,
+       22
+      ],
+      "left_thumb": [
+       34,
+       176,
+       108,
+       22
+      ],
+      "centre": [
+       146,
+       176,
+       108,
+       22
+      ],
+      "right_thumb": [
+       258,
+       176,
+       108,
+       22
+      ],
+      "left_lower": [
+       34,
+       200,
+       108,
+       22
+      ],
+      "centre_bottom": [
+       146,
+       200,
+       108,
+       22
+      ],
+      "right_lower": [
+       258,
+       200,
+       108,
+       22
+      ],
+      "back_left": [
+       0,
+       92,
+       30,
+       88
+      ],
+      "back_right": [
+       370,
+       92,
+       30,
+       88
+      ],
+      "hub": [
+       0,
+       246,
+       196,
+       54
+      ],
+      "unplaced": [
+       204,
+       246,
+       196,
+       54
+      ]
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,111 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/layouts/l_9f8e7d6c/guide?platform=ps5."
+ },
+ "body": {
+  "where": "Controls > [your wheel's preset]",
+  "where_evidence": "V",
+  "intro": [
+   "Open Controls, then your wheel's preset. F1 25 groups the actions as Control Scheme, MFD Shortcuts and UDP Custom Actions.",
+   "The game's preset for this wheel may already use this button (EA doesn't publish the GT DD Pro defaults)."
+  ],
+  "steps": [
+   {
+    "n": 1,
+    "group": "Control Scheme",
+    "native": "Activate/Deactivate DRS/S Mode",
+    "label": "DRS / active aero",
+    "physical": "Press TRIANGLE",
+    "evidence": "A",
+    "note": "F1 25 shares this button with the pit limiter by default."
+   },
+   {
+    "n": 2,
+    "group": "Control Scheme",
+    "native": "Pit Limiter",
+    "label": "Pit limiter",
+    "physical": "Press TRIANGLE",
+    "evidence": "A",
+    "note": "Same button as DRS: pit limiter in the pit lane, DRS on track."
+   },
+   {
+    "n": 3,
+    "group": "Control Scheme",
+    "native": "Overtake/Boost",
+    "label": "Overtake / boost",
+    "physical": "Press SQUARE",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 4,
+    "group": "Control Scheme",
+    "native": "Radio/Voice Commands",
+    "label": "Team radio menu",
+    "physical": "Press CROSS",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 5,
+    "group": "Control Scheme",
+    "native": "MFD Menu Up",
+    "label": "MFD up",
+    "physical": "Push the MENU STICK up",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 6,
+    "group": "MFD Shortcuts",
+    "native": "Brake Bias Increase",
+    "label": "Brake bias +",
+    "physical": "Press R2",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 7,
+    "group": "MFD Shortcuts",
+    "native": "Brake Bias Decrease",
+    "label": "Brake bias −",
+    "physical": "Press L2",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 8,
+    "group": "MFD Shortcuts",
+    "native": "ERS Mode Increase",
+    "label": "ERS / hybrid mode +",
+    "physical": "Press R3",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 9,
+    "group": "MFD Shortcuts",
+    "native": "ERS Mode Decrease",
+    "label": "ERS / hybrid mode −",
+    "physical": "Press L3",
+    "evidence": "A",
+    "note": null
+   },
+   {
+    "n": 10,
+    "group": "UDP Custom Actions",
+    "native": "UDP Action 3",
+    "label": "Talk to Pitwall",
+    "physical": "Press CIRCLE",
+    "evidence": "A",
+    "note": "Pitwall listens for this one. Back out to the garage or menu, then test it."
+   }
+  ],
+  "outro": [
+   "Open Test and press each one once.",
+   "If a button already did something else, F1 25 may have moved or dropped that action: check the list once more."
+  ]
+ }
+}

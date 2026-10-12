@@ -38,6 +38,7 @@ const PAGE_FILES: Record<string, string> = {
   "setup/game": "./pages/setup/GamePage.tsx",
   "setup/connect": "./pages/setup/ConnectPage.tsx",
   "setup/rig": "./pages/setup/RigPage.tsx",
+  "setup/controls": "./pages/setup/ControlsPage.tsx", // Controls and button mapping (feat/controls)
   "setup/car": "./pages/setup/CarSetupPage.tsx",
   "setup/validation": "./pages/setup/ValidationPage.tsx", // validation kit (lane validate)
   "settings/drivers": "./pages/settings/DriversPage.tsx",

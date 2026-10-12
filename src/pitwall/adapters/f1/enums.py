@@ -220,6 +220,47 @@ PIT_STATUS: dict[int, str] = {0: "none", 1: "pitting", 2: "in_pit_area"}
 DRIVER_STATUS: dict[int, str] = {0: "in_garage", 1: "flying_lap", 2: "in_lap", 3: "out_lap", 4: "on_track"}
 ERS_DEPLOY_MODE: dict[int, str] = {0: "none", 1: "medium", 2: "hotlap", 3: "overtake"}
 
+# Appendix 8.9: Event BUTN ``buttonStatus`` bit flags, named exactly as the spec names them (machine-checked by
+# tests/unit/test_f1_protocol.py). UDP Action n = 0x00100000 << (n - 1). Which wheel control sets which bit is not in
+# the spec: Pitwall's button test reports only what it sees.
+BUTTON_FLAGS: dict[int, str] = {
+    0x00000001: "Cross or A",
+    0x00000002: "Triangle or Y",
+    0x00000004: "Circle or B",
+    0x00000008: "Square or X",
+    0x00000010: "D-pad Left",
+    0x00000020: "D-pad Right",
+    0x00000040: "D-pad Up",
+    0x00000080: "D-pad Down",
+    0x00000100: "Options or Menu",
+    0x00000200: "L1 or LB",
+    0x00000400: "R1 or RB",
+    0x00000800: "L2 or LT",
+    0x00001000: "R2 or RT",
+    0x00002000: "Left Stick Click",
+    0x00004000: "Right Stick Click",
+    0x00008000: "Right Stick Left",
+    0x00010000: "Right Stick Right",
+    0x00020000: "Right Stick Up",
+    0x00040000: "Right Stick Down",
+    0x00080000: "Special",
+    **{0x00100000 << (n - 1): f"UDP Action {n}" for n in range(1, 13)},
+}
+UDP_ACTION_BASE = 0x00100000
+
+
+def udp_action_bit(n: int) -> int:
+    """BUTN bit of UDP Action ``n`` (1..12)."""
+    if not 1 <= n <= 12:
+        raise ValueError("UDP Action must be 1..12")
+    return UDP_ACTION_BASE << (n - 1)
+
+
+def button_names(mask: int) -> list[str]:
+    """Spec names of the bits set in ``mask`` (lowest bit first)."""
+    return [BUTTON_FLAGS[1 << i] for i in range(32) if mask & (1 << i)]
+
+
 EVENT_NAMES: dict[str, str] = {
     "SSTA": "session_started",
     "SEND": "session_ended",

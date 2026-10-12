@@ -590,3 +590,77 @@ async def test_a_lap_slower_than_an_earlier_one_is_not_the_session_best_after_la
     assert await _summary_after_lap_25(None) == "That lap, 1:20.500, personal best."
     # D2 not including this lap yet: this lap is still the best
     assert await _summary_after_lap_25(80_600) == "That lap, 1:20.500, personal best."
+
+
+# ---------------------------------------------------------------- Setup › Controls: push-to-talk follows the layout
+async def test_ptt_actions_swap_without_a_restart() -> None:
+    hub, client, sent, _stt, _ = await make_hub("fuel")
+    assert hub.ptt_actions == [1] and hub.state()["ptt_actions"] == [1] and hub.state()["ptt_label"] is None
+    hub.set_ptt_actions([3, 1], "Right thumb button")
+    assert hub.ptt_mask == (UDP_ACTION_BASE << 2) | UDP_ACTION_BASE
+    await settle()
+    assert texts(sent, "state")[-1]["ptt_actions"] == [3, 1]
+    assert texts(sent, "state")[-1]["ptt_label"] == "Right thumb button"
+    hub.on_audio(client, pcm(0.1))
+    hub._on_button(UDP_ACTION_BASE << 2)  # UDP Action 3 now talks
+    assert hub.ptt_down and hub.ptt_source == "wheel"
+    hub._on_button(0)
+    hub.set_ptt_actions([], None)  # never left with no wheel button
+    assert hub.ptt_actions == [3, 1]
+    await hub.stop()
+
+
+async def test_a_held_wheel_transmission_ends_when_its_action_leaves_the_mask() -> None:
+    hub, client, _sent, _stt, _ = await make_hub("fuel")
+    hub.on_audio(client, pcm(0.1))
+    hub._on_button(UDP_ACTION_BASE)
+    assert hub.ptt_down
+    hub.set_ptt_actions([3], None)  # UDP Action 1 is no longer push-to-talk
+    assert not hub.ptt_down
+    hub.set_ptt_actions([3, 1], None)
+    hub._on_button(UDP_ACTION_BASE)  # still held: no new edge, no new transmission
+    assert not hub.ptt_down
+    await hub.stop()
+
+
+async def test_the_button_test_pauses_wheel_ptt_and_the_pause_lapses() -> None:
+    hub, client, _sent, _stt, _ = await make_hub("fuel")
+    hub.on_audio(client, pcm(0.1))
+    hub._on_button(UDP_ACTION_BASE)
+    hub.suspend_wheel_ptt(True)
+    assert not hub.ptt_down and hub.state()["wheel_ptt_paused"]  # a held transmission ends
+    hub._on_button(0)
+    hub._on_button(UDP_ACTION_BASE)
+    assert not hub.ptt_down  # a press during the test never opens the radio
+    hub._on_button(0)
+    hub.suspend_wheel_ptt(True, for_s=-1.0)  # lapsed (the page stopped polling)
+    hub._on_button(UDP_ACTION_BASE)
+    assert hub.ptt_down
+    hub._on_button(0)
+    hub.suspend_wheel_ptt(False)
+    assert not hub.state()["wheel_ptt_paused"]
+    await hub.stop()
+
+
+async def test_which_button_is_answered_without_a_session() -> None:
+    """ "Which button is brake bias?" needs the saved layout, not a lap: answered at once, never the LLM."""
+    live = LiveState()
+    sched = FakeScheduler()
+    eng = RaceEngineer(None)
+    eng.controls_handler = lambda _i, q: "In your layout, brake bias + is R3 tab and − is L3 tab."
+    hub = RadioHub(
+        live, eng, FakeStt(), FakeTts(), sched, fact_sheet=lambda: None, to_speech=lambda s: s, lap_messages=None
+    )
+    hub.start()
+    sent: list[Any] = []
+
+    async def send(item: Any) -> None:
+        sent.append(item)
+
+    await hub.connect(RadioClient(send=send))
+    hub.ask_text("Which button is brake bias?")
+    await settle()
+    said = [m for m in hub.history if m["role"] == "engineer"]
+    assert said and said[0]["text"].startswith("In your layout, brake bias +")
+    assert not any("Copy, checking." in str(m) for m in sent)
+    await hub.stop()

@@ -27,7 +27,7 @@ def _copy(item: object) -> list[str]:
 
 def test_ids_groups_steps_and_briefs() -> None:
     ids = [it.id for it in CATALOG]
-    assert len(ids) == len(set(ids)) == 12
+    assert len(ids) == len(set(ids)) == 13
     groups = {g for g, _ in GROUPS}
     for it in CATALOG:
         assert it.group in groups and it.steps and it.prompt and it.rule_text and it.informs
@@ -102,3 +102,22 @@ def test_catalog_json_matches_the_contract() -> None:
 def test_example_fixture_uses_catalogue_ids() -> None:
     ex = json.loads(EXAMPLE.read_text(encoding="utf-8"))
     assert all(i in BY_ID for i in ex["run"]["selected_items"])
+
+
+def test_radio_ptt_names_the_effective_wheel_action() -> None:
+    """Setup › Controls: the radio_ptt step names the UDP Action(s) wheel push-to-talk listens to now, filled in by the
+    kit from the effective push-to-talk (the catalogue keeps a placeholder, never a fixed "UDP Action 1")."""
+    step = BY_ID["radio_ptt"].steps[2]
+    assert step.detail == "F1 25: {ptt}."
+    default = next(i for i in catalog_json(FULL)["items"] if i["id"] == "radio_ptt")
+    assert default["steps"][2]["detail"] == "F1 25: UDP Action 1."
+    mine = next(i for i in catalog_json(FULL, "UDP Action 3 or 1")["items"] if i["id"] == "radio_ptt")
+    assert mine["steps"][2]["detail"] == "F1 25: UDP Action 3 or 1."
+    assert all("{ptt}" not in (s["detail"] or "") for i in catalog_json(FULL)["items"] for s in i["steps"])
+
+
+def test_wheel_buttons_item() -> None:
+    it = BY_ID["wheel_buttons"]
+    assert it.group == "games" and not it.requires and it.scope == "run"
+    assert "validated" not in it.summary.lower() and "F1 25" in it.title
+    assert availability(it, Availability())[0]  # needs nothing on this Mac but F1 25 data

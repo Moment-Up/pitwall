@@ -144,6 +144,22 @@ Details: `docs/research/track-reference-sources.md`.
 | EA SPORTS F1 25 UDP Specification + 2026 Season Pack spec (forums.ea.com) | F1 packet layouts (formats 2025, 2026) | Published by EA for third-party telemetry apps |
 | Community GT7 / Forza / AC / ACC / iRacing protocol docs | Phase 7 adapters (planned) | See `docs/research/*.md` |
 
+## Controls research (Setup › Controls; names and facts only, no code)
+
+`docs/research/controls-games.json` and `controls-wheels.json` (and their byte-identical copies in
+`src/pitwall/controls/data/`) record game action names, wheel layouts and button numbers as facts with their sources;
+descriptions are in Pitwall's words, and no manual text, figure or table is copied (positions were read from the
+makers' mapping figures by a person). Sources: [research/controls-research.md](research/controls-research.md).
+
+| Source | Licence | Class | Use |
+|---|---|---|---|
+| Simucube sc-api (`device_info_enums.json`, role vocabulary) | MIT | P | names of controller roles only |
+| irdashies (`carSystems.ts`, LMU telemetry map), pyirsdk (`vars.txt`) | MIT | P | iRacing / LMU names only |
+| rFactor 2 internals header (a Studio 397 header copy inside a GPL-3.0 repository) | GPL-3.0 (repository) | C | facts and names only. **Do not copy.** |
+| vAzhureRacingHub AC EVO shared-memory structs | GPL-3.0 | C | field names only. **Do not copy.** |
+| X2 file named in the research brief | none | U | names and facts only. **Do not copy.** |
+| Custom Shaders Patch controls list (Assetto Corsa PC names) | see the repository | community | action names only |
+
 ## Voice stack: speech-to-text and options
 
 | Component | Licence | Class | Note |

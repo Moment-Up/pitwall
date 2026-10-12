@@ -206,7 +206,7 @@ CATALOG: tuple[ValidationItem, ...] = (
         steps=(
             Step("Drive › Radio › Go live; allow the microphone."),
             Step('Hold the on-screen talk button, ask "How are my tyres?", let go.'),
-            Step('Hold your wheel\'s talk button and ask "Where am I losing the most time?"', "F1 25: UDP Action 1."),
+            Step('Hold your wheel\'s talk button and ask "Where am I losing the most time?"', "F1 25: {ptt}."),
             Step("Ask one more question while driving."),
             Step("When you stop, mark each transcript below as heard right or wrong."),
         ),
@@ -431,6 +431,39 @@ CATALOG: tuple[ValidationItem, ...] = (
         requires=("game_block",),
     ),
     ValidationItem(
+        id="wheel_buttons",
+        group="games",
+        title="Your wheel buttons reach Pitwall (F1 25)",
+        short="wheel buttons",
+        summary="Press each button you mapped to a UDP Action in F1 25, and change brake bias once.",
+        why="Which wheel control sends which button is known only from documents; Pitwall has not seen your "
+        "layout's buttons live.",
+        est_minutes=10,
+        prerequisites=(
+            "An F1 25 layout saved in Setup › Controls for the driver in the seat.",
+            "F1 25 sending telemetry to Pitwall (the garage is fine).",
+        ),
+        steps=(
+            Step("Open Setup › Controls › Test and start the test."),
+            Step(
+                "Press each button you mapped to a UDP Action.",
+                "Back out to the garage or a menu first: whether F1 25 sends presses while its Controls screen is "
+                "open is unknown.",
+            ),
+            Step("Change brake bias once with your wheel."),
+        ),
+        prompt="Did every button you mapped reach Pitwall?",
+        radio_brief="Validation: wheel buttons. Press each button you mapped to a UDP Action, then change brake bias "
+        "once.",
+        rule_text="Pitwall reads F1 25's button events (BUTN). This passes when every UDP Action in the seated "
+        "driver's F1 25 layout (copied into the run when it changes) was seen at least once from the live game "
+        "during the run; replays and generated streams never count. Only some seen is inconclusive. Brake bias and "
+        "ERS changes are shown in Setup › Controls › Test, not required here.",
+        informs=(Informs("Controls and button mapping › live: no (owner's F1 button test)"),),
+        candidate="If you agree with this run, docs/status.md may say F1 25 wheel buttons reach Pitwall on "
+        "{platform} with {wheel} ({date}, run id).",
+    ),
+    ValidationItem(
         id="driver_switch",
         group="drivers",
         title="Switching drivers mid-session",
@@ -497,7 +530,8 @@ def default_items(a: Availability) -> list[str]:
     return [it.id for it in CATALOG if not it.optional and availability(it, a)[0]]
 
 
-def item_json(item: ValidationItem, a: Availability) -> dict[str, Any]:
+def item_json(item: ValidationItem, a: Availability, ptt_words: str = "UDP Action 1") -> dict[str, Any]:
+    """``ptt_words``: the UDP Action(s) wheel push-to-talk listens to now (Setup › Controls) for step details."""
     ok, reason = availability(item, a)
     return {
         "id": item.id,
@@ -510,7 +544,10 @@ def item_json(item: ValidationItem, a: Availability) -> dict[str, Any]:
         "per_driver": item.per_driver,
         "scope": item.scope,
         "prerequisites": list(item.prerequisites),
-        "steps": [{"text": s.text, "detail": s.detail} for s in item.steps],
+        "steps": [
+            {"text": s.text, "detail": None if s.detail is None else s.detail.replace("{ptt}", ptt_words)}
+            for s in item.steps
+        ],
         "attestations": [{"key": x.key, "text": x.text} for x in item.attestations],
         "prompt": item.prompt,
         "radio_brief": item.radio_brief,
@@ -522,11 +559,11 @@ def item_json(item: ValidationItem, a: Availability) -> dict[str, Any]:
     }
 
 
-def catalog_json(a: Availability) -> dict[str, Any]:
+def catalog_json(a: Availability, ptt_words: str = "UDP Action 1") -> dict[str, Any]:
     return {
         "format": FORMAT,
         "groups": [{"id": g, "title": t} for g, t in GROUPS],
-        "items": [item_json(it, a) for it in CATALOG],
+        "items": [item_json(it, a, ptt_words) for it in CATALOG],
         "voice_commands": [{"phrase": p, "does": d} for p, d in VOICE_COMMANDS],
     }
 

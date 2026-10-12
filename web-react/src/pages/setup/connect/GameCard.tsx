@@ -3,7 +3,7 @@
 // proven, and the game's own telemetry settings as a vertical Pro Stepper with a copy button on every value the
 // driver types. Behaviour reference: web/src/views/ConnectView.svelte (drafts survive the refresh; F1 is always on).
 
-import { Button, Card, Chip, Disclosure, Input, Label, ListBox, Select, Switch, TextField } from "@heroui/react";
+import { Button, Card, Chip, Disclosure, Input, Label, Link, ListBox, Select, Switch, TextField } from "@heroui/react";
 import { useEffect, useState } from "react";
 import { CopyField } from "../../../components/ui";
 import { cache } from "../../../lib/cache";
@@ -33,6 +33,7 @@ import {
   type CardState,
   type Draft,
 } from "../../../lib/setup/connect";
+import { href } from "../../../lib/router";
 import { CopyButton } from "../shared/CopyButton";
 import { GuideStepper } from "./GuideStepper";
 
@@ -301,6 +302,11 @@ export function GameCard({ g, guide }: { g: Integration; guide: GameGuide | null
                           <span className="font-semibold">{s.value}</span>
                         )}
                         {s.note ? <span className="text-xs text-muted">{s.note}</span> : null}
+                        {/^UDP Action \d+/.test(s.value) ? (
+                          <Link href={href("/setup/controls?game=f1_25")} className="inline-flex min-h-11 items-center text-sm font-medium" data-testid="connect-controls-link">
+                            Map your buttons: Setup › Controls
+                          </Link>
+                        ) : null}
                       </div>
                     ))}
                   </div>

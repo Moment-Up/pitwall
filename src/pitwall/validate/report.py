@@ -327,6 +327,20 @@ def evidence_tables(run: Run, item_id: str, redact: bool = False) -> list[Table]
                 ],
             )
         ]
+    if item_id == "wheel_buttons":
+        lay = run.controls_layout or {}
+        presses: list[Row] = [[_when(b.t_unix), ", ".join(b.pressed), b.origin, b.tier] for b in ev.buttons[-200:]]
+        out = [_table("Button presses (F1 25 BUTN)", ["time", "pressed", "origin", "tier"], presses)]
+        acts = lay.get("udp_actions") if isinstance(lay, dict) else None
+        if acts:
+            out.append(
+                _table(
+                    "Layout",
+                    ["UDP Actions", "wheel", "platform"],
+                    [[", ".join(str(a) for a in acts), lay.get("wheel"), lay.get("platform")]],
+                )
+            )
+        return out
     if item_id == "driver_switch":
         return [
             _table(

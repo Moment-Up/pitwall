@@ -6,9 +6,12 @@
 
 import { useMemo } from "react";
 import { shallowEqual, useRadio } from "../../components/radio";
-import { useDrivers } from "../../hooks/stores";
+import { useActiveDriver, useDrivers } from "../../hooks/stores";
 import { useApi } from "../../hooks/useApi";
+import { CONTROLS_KEYS, controlsApi } from "../../lib/endpoints/controls";
 import { SETTINGS_KEYS, systemApi } from "../../lib/endpoints/settings";
+import { href } from "../../lib/router";
+import { pttLine } from "../../lib/setup/controls";
 import { radio } from "../../lib/radio";
 import type { PageProps } from "../../routes";
 import { deviceNoun, linkState } from "./radio/model";
@@ -21,6 +24,10 @@ export function RadioVoicePage(_props: PageProps) {
   // re-read when the link drops, so a change made while live shows).
   const status = useApi(linkUp ? null : SETTINGS_KEYS.voice, systemApi.voiceStatus, { maxAgeMs: 0 });
   const radioFollowsDriver = useDrivers((s) => s.radioFollowsDriver);
+  // Which wheel button talks to Pitwall (Setup › Controls); a server without /api/controls just leaves the row out.
+  const seatedId = useActiveDriver()?.id ?? null;
+  const controls = useApi(CONTROLS_KEYS.state(seatedId), () => controlsApi.state(seatedId));
+  const ptt = controls.data ? { line: pttLine(controls.data.ptt), href: href("/setup/controls") } : undefined;
   const noun = useMemo(
     () => (typeof navigator === "undefined" ? "device" : deviceNoun(navigator.userAgent, navigator.maxTouchPoints ?? 0)),
     [],
@@ -32,6 +39,7 @@ export function RadioVoicePage(_props: PageProps) {
       radioFollowsDriver={radioFollowsDriver}
       noun={noun}
       actions={radio}
+      ptt={ptt}
     />
   );
 }

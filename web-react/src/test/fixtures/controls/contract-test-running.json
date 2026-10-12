@@ -1,0 +1,143 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/test while a test runs (states detected, effect_seen, waiting)."
+ },
+ "body": {
+  "id": "t_5e6f7a8b",
+  "layout_id": "l_9f8e7d6c",
+  "started_unix": 1791830000,
+  "available": true,
+  "why": null,
+  "wheel_ptt_paused": true,
+  "current": 2,
+  "items": [
+   {
+    "key": "ptt_pitwall.hold",
+    "kind": "udp_action",
+    "prompt": "Press the button you mapped to Talk to Pitwall (UDP Action 3)",
+    "expect": {
+     "bit": 4194304
+    },
+    "state": "detected",
+    "seen": [
+     "UDP Action 3"
+    ],
+    "detail": "UDP Action 3 seen"
+   },
+   {
+    "key": "brake_bias.inc",
+    "kind": "effect",
+    "prompt": "Press Brake bias + once (R2)",
+    "expect": {
+     "field": "brake_bias_front_pct",
+     "direction": "change"
+    },
+    "state": "effect_seen",
+    "seen": [
+     "R2 or RT"
+    ],
+    "detail": "brake bias 56 → 57"
+   },
+   {
+    "key": "brake_bias.dec",
+    "kind": "effect",
+    "prompt": "Press Brake bias − once (L2)",
+    "expect": {
+     "field": "brake_bias_front_pct",
+     "direction": "change"
+    },
+    "state": "waiting",
+    "seen": [],
+    "detail": null
+   },
+   {
+    "key": "ers_mode.inc",
+    "kind": "effect",
+    "prompt": "Press ERS mode + once (R3)",
+    "expect": {
+     "field": "ers_deploy_mode",
+     "direction": "change"
+    },
+    "state": "waiting",
+    "seen": [],
+    "detail": null
+   },
+   {
+    "key": "ers_mode.dec",
+    "kind": "effect",
+    "prompt": "Press ERS mode − once (L3)",
+    "expect": {
+     "field": "ers_deploy_mode",
+     "direction": "change"
+    },
+    "state": "waiting",
+    "seen": [],
+    "detail": null
+   }
+  ],
+  "feed": [
+   {
+    "seq": 41,
+    "t_unix": 1791830012.4,
+    "status": 4194304,
+    "pressed": [
+     "UDP Action 3"
+    ],
+    "released": [],
+    "origin": "live"
+   },
+   {
+    "seq": 42,
+    "t_unix": 1791830012.9,
+    "status": 0,
+    "pressed": [],
+    "released": [
+     "UDP Action 3"
+    ],
+    "origin": "live"
+   },
+   {
+    "seq": 43,
+    "t_unix": 1791830020.1,
+    "status": 4096,
+    "pressed": [
+     "R2 or RT"
+    ],
+    "released": [],
+    "origin": "live"
+   },
+   {
+    "seq": 44,
+    "t_unix": 1791830020.3,
+    "status": 0,
+    "pressed": [],
+    "released": [
+     "R2 or RT"
+    ],
+    "origin": "live"
+   },
+   {
+    "seq": 45,
+    "t_unix": 1791830031.0,
+    "status": 4,
+    "pressed": [
+     "Circle or B"
+    ],
+    "released": [],
+    "origin": "replay"
+   },
+   {
+    "seq": 46,
+    "t_unix": 1791830031.2,
+    "status": 0,
+    "pressed": [],
+    "released": [
+     "Circle or B"
+    ],
+    "origin": "replay"
+   }
+  ]
+ }
+}

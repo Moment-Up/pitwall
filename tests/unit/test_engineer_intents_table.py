@@ -21,6 +21,7 @@ FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "intents.json"
 QUESTIONS: list[dict[str, Any]] = json.loads(FIXTURE.read_text(encoding="utf-8"))["questions"]
 CONTROL = {"radio_check", "control_quiet", "control_resume"}
 DRILL = {"drill_start", "drill_status", "drill_stop"}  # coachref: answered by RaceEngineer.drill_handler
+CONTROLS = {"controls_where"}  # Setup › Controls: answered by RaceEngineer.controls_handler (the saved layout)
 
 
 @pytest.mark.parametrize("row", QUESTIONS, ids=[r["question"] for r in QUESTIONS])
@@ -32,7 +33,7 @@ def test_route(row: dict[str, Any]) -> None:
 def test_the_fixture_is_well_formed() -> None:
     questions = [r["question"].casefold() for r in QUESTIONS]
     assert len(questions) == len(set(questions)) >= 90
-    known = set(_TOPICS) | CONTROL | DRILL
+    known = set(_TOPICS) | CONTROL | DRILL | CONTROLS
     assert {r["intent"] for r in QUESTIONS} <= known
 
 
@@ -78,7 +79,7 @@ async def test_every_question_has_a_grounded_deterministic_answer() -> None:
         ans = await engineer.answer(row["question"], sheet, use_llm=False)
         assert ans.intent == row["intent"], row
         assert ans.text.strip(), row
-        if ans.intent not in CONTROL | DRILL:
+        if ans.intent not in CONTROL | DRILL | CONTROLS:
             assert ans.fallback and ans.grounded, row
             assert check_grounding(ans.cited_text, sheet.facts).ok, row
 
@@ -102,7 +103,7 @@ async def test_every_radio_answer_at_speed_is_short() -> None:
         ans = await engineer.answer(row["question"], sheet, use_llm=False, short=True)
         said = radio_answer(ans.intent, sheet, row["question"]) or ans.text
         assert estimate_speech_s(said) <= 12.0, (row["question"], said)  # the estimate errs long (2.6 words/s)
-        if ans.intent not in CONTROL | DRILL:
+        if ans.intent not in CONTROL | DRILL | CONTROLS:
             assert check_grounding(ans.cited_text, sheet.facts).ok, row
     summary = await engineer.answer("How am I doing?", sheet, use_llm=False, short=True)
     assert summary.text.count(". ") <= 1 and "Best clean lap" in summary.text  # the best lap and the top point

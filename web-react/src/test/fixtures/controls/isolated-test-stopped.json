@@ -1,0 +1,81 @@
+{
+ "_fixture": {
+  "source": "isolated-server answer: on an isolated `pitwall serve` (127.0.0.1:8904, scratch data dir, LLM and voice off, UDP on 127.0.0.1:20904 with no game) from the feat/controls worktree while the backend was in progress. Not a live rig.",
+  "status": 200,
+  "note": "POST /api/controls/test/{id}/stop of that test"
+ },
+ "body": {
+  "stopped": "t_d0e4d673",
+  "test": {
+   "id": "t_d0e4d673",
+   "layout_id": "l_5e6d806d",
+   "started_unix": 1791812307.571033,
+   "available": false,
+   "why": "No live F1 25 data: drive out or sit in the garage with UDP Telemetry on.",
+   "wheel_ptt_paused": false,
+   "current": 0,
+   "items": [
+    {
+     "key": "ptt_pitwall.hold",
+     "kind": "udp_action",
+     "prompt": "Press the button you mapped to Talk to Pitwall (UDP Action 1) (Triangle).",
+     "expect": {
+      "bit": 1048576
+     },
+     "state": "skipped",
+     "seen": [],
+     "detail": null
+    },
+    {
+     "key": "brake_bias.inc",
+     "kind": "effect",
+     "prompt": "On track or in the garage, press Brake bias + once (L3 tab).",
+     "expect": {
+      "field": "brake_bias_front_pct",
+      "direction": "change"
+     },
+     "state": "skipped",
+     "seen": [],
+     "detail": null
+    },
+    {
+     "key": "brake_bias.dec",
+     "kind": "effect",
+     "prompt": "On track or in the garage, press Brake bias − once (R3 tab).",
+     "expect": {
+      "field": "brake_bias_front_pct",
+      "direction": "change"
+     },
+     "state": "skipped",
+     "seen": [],
+     "detail": null
+    },
+    {
+     "key": "ers_mode.inc",
+     "kind": "effect",
+     "prompt": "On track or in the garage, press ERS / hybrid mode + once (R2 tab).",
+     "expect": {
+      "field": "ers_deploy_mode",
+      "direction": "change"
+     },
+     "state": "skipped",
+     "seen": [],
+     "detail": null
+    },
+    {
+     "key": "ers_mode.dec",
+     "kind": "effect",
+     "prompt": "On track or in the garage, press ERS / hybrid mode − once (L2 tab).",
+     "expect": {
+      "field": "ers_deploy_mode",
+      "direction": "change"
+     },
+     "state": "skipped",
+     "seen": [],
+     "detail": null
+    }
+   ],
+   "feed": []
+  }
+ }
+}

@@ -256,11 +256,27 @@ def ac_guide(ac_console_ip: str | None = None, ac_platform: str | None = None) -
     )
 
 
+PTT_MENU_PATH = "Controls > (your wheel's preset) > UDP Custom Actions"  # EA's controls hub groups (F1 25) [V]
+
+
+def ptt_words(settings: Settings, ptt: dict[str, Any] | None = None) -> str:
+    """The UDP Action(s) wheel push-to-talk listens to: Setup › Controls' effective push-to-talk, else the setting."""
+    acts = [int(n) for n in (ptt or {}).get("udp_actions") or [] if isinstance(n, int)]
+    if not acts:
+        return settings.voice_ptt_button.replace("udp_action_", "UDP Action ")
+    return "UDP Action " + " or ".join(str(n) for n in acts)
+
+
 def game_guides(
-    ip: str, settings: Settings, ac_console_ip: str | None = None, ac_platform: str | None = None
+    ip: str,
+    settings: Settings,
+    ac_console_ip: str | None = None,
+    ac_platform: str | None = None,
+    ptt_info: dict[str, Any] | None = None,
 ) -> list[GameGuide]:
     port = str(settings.f1_udp_port)
-    ptt = settings.voice_ptt_button.replace("udp_action_", "UDP Action ")
+    ptt = ptt_words(settings, ptt_info)
+    label = (ptt_info or {}).get("label")
     f1 = GameGuide(
         id="f1_25",
         game="EA SPORTS F1 25 (incl. 2026 Season Pack)",
@@ -280,9 +296,14 @@ def game_guides(
         ],
         extras=[
             GuideStep(
-                "Controls > (your wheel) > a spare button",
+                PTT_MENU_PATH,
                 ptt,
-                note="push-to-talk to the race engineer (hold to talk)",
+                note=(
+                    f"push-to-talk to the race engineer on {label} (hold to talk); Setup › Controls maps the rest"
+                    if label
+                    else "push-to-talk to the race engineer on a spare button (hold to talk); Setup › Controls maps "
+                    "the rest"
+                ),
             ),
         ],
         notes=[
@@ -357,7 +378,11 @@ def game_guides(
 
 
 def connect_info(
-    settings: Settings, tailscale_dns: str | None, token: str, inputs: list[dict[str, Any]] | None = None
+    settings: Settings,
+    tailscale_dns: str | None,
+    token: str,
+    inputs: list[dict[str, Any]] | None = None,
+    ptt: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     ip = primary_lan_ip() or f"<{this_machine()}'s IP>"
     https = tailscale_https_url(tailscale_dns, settings.http_port)
@@ -377,6 +402,6 @@ def connect_info(
             "lan_with_token": f"http://{ip}:{settings.http_port}/?token={token}",  # any LAN browser, no mic
             "local": f"http://127.0.0.1:{settings.http_port}/",
         },
-        "guides": [asdict(g) for g in game_guides(ip, settings, ac_ip, ac_platform)],
+        "guides": [asdict(g) for g in game_guides(ip, settings, ac_ip, ac_platform, ptt)],
         "integrations": inputs or [],  # Runtime.input_status(): enabled, port, listening, senders, errors
     }

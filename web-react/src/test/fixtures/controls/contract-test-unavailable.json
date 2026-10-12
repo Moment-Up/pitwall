@@ -1,0 +1,18 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "POST /api/controls/test without a live F1 25 stream."
+ },
+ "body": {
+  "id": "t_00000000",
+  "layout_id": "l_9f8e7d6c",
+  "started_unix": 1791830000,
+  "available": false,
+  "why": "No live F1 25 stream yet. Start F1 25 with UDP telemetry on and go to the garage.",
+  "wheel_ptt_paused": false,
+  "current": 0,
+  "items": [],
+  "feed": []
+ }
+}

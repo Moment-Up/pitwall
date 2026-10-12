@@ -1,0 +1,855 @@
+{
+ "_fixture": {
+  "source": "isolated-server answer: GET on an isolated `pitwall serve` (127.0.0.1:8904, scratch data dir, LLM and voice off, UDP on 127.0.0.1:20904 with no game) from the feat/controls worktree while the backend was in progress, after the dashboard saved the recommended F1 25 PS5 layout for the GT DD Pro template. Not a live rig.",
+  "status": 200,
+  "note": "GET /api/controls/state?driver_id=1"
+ },
+ "body": {
+  "schema": 1,
+  "wheels": [
+   {
+    "id": "w_9404437b",
+    "rev": 1,
+    "name": "GT DD Pro wheel",
+    "template": "fanatec_gt_dd_pro_wheel",
+    "template_version": "2026-10-12/1",
+    "shape": "round",
+    "platforms": [
+     "ps",
+     "pc"
+    ],
+    "parts": [
+     {
+      "id": "rim",
+      "kind": "rim",
+      "name": "GT DD Pro wheel"
+     }
+    ],
+    "controls": [
+     {
+      "id": "face_triangle",
+      "part": "rim",
+      "kind": "button",
+      "label": "Triangle",
+      "zone": "right_thumb",
+      "order": 1,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "triangle",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "face_square",
+      "part": "rim",
+      "kind": "button",
+      "label": "Square",
+      "zone": "right_thumb",
+      "order": 2,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "square",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "face_circle",
+      "part": "rim",
+      "kind": "button",
+      "label": "Circle",
+      "zone": "right_thumb",
+      "order": 3,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "circle",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "face_cross",
+      "part": "rim",
+      "kind": "button",
+      "label": "Cross",
+      "zone": "right_thumb",
+      "order": 4,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "cross",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "tab_l2",
+      "part": "rim",
+      "kind": "button",
+      "label": "L2 tab",
+      "zone": "left_top",
+      "order": 0,
+      "reach": "stretch",
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "l2",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "tab_r2",
+      "part": "rim",
+      "kind": "button",
+      "label": "R2 tab",
+      "zone": "right_top",
+      "order": 0,
+      "reach": "stretch",
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "r2",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "tab_l3",
+      "part": "rim",
+      "kind": "button",
+      "label": "L3 tab",
+      "zone": "centre_bottom",
+      "order": 0,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "l3",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "ps",
+      "part": "rim",
+      "kind": "button",
+      "label": "PS button",
+      "zone": "centre_bottom",
+      "order": 1,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "ps",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "tab_r3",
+      "part": "rim",
+      "kind": "button",
+      "label": "R3 tab",
+      "zone": "centre_bottom",
+      "order": 2,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "r3",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": ""
+     },
+     {
+      "id": "hub_left",
+      "part": "rim",
+      "kind": "button",
+      "label": "Left hub button",
+      "zone": "centre_top",
+      "order": 0,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": "Under the L2 tab. Research: probably Create (from its shape; Fanatec doesn't name it)."
+     },
+     {
+      "id": "hub_right",
+      "part": "rim",
+      "kind": "button",
+      "label": "Right hub button (≡)",
+      "zone": "centre_top",
+      "order": 2,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": "Under the R2 tab. Research: probably Options (from its shape; Fanatec doesn't name it)."
+     },
+     {
+      "id": "menu_stick",
+      "part": "rim",
+      "kind": "dpad_hat",
+      "label": "Menu stick",
+      "zone": "left_lower",
+      "order": 0,
+      "reach": null,
+      "push": true,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "pad",
+        "value": "dpad",
+        "evidence": "A",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "per_slot": {
+         "up": "dpad_up",
+         "down": "dpad_down",
+         "left": "dpad_left",
+         "right": "dpad_right",
+         "push": "unknown:"
+        },
+        "seen": null
+       }
+      },
+      "evidence": "V",
+      "note": "Fanatec calls it the D-Pad. That it sends the D-pad is assumed in the research."
+     },
+     {
+      "id": "stick_green",
+      "part": "rim",
+      "kind": "dpad_hat",
+      "label": "Green-ring stick",
+      "zone": "left_top",
+      "order": 1,
+      "reach": null,
+      "push": true,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "game_specific",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [
+         "COMM-FAN-GTSTICKS"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+     },
+     {
+      "id": "stick_blue",
+      "part": "rim",
+      "kind": "dpad_hat",
+      "label": "Blue-ring stick",
+      "zone": "left_thumb",
+      "order": 0,
+      "reach": null,
+      "push": true,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "game_specific",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [
+         "COMM-FAN-GTSTICKS"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+     },
+     {
+      "id": "stick_red",
+      "part": "rim",
+      "kind": "dpad_hat",
+      "label": "Red-ring stick",
+      "zone": "right_top",
+      "order": 1,
+      "reach": null,
+      "push": true,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "game_specific",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [
+         "COMM-FAN-GTSTICKS"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+     },
+     {
+      "id": "stick_yellow",
+      "part": "rim",
+      "kind": "dpad_hat",
+      "label": "Yellow-ring stick",
+      "zone": "right_thumb",
+      "order": 0,
+      "reach": null,
+      "push": true,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "game_specific",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [
+         "COMM-FAN-GTSTICKS"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": "Community: GT7 sets these sticks itself and other games can't use them (unverified). Not available on ClubSport V2 or CSL Elite (V1.1) bases."
+     },
+     {
+      "id": "paddle_left",
+      "part": "rim",
+      "kind": "shift_paddle",
+      "label": "Left shift paddle",
+      "zone": "back_left",
+      "order": 0,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": "Research: likely L1 (unverified)."
+     },
+     {
+      "id": "paddle_right",
+      "part": "rim",
+      "kind": "shift_paddle",
+      "label": "Right shift paddle",
+      "zone": "back_right",
+      "order": 0,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [],
+        "seen": null
+       },
+       "ps": {
+        "kind": "unknown",
+        "value": null,
+        "evidence": "U",
+        "source_ids": [
+         "WALKTHROUGH",
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "A",
+      "note": "Research: likely R1 (unverified)."
+     },
+     {
+      "id": "tuning",
+      "part": "rim",
+      "kind": "device_menu",
+      "label": "Tuning Menu button",
+      "zone": "centre_top",
+      "order": 1,
+      "reach": null,
+      "push": false,
+      "positions": null,
+      "mps_mode": null,
+      "signals": {
+       "pc": {
+        "kind": "none",
+        "value": null,
+        "evidence": "V",
+        "source_ids": [
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       },
+       "ps": {
+        "kind": "none",
+        "value": null,
+        "evidence": "V",
+        "source_ids": [
+         "FAN-GTDDP-MAN"
+        ],
+        "seen": null
+       }
+      },
+      "evidence": "V",
+      "note": ""
+     }
+    ],
+    "created_unix": 1791812212.7952158,
+    "updated_unix": 1791812212.7952158
+   }
+  ],
+  "layouts": [
+   {
+    "id": "l_5e6d806d",
+    "rev": 1,
+    "game": "f1_25",
+    "game_name": null,
+    "platform": "ps5",
+    "wheel_id": "w_9404437b",
+    "owner": "household",
+    "preset": "advanced",
+    "other_functions": null,
+    "assignments": [
+     {
+      "key": "ptt_pitwall.hold",
+      "function": "ptt_pitwall",
+      "action": "hold",
+      "control_id": "face_triangle",
+      "slot": "press",
+      "udp_action": 1,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "mfd.up",
+      "function": "mfd",
+      "action": "up",
+      "control_id": "menu_stick",
+      "slot": "up",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "mfd.down",
+      "function": "mfd",
+      "action": "down",
+      "control_id": "menu_stick",
+      "slot": "down",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "mfd.left",
+      "function": "mfd",
+      "action": "left",
+      "control_id": "menu_stick",
+      "slot": "left",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "mfd.right",
+      "function": "mfd",
+      "action": "right",
+      "control_id": "menu_stick",
+      "slot": "right",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "mfd.select",
+      "function": "mfd",
+      "action": "select",
+      "control_id": "menu_stick",
+      "slot": "push",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "drs_aero.press",
+      "function": "drs_aero",
+      "action": "press",
+      "control_id": "face_square",
+      "slot": "press",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "overtake.press",
+      "function": "overtake",
+      "action": "press",
+      "control_id": "face_circle",
+      "slot": "press",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "brake_bias.inc",
+      "function": "brake_bias",
+      "action": "inc",
+      "control_id": "tab_l3",
+      "slot": "press",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "brake_bias.dec",
+      "function": "brake_bias",
+      "action": "dec",
+      "control_id": "tab_r3",
+      "slot": "press",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "ers_mode.inc",
+      "function": "ers_mode",
+      "action": "inc",
+      "control_id": "tab_r2",
+      "slot": "press",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "ers_mode.dec",
+      "function": "ers_mode",
+      "action": "dec",
+      "control_id": "tab_l2",
+      "slot": "press",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "radio_menu.press",
+      "function": "radio_menu",
+      "action": "press",
+      "control_id": "face_cross",
+      "slot": "press",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     },
+     {
+      "key": "pit_limiter.press",
+      "function": "pit_limiter",
+      "action": "press",
+      "control_id": "face_square",
+      "slot": "press",
+      "udp_action": null,
+      "origin": "recommended",
+      "check": null
+     }
+    ],
+    "created_unix": 1791812212.8249311,
+    "updated_unix": 1791812212.8249311
+   }
+  ],
+  "household": {
+   "wheel_id": null,
+   "preset": null,
+   "layouts": {
+    "f1_25:ps5": "l_5e6d806d"
+   }
+  },
+  "drivers": {
+   "1": {
+    "wheel_id": "w_9404437b",
+    "preset": null,
+    "layouts": {}
+   }
+  },
+  "updated_unix": 1791812212.830801,
+  "ptt": {
+   "udp_actions": [
+    1
+   ],
+   "from": "layout",
+   "layout_id": "l_5e6d806d",
+   "label": "Triangle",
+   "fallback_kept": true
+  },
+  "defaults": {
+   "driver_id": 1,
+   "game": null,
+   "platform": "ps5",
+   "wheel_id": "w_9404437b",
+   "template": null,
+   "preset": "advanced"
+  }
+ }
+}

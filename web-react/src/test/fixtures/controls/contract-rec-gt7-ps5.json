@@ -1,0 +1,619 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/recommendation?game=gt7&platform=ps5&wheel_id=w_1a2b3c4d&driver_id=1&preset=advanced (fixed sticks, push-to-talk on the screen)."
+ },
+ "body": {
+  "game": "gt7",
+  "platform": "ps5",
+  "wheel_id": "w_1a2b3c4d",
+  "preset": "advanced",
+  "driver_id": 1,
+  "catalogue_version": "2026-10-12/1",
+  "status": "research_only",
+  "assignments": [
+   {
+    "key": "tc.fixed",
+    "function": "tc",
+    "action": "fixed",
+    "control_id": "stick_blue",
+    "slot": null,
+    "udp_action": null,
+    "origin": "game_fixed",
+    "check": null,
+    "label": "Traction control",
+    "native": "TCS (MFD page)",
+    "menu_group": null,
+    "control_label": "Blue stick",
+    "signal": {
+     "kind": "game_specific",
+     "value": null,
+     "evidence": "U",
+     "source_ids": [
+      "COMM-FAN-GTSTICKS"
+     ]
+    },
+    "reason": "Traction control: GT7 sets the four coloured sticks itself; Pitwall can't change them. Which colour does what is community-reported.",
+    "evidence": "U",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "U"
+    },
+    "source_ids": [
+     "gt7m_mfd",
+     "gt7m_assist",
+     "fan_pvgt_gt7",
+     "fan_forum_gt7_extra",
+     "og_gt7_pad",
+     "repo_gt7"
+    ],
+    "conditions": [
+     "through the MFD's TCS page"
+    ],
+    "warnings": [
+     "Which colour does what is community-reported."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "brake_bias.fixed",
+    "function": "brake_bias",
+    "action": "fixed",
+    "control_id": "stick_red",
+    "slot": null,
+    "udp_action": null,
+    "origin": "game_fixed",
+    "check": null,
+    "label": "Brake bias",
+    "native": "Brake Balance (MFD page)",
+    "menu_group": null,
+    "control_label": "Red stick",
+    "signal": {
+     "kind": "game_specific",
+     "value": null,
+     "evidence": "U",
+     "source_ids": [
+      "COMM-FAN-GTSTICKS"
+     ]
+    },
+    "reason": "Brake bias: GT7 sets the four coloured sticks itself; Pitwall can't change them. Which colour does what is community-reported.",
+    "evidence": "U",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "U"
+    },
+    "source_ids": [
+     "gt7m_mfd",
+     "fan_forum_gt7_extra"
+    ],
+    "conditions": [
+     "only cars with a Brake Controller part fitted"
+    ],
+    "warnings": [
+     "Which colour does what is community-reported."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "engine_map.fixed",
+    "function": "engine_map",
+    "action": "fixed",
+    "control_id": "stick_green",
+    "slot": null,
+    "udp_action": null,
+    "origin": "game_fixed",
+    "check": null,
+    "label": "Engine map / fuel mix",
+    "native": "Fuel Map (MFD page; 1 = power, higher = leaner)",
+    "menu_group": null,
+    "control_label": "Green stick",
+    "signal": {
+     "kind": "game_specific",
+     "value": null,
+     "evidence": "U",
+     "source_ids": [
+      "COMM-FAN-GTSTICKS"
+     ]
+    },
+    "reason": "Engine map / fuel mix: GT7 sets the four coloured sticks itself; Pitwall can't change them. Which colour does what is community-reported.",
+    "evidence": "U",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "U"
+    },
+    "source_ids": [
+     "gt7m_mfd",
+     "gt7m_pit",
+     "fan_pvgt_gt7",
+     "fan_forum_gt7_extra"
+    ],
+    "conditions": [
+     "only in events with fuel use on"
+    ],
+    "warnings": [
+     "Which colour does what is community-reported."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "diff.fixed",
+    "function": "diff",
+    "action": "fixed",
+    "control_id": "stick_yellow",
+    "slot": null,
+    "udp_action": null,
+    "origin": "game_fixed",
+    "check": null,
+    "label": "Differential",
+    "native": "Front/Rear Torque Distribution (MFD page)",
+    "menu_group": null,
+    "control_label": "Yellow stick",
+    "signal": {
+     "kind": "game_specific",
+     "value": null,
+     "evidence": "U",
+     "source_ids": [
+      "COMM-FAN-GTSTICKS"
+     ]
+    },
+    "reason": "Differential: GT7 sets the four coloured sticks itself; Pitwall can't change them. Which colour does what is community-reported.",
+    "evidence": "U",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "U"
+    },
+    "source_ids": [
+     "gt7m_mfd",
+     "fan_pvgt_gt7",
+     "fan_forum_gt7_extra"
+    ],
+    "conditions": [
+     "four-wheel-drive cars only"
+    ],
+    "warnings": [
+     "Which colour does what is community-reported."
+    ],
+    "pitwall_sees": null
+   },
+   {
+    "key": "mfd.up",
+    "function": "mfd",
+    "action": "up",
+    "control_id": "menu_stick",
+    "slot": "up",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "MFD / black box up",
+    "native": "MFD Up",
+    "menu_group": null,
+    "control_label": "Menu stick",
+    "signal": {
+     "kind": "pad",
+     "value": "dpad",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ],
+     "per_slot": {
+      "up": "dpad_up",
+      "down": "dpad_down",
+      "left": "dpad_left",
+      "right": "dpad_right"
+     }
+    },
+    "reason": "MFD on Menu stick: the game uses it for its pages, and the stick's four directions move through them.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "gt7m_mfd",
+     "fan_pvgt_gt7",
+     "og_gt7_pad"
+    ],
+    "conditions": [],
+    "warnings": [],
+    "pitwall_sees": null
+   },
+   {
+    "key": "mfd.down",
+    "function": "mfd",
+    "action": "down",
+    "control_id": "menu_stick",
+    "slot": "down",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "MFD / black box down",
+    "native": "MFD Down",
+    "menu_group": null,
+    "control_label": "Menu stick",
+    "signal": {
+     "kind": "pad",
+     "value": "dpad",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ],
+     "per_slot": {
+      "up": "dpad_up",
+      "down": "dpad_down",
+      "left": "dpad_left",
+      "right": "dpad_right"
+     }
+    },
+    "reason": "MFD on Menu stick: the game uses it for its pages, and the stick's four directions move through them.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "gt7m_mfd",
+     "fan_pvgt_gt7",
+     "og_gt7_pad"
+    ],
+    "conditions": [],
+    "warnings": [],
+    "pitwall_sees": null
+   },
+   {
+    "key": "mfd.left",
+    "function": "mfd",
+    "action": "left",
+    "control_id": "menu_stick",
+    "slot": "left",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "MFD / black box left",
+    "native": "MFD Selection Left",
+    "menu_group": null,
+    "control_label": "Menu stick",
+    "signal": {
+     "kind": "pad",
+     "value": "dpad",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ],
+     "per_slot": {
+      "up": "dpad_up",
+      "down": "dpad_down",
+      "left": "dpad_left",
+      "right": "dpad_right"
+     }
+    },
+    "reason": "MFD on Menu stick: the game uses it for its pages, and the stick's four directions move through them.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "gt7m_mfd",
+     "fan_pvgt_gt7",
+     "og_gt7_pad"
+    ],
+    "conditions": [],
+    "warnings": [],
+    "pitwall_sees": null
+   },
+   {
+    "key": "mfd.right",
+    "function": "mfd",
+    "action": "right",
+    "control_id": "menu_stick",
+    "slot": "right",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "MFD / black box right",
+    "native": "MFD Selection Right",
+    "menu_group": null,
+    "control_label": "Menu stick",
+    "signal": {
+     "kind": "pad",
+     "value": "dpad",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ],
+     "per_slot": {
+      "up": "dpad_up",
+      "down": "dpad_down",
+      "left": "dpad_left",
+      "right": "dpad_right"
+     }
+    },
+    "reason": "MFD on Menu stick: the game uses it for its pages, and the stick's four directions move through them.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "gt7m_mfd",
+     "fan_pvgt_gt7",
+     "og_gt7_pad"
+    ],
+    "conditions": [],
+    "warnings": [],
+    "pitwall_sees": null
+   },
+   {
+    "key": "overtake.press",
+    "function": "overtake",
+    "action": "press",
+    "control_id": "face_square",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Overtake / boost",
+    "native": "Nitro / Overtake",
+    "menu_group": null,
+    "control_label": "Square",
+    "signal": {
+     "kind": "pad",
+     "value": "square",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Overtake / boost on Square: you need it at a precise moment, so it's under your thumb.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "gt7m_screen",
+     "og_gt7_pad"
+    ],
+    "conditions": [
+     "only cars with Nitro or an overtake system"
+    ],
+    "warnings": [],
+    "pitwall_sees": null
+   },
+   {
+    "key": "drs_aero.press",
+    "function": "drs_aero",
+    "action": "press",
+    "control_id": "face_triangle",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "DRS / active aero",
+    "native": "Nitro / Overtake (unverified for DRS)",
+    "menu_group": null,
+    "control_label": "Triangle",
+    "signal": {
+     "kind": "pad",
+     "value": "triangle",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "DRS / active aero on Triangle: you need it at a precise moment, so it's under your thumb.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "A",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "gt7m_screen",
+     "og_gt7_pad"
+    ],
+    "conditions": [
+     "DRS cars only; which button is unverified"
+    ],
+    "warnings": [],
+    "pitwall_sees": null
+   },
+   {
+    "key": "lights.press",
+    "function": "lights",
+    "action": "press",
+    "control_id": "r3",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Lights",
+    "native": "Headlights",
+    "menu_group": null,
+    "control_label": "R3",
+    "signal": {
+     "kind": "pad",
+     "value": "r3",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Lights on R3: you rarely need it, so it's on a control you have to reach for.",
+    "evidence": "U",
+    "evidence_parts": {
+     "game": "U",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "og_gt7_pad",
+     "repo_gt7"
+    ],
+    "conditions": [],
+    "warnings": [],
+    "pitwall_sees": null
+   },
+   {
+    "key": "look.press",
+    "function": "look",
+    "action": "press",
+    "control_id": "l3",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Look back / left / right",
+    "native": "Look Back",
+    "menu_group": null,
+    "control_label": "L3",
+    "signal": {
+     "kind": "pad",
+     "value": "l3",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Look back / left / right on L3: you press it a few times a race.",
+    "evidence": "U",
+    "evidence_parts": {
+     "game": "U",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "og_gt7_pad"
+    ],
+    "conditions": [],
+    "warnings": [],
+    "pitwall_sees": null
+   },
+   {
+    "key": "camera.press",
+    "function": "camera",
+    "action": "press",
+    "control_id": "face_cross",
+    "slot": "press",
+    "udp_action": null,
+    "origin": "recommended",
+    "check": null,
+    "label": "Change camera",
+    "native": "Change View",
+    "menu_group": null,
+    "control_label": "Cross",
+    "signal": {
+     "kind": "pad",
+     "value": "cross",
+     "evidence": "A",
+     "source_ids": [
+      "FAN-GTDDP-PROD",
+      "WALKTHROUGH"
+     ]
+    },
+    "reason": "Change camera on Cross: you rarely need it, so it's on a control you have to reach for.",
+    "evidence": "A",
+    "evidence_parts": {
+     "game": "V",
+     "wheel": "A"
+    },
+    "source_ids": [
+     "gt7m_views"
+    ],
+    "conditions": [],
+    "warnings": [],
+    "pitwall_sees": null
+   }
+  ],
+  "pitwall_ptt": {
+   "path": "screen",
+   "text": "GT7 doesn't send wheel button presses, so Pitwall can't see your wheel. Talk to Pitwall with the iPad's talk button, or hold Space on a keyboard."
+  },
+  "not_on_wheel": [
+   {
+    "function": "abs",
+    "label": "ABS",
+    "why": "pause_menu",
+    "text": "GT7's stability control (ASM) and ABS are only in the pause menu, under Assistance Settings. They can't go on a button."
+   },
+   {
+    "function": "stability",
+    "label": "Stability control",
+    "why": "pause_menu",
+    "text": "GT7's stability control (ASM) and ABS are only in the pause menu, under Assistance Settings. They can't go on a button."
+   },
+   {
+    "function": "wing",
+    "label": "Wing",
+    "why": "no",
+    "text": "Wing angles are a setup item in every game researched. F1 25 2026 cars switch Active Aero to Straight Line Mode on the DRS/S Mode button inside the zones only; other games have DRS on cars that have it."
+   },
+   {
+    "function": "ride_height",
+    "label": "Ride height / weight jacker",
+    "why": "no",
+    "text": "No game Pitwall knows lets you change ride height while driving. F1 25 and GT7 only show it in the car setup; iRacing's weight jacker on some oval cars is the closest thing."
+   },
+   {
+    "function": "reset",
+    "label": "Flashback / rewind / reset",
+    "why": "no",
+    "text": "GT7 has no rewind button; Retry is in the pause menu."
+   }
+  ],
+  "not_in_game": [
+   {
+    "function": "pit_limiter",
+    "label": "Pit limiter",
+    "text": "GT7 has no pit limiter button: the pit lane is automatic."
+   },
+   {
+    "function": "ptt_game",
+    "label": "The game's own push-to-talk",
+    "text": "GT7 has no push-to-talk of its own."
+   }
+  ],
+  "unplaced": [],
+  "reserved": [
+   {
+    "control_id": "ps",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "hub_left",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "hub_right",
+    "as": "system",
+    "label": "Console buttons (PS, Options, Create; Xbox, Menu, View)"
+   },
+   {
+    "control_id": "paddle_left",
+    "as": "gear_down",
+    "label": "Gear down"
+   },
+   {
+    "control_id": "paddle_right",
+    "as": "gear_up",
+    "label": "Gear up"
+   },
+   {
+    "control_id": "tuning",
+    "as": "wheel_menu",
+    "label": "The wheel's own menu (Tuning, MODE, Settings)"
+   }
+  ],
+  "notes": [
+   "GT7 sets the four coloured sticks itself; Pitwall can't change them. Which colour does what is community-reported."
+  ]
+ }
+}

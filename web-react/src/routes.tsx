@@ -150,6 +150,26 @@ export const AREAS: AreaDef[] = [
         keywords: ["wheel", "pedals", "ffb"],
         component: lazyPage(() => import("./pages/setup/RigPage"), "RigPage"),
       },
+      // Controls and button mapping (feat/controls): any wheel, any game; only F1 25 can be tested in the app.
+      {
+        id: "controls",
+        label: "Controls",
+        summary: "Which button does what, for any wheel and game",
+        keywords: [
+          "buttons",
+          "mapping",
+          "bindings",
+          "button box",
+          "push to talk",
+          "ptt",
+          "brake bias",
+          "encoder",
+          "rotary",
+          "funky switch",
+          "udp action",
+        ],
+        component: lazyPage(() => import("./pages/setup/ControlsPage"), "ControlsPage"),
+      },
       {
         id: "car",
         label: "Car setup",

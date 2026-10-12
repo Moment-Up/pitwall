@@ -25,11 +25,13 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any
 
+from pitwall.adapters.f1.enums import button_names
 from pitwall.storage import repo
 from pitwall.validate import evidence as E
 from pitwall.validate import rules as R
 from pitwall.validate.model import (
     LIMITS,
+    ButtonRecord,
     CueRecord,
     GameTransition,
     InputPhaseRecord,
@@ -129,6 +131,7 @@ class Collector:
         self._last_mode: str | None = None
         self._mode_changed = False  # the braking-call mode changed since the last lap was stored
         self._decode0: dict[str, dict[str, Any]] = {}  # adapter name -> its counters when the run started
+        self._button_seq = 0  # Setup › Controls probe: last button event copied into the run
 
     # ------------------------------------------------------------------ lifecycle
     def attach(self) -> None:
@@ -137,6 +140,8 @@ class Collector:
         self._attached = True
         self._seated = self.rt.drivers.active_id
         self._decode0 = _adapter_counts(self.rt, self.live)
+        controls = getattr(self.rt, "controls", None)
+        self._button_seq = int(getattr(getattr(controls, "probe", None), "seq", 0) or 0)
         self.live.subscribe(self._on_live)
         self.rt.drivers.subscribe(self._on_driver_thread)
         if self.hub is not None and callable(getattr(self.hub, "add_observer", None)):
@@ -532,6 +537,7 @@ class Collector:
             self._sample_inputs()
             self._sample_tts(run.selected_items)
         self._sample_live(now)
+        self._sample_buttons(n)
         if run.current_item == "game_selection" and n % 2 == 0:
             self._sample_game(now)
         if n % 4 == 0:
@@ -607,6 +613,45 @@ class Collector:
             base = self._decode0.get(str(stats.get("adapter")))
             if g is not None and E.tally_decode(run.evidence.decode, f"{tier}|{g}", stats, base):
                 self.kit.dirty()
+
+    def _sample_buttons(self, n: int) -> None:
+        """Setup › Controls: F1 25 presses from the probe's ring (read here on the loop, never on the ingest thread),
+        and every 2 s the seated driver's F1 25 layout (its UDP Actions) for the wheel_buttons rule."""
+        controls = getattr(self.rt, "controls", None)
+        probe = getattr(controls, "probe", None)
+        if controls is None or probe is None:
+            return
+        run = self.kit.run_or_raise()
+        events = probe.since(self._button_seq)
+        if events:
+            self._button_seq = events[-1].seq
+        for ev in events:
+            pressed = ev.pressed
+            if not pressed:
+                continue
+            tier: Tier = (
+                self.tier_now() if ev.origin == "live" else ("recorded" if ev.origin == "replay" else "synthetic")
+            )
+            rec = ButtonRecord(
+                ev.t_unix,
+                tier,
+                self.live.session_id,
+                self.rt.drivers.active_id,
+                ev.seq,
+                ev.status,
+                button_names(pressed),
+                ev.origin,
+            )
+            self._append("buttons", run.evidence.buttons, rec)
+        if n % 4 == 2:
+            try:
+                snap = controls.layout_snapshot()
+            except Exception:
+                log.exception("validation: could not read the controls layout")
+                return
+            if snap != run.controls_layout:
+                run.controls_layout = snap
+                self.kit.touch()
 
     def _sample_inputs(self) -> None:
         run = self.kit.run_or_raise()

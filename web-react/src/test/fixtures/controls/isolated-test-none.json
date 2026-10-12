@@ -1,0 +1,8 @@
+{
+ "_fixture": {
+  "source": "isolated-server answer: GET on an isolated `pitwall serve` (127.0.0.1:8904, scratch data dir, LLM and voice off, UDP on 127.0.0.1:20904 with no game) from the feat/controls worktree while the backend was in progress, after the dashboard saved the recommended F1 25 PS5 layout for the GT DD Pro template. Not a live rig.",
+  "status": 200,
+  "note": "GET /api/controls/test"
+ },
+ "body": null
+}

@@ -1,0 +1,52 @@
+{
+  "assignments": [
+    "ptt_pitwall.hold -> b1:press (recommended, ev V)",
+    "mfd.up -> funky5:up (recommended, ev U)",
+    "mfd.down -> funky5:down (recommended, ev U)",
+    "mfd.left -> funky5:left (recommended, ev U)",
+    "mfd.right -> funky5:right (recommended, ev U)",
+    "mfd.select -> funky5:push (recommended, ev U)",
+    "drs_aero.press -> b3:press (recommended, ev V)",
+    "overtake.press -> b4:press (recommended, ev V)",
+    "brake_bias.inc -> enc12:cw (recommended, ev V)",
+    "brake_bias.dec -> enc12:ccw (recommended, ev V)",
+    "ers_mode.inc -> b8:press (recommended, ev V)",
+    "ers_mode.dec -> b9:press (recommended, ev V)",
+    "diff.inc -> funky5:cw (recommended, ev U)",
+    "diff.dec -> funky5:ccw (recommended, ev U)",
+    "radio_menu.press -> b6:press (recommended, ev V)",
+    "pit_limiter.press -> b3:press (recommended, ev V)"
+  ],
+  "pitwall_ptt": {
+    "path": "udp_action",
+    "udp_action": 1,
+    "control_id": "b1"
+  },
+  "not_on_wheel": [
+    "tc (pause_menu)",
+    "abs (pause_menu)",
+    "wing (no)",
+    "ride_height (no)"
+  ],
+  "not_in_game": [
+    "stability",
+    "lights"
+  ],
+  "unplaced": [
+    "engine_map",
+    "look",
+    "reset",
+    "pit_request"
+  ],
+  "reserved": [
+    "b2 (system)",
+    "b7 (system)",
+    "b10 (system)",
+    "paddle13 (gear_down)",
+    "paddle14 (gear_up)",
+    "ap16 (clutch)",
+    "ap17 (clutch)",
+    "sel15 (mode_switch)",
+    "tuning (wheel_menu)"
+  ]
+}

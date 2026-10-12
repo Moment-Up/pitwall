@@ -1,0 +1,17 @@
+{
+  "assignments": [
+    "brake_bias.inc -> enc_l:cw (recommended, ev None)",
+    "brake_bias.dec -> enc_l:ccw (recommended, ev None)",
+    "tc.inc -> enc_r:cw (recommended, ev None)",
+    "tc.dec -> enc_r:ccw (recommended, ev None)",
+    "pit_limiter.press -> b1:press (recommended, ev None)",
+    "lights.press -> b2:press (recommended, ev None)"
+  ],
+  "pitwall_ptt": {
+    "path": "screen"
+  },
+  "not_on_wheel": [],
+  "not_in_game": [],
+  "unplaced": [],
+  "reserved": []
+}

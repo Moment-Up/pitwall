@@ -1,0 +1,35 @@
+{
+ "_fixture": {
+  "source": "contract fixture: built by a development script (not in the repository) from the design draft overlay and research copies, in the shapes of the design's contract (now the types in lib/endpoints/controls.ts). Not a server answer.",
+  "status": 200,
+  "note": "GET /api/controls/state?driver_id=1 on a fresh install: no section yet, defaults from the rig profile (GT DD Pro)."
+ },
+ "body": {
+  "schema": 1,
+  "wheels": [],
+  "layouts": [],
+  "household": {
+   "wheel_id": null,
+   "preset": null,
+   "layouts": {}
+  },
+  "drivers": {},
+  "ptt": {
+   "udp_actions": [
+    1
+   ],
+   "from": "default",
+   "layout_id": null,
+   "label": null,
+   "fallback_kept": true
+  },
+  "defaults": {
+   "driver_id": 1,
+   "game": "f1_25",
+   "platform": "ps5",
+   "wheel_id": null,
+   "template": "fanatec_gt_dd_pro_wheel",
+   "preset": "advanced"
+  }
+ }
+}
