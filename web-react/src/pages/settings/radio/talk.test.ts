@@ -73,15 +73,17 @@ describe("Talking to the engineer", () => {
     const m = render();
     const t = text(m);
     expect(t).toContain("Hold to talk");
-    expect(t).toContain("Space on a Mac");
+    expect(t).toContain("Space on a keyboard");
     expect(t).toContain("UDP Action 1");
     expect(t).toContain("Bluetooth button");
-    expect(t).toContain("AirPods taps and headphone play buttons can't reach a web page on iPad");
+    expect(t).toContain("paired with this iPad. AirPods taps and headphone play buttons can't reach a web page");
     expect(t).toContain("Set up");
     expect(t).not.toContain("Remove");
     expect(t).toContain("Hands-free");
-    expect(t).toContain('Off. When on, start with "Pitwall"');
+    expect(t).toContain('Off. Turn on to ask without a button: start with "Pitwall"');
     expect(t).toContain("keyboard only");
+    // the keyboard-only advice is part of the Bluetooth button's hint, before the hands-free row
+    expect(t.indexOf("keyboard only")).toBeLessThan(t.indexOf("Hands-free"));
     const checked = m.match(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>.*?<\/button>/g) ?? [];
     expect(checked).toHaveLength(1);
     expect(checked[0]).toContain(">Pitwall<");
@@ -98,7 +100,7 @@ describe("Talking to the engineer", () => {
   it("on and live: says when it listens; the radio wake word changes the hint", () => {
     const on = { ...SETTINGS, handsFree: true, handsFreeConsent: true, wakeWord: "radio" as const };
     const t = text(render({ r: r({ phase: "live", conn: "open", mic: "live", server: SERVER, settings: on }) }));
-    expect(t).toContain('Listening while the car is stopped. Start with "Radio"');
+    expect(t).toContain('Listening while the car is stopped (or no game data arrives). Start with "Radio"');
     expect(t).toContain(`Start with "Radio": "Radio, what's the gap?"`);
   });
 

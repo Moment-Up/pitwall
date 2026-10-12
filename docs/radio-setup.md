@@ -64,7 +64,7 @@ answers while moving, the language model only when stopped).
 
 | Way | Games | How |
 | --- | --- | --- |
-| Hold the big button, or Space on a Mac | all | Drive › Radio, the radio strip or the floating radio bar |
+| Hold the big button, or Space on a keyboard | all | Drive › Radio, the radio strip or the floating radio bar |
 | A wheel button | F1 25 only | map a spare button to **UDP Action 1** (step 5 above); GT7, Assetto Corsa and Forza send no button data |
 | A Bluetooth button | all | a page turner, pedal or spare game controller paired with the iPad (below) |
 | Hands-free | all | start with **"Pitwall"** (or **"Radio"**): "Pitwall, what's my fuel?" (below) |
@@ -87,19 +87,27 @@ speech; the computer turns what it hears into text and answers only when it star
 "Pitwall" or "Radio" ("Hey Pitwall", "OK Pitwall" work too). Everything else is thrown away at once: never shown,
 saved or logged. The screen shows when it is listening ("Listening for "Pitwall"", "Hearing you…").
 
-- Say the wake word alone ("Pitwall.") and the engineer says "Go ahead." - then ask, without the wake word, within
-  6 seconds.
-- **Only while the car is stopped** (on the grid, in the pits, in the garage and menus, after the flag) unless the
-  driver in the seat turns on **Hands-free while driving** in their profile (Settings › Drivers). On track it shows
-  "Hands-free paused · driving"; if you try to talk, the engineer tells you once, at your next stop, to use the
-  button on track. On the owner's real races the car is still for only 2-25 % of a race.
-- While you are talking hands-free the radio holds its own messages back (urgent calls still go out, and a braking
-  call cuts in: say it again after it).
+- Say the wake word alone ("Pitwall." or "Pitwall, um.") and the engineer says "Go ahead." - then ask, without the
+  wake word, within 6 seconds. Only a question about the car or the race is taken that way: anything else said then
+  is thrown away like any other talk.
+- **Only while the car is stopped** (on the grid, in the pits, in the garage and menus, after the flag; also when no
+  game data arrives at all, e.g. a game Pitwall does not read) unless the driver in the seat turns on **Hands-free
+  while driving**: in their profile (Settings › Drivers), or with **Also while driving** under the hands-free switch on
+  Drive › Radio while they are seated. On track it shows "Hands-free paused · driving" and a sentence you started
+  just before moving off is dropped; if you try to talk, the engineer tells you once a session, at a stop of at least
+  8 seconds, that hands-free only listens when you stop. A short stop (a spin, a flashback, the grid just before
+  lights out) does not count. On the owner's real races the car is still for only 0-28 % of a race.
+- While you are talking hands-free, and while the engineer waits for your question after "Go ahead.", the radio
+  holds its own messages back (urgent calls still go out). On track a braking call still cuts in: if you had started
+  with the wake word, the engineer says "Say again?" after it.
 - It needs speech recognition on the computer (the table below). `PITWALL_VOICE_HANDSFREE=false` turns it off for
   every device.
 - Settings › Radio & voice › Diagnostics shows the microphone level, the noise floor and the threshold, and how many
   segments were heard, ignored or too long. `GET /api/voice/status` -> `handsfree_diag` has the server's side (counts
   per reason, never any words).
+
+- On Windows the speech model downloads the first time (about 660 MB): until it is ready hands-free shows "Hands-free
+  starting…" with the download's progress, and a push-to-talk question gets "Speech recognition is still starting".
 
 Evidence: synthetic and recorded only. The wake word was checked with macOS `say` voices through the real speech
 engines, and the stopped/moving rule on 11 of the owner's real captures; hands-free has not been tried on the rig, with

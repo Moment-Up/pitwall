@@ -160,6 +160,26 @@
         "ignored": 0,
         "rejected": 0
       }
+    },
+    "starting_download": {
+      "available": false,
+      "reason": "starting: downloading the speech model (42 %)",
+      "armed": 1,
+      "scope": "stationary",
+      "active": false,
+      "paused": null,
+      "capturing": false,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 0,
+        "addressed": 0,
+        "ignored": 0,
+        "rejected": 0
+      }
     }
   },
   "events": [

@@ -1,7 +1,7 @@
 // Settings › Radio & voice › Talking to the engineer (lane handsfree, spec §7): hold to talk (what already works), the
-// Bluetooth talk button (Set up / Remove; AirPods taps cannot reach a web page on iPad), hands-free on this device
-// (first time: the privacy note) and its wake word. Pure: the radio state and the store's actions come in as props
-// (render tests use plain objects); the two dialogs keep only their open state here.
+// Bluetooth talk button (Set up / Remove; AirPods taps cannot reach a web page; the keyboard-only advice is in its
+// hint), hands-free on this device (first time: the privacy note) and its wake word. Pure: the radio state and the
+// store's actions come in as props (render tests use plain objects); the two dialogs keep only their open state here.
 
 import { Button } from "@heroui/react";
 import { useState } from "react";
@@ -9,7 +9,6 @@ import {
   handsFreeNote,
   handsFreeOn,
   talkButtonHint,
-  TALK_BUTTON_KEYBOARD_NOTE,
   TALK_HOLD_HINT,
   WAKE_CHOICES,
 } from "../../../components/radio/handsfree-view";
@@ -45,7 +44,7 @@ export function TalkSection({ r, statusHandsFree, noun, actions }: TalkSectionPr
     <>
       <CellGroup label="Talking to the engineer">
         <CellRow title="Hold to talk" hint={TALK_HOLD_HINT} />
-        <CellRow title="Bluetooth button" hint={talkButtonHint(button)}>
+        <CellRow title="Bluetooth button" hint={talkButtonHint(button, noun)}>
           <Button className="min-h-11" size="lg" variant="secondary" onPress={() => setSetup(true)}>
             {button ? "Change" : "Set up"}
           </Button>
@@ -73,7 +72,6 @@ export function TalkSection({ r, statusHandsFree, noun, actions }: TalkSectionPr
           onChange={(w) => actions.setWakeWord(w)}
         />
       </CellGroup>
-      <p className="m-0 px-1 text-sm text-muted">{TALK_BUTTON_KEYBOARD_NOTE}</p>
       <HandsFreeConsent
         isOpen={consent}
         noun={noun}

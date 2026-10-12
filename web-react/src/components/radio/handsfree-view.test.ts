@@ -8,11 +8,13 @@ import { HANDS_FREE_IDLE, parseHandsFreeState, type HandsFreeLocal, type PadLike
 import type { RadioServerState, RadioSettings, RadioState } from "../../lib/radio";
 import {
   consentText,
+  drivingSwitchView,
   handsFreeChipState,
   handsFreeDiagRows,
   handsFreeNote,
   handsFreeSwitchView,
   miniBarPrefix,
+  startingText,
   talkButtonHint,
   unavailableText,
 } from "./handsfree-view";
@@ -87,14 +89,15 @@ describe("micChipView with hands-free (order: on air, link, mic problem, hands-f
     ["listening", state(), 'Listening for "Pitwall"', "accent"],
     ["listening for Radio", state({ settings: { ...SETTINGS, wakeWord: "radio" } }), 'Listening for "Radio"', "accent"],
     ["calibrating", state({ handsFree: { ...LISTENING, vad: "calibrating" } }), "Hands-free starting…", "default"],
-    ["not armed on the Mac yet", withHf("not_armed"), "Hands-free starting…", "default"],
+    ["not armed on the computer yet", withHf("not_armed"), "Hands-free starting…", "default"],
+    ["speech model downloading", withHf("starting_download"), "Hands-free starting…", "default"],
     ["hearing (server capturing)", withHf("capturing"), "Hearing you…", "accent"],
     ["hearing (local speech)", state({ handsFree: { ...LISTENING, vad: "speech" } }), "Hearing you…", "accent"],
     ["follow-up", withHf("follow_up"), "Go ahead…", "accent"],
     ["paused while driving", withHf("paused_moving"), "Hands-free paused · driving", "default"],
     ["too noisy", state({ handsFree: { ...LISTENING, vad: "noisy" } }), "Hands-free · too noisy", "warning"],
     ["unavailable", withHf("unavailable_env"), "Hands-free unavailable", "warning"],
-    ["a Mac without hands-free", state({ server: { ...SERVER, handsfree: undefined } }), "Hands-free unavailable", "warning"],
+    ["a computer without hands-free", state({ server: { ...SERVER, handsfree: undefined } }), "Hands-free unavailable", "warning"],
     ["hands-free off here", state({ settings: { ...SETTINGS, handsFree: false } }), "Mic live", "success"],
     ["no consent (never on)", state({ settings: { ...SETTINGS, handsFreeConsent: false } }), "Mic live", "success"],
     // what comes first
@@ -126,7 +129,27 @@ describe("micChipView with hands-free (order: on air, link, mic problem, hands-f
   it("unavailable explains why in the detail", () => {
     expect(micChipView(withHf("unavailable_env")).detail).toContain("PITWALL_VOICE_HANDSFREE=false");
     expect(micChipView(withHf("unavailable_sentence")).detail).toBe("Needs speech recognition: no speech recognition engine on the server.");
-    expect(micChipView(state({ server: { ...SERVER, handsfree: undefined } })).detail).toContain("update Pitwall");
+    expect(micChipView(state({ server: { ...SERVER, handsfree: undefined } })).detail).toContain("update it");
+  });
+
+  it("starting says what the computer is doing: the speech model download with its percentage (Windows' first run)", () => {
+    expect(micChipView(withHf("starting_download")).detail).toBe("Downloading the speech model (42 %)");
+    expect(micChipView(state({ handsFree: { ...LISTENING, vad: "calibrating" } })).detail).toBe("Measuring the room's noise for a second");
+    expect(startingText("starting: loading the speech model")).toBe("Loading the speech model");
+  });
+
+  it("hands-free words never say Mac (Windows users see them too)", () => {
+    const all = [
+      ...["listening", "capturing", "follow_up", "paused_moving", "unavailable_env", "starting_download", "not_armed"].map(
+        (n) => micChipView(withHf(n as HfName)).detail,
+      ),
+      micChipView(state({ server: { ...SERVER, handsfree: undefined } })).detail,
+      unavailableText(null),
+      handsFreeNote(state({ server: { ...SERVER, handsfree: undefined } })).text,
+      handsFreeNote(state({ phase: "live", conn: "open", server: { ...SERVER, handsfree: undefined } })).text,
+      ...handsFreeDiagRows(state({ server: { ...SERVER, handsfree: undefined } }), 0).map((r) => `${r.label} ${r.value}`),
+    ];
+    for (const t of all) expect(t).not.toMatch(/\bMac\b/);
   });
 });
 
@@ -136,8 +159,8 @@ describe("unavailableText", () => {
     expect(unavailableText("switched off on the server (PITWALL_VOICE_HANDSFREE=false)")).toBe(
       "Switched off on the server (PITWALL_VOICE_HANDSFREE=false).",
     );
-    expect(unavailableText("odd_code")).toBe("The Mac cannot listen hands-free right now (odd_code).");
-    expect(unavailableText(null)).toBe("The Mac cannot listen hands-free right now.");
+    expect(unavailableText("odd_code")).toBe("The computer can't listen hands-free right now (odd_code).");
+    expect(unavailableText(null)).toBe("The computer can't listen hands-free right now.");
   });
 });
 
@@ -161,8 +184,8 @@ describe("mini radio bar prefix", () => {
 describe("Drive › Radio switch and its note", () => {
   it("off: says what it would do", () => {
     const v = handsFreeSwitchView(state({ settings: { ...SETTINGS, handsFree: false } }));
-    expect(v).toMatchObject({ on: false, disabled: false, consented: true, label: "Hands-free (say 'Pitwall')", warn: false });
-    expect(v.note).toContain('start with "Pitwall"');
+    expect(v).toMatchObject({ on: false, disabled: false, consented: true, label: 'Hands-free (say "Pitwall")', warn: false });
+    expect(v.note).toBe('Off. Turn on to ask without a button: start with "Pitwall". Only while stopped unless the driver allows it on track.');
   });
 
   it("no microphone: disabled, and says why", () => {
@@ -172,11 +195,12 @@ describe("Drive › Radio switch and its note", () => {
   });
 
   it.each<[string, RadioState, RegExp, boolean]>([
-    ["stopped only", state(), /while the car is stopped/, false],
+    ["stopped only", state(), /while the car is stopped \(or no game data arrives\)/, false],
+    ["speech model downloading", withHf("starting_download"), /^Starting: downloading the speech model \(42 %\)\.$/, false],
     ["also while driving", withHf("driving"), /on track too/, false],
     ["paused while driving", withHf("paused_moving"), /Paused while you drive/, false],
     ["unavailable", withHf("unavailable_env"), /Switched off on the server/, true],
-    ["a Mac without hands-free", state({ server: { ...SERVER, handsfree: undefined } }), /no hands-free yet/, true],
+    ["a computer without hands-free", state({ server: { ...SERVER, handsfree: undefined } }), /no hands-free yet/, true],
     ["radio off", state({ phase: "idle", conn: "offline", server: null }), /listens while the radio is live/, false],
     ["link down", state({ conn: "waiting", server: null }), /waiting for the radio link/, false],
   ])("on, %s", (_n, s, text, warn) => {
@@ -185,14 +209,41 @@ describe("Drive › Radio switch and its note", () => {
     expect(n.warn).toBe(warn);
   });
 
-  it("with the radio off, an unavailable Mac (from GET /api/voice/status) is said at once", () => {
+  it("with the radio off, an unavailable computer (from GET /api/voice/status) is said at once", () => {
     const n = handsFreeNote(state({ phase: "idle", conn: "offline", server: null }), hf("unavailable_env"));
     expect(n).toMatchObject({ warn: true });
     expect(n.text).toContain("PITWALL_VOICE_HANDSFREE");
   });
 
+  it("with the radio off, the scope is said once the computer's status is known", () => {
+    const off = state({ phase: "idle", conn: "offline", server: null });
+    expect(handsFreeNote(off).text).toBe("On: listens while the radio is live.");
+    expect(handsFreeNote(off, hf("listening")).text).toBe(
+      "On: listens while the radio is live and while the car is stopped (or no game data arrives).",
+    );
+    expect(handsFreeNote(off, hf("driving")).text).toBe("On: listens while the radio is live, on track too.");
+  });
+
   it("the label follows the wake word", () => {
-    expect(handsFreeSwitchView(state({ settings: { ...SETTINGS, wakeWord: "radio" } })).label).toBe("Hands-free (say 'Radio')");
+    expect(handsFreeSwitchView(state({ settings: { ...SETTINGS, wakeWord: "radio" } })).label).toBe('Hands-free (say "Radio")');
+  });
+});
+
+describe("Drive › Radio: also while driving (the seated driver's profile)", () => {
+  const sam = { name: "Sam", preferences: { handsfree_while_driving: false } } as Parameters<typeof drivingSwitchView>[1];
+  it("shown only while hands-free is on, a driver is seated, the radio follows them and the server knows the setting", () => {
+    expect(drivingSwitchView(true, sam, true)).toEqual({
+      label: "Also while driving (Sam)",
+      on: false,
+      note: "Off: only while the car is stopped.",
+    });
+    const on = { name: "Sam", preferences: { handsfree_while_driving: true } } as Parameters<typeof drivingSwitchView>[1];
+    expect(drivingSwitchView(true, on, true)?.note).toMatch(/braking call can cut you off/);
+    expect(drivingSwitchView(false, sam, true)).toBeNull();
+    expect(drivingSwitchView(true, null, true)).toBeNull();
+    expect(drivingSwitchView(true, sam, false)).toBeNull();
+    const old = { name: "Sam", preferences: {} } as Parameters<typeof drivingSwitchView>[1];
+    expect(drivingSwitchView(true, old, true)).toBeNull();
   });
 });
 
@@ -203,19 +254,21 @@ describe("consent and the talk button's words", () => {
     expect(t.body).toContain("this iPad listens for speech");
     expect(t.body).toContain('starts with "Pitwall"');
     expect(t.body).toContain("never shown, saved or logged");
-    expect(t.body).toContain("only listens while the car is stopped");
+    expect(t.body).toContain("only listens while the car is stopped, or while no game data arrives");
     expect([t.accept, t.decline]).toEqual(["Turn on", "Not now"]);
     expect(consentText("device", "radio").body).toContain('starts with "Radio"');
   });
 
-  it("the talk button hint: what to use, or the learned button and how it works", () => {
-    expect(talkButtonHint(null)).toContain("AirPods taps and headphone play buttons can't reach a web page");
+  it("the talk button hint: what to use (on this device, keyboard-only), or the learned button and how it works", () => {
+    expect(talkButtonHint(null, "phone")).toContain("paired with this phone. AirPods taps and headphone play buttons can't reach a web page");
+    expect(talkButtonHint(null, "iPad")).toContain("works as a keyboard only");
+    expect(talkButtonHint(null)).not.toMatch(/iPad\./);
     expect(talkButtonHint({ kind: "key", code: "PageDown" })).toMatch(/^Page Down\. Hold it to talk, or tap it once/);
   });
 });
 
 describe("hands-free diagnostics", () => {
-  it("level, floor and threshold in dB, the Mac's side and the counts", () => {
+  it("level, floor and threshold in dB, the computer's side and the counts", () => {
     const s = state({
       handsFree: {
         ...LISTENING,
@@ -226,7 +279,7 @@ describe("hands-free diagnostics", () => {
     });
     const rows = Object.fromEntries(handsFreeDiagRows(s, 15_000).map((r) => [r.label, r.value]));
     expect(rows["Hands-free (this device)"]).toBe("listening · level -30 dB · floor -68 dB · threshold -50 dB");
-    expect(rows["Hands-free (Mac)"]).toBe("available · 1 device on · stopped only");
+    expect(rows["Hands-free (computer)"]).toBe("available · 1 device on · stopped only");
     expect(rows["Hands-free counts"]).toBe("heard 3 · answered 1 · ignored 2 · not taken 0 · too long 1");
     expect(rows["Hands-free last event"]).toBe("not taken (too_long) · 5 s ago");
     expect(rows["Talk button"]).toBe("Page Down");
@@ -240,15 +293,17 @@ describe("hands-free diagnostics", () => {
     );
     expect(rows).toMatchObject({
       "Hands-free (this device)": "Off",
-      "Hands-free (Mac)": "-",
+      "Hands-free (computer)": "-",
       "Hands-free last event": "-",
       "Talk button": "None",
     });
   });
 
-  it("a Mac without hands-free says so", () => {
+  it("a computer without hands-free says so; a model still downloading is not a warning", () => {
     const rows = handsFreeDiagRows(state({ server: { ...SERVER, handsfree: undefined } }), 0);
-    expect(rows.find((r) => r.label === "Hands-free (Mac)")?.value).toBe("not supported by this Mac");
+    expect(rows.find((r) => r.label === "Hands-free (computer)")?.value).toBe("not supported by this computer");
+    const starting = handsFreeDiagRows(withHf("starting_download"), 0).find((r) => r.label === "Hands-free (computer)");
+    expect(starting).toMatchObject({ value: "starting: downloading the speech model (42 %) · 1 device on · stopped only", warn: false });
   });
 });
 

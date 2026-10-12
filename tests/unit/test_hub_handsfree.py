@@ -103,21 +103,40 @@ class Rig:
             self.hub._gate_until = 0.0  # skip the 0.3 s echo tail
 
 
-async def rig(*script: str, stt: Any = None, sched: Any = None, enabled: bool = True) -> Rig:
+async def rig(*script: str, stt: Any = None, sched: Any = None, enabled: bool = True, facts: Any = sheet) -> Rig:
     eng = RecordingEngineer()
     s = stt if stt is not None else ScriptedStt(*script)
     sched = sched or FakeScheduler()
-    hub = RadioHub(LiveState(), eng, s, FakeTts(), sched, fact_sheet=sheet, to_speech=lambda x: x, handsfree=enabled)
+    hub = RadioHub(LiveState(), eng, s, FakeTts(), sched, fact_sheet=facts, to_speech=lambda x: x, handsfree=enabled)
     hub.start()
     return Rig(hub, s, eng, sched)
 
 
-def drive(hub: RadioHub, speed: float, pit: int | None = None) -> None:
+def drive(hub: RadioHub, speed: float, pit: int | None = None, calm: bool = False) -> None:
+    """A live frame. ``calm``: off the brakes and straight (a speak window on track); else brake and steering are
+    unknown, which is never calm."""
     hub.live.on_packet(accepted=True)
     hub.live.on_frame(
-        CarFrame(game=Game.F1_25, t_recv_ns=0, speed_kph=speed, pit_status=pit, lap_number=3, lap_distance_m=400.0)
+        CarFrame(
+            game=Game.F1_25,
+            t_recv_ns=0,
+            speed_kph=speed,
+            pit_status=pit,
+            lap_number=3,
+            lap_distance_m=400.0,
+            brake=0.0 if calm else None,
+            steering=0.0 if calm else None,
+        )
     )
     hub.handsfree.tick(time.monotonic())
+
+
+def settled(hub: RadioHub) -> None:
+    """The car has been still for the hint's settle time and the radio quiet for long enough."""
+    hf = hub.handsfree
+    hf._still_since = time.monotonic() - hf_mod.HINT_SETTLE_S - 0.1
+    hub._air_free_mono = -math.inf
+    hf.tick(time.monotonic())
 
 
 def _driver(handsfree: bool, skill: str = "advanced") -> Driver:
@@ -468,7 +487,7 @@ async def test_the_seated_drivers_profile_sets_the_scope() -> None:
     await r.hub.stop()
 
 
-async def test_paused_hint_once_per_session_at_the_next_stop() -> None:
+async def test_paused_hint_once_per_session_after_a_settled_stop() -> None:
     r = await rig()
     c = await r.client(wake="radio")
     hf = r.hub.handsfree
@@ -481,22 +500,98 @@ async def test_paused_hint_once_per_session_at_the_next_stop() -> None:
     assert r.says() == []  # not while moving
     drive(r.hub, 0.0, pit=1)
     await settle(20)
+    assert r.says() == []  # a stop is not yet a settled one (an incident, the grid just before lights out)
+    settled(r.hub)
+    await settle(20)
     assert r.says() == [hf_mod.HINT_TEXT]
+    hint = next(m for m in texts(r.sent[c], "say") if m["text"] == hf_mod.HINT_TEXT)
+    assert hint["kind"] == "info"  # not a control message: it never bypasses quiet and a braking call may cut it
     r.end_playback()
     drive(r.hub, 200.0)
     await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": 2})
     drive(r.hub, 0.0, pit=1)
+    settled(r.hub)
     await settle(20)
     assert r.says() == [hf_mod.HINT_TEXT]  # once per session
     hf.new_session()
-    r.hub.apply_driver(_driver(handsfree=False, skill="beginner"))  # simple wording
+    r.hub._on_button(UDP_ACTION_BASE)  # the F1 wheel button was used this session
+    r.hub._on_button(0)
     drive(r.hub, 200.0)
     await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": 3})
     drive(r.hub, 0.0, pit=1)
+    settled(r.hub)
     await settle(20)
-    assert (
-        r.says()[-1] == "I only listen for 'Radio' when the car is stopped. Press the button to talk while you drive."
-    )
+    assert r.says()[-1] == hf_mod.HINT_TEXT + hf_mod.HINT_WHEEL
+    r.end_playback()
+    hf.new_session()
+    r.hub.apply_driver(_driver(handsfree=False, skill="beginner"))  # simple wording
+    drive(r.hub, 200.0)
+    await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": 4})
+    drive(r.hub, 0.0, pit=1)
+    settled(r.hub)
+    await settle(20)
+    assert r.says()[-1] == "I can't hear you while you drive. Ask me when you stop."
+    await r.hub.stop()
+
+
+async def test_the_hint_waits_for_a_quiet_radio_and_is_rechecked_after_synthesis() -> None:
+    """Review finding 1 / UX M1: the hint never cut the final-lap summary, never bypassed quiet mode, and is not said
+    when the car moves off while it is being synthesised (it waits for the next settled stop)."""
+    r = await rig()
+    c = await r.client()
+    hf = r.hub.handsfree
+    drive(r.hub, 200.0)
+    await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": 1})
+    drive(r.hub, 0.0, pit=1)
+    now = time.monotonic()
+    summary = RadioMessage("s1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Final lap, 1:28.352.", "Final lap.", now)
+    r.hub._hold((summary, None, 0.0))  # a held lap summary goes first
+    settled(r.hub)
+    await settle(10)
+    assert hf_mod.HINT_TEXT not in r.says()  # the summary goes out (or stays held); the hint never cuts it
+    if r.hub.speaking_id == "s1":
+        assert r.says()[-1] == "Final lap, 1:28.352."
+        r.end_playback()
+    r.hub._held = None
+    r.hub.intensity = "quiet"  # minimal radio: alerts and answers only
+    settled(r.hub)
+    await settle(10)
+    assert hf_mod.HINT_TEXT not in r.says()
+    r.hub.intensity = "normal"
+    original = r.hub._synthesize
+
+    async def moving_off(msg: RadioMessage, verify: bool = False) -> AudioClip | None:
+        drive(r.hub, 60.0)  # lights out while the hint is synthesised
+        return await original(msg, verify)
+
+    r.hub._synthesize = moving_off  # type: ignore[method-assign]
+    settled(r.hub)
+    await settle(20)
+    assert hf_mod.HINT_TEXT not in r.says() and hf._hint_word is not None and not hf._hint_said
+    r.hub._synthesize = original  # type: ignore[method-assign]
+    drive(r.hub, 0.0, pit=1)
+    settled(r.hub)
+    await settle(20)
+    assert r.says()[-1] == hf_mod.HINT_TEXT
+    await r.hub.stop()
+
+
+async def test_a_braking_call_cuts_the_hint_and_it_is_not_said_again() -> None:
+    from pitwall.voice.hub import compose_cue_clip
+    from tests.unit.test_cues import make_event
+
+    r = await rig()
+    c = await r.client()
+    drive(r.hub, 200.0)
+    await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": 1})
+    drive(r.hub, 0.0, pit=1)
+    settled(r.hub)
+    await settle(20)
+    assert r.says() == [hf_mod.HINT_TEXT] and r.hub.speaking_id is not None
+    ev = make_event()
+    r.hub._cue_phrases[ev.cue.parts] = compose_cue_clip([AudioClip(tone(0.3), SR) for _ in ev.cue.parts], 1)
+    assert r.hub.deliver_cue(ev, time.monotonic()) is None  # not dropped as "answer on air"
+    assert r.hub._held is None  # the hint is not said again later
     await r.hub.stop()
 
 
@@ -601,4 +696,308 @@ async def test_a_braking_cue_cuts_a_capture_and_the_driver_repeats() -> None:
     assert r.hub.deliver_cue(ev, time.monotonic()) is None  # delivered, not blocked by the capture
     await settle(2)
     assert r.events(c)[-1]["reason"] == "speaking" and not r.hub.handsfree.capturing
+    await r.hub.stop()
+
+
+# ---------------------------------------------------------------------------------------------- review fixes
+async def test_the_wake_word_and_a_filler_then_the_question_is_answered() -> None:
+    """Review finding 2: "Pitwall, um." is the wake word alone (no answer to "um."), and the question that follows
+    after the browser split the sentence is taken without the wake word."""
+    r = await rig("Pitwall, um.", "what's my fuel?")
+    c = await r.client()
+    await r.segment(c, 1)
+    await r.segment(c, 2, pre_s=0.1)
+    await settle(20)
+    assert [e["event"] for e in r.events(c)] == ["accepted", "addressed", "follow_up", "accepted", "addressed"]
+    assert [t["text"] for t in texts(r.sent[c], "transcript")] == ["what's my fuel?"]
+    assert "Copy, checking." not in r.says() and r.eng.use_llm[-1][0] == "what's my fuel?"
+    await r.hub.stop()
+
+
+async def test_a_question_that_repeats_a_short_engineer_call_is_not_an_echo() -> None:
+    """Review finding 3: "Pitwall, box this lap?" after "Box this lap." is a question; the radio's own line that starts
+    with the wake word coming back through the mic is still an echo."""
+    r = await rig("Pitwall, box this lap?", "Pitwall works with Gran Turismo")
+    c = await r.client()
+    now = time.monotonic()
+    await r.hub.say(
+        RadioMessage("b1", MessageKind.STRATEGY, Priority.NORMAL, "Box this lap.", "Box this lap.", now), None, None
+    )
+    r.end_playback()
+    await r.segment(c, 1)
+    assert [t["text"] for t in texts(r.sent[c], "transcript")] == ["box this lap?"]
+    r.end_playback()
+    line = "Pitwall works with Gran Turismo 7 lap times."
+    await r.hub.say(RadioMessage("g1", MessageKind.ANSWER, Priority.HIGH, line, line, now), None, None)
+    r.end_playback()
+    await r.segment(c, 2)
+    assert r.events(c)[-1]["reason"] == "echo"
+    await r.hub.stop()
+
+
+async def test_the_wake_word_alone_holds_the_radio_until_the_question() -> None:
+    """Review finding 4: after "Pitwall." the grace, "Go ahead." and the window hold scheduled messages, so the
+    question is not refused as "speaking"; the lap summary goes out after the answer."""
+    r = await rig("Pitwall.", "what's my fuel?")
+    c = await r.client()
+    hf = r.hub.handsfree
+    await r.segment(c, 1)
+    assert hf.holds_radio
+    hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + 0.05)
+    await settle(20)
+    assert r.says() == ["Go ahead."]
+    r.end_playback()
+    hf.tick(time.monotonic())
+    assert hf._follow is not None and hf._follow.phase == "window" and hf.holds_radio
+    r.hub._air_free_mono = -math.inf  # the scheduler's 2 s gap has passed
+    now = time.monotonic()
+    r.sched.enqueue(RadioMessage("s1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 3, 1:32.4.", "Lap 3.", now))
+    await settle(30)
+    assert r.says() == ["Go ahead."]  # the summary waits
+    await r.segment(c, 2)
+    assert r.events(c)[-1]["event"] == "addressed"
+    assert [t["text"] for t in texts(r.sent[c], "transcript")] == ["what's my fuel?"]
+    r.end_playback()
+    r.hub._air_free_mono = -math.inf
+    await settle(30)
+    assert r.says()[-1] == "Lap 3, 1:32.4."
+    await r.hub.stop()
+
+
+async def test_go_ahead_never_cuts_a_message_on_air() -> None:
+    """Review finding 4: "Go ahead." waits for what is on air; with no moment within ACK_WAIT_S it listens silently."""
+    r = await rig("Pitwall.", "what's my fuel?")
+    c = await r.client()
+    hf = r.hub.handsfree
+    await r.segment(c, 1)
+    now = time.monotonic()
+    summary = RadioMessage("s1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 3, 1:32.4.", "Lap 3.", now)
+    r.hub._send_ready((summary, AudioClip(b"\x01\x00" * 22_050, 22_050), 0.0), now)  # already on air
+    hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + 0.05)
+    await settle(10)
+    assert "Go ahead." not in r.says() and r.hub.speaking_id == "s1"
+    assert all(m.get("id") != "s1" for box in r.sent.values() for m in texts(box, "cancel"))
+    hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + hf_mod.ACK_WAIT_S + 0.1)
+    assert hf._follow is not None and hf._follow.phase == "window"  # listens without "Go ahead."
+    r.end_playback()
+    await r.segment(c, 2)
+    assert [t["text"] for t in texts(r.sent[c], "transcript")] == ["what's my fuel?"]
+    await r.hub.stop()
+
+
+async def test_go_ahead_waits_for_a_calm_stretch_on_track() -> None:
+    """Review finding 7: with hands-free while driving, "Go ahead." is said only in a speak window."""
+    r = await rig("Pitwall.", "Pitwall.")
+    c = await r.client()
+    hf = r.hub.handsfree
+    r.hub.apply_driver(_driver(handsfree=True))
+    drive(r.hub, 220.0)  # brake and steering unknown: never calm
+    await r.segment(c, 1)
+    hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + 0.05)
+    await settle(10)
+    assert r.says() == []
+    hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + hf_mod.ACK_WAIT_S + 0.1)
+    assert hf._follow is not None and hf._follow.phase == "window" and r.says() == []
+    hf._follow = None
+    hf._acks.clear()
+    drive(r.hub, 220.0, calm=True)  # off the brakes, straight, no braking zone known
+    await r.segment(c, 2)
+    hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + 0.05)
+    await settle(20)
+    assert r.says() == ["Go ahead."]
+    await r.hub.stop()
+
+
+async def test_a_recording_in_progress_is_dropped_when_the_car_moves_off() -> None:
+    """Review finding 5: the stationary scope is enforced on a recording that started while stopped."""
+    r = await rig("Pitwall, how are my tyres?")
+    c = await r.client()
+    hf = r.hub.handsfree
+    drive(r.hub, 0.0)
+    r.hub.on_audio(c, tone(0.5))
+    await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": 1})
+    r.hub.on_audio(c, tone(0.6))
+    drive(r.hub, 150.0)  # lights out mid-sentence
+    assert hf.paused == "moving" and not hf.capturing
+    await settle(2)
+    assert r.events(c)[-1]["reason"] == "paused_moving"
+    r.hub.on_audio(c, tone(0.6))
+    await r.hub.on_text(c, {"type": "vad", "state": "end", "seq": 1})
+    await settle(20)
+    assert r.stt.clips == [] and texts(r.sent[c], "transcript") == [] and r.says() == []
+    await r.hub.stop()
+
+
+async def test_a_stalled_stream_while_moving_does_not_open_listening() -> None:
+    """Review findings 1, 5 and 9: a 2-4 s gap in the stream mid-race (an incident) is not a stop."""
+    r = await rig()
+    c = await r.client()
+    hf = r.hub.handsfree
+    drive(r.hub, 150.0)
+    r.hub.live.last_packet_mono -= 2.5  # the hub sees the stream stale
+    hf.tick(time.monotonic())
+    assert hf.paused == "moving"
+    await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": 1})
+    await settle(2)
+    assert r.events(c)[-1]["reason"] == "paused_moving"
+    assert hf._motion.stale_since is not None
+    hf._motion.stale_since -= hf_mod.STALE_STILL_AFTER_S  # a menu or a pause: long enough
+    hf.tick(time.monotonic())
+    assert hf.paused is None and hf.active
+    await r.hub.stop()
+
+
+async def test_a_question_cut_by_a_braking_call_gets_say_again() -> None:
+    """UX review H1: a cue cuts a question on track; it is never answered half-heard, the radio asks for it again once
+    the cue is over (in a calm stretch). Chatter cut the same way gets nothing."""
+    from pitwall.voice.hub import compose_cue_clip
+    from tests.unit.test_cues import make_event
+
+    r = await rig("Pitwall, what's my fuel?", "What's for dinner tonight?")
+    c = await r.client()
+    r.hub.apply_driver(_driver(handsfree=True))
+    drive(r.hub, 250.0, calm=True)
+    ev = make_event()
+    r.hub._cue_phrases[ev.cue.parts] = compose_cue_clip([AudioClip(tone(0.3), SR) for _ in ev.cue.parts], 1)
+    for seq in (1, 2):
+        r.hub.on_audio(c, tone(0.5))
+        await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": seq})
+        r.hub.on_audio(c, tone(1.0))
+        assert r.hub.deliver_cue(make_event(seq=seq), time.monotonic()) is None  # the cue is never held back
+        await settle(20)
+        assert r.hub.speaking_id is not None  # the cue is on air: nothing is said over it
+        r.end_playback()
+        await settle(30)
+        r.end_playback()
+    rejected = r.events(c, "rejected")
+    assert [e["reason"] for e in rejected] == ["speaking"] and rejected[0]["seq"] == 1
+    assert r.events(c, "ignored")[-1] == {
+        "type": "handsfree",
+        "event": "ignored",
+        "seq": 2,
+        "reason": "not_addressed",
+        "audio_s": 1.5,
+    }
+    assert r.says().count("Say again?") == 1 and texts(r.sent[c], "transcript") == []
+    r.hub.on_audio(c, tone(0.5))  # a short capture cut by a cue: dropped at once, never transcribed
+    await r.hub.on_text(c, {"type": "vad", "state": "start", "seq": 3})
+    r.hub.on_audio(c, tone(0.3))
+    r.hub.deliver_cue(make_event(seq=3), time.monotonic())
+    await settle(10)
+    assert r.events(c)[-1]["reason"] == "speaking" and len(r.stt.clips) == 2
+    await r.hub.stop()
+
+
+async def test_after_go_ahead_only_a_question_about_the_car_or_race_is_taken() -> None:
+    """UX review H2: chatter in the follow-up window is not answered, shown or kept."""
+    r = await rig("Pitwall.", "Anyway, what are we having for dinner tonight?")
+    c = await r.client()
+    hf = r.hub.handsfree
+    history = list(r.hub.history)
+    await r.segment(c, 1)
+    hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + 0.05)
+    await settle(20)
+    r.end_playback()
+    hf.tick(time.monotonic())
+    await r.segment(c, 2)
+    assert r.events(c)[-1]["reason"] == "not_addressed"
+    assert texts(r.sent[c], "transcript") == [] and r.says() == ["Go ahead."]
+    assert list(r.hub.history)[: len(history) + 1] == [h for h in r.hub.history if h["text"] == "Go ahead."] + history
+    assert "dinner" not in repr(r.observed) + repr(r.hub.status())
+    await r.hub.stop()
+
+
+async def test_a_radio_check_before_any_session_is_answered() -> None:
+    """UX review H4: no session yet, "Radio check" gets "Loud and clear", not "No session data yet"."""
+    from pitwall.voice.hub import NO_GAME_REPLY, NO_SESSION_REPLY
+
+    r = await rig("Radio check.", "Radio, what's my fuel?", facts=lambda: None)
+    c = await r.client(wake="radio")
+    await r.segment(c, 1)
+    assert r.says()[-1] == "Loud and clear. Radio check OK."
+    r.end_playback()
+    await r.segment(c, 2)
+    assert r.says()[-1] in (NO_SESSION_REPLY, NO_GAME_REPLY)  # a real question still needs a session (or a game)
+    await r.hub.stop()
+
+
+class LoadingStt(ScriptedStt):
+    """A speech engine still downloading its model (Windows, first run), as ``SherpaParakeetStt`` reports it."""
+
+    name = "sherpa"
+
+    def __init__(self, *script: str) -> None:
+        super().__init__(*script)
+        self.loaded = False
+        self.loading = True
+        self.last_error: str | None = None
+        self.percent: int | None = 42
+        self.warmups = 0
+
+    def download_percent(self) -> int | None:
+        return self.percent
+
+    def warmup(self) -> None:
+        self.warmups += 1
+
+    def transcribe(self, clip: AudioClip, prompt: str | None = None) -> SttResult:
+        if not self.loaded:
+            raise SttError(f"speech model downloading ({self.percent} %)")
+        return super().transcribe(clip, prompt)
+
+
+async def test_a_speech_model_still_downloading_is_shown_and_said() -> None:
+    """UX review H5: the first-run download is visible (the percentage reaches the state frame), hands-free waits for
+    it, and push-to-talk says why instead of nothing."""
+    from pitwall.voice.handsfree import STT_STARTING_REPLY
+
+    stt = LoadingStt("Pitwall, what's my fuel?")
+    r = await rig(stt=stt)
+    c = await r.client()
+    hf = r.hub.handsfree
+    st = r.hub.state()["handsfree"]
+    assert st["available"] is False and st["reason"] == "starting: downloading the speech model (42 %)"
+    await r.segment(c, 1)
+    assert r.events(c)[-1]["reason"] == "unavailable"
+    stt.percent = 57
+    hf.tick(time.monotonic())
+    await settle(2)
+    assert texts(r.sent[c], "state")[-1]["handsfree"]["reason"] == "starting: downloading the speech model (57 %)"
+    r.hub._ptt_down_now("screen", c)
+    r.hub.on_audio(c, tone(0.8))
+    r.hub._ptt_up("screen")
+    await settle(30)
+    assert r.says() == [STT_STARTING_REPLY]
+    r.end_playback()
+    stt.loading, stt.percent = False, None
+    stt.last_error = "speech model unavailable: connection reset"
+    before = stt.warmups  # the hub warms the engine up once when a radio connects
+    hf._next_stt_try = 0.0
+    hf.tick(time.monotonic())
+    await settle(10)
+    assert hf.unavailable_reason() == "speech recognition failed to start: speech model unavailable: connection reset"
+    assert stt.warmups == before + 1  # retried (the engine backs off on its own); not again within STT_RETRY_S
+    hf.tick(time.monotonic())
+    await settle(5)
+    assert stt.warmups == before + 1
+    stt.loaded, stt.last_error = True, None
+    hf.tick(time.monotonic())
+    assert hf.available and r.hub.state()["handsfree"]["reason"] is None
+    await r.segment(c, 2)
+    assert [t["text"] for t in texts(r.sent[c], "transcript")] == ["what's my fuel?"]
+    await r.hub.stop()
+
+
+async def test_the_diagnostics_carry_each_segments_level_never_its_text() -> None:
+    """Review finding 10: the server's speech gate matches the browser (-50 dBFS) and the level is in the diagnostics."""
+    r = await rig("What's for dinner tonight?")
+    c = await r.client()
+    assert hf_mod.SEGMENT_GATE.threshold_dbfs == -50.0
+    await r.segment(c, 1, pre_s=0.0, audio=tone(1.0, amp=100))  # -53 dBFS: under the gate
+    await r.segment(c, 2)
+    diag = r.hub.status()["handsfree_diag"]
+    by_seq = {e["seq"]: e for e in diag["events"] if e["event"] in ("rejected", "ignored")}
+    assert by_seq[1]["reason"] == "no_speech" and by_seq[1]["level_dbfs"] < -45 and by_seq[1]["voiced_s"] < 0.3
+    assert by_seq[2]["reason"] == "not_addressed" and by_seq[2]["level_dbfs"] > -25 and by_seq[2]["voiced_s"] > 1
+    assert "dinner" not in repr(diag)
     await r.hub.stop()

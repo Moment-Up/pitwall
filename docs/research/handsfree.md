@@ -70,37 +70,43 @@ but ships no licence file, and bundles ONNX Runtime (MIT) without its notice ([l
 ### 3.1 Recorded: the stationary gate on real captures (A1)
 
 The 12 owner captures (8 F1 25 races, 4 GT7) decoded with the real adapters and run through the shipped
-`MotionGate` (`scripts/handsfree_check.py --captures`, scratch copies, deleted afterwards). A packet gap over
-`LIVE_S` (2 s) counts as stationary from the last frame before it; the hub sees "stale" 2 s later
-(`hub_longest_still_s`).
+`MotionGate` as the hub sees them (`scripts/handsfree_check.py --captures`, scratch copies, deleted afterwards): a
+packet gap over `LIVE_S` (2 s) makes the data stale 2 s after the last packet, and a car that was moving stays
+moving for `STALE_STILL_AFTER_S` (5 s) more before it counts as stationary (review round 2, section 3.6).
 
-| Capture | Game / session | Min | Stationary share | Windows (>=5 s / >=15 s) | Flips | Longest still (s) |
-|---|---|---|---|---|---|---|
-| 20261010-191501 | F1 25 race | 4.4 | 2.6% | 2 (1/0) | 3 | 6.9 |
-| 20261010-203637 | F1 25 race | 5.4 | 3.9% | 4 (0/0) | 7 | 4.5 |
-| 20261010-215916 | F1 25 race | 4.2 | 4.6% | 2 (1/0) | 3 | 11.6 |
-| 20261010-221749 | F1 25 race | 28.6 | 14.0% | 4 (3/1) | 7 | 215.4 |
-| 20261010-225601 | F1 25 qualifying + race | 12.0 | 19.1% | 3 (3/2) | 5 | 95.6 |
-| 20261011-010607 | F1 25 race | 5.3 | 7.2% | 3 (2/1) | 5 | 15.9 |
-| 20261011-183245 | F1 25 race | 8.4 | 1.7% | 2 (0/0) | 4 | 5.0 |
-| 20261011-185757 | F1 25 race (pit stop) | 5.6 | 25.2% | 6 (4/3) | 12 | 34.5 |
-| 20261011-013533 | GT7 | 1.8 | 4.1% | 1 (0/0) | 1 | 4.3 |
-| 20261011-124608 | GT7 | 16.6 | 29.1% | 3 (2/1) | 6 | 281.6 |
-| 20261011-182615 | GT7 | 3.1 | 2.9% | 1 (1/0) | 1 | 5.4 |
-| 20261011-121256 | GT7 | 0 player frames decoded (not investigated) | | | | |
+| Capture | Game / session | Min | Stationary share | Windows (>=5 s / >=15 s) | Flips | Longest still (s) | Stops after driving (min: s) |
+|---|---|---|---|---|---|---|---|
+| 20261010-191501 | F1 25 race | 4.4 | 3.2% | 2 (1/0) | 2 | 8.4 | none (the grid at the start) |
+| 20261010-203637 | F1 25 race | 5.4 | 0.0% | 1 (0/0) | 1 | 0.0 | none: 3 incident gaps stay moving |
+| 20261010-215916 | F1 25 race | 4.2 | 5.2% | 2 (1/0) | 2 | 13.1 | none (the grid at the start) |
+| 20261010-221749 | F1 25 race | 28.6 | 13.6% | 4 (2/1) | 7 | 215.4 | 4.4: 14.0, 12.6: 215.4, 20.2: 4.4 |
+| 20261010-225601 | F1 25 qualifying + race | 12.0 | 19.1% | 3 (3/2) | 5 | 95.6 | 1.1: 30.5, 1.8: 95.6, 11.8: 11.2 |
+| 20261011-010607 | F1 25 race | 5.3 | 5.5% | 3 (2/0) | 4 | 8.9 | 0.7: 8.9 |
+| 20261011-183245 | F1 25 race | 8.4 | 0.0% | 0 | 0 | 0.0 | none: 2 incident gaps stay moving |
+| 20261011-185757 | F1 25 race (pit stop) | 5.6 | 19.0% | 6 (4/2) | 12 | 27.5 | 1.3: 9.4, 2.0: 8.7, 2.7: 2.9, 2.8: 0.8, 4.1: 27.5, 4.9: 15.0 |
+| 20261011-013533 | GT7 | 1.8 | 4.1% | 1 (0/0) | 1 | 4.3 | none |
+| 20261011-124608 | GT7 | 16.6 | 28.4% | 3 (2/1) | 6 | 274.6 | 0.4: 1.9, 4.3: 274.6, 13.0: 5.7 |
+| 20261011-182615 | GT7 | 3.1 | 2.9% | 1 (1/0) | 1 | 5.4 | none |
+| 20261011-121256 | GT7 | 0 player frames decoded (not investigated) | | | | | |
 
-- **Reproduction.** With the design scan's start (the car counted as moving before its first frame,
-  `--moving-start`) the shipped gate reproduces every row exactly (flips, longest window and share). With the
-  shipped rule's own start - Drive's `motion.ts`: a car under 3 km/h with nothing before it is stationary at once -
-  three races that begin on the grid (191501, 215916, 010607) count as stationary 1.5 s earlier: one flip fewer
-  and a first window 1.5 s longer (8.4 s and 13.1 s instead of 6.9 s and 11.6 s). That is the rule as specified, not a
-  regression; the two readings differ only before the first frame.
+- **What changed in round 2.** The first table counted a packet gap as stationary from its last frame. On the real
+  races those gaps are mostly incidents (a spin or a flashback: 3-28 km/h, then 3.0-3.7 s without data, then 92 or
+  95 km/h within 5 s): the stationary scope opened mid-race and the "paused while driving" hint was said as the car
+  drove on. With the 5 s hold, 203637 and 183245 have no stop at all after driving (5 incident gaps stay moving;
+  round 1 had them 3.9 % and 1.7 % stationary), and the windows that end in a menu or the stream's end start 7 s
+  later (010607: 8.9 s instead of 15.9 s; 124608 and 185757: 7 s shorter).
+- **The hint's stops.** The hint now waits for a stop of at least `HINT_SETTLE_S` (8 s): the short ones above (1.9 s
+  in 124608, 2.9 s and 0.8 s in 185757, 4.4 s in 221749) are never used.
 - **No frame above 8 km/h is classed stationary** in any capture, except frames the game itself flags paused or
   replay (counted apart: 1-2 per F1 race, 2544 in the qualifying + race capture, 260-341 per GT7 capture).
-- **When the stationary scope listens:** on the grid, in the pits, in the garage and menus (the packet gaps) and after
-  the flag. In a race the car is still for only 2-25% of the time.
+- **When the stationary scope listens:** on the grid, in the pits, in the garage and menus (after the hold) and after
+  the flag; with no game data at all (any game, telemetry not set up). In a race the car is still for 0-28 % of the
+  time.
 - **Why the hysteresis matters.** A single 8 km/h threshold flipped up to 22 times in 5.6 minutes; the hysteresis
-  rule flips 1-12 times per capture.
+  rule flips 0-12 times per capture.
+- `--moving-start` (the design scan's start: moving before the first frame) gives the three races that begin on the
+  grid one flip more and a first window 1.5 s shorter; the table uses the shipped start (a stopped car is stationary
+  at once, as Drive's `motion.ts`).
 
 ### 3.2 Recorded: real button presses through the hub (A2)
 
@@ -135,6 +141,27 @@ the shipped `match_wake` (`--wake`).
   "Pigwall", "Bidwall", "Big wall", "Bit wall", "Tidwall", "Pidwall", "Hitwall", "It wall", "Fit wall", "Pitfall",
   "Pitmull" - all accepted. Misses: "It all...", "Fedwall", "Two". "Pitfall" or "pit wall" in the middle of a sentence
   is never accepted: the match must be at the start.
+- **Round 2 (review findings 2 and 8, UX H3).** A match is now graded. Within one edit of "pitwall" (on one word or two
+  joined) it takes any question; two edits ("Big wall", "Bidwall", "Pitbull", "Paywall", "Pinball"), "It all," with
+  punctuation after it, or one edit from "radio" ("Ratio") only a racing question (an engineer intent other than
+  "general") or nothing at all. Two words count as "pit wall" only when the second sounds like "wall" (wall, well,
+  ball, bull, fall, mall, mull), so "Hit all the apexes", "Fit all four tyres" are not the wake word. "a" and "k" (a
+  clipped onset: "A pit wall", "K pit wall") are fillers before "Pitwall", "k" is a first letter, and with less than
+  0.25 s of pre-roll "Wall" / "Well" / "Twell" count before a racing question. Fillers after the wake word are not the
+  question ("Pitwall, um." is the wake word alone; "right" stays when more follows: "right front tyre?"). Scored on
+  the same transcripts (scratch, `wake_eval.py`), shipped -> round 2:
+
+  | Transcripts | "Pitwall" recall | "Radio" recall | False accepts |
+  |---|---|---|---|
+  | Parakeet clean / drone 10 dB / pink 15 dB | 44 -> 45 / 45 -> 45 / 35 -> 34 of 49 | unchanged | 0 -> 0 |
+  | sherpa v2 clean / drone 10 dB | 43 -> 43 / 41 -> 40 of 49 | unchanged | 0 -> 0 |
+  | Onset probe (80-250 ms of the onset removed, 48 positives) | 22 -> 30, 45 with the clipped rule | | |
+  | 34 negatives, including every false accept the review found | | | 0 of 34 (both words, clipped or not) |
+
+  The two lost: "Hey big wall! Where should I be?" and "Tidwall, how are my timers?" (garbled questions after a
+  two-edit match). One extra gain: "A bit wall! Where should I bid?". "He pitwall wins a ditch." is no longer
+  accepted. "Pit wall says box" is still the wake word (strong, at the start); "Hey, radio" is the wake word alone
+  by design (the driver calls the radio by name).
 - **A5 (text):** the 204-question engineer intents fixture gives 0 "Pitwall" accepts; "Radio" matches only "Radio
   check", which keeps its whole text as the question (`tests/unit/test_handsfree.py`).
 - **Engineer lines** that begin with "Pitwall" (game capability answers) and the test phrase "Radio check, loud and
@@ -200,11 +227,48 @@ confirm (start about 250 ms after the speech onset), device TTS that reports pla
 - while the race streams: `paused: moving` once the car moves; a start then is refused (`paused_moving`); the seated
   driver's profile switched to "Hands-free while driving" (`PATCH /api/drivers/1`) turns the scope to `driving`, and a
   question while moving gets the deterministic tyre answer (no language model); back off, the scope returns to
-  `stationary`; the race's UDP Action 1 press keys push-to-talk with hands-free armed; the "Hands-free is off while you
-  drive" hint is said once, at the first stationary moment (the stream's end);
+  `stationary`; the race's UDP Action 1 press keys push-to-talk with hands-free armed; the "paused while driving" hint
+  is said once (round 1 said it at the first stationary moment; since round 2 it waits for a stop of 8 s, see 3.6);
 - `/api/voice/status`: `clients[].handsfree`, and `handsfree_diag` with reasons and counts but no text.
 
-### 3.6 Owed
+### 3.6 Review round 2 (correctness and radio-feel reviews)
+
+Every finding was reproduced or checked, then fixed with a unit test in `tests/unit/test_hub_handsfree.py` /
+`test_handsfree.py` (hub probes, synthetic) and, for motion, the recorded scan in 3.1.
+
+- **The hint** (finding 1, UX M1): said only at a stop of at least 8 s, with the radio quiet for 3 s and nothing held,
+  re-checked after synthesis (the car may have moved off), never in quiet mode or at minimal intensity, and sent as an
+  `info` message a braking call may cut (not a control message that blocks braking calls); new words: "Hands-free only
+  listens when you stop. Your driver profile can turn it on for driving." (+ the wheel or talk button when one was
+  used), simple: "I can't hear you while you drive. Ask me when you stop." Not said on a quiet stretch of track: a
+  refusal while moving is often engine noise, and the Drive chip already says "paused · driving".
+- **Incident gaps** (findings 1, 5, 9): the 5 s stale hold (3.1); a capture still running when the car moves off is
+  dropped (`paused_moving`); the copy says the stationary scope also listens when no game data arrives.
+- **"Pitwall, um."** (finding 2) is the wake word alone; **the echo guard** (finding 3) compares a transcript that
+  starts with the wake word only with lines that start with it.
+- **Holding the radio** (finding 4): a capture, a segment in the speech engine, the wake word alone waiting for its
+  question, and "Say again?" waiting all hold non-urgent messages; "Go ahead." waits for what is on air (it cut a lap
+  summary that was then lost) and, on track, for a speak window (finding 7), else the window opens silently after 2 s.
+  A capture started while "Go ahead." is still pending takes the follow-up and "Go ahead." is not said.
+- **A question cut by a braking call** (UX H1): with at least 0.8 s of speech it is still transcribed; if it was
+  addressed, "Say again?" once the radio is free (on track in a speak window); chatter is dropped as before.
+- **After "Go ahead."** (UX H2) only a racing question (intent other than "general") is taken without the wake word.
+- **Before any session** (UX H4) a radio check, "stop talking" and "you can talk" are answered (an empty fact sheet;
+  "quiet for 3 laps" still needs a lap to count from).
+- **Windows' first run** (UX H5): while the speech model downloads or loads, `handsfree.reason` is
+  `starting: downloading the speech model (NN %)`, the chip shows it, a failed load is retried every 30 s while a
+  device listens, and push-to-talk says "Speech recognition is still starting. Type it, or try again in a minute."
+- **The browser** (finding 6) aborts an open segment (`reason: mic`) when its microphone track ends or is reopened.
+- **The speech gate** (finding 10) is -50 dBFS like the browser's and push-to-talk's; each segment's loudest 20 ms
+  and voiced seconds are in `handsfree_diag.events`. Unverified until a real voice is recorded (A9).
+- **Copy** (UX L1, M2): "the computer", not "Mac", in hands-free text; the talk-button help names the device; the
+  keyboard-only advice is in the Bluetooth button's hint; Drive › Radio has "Also while driving (name)" for the seated
+  driver.
+- **Not done here** (other lanes): shorter answers while moving (UX M3: engineer phrasing), "Copy, checking." with the
+  language model switched off, number rounding and "k p h" / brackets in speech (UX L2), "Say again?" for a wheel
+  press with no speech in menus (push-to-talk behaviour).
+
+### 3.7 Owed
 
 - **A7 (CI, Windows):** the `windows` job runs `uv sync --all-extras --locked` (as the one-line installer does), so it
   installs sherpa-onnx and its core from the lock; its pytest runs the Windows-only import test in
@@ -224,8 +288,8 @@ confirm (start about 250 ms after the speech onset), device TTS that reports pla
   SNR. The thresholds are heuristics with a diagnostic view; A9 is needed.
 - The `say` voices clip the "P" of "Pitwall", so recall with real voices may differ either way.
 - The Windows engine has never run on a Windows PC: expect 2-4x the Mac's CPU figures.
-- Hands-free while driving: a braking call cuts a capture, and a capture holds back non-urgent radio messages (at most
-  about 9 s).
+- Hands-free while driving: a braking call cuts a capture ("Say again?" if it was addressed), and a capture or the
+  wake word alone waiting for its question holds back non-urgent radio messages (at most about 10 s).
 - Gamepad buttons in Safari are unverified.
 
 ## Sources

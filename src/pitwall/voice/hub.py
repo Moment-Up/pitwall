@@ -95,7 +95,11 @@ from pitwall.coach.cues import (
 from pitwall.compat import is_windows
 from pitwall.core.live import LiveState
 from pitwall.motivation.radio import GoalLineGate, goal_message  # lane motivation
-from pitwall.voice.handsfree import HandsFreeController  # --- hands-free (lane handsfree) ---
+from pitwall.voice.handsfree import (  # --- hands-free (lane handsfree) ---
+    STT_STARTING_REPLY,
+    HandsFreeController,
+    no_session_sheet,
+)
 from pitwall.voice.scheduler import (
     DRIVER_INITIATED,
     DRIVER_LAP_KINDS,
@@ -574,6 +578,7 @@ class RadioHub:
                 log.exception("TTS engine %s failed to start; its fallback speaks", self.tts.name)
 
     async def stop(self) -> None:
+        self.handsfree.close()  # --- hands-free (lane handsfree) ---
         self.live.unsubscribe(self._on_live_note)
         self.live.unsubscribe_buttons(self._on_button_threadsafe)
         self.cues.set_sink(None)
@@ -749,7 +754,7 @@ class RadioHub:
     def _ptt_down_now(self, source: str, client: RadioClient | None) -> None:
         if self.ptt_down:
             return
-        self.handsfree.abort("ptt")  # --- hands-free (lane handsfree) --- push-to-talk wins
+        self.handsfree.abort("ptt", source)  # --- hands-free (lane handsfree) --- push-to-talk wins
         if self.speaking_id is not None:
             self._cancel_speaking()  # barge-in
             self._gate_until = time.monotonic() + BARGE_IN_GATE_S
@@ -815,6 +820,10 @@ class RadioHub:
         except Exception as e:
             log.exception("STT failed")
             self._broadcast({"type": "error", "message": f"speech recognition failed: {e}"})
+            if getattr(self.stt, "loaded", True) is False:  # --- hands-free (lane handsfree) --- model still starting
+                await self.say(
+                    self._msg(MessageKind.CONTROL, Priority.HIGH, STT_STARTING_REPLY, bypass=True), None, released
+                )
             return
         rec.stt_ms = res.latency_ms
         rec.text = res.text
@@ -859,6 +868,8 @@ class RadioHub:
             sheet = await asyncio.to_thread(self.fact_sheet)
             if sheet is None and cap and entry is not None:
                 sheet = games.capability_sheet(entry)  # no session yet: the game's capabilities are still known
+            if sheet is None:  # --- hands-free (lane handsfree) --- a radio check / quiet / resume needs no session
+                sheet = no_session_sheet(intent)
             no_game = False
             if sheet is None:
                 no_game = entry is None and intent.name in games.CAPABILITY_ONLY_INTENTS
@@ -1420,7 +1431,7 @@ class RadioHub:
                 self._send_ready(urgent, now)
             return
         speaking = self.speaking_id is not None
-        capturing = self.handsfree.capturing  # --- hands-free (lane handsfree) --- only urgent calls cut a capture
+        capturing = self.handsfree.holds_radio  # --- hands-free (lane handsfree) --- only urgent calls cut it
         if not speaking and not self._busy and not capturing and self._release_held(now):
             return
         interrupt_only = speaking or self._busy or self._held is not None or capturing
@@ -1450,7 +1461,7 @@ class RadioHub:
             radio_free = (
                 self.speaking_id is None
                 and not self._busy
-                and not self.handsfree.capturing  # --- hands-free (lane handsfree) ---
+                and not self.handsfree.holds_radio  # --- hands-free (lane handsfree) ---
                 and self._gap_ok(msg, now)
             )
             may_go = radio_free and (

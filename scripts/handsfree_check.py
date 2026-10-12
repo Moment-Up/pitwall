@@ -11,11 +11,13 @@
 Every mode prints JSON lines and exits 1 when an acceptance threshold fails.
 
 * ``--captures``: decodes each capture with the real adapters and runs the shipped ``voice.handsfree.MotionGate``
-  (Drive's hysteresis rule) over the player's frames. A packet gap longer than ``LIVE_S`` counts as stationary from
-  the last frame before it (the accounting of the design scan in section 3.1; the hub itself sees "stale" only
-  ``LIVE_S`` later, reported as ``hub_longest_still_s``). It compares flips and the longest stationary window with
-  section 3.1 (+-1 flip, +-0.5 s) and checks that no frame above 8 km/h is classed stationary (frames the game flags
-  paused or replay are counted apart). Never commit or keep the captures (other players' names).
+  (Drive's hysteresis rule) over the player's frames as the hub sees them: a packet gap longer than ``LIVE_S`` makes
+  the data stale ``LIVE_S`` after the last packet, and a car that was moving stays moving for ``STALE_STILL_AFTER_S``
+  more (an incident gap), stationary after that. It compares flips and the longest stationary window with section 3.1
+  (+-1 flip, +-0.5 s), checks that no frame above 8 km/h is classed stationary (frames the game flags paused or replay
+  are counted apart), and counts the stops long enough for the "paused while driving" hint (``HINT_SETTLE_S``) and
+  the shorter ones after driving (incidents, the grid) it no longer uses. Never commit or keep the captures (other
+  players' names).
 * ``--rms``: renders the section 3.3 conditions from ``<voice>__NN.wav`` clips (3 s of pink noise in front, the clip as
   rendered and 20 dB quieter, noise at -70 / -50 / -40 dBFS), writes one RMS value per 512-sample frame for the
   dashboard's TypeScript VAD test, and runs this script's reference ``EnergyVad`` (the same rules as
@@ -47,7 +49,7 @@ import numpy as np
 from scipy.signal import resample_poly
 
 from pitwall.core.live import LIVE_S
-from pitwall.voice.handsfree import MOVE_ABOVE_KPH, MotionGate, match_wake
+from pitwall.voice.handsfree import HINT_SETTLE_S, MOVE_ABOVE_KPH, STALE_STILL_AFTER_S, MotionGate, match_wake
 from pitwall.voice.types import AudioClip
 
 RATE = 16_000
@@ -55,17 +57,18 @@ FRAME = 512  # samples per browser worklet frame (32 ms)
 
 # ---------------------------------------------------------------------------------------------- section 3.1
 # capture prefix -> (flips, longest stationary window s): the design scan (docs/research/handsfree.md section 3.1)
+# (flips, longest stationary window in s) per capture as the hub sees it (section 3.1), with the shipped start
 EXPECTED_MOTION: dict[str, tuple[int, float]] = {
-    "20261010-191501": (3, 6.9),
-    "20261010-203637": (7, 4.5),
-    "20261010-215916": (3, 11.6),
+    "20261010-191501": (2, 8.4),
+    "20261010-203637": (1, 0.0),
+    "20261010-215916": (2, 13.1),
     "20261010-221749": (7, 215.4),
     "20261010-225601": (5, 95.6),
-    "20261011-010607": (5, 15.9),
-    "20261011-183245": (4, 5.0),
-    "20261011-185757": (12, 34.5),
+    "20261011-010607": (4, 8.9),
+    "20261011-183245": (0, 0.0),
+    "20261011-185757": (12, 27.5),
     "20261011-013533": (1, 4.3),
-    "20261011-124608": (6, 281.6),
+    "20261011-124608": (6, 274.6),
     "20261011-182615": (1, 5.4),
 }
 
@@ -124,6 +127,7 @@ class MotionStats:
     fast_stationary: int = 0  # frames over 8 km/h classed stationary (must be 0)
     flagged_fast: int = 0  # paused / replay frames over 8 km/h (stationary by the game's own flag)
     gaps: list[float] = field(default_factory=list)
+    stale_moving: int = 0  # gaps the hub sees stale while the car still counts as moving (incidents: no stop)
 
 
 def scan_capture(path: Path, moving_start: bool = False) -> MotionStats:
@@ -141,6 +145,7 @@ def scan_capture(path: Path, moving_start: bool = False) -> MotionStats:
     state: bool | None = None
     since = 0.0
     t_prev: float | None = None
+    f_prev: Any = None
 
     def flip(s: bool, t: float) -> None:
         nonlocal state, since
@@ -167,13 +172,17 @@ def scan_capture(path: Path, moving_start: bool = False) -> MotionStats:
             t = f.t_recv_ns / 1e9
             if t_prev is not None:
                 dt = t - t_prev
-                if dt > LIVE_S:  # the stream stopped (menus, loading, pause): stationary
+                if dt > LIVE_S:  # the stream stopped (menus, loading, pause, an incident): the hub sees it stale
                     st.gaps.append(dt)
-                    flip(gate.update(None, False, t_prev), t_prev)
+                    t_stale = t_prev + LIVE_S
+                    flip(gate.update(f_prev, False, t_stale), t_stale)
+                    t_hold = t_stale + STALE_STILL_AFTER_S
+                    if t_hold < t:
+                        flip(gate.update(f_prev, False, t_hold), t_hold)
+                    elif state is False:
+                        st.stale_moving += 1
                 st.duration_s += dt
-                if state:
-                    st.still_s += dt
-            t_prev = t
+            t_prev, f_prev = t, f
             stationary = gate.update(f, True, t)
             st.frames += 1
             v = f.speed_kph
@@ -185,6 +194,7 @@ def scan_capture(path: Path, moving_start: bool = False) -> MotionStats:
             flip(stationary, t)
     if state is not None and t_prev is not None:
         st.runs.append((state, t_prev - since))
+    st.still_s = sum(d for s, d in st.runs if s)
     return st
 
 
@@ -195,8 +205,12 @@ def check_captures(paths: Sequence[Path], moving_start: bool = False) -> int:
         still = [d for s, d in st.runs if s]
         flips = sum(1 for i in range(1, len(st.runs)) if st.runs[i][0] != st.runs[i - 1][0])
         longest = max(still, default=0.0)
-        # the hub sees "stale" LIVE_S after the last packet: each gap-made window is LIVE_S shorter there
-        hub_longest = max((d - LIVE_S if d > LIVE_S else d for d in still), default=0.0) if st.gaps else longest
+        # stops that follow a moving stretch; the last run is cut off by the capture's end (a short one is unknown)
+        last = len(st.runs) - 1
+        starts = [sum(d for _, d in st.runs[:i]) for i in range(len(st.runs))]
+        after_driving = [
+            (starts[i], d) for i, (s, d) in enumerate(st.runs) if s and i > 0 and (i < last or d >= HINT_SETTLE_S)
+        ]
         row: dict[str, Any] = {
             "capture": st.capture,
             "frames": st.frames,
@@ -207,7 +221,10 @@ def check_captures(paths: Sequence[Path], moving_start: bool = False) -> int:
             "ge_15s": sum(d >= 15 for d in still),
             "flips": flips,
             "longest_still_s": round(longest, 1),
-            "hub_longest_still_s": round(hub_longest, 1),
+            "stale_gaps_still_moving": st.stale_moving,
+            "hint_settled_stops": sum(d >= HINT_SETTLE_S for _, d in after_driving),
+            "hint_short_stops": sum(d < HINT_SETTLE_S for _, d in after_driving),
+            "stops_after_driving": [[round(t / 60, 2), round(d, 1)] for t, d in after_driving],  # [minute, seconds]
             "fast_stationary": st.fast_stationary,
             "flagged_fast": st.flagged_fast,
         }

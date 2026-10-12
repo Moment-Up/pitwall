@@ -10,6 +10,7 @@ import {
   type TalkButton,
   type WakeWord,
 } from "../../lib/handsfree";
+import type { Driver } from "../../lib/drivers";
 import type { RadioState } from "../../lib/radio";
 import type { StatusChipView } from "./radio-view";
 
@@ -24,17 +25,29 @@ export function quotedWake(w: WakeWord): string {
 }
 
 /**
- * Why the Mac cannot do hands-free, for the driver. voice/handsfree.py words it as a sentence ("switched off on the
- * server (PITWALL_VOICE_HANDSFREE=false)", "needs speech recognition: …"): shown as one; a bare code in brackets.
+ * Why the computer cannot do hands-free, for the driver (Windows and Mac alike). voice/handsfree.py words it as a
+ * sentence ("switched off on the server (PITWALL_VOICE_HANDSFREE=false)", "needs speech recognition: …",
+ * "starting: downloading the speech model (42 %)"): shown as one; a bare code in brackets.
  */
 export function unavailableText(reason: string | null): string {
-  if (!reason) return "The Mac cannot listen hands-free right now.";
+  if (!reason) return "The computer can't listen hands-free right now.";
   if (/\s/.test(reason)) {
     const s = reason.trim();
     const cap = s.charAt(0).toUpperCase() + s.slice(1);
     return /[.!?]$/.test(cap) ? cap : `${cap}.`;
   }
-  return `The Mac cannot listen hands-free right now (${reason}).`;
+  return `The computer can't listen hands-free right now (${reason}).`;
+}
+
+/** The speech engine is still downloading or loading its model (Windows' first run): a wait, not a fault. */
+export function isStartingReason(reason: string | null | undefined): boolean {
+  return typeof reason === "string" && reason.startsWith("starting");
+}
+
+/** "starting: downloading the speech model (42 %)" -> "Downloading the speech model (42 %)". */
+export function startingText(reason: string): string {
+  const s = reason.replace(/^starting:?\s*/, "").trim() || "loading the speech model";
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /** The server's hands-free block while the radio link is up; null when it is down or the Mac has no hands-free. */
@@ -64,6 +77,7 @@ export type HandsFreeChipState =
 export function handsFreeChipState(s: HandsFreeInput): HandsFreeChipState | null {
   if (!handsFreeOn(s) || s.phase === "idle" || s.conn !== "open" || s.server === null) return null;
   const hf = s.server.handsfree;
+  if (hf && !hf.available && isStartingReason(hf.reason)) return "starting";
   if (!hf || !hf.available) return "unavailable";
   if (hf.paused === "moving") return "paused";
   if (hf.capturing || s.handsFree.vad === "speech") return "hearing";
@@ -84,7 +98,7 @@ export function handsFreeChip(s: HandsFreeInput): StatusChipView | null {
         tone: "warning",
         detail: s.server?.handsfree
           ? unavailableText(s.server.handsfree.reason)
-          : "This Mac's Pitwall has no hands-free yet: update Pitwall on the Mac. Hold to talk works.",
+          : "Pitwall on the computer has no hands-free yet: update it. Hold to talk works.",
       };
     case "paused":
       return {
@@ -93,11 +107,17 @@ export function handsFreeChip(s: HandsFreeInput): StatusChipView | null {
         detail: `Hands-free listens only while the car is stopped. Hold the button to talk on track, or allow hands-free while driving in the driver's profile.`,
       };
     case "hearing":
-      return { label: "Hearing you…", tone: "accent", detail: "Speech heard: the Mac is listening for the wake word", pulse: true };
+      return { label: "Hearing you…", tone: "accent", detail: "Speech heard: the computer is listening for the wake word", pulse: true };
     case "follow_up":
-      return { label: "Go ahead…", tone: "accent", detail: "The engineer is waiting for your question: no wake word needed" };
-    case "starting":
-      return { label: "Hands-free starting…", tone: "default", detail: "Measuring the room's noise for a second" };
+      return { label: "Go ahead…", tone: "accent", detail: "The engineer is waiting for your question about the car or the race" };
+    case "starting": {
+      const reason = s.server?.handsfree?.reason;
+      return {
+        label: "Hands-free starting…",
+        tone: "default",
+        detail: isStartingReason(reason) ? startingText(reason as string) : "Measuring the room's noise for a second",
+      };
+    }
     case "noisy":
       return {
         label: "Hands-free · too noisy",
@@ -133,21 +153,28 @@ export function handsFreeNote(s: HandsFreeInput, statusHf?: HandsFreeServerState
   const wake = quotedWake(s.settings.wakeWord);
   if (!s.micCapable) return { text: "Hands-free needs the microphone: open the HTTPS address.", warn: true };
   if (!handsFreeOn(s)) {
-    return { text: `Off. When on, start with ${wake}, then your question: no button needed.`, warn: false };
+    return {
+      text: `Off. Turn on to ask without a button: start with ${wake}. Only while stopped unless the driver allows it on track.`,
+      warn: false,
+    };
   }
   const live = s.phase !== "idle" && s.conn === "open";
   const hf = live ? serverHf(s) : (statusHf ?? null);
   if (live && s.server !== null && !s.server.handsfree) {
-    return { text: "This Mac's Pitwall has no hands-free yet: update it. Hold to talk works.", warn: true };
+    return { text: "Pitwall on the computer has no hands-free yet: update it. Hold to talk works.", warn: true };
   }
-  if (hf && !hf.available) return { text: unavailableText(hf.reason), warn: true };
+  if (hf && !hf.available) {
+    return isStartingReason(hf.reason)
+      ? { text: `Starting: ${startingText(hf.reason as string).toLowerCase()}.`, warn: false }
+      : { text: unavailableText(hf.reason), warn: true };
+  }
   if (!live) {
-    return {
-      text: s.phase === "idle" ? "On: listens while the radio is live." : "On: waiting for the radio link.",
-      warn: false,
-    };
+    if (s.phase !== "idle") return { text: "On: waiting for the radio link.", warn: false };
+    if (hf?.scope === "driving") return { text: "On: listens while the radio is live, on track too.", warn: false };
+    if (hf) return { text: `On: listens while the radio is live and ${STOPPED_SCOPE}.`, warn: false };
+    return { text: "On: listens while the radio is live.", warn: false };
   }
-  if (!hf) return { text: "On: waiting for the Mac.", warn: false };
+  if (!hf) return { text: "On: waiting for the computer.", warn: false };
   if (hf.paused === "moving") {
     return {
       text: "Paused while you drive. Hold the button to talk on track (a driver's profile can allow hands-free while driving).",
@@ -157,8 +184,14 @@ export function handsFreeNote(s: HandsFreeInput, statusHf?: HandsFreeServerState
   if (hf.scope === "driving") {
     return { text: `Listening on track too (the driver's profile allows it). Start with ${wake}.`, warn: false };
   }
-  return { text: `Listening while the car is stopped. Start with ${wake}; on track, hold the button to talk.`, warn: false };
+  return {
+    text: `Listening ${STOPPED_SCOPE}. Start with ${wake}; on track, hold the button to talk.`,
+    warn: false,
+  };
 }
+
+/** Where the stationary scope listens: no game data counts as stopped (any game, or telemetry not set up yet). */
+const STOPPED_SCOPE = "while the car is stopped (or no game data arrives)";
 
 export function handsFreeSwitchView(s: HandsFreeInput): HandsFreeSwitchView {
   const note = handsFreeNote(s);
@@ -166,7 +199,7 @@ export function handsFreeSwitchView(s: HandsFreeInput): HandsFreeSwitchView {
     on: handsFreeOn(s),
     disabled: !s.micCapable,
     consented: s.settings.handsFreeConsent,
-    label: `Hands-free (say ${quotedWake(s.settings.wakeWord).replace(/"/g, "'")})`,
+    label: `Hands-free (say ${quotedWake(s.settings.wakeWord)})`,
     note: note.text,
     warn: note.warn,
   };
@@ -182,7 +215,7 @@ export function consentText(noun: string, wake: WakeWord): { title: string; body
       `While the radio is on, this ${noun} listens for speech. Pitwall turns what it hears into text on your computer ` +
       `and only answers when it starts with ${quotedWake(wake)}. Everything else is thrown away at once: never shown, ` +
       `saved or logged. The screen shows when it's listening. Until a driver allows it in their profile, it only ` +
-      `listens while the car is stopped.`,
+      `listens while the car is stopped, or while no game data arrives.`,
     accept: "Turn on",
     decline: "Not now",
   };
@@ -191,21 +224,54 @@ export function consentText(noun: string, wake: WakeWord): { title: string; body
 // ------------------------------------------------------------------------------------------------- talk button
 
 export const TALK_HOLD_HINT =
-  "Hold the big button, or Space on a Mac. In F1 25 a wheel button set to UDP Action 1 works too.";
+  "Hold the big button, or Space on a keyboard. In F1 25 a wheel button set to UDP Action 1 works too.";
 
-export const TALK_BUTTON_HELP =
-  "Use a page turner, pedal or spare game controller paired with this iPad. AirPods taps and headphone play " +
-  "buttons can't reach a web page on iPad.";
+/** What to pair as a talk button (``noun``: "iPad", "phone", "tablet", "computer", from settings/radio/model). */
+export function talkButtonHelp(noun: string): string {
+  return (
+    `Use a page turner, pedal or spare game controller paired with this ${noun}. AirPods taps and headphone play ` +
+    "buttons can't reach a web page."
+  );
+}
 
 /** Pedals and page turners that also act as a mouse stop sending keys to Safari on iPadOS 18.4 and later. */
 export const TALK_BUTTON_KEYBOARD_NOTE =
   "Pick one that works as a keyboard only: on iPadOS 18.4 and later Safari ignores the keys of devices that are a " +
   "keyboard and a mouse at once. A controller needs one press after the page opens before it is seen.";
 
-/** The talk-button row's hint: the learned button and how it works, or what to use. */
-export function talkButtonHint(b: TalkButton | null): string {
-  if (b === null) return TALK_BUTTON_HELP;
+/** The talk-button row's hint: the learned button and how it works, or what to use (and what to avoid). */
+export function talkButtonHint(b: TalkButton | null, noun = "device"): string {
+  if (b === null) return `${talkButtonHelp(noun)} ${TALK_BUTTON_KEYBOARD_NOTE}`;
   return `${talkButtonLabel(b)}. Hold it to talk, or tap it once and speak: the radio stops when you go quiet. Works on Drive pages while the radio is live.`;
+}
+
+// ------------------------------------------------------------------------------------------------- driving scope
+
+export interface DrivingSwitchView {
+  label: string;
+  on: boolean;
+  note: string;
+}
+
+/**
+ * Drive › Radio's second switch (UX review M2: on GT7 the car is stopped only 3-29 % of a race, and the setting lived
+ * two screens away): "Also while driving (Sam)", the seated driver's "Hands-free while driving". Shown only while
+ * hands-free is on here, a driver is seated, the radio follows the seated driver (otherwise the setting changes
+ * nothing on track) and the server knows the preference.
+ */
+export function drivingSwitchView(
+  handsFreeIsOn: boolean,
+  driver: Pick<Driver, "name" | "preferences"> | null,
+  radioFollowsDriver: boolean,
+): DrivingSwitchView | null {
+  if (!handsFreeIsOn || driver === null || !radioFollowsDriver) return null;
+  const pref = driver.preferences.handsfree_while_driving;
+  if (typeof pref !== "boolean") return null;
+  return {
+    label: `Also while driving (${driver.name})`,
+    on: pref,
+    note: pref ? "Listens on track too: a braking call can cut you off, then say it again." : "Off: only while the car is stopped.",
+  };
 }
 
 export interface WakeChoice {
@@ -259,13 +325,13 @@ export function handsFreeDiagRows(
     s.phase === "idle" || s.conn !== "open"
       ? "-"
       : !s.server?.handsfree
-        ? "not supported by this Mac"
+        ? "not supported by this computer"
         : hf
-          ? `${hf.available ? "available" : `unavailable${hf.reason ? ` (${hf.reason})` : ""}`} · ${hf.armed} device${hf.armed === 1 ? "" : "s"} on · ${hf.scope === "driving" ? "also while driving" : "stopped only"}${hf.paused ? " · paused (moving)" : ""}`
+          ? `${hf.available ? "available" : isStartingReason(hf.reason) ? (hf.reason as string) : `unavailable${hf.reason ? ` (${hf.reason})` : ""}`} · ${hf.armed} device${hf.armed === 1 ? "" : "s"} on · ${hf.scope === "driving" ? "also while driving" : "stopped only"}${hf.paused ? " · paused (moving)" : ""}`
           : "-";
   return [
     { label: "Hands-free (this device)", value: on ? listener : s.micCapable ? "Off" : "No microphone" },
-    { label: "Hands-free (Mac)", value: server, warn: hf !== null && !hf.available },
+    { label: "Hands-free (computer)", value: server, warn: hf !== null && !hf.available && !isStartingReason(hf.reason) },
     { label: "Hands-free counts", value: counts },
     { label: "Hands-free last event", value: last },
     { label: "Talk button", value: s.settings.talkButton ? `${talkButtonLabel(s.settings.talkButton)}${h.button !== "off" ? ` · ${h.button}` : ""}` : "None" },

@@ -944,7 +944,10 @@ export class RadioStore extends Store<RadioState> {
     if ((on && !settings.handsFreeConsent) || on === settings.handsFree) return;
     this.updateSettings({ handsFree: on });
     this.saveSettings();
-    if (on) this.vad.reset(); // calibrate afresh: the chip says "Hands-free starting…" for a second
+    if (on) {
+      this.abortVad("mic");
+      this.vad.reset(); // calibrate afresh: the chip says "Hands-free starting…" for a second
+    }
     this.sendSettings();
     this.publishVad(false);
     this.addLog("system", on ? "Hands-free on" : "Hands-free off");
@@ -1074,6 +1077,16 @@ export class RadioStore extends Store<RadioState> {
       this.vadOpen = null;
     }
     this.publishVad(suppressed);
+  }
+
+  /**
+   * Tell the server a segment it was told about is over without an end (the mic was reopened, its track ended):
+   * otherwise it keeps recording, holding the radio and showing "listening", until its 9 s watchdog.
+   */
+  private abortVad(reason: string): void {
+    if (this.vadOpen === null) return;
+    this.send({ type: "vad", state: "abort", seq: this.vadOpen, reason });
+    this.vadOpen = null;
   }
 
   /** Publish the listener's state for the chips and diagnostics (only when it changed: ~31 frames a second). */
@@ -1253,7 +1266,8 @@ export class RadioStore extends Store<RadioState> {
       return;
     }
     this.micSilentReset();
-    this.vad.reset(); // --- hands-free (lane handsfree): a (re)opened mic is calibrated afresh
+    this.abortVad("mic"); // --- hands-free (lane handsfree): a segment of the old capture never ends on its own
+    this.vad.reset(); // a (re)opened mic is calibrated afresh
     const error = this.get().error;
     this.set({
       mic: track.muted ? "muted" : "live",
@@ -1314,6 +1328,7 @@ export class RadioStore extends Store<RadioState> {
   }
 
   private onTrackEnded = (): void => {
+    this.abortVad("mic"); // --- hands-free (lane handsfree): no more audio for an open segment
     this.set({ mic: "ended" });
     // getUserMedia fails while hidden; the visibility handler re-acquires on return.
     if (document.visibilityState === "visible") void this.reacquireMic("track ended");

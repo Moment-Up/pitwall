@@ -66,7 +66,7 @@ describe("hands-free while driving in a driver's profile", () => {
   });
 
   it("hints and the card subtitle", () => {
-    expect(handsFreeDrivingHint(true)).toBe("On: hands-free also listens on track.");
+    expect(handsFreeDrivingHint(true)).toBe("On: also listens on track (a braking call can cut you off: say it again).");
     expect(handsFreeDrivingHint(false)).toBe("Off: only while the car is stopped.");
     expect(driverSubtitle(driver(1, { handsfree_while_driving: true }), true)).toBe(
       "Beginner · coaching normal · hands-free on track",

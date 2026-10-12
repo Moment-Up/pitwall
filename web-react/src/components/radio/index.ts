@@ -51,6 +51,7 @@ export {
 // --- hands-free (lane handsfree)
 export {
   consentText,
+  drivingSwitchView,
   handsFreeChip,
   handsFreeChipState,
   handsFreeDiagRows,
@@ -58,10 +59,11 @@ export {
   handsFreeOn,
   handsFreeSwitchView,
   miniBarPrefix,
+  talkButtonHelp,
   talkButtonHint,
-  TALK_BUTTON_HELP,
   TALK_BUTTON_KEYBOARD_NOTE,
   TALK_HOLD_HINT,
   WAKE_CHOICES,
+  type DrivingSwitchView,
   type HandsFreeSwitchView,
 } from "./handsfree-view";

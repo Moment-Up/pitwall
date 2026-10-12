@@ -1488,6 +1488,20 @@ describe("hands-free and the talk button (lane handsfree)", () => {
     expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "abort", seq: 1, reason: "suppressed" });
   });
 
+  it("a mic that ends or is reopened during a segment aborts it at once (the server stops recording)", async () => {
+    const { radio, ws, node, env } = await liveHandsFree();
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "start", seq: 1 });
+    env.streams[0]!.track.fire("ended");
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "abort", seq: 1, reason: "mic" });
+    await settle(); // re-acquired: a fresh capture, calibrated afresh, and no second abort for the same segment
+    expect(radio.get().mic).toBe("live");
+    expect(vads(ws).filter((m) => m.state === "abort")).toHaveLength(1);
+    for (let i = 0; i < 31; i++) node.frame(db(-70));
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "start", seq: 2 });
+  });
+
   it("tallies the server's events; an addressed question is logged as a hands-free transcript", async () => {
     const { radio, ws, node } = await liveHandsFree();
     for (let i = 0; i < 4; i++) node.frame(db(-30));

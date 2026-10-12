@@ -135,7 +135,7 @@ export function handsFreeSupported(list: readonly Driver[]): boolean {
 
 /** The driver sheet's switch hint (spec §7). */
 export function handsFreeDrivingHint(on: boolean): string {
-  return on ? "On: hands-free also listens on track." : "Off: only while the car is stopped.";
+  return on ? "On: also listens on track (a braking call can cut you off: say it again)." : "Off: only while the car is stopped.";
 }
 
 /** The "Usually plays" choice that means none. */

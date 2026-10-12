@@ -164,10 +164,11 @@ Desktop Mode. AirPods stem presses and headphone play buttons cannot reach a web
 "Go ahead." and the next sentence needs no wake word). It is off on every device until you turn it on and confirm.
 The iPad detects speech, the computer turns it into text, and anything that does not start with the wake word is
 thrown away at once, never shown, saved or logged. It listens only while the car is stopped (grid, pits, garage,
-menus, after the flag: 2-25 % of a real race) unless the driver in the seat allows "Hands-free while driving" in their
-profile; on track it shows "paused · driving", and if you try anyway the engineer tells you once, at the next stop, to
-use the button. The radio's own words coming back through the microphone are ignored, and the engineer's messages wait
-while you talk (urgent calls and braking calls still cut in). Evidence: synthetic (the wake word through the real
+menus, after the flag, or when no game data arrives: 0-28 % of a real race) unless the driver in the seat allows
+"Hands-free while driving" in their profile (or with "Also while driving" on Drive › Radio); on track it shows "paused
+· driving", and if you try anyway the engineer tells you once, at a stop of a few seconds, that hands-free only listens
+when you stop. The radio's own words coming back through the microphone are ignored, and the engineer's messages wait
+while you talk (urgent calls and braking calls still cut in: a question a braking call cut gets "Say again?"). Evidence: synthetic (the wake word through the real
 speech engines on macOS `say` voices) and recorded (the stopped/moving rule on 11 real captures, real F1 25 button
 presses through the radio with hands-free on); not yet tried on the rig with a real voice, an AirPod or engine noise,
 and the Bluetooth button not yet on an iPad.
