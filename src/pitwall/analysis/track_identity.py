@@ -1068,6 +1068,8 @@ def corner_texts(model: TrackModel) -> dict[str, CornerText]:
 
 
 BORROWED_CAPTION = "Corners from {other_label} laps until your first clean {label} lap here."
+# a model from before car classes whose laps' car was never recorded (no formula, no car id): it stands in too
+LEGACY_CAPTION = "Corners from older laps (car class not recorded) until your first clean {label} lap here."
 
 
 def track_model_payload(model: TrackModel, family: str | None = None) -> dict[str, Any]:
@@ -1075,8 +1077,9 @@ def track_model_payload(model: TrackModel, family: str | None = None) -> dict[st
     live state, so the dashboard shows the same labels as coaching and speech without re-implementing these rules.
 
     Car class families (``pitwall.carclass``): ``car_family`` (from the model) and ``car_family_match`` - False when
-    ``family`` (the session's) has no model of its own yet and this model of another family stands in, None when
-    either family is unknown (non-F1 games) - with ``car_family_note``, the caption that says so.
+    ``family`` (the session's) has no model of its own yet and this model of another family (or a legacy model whose
+    family was never recorded) stands in, None when the session's family is unknown (non-F1 games) - with
+    ``car_family_note``, the caption that says so.
     """
     from pitwall.carclass import family_label
 
@@ -1087,6 +1090,13 @@ def track_model_payload(model: TrackModel, family: str | None = None) -> dict[st
         other, own = family_label(model.car_family), family_label(family)
         if not match and other and own:
             note = BORROWED_CAPTION.format(other_label=other, label=own)
+    elif family is not None:
+        # a legacy model of unknown family stands in until this family's first clean lap (``LapProcessor._track_model``
+        # replaces it then): said so, never taken for the family's own model
+        match = False
+        own = family_label(family)
+        if own:
+            note = LEGACY_CAPTION.format(label=own)
     return {
         **model.to_dict(identity=True),
         "corner_text": {

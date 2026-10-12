@@ -157,7 +157,7 @@ export const F2_ROWS = {
       weather: { condition: "clear", track_temp_c: 39, air_temp_c: 28 },
       ...F2_FIELDS("F2 · Art GP '24", "Feature race"),
     }),
-  /** 969ee7a1b400: Melbourne one-shot qualifying (session_label is the game's own name). */
+  /** 969ee7a1b400: Melbourne one-shot qualifying (session_label is the game's own name in sentence case). */
   melbourneOneShot: (): SessionListRow =>
     row({
       id: "969ee7a1b400",
@@ -173,6 +173,6 @@ export const F2_ROWS = {
       best_clean_ms: 91525,
       ai_difficulty: 50,
       weather: { condition: "light_cloud", track_temp_c: 26, air_temp_c: 19 },
-      ...F2_FIELDS("F2 · Art GP '24", "One-Shot Qualifying"),
+      ...F2_FIELDS("F2 · Art GP '24", "One-shot qualifying"),
     }),
 };

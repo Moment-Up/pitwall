@@ -82,6 +82,32 @@ def test_race_final_lap_is_reported_when_its_time_arrives_first_or_a_packet_late
     assert [(x.lap_number, x.final) for x in same] == [(5, True)]
 
 
+def test_final_lap_in_exactly_the_previous_laps_time_is_reported_after_a_grace() -> None:
+    """Review C7: a final lap driven in the previous lap's time to the millisecond shows no new time; it is reported
+    once FINAL_TIME_GRACE_S of session time has passed, because the car had been on that lap for most of a lap. The
+    one-shot lap number (17 ms old at "finished") never is."""
+    a = F1Adapter(field_hz=0, timing_hz=0)
+    _lap(460.0, a, currentLapNum=4, lastLapTimeInMS=108_052, sector=2, lapDistance=5400.0)
+    assert [c.lap_number for c in _lap(466.195, a, currentLapNum=5, lastLapTimeInMS=108_847)] == [4]
+    assert _lap(575.04, a, currentLapNum=5, lastLapTimeInMS=108_847, resultStatus=FINISHED) == []  # waits
+    assert _lap(575.5, a, currentLapNum=5, lastLapTimeInMS=108_847, resultStatus=FINISHED) == []
+    same = _lap(576.1, a, currentLapNum=5, lastLapTimeInMS=108_847, resultStatus=FINISHED)
+    assert [(c.lap_number, c.lap_time_ms, c.final) for c in same] == [(5, 108_847, True)]
+    assert _lap(577.0, a, currentLapNum=5, lastLapTimeInMS=108_847, resultStatus=FINISHED) == []  # once
+    assert a.stats.by_type.get("LAP_FINAL_SAME_TIME") == 1
+    # one-shot qualifying: seconds of "finished" packets after the line still report nothing
+    b = F1Adapter(field_hz=0, timing_hz=0)
+    _lap(100.0, b, currentLapNum=1, lastLapTimeInMS=0, sector=2, lapDistance=5400.0)
+    assert [c.lap_number for c in _lap(121.794, b, currentLapNum=2, lastLapTimeInMS=116_133)] == [1]
+    for k in range(60):
+        assert _lap(121.811 + k * 0.1, b, currentLapNum=2, lastLapTimeInMS=116_133, resultStatus=FINISHED) == []
+    # joined mid-lap: when the lap began is not known, so an unchanged time is never taken for the final lap's
+    c = F1Adapter(field_hz=0, timing_hz=0)
+    _lap(10.0, c, currentLapNum=5, lastLapTimeInMS=95_000)
+    for k in range(30):
+        assert _lap(80.0 + k * 0.1, c, currentLapNum=5, lastLapTimeInMS=95_000, resultStatus=FINISHED) == []
+
+
 def test_joined_mid_race_the_old_time_is_not_the_final_lap() -> None:
     a = F1Adapter(field_hz=0, timing_hz=0)
     _lap(10.0, a, currentLapNum=5, lastLapTimeInMS=95_000)  # first LapData: lap 4's time on show
@@ -106,7 +132,8 @@ def test_f2_cars_have_no_ers_and_drs_fields_are_read() -> None:
     zeros = {"ersStoreEnergy": 0.0, "ersDeployMode": 0, "drsAllowed": 0, "drsActivationDistance": 120}
     a.decode(_status(1.0, zeros), 1)
     f = _frame(a, 1.01)
-    assert f.ers_store_j == 0.0 and f.ers_deploy_mode == 0  # before the first Session packet: as sent
+    # before the first Session packet the formula is not known (joining a running F2 session): no ERS value yet
+    assert f.ers_store_j is None and f.ers_deploy_mode is None
     a.decode(_session_packet(1.1, formula=2), 2)
     a.decode(_status(1.2, zeros), 3)
     f = _frame(a, 1.21)
@@ -153,6 +180,21 @@ def test_a_one_sample_lap_is_incomplete_whatever_the_track_length() -> None:
         )
         assert len(laps) == 1 and laps[0].n == 1
         assert LapFlag.INCOMPLETE in laps[0].flags and not laps[0].clean, length
+
+
+def test_a_session_ending_one_frame_into_a_lap_stores_no_lap() -> None:
+    """Review U1: one-shot qualifying ends one frame into "lap 2"; flushing that frame stored an untimed one-sample lap
+    (Review: "0 of 2 clean · 2 not used"). A lap of fewer than 2 samples is dropped at flush; 2 or more stay."""
+    laps: list[LapTrace] = []
+    asm = LapAssembler(laps.append, track_length_m=5408.0)
+    asm.feed(_cf(121.8, 2.0, 2))
+    asm.flush()
+    assert laps == []
+    asm.feed(_cf(200.0, 2.0, 3))
+    asm.feed(_cf(200.1, 9.0, 3))
+    asm.flush()
+    assert [(lap.lap_number, lap.n, lap.lap_time_ms) for lap in laps] == [(3, 2, None)]
+    assert LapFlag.INCOMPLETE in laps[0].flags
 
 
 def test_a_full_lap_is_still_clean() -> None:

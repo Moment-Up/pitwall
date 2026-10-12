@@ -50,6 +50,19 @@ def test_under_time_names_the_car_and_hides_id_only_names() -> None:
     assert u2.title == "First time under 1:19 at Austria"  # an id-only name is left out, never shown
 
 
+def test_f2_badges_name_the_class_with_the_car() -> None:
+    """Review U15: an F2 badge says "F2" with the car ("in the Art GP '24 F2 car"); the 2025 F2 car, whose stored name
+    is the spec's "Unknown team (id 214)", is named from its class ("in the Hitech '25 F2 car"), never left out."""
+    for car_id, name, words in (
+        ("f1:team:158", "Art GP '24", " in the Art GP '24 F2 car"),
+        ("f1:team:214", "Unknown team (id 214)", " in the Hitech '25 F2 car"),
+    ):
+        f2 = {"car_id": car_id, "car_name": name, "formula": "F2", "packet_format": 2025}
+        h = history((sess("a", T0, **f2), laps("a", [80_400])), (sess("b", T0 + 60, **f2), laps("b", [78_900])))
+        (u,) = [x for x in B.badges(h) if x.kind == "under_time"]
+        assert u.title == f"First time under 1:19 at Austria{words}", car_id
+
+
 def test_track_badges_need_an_identified_track_and_a_real_lap() -> None:
     """Plan 5.8: no track badge for GT7's placeholder circuit, an unknown F1 track or a "lap" under 30 s; the other
     badges (clean laps in a row) still count. Junk badges older code awarded simply stop being listed."""

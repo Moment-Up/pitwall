@@ -84,11 +84,16 @@ def test_one_shot_qualifying_stores_one_lap() -> None:
         elif isinstance(e, LapCompletion):
             asm.feed_completion(e)
     asm.flush()
-    assert [(lap.lap_number, lap.lap_time_ms) for lap in laps if lap.lap_time_ms] == [(1, 116_133)]
+    # every lap, timed or not: the session ends one frame into "lap 2", which is never stored (review U1)
+    assert [(lap.lap_number, lap.lap_time_ms) for lap in laps] == [(1, 116_133)]
     # known gap (docs/status.md): the result turns "finished" after the completion, so the lap is not tagged final
     assert done[0].final is False
     cls = carclass.classify_info(info)
     assert cls is not None and cls.id == "f2" and carclass.info_fields(info)["car_label"] == "F2 · Art GP '24"
+    # the game's weekend: one-shot qualifying, then the feature race ("Race 2"); the session name in sentence case
+    assert info.extra["weekend_structure"] == [9, 16]
+    assert carclass.info_fields(info)["session_label"] == "One-shot qualifying"
+    assert cls.evidence == "recorded_validated"
 
 
 def test_jeddah_feature_race_has_no_ers_and_sends_drs_and_f2_compounds() -> None:
@@ -106,10 +111,11 @@ def test_jeddah_feature_race_has_no_ers_and_sends_drs_and_f2_compounds() -> None
     _a, items = _decode(JEDDAH)
     info = _last_info(items)
     assert info.formula == "F2" and info.pit_speed_limit_kph == 60.0 and info.session_type_raw == "Race 2"
+    assert info.extra["weekend_structure"] == [9, 16]  # one-shot qualifying, then this feature race
     assert carclass.info_fields(info)["session_label"] == "Feature race"
     frames = [e for e in items if isinstance(e, CarFrame)]
-    after = [f for f in frames if f.t_recv_ns > info.t_recv_ns]
-    assert after and all(f.ers_store_j is None and f.ers_deploy_mode is None for f in after)
+    # no ERS value in any frame: after the formula is known (F2), and before it (review C5: joining a running session)
+    assert frames and all(f.ers_store_j is None and f.ers_deploy_mode is None for f in frames)
     # allowed for a moment, recorded (None: telemetry before the first CarStatus packet of the excerpt)
     assert {f.drs_allowed for f in frames} - {None} == {True, False}
     events = [e.code for e in items if isinstance(e, GameEvent)]
@@ -155,6 +161,8 @@ def test_melbourne_grand_prix_f2_field_is_on_ids_209_to_219() -> None:
         "Race",
     )
     labels = carclass.info_fields(info)
+    # the weekend structure (Race, Race 2) is what makes this "Race" the sprint
+    assert info.extra["weekend_structure"] == [15, 16]
     assert labels["car_label"] == "F2 · Hitech '25" and labels["session_label"] == "Sprint race"
     assert labels["car_class"]["id"] == "f2" and labels["car_class"]["has_ers"] is False
 

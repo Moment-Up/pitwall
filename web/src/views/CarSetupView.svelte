@@ -776,7 +776,7 @@
           <span class="muted">Built from</span><span>{SELECTION_LABEL[r.selection]}</span>
           <span class="muted">Style</span>
           <span>{r.style_reason === "requested" ? "your choice" : `${r.style_reason}${r.skill_source === "driver" && driver ? ` (${driver.name})` : ""}`}</span>
-          {#if format}
+          {#if format?.latest_handling_patch}
             <span class="muted">Handling patch</span>
             <span>{format.latest_handling_patch.version} ({format.latest_handling_patch.date}): <span class="muted">{format.latest_handling_patch.note}</span></span>
           {/if}
@@ -793,8 +793,8 @@
             <a href={s.url} target="_blank" rel="noopener noreferrer">{s.source_name}{s.author ? ` · ${s.author}` : ""}</a>
             <div class="small muted">
               {s.published ? `Published ${s.published}` : "Date not stated"} · {s.patch ? `game v${s.patch}` : "game version not stated"}
-              {#if old === "yes"}<span class="badge warn">before handling patch {format?.latest_handling_patch.version}</span>
-              {:else if old === "maybe"}<span class="badge warn">may predate handling patch {format?.latest_handling_patch.version}</span>{/if}
+              {#if old === "yes"}<span class="badge warn">before handling patch {format?.latest_handling_patch?.version}</span>
+              {:else if old === "maybe"}<span class="badge warn">may predate handling patch {format?.latest_handling_patch?.version}</span>{/if}
             </div>
             <div class="small faint">
               {s.session} · {s.conditions}{s.style ? ` · ${s.style}` : ""}{s.input ? ` · ${s.input}` : ""} · values checked {s.verified}

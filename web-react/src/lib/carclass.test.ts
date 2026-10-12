@@ -139,7 +139,7 @@ describe("another family's car and corners", () => {
       "Corners from F1 laps until your first clean Classic F1 lap here.",
     );
     expect(borrowedCaption({ car_family: null, car_family_match: false }, F2)).toBe(
-      "Corners from another class of car's laps until your first clean F2 lap here.",
+      "Corners from older laps (car class not recorded) until your first clean F2 lap here.",
     );
   });
 

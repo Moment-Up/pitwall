@@ -31,6 +31,7 @@ from pitwall.analysis.brake_prior import (
 from pitwall.api.routes_carsetup import router
 from pitwall.carsetup.catalog import FORMAT_FAMILY, load_catalog
 from pitwall.carsetup.context import guess_car_format, session_context
+from pitwall.carsetup.recommend import _ref_dict, ref_for
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
 
@@ -64,6 +65,9 @@ def test_every_f2_setup_is_credited_and_none_is_a_preset_copy_or_an_email() -> N
         assert s.source == "f1laps" and s.url.startswith("https://www.f1laps.com/f1-25/setups/") and s.author
         assert s.published and s.conditions == "dry" and not EMAIL.match(s.author), s.id
         assert s.notes and "F2" in s.notes and s.style is None, s.id
+        # the credit the page shows keeps the source's notes (review U7): source, author, link, date and notes
+        ref = _ref_dict(ref_for(cat, s))
+        assert (ref["source"], ref["author"], ref["url"], ref["notes"]) == (s.source, s.author, s.url, s.notes)
     per = Counter((s.track_id, s.session) for s in f2)
     assert set(per.values()) == {3} and len(per) == 10  # 3 per track and session
     for (track, session), _n in per.items():
@@ -86,10 +90,11 @@ def test_f2_recommendations_are_built_from_f2_setups_only() -> None:
 @pytest.mark.parametrize(
     ("formula", "car", "fmt", "expected", "reason"),
     [
-        ("F2", "f1:team:158", 2025, "f2", "2024 season car"),
-        (None, "f1:team:160", 2025, "f2", "2024 season car"),
-        ("F2", "f1:team:214", 2025, "f2", "2025 season car"),
-        ("F2", "f1:team:470", 2026, "f2", "2025 season car"),
+        # the reason names the car in words, never a team id (review U13)
+        ("F2", "f1:team:158", 2025, "f2", "Art GP '24 (2024 F2 car)"),
+        (None, "f1:team:160", 2025, "f2", "(2024 F2 car)"),
+        ("F2", "f1:team:214", 2025, "f2", "Hitech '25 (2025 F2 car)"),
+        ("F2", "f1:team:470", 2026, "f2", "(2025 F2 car)"),
         (None, "f1:team:214", 2025, None, "Pitwall can't tell which F2 car this is, so it shows no setups."),
         ("F2", "f1:team:494", 2026, None, "No setups for the 2026 F2 cars in Pitwall yet."),
         ("F2", None, 2025, None, "Pitwall can't tell which F2 car this is, so it shows no setups."),
@@ -100,6 +105,8 @@ def test_f2_recommendations_are_built_from_f2_setups_only() -> None:
 def test_f2_car_formats(formula: str | None, car: str | None, fmt: int, expected: str | None, reason: str) -> None:
     g = guess_car_format(fmt, formula, car)
     assert g.car_format == expected and reason in g.reason
+    if expected == "f2":
+        assert "team id" not in g.reason and "formula" not in g.reason
 
 
 def _row(**kw: Any) -> dict[str, Any]:
@@ -286,7 +293,7 @@ def test_live_snapshot_names_the_class(tmp_path: Path) -> None:
             formula="F2",
             session_type=SessionType.RACE,
             session_type_raw="Race",
-            extra={"packet_format": 2025},
+            extra={"packet_format": 2025, "weekend_structure": [15, 16]},  # recorded: Melbourne (Race, Race 2)
         )
     )
     s = live.snapshot()["session"]

@@ -255,8 +255,13 @@ class LapProcessor:
         return result
 
     def refresh_bests(self, req: BestsRequest) -> None:
-        """The live session's context changed (``LiveState.set_bests_requester``): recompute its bests."""
+        """The live session's context changed (``LiveState.set_bests_requester``): recompute its bests, and before the
+        session's first lap show the stored track model (``publish_stored_model``)."""
         self._publish_bests(req.session_id, req.game, req.track_id, req.car_id, req.track_length_m)
+        try:
+            self.publish_stored_model(req.session_id)
+        except Exception:
+            log.exception("stored track model not published")
         if self.coachref is not None:  # --- coachref --- the live session / seat changed: republish the choice
             try:
                 self.coachref.on_context(req.session_id)
@@ -285,14 +290,11 @@ class LapProcessor:
         key = (str(game), str(track_id), ctx_family(ctx))
         model = self._models.get(key)
         if model is None and load_model:
-            with self.db.read() as c:
-                model = repo.load_track_model(c, key[0], key[1], key[2])
-            if model is not None and not lengths_compatible(model.length_m, float(length)):
-                model = None
-            if model is not None and model.corners:
-                if all(c.identity_tier is None for c in model.corners):  # stored models are learned-only
-                    model, _ = identify(model)
-                self._models[key] = model  # as LapProcessor._track_model would cache it
+            model = self._stored_model(key, float(length))
+            live = self.live
+            if model is not None and live is not None and self._is_live(session_id) and live.track_model is None:
+                # no lap of this session yet: the live screen shows the corners the reference is analysed with
+                live.set_track_model(track_model_payload(model, key[2]))
         if model is None or not model.corners:
             return
         driver_id, ref_id, desc = self._choose_reference(
@@ -315,6 +317,40 @@ class LapProcessor:
                 self.live.set_reference(None, None)
             return
         self._reference_analysis(ref_id, model, session_id, True, desc)
+
+    def _stored_model(self, key: tuple[str, str, str | None], length: float) -> TrackModel | None:
+        """The stored track model for ``key`` (game, track, car class family) and this layout length, identified and
+        cached as ``_track_model`` would cache it; None without one with corners."""
+        with self.db.read() as c:
+            model = repo.load_track_model(c, key[0], key[1], key[2])
+        if model is None or not model.corners or not lengths_compatible(model.length_m, length):
+            return None
+        if all(c.identity_tier is None for c in model.corners):  # stored models are learned-only
+            model, _ = identify(model)
+        self._models[key] = model
+        return model
+
+    def publish_stored_model(self, session_id: str) -> None:
+        """Before ``session_id``'s first lap: put the stored track model of its track (and car class family) on the live
+        screen, so corners, the track map and corner names are there from the start. One-shot qualifying has a single
+        lap, so without this its whole session showed "Corners appear after your first clean lap". Analysis thread."""
+        live = self.live
+        if live is None or not self._is_live(session_id) or self.has_lap(session_id) or live.track_model is not None:
+            return
+        ctx = self._live_ctx(session_id)
+        if ctx is None:
+            return
+        game, track_id, length = ctx.get("game"), ctx.get("track_id"), ctx.get("track_length_m")
+        if not (game and track_id and isinstance(length, int | float) and length > 0):
+            return
+        key = (str(game), str(track_id), ctx_family(ctx))
+        model = self._models.get(key)
+        if model is not None and not lengths_compatible(model.length_m, float(length)):
+            model = None
+        if model is None:
+            model = self._stored_model(key, float(length))
+        if model is not None and model.corners and self._is_live(session_id) and live.track_model is None:
+            live.set_track_model(track_model_payload(model, key[2]))
 
     def coachref_context(self, session_id: str) -> CoachrefContext:
         """The session's coaching context for the coachref service (drill options and targets). Analysis thread."""
@@ -538,11 +574,11 @@ class LapProcessor:
 
     # ------------------------------------------------------------------ one-off repairs (start of the service)
     def run_repairs(self) -> dict[str, Any] | None:
-        """The F2 repair (``repo.repair_f2_v1``), once: delete the fake one-shot laps, tag every stored track model with
-        its car class family, then rebuild a model of each family with clean laps at every track whose models were
-        superseded (through ``_build_model``, the live code), as a new version. Guarded by the meta record
-        (``repo.REPAIR_F2_V1_KEY``, status ``done``); an interrupted run resumes. Analysis thread only (the runtime
-        submits it first); returns the record, None when it ran before."""
+        """The F2 repair (``repo.repair_f2_v1``), once: delete the fake one-shot laps and the one-sample laps without a
+        time, tag every stored track model with its car class family, then rebuild a model of each family with clean
+        laps at every track whose models were superseded (through ``_build_model``, the live code), as a new version.
+        Guarded by the meta record (``repo.REPAIR_F2_V1_KEY``, status ``done``); an interrupted run resumes. Analysis
+        thread only (the runtime submits it first); returns the record, None when it ran before."""
         with self.db.read() as c:
             rec = repo.repair_record(c)
         if rec is not None and rec.get("status") == "done":
@@ -579,11 +615,13 @@ class LapProcessor:
             rebuilt=[*(record.get("rebuilt") or []), *rebuilt],
         )
         self.writer.call(lambda c: repo.set_meta(c, repo.REPAIR_F2_V1_KEY, dumps(record)))
-        if summary["deleted"] or summary["superseded"] or rebuilt:
+        if summary["deleted"] or summary["stubs"] or summary["superseded"] or rebuilt:
             log.info(
-                "repair %s: %d fake one-shot lap(s) deleted, %d track model(s) superseded, %d rebuilt",
+                "repair %s: %d fake one-shot lap(s) and %d one-sample untimed lap(s) deleted, %d track model(s) "
+                "superseded, %d rebuilt",
                 repo.REPAIR_F2_V1_KEY,
                 len(summary["deleted"]),
+                len(summary["stubs"]),
                 len(summary["superseded"]),
                 len(rebuilt),
             )

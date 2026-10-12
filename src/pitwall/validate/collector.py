@@ -875,6 +875,7 @@ class Collector:
                         "lap_time_ms": lap.get("lap_time_ms"),
                         "clean": bool(lap.get("clean")),
                         "flags": list(lap.get("flags") or []),
+                        "n_samples": lap.get("n_samples"),  # the F2 check: a one-sample lap, a short duplicate
                     }
                     for lap in repo.list_laps(c, str(r["id"]))
                 ]
@@ -967,6 +968,7 @@ _EXTRA_KEYS = (
     "packet_format",
     "game_version",
     "formula",  # F1 Session.formula (the F2 check)
+    "session_type_id",  # F1 Session.sessionType (the F2 check: one-shot qualifying)
 )
 
 

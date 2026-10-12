@@ -2,7 +2,8 @@
 
 * "How much ERS?" in an F2 car: no ERS (F1 25 sends 0 for F2 cars), never a made-up store.
 * "Was a pit stop mandatory?": the game sends no stop rules, so the answer says they are not known, then the F2 note,
-  then the tyre statement, and never "no".
+  then the tyre statement, and never "no". Only rule words ask it: "do I need to pit (this lap / under the safety
+  car)?" stays strategy, "do I need to stop braking early?" braking; under a safety car the box call comes first.
 * "Is DRS available?": its own intent (no longer ERS's), answered from the game's DRS fields.
 """
 
@@ -31,7 +32,7 @@ F2_SESSION: dict[str, Any] = {
     "car_id": "f1:team:158",
     "car_name": "Art GP '24",
     "weather": {"condition": "light_cloud", "track_temp_c": 32, "air_temp_c": 26},
-    "info": {"formula": "F2", "packet_format": 2025},
+    "info": {"formula": "F2", "packet_format": 2025, "weekend_structure": [15, 16]},  # recorded: Melbourne
 }
 
 
@@ -70,10 +71,21 @@ def _live(**frame: Any) -> dict[str, Any]:
         ("Can I use DRS?", "drs"),
         ("Am I in DRS range?", "gaps"),  # the gaps rule keeps "DRS range"
         ("Was a pit stop mandatory?", "stop_rules"),
-        ("Do I have to pit?", "stop_rules"),
         ("Do I need to use both compounds?", "stop_rules"),
-        ("Must I pit this race?", "stop_rules"),
+        ("What are the stop rules?", "stop_rules"),
+        ("What are the pit stop rules here?", "stop_rules"),
+        ("Is a pit stop required in this race?", "stop_rules"),
+        ("Do I have to run both tyres?", "stop_rules"),
         ("When should I pit?", "strategy"),
+        # a plain "do I need to pit / box" is strategy (F1 and F2 alike); no rule words, no rules answer
+        ("Do I have to pit?", "strategy"),
+        ("Must I pit this race?", "strategy"),
+        ("Do I need to pit under the safety car?", "strategy"),
+        ("Do I need to box this lap?", "strategy"),
+        ("When do I need to pit?", "strategy"),
+        ("Do I need to stop braking so early into turn 1?", "braking"),
+        ("Do I have to stop lifting in turn 3?", "corner"),
+        ("Are both tyres on the left worn?", "tyres"),
         ("How much ERS have I got?", "ers"),
         ("Should I use overtake mode?", "ers"),
     ],
@@ -86,7 +98,11 @@ def test_session_fact_names_the_class_and_the_f2_race() -> None:
     sheet = build_fact_sheet(_sa())
     s = next(f for f in sheet.facts if f.topic == "session")
     assert "Feature race (the game calls it Race 2)" in s.text
-    assert "car F2 · Art GP '24 (car class F2)" in s.text and s.data["car_class"] == "f2"
+    # the car's name already says F2: no "(car class F2)" after it
+    assert "car F2 · Art GP '24, weather" in s.text and s.data["car_class"] == "f2" and "car class" not in s.text
+    osq = {**F2_SESSION, "session_type": "qualifying", "session_type_raw": "One-Shot Qualifying"}
+    s2 = next(f for f in build_fact_sheet(_sa(osq)).facts if f.topic == "session")
+    assert ", One-shot qualifying, car" in s2.text and "the game calls it" not in s2.text
     mclaren = {**F2_SESSION, "car_id": "f1:team:8", "car_name": "McLaren", "info": {"formula": "F1 Modern"}}
     s1 = next(f for f in build_fact_sheet(_sa(mclaren)).facts if f.topic == "session")
     assert ", Race 2, car McLaren (car class F1)," in s1.text  # only F2 renames the race
@@ -113,7 +129,7 @@ async def test_stop_rules_are_never_answered_no() -> None:
         "the finish."
     )
     assert ans.grounded and not any(n in ans.text.lower() for n in _NO)
-    radio = await RaceEngineer(None).answer("Do I have to pit?", sheet, use_llm=False, short=True)
+    radio = await RaceEngineer(None).answer("Is a stop mandatory?", sheet, use_llm=False, short=True)
     assert radio.text.startswith("I don't know this race's stop rules") and not any(
         n in radio.text.lower() for n in _NO
     )
@@ -127,6 +143,10 @@ async def test_stop_rules_are_never_answered_no() -> None:
     sprint = {**F2_SESSION, "session_type_raw": "Race"}
     s_ans = await RaceEngineer(None).answer("Is the stop compulsory?", build_fact_sheet(_sa(sprint)))
     assert F2_SPRINT_NOTE in s_ans.text and s_ans.text.startswith("I don't know this race's stop rules")
+    # a race-only weekend (or one whose structure is not known): not called a sprint, no sprint note
+    alone = {**sprint, "info": {"formula": "F2", "packet_format": 2025, "weekend_structure": [15]}}
+    a_ans = await RaceEngineer(None).answer("Is the stop compulsory?", build_fact_sheet(_sa(alone)))
+    assert "sprint" not in a_ans.text and a_ans.text.startswith("I don't know this race's stop rules")
     f1 = {**F2_SESSION, "car_id": "f1:team:8", "info": {"formula": "F1 Modern"}, "session_type_raw": "Race"}
     f1_ans = await RaceEngineer(None).answer("Was a pit stop mandatory?", build_fact_sheet(_sa(f1)))
     assert f1_ans.text.startswith("I don't know this race's stop rules") and "F2" not in f1_ans.text
@@ -166,7 +186,9 @@ def test_strategy_rules_block() -> None:
         "text": RULES_TEXT,
         "class_note": F2_FEATURE_NOTE,
     }
-    assert pit_rules(f2, "Race")["race"] == "sprint" and pit_rules(f2, "Race")["class_note"] == F2_SPRINT_NOTE
+    sprint = pit_rules(f2, "Race", [15, 16])
+    assert sprint["race"] == "sprint" and sprint["class_note"] == F2_SPRINT_NOTE
+    assert pit_rules(f2, "Race")["race"] is None and pit_rules(f2, "Race", [15])["class_note"] is None
     f1 = classify("f1_25", "F1 Modern", "f1:team:8", 2025)
     assert pit_rules(f1, "Race") == {"race": None, "known": False, "text": RULES_TEXT, "class_note": None}
     assert off_view(None)["drs_enabled"] is None
@@ -213,3 +235,40 @@ def test_games_and_capabilities_list_the_car_classes() -> None:
     assert games.INTENT_FEATURES["ers"] == ("ers",) and games.INTENT_FEATURES["drs"] == ("drs",)
     gt7 = games.entry("gt7:ps5")
     assert gt7 is not None and "car_classes" not in gt7.to_dict()
+
+
+async def test_rules_and_strategy_questions_under_a_safety_car_and_outside_a_race() -> None:
+    """Review C1: "do I need to pit under the safety car?" gets the box call (strategy), as before F2 support; a rules
+    question under a safety car leads with the box call too; outside a race there is no rules fact."""
+    v = _view(stop_needed=True)
+    v["safety_car"] = {
+        "status": "full",
+        "since_lap": 2,
+        "box": {"stop_needed": True, "this_lap": True, "pit_loss_s": 11.0, "green_pit_loss_s": 21.0, "tier": "game"},
+    }
+    f1_race = {**F2_SESSION, "car_id": "f1:team:8", "car_name": "McLaren", "info": {"formula": "F1 Modern"}}
+    live = {**_live(), "strategy": v}
+    sheet = build_fact_sheet(_sa(f1_race), live)
+    for q in ("Do I need to pit under the safety car?", "Do I need to box this lap?"):
+        ans = await RaceEngineer(None).answer(q, sheet, use_llm=False, short=True)
+        assert ans.text.startswith("Safety car. Pitting this lap is an option"), (q, ans.text)
+        assert "stop rules" not in ans.text
+    rules = await RaceEngineer(None).answer("Is a pit stop mandatory?", sheet, use_llm=False)
+    assert rules.text.startswith("Safety car. Pitting this lap is an option")
+    assert "I don't know this race's stop rules" in rules.text
+    radio = await RaceEngineer(None).answer("Is a pit stop mandatory?", sheet, use_llm=False, short=True)
+    assert radio.text.startswith("Safety car. Pitting this lap is an option")
+    # practice / qualifying: no rules fact, and the plain question is strategy
+    osq = {**F2_SESSION, "session_type": "qualifying", "session_type_raw": "One-Shot Qualifying"}
+    q_sheet = build_fact_sheet(_sa(osq))
+    assert not any(f.topic == "rules" for f in q_sheet.facts)
+    q_ans = await RaceEngineer(None).answer("Do I need to pit?", q_sheet, use_llm=False)
+    assert "stop rules" not in q_ans.text
+
+
+async def test_drs_open_beats_the_momentary_allowed_flag() -> None:
+    """Review U4: F1 25 sets the DRS-allowed flag only for a moment before the flap opens (recorded: 2 samples a lap,
+    hundreds open), so an open flap is said to be open, never "DRS isn't allowed now"."""
+    sheet = build_fact_sheet(_sa(), _live(drs_open=True, drs_allowed=False, drs_activation_m=None))
+    a = await RaceEngineer(None).answer("Can I use DRS?", sheet, use_llm=False, short=True)
+    assert a.text.startswith("DRS is open.") and "isn't allowed" not in a.text

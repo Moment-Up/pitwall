@@ -989,7 +989,7 @@ def test_api_driver_sessions_are_the_same_rows_as_the_sessions_api(api: tuple[Te
     rt.writer.call(
         lambda c: c.execute(
             "UPDATE sessions SET car_id='f1:team:214', car_name='Unknown team (id 214)', session_type_raw='Race', "
-            'info=\'{"formula": "F2", "packet_format": 2025}\' WHERE id=\'f2s\''
+            'info=\'{"formula": "F2", "packet_format": 2025, "weekend_structure": [15, 16]}\' WHERE id=\'f2s\''
         )
     )
     (row,) = client.get(f"/api/drivers/{james}/sessions").json()

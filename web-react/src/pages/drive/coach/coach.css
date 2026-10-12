@@ -1081,7 +1081,6 @@
 @media (max-width: 767px) {
   .pwc-status { height: 44px; }
   .pwc-status .pwc-trk,
-  .pwc-status .pwc-classchip,
   .pwc-status .pwc-meta,
   .pwc-status .pwc-pill { display: none; }
   .pwc-band__words { font-size: 15px; }

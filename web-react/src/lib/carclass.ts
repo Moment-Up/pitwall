@@ -143,6 +143,7 @@ export function borrowedCaption(model: TrackModelFamily | null | undefined, cls:
   const other = from ? FAMILY_LABEL[from] : null;
   const fam = familyOf(cls);
   const label = (fam ? FAMILY_LABEL[fam] : null) ?? classOf(cls)?.label ?? null;
-  const source = other ? `${other} laps` : "another class of car's laps";
+  // a legacy model whose laps' car was never recorded (no family) stands in too
+  const source = other ? `${other} laps` : "older laps (car class not recorded)";
   return `Corners from ${source} until your first clean ${label ? `${label} ` : ""}lap here.`;
 }

@@ -142,13 +142,17 @@ def drs_now(sheet: FactSheet) -> str | None:
 
 
 def stop_rules(sheet: FactSheet) -> str | None:
-    """The race's stop rules over the radio: not known (the game doesn't send them), then the tyre statement. Never
-    "no" (the F2 note stays for Review)."""
-    from pitwall.ai.engineer import tyre_statement  # the engineer imports this module: keep it lazy
+    """The race's stop rules over the radio: under a safety car its box call first, then not known (the game doesn't
+    send them), then the tyre statement. Never "no" (the F2 note stays for Review). None outside a race (no rules
+    fact): the engineer's own short answer then."""
+    from pitwall.ai.engineer import sc_box_fact, tyre_statement  # the engineer imports this module: keep it lazy
 
     rules = next((f for f in sheet.facts if f.topic == "rules" and f.text.startswith(RULES_PREFIX)), None)
     if rules is None:
         return None
+    box = sc_box_fact(sheet.facts)
+    if box is not None:
+        return f"{box.plain} {rules.plain}"
     tyre = tyre_statement(sheet.facts)
     return rules.plain if tyre is None else f"{rules.plain} {tyre.plain}"
 

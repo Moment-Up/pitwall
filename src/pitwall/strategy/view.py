@@ -50,10 +50,11 @@ def clean(v: Any) -> Any:
     return v
 
 
-def pit_rules(car_class: Any, session_type_raw: object) -> dict[str, Any]:
+def pit_rules(car_class: Any, session_type_raw: object, weekend: object = None) -> dict[str, Any]:
     """``pit.rules`` of a race: never known (``known`` False), with the F2 sprint / feature note for an F2 race.
-    ``car_class``: a ``carclass.CarClass`` (or None); ``session_type_raw``: the game's session name."""
-    race = f2_race_kind(car_class, session_type_raw)
+    ``car_class``: a ``carclass.CarClass`` (or None); ``session_type_raw``: the game's session name; ``weekend``: the
+    game's weekend structure (``extra["weekend_structure"]``: a "Race" is the sprint only before a "Race 2")."""
+    race = f2_race_kind(car_class, session_type_raw, weekend)
     note = F2_FEATURE_NOTE if race == "feature" else F2_SPRINT_NOTE if race == "sprint" else None
     return {"race": race, "known": False, "text": RULES_TEXT, "class_note": note}
 
@@ -259,7 +260,11 @@ def _pit(e: StrategyEngine) -> dict[str, Any]:
         "undercut_threat": d.threat,
         "neighbour_stop": d.neighbour,
         "note": note,
-        "rules": pit_rules(classify_info(e.info), e.info.session_type_raw if e.info is not None else None),
+        "rules": pit_rules(
+            classify_info(e.info),
+            e.info.session_type_raw if e.info is not None else None,
+            e.info.extra.get("weekend_structure") if e.info is not None else None,
+        ),
     }
 
 

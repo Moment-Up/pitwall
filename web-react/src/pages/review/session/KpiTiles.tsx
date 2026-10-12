@@ -26,6 +26,7 @@ import {
   bestLapSub,
   gainedView,
   gapToBestEver,
+  isOneShot,
   notUsedText,
   steadinessSentence,
   summaryKpis,
@@ -201,7 +202,8 @@ export function KpiTiles({ session, density, legend = true, ai: showAi = true }:
   const { bests, badge } = useSessionBests(session, k.best?.ms ?? null);
   const status = bestLapStatus(session, k.best, badge);
   const gap = gapToBestEver(session, k.best, bests, Date.now());
-  const gained = gainedView(k);
+  const oneShot = isOneShot(session.session_type_raw); // one timed lap by design: never "needs a second clean lap"
+  const gained = gainedView(k, oneShot);
   const g = density.glossary;
   const six = density.kpiTiles === 6;
   const ai = showAi
@@ -229,7 +231,7 @@ export function KpiTiles({ session, density, legend = true, ai: showAi = true }:
         <Tile title="Gained today" glossary={g} sub={gained.sub}>
           <Change change={gained.change} greenFaster />
         </Tile>
-        <Tile title="Steadiness" term="steadiness" glossary={g} sub={steadinessSentence(k.spreadMs)}>
+        <Tile title="Steadiness" term="steadiness" glossary={g} sub={steadinessSentence(k.spreadMs, oneShot)}>
           {k.spreadMs == null ? <Unknown className="text-[32px]" /> : <Big>{spreadSeconds(k.spreadMs)}</Big>}
         </Tile>
         {six && !noSectors && (

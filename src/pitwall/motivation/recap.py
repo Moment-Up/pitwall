@@ -357,6 +357,15 @@ def work_on(inp: RecapInput) -> Thing | None:
             "No clean lap this time.",
         )
     if len(clean) == 1:
+        if inp.session.one_shot:  # one timed lap by design: "drive two or more" would be impossible advice
+            return Thing(
+                "work_on",
+                "single_clean_lap",
+                "One-shot qualifying has one timed lap, so there is no second lap in this session to compare it with.",
+                "One-shot qualifying: one timed lap, nothing to compare it with.",
+                lap_id=clean[0].id,
+                lap_number=clean[0].lap_number,
+            )
         return Thing(
             "work_on",
             "single_clean_lap",

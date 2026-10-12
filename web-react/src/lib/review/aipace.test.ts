@@ -607,6 +607,15 @@ describe("the suggestion's sentence is about the driver who is viewed", () => {
       { car_class: "F3", car_name: "Unknown team (id 214)", started_unix: 4 },
     ]);
     expect([...names]).toEqual([["F1 World", "F1 Generic"]]);
+    // review U3: a stored raw id is never shown; the server's car label is, without its class prefix
+    const f2 = aiCarNamesByClass([
+      { car_class: "F2", car_name: "team_214", started_unix: 1 },
+      { car_class: "F1 Modern", car_name: "f1:team:8", started_unix: 2 },
+    ]);
+    expect([...f2]).toEqual([]);
+    const labelled = aiCarNamesByClass([{ car_class: "F2", car_name: "team_214", car_label: "F2 · Hitech '25", started_unix: 1 }]);
+    expect([...labelled]).toEqual([["F2", "Hitech '25"]]);
+    expect(suggestionKeyLabel({ ...key, car_class: "F2" }, labelled.get("F2"))).toBe("Austria · F2 class (Hitech '25) · races · dry");
   });
 });
 

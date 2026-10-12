@@ -2640,9 +2640,17 @@ Practical requirements: the console and the receiver must be on the same LAN/sub
     sessions of the two captures above, `m_ersStoreEnergy`, `m_ersDeployMode`, `m_enginePowerMGUK`,
     `m_ersHarvestedThisLapMGUK`, `m_ersHarvestedThisLapMGUH` and `m_ersDeployedThisLap` are 0 for every car in every
     Car Status packet (F2 cars have no ERS). Pitwall reports no ERS (None) for an F2 car instead of an empty store.
-    `m_drsAllowed` and `m_drsActivationDistance` are sent (the distance counts down in one-shot qualifying; in the
-    races it stayed 0 while `m_drsAllowed` was set for a moment); the F2 tyre compounds are actual 11 (super soft),
-    12 (soft), 13 (medium), 14 (hard), 15 (wet) and visual 19, 20, 21, 22 and 15, and `m_pitSpeedLimit` is 60.
+    `m_drsAllowed` and `m_drsActivationDistance` are sent, in qualifying and in the races alike: the player's
+    distance counted down in 723 Car Status packets of the Melbourne sprint (laps 2-3), 934 of the Sakhir feature
+    race and 449 of the Jeddah feature race, and `m_drsAllowed` and a distance above 0 never occur in the same packet.
+    `m_drsAllowed` stays set only until the flap opens: at Melbourne it was set in 2 packets a lap while Car
+    Telemetry `m_drs` showed the flap open in 363 and 504 samples (laps 2 and 3); at Sakhir, where the flap was never
+    opened, it stayed set for 860 packets. So "not allowed" with the flap open means "in use", not "forbidden". The
+    F2 tyre compounds are actual 11 (super soft), 12 (soft), 13 (medium), 14 (hard), 15 (wet) and visual 19, 20, 21,
+    22 and 15, and `m_pitSpeedLimit` is 60. `m_weekendStructure` listed (15, 16) for the Melbourne weekend (a sprint,
+    then the feature race) and (9, 16) for the Sakhir and Jeddah weekends (one-shot qualifying, then the feature
+    race); `m_sessionDuration` was 2700 s for type 15, 3600 s for type 16 and 240 s for one-shot qualifying, and the
+    type-16 races' Final Classification gave the winner 25 points (Jeddah) and 26 (Sakhir, with the fastest lap).
 21. **Observed (PS5, F1 25 v1.26, 2026-10-11): the one-shot qualifying finishing sequence.** At the line the lap
     number advances (1 -> 2) with `m_lastLapTimeInMS` set to the lap's time; 17 ms later (the next Lap Data packet)
     `m_resultStatus` turns 3 ("finished") with `m_lastLapTimeInMS` unchanged, on lap 2, which is never driven. At a
@@ -2651,6 +2659,10 @@ Practical requirements: the console and the receiver must be on the same LAN/sub
     lap completion (and waits for a new time on the same lap number), so one-shot qualifying stores one lap; until
     the fix it stored a one-sample second lap with the same time (3 such laps on the owner's database, removed by the
     one-off repair `repair.f2_v1`). The completed one-shot lap is not tagged final (the result changes after it).
+    The session then ends one frame into lap 2: that one-sample, untimed "lap" is no longer stored either
+    (`LapAssembler.flush`; the same repair deletes the ones already stored). A final lap driven in exactly the
+    previous lap's time shows no new time: Pitwall reports it once 1 s of session time has passed with the car on that
+    lap number for at least half a lap's time (not recorded: no such lap is in the captures).
 
 ---
 

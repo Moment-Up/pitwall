@@ -490,13 +490,30 @@ export function suggestionKeyLabel(k: AiLevelKey, carName?: string | null): stri
   return [where, what, categoryMany(k.session_category), k.weather_class].filter(Boolean).join(" · ");
 }
 
-/** The car the driver used last in each car class (key: the class as stored, "" when unknown). A name the game did
- * not give ("Unknown team (id 214)") is left out: it would say nothing the class does not. */
-export function aiCarNamesByClass(points: readonly Pick<AiPacePoint, "car_class" | "car_name" | "started_unix">[]): Map<string, string> {
+/** A stored car name that is a raw id or F1's neutral fallback ("team_214", "f1:team:214", "Unknown team (id 214)"). */
+const RAW_CAR = /^(?:unknown\b|team_\d+$|f1:team:\d+$)/i;
+
+/** A point's car in words: the server's label without its class prefix ("F2 · Hitech '25" -> "Hitech '25"), nothing
+ * for a label that names only the class ("F2 car"), else the stored name (older servers). */
+function aiCarName(p: Pick<AiPacePoint, "car_name" | "car_label">): string | null {
+  const label = p.car_label?.trim();
+  if (label) {
+    if (label.includes("·")) return label.replace(/^[^·]+·\s*/, "") || null;
+    return / car$/i.test(label) ? null : label;
+  }
+  return p.car_name?.trim() || null;
+}
+
+/** The car the driver used last in each car class (key: the class as stored, "" when unknown): the server's car_label
+ * without its class prefix ("F2 · Hitech '25" -> "Hitech '25"), else the stored name. A name the game did not give
+ * ("Unknown team (id 214)", "team_214") is left out: it would say nothing the class does not. */
+export function aiCarNamesByClass(
+  points: readonly Pick<AiPacePoint, "car_class" | "car_name" | "car_label" | "started_unix">[],
+): Map<string, string> {
   const out = new Map<string, string>();
   for (const p of [...points].sort((a, b) => a.started_unix - b.started_unix)) {
-    const name = p.car_name?.trim();
-    if (name && !/^unknown\b/i.test(name)) out.set(classKeyOf(p.car_class), name);
+    const name = aiCarName(p);
+    if (name && !RAW_CAR.test(name)) out.set(classKeyOf(p.car_class), name);
     else out.delete(classKeyOf(p.car_class));
   }
   return out;

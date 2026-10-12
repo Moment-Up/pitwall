@@ -85,6 +85,7 @@ class SessionRow:
     formula: str | None  # F1 "F1 World" / "F2" ...
     car_class_raw: int | None  # Forza CarClass
     packet_format: int | None = None  # F1 UDP format (names the observed F2 team ids 209-219 in format 2025)
+    session_type_raw: str | None = None  # the game's own session name ("One-Shot Qualifying")
 
     @classmethod
     def from_row(cls, d: Mapping[str, Any]) -> SessionRow:
@@ -106,6 +107,7 @@ class SessionRow:
             formula=_str(d.get("formula")),
             car_class_raw=_int(d.get("car_class")),
             packet_format=_int(d.get("packet_format")),
+            session_type_raw=_str(d.get("session_type_raw")),
         )
 
     @property
@@ -121,6 +123,11 @@ class SessionRow:
     @property
     def is_race(self) -> bool:
         return self.session_type == "race"
+
+    @property
+    def one_shot(self) -> bool:
+        """F1 one-shot qualifying (or sprint shootout): one timed lap by design."""
+        return (self.session_type_raw or "").lower().startswith("one-shot")
 
     @property
     def is_f1(self) -> bool:

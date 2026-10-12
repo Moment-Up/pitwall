@@ -420,7 +420,7 @@ CATALOG: tuple[ValidationItem, ...] = (
         steps=(
             Step("Choose an F2 car (Grand Prix or F2 career): one-shot qualifying, then a short race."),
             Step("On Drive, check that the car shows F2 and that there is no ERS on the car tile."),
-            Step("Afterwards open Setup › Car for the session: F2 setups, or a line saying there are none."),
+            Step("Afterwards open Setup › Car setup for the session: F2 setups, or a line saying there are none."),
             Step(
                 "Optional, in the game's F2 setup screen: read the ends Pitwall has not confirmed yet.",
                 "Front camber max -2.50, rear camber max -1.00, front toe max 0.12, front suspension min 24, rear "
@@ -440,8 +440,9 @@ CATALOG: tuple[ValidationItem, ...] = (
         "setup.",
         rule_text="Over every live F1 25 session in this run whose formula is F2: 2 or more timed laps"
         + _H
-        + ", no lap stored twice with the same time (the one-shot qualifying duplicate), and no ERS value published "
-        "while the formula is F2, plus your two ticks. A duplicated lap or a published ERS value fails.",
+        + ", no lap stored twice with the same time (the one-shot qualifying duplicate), no lap of one sample, and no "
+        "ERS value published while the formula is F2, plus your two ticks. A duplicated lap, a one-sample lap or a "
+        "published ERS value fails.",
         informs=(
             Informs(
                 "F2 in F1 25 (PS5): recorded › Unverified: live run",

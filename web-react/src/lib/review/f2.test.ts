@@ -18,7 +18,7 @@ describe("titles and rows", () => {
   it("the race as F2 calls it: the game's 'Race' is the sprint, 'Race 2' the feature race", () => {
     expect(sessionTitle(F2_ROWS.melbourneSprint())).toBe("Melbourne · Sprint race");
     expect(sessionTitle(F2_ROWS.jeddahFeature())).toBe("Jeddah · Feature race");
-    expect(sessionTitle(F2_ROWS.melbourneOneShot())).toBe("Melbourne · One-Shot Qualifying");
+    expect(sessionTitle(F2_ROWS.melbourneOneShot())).toBe("Melbourne · One-shot qualifying"); // as Drive writes it
   });
 
   it("an older server (no session_label): the game's own name, as before", () => {

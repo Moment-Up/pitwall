@@ -27,7 +27,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from pitwall.adapters.f1 import enums
@@ -87,10 +87,16 @@ F2_NO_ERS_NOTE = "F2 cars have no ERS: F1 25 sends 0 for them."
 _NOTES: Mapping[CarClassId, tuple[str, ...]] = {"f2": (F2_NO_ERS_NOTE,)}
 
 # session types the F2 weekend names differently (spec appendix 8.5 "Race" 15 / "Race 2" 16). Recorded in F1 25 on PS5
-# (2026-10-11): the weekend runs 15 then 16; 15 has the 45-minute cap and sprint points, 16 the 60-minute cap, feature
-# points and the qualifying order as its grid.
+# (2026-10-11): Session.weekendStructure listed (15, 16) at Melbourne and (one-shot qualifying, 16) at Sakhir and
+# Jeddah; sessionDuration was 2700 s (45 minutes) for 15 and 3600 s (60 minutes) for 16, and the 16 races paid feature
+# points (25 to the winner at Jeddah). So 16 is the feature race, and 15 is the sprint only in a weekend whose
+# structure also has a 16 (a race-only weekend's 15 stays "Race": not recorded).
+SESSION_TYPE_RACE_2 = 16  # spec 8.5 "Race 2"
 F2_SESSION_LABELS: Mapping[str, str] = {"Race": "Sprint race", "Race 2": "Feature race"}
 F2_RACE_KIND: Mapping[str, str] = {"Race": "sprint", "Race 2": "feature"}
+# the F1 games' own session names (spec appendix 8.5), shown in sentence case ("One-Shot Qualifying" -> "One-shot
+# qualifying", as Drive writes them)
+F1_SESSION_NAMES = frozenset(label for label, _ in enums.SESSION_TYPES.values())
 _SESSION_WORDS: Mapping[str, str] = {
     "race": "Race",
     "qualifying": "Qualifying",
@@ -108,6 +114,9 @@ class CarClass:
     formula: str | None
     certain: bool = True
     game: str = "f1_25"
+    # what the evidence status depends on (``evidence``): the car's team id and the UDP format it reported
+    team: int | None = field(default=None, compare=False)
+    packet_format: int | None = field(default=None, compare=False)
 
     @property
     def family(self) -> CarFamily:
@@ -132,10 +141,11 @@ class CarClass:
 
     @property
     def evidence(self) -> str | None:
-        """``capabilities.CAR_CLASSES`` status of this class in its game (looked up lazily: no import cycle)."""
+        """``capabilities.CAR_CLASSES`` status of this class in its game, for this car (a variant that was never
+        recorded, such as a 2026 F2 car, is only spec_implemented). Looked up lazily: no import cycle."""
         from pitwall.capabilities import car_class_status
 
-        return car_class_status(self.game, self.id)
+        return car_class_status(self.game, self.id, team=self.team, packet_format=self.packet_format)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -208,16 +218,17 @@ def classify(game: object, formula: object, car_id: object, packet_format: objec
     assert g is not None
     form = _str(formula)
     team = team_id(car_id)
+    fmt = _int(packet_format)
     if form is not None:
         if form == FORMULA_F2:
-            return CarClass("f2", form, game=g)
+            return CarClass("f2", form, game=g, team=team, packet_format=fmt)
         if form == FORMULA_CLASSIC:
-            return CarClass("f1_classic", form, game=g)
+            return CarClass("f1_classic", form, game=g, team=team, packet_format=fmt)
         if form == FORMULA_2026 or form in FORMULAS_F1:
             return _f1_class(g, packet_format, form, car_id)
-        return CarClass("other", form, game=g)  # Beta, or a formula this table does not know
+        return CarClass("other", form, game=g, team=team, packet_format=fmt)  # Beta, or a formula not in this table
     if team in TEAMS_F2:
-        return CarClass("f2", None, game=g)
+        return CarClass("f2", None, game=g, team=team, packet_format=fmt)
     if team in TEAMS_F1:
         return _f1_class(g, packet_format, None, car_id)
     return None
@@ -225,11 +236,12 @@ def classify(game: object, formula: object, car_id: object, packet_format: objec
 
 def _f1_class(game: str, packet_format: object, formula: str | None, car_id: object) -> CarClass:
     gen, certain, _ = f1_generation(packet_format, formula, car_id)
+    team, fmt = team_id(car_id), _int(packet_format)
     if gen == "f1_2026":
-        return CarClass("f1_2026", formula, game=game)
+        return CarClass("f1_2026", formula, game=game, team=team, packet_format=fmt)
     if gen == "f1_2025" and certain:
-        return CarClass("f1_2025", formula, game=game)
-    return CarClass("f1", formula, certain=False, game=game)
+        return CarClass("f1_2025", formula, game=game, team=team, packet_format=fmt)
+    return CarClass("f1", formula, certain=False, game=game, team=team, packet_format=fmt)
 
 
 def classify_row(row: Mapping[str, Any] | None) -> CarClass | None:
@@ -308,26 +320,48 @@ def car_label(cls: CarClass | None, car_name: object, car_id: object, packet_for
     return _readable(car_name)
 
 
-def session_label(cls: CarClass | None, session_type_raw: object, session_type: object = None) -> str | None:
-    """The session's name: the F2 weekend's "Sprint race" (the game's "Race") and "Feature race" ("Race 2"); else the
-    game's own name unchanged; else pitwall's session type in words. None when unknown."""
-    raw = _str(session_type_raw)
-    if raw is not None:
-        if cls is not None and cls.id == "f2" and raw in F2_SESSION_LABELS:
-            return F2_SESSION_LABELS[raw]
-        if raw == "Unknown" or raw.startswith("unknown_"):
-            return None
-        return raw
-    st = getattr(session_type, "value", session_type)
-    return _SESSION_WORDS.get(st) if isinstance(st, str) else None
+def weekend_types(weekend: object) -> tuple[int, ...] | None:
+    """The session type ids of the game's weekend structure (``SessionInfo.extra["weekend_structure"]``, F1
+    ``m_weekendStructure``); None when not known (an older stored session, or the game sent none)."""
+    if not isinstance(weekend, list | tuple) or not weekend:
+        return None
+    ids = tuple(v for v in weekend if isinstance(v, int) and not isinstance(v, bool))
+    return ids if len(ids) == len(weekend) else None
 
 
-def f2_race_kind(cls: CarClass | None, session_type_raw: object) -> str | None:
-    """``"sprint"`` / ``"feature"`` for an F2 race (recorded), None otherwise."""
+def f2_race_kind(cls: CarClass | None, session_type_raw: object, weekend: object = None) -> str | None:
+    """``"feature"`` for an F2 car's "Race 2"; ``"sprint"`` for its "Race" when the weekend also has a "Race 2" (the
+    game's weekend structure says so); None otherwise (a race-only weekend, or the structure not known)."""
     raw = _str(session_type_raw)
     if cls is None or cls.id != "f2" or raw is None:
         return None
-    return F2_RACE_KIND.get(raw)
+    kind = F2_RACE_KIND.get(raw)
+    if kind == "sprint":
+        types = weekend_types(weekend)
+        return kind if types is not None and SESSION_TYPE_RACE_2 in types else None
+    return kind
+
+
+def _sentence(name: str) -> str:
+    return name[:1].upper() + name[1:].lower()
+
+
+def session_label(
+    cls: CarClass | None, session_type_raw: object, session_type: object = None, weekend: object = None
+) -> str | None:
+    """The session's name: an F2 weekend's "Feature race" (the game's "Race 2") and "Sprint race" (its "Race", when
+    the weekend has a "Race 2": ``f2_race_kind``); else the F1 game's own name in sentence case ("One-shot
+    qualifying"), another game's own name unchanged; else pitwall's session type in words. None when unknown."""
+    raw = _str(session_type_raw)
+    if raw is not None:
+        kind = f2_race_kind(cls, raw, weekend)
+        if kind is not None:
+            return F2_SESSION_LABELS[raw]
+        if raw == "Unknown" or raw.startswith("unknown_"):
+            return None
+        return _sentence(raw) if raw in F1_SESSION_NAMES else raw
+    st = getattr(session_type, "value", session_type)
+    return _SESSION_WORDS.get(st) if isinstance(st, str) else None
 
 
 def compound_words(label: object) -> str | None:
@@ -346,7 +380,9 @@ def session_fields(row: Mapping[str, Any] | None) -> dict[str, Any]:
     return {
         "car_class": None if cls is None else cls.to_dict(),
         "car_label": car_label(cls, row.get("car_name"), row.get("car_id"), extra.get("packet_format")),
-        "session_label": session_label(cls, row.get("session_type_raw"), row.get("session_type")),
+        "session_label": session_label(
+            cls, row.get("session_type_raw"), row.get("session_type"), extra.get("weekend_structure")
+        ),
     }
 
 
@@ -362,6 +398,9 @@ def info_fields(info: Any) -> dict[str, Any]:
             cls, getattr(info, "car_name", None), getattr(info, "car_id", None), extra.get("packet_format")
         ),
         "session_label": session_label(
-            cls, getattr(info, "session_type_raw", None), getattr(info, "session_type", None)
+            cls,
+            getattr(info, "session_type_raw", None),
+            getattr(info, "session_type", None),
+            extra.get("weekend_structure"),
         ),
     }

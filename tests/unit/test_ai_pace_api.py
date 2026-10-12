@@ -68,6 +68,7 @@ POINT_KEYS = {
     "track_name",
     "car_id",
     "car_name",
+    "car_label",
     "car_class",
     "session_category",
     "weather_class",
@@ -233,6 +234,16 @@ def test_driver_points_scope_and_order(store: tuple[Database, DbWriter]) -> None
     assert [p["session_id"] for p in austria] == ["old", "nolap", "new"]
     assert [p["session_id"] for p in newest] == ["nolap", "new"]
     assert f2 == [] and quali == []
+    assert pts[0]["car_label"] == "McLaren"  # the car in words (review U3: never a raw id such as "team_214")
+    writer.call(
+        lambda c: c.execute(
+            "UPDATE sessions SET car_id='f1:team:214', car_name='team_214', "
+            "info=json_set(info, '$.formula', 'F2', '$.packet_format', 2025) WHERE id='old'"
+        )
+    )
+    with db.read() as c:
+        old = repo.driver_ai_pace_points(c, james)[0]
+    assert old["session_id"] == "old" and old["car_label"] == "F2 · Hitech '25" and old["car_name"] == "team_214"
     # raced against the AI but not comparable: listed apart, with the reason (never synthetic, replays or others)
     with db.read() as c:
         unusable = repo.driver_ai_pace_unusable(c, james, track_id="f1:17")
@@ -543,10 +554,11 @@ async def test_no_ai_comparison_answer_is_honest(store: tuple[Database, DbWriter
     for q in ("how am I doing against the AI?", "is the AI too hard?"):
         ans = await RaceEngineer(None).answer(q, sheet, use_llm=False)
         assert ans.text == (
-            "This session has no AI comparison: Pitwall compares against the AI only in F1 sessions raced against "
-            "AI cars."
+            "No comparison with the AI yet: Pitwall needs laps from the AI cars in an F1 game session raced against "
+            "them."
         )
-        assert "laps" not in ans.text and check_grounding(ans.text, sheet.facts).ok
+        # never "drive more laps": the driver's own laps would not help
+        assert "your" not in ans.text and "complete" not in ans.text and check_grounding(ans.text, sheet.facts).ok
 
 
 def test_online_session_says_so(store: tuple[Database, DbWriter]) -> None:

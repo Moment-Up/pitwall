@@ -181,15 +181,23 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
             re.I,
         ),
     ),
-    # the race's stop rules (F2 support): before tyres and strategy ("do I need to use both compounds?", "do I have to
-    # pit?"). Answered deterministically: the rules are not known, never "no" (``DETERMINISTIC_INTENTS``)
+    # the race's stop rules (F2 support): rule words only, before tyres and strategy ("is a pit stop mandatory?", "do
+    # I need to use both compounds?", "what are the stop rules?"). A plain "do I need to pit / box (this lap, under the
+    # safety car)?" stays strategy, "do I need to stop braking early?" braking and "are both tyres on the left worn?"
+    # tyres. Answered deterministically: the rules are not known, never "no" (``DETERMINISTIC_INTENTS``); under a
+    # safety car the answer leads with the box call
     (
         "stop_rules",
         re.compile(
-            r"\b(?:mandatory|compulsory|obligatory|required)\b[^.?!]*\b(?:stops?|pit(?:stops?)?)\b"
-            r"|\b(?:stops?|pit ?stops?)\b[^.?!]*\b(?:mandatory|compulsory|obligatory|required)\b"
-            r"|\b(?:have|need)\s+to\s+(?:pit|stop|box)\b|\bmust\s+i\s+(?:pit|stop|box)\b"
-            r"|\b(?:both|two)\s+(?:dry\s+)?(?:compounds|tyre compounds|tyres?)\b",
+            r"\b(?:mandatory|compulsory|obligatory)\b[^.?!]*\b(?:stops?|pit(?:[- ]?stops?)?|compounds?|tyres?|tires?)\b"
+            r"|\brequired\b[^.?!]*\b(?:stops?|pit[- ]?stops?|compounds?)\b"
+            r"|\b(?:stops?|pit(?:[- ]?stops?)?|compounds?|tyres?|tires?)\b[^.?!]*"
+            r"\b(?:mandatory|compulsory|obligatory)\b"
+            r"|\b(?:stops?|pit[- ]?stops?|compounds?)\b[^.?!]*\brequired\b"
+            r"|\b(?:stop|pit(?:[- ]?stop)?|tyre|tire|race)\s+rules?\b"
+            r"|\brules?\b[^.?!]*\b(?:stops?|pit(?:[- ]?stops?)?|compounds?)\b"
+            r"|\b(?:both|two)\s+(?:dry\s+)?(?:tyre\s+|tire\s+)?compounds\b"
+            r"|\b(?:use|run|fit)\s+(?:both|two)\s+(?:dry\s+)?(?:tyres|tires|compounds)\b",
             re.I,
         ),
     ),
@@ -674,8 +682,11 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *,
         if gap is not None or first("gaps") is not None:
             return say(gap, first("gaps", contains="behind"))
         return say(game) if game is not None else say(first("session"))
-    if n == "stop_rules":  # F2 support: the rules are not known, the class note, then the tyre statement; never "no"
+    if n == "stop_rules":
+        # F2 support: under a safety car the box call first; then the rules are not known, the class note, then the tyre
+        # statement (outside a race: that no pit-window calculation applies); never "no"
         return say(
+            sc_box_fact(facts),
             first("rules", contains=RULES_PREFIX),
             first("rules", contains=RULES_CLASS_PREFIX),
             tyre_statement(facts),
@@ -779,17 +790,27 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *,
     return say(first("laps", contains="Best clean"), first("observations"))
 
 
+def sc_box_fact(facts: list[Fact]) -> Fact | None:
+    """The race strategy's safety-car box call ("Safety car. Pitting this lap is an option ..."), when there is one."""
+    return next((f for f in facts if f.topic == "strategy" and f.data.get("kind") == "sc_box"), None)
+
+
 def tyre_statement(facts: list[Fact]) -> Fact | None:
-    """The strategy fact about the tyres and a stop: the pit window, or that the tyres reach the finish, or why
-    neither is known yet (live race: ``strategy.facts``; else the per-lap pit window of ``ai.facts``)."""
-    strategy = [f for f in facts if f.topic == "strategy"]
-    for f in strategy:
+    """The strategy fact about the tyres and a stop: under a safety car its box call; else the pit window, or that the
+    tyres reach the finish, or why neither is known yet (live race: ``strategy.facts``; else the per-lap pit window of
+    ``ai.facts``)."""
+    box = sc_box_fact(facts)
+    if box is not None:
+        return box
+    for f in facts:
+        if f.topic != "strategy":
+            continue
         kind = f.data.get("kind")
         if kind in ("window", "no_stop", "window_unknown"):
             return f
         if "stop_needed_for_tyres" in f.data or f.text.startswith(("Pit window", "No tyre stop", "This is not a race")):
             return f
-    return next((f for f in strategy if f.data.get("kind") == "sc_box"), None)
+    return None
 
 
 # --- feat/technique --------------------------------------------------------------------------------------------

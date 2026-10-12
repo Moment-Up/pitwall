@@ -50,11 +50,12 @@ export interface StatusContentProps {
 }
 
 /** F2 support: the car class next to the track ("F2", "Classic F1"; none for F1 cars). A neutral chip that never
- * shrinks; phones hide it with the track (coach.css), the slot's words still carry it. */
+ * shrinks; phones keep it (one size down) though they hide the track: it is the only place phone Coach says F2. */
 function ClassChip({ text }: { text: string | null }) {
+  const phone = useMediaQuery(PHONE);
   if (!text) return null;
   return (
-    <Chip size="lg" className="pwc-classchip">
+    <Chip size={phone ? "md" : "lg"} className="pwc-classchip">
       <span className="sr-only">Car class </span>
       <Chip.Label>{text}</Chip.Label>
     </Chip>

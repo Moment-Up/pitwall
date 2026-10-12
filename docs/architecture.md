@@ -103,22 +103,29 @@ ERS, a chip flag and the capability status (`capabilities.CAR_CLASSES`, looked u
 read time from `SessionInfo.formula` (EA spec 8.12; `F2` = formula 2), else from the spec's team ids for rows stored
 without a formula, never stored itself (schema 6 unchanged); non-F1 games get no class. `car_label` names the car
 ("F2 · Art GP '24", "F2 car", never a raw id; ids 209-219 in format 2025 are named after EA's 465-475, the observed
-F2 2025 teams) and `session_label` the session ("Sprint race" / "Feature race" for F2's "Race" / "Race 2"). The
-live snapshot (`core/live.py`, recomputed only when the formula, car, format or session type change), the session
+F2 2025 teams) and `session_label` the session ("Feature race" for F2's "Race 2", "Sprint race" for its "Race" only
+when the game's weekend structure, stored as `extra["weekend_structure"]`, also has a "Race 2"; the F1 games' own
+names in sentence case). The capability status is per variant: an F2 car no recording covers (UDP format 2026, the
+2026 F2 cars) is `spec_implemented`. The live snapshot (`core/live.py`, recomputed only when the formula, car,
+format, session type or weekend change), the session
 rows of the API, the report, recap, digest, the engineer's facts and the car setup context all ask it.
 `repo.family_sql()` is its SQL twin (checked against it row by row) for queries that filter or partition by family.
 
 The family keys three things: **track models** (`analysis/track.py` `TrackModel.car_family` and `superseded`, in the
 stored JSON; `repo.load_track_model(..., family)` picks the family's newest model, else a legacy one of unknown
 family, else another family's, which is *borrowed* and shown as such; `core/lap_processor.py` caches models per
-(game, track, family) and replaces a borrowed model on the family's first clean lap), the **physics heavy-stop
+(game, track, family), publishes the stored model to the live screen when a session's context arrives, before its
+first lap, and replaces a borrowed model - or a legacy one of unknown family, captioned as such - on the family's
+first clean lap), the **physics heavy-stop
 warning** (`analysis/brake_prior.py` `default_envelope(family)`: the default model for F1, `F2_ENVELOPE` fitted from
 the F2 AI field for F2, none for `other`; `PriorRefresher` keys on the family, so one family's AI fit never carries
 over), and the **setup car format** (`carsetup.catalog.FORMAT_FAMILY`: an F2 session is only ever offered the `f2`
-format). The F1 adapter reports no ERS (None) for F2 cars (formula 2: the game sends 0) and reads the DRS fields of
-Car Status; the one-shot qualifying finish is reported as one lap (`_on_lap_data`). A one-off repair
-(`repo.repair_f2_v1`, meta key `repair.f2_v1`, run by `LapProcessor.run_repairs` on the analysis worker at start)
-removed the one-shot duplicate laps stored before that fix and rebuilt the track models made from them.
+format). The F1 adapter reports no ERS (None) for F2 cars (formula 2: the game sends 0), and none before the
+session's first Session packet (the formula is not known yet), and reads the DRS fields of Car Status; the one-shot
+qualifying finish is reported as one lap (`_on_lap_data`), and `LapAssembler.flush` drops an in-progress lap of
+fewer than 2 samples (the frame after a one-shot line). A one-off repair (`repo.repair_f2_v1`, meta key
+`repair.f2_v1`, run by `LapProcessor.run_repairs` on the analysis worker at start) removed the one-shot duplicate
+laps and the one-sample untimed laps stored before those fixes and rebuilt the track models made from them.
 
 ## Analysis pipeline (deterministic)
 1. **Lap assembly** (`analysis/laps.py`): lap boundaries from the game's lap counter + official lap time;

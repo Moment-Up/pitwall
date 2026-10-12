@@ -77,6 +77,16 @@ def test_repair_deletes_the_one_shot_duplicates_tags_models_and_rebuilds(db: Dat
             c.execute("UPDATE laps SET clean=1, flags='[]' WHERE id=?", (fake,))  # stored clean before the fix
             _session(c, "race", "F2", "f1:team:158", 200.0, d)
             race = [repo.insert_lap(c, "race", _trace(n, 108_000 + n, 600), None) for n in (1, 2, 3)]
+            # review U1: the untimed one-sample "lap" a session's end stored (deleted), and a lap the game timed but
+            # Pitwall never traced (0 samples, a time: kept)
+            stub = repo.insert_lap(c, "osq", _trace(3, None, 1), None)
+            empty = {name: np.empty(0) for name in CHANNELS}
+            untraced = repo.insert_lap(
+                c,
+                "race",
+                LapTrace(4, empty, 109_000, valid=True, flags={LapFlag.INCOMPLETE, LapFlag.NO_TRACE}, meta={}),
+                None,
+            )
             _session(c, "synth", "F1 Modern", "f1:team:8", 300.0, d)  # equal times, thousands of samples: kept
             synth = [repo.insert_lap(c, "synth", _trace(n, 90_000, 600, final=n == 2), None) for n in (1, 2)]
             _model(c, [fake])  # v1-v3 built from the fake lap (as on the owner's copy)
@@ -84,19 +94,21 @@ def test_repair_deletes_the_one_shot_duplicates_tags_models_and_rebuilds(db: Dat
             _model(c, [race[1], fake, race[0]])
             c.commit()
             assert [r["id"] for r in repo.find_fake_final_laps(c)] == [fake]
+            assert [r["id"] for r in repo.find_stub_laps(c)] == [stub]
         lp = LapProcessor(db, w)
         rec = lp.run_repairs()
         assert rec is not None and rec["status"] == "done"
         assert [(x["id"], x["lap_number"], x["lap_time_ms"], x["family"]) for x in rec["deleted"]] == [
             (fake, 2, 116_133, "f2")
         ]
+        assert [(x["id"], x["lap_number"], x["n_samples"]) for x in rec["stubs"]] == [(stub, 3, 1)]
         assert [s["version"] for s in rec["superseded"]] == [1, 2, 3]
         assert [(r["family"], r["version"]) for r in rec["rebuilt"]] == [("f2", 4)]
         assert lp.run_repairs() is None  # once
         with closing(db.connect()) as c:
             c.row_factory = sqlite3.Row
-            assert repo.get_lap(c, fake, with_trace=False) is None
-            assert all(repo.get_lap(c, i, with_trace=False) is not None for i in [real, *race, *synth])
+            assert repo.get_lap(c, fake, with_trace=False) is None and repo.get_lap(c, stub, with_trace=False) is None
+            assert all(repo.get_lap(c, i, with_trace=False) is not None for i in [real, *race, *synth, untraced])
             rows = {
                 r["version"]: json.loads(r["model"])
                 for r in c.execute("SELECT version, model FROM track_models WHERE track_id=?", (TRACK,))
@@ -110,7 +122,7 @@ def test_repair_deletes_the_one_shot_duplicates_tags_models_and_rebuilds(db: Dat
             # the one-shot session is left with no clean lap: correct, its only real lap had a flashback
             assert not any(lap["clean"] for lap in repo.list_laps(c, "osq"))
             meta = json.loads(repo.get_meta(c, repo.REPAIR_F2_V1_KEY) or "{}")
-            assert meta["status"] == "done" and meta["deleted"][0]["id"] == fake
+            assert meta["status"] == "done" and meta["deleted"][0]["id"] == fake and meta["stubs"][0]["id"] == stub
     finally:
         w.close()
 
@@ -153,7 +165,11 @@ def test_track_model_family_choice_and_borrowed_flag(db: Database) -> None:
         c.commit()
         m = repo.load_track_model(c, "f1_25", TRACK, "f1")
         assert m is not None and m.version == 2 and not repo.track_model_borrowed(m, "f1")
-        assert track_model_payload(m, "f1")["car_family_match"] is None
+        legacy = track_model_payload(m, "f1")  # it stands in, said so (its laps' car was never recorded)
+        assert legacy["car_family"] is None and legacy["car_family_match"] is False
+        assert legacy["car_family_note"] == (
+            "Corners from older laps (car class not recorded) until your first clean F1 lap here."
+        )
         _model(c, [3], "f1")  # v3: the family's own
         _model(c, [4], "f2")  # v4: newer, but another family's
         c.commit()
@@ -276,5 +292,49 @@ def test_an_interrupted_repair_resumes_its_rebuild(db: Database) -> None:
         done = LapProcessor(db, w).run_repairs()
         assert done is not None and done["status"] == "done" and [r["family"] for r in done["rebuilt"]] == ["f2"]
         assert [x["id"] for x in done["deleted"]] == [fake]  # the record keeps what the first run deleted
+    finally:
+        w.close()
+
+
+def test_the_stored_track_model_is_on_the_live_screen_before_the_first_lap(db: Database) -> None:
+    """Review U2: one-shot qualifying has one lap, so a model published only after a lap left the whole session on
+    "Corners appear after your first clean lap". The stored model of the session's family is published when the live
+    context arrives (``refresh_bests``), before any lap; a session with a lap of its own keeps the lap pipeline's."""
+    from pitwall.core.live import BestsRequest, LiveState
+    from pitwall.model.telemetry import Game, SessionInfo, SessionType
+
+    w = DbWriter(db)
+    try:
+        with closing(db.connect()) as c:
+            d = repo.insert_driver(c, "Driver", {})
+            _session(c, "race", "F2", "f1:team:158", 100.0, d)
+            lap = repo.insert_lap(c, "race", _trace(1, 108_000, 600, speed=180.0), None)
+            repo.save_track_model(c, _built(TrackModel("f1_25", TRACK, "Sakhir", LENGTH), lap))
+            c.commit()
+        live = LiveState()
+        live.reset_session("osq", "udp:20777", False, "f1_25")
+        info = SessionInfo(
+            game=Game.F1_25,
+            track_id=TRACK,
+            track_name="Sakhir",
+            track_length_m=LENGTH,
+            car_id="f1:team:158",
+            formula="F2",
+            session_type=SessionType.QUALIFYING,
+            session_type_raw="One-Shot Qualifying",
+            extra={"packet_format": 2025, "weekend_structure": [9, 16]},
+        )
+        live.on_session(info)
+        lp = LapProcessor(db, w, live=live)
+        assert live.track_model is None
+        lp.refresh_bests(BestsRequest("osq", "f1_25", TRACK, "f1:team:158", LENGTH, d))
+        tm = live.track_model
+        assert tm is not None and tm["corners"] and tm["car_family"] == "f2" and tm["car_family_match"] is True
+        # another session (not the live one): nothing published
+        other = LiveState()
+        other.reset_session("x", "udp:20777", False, "f1_25")
+        lp2 = LapProcessor(db, w, live=other)
+        lp2.refresh_bests(BestsRequest("osq", "f1_25", TRACK, "f1:team:158", LENGTH, d))
+        assert other.track_model is None
     finally:
         w.close()

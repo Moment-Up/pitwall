@@ -11,11 +11,20 @@ from pitwall.validate.model import SessionSummary
 
 
 def _s(
-    sid: str, laps: list[tuple[int, int | None]], *, formula: str | None = "F2", ers: bool | None = False
+    sid: str,
+    laps: list[tuple[int, int | None]],
+    *,
+    formula: str | None = "F2",
+    ers: bool | None = False,
+    samples: dict[int, int] | None = None,
+    session_type_id: int | None = None,
 ) -> SessionSummary:
     extra: dict[str, object] = {} if formula is None else {"formula": formula}
     if ers is not None:
         extra["ers_published"] = ers
+    if session_type_id is not None:
+        extra["session_type_id"] = session_type_id
+    n = samples or {}
     return SessionSummary(
         session_id=sid,
         game="f1_25",
@@ -29,7 +38,10 @@ def _s(
         platform="ps5",
         driver_id=1,
         game_session_uid="1",
-        laps=[{"lap_number": n, "lap_time_ms": ms, "clean": True, "flags": []} for n, ms in laps],
+        laps=[
+            {"lap_number": k, "lap_time_ms": ms, "clean": True, "flags": [], "n_samples": n.get(k, 3000)}
+            for k, ms in laps
+        ],
         extra=extra,
     )
 
@@ -45,9 +57,18 @@ def test_f2_check_passes_fails_and_waits() -> None:
     assert f.sessions == 2 and len(f.timed_laps) == 4 and not f.duplicates and f.ers_published is False
     assert R.f2_verdict(f, True, True, 1.0).verdict == "pass"
     assert R.f2_verdict(f, None, True, 1.0).verdict == "inconclusive"  # the ticks are the driver's
-    dup = E.f2_facts([_s("osq2", [(1, 116_133), (2, 116_133)])], _all)
+    dup = E.f2_facts([_s("osq2", [(1, 116_133), (2, 116_133)], samples={2: 1})], _all)
     v = R.f2_verdict(dup, True, True, 1.0)
     assert v.verdict == "fail" and dup.duplicates == ["lap 2 (1:56.133)"]
+    # two genuinely equal race laps (thousands of samples each) are not the duplicate; in one-shot qualifying they are
+    equal = E.f2_facts([_s("race3", [(1, 100_000), (2, 100_000)])], _all)
+    assert not equal.duplicates and R.f2_verdict(equal, True, True, 1.0).verdict == "pass"
+    osq_dup = E.f2_facts([_s("osq3", [(1, 116_133), (2, 116_133)], session_type_id=9)], _all)
+    assert osq_dup.duplicates == ["lap 2 (1:56.133)"]
+    # a lap of one sample without a time (the end of one-shot qualifying, before the fix) fails the check
+    stub = E.f2_facts([_s("osq4", [(1, 116_133), (2, None)], samples={2: 1})], _all)
+    v = R.f2_verdict(stub, True, True, 1.0)
+    assert v.verdict == "fail" and stub.stubs == ["lap 2"] and "one sample" in v.reasons[0]
     ers = E.f2_facts([_s("race2", [(1, 100_000), (2, 101_000)], ers=True)], _all)
     assert R.f2_verdict(ers, True, True, 1.0).verdict == "fail"
     assert R.f2_verdict(E.f2_facts([], _all), True, True, 1.0).verdict == "no_evidence"

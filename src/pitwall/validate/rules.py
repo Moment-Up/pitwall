@@ -1047,6 +1047,7 @@ class F2Facts:
     sessions: int = 0
     timed_laps: list[int] = field(default_factory=list)  # lap times (ms), every F2 session
     duplicates: list[str] = field(default_factory=list)  # "lap 2 (1:56.133)": the same time as the lap before it
+    stubs: list[str] = field(default_factory=list)  # "lap 2": one sample, no time (a lap that was never driven)
     ers_published: bool | None = None  # an ERS value was published while the formula was F2; None = no frame seen
     tracks: list[str] = field(default_factory=list)
 
@@ -1071,6 +1072,13 @@ def f2_verdict(f: F2Facts, drive_f2_no_ers: bool | None, setup_f2: bool | None, 
             "none",
         ),
         check(
+            "no_stub",
+            "No lap of one sample stored",
+            not f.stubs,
+            ", ".join(f.stubs) or "none",
+            "none",
+        ),
+        check(
             "no_ers",
             "No ERS value published while the formula is F2",
             None if f.ers_published is None else not f.ers_published,
@@ -1084,12 +1092,15 @@ def f2_verdict(f: F2Facts, drive_f2_no_ers: bool | None, setup_f2: bool | None, 
         "sessions": f.sessions,
         "timed_laps": len(f.timed_laps),
         "duplicates": len(f.duplicates),
+        "stubs": len(f.stubs),
         "tracks": ", ".join(f.tracks) or None,
     }
     if not f.sessions:
         return state("no_evidence", ["No F2 session (F1 25, formula F2) in this run yet"], [], metrics, now)
     if f.duplicates:
         return state("fail", [f"A lap was stored twice: {', '.join(f.duplicates)}"], checks, metrics, now)
+    if f.stubs:
+        return state("fail", [f"A lap of one sample was stored: {', '.join(f.stubs)}"], checks, metrics, now)
     if f.ers_published:
         return state("fail", ["An ERS value was published for an F2 car"], checks, metrics, now)
     if all(c.status == "met" for c in checks):

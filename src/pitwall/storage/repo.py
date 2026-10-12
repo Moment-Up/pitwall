@@ -835,6 +835,21 @@ def find_fake_final_laps(conn: sqlite3.Connection) -> list[dict[str, Any]]:
     return [dict(r) for r in rows]
 
 
+STUB_LAP_MAX_SAMPLES = 1
+
+
+def find_stub_laps(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Laps of at most ``STUB_LAP_MAX_SAMPLES`` sample and no lap time: the in-progress lap a session's end stored
+    before ``LapAssembler.flush`` dropped them (F1 25 one-shot qualifying ends one frame into a "lap 2" that is never
+    driven). They cover nothing and were listed as laps. A lap timed by the game but stored without a trace
+    (``NO_TRACE``: 0 samples, a lap time) is not one."""
+    rows = conn.execute(
+        f"""SELECT id, session_id, lap_number, lap_time_ms, n_samples FROM laps
+           WHERE n_samples <= {STUB_LAP_MAX_SAMPLES} AND lap_time_ms IS NULL ORDER BY id"""
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def lap_families(conn: sqlite3.Connection, lap_ids: list[int]) -> dict[int, str | None]:
     """The car class family (``family_sql``) of each lap's session; laps that no longer exist are absent."""
     out: dict[int, str | None] = {}
@@ -853,12 +868,20 @@ def repair_f2_v1(conn: sqlite3.Connection) -> dict[str, Any]:
     """Steps 1-2 of the one-off F2 repair (writer thread; ``core.lap_processor.LapProcessor.run_repairs`` runs it
     once at start on the analysis worker and rebuilds what it supersedes). Safe to run again.
 
-    1. Delete the fake one-shot laps (``find_fake_final_laps``); their observations go with them (foreign keys) and
-       goal / reference / drill links to them are cleared. The deleted rows are returned for the meta record.
+    1. Delete the fake one-shot laps (``find_fake_final_laps``) and the one-sample laps without a time
+       (``find_stub_laps``); their observations go with them (foreign keys) and goal / reference / drill links to them
+       are cleared. The deleted rows are returned for the meta record (``deleted``, ``stubs``).
     2. Tag every stored track model with the family of its source laps' sessions; a model whose source laps include
        a deleted lap, or mix families, is marked superseded (never used again).
 
-    Returns ``{"deleted": [...], "tagged": n, "superseded": [{"id", "game", "track_id", "version", "why"}]}``."""
+    Returns ``{"deleted": [...], "stubs": [...], "tagged": n, "superseded": [{"id", "game", "track_id", "version",
+    "why"}]}``."""
+    stubs = find_stub_laps(conn)
+    if stubs:  # never in a track model (no time, so never clean): nothing to supersede
+        stub_ids = sorted(int(r["id"]) for r in stubs)
+        for i in range(0, len(stub_ids), _IN_CHUNK):
+            chunk = stub_ids[i : i + _IN_CHUNK]
+            conn.execute(f"DELETE FROM laps WHERE id IN ({','.join('?' * len(chunk))})", chunk)
     fake = find_fake_final_laps(conn)
     deleted_ids = {int(r["id"]) for r in fake}
     for r, fam in zip(fake, (lap_families(conn, [int(r["id"])]).get(int(r["id"])) for r in fake), strict=True):
@@ -907,12 +930,14 @@ def repair_f2_v1(conn: sqlite3.Connection) -> dict[str, Any]:
     # the record, before any rebuild: an interrupted run resumes from it (``LapProcessor.run_repairs``)
     known_sup = {int(x["id"]) for x in record.get("superseded") or () if isinstance(x, dict) and "id" in x}
     all_sup = [*(record.get("superseded") or []), *(x for x in superseded if int(x["id"]) not in known_sup)]
+    known_stub = {int(x["id"]) for x in record.get("stubs") or () if isinstance(x, dict) and "id" in x}
+    all_stubs = [*(record.get("stubs") or []), *(x for x in stubs if int(x["id"]) not in known_stub)]
     set_meta(
         conn,
         REPAIR_F2_V1_KEY,
-        dumps({**record, "status": "rebuilding", "deleted": all_deleted, "superseded": all_sup}),
+        dumps({**record, "status": "rebuilding", "deleted": all_deleted, "stubs": all_stubs, "superseded": all_sup}),
     )
-    return {"deleted": fake, "tagged": tagged, "superseded": superseded}
+    return {"deleted": fake, "stubs": stubs, "tagged": tagged, "superseded": superseded}
 
 
 def repair_record(conn: sqlite3.Connection) -> dict[str, Any] | None:
@@ -1433,7 +1458,7 @@ def max_lap_id(conn: sqlite3.Connection) -> int:
 
 
 _MOTIVATION_SESSION_COLS = """s.id, s.started_unix, s.ended_unix, s.game, s.track_id, s.track_name, s.track_length_m,
-    s.car_id, s.car_name, s.session_type, s.synthetic, s.source, s.driver_id,
+    s.car_id, s.car_name, s.session_type, s.session_type_raw, s.synthetic, s.source, s.driver_id,
     json_extract(s.info, '$.total_laps') AS total_laps, json_extract(s.info, '$.formula') AS formula,
     json_extract(s.info, '$.car_class') AS car_class, json_extract(s.info, '$.packet_format') AS packet_format"""
 
@@ -1712,7 +1737,9 @@ def driver_ai_pace_points(
     limit: int = 500,
 ) -> list[dict[str, Any]]:
     """One ``AiPacePoint`` per session of the driver's own real driving (never synthetic, never replays) whose AI
-    metrics are filled and whose AI difficulty and track are known: the newest ``limit``, returned oldest first."""
+    metrics are filled and whose AI difficulty and track are known: the newest ``limit``, returned oldest first.
+    ``car_label``: the car in words (``carclass.session_fields``: "F2 · Hitech '25"; never a raw id such as
+    "team_214"), None when nothing readable is known."""
     where = [
         f"s.driver_id=? AND {_DRIVEN} AND s.synthetic=0 AND s.track_id IS NOT NULL",
         "a.status IN ('ok','no_driver_lap') AND a.ai_difficulty IS NOT NULL AND a.ai_ref_ms IS NOT NULL",
@@ -1730,7 +1757,8 @@ def driver_ai_pace_points(
     rows = conn.execute(
         f"""SELECT s.id AS session_id, s.started_unix, s.game, s.track_id, s.track_name, s.car_id, s.car_name,
                   s.session_type, a.car_class, a.weather_class, a.online, a.status, a.ai_difficulty, a.ai_ref_ms,
-                  a.ai_best_ms, a.ai_cars, a.driver_best_ms, a.gap_ms, a.gap_pct, a.field_rank, a.field_size
+                  a.ai_best_ms, a.ai_cars, a.driver_best_ms, a.gap_ms, a.gap_pct, a.field_rank, a.field_size,
+                  s.info AS session_info
            FROM session_ai_pace a JOIN sessions s ON s.id = a.session_id
            WHERE {" AND ".join(where)}
            ORDER BY s.started_unix DESC, s.rowid DESC LIMIT ?""",
@@ -1739,6 +1767,10 @@ def driver_ai_pace_points(
     out: list[dict[str, Any]] = []
     for r in reversed(rows):
         d = dict(r)
+        info = json.loads(d.pop("session_info") or "{}")
+        d["car_label"] = carclass.session_fields(
+            {"game": d["game"], "car_id": d["car_id"], "car_name": d["car_name"], "info": info}
+        )["car_label"]
         d["session_category"] = d.pop("session_type") or "unknown"
         d["online"] = None if d["online"] is None else bool(d["online"])
         out.append(d)

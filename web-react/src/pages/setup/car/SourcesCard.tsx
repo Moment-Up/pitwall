@@ -49,7 +49,7 @@ export function SourcesCard({ rec, catalog }: { rec: RecommendationResponse; cat
             <ListView.Item id={s.id} textValue={`${s.source_name} ${s.author ?? ""}`} className="min-h-14">
               <ListView.ItemContent>
                 <div className="grid min-w-0">
-                  <ListView.Title>
+                  <ListView.Title className="whitespace-normal break-words">
                     {s.source_name}
                     {s.author ? ` · ${s.author}` : ""}
                   </ListView.Title>

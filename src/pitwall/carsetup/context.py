@@ -118,20 +118,22 @@ def guess_car_format(packet_format: object, formula: object, car_id: object) -> 
     if form in FORMULAS_UNSUPPORTED:
         return CarFormatGuess(None, True, f"formula {form}: pitwall has no setups for these cars")
     if cls is not None and cls.family == "f2":
-        return _f2_format(team, form)
+        return _f2_format(team, form, packet_format)
     if cls is not None and cls.family != "f1":
         return CarFormatGuess(None, True, f"formula {form}: pitwall has no setups for these cars")
     gen, certain, why = carclass.f1_generation(packet_format, formula, car_id)
     return CarFormatGuess(gen, certain, why)
 
 
-def _f2_format(team: int | None, formula: str | None) -> CarFormatGuess:
+def _f2_format(team: int | None, formula: str | None, packet_format: object = None) -> CarFormatGuess:
     """F2 cars: format ``f2`` for the 2024 teams, and for the 2025 teams when the formula says F2 (the observed ids
-    209-219 are named only with it); none for the 2026 F2 cars or an F2 car whose team is not known."""
+    209-219 are named only with it); none for the 2026 F2 cars or an F2 car whose team is not known. The reason names
+    the car in words ("Hitech '25 (2025 F2 car)"), never a team id."""
+    name = carclass.f2_team_name(team, packet_format, formula)
     if team in F2_TEAMS_ALWAYS:
-        return CarFormatGuess("f2", True, f"F2 team id {team} (2024 season car)")
+        return CarFormatGuess("f2", True, f"{name} (2024 F2 car)" if name else "a 2024 F2 car")
     if team in F2_TEAMS_WITH_FORMULA and formula == carclass.FORMULA_F2:
-        return CarFormatGuess("f2", True, f"F2 team id {team} with formula F2 (2025 season car)")
+        return CarFormatGuess("f2", True, f"{name} (2025 F2 car)" if name else "a 2025 F2 car")
     if team in TEAMS_F2_2026:
         return CarFormatGuess(None, True, F2_2026_REASON)
     return CarFormatGuess(None, True, F2_UNKNOWN_REASON)

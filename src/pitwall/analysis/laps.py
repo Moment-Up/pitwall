@@ -471,8 +471,10 @@ class LapAssembler:
         self.on_lap(lap)
 
     def flush(self) -> None:
-        """Emit the in-progress lap as incomplete (e.g. session ended mid-lap)."""
-        if self._cur is not None and self._cur.rows:
+        """Emit the in-progress lap as incomplete (e.g. session ended mid-lap). A lap of fewer than 2 samples is
+        dropped: it covers nothing and has no time (real F1 25 one-shot qualifying ends one frame into a "lap 2" that is
+        never driven, which used to be stored and listed as a lap)."""
+        if self._cur is not None and len(self._cur.rows) >= 2:
             self._cur.flags.add(LapFlag.INCOMPLETE)
             self._finalise(self._cur, None)
         self._cur = None

@@ -85,6 +85,7 @@ class SetupRef:
     style: str | None
     input: str | None
     verified: str
+    notes: str | None = None  # the source's own notes (F2: lap time, session, team and season), shown with the credit
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,6 +190,7 @@ def _ref_dict(s: SetupRef) -> dict[str, Any]:
         "style": s.style,
         "input": s.input,
         "verified": s.verified,
+        "notes": s.notes,
     }
 
 
@@ -258,6 +260,7 @@ def ref_for(cat: Catalog, s: SourceSetup) -> SetupRef:
         style=s.style,
         input=s.input,
         verified=s.verified,
+        notes=s.notes,
     )
 
 

@@ -138,6 +138,8 @@ export interface AiPacePoint {
   track_name: string | null;
   car_id: string | null;
   car_name: string | null;
+  /** The car in words ("F2 · Hitech '25"; never a raw id); null when nothing readable is known. Older servers: absent. */
+  car_label?: string | null;
   car_class: string | null;
   session_category: SessionCategory;
   weather_class: WeatherClass | null;

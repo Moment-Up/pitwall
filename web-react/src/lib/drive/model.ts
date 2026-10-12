@@ -15,6 +15,7 @@ import { INTENSITIES, SKILL_LEVELS } from "../drivers";
 import { dedupeComplete, recapFacts, type CompleteThings } from "./complete";
 import { motionOf, type Motion } from "./motion";
 import { aiEndLine } from "../review/aipace";
+import { ONE_SHOT_SUB, isOneShot } from "../review/kpis";
 import { coachPoint, lastLapNumber, simpleWording, topPoint, workOnWentWell, type CoachPoint } from "./coach";
 import { cornerAhead, cornerLabelOf, cornerLayout, focusReasonOf, isFocus, officialNameOf, type CornerView } from "./corner";
 import { callsModeText, cueView, lastCueOutcome, type CueBandView, type CuePause, type LastCueOutcome } from "./cues";
@@ -638,7 +639,13 @@ function endedCard(
     // with fewer than two clean laps there is nothing to gain from: say why (as Review does), not "first → best"
     gained: endedChange(
       gainedChange(counts.firstClean, counts.bestClean, 2, counts.clean),
-      counts.clean >= 2 ? "first clean lap → best" : counts.clean === 1 ? "Needs a second clean lap" : "Needs 2 clean laps",
+      counts.clean >= 2
+        ? "first clean lap → best"
+        : isOneShot(s.session?.session_type) && counts.clean <= 1
+          ? ONE_SHOT_SUB // one timed lap by design: a second clean lap is impossible advice
+          : counts.clean === 1
+            ? "Needs a second clean lap"
+            : "Needs 2 clean laps",
     ),
     toYourBest: !bv.driver
       ? null

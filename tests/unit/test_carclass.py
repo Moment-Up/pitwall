@@ -112,14 +112,35 @@ def test_car_labels_never_show_a_raw_id(
 def test_session_labels() -> None:
     f2 = C.classify("f1_25", "F2", "f1:team:158", 2025)
     f1 = C.classify("f1_25", "F1 Modern", "f1:team:8", 2025)
-    assert C.session_label(f2, "Race") == "Sprint race"
-    assert C.session_label(f2, "Race 2") == "Feature race"
-    assert C.session_label(f2, "One-Shot Qualifying") == "One-Shot Qualifying"
-    assert C.session_label(f1, "Race 2") == "Race 2"  # only F2 renames the races
+    sprint_weekend, feature_only = [15, 16], [9, 16]  # recorded: Melbourne; Sakhir and Jeddah
+    assert C.session_label(f2, "Race", weekend=sprint_weekend) == "Sprint race"  # a "Race 2" follows
+    assert C.session_label(f2, "Race 2", weekend=sprint_weekend) == "Feature race"
+    assert C.session_label(f2, "Race 2", weekend=feature_only) == "Feature race"
+    assert C.session_label(f2, "Race 2") == "Feature race"  # the 60-minute race with feature points
+    # a race-only weekend, or a structure not known (older rows): the game's own name, never a guessed sprint
+    assert C.session_label(f2, "Race", weekend=[15]) == "Race" and C.session_label(f2, "Race") == "Race"
+    # the F1 game's names in sentence case, as Drive writes them
+    assert C.session_label(f2, "One-Shot Qualifying") == "One-shot qualifying"
+    assert C.session_label(f1, "Time Trial") == "Time trial" and C.session_label(f1, "Practice 1") == "Practice 1"
+    assert C.session_label(f1, "Race 2", weekend=sprint_weekend) == "Race 2"  # only F2 renames the races
+    assert C.session_label(None, "Lobby race") == "Lobby race"  # another game's own name: unchanged
     assert C.session_label(None, None, "race") == "Race"  # GT7: no raw name
     assert C.session_label(None, None, "unknown") is None and C.session_label(f2, "Unknown") is None
-    assert C.f2_race_kind(f2, "Race 2") == "feature" and C.f2_race_kind(f2, "Race") == "sprint"
-    assert C.f2_race_kind(f1, "Race") is None
+    assert C.f2_race_kind(f2, "Race 2") == "feature" and C.f2_race_kind(f2, "Race", sprint_weekend) == "sprint"
+    assert C.f2_race_kind(f2, "Race") is None and C.f2_race_kind(f2, "Race", [15]) is None
+    assert C.f2_race_kind(f1, "Race", sprint_weekend) is None
+    assert C.weekend_types([15, 16]) == (15, 16) and C.weekend_types([]) is None and C.weekend_types("x") is None
+
+
+def test_f2_evidence_per_variant() -> None:
+    """Only the recorded F2 variants (UDP format 2025, team ids 158-168 and 209-219) are recorded_validated."""
+    for car, fmt in (("f1:team:158", 2025), ("f1:team:214", 2025), (None, 2025), ("f1:team:214", None)):
+        cls = C.classify("f1_25", "F2", car, fmt)
+        assert cls is not None and cls.evidence == "recorded_validated", (car, fmt)
+    for car, fmt in (("f1:team:490", 2026), ("f1:team:470", 2026), ("f1:team:158", 2026), ("f1:team:494", None)):
+        cls = C.classify("f1_25", "F2", car, fmt)
+        assert cls is not None and cls.evidence == "spec_implemented", (car, fmt)
+    assert C.classify("f1_25", "F2", "f1:team:490", 2026) == C.CarClass("f2", "F2")  # team / format: not identity
 
 
 def test_compound_words() -> None:
@@ -135,7 +156,7 @@ def test_info_and_row_fields_agree() -> None:
         formula="F2",
         session_type=SessionType.RACE,
         session_type_raw="Race",
-        extra={"packet_format": 2025},
+        extra={"packet_format": 2025, "weekend_structure": [15, 16]},
     )
     row = {
         "game": "f1_25",
@@ -143,7 +164,7 @@ def test_info_and_row_fields_agree() -> None:
         "car_name": "Unknown team (id 214)",
         "session_type": "race",
         "session_type_raw": "Race",
-        "info": {"formula": "F2", "packet_format": 2025},
+        "info": {"formula": "F2", "packet_format": 2025, "weekend_structure": [15, 16]},
     }
     assert C.info_fields(info) == C.session_fields(row)
     assert C.session_fields(row)["car_label"] == "F2 · Hitech '25"

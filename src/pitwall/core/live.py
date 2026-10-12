@@ -388,6 +388,7 @@ class LiveState:
             info.extra.get("packet_format"),
             info.session_type_raw,
             info.session_type,
+            tuple(info.extra.get("weekend_structure") or ()),
         )
         if ckey != self._class_key:  # O(1) per session packet; the labels are worked out on a change only
             self._class_key = ckey
