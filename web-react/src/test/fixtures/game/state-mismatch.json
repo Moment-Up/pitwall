@@ -179,7 +179,7 @@
     "status": "not_implemented",
     "evidence": null,
     "short": "Not in Pitwall yet",
-    "reason": "GT7 sends a fuel level, but none of your recordings shows it going down yet, so Pitwall doesn't estimate fuel.",
+    "reason": "GT7 sends a fuel level, but Pitwall hasn't yet seen a recording where it goes down, so it doesn't estimate fuel.",
     "detail": "fuel_litres: 0x44 fuel level, unit conflicting (litres per PDTools, % per GT7Eng): not emitted until a capture settles it; SessionInfo.extra['fuel_fraction'] = level / capacity (row gt7)",
     "note": null,
     "fields": [

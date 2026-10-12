@@ -51,10 +51,10 @@ def strategy_radio_answer(intent: str, sheet: FactSheet) -> str | None:
     if not k:
         return None
     if intent == "rejoin":  # --- health lane: "where will I come out?" ---
-        rj = k.get("rejoin")
+        rj = k.get("rejoin") or k.get("rejoin_unknown")
         if rj is not None and _beginner(sheet) and isinstance(rj.data.get("simple"), str):
             return str(rj.data["simple"])
-        return _say(rj or k.get("rejoin_unknown"))
+        return _say(rj)
     if intent == "strategy":
         if "practice" in k:
             return _say(k["practice"], k.get("tyres"))

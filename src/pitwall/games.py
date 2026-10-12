@@ -258,7 +258,7 @@ FORZA_FUEL_DETAIL = (
     "SessionInfo.extra['fuel_fraction'] (Dash.Fuel 0..1, community docs) -> carhealth.fuel.TankFractionFuel"
 )
 GT7_FUEL_REASON = (
-    "GT7 sends a fuel level, but none of your recordings shows it going down yet, so Pitwall doesn't estimate fuel."
+    "GT7 sends a fuel level, but Pitwall hasn't yet seen a recording where it goes down, so it doesn't estimate fuel."
 )
 # --- end health lane ---
 NOT_IMPLEMENTED: dict[tuple[str, str], str] = {

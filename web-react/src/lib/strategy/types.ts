@@ -119,6 +119,9 @@ export interface RejoinView {
   loss_s?: number | null;
   loss_tier?: Tier | null;
   loss_n?: number | null;
+  /** basis "game_only": why Pitwall has no estimate - "no_loss" (no stop timed yet) or "no_gap" (the player's own gap
+   * unknown this moment, e.g. right after their own stop). Absent from older servers. */
+  reason?: "no_loss" | "no_gap" | string | null;
   // --- end health lane ---
 }
 

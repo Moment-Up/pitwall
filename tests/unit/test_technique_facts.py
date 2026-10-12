@@ -183,7 +183,7 @@ async def test_deterministic_answers_are_grounded_and_corner_aware(
     t3 = names["T3"]  # learned name of design-T3 (lap 3 ran 2 m wide there)
     cases = {
         f"how's my line through {t3}": "2.0 m wider",
-        "am I locking up": "1 lock-up, at",
+        "am I locking up": "1 lock-up this session, at",
         f"I've got understeer at {names['T8']}": "pushed wide",
         "how is the balance": "Something to try after the session",
         "how much wheelspin": "Most wheelspin at",

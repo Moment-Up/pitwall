@@ -1,7 +1,7 @@
 // Settings › Radio & voice, the "Car health calls" card (lane "health", spec 3.13 D5): pure view model. Which car
 // health calls the radio makes, for the whole household (GET / PUT /api/car-health/settings): cold tyres, tyre wear,
-// fuel, and the lock-up and wheelspin notes (off, only at Detailed coaching, or always). Intensity and voice stay per
-// driver (Coaching on this page). Tested in plain node (carhealth-model.test.ts).
+// fuel, and the lock-up and wheelspin notes (off, from Detailed coaching, or from Normal coaching - never at Quiet).
+// Intensity and voice stay per driver (Coaching on this page). Tested in plain node (carhealth-model.test.ts).
 //
 // Unknown stays unknown: until the Mac answers, no switch is drawn as off or on (one row says why instead).
 
@@ -25,18 +25,18 @@ export interface ToggleRow {
 export const TOGGLES: readonly ToggleRow[] = [
   {
     key: "tyre_calls",
-    title: "Tyre temperature calls",
-    hint: "Cold tyres after a pit stop or a safety car (F1). The colours on Drive › Car stay either way.",
+    title: "Cold tyre calls (F1 25)",
+    hint: "New tyres in the pit lane, and the restart after a safety car. The colours on Drive › Car stay either way.",
   },
   {
     key: "wear_calls",
-    title: "Tyre wear calls",
-    hint: "A worn tyre in practice and in Forza. In an F1 race the strategy calls the pit window instead.",
+    title: "Worn tyre call",
+    hint: "At 70 % wear in practice, qualifying and Forza Motorsport. In F1 25 races the pit-window call covers wear.",
   },
   {
     key: "fuel_calls",
-    title: "Fuel calls",
-    hint: "Low fuel in Forza, from how fast the tank level falls. F1 fuel calls come from the race strategy.",
+    title: "Fuel calls (Forza)",
+    hint: "Low fuel, from how fast the tank level falls. F1 25 fuel calls come from race strategy and stay on.",
   },
 ];
 
@@ -44,12 +44,14 @@ export const SLIP_TITLE = "Lock-up and wheelspin notes";
 
 export const SLIP_CHOICES: readonly (SegmentChoice<SlipCallsSetting> & { hint: string })[] = [
   { value: "off", label: "Off", hint: "Never on the radio; Drive › Car still counts them." },
-  { value: "detailed", label: "Detailed radio only", hint: "Only when Coaching is on Detailed." },
-  { value: "normal", label: "Always", hint: "At Normal coaching too." },
+  // the Coaching level they are said from (never at Quiet: "Always" was wrong there, and too wide at 320 px)
+  { value: "detailed", label: "Detailed", hint: "Said only when Coaching is on Detailed; never at Quiet." },
+  { value: "normal", label: "Normal", hint: "Said when Coaching is on Normal or Detailed; never at Quiet." },
 ];
 
-/** Under the card, after the help: when lock-ups and wheelspin count at all (F1 only). */
-export const SLIP_RULE = "Lock-ups count with ABS off, wheelspin with traction control off or medium (F1).";
+/** Under the card, after the help: when lock-ups and wheelspin count at all (F1 25 only). */
+export const SLIP_RULE =
+  "Lock-ups are counted only with ABS off. Wheelspin is said only with traction control off or medium (F1 25).";
 
 export interface CarHealthCardInput {
   /** The settings as the Mac last reported them (undefined: not read yet). */

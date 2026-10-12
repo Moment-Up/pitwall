@@ -163,11 +163,12 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
 9. **Car health** (`pitwall/carhealth/`, worker thread `carhealth`, off the ingest path, nothing persisted): one
    `CarHealthEngine` per session (a few at most, LRU) runs the tyre monitor (the session's temperature model:
    carcass only when the F1 session simulates it; 1 C histograms per lap and per stint; the warm baseline frozen at a
-   pit entry; the cold-tyre rule armed at a pit exit or a safety-car end), brakes and engine against the session's
-   own laps (F1), lock-ups and wheelspin per lap (F1 MotionEx, the technique thresholds), the tank-level fuel
-   estimator (Forza; GT7 switched off) and the attack / defend segment clocks (the learned corners as segments, the
-   cars directly ahead and behind, the last 3 clean laps each; F1 races, per-car buffers dropped at the session's
-   end). It publishes `car_health` and `racecraft` at most once a second (and at a lap line or a call) and its calls
+   pit entry; the cold-tyre rule armed at a tyre change in the box - judged there on the new set's first second -
+   at a pit exit without one, or at a safety-car end), brakes and engine against the session's own laps (F1),
+   lock-ups and wheelspin per lap (F1 MotionEx, the technique thresholds), the tank-level fuel estimator (Forza; GT7
+   switched off) and the attack / defend grid clocks (every car's crossing time every 25 m of the lap from the race
+   start, the last 5 laps; any learned corner model is derived from them, the cars directly ahead and behind, the
+   last 3 clean laps each; F1 races, per-car buffers dropped at the session's end). It publishes `car_health` and `racecraft` at most once a second (and at a lap line or a call) and its calls
    (`health_call`) go through the radio scheduler with the existing kinds. Routes: `/api/car-health/*`,
    `/api/racecraft/live` (`/api/health` is the service's own health check).
 

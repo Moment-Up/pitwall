@@ -11,7 +11,8 @@
 //    window: no game publishes its tyre windows, and F1 25's real surface temperatures sit under 75 °C on 93 % of
 //    wheel-laps. Colour is never the only signal (P4): a cold or hot wheel also says so in a word.
 //  * In a surface-only F1 session the game sends a constant inner temperature: only the surface is ever shown then.
-//  * Unknown is "-" (P5), never 0. ABS on means lock-ups are not counted ("ABS on"), never "0 lock-ups".
+//  * Unknown is "-" (P5), never 0. ABS on means lock-ups are not counted ("ABS on"), never "0 lock-ups" or "no
+//    lock-ups"; an ABS setting not known yet is said as such, never as "ABS on".
 //  * Rejoin and racecraft numbers are estimates and say so: "≈", a range, and the tier suffix of the pit loss.
 //  * Racecraft names no one: positions, car indexes and corners only.
 
@@ -201,23 +202,27 @@ export function tempsLine(
 
 // ------------------------------------------------------------------------------------- lock-ups and wheelspin
 
-function countText(n: number | null | undefined, one: string, many: string, none: string): string {
-  if (!finite(n)) return `${many} ${UNKNOWN}`;
+function countText(n: number | null | undefined, one: string, many: string, none: string, unknown = many): string {
+  if (!finite(n)) return `${unknown} ${UNKNOWN}`;
   if (n <= 0) return none;
   return `${n} ${n === 1 ? one : many}`;
 }
 
 /**
- * The last completed lap's lock-ups and wheelspin (F1 MotionEx, the whole lap): "Last lap: 3 lock-ups · 4 wheelspin",
- * "Last lap: no lock-ups (ABS on) · 1 wheelspin". With ABS on lock-ups are not counted, so they are never "0". Null
- * when the game sends no slip (the line is left out).
+ * The last completed lap's lock-ups and wheelspin (F1 MotionEx, the whole lap): "Last lap: 3 lock-ups · 4 wheelspins",
+ * "Last lap: ABS on · 1 wheelspin". With ABS on lock-ups are not counted, so the line never claims a count ("0" or
+ * "no lock-ups"); with the ABS setting not known yet it says that. Null when the game sends no slip (left out).
  */
 export function slipLine(slip: SlipHealth | null): string | null {
   if (!slip) return null;
   const l = slip.last_lap;
   if (!l) return `Last lap: ${UNKNOWN}`;
-  const lock = slip.lockups_applicable ? countText(l.lockups, "lock-up", "lock-ups", "no lock-ups") : "no lock-ups (ABS on)";
-  const spin = countText(l.wheelspin, "wheelspin", "wheelspin", "no wheelspin");
+  const lock = slip.lockups_applicable
+    ? countText(l.lockups, "lock-up", "lock-ups", "no lock-ups")
+    : slip.abs === true
+      ? "ABS on"
+      : "ABS setting not known";
+  const spin = countText(l.wheelspin, "wheelspin", "wheelspins", "no wheelspin", "wheelspin");
   return `Last lap: ${lock} · ${spin}`;
 }
 
@@ -281,6 +286,8 @@ export interface RejoinLine {
   /** "Box now ≈ P7 (P6–8)", "Box now: game says P8", "If you stop now: about 7th". */
   text: string;
   aria: string;
+  /** Only the game's own figure (Pitwall has no estimate this moment). */
+  gameOnly: boolean;
 }
 
 function pos(n: number | null | undefined): n is number {
@@ -296,9 +303,12 @@ export function rejoinLine(r: RejoinView | null | undefined, simple = false): Re
   const game = pos(r.game_position) ? r.game_position : null;
   if (r.basis === "game_only" || !pos(r.position)) {
     if (game == null) return null;
+    // why Pitwall has none (rejoin.py reason): no stop timed yet, or the player's own gap unknown this moment
+    const why = r.reason === "no_gap" ? "your own gap isn't known this moment" : "no pit stop timed in this race yet";
     return {
       text: simple ? `If you stop now: game says ${ordinal(game)}` : `Box now: game says P${game}`,
-      aria: `If you box now: no pit stop measured in this race yet, the game's own estimate is P${game}`,
+      aria: `If you box now: ${why}, the game's own estimate is P${game}`,
+      gameOnly: true,
     };
   }
   const p = r.position;
@@ -323,7 +333,7 @@ export function rejoinLine(r: RejoinView | null | undefined, simple = false): Re
   ]
     .filter(Boolean)
     .join("; ");
-  return { text, aria };
+  return { text, aria, gameOnly: false };
 }
 
 // ---------------------------------------------------------------------------------------------- attack / defend

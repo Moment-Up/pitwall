@@ -82,7 +82,7 @@ def test_gt7_is_unverified_with_no_numbers() -> None:
     fuel = eng.view()["fuel"]
     assert fuel["status"] == "unverified" and fuel["tier"] == "unverified"
     assert fuel["fraction"] is None and fuel["per_lap"] is None and fuel["laps_of_fuel"] is None
-    assert "none of your recordings" in fuel["reason"]
+    assert "hasn't yet seen a recording" in fuel["reason"]
     assert not T.GT7_FUEL_ENABLED
 
 

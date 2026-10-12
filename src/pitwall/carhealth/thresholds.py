@@ -30,6 +30,12 @@ WINDOW_SPAN_FRAC = 0.8  # the window must span this much of WINDOW_S before it i
 # tyres leave the pits far under the warm baseline (carcass -55 to -59 C on the F2 stops), so a short window cannot
 # mistake a straight for cold tyres there, and the call is worth most before the first corners
 ARM_FIRST_SPAN_S = {"carcass": 3.0, "surface": 36.0}
+# A tyre change in the pit lane (the tyre age drops or the compound changes) is judged at once, in the box: the new
+# set's raw temperatures over PIT_JUDGE_S right after the change, before the pit lane cools them. Real PS5 2026-10-11:
+# F2 Jeddah / Bahrain (no blankets) fitted sets at 28-30 C, inside and surface, against warm laps of 88 C (carcass) and
+# ~70 C (surface); F1 Imola (blankets, surface model) fitted them at 69-70 C against 66-68 C, then the 80 km/h pit lane
+# cooled the surface to 53 C - so the pit lane after the box is never judged.
+PIT_JUDGE_S = 1.0  # [R]
 WINDOW_SAMPLE_S = 0.1  # the rolling window keeps at most 10 samples a second
 EVAL_EVERY_S = 1.0  # the cold-tyre state is judged once a second
 ARM_MAX_LAPS = 3  # [R] the cold-tyre rule stays armed for this many laps after the pit exit / restart
@@ -56,7 +62,9 @@ NOT_USED_DROP = 0.001  # [H] two complete laps using less than this in total: fu
 FUEL_LAPS_USED = 5  # median of the last <= 5 usable laps ...
 FUEL_MIN_LAPS = 2  # ... at least 2
 FUEL_LOW_LAPS = 3.0  # [H]
-FUEL_CRITICAL_LAPS = 1.2  # [H]
+# [H] judged at the line: under 2 laps there is only this lap left to reach the pit entry (1.2 left the last call to the
+# line from which the car could no longer reach the pits)
+FUEL_CRITICAL_LAPS = 2.0
 FUEL_LOW_REPEAT_LAPS = 3  # [H] fuel_low again only after 3 laps, or ...
 FUEL_LOW_WORSEN_LAPS = 0.5  # [H] ... 0.5 lap of fuel worse
 FUEL_CRITICAL_REPEAT_LAPS = 2  # [H]
@@ -71,8 +79,12 @@ SEG_MIN_S = 0.10  # [R] a corner must be worth this much a lap to be named (Aust
 MARGIN_S = 0.05  # [R] ... and this much more than the next one (Imola's defend picks: 0.00-0.14 s, "spread")
 RACECRAFT_LAPS = 3  # [R] the median of each car's last 3 usable laps ...
 RACECRAFT_MIN_LAPS = 2  # ... at least 2
-RACECRAFT_KEEP_LAPS = 5  # laps kept per car (boundary times only, never raw samples)
+RACECRAFT_KEEP_LAPS = 5  # laps kept per car (grid crossing times only, never raw samples)
+RACECRAFT_GRID_M = 25.0  # a crossing time every 25 m of the lap: any corner model is derived from them
+RACECRAFT_HOLD_EVALS = 1  # [H] a named corner survives this many contrary evaluations in a row (no flicker)
 LINE_WINDOW_M = 300.0  # a lap-number change with the car this close to the line is a line crossing
+CLOSE_GAP_S = 1.5  # [H] the car is close enough for a move ("expect a look there")
+LOOK_MAX_QUICKER_S = 0.5  # [H] ... unless the player is this much a lap quicker than the car behind
 
 # ---------------------------------------------------------------------------------------------- calls
 MAX_TEXT = 120
@@ -109,6 +121,8 @@ THRESHOLDS: tuple[dict[str, Any], ...] = (
     _t("SLIP_CALL_LOCKUPS", SLIP_CALL_LOCKUPS, "per lap", True, "lock-ups in a lap for a note (ABS off)", _F2),
     _t("SLIP_CALL_SPINS", SLIP_CALL_SPINS, "per lap", True, "wheelspins in a lap for a note (TC off/medium)", "-"),
     _t("FUEL_LOW_LAPS", FUEL_LOW_LAPS, "laps", True, "laps of fuel left: low", "-"),
-    _t("FUEL_CRITICAL_LAPS", FUEL_CRITICAL_LAPS, "laps", True, "laps of fuel left: critical", "-"),
+    _t("FUEL_CRITICAL_LAPS", FUEL_CRITICAL_LAPS, "laps", True, "laps of fuel left at the line: critical", "-"),
+    _t("PIT_JUDGE_S", PIT_JUDGE_S, "s", False, "new tyres judged in the box over this long", _F2 + ", Imola PS5"),
+    _t("CLOSE_GAP_S", CLOSE_GAP_S, "s", True, "a car this close may try a move", "-"),
     _t("GT7_FUEL_ENABLED", GT7_FUEL_ENABLED, None, False, "GT7 fuel estimate switched on", "4 GT7 captures: 100/100"),
 )

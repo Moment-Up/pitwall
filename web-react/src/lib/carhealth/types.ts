@@ -185,6 +185,11 @@ export interface RacecraftSide {
   margin_s: number | null;
   /** Σ of the segment deltas (s a lap): negative = the player is quicker over the lap. */
   lap_delta_s: number | null;
+  /** The gap to that car is under the backend's CLOSE_GAP_S (1.5 s); null when the game gives no gap. Absent from
+   * older servers. */
+  close?: boolean | null;
+  /** Why there is no verdict ("needs two clean laps of you", "... of that car", "leading: ..."). */
+  reason?: string | null;
 }
 
 /** `snapshot["racecraft"]` and GET /api/racecraft/live (carhealth/racecraft.py, version 1). */

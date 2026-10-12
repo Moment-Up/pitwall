@@ -58,6 +58,7 @@ describe("kindChip", () => {
     ["cue", "CUE", "danger"],
     ["alert", "ALERT", "warning"],
     ["strategy", "STRATEGY", "ref"],
+    ["car", "CAR", "ref"],
     ["goal", "GOAL", "success"],
     ["validation", "TEST", "default"],
     ["transcript", "YOU", "default"],

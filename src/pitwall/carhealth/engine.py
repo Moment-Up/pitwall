@@ -25,7 +25,7 @@ from pitwall.carhealth.racecraft import Racecraft, Segments
 from pitwall.carhealth.settings import DEFAULTS, HealthSettings
 from pitwall.carhealth.slip import SlipCounter
 from pitwall.carhealth.temps import BrakeEngineMonitor
-from pitwall.carhealth.tyres import MODEL_CARCASS, MODEL_SURFACE, TyreTempMonitor
+from pitwall.carhealth.tyres import MODEL_CARCASS, MODEL_SURFACE, TyreEvent, TyreTempMonitor
 from pitwall.coach.cues import cue_labels
 from pitwall.model.telemetry import (
     CarFrame,
@@ -69,6 +69,7 @@ class CarHealthEngine:
         self.planner = HealthCallPlanner(clock, settings)
         self.recent_calls: deque[HealthCall] = deque(maxlen=CALLS_SHOWN)
         self._pending: list[HealthCall] = []
+        self._tyre_wait: list[TyreEvent] = []  # cold-tyre events that cannot be said yet (a red flag, lap unknown)
         self._lap: int | None = None
         self._t: float | None = None
         self._sc: str | None = None
@@ -154,11 +155,12 @@ class CarHealthEngine:
         if self.game in FUEL_GAMES and self.fuel is None:
             self.fuel = TankFractionFuel(enabled=self.game is not Game.GT7 or T.GT7_FUEL_ENABLED)
         sc = info.safety_car_status
-        if self.f1 and self._sc in NEUTRAL and sc == "none":
-            self.tyres.on_safety_car_end()
+        if self.f1:
+            self.tyres.set_neutral(sc in NEUTRAL)
+            if self._sc in NEUTRAL and sc == "none":
+                self.tyres.on_safety_car_end()
         self._sc = sc
-        if info.track_length_m:
-            self.racecraft.line_length_m = info.track_length_m
+        self.racecraft.set_length(info.track_length_m)
         frac = info.extra.get("fuel_fraction")
         if self.fuel is not None and isinstance(frac, int | float) and not isinstance(frac, bool):
             f = self.frame
@@ -223,8 +225,23 @@ class CarHealthEngine:
             if self._lap is not None and lap == self._lap + 1:
                 self._line(self._lap, lap)
             self._lap = lap
-        for ev in self.tyres.take_events():
-            self._emit(self.planner.tyres(self._ctx(), ev))
+        self._tyre_events(self.tyres.take_events())
+
+    def _tyre_events(self, new: list[TyreEvent]) -> None:
+        """The cold-tyre events, each said once when allowed: one that must wait (a red flag; the all-clear while still
+        in the pit lane) is kept, an all-clear drops a cold call still waiting for the same arm (the news is stale)."""
+        if not new and not self._tyre_wait:
+            return
+        events = [*self._tyre_wait, *new]
+        warm_arms = {ev.arm for ev in events if ev.topic == "tyres_warm"}
+        events = [ev for ev in events if not (ev.topic == "tyres_cold" and ev.arm in warm_arms)]
+        self._tyre_wait = []
+        ctx = self._ctx()
+        for ev in events:
+            if self.planner.tyre_must_wait(ctx, ev):
+                self._tyre_wait.append(ev)
+            else:
+                self._emit(self.planner.tyres(ctx, ev))
 
     def _line(self, finished: int, new: int) -> None:
         self.lines += 1

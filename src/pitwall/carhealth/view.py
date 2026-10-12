@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any
 from pitwall import games
 from pitwall.carhealth import thresholds as T
 from pitwall.carhealth.fuel import STATUS_NOT_SENT
-from pitwall.carhealth.racecraft import REASON_NOT_RACE
+from pitwall.carhealth.racecraft import REASON_ENDED, REASON_NOT_F1, REASON_NOT_RACE
 from pitwall.carhealth.tyres import MODEL_SURFACE
 from pitwall.model.telemetry import Game
 
@@ -136,6 +136,14 @@ def _slip(e: CarHealthEngine) -> dict[str, Any]:
         )
         return {"available": False, "reason": reason}
     applicable = s.abs_on is False
+    # abs_on is set from racing frames only: unknown in the garage and the pit lane before the first one
+    why = (
+        None
+        if applicable
+        else "ABS setting not known yet: lock-ups are not counted"
+        if s.abs_on is None
+        else "ABS is on: lock-ups are not counted"
+    )
     last = s.last_lap
     return {
         "available": True,
@@ -154,7 +162,7 @@ def _slip(e: CarHealthEngine) -> dict[str, Any]:
         },
         "current": s.current(),
         "session": {"laps": s.session_laps, "lockups": s.session_lockups, "wheelspin": s.session_wheelspin},
-        "reason": None if applicable else "ABS is on: lock-ups are not counted",
+        "reason": why,
     }
 
 
@@ -209,7 +217,7 @@ def build_view(e: CarHealthEngine, *, thresholds: bool = False) -> dict[str, Any
 
 def build_racecraft_view(e: CarHealthEngine) -> dict[str, Any]:
     if not (e.f1 and e.race) or e.ended:
-        reason = "the session ended" if e.ended else REASON_NOT_RACE
+        reason = REASON_ENDED if e.ended else REASON_NOT_RACE if e.f1 else REASON_NOT_F1
         return off_racecraft(e.session_id, reason)
     rc = e.racecraft.compute()
     return {

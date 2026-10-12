@@ -183,13 +183,27 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
             re.I,
         ),
     ),
+    # "how's the car?" only as the whole question: "how's the car behind?" stays gaps, "how's the car's balance?"
+    # balance, "how is the car through turn 3?" the corner, "how are my brakes in turn 1?" braking
     (
         "car_health",
         re.compile(
-            r"\b(?:brake (?:temp\w*|heat)|brakes? (?:are |is )?(?:hot|cold|overheat\w*|cooking|glowing)|"
-            r"how(?:['\u2019]s| is| are) (?:the |my )(?:brakes|engine|car)\b(?!\s+handl)|"
-            r"engine (?:temp\w*|heat|hot|overheat\w*)|is (?:the |my )?engine (?:ok|okay|hot|overheating)|car health|"
-            r"overheat\w*)\b",
+            r"\b(?:brake (?:temp\w*|heat)|brakes? (?:are |is )?(?:too |very |really |getting )?"
+            r"(?:hot|cold|overheat\w*|cooking|glowing)|how (?:hot|cold) (?:are|is) (?:the |my )?brakes?|"
+            r"(?:are|is) (?:the |my )?brakes? (?:ok|okay|alright|all right|fine|good)\s*[?.!]*\s*$|"
+            r"how(?:['\u2019]s| is| are) (?:the |my )(?:brakes|engine|car)"
+            r"(?:\s+(?:doing|holding up|looking|feeling))?\s*[?.!]*\s*$|"
+            r"is (?:the |my )?car (?:ok|okay|alright|all right|fine|good|healthy)\s*[?.!]*\s*$|"
+            r"engine (?:temp\w*|heat|hot|overheat\w*)|is (?:the |my )?engine (?:ok|okay|alright|fine|hot|overheating)|"
+            r"car health)",
+            re.I,
+        ),
+    ),
+    # "is anything overheating?", never about another car ("is the car ahead overheating?" stays gaps)
+    (
+        "car_health",
+        re.compile(
+            r"^(?!.*\b(?:ahead|behind|in front|front of|him|her|them|they|he|she|his|their|other)\b).*\boverheat\w*",
             re.I,
         ),
     ),
@@ -208,22 +222,31 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
     # --- health lane: attack / defend corners (before gaps: "where's the car behind quicker than me?"); "is the car
     # behind catching me?" and "what should I do against the car behind?" stay gaps
+    # Defend: the car behind (or "me") is the one attacking - "the car behind is attacking me", "can the car behind
+    # overtake me?", "am I under attack?". Attack only with "I" / "we" or the car ahead as the subject, never a corner
+    # ("how should I attack turn 3?" stays the corner) or ERS ("overtake mode").
     (
         "defend",
         re.compile(
-            r"\b(?:defend\w*|hold (?:him|her|them|it) off|"
+            r"\b(?:defend\w*|hold (?:him|her|them|it) off|under attack|(?:being|getting) (?:attacked|overtaken|passed)|"
             r"(?:where|which corner)\b[^.?!]*\bcar behind\b[^.?!]*"
             r"\b(?:faster|quicker|gain\w*|attack|pass|overtake|try)|"
-            r"where (?:will|could|would|is) (?:the )?car behind\b[^.?!]*\b(?:attack|pass|overtake|try|make a move))\b",
+            r"where (?:will|could|would|is) (?:the )?car behind\b[^.?!]*\b(?:attack|pass|overtake|try|make a move)|"
+            r"car behind\b[^.?!]*\b(?:attack\w*|overtak\w*|pass(?:ing)?|get (?:past|by)|make a move)|"
+            r"(?:attack\w*|overtak\w*|pass(?:ing)?|get (?:past|by))\s+me)\b",
             re.I,
         ),
     ),
     (
         "attack",
         re.compile(
-            r"\b(?:attack\w*|overtak\w*|make a (?:move|pass)|"
+            r"\b(?:make a (?:move|pass)|"
+            r"(?:i|we)\b[^.?!]*\b(?:attack|overtake|pass|get (?:past|by))\b"
+            r"(?!\s+(?:mode\b|(?:the |this |that )?"
+            r"(?:kerbs?|corners?|apex\w*|chicane|hairpin|entry|exit|turn\b|t\s?\d)))|"
             r"(?:where|which corner)\b[^.?!]*\b(?:pass|get past|faster than|quicker than|gain\w* on)\b[^.?!]*"
-            r"\b(?:car (?:ahead|in front)|him|her|them))\b",
+            r"\b(?:car (?:ahead|in front)|him|her|them)\b|"
+            r"(?:attack\w*|overtak\w*|pass|get (?:past|by))\b[^.?!]*\bcar (?:ahead|in front)\b)",
             re.I,
         ),
     ),
@@ -706,9 +729,20 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *,
 
         if n == "car_health":
             lead = kind("health", "tyre_temps")
-            rest = (kind("health", "brakes"), kind("health", "engine"))
-            if lead is not None or any(rest):
-                return say(lead, *rest)
+            brakes, engine = kind("health", "brakes"), kind("health", "engine")
+            if intent.topic in ("brakes", "engine"):  # about that part only, never the tyres in its place
+                from pitwall.carhealth.phrasing import NO_BRAKE_LAP_YET, NO_ENGINE_YET
+
+                part = brakes if intent.topic == "brakes" else engine
+                if part is not None:
+                    return say(part)
+                if game is not None:
+                    return say(game)
+                if intent.topic == "brakes":
+                    return NO_BRAKE_LAP_YET if engine is not None else HEALTH_NONE[n]
+                return NO_ENGINE_YET
+            if lead is not None or brakes is not None or engine is not None:
+                return say(lead, brakes, engine)
         elif n == "rejoin":
             rj = kind("strategy", "rejoin", "rejoin_unknown")
             if rj is not None:
@@ -833,6 +867,11 @@ _SUBTOPICS: dict[str, tuple[tuple[str, re.Pattern[str]], ...]] = {
     "balance": (
         ("oversteer", re.compile(r"\b(?:over-?steer\w*|loose|snap\w*|rear\b.*\bout)\b", re.I | re.S)),
         ("understeer", re.compile(r"\b(?:under-?steer\w*|push\w* wide|(?:won't|doesn't) turn)\b", re.I)),
+    ),
+    # --- health lane: a brake or engine question is answered about that part, never with the tyres ---
+    "car_health": (
+        ("brakes", re.compile(r"\bbrak\w*", re.I)),
+        ("engine", re.compile(r"\bengine\b", re.I)),
     ),
 }
 # technique sub-topics answered from the corner notes: the note metrics they cover, and how they are said

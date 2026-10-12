@@ -15,6 +15,17 @@ from typing import TYPE_CHECKING, Any
 
 from pitwall.carhealth import thresholds as T
 from pitwall.carhealth.calls import WHEEL_WORDS, count_word
+from pitwall.carhealth.racecraft import (
+    REASON_ENDED,
+    REASON_LAST,
+    REASON_LEADING,
+    REASON_MY_LAPS,
+    REASON_NO_MODEL,
+    REASON_NO_TIMING,
+    REASON_NOT_F1,
+    REASON_NOT_RACE,
+    REASON_THEIR_LAPS,
+)
 
 if TYPE_CHECKING:
     from pitwall.ai.facts import FactSheet
@@ -33,6 +44,18 @@ def _n(v: float | None, nd: int = 0) -> str:
 
 def _num(v: Any) -> float | None:
     return float(v) if isinstance(v, int | float) and not isinstance(v, bool) else None
+
+
+def tenths(v: float) -> str:
+    """A pace difference as an engineer says it: "a tenth", "four tenths", "1.2 seconds" (a TTS reads "0.4" as "zero
+    point four"). Words, so the grounding check has no number to trace below a second."""
+    r = round(abs(v), 1)
+    if r < 0.1:
+        return "under a tenth"
+    if r < 1.0:
+        n = round(r * 10)
+        return "a tenth" if n == 1 else f"{count_word(n)} tenths"
+    return "a second" if r == 1.0 else f"{_n(r, 1)} seconds"
 
 
 def add_car_health_facts(fs: FactSheet, live: Mapping[str, Any] | None) -> set[str]:
@@ -95,6 +118,7 @@ def _tyres(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
     state = t.get("state")
     shown = index if index is not None else sum(v for v in temps if v is not None) / 4
     data["shown_c"] = round(shown)
+    in_range = f"in their normal range: {where} about {_n(shown)}"
     if state == "cold" and base is not None:
         since = t.get("since") or {}
         why = "after the pit stop" if since.get("reason") == "pit_exit" else "after the safety car"
@@ -107,12 +131,26 @@ def _tyres(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
         data["hot_over_c"] = round(over)
         say = f"{WHEEL_WORDS[k].capitalize()} is about {_n(over)} degrees above its normal."
         simple = f"Your {WHEEL_WORDS[k]} tyre is hotter than usual."
-    elif base is not None:
+    elif base is not None and state == "ok":
         say = f"Tyres are in their normal range for this session, {where} about {_n(shown)} degrees."
         simple = "Your tyres are at their normal temperature."
+    elif base is not None:  # new tyres not judged yet (between the cold and warm thresholds): no "normal" claim
+        say = f"Tyres: {where} about {_n(shown)} degrees; your warm laps run about {_n(base)}."
+        simple = "Your tyres are still warming up."
     else:
         say = f"Tyres: {where} about {_n(shown)} degrees. I need a few more laps to know your normal."
-        simple = f"Your tyres are about {_n(shown)} degrees."
+        simple = "I can't tell yet: give me a lap or two."
+    # "are my tyres cold / hot?": a yes or a no first (``carhealth.phrasing``), only against a known normal
+    if base is not None:
+        if state == "cold":
+            data["yes_cold"], data["yes_cold_simple"] = f"Yes. {say}", simple
+            data["no_hot"], data["no_hot_simple"] = f"No, they're cold: {where} about {_n(shown)}.", simple
+        elif hot:
+            data["yes_hot"], data["yes_hot_simple"] = f"Yes. {say}", simple
+            data["no_cold"], data["no_cold_simple"] = f"No. {say}", simple
+        elif state == "ok":
+            data["no_cold"] = data["no_hot"] = f"No, they're {in_range}."
+            data["no_cold_simple"] = data["no_hot_simple"] = "No, your tyres are at their normal temperature."
     data["simple"] = simple
     fs.add("health", text + ".", data, say=say)
     added.add("tyre_temps")
@@ -144,12 +182,15 @@ def _brakes(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
     data["peak_said_c"] = round(peak, -1)
     if word == "normal":
         say = f"Brakes peaked about {about} degrees last lap, normal for this session."
+        simple = "Your brakes are fine."
     elif word in ("hotter", "cooler"):
         say = f"Brakes peaked about {about} degrees last lap, {word} than usual this session."
+        simple = f"Your brakes are {word} than usual."
     else:
         say = f"Brakes peaked about {about} degrees last lap. I need another lap to know your normal."
+        simple = "I need another lap to check your brakes."
     text += "; no fixed brake window (the game publishes none)"
-    data["simple"] = say
+    data["simple"] = simple
     fs.add("health", text + ".", data, say=say)
     added.add("brakes")
 
@@ -171,14 +212,15 @@ def _engine(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
     data = {"src": SRC, "kind": "engine", "engine_c": shown, "baseline_c": base, "word": word}
     if word == "steady":
         say = f"Engine {_n(shown)} degrees, steady."
-    elif word == "hotter":
-        say = f"Engine {_n(shown)} degrees, running hotter than earlier."
-    elif word == "cooler":
-        say = f"Engine {_n(shown)} degrees, running cooler than earlier."
+        simple = "The engine's fine."
+    elif word in ("hotter", "cooler"):
+        say = f"Engine {_n(shown)} degrees, running {word} than earlier."
+        simple = f"The engine's running {word} than earlier."
     else:
         say = f"Engine {_n(shown)} degrees."
+        simple = "I need another lap to check the engine."
     text += "; no fixed engine limit (the game publishes none)"
-    data["simple"] = say
+    data["simple"] = simple
     fs.add("health", text + ".", data, say=say)
     added.add("engine")
 
@@ -192,6 +234,7 @@ def _slip(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
     if not isinstance(last, Mapping):
         return
     applicable = bool(s.get("lockups_applicable"))
+    abs_known = s.get("abs") is not None
     lock, spin = int(last.get("lockups") or 0), int(last.get("wheelspin") or 0)
     corners = [c for c in last.get("corners") or [] if isinstance(c, Mapping)]
     top_lock = max((c for c in corners if c.get("lockups")), key=lambda c: c["lockups"], default=None)
@@ -202,8 +245,10 @@ def _slip(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
         text = f"Last lap (lap {last.get('lap')}): {lock} lock-up(s) (ABS off)"
         if top_lock is not None:
             text += f", {top_lock['lockups']} at {top_lock['text']}"
-    else:
+    elif abs_known:
         text = f"Last lap (lap {last.get('lap')}): lock-ups not counted (ABS on)"
+    else:
+        text = f"Last lap (lap {last.get('lap')}): lock-ups not counted (the ABS setting is not known yet)"
     text += f"; wheelspin {spin} time(s) ({_n(_num(last.get('wheelspin_s')), 1)} s)"
     if top_spin is not None:
         text += f", most at {top_spin['text']}"
@@ -226,6 +271,12 @@ def _slip(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
     parts.append(f"wheelspin {count_word(spin)} time{'s' if spin != 1 else ''}" if spin else "no wheelspin")
     say = "; ".join(parts) + "."
     say = say[0].upper() + say[1:]
+    if applicable and lock:
+        simple = f"The wheels locked {count_word(lock)} time{'s' if lock != 1 else ''} last lap."
+    elif spin:
+        simple = f"The rear wheels spun {count_word(spin)} time{'s' if spin != 1 else ''} last lap."
+    else:
+        simple = "No lock-ups or wheelspin last lap." if applicable else "No wheelspin last lap."
     data = {
         "src": SRC,
         "kind": "slip",
@@ -235,7 +286,7 @@ def _slip(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
         "session_lockups": sess.get("lockups"),
         "session_wheelspin": sess.get("wheelspin"),
         "session_laps": sess.get("laps"),
-        "simple": say,
+        "simple": simple,
     }
     fs.add("health", text + ".", data, say=say)
     added.add("slip")
@@ -296,11 +347,19 @@ def _fuel(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
 
 # ---------------------------------------------------------------------------------------------------- racecraft
 _UNKNOWN_SAY = {
-    "needs two clean laps of you and that car": "I need two clean laps of you and that car to compare.",
-    "leading: there's no car ahead": "You're leading: there's no car ahead.",
-    "last: there's no car behind": "There's no car behind you.",
-    "corners not learned yet": "Corners aren't learned yet: a couple of clean laps first.",
+    REASON_MY_LAPS: "I need two clean laps from you first.",
+    REASON_THEIR_LAPS: "I need two clean laps of that car first.",
+    REASON_LEADING: "You're leading: there's no car ahead.",
+    REASON_LAST: "There's no car behind you.",
+    REASON_NO_MODEL: "Corners aren't learned yet: a couple of clean laps first.",
+    REASON_NO_TIMING: "I'm waiting for the race timing.",
 }
+_OFF_SAY = {
+    REASON_ENDED: "The race is over.",
+    REASON_NOT_RACE: "Attack and defend work in races only.",
+    REASON_NOT_F1: "Attack and defend need the other cars' positions, which only F1 25 sends.",
+}
+LEVEL_S = 0.1  # a pace difference under this a lap is "level"
 
 
 def _racecraft(fs: FactSheet, rc: Mapping[str, Any], added: set[str]) -> None:
@@ -310,7 +369,7 @@ def _racecraft(fs: FactSheet, rc: Mapping[str, Any], added: set[str]) -> None:
             "racecraft",
             f"Attack/defend not available: {reason}.",
             {"src": SRC, "kind": "racecraft_unknown", "side": None},
-            say="Attack and defend need an F1 race with the other cars' positions.",
+            say=_OFF_SAY.get(reason, "Attack and defend aren't available right now."),
         )
         added.add("racecraft_unknown")
         return
@@ -328,6 +387,84 @@ def _racecraft(fs: FactSheet, rc: Mapping[str, Any], added: set[str]) -> None:
         s = rc.get(side)
         if isinstance(s, Mapping):
             _side(fs, side, s, added)
+
+
+def _ahead_words(v: str, corner: str | None, d: float | None, pace: float | None) -> tuple[str, str]:
+    """(say, simple) against the car ahead; ``pace`` = the lap delta, positive: the car ahead is quicker over a lap."""
+    if v == "clear" and d is not None:
+        if pace is not None and pace >= LEVEL_S:
+            return (
+                f"You're quickest on the car ahead at {corner}, {tenths(d)} a lap, but it's {tenths(pace)} a lap "
+                "quicker overall.",
+                f"The car ahead is quicker overall, but you're quickest at {corner}.",
+            )
+        return (
+            f"You're quickest on the car ahead at {corner}, about {tenths(d)} a lap. That's your best chance.",
+            f"You catch the car ahead most at {corner}.",
+        )
+    if pace is None:
+        return (
+            "You're not clearly quicker than the car ahead anywhere right now.",
+            "Nowhere stands out against the car ahead yet.",
+        )
+    if pace <= -LEVEL_S:
+        where = "but no one corner stands out" if v == "spread" else "but not clearly quicker in any one corner"
+        return (
+            f"You're {tenths(pace)} a lap quicker than the car ahead, {where}.",
+            "You're quicker than the car ahead, but not in one place.",
+        )
+    if pace >= LEVEL_S:
+        if v == "spread":
+            return (
+                f"No one corner stands out, and the car ahead is {tenths(pace)} a lap quicker overall.",
+                "The car ahead is a bit quicker than you overall.",
+            )
+        return (
+            f"The car ahead is {tenths(pace)} a lap quicker: you're not clearly quicker anywhere.",
+            "The car ahead is quicker than you right now.",
+        )
+    return (
+        "You're level on pace with the car ahead; no one corner stands out.",
+        "You're about as quick as the car ahead.",
+    )
+
+
+def _behind_words(
+    v: str, corner: str | None, d: float | None, pace: float | None, close: bool | None
+) -> tuple[str, str]:
+    """(say, simple) about the car behind; ``pace`` = the lap delta, positive: the car behind is quicker over a lap.
+    "Expect a look there" only when it is close and not much slower over the lap."""
+    if v == "clear" and d is not None:
+        say = f"The car behind is quickest through {corner}, about {tenths(d)} a lap."
+        if close is True and (pace is None or pace >= -T.LOOK_MAX_QUICKER_S):
+            return (
+                f"{say} Expect a look there.",
+                f"The car behind catches you most at {corner}. Watch for a move there.",
+            )
+        if pace is not None and pace <= -LEVEL_S:
+            return (
+                f"{say[:-1]}, but you're {tenths(pace)} a lap quicker overall.",
+                f"The car behind is quickest at {corner}, but you're quicker overall.",
+            )
+        return say, f"The car behind catches you most at {corner}."
+    if pace is None:
+        return "The car behind isn't clearly quicker than you anywhere.", "The car behind isn't clearly quicker."
+    if pace >= LEVEL_S:
+        where = "but no one corner stands out" if v == "spread" else "but it isn't clearly quicker in any one corner"
+        return f"The car behind is {tenths(pace)} a lap quicker, {where}.", "The car behind is a bit quicker than you."
+    if pace <= -LEVEL_S:
+        return (
+            f"You're {tenths(pace)} a lap quicker than the car behind; it isn't clearly quicker anywhere."
+            if v == "none"
+            else f"The car behind gains in a few places, but you're {tenths(pace)} a lap quicker overall.",
+            "You're quicker than the car behind.",
+        )
+    return (
+        "The car behind gains in a few places; nowhere stands out."
+        if v == "spread"
+        else "The car behind isn't clearly quicker than you anywhere.",
+        "The car behind is about as quick as you.",
+    )
 
 
 def _side(fs: FactSheet, side: str, s: Mapping[str, Any], added: set[str]) -> None:
@@ -348,6 +485,7 @@ def _side(fs: FactSheet, side: str, s: Mapping[str, Any], added: set[str]) -> No
     c, sec = s.get("corner") or {}, s.get("second") or {}
     delta = _num(c.get("delta_s"))
     lap_delta = _num(s.get("lap_delta_s"))
+    close = s.get("close") if isinstance(s.get("close"), bool) else None
     text = f"Against {who} (P{pos}) over {laps[0]} and {laps[1]} laps: "
     if side == "ahead":
         if v in ("clear", "spread") and delta is not None:
@@ -367,29 +505,13 @@ def _side(fs: FactSheet, side: str, s: Mapping[str, Any], added: set[str]) -> No
             text += f"it is not quicker by {T.SEG_MIN_S:.1f} s or more in any corner"
     if lap_delta is not None:
         text += f"; pace difference {lap_delta:+.2f} s a lap (negative: you are quicker)"
+    if close is not None:
+        text += f"; the gap is {'under' if close else 'over'} {_n(T.CLOSE_GAP_S, 1)} s"
     corner_text = c.get("text")
     if side == "ahead":
-        if v == "clear" and delta is not None:
-            about = _n(abs(delta), 1)
-            say = f"You're quickest on the car ahead at {corner_text}, about {about} a lap. That's your best chance."
-            simple = f"You catch the car ahead most at {corner_text}."
-        elif v == "spread":
-            say = "Nowhere stands out against the car ahead: your gains are spread around the lap."
-            simple = "You're catching the car ahead all around the lap."
-        else:
-            say = "You're not clearly quicker than the car ahead anywhere right now."
-            simple = "The car ahead is as quick as you everywhere right now."
+        say, simple = _ahead_words(str(v), corner_text, delta, lap_delta)
     else:
-        if v == "clear" and delta is not None:
-            about = _n(abs(delta), 1)
-            say = f"The car behind is quickest through {corner_text}, about {about} a lap. Expect a look there."
-            simple = f"The car behind catches you most at {corner_text}."
-        elif v == "spread":
-            say = "The car behind gains in a few places; nowhere stands out."
-            simple = "The car behind is a little quicker in a few places."
-        else:
-            say = "The car behind isn't quicker than you anywhere."
-            simple = "The car behind isn't quicker than you anywhere."
+        say, simple = _behind_words(str(v), corner_text, delta, lap_delta, close)
     data = {
         "src": SRC,
         "kind": f"racecraft_{side}",
@@ -400,6 +522,7 @@ def _side(fs: FactSheet, side: str, s: Mapping[str, Any], added: set[str]) -> No
         "delta_s": delta,
         "lap_delta_s": lap_delta,
         "margin_s": _num(s.get("margin_s")),
+        "close": close,
         "simple": simple,
     }
     fs.add("racecraft", text + ".", data, say=say)

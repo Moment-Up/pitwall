@@ -5,17 +5,23 @@ the radio treats both alike (``carhealth.radio``: existing message kinds, the sc
 
 | Topic | When | Level / priority / TTL |
 |---|---|---|
-| ``tyres_cold`` | the cold-tyre rule turns cold (pit exit, safety car / VSC end) | normal / high / 40 s, once per arm |
-| ``tyres_warm`` | cold -> warm again | detailed / low / 30 s, once per arm |
-| ``wear_high`` | most-worn tyre at ``WEAR_CALL_PCT``, outside F1 races | normal / normal / 90 s, once per stint |
-| ``fuel_low`` | tank-level fuel (Forza) ``low`` | normal / normal / 120 s; again after 3 laps or 0.5 lap worse |
-| ``fuel_critical`` | ``critical`` | alert / high / 60 s, bypasses quiet; again after 2 laps |
+| ``tyres_cold`` | the cold-tyre rule turns cold (in the box, else on track; SC / VSC end) | normal / high / 40 s |
+| ``tyres_warm`` | cold -> warm again, only after that arm's cold call | normal / low / 30 s, once per arm |
+| ``wear_high`` | most-worn tyre at ``WEAR_CALL_PCT``, outside F1 races | normal / normal / 90 s, once a stint |
+| ``fuel_low`` | tank-level fuel (Forza) ``low`` at the line | normal / normal / 120 s; again in 3 laps / 0.5 worse |
+| ``fuel_critical`` | ``critical`` (``FUEL_CRITICAL_LAPS`` at the line) | alert / high / 60 s, not quiet; 2 laps (1) |
 | ``slip_lockups`` | >= ``SLIP_CALL_LOCKUPS`` lock-ups in a lap (ABS off) | detailed (or normal) / low / 45 s, 3 laps |
 | ``slip_wheelspin`` | >= ``SLIP_CALL_SPINS`` spoken-eligible spins (TC off / medium) | as lock-ups |
 
-Rules: nothing on a formation lap, under a red flag, in the pit lane or on a race's final lap; nothing on lap 1 but
-``tyres_cold``; at most one ``normal`` and one ``detailed`` health call per lap (alerts: their cooldowns); in F1 races
-no wear or fuel calls (race strategy owns them); the household settings switch topics off (``carhealth.settings``).
+(1) Or at once when it drops under one lap of fuel.
+
+Rules: nothing on a formation lap, under a red flag, in the pit lane or on a race's final lap - except ``tyres_cold``,
+which is said in the pit lane (the box is where the tyres were changed, and the out-lap's first corners are not), and
+which waits out a red flag with ``tyres_warm`` (``tyre_must_wait``; the engine keeps them); nothing on lap 1 but
+``tyres_cold``; at most one ``normal`` and one ``detailed`` health call per lap (alerts: their cooldowns; the two tyre
+calls are once per stop and never counted, so a lock-up note never silences them); in F1 races no wear or fuel calls
+(race strategy owns them); the household settings switch topics off (``carhealth.settings``). Laps of fuel are said
+rounded down, as the answers and the dashboard say them.
 Every text is at most ``MAX_TEXT`` characters, built only from numbers in ``data``, British English, and never tells
 the driver to brake later (``tests/unit/test_carhealth_calls.py`` lints every template). ``text_simple`` is the same
 call in plain words, one idea per message, for a driver whose profile asks for simple wording.
@@ -116,8 +122,9 @@ class HealthCallPlanner:
     _spent: dict[tuple[int, str], int] = field(default_factory=dict)
     _wear_stint: int | None = None  # the stint a wear call was made in
     _fuel_low: tuple[int, float] | None = None  # (lap, laps of fuel) of the last fuel_low call
-    _fuel_crit: int | None = None
+    _fuel_crit: tuple[int, bool] | None = None  # (lap, under one lap) of the last fuel_critical call
     _slip: dict[str, int] = field(default_factory=dict)  # topic -> lap of the last call
+    _cold_arm: int | None = None  # the arm whose cold call was made (its all-clear may follow)
 
     # ------------------------------------------------------------------ gate
     def _allowed(self, ctx: CallContext, topic: str, level: str) -> bool:
@@ -130,6 +137,20 @@ class HealthCallPlanner:
             if self._spent.get((ctx.lap, level), 0) >= cap:
                 return False
         return True
+
+    def tyre_must_wait(self, ctx: CallContext, ev: TyreEvent) -> bool:
+        """A cold-tyre event that cannot be said now but can later: under a red flag, before the lap is known, or the
+        all-clear while still in the pit lane or on lap 1 (the engine keeps it and asks again)."""
+        if ctx.lap is None or ctx.blocked == "red flag":
+            return True
+        return ev.topic == "tyres_warm" and (ctx.in_pit or ctx.lap <= 1)
+
+    def _tyres_allowed(self, ctx: CallContext, ev: TyreEvent) -> bool:
+        """The tyre calls' own gate: not on a formation lap, a red flag or a race's final lap; the cold call also in
+        the pit lane; never counted against the per-lap cap (once per stop already)."""
+        if ctx.blocked is not None or ctx.lap is None or ctx.final_lap:
+            return False
+        return ev.topic == "tyres_cold" or not (ctx.in_pit or ctx.lap <= 1)
 
     def _spend(self, ctx: CallContext, level: str) -> None:
         lap = ctx.lap or 0
@@ -150,12 +171,14 @@ class HealthCallPlanner:
         data: dict[str, Any],
         *,
         bypass: bool = False,
+        spend: bool = True,
     ) -> HealthCall:
         if len(text) > T.MAX_TEXT:
             text = text[: T.MAX_TEXT - 1].rstrip(" ,:;") + "."
         if len(simple) > T.MAX_TEXT:
             simple = simple[: T.MAX_TEXT - 1].rstrip(" ,:;") + "."
-        self._spend(ctx, level)
+        if spend:
+            self._spend(ctx, level)
         return HealthCall(
             id=f"hc-{topic}-{ctx.lap}-{next(_ids)}",
             topic=topic,
@@ -173,31 +196,31 @@ class HealthCallPlanner:
 
     # ------------------------------------------------------------------ tyres
     def tyres(self, ctx: CallContext, ev: TyreEvent) -> HealthCall | None:
-        if not self.settings.tyre_calls:
+        if not self.settings.tyre_calls or not self._tyres_allowed(ctx, ev):
             return None
+        data = {**ev.data, "reason": ev.reason}
         if ev.topic == "tyres_cold":
-            if not self._allowed(ctx, "tyres_cold", "normal"):
-                return None
             if ev.reason == REASON_SC_END:
                 text = "Tyres have cooled behind the safety car: careful on the restart."
             else:
                 text = "New tyres are cold: give them a lap or two before you push."
             simple = "Your tyres are cold, so there's less grip. Take the first corners gently."
-            data = {**ev.data, "reason": ev.reason}
-            return self._make(ctx, "tyres_cold", "normal", "high", text, simple, 40.0, data)
+            self._cold_arm = ev.arm
+            return self._make(ctx, "tyres_cold", "normal", "high", text, simple, 40.0, data, spend=False)
         if ev.topic == "tyres_warm":
-            if not self._allowed(ctx, "tyres_warm", "detailed"):
-                return None
-            data = {**ev.data, "reason": ev.reason}
+            if self._cold_arm != ev.arm:
+                return None  # its cold call was never made: an all-clear alone would be news of nothing
+            self._cold_arm = None
             return self._make(
                 ctx,
                 "tyres_warm",
-                "detailed",
+                "normal",
                 "low",
                 "Tyres are up to temperature now.",
                 "Your tyres are warm now.",
                 30.0,
                 data,
+                spend=False,
             )
         return None
 
@@ -231,12 +254,19 @@ class HealthCallPlanner:
             return None
         lap = ctx.lap or 0
         if status == "critical":
-            if self._fuel_crit is not None and lap - self._fuel_crit < T.FUEL_CRITICAL_REPEAT_LAPS:
+            under = laps < 1.0
+            last_crit = self._fuel_crit
+            # again after the repeat laps, or at once when it gets worse: under a lap now, not at the last call
+            if (
+                last_crit is not None
+                and lap - last_crit[0] < T.FUEL_CRITICAL_REPEAT_LAPS
+                and (last_crit[1] or not under)
+            ):
                 return None
             if not self._allowed(ctx, "fuel_critical", "alert"):
                 return None
-            self._fuel_crit = lap
-            if laps < 0.75:
+            self._fuel_crit = (lap, under)
+            if laps < 1.0:
                 text, simple = "Fuel is almost gone: less than a lap left.", "Almost out of fuel: less than a lap left."
             else:
                 text, simple = "Fuel for about one more lap.", "Almost out of fuel: about one lap left."
@@ -252,7 +282,7 @@ class HealthCallPlanner:
         if not self._allowed(ctx, "fuel_low", "normal"):
             return None
         self._fuel_low = (lap, laps)
-        n = max(1, round(laps))
+        n = max(1, int(laps))  # rounded down, as the answers and the dashboard say it
         unit = "lap" if n == 1 else "laps"
         text = f"Fuel for about {n} more {unit}"
         data: dict[str, Any] = {"laps_of_fuel": round(laps, 1), "laps_said": n, "status": status}
@@ -282,13 +312,18 @@ class HealthCallPlanner:
             top = SlipCounter.top_corner(events, "lockup")
             c = _cap(count_word(n_lock))
             data: dict[str, Any] = {"lockups": n_lock, "lap": last_lap.get("lap")}
-            if top is not None:
+            if top is not None and 2 * top[2] >= n_lock:  # "mostly" only when that corner has at least half
                 where = "all" if top[2] == n_lock else count_word(top[2])
                 text = f"{c} lock-ups that lap, {where} into {top[1]}."
+                most = "all" if top[2] == n_lock else "mostly"
                 simple = (
-                    f"The wheels locked {count_word(n_lock)} times, mostly into {top[1]}. "
+                    f"The wheels locked {count_word(n_lock)} times, {most} into {top[1]}. "
                     "Squeeze the brake more gently there."
                 )
+                data.update(corner=top[0], corner_text=top[1], at_corner=top[2])
+            elif top is not None:
+                text = f"{c} lock-ups that lap, {count_word(top[2])} into {top[1]}."
+                simple = f"The wheels locked {count_word(n_lock)} times that lap. Squeeze the brake more gently."
                 data.update(corner=top[0], corner_text=top[1], at_corner=top[2])
             else:
                 text = f"{c} lock-ups that lap."
@@ -304,7 +339,11 @@ class HealthCallPlanner:
             data = {"wheelspin": n_spin, "lap": last_lap.get("lap")}
             if top is not None:
                 text = f"Wheelspin {c} times that lap, most out of {top[1]}."
-                simple = f"The rear wheels spun {c} times, mostly out of {top[1]}. Ease onto the throttle there."
+                simple = (
+                    f"The rear wheels spun {c} times, mostly out of {top[1]}. Ease onto the throttle there."
+                    if 2 * top[2] >= n_spin
+                    else f"The rear wheels spun {c} times that lap. Ease onto the throttle."
+                )
                 data.update(corner=top[0], corner_text=top[1], at_corner=top[2])
             else:
                 text = f"Wheelspin {c} times that lap."
@@ -321,9 +360,9 @@ def sample_calls() -> list[HealthCall]:
     p = HealthCallPlanner(clock=lambda: 0.0)
     for k, ev in enumerate(
         (
-            TyreEvent("tyres_cold", "pit_exit", 2, {}),
-            TyreEvent("tyres_cold", "sc_end", 2, {}),
-            TyreEvent("tyres_warm", "pit_exit", 2, {}),
+            TyreEvent("tyres_cold", "pit_exit", 2, {}, 1),
+            TyreEvent("tyres_cold", "sc_end", 2, {}, 2),
+            TyreEvent("tyres_warm", "pit_exit", 2, {}, 2),
         )
     ):
         c = p.tyres(CallContext(lap=10 + k), ev)
@@ -332,18 +371,20 @@ def sample_calls() -> list[HealthCall]:
     c = p.wear(CallContext(lap=20), (72.0, 60.0, 50.0, 50.0), 1)
     if c is not None:
         out.append(c)
-    for k, (st, laps) in enumerate((("low", 2.6), ("critical", 1.1), ("critical", 0.5))):
+    for k, (st, laps) in enumerate((("low", 2.6), ("critical", 1.6), ("critical", 0.5))):
         q = HealthCallPlanner(clock=lambda: 0.0)
         c = q.fuel(CallContext(lap=30 + k), st, laps, 0.041)
         if c is not None:
             out.append(c)
     corner = ("T1", "Turn 1")
     ev_l = [SlipEvent("lockup", 100.0, 0.3, ("FL",), 1, corner)] * 3
+    ev_split = [*ev_l[:1], *[SlipEvent("lockup", 900.0, 0.3, ("FR",), 1, ("T9", "Turn 9"))] * 2, ev_l[0]]
+    split_lap = {"lap": 3, "lockups": 5, "wheelspin": 0, "wheelspin_spoken": 0}
     ev_s = [SlipEvent("wheelspin", 900.0, 0.4, ("RR",), 1, ("T9", "Turn 9"))] * 4
     lock_lap = {"lap": 3, "lockups": 3, "wheelspin": 0, "wheelspin_spoken": 0}
     spin_lap = {"lap": 3, "lockups": 0, "wheelspin": 4, "wheelspin_spoken": 4}
     for mode in ("detailed", "normal"):
-        for lap, events in ((lock_lap, ev_l), (lock_lap, []), (spin_lap, ev_s), (spin_lap, [])):
+        for lap, events in ((lock_lap, ev_l), (lock_lap, []), (split_lap, ev_split), (spin_lap, ev_s), (spin_lap, [])):
             q = HealthCallPlanner(clock=lambda: 0.0, settings=HealthSettings(slip_calls=mode))
             out += q.slip(CallContext(lap=4), lap, events)
     return out

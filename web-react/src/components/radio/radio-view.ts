@@ -35,6 +35,7 @@ export const KIND_CHIP: Record<LogKind, KindChip> = {
   coaching: { label: "COACH", tone: "default" },
   info: { label: "INFO", tone: "default" },
   strategy: { label: "STRATEGY", tone: "ref" }, // race strategy calls (pitwall.strategy)
+  car: { label: "CAR", tone: "ref" }, // health lane: car health calls (pitwall.carhealth), by their meta.source
   goal: { label: "GOAL", tone: "success" }, // a goal reached (pitwall.motivation)
   validation: { label: "TEST", tone: "default" }, // a rig validation prompt (pitwall.validate)
   transcript: { label: "YOU", tone: "default" },

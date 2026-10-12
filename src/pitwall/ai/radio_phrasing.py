@@ -236,10 +236,10 @@ def radio_answer(intent: str, sheet: FactSheet, question: str | None = None) -> 
             return said
     # --- health lane: the question decides which temperature leads ("how are my brakes?" / "are my tyres cold?")
     if intent == "car_health":
-        from pitwall.carhealth.phrasing import health_radio_answer
+        from pitwall.carhealth.phrasing import health_radio_answer, names_part
 
         said = health_radio_answer(intent, sheet, question)
-        if said is not None:
+        if said is not None or names_part(question):  # a brake / engine question never falls back to the tyres
             return said
     if intent == "tyres":
         from pitwall.carhealth.phrasing import tyres_answer

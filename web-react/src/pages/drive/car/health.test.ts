@@ -58,7 +58,7 @@ describe("Tyres & energy against the driver's own warm laps", () => {
     expect(v.caption).toBeNull();
     expect(v.energy).toBe("Fuel 18.4 kg · ERS 2.8 MJ"); // F1: the strategy's kilos, unchanged
     expect(v.temps).toBe("Brakes 982° · Engine 124°");
-    expect(v.slip).toBe("Last lap: 3 lock-ups · 4 wheelspin");
+    expect(v.slip).toBe("Last lap: 3 lock-ups · 4 wheelspins");
   });
 
   it("surface-only model: the surface is the number (the game's constant inner 90 °C never shows); hot says so", () => {
@@ -72,7 +72,7 @@ describe("Tyres & energy against the driver's own warm laps", () => {
     expect(v.chip).toBe("Medium · 13 laps");
     expect(v.chipTone).toBe("neutral");
     expect(v.basis).toBe("Surface temperatures · colours compare with your warm laps");
-    expect(v.slip).toBe("Last lap: no lock-ups (ABS on) · 1 wheelspin");
+    expect(v.slip).toBe("Last lap: ABS on · 1 wheelspin");
     expect(JSON.stringify(v)).not.toContain("90°");
   });
 
@@ -181,6 +181,29 @@ describe("Strategy tile: where a stop now would rejoin, and attack / defend", ()
     expect(rowsOf(strategyTile(race(), LIVE, { simple: true })).window!.sub).toBe("If you stop now: about 11th");
   });
 
+  it("the line only when it is worth a glance: in the pit lane, under a safety car, or near the pit window", () => {
+    const early = race(); // lap 20 of a window opening on lap 18: shown; lap 1 of the same race: not (P20 noise)
+    early.strategy!.lap = 1;
+    expect(rowsOf(strategyTile(early, LIVE)).window!.sub).toBeNull();
+    early.strategy!.lap = 15; // three laps before the window opens
+    expect(rowsOf(strategyTile(early, LIVE)).window!.sub).toBe("Box now ≈ P11 (P10–12)");
+    const sc = race();
+    sc.strategy!.lap = 1;
+    sc.strategy!.safety_car = { status: "full", since_lap: 1, box: null };
+    expect(rowsOf(strategyTile(sc, LIVE)).window!.sub).toBe("Box now ≈ P11 (P10–12)"); // a cheap stop
+    const lane = race();
+    lane.strategy!.lap = 1;
+    lane.strategy!.pit!.rejoin = { ...lane.strategy!.pit!.rejoin!, frozen: true };
+    expect(rowsOf(strategyTile(lane, LIVE)).window!.sub).toBe("Rejoin ≈ P11 (P10–12)"); // held through the lane
+  });
+
+  it("a beginner never gets the game's own figure alone", () => {
+    const g = race();
+    g.strategy!.pit!.rejoin = { ...g.strategy!.pit!.rejoin!, basis: "game_only", position: null, reason: "no_loss" };
+    expect(rowsOf(strategyTile(g, LIVE)).window!.sub).toBe("Box now: game says P10");
+    expect(rowsOf(strategyTile(g, LIVE, { simple: true })).window!.sub).toBeNull();
+  });
+
   it("no line when no stop is needed, or from an older server's rejoin", () => {
     const s = race();
     s.strategy!.pit!.stop_needed = false;
@@ -280,7 +303,7 @@ describe("Drive › Car rendered with the health lane's blocks", () => {
     expect(html).toContain('class="pww-tyres__foot"');
     expect(text).toContain("Fuel 18.4 kg");
     expect(text).toContain("Brakes 982° · Engine 124°");
-    expect(text).toContain("Last lap: 3 lock-ups · 4 wheelspin");
+    expect(text).toContain("Last lap: 3 lock-ups · 4 wheelspins");
     expect(html).toContain('aria-label="FL: inside 46 degrees, cold for this session, wear 2 percent, pressure 19.5 psi"');
   });
 

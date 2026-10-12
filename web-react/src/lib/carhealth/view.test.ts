@@ -207,11 +207,14 @@ describe("brakes and engine (F1, from the frame)", () => {
 
 describe("lock-ups and wheelspin (F1 MotionEx, the whole last lap)", () => {
   it("ABS off: lock-ups counted", () => {
-    expect(slipLine(slipSection(healthView("edited-live-f1-carcass-cold-after-stop")))).toBe("Last lap: 3 lock-ups · 4 wheelspin");
+    expect(slipLine(slipSection(healthView("edited-live-f1-carcass-cold-after-stop")))).toBe("Last lap: 3 lock-ups · 4 wheelspins");
   });
 
   it("ABS on: lock-ups are not counted, never '0'", () => {
-    expect(slipLine(slipSection(healthView("edited-live-f1-surface-warm-abs-on")))).toBe("Last lap: no lock-ups (ABS on) · 1 wheelspin");
+    // with ABS on nothing is counted: no "no lock-ups" claim, just the setting
+    expect(slipLine(slipSection(healthView("edited-live-f1-surface-warm-abs-on")))).toBe("Last lap: ABS on · 1 wheelspin");
+    const absOn = slipSection(healthView("edited-live-f1-surface-warm-abs-on"));
+    expect(absOn && slipLine({ ...absOn, abs: null })).toBe("Last lap: ABS setting not known · 1 wheelspin");
   });
 
   it("one, none and unknown", () => {
@@ -288,6 +291,7 @@ describe("where I'd come out (rejoin v2)", () => {
     expect(rejoinLine(r())).toEqual({
       text: "Box now ≈ P11 (P10–12)",
       aria: "If you box now you'd come out around P11, between P10 and P12; Pitwall estimate, from a 22 second pit loss measured on 3 stops; the game says P10; in traffic",
+      gameOnly: false,
     });
     expect(rejoinLine(r(), true)?.text).toBe("If you stop now: about 11th");
   });
@@ -312,8 +316,13 @@ describe("where I'd come out (rejoin v2)", () => {
     const g: RejoinView = { ...r(), basis: "game_only", position: null, position_low: null, position_high: null };
     expect(rejoinLine(g)).toEqual({
       text: "Box now: game says P10",
-      aria: "If you box now: no pit stop measured in this race yet, the game's own estimate is P10",
+      aria: "If you box now: no pit stop timed in this race yet, the game's own estimate is P10",
+      gameOnly: true,
     });
+    // stops timed, but the player's own gap is not known this moment (right after their own stop): said so
+    expect(rejoinLine({ ...g, reason: "no_gap" })?.aria).toBe(
+      "If you box now: your own gap isn't known this moment, the game's own estimate is P10",
+    );
     expect(rejoinLine(g, true)?.text).toBe("If you stop now: game says 10th");
     expect(rejoinLine({ ...g, game_position: 0 })).toBeNull(); // F1 25 reads 0 on the in-lap: unknown
     expect(rejoinLine({ ...g, game_position: null })).toBeNull();

@@ -17,9 +17,11 @@ describe("Car health calls: view model", () => {
   it("ready: the settings, editable, the slip hint follows the choice", () => {
     const v = carHealthCardView(READY);
     expect(v).toMatchObject({ state: "ready", editable: true, note: null, saveError: null });
-    expect(v.slipHint).toBe("Only when Coaching is on Detailed.");
+    expect(v.slipHint).toBe("Said only when Coaching is on Detailed; never at Quiet.");
     expect(carHealthCardView({ ...READY, data: { ...READY.data, slip_calls: "off" } }).slipHint).toMatch(/^Never on the radio/);
-    expect(carHealthCardView({ ...READY, data: { ...READY.data, slip_calls: "normal" } }).slipHint).toBe("At Normal coaching too.");
+    expect(carHealthCardView({ ...READY, data: { ...READY.data, slip_calls: "normal" } }).slipHint).toBe(
+      "Said when Coaching is on Normal or Detailed; never at Quiet.",
+    );
   });
 
   it("loading, an older server, a load error: no settings (never guessed), one row says why", () => {
@@ -47,7 +49,8 @@ describe("Car health calls: view model", () => {
   it("a change keeps the other three (the card always sends all four)", () => {
     const q = settingsFixture("edited-settings-quiet");
     expect(withChange(q, { tyre_calls: false })).toEqual({ ...q, tyre_calls: false });
-    expect(SLIP_CHOICES.map((c) => c.label)).toEqual(["Off", "Detailed radio only", "Always"]);
+    // the Coaching level the notes are said from: never "Always" (nothing is said at Quiet), short enough for 320 px
+    expect(SLIP_CHOICES.map((c) => c.label)).toEqual(["Off", "Detailed", "Normal"]);
     expect(TOGGLES.map((t) => t.key)).toEqual(["tyre_calls", "wear_calls", "fuel_calls"]);
   });
 
@@ -76,15 +79,15 @@ describe("Car health calls: the card", () => {
   it("ready: three switches and the three-way choice, the help under them", () => {
     const m = render({ data: settingsFixture("edited-settings-quiet") });
     const t = text(m);
-    for (const w of ["Car health calls", "Tyre temperature calls", "Tyre wear calls", "Fuel calls", "Lock-up and wheelspin notes"]) {
+    for (const w of ["Car health calls", "Cold tyre calls (F1 25)", "Worn tyre call", "Fuel calls (Forza)", "Lock-up and wheelspin notes"]) {
       expect(t).toContain(w);
     }
     expect(t).toContain(`${CARD_HELP} ${SLIP_RULE}`);
     expect(m.match(/role="switch"/g)).toHaveLength(3);
     // tyre on, wear off, fuel off
     expect([...m.matchAll(/<input[^>]*role="switch"[^>]*>/g)].map((x) => /checked=""/.test(x[0]))).toEqual([true, false, false]);
-    expect(m.match(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>.*?<\/button>/g)?.join(" ")).toContain(">Always<");
-    expect(t).toContain("At Normal coaching too.");
+    expect(m.match(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>.*?<\/button>/g)?.join(" ")).toContain(">Normal<");
+    expect(t).toContain("Said when Coaching is on Normal or Detailed; never at Quiet.");
   });
 
   it("loading: no switches drawn (unknown is never 'off')", () => {

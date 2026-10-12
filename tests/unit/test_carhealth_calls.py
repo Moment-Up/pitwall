@@ -23,8 +23,8 @@ from pitwall.voice.types import DrivingState, MessageKind, Priority
 # The coaching rule: nothing here ever tells the driver to brake later (or deeper, or to dive in).
 BRAKE_LATER = re.compile(r"brake\w* (?:a (?:bit|little) )?later|later on the brakes|brake deeper|\bdive\b", re.I)
 CALM = DrivingState(True, 250.0, 0.0, 0.0, 10, 500.0, 20.0)
-COLD = TyreEvent("tyres_cold", "pit_exit", 3, {"index_c": 30.0, "baseline_c": 89.0})
-WARM = TyreEvent("tyres_warm", "pit_exit", 4, {"index_c": 82.0, "baseline_c": 89.0})
+COLD = TyreEvent("tyres_cold", "pit_exit", 3, {"index_c": 30.0, "baseline_c": 89.0}, 1)
+WARM = TyreEvent("tyres_warm", "pit_exit", 4, {"index_c": 82.0, "baseline_c": 89.0}, 1)
 LOCK = SlipEvent("lockup", 100.0, 0.3, ("FL",), 1, ("T1", "Turn 1"))
 SPIN = SlipEvent("wheelspin", 900.0, 0.4, ("RR",), 1, ("T9", "Turn 9"))
 
@@ -103,27 +103,56 @@ def test_fact_says_pass_the_lint_too() -> None:
 def test_tyres_cold_on_lap_one_but_nothing_else_there() -> None:
     p = HealthCallPlanner(clock=lambda: 0.0)
     assert p.tyres(ctx(1), COLD) is not None  # cold tyres after a lap-1 stop: the one lap-1 call
+    assert p.tyre_must_wait(ctx(1), WARM)  # the all-clear waits for lap 2
     assert p.tyres(ctx(1), WARM) is None
     assert p.wear(ctx(1), (75.0, 1.0, 1.0, 1.0), 1) is None
 
 
-@pytest.mark.parametrize(
-    "c", [ctx(blocked="red flag"), ctx(blocked="formation lap"), ctx(in_pit=True), ctx(final_lap=True)]
-)
-def test_nothing_when_blocked_in_the_pits_or_on_the_final_lap(c: CallContext) -> None:
+@pytest.mark.parametrize("c", [ctx(blocked="red flag"), ctx(blocked="formation lap"), ctx(final_lap=True)])
+def test_nothing_when_blocked_or_on_the_final_lap(c: CallContext) -> None:
     p = HealthCallPlanner(clock=lambda: 0.0)
     assert p.tyres(c, COLD) is None
     assert p.fuel(c, "critical", 1.0, 0.05) is None
     assert p.slip(c, {"lap": 4, "lockups": 5, "wheelspin_spoken": 5}, [LOCK]) == []
 
 
-def test_one_normal_and_one_detailed_call_per_lap() -> None:
+def test_the_cold_call_is_said_in_the_pit_lane_and_nothing_else_is() -> None:
     p = HealthCallPlanner(clock=lambda: 0.0)
-    assert p.tyres(ctx(5), COLD) is not None  # normal
-    assert p.wear(ctx(5), (75.0, 1.0, 1.0, 1.0), 1) is None  # a second normal on the same lap
-    assert p.tyres(ctx(5), WARM) is not None  # detailed
-    assert p.slip(ctx(5), {"lap": 4, "lockups": 4, "wheelspin_spoken": 0}, [LOCK] * 4) == []  # a second detailed
-    assert p.wear(ctx(6), (75.0, 1.0, 1.0, 1.0), 1) is not None  # the next lap
+    pit = ctx(in_pit=True)
+    c = p.tyres(pit, COLD)
+    assert c is not None and c.level == "normal" and c.priority == "high"  # in the box: before the first corners
+    assert p.tyre_must_wait(pit, WARM) and p.tyres(pit, WARM) is None  # the all-clear waits for the track
+    assert p.fuel(pit, "critical", 1.0, 0.05) is None
+    assert p.slip(pit, {"lap": 4, "lockups": 5, "wheelspin_spoken": 5}, [LOCK]) == []
+
+
+def test_a_red_flag_holds_the_tyre_calls_but_drops_the_rest() -> None:
+    p = HealthCallPlanner(clock=lambda: 0.0)
+    red = ctx(blocked="red flag")
+    assert p.tyre_must_wait(red, COLD) and p.tyre_must_wait(red, WARM)
+    assert not p.tyre_must_wait(ctx(blocked="formation lap"), COLD) and not p.tyre_must_wait(ctx(), COLD)
+
+
+def test_the_all_clear_only_after_that_stops_cold_call() -> None:
+    p = HealthCallPlanner(clock=lambda: 0.0)
+    assert p.tyres(ctx(5), WARM) is None  # no cold call was made for this arm: nothing to clear
+    assert p.tyres(ctx(5), COLD) is not None
+    other = TyreEvent("tyres_warm", "pit_exit", 6, {}, 2)
+    assert p.tyres(ctx(6), other) is None  # another arm
+    w = p.tyres(ctx(6), WARM)
+    assert w is not None and w.level == "normal" and w.priority == "low" and w.ttl_s == 30.0  # heard at Normal too
+    assert p.tyres(ctx(7), WARM) is None  # once
+
+
+def test_one_normal_and_one_detailed_call_per_lap_and_the_tyre_calls_are_never_capped() -> None:
+    p = HealthCallPlanner(clock=lambda: 0.0)
+    lock_lap = {"lap": 4, "lockups": 4, "wheelspin_spoken": 0}
+    assert p.slip(ctx(5), lock_lap, [LOCK] * 4) != []  # the lap's detailed slot
+    assert p.wear(ctx(5), (75.0, 1.0, 1.0, 1.0), 1) is not None  # its normal slot
+    assert p.tyres(ctx(5), COLD) is not None  # once per stop: never refused by the cap ...
+    assert p.tyres(ctx(5), WARM) is not None  # ... the all-clear either (a lock-up note took it on F2 Bahrain)
+    assert p.fuel(ctx(5), "low", 2.6, 0.04) is None  # a second normal on the same lap
+    assert p.fuel(ctx(6), "low", 2.6, 0.04) is not None  # the next lap
 
 
 def test_wear_once_per_stint_and_never_in_f1_races() -> None:
@@ -139,9 +168,9 @@ def test_wear_once_per_stint_and_never_in_f1_races() -> None:
 
 def test_fuel_low_repeats_after_three_laps_or_half_a_lap_worse() -> None:
     p = HealthCallPlanner(clock=lambda: 0.0)
-    c = p.fuel(ctx(10), "low", 2.6, 0.041)
-    assert c is not None and c.text == "Fuel for about 3 more laps, at 4.1 percent a lap." and c.level == "normal"
-    assert c.text_simple == "You've got fuel for about 3 more laps."
+    c = p.fuel(ctx(10), "low", 2.6, 0.041)  # rounded down, as the answer and the tile say it
+    assert c is not None and c.text == "Fuel for about 2 more laps, at 4.1 percent a lap." and c.level == "normal"
+    assert c.text_simple == "You've got fuel for about 2 more laps." and c.data["laps_said"] == 2
     assert p.fuel(ctx(11), "low", 2.3, 0.041) is None
     assert p.fuel(ctx(12), "low", 2.0, 0.041) is not None  # 0.6 lap worse
     assert p.fuel(ctx(13), "low", 1.8, 0.041) is None
@@ -154,8 +183,27 @@ def test_fuel_critical_is_an_alert_that_bypasses_quiet_mode() -> None:
     c = p.fuel(ctx(10), "critical", 1.1, 0.04)
     assert c is not None and c.level == "alert" and c.priority == "high" and c.bypass_quiet
     assert c.text == "Fuel for about one more lap." and c.text_simple == "Almost out of fuel: about one lap left."
-    assert p.fuel(ctx(11), "critical", 0.9, 0.04) is None
-    assert p.fuel(ctx(12), "critical", 0.6, 0.04) is not None  # two laps on
+    assert p.fuel(ctx(11), "critical", 1.05, 0.04) is None  # within two laps, no worse
+    worse = p.fuel(ctx(11), "critical", 0.9, 0.04)  # under a lap now: at once
+    assert worse is not None and worse.text == "Fuel is almost gone: less than a lap left."
+    assert p.fuel(ctx(12), "critical", 0.6, 0.04) is None
+    assert p.fuel(ctx(13), "critical", 0.4, 0.04) is not None  # two laps on
+
+
+def test_fuel_critical_comes_at_the_last_line_the_pits_can_be_reached_from() -> None:
+    """12 % a lap: 1.33 laps at the line is the last line the car can still reach the pit entry from (1.2 laps was too
+    late: the alert came at 0.33 laps, with no way to reach the pits)."""
+    from pitwall.carhealth.fuel import TankFractionFuel
+
+    f = TankFractionFuel()
+    level = 1.0
+    for lap in range(1, 9):
+        f.on_level(level, lap)
+        level -= 0.12
+    assert f.laps_of_fuel() == pytest.approx(0.16 / 0.12, abs=0.01)  # lap 8's line: 1.33 laps
+    assert f.status() == "critical"
+    c = HealthCallPlanner(clock=lambda: 0.0).fuel(ctx(8), f.status(), f.laps_of_fuel(), f.per_lap())
+    assert c is not None and c.level == "alert" and c.bypass_quiet  # heard even in quiet mode
 
 
 def test_slip_notes_detailed_by_default_and_the_setting() -> None:
@@ -271,3 +319,15 @@ async def test_a_health_call_notification_reaches_the_scheduler_and_the_answers_
         assert eng.use_llm[-1] == ("how are my brakes?", False)
     finally:
         await hub.stop()
+
+
+def test_mostly_only_when_that_corner_has_at_least_half() -> None:
+    """F2 Bahrain: "mostly into Turn 6" was said for three of eight lock-ups."""
+    t6 = SlipEvent("lockup", 100.0, 0.3, ("FL",), 1, ("T6", "Turn 6"))
+    others = [SlipEvent("lockup", 100.0 * k, 0.3, ("FL",), 1, (f"T{k}", f"Turn {k}")) for k in (1, 2, 3, 4, 5)]
+    lap = {"lap": 4, "lockups": 8, "wheelspin": 0, "wheelspin_spoken": 0}
+    (c,) = HealthCallPlanner(clock=lambda: 0.0).slip(ctx(5), lap, [t6] * 3 + others)
+    assert c.text == "Eight lock-ups that lap, three into Turn 6."
+    assert c.text_simple == "The wheels locked eight times that lap. Squeeze the brake more gently."
+    (c,) = HealthCallPlanner(clock=lambda: 0.0).slip(ctx(5), {**lap, "lockups": 4}, [t6] * 2 + others[:2])
+    assert "mostly into Turn 6" in str(c.text_simple)

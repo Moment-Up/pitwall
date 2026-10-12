@@ -1,5 +1,5 @@
 {
-  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge. final-review = the v0.2.0 final review: race questions never go to the reference rule, drill commands led by 'alright', 'yes', 'can we', rain questions before strategy, 'what place am I?'. health = the car health lane: brakes, engine and 'how's the car?' (car_health, before tyres; 'how are my tyre temps' stays tyres), 'where will I come out?' (rejoin, before strategy), attack and defend (before gaps; 'is the car behind catching me?' stays gaps).",
+  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge. final-review = the v0.2.0 final review: race questions never go to the reference rule, drill commands led by 'alright', 'yes', 'can we', rain questions before strategy, 'what place am I?'. health = the car health lane: brakes, engine and 'how's the car?' (car_health, before tyres; 'how are my tyre temps' stays tyres), 'where will I come out?' (rejoin, before strategy), attack and defend (before gaps; 'is the car behind catching me?' stays gaps). health-fix = the lane's review fixes: 'how's the car?' only as the whole question (the car ahead / behind, balance, a corner or a sector keep their intents), the car behind or 'me' attacking is defend, attack needs 'I' / 'we' or the car ahead (never a corner or overtake mode), and the beginner questions ('is the car ok?', 'where can I pass?').",
   "questions": [
     {"question": "How am I doing so far?", "intent": "summary", "corner": null, "from": "review"},
     {"question": "What's my gap to the AI?", "intent": "ai_pace", "corner": null, "from": "review"},
@@ -230,6 +230,35 @@
     {"question": "How do I hold him off?", "intent": "defend", "corner": null, "from": "health"},
     {"question": "Where will the car behind try to pass?", "intent": "defend", "corner": null, "from": "health"},
     {"question": "Which corner is the car behind faster in?", "intent": "defend", "corner": null, "from": "health"},
-    {"question": "Where is the car behind gaining on me?", "intent": "defend", "corner": null, "from": "health"}
+    {"question": "Where is the car behind gaining on me?", "intent": "defend", "corner": null, "from": "health"},
+    {"question": "how's the car behind?", "intent": "gaps", "corner": null, "from": "health-fix"},
+    {"question": "how is the car ahead doing?", "intent": "gaps", "corner": null, "from": "health-fix"},
+    {"question": "how's the car in front?", "intent": "gaps", "corner": null, "from": "health-fix"},
+    {"question": "how is the car behind on tyres?", "intent": "tyres", "corner": null, "from": "health-fix"},
+    {"question": "how's the car's balance?", "intent": "balance", "corner": null, "from": "health-fix"},
+    {"question": "how is the car through turn 3?", "intent": "corner", "corner": "T3", "from": "health-fix"},
+    {"question": "how's the car in sector 2?", "intent": "sectors", "corner": null, "from": "health-fix"},
+    {"question": "how is my car on old tyres?", "intent": "tyres", "corner": null, "from": "health-fix"},
+    {"question": "how are my brakes in turn 1?", "intent": "braking", "corner": "T1", "from": "health-fix"},
+    {"question": "is the car ahead overheating?", "intent": "gaps", "corner": null, "from": "health-fix"},
+    {"question": "is the car behind overheating?", "intent": "gaps", "corner": null, "from": "health-fix"},
+    {"question": "the car behind is attacking me", "intent": "defend", "corner": null, "from": "health-fix"},
+    {"question": "the car behind is trying to overtake me", "intent": "defend", "corner": null, "from": "health-fix"},
+    {"question": "can the car behind overtake me?", "intent": "defend", "corner": null, "from": "health-fix"},
+    {"question": "is the car behind going to overtake me?", "intent": "defend", "corner": null, "from": "health-fix"},
+    {"question": "am I under attack?", "intent": "defend", "corner": null, "from": "health-fix"},
+    {"question": "who is attacking?", "intent": "general", "corner": null, "from": "health-fix"},
+    {"question": "how should I attack turn 3?", "intent": "corner", "corner": "T3", "from": "health-fix"},
+    {"question": "should I attack the kerbs?", "intent": "general", "corner": null, "from": "health-fix"},
+    {"question": "is overtake mode on?", "intent": "ers", "corner": null, "from": "health-fix"},
+    {"question": "can I use overtake mode?", "intent": "ers", "corner": null, "from": "health-fix"},
+    {"question": "is the car ok?", "intent": "car_health", "corner": null, "from": "health-fix"},
+    {"question": "is my car ok?", "intent": "car_health", "corner": null, "from": "health-fix"},
+    {"question": "how hot are my brakes?", "intent": "car_health", "corner": null, "from": "health-fix"},
+    {"question": "are my brakes too hot?", "intent": "car_health", "corner": null, "from": "health-fix"},
+    {"question": "are my brakes ok?", "intent": "car_health", "corner": null, "from": "health-fix"},
+    {"question": "where can I pass?", "intent": "attack", "corner": null, "from": "health-fix"},
+    {"question": "how do I get past him?", "intent": "attack", "corner": null, "from": "health-fix"},
+    {"question": "how do I get by the car in front?", "intent": "attack", "corner": null, "from": "health-fix"}
   ]
 }

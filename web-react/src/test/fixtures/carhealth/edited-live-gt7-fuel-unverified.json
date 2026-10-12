@@ -79,7 +79,7 @@
   "laps_of_fuel": null,
   "laps_used": 0,
   "tier": "community",
-  "reason": "GT7 sends a fuel level, but none of your recordings shows it going down yet, so Pitwall doesn't estimate fuel."
+  "reason": "GT7 sends a fuel level, but Pitwall hasn't yet seen a recording where it goes down, so it doesn't estimate fuel."
  },
  "calls": [],
  "thresholds": []

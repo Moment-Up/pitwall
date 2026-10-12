@@ -402,6 +402,13 @@ class PitTracker:
             out["tier"] = "heuristic"
         return out
 
+    def neutral_stops(self, kind: str) -> int:
+        """(Health lane) The measured neutralised stops of ``kind`` ("full" / "virtual") behind ``neutral_loss``'s
+        value: 0 when that value is the heuristic one, so the rejoin estimate carries each value's tier and count."""
+        return sum(
+            1 for v in self.visits if v.final and not v.excluded and v.neutralised == kind and v.pit_loss_ms is not None
+        )
+
     def measured_gains(self) -> list[float]:
         """Fresh-tyre gains (s per lap) the field's stops measured: pre-stop pace minus post-stop pace."""
         return [

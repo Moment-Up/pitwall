@@ -94,12 +94,13 @@ def test_forza_laps_of_fuel_follow_the_truth(forza: tuple[CarHealthEngine, list[
 def test_forza_calls_low_then_critical(forza: tuple[CarHealthEngine, list[Any], list[tuple[int, float]]]) -> None:
     _eng, calls, _seen = forza
     topics = [(lap, c.topic) for lap, c in calls if c.topic.startswith("fuel")]
-    # 2.65 laps left at the line into lap 8 (low), 1.65 into lap 9 (low again: a lap worse), 0.65 into lap 10
-    assert topics == [(8, "fuel_low"), (9, "fuel_low"), (10, "fuel_critical")], topics
-    low, low2, crit = (c for _, c in calls if c.topic.startswith("fuel"))
+    # 2.65 laps left at the line into lap 8 (low), 1.65 into lap 9: critical - only this lap to reach the pit entry
+    # (the alert bypasses quiet mode); 0.65 into lap 10: under a lap now, so the alert again at once
+    assert topics == [(8, "fuel_low"), (9, "fuel_critical"), (10, "fuel_critical")], topics
+    low, crit, crit2 = (c for _, c in calls if c.topic.startswith("fuel"))
     assert low.level == "normal" and crit.level == "alert" and crit.bypass_quiet
-    assert low.text == "Fuel for about 3 more laps, at 4 percent a lap." and low2.text.startswith("Fuel for about 2")
-    assert crit.text == "Fuel is almost gone: less than a lap left."
+    assert low.text == "Fuel for about 2 more laps, at 4 percent a lap."  # rounded down, as the answer and the tile
+    assert crit.text == "Fuel for about one more lap." and crit2.text == "Fuel is almost gone: less than a lap left."
 
 
 def test_gt7_fuel_stays_off_with_no_numbers() -> None:

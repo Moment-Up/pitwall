@@ -30,9 +30,10 @@ Committed captures (each a byte-for-byte excerpt of the maintainer's own PS5 ses
 - `f1_25_2025_ps5_imola_race-pitstop-excerpt.pwcap`: F1 25, Imola race pit stop - lap 14 pit entry (4810 m) and the
   line crossed in the pit lane, lap 15 leaving the pit lane (exit 449 m), lap 15->16 (in-lap / out-lap flags)
 - `f1_25_2025_ps5_jeddah-f2_race-pitstop-coldtyres-excerpt.pwcap`: F1 25 v1.26, F2 Jeddah race (2026-10-11,
-  20261011-224147, session ...314818, carcass tyre model): the start, the lap-1 baseline, the lap-1 pit stop and the
-  exit on new tyres (carcass 30 C against 88 C), warm again on lap 3 - car health's cold-tyre call (1.25 MB). Only the
-  Session, LapData, Event and CarTelemetry packets of the windows (`excerpt_capture.py --f1-packet-id`), each unchanged
+  20261011-224147, session ...314818, carcass tyre model): the start, the lap-1 baseline, the lap-1 pit stop - the
+  tyre change in the box (tyre age 1 -> 0, carcass 28 C against 88 C) and the exit on new tyres -, warm again on lap 3:
+  car health's cold-tyre call, said in the box (1.54 MB). Only the Session, LapData, Event, CarTelemetry and CarStatus
+  packets of the windows (`excerpt_capture.py --f1-packet-id`), each unchanged
 - `f1_25_2025_ps5_bahrain-f2_race-lockups-abs-off-excerpt.pwcap`: the same capture's F2 Bahrain race (session
   ...752346, ABS off), lap 2: five lock-ups, wheels fully locked (slip -1.0) - car health's lock-up counts (1.52 MB).
   Only the Session, LapData, CarTelemetry, CarStatus and MotionEx packets of the windows, each unchanged

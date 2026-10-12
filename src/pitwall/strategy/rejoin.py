@@ -20,7 +20,8 @@ dropped: ``cuts.rejoin``) could therefore predict 2 of the 32 stops. This one:
 7. **Road traffic** [H]: every other car's race-time difference modulo one lap (L = the median green lap):
    Δ = ((g - t_out + L/2) mod L) - L/2. A car less than ``TRAFFIC_S`` ahead on the road (``road_ahead_s``) is
    traffic, a lapped car included, which a position count cannot see.
-8. **No measured loss**: no position, ``basis: "game_only"`` with the game's own ``pitStopRejoinPosition``.
+8. **No measured loss** (or the player's own gap unknown this moment): no position, ``basis: "game_only"`` with the
+   game's own ``pitStopRejoinPosition`` and the ``reason`` (``no_loss`` / ``no_gap``).
 
 On 28 real Imola stops (the loss measured leave-one-out): |predicted - position 10 s after the exit| <= 1 for 75 %
 and <= 2 for 100 %; [low, high] +- 1 covered 89 %; both player stops exact. The game's own value said P4 where the
@@ -46,6 +47,8 @@ SOURCE_LAST_KNOWN = "last_known"
 BASIS_MEASURED = "measured_loss"
 BASIS_ESTIMATED = "estimated_loss"  # the safety-car / VSC loss when none was measured under one (heuristic)
 BASIS_GAME_ONLY = "game_only"
+REASON_NO_LOSS = "no_loss"  # game_only: no pit stop timed in this race yet (none under this safety car either)
+REASON_NO_GAP = "no_gap"  # game_only: the player's own gap to the leader is not known this moment
 
 type LastKnown = Mapping[int, tuple[float, float]]  # car index -> (session time s, gap to the leader s)
 
@@ -101,7 +104,9 @@ def _r(v: float | None) -> float | None:
     return None if v is None else round(v, 1)
 
 
-def game_only(game_position: int | None, unknown_cars: int = 0) -> dict[str, Any] | None:
+def game_only(game_position: int | None, unknown_cars: int = 0, reason: str | None = None) -> dict[str, Any] | None:
+    """The game's own value alone; ``reason`` why Pitwall has none: ``REASON_NO_LOSS`` (no stop timed yet) or
+    ``REASON_NO_GAP`` (the player's own gap is not known this moment, e.g. right after a stop)."""
     game = game_position if game_position else None
     if game is None:
         return None
@@ -123,6 +128,7 @@ def game_only(game_position: int | None, unknown_cars: int = 0) -> dict[str, Any
         "loss_tier": None,
         "loss_n": 0,
         "basis": BASIS_GAME_ONLY,
+        "reason": reason,
     }
 
 
@@ -159,7 +165,7 @@ def predict(
         else:
             others.append(g)
     if loss is None or me is None:
-        return game_only(game_position, unknown)
+        return game_only(game_position, unknown, REASON_NO_LOSS if loss is None else REASON_NO_GAP)
     t_out = me + loss.median_s
     t_lo, t_hi = me + loss.low_s, me + loss.high_s
     ahead = [g for g in others if g < t_out]

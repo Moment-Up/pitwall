@@ -20,18 +20,31 @@ baseline. There is no fixed window: no game publishes one (real F1 25 surface la
 500 wheel-laps; GT7 runs 37-196 C).
 
 **Cold tyres** (the one proactive temperature rule; F1 only - GT7 and Forza send no pit state): the index is the mean
-of the four wheels, as a rolling median, judged once a second. It is *armed* at a pit exit when there is a warm
-baseline, and when a safety car or VSC ends (against the current stint's baseline). Armed and the index at or under
-baseline - ``COLD_DROP``: ``cold`` (call ``tyres_cold`` once per arm); cold and back within ``WARM_DROP``: ``ok`` (call
+of the four wheels, as a rolling median, judged once a second. It is *armed* when the tyres are changed in the pit lane
+(the tyre age drops or the compound changes) and at a pit exit without a change seen, when there is a warm baseline,
+and when a safety car or VSC ends (against the current stint's baseline). Armed and the index at or under baseline -
+``COLD_DROP``: ``cold`` (call ``tyres_cold`` once per arm); cold and back within ``WARM_DROP``: ``ok`` (call
 ``tyres_warm`` once). Armed but already within ``WARM_DROP`` (tyre blankets): disarmed with no call. The rule disarms
-``ARM_MAX_LAPS`` laps after the arm. The first judgement after an arm needs only ``ARM_FIRST_SPAN_S`` of racing time
-(carcass: new tyres leave 55-59 C under the warm laps, so the call comes before the first corners). Without a warm
-baseline (the first stint, a session joined mid-race) it never arms.
+``ARM_MAX_LAPS`` laps after the arm.
+
+* **A tyre change** is judged at once, in the box: the new set's raw temperatures over ``PIT_JUDGE_S`` (no racing
+  filter), so the call is said in the pit lane - real F2 stops fitted 28-30 C sets against 88 C warm laps, and a call
+  made after the exit landed in the first braking zone. Only that first second: the pit lane then cools a blanket-warm
+  surface (F1 Imola: 69 C in the box, 53 C at the exit, against 66-68 C warm laps). Undecided there (between the two
+  thresholds), it is judged on track as below.
+* **On track** (a pit exit without a change seen, or undecided in the box) the first judgement needs only
+  ``ARM_FIRST_SPAN_S`` of racing time (carcass: new tyres leave 55-59 C under the warm laps).
+* **A safety car / VSC end** is judged at once on the window that ran behind it (the restart is when the call matters),
+  and the neutralised laps never enter the stint baseline.
+
+Without a warm baseline (the first stint, a session joined mid-race) it never arms. While a stop's cold state is on,
+the wheel colours use the ``WARM_DROP`` threshold too, so "cold tyres" never sits over four normal wheels.
 """
 
 from __future__ import annotations
 
 import math
+import statistics
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -62,12 +75,14 @@ def racing(f: CarFrame) -> bool:
 
 @dataclass(slots=True)
 class TyreEvent:
-    """A cold-tyre transition for the call planner: ``tyres_cold`` / ``tyres_warm``."""
+    """A cold-tyre transition for the call planner: ``tyres_cold`` / ``tyres_warm`` (``arm``: which arm it belongs to,
+    so the all-clear is said only after that arm's cold call)."""
 
     topic: str
     reason: str  # REASON_PIT_EXIT / REASON_SC_END
     lap: int | None
     data: dict[str, Any] = field(default_factory=dict)
+    arm: int = 0
 
 
 @dataclass(slots=True)
@@ -77,6 +92,7 @@ class _Arm:
     base_index: float
     base_wheels: tuple[float | None, ...]
     cold: bool = False
+    id: int = 0
 
 
 @dataclass(slots=True)
@@ -120,6 +136,10 @@ class TyreTempMonitor:
         self.last_lap_pressure: tuple[float | None, ...] = (None,) * 4
         self.wear_now: tuple[float, ...] | None = None
         self.events: list[TyreEvent] = []
+        self.neutral = False  # a safety car / VSC is out: nothing enters the stint baseline
+        self._arms = 0
+        self._changed_in_pit = False  # the tyres were changed in this pit visit (the arm was made in the box)
+        self._pit_judge: tuple[float, list[float]] | None = None  # (change time, raw index values) until judged
 
     # ------------------------------------------------------------------ inputs
     def _set_windows(self, model: str) -> None:
@@ -145,6 +165,10 @@ class TyreTempMonitor:
         t = f.session_time_s
         if t is None:
             return
+        changed = bool(f.pit_status) and (
+            (f.tyre_age_laps is not None and self.age_laps is not None and f.tyre_age_laps < self.age_laps)
+            or (f.tyre_compound is not None and self.compound is not None and f.tyre_compound != self.compound)
+        )
         if f.tyre_compound is not None:
             self.compound = f.tyre_compound
         if f.tyre_age_laps is not None:
@@ -170,6 +194,10 @@ class TyreTempMonitor:
             return
         self.set_model(model)
         temps = f.tyre_inner_temp_c if model == MODEL_CARCASS else f.tyre_surface_temp_c
+        if changed:
+            self._tyre_change(t)
+        if self._pit_judge is not None and temps is not None and not (f.quality & BAD_QUALITY):
+            self._judge_in_box(t, sum(temps.as_tuple()) / 4.0)
         if temps is None or not racing(f):
             self._prev_racing_t = None
             return
@@ -186,7 +214,7 @@ class TyreTempMonitor:
                 self._lap_pressure[k].add(p)
         self._index_win.add(t, index)
         t0 = self._stint.t0 if self._stint.t0 is not None else t
-        if self._arm is None and t - t0 >= T.STINT_SKIP_S:  # never the warm-up after a stop / restart
+        if self._arm is None and not self.neutral and t - t0 >= T.STINT_SKIP_S:  # never a warm-up or a safety car
             for k, v in enumerate(vals):
                 self._stint.wheels[k].add(v, dt)
             self._stint.index.add(index, dt)
@@ -208,14 +236,17 @@ class TyreTempMonitor:
                 self.state = "ok"
                 self.since = {"lap": new_lap, "reason": "timeout"}
 
+    def set_neutral(self, neutral: bool) -> None:
+        """A safety car / VSC is out (True) or not: its laps never enter the stint baseline."""
+        self.neutral = neutral
+
     def on_safety_car_end(self) -> None:
-        """A safety car / VSC came in: armed against the current stint's baseline (else the warm one)."""
+        """A safety car / VSC came in: armed against the current stint's baseline (else the warm one) and judged at
+        once on the window that ran behind it, so a call comes at the restart, not a lap later."""
         base = self._stint.baseline() or self._warm
         if base is not None and base[0] is not None:
-            self._arm = _Arm(REASON_SC_END, self.lap, base[0], base[1])
-            self._index_win.clear()
-            for w in self._windows:
-                w.clear()
+            self._arm = self._new_arm(REASON_SC_END, base)
+            self._last_eval = -math.inf
 
     def rewind(self) -> None:
         """A flashback: the lap in progress and the windows hold rewound data."""
@@ -227,21 +258,66 @@ class TyreTempMonitor:
         self._last_eval = -math.inf
 
     # ------------------------------------------------------------------ stints
+    def _new_arm(self, reason: str, base: tuple[float | None, tuple[float | None, ...]]) -> _Arm:
+        assert base[0] is not None
+        self._arms += 1
+        return _Arm(reason, self.lap, base[0], base[1], id=self._arms)
+
     def _pit_entry(self) -> None:
+        self._changed_in_pit = False
+        self._pit_judge = None
         base = self._stint.baseline()
         if base is not None and base[0] is not None:
             self._warm = base
+
+    def _tyre_change(self, t: float) -> None:
+        """New tyres in the pit lane: armed now (against the warm laps) and judged in the box (``_judge_in_box``)."""
+        self._changed_in_pit = True
+        warm = self._warm
+        if warm is None or warm[0] is None:
+            self._arm, self._pit_judge = None, None
+            return
+        self._arm = self._new_arm(REASON_PIT_EXIT, warm)
+        self.state, self.since = "unknown", None
+        self._pit_judge = (t, [])
+
+    def _judge_in_box(self, t: float, index: float) -> None:
+        """The new set's raw temperatures over ``PIT_JUDGE_S`` after the change: cold (the call, in the pit lane),
+        warm (blankets: disarmed, nothing to say) or undecided (judged on track)."""
+        judge, arm = self._pit_judge, self._arm
+        if judge is None or arm is None:
+            self._pit_judge = None
+            return
+        t0, vals = judge
+        if t - t0 < T.PIT_JUDGE_S:
+            vals.append(index)
+            return
+        self._pit_judge = None
+        if not vals:
+            return
+        med = statistics.median(vals)
+        model = self.model or MODEL_SURFACE
+        data = {"index_c": round(med, 1), "baseline_c": round(arm.base_index, 1), "model": model, "in_pit": True}
+        if med <= arm.base_index - T.COLD_DROP_C[model]:
+            arm.cold = True
+            self.state = "cold"
+            self.since = {"lap": self.lap, "reason": arm.reason}
+            self.events.append(TyreEvent("tyres_cold", arm.reason, self.lap, data, arm.id))
+        elif med >= arm.base_index - T.WARM_DROP_C[model]:
+            self._disarm(t)  # blankets: nothing to say
+            self.state = "ok"
 
     def _pit_exit(self, t: float) -> None:
         self._stint = _Stint(t0=t)
         for w in (*self._windows, self._index_win):
             w.clear()
         self._prev_racing_t = None
+        self._pit_judge = None
+        if self._changed_in_pit:
+            self._changed_in_pit = False  # armed (or not) in the box already
+            return
         warm = self._warm
-        if warm is not None and warm[0] is not None:
-            self._arm = _Arm(REASON_PIT_EXIT, self.lap, warm[0], warm[1])
-        else:
-            self._arm = None
+        self._arm = self._new_arm(REASON_PIT_EXIT, warm) if warm is not None and warm[0] is not None else None
 
     # ------------------------------------------------------------------ cold-tyre rule
     def _disarm(self, t: float | None) -> None:
@@ -273,7 +349,7 @@ class TyreTempMonitor:
                 arm.cold = True
                 self.state = "cold"
                 self.since = {"lap": self.lap, "reason": arm.reason}
-                self.events.append(TyreEvent("tyres_cold", arm.reason, self.lap, data))
+                self.events.append(TyreEvent("tyres_cold", arm.reason, self.lap, data, arm.id))
             elif med >= arm.base_index - warm:
                 self._disarm(t)  # warm already (tyre blankets): nothing to say
                 self.state = "ok"
@@ -281,7 +357,7 @@ class TyreTempMonitor:
             self._disarm(t)
             self.state = "ok"
             self.since = {"lap": self.lap, "reason": "warm"}
-            self.events.append(TyreEvent("tyres_warm", arm.reason, self.lap, data))
+            self.events.append(TyreEvent("tyres_warm", arm.reason, self.lap, data, arm.id))
 
     # ------------------------------------------------------------------ outputs
     def take_events(self) -> list[TyreEvent]:
@@ -316,13 +392,17 @@ class TyreTempMonitor:
     def bands(self) -> list[dict[str, Any]]:
         model = self.model or MODEL_SURFACE
         bases = self.wheel_baselines()
+        # while a stop's (or restart's) cold state is on, a wheel is cold until it is back within the warm threshold,
+        # the same rule that ends the cold state: never "cold tyres" over four normal wheels
+        arm = self._arm
+        drop = T.WARM_DROP_C[model] if arm is not None and arm.cold else T.COLD_DROP_C[model]
         out = []
         for k, name in enumerate(WHEELS):
             now = self._windows[k].median() if self._windows else None
             base = bases[k] if k < len(bases) else None
             if base is None or now is None:
                 band = "unknown"
-            elif now <= base - T.COLD_DROP_C[model]:
+            elif now <= base - drop:
                 band = "cold"
             elif now >= base + T.HOT_RISE_C[model]:
                 band = "hot"

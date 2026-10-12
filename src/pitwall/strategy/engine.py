@@ -518,7 +518,10 @@ class StrategyEngine:
         neutral = self.sc.neutral
         if neutral is not None:
             loss_now = d.loss_sc.get("full_s" if neutral == "full" else "virtual_s")
-            loss = None if loss_now is None else Loss.of(loss_now, None, None, 0, str(d.loss_sc.get("tier")))
+            n_sc = self.pits.neutral_stops(neutral)  # this kind's own count and tier
+            loss = (
+                None if loss_now is None else Loss.of(loss_now, None, None, n_sc, "measured" if n_sc else "heuristic")
+            )
         if me is not None and rt is not None:
             d.rejoin = self.rejoin.update(
                 me,

@@ -108,7 +108,27 @@ def test_game_only_without_a_measured_loss() -> None:
     cars = [car(0, 1), car(5, 2, leader_ms=3000, player=True)]
     r = _predict(cars, loss=None)
     assert r is not None and r["basis"] == "game_only" and r["position"] is None and r["game_position"] == 8
+    assert r["reason"] == "no_loss"
     assert _predict(cars, loss=None, game_position=0) is None
+    # stops measured, but the player's own gap is unknown this moment (right after the player's own stop)
+    blind = [car(0, 1, gap_ms=None), with_(car(5, 2, player=True), gap_leader_ms=None, gap_ahead_ms=None)]
+    r = _predict(blind)
+    assert r is not None and r["basis"] == "game_only" and r["reason"] == "no_gap"
+
+
+def test_a_safety_car_loss_carries_its_own_stop_count_and_tier() -> None:
+    from pitwall.ai.facts import FactSheet
+    from pitwall.strategy.facts import _rejoin
+
+    pt = PitTracker()
+    assert pt.neutral_stops("full") == 0 and pt.neutral_stops("virtual") == 0  # nothing measured: no count
+    cars = [car(0, 1), car(5, 2, leader_ms=3000, player=True), car(2, 3, leader_ms=10000)]
+    r = _predict(cars, loss=rj.Loss.of(14.0, None, None, 0, "measured"))
+    assert r is not None
+    fs = FactSheet()
+    _rejoin(fs, r)
+    (f,) = fs.facts
+    assert "measured on 0 stop" not in f.text and "from a measured 14 s pit loss" in f.text
 
 
 def test_pit_tracker_entry_gap_falls_back_to_the_last_known_value() -> None:

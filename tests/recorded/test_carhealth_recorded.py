@@ -4,16 +4,17 @@ Committed fixtures (byte-for-byte excerpts of the owner's sessions, names scrubb
 types car health reads: ``excerpt_capture.py --f1-packet-id``):
 
 * ``f1_25_2025_ps5_jeddah-f2_race-pitstop-coldtyres-excerpt.pwcap`` (F2 Jeddah race, carcass tyre model): the lap-1
-  stop on new tyres -> ``tyres_cold`` within 5 s of the pit exit (carcass 30 C against an 88 C baseline), warm again on
-  lap 3 at 353 s.
+  stop on new tyres -> ``tyres_cold`` in the box, a second after the tyre change and 13 s before the pit exit
+  (carcass 28 C against an 88 C baseline), warm again on lap 3 at 353 s.
 * ``f1_25_2025_ps5_bahrain-f2_race-lockups-abs-off-excerpt.pwcap`` (F2 Bahrain race, ABS off): five lock-ups in lap 2,
   the wheels fully locked (slip -1.0).
 * ``f1_25_2025_ps5_imola_race-pitstop-excerpt.pwcap`` (F1 Imola, tyre blankets, surface model): no cold-tyre call;
   the player's pit entry gap is known and the rejoin estimate is frozen through the lane.
 
-The owner-only checks (``scripts/carhealth_check.py`` on the full captures in ``data/captures``, or the scratch copies
-``PITWALL_OWNER_CAPTURES`` names) are skipped where those captures are absent, like
-``test_strategy_real.test_full_austria_race``. Nothing here is live validation.
+The owner-only checks (``scripts/carhealth_check.py`` on the owner's full captures) run only when
+``PITWALL_OWNER_CAPTURES`` names a folder of scratch copies of them, never the live data folder (a capture the service
+is still writing could break or flake ``make check``); they are skipped otherwise, and for a capture that is absent.
+Nothing here is live validation.
 """
 
 from __future__ import annotations
@@ -39,8 +40,9 @@ FIXTURES = ROOT / "tests" / "fixtures" / "recorded"
 JEDDAH = FIXTURES / "f1_25_2025_ps5_jeddah-f2_race-pitstop-coldtyres-excerpt.pwcap"
 BAHRAIN = FIXTURES / "f1_25_2025_ps5_bahrain-f2_race-lockups-abs-off-excerpt.pwcap"
 IMOLA = FIXTURES / "f1_25_2025_ps5_imola_race-pitstop-excerpt.pwcap"
-# the owner's full captures; PITWALL_OWNER_CAPTURES points at scratch copies of them (never the live data folder)
-CAPTURES = Path(os.environ.get("PITWALL_OWNER_CAPTURES") or ROOT / "data" / "captures")
+# the owner's full captures: only scratch copies PITWALL_OWNER_CAPTURES points at (never the live data folder)
+_OWNER_DIR = os.environ.get("PITWALL_OWNER_CAPTURES")
+CAPTURES = Path(_OWNER_DIR) if _OWNER_DIR else None
 
 pytestmark = pytest.mark.recorded
 
@@ -96,11 +98,13 @@ def test_jeddah_cold_tyres_after_the_stop_then_warm(jeddah: Run) -> None:
     warm = [(t, c) for t, c in jeddah.calls if c.topic == "tyres_warm"]
     assert len(cold) == 1 and len(warm) == 1
     t_cold, c = cold[0]
-    assert t_cold is not None and 0 < t_cold - exit_t <= 5.0  # before the first corners
-    assert c.data["baseline_c"] == 88.0 and c.data["index_c"] <= 32.0 and c.data["reason"] == "pit_exit"
-    assert c.text == "New tyres are cold: give them a lap or two before you push." and c.lap == 2
+    # in the box, a second after the change at 132.5 s: said in the pit lane, never into the first braking zone
+    assert t_cold is not None and 133.0 <= t_cold <= 134.0 and exit_t - t_cold > 10.0
+    assert c.data["baseline_c"] == 88.0 and c.data["index_c"] <= 30.0 and c.data["in_pit"] is True
+    assert c.data["reason"] == "pit_exit" and c.lap == 2
+    assert c.text == "New tyres are cold: give them a lap or two before you push."
     t_warm, w = warm[0]
-    assert t_warm is not None and 350.0 <= t_warm <= 356.0 and w.lap == 3 and w.level == "detailed"
+    assert t_warm is not None and 350.0 <= t_warm <= 356.0 and w.lap == 3 and w.level == "normal"
     assert e.tyres.state == "ok" and not e.tyres.armed
 
 
@@ -162,6 +166,8 @@ def _check_module() -> Any:
 
 
 def _owner(name: str) -> Path:
+    if CAPTURES is None:
+        pytest.skip("PITWALL_OWNER_CAPTURES not set (scratch copies of the owner's captures)")
     path = CAPTURES / name
     if not path.exists():
         pytest.skip(f"owner capture {name} absent")
@@ -205,19 +211,26 @@ def test_owner_f2_cold_tyres_and_lockups() -> None:
     by = {uid[-6:]: s for uid, s in res["sessions"].items()}
     for uid, exit_t in (("314818", 146.3), ("244822", 161.6)):
         cold = [c for c in by[uid]["calls"] if c["topic"] == "tyres_cold"]
-        assert len(cold) == 1 and 0 < cold[0]["t"] - exit_t <= 5.0, uid
+        assert len(cold) == 1 and 10.0 < exit_t - cold[0]["t"] <= 20.0 and cold[0]["in_pit"], uid  # the box
+        assert [c["topic"] for c in by[uid]["calls"]].count("tyres_warm") == 1, uid  # the all-clear is never dropped
     assert next(s for s in by["244822"]["lap_states"] if s["lap"] == 5)["state"] == "ok"  # warm by the end of lap 4
     raw = by["752346"]["raw_slip_laps"]
     assert raw["1"][0] == 10 and (raw.get("2") or raw.get("2*"))[0] == 8  # the survey's per-lap lock-ups
 
 
 def test_owner_gt7_fuel_stays_off() -> None:
+    """Why ``GT7_FUEL_ENABLED`` is off: no GT7 recording shows the level falling. A capture that does fails this test,
+    which is the cue to verify the estimate (thresholds.GT7_FUEL_ENABLED) - not to loosen it."""
+    if CAPTURES is None:
+        pytest.skip("PITWALL_OWNER_CAPTURES not set (scratch copies of the owner's captures)")
     mod = _check_module()
-    names = sorted(p.name for p in CAPTURES.glob("*_udp33740.pwcap")) if CAPTURES.exists() else []
+    names = sorted(p.name for p in CAPTURES.glob("*_udp33740.pwcap"))
     if not names:
         pytest.skip("owner GT7 captures absent")
     for name in names:
         for s in mod.run_capture(CAPTURES / name)["sessions"].values():
+            levels = s["fuel_levels"]
+            assert not levels or levels[0] == levels[1] == 1.0, (name, levels)  # 100 / 100 throughout
             fuel = s["final_view"]["fuel"]
             assert fuel["status"] == "unverified" and fuel["fraction"] is None and fuel["laps_of_fuel"] is None
             assert not [f for f in s["facts"] if "Fuel" in f]

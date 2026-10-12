@@ -103,17 +103,74 @@ def test_the_arm_ends_after_three_laps() -> None:
     assert not eng.tyres.armed and eng.take_calls() == []
 
 
-def test_safety_car_end_arms_against_this_stint() -> None:
+def test_safety_car_end_judges_the_laps_behind_it_at_once() -> None:
     eng = _engine()
     t = drive(eng, 0.0, 100.0, inner=90.0, lap_s=1000.0)
     eng.feed(info(sc="full", t=t))
-    t = drive(eng, t, t + 60.0, inner=88.0, speed=120.0, lap_s=1000.0)
+    t = drive(eng, t, t + 120.0, inner=65.0, speed=120.0, lap_s=1000.0)  # cooled behind the safety car
+    assert eng.tyres.baseline_index() == 90.0  # the neutralised laps never enter the stint baseline
     eng.feed(info(sc="none", t=t))
     assert eng.tyres.armed
-    drive(eng, t, t + 5.0, inner=65.0, lap0=3, lap_s=1000.0)
+    drive(eng, t, t + 0.5, inner=66.0, lap0=3, lap_s=1000.0)  # the first racing frame of the restart
     assert eng.tyres.state == "cold" and eng.tyres.since is not None and eng.tyres.since["reason"] == "sc_end"
     (call,) = eng.take_calls()
     assert call.topic == "tyres_cold" and "safety car" in call.text and call.data["reason"] == "sc_end"
+
+
+def test_a_safety_car_that_did_not_cool_the_tyres_says_nothing() -> None:
+    eng = _engine()
+    t = drive(eng, 0.0, 100.0, inner=90.0, lap_s=1000.0)
+    eng.feed(info(sc="virtual", t=t))
+    t = drive(eng, t, t + 60.0, inner=86.0, speed=150.0, lap_s=1000.0)
+    eng.feed(info(sc="none", t=t))
+    drive(eng, t, t + 10.0, inner=88.0, lap0=3, lap_s=1000.0)
+    assert not eng.tyres.armed and eng.tyres.state == "ok" and eng.take_calls() == []
+
+
+def _stop_with_a_change(eng: CarHealthEngine, new: float, *, base: float = 90.0, surface: bool = False) -> float:
+    """A stint at ``base``, the pit lane, the box (tyre age 3 -> 0 at the change) at ``new``; returns the exit time."""
+    kw = (lambda v: {"surf": v, "inner": 80.0}) if surface else (lambda v: {"inner": v, "surf": v - 10})
+    t = drive(eng, 0.0, 100.0, lap0=2, lap_s=200.0, **kw(base))
+    t = drive(eng, t, t + 10.0, pit=1, speed=70.0, lap0=2, lap_s=1000.0, **kw(base))
+    t = drive(eng, t, t + 3.0, pit=2, speed=0.0, lap0=2, lap_s=1000.0, **kw(base - 2))  # in the box, old tyres
+    t = drive(eng, t, t + 4.0, pit=2, speed=0.0, lap0=2, lap_s=1000.0, age=0, **kw(new))  # the change
+    return drive(eng, t, t + 10.0, pit=1, speed=70.0, lap0=2, lap_s=1000.0, age=0, **kw(new))
+
+
+def test_new_cold_tyres_are_called_in_the_box() -> None:
+    eng = _engine()
+    _stop_with_a_change(eng, 30.0)
+    calls = eng.take_calls()  # still in the pit lane
+    assert [c.topic for c in calls] == ["tyres_cold"] and calls[0].data["in_pit"] is True
+    assert calls[0].data["baseline_c"] == 90.0 and calls[0].data["index_c"] == 30.0
+    assert eng.tyres.state == "cold" and eng.view()["tyres"]["armed"]
+
+
+def test_tyre_blankets_in_the_box_say_nothing_even_when_the_pit_lane_cools_them() -> None:
+    """F1 Imola (surface model, blankets): 69 C in the box against 66-68 C warm laps, then 53 C at the 80 km/h exit."""
+    eng = _engine("surface")
+    t = _stop_with_a_change(eng, 69.0, base=67.0, surface=True)
+    assert not eng.tyres.armed and eng.take_calls() == []
+    drive(eng, t, t + 5.0, pit=1, speed=80.0, surf=53.0, inner=80.0, age=0, lap0=2, lap_s=1000.0)
+    drive(eng, t + 5.0, t + 60.0, surf=60.0, inner=80.0, age=0, lap0=2, lap_s=1000.0)
+    assert eng.take_calls() == [] and eng.tyres.state != "cold"
+
+
+def test_undecided_in_the_box_is_judged_on_track() -> None:
+    eng = _engine()
+    t = _stop_with_a_change(eng, 78.0)  # 12 C under: neither cold (20) nor warm (8)
+    assert eng.tyres.armed and eng.take_calls() == []
+    drive(eng, t, t + 6.0, inner=60.0, age=0, lap0=2, lap_s=1000.0)  # out on track, cooling: cold
+    assert [c.topic for c in eng.take_calls()] == ["tyres_cold"]
+
+
+def test_wheels_stay_cold_while_the_tyres_are_called_cold() -> None:
+    """The cold state clears within WARM_DROP (8 C): a wheel 10 C under is still "cold", never "ok" under the chip."""
+    eng = _engine()
+    t = _stop_with_a_change(eng, 30.0)
+    drive(eng, t, t + 12.0, inner=80.0, age=0, lap0=2, lap_s=1000.0)  # 10 C under the 90 C warm laps
+    assert eng.tyres.state == "cold"
+    assert {w["band"] for w in eng.view()["tyres"]["wheels"]} == {"cold"}
 
 
 def test_a_short_dip_on_a_straight_is_not_cold_in_surface_mode() -> None:

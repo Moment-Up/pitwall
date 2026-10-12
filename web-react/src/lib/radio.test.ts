@@ -825,6 +825,15 @@ describe("playback and the half-duplex gate", () => {
     expect(radio.get().log.at(-1)?.meta).toBe("text only");
   });
 
+  it("logs a car health call as CAR (its meta.source), still spoken as its own kind", async () => {
+    const { radio, ws } = await goLive();
+    const meta = { topic: "health:tyres_cold", source: "car_health" };
+    ws.text({ type: "say", id: "h1", kind: "strategy", text: "New tyres are cold.", speech: "x", sample_rate: 0, n_bytes: 0, meta });
+    ws.text({ type: "say_end", id: "h1" });
+    expect(radio.get().current).toMatchObject({ id: "h1", kind: "strategy" });
+    expect(radio.get().log.at(-1)).toMatchObject({ id: "h1", kind: "car", text: "New tyres are cold." });
+  });
+
   it("cancel stops the message and reports ended", async () => {
     const { radio, ws, ctx } = await goLive();
     sayAudio(ws, "m1");

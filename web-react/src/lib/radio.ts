@@ -56,7 +56,8 @@ export type SayKind =
   | "strategy"
   | "goal"
   | "validation";
-export type LogKind = SayKind | "transcript" | "you" | "error" | "system";
+/** "car" (health lane): a car health call (cold tyres, fuel, lock-ups), logged by its `meta.source`; spoken as its kind. */
+export type LogKind = SayKind | "car" | "transcript" | "you" | "error" | "system";
 export type Phase = "idle" | "starting" | "live";
 export type ConnStatus = "offline" | "connecting" | "open" | "waiting";
 export type MicStatus = "off" | "requesting" | "live" | "muted" | "ended" | "denied" | "unavailable" | "error";
@@ -1421,19 +1422,20 @@ export class RadioStore extends Store<RadioState> {
     const rate = Math.floor(Number(m.sample_rate) || 0);
     const audioS = nBytes > 0 && rate > 0 ? nBytes / 2 / rate : 0;
     const text = String(m.text ?? "");
+    const logKind: LogKind = m.meta?.["source"] === "car_health" ? "car" : m.kind; // health lane: CAR in the log
     this.set({ current: { id: m.id, kind: m.kind, text, at: Date.now(), audioS } });
     if (this.transmitting()) {
       // Playing this over the driver would cut their transmission: the server drops mic audio while a message is
       // "speaking". Treat it as a barge-in instead: show it, do not play it, and tell the server to stop.
       this.pending = null; // its PCM (if any) is ignored
-      this.addLog(m.kind, text, "not played: you were transmitting", m.id);
+      this.addLog(logKind, text, "not played: you were transmitting", m.id);
       this.send({ type: "stop_tts" });
       return;
     }
     const speech = String(m.speech ?? text);
     const deviceSpeaks = audioS === 0 && m.device_tts === true && this.ttsMode() === "device" && speech.trim() !== "";
     this.addLog(
-      m.kind,
+      logKind,
       text,
       audioS > 0 ? `${audioS.toFixed(1)} s audio` : deviceSpeaks ? "device voice" : "text only",
       m.id,

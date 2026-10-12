@@ -21,7 +21,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 
-from pitwall.carhealth.racecraft import REASON_NOT_RACE
+from pitwall.carhealth.racecraft import REASON_NOT_F1
 from pitwall.carhealth.settings import SECTION, from_stored, validate
 from pitwall.carhealth.view import off_car_health, off_racecraft, with_thresholds
 
@@ -53,7 +53,7 @@ def racecraft_live(request: Request) -> dict[str, Any]:
     if isinstance(view, dict) and view.get("session_id") == sid:
         return view
     s = live.session
-    reason = REASON_NOT_RACE if s is not None and s.game.value != "f1_25" else REASON_WAITING
+    reason = REASON_NOT_F1 if s is not None and s.game.value != "f1_25" else REASON_WAITING
     return off_racecraft(sid, reason)
 
 

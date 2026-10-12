@@ -227,12 +227,27 @@ function gapRow(v: StrategyView, side: "ahead" | "behind", simple: boolean, race
   });
 }
 
+/** Laps before the pit window opens from which "Box now ≈ P7" is shown (before that it is noise: P20 on lap 1). */
+export const REJOIN_LEAD_LAPS = 3;
+
+/** (health lane) The rejoin line is worth a glance: in the pit lane (the held prediction), under a safety car or VSC
+ * (a cheap stop), or from REJOIN_LEAD_LAPS laps before the pit window opens. */
+function rejoinRelevant(v: StrategyView): boolean {
+  if (v.pit?.rejoin?.frozen === true) return true;
+  const sc = v.safety_car?.status;
+  if (sc === "full" || sc === "virtual") return true;
+  const w = v.pit?.window;
+  return !!w && finite(v.lap) && finite(w.open_lap) && v.lap >= w.open_lap - REJOIN_LEAD_LAPS;
+}
+
 /** (health lane) The pit window row with "Box now ≈ P7 (P6–8)" beside its label: where the player would come out
- * (rejoin v2 only, and only while a stop is still needed). */
+ * (rejoin v2 only, only while a stop is still needed and the line is relevant, see rejoinRelevant). A beginner never
+ * gets the game's own figure alone. */
 function windowRowWithRejoin(v: StrategyView, simple: boolean): StrategyRowView {
   const r = windowRow(v, simple);
-  const rj = v.pit?.stop_needed === false ? null : rejoinLine(v.pit?.rejoin, simple);
-  if (!rj) return r;
+  if (v.pit?.stop_needed === false || !rejoinRelevant(v)) return r;
+  const rj = rejoinLine(v.pit?.rejoin, simple);
+  if (!rj || (simple && rj.gameOnly)) return r;
   return { ...r, sub: rj.text, aria: `${r.aria}; ${rj.aria}` };
 }
 

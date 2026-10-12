@@ -138,6 +138,7 @@ class Session:
         self.engine_words: list[tuple[int, str | None]] = []
         self.view_sizes: list[tuple[int, int]] = []
         self.fuel_views: list[dict[str, Any]] = []
+        self.fuel_levels: list[float] = []  # the game's tank level (min, max) seen: does it ever fall?
         self.player_rejoin_at_entry: list[dict[str, Any]] = []
         self.neighbour: list[str] = []
         # rejoin evaluation (every car's pit entry)
@@ -163,6 +164,10 @@ class Session:
                 self.sc_ends.append((self._t, self._lap))
             self._prev_sc = it.safety_car_status
             self.info = it
+            level = it.extra.get("fuel_fraction")
+            if isinstance(level, int | float) and not isinstance(level, bool):
+                lv = float(level)
+                self.fuel_levels = [min([lv, *self.fuel_levels[:1]]), max([lv, *self.fuel_levels[1:]])]
         if isinstance(it, FieldSample):
             if e.wants_field:
                 e.feed(it)
@@ -251,12 +256,13 @@ class Session:
             self.racecraft.append(
                 {"lap": self._lap, "ahead": rc["ahead"], "behind": rc["behind"], "reason": rc["reason"]}
             )
-        clock = e.racecraft.player
-        if clock is not None and clock.laps:
+        clock, seg = e.racecraft.player, e.racecraft.seg
+        if clock is not None and clock.laps and seg is not None:
             last = clock.laps[-1]
+            segs = clock.segments(last, seg)
             ms = self.lap_ms.get(last.lap)
-            if ms:
-                self.seg_checks.append((last.lap, sum(last.segs), ms / 1000.0))
+            if ms and segs is not None:
+                self.seg_checks.append((last.lap, sum(segs), ms / 1000.0))
 
     def _timing(self, rt: RaceTiming) -> None:
         prev = self.prev
@@ -421,7 +427,10 @@ def run_capture(path: Path, uid_filter: str | None = None) -> dict[str, Any]:
             "pit_exits": s.pit_exits,
             "tyre_events": s.events,
             "sc_ends": s.sc_ends,
-            "calls": [{k: c[k] for k in ("topic", "level", "lap", "t", "text")} for c in s.calls],
+            "calls": [
+                {**{k: c[k] for k in ("topic", "level", "lap", "t", "text")}, "in_pit": bool(c["data"].get("in_pit"))}
+                for c in s.calls
+            ],
             "lap_states": s.lap_states,
             "engine_range": None if not s.engine_temps else (min(s.engine_temps), max(s.engine_temps)),
             "brake_words": s.brake_words,
@@ -434,6 +443,7 @@ def run_capture(path: Path, uid_filter: str | None = None) -> dict[str, Any]:
                 for lap in s.slip_laps
             ],
             "fuel": s.fuel_views[-3:],
+            "fuel_levels": s.fuel_levels,
             "raw_slip_laps": {
                 **{str(k): v for k, v in s.raw_laps.items()},
                 **(

@@ -9,7 +9,7 @@ import orjson
 
 from pitwall.carhealth.engine import CarHealthEngine
 from pitwall.carhealth.view import off_car_health, off_racecraft, with_thresholds
-from pitwall.model.telemetry import Game
+from pitwall.model.telemetry import Game, SessionType
 from tests.unit.carhealth_helpers import drive, frame, info, model
 
 TOP = {"version", "session_id", "game", "synthetic", "tyres", "brakes", "engine", "slip", "fuel", "calls"}
@@ -100,7 +100,10 @@ def test_racecraft_view_contract_and_off_shapes() -> None:
     gt7 = CarHealthEngine("g")
     gt7.feed(info(game=Game.GT7, model=None))
     off = gt7.racecraft_view()
-    assert set(off) == RC and off["mode"] == "off" and off["ahead"] is None and "F1 race" in off["reason"]
+    assert set(off) == RC and off["mode"] == "off" and off["ahead"] is None and "only F1 25" in off["reason"]
+    q = CarHealthEngine("q")
+    q.feed(info(session_type=SessionType.QUALIFYING))
+    assert q.racecraft_view()["reason"] == "attack and defend work in races only"
     assert set(off_racecraft(None, "no live session")) == RC
     na = off_car_health(None, "no live session")
     assert set(na) - {"thresholds"} == TOP and na["tyres"] == {"available": False, "reason": "no live session"}
