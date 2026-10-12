@@ -218,6 +218,42 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
             re.I,
         ),
     ),
+    # --- health lane: "where will I come out?" before strategy ("pit", "box"); brakes, engine and "how's the car?"
+    # before tyres ("how are my tyre temps?" stays tyres: the tyres answer leads with the temperatures then)
+    (
+        "rejoin",
+        re.compile(
+            r"\b(?:where (?:will|would|do|'d) (?:i|we) (?:come out|rejoin|end up)|rejoin\w*|"
+            r"come out (?:in|at|behind|ahead|after)|(?:what|which) (?:position|place) (?:will|would) (?:i|we) "
+            r"(?:come out|rejoin)|if (?:i|we) (?:pit|box|stop) (?:now|this lap|next lap))\b",
+            re.I,
+        ),
+    ),
+    # "how's the car?" only as the whole question: "how's the car behind?" stays gaps, "how's the car's balance?"
+    # balance, "how is the car through turn 3?" the corner, "how are my brakes in turn 1?" braking
+    (
+        "car_health",
+        re.compile(
+            r"\b(?:brake (?:temp\w*|heat)|brakes? (?:are |is )?(?:too |very |really |getting )?"
+            r"(?:hot|cold|overheat\w*|cooking|glowing)|how (?:hot|cold) (?:are|is) (?:the |my )?brakes?|"
+            r"(?:are|is) (?:the |my )?brakes? (?:ok|okay|alright|all right|fine|good)\s*[?.!]*\s*$|"
+            r"how(?:['\u2019]s| is| are) (?:the |my )(?:brakes|engine|car)"
+            r"(?:\s+(?:doing|holding up|looking|feeling))?\s*[?.!]*\s*$|"
+            r"is (?:the |my )?car (?:ok|okay|alright|all right|fine|good|healthy)\s*[?.!]*\s*$|"
+            r"engine (?:temp\w*|heat|hot|overheat\w*)|is (?:the |my )?engine (?:ok|okay|alright|fine|hot|overheating)|"
+            r"car health)",
+            re.I,
+        ),
+    ),
+    # "is anything overheating?", never about another car ("is the car ahead overheating?" stays gaps)
+    (
+        "car_health",
+        re.compile(
+            r"^(?!.*\b(?:ahead|behind|in front|front of|him|her|them|they|he|she|his|their|other)\b).*\boverheat\w*",
+            re.I,
+        ),
+    ),
+    # --- end health lane ---
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
     # --- race radio --- penalties and warnings (raceradio.answers), before strategy ("should I pit to serve my
     # drive-through?" is about the penalty)
@@ -256,6 +292,37 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     # --- end race radio ---
+    # --- health lane: attack / defend corners (before gaps: "where's the car behind quicker than me?"); "is the car
+    # behind catching me?" and "what should I do against the car behind?" stay gaps
+    # Defend: the car behind (or "me") is the one attacking - "the car behind is attacking me", "can the car behind
+    # overtake me?", "am I under attack?". Attack only with "I" / "we" or the car ahead as the subject, never a corner
+    # ("how should I attack turn 3?" stays the corner) or ERS ("overtake mode").
+    (
+        "defend",
+        re.compile(
+            r"\b(?:defend\w*|hold (?:him|her|them|it) off|under attack|(?:being|getting) (?:attacked|overtaken|passed)|"
+            r"(?:where|which corner)\b[^.?!]*\bcar behind\b[^.?!]*"
+            r"\b(?:faster|quicker|gain\w*|attack|pass|overtake|try)|"
+            r"where (?:will|could|would|is) (?:the )?car behind\b[^.?!]*\b(?:attack|pass|overtake|try|make a move)|"
+            r"car behind\b[^.?!]*\b(?:attack\w*|overtak\w*|pass(?:ing)?|get (?:past|by)|make a move)|"
+            r"(?:attack\w*|overtak\w*|pass(?:ing)?|get (?:past|by))\s+me)\b",
+            re.I,
+        ),
+    ),
+    (
+        "attack",
+        re.compile(
+            r"\b(?:make a (?:move|pass)|"
+            r"(?:i|we)\b[^.?!]*\b(?:attack|overtake|pass|get (?:past|by))\b"
+            r"(?!\s+(?:mode\b|(?:the |this |that )?"
+            r"(?:kerbs?|corners?|apex\w*|chicane|hairpin|entry|exit|turn\b|t\s?\d)))|"
+            r"(?:where|which corner)\b[^.?!]*\b(?:pass|get past|faster than|quicker than|gain\w* on)\b[^.?!]*"
+            r"\b(?:car (?:ahead|in front)|him|her|them)\b|"
+            r"(?:attack\w*|overtak\w*|pass|get (?:past|by))\b[^.?!]*\bcar (?:ahead|in front)\b)",
+            re.I,
+        ),
+    ),
+    # --- end health lane ---
     # race gaps and position, never the driver's own reference ("how far behind my best am I?") and "position" only as
     # race position ("my position on the brake for turn 4" is braking)
     (
@@ -351,8 +418,14 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
 
 _TOPICS: dict[str, set[str]] = {
     # every intent keeps the "game" topic: what the game never sends is answered from it
-    "fuel": {"session", "game", "fuel", "strategy"},
-    "tyres": {"session", "game", "tyres", "strategy"},
+    "fuel": {"session", "game", "fuel", "strategy", "health"},  # health: health lane
+    "tyres": {"session", "game", "tyres", "strategy", "health"},
+    # --- health lane ---
+    "car_health": {"session", "game", "health", "tyres", "fuel"},
+    "rejoin": {"session", "game", "strategy"},
+    "attack": {"session", "game", "racecraft", "gaps"},
+    "defend": {"session", "game", "racecraft", "gaps"},
+    # --- end health lane ---
     "strategy": {"session", "game", "fuel", "tyres", "strategy", "gaps", "weather"},
     "safety_car": {"session", "game", "strategy", "flags"},
     "gaps": {"session", "game", "gaps", "race"},  # race: the race radio's position (any game)
@@ -701,6 +774,14 @@ def _describe(g: GroundingResult) -> str:
     return "; ".join(parts) or "ok"
 
 
+# --- health lane: no fact to answer from (and nothing the game never sends): what is needed, in plain words
+HEALTH_NONE = {
+    "car_health": "No tyre, brake or engine temperatures yet: get a lap in and ask me again.",
+    "rejoin": "Where you'd come out needs a race with the other cars' timing and a pit stop measured.",
+    "attack": "Attack and defend need a race with the other cars' positions and two clean laps.",
+    "defend": "Attack and defend need a race with the other cars' positions and two clean laps.",
+}
+# --- end health lane ---
 RADIO_SHORT_CHARS = 120  # a short (radio) answer adds a second fact only while the two stay this short together
 
 
@@ -770,6 +851,39 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *,
         if sc is not None:
             return say(sc)
         return say(game) if game is not None else say(first("session"))
+    # --- health lane: car health, "where will I come out?", attack / defend ---
+    if n in ("car_health", "rejoin", "attack", "defend"):
+
+        def kind(topic: str, *kinds: str) -> Fact | None:
+            return next((f for k in kinds for f in facts if f.topic == topic and f.data.get("kind") == k), None)
+
+        if n == "car_health":
+            lead = kind("health", "tyre_temps")
+            brakes, engine = kind("health", "brakes"), kind("health", "engine")
+            if intent.topic in ("brakes", "engine"):  # about that part only, never the tyres in its place
+                from pitwall.carhealth.phrasing import NO_BRAKE_LAP_YET, NO_ENGINE_YET
+
+                part = brakes if intent.topic == "brakes" else engine
+                if part is not None:
+                    return say(part)
+                if game is not None:
+                    return say(game)
+                if intent.topic == "brakes":
+                    return NO_BRAKE_LAP_YET if engine is not None else HEALTH_NONE[n]
+                return NO_ENGINE_YET
+            if lead is not None or brakes is not None or engine is not None:
+                return say(lead, brakes, engine)
+        elif n == "rejoin":
+            rj = kind("strategy", "rejoin", "rejoin_unknown")
+            if rj is not None:
+                return say(rj)
+        else:
+            side = "ahead" if n == "attack" else "behind"
+            rc = kind("racecraft", f"racecraft_{side}", f"racecraft_{side}_unknown", "racecraft_unknown")
+            if rc is not None:
+                return say(rc)
+        return say(game) if game is not None else HEALTH_NONE[n]
+    # --- end health lane ---
     if n == "gaps":  # race strategy (pitwall.strategy)
         gap = first("gaps", contains="ahead") or first("gaps", contains="leading")
         if gap is not None or first("gaps") is not None:
@@ -928,6 +1042,11 @@ _SUBTOPICS: dict[str, tuple[tuple[str, re.Pattern[str]], ...]] = {
     "balance": (
         ("oversteer", re.compile(r"\b(?:over-?steer\w*|loose|snap\w*|rear\b.*\bout)\b", re.I | re.S)),
         ("understeer", re.compile(r"\b(?:under-?steer\w*|push\w* wide|(?:won't|doesn't) turn)\b", re.I)),
+    ),
+    # --- health lane: a brake or engine question is answered about that part, never with the tyres ---
+    "car_health": (
+        ("brakes", re.compile(r"\bbrak\w*", re.I)),
+        ("engine", re.compile(r"\bengine\b", re.I)),
     ),
 }
 # technique sub-topics answered from the corner notes: the note metrics they cover, and how they are said

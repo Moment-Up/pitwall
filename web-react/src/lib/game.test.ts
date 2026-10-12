@@ -59,7 +59,7 @@ const ACC_PS5 = entry("acc:ps5", CAT);
 const ACC_PC = entry("acc:pc", CAT);
 
 describe("the catalogue fixture is the spec's contract", () => {
-  it("has 23 entries, each with the 25 features in order", () => {
+  it("has 23 entries, each with the 26 features in order", () => {
     expect(CAT.schema).toBe(1);
     expect(CAT.entries).toHaveLength(23);
     expect(new Set(CAT.entries.map((e) => e.id)).size).toBe(23);
@@ -147,7 +147,11 @@ describe("unavailableLine", () => {
     expect(unavailableLine(GT7, ["fuel", "ers"])).toBe("Fuel, ERS: not in Pitwall yet");
     expect(unavailableLine(GT7, ["tyre_wear", "tyre_pressures"])).toBe("Tyre wear, pressures: not sent by GT7");
     expect(unavailableLine(AC, ["fuel", "ers"])).toBe("Fuel, ERS: not sent by Assetto Corsa");
-    expect(unavailableLine(FM, ["fuel", "ers"])).toBe("Fuel: not in Pitwall yet · ERS: not sent by Forza Motorsport");
+    // health lane: Forza fuel is now estimated from the tank level (partial), so it is no longer in the line
+    expect(unavailableLine(FM, ["fuel", "ers"])).toBe("ERS: not sent by Forza Motorsport");
+    expect(unavailableLine(FM, ["official_corner_names", "ers"])).toBe(
+      "Official corner names: not in Pitwall yet · ERS: not sent by Forza Motorsport",
+    );
     expect(unavailableLine(AC, ["tyre_temps", "tyre_wear", "tyre_pressures"])).toBe(
       "Tyre temperatures, wear, pressures: not sent by Assetto Corsa",
     );
@@ -340,9 +344,10 @@ describe("the feature list (Setup › Game)", () => {
     expect(car[0]!.id).toBe("tyre_temps");
     const firstUnavailable = car.findIndex((f) => !available(f));
     expect(car.slice(firstUnavailable).some(available)).toBe(false);
-    expect(groups.flatMap((g) => g.features)).toHaveLength(25); // + race radio: race_position, penalties
-    expect(featureCounts(GT7)).toEqual({ available: 7, unavailable: 18, unknown: 0 });
-    expect(featureCounts(OTHER)).toEqual({ available: 0, unavailable: 0, unknown: 25 });
+    // + race radio (race_position, penalties), + health lane (engine temperature)
+    expect(groups.flatMap((g) => g.features)).toHaveLength(26);
+    expect(featureCounts(GT7)).toEqual({ available: 7, unavailable: 19, unknown: 0 });
+    expect(featureCounts(OTHER)).toEqual({ available: 0, unavailable: 0, unknown: 26 });
   });
 
   it("evidence words are the server's support words", () => {

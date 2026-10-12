@@ -29,6 +29,14 @@ Committed captures (each a byte-for-byte excerpt of the maintainer's own PS5 ses
   timing line (negative lap distance), lights out, lap 1->2 and lap 2->3 (lap numbering, standing start)
 - `f1_25_2025_ps5_imola_race-pitstop-excerpt.pwcap`: F1 25, Imola race pit stop - lap 14 pit entry (4810 m) and the
   line crossed in the pit lane, lap 15 leaving the pit lane (exit 449 m), lap 15->16 (in-lap / out-lap flags)
+- `f1_25_2025_ps5_jeddah-f2_race-pitstop-coldtyres-excerpt.pwcap`: F1 25 v1.26, F2 Jeddah race (2026-10-11,
+  20261011-224147, session ...314818, carcass tyre model): the start, the lap-1 baseline, the lap-1 pit stop - the
+  tyre change in the box (tyre age 1 -> 0, carcass 28 C against 88 C) and the exit on new tyres -, warm again on lap 3:
+  car health's cold-tyre call, said in the box (1.54 MB). Only the Session, LapData, Event, CarTelemetry and CarStatus
+  packets of the windows (`excerpt_capture.py --f1-packet-id`), each unchanged
+- `f1_25_2025_ps5_bahrain-f2_race-lockups-abs-off-excerpt.pwcap`: the same capture's F2 Bahrain race (session
+  ...752346, ABS off), lap 2: five lock-ups, wheels fully locked (slip -1.0) - car health's lock-up counts (1.52 MB).
+  Only the Session, LapData, CarTelemetry, CarStatus and MotionEx packets of the windows, each unchanged
 - `ac_ps5_ks_silverstone_probe-excerpt.pwcap`: Assetto Corsa (PS4 build) on PS5, live probe 2026-10-11
 - `gt7_c_ps5_oval_race-start-3laps-excerpt.pwcap`: Gran Turismo 7 (variant C) on PS5, 2026-10-11 (20261011-013533,
   18.0-96.0 s): the load, the rolling start of a 10-lap race on a 0.92 km oval, laps 1-3 timed (24.286 / 23.222 /

@@ -524,8 +524,12 @@ async def test_ac_sheet_says_what_the_game_does_not_send() -> None:
         "setup",
         "who_ahead",  # race radio
         "penalties",  # race radio
+        *("car_health", "rejoin", "attack", "defend"),  # health lane (games.INTENT_FEATURES)
     }
     assert groups == set(game)
+    assert game["car_health"].say == (
+        "Assetto Corsa doesn't send tyre temperatures, brake temperatures or engine temperature."
+    )
     assert game["tyres"].say == (
         "Assetto Corsa doesn't send tyre temperatures, tyre wear, tyre pressures or brake temperatures."
     )

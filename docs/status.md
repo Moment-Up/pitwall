@@ -40,9 +40,16 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Game selection and what each game sends | yes | yes (F1 25 and Assetto Corsa excerpts) | no | GT7, Forza or Assetto Corsa selected with a live console | `game_selection` |
 | Driver profiles and seat changes | yes | yes | no | splitting a live session on a switch | `driver_switch` |
 | Pace against the AI (F1 25) | yes | yes (six PS5 sessions, exact to the millisecond) | no | a real safety car; time trial and the 2026 format; a real "measured" level suggestion | `ai_pace_result` *(new)* |
-| Technique: racing line, brake and throttle, handling balance, setup suggestions | yes | yes (F1 25 PS5 laps; the line on a GT7 capture) | no | lock-ups (every real capture had ABS on); a setup suggestion driven and checked | `technique_balance` *(new)* |
+| Technique: racing line, brake and throttle, handling balance, setup suggestions | yes | yes (F1 25 PS5 laps; the line on a GT7 capture; lock-ups on the F2 Bahrain race with ABS off, 2026-10-11) | no | a setup suggestion driven and checked | `technique_balance` *(new)* |
 | Race strategy engineer (F1 25) | yes | yes (Austria and Monza excerpts; a full 71-lap Austria race) | no | safety car, VSC, rain and your own stop (synthetic only) | `strategy_calls` *(new)* |
 | Race radio: flags, penalties, start and countdown, positions and rivals, damage (F1 25, GT7) | yes | yes (F1 25 PS5: yellow, blue, the start, laps to go, the finish, position changes and clean passes, gaps, warnings, time penalties, a drive-through and its service, wing/floor/diffuser damage, retirements, fastest laps; GT7 PS5: the start, lap one, laps to go, the finish and positions; 5 excerpts and 30 of the owner's races, see [below](#race-radio-unreleased)) | no | everything heard on track; the safety car, VSC, red flag, stop-go, disqualification, black flag, reminders, lap invalidations, the car ahead pitting, punctures, minutes left and faults (synthetic only); GT7 positions against the game's screen; Forza (community docs only) | `race_radio` *(new)* |
+| "Where will I come out?" (rejoin estimate, F1 races) | yes | yes (the Imola 32-lap race, every one of its 32 stops predicted with the loss of the other stops: within one place 78 %, within two 100 %, the range +-1 covered 91 %; both of the player's stops exact; the game's own value said P4 where the car came out P2) | no | a stop of your own called by voice; under a safety car (synthetic only) | - |
+| Cold tyres after a stop (car health) | yes (the safety-car restart: synthetic only) | yes (two F2 stops on PS5 with the carcass model, 2026-10-11: "cold" in the box a second after the tyre change, 13 / 15 s before the pit exit, at 28-30 C against an 88 / 86 C baseline; warm again on lap 3 / 4 and the all-clear said on both (on Bahrain a lock-up note had taken the lap's slot before); two F1 stops with tyre blankets at Imola - 69 C in the box against 66-68 C - and the Austria and Suzuka races: no call) | no | heard live in the pit lane after a stop; a real safety-car restart | - |
+| Tyre temperature bands, brakes and engine (car health) | yes | recorded values, no thresholds (engine 103-132 C, brake lap peaks up to about 1,030 C on every recorded F1 25 / F2 race; GT7 surface 37-196 C) | no | the "hot" band (unvalidated); Forza tyre temperatures | - |
+| Lock-ups and wheelspin per lap (car health, F1) | yes | yes (per-lap counts equal the survey's on every lap of the F2 and Imola sessions but one wheelspin across a line; F2 Bahrain ABS off: 50 lock-ups in 9 laps; wheelspin with traction control full, medium and off) | no | the notes heard on the radio | - |
+| Fuel from the tank level (Forza) | yes (generated laps: within 0.3 laps of the truth, low then critical) | no (community-documented `Dash.Fuel`) | no | everything with the real game | - |
+| GT7 fuel | n/a | **not enabled**: all four owner captures read 100 / 100 (no fuel used) | no | a GT7 race with fuel use on, 5+ laps and a refuelling stop | - |
+| Attack and defend corners (F1 races, on request) | yes | recorded consistency (Austria, three sessions on two days: the attack corner the same, T2 at 1.4 km, on 11 of 12 laps with a car ahead; Imola's defend pick "spread" or "none" on 61 % of laps instead of an invented corner; segment sums within 0.035 s of the game's lap times; laps timed on a 25 m grid from the race start, so a re-learned corner model no longer restarts them: with the model rebuilt after 1, 2, 3 and 5 clean laps as the lap processor does, the first verdict came on lap 65 of the Austria session joined on lap 62 and on lap 5 at Imola - the first laps with two clean laps of both cars; a scratch-server replay before the change gave laps 68 and 8) | no | asked by voice on track | - |
 | Goals, streaks, badges, weekly digest, 3 things, session report | yes | yes (owner's PS5 captures replayed in a scratch database) | no | used after a live session | `goal_line` *(new)* |
 | Reference choice and practice drills | yes | yes (owner's F1 25 captures through `scripts/coachref_check.py`; no committed excerpt has a complete lap) | no | a drill driven on purpose; another driver's lap as the live reference | `drill_cycle`, `reference_choice` *(new)* |
 | Rig validation kit | yes | yes | n/a | nothing passes until it is run live, by design | every item |
@@ -215,9 +222,19 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
 - **Goals and recaps:** a lapped finisher's race is worded as finished but judged by the chequered-flag rule only
   later; incomplete laps; safety-car laps are judged by the live safety-car state, not stored per lap yet.
 - **Game selection:** the owner's seven open questions from the game selection review.
-- **Technique:** lock-ups are synthetic only; the rig check has no lock-up measure yet.
-- **Race strategy:** the predicted rejoin place is right only 44.6 % of the time on a second session id; safety car,
-  VSC, rain and your own stop are synthetic only.
+- **Technique:** the rig check has no lock-up measure yet (lock-ups themselves are recorded since 2026-10-12: the F2
+  Bahrain race with ABS off).
+- **Race strategy:** safety car, VSC, rain and your own stop are synthetic only. The rejoin estimate was rebuilt on
+  real data (F1 25 zeroes the gaps 1-2 s before a car turns in, so the first rule had none for any AI stop at Imola);
+  it is recorded on one race (Imola).
+- **Car health:** nothing is live-validated. The recorded races were streamed end to end over UDP to a scratch server
+  (2026-10-12, text-only radio): both F2 cold-tyre calls, the warm-again and lock-up notes were said, Drive showed the
+  cold wheels and TYRES COLD, and the tyre-call switch silenced the call; never with the game running. The "hot" tyre
+  band is display only and unvalidated; lock-ups and wheelspin are read for F1 only (GT7, Forza and Assetto Corsa slip
+  is not read); GT7 fuel stays off until a recording shows it falling; Forza fuel is synthetic only; the safety-car
+  restart arm of the cold-tyre call is synthetic only; a cold-tyre baseline is never carried across sessions (an F2
+  race starts without blankets: no call on lap 1). The in-box judgement of new tyres reads the tyre age and compound
+  (CarStatus): a stop whose change is not seen is judged on track after the exit, as before.
 - **Pace against the AI:** the active-car count and assist guards; the safety-car exclusion is synthetic only; time
   trial and the 2026 format are unverified; the "measured" suggestion has only been shown with made-up data.
 - **Reference choice and drills:** the finished-drill card is tested as a render only; recorded evidence comes from a

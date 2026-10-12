@@ -1,0 +1,97 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "Forza Motorsport race: 4 % fuel, about one lap left",
+  "notes": "The fuel_critical alert's moment. Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": "s1",
+ "game": "forza_motorsport",
+ "synthetic": false,
+ "tyres": {
+  "available": true,
+  "model": "surface",
+  "compound": null,
+  "state": "ok",
+  "since": null,
+  "index_c": 81.0,
+  "baseline_c": 80.0,
+  "baseline_source": "this_stint",
+  "wheels": [
+   {
+    "wheel": "FL",
+    "band": "ok",
+    "window_c": 80.0,
+    "lap_median_c": 80.0,
+    "baseline_c": 79.0,
+    "pressure_psi": null,
+    "wear_pct": 3.0
+   },
+   {
+    "wheel": "FR",
+    "band": "ok",
+    "window_c": 81.0,
+    "lap_median_c": 81.0,
+    "baseline_c": 80.0,
+    "pressure_psi": null,
+    "wear_pct": 3.0
+   },
+   {
+    "wheel": "RL",
+    "band": "cold",
+    "window_c": 62.0,
+    "lap_median_c": 70.0,
+    "baseline_c": 81.0,
+    "pressure_psi": null,
+    "wear_pct": 4.0
+   },
+   {
+    "wheel": "RR",
+    "band": "ok",
+    "window_c": 83.0,
+    "lap_median_c": 82.0,
+    "baseline_c": 82.0,
+    "pressure_psi": null,
+    "wear_pct": 4.0
+   }
+  ],
+  "note": null,
+  "tier": "heuristic"
+ },
+ "brakes": {
+  "available": false,
+  "reason": "Forza Motorsport doesn't send brake temperatures"
+ },
+ "engine": {
+  "available": false,
+  "reason": "Forza Motorsport doesn't send an engine temperature"
+ },
+ "slip": {
+  "available": false,
+  "reason": "Lock-ups and wheelspin: F1 only for now"
+ },
+ "fuel": {
+  "source": "tank_fraction",
+  "status": "critical",
+  "fraction": 0.045,
+  "per_lap": 0.041,
+  "laps_of_fuel": 1.1,
+  "laps_used": 3,
+  "tier": "community",
+  "reason": null
+ },
+ "calls": [
+  {
+   "id": "hc-fuel_critical-12-1",
+   "topic": "fuel_critical",
+   "level": "alert",
+   "text": "Fuel for about one more lap.",
+   "text_simple": "Almost out of fuel: about one lap left.",
+   "lap": 12,
+   "t_unix": 1760000300,
+   "ttl_s": 60
+  }
+ ],
+ "thresholds": []
+}

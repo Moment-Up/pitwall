@@ -155,6 +155,8 @@ class CarFrame:
     tyre_wear_pct: Wheels[float] | None = None  # 0 = new, 100 = fully worn
     tyre_compound: str | None = None  # normalised label, e.g. "soft", "medium", "hard", "inter", "wet"
     tyre_age_laps: int | None = None
+    # --- health lane: engine temperature (F1 CarTelemetry.engineTemperature); None = not sent / not simulated ---
+    engine_temp_c: float | None = None
 
     # --- fuel ---------------------------------------------------------------------------------------
     fuel_kg: float | None = None

@@ -382,10 +382,10 @@ def _slip_facts(st: SessionTechnique) -> list[FactTuple]:
             ]
             total = sum(h[1] for h in hits)
             top = max(hits, key=lambda h: h[1])
-            say = (
-                f"{total} lock-up{'s' if total != 1 else ''}, most at {top[0]}."
+            say = (  # "this session": a lap's lock-up note (carhealth.calls) counts one lap
+                f"{total} lock-up{'s' if total != 1 else ''} this session, most at {top[0]}."
                 if len(hits) > 1
-                else f"{total} lock-up{'s' if total != 1 else ''}, at {top[0]}."
+                else f"{total} lock-up{'s' if total != 1 else ''} this session, at {top[0]}."
             )
             out.append(
                 (

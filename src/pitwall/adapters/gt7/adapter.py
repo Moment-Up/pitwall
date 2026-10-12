@@ -307,6 +307,7 @@ GT7_INFO = AdapterInfo(
         "tyre_pressure_psi": FieldSupport(_U, "not sent (0xD4..0xF3 is reserved, not pressures)"),
         "tyre_wear_pct": FieldSupport(_U, "not sent by GT7"),
         "brake_temp_c": FieldSupport(_U, "not sent by GT7"),
+        "engine_temp_c": FieldSupport(_U, "0x58/0x5C water/oil are constants 85/110 (not simulated)"),  # health lane
         "sector": FieldSupport(_U, "GT7 has no sectors / split times"),
         "lap_invalid": FieldSupport(_U, "GT7 sends no lap validity"),
         "pit_status": FieldSupport(_U, "GT7 sends no pit state"),

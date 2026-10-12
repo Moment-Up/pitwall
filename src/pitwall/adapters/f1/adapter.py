@@ -98,6 +98,10 @@ F1_25_INFO = AdapterInfo(
         "tyre_inner_temp_c": FieldSupport(_S, "CarTelemetry.tyresInnerTemperature"),
         "tyre_pressure_psi": FieldSupport(_S, "CarTelemetry.tyresPressure (psi)"),
         "brake_temp_c": FieldSupport(_S, "CarTelemetry.brakesTemperature"),
+        # --- health lane ---
+        "engine_temp_c": FieldSupport(
+            _S, "CarTelemetry.engineTemperature (°C; uint16 2025, uint8 2026); PS5 103–132 °C on recorded races"
+        ),
         "tyre_wear_pct": FieldSupport(_S, "CarDamage.tyresWear (%)"),
         "tyre_compound": FieldSupport(_S, "CarStatus.visualTyreCompound"),
         "tyre_age_laps": FieldSupport(_S, "CarStatus.tyresAgeLaps"),
@@ -224,6 +228,8 @@ AI_DIFFICULTY_MAX = 110  # Session.aiDifficulty "0-110" (spec appendix)
 # together with aiDifficulty 0 in the first 2-3 Session packets of every session, before the tail is filled in.
 GEARBOX_ASSIST_DEFINED = frozenset({1, 2, 3})
 NETWORK_GAME: dict[int, bool] = {0: False, 1: True}
+# --- health lane: Session.tyreTemperature (spec: 0 = Surface only, 1 = Surface & Carcass); another value is unknown
+TYRE_TEMPERATURE_MODEL: dict[int, str] = {0: "surface", 1: "surface_and_carcass"}
 LAP_VALID_BIT = 0x01  # LapHistoryData.lapValidBitFlags: 0x01 lap valid (0x02/0x04/0x08 sectors 1-3 valid)
 STINT_END_CURRENT = 255  # TyreStintHistoryData.endLap of the tyre currently fitted
 # Session History byte layout (spec section 5.11): head at 29, laps at 36 (stride 14), stints at 1436 (stride 3).
@@ -983,6 +989,7 @@ class F1Adapter:
             tyre_surface_temp_c=Wheels.from_rl_rr_fl_fr([float(v) for v in tel["tyresSurfaceTemperature"]]),
             tyre_inner_temp_c=Wheels.from_rl_rr_fl_fr([float(v) for v in tel["tyresInnerTemperature"]]),
             tyre_pressure_psi=Wheels.from_rl_rr_fl_fr(list(tel["tyresPressure"])),
+            engine_temp_c=float(tel["engineTemperature"]),  # --- health lane --- (uint16 2025, uint8 2026)
         )
         m = self._motion
         if m is not None:
@@ -1310,6 +1317,13 @@ class F1Adapter:
                     # the weekend's session types in order (spec 8.5; F2: a "Race" is the sprint only before a
                     # "Race 2", carclass.f2_race_kind); absent while the tail is unfilled or the game lists none
                     **({"weekend_structure": weekend} if weekend else {}),
+                    # --- health lane: game settings (raw), None while the tail is unfilled (first ~1.5 s) ---
+                    # tyreTemperature 0 = surface only (the inner temperatures and pressures are then constants the
+                    # game holds per compound: 80/85 C on real PS5 captures), 1 = surface & carcass
+                    "tyre_temperature_model": TYRE_TEMPERATURE_MODEL.get(tail["tyreTemperature"]) if tail_ok else None,
+                    "car_damage_setting": tail["carDamage"] if tail_ok else None,
+                    "low_fuel_mode": tail["lowFuelMode"] if tail_ok else None,
+                    "pit_lane_tyre_sim": tail["pitLaneTyreSim"] if tail_ok else None,
                 },
             )
         )

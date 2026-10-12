@@ -1,0 +1,86 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "GT7 on PS5: surface temperatures with bands, fuel unverified (no numbers)",
+  "notes": "All four owner GT7 captures read fuel 100/100, so Pitwall does not estimate fuel; water and oil are constants. Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": "s1",
+ "game": "gt7",
+ "synthetic": false,
+ "tyres": {
+  "available": true,
+  "model": "surface",
+  "compound": null,
+  "state": "unknown",
+  "since": null,
+  "index_c": 68.5,
+  "baseline_c": 70.0,
+  "baseline_source": "this_stint",
+  "wheels": [
+   {
+    "wheel": "FL",
+    "band": "ok",
+    "window_c": 65.0,
+    "lap_median_c": 64.0,
+    "baseline_c": 66.0,
+    "pressure_psi": null,
+    "wear_pct": null
+   },
+   {
+    "wheel": "FR",
+    "band": "ok",
+    "window_c": 71.0,
+    "lap_median_c": 70.0,
+    "baseline_c": 72.0,
+    "pressure_psi": null,
+    "wear_pct": null
+   },
+   {
+    "wheel": "RL",
+    "band": "ok",
+    "window_c": 66.0,
+    "lap_median_c": 65.0,
+    "baseline_c": 67.0,
+    "pressure_psi": null,
+    "wear_pct": null
+   },
+   {
+    "wheel": "RR",
+    "band": "ok",
+    "window_c": 72.0,
+    "lap_median_c": 71.0,
+    "baseline_c": 73.0,
+    "pressure_psi": null,
+    "wear_pct": null
+   }
+  ],
+  "note": null,
+  "tier": "heuristic"
+ },
+ "brakes": {
+  "available": false,
+  "reason": "GT7 doesn't send brake temperatures"
+ },
+ "engine": {
+  "available": false,
+  "reason": "GT7's water and oil temperatures are constants: not simulated"
+ },
+ "slip": {
+  "available": false,
+  "reason": "Lock-ups and wheelspin: F1 only for now"
+ },
+ "fuel": {
+  "source": "tank_fraction",
+  "status": "unverified",
+  "fraction": null,
+  "per_lap": null,
+  "laps_of_fuel": null,
+  "laps_used": 0,
+  "tier": "community",
+  "reason": "GT7 sends a fuel level, but Pitwall hasn't yet seen a recording where it goes down, so it doesn't estimate fuel."
+ },
+ "calls": [],
+ "thresholds": []
+}

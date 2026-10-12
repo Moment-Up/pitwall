@@ -214,6 +214,7 @@ def _fields(level: SupportLevel, motorsport: bool) -> dict[str, FieldSupport]:
         else FieldSupport(_U, "not sent by Horizon"),
         "tyre_pressure_psi": FieldSupport(_U, "not sent"),
         "brake_temp_c": FieldSupport(_U, "not sent"),
+        "engine_temp_c": FieldSupport(_U, "not sent"),  # health lane
         "fuel_kg": FieldSupport(
             _U, "Dash.Fuel is a 0..1 tank fraction without capacity (fraction in SessionInfo.extra['fuel_fraction'])"
         ),

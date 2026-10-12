@@ -19,6 +19,11 @@ to 0 at the exit; ``numPitStops`` increments and the driver status goes in-lap -
   flashback during the stop, or (session end) the out-lap was never completed.
 
 Nothing is carried across sessions: with no measured stop the pit loss is unknown.
+
+Gap to the leader at pit entry (health lane, ``strategy.rejoin``): real F1 25 zeroes ``deltaToRaceLeader`` 1-2 s before
+the car turns in, so every AI stop at Imola had none on the tick before its entry. Each tick resolves every car's gap
+(the game's, else chained from the car in front, else the last known value at most ``LAST_KNOWN_MAX_AGE_S`` old:
+``last_known_leader``), and a visit's ``entry_leader_ms`` is the resolved gap of the tick before the entry.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pitwall.model.telemetry import CarTiming, RaceTiming
+from pitwall.strategy import rejoin as rj
 
 STATIONARY_MAX_MS = 6000  # [H] longer = repair or penalty, not a normal stop
 LOSS_MIN_MS, LOSS_MAX_MS = 8_000, 45_000  # [H] plausible green pit loss
@@ -110,6 +116,7 @@ class _Car:
     pitted: set[int] = field(default_factory=set)
     visit: PitVisit | None = None
     last: CarTiming | None = None
+    lead_s: float | None = None  # health lane: the resolved gap to the leader on the last tick (strategy.rejoin)
 
 
 class PitTracker:
@@ -120,6 +127,10 @@ class PitTracker:
         self.cars: dict[int, _Car] = {}
         self.visits: list[PitVisit] = []
         self._changed: list[PitVisit] = []
+        # --- health lane: every car's last gap to the leader the game gave (directly or chained) and the latest
+        # resolution (``strategy.rejoin.resolve_leader_gaps``) ---
+        self.last_known_leader: dict[int, tuple[float, float]] = {}
+        self.resolved: dict[int, tuple[float | None, str | None]] = {}
 
     # ------------------------------------------------------------------ input
     def update(self, timing: RaceTiming, safety_car: str | None) -> list[PitVisit]:
@@ -127,6 +138,14 @@ class PitTracker:
         opened: list[PitVisit] = []
         t = timing.session_time_s
         neutral = safety_car if safety_car in NEUTRAL else None
+        # --- health lane: a car leaving the pit lane is somewhere else: its pre-stop gap is never "last known" again
+        for c in timing.cars:
+            prev = self.cars.get(c.car_index)
+            if prev is not None and prev.pit_status and not c.pit_status:
+                self.last_known_leader.pop(c.car_index, None)
+        resolved = self.resolved = rj.resolve_leader_gaps(timing.cars, t, self.last_known_leader)
+        rj.remember(self.last_known_leader, resolved, t)
+        # --- end health lane ---
         for c in timing.cars:
             st = self.cars.get(c.car_index)
             if st is None:
@@ -154,15 +173,18 @@ class PitTracker:
                 st.visit = None
                 st.pit_status = c.pit_status
                 st.last = c
+                st.lead_s = resolved.get(c.car_index, (None, None))[0]
                 continue
             if not st.pit_status and c.pit_status:
+                # health lane: the resolved gap of the tick before the entry (the game's is zero by then)
+                lead = st.lead_s if st.last is not None else resolved.get(c.car_index, (None, None))[0]
                 v = st.visit = PitVisit(
                     car_index=c.car_index,
                     is_player=c.is_player,
                     entry_lap=lap,
                     entry_m=c.lap_distance_m,
                     t_entry=t,
-                    entry_leader_ms=(st.last.gap_leader_ms if st.last is not None else c.gap_leader_ms),
+                    entry_leader_ms=None if lead is None else round(lead * 1000),
                     compound_before=(st.last.tyre_visual if st.last is not None else c.tyre_visual),
                 )
                 opened.append(v)
@@ -189,6 +211,7 @@ class PitTracker:
                 self._finalise(st, v)
             st.pit_status = c.pit_status
             st.last = c
+            st.lead_s = resolved.get(c.car_index, (None, None))[0]
         return opened
 
     def _lap_done(self, idx: int, st: _Car) -> None:
@@ -288,6 +311,7 @@ class PitTracker:
             elif v is not None:
                 v.rewound = True
             st.pit_status = 0 if st.visit is None else st.pit_status
+        self.last_known_leader = {k: v for k, v in self.last_known_leader.items() if v[0] <= t}  # health lane
         keep: list[PitVisit] = []
         for v in self.visits:
             if v.t_entry > t:
@@ -337,6 +361,14 @@ class PitTracker:
         st = self.cars.get(idx)
         return None if st is None else st.visit
 
+    def in_lane_entries(self) -> dict[int, float]:
+        """Health lane: car index -> gap to the leader (s) at pit entry, of the cars in the pit lane now."""
+        return {
+            i: st.visit.entry_leader_ms / 1000.0
+            for i, st in self.cars.items()
+            if st.visit is not None and st.visit.entry_leader_ms is not None
+        }
+
     def green_loss(self) -> dict[str, Any] | None:
         """Median and range (s) of the stops measured under green: ``{"median_s", "range", "n"}``, or None."""
         vals = [v.pit_loss_ms for v in self.visits if v.final and not v.excluded and not v.neutralised]
@@ -369,6 +401,13 @@ class PitTracker:
         if out["full_s"] is None and out["virtual_s"] is None:
             out["tier"] = "heuristic"
         return out
+
+    def neutral_stops(self, kind: str) -> int:
+        """(Health lane) The measured neutralised stops of ``kind`` ("full" / "virtual") behind ``neutral_loss``'s
+        value: 0 when that value is the heuristic one, so the rejoin estimate carries each value's tier and count."""
+        return sum(
+            1 for v in self.visits if v.final and not v.excluded and v.neutralised == kind and v.pit_loss_ms is not None
+        )
 
     def measured_gains(self) -> list[float]:
         """Fresh-tyre gains (s per lap) the field's stops measured: pre-stop pace minus post-stop pace."""

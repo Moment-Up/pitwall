@@ -1,0 +1,40 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "Assetto Corsa: no tyre, brake, engine or fuel data",
+  "notes": "Every section unavailable with the capability sentence. Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": "s1",
+ "game": "ac",
+ "synthetic": false,
+ "tyres": {
+  "available": false,
+  "reason": "Assetto Corsa doesn't send tyre data"
+ },
+ "brakes": {
+  "available": false,
+  "reason": "Assetto Corsa doesn't send brake temperatures"
+ },
+ "engine": {
+  "available": false,
+  "reason": "Assetto Corsa doesn't send an engine temperature"
+ },
+ "slip": {
+  "available": false,
+  "reason": "Lock-ups and wheelspin: F1 only for now"
+ },
+ "fuel": {
+  "source": "tank_fraction",
+  "status": "not_sent",
+  "fraction": null,
+  "per_lap": null,
+  "laps_of_fuel": null,
+  "laps_used": 0,
+  "tier": "community",
+  "reason": "Assetto Corsa doesn't send fuel"
+ },
+ "calls": [],
+ "thresholds": []
+}

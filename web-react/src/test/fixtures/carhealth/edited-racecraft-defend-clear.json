@@ -1,0 +1,55 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "F1 25 race, P6: the car behind (P7, car 14) is clearly quicker through T7 (Turn 7); ahead spread",
+  "notes": "Defend side clear; the attack side has no clear corner (spread), as on Imola. Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": "s1",
+ "mode": "race",
+ "reason": null,
+ "corners_source": "learned",
+ "ahead": {
+  "car_index": 7,
+  "position": 5,
+  "laps_compared": [
+   3,
+   3
+  ],
+  "verdict": "spread",
+  "corner": {
+   "name": "T5",
+   "text": "Turn 5",
+   "delta_s": -0.14
+  },
+  "second": {
+   "name": "T1",
+   "text": "Turn 1",
+   "delta_s": -0.12
+  },
+  "margin_s": 0.02,
+  "lap_delta_s": -0.5
+ },
+ "behind": {
+  "car_index": 14,
+  "position": 7,
+  "laps_compared": [
+   3,
+   2
+  ],
+  "verdict": "clear",
+  "corner": {
+   "name": "T7",
+   "text": "Turn 7",
+   "delta_s": 0.21
+  },
+  "second": {
+   "name": "T4",
+   "text": "Turn 4",
+   "delta_s": 0.08
+  },
+  "margin_s": 0.13,
+  "lap_delta_s": 0.3
+ }
+}

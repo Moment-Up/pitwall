@@ -13,7 +13,6 @@ import {
   mapTile,
   raceControlLine,
   RPM_HOT,
-  tyreBand,
   tyresTile,
   WALL_LAPS,
   WALL_POINTS,
@@ -88,22 +87,21 @@ describe("car tile", () => {
 });
 
 describe("tyres tile", () => {
-  it("FL FR RL RR with the band colour and a word outside the window", () => {
-    const s = fixture("recorded-d246-suzuka-on-track-brake-ahead"); // 89 69 75 67 °C
+  it("FL FR RL RR; without the car_health block no colour and no word: the fixed window is gone (health lane)", () => {
+    const s = fixture("recorded-d246-suzuka-on-track-brake-ahead"); // 89 69 75 67 °C: F1 25 runs cool, not "cold"
     const v = tyresTile(s);
     expect(v.wheels.map((w) => w.wheel)).toEqual(["FL", "FR", "RL", "RR"]);
     expect(v.wheels.map((w) => w.temp)).toEqual(["89°", "69°", "75°", "67°"]);
-    expect(v.wheels[0]).toMatchObject({ band: "ok", word: null, colour: "var(--pw-tyre-optimal)" });
-    expect(v.wheels[1]).toMatchObject({ band: "cold", word: "cold", colour: "var(--pw-tyre-cold)" });
-    expect(v.wheels[2]).toMatchObject({ band: "cool", word: "cool" });
+    for (const w of v.wheels) expect(w).toMatchObject({ band: "unknown", word: null, colour: "var(--pw-tyre-optimal)" });
     expect(v.wheels[0]!.sub).toBe("12% · 24.3 psi");
-    expect(v.wheels[1]!.aria).toBe("FR: surface 69 degrees, cold, wear 13 percent, pressure 24.3 psi");
+    expect(v.wheels[1]!.aria).toBe("FR: surface 69 degrees, wear 13 percent, pressure 24.3 psi");
     expect(v.chip).toBe("Soft · 4 laps");
+    expect(v.chipTone).toBe("neutral");
     expect(v.energy).toBe("Fuel 5.8 kg · +2.4 laps (game) · ERS 4.0 MJ");
-  });
-
-  it("bands: cold < 75, cool < 85, in the window to 105, hot to 115, over above", () => {
-    expect([60, 80, 95, 110, 120, null].map(tyreBand)).toEqual(["cold", "cool", "ok", "hot", "over", "unknown"]);
+    expect(v.basis).toBeNull();
+    // the frame's brakes (the hottest wheel); this older recording has no engine temperature
+    expect(v.temps).toBe("Brakes 857°");
+    expect(v.slip).toBeNull();
   });
 
   it("unknown tyres and fuel are '-', the game's margin left out", () => {
@@ -320,7 +318,7 @@ describe("what the game sends (game selection)", () => {
     const v = tyresTile(s, GT7);
     expect(v.wheels.map((w) => w.temp)).toEqual(["65°", "71°", "66°", "72°"]);
     expect(v.wheels.every((w) => w.sub === null)).toBe(true); // no wear and no pressures: no sub line
-    expect(v.wheels[0]!.aria).toBe("FL: surface 65 degrees, cold");
+    expect(v.wheels[0]!.aria).toBe("FL: surface 65 degrees"); // health lane: no fixed window, so no "cold" at 65 °C
     expect(v.caption).toBe("Tyre wear, pressures: not sent by GT7");
     expect(v.empty).toBeNull();
     expect(v.energy).toBe("Fuel, ERS: not in Pitwall yet");
@@ -342,7 +340,8 @@ describe("what the game sends (game selection)", () => {
     const v = tyresTile(s, FM);
     expect(v.wheels[0]!.sub).toBe("3%");
     expect(v.caption).toBe("Tyre pressures: not sent by Forza Motorsport");
-    expect(v.energy).toBe("Fuel: not in Pitwall yet · ERS: not sent by Forza Motorsport");
+    // health lane: Forza fuel is estimated from the tank level; unknown ("-") until the car health block arrives
+    expect(v.energy).toBe("Fuel - · ERS: not sent by Forza Motorsport");
   });
 
   it("an unknown game ('Another game') keeps every dash: nothing is claimed about it", () => {

@@ -87,6 +87,7 @@ export const FEATURE_NOUNS: Readonly<Record<FeatureId, string>> = {
   tyre_wear: "tyre wear",
   tyre_pressures: "tyre pressures",
   brake_temps: "brake temperatures",
+  engine_temp: "engine temperature", // health lane
   damage: "damage",
   ers: "ERS",
   drs: "DRS",

@@ -173,6 +173,12 @@ FAST_INTENTS = frozenset(
         "sectors",
         "laps_left",
         # --- end race radio ---
+        # --- health lane: car health, "where will I come out?", attack / defend (deterministic, instant) ---
+        "car_health",
+        "rejoin",
+        "attack",
+        "defend",
+        # --- end health lane ---
     }
 )
 # While the car is moving every answer is deterministic (plan decision 2): with the local LLM at about 15 tokens a
@@ -1344,6 +1350,8 @@ class RadioHub:
         elif kind == "race_retract" and self._loop is not None:
             self._loop.call_soon_threadsafe(self._retract_race, payload)
         # --- end race radio ---
+        elif kind == "health_call" and self._loop is not None:  # --- health lane --- car health (pitwall.carhealth)
+            self._loop.call_soon_threadsafe(self._enqueue_health, payload)
 
     def _enqueue_motivation(self, payload: dict[str, Any]) -> None:  # lane motivation (event loop only)
         simple = self.coaching_limits is not None and self.coaching_limits.simple_wording
@@ -1454,6 +1462,23 @@ class RadioHub:
         self._spawn(run())
 
     # --- end race radio ---
+
+    # --- health lane (pitwall.carhealth) ---
+    def _enqueue_health(self, payload: dict[str, Any]) -> None:
+        """A proactive car health call (cold tyres, wear, fuel, lock-ups / wheelspin): queued for the scheduler's speak
+        windows (``carhealth.radio``), in plain words (``text_simple``) for a driver whose profile asks for them."""
+        try:
+            from pitwall.carhealth.radio import health_message
+
+            limits = self.coaching_limits
+            simple = limits is not None and limits.simple_wording
+            if payload.get("audience") == "experienced" and simple:
+                return
+            self.scheduler.enqueue(health_message(payload, time.monotonic(), simple=simple))
+        except Exception:
+            log.exception("car health call failed")
+
+    # --- end health lane ---
 
     def apply_driver(self, driver: Driver | None) -> None:
         """The seated driver changed or edited their profile (``DriverService.attach_radio``; event loop only).

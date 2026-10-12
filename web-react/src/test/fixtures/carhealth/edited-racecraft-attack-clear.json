@@ -1,0 +1,47 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "F1 25 race, P6: the car ahead (P5, car 7) is beaten clearly at T2 (Turn 3); the car behind is not quicker anywhere",
+  "notes": "The spec's RacecraftView example, its car indexes matched to strategy edited-live-race-window-open. Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": "s1",
+ "mode": "race",
+ "reason": null,
+ "corners_source": "learned",
+ "ahead": {
+  "car_index": 7,
+  "position": 5,
+  "laps_compared": [
+   3,
+   3
+  ],
+  "verdict": "clear",
+  "corner": {
+   "name": "T2",
+   "text": "Turn 3",
+   "delta_s": -0.42
+  },
+  "second": {
+   "name": "T3",
+   "text": "Turn 4",
+   "delta_s": -0.18
+  },
+  "margin_s": 0.24,
+  "lap_delta_s": -0.9
+ },
+ "behind": {
+  "car_index": 14,
+  "position": 7,
+  "laps_compared": [
+   3,
+   2
+  ],
+  "verdict": "none",
+  "corner": null,
+  "second": null,
+  "margin_s": null,
+  "lap_delta_s": -0.1
+ }
+}

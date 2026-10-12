@@ -7,6 +7,7 @@
 // tests drive it with plain objects. RadioVoicePage wires it to the stores.
 
 import { Alert, Button, Link } from "@heroui/react";
+import type { ReactNode } from "react";
 import { GoLiveButton, micChipView } from "../../../components/radio";
 import type { VoiceStatus } from "../../../lib/endpoints/settings";
 import type { RadioState, RadioStore, VoiceSource } from "../../../lib/radio";
@@ -100,6 +101,8 @@ export interface RadioVoiceViewProps {
   /** race radio (P2): "Say online players' names" (model.onlineNamesView); absent or not shown = no row. */
   onlineNames?: OnlineNamesView | null;
   onOnlineNames?: (on: boolean) => void;
+  /** (health lane) Shown under "On the radio": the "Car health calls" card (RadioVoicePage passes it). */
+  carHealth?: ReactNode;
 }
 
 const SPEED_MIN = 0.8;
@@ -115,6 +118,7 @@ export function RadioVoiceView({
   ptt,
   onlineNames = null,
   onOnlineNames,
+  carHealth = null,
 }: RadioVoiceViewProps) {
   const link = linkState(r);
   const linkUp = link === "open";
@@ -295,6 +299,7 @@ export function RadioVoiceView({
           </p>
           {/* --- race radio: the per-driver race calls live on the driver sheet --- */}
           {onlineNames?.shown && <p className="m-0 px-1 text-sm text-muted">{RACE_CALLS_NOTE}</p>}
+          {carHealth /* health lane: the "Car health calls" card */}
         </div>
       </div>
     </div>

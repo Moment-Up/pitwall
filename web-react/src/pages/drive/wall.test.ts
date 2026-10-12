@@ -146,7 +146,7 @@ describe("Drive › Car (5.1)", () => {
     expect(text).toContain("Steering 0.48");
     expect(text).toContain("Bias 58%");
     expect(text).toContain("FL 89° 12% · 24.3 psi");
-    expect(text).toContain("FR cold 69°");
+    expect(text).toContain("FR 69°"); // health lane: no fixed window, so 69 °C is not "cold" without the session's bands
     expect(text).toContain("Fuel 5.8 kg");
     expect(text).toContain("current standing · ref L3");
     expect(text).toContain("SB your best today"); // the legend on every timing surface

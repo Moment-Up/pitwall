@@ -500,7 +500,9 @@ async def test_capability_question_with_a_game_that_sends_it_waits_for_a_session
     assert [m["text"] for m in texts(sent, "say")][-1] == "No session data yet. Get a lap in and ask me again."
     hub.ask_text("what's my fuel situation")  # GT7 fuel is not read yet: a known fact
     await settle()
-    assert [m["text"] for m in texts(sent, "say")][-1].startswith("GT7 sends a fuel level, but sources disagree")
+    assert [m["text"] for m in texts(sent, "say")][-1].startswith(
+        "GT7 sends a fuel level, but Pitwall hasn't yet seen a recording"
+    )
     await hub.stop()
 
 

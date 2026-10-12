@@ -131,15 +131,9 @@ export function ago(unix: number): string {
   return new Date(unix * 1000).toLocaleDateString();
 }
 
-// Tyre temperature colour band (generic slick window, F1-like): cold -> in window (plain foreground) -> hot.
-export function tyreTempColor(t: number | null | undefined): string {
-  if (!finite(t)) return "var(--pw-faint)";
-  if (t < 75) return "var(--pw-tyre-cold)";
-  if (t < 85) return "var(--pw-tyre-cool)";
-  if (t <= 105) return "var(--pw-tyre-optimal)";
-  if (t <= 115) return "var(--pw-tyre-hot)";
-  return "var(--pw-tyre-over)";
-}
+// (health lane) The fixed tyre window (tyreTempColor: 75/85/105/115 °C for every game) is gone: no game publishes its
+// tyre windows and F1 25's real surface temperatures sat under it on 93 % of wheel-laps. Tyre colours now compare
+// with the driver's own warm laps (lib/carhealth/view.ts wheelBand / BAND_COLOUR).
 
 /** Clamp a 0..1 pedal / ratio value; unknown stays null (never coerced to 0). */
 export function unit01(v: number | null | undefined): number | null {

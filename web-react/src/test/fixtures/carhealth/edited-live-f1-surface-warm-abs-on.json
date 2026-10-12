@@ -1,0 +1,132 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "F1 25 race, lap 14: surface-only tyre model, tyres in range (FR hot), ABS on, TC full",
+  "notes": "Imola-like: surface temperatures in the 60s, the game's inner temperature is a constant and never shown. Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": "s1",
+ "game": "f1_25",
+ "synthetic": false,
+ "tyres": {
+  "available": true,
+  "model": "surface",
+  "compound": "medium",
+  "state": "ok",
+  "since": null,
+  "index_c": 66.0,
+  "baseline_c": 64.0,
+  "baseline_source": "this_stint",
+  "wheels": [
+   {
+    "wheel": "FL",
+    "band": "ok",
+    "window_c": 66.0,
+    "lap_median_c": 65.0,
+    "baseline_c": 63.0,
+    "pressure_psi": 24.2,
+    "wear_pct": 21.0
+   },
+   {
+    "wheel": "FR",
+    "band": "hot",
+    "window_c": 77.0,
+    "lap_median_c": 74.0,
+    "baseline_c": 64.0,
+    "pressure_psi": 24.2,
+    "wear_pct": 23.0
+   },
+   {
+    "wheel": "RL",
+    "band": "ok",
+    "window_c": 62.0,
+    "lap_median_c": 61.0,
+    "baseline_c": 63.0,
+    "pressure_psi": 21.3,
+    "wear_pct": 18.0
+   },
+   {
+    "wheel": "RR",
+    "band": "ok",
+    "window_c": 61.0,
+    "lap_median_c": 60.0,
+    "baseline_c": 62.0,
+    "pressure_psi": 21.3,
+    "wear_pct": 19.0
+   }
+  ],
+  "note": null,
+  "tier": "heuristic"
+ },
+ "brakes": {
+  "available": true,
+  "last_lap_max_c": [
+   982,
+   979,
+   961,
+   960
+  ],
+  "baseline_max_c": [
+   975,
+   972,
+   955,
+   954
+  ],
+  "word": "hotter",
+  "reason": null
+ },
+ "engine": {
+  "available": true,
+  "lap_median_c": 124.0,
+  "baseline_c": 123.0,
+  "max_c": 127.0,
+  "word": "steady",
+  "reason": null
+ },
+ "slip": {
+  "available": true,
+  "abs": true,
+  "tc": 2,
+  "lockups_applicable": false,
+  "last_lap": {
+   "lap": 13,
+   "lockups": null,
+   "lockup_s": null,
+   "wheelspin": 1,
+   "wheelspin_s": 0.3,
+   "corners": []
+  },
+  "current": {
+   "lap": 14,
+   "lockups": null,
+   "wheelspin": 0
+  },
+  "session": {
+   "laps": 12,
+   "lockups": null,
+   "wheelspin": 11
+  },
+  "reason": null
+ },
+ "fuel": null,
+ "calls": [],
+ "thresholds": [
+  {
+   "name": "COLD_DROP_CARCASS_C",
+   "value": 20.0,
+   "unit": "C",
+   "heuristic": true,
+   "meaning": "cold when the inside temperature is this far under your warm laps",
+   "evidence": "F2 Jeddah/Bahrain PS5 2026-10-11"
+  },
+  {
+   "name": "WARM_DROP_CARCASS_C",
+   "value": 8.0,
+   "unit": "C",
+   "heuristic": true,
+   "meaning": "warm again within this of your warm laps",
+   "evidence": "F2 Jeddah/Bahrain PS5 2026-10-11"
+  }
+ ]
+}

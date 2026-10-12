@@ -106,6 +106,21 @@ class RaceSink(Protocol):
 # --- end race radio ---
 
 
+# --- health lane (pitwall.carhealth) ---
+class HealthSink(Protocol):
+    """Where the car health inputs go (``pitwall.carhealth.worker.CarHealthWorker``): O(1), never blocks ingest.
+    ``wants_field`` is a plain bool (True only in F1 races): field samples are handed over only then."""
+
+    wants_field: bool
+
+    def submit(self, session_id: str, item: Emitted) -> bool: ...
+
+    def end_session(self, session_id: str) -> None: ...
+
+
+# --- end health lane ---
+
+
 class SessionManager:
     def __init__(
         self,
@@ -121,6 +136,7 @@ class SessionManager:
         field: FieldSink | None = None,
         strategy: StrategySink | None = None,
         race: RaceSink | None = None,
+        health: HealthSink | None = None,  # --- health lane ---
     ) -> None:
         self.writer = writer
         self.live = live
@@ -131,6 +147,7 @@ class SessionManager:
         # when it changed), handed to every session that starts after it - a table that came before the session's
         # first item would otherwise never reach it
         self._participants: Participants | None = None
+        self.health = health  # --- health lane --- car health (pitwall.carhealth): runs off this thread
         self.worker = worker
         self.source = source
         self.synthetic = synthetic
@@ -228,6 +245,8 @@ class SessionManager:
             self.strategy.end_session(sid)
         if self.race is not None:  # race radio (pitwall.raceradio)
             self.race.end_session(sid)
+        if self.health is not None:  # --- health lane --- per-car buffers go with the session (privacy)
+            self.health.end_session(sid)
         log.info("session %s ended", sid)
         self.session_id = None
         self._game_uid = None
@@ -239,6 +258,11 @@ class SessionManager:
             # never persisted. Straight to the field worker (a lock-free append) or nowhere.
             if self.field is not None:
                 self.field.submit(e)
+            # --- health lane: attack / defend (F1 races only; one attribute load otherwise) ---
+            h = self.health
+            if h is not None and h.wants_field and self.session_id is not None:
+                h.submit(self.session_id, e)
+            # --- end health lane ---
             return
         if isinstance(e, CarLapHistory):
             # A car's lap list (pace vs AI): never starts a session or counts as activity; O(1) dict store.
@@ -253,6 +277,10 @@ class SessionManager:
             # --- race radio --- the field's timing to the race radio too
             if isinstance(e, RaceTiming) and self.race is not None and self.session_id is not None:
                 self.race.submit(self.session_id, e)
+            # --- health lane: race positions for attack / defend ---
+            if isinstance(e, RaceTiming) and self.health is not None and self.session_id is not None:
+                self.health.submit(self.session_id, e)
+            # --- end health lane ---
             return
         if isinstance(e, Participants):
             # --- race radio --- who drives which car (names inside): only ever to the race radio worker. Never starts
@@ -270,6 +298,7 @@ class SessionManager:
             self._on_session(e)
             self._to_strategy(e)
             self._to_race(e)  # race radio
+            self._to_health(e)  # --- health lane ---
             return
         if isinstance(e, GameEvent) and self.session_id is None:
             # menus send button events with no session: drive PTT but don't create an empty session
@@ -296,6 +325,7 @@ class SessionManager:
         if not isinstance(e, CarSetup):
             self._to_strategy(e)
             self._to_race(e)  # race radio
+            self._to_health(e)  # --- health lane ---
 
     def _to_strategy(self, e: Emitted) -> None:
         """Race strategy (pitwall.strategy): the player's frames, laps, events and session info, after the session
@@ -324,6 +354,21 @@ class SessionManager:
         self.race.submit(sid, e)
 
     # --- end race radio ---
+
+    # --- health lane ---
+    def _to_health(self, e: Emitted) -> None:
+        """Car health (pitwall.carhealth): the player's frames, laps, events and session info, as ``_to_strategy``
+        (one deque append; button events stay out)."""
+        sid = self.session_id
+        if self.health is None or sid is None:
+            return
+        if not isinstance(e, CarFrame | LapCompletion | SessionInfo | GameEvent):
+            return
+        if isinstance(e, GameEvent) and e.kind == EventKind.BUTTON:
+            return
+        self.health.submit(sid, e)
+
+    # --- end health lane ---
 
     def _on_session(self, info: SessionInfo) -> None:
         uid = info.session_uid

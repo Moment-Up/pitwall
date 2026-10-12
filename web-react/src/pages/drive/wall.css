@@ -171,6 +171,22 @@
   font-size: 13px;
   color: var(--muted);
 }
+/* health lane: two captions in a row (what the number is, then what the game does not send) sit close together */
+.pww-tyres__caption + .pww-tyres__caption { margin-top: 2px; }
+/* health lane: the foot's lines (energy; brakes · engine; lock-ups · wheelspin), each its own line */
+.pww-tyres__foot {
+  display: grid;
+  gap: 2px;
+}
+.pww-foot [data-tone="warn"] { color: var(--warning); }
+/* health lane: iPad mini / Safari with toolbars: the wheels step down so the captions and the three foot lines fit */
+@media (max-height: 760px) and (min-width: 1024px) {
+  .pww-tyres { gap: 6px; }
+  .pww-tyre { padding: 6px 10px; }
+  .pww-tyre__t { font-size: 24px; }
+  .pww-tyres__caption { margin-top: 4px; font-size: 12px; line-height: 1.3; }
+  .pww-tyres__foot { gap: 0; }
+}
 .pww-laps__foot {
   display: flex;
   flex-wrap: wrap;

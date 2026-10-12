@@ -20,6 +20,7 @@ Where a feature has less evidence than that, this page says so. [status.md](stat
 - [How the coach decides what to say](#how-the-coach-decides-what-to-say)
 - [Pace against the AI](#pace-against-the-ai)
 - [How the race engineer makes strategy calls](#how-the-race-engineer-makes-strategy-calls)
+- [Car health: tyres, brakes, engine, fuel](#car-health-tyres-brakes-engine-fuel)
 - [The AI engineer](#the-ai-engineer)
 - [F2 cars in F1 25](#f2-cars-in-f1-25)
 - [The classic dashboard](#the-classic-dashboard)
@@ -132,6 +133,20 @@ come from the game's own tyre model say "(game)", rules of thumb say "(estimate)
 `-`. A driver whose profile asks for simple wording gets plain words ("Laps to go", "close", "lift early"). Race strategy is tested on recorded PS5 races and synthetic ones; **not yet validated live**, and safety car,
 rain and your own pit stop are synthetic only (see [how the race engineer makes strategy
 calls](#how-the-race-engineer-makes-strategy-calls)).
+
+The pit window row also says where you would come out if you boxed now ("Box now ≈ P7 (P6–8)", or the game's own
+estimate when no stop has been timed in this race yet) from three laps before the window opens, under a safety car or
+VSC, and through your own stop - not from lap 1, when it is noise. A beginner never sees the game's figure alone. The
+rows for the car ahead and behind carry the corner where you gain most on the car ahead ("best T3") or where the car
+behind gains most on you ("watch T7"), only when one corner clearly stands out (a named corner is kept through one
+contrary lap, so the tag does not flicker).
+
+The **Tyres & energy** tile colours each tyre against *your own warm laps in this session*, not a fixed window: cold
+(blue) or hot (red), with the word, and plain otherwise. The number is the inside (carcass) temperature when the F1
+session simulates it, else the surface. After a pit stop on new tyres the header shows **Cold tyres** until they are
+up to temperature. In F1 the foot line adds the brakes' and engine's temperatures and the last lap's lock-ups (with
+ABS off) and wheelspin; in Forza it shows the laps of fuel from how fast the tank level falls. See [car
+health](#car-health-tyres-brakes-engine-fuel).
 
 ### Track
 
@@ -607,6 +622,9 @@ of the lap except braking cues, alerts and your own answers.
 | Race control, penalties, damage that matter (race radio alerts) | no | yellow, blue, safety car, penalties, major damage |
 | Race calls (position, countdown, lap one, gaps, warnings, minor damage) | their own: 2 a lap (3 detailed) | the finish whatever the allowance |
 | Strategy alerts (safety car box or stay out, critical fuel) | no | also at quiet intensity |
+| Car health alert (Forza fuel for about one lap) | no | also at quiet intensity |
+| Car health call (cold tyres after a stop - in the pit lane -, tyres warm again, wear outside F1 races, Forza fuel low) | yes | as a strategy call |
+| Car health notes (lock-ups, wheelspin) | yes | detailed intensity only (also normal if you choose so) |
 | Lap summary | yes | a newer lap's summary replaces an unsaid one |
 | Strategy call | yes | in a race, after the lap summary |
 | Goal line ("Goal reached: ...") | yes | after the summary and any strategy call; at most two a session |
@@ -725,8 +743,28 @@ the per-lap fuel and tyre answers.
   Under a safety car or VSC a measured stop is used if there is one; otherwise the green loss is halved (VSC 0.6),
   a rule of thumb shown as an estimate.
 - **Undercut.** A new set's gain per lap (the game's tyre model, else the field's measured stops): the undercut on
-  the car ahead is likely below 70 % of that gain, marginal up to it. Where you rejoin if you box now comes from
-  everyone's gap to the leader plus the pit loss, next to the game's own estimate.
+  the car ahead is likely below 70 % of that gain, marginal up to it.
+- **Where will I come out?** Your gap to the leader plus the pit loss, against every other car's gap to the leader.
+  F1 25 zeroes a car's timing gaps 1-2 s before it turns into the pit lane, so each car's gap is the game's, else the
+  one worked out from the car in front, else its last known value (up to 15 s old); cars already in the pit lane count
+  at their entry gap plus the loss. The answer is a place with a range from the measured losses ("around P7, between
+  P6 and P8"), the gap to the car you would come out behind, and whether you rejoin in traffic on the road (a lapped
+  car included). Leading, it says so: "you'd stay in the lead, about 32 seconds clear of P2". Once you are on your
+  in-lap or in the pit lane, the estimate made on track is kept. With no stop timed yet it says that ("I haven't
+  timed a stop this race yet") and gives the game's own estimate as the game's; for a few seconds after your own stop,
+  before your own gap is known again, "give me a few seconds to place you". The game's own estimate is shown next to
+  it, never instead of it (on the real Imola race it said P4 where the car came out P2). On that race's 32 stops the
+  estimate was within one place for 78 % and within two for all of them, and both of your own stops were exact.
+- **Attack and defend** (on request: "where can I overtake him?", "where's the car behind quicker?", "am I under
+  attack?"). For each learned corner, your time against the car directly ahead or behind, over the last three clean
+  laps of each. A corner is named only when it stands out clearly (at least a tenth a lap, and five hundredths more
+  than the next one); otherwise the answer gives the pace over the whole lap ("the car behind is five tenths a lap
+  quicker, but it isn't clearly quicker in any one corner") - never "as quick everywhere". "Expect a look there" only
+  when the car behind is within 1.5 s and not much slower over a lap. Every car's lap is timed from the start of the
+  race, so the answer comes from the third lap and survives the corners being re-learned; when it cannot answer yet it
+  says whose laps are missing (yours or that car's). On three recorded Austria sessions over two days the corner
+  against the car ahead was the same on 11 of 12 laps. Human opponents included, this is kept in memory only and
+  dropped when the session ends: nothing is stored or logged per car, and no names are used.
 - **Fuel.** Fuel per lap is the median of your clean laps; the margin is what the tank lasts against the laps left,
   shown next to the game's own figure. When you are short, lift and coast is worked out from a model of fuel burn
   against throttle fitted on your own driving: so many seconds of lift a lap, *before* your braking point, braking
@@ -751,6 +789,85 @@ under a red flag, and nothing about the gaps under a safety car or VSC. Evidence
 sets, the forecast and other cars' pit stops are checked on real PS5 races (committed excerpts, and a full-distance
 Austria race by `scripts/strategy_check.py`); safety car, VSC, rain, the inters crossover and your own stop are
 synthetic only (`race-strategy-demo`). Nothing is validated live yet.
+
+## Car health: tyres, brakes, engine, fuel
+
+Everything here is deterministic, runs on its own thread (it never slows telemetry), stores nothing and works with
+the language model switched off.
+
+**No fixed temperature windows.** No game publishes its tyre, brake or engine windows (EA's UDP spec, the GT7 and Forza
+community documents), and the real-world figures describe real cars, not the games' models. On real F1 25 races the
+tyre surface's lap median was under 75 °C on 93 % of 500 wheel-laps, and GT7 runs from 37 to 196 °C: a fixed window
+would call almost every lap "cold". So every temperature is judged against **your own warm laps in this session**:
+per tyre, the median of the current stint after its first minute (the previous stint's while new tyres warm up). A
+tyre is *cold* 20 °C under it (12 °C on surface temperatures) and *hot* 12 °C over it (10 °C; shown only, not yet
+checked against real data).
+
+**Which temperature.** F1 sends a surface and an inside (carcass) temperature, but when the session's tyre model is
+"surface only" the inside value is a constant the game holds per compound (80 °C on mediums, 85 °C on hards for a
+whole race), and the pressures stay fixed too. Pitwall uses the inside temperature only when the session simulates
+it; GT7 and Forza send one temperature per tyre (the surface).
+
+**Cold tyres after a stop** is the one proactive temperature call (F1: the other games send no pit state). When new
+tyres go on in the pit box, the first second of their temperatures is judged against your warm laps, and the call
+"New tyres are cold: give them a lap or two before you push" is said in the pit lane - on two real F2 stops the new
+tyres read 28-30 °C against 88 °C, and the same call made after the exit had run into the first braking zone. Later
+"Tyres are up to temperature now" (lap 3 or 4 on those stops, normal radio). With tyre blankets (the real Imola F1
+stops: 69 °C in the box against 66-68 °C) it stays silent, even though the pit lane then cools the surface. A stop
+whose tyre change is not seen is judged on track after the exit. When a safety car or VSC comes in, the laps behind it
+are judged at once, so a call comes at the restart (synthetic only so far); those laps never count towards your warm
+laps. While the cold call stands, the tyre colours stay cold until the tyres are within 8 °C (5 °C surface) of your
+warm laps, the same rule that ends the call. With no warm laps to compare with (the first stint, a session joined
+mid-race) it never fires.
+
+**Brakes and engine** (F1): the last lap's brake peaks and engine temperature against this session's median,
+"normal" / "steady" or "hotter" / "cooler than usual", on Drive and when you ask ("how are my brakes?"). There are no
+warnings: no reliable threshold exists, and on every recorded race the values were never abnormal (engine 103-132 °C,
+brake peaks up to about 1,030 °C). GT7's water and oil temperatures are constants the game does not simulate, so they
+stay unknown.
+
+**Lock-ups and wheelspin per lap** (F1, from the wheel slip): a lock-up is a wheel at least 20 % slower than the car
+under braking for a tenth of a second, counted only with ABS off; wheelspin is a rear wheel 15 % faster under throttle
+for two tenths. Each is placed in its learned corner. Recorded on the F2 Bahrain race with ABS off (50 lock-ups in 9
+laps). A note after a lap with two lock-ups or three wheelspins goes out on the detailed radio by default (Settings ›
+Radio & voice can make it normal or switch it off); wheelspin is spoken only with traction control off or medium.
+
+**Fuel in every game.** F1 is the race strategy engineer's (kilos per lap and the margin to the flag). Forza sends only
+how full the tank is, so Pitwall works out laps of fuel from how fast the level falls over your green laps (no litres
+or kilos), judged at the line: a call under three laps left, and an alert (heard even in quiet mode) under two - the
+last line from which you can still reach the pit entry - and again at once if it drops under one. Laps of fuel are
+said rounded down, the same on the radio, in answers and on Drive. This follows the community documents and is tested
+on generated data only. GT7 sends a fuel level, but Pitwall hasn't yet seen a recording where it goes down, so GT7 fuel
+stays off until a recorded race with fuel use, five laps or more and a refuelling stop proves it. Assetto Corsa sends
+no fuel.
+
+| | F1 25 | GT7 | Forza | Assetto Corsa |
+|---|---|---|---|---|
+| Tyre temperatures against your warm laps | yes (inside when simulated, else surface) | surface | surface (community °F) | not sent |
+| Cold tyres after a stop | yes | no (no pit state) | no | no |
+| Pressures | shown, on request | not sent | not sent | not sent |
+| Wear call | outside races (races: strategy) | not sent | Forza Motorsport only | not sent |
+| Brakes / engine | yes / yes | not sent / not simulated | not sent | not sent |
+| Lock-ups and wheelspin | yes | not read yet | not read yet | not read yet |
+| Fuel | kilos (race strategy) | off until recorded | laps from the tank level | not sent |
+| Where will I come out, attack and defend | races | no (your car only) | no | no |
+
+| Call | When | Level |
+|---|---|---|
+| Cold tyres | new tyres in the box (or a safety car coming in) well under your warm laps; once per stop | normal (also on lap 1, in the pit lane) |
+| Tyres warm again | back within 8 °C (5 °C surface), only after that stop's cold call | normal |
+| Tyre wear | the most-worn tyre at 70 %, once per stint, outside F1 races | normal |
+| Fuel low / critical (Forza) | under three / two laps of fuel at the line; again after three laps (two, or at once under one lap) or half a lap worse | normal / alert |
+| Lock-ups, wheelspin | two lock-ups (ABS off) / three wheelspins (TC off or medium) in a lap; once every three laps | detailed (setting) |
+
+At most one normal and one detailed car health call a lap (the two tyre calls are once per stop and never count, so a
+lock-up note cannot silence them); nothing on lap 1 but cold tyres, on a formation lap, in the pit lane (but the cold
+tyres) or on a race's final lap; under a red flag the tyre calls wait for it to end and the rest are dropped. A driver
+whose profile asks for simple wording hears plain words ("Your tyres are cold, so there's less grip. Take the first
+corners gently."), and plain answers without numbers ("Your brakes are fine."). "How's the car?" says only what stands
+out, else "All normal: tyres, brakes and engine."; a brake or engine question is answered about that part, or with
+what the game does not send - never with the tyres instead. Nothing here ever tells you to brake later. Evidence tiers
+are in [status.md](status.md); **nothing here is validated live yet**.
 
 ## The AI engineer
 

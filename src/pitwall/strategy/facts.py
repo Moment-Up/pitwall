@@ -166,22 +166,7 @@ def _strategy(fs: FactSheet, v: dict[str, Any]) -> None:
             "Pit-lane loss: no pit stop measured in this race yet.",
             {"src": SRC, "kind": "pit_loss_unknown"},
         )
-    rj = pit.get("rejoin")
-    if rj and rj.get("position") is not None:
-        game = rj.get("game_position")
-        text = f"Boxing now would rejoin around P{rj['position']} (estimate)"
-        if rj.get("gap_ahead_s") is not None:
-            text += f", {_n(rj['gap_ahead_s'])} s behind the car ahead"
-        if rj.get("traffic"):
-            text += ", in traffic"
-        if game:
-            text += f"; the game says P{game}"
-        fs.add(
-            "strategy",
-            text + ".",
-            {"src": SRC, "kind": "rejoin", "position": rj["position"], "game_position": game},
-            say=f"Box now and you rejoin around P{rj['position']}.",
-        )
+    _rejoin(fs, pit.get("rejoin"), measured=bool(loss))  # health lane: "where will I come out?" (strategy.rejoin)
     for key in ("undercut_ahead", "undercut_threat"):
         cut = pit.get(key)
         if not cut or cut.get("status") == "unknown":
@@ -221,6 +206,106 @@ def _strategy(fs: FactSheet, v: dict[str, Any]) -> None:
             {"src": SRC, "kind": "neighbour_stop", "rejoin_gap_s": gap, "status": st},
             say=say,
         )
+
+
+# --- health lane: "where will I come out?" (strategy.rejoin) ---
+def _rejoin(fs: FactSheet, rj: dict[str, Any] | None, *, measured: bool = False) -> None:
+    """The rejoin estimate (kind ``rejoin``), or why there is none (``rejoin_unknown``: no stop timed yet, or the
+    player's own gap not known this moment - ``measured``: a stop was timed in this race), always with the game's own
+    value next to it. Positions are said as "P7" (identifiers, not measurements, for the grounding check)."""
+    game = None if not rj else rj.get("game_position")
+    if not rj or rj.get("position") is None:
+        reason = None if not rj else rj.get("reason")
+        if reason == "no_gap" or (reason is None and measured):
+            text = "Rejoin estimate not available this moment: the player's own gap to the leader is not known yet"
+            say = "Give me a few seconds to place you."
+        else:
+            text = "No pit stop timed in this race yet, so no rejoin estimate"
+            say = "I haven't timed a stop this race yet."
+        simple = say
+        if game:
+            text += f"; the game's own estimate is P{game}"
+            say += f" The game says you'd come out about P{game}."
+            simple = f"The game thinks you'd come out about {_ordinal(game)}."
+        fs.add(
+            "strategy",
+            text + ".",
+            {"src": SRC, "kind": "rejoin_unknown", "game_position": game, "reason": reason, "simple": simple},
+            say=say,
+        )
+        return
+    pos, lo, hi = rj["position"], rj.get("position_low"), rj.get("position_high")
+    loss, n, tier = rj.get("loss_s"), rj.get("loss_n"), rj.get("loss_tier")
+    frozen = " (worked out before you turned into the pit lane)" if rj.get("frozen") else ""
+    text = f"Boxing now would rejoin around P{pos}"
+    rng = lo is not None and hi is not None and (lo, hi) != (pos, pos)
+    if tier != "measured":
+        basis = f"estimate from a {_n(loss)} s safety-car pit loss (heuristic)"
+    elif n:
+        basis = f"estimate from a {_n(loss)} s pit loss measured on {n} stop(s)"
+    else:
+        basis = f"estimate from a measured {_n(loss)} s pit loss"
+    text += f" ({'P' + str(lo) + '-P' + str(hi) + ', ' if rng else ''}{basis})"
+    ahead, gap = rj.get("ahead_position"), rj.get("gap_ahead_s")
+    behind, gap_behind = rj.get("behind_position"), rj.get("gap_behind_s")
+    lead = pos == 1 and not rng
+    simple = "You'd still be in the lead." if lead else f"You'd come out around {_ordinal(pos)}."
+    if lead:
+        say = "Box now and you'd stay in the lead"  # "you'd come out around P1" is not how anyone says it
+        if behind is not None and gap_behind is not None:
+            text += f"; {_n(gap_behind)} s ahead of P{behind}"
+            if gap_behind < 1.0:
+                say += f", less than a second clear of P{behind}"
+            else:
+                whole = _n(gap_behind, 0)
+                say += f", about {whole} second{'' if whole == '1' else 's'} clear of P{behind}"
+    else:
+        say = f"Box now and you'd come out around P{pos}"
+    if rng:
+        say += f", between P{lo} and P{hi}"
+    if ahead is not None and gap is not None:
+        text += f"; {_n(gap)} s behind P{ahead}"
+        if gap < 1.0:
+            say += f", less than a second behind P{ahead}"
+        else:
+            whole = _n(gap, 0)
+            say += f", about {whole} second{'' if whole == '1' else 's'} behind P{ahead}"
+    road = rj.get("road_ahead_s")
+    if rj.get("traffic") and road is not None:
+        text += f"; in traffic on the road ({_n(road)} s behind a car)"
+        say += ", in traffic"
+    unknown = rj.get("unknown_cars")
+    if unknown:
+        text += f"; {unknown} car(s) without a known gap left out"
+    if game:
+        text += f"; game says P{game}"
+    text += frozen
+    fs.add(
+        "strategy",
+        text + ".",
+        {
+            "src": SRC,
+            "kind": "rejoin",
+            "position": pos,
+            "position_low": lo,
+            "position_high": hi,
+            "game_position": game,
+            "gap_ahead_s": gap,
+            "gap_behind_s": gap_behind,
+            "loss_s": loss,
+            "loss_n": n,
+            "simple": simple,
+        },
+        say=say + ".",
+    )
+
+
+def _ordinal(n: int) -> str:
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+# --- end health lane ---
 
 
 def _cut_say(word: str, status: str, gap: float | None, gain: float | None) -> str:

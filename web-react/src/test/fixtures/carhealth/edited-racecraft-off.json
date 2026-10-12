@@ -1,0 +1,15 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "GT7 (or any session outside an F1 race)",
+  "notes": "Attack / defend need the other cars' timing (F1 races). Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": null,
+ "mode": "off",
+ "reason": "attack and defend need an F1 race",
+ "corners_source": null,
+ "ahead": null,
+ "behind": null
+}

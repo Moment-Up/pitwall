@@ -106,7 +106,7 @@ def check_entry(e: dict[str, Any], *, full: bool = False) -> None:
     assert set(t) == {"kind", "summary", "port", "console_port", "console_ip", "in_game_setting"}
     assert t["kind"] in KINDS and t["console_ip"] in ("required", "optional", "no")
     assert e["rig"] is None or (set(e["rig"]) == {"game", "platform"} and e["rig"]["game"] in ("f1_25", "gt7"))
-    assert len(e["features"]) == 25  # race radio: race_position, penalties
+    assert len(e["features"]) == 26  # 23 + race radio (race_position, penalties) + engine_temp (health lane)
     for f in e["features"]:
         assert set(f) == FEATURE_KEYS
         assert f["status"] in STATUSES and f["group"] in GROUPS
@@ -391,7 +391,9 @@ def test_engineer_answers_capability_questions_before_any_session(client: TestCl
     want = "No session yet: ask about the game (what Gran Turismo 7 sends), or drive a lap and ask again."
     assert tyres.json()["text"] == want
     fuel = client.post("/api/engineer/ask", json={"question": "how much fuel do I have?"}).json()
-    assert fuel["model"] is None and fuel["text"].startswith("GT7 sends a fuel level, but sources disagree")
+    assert fuel["model"] is None and fuel["text"].startswith(
+        "GT7 sends a fuel level, but Pitwall hasn't yet seen a recording"
+    )
     assert client.get("/api/engineer/history").json() == []  # nothing stored without a session
 
 

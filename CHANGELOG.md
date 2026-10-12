@@ -54,6 +54,20 @@ The release workflow copies a release's bullet points into its GitHub release no
 - Ask "who's ahead?", "do I have a penalty?", "what's my damage?" or "how was sector 2?"; "what position am I?" now
   works in GT7 too.
 - The radio sometimes uses your first name ("Up to P5, Sam."), at most once a minute.
+- Car health: the radio says new tyres are cold after a stop (in the pit lane) and when they are warm again. Tested
+  on recordings of two F2 stops on PS5; not yet heard live.
+- Car health on Drive: tyre temperatures against your own warm laps, brake and engine temperatures, and lock-ups and
+  wheelspin per lap (F1 25). Recorded values; the "hot" band is not yet checked.
+- Ask "how's the car?", "how are my brakes?" or "is the engine OK?": the answer is about that part, never the tyres
+  instead. Not yet asked live.
+- F1 races: ask "where will I come out if I pit now?"; Drive shows "Box now ≈ P7 (P6–8)" near the pit window, under
+  a safety car and in the pit lane. Tested on a recorded Imola race.
+- F1 races: ask "where can I pass?" or "am I under attack?" for the corner where you, or the car behind, is quicker.
+  Tested on recordings.
+- Forza: laps of fuel from how fast the tank level falls (synthetic data only). GT7 fuel stays off until a recording
+  shows it going down.
+- Settings › Radio & voice: Car health calls, for the whole household (tyre temperature, tyre wear, fuel, and the
+  lock-up and wheelspin notes).
 
 ## v0.2.1 - 2026-10-12
 

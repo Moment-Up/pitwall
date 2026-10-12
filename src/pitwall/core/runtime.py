@@ -22,6 +22,8 @@ from pitwall.adapters.base import GameAdapter
 from pitwall.analysis.brake_prior import BrakeEnvelope, PriorRefresher
 from pitwall.analysis.field_model import FieldSnapshot
 from pitwall.carclass import classify_info
+from pitwall.carhealth import settings as carhealth_settings  # --- health lane ---
+from pitwall.carhealth.worker import CarHealthWorker  # --- health lane ---
 from pitwall.config import Settings
 from pitwall.controls.service import ControlsService
 from pitwall.core.coachref import CoachRef
@@ -207,6 +209,13 @@ class Runtime:
         self._unsubscribe_race = self.store.subscribe(
             RACE_RADIO_SECTION, lambda _s, v: setattr(self.live, "race_online_names", online_names_enabled(v))
         )
+        # --- health lane: car health (pitwall.carhealth) for every game, one worker for live input and one per replay;
+        # the household's call settings are swapped in by a store listener
+        hs = carhealth_settings.from_stored(self.store.get(carhealth_settings.SECTION))
+        self.health = CarHealthWorker(self.live, settings=hs)
+        self._replay_health: CarHealthWorker | None = None
+        self._unsubscribe_health = self.store.subscribe(carhealth_settings.SECTION, self._on_health_settings)
+        # --- end health lane ---
         self.processor = LapProcessor(self.db, self.writer, self.live)
         self.worker = AnalysisWorker(self.processor)
         self.motivation = MotivationWorker(self.db, self.writer, self.live)  # lane motivation: goals reached
@@ -339,6 +348,7 @@ class Runtime:
             field=self.field if "f1" in keys else None,  # only F1 reports the whole field (one worker per runtime)
             strategy=self.strategy if "f1" in keys else None,  # race strategy (pitwall.strategy): F1 timing only
             race=self.race,  # race radio: every game
+            health=self.health,  # --- health lane --- every game
         )
         router = PacketRouter(adapters_for(keys, self._known_tracks()), sessions, self.live)
         last_err: OSError | None = None
@@ -562,6 +572,11 @@ class Runtime:
             self._replay_strategy = strategy
             race = RaceRadioWorker(self.live, publish_calls=speed is not None, block_when_full=True)  # race radio
             self._replay_race = race
+            # --- health lane: the same rules as strategy (no calls at max speed; waits instead of dropping)
+            health = CarHealthWorker(
+                self.live, settings=self.health.settings, publish_calls=speed is not None, block_when_full=True
+            )
+            self._replay_health = health
             self.live.knowledge = resolver
             sessions = SessionManager(
                 self.writer,
@@ -575,6 +590,7 @@ class Runtime:
                 field=field,
                 strategy=strategy,
                 race=race,  # race radio
+                health=health,  # --- health lane ---
             )
             adapters = all_adapters(self._known_tracks(), ac_tracks=self._ac_known_tracks(), ac_platform=platform)
             if meta.game_hint != AC_CAPTURE_HINT:
@@ -588,6 +604,7 @@ class Runtime:
                 field.close(drain=True)  # learn what is still queued, publish the final view
                 strategy.close(timeout=30.0, drain=True)  # race strategy: finish the records and stops
                 race.close(timeout=30.0, drain=True)  # race radio: the final view
+                health.close(timeout=30.0, drain=True)  # --- health lane ---
                 if self.live.knowledge is resolver:
                     self.live.knowledge = self.knowledge  # learned (L3) models feed the live resolver again
 
@@ -609,6 +626,9 @@ class Runtime:
         race, self._replay_race = self._replay_race, None  # race radio
         if race is not None:
             race.close()
+        health, self._replay_health = self._replay_health, None  # --- health lane ---
+        if health is not None:
+            health.close()
         self.live.knowledge = self.knowledge
 
     def replay_status(self) -> dict[str, Any] | None:
@@ -639,11 +659,22 @@ class Runtime:
         self.store.replace(games.SECTION, games.new_selection(game, "driver_default", by_driver_id=new_id).section())
         log.info("game %s selected: the usual game of driver %s", game, new_id)
 
+    # --- health lane ---
+    def _on_health_settings(self, _section: str, values: dict[str, Any]) -> None:
+        s = carhealth_settings.from_stored(values)
+        self.health.set_settings(s)
+        replay = self._replay_health
+        if replay is not None:
+            replay.set_settings(s)
+
+    # --- end health lane ---
+
     def close(self) -> None:
         self._unsubscribe()
         self._unsubscribe_game()
         self.controls.close()
         self._unsubscribe_race()  # race radio
+        self._unsubscribe_health()  # --- health lane ---
         self.drivers.unsubscribe(self._on_driver)
         self.stop_replay()
         with self._ilock:
@@ -662,5 +693,6 @@ class Runtime:
         self.field.close()
         self.strategy.close(drain=True)
         self.race.close()  # race radio
+        self.health.close()  # --- health lane --- (nothing to persist)
         self.writer.flush()
         self.writer.close()

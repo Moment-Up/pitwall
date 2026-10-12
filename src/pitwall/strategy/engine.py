@@ -57,6 +57,7 @@ from pitwall.strategy.fuel import BurnWindows, fuel_status, lift_corners
 from pitwall.strategy.gaps import GapEvent, GapTracker, laps_to_within
 from pitwall.strategy.laps_left import lap_fraction, laps_remaining
 from pitwall.strategy.pitloss import PitTracker
+from pitwall.strategy.rejoin import Loss, RejoinPredictor
 from pitwall.strategy.safety_car import SafetyCarState, box_opportunity, entry_ttl_s
 from pitwall.strategy.tyres import GameTyres
 from pitwall.strategy.view import build_view, call_entry
@@ -204,6 +205,7 @@ class StrategyEngine:
         self.ledger: dict[int, LapEntry] = {}
         self.gaps = GapTracker()
         self.pits = PitTracker()
+        self.rejoin = RejoinPredictor()  # health lane: "where will I come out?" (strategy.rejoin)
         self.weather = WeatherTracker()
         self.game_tyres = GameTyres()
         self.burn = BurnWindows()
@@ -403,6 +405,7 @@ class StrategyEngine:
             self._lap = lap_at
         self.gaps.rewind(t)
         self.pits.rewind(t)
+        self.rejoin.rewind(t)  # health lane
         self.burn.rewind(t)
         self._t = t
         self._dirty = True
@@ -494,11 +497,32 @@ class StrategyEngine:
         rt = self.timing
         game_rejoin = None if self.info is None else self.info.extra.get("pit_rejoin_position")
         loss_now = d.loss_green["median_s"] if d.loss_green else None
+        # --- health lane: the loss with its range and tier for the rejoin estimate (strategy.rejoin) ---
+        lg = d.loss_green
+        loss = (
+            None
+            if lg is None
+            else Loss.of(lg["median_s"], lg["range"]["low"], lg["range"]["high"], lg["n"], "measured")
+        )
         neutral = self.sc.neutral
         if neutral is not None:
             loss_now = d.loss_sc.get("full_s" if neutral == "full" else "virtual_s")
+            n_sc = self.pits.neutral_stops(neutral)  # this kind's own count and tier
+            loss = (
+                None if loss_now is None else Loss.of(loss_now, None, None, n_sc, "measured" if n_sc else "heuristic")
+            )
         if me is not None and rt is not None:
-            d.rejoin = cuts.rejoin(me, rt.cars, loss_now, game_rejoin if isinstance(game_rejoin, int) else None)
+            d.rejoin = self.rejoin.update(
+                me,
+                rt.cars,
+                rt.session_time_s,
+                resolved=self.pits.resolved,
+                loss=loss,
+                game_position=game_rejoin if isinstance(game_rejoin, int) else None,
+                in_lane=self.pits.in_lane_entries(),
+                lap_s=d.lap_time_s,
+            )
+            # --- end health lane ---
             stops = me.num_pit_stops
             traffic = None if d.rejoin is None else d.rejoin.get("traffic")
             a, b = self.gaps.ahead, self.gaps.behind

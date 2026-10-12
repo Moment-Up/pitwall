@@ -174,15 +174,13 @@
     "id": "fuel",
     "label": "Fuel",
     "group": "car",
-    "status": "not_implemented",
-    "evidence": null,
-    "short": "Not in Pitwall yet",
-    "reason": "Forza sends only how full the tank is, not its size, so Pitwall doesn't show fuel yet.",
-    "detail": "fuel_kg: Dash.Fuel is a 0..1 tank fraction without capacity (fraction in SessionInfo.extra['fuel_fraction']) (row forza_motorsport)",
+    "status": "partial",
+    "evidence": "community_documented",
+    "short": "Partial",
+    "reason": "Forza sends only how full the tank is, so Pitwall works out laps of fuel from how fast the level falls; no litres or kilos.",
+    "detail": "SessionInfo.extra['fuel_fraction'] (Dash.Fuel 0..1, community docs) -> carhealth.fuel.TankFractionFuel (row forza_motorsport)",
     "note": null,
-    "fields": [
-     "fuel_kg"
-    ]
+    "fields": []
    },
    {
     "id": "tyre_temps",
@@ -238,6 +236,20 @@
     "note": null,
     "fields": [
      "brake_temp_c"
+    ]
+   },
+   {
+    "id": "engine_temp",
+    "label": "Engine temperature",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send engine temperature.",
+    "detail": "not sent (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "engine_temp_c"
     ]
    },
    {
