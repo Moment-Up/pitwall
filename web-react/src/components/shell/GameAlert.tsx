@@ -4,7 +4,7 @@
 //   nothing selected, Pitwall sees a game  [Yes, F1 25 · PS5]       [Choose another] (Setup › Game)
 // The words are the server's (snapshot.game). Renders nothing until the catalogue loads, or with an older server.
 // A mismatch also says why the selected game is selected when a seat change or the command line chose it
-// ("Selected because Thomas usually plays GT7", the same sentence as Setup › Game; integration plan 1.3): GET /api/game
+// ("Selected because Sam usually plays GT7", the same sentence as Setup › Game; integration plan 1.3): GET /api/game
 // is asked only while a mismatch is shown.
 
 import { Alert, Button } from "@heroui/react";

@@ -796,7 +796,7 @@
   font-variant-numeric: tabular-nums;
 }
 /* A tile's sub line is one line (plan 2.6: the card fits with every slot filled): the most important words lead
- * ("Thomas · 1:10.412" before "· 0.540 s slower than your best"), the rest ellipsizes (the full words are its title). */
+ * ("Sam · 1:10.412" before "· 0.540 s slower than your best"), the rest ellipsizes (the full words are its title). */
 .pwc-end__s {
   display: block;
   flex: none; /* never squeezed by a short tile: overflow shows (and is measured) instead */

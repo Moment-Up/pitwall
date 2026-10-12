@@ -28,6 +28,14 @@ The live tests still pending (docs/status.md) are run from **Setup › Validatio
 
 Only live evidence (telemetry from the console on the network) can pass; replays (`recorded`), synthetic streams and
 `pitwall send` over loopback are shown and labelled but never count.
+
+**After v0.2.0 is released**, run these in this order on the rig: `game_selection`, `driver_switch`,
+`radio_speak_windows`, `ipad_one_message` (it now also checks that a drill lap's one message is its drill point).
+The v0.2.0 features need these items too, which are **planned and not in the catalogue yet**: `radio_budget` (at most
+two radio messages of its own a lap at normal intensity, on live laps), `strategy_calls` (a race of 5 laps or more),
+`goal_line`, `drill_cycle` (start, attempts, stop), `ai_pace_result` (an F1 race against the AI),
+`technique_balance` (F1, ABS off for lock-ups) and `reference_choice` (the delta against another driver's lap). Until
+they exist, those features stay at the tiers in [status.md](status.md).
 <!-- end validation kit -->
 
 ## Live validation: F1 25 on PS5 (repeat for Xbox / PC)

@@ -50,12 +50,15 @@
 |---|---|---|
 | `udp-<port>` | `recvfrom` -> monotonic timestamp -> capture queue -> decode -> session state | disk I/O, DB, analysis, LLM |
 | `capture-writer` | zstd-compress raw packets to `.pwcap` (flush every 1 s) | - |
-| `lap-analysis` | per-lap: persist, track model, reference, compare, coaching | touch live sockets |
+| `lap-analysis` | per-lap: persist, track model, reference, compare, coaching. Its one queue also takes bests refreshes (`BestsRequest`), AI pace summaries (`AiPaceJob`, `core/ai_pace.py`) and coachref tasks (`_Task`: reference choice, drill start / stop), in order with the laps | touch live sockets |
 | `db-writer` | all SQLite writes, one transaction per job | - |
 | `motivation` | after a live lap / at session end: mark goals reached (exactly once), notify `motivation` | run on ingest (its note handler only queues, O(1)) |
-
 | `strategy` | race strategy engine (`pitwall/strategy`): gaps, pit loss, tyres, fuel, weather, calls; per-lap records | touch sockets, block ingest (fed by one lock-free deque append per item) |
 | asyncio (uvicorn) | REST, WebSocket snapshots (pull model), LLM calls (async HTTP) | block on DB (uses `to_thread`) |
+
+Every ingest-thread hook of the v0.2.0 features is O(1) (a deque append, a field write or a counter). The combined
+budget is checked on the Austria race excerpt by `tests/recorded/test_ingest_budget_combined.py` (decode, session
+handling and every hook per packet: median, p99 and maximum under fixed limits).
 
 Backpressure: capture queue (200k packets) and lap queue are bounded; overflow is counted and logged, never
 silent. Dashboard clients pull snapshots at a fixed rate, so a slow browser cannot slow ingest; per-client
@@ -170,11 +173,14 @@ pipeline at four points, all on the `lap-analysis` thread:
    `CoachRef.on_context`, which resolves and publishes the seated driver's chosen reference while no lap of the
    session is in yet (`LapProcessor.refresh_reference`), so the delta runs from the first lap.
 
-Storage (schema v3, new tables only): `reference_choices` (per driver, `game`/`track_id` `''` = every track; cascade
+Storage (schema v6, new tables only): `reference_choices` (per driver, `game`/`track_id` `''` = every track; cascade
 on driver delete) and `drills` (one row per drill, attempts as JSON; kept with a NULL driver when the driver is
 deleted). API: `api/routes_coachref.py` (`/api/coachref/...`). Radio: drill intents in `ai/engineer.py` answered by
 `CoachRef.radio_command` without the LLM (only an imperative starts or stops a drill; "who am I compared with?"
-is a deterministic `reference` answer from `ai/facts.py`).
+is a deterministic `reference` answer from `ai/facts.py`), and a `drill` fact (the running drill, or the result of one
+driven in the session) for focus and summary questions. A drill attempt's radio message carries `meta.drill_id`, so the
+validation kit can tell the lap's one drill point. The family's best lap in these conditions is labelled "Best in
+these conditions" whenever it is not the family record (the REC lap in any conditions).
 
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw
@@ -182,8 +188,26 @@ telemetry). `ai/engineer.py`: rule-based intent (works offline; control commands
 topic-filtered facts -> LLM with strict system prompt -> `ai/grounding.py` (every number must be a rounding
 of a number in the cited facts; citations must exist) -> one corrective retry -> deterministic fallback.
 `ai/providers.py`: OpenAI-compatible provider with model discovery and a circuit breaker.
+`_RULES` is one ordered intent table (first match wins), pinned by `tests/fixtures/intents.json` (every question's
+intent and corner, and a grounded deterministic answer for each). The radio never asks the LLM for its fast intents,
+for a question only about data the game never sends (`games.capability_only`), or for any question while the car is
+moving (on track at 8 km/h or more, or speed unknown): `deterministic_answer` covers every intent.
 Technique facts (topics `line`, `technique`, `balance`) come from `technique/facts.py`; their intents are answered
 deterministically and are radio fast intents (feat/technique).
+
+## Radio policy (`voice/scheduler.py`)
+One scheduler decides what is said and when. Message kinds (`voice/types.py`): `answer` and `control` (the driver's
+own questions and commands), `cue` (braking calls), `alert`, `lap_summary`, `strategy`, `goal`, `coaching` (also a
+drill point), `info` (detailed strategy notes) and `validation` (the kit's prompts). `ALLOWED_KINDS` per intensity:
+quiet = answers, control, alerts, cues and validation; normal adds lap summaries, goals, coaching and strategy;
+detailed adds info. Pending messages are dispatched by (priority, `KIND_RANK`, arrival): cues, answers and control
+first, then alerts, lap summary, strategy, goal, coaching, info, validation. On track, `TALK_PER_LAP` (0 / 2 / 4)
+caps the budgeted kinds (lap summary, goal, strategy, coaching, info) per driving lap; alerts, cues, answers and
+validation are outside it. Every proactive message waits for a speak window (off the brake, steering nearly straight,
+time before the next braking zone); the 2 s gap, the 60 s repeat filter and topic replacement (newest wins) still
+apply. `RadioHub.apply_driver` calls `drop_driver_messages()` when another driver sits down (unsaid lap summaries,
+goals and coaching go; strategy and alerts stay). Strategy (`strategy/radio.py`) is the only source of fuel alerts.
+The `say` frames are in [voice-protocol.md](voice-protocol.md).
 
 ## Goals, badges and summaries (`motivation/`)
 Pure rules (`rules.py`: clean runs, steady-lap windows, scopes, F1 race outcomes, personal bests, week arithmetic),
@@ -194,7 +218,7 @@ schema v3); badges, streaks, recaps and digests are derived from laps and events
 driving only (never replays, synthetic only on request). `worker.py` listens to `LiveState` notes (`lap`,
 `event:session_ended`), evaluates on its own thread, flips a goal with one `UPDATE ... WHERE status='active'` and only
 then publishes `live.notify("motivation", note)`: `/ws/live` forwards it as `{"type": "motivation"}` and the radio
-hub queues one `LAP_SUMMARY` line. API reads never write. History reads take only the lap columns before `meta`;
+hub queues one `GOAL` line (no lap identity, so it never holds its lap's coaching back). API reads never write. History reads take only the lap columns before `meta`;
 F1 races with a safety car, or with a chequered flag but no stored last lap (a lapped finish), also read two receive
 times from the lap meta (`t_recv_start_ns`, `t_recv_end_ns`, the events' clock) to judge the finish and leave laps
 behind the safety car out of steady laps.
@@ -207,8 +231,8 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
 `web-react/README.md` has the layout and the switch-over details.
 
 - **Routes** are hash routes `#/<area>/<page>[/<param>][?<query>]` over four areas: Drive (Coach, Car, Track,
-  Radio), Review (Sessions, Coaching, Progress, Ask), Setup (Game, Connect, Rig, Car setup) and Settings (Drivers,
-  Radio & voice, AI engineer, Display, System). Every Svelte hash (`#/live`, `#/radio?token=…`, `#/sessions/<id>`,
+  Radio), Review (Sessions, Coaching, Progress, Goals, Ask), Setup (Game, Connect, Rig, Car setup, Validation; it opens
+  on Game) and Settings (Drivers, Radio & voice, AI engineer, Display, System). Every Svelte hash (`#/live`, `#/radio?token=…`, `#/sessions/<id>`,
   ...) is rewritten in place, keeping its query (`src/lib/route-parse.ts`).
 - **Data:** one `/ws/live` socket for the whole app (snapshots at 20 Hz, the static payload every 5 s), the radio's
   `/ws/radio`, and REST through typed endpoint modules (`src/lib/endpoints/`) behind a request cache that a completed
@@ -218,7 +242,18 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
   rules (state, corner ahead, delta, timing colours, cues, the coaching point) are pure functions in
   `src/lib/drive/` tested on recorded and synthetic fixtures; unknown values show `-`, synthetic data is labelled.
   Drive › Coach is in the first bundle and every other page loads lazily; Recharts stays out of the Drive bundle (the
-  Session complete card loads it on demand).
+  Session complete card loads it on demand). `lib/drive/motion.ts` decides moving or stationary with hysteresis
+  (stationary under 3 km/h for 1.5 s or with no live frame, moving over 8 km/h) and gates the cards, the game
+  mismatch line and the full coaching text; `state.ts` `statusSlot` is the one priority order of the status line and
+  `chipsOf` the stateless chip rule (the highest-ranked short-lived chip within its life; DRILL as the persistent
+  chip); `complete.ts` `dedupeComplete` shows each fact of Session complete once, by the server's `fact_key`.
+- **Live snapshot keys** (`core/live.py`, every snapshot unless noted): the frame, session, laps and events (every-car
+  events carry `player` when F1 says whose they are), `session_state`, `coach`, `bests` (D2), `game`, `ai_pace`,
+  `strategy` (static merge: sent when `strategy_rev` moved or with the 5 s static payload; absent means keep the last
+  value, `null` none), `coachref` (the reference choice and drill), then the static keys every 5 s (`track_model`,
+  `last_comparison`, `skeleton`, `track_knowledge`).
+- **Two car class encodings** until the 0.2.1 single source: goals and badges store `car_class` as
+  `"<game>:formula:<name>"`, pace against the AI as the game's class name (`"F1 World"`); they are never joined.
 
 ## Rig validation kit (`validate/`)
 <!-- validation kit (lane validate) -->
@@ -236,13 +271,20 @@ answered by `RadioHub.command_handler` before the engineer; the LLM never sees v
 <!-- end validation kit -->
 
 ## Storage
-SQLite WAL (`data/pitwall.sqlite3`), schema v4 (`storage/db.py`: v2 driver profiles, v3 `goals` and
-`sessions.info.total_laps`, v4 `sessions.ai_difficulty` and `session_ai_pace`; every migration is additive and
-idempotent, run in one `BEGIN IMMEDIATE` transaction on open). Lap traces stored as compressed float32 npz blobs
-(~19 channels).
+SQLite WAL (`data/pitwall.sqlite3`), schema v6 (`storage/db.py`). Every migration is additive and idempotent, run in
+one `BEGIN IMMEDIATE` transaction on open; `_migrate` checks columns, not version numbers, so any older database
+converges (tests: `tests/unit/test_db_migrations.py`, v2 to v5 fixtures; nothing reads `meta.schema_version`).
 
-SQLite WAL (`data/pitwall.sqlite3`); the race strategy added the tables `strategy_laps` and `pit_stops` (schema
-history in `storage/db.py`). Lap traces stored as compressed float32 npz blobs (~19 channels).
+| Version | Lane | Changes |
+|---|---|---|
+| v1 | - | initial schema |
+| v2 | profiles | `reference_laps.driver_id` and the per-driver indexes |
+| v3 | motivation | `goals`, `ix_goals_driver`; `sessions.info.total_laps` (JSON, no DDL); the 0.1.0 database |
+| v4 | pace vs AI | `sessions.ai_difficulty` (added last, by `ALTER TABLE`), `session_ai_pace` |
+| v5 | race strategy | `strategy_laps`, `pit_stops`, `ix_pit_stops_session` (new tables only) |
+| v6 | coachref | `reference_choices`, `drills`, `ix_drills_driver` (new tables only) |
+
+Lap traces stored as compressed float32 npz blobs (~19 channels).
 Raw packets in `data/captures/*.pwcap` (zstd, ~2.5 MB per 7 min at 60 Hz) for reprocessing.
 
 ## Install and update (`install/`)

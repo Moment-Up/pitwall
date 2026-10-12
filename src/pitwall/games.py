@@ -913,7 +913,7 @@ class Selection:
     id: str
     since_unix: float
     source: str  # "dashboard" | "cli" | "driver_default"
-    # source "driver_default": the driver whose usual game it is, so Setup › Game can say "Selected because Thomas
+    # source "driver_default": the driver whose usual game it is, so Setup › Game can say "Selected because Sam
     # usually plays GT7" (v0.2.0 plan 1.3). None for any other source, and from a settings.json written before it.
     by_driver_id: int | None = None
 

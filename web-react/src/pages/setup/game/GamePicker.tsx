@@ -5,7 +5,7 @@
 // ACC, iRacing, F1 24". Choosing sends PUT /api/game; the answer's actions (the server's words) are listed under the
 // cards, followed by any other input that is still on but receiving nothing, with a Turn off (after a confirm), so
 // inputs from earlier choices do not pile up. The selected card says why it is selected when someone other than this
-// page chose it: "Selected because Thomas usually plays GT7" (a seat change), "Selected from the command line"
+// page chose it: "Selected because Sam usually plays GT7" (a seat change), "Selected from the command line"
 // (lib/game.ts selectionReason; integration plan 1.3).
 
 import { Check, CircleCheck, CircleInfo, TriangleExclamation } from "@gravity-ui/icons";

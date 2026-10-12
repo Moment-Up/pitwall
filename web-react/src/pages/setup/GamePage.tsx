@@ -5,7 +5,7 @@
 //   [You last drove F1 25 on PS5.  Yes · Choose another]   (history suggestion, nothing selected)
 //   What are you playing?   one card per game, platform buttons with their support words, More games; the selected
 //                           card says why when a seat change or the command line chose it
-//                           ("Selected because Thomas usually plays GT7", integration plan 1.3)
+//                           ("Selected because Sam usually plays GT7", integration plan 1.3)
 //   Telemetry input (state, console IP, Open Connect, other inputs)   │   What GT7 sends (23 features, grouped)
 //
 // Data: GET /api/games (catalogue, once per app load), GET /api/game (refetched when the selection changes and every

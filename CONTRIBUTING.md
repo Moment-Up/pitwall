@@ -4,12 +4,12 @@ Thanks for helping. Pitwall is a sim racing coach that runs on the driver's own 
 works out coaching with fixed rules, and only lets a language model explain facts it has already checked. These notes
 cover the setup, the checks every change must pass, and the few rules that keep it trustworthy.
 
-## Before larger work
+## Before sending code
 
 Pitwall does not have an open-source licence yet, so all rights are reserved (README, "Licence and credits"). You are
-welcome to use it for your own racing and to send fixes. For anything larger than a small fix, **open an issue first**
-so we can agree on the approach before you spend time on it. The terms for contributions will be set when the
-licence is chosen.
+welcome to use it for your own racing. **No licence is chosen yet, so please open an issue before sending code**, even
+a small fix: we can then agree on the approach, and the terms for contributions will be set when the licence is
+chosen. Bug reports and feature requests are welcome at any time.
 
 ## Set up
 

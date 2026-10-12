@@ -16,9 +16,9 @@ Where a feature has less evidence than that, this page says so. [status.md](stat
 - [Review](#review)
 - [Setup](#setup)
 - [Settings](#settings)
+- [What the radio says](#what-the-radio-says)
 - [How the coach decides what to say](#how-the-coach-decides-what-to-say)
 - [Pace against the AI](#pace-against-the-ai)
-
 - [How the race engineer makes strategy calls](#how-the-race-engineer-makes-strategy-calls)
 - [The AI engineer](#the-ai-engineer)
 - [The classic dashboard](#the-classic-dashboard)
@@ -53,17 +53,44 @@ bottom. The delta and the coaching keep running.
 
 ![Drive › Session complete](screenshots/03-drive-session-complete.png)
 
-When the session ends, Drive shows the best lap, the number of clean laps, the time gained, one thing to work on
-and one thing that went well. Before a session starts it shows a Ready card, and without telemetry it shows what to
-check plus a button to try the synthetic demo.
+**Moving or stopped.** On track Drive shows only what helps at speed: the status band or line, at most two chips,
+the next corner (FOCUS, or DRILL while a drill runs), the delta and a short coaching line. Cards, the game mismatch
+line and the full coaching text wait for the car to stop (under 3 km/h for 1.5 s, or the data going quiet; it counts
+as moving again above 8 km/h, so nothing flickers in the pit lane).
 
-**Goals on Drive.** While you drive, a reached goal shows only as a 6-second `GOAL REACHED` chip in the status band
-(an incident chip wins over it); nothing else moves on track. The Ready card between runs shows one goal with its
-progress bar (a goal reached this session first, then a lap-time goal for this track), and the Session complete
-card shows [Today's 3 things](#todays-3-things) and up to two new badges. No animation and no sound.
+**The status line** shows one thing at a time, in this order: offline, no data, no signal, red flag, safety car or
+VSC, yellow, blue, pit lane, chequered flag, session complete, another game's data (stopped only), ready, then the
+normal line (track, session, lap and position). Strategy, goals, drills, pace against the AI and validation never
+take it over. Beside it, at most one short-lived chip (6 s): a penalty or contact of your own first, then a goal
+reached, a flashback, pit entry or exit, a fastest lap, then a reference notice ("Delta to Sam's best from the next
+lap"); and, on an iPad's normal line, the DRILL chip while a drill runs. On a phone or under a band only one chip
+shows, and SYNTHETIC or REPLAY become icons (their words stay in the accessible label).
+
+**Ready card** (before a session and between runs, stopped only): who is in the seat; *Target*: your best here (or
+the last run between runs: best lap, clean laps, time gained), the family record and its holder, the delta reference
+and one goal in scope; *Today*: the radio's calls for this run ("Radio calls: T6, T9, T1"), up to two FOCUS corners
+and the braking calls mode, or, between runs, "Last lap:" with the last lap's point. While a drill runs, or its result
+waits for Done, that column is the drill.
+
+**Session complete** (stopped only): four tiles (best lap with its REC or PB tag, clean laps, gained today, and the
+gap to the family record, or "Laps compared" when this session set it), one line of pace against the AI in an F1 race,
+[Today's 3 things](#todays-3-things) and at most two new badges. Each fact shows once: a personal best named in Went
+well is not repeated by the tile tag, Progress or a badge. When a drill ran in the session, its result takes the
+Work on slot. Without telemetry Drive shows what to check plus a button to try the synthetic demo.
+
+**Goals on Drive.** While you drive, a reached goal shows only as a 6-second `GOAL REACHED` chip (a penalty or contact
+of your own wins over it; it wins over a flashback, a pit message and a fastest lap); nothing else moves on track. No
+animation and no sound.
+
+Evidence: the Drive rules are tested on recorded and synthetic snapshots, and the card fit was measured in a desktop
+browser at 1180 x 820, 1133 x 744, 768 x 1024 and 390 x 844 before the reference control and the drill block joined
+the Ready card (not re-measured since); not yet on an iPad during a live session.
+
 **Delta to.** The label above the delta is a control: what the delta, braking calls, corner comparison and lap
 coaching measure against. *Your best* (the default), the *Family record*, another driver's best (*Sam's best*) or
-a saved lap. Only compatible laps are offered (same game, track, layout, car, wet or dry, and assists); a choice
+a saved lap. When the family's best lap in your conditions is not the family record (the record was set in the wet,
+or with another assist), it is called *Best in these conditions*: "Family record" always means the REC lap. Only
+compatible laps are offered (same game, track, layout, car, wet or dry, and assists); a choice
 that is not available says why, for example "Sam's laps here used a different braking assist". The choice is kept
 per driver, for every track or for one track. It changes while the car is stopped; on track only *Back to your
 best* is offered, and it applies from the next lap. A choice made before the session is in place from the first
@@ -72,7 +99,8 @@ km/h more through the slowest point"), and braking calls never go later than you
 a corner where you have no braking point of your own gets no call. Ask the radio "who am I compared with?" to hear
 it.
 
-**Practice drills.** From the Ready card (or a Work on point in Review, or the radio) pick a corner and a skill:
+**Practice drills.** From the Ready card between runs (a suggested drill under "Last lap:", or *Choose a corner…*),
+a Work on point in Review, or the radio ("start a drill on turn 3"), pick a corner and a skill:
 brake point (within 5 m before the point; past it counts only when the corner was faster), minimum speed (3 km/h
 more than usual, never above the best speed driven there), exit speed, or entry speed (consistency, measured
 against your own laps). For the next laps (5 by default) the radio and the braking calls talk only about that
@@ -118,9 +146,11 @@ been checked by hand, which so far is Austria.
 
 The race engineer. Tap **Go live** once (the browser needs a tap before it plays audio), then hold the button,
 the Space bar on a Mac, or a wheel button mapped to F1 25's UDP Action 1, and ask. Questions about fuel, tyres,
-lap times and radio control are answered at once from telemetry. Analysis questions go to the language model if
-there is one; the engineer says "Copy, checking" and answers a few seconds later. Without a model, the answer is
-built from the facts, as in this screenshot. You can also type questions. Spoken questions need speech
+lap times, flags and the safety car, gaps, strategy, technique, pace against the AI, goals, drills and radio control
+are answered at once from telemetry. While the car is moving every answer is built from the facts at once, never by
+the language model and never with "Copy, checking". Stopped, analysis questions go to the language model if there is
+one; the engineer says "Copy, checking" and answers a few seconds later. Without a model, the answer is built from the
+facts, as in this screenshot. You can also type questions. Spoken questions need speech
 recognition on the computer: built in on a Mac with Apple Silicon, and a whisper.cpp server elsewhere (Windows,
 Linux, Intel Macs); typed questions work everywhere.
 
@@ -174,10 +204,12 @@ and [radio-setup.md](radio-setup.md).
 ![Review › Sessions](screenshots/07-review-sessions.png)
 
 Every session for the selected driver, newest first, with a preview of the selected one and its main thing to
-work on. Each session has Summary, Laps, Compare, Corners and Ask tabs, and races also have a **Strategy** tab:
+work on. Each session has Summary, Laps, Compare, Corners and Ask tabs (on a phone Ask moves to the header button
+when there are five), and races with strategy records also have a **Race** tab:
 grid to finish, stops and the measured pit loss, a timeline of position and gaps with your stops, safety-car laps
 and the weather, your stints, every car's measured pit stops (with why a stop was left out of the pit loss), and
-the strategy calls the radio made. Races recorded before strategy tracking say so instead.
+the strategy calls the radio made. The header names the game and platform ("F1 25 · PS5"); a car Pitwall cannot name
+reads "Unnamed car", never a raw id.
 
 ![Review › Session summary](screenshots/08-review-session-summary.png)
 
@@ -200,12 +232,13 @@ Everything here compares you with **your own reference lap**, never with an "ide
 track edges, so the maps show where each lap went.
 
 - **Compare** adds a technique card for the two laps: both lines on a map (zoom to any corner at true scale, with
-  numbered markers at the biggest differences, e.g. "T3 apex: 1.5 m wider than your reference"), a chart of how far
+  numbered markers at the biggest differences, e.g. "T3 apex: 1.5 m wider than your reference", or "than Sam's best"
+  when lap A is another driver's), a chart of how far
   you were tighter (+) or wider (-) through the focused corner, a table of your inputs against the reference
   (brake peak and time to peak, how you released the brake, brake still on at turn-in, trail braking, coasting,
   throttle pick-up, the ramp to full throttle and lifts, lock-ups and wheelspin) and how the car handled on entry,
   mid-corner and exit.
-- **Corners** adds a "Line, inputs and balance" section to each corner card: the line at turn-in, apex and track-out
+- **Corners** adds a "Technique patterns" section to each corner card (folded on a phone and for beginners): the line at turn-in, apex and track-out
   over the session, habits that repeat ("on 3 of 4 laps"), lock-up and wheelspin counts, and the handling chips.
 - Notes describe what happened; they never tell you to brake later or earlier.
 - Brake differences take your pedals into account: a stock CSL brake measures pedal travel, so only bigger
@@ -228,16 +261,18 @@ on). Nothing has been checked during a live session yet.
 
 ![Review › Coaching plan](screenshots/10-review-coaching-plan.png)
 
-The coaching plan for a driver, track and car: the corners to work on now with their trend over sessions, habits
-that repeat, and what the radio will focus on. Below them, the **Drills** list: each drill's corner, skill, hits,
-best attempt, trend and the reference it was measured against.
+The coaching plan for a driver, track and car: **This session's focus** (led by the same "One to work on (this
+session)" corner as the session's Summary, with its trend over sessions), **Repeats lap after lap** (habits), **Radio
+calls next run** (the live cue plan), the suggested AI difficulty, and the **Drills** list: each drill's corner,
+skill, hits, best attempt, trend and the reference it was measured against.
 
 ### Progress
 
 ![Review › Progress](screenshots/11-review-progress.png)
 
-Progress at one track and car: the personal best, sessions and clean laps, and how the time lost at each corner
-changed from session to session.
+Progress at one track and car (the scope bar at the top applies to every card): the personal best, sessions and clean
+laps, pace against the AI, **What the coach flagged** and how the time lost at each corner changed from session to
+session. Goals, the week and badges have their own page, [Goals](#goals).
 
 Coaching and Progress are the newest pages and have not been used after a live session yet.
 
@@ -246,7 +281,8 @@ Coaching and Progress are the newest pages and have not been used after a live s
 Every session's Summary (and Drive's Session complete card) starts with three short points: **one thing that went
 well**, **one to work on** and **one piece of progress**. They are picked by fixed rules, never by a language model:
 
-- *Went well*: a new personal best, else the strongest positive coaching point, a run of 3 or more clean laps, getting
+- *Went well*: a new personal best (or your first clean laps ever at a track, in that car), else the strongest
+  positive coaching point, a run of 3 or more clean laps, getting
   0.1 s or more faster from your first clean lap to your best (race lap 1, from the grid, is left out), or every lap
   clean; for a beginner, otherwise, how many laps they drove.
 - *One to work on*: the coaching point that cost the most over the session (the coach's own words, simpler for
@@ -262,7 +298,8 @@ complete card says whose session it was. Terminal: `uv run pitwall recap`.
 
 ### Goals
 
-Each driver can have up to six active goals of four kinds: **a lap time** (a clean lap under a target, at one track
+**Review › Goals** holds the goals, the week (newest session first) and the streaks and badges, each in one place;
+it shares Progress's scope bar. Each driver can have up to six active goals of four kinds: **a lap time** (a clean lap under a target, at one track
 in one car or any car of the same class), **clean laps in a row** (2 to 50), **steady laps** (3, 5 or 10 clean laps
 in a row within a spread, 0.1 to 10 s) and **a clean race** (an F1 race from lap 1 to the flag with no penalties, or
 without touching another car either). Only laps driven after the goal was set count, and only your own real driving:
@@ -273,7 +310,7 @@ together, your recent improvement, your best run of clean laps, your steadiest l
 suggestion is for the track it was learned at) and your recent races. Nothing is invented. A goal is marked reached
 once, after the lap that reached it, and stays reached; if that session is later moved to another driver, the goal
 can be reopened (a goal your own laps still reach cannot: add it again to go for it again). Goals can be set before a
-driver's first session, so a parent can set a first one. On Progress, the goals for the chosen track and car come
+driver's first session, so a parent can set a first one. On the Goals page, the goals for the chosen track and car come
 first.
 
 How the rules count, shown in the dashboard where it matters:
@@ -292,17 +329,20 @@ Terminal: `uv run pitwall goals --suggest`.
 
 ### Badges and streaks
 
-Badges are earned by your own driving and worked out from it, so they always match the laps: your first clean lap
-at a track, your first time under a whole second at a track and car (between sessions, never within one), 3, 5, 10
+Badges are earned by your own driving and worked out from it, so they always match the laps. Track badges need a
+track Pitwall can name (not "Unknown track" or GT7's unidentified circuits) and a lap of 30 s or more, and a car is
+always named, never shown as a raw id; older badges that break these rules are simply no longer listed. The badges:
+your first clean lap at a track, your first time under a whole second at a track and car (between sessions, never within one), 3, 5, 10
 and 20 clean laps in a row, 10 clean laps in one session, new bests in 2, 3 and 5 sessions in a row, 2, 4, 8 and 12
-weeks in a row with a session (Monday to Sunday), 3 and 5 sessions in one week, a race with no penalties or without
+weeks in a row with a session with a timed lap (Monday to Sunday), 3 and 5 sessions with a timed lap in one week, a race with no penalties or without
 contact, and 1, 3 and 10 goals reached. Streaks show weeks in a row, sessions this week, your best run of clean
 laps and your new-best streaks.
 
 ### Weekly digest
 
-One page per driver per week: sessions, laps and clean laps against the week before, new tracks (the first session
-there, in its car) and the biggest improvements, goals reached and how far the others moved, badges and streaks.
+One page per driver per week: sessions with a timed lap, laps and clean laps against the week before, **Improvements**
+(your best at a track and car against your best before the week) and **New tracks** (the first session there, in its
+car, and how much faster you got that week: "New this week: 1:18.351 → 1:17.155 (1.2 s faster)"), goals reached and how far the others moved, badges and streaks.
 **Printable page** opens a plain A4 page made on this computer, and **Copy as text** copies the same as Markdown for
 a message (neither is offered for a week without driving). Nothing is sent anywhere. Terminal: `uv run pitwall
 digest [--week 2026-10-05] [--html week.html]`.
@@ -312,7 +352,9 @@ scratch database; they have not been used after a live session yet.
 
 ### Ask
 
-Ask the engineer about any session in plain words. The same question works from the terminal:
+Ask the engineer about any session in plain words. The suggested questions follow what the session has: where the
+time went and one thing to work on, then the handling and the line (technique data), the pit and the gap ahead (a
+race with strategy records), the AI, your goals, a running drill, and a summary. The same question works from the terminal:
 `uv run pitwall ask "Where am I losing time?"` (add `--no-llm` for the fact-based answer, `--show-facts` to see
 the facts used). `uv run pitwall report` prints a Markdown report of the latest session.
 
@@ -332,7 +374,8 @@ would search your whole network for the console, so that happens only when you p
 confirm). It never switches another game's input off, and it leaves alone an
 input that is receiving packets at that moment. The choice is kept for the whole rig and survives restarts. A
 driver can also have a usual game (Settings › Drivers › Edit › *Usually plays*): it is selected when that driver
-takes the seat, unless a game is sending telemetry at that moment.
+takes the seat, unless a game is sending telemetry at that moment, and the page then says why ("Selected because
+Sam usually plays GT7").
 
 **What the game sends** lists Pitwall's features in six groups (timing, coaching, track, car and tyres, session and
 race, setup and radio). Each is marked Supported, Estimated, Partial, Not sent, Not in Pitwall yet or Unknown, with
@@ -414,7 +457,8 @@ sessions of each game); you then tap **Worked** or **Didn't work**, tick what yo
   thresholds that are first guesses are marked heuristic.
 - **Radio commands** (optional): "start validation", then during a run "next test", "worked", "didn't work",
   "what's the test" and "finish validation" (with no run active the radio answers those words as usual). The radio
-  can also say each test's brief in a calm moment (on by default, never into a braking zone, never in quiet mode).
+  can also say each test's brief in a calm moment (on by default, never into a braking zone, at least 30 s apart and
+  after everything else the radio has to say; also at quiet intensity, since you started the run).
 - **Reports** are saved on the Mac (`data/validation/`) as JSON and Markdown; review them with `pitwall validate list`,
   `show` or `report`. They never change what Pitwall claims to support: the maintainer updates that by hand.
 - **Privacy:** reports keep device facts only (no IP addresses, no microphone names, no driver names: "Driver #2").
@@ -429,8 +473,9 @@ sessions of each game); you then tap **Worked** or **Didn't work**, tick what yo
 Profiles for everyone who shares the rig. The driver in the seat owns the session: their reference laps, personal
 bests and coaching follow them, and the radio and braking calls switch with them. Switching driver during a live
 session hands the seat over, splitting the session if laps were already driven (verified on synthetic streams
-only). Each profile has a skill level (beginner, intermediate, advanced) and a coaching intensity (quiet, normal,
-detailed); see [below](#how-the-coach-decides-what-to-say).
+only). Each profile has a skill level (beginner, intermediate, advanced; a fresh install's first profile starts at
+intermediate) and a coaching intensity (quiet, normal, detailed); see [below](#how-the-coach-decides-what-to-say)
+and [What the radio says](#what-the-radio-says). Driver cards count everything on record, timed or not.
 
 ### Radio & voice
 
@@ -458,12 +503,47 @@ with its evidence, and the version.
 
 <!-- --- lane install --- -->
 **Updates.** Whether a newer Pitwall is out, what changed in it, and the one command that updates this computer
-(`uv run pitwall update`, or the git steps in a git checkout), with a "Check now" button. While the page is open,
-Pitwall asks GitHub at most once a day, never while someone is driving (`PITWALL_UPDATE_CHECK=auto`; `manual` or `off`
-in `.env`). The page never
+(`uv run pitwall update`, or the git steps in a git checkout), with a "Check now" button. By default Pitwall asks
+GitHub only when you press it (`PITWALL_UPDATE_CHECK=manual`); with `auto` in `.env` it also asks at most once a day
+while the page is open, never while someone is driving; `off` never asks. The page never
 updates anything itself: updating replaces the server's own files, so it is always done in a terminal on the computer
 running Pitwall. Drive never shows any of this.
 <!-- --- end lane install --- -->
+
+## What the radio says
+
+One policy decides what the radio says on its own and when (`voice/scheduler.py`). Everything waits for a calm part
+of the lap except braking cues, alerts and your own answers.
+
+| Message | Counts towards the lap's allowance | Notes |
+|---|---|---|
+| Answers to your questions, "Copy" acknowledgements | no | at once, even at quiet intensity |
+| Braking cues | no | timed to your braking point; by the braking calls mode |
+| Red flag and other urgent alerts | no | at once |
+| Strategy alerts (safety car box or stay out, critical fuel) | no | also at quiet intensity |
+| Lap summary | yes | a newer lap's summary replaces an unsaid one |
+| Strategy call | yes | in a race, after the lap summary |
+| Goal line ("Goal reached: ...") | yes | after the summary and any strategy call; at most two a session |
+| Coaching point or drill result | yes | after its lap's summary; one a lap at normal intensity |
+| Detailed strategy notes | yes | detailed intensity only |
+| Validation prompt (during a validation run) | no | last, low priority, at least 30 s apart, also at quiet intensity |
+
+On track the radio says at most **two** messages a lap that count at normal intensity and **four** at detailed (none
+at quiet), in the order above: in a race, the lap time, then the strategy call, then the goal line, then the coaching
+point. A message that does not fit waits for the next lap or expires. Off track (garage, menus) the allowance does not
+apply. When another driver takes the seat, the previous driver's unsaid lap summaries, goal lines and coaching
+points are dropped; strategy and car alerts stay.
+
+| | quiet | normal | detailed | "quiet for N laps" | voice off |
+|---|---|---|---|---|---|
+| Answers, acknowledgements | yes | yes | yes | yes | on screen |
+| Urgent alerts, strategy alerts | yes | yes | yes | yes | on screen |
+| Lap summary, goal, coaching, drill point | - | 2 a lap | 4 a lap | held | - |
+| Strategy normal / detailed | - | 2 a lap / - | 4 a lap | held | - |
+| Validation prompt (run active) | yes | yes | yes | held | - |
+
+At quiet intensity a drill's points show on the screen only. This policy is tested on unit tests and on recordings
+played over loopback; it has not yet been heard in a live session.
 
 ## How the coach decides what to say
 

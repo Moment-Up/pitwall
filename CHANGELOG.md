@@ -24,9 +24,17 @@ live on the rig. Nothing here has been tested live unless it says so.
   session (also in the session report). Tested on recordings; not yet tested live.
 - Badges only for tracks Pitwall can name and laps of 30 s or more, cars always by name; counts say what they count
   ("3 sessions with a timed lap"). Tested on recordings.
+- Choose what the delta compares you with (your best, the family record or another driver's lap) and practise one
+  corner with drills. Tested on recordings with a development script; not yet tested live.
 - Test your rig with Setup › Validation and `pitwall validate`. Nothing passes until it is run live, by design.
 - The radio talks less and in better places: at most two messages a lap at normal intensity, plus braking cues,
   safety alerts and your answers. Checked on recordings over loopback; not yet tested live.
+- Questions asked while the car is moving get an instant answer from the facts, never "Copy, checking", including
+  flags and the safety car. Tested on recordings and synthetic data; not yet tested live.
+- The radio names the lap you just finished ("That lap", "Out-lap", "Final lap") and says "personal best" only when
+  it is one. Tested on recordings; not yet heard live.
+- On track, Drive shows only what helps at speed; the Ready and Session complete cards wait for the car to stop.
+  Tested on recordings in a desktop browser; not yet on an iPad.
 - Install with one command on macOS, Linux or Windows; it checks the download and keeps your sessions in one data
   folder. Tested end to end on macOS; Linux and Windows through CI only.
 - Update with `uv run pitwall update`: it shows what changed, backs up the database and never runs while someone is

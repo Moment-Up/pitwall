@@ -160,6 +160,26 @@ Full instructions, including game setup, the iPad, the radio and running Pitwall
 Each item below works today unless it is marked otherwise. [docs/features.md](docs/features.md) has a tour with
 screenshots, and [docs/status.md](docs/status.md) has the full evidence.
 
+**New in v0.2.0**, each with how far it has been tested (*recorded*: real game captures played back; *synthetic*:
+generated data; nothing below has been run live on the rig yet):
+
+- **Game selection**: tell Pitwall what you play; it says what that game sends, and each driver can have a usual
+  game. Recorded (F1 25, Assetto Corsa) and synthetic (GT7, Forza).
+- **Pace against the AI** (F1 25): your best lap against the typical AI car, and a suggested AI difficulty per track.
+  Recorded (six PS5 sessions).
+- **Technique and setup engineer**: racing line, braking and throttle, handling balance, and one setup change to try.
+  Recorded (F1 25; the line also on GT7); lock-ups synthetic only.
+- **Race strategy engineer** (F1 25): gaps, tyres, fuel, pit window, undercut, safety car and weather, on the radio
+  and on Drive › Car. Recorded (a 71-lap race); safety car, VSC, rain and your own stop synthetic only.
+- **Goals, streaks and weekly summaries** for every driver, and three things after every session. Recorded.
+- **Reference choice and practice drills**: what the delta compares you with (your best, the family record or
+  another driver's lap) and one-corner drills. Recorded through a development script.
+- **Rig validation kit**: Setup › Validation and `pitwall validate`. Nothing passes until it is run live, by design.
+- **One-line install and `pitwall update`**. End to end on macOS; Windows and Linux through CI only.
+- **A calmer radio and a glanceable Drive**: at most two messages a lap of the radio's own at normal intensity, in
+  a calm part of the lap; instant answers while moving; on track Drive shows only what helps at speed. Recorded over
+  loopback and in a desktop browser.
+
 The screenshots show the new dashboard, which comes prebuilt in every release. Built from source without a HeroUI Pro
 licence, you get the classic dashboard instead (see [The two dashboards](#the-two-dashboards-and-heroui-pro)): it has
 the same telemetry, coaching, radio, session review, setup and engineer features in a different layout, but not the
@@ -168,8 +188,12 @@ been tested with recorded and synthetic sessions in a desktop browser. It has no
 live session; the live PS5 tests so far used the classic dashboard.
 
 **Drive**
-- Coach screen: the next corner, distance to it, a braking cue, the live delta to your reference lap, the projected
-  lap time, sector times and one coaching point from the last lap.
+- Coach screen: the next corner, distance to it, a braking cue, the live delta to your chosen reference, the
+  projected lap time, sector times and one coaching point from the last lap. Cards (Ready, Session complete) wait for
+  the car to stop; on track the status line shows one thing at a time with at most two chips.
+- Reference choice: the delta compares you with your best (default), the family record, another driver's best or a
+  saved lap, compatible laps only; practice drills on one corner from the Ready card or the radio. Recorded through a
+  development script; not yet live.
 - Car (pit wall) screen: speed, gear, inputs, track map, tyres and fuel, lap table.
 - Track screen: the map follows the car and shows what the coach said about each corner.
 - Game flags (for example a yellow flag) take over the status band. Unknown values show as `-`, never a guess.
@@ -181,8 +205,10 @@ live session; the live PS5 tests so far used the classic dashboard.
   F1 25 on PS5; asking a question by push-to-talk has not yet been tested by a driver.
 - Fuel, tyres, lap times and radio commands are answered at once from telemetry. Analysis questions go to the
   language model if you have one, and to a fact-based answer if you do not.
-- Lap summaries and coaching wait for a calm part of the lap: off the brake, steering nearly straight and with time
-  to finish before the next braking zone. You can say "Stop talking for two laps". Tested on replayed sessions;
+- Lap summaries, strategy calls, goal lines and coaching wait for a calm part of the lap: off the brake, steering
+  nearly straight and with time to finish before the next braking zone. At most two of them a lap at normal intensity
+  (four at detailed), in a fixed order; braking cues, alerts and your answers do not count. While the car is moving
+  every answer is instant, from the facts. You can say "Stop talking for two laps". Tested on replayed sessions;
   not yet heard in a live session.
 - Speech recognition with Parakeet on Apple Silicon. A whisper.cpp server can be used instead on any platform;
   that path is tested against a mock server only.
@@ -198,8 +224,13 @@ live session; the live PS5 tests so far used the classic dashboard.
   and corners ranked by time lost.
 - Lap comparison on the same car, track and conditions: time gained or lost along the lap, a map coloured by where
   the time went, and per-corner detail.
-- Coaching plan (corners to work on, habits, what the radio will focus on) and Progress across sessions. These
-  two pages are new and not yet used in a live session.
+- Coaching plan (this session's focus, repeats lap after lap, radio calls next run, drills, suggested AI level),
+  Progress across sessions at one track and car, and Goals (goals, the week, streaks and badges). These pages are
+  new and not yet used after a live session.
+- Goals, streaks, badges and a weekly digest for every driver, and three things after every session (also in
+  `pitwall report`, `pitwall recap` and `pitwall digest`). Tested on recorded captures; not yet live.
+- Technique (Compare and Corners): racing line, brake and throttle, handling balance, and setup changes to try on
+  Setup › Car setup (F1 25). Tested on recorded laps; lock-ups on synthetic data only.
 - Ask the engineer about any session, on screen or with `pitwall ask`. `pitwall report` prints a Markdown report.
 - Pace against the AI (F1 25): your best clean lap against the typical AI car's at the AI difficulty you raced,
   per track and car class over time, and a suggested AI level once you have raced a track at two or more levels.
@@ -217,11 +248,17 @@ live session; the live PS5 tests so far used the classic dashboard.
   leaving a gap unexplained or guessing. Tested with unit, synthetic and recorded data; not yet with a live GT7,
   Forza or Assetto Corsa console.
 - Connect: the exact in-game telemetry settings with copy buttons, and live confirmation that packets arrive.
+- Validation: a checklist of the live tests still pending on the rig; Pitwall collects the evidence while you drive
+  and you confirm. Reports stay on the computer and never change what Pitwall claims by themselves.
 - Rig walkthrough for the Fanatec GT DD Pro (5 Nm, or 8 Nm with the Boost Kit) and CSL pedals, for F1 25 and
   GT7: one menu item at a time, with the source and confidence of every value. A rig check reads your last
   session's telemetry. Its thresholds are heuristics, and the load-cell checks are unverified.
 - Car setups for F1 25: a catalogue of 454 published setups with recommendations by track, session, weather and
   style. No recommended setup has yet been driven and checked by Pitwall.
+
+**Race engineer (F1 25 races)**
+- Gaps, tyres, fuel, the pit window, undercut, safety car and weather on Drive › Car and the radio, and a Race tab in
+  Review. Tested on recorded races; safety car, VSC, rain and your own stop on synthetic data only; not yet live.
 
 **Drivers**
 - Profiles for everyone who shares the rig. Sessions, reference laps and personal bests belong to the driver in
@@ -268,6 +305,17 @@ for the full list with notes.
 What one game and platform sends, feature by feature (sector times, tyre wear, fuel, ...), is on Setup › Game and in
 `uv run pitwall game show <id>`; it is built from the same rows and is never stronger than them.
 
+The newer analyses need data only some games send:
+
+| Feature | F1 25 | Gran Turismo 7 | Forza | Assetto Corsa |
+|---|---|---|---|---|
+| Racing line (Compare, Corners) | Recorded (PS5) | Recorded (a PS5 capture) | Synthetic only | Position decoded on the PS5 recording; no lap stored end to end yet |
+| Handling balance, lock-ups and wheelspin | Recorded (PS5); lock-ups synthetic only | No: Pitwall reads tyre slip from F1 25 only | No (same) | No (same) |
+| Race strategy engineer | Recorded (PS5 races) | No (F1 25 only) | No | No |
+| Pace against the AI | Recorded (PS5) | No (F1 25 only) | No | No |
+
+None of these has been run live yet.
+
 **Status words.** *Tested live*: checked end to end with the real game on that platform. *Tested on a recording*:
 checked against real game output that was recorded. *Built from the official spec* or *community docs*: written
 from the protocol documentation and tested with generated (synthetic) data only. Synthetic tests prove the
@@ -278,7 +326,9 @@ computer that receives its telemetry (see [Platforms](#platforms)).
 
 These show the new dashboard at iPad (landscape) and phone screen sizes, captured in a desktop browser. All
 telemetry comes from real F1 25 sessions recorded on a PS5. The driver names are demo profiles. Three screens (rig,
-car setup, radio settings) show no telemetry.
+car setup, radio settings) show no telemetry. They were taken with v0.1.0: in v0.2.0 the Ready and Session complete
+cards, Review › Coaching and Progress changed, and Review › Goals, the session's Race tab, Setup › Game and Setup ›
+Validation are new; those screenshots are still to be retaken.
 
 <table>
 <tr>
@@ -343,8 +393,15 @@ If you hold a HeroUI Pro licence, sign in and build the new dashboard:
 | `pitwall sessions [--limit]` / `pitwall report [id]` | List sessions / print a Markdown session report |
 | `pitwall ask "Where am I losing time?" [--session ID] [--no-llm] [--show-facts]` | Ask the engineer about the latest session (uses the `.env` model unless `PITWALL_LLM_ENABLED=false` or `--no-llm`) |
 | `pitwall llm-check` | Find and test the model server set in `.env` or the environment (not one chosen in the settings page) |
-| `pitwall doctor [--json] [--no-llm]` | Check this computer's setup (ports, firewall, dashboard, voice, AI, telemetry) with a fix for each problem |
-| `pitwall ai-pace backfill [--captures DIR] [--dry-run]` | Fill pace against the AI for older F1 sessions from their raw captures |
+| `pitwall doctor [--json] [--no-llm]` | Check this computer's setup (ports, firewall, dashboard, voice, AI, telemetry, last update check) with a fix for each problem |
+| `pitwall game list` / `show [<id>]` / `set <id>` / `clear` | The game catalogue, what a game sends, and the household's selection |
+| `pitwall technique [SESSION_ID] [--ref LAP_ID] [--json]` | Racing line, brake and throttle, handling balance and setup suggestions for a session |
+| `pitwall goals [--suggest]` | A driver's goals with their progress (and suggestions) |
+| `pitwall recap [SESSION_ID]` | A session's three things: went well, one to work on, progress |
+| `pitwall digest [--week DATE] [--html FILE]` | A driver's weekly digest as Markdown, or the printable page |
+| `pitwall ai-pace backfill [--captures DIR] [--dry-run]` | Fill pace against the AI for older F1 sessions from their raw captures (refuses while a server answers on the HTTP port) |
+| `pitwall validate list` / `show` / `report` / `catalog` | Rig validation runs (started from Setup › Validation) and what each test asks |
+| `pitwall update [--check] [--rollback]` | Update a release install to the latest release (a git checkout updates with `git pull`) |
 | `pitwall capabilities` | Print the game and platform support matrix |
 | `pitwall token` | Print the access token URL for phones and tablets |
 
@@ -384,7 +441,9 @@ facts, and an answer is used only if every number in it comes from the facts it 
 | [Install](docs/install.md) | Releases, Claude Code, from source, games, iPad, radio, background service, updating, troubleshooting |
 | [Windows scripts](scripts/windows/README.md) | Install, run, firewall, background service and smoke test on Windows |
 | [Features](docs/features.md) | A tour of each screen and how the coach decides what to say |
-| [Status](docs/status.md) | What works, what is tested and how |
+| [Status](docs/status.md) | What works, what is tested and how, one row per feature |
+| [History](docs/history.md) | Each development lane's own notes and evidence, kept as written |
+| [Changelog](CHANGELOG.md) | What changed in each release, for drivers |
 | [Validation](docs/validation.md) | The evidence tiers and the live test procedure |
 | [Architecture](docs/architecture.md) | Threads, data model, analysis pipeline, storage, security |
 | [AI engineer models](docs/llm-providers.md) | Local and cloud models, privacy, costs |

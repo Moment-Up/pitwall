@@ -693,6 +693,16 @@ without a game. The Connect page lists the address of the default network connec
 
 The database is upgraded automatically when Pitwall starts.
 
+### Updating from 0.1.0
+
+Version 0.2.0 moves the database from schema v3 to v6 on its first start, in one transaction: it adds the pace
+against the AI column and table (v4), the race strategy tables (v5) and the reference choice and drill tables (v6).
+Nothing is renamed or deleted, and every step only adds what is missing, so a database from any earlier version
+(v2 onwards) reaches v6 the same way. `pitwall update` and the installers back the database up first
+(`data/backups/`). Going back to 0.1.0 (`pitwall update --rollback`) keeps the database as it is: the new tables and
+the new column are additions that 0.1.0 does not use. Restore the backup only if you want to drop what 0.2.0
+recorded.
+
 <!-- --- lane install --- -->
 ### With `pitwall update`
 
@@ -779,7 +789,22 @@ scripts/pitwall-service.sh restart              # if you run the service; otherw
 
 On Windows, run `install.ps1` again after `git pull`: it updates the packages and rebuilds the dashboard (it stops a
 running Pitwall from that folder first, never while telemetry is live). `scripts/release.sh` is the maintainer's
-deploy script; you do not need it.
+deploy script; you do not need it. `pitwall update` refuses in a git checkout and says to use `git pull`.
+
+### The owner's release worktree (maintainer)
+
+The maintainer's own install runs from a git worktree that `scripts/release.sh` manages, never `pitwall update`.
+Release into a fresh worktree, so the running version's code and dashboard are never changed under it:
+
+```bash
+PITWALL_RELEASE_DIR=$HOME/Projects/pitwall-release-v0.2.0 scripts/release.sh <commit>
+```
+
+The script checks the commit out there, runs the tests and builds both dashboards, waits until nobody is driving,
+backs the database up (`data/backups/pitwall-pre-<commit>-<time>.sqlite3`; it does not switch if the backup fails)
+and then points the background service at the new worktree. It refuses to check out into the worktree the running
+service uses (`RELEASE_IN_PLACE=1` overrides, only safe while the service is stopped). The old worktree stays as it
+was, so going back is the same command with the old worktree and commit.
 
 ## Your data
 
@@ -798,10 +823,11 @@ Your sessions and settings are in the data folder (`data/` in the folder you sta
 Before each update the database is copied to `data/backups/pitwall-before-<version>-<date>.sqlite3` and checked;
 backups are never deleted automatically.
 
-**Update checks.** With `PITWALL_UPDATE_CHECK=auto` (the default) Settings › System asks GitHub for the latest
-release at most once a day, and only while nobody is driving: one HTTPS request to api.github.com, which sees your
-IP address and the Pitwall version, and nothing else is sent. `manual` asks only when you press "Check now" or run
-`uv run pitwall update --check`; `off` means Pitwall never contacts GitHub on its own. Nothing is checked until
+**Update checks.** With `PITWALL_UPDATE_CHECK=manual` (the default) Pitwall asks GitHub for the latest release only
+when you press "Check now" on Settings › System or run `uv run pitwall update --check`. With `auto` Settings › System
+also asks at most once a day while the page is open, and only while nobody is driving. Either way it is one HTTPS
+request to api.github.com, which sees your IP address and the Pitwall version, and nothing else is sent. `off` means
+Pitwall never contacts GitHub on its own. Nothing is checked until
 someone opens Settings › System or runs a command, and `pitwall doctor` only reads the last result
 (`data/update_check.json`, which `uv run pitwall update` also refreshes).
 

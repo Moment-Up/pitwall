@@ -121,8 +121,29 @@ drill keeps the radio on its corner: one line a lap ("Turn 3 drill, 2 of 5: on t
 summary and braking calls for that corner only, until it ends or you stop it. Name the skill to choose it ("a
 braking drill", "minimum speed", "exit", "entry") and the length ("for three laps", 3 to 10).
 
-Analysis questions go to the language model if you set one up (Settings › AI engineer): the engineer says "Copy,
-checking" and answers a few seconds later. Without a model, the answer is built from the facts.
+While the car is moving every answer is built from the facts at once, never by the language model and never with
+"Copy, checking". Stopped, analysis questions go to the language model if you set one up (Settings › AI engineer):
+the engineer says "Copy, checking" and answers a few seconds later. Without a model, the answer is built from the
+facts.
+
+## What the radio says at each intensity
+
+The coaching intensity is set per driver (Settings › Drivers) and changed on the radio ("stop talking for two laps",
+"you can talk again"). On track the radio says at most two messages a lap of its own at normal intensity and four at
+detailed, in a calm part of the lap; braking cues, alerts and your answers do not count towards that.
+
+| | quiet | normal | detailed | "quiet for N laps" | voice off |
+|---|---|---|---|---|---|
+| Answers, acknowledgements | yes | yes | yes | yes | on screen |
+| Urgent alerts; safety car box or stay out; critical fuel | yes | yes | yes | yes | on screen |
+| Lap summary, goal line, coaching point, drill point | - | 2 a lap | 4 a lap | held | - |
+| Strategy calls | - | within the 2 | within the 4, plus detailed notes | held | - |
+| Validation prompts (during a run you started) | yes | yes | yes | held | - |
+
+In a race the order is the lap time, then the strategy call, then the goal line, then the coaching point; a message
+that does not fit waits for the next lap or expires. When another driver sits down, the previous driver's unsaid lap
+messages are dropped. At quiet intensity drill points show on the screen only. Full table:
+[features.md](features.md#what-the-radio-says).
 
 ## Troubleshooting
 

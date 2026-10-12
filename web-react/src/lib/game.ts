@@ -598,7 +598,7 @@ export interface SelectionWho {
 
 /**
  * The sentence under the selected game on Setup › Game and under a mismatch alert:
- *   driver_default -> "Selected because Thomas usually plays GT7" (the seat changed to a driver whose usual game it is;
+ *   driver_default -> "Selected because Sam usually plays GT7" (the seat changed to a driver whose usual game it is;
  *                     the driver by name from the server, else from `names`, else "the driver in the seat")
  *   cli            -> "Selected from the command line"
  *   dashboard      -> null (someone chose it here: nothing to explain)

@@ -4,8 +4,8 @@
 
 Please report security problems **privately**, through GitHub's
 [private vulnerability reporting](https://github.com/Moment-Up/pitwall/security/advisories/new), not in a public
-issue. Describe what you found, how to reproduce it and what it lets someone do. We aim to acknowledge a report
-within 7 days and to agree a fix and a disclosure date with you.
+issue. Describe what you found, how to reproduce it and what it lets someone do. We reply within 7 days, then agree
+a fix and a disclosure date with you.
 
 ## What is in scope
 

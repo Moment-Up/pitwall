@@ -456,8 +456,14 @@ drives iPad, phone and Mac.
   text. **Fill = the track says** (red, safety car, yellow, blue, pit, session complete): a solid band with ink chosen
   for contrast (9.2). **[critic]** Band words are 26 px / 800 caps (17′ at 70 cm; v2's mockup used 20 px, 14′),
   the detail after them 20 px.
-- **Priority:** offline > stale > red > safety car > yellow > blue > pit > session complete > ready > normal. When the
-  data is in doubt, no flag is shown as current.
+- **Priority** (v0.2.0, `lib/drive/state.ts` `statusSlot`, the single order): offline > no data > stale > red flag >
+  safety car / VSC > yellow > blue > pit lane > chequered flag (last lap) > session complete > game mismatch (outline,
+  stationary only) > ready > normal line. When the data is in doubt, no flag is shown as current. Strategy, goals,
+  drills, AI pace and validation never take the band.
+- **Chips** (v0.2.0, `chipsOf`, stateless): at most one short-lived chip, the highest rank within its life: penalty,
+  contact, goal reached, flashback, pit entry / exit, fastest lap (6 s each), then the coachref reference notice (2 or
+  6 s). The persistent chip is DRILL while a drill runs, on the normal line only. An iPad's normal line shows the
+  short-lived chip and DRILL; a band or a phone one chip. SYNTHETIC / REPLAY always show (icons on a band or phone).
 - The Segment stays at the right end in every state (dark ink variant on light bands), so the driver can always
   leave.
 - Bands appear without animation. Red flag uses `role="alert"`; every other band `role="status"`.
@@ -476,8 +482,12 @@ drives iPad, phone and Mac.
 3. **Today:** focus corners (`cues.focus`, by official label and name, each with `cues.cues[].reason`, e.g.
    "braking early · 3 of last 5 laps"); braking calls mode; radio state (`Radio off` or `Radio live · mic OK`).
    **Go live** itself stays in the radio strip below (220 × 56), the one place it appears on Drive, so there is never
-   a second copy. Between runs this column leads with **One thing for the next run** (D6 pick, full text, evidence
-   line).
+   a second copy. Between runs this column leads with **"Last lap:"** and the last lap's top point (full text,
+   evidence line), then one FOCUS row and no radio line (v0.2.0, integration plan 2.5). Coachref: a running drill (or
+   its result waiting for Done) takes this column with no FOCUS rows; between runs a suggested drill goes under the
+   "Last lap:" point in place of the FOCUS row. The Target column's "Delta reference" row is coachref's control.
+   The card shows only while the car is stationary (`lib/drive/motion.ts`), and no column hides overflow: the slots
+   are capped and the fit is measured at 1180 x 820 and 1133 x 744.
 
 Footer (15 px, muted): `5 890 m · S2 1 813 m · S3 4 294 m · 14 corners learned · names: verified track sheet`.
 
