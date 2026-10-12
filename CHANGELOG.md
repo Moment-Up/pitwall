@@ -7,6 +7,20 @@ when a release is cut, that heading becomes the release's own (see [docs/releasi
 The release workflow copies a release's bullet points into its GitHub release notes under "What changed"
 (`scripts/changelog_section.py`), and `pitwall update` and Settings › System show them before you update.
 
+## Unreleased
+
+- Gran Turismo 7 on PS5 is tested live (the owner's races on 2026-10-11, lap times equal to the game's). PS4 is
+  still untested.
+- GT7: one session per race. Menus, replays, loading screens and car resets no longer start sessions, and the empty
+  ones already stored are hidden. Tested on recordings of those races.
+- GT7: every lap the game times is kept, including race lap 1 (marked "race start") and laps around a car reset.
+  Tested on recordings.
+- GT7: leaving a race no longer shows the car still moving or adds a long fake lap; the session ends. Tested on
+  recordings.
+- GT7: lap distance follows the car's velocity (within about 0.2 % per lap, not up to 4 % off after a slide).
+  Tested on recordings.
+- GT7: the throttle shown is your pedal, not the throttle after traction control. Tested on recordings.
+
 ## v0.2.0 - 2026-10-12
 
 Each line ends with how it was tested: on recordings (real captures played back), on synthetic (generated) data, or

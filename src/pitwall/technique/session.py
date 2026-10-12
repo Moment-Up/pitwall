@@ -425,8 +425,11 @@ def _pace_exclusions(sa: SessionAnalysis, entries: list[LapEntry]) -> tuple[dict
             continue
         lap = rows[e.lap_id]
         ms = lap.get("lap_time_ms")
-        if LapFlag.STANDING_START in (lap.get("flags") or ()):
+        flags = lap.get("flags") or ()
+        if LapFlag.STANDING_START in flags:
             out[e.lap_id] = "standing start"
+        elif LapFlag.RACE_START in flags:
+            out[e.lap_id] = "race start"
         elif best_ms and ms and int(ms) > T.BALANCE_PACE_FRAC * best_ms:
             out[e.lap_id] = f"more than {(T.BALANCE_PACE_FRAC - 1) * 100:.0f} % off your best clean lap"
     best = [

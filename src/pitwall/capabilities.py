@@ -106,16 +106,35 @@ PLANNED: list[CapabilityRow] = [
         adapter_game=None,
     ),
     CapabilityRow(
-        "gt7",
+        "gt7_ps5",
         "Gran Turismo 7",
-        "PS5 / PS4",
+        "PS5",
+        "UDP 33739 heartbeat -> 33740, Salsa20",
+        S.LIVE_VALIDATED,
+        True,
+        "Validated live on 2026-10-11 on the owner's PS5 (GT7 sending variant C, so game version 1.68 or later): "
+        "Pitwall's heartbeat and UDP 33740 listener received 277,467 packets in 4 captures (20261011-013533, "
+        "-121256, -124608, -182615), 0 rejected, 0 decode errors, 59.9 Hz, 9 lost; 4 races on 2 circuits with 3 "
+        "cars, and every lap time equal to the game's own last-lap field to the millisecond. Issues that data showed "
+        "are fixed and re-checked by replaying the same captures (4 sessions with all 11 timed laps): menus, replays, "
+        "background laps and car resets had made 28 sessions of the 4 races, race lap 1 and the laps around a car "
+        "reset were not stored, and the frozen stream after leaving a race was counted as driving. Recorded-tier "
+        "fixtures: tests/fixtures/recorded (gt7_c_ps5_* excerpts). No lap distance or track id on the wire: "
+        "distance is integrated from the car's velocity (within 0.2 % of the driven path), the circuit is "
+        "recognised from the start/finish line.",
+        platform_ids=("ps5",),
+        adapter_game=Game.GT7,
+    ),
+    CapabilityRow(
+        "gt7_ps4",
+        "Gran Turismo 7",
+        "PS4",
         "UDP 33739 heartbeat -> 33740, Salsa20",
         S.COMMUNITY_DOCUMENTED,
         True,
-        "Implemented from community protocol docs (Salsa20 written from the published spec; variants A/B/~/C). No lap "
-        "distance or track id on the wire: distance is integrated from speed (~1% drift), the circuit is recognised "
-        "from the start/finish line. Synthetic tests only - not yet tested on a real PS5.",
-        platform_ids=("ps5", "ps4"),
+        "The same packets as the PS5 per the community docs (variants A/B/~/C; Salsa20 written from the published "
+        "spec), and the PS5 is validated live, but no PS4 has been tested.",
+        platform_ids=("ps4",),
         adapter_game=Game.GT7,
     ),
     CapabilityRow(

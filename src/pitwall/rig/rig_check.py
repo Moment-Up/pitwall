@@ -127,7 +127,9 @@ DEFAULT_ROTATION_DEG = 360.0  # F1 25: the recommended Maximum Wheel Rotation (s
 GT7_ROTATION_DEG = math.degrees(2.0 * GT7_STEER_HALF_LOCK_RAD)  # GT7 adapter: fixed nominal scale (900 deg)
 
 CORE_CHANNELS: frozenset[str] = frozenset({"brake", "throttle", "steering", "speed_kph", "session_time_s"})
-INPUT_SAFE_FLAGS: frozenset[str] = frozenset({LapFlag.STANDING_START, LapFlag.DISTANCE_JUMP, LapFlag.INVALID})
+INPUT_SAFE_FLAGS: frozenset[str] = frozenset(
+    {LapFlag.STANDING_START, LapFlag.RACE_START, LapFlag.DISTANCE_JUMP, LapFlag.INVALID}
+)
 
 
 # ---------------------------------------------------------------------------------------------- results
@@ -1047,7 +1049,7 @@ def session_start_lap(laps: Sequence[LapTrace]) -> LapTrace | None:
         if lap.lap_number != 1:
             continue
         d = _ch(lap, "distance_m")
-        started = bool(lap.flags & {LapFlag.STANDING_START, LapFlag.PIT_OUT}) or (
+        started = bool(lap.flags & {LapFlag.STANDING_START, LapFlag.RACE_START, LapFlag.PIT_OUT}) or (
             d is not None and np.isfinite(d[0]) and d[0] <= START_LINE_TOL_M
         )
         return lap if started else None

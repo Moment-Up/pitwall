@@ -191,7 +191,8 @@ def test_router_detection_before_the_first_session_packet() -> None:
     live.on_packet(True)
     live.set_game_selection(sel("forza_motorsport:pc"))
     g = live.snapshot()["game"]
-    assert g["detected"]["entry_id"] == "gt7:ps5" and g["mismatch"]["kind"] == "game"
+    # GT7 sends no platform: the weakest entry it could be (PS4: untested; PS5: live) - never the stronger claim
+    assert g["detected"]["entry_id"] == "gt7:ps4" and g["mismatch"]["kind"] == "game"
 
 
 # ---------------------------------------------------------------------------------------------- ingest untouched

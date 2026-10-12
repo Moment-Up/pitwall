@@ -409,6 +409,12 @@ class LapCompletion:
     # the driver's session ended with this lap: the game reports their result as finished at this line crossing
     # (F1: LapData.resultStatus 3, the chequered flag). None = the game does not say.
     final: bool | None = None
+    # race lap 1, timed by the game from the start signal rather than from the line (GT7 rolling starts: 150-383 ms
+    # before the line on real PS5 captures): timed, but never comparable with a flying lap. None = not known to be.
+    race_start: bool | None = None
+    # the adapter could not place any of this lap on the track (no frame of it had a lap distance: a derived-distance
+    # game that never anchored it), but the game timed it: stored with its time and no trace. None = not known.
+    untraced: bool | None = None
 
 
 @dataclass(slots=True, kw_only=True)

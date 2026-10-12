@@ -204,7 +204,8 @@ and [radio-setup.md](radio-setup.md).
 ![Review › Sessions](screenshots/07-review-sessions.png)
 
 Every session for the selected driver, newest first, with a preview of the selected one and its main thing to
-work on. Each session has Summary, Laps, Compare, Corners and Ask tabs (on a phone Ask moves to the header button
+work on. A session with nothing in it (no timed lap, no driving, no message or note: a game's menus or loading
+screen) is left out of the list and the counts, never deleted. Each session has Summary, Laps, Compare, Corners and Ask tabs (on a phone Ask moves to the header button
 when there are five), and races with strategy records also have a **Race** tab:
 grid to finish, stops and the measured pit loss, a timeline of position and gaps with your stops, safety-car laps
 and the weather, your stints, every car's measured pit stops (with why a stop was left out of the pit loss), and
@@ -324,6 +325,9 @@ How the rules count, shown in the dashboard where it matters:
 - A run of clean laps ends at a mistake, a reset, a missing lap number, or a lap with lost telemetry in the middle of
   a session (what happened on it is unknown). Pit laps neither count nor end a run.
 - GT7, Assetto Corsa and Forza do not report track limits, so there "clean" means no pit lap, reset or flashback.
+  GT7's race lap 1 is timed from the start signal, before the line, so it is marked "race start" and never clean; a
+  lap GT7 timed that Pitwall could not place on the track (the session joined mid-lap, a standing start) keeps the
+  game's time and is marked "no trace".
 
 Terminal: `uv run pitwall goals --suggest`.
 

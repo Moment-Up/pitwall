@@ -11,12 +11,14 @@ Licensing: only commit captures you recorded yourself. Third-party captures foun
 (e.g. in unlicensed GitHub repositories) must not be added - see docs/licences.md.
 
 Privacy: real captures carry player names. F1 25 sends every participant's online ID or name (Participants,
-Lobby Info); Assetto Corsa sends yours (handshake reply, RTLap). Before committing, run
-`uv run python scripts/scrub_capture.py tests/fixtures/recorded/<file>.pwcap`: it rewrites only those name fields
-(F1: the player's car becomes `Player`, every other car `Driver NN`; AC: `Player`) and LAN addresses in the capture
-metadata (to 127.0.0.1), keeps every packet length, timestamp and all other bytes, checks that no original name
-is left, and notes the scrub in the capture's description. `scripts/scrub_capture.py --check <files>` only checks
-(exit 1 if a name or LAN address is left); `scripts/package_release.py` runs it on every capture in a release.
+Lobby Info); Assetto Corsa sends yours (handshake reply, RTLap). Gran Turismo 7 sends no names: the script checks
+that its only text fields (variant C surface letters and car category) hold the documented values. Before
+committing, run `uv run python scripts/scrub_capture.py tests/fixtures/recorded/<file>.pwcap`: it rewrites only those
+name fields (F1: the player's car becomes `Player`, every other car `Driver NN`; AC: `Player`) and LAN addresses in
+the capture metadata (to 127.0.0.1), keeps every packet length, timestamp and all other bytes, checks that no
+original name is left, and notes the scrub in the capture's description. `scripts/scrub_capture.py --check <files>`
+only checks (exit 1 if a name or LAN address is left); `scripts/package_release.py` runs it on every capture in a
+release.
 
 Committed captures (each a byte-for-byte excerpt of the maintainer's own PS5 sessions, see
 `scripts/excerpt_capture.py`, with the name fields then replaced by `scripts/scrub_capture.py`):
@@ -28,3 +30,11 @@ Committed captures (each a byte-for-byte excerpt of the maintainer's own PS5 ses
 - `f1_25_2025_ps5_imola_race-pitstop-excerpt.pwcap`: F1 25, Imola race pit stop - lap 14 pit entry (4810 m) and the
   line crossed in the pit lane, lap 15 leaving the pit lane (exit 449 m), lap 15->16 (in-lap / out-lap flags)
 - `ac_ps5_ks_silverstone_probe-excerpt.pwcap`: Assetto Corsa (PS4 build) on PS5, live probe 2026-10-11
+- `gt7_c_ps5_oval_race-start-3laps-excerpt.pwcap`: Gran Turismo 7 (variant C) on PS5, 2026-10-11 (20261011-013533,
+  18.0-96.0 s): the load, the rolling start of a 10-lap race on a 0.92 km oval, laps 1-3 timed (24.286 / 23.222 /
+  23.055 s), lap 3->4 - one session, lap times, race lap 1, the learned track id (1.74 MB)
+- `gt7_c_ps5_oval_leave-race-frozen-excerpt.pwcap`: the same race, 117.0-128.0 s: lap 4->5, a pause, leaving the race
+  and the frozen stream GT7 sends afterwards - the session ends, nothing frozen is integrated (0.25 MB)
+- `gt7_c_ps5_3800m_car-reset-excerpt.pwcap`: GT7 on PS5, 2026-10-11 (20261011-124608, 349.5-353.5 s and
+  457.5-461.0 s): a car reset during race lap 1 on a 3.8 km circuit, then lap 1->2 - the reset stays in the session
+  (0.17 MB; the gap between the windows is an excerpt artefact)

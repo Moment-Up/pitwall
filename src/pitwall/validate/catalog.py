@@ -373,7 +373,8 @@ CATALOG: tuple[ValidationItem, ...] = (
         title="Gran Turismo 7 on the PS5",
         short="Gran Turismo 7",
         summary="Four or more laps of GT7 on one circuit: timed, stored and coached.",
-        why="GT7 has only been tested with generated data.",
+        why="GT7 on the PS5 was run live on 2026-10-11; the session and lap fixes made since have only run on the "
+        "recordings of that day.",
         est_minutes=15,
         prerequisites=("Setup › Connect › Gran Turismo 7 on with the PS5's address.",),
         steps=(
@@ -385,9 +386,9 @@ CATALOG: tuple[ValidationItem, ...] = (
         attestations=(Attest("times_match", "Pitwall's lap times match the game's to the millisecond"),),
         prompt="Were your laps timed and coached correctly?",
         radio_brief="Validation: Gran Turismo 7. Four laps on one circuit, then compare the lap times.",
-        rule_text="Over every live GT7 session in this run (GT7 starts a new session on each retry or loading "
-        "screen): the heartbeat sent without errors, packets from the console, the packet variant, 50 packets a "
-        "second or more"
+        rule_text="Over every live GT7 session in this run (a session opens when you drive and ends when you leave "
+        "the race, a load or a retry; a car reset stays in it): the heartbeat sent without errors, packets from the "
+        "console, the packet variant, 50 packets a second or more"
         + _H
         + ", nothing rejected, 3 timed laps on one circuit"
         + _H
@@ -397,11 +398,12 @@ CATALOG: tuple[ValidationItem, ...] = (
         "not driving. The game's best lap is compared with Pitwall's as a warning only.",
         informs=(
             Informs(
-                "Other games › GT7: synthetic-validated only",
-                "Gran Turismo 7 · PS5 / PS4 (community_documented)",
+                "Verified vs unverified › Gran Turismo 7 (PS5): the session and lap fixes not yet run live",
+                "Gran Turismo 7 · PS5 (live_validated)",
             ),
         ),
-        candidate="If you agree with this run, the PS5 part of this row may become live_validated; PS4 stays "
+        candidate="If you agree with this run, the PS5 row's note may say the 2026-10-12 session and lap fixes ran "
+        "live (one session per race, every timed lap stored), with the date and this run id; PS4 stays "
         "community_documented.",
         input_check=("centre", "left", "right", "pedals"),
     ),

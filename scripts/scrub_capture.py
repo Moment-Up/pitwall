@@ -12,6 +12,10 @@ source port is copied unchanged, so decoders see the same packets as before.
 - **Assetto Corsa remote UDP** (``docs/research/protocols/ac-remote-udp.md``; captures with
   ``game_hint == "ac-remote"``): ``driverName`` in the handshake reply (408 B ``wchar_t[50]`` or 208 B
   ``char[50]``) and in RTLap (212 B ``wchar_t[50]``) becomes ``Player``.
+- **Gran Turismo 7** (``docs/research/gt7-protocol.md``; any datagram that decrypts with a GT7 magic): nothing to
+  rewrite - GT7 sends no names. Every field is a number except, on variant C, the four surface letters (0x158) and
+  the car category (0x16C); a packet whose text fields hold anything but those documented values is reported and
+  fails ``--check`` until someone has looked at it.
 - **Metadata**: every IPv4 address that is not loopback becomes ``127.0.0.1`` (ports are kept).
 
 Only the bytes from the start of a name up to and including its terminator are rewritten (the new name, then the
@@ -50,6 +54,7 @@ import zstandard
 
 from pitwall.adapters.ac import packets as ac
 from pitwall.adapters.f1 import packets as f1
+from pitwall.adapters.gt7 import packets as gt7
 from pitwall.adapters.structdef import StructDef
 from pitwall.ingest.ac_client import CAPTURE_GAME_HINT as AC_GAME_HINT
 from pitwall.ingest.capture import MAGIC, CapturedPacket, CaptureMeta, CaptureReader, CaptureWriter
@@ -76,6 +81,7 @@ def _field(sd: StructDef, name: str) -> tuple[int, int]:
 class Stats:
     fields: Counter[str] = field(default_factory=Counter)
     not_inspected: int = 0
+    gt7_unexpected_text: int = 0  # GT7 variant C text fields outside the documented values
     meta_ips: int = 0
     originals: set[bytes] = field(default_factory=set)  # original name bytes as sent (field encoding)
     regions: list[tuple[int, int, int]] = field(default_factory=list)  # (packet index, start, end) rewritten
@@ -165,6 +171,27 @@ def scrub_ac(data: bytes, stats: Stats, index: int) -> bytes | None:
         if not NEUTRAL.match(old.decode(encoding, errors="replace")):
             stats.originals.add(old)
     return bytes(buf)
+
+
+# GT7 variant C text (docs/research/gt7-protocol.md section 7): surface letters T, C, D, G, S, s per wheel; car
+# category GR1..GR4, GRB, GRN, GRX. NUL bytes: not set (menus, loading).
+_GT7_SURFACE = re.compile(rb"[TCDGSs\x00]{4}")
+_GT7_CATEGORY = re.compile(rb"(GR[1234BNX])?\x00+")
+
+
+def scrub_gt7(data: bytes, stats: Stats) -> bytes | None:
+    """Check one GT7 Simulator Interface datagram - nothing to rewrite, GT7 sends no names; ``None`` if not GT7."""
+    if not gt7.has_valid_magic(data):
+        return None
+    try:
+        variant, plain = gt7.decrypt(data)
+    except gt7.PacketError:
+        return None
+    if variant.name == "C":
+        f = gt7.unpack(variant, plain)
+        if not (_GT7_SURFACE.fullmatch(f["surface_type"]) and _GT7_CATEGORY.fullmatch(f["car_category"])):
+            stats.gt7_unexpected_text += 1
+    return data
 
 
 def scrub_meta(value: Any, stats: Stats) -> Any:
@@ -261,6 +288,8 @@ def scrub(source: Path, dest: Path | None, *, level: int, write: bool) -> Stats:
     scrubbed: list[CapturedPacket] = []
     for i, pk in enumerate(src_packets):
         new = scrub_ac(pk.data, stats, i) if is_ac else scrub_f1(pk.data, stats, i)
+        if new is None and not is_ac:
+            new = scrub_gt7(pk.data, stats)
         if new is None:
             stats.not_inspected += 1
             new = pk.data
@@ -286,6 +315,7 @@ def scrub(source: Path, dest: Path | None, *, level: int, write: bool) -> Stats:
         f"{source.name}: {len(src_packets)} packets; rewrote {summary}; "
         f"{len(stats.originals)} distinct original names; {stats.meta_ips} metadata IPs; "
         f"{stats.not_inspected} packets not inspected (unknown structure)"
+        + (f"; {stats.gt7_unexpected_text} GT7 packets with unexpected text" if stats.gt7_unexpected_text else "")
     )
     if not write:
         return stats
@@ -324,13 +354,13 @@ def main() -> None:
         failed = []
         for path in a.paths:
             stats = scrub(path, None, level=a.level, write=False)
-            if stats.originals or stats.meta_ips:
+            if stats.originals or stats.meta_ips or stats.gt7_unexpected_text:
                 failed.append(path.name)
             if stats.not_inspected:
                 print(f"  note: {path.name}: {stats.not_inspected} packets of an unknown structure were not checked")
         if failed:
             raise SystemExit(
-                f"not scrubbed: {', '.join(failed)} (player names or LAN addresses left); "
+                f"not scrubbed: {', '.join(failed)} (player names, LAN addresses or unexpected GT7 text left); "
                 "run scripts/scrub_capture.py on each before publishing"
             )
         print(f"{len(a.paths)} capture(s) scrubbed: no original names, no LAN addresses in the metadata")

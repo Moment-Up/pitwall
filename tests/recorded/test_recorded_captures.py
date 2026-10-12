@@ -17,8 +17,9 @@ from pitwall.model.synthetic import SYNTHETIC_SESSION_UID
 from tests.conftest import decode_session
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "recorded"
-# AC remote-telemetry captures (game_hint 'ac-remote') have their own module: tests/recorded/test_ac_ps5_real.py
-CAPTURES = sorted(p for p in FIXTURES.glob("**/*.pwcap") if CaptureReader(p).meta.game_hint != "ac-remote")
+# AC remote-telemetry captures (game_hint 'ac-remote') and GT7 captures ('gt7') have their own modules:
+# tests/recorded/test_ac_ps5_real.py and tests/recorded/test_gt7_ps5_real.py
+CAPTURES = sorted(p for p in FIXTURES.glob("**/*.pwcap") if CaptureReader(p).meta.game_hint not in ("ac-remote", "gt7"))
 
 pytestmark = [
     pytest.mark.recorded,

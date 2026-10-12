@@ -134,7 +134,7 @@ def lap_label(lap: Mapping[str, Any]) -> str:
         return LAP_IN
     if "pit_out" in flags:
         return LAP_OUT
-    if "standing_start" in flags:
+    if "standing_start" in flags or "race_start" in flags:
         return LAP_OPENING
     return LAP_THAT
 

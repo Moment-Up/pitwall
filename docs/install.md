@@ -431,13 +431,15 @@ For wheel push-to-talk: **Settings › Controls ›** your wheel, and assign a s
 Pitwall reads the button through the telemetry stream. Use `PITWALL_VOICE_PTT_BUTTON=udp_action_2` (up to 12) for
 a different action.
 
-### Gran Turismo 7 (built from community docs, untested on a real console)
+### Gran Turismo 7 (tested live on PS5; PS4 untested)
 
 There is nothing to set in the game. On the Connect page, enable **Gran Turismo 7**, enter the console's IP address
 and keep packet variant **C**. Pitwall sends a heartbeat to the console's UDP port 33739 and listens on 33740.
 Telemetry starts within about 2 s. Only one app on the computer can receive GT7 telemetry, so quit SimHub or
-similar apps first. GT7 sends no lap distance or track id: Pitwall works out distance from speed (about 1% drift per
-lap) and recognises the circuit from the start/finish line after the first full lap.
+similar apps first. GT7 sends no lap distance or track id: Pitwall works out distance from the car's velocity
+(within about 0.2% per lap on real PS5 laps) and recognises the circuit from the start/finish line after the first
+full lap. GT7 streams all the time, even in its menus and replays: a Pitwall session starts once you drive and ends
+when you leave the race (a car reset stays in it), so menus and replays never become sessions.
 
 ### Forza Motorsport (2023) and Forza Horizon 4 / 5 (built from community docs, untested on a real console)
 

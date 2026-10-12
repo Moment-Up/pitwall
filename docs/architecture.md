@@ -98,8 +98,11 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
 ## Analysis pipeline (deterministic)
 1. **Lap assembly** (`analysis/laps.py`): lap boundaries from the game's lap counter + official lap time;
    flashbacks detected by session time going backwards (rewound samples dropped, lap flagged); pit in/out,
-   joined-mid-lap, packet-loss gaps -> `incomplete`; game-declared invalid -> `invalid`. Only `clean` laps
-   can be references or train the track model.
+   joined-mid-lap, packet-loss gaps -> `incomplete`; game-declared invalid -> `invalid`; race lap 1 timed from the
+   start signal (GT7 rolling starts) -> `race_start`; a lap the game timed that the adapter could not place on the
+   track (`LapCompletion.untraced`) is stored with its time and no samples -> `no_trace` (+ `incomplete`). Only
+   `clean` laps can be references or train the track model. Games that stream in their menus (GT7) decide in the
+   adapter where a session starts and ends: it emits nothing outside a session and ends one with `session_ended`.
 2. **Distance domain** (`analysis/distance.py`): every lap resampled to a 1 m grid by lap distance; time at
    each metre gives the cumulative delta. Edges extrapolated with measured speed (<=25 m).
 3. **Track model** (`analysis/track.py`): corners = significant speed minima (prominence 8 km/h) of the
@@ -294,7 +297,10 @@ converges (tests: `tests/unit/test_db_migrations.py`, v2 to v5 fixtures; nothing
 | v5 | race strategy | `strategy_laps`, `pit_stops`, `ix_pit_stops_session` (new tables only) |
 | v6 | coachref | `reference_choices`, `drills`, `ix_drills_driver` (new tables only) |
 
-Lap traces stored as compressed float32 npz blobs (~19 channels).
+Lap traces stored as compressed float32 npz blobs (~19 channels); a `no_trace` lap has none (`n_samples` 0), and
+`repo.load_lap_trace` returns None for it. Empty sessions (ended, with no timed lap, no lap trace beyond a stub and
+nothing else stored) are hidden from the session lists, latest-session lookups and per-driver counts (`repo._listed`),
+never deleted.
 Raw packets in `data/captures/*.pwcap` (zstd, ~2.5 MB per 7 min at 60 Hz) for reprocessing.
 
 ## Install and update (`install/`)

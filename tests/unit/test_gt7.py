@@ -26,8 +26,12 @@ from pitwall.adapters.base import GameAdapter, PacketRejected, SupportLevel
 from pitwall.adapters.gt7 import packets as P
 from pitwall.adapters.gt7.adapter import (
     GT7_INFO,
+    OFF_TRACK_END_TICKS,
+    OPEN_TICKS,
+    RESET_MAX_LOADING_TICKS,
     SF_MATCH_LENGTH_FRAC,
     SF_MATCH_LENGTH_MIN_M,
+    STALL_END_TICKS,
     STEER_HALF_LOCK_RAD,
     GT7Adapter,
     TrackSignature,
@@ -38,7 +42,18 @@ from pitwall.analysis.laps import DERIVED_EDGE_FRAC, EDGE_TOLERANCE_M, LapAssemb
 from pitwall.ingest.capture import CapturedPacket, CaptureReader
 from pitwall.ingest.gt7_heartbeat import GT7Heartbeat
 from pitwall.model.synthetic import SYNTHETIC_SESSION_UID
-from pitwall.model.telemetry import CarFrame, Emitted, FrameQuality, Game, LapCompletion, SessionInfo, Wheels
+from pitwall.model.telemetry import (
+    CarFrame,
+    Emitted,
+    EventKind,
+    FrameQuality,
+    Game,
+    GameEvent,
+    LapCompletion,
+    Platform,
+    SessionInfo,
+    Wheels,
+)
 from pitwall.sim.driver import CornerDeviation, DriverProfile
 from pitwall.sim.gt7_stream import (
     GT7GroundTruth,
@@ -430,18 +445,49 @@ class TestRejection:
 
 
 # =============================================================================================== normalisation
+TICK_NS = 16_666_667
+
+
+def _open(adapter: GT7Adapter, data: bytes, t: int) -> list[Emitted]:
+    """Open a session in front of ``data``, as a real stream does before anything is emitted: OPEN_TICKS live packets
+    with its values (on track, not paused, the car moving), their packet ids just below its own. (One more: the first
+    packet of a stream cannot be live - nothing shows it advancing.)"""
+    v, plain = P.decrypt(data)
+    fields = P.unpack(v, plain)
+    out: list[Emitted] = []
+    n = OPEN_TICKS + 1
+    for k in range(n):
+        warm = dict(
+            fields,
+            packet_id=fields["packet_id"] - n + k,
+            flags=int(P.Flags.CAR_ON_TRACK),
+            position=(float(k), 0.0, 0.0),
+        )
+        out += adapter.decode(P.encrypt(P.pack(v, warm), 7 + k), t - (n - k) * TICK_NS)
+    assert adapter.session_uid is not None
+    return out
+
+
 def _decode_one(data: bytes, adapter: GT7Adapter | None = None, t: int = 0) -> tuple[CarFrame, list[Emitted]]:
-    out = (adapter or GT7Adapter()).decode(data, t)
+    """Decode one packet inside a session (opened first when none is): its frame, and everything emitted."""
+    a = adapter or GT7Adapter()
+    warm = _open(a, data, t) if a.session_uid is None else []
+    out = a.decode(data, t)
     frames = [e for e in out if isinstance(e, CarFrame)]
     assert len(frames) == 1, out
-    return frames[0], out
+    return frames[0], warm + out
+
+
+def _info(out: Iterable[Emitted]) -> SessionInfo:
+    return [e for e in out if isinstance(e, SessionInfo)][-1]
 
 
 def test_units_and_wheel_order() -> None:
     f, out = _decode_one(
         _packet(
             speed=50.0,
-            throttle=255,
+            throttle=200,  # 0x91: the throttle after TCS (owner's PS5 captures)
+            throttle_alt=255,  # 0x13C: the driver's pedal
             brake=128,
             gears=0xF3,
             engine_rpm=7123.0,
@@ -488,17 +534,25 @@ def test_units_and_wheel_order() -> None:
         "drs_open",
     ):
         assert getattr(f, name) is None, name
-    (info,) = [e for e in out if isinstance(e, SessionInfo)]
+    info = _info(out)
     assert info.game == Game.GT7 and info.car_id == "gt7:car:1234" and info.track_id is None
     assert info.track_length_m is None and info.extra["best_lap_ms"] == 91_000 and info.extra["packet_variant"] == "C"
     assert info.extra["fuel_fraction"] == pytest.approx(0.375)  # unitless whatever 0x44/0x48 measure
+
+
+@pytest.mark.parametrize(("variant", "expected"), [("A", 200), ("B", 200), ("~", 255), ("C", 255)])
+def test_throttle_is_the_pedal_where_the_packet_has_it(variant: str, expected: int) -> None:
+    """0x13C (variants ~ and C) is the driver's pedal, 0x91 the throttle after TCS: on the owner's PS5 captures 0x91
+    was below 0x13C on every TCS-active packet. A and B have only 0x91."""
+    f, _ = _decode_one(_packet(variant, throttle=200, throttle_alt=255))
+    assert f.throttle == pytest.approx(expected / 255)
 
 
 def test_unset_and_sentinel_values_map_to_none() -> None:
     f, out = _decode_one(
         _packet(
             "A",
-            gears=0xF0,
+            gears=0xFF,
             lap_count=0,
             last_lap_ms=-1,
             pre_race_position=-1,
@@ -512,9 +566,11 @@ def test_unset_and_sentinel_values_map_to_none() -> None:
     assert f.fuel_litres is None and f.fuel_capacity_litres is None and f.max_rpm is None
     assert f.steering is None  # variant A has no steering
     assert f.quality & FrameQuality.NOT_RACING  # lap 0 is not a timed lap
-    (info,) = [e for e in out if isinstance(e, SessionInfo)]
+    info = _info(out)
     assert info.car_id is None and info.total_laps is None and info.extra["fuel_fraction"] is None  # EV: no fuel
-    assert _decode_one(_packet(gears=0xFF))[0].gear is None  # 15 = neutral per Kaitai, unverified
+    # 15 = neutral per Kaitai, never seen on a real capture: unverified. 0 = reverse (Kaitai; the owner's PS5 captures
+    # showed gear 0 only while backing up)
+    assert _decode_one(_packet(gears=0xF0))[0].gear == -1
 
 
 def test_non_finite_auxiliary_values_map_to_none() -> None:
@@ -552,44 +608,117 @@ def test_finished_race_laps_are_not_racing() -> None:
     assert _decode_one(_packet(lap_count=4, total_laps=3))[0].quality & FrameQuality.NOT_RACING
 
 
-def test_loading_packets_emit_nothing_and_start_a_new_session() -> None:
-    a = GT7Adapter()
-    _, out1 = _decode_one(_packet(packet_id=1), a, t=100)
-    assert a.decode(_packet(packet_id=2, flags=int(P.Flags.LOADING_OR_PROCESSING)), 200) == []
-    assert a.stats.ignored == 1 and a.stats.by_type["loading"] == 1
-    _, out2 = _decode_one(_packet(packet_id=3), a, t=300)
-    uid1 = next(e for e in out1 if isinstance(e, SessionInfo)).session_uid
-    uid2 = next(e for e in out2 if isinstance(e, SessionInfo)).session_uid
-    assert uid1 == "gt7:100" and uid2 == "gt7:300"
-    assert isinstance(out2[0], SessionInfo)  # the new session is announced before its first frame
+# =============================================================================================== session boundaries
+def _drive(a: GT7Adapter, n: int, pid: int, t: int = 0, **values: Any) -> tuple[list[Emitted], int]:
+    """``n`` live packets (the car moving along x) from packet id ``pid``; returns what was emitted and the next id."""
+    out: list[Emitted] = []
+    for _ in range(n):
+        fields = {"position": (pid * 0.8, 0.0, 0.0), "velocity": (48.0, 0.0, 0.0), "speed": 48.0, **values}
+        out += a.decode(_packet(packet_id=pid, **fields), t + pid * TICK_NS)
+        pid += 1
+    return out, pid
 
 
-def test_car_change_starts_a_new_session() -> None:
-    a = GT7Adapter()
-    a.decode(_packet(packet_id=1, car_code=11), 1)
-    out = a.decode(_packet(packet_id=2, car_code=22), 2)
-    info = next(e for e in out if isinstance(e, SessionInfo))
-    assert info.session_uid == "gt7:2" and info.car_id == "gt7:car:22"
+def _ended(out: Iterable[Emitted]) -> list[str | None]:
+    return [e.code for e in out if isinstance(e, GameEvent) and e.kind == EventKind.SESSION_ENDED]
 
 
 def _uids(out: Iterable[Emitted]) -> list[str | None]:
     return [e.session_uid for e in out if isinstance(e, SessionInfo)]
 
 
-def test_lap_counter_going_back_is_a_retry_and_a_new_session() -> None:
+def _frames(out: Iterable[Emitted]) -> list[CarFrame]:
+    return [e for e in out if isinstance(e, CarFrame)]
+
+
+def test_a_session_opens_only_after_half_a_second_of_live_packets() -> None:
+    """Menus, replays and the menus' background laps (CarOnTrack clear), a frozen stream (nothing advancing), paused or
+    loading packets and transition blips shorter than OPEN_TICKS never open a session; nothing is emitted for them."""
     a = GT7Adapter()
-    a.decode(_packet(packet_id=1, lap_count=1, speed=50.0), 1)
-    out = a.decode(_packet(packet_id=2, lap_count=2, speed=50.0), 2)  # lap 1 done, its time not there yet: held
-    assert not any(isinstance(e, LapCompletion) for e in out)
-    out = a.decode(_packet(packet_id=3, lap_count=1, speed=50.0), 3)  # retry before the time arrived
-    comp = next(e for e in out if isinstance(e, LapCompletion))
-    i_info = next(i for i, e in enumerate(out) if isinstance(e, SessionInfo))
-    assert out.index(comp) < i_info and comp.lap_number == 1 and comp.lap_time_ms is None  # old session first
-    assert _uids(out) == ["gt7:3"] and a.stats.by_type["retry_lap_reset"] == 1
+    out, pid = _drive(a, 600, 1, flags=0)  # replay / background laps: the car moves, CarOnTrack clear
+    for _ in range(600):  # menus: one frozen packet, only the id changes
+        out += a.decode(_packet(packet_id=pid), pid * TICK_NS)
+        pid += 1
+    more, pid = _drive(a, OPEN_TICKS - 1, pid)  # a blip of live packets...
+    out += more
+    more, pid = _drive(a, 10, pid, flags=int(P.Flags.CAR_ON_TRACK | P.Flags.PAUSED))  # ...cut by a pause
+    out += more
+    assert out == [] and a.session_uid is None and "sessions" not in a.stats.by_type
+    assert a.stats.ignored == a.stats.packets == 1200 + OPEN_TICKS - 1 + 10
+    out, pid = _drive(a, OPEN_TICKS, pid)
+    t_open = (pid - 1) * TICK_NS
+    assert a.session_uid == f"gt7:{t_open}" and _uids(out) == [f"gt7:{t_open}"]  # uid: the packet that opened it
+    assert len(_frames(out)) == 1 and isinstance(out[0], SessionInfo)  # announced before its first frame
+
+
+def test_car_reset_keeps_the_session_and_drops_the_anchor() -> None:
+    """A car reset (owner's PS5: a 1-packet loading pulse, CarOnTrack on both sides, same car, lap and lap total, the C
+    lap timer 17-34 ms further on) is a teleport inside the session, not a new one."""
+    a = GT7Adapter()
+    out, pid = _drive(a, OPEN_TICKS + 5, 1, current_lap_ms=10_000)
+    uid = a.session_uid
+    pulse = int(P.Flags.CAR_ON_TRACK | P.Flags.LOADING_OR_PROCESSING)
+    assert a.decode(_packet(packet_id=pid, flags=pulse, current_lap_ms=10_017), 0) == []
+    out, pid = _drive(a, 5, pid + 1, current_lap_ms=10_034)
+    assert a.session_uid == uid and _ended(out) == [] and a.stats.by_type["car_reset"] == 1
+    assert len(_frames(out)) == 5
 
 
 @pytest.mark.parametrize(
-    ("tod_before", "tod_after", "new_session"),
+    "after",
+    [
+        {"lap_count": 0, "total_laps": 10},  # a race loaded
+        {"current_lap_ms": 90_000},  # the timer did not continue: not the same lap
+        {"car_code": 4321},  # another car
+        {"flags": 0},  # the car is not on track afterwards
+    ],
+)
+def test_any_other_loading_screen_ends_the_session(after: dict[str, Any]) -> None:
+    a = GT7Adapter()
+    _, pid = _drive(a, OPEN_TICKS + 5, 1, current_lap_ms=10_000)
+    a.decode(_packet(packet_id=pid, flags=int(P.Flags.LOADING_OR_PROCESSING)), 0)
+    out, pid = _drive(a, OPEN_TICKS, pid + 1, **{"current_lap_ms": 10_017, **after})
+    assert _ended(out) == ["loading"] and "car_reset" not in a.stats.by_type
+    i_end = next(i for i, e in enumerate(out) if isinstance(e, GameEvent))
+    assert i_end == 0  # nothing of the old session after its end
+    assert a.session_uid is None or _uids(out)  # a new session needs its own OPEN_TICKS live packets
+
+
+def test_a_long_loading_run_ends_the_session_while_loading() -> None:
+    a = GT7Adapter()
+    _, pid = _drive(a, OPEN_TICKS + 5, 1, current_lap_ms=10_000)
+    outs = [a.decode(_packet(packet_id=pid + k, flags=int(P.Flags.LOADING_OR_PROCESSING)), 0) for k in range(60)]
+    assert [k for k, o in enumerate(outs) if o] == [RESET_MAX_LOADING_TICKS]
+    assert _ended(outs[RESET_MAX_LOADING_TICKS]) == ["loading"] and a.session_uid is None
+
+
+def test_car_change_ends_the_session() -> None:
+    a = GT7Adapter()
+    _, pid = _drive(a, OPEN_TICKS + 1, 1, car_code=11)
+    out, pid = _drive(a, OPEN_TICKS, pid, car_code=22)
+    assert _ended(out) == ["car_change"] and isinstance(out[0], GameEvent)
+    assert _info(out).car_id == "gt7:car:22" and a.session_uid is not None
+
+
+def test_lap_counter_going_back_is_a_retry_that_ends_the_session() -> None:
+    a = GT7Adapter()
+    _, pid = _drive(a, OPEN_TICKS + 1, 1, lap_count=1)
+    out, pid = _drive(a, 1, pid, lap_count=2)  # lap 1 done, its time not there yet: held
+    assert not any(isinstance(e, LapCompletion) for e in out)
+    out, pid = _drive(a, 1, pid, lap_count=1)  # retry before the time arrived
+    comp = next(e for e in out if isinstance(e, LapCompletion))
+    assert comp.lap_number == 1 and comp.lap_time_ms is None
+    assert out.index(comp) < out.index(next(e for e in out if isinstance(e, GameEvent)))  # old session first
+    assert _ended(out) == ["retry_lap_reset"] and a.stats.by_type["retry_lap_reset"] == 1
+    # off track the lap counter means nothing (menus send -1): no retry
+    b = GT7Adapter()
+    _, pid = _drive(b, OPEN_TICKS + 1, 1, lap_count=3)
+    out, _ = _drive(b, 5, pid, lap_count=-1, flags=0)
+    assert _ended(out) == [] and len(_frames(out)) == 5
+
+
+@pytest.mark.parametrize(
+    ("tod_before", "tod_after", "ends"),
     [
         (50_000_000, 50_000_000 - 30_000, True),  # retry: the in-game clock went back 30 s
         (50_000_000, 50_000_000 - 9_000, False),  # less than the 10 s retry threshold
@@ -599,20 +728,53 @@ def test_lap_counter_going_back_is_a_retry_and_a_new_session() -> None:
         (50_000_000, -1, False),
     ],
 )
-def test_time_of_day_rewind_is_a_retry(tod_before: int, tod_after: int, new_session: bool) -> None:
+def test_time_of_day_rewind_is_a_retry(tod_before: int, tod_after: int, ends: bool) -> None:
     a = GT7Adapter()
-    a.decode(_packet(packet_id=1, time_of_day_ms=tod_before), 1)
-    out = a.decode(_packet(packet_id=2, time_of_day_ms=tod_after), 2)
-    assert (_uids(out) == ["gt7:2"]) is new_session
-    assert (a.stats.by_type.get("retry_time_rewind", 0) == 1) is new_session
+    _, pid = _drive(a, OPEN_TICKS + 1, 1, time_of_day_ms=tod_before)
+    out, _ = _drive(a, 1, pid, time_of_day_ms=tod_after)
+    assert (_ended(out) == ["retry_time_rewind"]) is ends
+    assert (a.stats.by_type.get("retry_time_rewind", 0) == 1) is ends
+
+
+def test_frozen_stream_at_speed_ends_the_session_and_is_never_integrated() -> None:
+    """After leaving a race GT7 repeats one packet - CarOnTrack set, not paused, 45.9 m/s on the owner's PS5 - with only
+    the packet id changing, for minutes. Those packets are dropped (no frame, no distance, no clock) and after
+    STALL_END_TICKS the session ends; a pause (same payload, paused bit set) keeps the session."""
+    a = GT7Adapter()
+    _, pid = _drive(a, OPEN_TICKS + 1, 1)
+    paused = int(P.Flags.CAR_ON_TRACK | P.Flags.PAUSED)
+    frozen_fields = {"position": (100.0, 0.0, 0.0), "velocity": (45.9, 0.0, 0.0), "speed": 45.9}
+    outs = [a.decode(_packet(packet_id=pid + k, flags=paused, **frozen_fields), 0) for k in range(600)]
+    assert all(len(_frames(o)) == 1 and _frames(o)[0].quality & FrameQuality.PAUSED for o in outs)  # a 10 s pause
+    pid += 600
+    clock = a._clock_s
+    outs = [a.decode(_packet(packet_id=pid + k, **frozen_fields), 0) for k in range(STALL_END_TICKS + 60)]
+    assert all(o == [] for o in outs[: STALL_END_TICKS - 1])  # never emitted, never integrated
+    assert _ended(outs[STALL_END_TICKS - 1]) == ["frozen"] and a.session_uid is None and a._clock_s == clock
+    assert all(o == [] for o in outs[STALL_END_TICKS:])  # and no new session from it
+    # a car standing still (same payload, not paused) is not a stopped simulation: the session stays
+    b = GT7Adapter()
+    _, pid = _drive(b, OPEN_TICKS + 1, 1)
+    still = {"position": (5.0, 0.0, 0.0), "velocity": (0.0, 0.0, 0.0), "speed": 0.0}
+    outs = [b.decode(_packet(packet_id=pid + k, **still), 0) for k in range(STALL_END_TICKS * 3)]
+    assert all(len(_frames(o)) == 1 for o in outs) and b.session_uid is not None
+
+
+def test_two_seconds_off_track_end_the_session() -> None:
+    a = GT7Adapter()
+    _, pid = _drive(a, OPEN_TICKS + 1, 1)
+    out, pid = _drive(a, OFF_TRACK_END_TICKS - 1, pid, flags=0)  # results screen: still the session's
+    assert _ended(out) == [] and all(f.quality & FrameQuality.NOT_RACING for f in _frames(out))
+    out, pid = _drive(a, 1, pid, flags=0)
+    assert _ended(out) == ["off_track"] and a.session_uid is None
 
 
 def test_synthetic_marker_flags_the_session() -> None:
     _, out = _decode_one(_packet(reserved=P.SYNTHETIC_MARKER))
-    info = next(e for e in out if isinstance(e, SessionInfo))
+    info = _info(out)
     assert info.session_uid == str(SYNTHETIC_SESSION_UID) and info.extra["synthetic"] is True
     _, out = _decode_one(_packet())
-    assert "synthetic" not in next(e for e in out if isinstance(e, SessionInfo)).extra
+    assert "synthetic" not in _info(out).extra
 
 
 def test_steering_normalisation_and_sign_cross_check() -> None:
@@ -627,42 +789,73 @@ def test_steering_normalisation_and_sign_cross_check() -> None:
     f = None
     for i in range(200):
         f, _ = _decode_one(
-            _packet("C", packet_id=i + 1, wheel_rotation_rad=quarter, fl_steer_rad=-0.1, fr_steer_rad=-0.1), a
+            _packet(
+                "C",
+                packet_id=i + 1,
+                position=(float(i), 0.0, 0.0),
+                wheel_rotation_rad=quarter,
+                fl_steer_rad=-0.1,
+                fr_steer_rad=-0.1,
+            ),
+            a,
         )
     assert a.steering_sign == 1.0 and f is not None and f.steering == pytest.approx(0.25)
     agreeing = GT7Adapter()
     for i in range(200):
         _decode_one(
-            _packet("C", packet_id=i + 1, wheel_rotation_rad=quarter, fl_steer_rad=0.1, fr_steer_rad=0.1), agreeing
+            _packet(
+                "C",
+                packet_id=i + 1,
+                position=(float(i), 0.0, 0.0),
+                wheel_rotation_rad=quarter,
+                fl_steer_rad=0.1,
+                fr_steer_rad=0.1,
+            ),
+            agreeing,
         )
     assert agreeing.steering_sign == -1.0
 
 
 def test_duplicate_and_out_of_order_packets_are_ignored() -> None:
     a = GT7Adapter()
-    a.decode(_packet(packet_id=10), 1)
+    _decode_one(_packet(packet_id=10), a, 1)
+    ignored = a.stats.ignored
     assert a.decode(_packet(packet_id=10), 2) == []
     assert a.decode(_packet(packet_id=9), 3) == []
-    assert a.stats.ignored == 2 and a.stats.by_type["duplicate_or_out_of_order"] == 2
-    assert len(a.decode(_packet(packet_id=11), 4)) >= 1
+    assert a.stats.ignored == ignored + 2 and a.stats.by_type["duplicate_or_out_of_order"] == 2
+    assert len(a.decode(_packet(packet_id=11, position=(1.0, 0.0, 0.0)), 4)) >= 1
     assert "stream_restart" not in a.stats.by_type
 
 
 def test_restart_just_below_the_last_packet_id_is_not_dropped_for_ever() -> None:
-    """Ids restarting 50 below the last one look like reordering at first; a run of them is a restart."""
+    """Ids restarting 50 below the last one look like reordering at first; a run of them is a restart, which ends the
+    session; the restarted stream opens a new one OPEN_TICKS packets later."""
     a = GT7Adapter()
     for pid in range(1000, 1100):
-        a.decode(_packet(packet_id=pid), pid)
-    outs = [a.decode(_packet(packet_id=pid), 10_000 + pid) for pid in range(1050, 1100)]
+        a.decode(_packet(packet_id=pid, position=(float(pid), 0.0, 0.0)), pid)
+    outs = [
+        a.decode(_packet(packet_id=pid, position=(-float(pid), 0.0, 0.0)), 10_000 + pid) for pid in range(1050, 1150)
+    ]
     assert all(o == [] for o in outs[:30]) and a.stats.by_type["duplicate_or_out_of_order"] == 30
-    assert _uids(outs[30]) == [f"gt7:{10_000 + 1080}"] and a.stats.by_type["retry_stream_restart"] == 1
-    assert all(any(isinstance(e, CarFrame) for e in o) for o in outs[30:])  # continuous again afterwards
+    assert _ended(outs[30]) == ["retry_stream_restart"] and a.stats.by_type["retry_stream_restart"] == 1
+    i_open = 30 + OPEN_TICKS - 1
+    assert all(not _frames(o) for o in outs[30:i_open])
+    assert _uids(outs[i_open]) == [f"gt7:{10_000 + 1050 + i_open}"]
+    assert all(_frames(o) for o in outs[i_open:])  # continuous again afterwards
 
 
 def test_adapter_info_declares_derived_unverified_and_unsupported_fields() -> None:
     f = GT7_INFO.fields
-    assert "derived by integration; drifts ~1%" in f["lap_distance_m"].source
-    assert f["lap_distance_m"].level is SupportLevel.COMMUNITY_DOCUMENTED
+    assert f["lap_distance_m"].source.startswith("derived: velocity magnitude x tick time")
+    assert f["lap_distance_m"].level is SupportLevel.RECORDED_VALIDATED  # the owner's PS5 recordings, 2026-10-11
+    assert GT7_INFO.platforms == {
+        Platform.PS5: SupportLevel.LIVE_VALIDATED,
+        Platform.PS4: SupportLevel.COMMUNITY_DOCUMENTED,
+    }
+    for name, fs in f.items():  # every recorded-validated field names its dated evidence
+        assert (fs.level is SupportLevel.RECORDED_VALIDATED) <= ("PS5 recordings 2026-10-11" in fs.source), name
+    for name in ("steering", "max_rpm", "race_position", "track_id", "clutch"):  # evidence noted, not enough
+        assert f[name].level is SupportLevel.COMMUNITY_DOCUMENTED, name
     for name in ("tyre_wear_pct", "tyre_pressure_psi", "tyre_inner_temp_c", "sector", "lap_invalid"):
         assert f[name].level is SupportLevel.UNSUPPORTED, name
     assert f["fuel_litres"].level is SupportLevel.UNVERIFIED and "conflicting" in f["fuel_litres"].source
@@ -770,8 +963,9 @@ class Run:
 
 
 def run(packets: Iterable[CapturedPacket], adapter: GT7Adapter | None = None) -> Run:
-    """Decode a stream and feed it through the lap assembler exactly as the session manager does: a SessionInfo
-    with a new session uid ends the session (its lap in progress is flushed as incomplete) and starts a new one."""
+    """Decode a stream and feed it through the lap assembler exactly as the session manager does: ``session_ended``
+    or a SessionInfo with a new session uid ends the session (its lap in progress is flushed as incomplete); the next
+    SessionInfo starts a new one."""
     r = Run(order=[], adapter=adapter or GT7Adapter())
     uid: str | None = None
 
@@ -783,7 +977,11 @@ def run(packets: Iterable[CapturedPacket], adapter: GT7Adapter | None = None) ->
     for p in packets:
         for e in r.adapter.decode(p.data, p.t_recv_ns):
             r.order.append(e)
-            if isinstance(e, SessionInfo):
+            if isinstance(e, GameEvent) and e.kind == EventKind.SESSION_ENDED:
+                asm.flush()
+                asm = LapAssembler(on_lap)
+                uid = None
+            elif isinstance(e, SessionInfo):
                 if uid is not None and e.session_uid != uid:
                     asm.flush()
                     asm = LapAssembler(on_lap)
@@ -856,7 +1054,9 @@ def plain_stream(triangle: TrackGeometry) -> tuple[list[CapturedPacket], GT7Grou
 @pytest.mark.synthetic
 def test_stream_decodes_without_errors(decoded: Run, stream: tuple[list[CapturedPacket], GT7GroundTruth]) -> None:
     st = decoded.adapter.stats
-    assert st.packets == len(stream[0]) == st.decoded and st.rejected == st.errors == st.ignored == 0
+    assert st.packets == len(stream[0]) == st.decoded + st.ignored and st.rejected == st.errors == 0
+    # the session opens at the OPEN_TICKS-th live packet; the stream's first packet cannot be live (nothing before it)
+    assert st.ignored == st.by_type["no_session"] == OPEN_TICKS
     assert st.by_type["variant_C"] == len(stream[0]) and st.by_type["sessions"] == 1
 
 
@@ -1004,8 +1204,11 @@ def test_joining_mid_lap_leaves_distance_unknown_until_the_line(
     r = run(packets[i2 - 600 :])  # join 10 s before the end of lap 1
     assert all(f.lap_distance_m is None for f in r.frames if f.lap_number == 1)
     laps = by_lap(r.laps)
-    assert 1 not in laps and laps[2].clean and laps[2].lap_time_ms == truth.lap_times_ms[2]
-    assert [c.lap_number for c in r.completions] == [1, 2, 3]  # lap 1's official time is still reported
+    assert laps[2].clean and laps[2].lap_time_ms == truth.lap_times_ms[2]
+    assert [c.lap_number for c in r.completions] == [1, 2, 3]  # lap 1's official time is still reported...
+    # ...and lap 1 is still stored: the game's time, no trace (never placed on the track), never a reference
+    assert laps[1].lap_time_ms == truth.lap_times_ms[1] and laps[1].n == 0
+    assert {LapFlag.NO_TRACE, LapFlag.INCOMPLETE} <= laps[1].flags and not laps[1].clean
 
 
 @pytest.mark.synthetic
@@ -1058,7 +1261,8 @@ def test_packet_id_restart_is_a_new_session(stream: tuple[list[CapturedPacket], 
     r = run(restarted)
     st = r.adapter.stats.by_type
     assert st["stream_restart"] == 1 and st["retry_stream_restart"] == 1 and st["sessions"] == 2
-    assert r.adapter.stats.ignored == 0
+    assert r.adapter.stats.ignored == st["no_session"] == OPEN_TICKS + OPEN_TICKS - 1  # see the test above
+    assert [e.code for e in r.order if isinstance(e, GameEvent)] == ["retry_stream_restart"]
     assert by_lap(r.laps)[3].clean
 
 
@@ -1087,7 +1291,8 @@ def test_retry_without_a_loading_screen_starts_a_new_session(triangle: TrackGeom
         (2, t_b.lap_times_ms[2]),
     ]
     sessions = r.laps_by_session()
-    uid_a, uid_b = (f"gt7:{first[0].t_recv_ns}", f"gt7:{second[0].t_recv_ns}")
+    # each session's uid is the packet that opened it: OPEN_TICKS live packets after the start / the retry
+    uid_a, uid_b = (f"gt7:{first[OPEN_TICKS].t_recv_ns}", f"gt7:{second[OPEN_TICKS - 1].t_recv_ns}")
     assert set(sessions) == {uid_a, uid_b}
     assert sessions[uid_a][1].clean and sessions[uid_a][1].lap_time_ms == t_a.lap_times_ms[1]
     assert not sessions[uid_a][2].clean  # cut short by the retry
@@ -1132,7 +1337,7 @@ def test_non_finite_motion_is_bridged_like_a_lost_packet(
         bad[i] = mutate(packets[i], **corrupt)
     r = run(bad)
     st = r.adapter.stats
-    assert st.by_type["non_finite_motion"] == 2 and st.errors == 0 and st.ignored == 2
+    assert st.by_type["non_finite_motion"] == 2 and st.errors == 0 and st.ignored == OPEN_TICKS + 2
     assert [(c.lap_number, c.lap_time_ms, c.valid) for c in r.completions] == [
         (n, ms, None) for n, ms in sorted(truth.lap_times_ms.items())
     ]
@@ -1178,7 +1383,12 @@ def test_one_odd_lap_cannot_define_a_track(plain_stream: tuple[list[CapturedPack
     track's length, which would make every later lap on the circuit 'incomplete'."""
     packets, truth = plain_stream
     i1, i2 = first_index_of_lap(packets, 1), first_index_of_lap(packets, 2)
-    odd = [mutate(p, speed=1.08 * field_of(p, "speed")) if i1 < i < i2 else p for i, p in enumerate(packets)]
+
+    def faster(p: CapturedPacket) -> CapturedPacket:  # lap distance integrates the velocity (module docstring)
+        vx, vy, vz = field_of(p, "velocity")
+        return mutate(p, speed=1.08 * field_of(p, "speed"), velocity=(1.08 * vx, 1.08 * vy, 1.08 * vz))
+
+    odd = [faster(p) if i1 < i < i2 else p for i, p in enumerate(packets)]
     r = run(odd)
     assert by_lap(r.laps)[1].channels["distance_m"][-1] > 1.07 * truth.track.length_m
     sig = TrackSignature.parse(r.infos[-1].track_id or "")
@@ -1304,35 +1514,55 @@ def test_counter_increment_away_from_the_line_does_not_anchor_the_next_lap(
     r = run(early)
     assert r.adapter.stats.by_type["sf_crossing_mismatch"] == 1
     assert all(f.lap_distance_m is None for f in r.frames if f.lap_number == 3)
-    assert 3 not in by_lap(r.laps)
+    lap3 = by_lap(r.laps)[3]  # timed by the game, never placed on the track: its time only, never a reference
+    assert lap3.n == 0 and LapFlag.NO_TRACE in lap3.flags and not lap3.clean
 
 
 @pytest.mark.synthetic
-def test_race_start_is_not_anchored(triangle: TrackGeometry) -> None:
+def test_rolling_race_start_anchors_lap_1_as_a_race_start_lap(triangle: TrackGeometry) -> None:
+    """A rolling start incremented the lap counter at the line on every real PS5 race (within 1 m of the later
+    crossings): race lap 1 is anchored there (provisionally while the line is unknown), stored with the game's time,
+    and flagged as a race-start lap - the game times it from the start signal, so it is never a reference."""
     packets, truth = generate_gt7_session(GT7Scenario(laps=2, total_laps=2), triangle)
     r = run(packets)
-    assert all(f.lap_distance_m is None for f in r.frames if f.lap_number == 1)
+    lap1 = [f for f in r.frames if f.lap_number == 1]
+    assert lap1[0].lap_distance_m == pytest.approx(0.0, abs=2.0) and all(f.lap_distance_m is not None for f in lap1)
+    comps = {c.lap_number: c for c in r.completions}
+    assert comps[1].race_start is True and comps[2].race_start is None and comps[1].valid is None
     laps = by_lap(r.laps)
-    assert 1 not in laps and laps[2].clean and laps[2].lap_time_ms == truth.lap_times_ms[2]
+    assert laps[1].lap_time_ms == truth.lap_times_ms[1] and LapFlag.RACE_START in laps[1].flags and not laps[1].clean
+    assert abs(laps[1].channels["distance_m"][-1] - truth.track.length_m) < 3.0
+    assert laps[2].clean and laps[2].lap_time_ms == truth.lap_times_ms[2]
     assert all(f.quality & FrameQuality.NOT_RACING for f in r.frames if f.lap_number == 3)  # after the flag
 
 
-def test_standing_start_is_not_anchored() -> None:
+def test_standing_start_is_not_anchored_but_lap_1_keeps_its_time() -> None:
     a = GT7Adapter()
+    asm_laps: list[LapTrace] = []
+    asm = LapAssembler(asm_laps.append)
     out: list[Emitted] = []
     pid = 1
-    for _ in range(30):  # on the grid, lap 0
-        out += a.decode(_packet(packet_id=pid, lap_count=0, speed=0.0, position=(0.0, 0.0, -50.0)), pid)
+    for k in range(60):  # on the grid, lap 0, engine running
+        grid = _packet(packet_id=pid, lap_count=0, total_laps=3, speed=0.0, engine_rpm=3000.0 + k, position=(0, 0, -50))
+        out += a.decode(grid, pid)
         pid += 1
     z = -50.0
-    for k in range(120):  # lights out: lap 1 while stationary, then accelerating
+    for k in range(600):  # lights out: lap 1 while stationary, then accelerating
         v = 0.1 * k
         z += v / 60
-        out += a.decode(_packet(packet_id=pid, lap_count=1, speed=v, position=(0.0, 0.0, z)), pid)
+        out += a.decode(_packet(packet_id=pid, lap_count=1, total_laps=3, speed=v, position=(0, 0, z)), pid)
         pid += 1
     frames = [e for e in out if isinstance(e, CarFrame) and e.lap_number == 1]
-    assert len(frames) == 120 and all(f.lap_distance_m is None for f in frames)
+    assert len(frames) == 600 and all(f.lap_distance_m is None for f in frames)
     assert a.stats.by_type["lap_start"] == 1
+    for e in out:
+        if isinstance(e, CarFrame):
+            asm.feed(e)
+    comp = LapCompletion(game=Game.GT7, t_recv_ns=pid, lap_number=1, lap_time_ms=95_000, race_start=True, untraced=True)
+    asm.feed_completion(comp)  # what the adapter emits at the line (the lap 1 -> 2 crossing)
+    (lap1,) = asm_laps
+    assert lap1.lap_time_ms == 95_000 and lap1.n == 0
+    assert {LapFlag.NO_TRACE, LapFlag.INCOMPLETE, LapFlag.RACE_START} <= lap1.flags and not lap1.clean
 
 
 @pytest.mark.synthetic

@@ -45,6 +45,10 @@ talk; the radio needs the Tailscale HTTPS step). Packets show up within a second
 
 Ids: `gt7:ps5`, `gt7:ps4`.
 
+Status: PS5 **live_validated** - races on the owner's PS5 on 2026-10-11, every lap time equal to the game's own; the
+session and lap handling fixed after that run has been re-checked on its recordings, not yet live. PS4
+**community_documented** - the same packets per the community docs, never tested on a PS4.
+
 Nothing to set in the game: Pitwall asks the console for telemetry (heartbeat to UDP 33739, replies to 33740).
 
 1. `uv run pitwall game set gt7:ps5 --console-ip <PS5 IP> --json` switches the GT7 input on (Pitwall listens on UDP
@@ -56,7 +60,9 @@ Nothing to set in the game: Pitwall asks the console for telemetry (heartbeat to
 
 Notes: telemetry flows only while the console receives the heartbeat (starts within ~2 s). Only one app on this
 computer can receive GT7 telemetry (UDP 33740): quit SimHub etc. GT7 sends no lap distance or track id: Pitwall
-integrates speed (~1 % drift per lap) and recognises the circuit from the start/finish line after the first lap.
+integrates the car's velocity (within ~0.2 % per lap on real PS5 laps) and recognises the circuit from the
+start/finish line after the first lap. GT7 streams in its menus and replays too: a Pitwall session starts only once
+the user drives, so "packets arriving" on Connect does not mean a session.
 
 ## Forza Motorsport (2023) / Forza Horizon 4, 5 - Xbox, PC
 

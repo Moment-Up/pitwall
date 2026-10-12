@@ -846,7 +846,7 @@ def test_game_mismatch_from_a_running_server(repo: Path) -> None:
     assert report.to_dict()["game"] == {
         "selected": "gt7:ps5",
         "label": "Gran Turismo 7",
-        "support": "community_documented",
+        "support": "live_validated",  # GT7 on PS5: validated live on 2026-10-11
         "integration": "gt7",
         "detected": "f1_25:ps5",
         "mismatch": "game",

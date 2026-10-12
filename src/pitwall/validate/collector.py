@@ -845,7 +845,9 @@ class Collector:
         switch_rows: list[Any] = []
         with self.rt.db.read() as c:
             rows = [
-                r for r in repo.list_sessions(c, limit=SESSION_SCAN) if float(r.get("started_unix") or 0) >= since - 1.0
+                r
+                for r in repo.list_sessions(c, limit=SESSION_SCAN, include_empty=True)
+                if float(r.get("started_unix") or 0) >= since - 1.0
             ]
             seen = {r["id"] for r in rows}
             for sid in sids - seen:

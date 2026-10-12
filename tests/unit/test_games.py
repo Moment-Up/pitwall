@@ -39,20 +39,22 @@ def code(f: games.GameFeature) -> str:
 
 # Design spec section 2.6, with two corrections from review: official corner names are partial for F1 25 (only
 # hand-checked track sheets count: track_identity shows verified turns only) and GT7's car setup is "not in Pitwall
-# yet" rather than "not sent" (GT7 sends its gear ratios; Pitwall doesn't read them as a setup).
+# yet" rather than "not sent" (GT7 sends its gear ratios; Pitwall doesn't read them as a setup). GT7 on PS5 since
+# 2026-10-11: validated live, its lap, distance, input and tyre fields on the owner's recordings, so ·rec where it was
+# ·comm (the distance features stay "Estimated": GT7 sends no lap distance).
 GOLDEN_COLUMNS = ("f1_25:ps5", "gt7:ps5", "ac:ps5", "forza_motorsport:pc", "forza_horizon:xbox")
 GOLDEN = """
-lap_timing             S·spec  S·comm  S·rec   P·part  P·part
+lap_timing             S·spec  S·rec   S·rec   P·part  P·part
 sectors                S·spec  NS      NS      NS      NS
-delta                  S·spec  P·comm  P·part  P·part  P·part
-braking_cues           S·spec  P·comm  P·part  P·part  P·part
-corner_coaching        S·spec  P·comm  P·part  P·part  P·part
-track_map              S·spec  P·comm  P·part  P·part  P·part
+delta                  S·spec  P·rec   P·part  P·part  P·part
+braking_cues           S·spec  P·rec   P·part  P·part  P·part
+corner_coaching        S·spec  P·rec   P·part  P·part  P·part
+track_map              S·spec  P·rec   P·part  P·part  P·part
 official_corner_names  P·-     NI      NI      NI      NI
 ai_field               S·rec   NS      NS      NS      NS
 flags                  S·spec  NS      NS      NS      NS
 fuel                   S·spec  NI      NS      NI      NI
-tyre_temps             S·spec  S·comm  NS      S·comm  S·comm
+tyre_temps             S·spec  S·rec   NS      S·comm  S·comm
 tyre_wear              S·spec  NS      NS      S·comm  NS
 tyre_pressures         S·spec  NS      NS      NS      NS
 brake_temps            S·spec  NS      NS      NS      NS
@@ -125,7 +127,7 @@ def test_short_labels_and_entry_words() -> None:
         "other": "Other",
     }
     words = {e.id: e.support_words for e in games.entries()}
-    assert words["f1_25:ps5"] == "Tested live"
+    assert words["f1_25:ps5"] == words["gt7:ps5"] == "Tested live"
     assert words["f1_25:pc"] == words["f1_25_2026:ps5"] == "Built from the official spec"
     assert words["ac:ps5"] == "Tested on a recording"
     assert words["gt7:ps4"] == words["ac:pc"] == "Built from community docs"
@@ -138,7 +140,8 @@ def test_short_labels_and_entry_words() -> None:
         assert f"| {w} |" in readme, w
     summaries = {e.id: e.support_summary for e in games.entries()}
     assert summaries["f1_25:ps5"].startswith("Checked end to end with the real game")
-    assert summaries["gt7:ps5"].startswith("Built from community documentation")
+    assert summaries["gt7:ps5"].startswith("Checked end to end with the real game")
+    assert summaries["gt7:ps4"].startswith("Built from community documentation")  # no PS4 tested
     assert summaries["acc:ps5"] == "ACC on PS5 has no telemetry output."
     assert summaries["other:any"].startswith("Pitwall doesn't know what this game sends")
     assert all("Connect page" not in v for v in summaries.values())
@@ -242,7 +245,8 @@ def test_platform_and_variant_profiles() -> None:
     assert profile("f1_25:pc") == profile("f1_25:xbox") == pc_like
     for p in ("ps5", "xbox", "pc"):  # the corner names were hand-checked with format 2025 only
         assert profile(f"f1_25_2026:{p}") == {**pc_like, "official_corner_names": "NI"}
-    assert profile("gt7:ps4") == profile("gt7:ps5")
+    gt7_comm = {k: v.replace("·rec", "·comm") for k, v in profile("gt7:ps5").items()}
+    assert profile("gt7:ps4") == gt7_comm  # same packets, but only the PS5 was tested
     ac_comm = {k: v.replace("·rec", "·comm") for k, v in profile("ac:ps5").items()}
     assert profile("ac:ps4") == ac_comm
     # AC on PC has this data in its shared memory, which Pitwall doesn't read: "not in Pitwall yet", never "not sent"
@@ -278,11 +282,11 @@ def test_feature_texts() -> None:
         "evidence": None,
         "short": "Not sent by GT7",
         "reason": "GT7 doesn't send tyre wear.",
-        "detail": "not sent by GT7 (row gt7)",
+        "detail": "not sent by GT7 (row gt7_ps5)",
         "note": None,
         "fields": ["tyre_wear_pct"],
     }
-    assert gt7.feature("delta").short == "Estimated" and "1 % drift" in gt7.feature("delta").reason
+    assert gt7.feature("delta").short == "Estimated" and "0.2 %" in gt7.feature("delta").reason
     f1 = games.entry("f1_25:ps5")
     assert f1 is not None
     assert f1.feature("track_map").note is not None  # shipped outline before the first lap
@@ -382,6 +386,42 @@ def test_code_fact_sheets_outlines_and_setups() -> None:
     assert games.setup_games() == F1_GAMES
 
 
+# Evidence-backed changes since the golden snapshot, each listed here so that no other row or field can change silently.
+# 2026-10-11, the owner's PS5 (live run + recordings, tests/recorded/test_gt7_ps5_real.py): the GT7 row split into a
+# live-validated PS5 row and a PS4 row that stays community-documented; these GT7 fields became recorded-validated and
+# every changed GT7 field source carries that dated evidence.
+GT7_EVIDENCE = "PS5 recordings 2026-10-11"
+GT7_ROWS = {"gt7_ps5": ("PS5", "live_validated"), "gt7_ps4": ("PS4", "community_documented")}
+GT7_OLD_PLATFORM = "PS5 / PS4"
+GT7_RECORDED = {
+    "speed_kph",
+    "throttle",
+    "brake",
+    "gear",
+    "rpm",
+    "pos_x_m",
+    "pos_y_m",
+    "pos_z_m",
+    "vel_x_mps",
+    "session_time_s",
+    "frame_id",
+    "lap_number",
+    "lap_distance_m",
+    "current_lap_time_ms",
+    "last_lap_time_ms",
+    "tyre_surface_temp_c",
+    "track_length_m",
+    "car_id",
+    "total_laps",
+    "best_lap_ms",
+}
+
+
+def _old_key(r: Any) -> tuple[str, str]:
+    """A current row's key in the golden snapshot (the GT7 rows were one ``PS5 / PS4`` row then)."""
+    return (r.game, GT7_OLD_PLATFORM if r.key in GT7_ROWS else r.platform)
+
+
 def test_adapter_declarations_added_for_documented_absences() -> None:
     old = {(r["game"], r["platform"]): r for r in json.loads(GOLDEN_MATRIX.read_text(encoding="utf-8"))}
     added = {
@@ -405,14 +445,20 @@ def test_adapter_declarations_added_for_documented_absences() -> None:
         Game.AC: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
     }
     for r in PLANNED:
-        before = old[(r.game, r.platform)]["fields"]
+        before = old[_old_key(r)]["fields"]
         if r.adapter_game is None or before is None:
             continue
         now = set(ADAPTER_INFOS[r.adapter_game].fields)
         assert now - set(before) == added[r.adapter_game], r.key
-        for k, v in before.items():  # no level was upgraded or changed
+        for k, v in before.items():  # no level was upgraded or changed, except the listed evidence-backed upgrades
             fs = ADAPTER_INFOS[r.adapter_game].fields[k]
-            assert (fs.level.value, fs.source) == (v["level"], v["source"]), (r.key, k)
+            if r.adapter_game is Game.GT7 and k in GT7_RECORDED:
+                assert (v["level"], fs.level) == ("community_documented", S.RECORDED_VALIDATED), k
+                assert GT7_EVIDENCE in fs.source, k
+            elif r.adapter_game is Game.GT7 and fs.source != v["source"]:
+                assert fs.level.value == v["level"] and GT7_EVIDENCE in fs.source, k  # the note gained evidence
+            else:
+                assert (fs.level.value, fs.source) == (v["level"], v["source"]), (r.key, k)
     for g in (Game.GT7, Game.FORZA_MOTORSPORT, Game.FORZA_HORIZON, Game.AC):
         new = {k: ADAPTER_INFOS[g].fields[k].level for k in added[g]}
         expected_unverified = {"ers_store_j"} if g is Game.GT7 else set()
@@ -421,15 +467,27 @@ def test_adapter_declarations_added_for_documented_absences() -> None:
 
 
 def test_capability_matrix_golden() -> None:
-    old = json.loads(GOLDEN_MATRIX.read_text(encoding="utf-8"))
+    old = {(r["game"], r["platform"]): r for r in json.loads(GOLDEN_MATRIX.read_text(encoding="utf-8"))}
     new = json.loads(json.dumps(capability_matrix()))
-    assert len(old) == len(new) == len(PLANNED)
-    for o, n in zip(old, new, strict=True):
+    assert len(old) + 1 == len(new) == len(PLANNED)  # the GT7 row split in two (see GT7_ROWS)
+    for r, n in zip(PLANNED, new, strict=True):
+        o = old[_old_key(r)]
         n = dict(n)
-        assert n.pop("key") and isinstance(n.pop("platform_ids"), list)
-        if n["fields"] is not None:  # section 2.2 declarations are the only additions
+        assert n.pop("key") == r.key and isinstance(n.pop("platform_ids"), list)
+        if n["fields"] is not None:  # section 2.2 declarations are the only additions (levels: the test above)
             n["fields"] = {k: v for k, v in n["fields"].items() if k in o["fields"]}
         o = {**o, "notes": o["notes"].replace(" Enable on the Connect page.", "")}  # stale since game selection
+        if r.key in GT7_ROWS:
+            platform, status = GT7_ROWS[r.key]
+            assert (n.pop("platform"), n.pop("status"), o.pop("platform"), o.pop("status")) == (
+                platform,
+                status,
+                GT7_OLD_PLATFORM,
+                "community_documented",
+            )
+            assert "Synthetic tests only" in o.pop("notes") and "Synthetic tests only" not in n["notes"]
+            assert ("2026-10-11" in n.pop("notes")) is (r.key == "gt7_ps5")
+            assert set(o.pop("fields")) == set(n.pop("fields"))
         assert o == n, o["game"]
     keys = [r["key"] for r in new]
     assert keys == [r.key for r in PLANNED] and len(set(keys)) == len(keys)
@@ -443,9 +501,9 @@ def test_capability_matrix_golden() -> None:
         (("f1_25", "ps5", "2026", None), "f1_25_2026:ps5"),
         (("f1_25", "unknown", "2025", "f1_25:pc"), "f1_25:pc"),
         (("f1_25", "unknown", "2025", None), "f1_25:xbox"),  # ambiguous platform: the weakest main entry
-        (("gt7", "unknown", None, "gt7:ps4"), "gt7:ps4"),
-        (("gt7", "unknown", None, None), "gt7:ps5"),
-        (("gt7", None, None, "f1_25:ps5"), "gt7:ps5"),  # a preference that is not a candidate is ignored
+        (("gt7", "unknown", None, "gt7:ps5"), "gt7:ps5"),
+        (("gt7", "unknown", None, None), "gt7:ps4"),  # GT7 sends no platform: the weakest of PS5 (live) / PS4
+        (("gt7", None, None, "f1_25:ps5"), "gt7:ps4"),  # a preference that is not a candidate is ignored
         (("ac", "ps4", None, None), "ac:ps4"),
         (("ac", None, None, None), "ac:ps4"),  # weakest of PS5 (recorded) / PS4 / PC (community): catalogue order
         (("ac", None, None, None, "pc"), "ac:pc"),  # the configured platform picks the entry
@@ -591,7 +649,7 @@ def test_history_suggestion_skips_replays_and_synthetic() -> None:
         {"game": "gt7", "platform": "unknown", "source": "udp:33740", "synthetic": False},
     ]
     assert games.history_suggestion(rows) == {
-        "id": "gt7:ps5",
+        "id": "gt7:ps4",  # GT7 sends no platform: the weakest entry it could be (PS4: untested; PS5: live)
         "source": "history",
         "text": "You last drove Gran Turismo 7.",
     }

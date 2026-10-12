@@ -267,9 +267,10 @@ live session; the live PS5 tests so far used the classic dashboard.
   verified on synthetic streams only.
 
 **Multi-game**
-- F1 25 is tested live on PS5. Assetto Corsa's telemetry has been confirmed from a PS5, but its laps and coaching
-  have not yet been run through Pitwall end to end. Gran Turismo 7 and Forza are implemented but not yet tested
-  with the real games. See [Supported games](#supported-games).
+- F1 25 and Gran Turismo 7 are tested live on PS5 (GT7: races on 2026-10-11; its session and lap handling was
+  fixed since and re-checked on the recordings of those races). Assetto Corsa's telemetry has been confirmed from a
+  PS5, but its laps and coaching have not yet been run through Pitwall end to end. Forza is implemented but not yet
+  tested with the real games. See [Supported games](#supported-games).
 
 **Private and local**
 - Telemetry, sessions and captures stay in a SQLite database and a folder on your computer.
@@ -290,7 +291,8 @@ for the full list with notes.
 | F1 25 (UDP format 2025) | PC, Xbox Series | Built from the official spec | Same packets as PS5 according to EA's spec. Not yet tested on these platforms. |
 | F1 25 2026 Season Pack (UDP format 2026) | PC, PS5, Xbox Series | Built from the official spec | Synthetic tests only. |
 | F1 24 and older (format 2024) | All | Not supported | Rejected with a clear message. Set the game's UDP Format to 2025 or 2026. |
-| Gran Turismo 7 | PS5, PS4 | Built from community docs | Synthetic tests only. The game sends no lap distance, so distance is worked out from speed (about 1% drift per lap). |
+| Gran Turismo 7 | PS5 | **Tested live** | Races on the owner's PS5 on 2026-10-11: 277,467 packets, 0 rejected, every lap time equal to the game's own to the millisecond. Menus, replays and car resets had split those races into extra sessions and lost some laps; that is fixed and re-checked on the same recordings, and recorded excerpts are part of the test suite. The game sends no lap distance, so distance is worked out from the car's velocity (within about 0.2% per lap). |
+| Gran Turismo 7 | PS4 | Built from community docs | The same packets as the PS5 according to the community docs. Not tested on a PS4. |
 | Forza Motorsport (2023) | Xbox Series, PC | Built from community docs | Synthetic tests only. |
 | Forza Horizon 4 / 5 | Xbox, PC | Built from community docs | Synthetic tests only. Free roam has live data but no laps. |
 | Assetto Corsa (PS4 version) | PS5 (backward compatibility) | Tested on a recording | A probe script confirmed live that the game streams telemetry on a PS5 (2026-10-11), and Pitwall's decoder is tested on that recording. Laps, timing and lap coaching through the full app are not yet confirmed. |

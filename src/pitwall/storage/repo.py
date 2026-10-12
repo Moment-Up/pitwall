@@ -10,6 +10,12 @@ Replays (``source`` starting with ``REPLAY_SOURCE_PREFIX``) re-process laps that
 are nobody's driving: they are stored without a driver unless one is named explicitly, the default-driver
 backfill leaves them alone, and a driver's *records* (personal best, automatic reference laps, stats) never count
 them, whoever they were assigned to. They still feed the shared, driver-independent track models.
+
+Empty sessions (``_listed``): an ended session with nothing to show - no timed lap, no lap trace longer than a stub,
+no observation, conversation, setup or game event besides its start and end - is hidden from the session lists, the
+latest-session lookups and the per-driver session counts. It is never deleted (that needs the owner's consent).
+Games that stream in their menus left such rows before their adapters learned where a session starts and ends (GT7
+on the owner's PS5, 2026-10-11: 28 stored sessions for 4 races, 23 of them empty).
 """
 
 from __future__ import annotations
@@ -38,6 +44,28 @@ def _driven(table: str = "s") -> str:
 
 
 _DRIVEN = _driven()
+
+EMPTY_LAP_MAX_SAMPLES = 30  # an untimed lap trace up to this long is a stub (2 samples in the GT7 menus), not driving
+_LIFECYCLE_EVENTS = ("session_started", "session_ended")  # every session has these: they are not content
+
+
+def _listed(table: str = "s") -> str:
+    """SQL predicate over a ``sessions`` row (alias ``table``): the session is shown in lists and counts - it is
+    still open (live), or it holds something (see the module docstring). The cheap, indexed checks come first."""
+    t = table
+    lifecycle = ", ".join(f"'{k}'" for k in _LIFECYCLE_EVENTS)
+    return (
+        f"({t}.ended_unix IS NULL"
+        f" OR EXISTS (SELECT 1 FROM laps lx WHERE lx.session_id = {t}.id"
+        f" AND (lx.lap_time_ms IS NOT NULL OR lx.n_samples > {EMPTY_LAP_MAX_SAMPLES}))"
+        f" OR EXISTS (SELECT 1 FROM observations ox WHERE ox.session_id = {t}.id)"
+        f" OR EXISTS (SELECT 1 FROM events ex WHERE ex.session_id = {t}.id AND ex.kind NOT IN ({lifecycle}))"
+        f" OR EXISTS (SELECT 1 FROM conversations cx WHERE cx.session_id = {t}.id)"
+        f" OR EXISTS (SELECT 1 FROM setups ux WHERE ux.session_id = {t}.id))"
+    )
+
+
+_LISTED = _listed()
 
 
 def new_session_id() -> str:
@@ -210,9 +238,15 @@ def _session_row(r: sqlite3.Row) -> dict[str, Any]:
     return d
 
 
-def list_sessions(conn: sqlite3.Connection, limit: int = 50, driver_id: int | None = None) -> list[dict[str, Any]]:
-    """Most recent sessions first, with lap count, clean lap count, best clean lap and the owning driver's name."""
-    where, args = ("WHERE s.driver_id=?", [driver_id]) if driver_id is not None else ("", [])
+def list_sessions(
+    conn: sqlite3.Connection, limit: int = 50, driver_id: int | None = None, *, include_empty: bool = False
+) -> list[dict[str, Any]]:
+    """Most recent sessions first, with lap count, clean lap count, best clean lap and the owning driver's name.
+    Empty sessions are left out unless ``include_empty`` (internal scans of stored session info)."""
+    conds, args = (["s.driver_id=?"], [driver_id]) if driver_id is not None else ([], [])
+    if not include_empty:
+        conds.append(_LISTED)
+    where = f"WHERE {' AND '.join(conds)}" if conds else ""
     rows = conn.execute(
         f"""SELECT s.*, d.name AS driver_name, COUNT(l.id) AS lap_count,
                   COALESCE(SUM(l.clean), 0) AS clean_lap_count,
@@ -233,13 +267,17 @@ def get_session(conn: sqlite3.Connection, session_id: str) -> dict[str, Any] | N
 
 
 def latest_session_id(conn: sqlite3.Connection, driver_id: int | None = None) -> str | None:
-    """The most recently started session (of ``driver_id`` when given). Equal ``started_unix`` values (Python 3.12's
-    ``time.time()`` ticks every 15.6 ms on Windows) go to the session inserted last (``rowid``)."""
+    """The most recently started session (of ``driver_id`` when given) that is listed (not empty). Equal
+    ``started_unix`` values (Python 3.12's ``time.time()`` ticks every 15.6 ms on Windows) go to the session inserted
+    last (``rowid``)."""
     if driver_id is None:
-        r = conn.execute("SELECT id FROM sessions ORDER BY started_unix DESC, rowid DESC LIMIT 1").fetchone()
+        r = conn.execute(
+            f"SELECT id FROM sessions s WHERE {_LISTED} ORDER BY started_unix DESC, rowid DESC LIMIT 1"
+        ).fetchone()
     else:
         r = conn.execute(
-            "SELECT id FROM sessions WHERE driver_id=? ORDER BY started_unix DESC, rowid DESC LIMIT 1", (driver_id,)
+            f"SELECT id FROM sessions s WHERE driver_id=? AND {_LISTED} ORDER BY started_unix DESC, rowid DESC LIMIT 1",
+            (driver_id,),
         ).fetchone()
     return r["id"] if r else None
 
@@ -300,8 +338,10 @@ def get_lap(conn: sqlite3.Connection, lap_id: int, with_trace: bool = True) -> d
 
 
 def load_lap_trace(conn: sqlite3.Connection, lap_id: int) -> LapTrace | None:
+    """The lap with its trace; None for an unknown lap and for a lap stored without one (``LapFlag.NO_TRACE``:
+    timed by the game, never anchored), so every reader treats it like a missing trace."""
     d = get_lap(conn, lap_id, with_trace=True)
-    if d is None:
+    if d is None or not d["n_samples"]:
         return None
     return LapTrace(
         lap_number=d["lap_number"],
@@ -425,15 +465,17 @@ def update_driver(
 
 
 def count_driver_sessions(conn: sqlite3.Connection, driver_id: int) -> int:
-    r = conn.execute("SELECT COUNT(*) AS n FROM sessions WHERE driver_id=?", (driver_id,)).fetchone()
+    """The driver's listed sessions (empty ones are hidden, see the module docstring): what their list shows."""
+    r = conn.execute(f"SELECT COUNT(*) AS n FROM sessions s WHERE s.driver_id=? AND {_LISTED}", (driver_id,)).fetchone()
     return int(r["n"])
 
 
 def delete_driver(conn: sqlite3.Connection, driver_id: int, reassign_to: int | None = None) -> int:
     """Delete a driver, first moving their sessions to ``reassign_to``; returns the number of sessions moved.
 
-    Without ``reassign_to`` a driver who still owns sessions is refused (``ValueError``): recorded laps are never
-    deleted as a side effect of removing a profile. Their pinned references move with the sessions but are
+    Without ``reassign_to`` a driver who still owns listed sessions is refused (``ValueError``): recorded laps are
+    never deleted as a side effect of removing a profile. Their empty (hidden) sessions are left without a driver,
+    like replays: nothing in them is anybody's driving. Their pinned references move with the sessions but are
     deactivated, so they cannot override the receiving driver's own choice. Meta keys naming the deleted driver
     are moved to the receiving driver (or cleared). Raises ``KeyError`` for an unknown driver or target.
     """
@@ -451,6 +493,7 @@ def delete_driver(conn: sqlite3.Connection, driver_id: int, reassign_to: int | N
         if n:
             raise ValueError(f"driver {driver_id} still owns {n} session(s)")
         moved = 0
+        conn.execute("UPDATE sessions SET driver_id=NULL WHERE driver_id=?", (driver_id,))  # empty ones only, now
         conn.execute("DELETE FROM reference_laps WHERE driver_id=?", (driver_id,))
     for key in (ACTIVE_DRIVER_KEY, DEFAULT_DRIVER_KEY):
         if get_meta(conn, key) == str(driver_id):
@@ -503,13 +546,14 @@ def default_driver_id(conn: sqlite3.Connection) -> int | None:
 def driver_stats(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
     """Per-driver totals and best clean lap per track, keyed by driver id (drivers with no sessions are absent).
 
-    ``sessions`` counts every session the driver owns (it is what ``delete_driver`` refuses on, and what their
-    session list shows); ``laps``, ``clean_laps``, ``tracks`` and ``best_laps`` count driving only, never replays.
+    ``sessions`` counts the listed sessions the driver owns (it is what ``delete_driver`` refuses on, and what their
+    session list shows: empty sessions are hidden); ``laps``, ``clean_laps``, ``tracks`` and ``best_laps`` count
+    driving only, never replays.
     The best lap per (game, track) is picked with a window function (fastest, then lowest lap id) so the lap id,
     session and car returned all belong to that one lap."""
     out: dict[int, dict[str, Any]] = {}
     for r in conn.execute(
-        f"""SELECT s.driver_id, COUNT(DISTINCT s.id) AS sessions,
+        f"""SELECT s.driver_id, COUNT(DISTINCT CASE WHEN {_LISTED} THEN s.id END) AS sessions,
                   COUNT(CASE WHEN {_DRIVEN} THEN l.id END) AS laps,
                   COALESCE(SUM(CASE WHEN {_DRIVEN} THEN l.clean END), 0) AS clean_laps,
                   COUNT(DISTINCT CASE WHEN s.track_id IS NOT NULL AND {_DRIVEN}

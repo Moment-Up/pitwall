@@ -103,6 +103,7 @@ _NOT_RECENT = frozenset(
         LapFlag.PIT_OUT,
         LapFlag.FLASHBACK,
         LapFlag.STANDING_START,
+        LapFlag.RACE_START,
         LapFlag.DISTANCE_JUMP,
         LapFlag.STALE_DATA,
     }

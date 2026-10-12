@@ -7,7 +7,8 @@ between them are an artefact of excerpting, not of the game.
     uv run python scripts/excerpt_capture.py data/captures/X.pwcap tests/fixtures/recorded/f1-25/Y.pwcap \\
         --window 668:682 --window 762:772 --description "F1 25 PS5 Austria race excerpt"
 
-Window bounds are seconds from the first packet in the source capture.
+Window bounds are seconds from the first packet in the source capture. ``--game-hint`` names the game in the
+metadata when the source does not (a live UDP capture does not know which game sent it; GT7 excerpts: ``gt7``).
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ def main() -> None:
     ap.add_argument("dest", type=Path)
     ap.add_argument("--window", type=parse_window, action="append", required=True)
     ap.add_argument("--description", default="")
+    ap.add_argument("--game-hint", default=None, help="the game, when the source's metadata does not name it")
     ap.add_argument("--level", type=int, default=19)
     a = ap.parse_args()
 
@@ -41,7 +43,7 @@ def main() -> None:
     meta = CaptureMeta(
         created_unix=reader.meta.created_unix,
         source=reader.meta.source,
-        game_hint=reader.meta.game_hint,
+        game_hint=reader.meta.game_hint or a.game_hint,
         synthetic=False,
         description=a.description or reader.meta.description,
         extra={

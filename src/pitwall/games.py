@@ -144,8 +144,8 @@ _ENTRY_TABLE: tuple[tuple[str, str, str | None, str, str], ...] = (
     ("f1_25_2026", "xbox", "f1_25_2026", "more", "Xbox Series"),
     ("f1_25_2026", "pc", "f1_25_2026", "more", "PC"),
     ("f1_24", "any", "f1_24", "more", "any"),
-    ("gt7", "ps5", "gt7", "main", "PS5"),
-    ("gt7", "ps4", "gt7", "main", "PS4"),
+    ("gt7", "ps5", "gt7_ps5", "main", "PS5"),
+    ("gt7", "ps4", "gt7_ps4", "main", "PS4"),
     ("forza_motorsport", "xbox", "forza_motorsport", "main", "Xbox Series"),
     ("forza_motorsport", "pc", "forza_motorsport", "main", "PC"),
     ("forza_horizon", "xbox", "forza_horizon", "main", "Xbox"),
@@ -237,9 +237,10 @@ DISTANCE_FEATURES = frozenset({"delta", "braking_cues", "corner_coaching", "trac
 
 # ---------------------------------------------------------------------------------------------- code facts
 # Each entry restates the code; tests/unit/test_games.py pins it to the code it describes.
-ESTIMATED: frozenset[tuple[str, str]] = frozenset({("gt7", "lap_distance_m")})  # GT7: integrated from speed
+ESTIMATED: frozenset[tuple[str, str]] = frozenset({("gt7", "lap_distance_m")})  # GT7: integrated from the velocity
 DISTANCE_REASON: dict[str, str] = {
-    "gt7": "GT7 sends no lap distance: Pitwall works it out from speed (about 1 % drift per lap).",
+    "gt7": "GT7 sends no lap distance: Pitwall works it out from the car's speed and direction (within about 0.2 % "
+    "per lap on real PS5 laps).",
     "forza_motorsport": "Forza sends no lap distance: Pitwall measures the distance you drive from the start line.",
     "forza_horizon": "Forza sends no lap distance: Pitwall measures the distance you drive from the start line.",
     "ac": "Assetto Corsa sends no lap distance: Pitwall works it out from the track position once the track length "

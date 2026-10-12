@@ -405,6 +405,8 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             trace = repo.load_lap_trace(c, lap_id)
             row = repo.get_lap(c, lap_id, with_trace=False)
             sess = repo.get_session(c, row["session_id"]) if row else None
+        if row is not None and not row["n_samples"]:
+            raise HTTPException(404, "lap has no trace: the game timed it, but Pitwall never placed it on the track")
         if trace is None or sess is None:
             raise HTTPException(404, "lap not found")
         length = sess.get("track_length_m") or float(np.nanmax(trace.channels["distance_m"]))

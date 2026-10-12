@@ -270,7 +270,7 @@ class Runtime:
     def _ac_known_tracks(self) -> dict[str, AcTrackGeometry]:
         try:
             with self.db.read() as c:
-                return ac_known_tracks(repo.list_sessions(c, limit=AC_GEOMETRY_SCAN_SESSIONS))
+                return ac_known_tracks(repo.list_sessions(c, limit=AC_GEOMETRY_SCAN_SESSIONS, include_empty=True))
         except Exception:  # an old database must never stop ingest from starting
             log.exception("could not load known AC track geometry")
             return {}

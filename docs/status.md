@@ -1,7 +1,7 @@
 # Status
 
 _Last updated: 2026-10-12 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
-yet unless the Live column says so)._
+yet unless the Live column says so. After it: Gran Turismo 7 on the PS5, from the owner's races of 2026-10-11)._
 
 What works, how far each part has been tested, and what is still unverified. Every claim is tied to one evidence
 tier:
@@ -10,11 +10,13 @@ tier:
 - **Recorded**: real game output captured to a file and played back (committed excerpts in
   `tests/fixtures/recorded`, or the owner's captures replayed into a scratch database). Proves the decoders and the
   analysis cope with what the game really sends.
-- **Live**: the real game on the real platform, end to end. Only a run of the validation kit (Setup › Validation,
-  `pitwall validate`) on the rig upgrades a status, and only by hand: `src/pitwall/capabilities.py` changes only with
-  new evidence.
+- **Live**: the real game on the real platform, end to end. Only live evidence upgrades a status to live - a run of
+  the validation kit (Setup › Validation, `pitwall validate`) on the rig, or the owner's own sessions with their
+  captures (F1 25 on 2026-10-10, GT7 on 2026-10-11) - and only by hand: `src/pitwall/capabilities.py` changes only
+  with new evidence, written into the row with its date.
 
-Merging the v0.2.0 lanes did not upgrade any tier. The per-lane development notes (what was checked, on which
+Merging the v0.2.0 lanes did not upgrade any tier; GT7 on the PS5 was upgraded after it (see
+[below](#gran-turismo-7-on-the-ps5-2026-10-11)). The per-lane development notes (what was checked, on which
 captures, with which numbers) are kept verbatim in [history.md](history.md).
 
 ## Verified vs unverified
@@ -45,15 +47,57 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Track knowledge (sectors, marshal zones, official corner names) | yes | yes (Austria) | no | official names beyond Austria; tracks other than Austria | - |
 | Rig walkthrough and rig check | yes | yes (Austria excerpt) | no | load-cell checks; the thresholds beyond one rig | - |
 | Car setup recommendations (F1 25) | n/a | yes (the PS5 Austria setups fit every confirmed range) | no | a recommended setup driven and checked | - |
-| Gran Turismo 7, Forza Motorsport, Forza Horizon | yes | no | no | everything with the real games | `gt7_ps5` |
+| Gran Turismo 7 (PS5) | yes | yes (3 excerpts of the owner's 2026-10-11 races; the 4 captures replayed: 4 sessions, all 11 timed laps exact) | **yes** (races on 2026-10-11: 277,467 packets, 0 rejected, every lap time equal to the game's) | the session and lap fixes made after that run, live; race position against the game's HUD; the steering scale; fuel units; PS4 | `gt7_ps5` |
+| Forza Motorsport, Forza Horizon | yes | no | no | everything with the real games | - |
 | Assetto Corsa (PS4 build on PS5) | yes | yes (probe excerpt, 2026-10-11) | protocol only (the probe script) | a lap stored, timed and coached end to end | `ac_ps5` |
 | Cloud AI providers | mock servers only | n/a | no | a live cloud call | - |
 | Dashboard v2 (React, HeroUI) | yes | yes (desktop browser at iPad and phone sizes) | no | on a real iPad in a live session | `ipad_endurance` |
 | Windows | CI | CI | no | a game on a Windows PC | - |
 
+## Gran Turismo 7 on the PS5 (2026-10-11)
+
+The owner drove GT7 on a PS5 with Pitwall's live service and reported that it worked. The live service's heartbeat
+and UDP 33740 listener recorded 277,467 packets in 4 captures (`data/captures/20261011-013533`, `-121256`,
+`-124608`, `-182615` `_udp33740.pwcap`): all variant C (so game version 1.68 or later), 0 rejected, 0 decode errors,
+59.9 Hz, 9 lost; 4 races on 2 circuits (a 0.92 km oval and a 3.8 km circuit) with 3 cars. Every lap time Pitwall
+stored equalled the game's own last-lap field to the millisecond.
+
+The same data showed three defects, fixed on 2026-10-12 and re-checked by replaying the 4 captures through the
+current code into a scratch database (4 sessions, all 11 timed laps stored with the game's times; seeded with the
+database's track ids, as the service is, both circuits get the ids the live run learned):
+
+- **28 sessions for 4 races.** GT7 streams at 60 Hz in its menus, replays and the menus' background laps; every load,
+  retry signal and car reset started a session. A session now opens after 0.5 s of driving (on track, not paused,
+  the car moving) and ends on a load that is not a car reset, a car change, a retry, 2 s off track, or 2 s of the
+  frozen stream below. A car reset (a 1-packet loading pulse with the car on track, the same lap and the lap timer
+  running on) stays inside the session. The 23 empty sessions already stored are hidden from the session lists and
+  counts, not deleted.
+- **5 of 11 timed laps lost.** Race lap 1 was never placed on the track, and the resets split the races. Race lap 1
+  is now anchored at the rolling start (every real one crossed within 1 m of the line) and marked "race start" (the
+  game times it from the start signal, 150-383 ms before the line); a timed lap Pitwall cannot place keeps the game's
+  time without a trace ("no trace").
+- **The frozen stream after leaving a race was driving.** GT7 then repeats one packet (on track, not paused, 45.9
+  m/s) for minutes; it was integrated into a 16.8 km "lap 5" while the dashboard showed 165 km/h. Those packets are
+  now dropped and end the session after 2 s.
+
+Fields the recordings settled (now `recorded_validated`, each with its evidence in the adapter's field notes): speed
+(0x4C is the speedometer, not the path speed: it drops in slides, so lap distance now integrates the velocity
+vector, within 0.2 % of the driven path instead of losing up to 3.9 %), throttle (0x13C is the pedal, 0x91 the
+throttle after TCS - the frames now carry the pedal), brake, gear (0 is reverse), rpm, position, velocity, the tick
+clock, packet id, lap count, lap times, the current-lap timer, lap total, best lap, car code, tyre temperatures,
+lap distance and track length. Still community-documented: steering (the sign is right, but 0x128 clamps at
++/-pi, so its scale tops out at 40 %), race position (a live position in races, not yet compared with the HUD), the
+rev-limit RPM, clutch and the derived track id; fuel stays unread (100 / 100 throughout: the unit is still open).
+Recorded-tier fixtures: `tests/fixtures/recorded/gt7_c_ps5_*` (the race start and 3 laps, leaving a race, a car
+reset), pinned by `tests/recorded/test_gt7_ps5_real.py`.
+
 ## Known gaps
 
 Kept open for after v0.2.0 (none of them changes what Pitwall claims):
+
+- **GT7:** the 2026-10-12 session and lap fixes have run only on the recordings; the PS4 is untested; `/api/health`
+  reports "live" while GT7 streams in its menus, so `scripts/pitwall-service.sh restart-when-idle` waits as long as
+  GT7 is open; a race whose every lap had a reset leaves its circuit unrecognised (no complete lap to measure).
 
 - **Goals and recaps:** a lapped finisher's race is worded as finished but judged by the chequered-flag rule only
   later; incomplete laps; safety-car laps are judged by the live safety-car state, not stored per lap yet.

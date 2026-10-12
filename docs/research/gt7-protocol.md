@@ -269,12 +269,35 @@ Surface type, together with position, is the cheapest off-track and kerb-use det
 pitwall should record its own raw **encrypted** datagrams with receive timestamps. That exercises decryption and gives fixtures we fully own.
 
 ## 11. Open questions to settle with our own captures
-1. Is 0x84 a live race position in races (GT7 ≥ 1.6x), or −1 after the start?
-2. Is throttle at 0x91 the input or the post-TCS output? (Compare with 0x13C while TCS is active.)
-3. Reverse/neutral encoding in the gear nibble.
-4. Sign convention of the steering wheel rotation at 0x128, and units of sway/heave/surge.
-5. Fuel units for EVs and for cars whose capacity is not 100.
-6. The actual heartbeat timeout: stop the heartbeat and count packets until the stream stops.
+
+Answers from the owner's PS5 captures of 2026-10-11 (4 captures, 277,467 packets, all variant C; 4 races, 3 cars, 2
+circuits; `tests/recorded/test_gt7_ps5_real.py` pins excerpts of them) are given after each question.
+
+1. Is 0x84 a live race position in races (GT7 ≥ 1.6x), or −1 after the start? **Partly answered:** during races it
+   stays within 1..N, N being 0x86 (the field size, constant during the race), and moves one place at a time; −1
+   outside races. That supports the live-position reading; it has not been compared with the game's HUD.
+2. Is throttle at 0x91 the input or the post-TCS output? (Compare with 0x13C while TCS is active.) **Answered:** 0x91
+   was below 0x13C on all 6,297 packets with the TCS flag set (61-92 units lower on average) and above it only while
+   the clutch was in (downshift blips): 0x91 is the throttle after TCS, 0x13C the driver's pedal (the Kaitai
+   reading). 0x13D equalled 0x92 on 7,068 of 7,070 braking packets, so brake input vs after-ABS output stays open.
+3. Reverse/neutral encoding in the gear nibble. **Reverse answered:** every gear-0 packet that moved, moved backwards
+   (171 packets; none forwards), so 0 = reverse (Kaitai). 15 (neutral) never appeared.
+4. Sign convention of the steering wheel rotation at 0x128, and units of sway/heave/surge. **Sign answered:** radians,
+   left positive - it agreed with the variant C road-wheel angles on 22,643 of 22,643 packets (road wheel = 0.068 x
+   0x128 on 3 cars, a 1:14.7 ratio) - but 0x128 is clamped at exactly ±π while the road wheels keep turning. The
+   sway/heave/surge units are still unknown.
+5. Fuel units for EVs and for cars whose capacity is not 100. **Open:** 100 / 100 in every packet (no fuel used).
+6. The actual heartbeat timeout: stop the heartbeat and count packets until the stream stops. **Open.**
+
+Other facts of the same captures: the speed at 0x4C equals the velocity magnitude to 0.1 % (median) while the tyres
+grip, is never above it, and drops to 22-47 % of it in slides; the rotation at 0x1C..0x2B has unit norm in every
+packet (a quaternion); the lap count and total are −1/−1 in menus (not 0); the last-lap field updates in the packet of
+the counter increment; the variant C lap timer at 0x15C reads within one tick of the last-lap value just before the
+line and, on race lap 1, starts 150-383 ms before the line; the reserved bytes 0xD4..0xF3 are all zero; a car reset
+shows as a single packet with the loading flag (and CarOnTrack) set; after the player leaves a race the console
+repeats one packet, CarOnTrack set and paused clear, with only the packet id changing, for minutes (20 min in one
+capture). Menus, replays and the menus' background laps stream at 60 Hz too, background laps and replays with
+CarOnTrack clear.
 
 ## Sources
 - Nenkai, PDTools, `PDTools.SimulatorInterface` and `PDTools.Crypto/SimulationInterface` (MIT): https://github.com/Nenkai/PDTools/tree/master/PDTools.SimulatorInterface

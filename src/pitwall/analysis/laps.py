@@ -18,6 +18,13 @@ scenario that starts at lap 62 starts at 62, and in-, out- and opening laps are 
   from its first frame, wherever the grid is (real F1 25: Melbourne -164 m, Las Vegas +2.6 m, Austria +132 m):
   lap 1, lap timer under ``STANDING_START_MAX_MS``, car stationary (``STANDING_START_MAX_KPH``) and not in the
   pit lane. A flying first lap (one-shot qualifying from -306 m) or a scenario joined at speed is not one.
+* **Race start** (``RACE_START``): race lap 1 that the adapter reports as timed from the start signal rather than
+  from the line (``LapCompletion.race_start``; GT7 rolling starts). Timed, never a reference.
+* **Laps without a trace** (``NO_TRACE``): a lap the game timed but the adapter could not place on the track
+  (``LapCompletion.untraced``: no frame of it had a lap distance - GT7 after a standing start or a session joined
+  mid-lap) is still stored, with the game's time and no samples, so a timed lap never disappears from the lap list.
+  Only for a lap this assembler saw being driven and never built or finalised, so a late completion can never
+  overwrite a lap with a trace.
 """
 
 from __future__ import annotations
@@ -99,6 +106,12 @@ class LapFlag:
     # lap distance jumped with no time gap (e.g. reset to track after an off): timed, but distance alignment is
     # locally broken, so not used as a reference
     DISTANCE_JUMP = "distance_jump"
+    RACE_START = "race_start"  # race lap 1 timed from the start signal (rolling start): not comparable either
+    NO_TRACE = "no_trace"  # timed by the game, but no frame had a lap distance: stored with its time only
+
+
+# Race lap 1 in either form: timed by the game, never comparable with a flying lap.
+RACE_START_FLAGS = frozenset({LapFlag.STANDING_START, LapFlag.RACE_START})
 
 
 @dataclass(slots=True)
@@ -126,6 +139,8 @@ class LapTrace:
             LapFlag.INVALID,
             LapFlag.STANDING_START,
             LapFlag.DISTANCE_JUMP,
+            LapFlag.RACE_START,
+            LapFlag.NO_TRACE,
         }
         return not (self.flags & bad) and self.valid is not False and self.lap_time_ms is not None
 
@@ -267,6 +282,8 @@ class LapAssembler:
         self._cur: _Building | None = None
         self._pending_completion: LapCompletion | None = None
         self.laps_emitted = 0
+        self._finalised: set[int] = set()  # lap numbers emitted by this assembler (one session)
+        self._untraced_lap: int | None = None  # the last lap seen driven with no lap distance
 
     def set_track_length(self, length_m: float | None) -> None:
         self.track_length_m = length_m
@@ -281,13 +298,24 @@ class LapAssembler:
         if cur is not None and cur.lap_number == c.lap_number:
             self._finalise(cur, c)
             self._cur = None
+        elif (
+            c.untraced
+            and c.lap_time_ms is not None
+            and c.lap_number == self._untraced_lap
+            and c.lap_number not in self._finalised
+            and (cur is None or cur.lap_number < c.lap_number)
+        ):
+            self._finalise_untraced(c)  # driven, timed by the game, never anchored: its time is still a lap
         else:
             self._pending_completion = c
 
     def feed(self, f: CarFrame) -> None:
         if f.quality & (FrameQuality.PAUSED | FrameQuality.REPLAY_OR_SPECTATING | FrameQuality.NOT_RACING):
             return
-        if f.lap_number is None or f.lap_distance_m is None:
+        if f.lap_number is None:
+            return
+        if f.lap_distance_m is None:
+            self._untraced_lap = f.lap_number  # O(1): a timed lap without any distance is stored without a trace
             return
         cur = self._cur
         if cur is not None and f.lap_number != cur.lap_number:
@@ -368,6 +396,8 @@ class LapAssembler:
         valid = completion.valid if completion else None
         if valid is False:
             flags.add(LapFlag.INVALID)
+        if completion is not None and completion.race_start and not flags & RACE_START_FLAGS:
+            flags.add(LapFlag.RACE_START)
         first, last = b.first, b.last
         meta: dict[str, Any] = {
             "fuel_start_kg": b.first_fuel_kg,
@@ -394,6 +424,45 @@ class LapAssembler:
             flags=flags,
             meta=meta,
         )
+        self._emit(lap)
+
+    def _finalise_untraced(self, c: LapCompletion) -> None:
+        """A lap the game timed but no frame of which had a lap distance: its time, no samples (``NO_TRACE``, and
+        ``INCOMPLETE`` so nothing downstream analyses a trace it does not have)."""
+        flags = {LapFlag.INCOMPLETE, LapFlag.NO_TRACE}
+        if c.valid is False:
+            flags.add(LapFlag.INVALID)
+        if c.race_start:
+            flags.add(LapFlag.RACE_START)
+        empty = np.empty(0, dtype=np.float64)
+        meta: dict[str, Any] = {
+            "fuel_start_kg": None,
+            "fuel_end_kg": None,
+            "tyre_compound": None,
+            "tyre_age_laps": None,
+            "wear_start": None,
+            "wear_end": None,
+            "t_recv_start_ns": None,
+            "t_recv_end_ns": c.t_recv_ns,
+            "abs_active": None,
+            "traction_control": None,
+            "final": c.final,
+        }
+        self._untraced_lap = None
+        self._emit(
+            LapTrace(
+                lap_number=c.lap_number,
+                channels={name: empty.copy() for name in CHANNELS},
+                lap_time_ms=c.lap_time_ms,
+                sector_times_ms=list(c.sector_times_ms),
+                valid=c.valid,
+                flags=flags,
+                meta=meta,
+            )
+        )
+
+    def _emit(self, lap: LapTrace) -> None:
+        self._finalised.add(lap.lap_number)
         self.laps_emitted += 1
         self.on_lap(lap)
 
