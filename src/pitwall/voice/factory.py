@@ -124,6 +124,7 @@ def build_radio_hub(
         cue_mode=settings.cue_mode,
         verify_tts=settings.tts_verify,
         persist_voice=lambda voice: save_voice_choice(voice_file, settings.tts_engine, voice),
+        handsfree=settings.voice_handsfree,  # --- hands-free (lane handsfree) ---
     )
 
 

@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { VoiceStatus } from "../../lib/endpoints/settings";
+import { HANDS_FREE_IDLE } from "../../lib/handsfree";
 import type { DeviceVoice, RadioServerState } from "../../lib/radio";
 import { DisplayPreview } from "./display/DisplayPreview";
 import { RadioVoiceView, type RadioActions, type RadioVoiceState, type RadioVoiceViewProps } from "./radio/RadioVoiceView";
@@ -53,7 +54,7 @@ function radioState(over: Partial<RadioVoiceState> = {}): RadioVoiceState {
     retryInS: null,
     error: null,
     server: null,
-    settings: { voiceEnabled: true, intensity: "normal", voiceSource: "server", deviceVoice: null, deviceRate: 1, version: 2 },
+    settings: { voiceEnabled: true, intensity: "normal", voiceSource: "server", deviceVoice: null, deviceRate: 1, version: 2, handsFree: false, wakeWord: "pitwall", handsFreeConsent: false, talkButton: null },
     deviceVoices: [],
     deviceTtsCapable: true,
     micCapable: true,
@@ -61,6 +62,7 @@ function radioState(over: Partial<RadioVoiceState> = {}): RadioVoiceState {
     mic: "off",
     micSilent: false,
     pttHeld: false,
+    handsFree: HANDS_FREE_IDLE,
     ...over,
   };
 }
@@ -76,6 +78,10 @@ function actions(): RadioActions {
     setDeviceVoice: vi.fn(),
     setDeviceRate: vi.fn(),
     testDeviceVoice: vi.fn(),
+    setHandsFree: vi.fn(),
+    acceptHandsFreeConsent: vi.fn(),
+    setWakeWord: vi.fn(),
+    setTalkButton: vi.fn(),
   };
 }
 
@@ -126,11 +132,12 @@ describe("Settings › Radio & voice", () => {
     expect(t).toContain("Unknown until the Mac answers.");
     expect(t).toContain("Unknown: the Mac has not answered.");
     expect(t).not.toContain("George");
-    // No braking-call mode is checked (cells.tsx keeps the group controlled with a key no choice uses). Coaching, the
-    // local setting, is the only checked choice.
+    // No braking-call mode is checked (cells.tsx keeps the group controlled with a key no choice uses). The local
+    // settings are the only checked choices: the hands-free wake word (lane handsfree), then coaching.
     const checked = m.match(/<button[^>]*role="radio"[^>]*aria-checked="true"[^>]*>.*?<\/button>/g) ?? [];
-    expect(checked).toHaveLength(1);
-    expect(checked[0]).toContain(">Normal<");
+    expect(checked).toHaveLength(2);
+    expect(checked[0]).toContain(">Pitwall<");
+    expect(checked[1]).toContain(">Normal<");
   });
 
   it("Test voice is a 44 px target at every width (HeroUI lg is 40 px from 768 px up)", () => {

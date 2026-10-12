@@ -596,13 +596,19 @@ def test_build_stt_parakeet_unavailable_falls_back(
 def test_build_stt_on_windows_is_null_with_a_reason(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
-    """Parakeet is MLX (Apple silicon only): on Windows the radio says why voice questions are off."""
-    monkeypatch.setattr(stt_mod.sys, "platform", "win32")
+    """Parakeet-mlx is Apple silicon only; on Windows without sherpa-onnx (lane handsfree: the voice extra installs it
+    there) the radio says why voice questions are off."""
+    import pitwall.voice.stt_sherpa as sherpa_mod
+
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setattr(sherpa_mod, "sherpa_supported", lambda: "sherpa-onnx not importable (ImportError)")
     with caplog.at_level(logging.WARNING, logger="pitwall.voice.stt"):
         engine = build_stt(_settings(tmp_path, stt_engine="parakeet"))
-    assert isinstance(engine, NullStt) and "Apple-silicon Mac" in engine.reason
+    assert isinstance(engine, NullStt) and "sherpa-onnx" in engine.reason and "not installed" in engine.reason
     assert "whispercpp" in caplog.text  # the log says what would work instead
     assert isinstance(build_stt(_settings(tmp_path, stt_engine="whispercpp")), WhisperCppStt)  # still available
+    monkeypatch.setattr(sys, "platform", "linux")  # elsewhere: Apple silicon or sherpa-onnx
+    assert "Apple-silicon Mac" in build_stt(_settings(tmp_path, stt_engine="parakeet")).reason  # type: ignore[attr-defined]
 
 
 def test_null_stt_reasons(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -179,6 +179,8 @@ class DriverPreferences:
     coaching_intensity: CoachingIntensity = "normal"
     voice_enabled: bool = True
     default_game: str | None = None  # games catalogue id: on a seat change, selected while telemetry is not live
+    # lane handsfree: hands-free talking also listens while the car moves (off: only while it is stationary)
+    handsfree_while_driving: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -205,6 +207,7 @@ class DriverPreferences:
         take("coaching_intensity", parse_coaching_intensity)
         take("voice_enabled", _parse_bool)
         take("default_game", parse_default_game)  # a game the catalogue no longer has reads as none
+        take("handsfree_while_driving", _parse_bool)  # lane handsfree
         return out
 
 
@@ -437,6 +440,7 @@ class Driver:
             "skill_level": p.skill_level,
             "coaching_intensity": p.coaching_intensity,
             "voice_enabled": p.voice_enabled,
+            "handsfree_while_driving": p.handsfree_while_driving,  # lane handsfree
         }
 
 
@@ -690,6 +694,7 @@ class DriverService:
         coaching_intensity: str = "normal",
         voice_enabled: bool = True,
         default_game: str | None = None,
+        handsfree_while_driving: bool = False,  # lane handsfree
     ) -> Driver:
         clean = clean_name(name)
         prefs = DriverPreferences(
@@ -699,6 +704,7 @@ class DriverService:
             coaching_intensity=parse_coaching_intensity(coaching_intensity),
             voice_enabled=_parse_bool(voice_enabled),
             default_game=parse_default_game(default_game),
+            handsfree_while_driving=_parse_bool(handsfree_while_driving),
         )
         pick_colour = colour is None
 
@@ -728,6 +734,7 @@ class DriverService:
         coaching_intensity: str | None = None,
         voice_enabled: bool | None = None,
         default_game: str | _Keep | None = KEEP,
+        handsfree_while_driving: bool | None = None,  # lane handsfree
     ) -> Driver:
         """Partial update: only the given fields change (``default_game``: None clears it, ``KEEP`` leaves it). Never
         bumps the seat version (no session effect)."""
@@ -744,6 +751,8 @@ class DriverService:
             changes["voice_enabled"] = _parse_bool(voice_enabled)
         if not isinstance(default_game, _Keep):
             changes["default_game"] = parse_default_game(default_game)
+        if handsfree_while_driving is not None:
+            changes["handsfree_while_driving"] = _parse_bool(handsfree_while_driving)
         new_name = clean_name(name) if name is not None else None
 
         def job(c: sqlite3.Connection) -> _Refused | None:

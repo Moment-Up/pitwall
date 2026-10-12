@@ -14,8 +14,11 @@ Engines
 * ``WhisperCppStt``: a whisper.cpp ``whisper-server`` sidecar over HTTP (``POST /inference`` with a WAV
   file). ``prompt`` carries vocabulary such as corner names. The server is a separate process, so a crash
   there cannot take down the app.
+* ``SherpaParakeetStt`` (``voice.stt_sherpa``, lane handsfree): Parakeet TDT 0.6B v2 (English) on the CPU through
+  sherpa-onnx. ``stt_engine=parakeet`` resolves to it off Apple silicon when sherpa-onnx is installed (the ``voice``
+  extra installs it on Windows), and ``stt_engine=sherpa`` asks for it anywhere.
 * ``NullStt``: always returns "". Used when speech recognition is disabled or unavailable (e.g. Parakeet off an
-  Apple-silicon Mac, so on Windows unless ``stt_engine=whispercpp``), so the radio still accepts typed questions.
+  Apple-silicon Mac without sherpa-onnx), so the radio still accepts typed questions.
   Its ``reason`` says why; the radio hub tells the driver instead of asking them to repeat themselves.
 
 Shared behaviour
@@ -71,6 +74,7 @@ from pitwall.voice.types import AudioClip, SttEngine, SttResult
 
 if TYPE_CHECKING:
     from pitwall.config import Settings
+    from pitwall.voice.stt_sherpa import SherpaParakeetStt
 
 log = logging.getLogger(__name__)
 
@@ -706,18 +710,42 @@ def build_stt(settings: Settings) -> SttEngine:
         if engine == "parakeet":
             reason = _parakeet_supported()
             if reason is not None:
-                log.warning("STT engine 'parakeet' unavailable, voice questions disabled: %s", reason)
                 if sys.platform != "darwin" or platform.machine() != "arm64":
-                    return NullStt("server speech recognition (Parakeet) needs an Apple-silicon Mac")
+                    # --- lane handsfree: off Apple silicon, the same model family on the CPU via sherpa-onnx ---
+                    sherpa = _sherpa(settings)
+                    if not isinstance(sherpa, str):
+                        log.info("STT engine 'parakeet': Parakeet on the CPU via sherpa-onnx (%s)", sherpa.model.key)
+                        return sherpa
+                    log.warning("STT engine 'parakeet' unavailable, voice questions disabled: %s; %s", reason, sherpa)
+                    if sys.platform == "win32":
+                        return NullStt("the server's speech recognition (Parakeet via sherpa-onnx) is not installed")
+                    return NullStt("server speech recognition (Parakeet) needs an Apple-silicon Mac or sherpa-onnx")
+                log.warning("STT engine 'parakeet' unavailable, voice questions disabled: %s", reason)
                 return NullStt("the server's speech recognition (Parakeet) is not installed")
             return ParakeetStt(settings.stt_model or DEFAULT_PARAKEET_MODEL)
+        if engine in ("sherpa", "sherpa-onnx", "sherpa_onnx"):  # --- lane handsfree ---
+            sherpa = _sherpa(settings)
+            if isinstance(sherpa, str):
+                log.warning("STT engine 'sherpa' unavailable, voice questions disabled: %s", sherpa)
+                return NullStt(f"the server's speech recognition (sherpa-onnx) cannot start: {sherpa}")
+            return sherpa
         if engine in ("whispercpp", "whisper.cpp", "whisper-cpp", "whisper"):
             return WhisperCppStt(settings.whispercpp_url or DEFAULT_WHISPERCPP_URL)
-        log.warning("unknown stt_engine %r (expected parakeet | whispercpp | none); voice questions disabled", engine)
+        log.warning(
+            "unknown stt_engine %r (expected parakeet | sherpa | whispercpp | none); voice questions disabled", engine
+        )
         return NullStt(f"unknown speech recognition engine {settings.stt_engine!r}")
     except Exception:
         log.exception("STT engine %r failed to initialise; voice questions disabled", engine)
     return NullStt("the server's speech recognition failed to start")
+
+
+def _sherpa(settings: Settings) -> SherpaParakeetStt | str:
+    """``voice.stt_sherpa`` (lane handsfree): the engine, or why it cannot be used. Imported here, not at the top:
+    that module builds on this one."""
+    from pitwall.voice.stt_sherpa import build_sherpa
+
+    return build_sherpa(settings)
 
 
 __all__ = [

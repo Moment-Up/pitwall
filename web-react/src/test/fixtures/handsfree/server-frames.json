@@ -1,0 +1,248 @@
+{
+  "about": "Hand-written /ws/radio frames and GET /api/voice/status bodies for hands-free (lane handsfree), in the shape of the build spec's protocol section and voice/handsfree.py (reason strings as that module words them). Not captured from a server.",
+  "handsfree": {
+    "listening": {
+      "available": true,
+      "reason": null,
+      "armed": 1,
+      "scope": "stationary",
+      "active": true,
+      "paused": null,
+      "capturing": false,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 3,
+        "addressed": 1,
+        "ignored": 2,
+        "rejected": 0
+      }
+    },
+    "paused_moving": {
+      "available": true,
+      "reason": null,
+      "armed": 1,
+      "scope": "stationary",
+      "active": false,
+      "paused": "moving",
+      "capturing": false,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 3,
+        "addressed": 1,
+        "ignored": 2,
+        "rejected": 4
+      }
+    },
+    "capturing": {
+      "available": true,
+      "reason": null,
+      "armed": 1,
+      "scope": "stationary",
+      "active": true,
+      "paused": null,
+      "capturing": true,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 4,
+        "addressed": 1,
+        "ignored": 2,
+        "rejected": 0
+      }
+    },
+    "follow_up": {
+      "available": true,
+      "reason": null,
+      "armed": 1,
+      "scope": "stationary",
+      "active": true,
+      "paused": null,
+      "capturing": false,
+      "follow_up": true,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 5,
+        "addressed": 2,
+        "ignored": 2,
+        "rejected": 0
+      }
+    },
+    "driving": {
+      "available": true,
+      "reason": null,
+      "armed": 2,
+      "scope": "driving",
+      "active": true,
+      "paused": null,
+      "capturing": false,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 0,
+        "addressed": 0,
+        "ignored": 0,
+        "rejected": 0
+      }
+    },
+    "not_armed": {
+      "available": true,
+      "reason": null,
+      "armed": 0,
+      "scope": "stationary",
+      "active": false,
+      "paused": null,
+      "capturing": false,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 0,
+        "addressed": 0,
+        "ignored": 0,
+        "rejected": 0
+      }
+    },
+    "unavailable_env": {
+      "available": false,
+      "reason": "switched off on the server (PITWALL_VOICE_HANDSFREE=false)",
+      "armed": 1,
+      "scope": "stationary",
+      "active": false,
+      "paused": null,
+      "capturing": false,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 0,
+        "addressed": 0,
+        "ignored": 0,
+        "rejected": 0
+      }
+    },
+    "unavailable_sentence": {
+      "available": false,
+      "reason": "needs speech recognition: no speech recognition engine on the server",
+      "armed": 1,
+      "scope": "stationary",
+      "active": false,
+      "paused": null,
+      "capturing": false,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 0,
+        "addressed": 0,
+        "ignored": 0,
+        "rejected": 0
+      }
+    }
+  },
+  "events": [
+    {
+      "type": "handsfree",
+      "event": "accepted",
+      "seq": 7
+    },
+    {
+      "type": "handsfree",
+      "event": "ignored",
+      "seq": 7,
+      "reason": "not_addressed",
+      "audio_s": 1.9
+    },
+    {
+      "type": "handsfree",
+      "event": "rejected",
+      "seq": 8,
+      "reason": "paused_moving"
+    },
+    {
+      "type": "handsfree",
+      "event": "rejected",
+      "seq": 9,
+      "reason": "too_long",
+      "audio_s": 8.4
+    },
+    {
+      "type": "handsfree",
+      "event": "addressed",
+      "seq": 10,
+      "wake": "pitwall",
+      "audio_s": 2.2
+    },
+    {
+      "type": "handsfree",
+      "event": "follow_up",
+      "seq": 11
+    }
+  ],
+  "transcript": {
+    "type": "transcript",
+    "text": "how's my fuel",
+    "stt_ms": 180,
+    "audio_s": 2.2,
+    "source": "handsfree",
+    "wake": "pitwall"
+  },
+  "voice_status": {
+    "enabled": true,
+    "stt": "parakeet",
+    "tts": "kokoro",
+    "intensity": "normal",
+    "voice_enabled": true,
+    "cue_mode": "focus",
+    "telemetry": "no_data",
+    "handsfree": {
+      "available": true,
+      "reason": null,
+      "armed": 0,
+      "scope": "stationary",
+      "active": false,
+      "paused": null,
+      "capturing": false,
+      "follow_up": false,
+      "wake_words": [
+        "pitwall",
+        "radio"
+      ],
+      "counts": {
+        "heard": 0,
+        "addressed": 0,
+        "ignored": 0,
+        "rejected": 0
+      }
+    },
+    "clients": [
+      {
+        "name": "ipad",
+        "handsfree": false,
+        "wake_word": "pitwall"
+      }
+    ]
+  }
+}

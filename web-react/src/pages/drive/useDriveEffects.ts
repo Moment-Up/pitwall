@@ -6,11 +6,11 @@
 //    live and for up to 10 min after the last live moment, so a game pause, menus, loading, a flashback or a socket
 //    flap never lets iPad Auto-Lock turn the screen off mid-session. A release waits 5 s (a flap never drops the lock).
 //    "Screen may sleep" when the browser refuses it.
-//  * Space = push-to-talk on a Mac while the radio is live.
+//  * Space = push-to-talk on a Mac while the radio is live; a learned Bluetooth talk button too (lane handsfree).
 // Switching between Drive pages keeps the wake lock: it is let go only when no Drive page is mounted.
 
 import { useEffect } from "react";
-import { usePushToTalkKey, useRadio } from "../../components/radio";
+import { usePushToTalkKey, useRadio, useTalkButton } from "../../components/radio";
 import { navLock } from "../../components/shell/navLock";
 import { useStore } from "../../hooks/stores";
 import type { DriveModel } from "../../lib/drive/model";
@@ -83,6 +83,7 @@ export function useDriveEffects(model: Pick<DriveModel, "onTrack" | "telemetryLi
 
   const radioLive = useRadio((s) => s.phase === "live");
   usePushToTalkKey(radioLive);
+  useTalkButton(radioLive); // --- hands-free (lane handsfree): the learned Bluetooth talk button, like Space
 
   return useStore(screenWake, screenMaySleep);
 }

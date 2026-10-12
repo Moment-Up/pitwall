@@ -62,9 +62,18 @@ class Settings(BaseSettings):
 
     # Voice radio (phase 5)
     voice_enabled: bool = True
-    stt_engine: str = "parakeet"  # parakeet | whispercpp | none
-    stt_model: str = "mlx-community/parakeet-tdt-0.6b-v3"
+    stt_engine: str = "parakeet"  # parakeet | sherpa | whispercpp | none (parakeet off Apple silicon = sherpa)
+    stt_model: str = "mlx-community/parakeet-tdt-0.6b-v3"  # parakeet-mlx only (sherpa uses stt_sherpa_model)
     whispercpp_url: str = "http://127.0.0.1:8178"
+    # --- lane handsfree ---
+    # Hands-free talking (voice/handsfree.py): false refuses it for every device (each device turns it on itself).
+    voice_handsfree: bool = True
+    # Parakeet on the CPU through sherpa-onnx (voice/stt_sherpa.py; the Windows engine). A catalogue key only: no
+    # arbitrary downloads. The model (about 660 MB) downloads to <app support>/stt/ the first time a radio connects.
+    stt_sherpa_model: str = "parakeet-tdt-0.6b-v2-int8"
+    stt_sherpa_dir: Path | None = None  # a folder already holding the model's four files (offline install)
+    stt_threads: int = Field(default=0, ge=0, le=64)  # sherpa CPU threads; 0 = max(1, min(4, cores // 2))
+    # --- end lane handsfree ---
     # Radio voice (voice/tts.py). kokoro = Kokoro-82M on Metal in a worker process (scripts/setup-tts.sh),
     # falling back to `say` automatically | say (macOS) | sapi (Windows' built-in voices) | none (text-only radio).
     # On Windows, kokoro and say (macOS-only) use sapi automatically.

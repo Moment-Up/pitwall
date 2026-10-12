@@ -37,8 +37,32 @@
 // * the worklet URL follows Vite's base, so it loads at /next/ as well as at /;
 // * capabilities (secure context, Web Speech, wake lock) are detected per instance instead of at import, so the
 //   module can be imported in plain node (tests) and each test can stub the browser it needs.
+// * hands-free and the Bluetooth talk button (lane handsfree, rules in ./handsfree): `vad` frames after the audio
+//   frame they confirm, `handsfree` / `wake_word` in `settings`, `ptt` with `source: "remote"`, the `handsfree` block
+//   and event frames. The frozen Svelte dashboard has none of it (additive protocol: an older server ignores it).
 
 import { accessToken, forgetToken, wsUrl } from "./auth";
+// --- hands-free (lane handsfree) ---
+import {
+  EnergyVad,
+  Endpointer,
+  HANDS_FREE_IDLE,
+  PLAYBACK_TAIL_MS,
+  TAP_LIMIT_MS,
+  TalkButtonMachine,
+  isWakeWord,
+  parseHandsFreeEvent,
+  parseHandsFreeState,
+  parseTalkButton,
+  tallyEvent,
+  type EndpointReason,
+  type HandsFreeLocal,
+  type HandsFreeServerState,
+  type LocalVad,
+  type TalkButton,
+  type WakeWord,
+} from "./handsfree";
+// --- end hands-free ---
 import { Store } from "./store";
 
 export type Intensity = "quiet" | "normal" | "detailed";
@@ -90,9 +114,15 @@ export interface RadioServerState {
   /** Kokoro worker state: "starting" | "ready" | "restarting" | "unavailable" | "stopped". */
   tts_status?: string | null;
   telemetry: "live" | "stale" | "no_data";
-  ptt_source: "screen" | "wheel" | null;
+  /** "remote": a learned Bluetooth talk button (lib/handsfree.ts). */
+  ptt_source: "screen" | "wheel" | "remote" | null;
   clients?: number;
+  /** Hands-free (lane handsfree), validated by parseHandsFreeState; absent on a server without it. */
+  handsfree?: HandsFreeServerState;
 }
+
+/** Who keyed the mic on this device: the screen button / Space, or a learned talk button. */
+export type PttSource = "screen" | "remote";
 
 export type VoiceSource = "device" | "server";
 
@@ -125,6 +155,15 @@ export interface RadioSettings {
    * driver can switch back, and that choice then sticks.
    */
   version: number;
+  // --- hands-free (lane handsfree): each field validated on its own, so no version bump ---
+  /** Hands-free on this device (needs `handsFreeConsent`). Off by default. */
+  handsFree: boolean;
+  /** The word that starts a hands-free question. */
+  wakeWord: WakeWord;
+  /** The privacy note was accepted once on this device. */
+  handsFreeConsent: boolean;
+  /** A learned Bluetooth talk button (key or game controller button), or none. */
+  talkButton: TalkButton | null;
 }
 
 export interface LogEntry {
@@ -192,11 +231,13 @@ export interface RadioState {
   micCapable: boolean;
   /** This browser can speak messages with its own voices (Web Speech API). */
   deviceTtsCapable: boolean;
+  /** This device's hands-free listener and talk button (lane handsfree). */
+  handsFree: HandsFreeLocal;
 }
 
 type ServerMessage =
   | ({ type: "state" } & RadioServerState)
-  | { type: "transcript"; text: string; stt_ms: number; audio_s: number }
+  | { type: "transcript"; text: string; stt_ms: number; audio_s: number; source?: string; wake?: string }
   | {
       type: "say";
       id: string;
@@ -211,7 +252,8 @@ type ServerMessage =
   | { type: "say_end"; id: string }
   | { type: "cancel"; id?: string }
   | { type: "pong"; t: number; server_ms: number }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | ({ type: "handsfree" } & Record<string, unknown>);
 
 type WorkletMessage =
   | { type: "ready"; inputRate: number; outputRate: number; taps: number; phases: number; exact: boolean }
@@ -477,6 +519,10 @@ export function loadSettings(deviceTts: boolean): RadioSettings {
     deviceVoice: null,
     deviceRate: 1,
     version: 1,
+    handsFree: false,
+    wakeWord: "pitwall",
+    handsFreeConsent: false,
+    talkButton: null,
   };
   if (typeof window === "undefined") return fallback; // not a browser (the module imported in plain node)
   try {
@@ -491,6 +537,11 @@ export function loadSettings(deviceTts: boolean): RadioSettings {
       deviceRate:
         typeof v.deviceRate === "number" && v.deviceRate >= 0.5 && v.deviceRate <= 2 ? v.deviceRate : fallback.deviceRate,
       version: typeof v.version === "number" && v.version >= 1 ? Math.floor(v.version) : 1,
+      // hands-free stays off unless the privacy note was accepted on this device
+      handsFree: v.handsFree === true && v.handsFreeConsent === true,
+      wakeWord: isWakeWord(v.wakeWord) ? v.wakeWord : fallback.wakeWord,
+      handsFreeConsent: v.handsFreeConsent === true,
+      talkButton: parseTalkButton(v.talkButton),
     };
   } catch {
     return fallback; // storage unavailable (private mode, plain node) or corrupt JSON
@@ -548,6 +599,7 @@ function initialState(micCapable: boolean, deviceTts: boolean): RadioState {
     allVoices: [],
     micCapable,
     deviceTtsCapable: deviceTts,
+    handsFree: HANDS_FREE_IDLE,
   };
 }
 
@@ -597,8 +649,20 @@ export class RadioStore extends Store<RadioState> {
   private silentSince: number | null = null;
   /** When the driver's current turn ended (PTT release or typed ask), for the latency notes in the log. */
   private turnAt: number | null = null;
-  private turnBy: "release" | "ask" = "release";
+  private turnBy: "release" | "ask" | "speech" = "release";
   private hiddenAt: number | null = null;
+  // --- hands-free (lane handsfree) ---
+  private vad = new EnergyVad();
+  private vadSeq = 0;
+  /** The segment the server was told about (`vad start` sent, no end or abort yet). */
+  private vadOpen: number | null = null;
+  /** When local playback last stopped (performance.now()): no segment within PLAYBACK_TAIL_MS of it. */
+  private speakingEndedAt = -Infinity;
+  private talk = new TalkButtonMachine();
+  /** A tapped talk button's transmission: ends when the driver goes quiet. */
+  private endpoint: Endpointer | null = null;
+  private tapTimer: ReturnType<typeof setTimeout> | null = null;
+  // --- end hands-free ---
 
   constructor() {
     const micCapable = micSupported();
@@ -644,9 +708,12 @@ export class RadioStore extends Store<RadioState> {
   goLive(): void {
     if (this.get().phase !== "idle") return;
     this.session++;
+    this.vad.reset(); // --- hands-free (lane handsfree)
+    this.vadOpen = null;
     this.set({
       phase: "starting",
       error: null,
+      handsFree: HANDS_FREE_IDLE,
       audioSession: setAudioSessionType("play-and-record") ? "play-and-record" : "unsupported",
     });
     let ctx: AudioContext;
@@ -745,14 +812,19 @@ export class RadioStore extends Store<RadioState> {
       level: 0,
       rttMs: null,
       retryInS: null,
+      handsFree: { ...this.get().handsFree, vad: "off", floorDb: null, thresholdDb: null, button: "off" },
     });
+    this.vadOpen = null;
     this.addLog("system", "Radio off");
   }
 
   // ------------------------------------------------------------------------------------------ driver actions
 
-  /** PTT pressed (button press start / Space keydown). Barge-in if the engineer is talking. */
-  pttPress(): void {
+  /**
+   * PTT pressed (button press start / Space keydown; `remote`: a learned talk button, see talkButtonDown). Barge-in
+   * if the engineer is talking.
+   */
+  pttPress(source: PttSource = "screen"): void {
     const st = this.get();
     if (st.phase === "idle" || st.pttHeld) return;
     this.onGesture();
@@ -768,7 +840,7 @@ export class RadioStore extends Store<RadioState> {
       // PTT goes out before the playback `ended` report and stop_tts: the server treats PTT-while-speaking as a
       // barge-in (short mic gate), whereas `ended`/stop_tts first would apply the full echo tail and clip the
       // driver's first word. All of this runs in one task, so the audio still stops immediately.
-      this.pttOnAir = this.send({ type: "ptt", down: true });
+      this.pttOnAir = this.send(source === "remote" ? { type: "ptt", down: true, source: "remote" } : { type: "ptt", down: true });
     }
     if (bargeIn) {
       this.stopPlayback(null);
@@ -783,6 +855,7 @@ export class RadioStore extends Store<RadioState> {
    * off) and also completes a release already in its hang time. Safe to call when nothing is held.
    */
   pttRelease(immediate = false): void {
+    this.resetTalk(); // --- hands-free (lane handsfree): any release ends a talk-button transmission
     if (this.get().pttHeld) {
       this.set({ pttHeld: false });
       this.startTurn("release");
@@ -862,6 +935,173 @@ export class RadioStore extends Store<RadioState> {
     this.updateSettings({ deviceRate: Math.min(1.5, Math.max(0.7, rate)) });
     this.saveSettings();
   }
+
+  // --- hands-free (lane handsfree) ---
+
+  /** Hands-free on or off on this device. Turning it on needs the privacy note accepted (acceptHandsFreeConsent). */
+  setHandsFree(on: boolean): void {
+    const { settings } = this.get();
+    if ((on && !settings.handsFreeConsent) || on === settings.handsFree) return;
+    this.updateSettings({ handsFree: on });
+    this.saveSettings();
+    if (on) this.vad.reset(); // calibrate afresh: the chip says "Hands-free starting…" for a second
+    this.sendSettings();
+    this.publishVad(false);
+    this.addLog("system", on ? "Hands-free on" : "Hands-free off");
+  }
+
+  /** The driver accepted the privacy note: remember it on this device and turn hands-free on. */
+  acceptHandsFreeConsent(): void {
+    this.updateSettings({ handsFreeConsent: true });
+    this.setHandsFree(true);
+  }
+
+  setWakeWord(word: WakeWord): void {
+    if (!isWakeWord(word) || word === this.get().settings.wakeWord) return;
+    this.updateSettings({ wakeWord: word });
+    this.saveSettings();
+    this.sendSettings();
+  }
+
+  /** Learn (or forget, null) the Bluetooth talk button. Stored on this device only. */
+  setTalkButton(button: TalkButton | null): void {
+    this.resetTalk();
+    this.updateSettings({ talkButton: button === null ? null : parseTalkButton(button) });
+    this.saveSettings();
+  }
+
+  /**
+   * The learned talk button went down (useTalkButton). Hold it to talk; a quick tap keys the mic until the driver
+   * goes quiet (endpoint rule), presses again, or 12 s pass.
+   */
+  talkButtonDown(): void {
+    const st = this.get();
+    if (st.phase === "idle") return;
+    const action = this.talk.press(performance.now());
+    if (action === "press") {
+      if (!pttUsable(st) || st.pttHeld) {
+        this.talk.reset(); // nothing to key, or the screen button already holds the mic
+        return;
+      }
+      this.pttPress("remote");
+      this.setButtonState("held");
+    } else if (action === "release") {
+      this.pttRelease();
+    }
+  }
+
+  /** The learned talk button came up: a hold ends here; a tap leaves the mic keyed (endpoint mode). */
+  talkButtonUp(): void {
+    const action = this.talk.release(performance.now());
+    if (action === "release") {
+      this.pttRelease();
+      return;
+    }
+    if (this.talk.state !== "tap") return;
+    if (!this.get().pttHeld) {
+      this.talk.reset(); // the link dropped meanwhile: nothing is keyed
+      return;
+    }
+    this.endpoint = new Endpointer();
+    const left = TAP_LIMIT_MS - (performance.now() - this.talk.pressedAt);
+    this.tapTimer = setTimeout(() => this.endTap("max"), Math.max(0, left));
+    this.setButtonState("tap");
+  }
+
+  private endTap(_why: EndpointReason): void {
+    if (this.talk.state === "idle" && this.endpoint === null) return;
+    this.pttRelease(); // resets the talk machine and the endpoint
+  }
+
+  private resetTalk(): void {
+    this.talk.reset();
+    this.endpoint = null;
+    if (this.tapTimer !== null) clearTimeout(this.tapTimer);
+    this.tapTimer = null;
+    if (this.get().handsFree.button !== "off") this.setButtonState("off");
+  }
+
+  private setButtonState(button: HandsFreeLocal["button"]): void {
+    this.set({ handsFree: { ...this.get().handsFree, button } });
+  }
+
+  /** Hands-free may send `vad` frames: on here (with consent), a mic, and a Mac that can do it now. */
+  private handsFreeArmed(): boolean {
+    const { settings, server, micCapable } = this.get();
+    return micCapable && settings.handsFree && settings.handsFreeConsent && server?.handsfree?.available === true;
+  }
+
+  /**
+   * One worklet frame through the energy VAD, after the frame itself went out: the socket is ordered, so the server
+   * already holds the frame that confirmed a start or an end. Also runs a tapped talk button's endpoint rule.
+   */
+  private handsFreeFrame(rms: number): void {
+    const now = performance.now();
+    const st = this.get();
+    const ws = this.ws;
+    const linkUp = ws !== null && ws.readyState === WS_OPEN && st.server !== null;
+    const suppressed =
+      !linkUp ||
+      st.mic !== "live" ||
+      st.micSilent ||
+      st.speaking ||
+      now - this.speakingEndedAt < PLAYBACK_TAIL_MS ||
+      st.server?.speaking === true ||
+      st.pttHeld ||
+      this.pttOnAir ||
+      st.server?.ptt === true ||
+      st.server?.busy === true ||
+      (typeof document !== "undefined" && document.visibilityState === "hidden");
+    const ev = this.vad.push(rms, suppressed);
+    if (this.endpoint) {
+      const why = this.endpoint.push(this.vad.lastDb, this.vad.effectiveThreshold());
+      if (why) this.endTap(why);
+    }
+    const armed = this.handsFreeArmed();
+    if (ev?.type === "start") {
+      if (armed) {
+        this.vadOpen = ++this.vadSeq;
+        this.send({ type: "vad", state: "start", seq: this.vadOpen });
+      }
+    } else if (ev && this.vadOpen !== null) {
+      const seq = this.vadOpen;
+      this.vadOpen = null;
+      this.send({ type: "vad", state: ev.type, seq, reason: ev.reason });
+      if (ev.type === "end") this.startTurn("speech");
+    } else if (!armed && this.vadOpen !== null) {
+      // hands-free turned off (or became unavailable) during a segment
+      this.send({ type: "vad", state: "abort", seq: this.vadOpen, reason: "suppressed" });
+      this.vadOpen = null;
+    }
+    this.publishVad(suppressed);
+  }
+
+  /** Publish the listener's state for the chips and diagnostics (only when it changed: ~31 frames a second). */
+  private publishVad(suppressed: boolean): void {
+    const { settings, micCapable, handsFree } = this.get();
+    const on = micCapable && settings.handsFree && settings.handsFreeConsent && this.get().phase !== "idle";
+    const phase = this.vad.phase;
+    const vad: LocalVad = !on
+      ? "off"
+      : suppressed && phase !== "calibrating"
+        ? "suppressed"
+        : phase === "calibrating"
+          ? "calibrating"
+          : phase === "speech"
+            ? "speech"
+            : phase === "noisy"
+              ? "noisy"
+              : "listening";
+    const floor = this.vad.floorDb;
+    const thr = this.vad.thresholdDb;
+    const floorDb = floor === null ? null : Math.round(floor);
+    const thresholdDb = thr === null ? null : Math.round(thr);
+    if (vad !== handsFree.vad || floorDb !== handsFree.floorDb || thresholdDb !== handsFree.thresholdDb) {
+      this.set({ handsFree: { ...handsFree, vad, floorDb, thresholdDb } });
+    }
+  }
+
+  // --- end hands-free ---
 
   /** The voice that will be used: the chosen one if installed, else the best available. */
   currentDeviceVoiceUri(): string | null {
@@ -1013,6 +1253,7 @@ export class RadioStore extends Store<RadioState> {
       return;
     }
     this.micSilentReset();
+    this.vad.reset(); // --- hands-free (lane handsfree): a (re)opened mic is calibrated afresh
     const error = this.get().error;
     this.set({
       mic: track.muted ? "muted" : "live",
@@ -1108,13 +1349,18 @@ export class RadioStore extends Store<RadioState> {
       micSilent = false;
     }
     this.set({ level, micSilent });
+    this.sendFrame(m.pcm);
+    this.handsFreeFrame(m.rms); // --- hands-free (lane handsfree): after the frame (VAD events confirm sent audio)
+  }
+
+  private sendFrame(pcm: ArrayBuffer): void {
     const ws = this.ws;
     if (ws === null || ws.readyState !== WS_OPEN) return;
     if (ws.bufferedAmount > MAX_BUFFERED_BYTES) {
       this.framesDropped++;
       return;
     }
-    ws.send(m.pcm);
+    ws.send(pcm);
     this.framesSent++;
   }
 
@@ -1240,6 +1486,8 @@ export class RadioStore extends Store<RadioState> {
     this.pending = null; // a half-received clip is useless
     // The server releases PTT on disconnect; finishRelease() only clears the release state (nothing to send on).
     this.set({ server: null, rttMs: null, pttHeld: false });
+    this.resetTalk(); // --- hands-free (lane handsfree)
+    this.vadOpen = null;
     this.finishRelease();
     this.scheduleReconnect(minDelayMs);
   }
@@ -1306,6 +1554,9 @@ export class RadioStore extends Store<RadioState> {
       voice_enabled: settings.voiceEnabled,
       intensity: settings.intensity,
       tts_mode: this.ttsMode(),
+      // --- hands-free (lane handsfree): per device, like tts_mode
+      handsfree: settings.handsFree && settings.handsFreeConsent,
+      wake_word: settings.wakeWord,
     });
   }
 
@@ -1333,13 +1584,23 @@ export class RadioStore extends Store<RadioState> {
         this.onState(msg);
         break;
       case "transcript": {
-        const ms = this.turnAt !== null && this.turnBy === "release" ? performance.now() - this.turnAt : Infinity;
-        const sinceRelease = ms < TURN_LATENCY_WINDOW_MS ? ` · +${Math.round(ms)} ms after release` : "";
+        const ms = this.turnAt !== null && this.turnBy !== "ask" ? performance.now() - this.turnAt : Infinity;
+        const after = this.turnBy === "speech" ? "after you stopped" : "after release";
+        const sinceRelease = ms < TURN_LATENCY_WINDOW_MS ? ` · +${Math.round(ms)} ms ${after}` : "";
+        const handsFree = msg.source === "handsfree" ? "hands-free · " : ""; // --- hands-free (lane handsfree)
         this.addLog(
           "transcript",
           String(msg.text ?? "").trim() || "(nothing understood)",
-          `STT ${msg.stt_ms} ms · ${Number(msg.audio_s).toFixed(1)} s audio${sinceRelease}`,
+          `${handsFree}STT ${msg.stt_ms} ms · ${Number(msg.audio_s).toFixed(1)} s audio${sinceRelease}`,
         );
+        break;
+      }
+      case "handsfree": {
+        // --- hands-free (lane handsfree): per-device events carry reasons and lengths, never what was said
+        const ev = parseHandsFreeEvent(msg);
+        if (!ev) break;
+        if ((ev.event === "ignored" || ev.event === "rejected") && this.turnBy === "speech") this.turnAt = null;
+        this.set({ handsFree: tallyEvent(this.get().handsFree, ev, Date.now()) });
         break;
       }
       case "say":
@@ -1363,8 +1624,12 @@ export class RadioStore extends Store<RadioState> {
     }
   }
 
-  private onState(s: RadioServerState): void {
+  private onState(raw: RadioServerState): void {
     const prev = this.get().server;
+    // --- hands-free (lane handsfree): the block is validated; a malformed or missing one is dropped
+    const { handsfree: hfRaw, ...rest } = raw as RadioServerState & { handsfree?: unknown };
+    const hf = parseHandsFreeState(hfRaw);
+    const s: RadioServerState = hf ? { ...rest, handsfree: hf } : rest;
     this.set({ server: s });
     this.migrateToNeuralVoice(s);
     // Follow changes made on the server side (voice commands such as "more detail"). The first state after a
@@ -1645,7 +1910,9 @@ export class RadioStore extends Store<RadioState> {
       end = Math.max(end, pb.startAt + d);
     }
     this.playEndAt = end;
-    this.set({ speaking: this.playing.size > 0 || this.utterances.size > 0, speakingId: audible });
+    const speaking = this.playing.size > 0 || this.utterances.size > 0;
+    if (this.get().speaking && !speaking) this.speakingEndedAt = performance.now(); // --- hands-free (lane handsfree)
+    this.set({ speaking, speakingId: audible });
   }
 
   // ------------------------------------------------------------------------------------------ environment
@@ -1771,7 +2038,7 @@ export class RadioStore extends Store<RadioState> {
 
   // ------------------------------------------------------------------------------------------ log + settings
 
-  private startTurn(by: "release" | "ask"): void {
+  private startTurn(by: "release" | "ask" | "speech"): void {
     this.turnAt = performance.now();
     this.turnBy = by;
   }

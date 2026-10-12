@@ -77,6 +77,7 @@ class DriverCreate(BaseModel):
     coaching_intensity: Intensity = "normal"
     voice_enabled: bool = True
     default_game: str | None = None  # games catalogue id ("Usually plays")
+    handsfree_while_driving: bool = False  # lane handsfree
 
 
 class DriverUpdate(BaseModel):
@@ -88,6 +89,7 @@ class DriverUpdate(BaseModel):
     coaching_intensity: Intensity | None = None
     voice_enabled: bool | None = None
     default_game: str | None = None  # null clears it (only when sent: omitted leaves it unchanged)
+    handsfree_while_driving: bool | None = None  # lane handsfree
 
 
 class DriverRef(BaseModel):
@@ -162,6 +164,7 @@ def create_driver(request: Request, body: DriverCreate) -> dict[str, Any]:
             coaching_intensity=body.coaching_intensity,
             voice_enabled=body.voice_enabled,
             default_game=body.default_game,
+            handsfree_while_driving=body.handsfree_while_driving,
         )
     except DriverError as e:
         raise _http(e) from e

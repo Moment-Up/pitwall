@@ -1172,16 +1172,8 @@ def check_voice(ctx: _Ctx, facts: _WinFacts | None) -> list[Check]:
         out.append(_check("voice_stt", "Speech input", "info", "off (PITWALL_STT_ENGINE=none): typed questions only"))
     elif stt.startswith("whisper"):
         out.append(_check("voice_stt", "Speech input", "ok", f"whisper.cpp server configured at {s.whispercpp_url}"))
-    elif not h.apple_silicon:
-        out.append(
-            _check(
-                "voice_stt",
-                "Speech input",
-                "info",
-                "Parakeet speech recognition needs an Apple-silicon Mac: spoken questions are off, typed ones work",
-                "optional: run a whisper.cpp server and set PITWALL_STT_ENGINE=whispercpp (and PITWALL_WHISPERCPP_URL)",
-            )
-        )
+    elif stt.startswith("sherpa") or not h.apple_silicon:  # --- lane handsfree: Parakeet on the CPU (Windows) ---
+        out.append(check_sherpa_stt(ctx, explicit=stt.startswith("sherpa")))
     elif ctx.probes.has_module("parakeet_mlx") and ctx.probes.has_module("mlx"):
         out.append(
             _check("voice_stt", "Speech input", "ok", "Parakeet (parakeet-mlx) installed; the model loads on first use")
@@ -1196,6 +1188,7 @@ def check_voice(ctx: _Ctx, facts: _WinFacts | None) -> list[Check]:
                 "uv sync --all-extras",
             )
         )
+    out.append(check_handsfree(ctx, stt_ok=out[-1].status == "ok"))  # --- lane handsfree ---
     # the server's voice
     tts = s.tts_engine.strip().lower()
     if tts in ("", "none", "off", "disabled"):
@@ -1264,6 +1257,88 @@ def check_voice(ctx: _Ctx, facts: _WinFacts | None) -> list[Check]:
     else:
         out.append(_check("voice_tts", "Engineer voice", "info", f"no server voice on {h.os_name}; {device}"))
     return out
+
+
+# --- lane handsfree ---
+def sherpa_model_state(settings: Settings) -> tuple[Path, bool]:
+    """``(folder, ready)``: where the sherpa-onnx speech model lives and whether its four files are there (sizes only:
+    the engine verifies hashes when it downloads, and hashes an offline folder when it loads)."""
+    from pitwall.voice.stt_sherpa import CATALOGUE, DEFAULT_SHERPA_MODEL, missing_files, model_folder
+
+    folder, _managed = model_folder(settings)
+    model = CATALOGUE.get(settings.stt_sherpa_model.strip().lower()) or CATALOGUE[DEFAULT_SHERPA_MODEL]
+    return folder, not missing_files(folder, model)
+
+
+def check_sherpa_stt(ctx: _Ctx, explicit: bool) -> Check:
+    """Speech input through sherpa-onnx (``voice/stt_sherpa.py``): the default off Apple silicon, installed by the
+    ``voice`` extra on Windows. ``explicit``: ``PITWALL_STT_ENGINE=sherpa``."""
+    from pitwall.voice.stt_sherpa import hf_offline
+
+    h = ctx.host
+    if not ctx.probes.has_module("sherpa_onnx"):
+        if h.is_windows or explicit:
+            return _check(
+                "voice_stt",
+                "Speech input",
+                "warn",
+                "sherpa-onnx is not installed: spoken questions are off, typed ones work",
+                "uv sync --all-extras",
+            )
+        return _check(
+            "voice_stt",
+            "Speech input",
+            "info",
+            "Parakeet speech recognition needs an Apple-silicon Mac or sherpa-onnx: spoken questions are off, typed "
+            "ones work",
+            "optional: uv pip install 'sherpa-onnx>=1.13.8,<1.14', or run a whisper.cpp server and set "
+            "PITWALL_STT_ENGINE=whispercpp (and PITWALL_WHISPERCPP_URL)",
+        )
+    folder, ready = sherpa_model_state(ctx.settings)
+    if ready:
+        return _check(
+            "voice_stt", "Speech input", "ok", f"Parakeet (English) via sherpa-onnx on the CPU: model ready at {folder}"
+        )
+    if ctx.settings.stt_sherpa_dir is not None:
+        return _check(
+            "voice_stt",
+            "Speech input",
+            "warn",
+            f"PITWALL_STT_SHERPA_DIR={folder} does not hold the speech model's four files: spoken questions are off",
+            "copy encoder.int8.onnx, decoder.int8.onnx, joiner.int8.onnx and tokens.txt there (docs/radio-setup.md)",
+        )
+    if hf_offline():
+        return _check(
+            "voice_stt",
+            "Speech input",
+            "warn",
+            "Parakeet via sherpa-onnx is installed, but its model is not downloaded and HF_HUB_OFFLINE is set",
+            "put the model's four files in a folder and set PITWALL_STT_SHERPA_DIR to it (docs/radio-setup.md)",
+        )
+    return _check(
+        "voice_stt",
+        "Speech input",
+        "ok",
+        "Parakeet (English) via sherpa-onnx installed; the model (about 660 MB) downloads the first time a radio "
+        "connects",
+    )
+
+
+def check_handsfree(ctx: _Ctx, stt_ok: bool) -> Check:
+    """Hands-free talking (``voice/handsfree.py``): needs the server's speech recognition; each device turns it on."""
+    if not ctx.settings.voice_handsfree:
+        return _check("voice_handsfree", "Hands-free", "info", "off (PITWALL_VOICE_HANDSFREE=false)")
+    if stt_ok:
+        return _check(
+            "voice_handsfree",
+            "Hands-free",
+            "info",
+            "available; each device turns it on (Settings > Radio & voice > Talking to the engineer)",
+        )
+    return _check("voice_handsfree", "Hands-free", "info", "needs speech recognition (see Speech input)")
+
+
+# --- end lane handsfree ---
 
 
 def check_lan_ip(ctx: _Ctx) -> Check:

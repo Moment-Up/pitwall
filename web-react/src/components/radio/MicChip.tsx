@@ -26,7 +26,10 @@ export function MicChip({ size = "lg", showWhenOff = false, className = "" }: Mi
       className={`shrink-0 gap-1.5 ${tone.className} ${className}`}
       title={view.detail}
     >
-      <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-current" />
+      <span
+        aria-hidden="true"
+        className={`size-2 shrink-0 rounded-full bg-current ${view.pulse ? "motion-safe:animate-pulse" : ""}`}
+      />
       <Chip.Label>{view.label}</Chip.Label>
     </Chip>
   );

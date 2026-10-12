@@ -151,8 +151,26 @@ are answered at once from telemetry. While the car is moving every answer is bui
 the language model and never with "Copy, checking". Stopped, analysis questions go to the language model if there is
 one; the engineer says "Copy, checking" and answers a few seconds later. Without a model, the answer is built from the
 facts, as in this screenshot. You can also type questions. Spoken questions need speech
-recognition on the computer: built in on a Mac with Apple Silicon, and a whisper.cpp server elsewhere (Windows,
-Linux, Intel Macs); typed questions work everywhere.
+recognition on the computer: built in on a Mac with Apple Silicon (Parakeet on the GPU) and on Windows (the same
+Parakeet family on the CPU, via sherpa-onnx), and a whisper.cpp server elsewhere (Linux, Intel Macs); typed questions
+work everywhere.
+
+**Talking without a wheel button.** Besides the screen button, Space and F1 25's wheel button, two ways work in every
+game. A **Bluetooth button** - a page turner, a foot pedal or a spare game controller paired with the iPad - is learned
+under Settings › Radio & voice and works held or tapped (tap to start; it stops when you go quiet). It must be a
+keyboard-only device: iPadOS 18.4 and later do not pass key presses from keyboard-plus-pointer devices to Safari in
+Desktop Mode. AirPods stem presses and headphone play buttons cannot reach a web page on iPad, so they cannot be used.
+**Hands-free** listens for a wake word instead: "Pitwall, what's my fuel?" (or "Radio, ..."; "Pitwall" alone gets
+"Go ahead." and the next sentence needs no wake word). It is off on every device until you turn it on and confirm.
+The iPad detects speech, the computer turns it into text, and anything that does not start with the wake word is
+thrown away at once, never shown, saved or logged. It listens only while the car is stopped (grid, pits, garage,
+menus, after the flag: 2-25 % of a real race) unless the driver in the seat allows "Hands-free while driving" in their
+profile; on track it shows "paused · driving", and if you try anyway the engineer tells you once, at the next stop, to
+use the button. The radio's own words coming back through the microphone are ignored, and the engineer's messages wait
+while you talk (urgent calls and braking calls still cut in). Evidence: synthetic (the wake word through the real
+speech engines on macOS `say` voices) and recorded (the stopped/moving rule on 11 real captures, real F1 25 button
+presses through the radio with hands-free on); not yet tried on the rig with a real voice, an AirPod or engine noise,
+and the Bluetooth button not yet on an iPad.
 
 The engineer speaks on its own too: a summary after each lap and a coaching point, but only in a calm part of the
 lap (off the brake, steering nearly straight, with time to finish before the next braking zone). "Stop talking for

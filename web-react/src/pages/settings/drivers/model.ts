@@ -35,6 +35,8 @@ export interface DriverForm {
   /** "Usually plays" (games catalogue id, null = none). undefined: not offered (a server before game selection, or
    * untouched on a new driver), so it is never sent. */
   default_game?: string | null;
+  /** Hands-free while driving (lane handsfree). undefined: not offered (a server without hands-free), never sent. */
+  handsfree_while_driving?: boolean;
 }
 
 export const NAME_MAX = 40;
@@ -77,6 +79,7 @@ export function formFromDriver(d: Driver): DriverForm {
     coaching_intensity: d.preferences.coaching_intensity,
     voice_enabled: d.preferences.voice_enabled,
     default_game: d.preferences.default_game,
+    handsfree_while_driving: d.preferences.handsfree_while_driving,
   };
 }
 
@@ -118,8 +121,21 @@ export function formBody(f: DriverForm): FormResult {
       coaching_intensity: f.coaching_intensity,
       voice_enabled: f.voice_enabled,
       ...(f.default_game !== undefined ? { default_game: f.default_game } : {}),
+      ...(f.handsfree_while_driving !== undefined ? { handsfree_while_driving: f.handsfree_while_driving } : {}),
     },
   };
+}
+
+// --- hands-free (lane handsfree) ---
+
+/** The server knows the hands-free preference (a server without hands-free never reports it: nothing is offered). */
+export function handsFreeSupported(list: readonly Driver[]): boolean {
+  return list.some((d) => typeof d.preferences.handsfree_while_driving === "boolean");
+}
+
+/** The driver sheet's switch hint (spec §7). */
+export function handsFreeDrivingHint(on: boolean): string {
+  return on ? "On: hands-free also listens on track." : "Off: only while the car is stopped.";
 }
 
 /** The "Usually plays" choice that means none. */
@@ -150,6 +166,7 @@ export function driverSubtitle(d: Driver, radioFollows: boolean): string {
   if (!radioFollows) return skill;
   const parts = [skill, `coaching ${intensityLabel(d.preferences.coaching_intensity).toLowerCase()}`];
   if (!d.preferences.voice_enabled) parts.push("voice off");
+  if (d.preferences.handsfree_while_driving === true) parts.push("hands-free on track"); // lane handsfree
   return parts.join(" · ");
 }
 

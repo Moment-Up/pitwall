@@ -10,6 +10,7 @@ import {
   type MicStatus,
   type RadioState,
 } from "../../lib/radio";
+import { handsFreeChip } from "./handsfree-view"; // --- hands-free (lane handsfree)
 
 /** Chip tones: HeroUI chip colours, plus `ref` (the info blue, --pw-ref) for the engineer's answers. */
 export type RadioTone = "accent" | "success" | "warning" | "danger" | "default" | "ref";
@@ -109,7 +110,7 @@ export function pttView(s: PttInput): PttView {
 
 type ChipInput = Pick<
   RadioState,
-  "phase" | "conn" | "mic" | "micSilent" | "retryInS" | "pttHeld" | "server" | "micCapable"
+  "phase" | "conn" | "mic" | "micSilent" | "retryInS" | "pttHeld" | "server" | "micCapable" | "settings" | "handsFree"
 >;
 
 export interface StatusChipView {
@@ -117,6 +118,8 @@ export interface StatusChipView {
   tone: RadioTone;
   /** Longer text for screen readers and the title. */
   detail: string;
+  /** The dot pulses (hands-free hearing speech). */
+  pulse?: boolean;
 }
 
 const MIC_CHIP: Record<MicStatus, StatusChipView> = {
@@ -132,16 +135,24 @@ const MIC_CHIP: Record<MicStatus, StatusChipView> = {
 
 /**
  * The radio strip's one status chip: transmitting first, then the radio link (no link = no radio, whatever the mic
- * says), then the microphone. Mockup: `● Mic live`.
+ * says), then the microphone, then hands-free (lane handsfree), then `Mic live`. Mockup: `● Mic live`.
  */
 export function micChipView(s: ChipInput): StatusChipView {
   if (s.phase === "idle") return { label: "Radio off", tone: "default", detail: "Radio off: tap Go live" };
   if (pttActive(s)) {
     const wheel = !s.pttHeld && s.server?.ptt_source === "wheel";
+    // --- hands-free (lane handsfree): a learned Bluetooth talk button, here or on another device
+    const button = s.pttHeld ? s.handsFree.button !== "off" : s.server?.ptt_source === "remote";
     return {
-      label: wheel ? "On air · wheel" : "On air",
+      label: wheel ? "On air · wheel" : button ? "On air · button" : "On air",
       tone: "accent",
-      detail: wheel ? "Transmitting from the wheel button" : "Transmitting",
+      detail: wheel
+        ? "Transmitting from the wheel button"
+        : button
+          ? s.handsFree.button === "tap"
+            ? "Transmitting from the talk button: stops when you go quiet"
+            : "Transmitting from the talk button"
+          : "Transmitting",
     };
   }
   if (s.conn === "connecting") return { label: "Connecting…", tone: "warning", detail: "Connecting to the radio" };
@@ -151,6 +162,10 @@ export function micChipView(s: ChipInput): StatusChipView {
   }
   if (s.mic === "live" && s.micSilent) {
     return { label: "Mic silent", tone: "warning", detail: "The microphone only delivers silence: tap Restart mic" };
+  }
+  if (s.mic === "live") {
+    const hf = handsFreeChip(s); // --- hands-free (lane handsfree)
+    if (hf) return hf;
   }
   return MIC_CHIP[s.mic];
 }

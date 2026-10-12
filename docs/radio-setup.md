@@ -1,9 +1,10 @@
 # Radio setup: iPad + one AirPod + wheel push-to-talk
 
 Game audio stays on the TV; the race engineer talks in one AirPod connected to an iPad, which runs the Pitwall
-dashboard. You talk back with a wheel button. Pitwall itself runs on your computer: a Mac with Apple Silicon has the
-whole radio, including spoken questions; other computers differ (see [Voices and speech recognition by
-platform](#voices-and-speech-recognition-by-platform)).
+dashboard. You talk back with a wheel button (F1 25), the on-screen button, a Bluetooth button, or hands-free with a
+wake word ([Talking to the engineer](#talking-to-the-engineer)). Pitwall itself runs on your computer: a Mac with
+Apple Silicon has the whole radio, including spoken questions; other computers differ (see [Voices and speech
+recognition by platform](#voices-and-speech-recognition-by-platform)).
 
 Replace `<your-computer>.<your-tailnet>.ts.net` below with your computer's Tailscale name (the Tailscale app shows
 it; the dashboard's Connect page shows the full address too), and `8443` with the port you chose. Install and
@@ -56,17 +57,75 @@ Evidence: a radio check over an iPad and one AirPod through Tailscale has been h
 the classic dashboard's Radio page. The new dashboard's Go live and push-to-talk over Tailscale have not been tried
 on an iPad yet, and spoken questions are still to be tested by a driver.
 
+## Talking to the engineer
+
+Push-to-talk is the default. Every way of talking goes to the same engineer, with the same rules (deterministic
+answers while moving, the language model only when stopped).
+
+| Way | Games | How |
+| --- | --- | --- |
+| Hold the big button, or Space on a Mac | all | Drive › Radio, the radio strip or the floating radio bar |
+| A wheel button | F1 25 only | map a spare button to **UDP Action 1** (step 5 above); GT7, Assetto Corsa and Forza send no button data |
+| A Bluetooth button | all | a page turner, pedal or spare game controller paired with the iPad (below) |
+| Hands-free | all | start with **"Pitwall"** (or **"Radio"**): "Pitwall, what's my fuel?" (below) |
+
+**Bluetooth button** (Settings › Radio & voice › Talking to the engineer › *Set up*, then press the button). It works
+held (talk while held) or tapped (tap to start; it stops when you go quiet, at the next press, or after 12 s).
+
+- Use a device that presents itself **only as a keyboard** (a page turner or foot pedal such as AirTurn, PageFlip or
+  Donner). iPadOS 18.4 and later stopped passing key presses from keyboard-plus-pointer devices to Safari in Desktop
+  Mode (WebKit bugs 301563 and 290779), and iPad Safari uses Desktop Mode by default.
+- A **spare** Bluetooth game controller paired with the iPad also works (Safari's Gamepad API; press any button once to
+  wake it). The wheel and the console's own controller are paired with the PS5, so they cannot be used. Not yet tried
+  on an iPad.
+- **AirPods stem presses and headphone play/pause buttons cannot reach a web page on iPad** (they belong to native
+  apps that hold a call or the "Now Playing" slot), so they cannot be used as the button.
+
+**Hands-free** (Settings › Radio & voice, or the switch under the segments on Drive › Radio; off on every device until
+you turn it on there, and the first time it asks you to confirm). While the radio is live, the iPad listens for
+speech; the computer turns what it hears into text and answers only when it starts with the wake word you chose,
+"Pitwall" or "Radio" ("Hey Pitwall", "OK Pitwall" work too). Everything else is thrown away at once: never shown,
+saved or logged. The screen shows when it is listening ("Listening for "Pitwall"", "Hearing you…").
+
+- Say the wake word alone ("Pitwall.") and the engineer says "Go ahead." - then ask, without the wake word, within
+  6 seconds.
+- **Only while the car is stopped** (on the grid, in the pits, in the garage and menus, after the flag) unless the
+  driver in the seat turns on **Hands-free while driving** in their profile (Settings › Drivers). On track it shows
+  "Hands-free paused · driving"; if you try to talk, the engineer tells you once, at your next stop, to use the
+  button on track. On the owner's real races the car is still for only 2-25 % of a race.
+- While you are talking hands-free the radio holds its own messages back (urgent calls still go out, and a braking
+  call cuts in: say it again after it).
+- It needs speech recognition on the computer (the table below). `PITWALL_VOICE_HANDSFREE=false` turns it off for
+  every device.
+- Settings › Radio & voice › Diagnostics shows the microphone level, the noise floor and the threshold, and how many
+  segments were heard, ignored or too long. `GET /api/voice/status` -> `handsfree_diag` has the server's side (counts
+  per reason, never any words).
+
+Evidence: synthetic and recorded only. The wake word was checked with macOS `say` voices through the real speech
+engines, and the stopped/moving rule on 11 of the owner's real captures; hands-free has not been tried on the rig, with
+a real voice, an AirPod or engine noise yet, and the Bluetooth button has not been tried on an iPad
+([research/handsfree.md](research/handsfree.md)).
+
 ## Voices and speech recognition by platform
 
 | Computer | The engineer's voice on the computer | Spoken questions (speech recognition) |
 | --- | --- | --- |
 | Mac with Apple Silicon | the natural voice (Kokoro, optional) or the macOS voices | Parakeet, installed by `uv sync --all-extras` |
-| Intel Mac | the macOS voices | a whisper.cpp server |
-| Windows | Windows' built-in voices (SAPI) | a whisper.cpp server |
-| Linux | none: text only | a whisper.cpp server |
+| Intel Mac | the macOS voices | a whisper.cpp server, or sherpa-onnx installed by hand |
+| Windows | Windows' built-in voices (SAPI) | Parakeet (English) on the CPU via sherpa-onnx, installed by `uv sync --all-extras` (CI-installed, not yet tried on a Windows PC) |
+| Linux | none: text only | a whisper.cpp server, or sherpa-onnx installed by hand |
 
 - **The iPad's own voice** works with every computer: Settings › Radio & voice › Engineer voice › This iPad (the
   iPad's Premium voices sound best). Typed questions also work everywhere.
+- **Parakeet via sherpa-onnx** (Windows): the speech model (NVIDIA Parakeet TDT 0.6B v2, English, about 660 MB)
+  downloads from Hugging Face the first time a radio connects, into `%LOCALAPPDATA%\pitwall\stt` (pinned files,
+  checked by size and SHA-256); until it is ready a spoken question gets "speech model downloading (NN %)". Offline:
+  copy `encoder.int8.onnx`, `decoder.int8.onnx`, `joiner.int8.onnx` and `tokens.txt` from
+  `huggingface.co/csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8` (revision `1ab9323`) into a folder and set
+  `PITWALL_STT_SHERPA_DIR` to it (`HF_HUB_OFFLINE=1` stops the download). `PITWALL_STT_THREADS` sets the CPU threads
+  (default: half the cores, 1-4). On the Mac's CPU a 3 s question takes about 0.1 s; expect a few times that on a
+  PC. `uv run pitwall doctor` says whether it is installed and the model ready. On Linux or an Intel Mac,
+  `uv pip install 'sherpa-onnx>=1.13.8,<1.14'` and `PITWALL_STT_ENGINE=sherpa` use it too.
 - **whisper.cpp**: run a [whisper.cpp](https://github.com/ggml-org/whisper.cpp) server and set
   `PITWALL_STT_ENGINE=whispercpp` and `PITWALL_WHISPERCPP_URL` (default `http://127.0.0.1:8178`) in `.env`. This path
   has only been tested against a mock server. Without speech recognition, push-to-talk cannot take spoken questions;
@@ -155,6 +214,11 @@ messages are dropped. At quiet intensity drill points show on the screen only. F
   [table above](#voices-and-speech-recognition-by-platform)); `uv run pitwall doctor` shows the voice setup. Type the
   question instead.
 - *Engineer answers itself*: should not happen (server-side half-duplex gate) - report it with the time.
+- *Hands-free never answers*: the chip says why ("Hands-free unavailable": no speech recognition on the computer;
+  "paused · driving": the car is moving and the driver's profile does not allow it). Start with the wake word you
+  chose, clearly, then the question. Settings › Radio & voice › Diagnostics shows whether speech was heard at all.
+- *A Bluetooth button does nothing*: check it is a keyboard-only device (see [above](#talking-to-the-engineer)), set
+  it up again under Settings › Radio & voice, and keep Pitwall in front on a Drive page.
 - *The voice sounds like the old robotic one* (Mac): the Mac voice line in Settings › Radio & voice says why
   (natural voice starting, restarting or not installed). Details: `GET /api/voice/status` -> `tts_engine`
   (`last_error`), and the server log (lines from `tts-worker`; `scripts/pitwall-service.sh logs` when Pitwall runs

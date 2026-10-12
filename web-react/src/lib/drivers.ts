@@ -28,6 +28,9 @@ export interface DriverPreferences {
   /** "Usually plays": a games catalogue id (GET /api/games), selected when this driver takes the seat while no
    * telemetry is live. null = none; absent from servers before game selection (never sent to those). */
   default_game?: string | null;
+  /** Hands-free also listens while this driver is on track (lane handsfree). Absent from servers without hands-free
+   * (never sent to those); false = only while the car is stopped. */
+  handsfree_while_driving?: boolean;
 }
 
 export interface DriverBestLap {

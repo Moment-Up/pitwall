@@ -12,25 +12,27 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
 |---|---|
 | binary | Microphone audio: int16 little-endian mono PCM at **16 000 Hz**, any length (client sends 512-sample = 1024-byte frames, ~32 ms). Sent continuously while the radio is live; the server decides what to keep. |
 | `{"type":"hello","client":"ipad","sample_rate":16000,"version":1}` | First message after connect. |
-| `{"type":"ptt","down":true}` / `{"type":"ptt","down":false}` | On-screen push-to-talk pressed / released. |
+| `{"type":"ptt","down":true}` / `{"type":"ptt","down":false}` | On-screen push-to-talk pressed / released. Optional `"source":"remote"`: a Bluetooth key or game controller button the device learned (any other value, or none, is `"screen"`). |
+| `{"type":"vad","state":"start","seq":7}` / `{"type":"vad","state":"end","seq":7,"reason":"silence"\|"max"}` / `{"type":"vad","state":"abort","seq":7,"reason":"suppressed"}` | Hands-free only (see below): the device's voice detector heard speech start, end (after silence, or at its 8 s cap), or gave the segment up (it started playing, the button was pressed...). `seq` is an integer the device increments per segment. Sent **after** the binary frame that triggered it, so the server already holds that audio. |
 | `{"type":"playback","id":"m12","state":"started"\|"ended"}` | The device actually started/finished playing message `m12`. Used for the half-duplex gate and latency measurement. |
 | `{"type":"stop_tts"}` | Barge-in: stop speaking now. |
 | `{"type":"ask","text":"how are my tyres"}` | Typed question (same pipeline minus STT). |
 | `{"type":"test_voice","text":"optional, max 200 chars"}` | Radio page "Test voice": the server voice says the text (default: a radio check) on every connected radio, as an `info` message. |
-| `{"type":"settings","voice_enabled":true,"intensity":"quiet"\|"normal"\|"detailed","tts_mode":"device"\|"server","cue_mode":"off"\|"focus"\|"markers"\|"all","tts_voice":"bm_george"}` | Radio preferences; every field optional. `tts_mode`: who speaks on *this* device (its own Web Speech voice, or the Mac's PCM). `cue_mode` and `tts_voice` are server-wide: `tts_voice` switches the Mac's voice for every following message (Kokoro voices `bm_fable`, `bm_george`, `bf_emma`, `bf_isabella`; remembered across restarts in `data/radio_voice.json`). An unknown voice, or an engine without voices (`say`), is answered with an `error` frame and changes nothing. |
+| `{"type":"settings","voice_enabled":true,"intensity":"quiet"\|"normal"\|"detailed","tts_mode":"device"\|"server","cue_mode":"off"\|"focus"\|"markers"\|"all","tts_voice":"bm_george","handsfree":false,"wake_word":"pitwall"\|"radio"}` | Radio preferences; every field optional. `handsfree` and `wake_word` are per device, like `tts_mode` (hands-free is off until the device sends `true`); any other `wake_word`, or a `handsfree` that is not a boolean, gets an `error` frame and changes neither. `tts_mode`: who speaks on *this* device (its own Web Speech voice, or the Mac's PCM). `cue_mode` and `tts_voice` are server-wide: `tts_voice` switches the Mac's voice for every following message (Kokoro voices `bm_fable`, `bm_george`, `bf_emma`, `bf_isabella`; remembered across restarts in `data/radio_voice.json`). An unknown voice, or an engine without voices (`say`), is answered with an `error` frame and changes nothing. |
 | `{"type":"ping","t":12345.6}` | Client clock in ms (performance.now()). |
 
 ## Server -> client
 
 | Frame | Meaning |
 |---|---|
-| `{"type":"state", "ptt":bool, "listening":bool, "speaking":bool, "quiet":{"until_lap":int\|null,"indefinite":bool}, "intensity":str, "stt":str, "stt_reason":str\|null, "tts":str, "tts_voice":str\|null, "tts_voices":[str], "tts_active":str, "tts_ready":bool, "tts_neural":bool, "tts_status":str\|null, "telemetry":"live"\|"stale"\|"no_data", "ptt_source":"screen"\|"wheel"\|null, "cue_mode":str}` | Sent on connect and on every change, including when the voice engine comes up, goes down or changes voice. `stt` is the speech recognition engine (`parakeet`, `whispercpp`, `none`); `stt_reason` says why there is none (null when there is one). `tts` is the configured engine (`kokoro`, `say`, `sapi` on Windows, `none`); `tts_active` is what renders messages right now (`kokoro`, or `say` while the Kokoro worker starts/restarts or is not installed); `tts_status` is the worker's state (`starting`, `ready`, `restarting`, `unavailable`, `stopped`; null for `say`); `tts_voices` lists the selectable server voices (empty for `say`). |
-| `{"type":"transcript","text":"...","stt_ms":int,"audio_s":float}` | What the server heard (after PTT release). Empty text = nothing understood. |
+| `{"type":"state", "ptt":bool, "listening":bool, "speaking":bool, "quiet":{"until_lap":int\|null,"indefinite":bool}, "intensity":str, "stt":str, "stt_reason":str\|null, "tts":str, "tts_voice":str\|null, "tts_voices":[str], "tts_active":str, "tts_ready":bool, "tts_neural":bool, "tts_status":str\|null, "telemetry":"live"\|"stale"\|"no_data", "ptt_source":"screen"\|"wheel"\|"remote"\|null, "cue_mode":str, "handsfree":{...}}` | Sent on connect and on every change, including when the voice engine comes up, goes down or changes voice. `stt` is the speech recognition engine (`parakeet`; `sherpa` = Parakeet on the CPU via sherpa-onnx, the Windows engine; `whispercpp`; `none`); `stt_reason` says why there is none (null when there is one). `tts` is the configured engine (`kokoro`, `say`, `sapi` on Windows, `none`); `tts_active` is what renders messages right now (`kokoro`, or `say` while the Kokoro worker starts/restarts or is not installed); `tts_status` is the worker's state (`starting`, `ready`, `restarting`, `unavailable`, `stopped`; null for `say`); `tts_voices` lists the selectable server voices (empty for `say`). `listening` is true while push-to-talk is down **or** a hands-free capture is running. `handsfree`: `{"available":bool, "reason":str\|null, "armed":int, "scope":"stationary"\|"driving", "active":bool, "paused":"moving"\|null, "capturing":bool, "follow_up":bool, "wake_words":["pitwall","radio"], "counts":{"heard":int,"addressed":int,"ignored":int,"rejected":int}}` - `armed` is how many devices turned hands-free on; `scope` is the seated driver's (`driving` only when their profile allows "Hands-free while driving"); `active` = available, armed and (scope `driving` or the car stationary); `paused` is `"moving"` while armed devices wait for the car to stop; `follow_up` while the next segment needs no wake word. |
+| `{"type":"transcript","text":"...","stt_ms":int,"audio_s":float}` | What the server heard (after PTT release). Empty text = nothing understood. A hands-free question adds `"source":"handsfree","wake":"pitwall"\|"radio"`, its `text` is the question after the wake word, and it is sent **only** when the speech was addressed to the radio. |
+| `{"type":"handsfree","event":"accepted"\|"rejected"\|"ignored"\|"addressed"\|"follow_up","seq":7,"reason":"...","audio_s":1.9,"wake":"pitwall"}` | To the device that sent the segment only. `reason` (rejected / ignored): `not_armed`, `unavailable`, `ptt`, `other_device`, `speaking`, `busy`, `paused_moving`, `rate_limited` (a `start` refused, checked in that order), `too_short`, `too_long`, `no_speech`, `stt_error`, `answer_limit` (a segment dropped), `echo`, `not_addressed` (transcribed and thrown away; never shown, stored or logged). `addressed` carries `wake`; `follow_up` means the next segment of this device needs no wake word. `audio_s` and `reason` are present only when they apply. |
 | `{"type":"say","id":"m12","kind":"answer"\|"control"\|"cue"\|"alert"\|"lap_summary"\|"coaching"\|"strategy"\|"goal"\|"validation"\|"info","text":"display text","speech":"spoken text","sample_rate":24000,"n_bytes":int,"meta":{...}}` | A message follows. Immediately followed by one or more **binary** frames of int16 LE mono PCM at `sample_rate` totalling `n_bytes`, then `say_end`. If TTS is unavailable `n_bytes` is 0 (display only). A client speaks every `say` frame whatever its `kind`; a kind it does not know (a newer server) is only labelled `INFO`. **`sample_rate` is per message and must be honoured**: 24 000 Hz with Kokoro (and with its `say` fallback, rendered at 24 kHz so cue parts from both engines join), 22 050 Hz with the plain `say` engine. Kokoro audio arrives trimmed to ~40 ms of silence at each end, at about -17 dBFS speech RMS with peaks at most -3 dBFS. |
 | `{"type":"say_end","id":"m12"}` | End of audio for `m12`. |
 | `{"type":"cancel","id":"m12"}` | Stop playing `m12` (barge-in or superseded). |
 | `{"type":"pong","t":12345.6,"server_ms":int}` | Echo for round-trip measurement. |
-| `{"type":"error","message":"..."}` | Non-fatal error to show. On Windows without server speech recognition (`stt` `none`), a push-to-talk utterance is answered with an error naming `stt_reason` and a spoken "No voice questions on this server. Type your question instead." instead of a transcript and "Say again?" (macOS keeps the transcript + "Say again?"). |
+| `{"type":"error","message":"..."}` | Non-fatal error to show. On Windows without server speech recognition (`stt` `none`: sherpa-onnx not installed, or switched off), a push-to-talk utterance is answered with an error naming `stt_reason` and a spoken "No voice questions on this server. Type your question instead." instead of a transcript and "Say again?" (macOS keeps the transcript + "Say again?"). |
 
 ## Behaviour
 
@@ -69,6 +71,27 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   drivers are not sent to a driver whose profile asks for simple wording, who hears each call's plain words instead
   (the call's `text_simple`: "Pit this lap or next: your tyres are nearly worn out."). Max-speed replays make no
   calls.
+- **Hands-free** (lane handsfree, `voice/handsfree.py`; evidence in [research/handsfree.md](research/handsfree.md)): a
+  device that sends `"handsfree":true` runs an energy voice detector on its own microphone level and sends `vad`
+  frames; the server keeps that device's last 0.5 s of audio (only while it may listen: not during push-to-talk,
+  while the radio speaks or in its 300 ms tail, nor while hands-free is paused), captures from `start` to `end` (9 s
+  watchdog), and transcribes one segment at a time (at most 2 waiting). It answers only when the transcript starts
+  with the device's wake word ("Pitwall", heard as "Pit wall", "Big wall", "Pitbull"...; or "Radio"), after up to two
+  fillers ("hey", "ok", "um"...). The question is the text after it; "Radio check" keeps its whole text. Everything
+  else is dropped at once. The wake word alone: after 1.2 s without a question the radio says "Go ahead." (at most
+  one every 20 s) and the device's next segment within 6 s of it ending needs no wake word (once). The radio's own
+  words coming back through the mic (a transcript that matches something said in the last 10 s) are dropped.
+  Budgets: 12 transcriptions and 6 answers a minute; speech-engine errors reach the device at most once a minute.
+  Answers follow the usual rules: deterministic while moving, the LLM only stationary.
+  - **Scope:** only while the car is stationary (no live data, paused or replay, or under 3 km/h for 1.5 s - at once
+    in the pits - until over 8 km/h; Drive's rule) unless the seated driver's profile has `handsfree_while_driving`.
+    A `start` refused as `paused_moving` makes the radio say, once a session at the next stop, "Hands-free is off
+    while you drive. Hold the button to talk on track." (simple wording: "I only listen for 'Pitwall' when the car is
+    stopped. Press the button to talk while you drive.").
+  - **Half-duplex:** anything going on air (a cue, an urgent call, an answer) cuts a capture (`rejected` /
+    `speaking`); push-to-talk cuts it too (`ptt`). While a capture runs only urgent calls go out; other proactive
+    messages wait (at most about 9 s).
+  - `PITWALL_VOICE_HANDSFREE=false` refuses hands-free for every device (`available` false).
 - Latency is measured per stage (PTT release -> transcript -> answer -> first audio sent -> playback started).
 - **Validation commands** (rig validation kit, server side only, no protocol change): a question that fully matches
   "start validation" or, while a validation run is active, "next test", "worked", "didn't work", "what's the test" or
@@ -85,3 +108,13 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   cue parts rendered before the STT was loaded are checked once it is).
 - No streamed-PCM extension yet (tts-evaluation section 6.6): Kokoro renders a whole message in 0.08-0.22 s, so
   the buffered `say` + `n_bytes` path stays.
+
+## REST (lane handsfree)
+
+- `GET /api/voice/status`: the `state` frame's fields (including `handsfree`), plus per client `handsfree` (bool) and
+  `wake_word`, and `handsfree_diag`: counters per reason, the last 20 hands-free events (event, reason, seq, client,
+  audio length - never any text), whether the car is stationary, the queue, the last minute's budgets and the server
+  thresholds.
+- `PATCH /api/drivers/{id}` with `{"handsfree_while_driving": bool}` (also accepted by `POST /api/drivers`); the
+  driver's `preferences` and `summary()` return it. Default false; it sets the hands-free scope while that driver is
+  in the seat.

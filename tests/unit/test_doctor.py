@@ -499,7 +499,10 @@ def test_windows_missing_firewall_rule_and_public_network_warn(repo: Path) -> No
     assert "Private" in checks["network_profile"].fix
     assert checks["voice_tts"].status == "ok"
     assert "Microsoft David Desktop" in checks["voice_tts"].detail
-    assert checks["voice_stt"].status == "info"  # Parakeet is Apple-silicon only
+    assert checks["voice_stt"].status == "warn"  # lane handsfree: the voice extra installs sherpa-onnx on Windows
+    assert "sherpa-onnx is not installed" in checks["voice_stt"].detail
+    assert checks["voice_stt"].fix == "uv sync --all-extras"
+    assert checks["voice_handsfree"].detail == "needs speech recognition (see Speech input)"
     assert not any("socketfilterfw" in c for c in fake.run_calls)
     assert not any(c.startswith("netsh") for c in fake.run_calls)  # PowerShell read the rules: no netsh needed
     ps = [c for c in fake.run_calls if "Get-NetConnectionProfile" in c]
@@ -921,3 +924,58 @@ def test_update_check_reads_only_the_cache(repo: Path) -> None:
 
 
 # --- end lane install ---
+
+
+# --------------------------------------------------------------------------------------------- lane handsfree
+def test_windows_speech_input_via_sherpa_onnx(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The voice extra installs sherpa-onnx on Windows: Parakeet on the CPU, its model downloaded on first use."""
+    monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
+    fake = _windows_fake()
+    fake.modules["sherpa_onnx"] = True
+    monkeypatch.setattr(doctor, "sherpa_model_state", lambda _s: (repo / "stt" / "m", False))
+    checks = by_id(run(repo, fake, host=_win(repo)))
+    assert checks["voice_stt"].status == "ok"
+    assert "downloads the first time a radio connects" in checks["voice_stt"].detail
+    assert checks["voice_handsfree"].status == "info" and checks["voice_handsfree"].detail.startswith("available")
+    monkeypatch.setattr(doctor, "sherpa_model_state", lambda _s: (repo / "stt" / "m", True))
+    stt = by_id(run(repo, fake, host=_win(repo)))["voice_stt"]
+    assert stt.status == "ok" and stt.detail.startswith("Parakeet (English) via sherpa-onnx on the CPU: model ready")
+
+
+def test_windows_speech_model_offline_and_own_folder(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    fake = _windows_fake()
+    fake.modules["sherpa_onnx"] = True
+    monkeypatch.setattr(doctor, "sherpa_model_state", lambda s: (s.stt_sherpa_dir or repo / "stt", False))
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    stt = by_id(run(repo, fake, host=_win(repo)))["voice_stt"]
+    assert stt.status == "warn" and "HF_HUB_OFFLINE" in stt.detail and "PITWALL_STT_SHERPA_DIR" in stt.fix
+    own = settings(repo, stt_sherpa_dir=repo / "my-model")
+    stt = by_id(run(repo, fake, own, host=_win(repo)))["voice_stt"]
+    assert stt.status == "warn" and "PITWALL_STT_SHERPA_DIR=" in stt.detail and "tokens.txt" in stt.fix
+
+
+def test_sherpa_model_state_checks_sizes(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from pitwall.voice.stt_sherpa import CATALOGUE, ModelFile, SherpaModel
+
+    tiny = SherpaModel("tiny", "r/r", "0" * 40, "tiny", (ModelFile("tokens", "tokens.txt", 3, "0" * 64),), "x", "en")
+    monkeypatch.setitem(CATALOGUE, "tiny", tiny)
+    folder = repo / "own"
+    folder.mkdir()
+    s = settings(repo, stt_sherpa_dir=folder, stt_sherpa_model="tiny")
+    assert doctor.sherpa_model_state(s) == (folder, False)
+    (folder / "tokens.txt").write_bytes(b"abc")
+    assert doctor.sherpa_model_state(s) == (folder, True)
+
+
+def test_handsfree_check_follows_the_switch_and_speech_input(repo: Path) -> None:
+    build_react(repo)
+    ready_voice_and_token(repo)
+    assert by_id(run(repo, Fake()))["voice_handsfree"].detail.startswith("available")
+    off = by_id(run(repo, Fake(), settings(repo, voice_handsfree=False)))["voice_handsfree"]
+    assert off.status == "info" and off.detail == "off (PITWALL_VOICE_HANDSFREE=false)"
+    none = by_id(run(repo, Fake(), settings(repo, stt_engine="none")))["voice_handsfree"]
+    assert none.detail == "needs speech recognition (see Speech input)"
+    fake = Fake()
+    fake.modules = {}
+    sherpa = by_id(run(repo, fake, settings(repo, stt_engine="sherpa")))["voice_stt"]
+    assert sherpa.status == "warn" and sherpa.fix == "uv sync --all-extras"  # asked for, not installed

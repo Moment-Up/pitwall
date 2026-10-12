@@ -12,6 +12,8 @@ import type { VoiceStatus } from "../../../lib/endpoints/settings";
 import type { RadioState, RadioStore, VoiceSource } from "../../../lib/radio";
 import { CellGroup, CellRow, SegmentRow, SelectRow, SliderRow, SwitchRow, type SelectOption } from "../cells";
 import { DiagnosticsRow } from "./Diagnostics";
+import { parseHandsFreeState } from "../../../lib/handsfree"; // --- hands-free (lane handsfree)
+import { TalkSection, type TalkActions } from "./TalkSection";
 import {
   COACHING,
   CUE_MODES,
@@ -50,6 +52,7 @@ export type RadioVoiceState = Pick<
   | "mic"
   | "micSilent"
   | "pttHeld"
+  | "handsFree"
 >;
 
 export const pickRadioVoice = (s: RadioState): RadioVoiceState => ({
@@ -66,6 +69,7 @@ export const pickRadioVoice = (s: RadioState): RadioVoiceState => ({
   mic: s.mic,
   micSilent: s.micSilent,
   pttHeld: s.pttHeld,
+  handsFree: s.handsFree,
 });
 
 /** The radio store's setting actions (the `radio` singleton in the app; a fake in tests). */
@@ -80,7 +84,8 @@ export type RadioActions = Pick<
   | "setDeviceVoice"
   | "setDeviceRate"
   | "testDeviceVoice"
->;
+> &
+  TalkActions;
 
 export interface RadioVoiceViewProps {
   r: RadioVoiceState;
@@ -232,6 +237,8 @@ export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, g
         </div>
 
         <div className="grid min-w-0 grid-cols-1 gap-3">
+          {/* --- hands-free (lane handsfree) */}
+          <TalkSection r={r} statusHandsFree={parseHandsFreeState(status?.handsfree)} noun={noun} actions={actions} />
           <CellGroup label="On the radio">
             <SegmentRow
               title="Braking calls"

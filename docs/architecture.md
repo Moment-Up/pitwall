@@ -219,6 +219,28 @@ Questions are answered short on the radio (`deterministic_answer(short=True)`: o
 form). Strategy (`strategy/radio.py`) is the only source of fuel alerts.
 The `say` frames are in [voice-protocol.md](voice-protocol.md).
 
+## Hands-free talking and speech engines (`voice/handsfree.py`, `voice/stt_sherpa.py`)
+Lane handsfree ([research/handsfree.md](research/handsfree.md)). `HandsFreeController` is the hub's hands-free side,
+called from twelve small hooks marked `# --- hands-free (lane handsfree) ---` in `voice/hub.py` (connect/disconnect,
+`state()`, `on_text` for `vad` / `settings` / the `ptt` source, `on_audio`, `_ptt_down_now`, `_deliver`, `_tick`,
+`_after_synthesis`, `apply_driver`, `_follow_session`, `status()`); everything runs on the event loop and nothing on the
+UDP thread. Per armed device it keeps a 0.5 s ring buffer (filled only when it may listen; a frame from an unarmed
+device is dropped at once), captures between the browser's `vad` start and end, and processes one segment at a time
+(at most two queued): length checks, the STT energy gate at -45 dBFS, the speech engine in a worker thread, the echo
+guard (the radio's last 10 s of words), then `match_wake` (pure: up to two fillers, "pitwall" on one or two joined
+words within 2 edits, "radio" on one word). An addressed question goes to the hub's own `_answer` (deterministic while
+moving); anything else is dropped without a trace (logs and observers carry reasons and lengths only). `MotionGate` is
+Drive's stationary rule (`web-react/src/lib/drive/motion.ts`) plus the frame's paused/replay flags, updated at 10 Hz
+in the tick; the scope is the seated driver's `handsfree_while_driving` (`drivers.py`, stored in the preferences JSON:
+no schema change). While a capture runs, the tick and `_after_synthesis` treat the radio as busy (only urgent calls
+go out) and anything delivered cuts the capture. The browser side (`web-react/src/lib/handsfree.ts`: the energy VAD,
+the learned Bluetooth key or gamepad button) is the dashboard's.
+Speech engines (`voice/stt.py` `build_stt`): Parakeet through parakeet-mlx on Apple silicon; elsewhere
+`stt_engine=parakeet` resolves to `SherpaParakeetStt` when sherpa-onnx imports (the `voice` extra installs it on
+Windows): Parakeet TDT 0.6B v2 int8 on the CPU, its four files pinned by revision, size and SHA-256, downloaded on the
+first `warmup()` to `<app support>/stt/` (or read from `PITWALL_STT_SHERPA_DIR`), with the same gate, resampling and
+racing-term corrections as Parakeet. `pitwall doctor` reports both (`voice_stt`, `voice_handsfree`).
+
 ## Goals, badges and summaries (`motivation/`)
 Pure rules (`rules.py`: clean runs, steady-lap windows, scopes, F1 race outcomes, personal bests, week arithmetic),
 `goals.py`, `suggest.py`, `badges.py`, `recap.py` (Today's 3 things), `digest.py` + `html.py` (weekly digest),

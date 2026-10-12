@@ -4,14 +4,14 @@
 
 import { Button, Disclosure } from "@heroui/react";
 import { useState } from "react";
-import { micChipView, useNow } from "../../../components/radio";
+import { handsFreeDiagRows, micChipView, useNow } from "../../../components/radio";
 import { radio } from "../../../lib/radio";
 import { diagnosticsRows, type MacState } from "./model";
 
 function DiagnosticsBody({ mac }: { mac: MacState | null }) {
   useNow(1000); // re-render once a second; values are read from the store directly
   const s = radio.get();
-  const rows = diagnosticsRows(s, mac, micChipView(s).label);
+  const rows = [...diagnosticsRows(s, mac, micChipView(s).label), ...handsFreeDiagRows(s, Date.now())]; // + hands-free
   const live = s.phase !== "idle";
   const audioBlocked = live && s.audio !== "running" && s.audio !== "none";
   const english = s.allVoices.filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith("en"));
