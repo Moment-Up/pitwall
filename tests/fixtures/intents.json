@@ -1,5 +1,5 @@
 {
-  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge. final-review = the v0.2.0 final review: race questions never go to the reference rule, drill commands led by 'alright', 'yes', 'can we', rain questions before strategy, 'what place am I?'.",
+  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge. final-review = the v0.2.0 final review: race questions never go to the reference rule, drill commands led by 'alright', 'yes', 'can we', rain questions before strategy, 'what place am I?'. health = the car health lane: brakes, engine and 'how's the car?' (car_health, before tyres; 'how are my tyre temps' stays tyres), 'where will I come out?' (rejoin, before strategy), attack and defend (before gaps; 'is the car behind catching me?' stays gaps).",
   "questions": [
     {"question": "How am I doing so far?", "intent": "summary", "corner": null, "from": "review"},
     {"question": "What's my gap to the AI?", "intent": "ai_pace", "corner": null, "from": "review"},
@@ -204,6 +204,32 @@
     {"question": "Will it rain before my pit window?", "intent": "weather", "corner": null, "from": "final-review"},
     {"question": "Is the track drying, should I stay out?", "intent": "weather", "corner": null, "from": "final-review"},
     {"question": "Where am I losing time in the rain?", "intent": "losing_time", "corner": null, "from": "final-review"},
-    {"question": "What place am I?", "intent": "gaps", "corner": null, "from": "final-review"}
+    {"question": "What place am I?", "intent": "gaps", "corner": null, "from": "final-review"},
+    {"question": "How are my brakes?", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "Engine temperature?", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "How's the car?", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "Are my brakes overheating?", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "Is the engine OK?", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "What are my brake temps?", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "Is anything overheating?", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "Give me a car health check", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "Are my tyres overheating?", "intent": "car_health", "corner": null, "from": "health"},
+    {"question": "Where will I come out if I pit now?", "intent": "rejoin", "corner": null, "from": "health"},
+    {"question": "If I box this lap where do I rejoin", "intent": "rejoin", "corner": null, "from": "health"},
+    {"question": "Where would I rejoin?", "intent": "rejoin", "corner": null, "from": "health"},
+    {"question": "What position would I come out in?", "intent": "rejoin", "corner": null, "from": "health"},
+    {"question": "If I pit now where do I end up?", "intent": "rejoin", "corner": null, "from": "health"},
+    {"question": "Would I come out behind the car ahead if I box?", "intent": "rejoin", "corner": null, "from": "health"},
+    {"question": "Where can I overtake him?", "intent": "attack", "corner": null, "from": "health"},
+    {"question": "Where am I faster than the car ahead?", "intent": "attack", "corner": null, "from": "health"},
+    {"question": "Where should I attack?", "intent": "attack", "corner": null, "from": "health"},
+    {"question": "Which corner can I pass the car in front?", "intent": "attack", "corner": null, "from": "health"},
+    {"question": "Where can I make a move?", "intent": "attack", "corner": null, "from": "health"},
+    {"question": "Where's the car behind quicker than me?", "intent": "defend", "corner": null, "from": "health"},
+    {"question": "Should I defend into turn 4?", "intent": "defend", "corner": "T4", "from": "health"},
+    {"question": "How do I hold him off?", "intent": "defend", "corner": null, "from": "health"},
+    {"question": "Where will the car behind try to pass?", "intent": "defend", "corner": null, "from": "health"},
+    {"question": "Which corner is the car behind faster in?", "intent": "defend", "corner": null, "from": "health"},
+    {"question": "Where is the car behind gaining on me?", "intent": "defend", "corner": null, "from": "health"}
   ]
 }

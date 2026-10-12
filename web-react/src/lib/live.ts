@@ -67,7 +67,8 @@ export const FOREGROUND_RECONNECT_MS = 2000;
 
 /** The snapshot keys the server sends only with its ~5 s static payload (core/live.py snapshot(include_static)).
  * "strategy" (race strategy) is sent with it and when it changed (LiveState.strategy_rev, at most every 2 s);
- * "ai_pace", "coachref" and "lap_totals" with it and whenever they changed (api/app.py ON_CHANGE_KEYS). Absent keeps the previous
+ * "ai_pace", "coachref" and "lap_totals" with it and whenever they changed (api/app.py ON_CHANGE_KEYS); so do
+ * "car_health" and "racecraft" (health lane: api/live_feed.py ON_CHANGE_KEYS). Absent keeps the previous
  * value within the session, null means none, and a new session starts without them (the server sends them all again
  * in a new session's first snapshot). */
 export const STATIC_KEYS = [
@@ -80,6 +81,10 @@ export const STATIC_KEYS = [
   "ai_pace",
   "coachref",
   "lap_totals",
+  // --- health lane (pitwall.carhealth): sent with the static payload and when they changed (ON_CHANGE_KEYS) ---
+  "car_health",
+  "racecraft",
+  // --- end health lane ---
 ] as const;
 
 /** Merge the static parts of the previous snapshot into one that omitted them, within the same session (a new session

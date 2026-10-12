@@ -4,9 +4,12 @@
 // The tile takes the bottom-left slot (Inputs, last 12 s) only in a race of at least STRATEGY_TILE_MIN_LAPS laps
 // (in a 3-5 lap sprint half the tile never changes: the Inputs trace earns the slot there). Mode and race length
 // change only at a session change, so nothing moves while driving (P2). Six fixed rows (the label, then the value):
-//   Ahead       "+1.8 s · closing 0.3/lap"        tags IN PIT / DRS / CLOSE / 1 STOP; unsettled values dimmed
-//   Behind      "0.8 s · closing 0.2/lap"         DRS, or CLOSE and closing, is amber (with its word, never colour alone)
-//   Pit window  "L38-44 · best L41" / "L41" / "No stop needed" / "Not enough laps yet"
+//   Ahead       "+1.8 s · closing 0.3/lap"        tags IN PIT / DRS / CLOSE / 1 STOP / BEST T3 (health lane:
+//                                                 the corner that stands out); unsettled values dimmed
+//   Behind      "0.8 s · closing 0.2/lap"         DRS, or CLOSE and closing, is amber (with its word, never colour alone);
+//                                                 WATCH T7 where the car behind is quickest (health lane)
+//   Pit window  "L38-44 · best L41" / "L41" / "No stop needed" / "Not enough laps yet"; beside the label (health
+//               lane) where a stop now would rejoin: "Box now ≈ P7 (P6–8)" (simple: "If you stop now: about 7th")
 //   Undercut    "ahead marginal · behind threat"; "Laps to go" instead when no stop is needed (and for simple wording)
 //   Fuel        "+0.4 laps" / "−0.3 laps · lift & coast 2.1 s/lap" / "On the limit" (amber when tight or short)
 //   Weather     "Light rain in 10 min · 7 laps" / "Light rain after the flag" / "Dry for 15 min"; under SC / VSC the
@@ -18,7 +21,9 @@
 // profile) swaps the jargon for plain words, and leaves out the calls meant for experienced drivers.
 
 import type { DriveModel } from "../drive/model";
-import type { SnapshotNext } from "../drive/types";
+import type { SnapshotNext, TrackModelNext } from "../drive/types";
+import { racecraftMark, rejoinLine, snapRacecraft } from "../carhealth/view"; // health lane (pitwall.carhealth)
+import type { RacecraftView } from "../carhealth/types"; // health lane
 import type { CallView, CarGap, CutStatus, StrategyView, Tier } from "./types";
 import {
   compoundPlural,
@@ -100,6 +105,9 @@ export interface StrategyRowView {
   /** The value is the last settled one while the gap is in doubt (position change, a car in the pit lane). */
   dim: boolean;
   tags: StrategyTag[];
+  /** (health lane) A short phrase beside the label: "Box now ≈ P7 (P6–8)" on the pit window, "you catch it at T3"
+   * on Ahead for simple wording; null when there is none. */
+  sub: string | null;
   /** The whole row for screen readers. */
   aria: string;
 }
@@ -126,7 +134,7 @@ export interface StrategyTileOptions {
 }
 
 function row(key: StrategyRowKey, label: string, text: string, extra: Partial<StrategyRowView> = {}): StrategyRowView {
-  const r: StrategyRowView = { key, label, text, tone: "plain", dim: false, tags: [], aria: "", ...extra };
+  const r: StrategyRowView = { key, label, text, tone: "plain", dim: false, tags: [], sub: null, aria: "", ...extra };
   if (!r.aria) r.aria = `${label}: ${text === UNKNOWN ? "unknown" : text}`;
   return r;
 }
@@ -163,7 +171,13 @@ function trendAria(t: number | null, side: "ahead" | "behind"): string | null {
   return side === "ahead" ? `pulling away ${amount} seconds a lap` : `dropping back ${amount} seconds a lap`;
 }
 
-function gapRow(v: StrategyView, side: "ahead" | "behind", simple: boolean): StrategyRowView {
+/** (health lane) What the gap rows read from the racecraft block: attack / defend per corner. */
+interface RacecraftInput {
+  rc: RacecraftView | null;
+  trackModel: TrackModelNext | null;
+}
+
+function gapRow(v: StrategyView, side: "ahead" | "behind", simple: boolean, race: RacecraftInput | null = null): StrategyRowView {
   const label = side === "ahead" ? (simple ? "Car ahead" : "Ahead") : simple ? "Car behind" : "Behind";
   const g = v.gaps;
   const car: CarGap | null = g ? (side === "ahead" ? g.ahead : g.behind) : null;
@@ -189,6 +203,12 @@ function gapRow(v: StrategyView, side: "ahead" | "behind", simple: boolean): Str
   if (close) tags.push({ text: close, tone: warn ? "warn" : side === "ahead" ? "info" : "neutral" });
   const stops = stopsTag(car.stops);
   if (stops) tags.push(stops);
+  // --- health lane: the corner that stands out against this car (verdict "clear" only, same car only) ---
+  const mark = race
+    ? racecraftMark(race.rc, side, { carIndex: car.car_index, trackModel: race.trackModel, simple })
+    : null;
+  if (mark?.tag) tags.push({ text: mark.tag, tone: "neutral" });
+  // --- end health lane ---
   const parts = [
     `${side === "ahead" ? "Car ahead" : "Car behind"}: ${finite(car.gap_s) ? `${one(car.gap_s)} seconds` : "gap unknown"}`,
     trendAria(car.trend_s_per_lap, side),
@@ -196,13 +216,24 @@ function gapRow(v: StrategyView, side: "ahead" | "behind", simple: boolean): Str
     car.in_pit ? "in the pit lane" : null,
     finite(car.stops) ? plural(car.stops, "stop") : null,
     car.settled || !finite(car.gap_s) ? null : "last settled value",
+    mark?.aria ?? null, // health lane
   ].filter(Boolean);
   return row(side, label, text, {
     tone: warn ? "warn" : "plain",
     dim: !car.settled,
     tags,
+    sub: mark?.sub ?? null, // health lane
     aria: parts.join(", "),
   });
+}
+
+/** (health lane) The pit window row with "Box now ≈ P7 (P6–8)" beside its label: where the player would come out
+ * (rejoin v2 only, and only while a stop is still needed). */
+function windowRowWithRejoin(v: StrategyView, simple: boolean): StrategyRowView {
+  const r = windowRow(v, simple);
+  const rj = v.pit?.stop_needed === false ? null : rejoinLine(v.pit?.rejoin, simple);
+  if (!rj) return r;
+  return { ...r, sub: rj.text, aria: `${r.aria}; ${rj.aria}` };
 }
 
 function windowRow(v: StrategyView, simple: boolean): StrategyRowView {
@@ -509,7 +540,10 @@ const EMPTY_VIEW: StrategyView = {
  * While the data is in doubt (stale, offline) the page dims the tile and the values are the last known ones.
  */
 export function strategyTile(
-  snap: Pick<SnapshotNext, "strategy"> | null | undefined,
+  snap:
+    | (Pick<SnapshotNext, "strategy"> & Partial<Pick<SnapshotNext, "racecraft" | "track_model" | "session_id">>)
+    | null
+    | undefined,
   model: Pick<DriveModel, "dim" | "state"> | null = null,
   opts: StrategyTileOptions = {},
 ): StrategyTileView {
@@ -517,15 +551,17 @@ export function strategyTile(
   const v = snapStrategy(snap) ?? EMPTY_VIEW;
   const stale = !!model?.dim;
   const { foot, level } = footText(v, stale, simple, opts.nowS);
+  // health lane (pitwall.carhealth): attack / defend marks on the gap rows
+  const race: RacecraftInput = { rc: snapRacecraft(snap), trackModel: snap?.track_model ?? null };
   return {
     show: longRace(v),
     title: "Strategy",
     aside: asideText(v),
     synthetic: v.synthetic === true,
     rows: [
-      gapRow(v, "ahead", simple),
-      gapRow(v, "behind", simple),
-      windowRow(v, simple),
+      gapRow(v, "ahead", simple, race),
+      gapRow(v, "behind", simple, race),
+      windowRowWithRejoin(v, simple), // health lane: "Box now ≈ P7 (P6–8)"
       undercutRow(v, simple),
       fuelRow(v, simple),
       weatherRow(v, simple),

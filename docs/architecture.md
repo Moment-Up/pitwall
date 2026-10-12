@@ -43,6 +43,12 @@
    TyreSetsInfo, player frames,      |  StrategyEngine (pure,     |--> notify("strategy_call") -> RadioHub
    laps, events, session info        |  game clock, no LLM)       |    -> RadioScheduler speak windows
                                      +----------------------------+
+ SessionManager --(deque append)--> +-------------------------------+
+   player frames, laps, events,      | CarHealthWorker ("carhealth") |--> LiveState.car_health / racecraft
+   session info (every game),        |  CarHealthEngine per session  |    (<= 1 Hz, on change)
+   RaceTiming; FieldSamples only     |  (pure, game clock, no LLM,   |--> notify("health_call") -> RadioHub
+   while wants_field (F1 races)      |   nothing persisted)          |    -> RadioScheduler speak windows
+                                     +-------------------------------+
 ```
 
 ## Threads and the critical path
@@ -54,6 +60,7 @@
 | `db-writer` | all SQLite writes, one transaction per job | - |
 | `motivation` | after a live lap / at session end: mark goals reached (exactly once), notify `motivation` | run on ingest (its note handler only queues, O(1)) |
 | `strategy` | race strategy engine (`pitwall/strategy`): gaps, pit loss, tyres, fuel, weather, calls; per-lap records | touch sockets, block ingest (fed by one lock-free deque append per item) |
+| `carhealth` | car health (`pitwall/carhealth`): tyre temperatures against the warm laps, brakes, engine, lock-ups and wheelspin, tank-level fuel, attack / defend; calls | touch sockets or SQLite, block ingest (one deque append per item; field samples only while `wants_field`) |
 | asyncio (uvicorn) | REST, WebSocket snapshots (pull model), LLM calls (async HTTP) | block on DB (uses `to_thread`) |
 
 Every ingest-thread hook of the v0.2.0 features is O(1) (a deque append, a field write or a counter). The combined
@@ -149,7 +156,20 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
    stops are stored (tables `strategy_laps`, `pit_stops`, schema v5) for Review › Strategy. The live view
    (`strategy`, about 2-3.5 kB) rides the static merge on `/ws/live` (`api/live_feed.py`): sent when
    `LiveState.strategy_rev` moved, at most every 2 s, and in a new session's first snapshot, left out otherwise (the
-   client keeps it, `lib/live.ts` `STATIC_KEYS`).
+   client keeps it, `lib/live.ts` `STATIC_KEYS`). Where the player comes out if they box now is
+   `strategy/rejoin.py`: every car's gap to the leader (the game's, else chained from the car in front, else the
+   last known value up to 15 s old: F1 25 zeroes the gaps 1-2 s before a pit entry), cars in the lane at their entry
+   gap plus the loss, a position range and road traffic modulo one lap; frozen through the player's own stop.
+9. **Car health** (`pitwall/carhealth/`, worker thread `carhealth`, off the ingest path, nothing persisted): one
+   `CarHealthEngine` per session (a few at most, LRU) runs the tyre monitor (the session's temperature model:
+   carcass only when the F1 session simulates it; 1 C histograms per lap and per stint; the warm baseline frozen at a
+   pit entry; the cold-tyre rule armed at a pit exit or a safety-car end), brakes and engine against the session's
+   own laps (F1), lock-ups and wheelspin per lap (F1 MotionEx, the technique thresholds), the tank-level fuel
+   estimator (Forza; GT7 switched off) and the attack / defend segment clocks (the learned corners as segments, the
+   cars directly ahead and behind, the last 3 clean laps each; F1 races, per-car buffers dropped at the session's
+   end). It publishes `car_health` and `racecraft` at most once a second (and at a lap line or a call) and its calls
+   (`health_call`) go through the radio scheduler with the existing kinds. Routes: `/api/car-health/*`,
+   `/api/racecraft/live` (`/api/health` is the service's own health check).
 
 ### Reference choice and practice drills (coachref)
 `core/coachref.py` (`CoachRef`, created by the runtime and attached to the `LapProcessor`) plugs into the lap
@@ -216,7 +236,9 @@ summaries, goals and coaching go; strategy and alerts stay), and a new live sess
 queue, budgets, repeat filter and a lap-bounded quiet period belong to the old session). The safety-car box and stay
 calls and critical fuel are alerts outside the budget. The final lap gets its summary but no coaching point.
 Questions are answered short on the radio (`deterministic_answer(short=True)`: one or two facts in their spoken
-form). Strategy (`strategy/radio.py`) is the only source of fuel alerts.
+form). Strategy (`strategy/radio.py`) is the only source of F1 fuel alerts; car health (`carhealth/radio.py`) calls
+Forza's tank-level fuel, cold tyres after a stop, wear outside F1 races and (detailed by default) lock-up and
+wheelspin notes, with the strategy kinds (alert / strategy / info) and topics `health:<topic>`.
 The `say` frames are in [voice-protocol.md](voice-protocol.md).
 
 ## Goals, badges and summaries (`motivation/`)
@@ -260,8 +282,9 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
 - **Live snapshot keys** (`core/live.py`; what each `/ws/live` snapshot carries is `api/live_feed.py`'s rule): every
   snapshot has the frame, session, laps (the newest 20) and events (every-car events carry `player` when F1 says whose
   they are), `session_state`, `coach`, `bests` (D2) and `game` (with `selected_source` / `selected_by`: why the game is
-  selected). Sent when they changed: `ai_pace`, `coachref` (the reference choice and drill) and `lap_totals` (the
-  whole session's lap counts); `strategy` when it changed, at most every 2 s. The static keys go every 5 s
+  selected). Sent when they changed: `ai_pace`, `coachref` (the reference choice and drill), `lap_totals` (the
+  whole session's lap counts), `car_health` and `racecraft` (car health, at most once a second); `strategy` when it
+  changed, at most every 2 s. The static keys go every 5 s
   (`last_comparison` always; `track_model`, `skeleton` and `track_knowledge` only when they changed). A new session's
   first snapshot and one a minute carry everything. Absent means keep the last value within the session, `null`
   none (`lib/live.ts` `STATIC_KEYS`).

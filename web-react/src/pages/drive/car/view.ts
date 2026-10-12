@@ -18,11 +18,30 @@ import type { DriveModel } from "../../../lib/drive/model";
 import { ageText, finite, signedFixed, UNKNOWN } from "../../../lib/drive/text";
 import { bestsOf, notCleanWords, standing, type TimingStatus } from "../../../lib/drive/timing";
 import type { LiveEvent, ObservationNext, SnapshotNext } from "../../../lib/drive/types";
-import type { GameEntry } from "../../../lib/endpoints/game";
-import { decimal, gearLabel, grouped, num, tyreTempColor, unit01 } from "../../../lib/format";
+import type { FeatureId, GameEntry } from "../../../lib/endpoints/game";
+import { decimal, gearLabel, grouped, num, unit01 } from "../../../lib/format";
 import { featureOf, missing, tyresUnavailableText, unavailableLine } from "../../../lib/game";
 import { worldXZ } from "../../../lib/viz/track-map";
 import { measuredFuelMargin } from "../../../lib/strategy/view"; // race strategy (pitwall.strategy)
+// --- health lane (pitwall.carhealth) ---
+import type { TyreTempBand } from "../../../lib/carhealth/types";
+import {
+  BAND_COLOUR,
+  BAND_WORD,
+  bandAria,
+  COLD_CHIP,
+  mainTemp,
+  slipLine,
+  slipSection,
+  snapCarHealth,
+  tankFuelLine,
+  tempBasis,
+  tempsLine,
+  tyreSection,
+  tyresCold,
+  wheelBand,
+} from "../../../lib/carhealth/view";
+// --- end health lane ---
 
 /** The data on screen is current: not stale, not offline, and telemetry has arrived. */
 export function liveValues(model: Pick<DriveModel, "dim" | "state">): boolean {
@@ -98,17 +117,24 @@ export function carTile(
 }
 
 // ----------------------------------------------------------------------------------------------- tyres tile
+//
+// Health lane (pitwall.carhealth, lane spec 3.13 D2): the colours compare each wheel with the driver's own warm laps
+// in this session (car_health.tyres.wheels[].band), never with a fixed window: no game publishes its tyre windows,
+// and F1 25's real surface temperatures sit under 75 °C on 93 % of wheel-laps. Without the block (an older server,
+// the first warm laps) every wheel is the plain foreground with no word. The big number is the carcass when the
+// game simulates it (F1 surface & carcass model), else the surface: a surface-only F1 session sends a constant inner
+// temperature, which is never shown.
 
-export type TyreBand = "cold" | "cool" | "ok" | "hot" | "over" | "unknown";
+export type TyreBand = TyreTempBand;
 
 export interface TyreView {
   wheel: "FL" | "FR" | "RL" | "RR";
-  /** Surface temperature "92°", or "-". */
+  /** Inside (carcass model) or surface temperature "92°", or "-". */
   temp: string;
-  /** Colour token of the band (in the window: plain foreground). */
+  /** Colour token of the band (in range or unknown: plain foreground; no value: faint). */
   colour: string;
   band: TyreBand;
-  /** Out of the window in words, so colour is never the only signal (P4): "cold", "hot", "over", else null. */
+  /** Out of range in words, so colour is never the only signal (P4): "cold", "hot", else null. */
   word: string | null;
   /** "6% · 23.1 psi" (wear · pressure); only the parts the game sends; null = no line (it sends neither). */
   sub: string | null;
@@ -116,32 +142,35 @@ export interface TyreView {
 }
 
 export interface TyresView {
-  /** "Soft · 7 laps", or null when the game does not say. */
+  /** "Cold tyres" while the tyres are cold after a stop or a safety car, else "Soft · 7 laps", or null when the game
+   * does not say. */
   chip: string | null;
+  /** "warn": the chip is "Cold tyres" (amber, its words carry it too). */
+  chipTone: "neutral" | "warn";
   /** FL FR / RL RR (wheel order is always FL, FR, RL, RR). */
   wheels: [TyreView, TyreView, TyreView, TyreView];
-  /** "Fuel 18.4 kg · +1.2 laps (game) · ERS 2.8 MJ"; what the game does not send in words ("Fuel, ERS: not in
-   * Pitwall yet"). */
+  /** "Fuel 18.4 kg · +1.2 laps (game) · ERS 2.8 MJ"; Forza "Fuel ≈ 7 laps (tank level)"; what the game does not
+   * send in words ("Fuel, ERS: not in Pitwall yet"). */
   energy: string;
+  /** Amber when the tank fuel is low or almost out (the words say so too). */
+  energyTone: "plain" | "warn";
+  /** The start of `energy` drawn amber when energyTone is "warn" (the fuel words only, never ERS); else null. */
+  energyWarn: string | null;
+  /** "Brakes 980° · Engine 124°" (F1, from the frame), else null. */
+  temps: string | null;
+  /** "Last lap: 3 lock-ups · 4 wheelspin" (F1), else null. */
+  slip: string | null;
   /** The game sends no tyre data at all: one line instead of the wheel grid ("Assetto Corsa doesn't send tyre
    * data"), else null. */
   empty: string | null;
+  /** What the numbers are and what the colours mean ("Inside temperatures · colours compare with your warm laps");
+   * null without the car_health block. */
+  basis: string | null;
   /** Under the grid when wear or pressures are not sent ("Tyre wear, pressures: not sent by GT7"), else null. */
   caption: string | null;
 }
 
 const WHEELS = ["FL", "FR", "RL", "RR"] as const;
-
-export function tyreBand(t: number | null | undefined): TyreBand {
-  if (!finite(t)) return "unknown";
-  if (t < 75) return "cold";
-  if (t < 85) return "cool";
-  if (t <= 105) return "ok";
-  if (t <= 115) return "hot";
-  return "over";
-}
-
-const BAND_WORD: Partial<Record<TyreBand, string>> = { cold: "cold", cool: "cool", hot: "hot", over: "over" };
 
 function at(xs: readonly (number | null)[] | null | undefined, i: number): number | null {
   const v = xs?.[i];
@@ -154,22 +183,27 @@ function capitalised(s: string): string {
 
 export function tyresTile(s: SnapshotNext | null, entry: GameEntry | null = null): TyresView {
   const f = s?.frame ?? null;
+  const ch = snapCarHealth(s); // health lane: null on older servers (the tile is then as before, minus the window)
+  const th = tyreSection(ch);
+  const inner = mainTemp(th) === "inner";
   const showTemp = !missing(entry, "tyre_temps");
   const showWear = !missing(entry, "tyre_wear");
   const showP = !missing(entry, "tyre_pressures");
   // A game that sends wear but no temperatures shows wear as the main value (none does today; kept for honesty).
   const wearMain = !showTemp && showWear;
   const wheels = WHEELS.map((wheel, i): TyreView => {
-    const t = showTemp ? at(f?.tyre_surface_temp_c, i) : null;
+    const t = showTemp ? at(inner ? f?.tyre_inner_temp_c : f?.tyre_surface_temp_c, i) : null;
     const wear = at(f?.tyre_wear_pct, i);
     const p = at(f?.tyre_pressure_psi, i);
-    const band = tyreBand(t);
+    const band: TyreBand = showTemp ? wheelBand(th, wheel) : "unknown";
+    const word = BAND_WORD[band] ?? null;
     const wearText = wear == null ? UNKNOWN : `${num(wear)}%`;
     const pText = p == null ? UNKNOWN : `${num(p, 1)} psi`;
     const subParts = [showWear && !wearMain ? wearText : null, showP ? pText : null].filter((x): x is string => x !== null);
+    const bandWords = bandAria(band);
     const aria = [
       showTemp
-        ? `surface ${t == null ? "unknown" : `${num(t)} degrees`}${BAND_WORD[band] ? `, ${BAND_WORD[band]}` : ""}`
+        ? `${inner ? "inside" : "surface"} ${t == null ? "unknown" : `${num(t)} degrees`}${bandWords ? `, ${bandWords}` : ""}`
         : null,
       showWear ? `wear ${wear == null ? "unknown" : `${num(wear)} percent`}` : null,
       showP ? `pressure ${p == null ? "unknown" : `${num(p, 1)} psi`}` : null,
@@ -177,36 +211,54 @@ export function tyresTile(s: SnapshotNext | null, entry: GameEntry | null = null
     return {
       wheel,
       temp: wearMain ? wearText : t == null ? UNKNOWN : `${num(t)}°`,
-      colour: tyreTempColor(t),
+      colour: t == null && !wearMain ? "var(--pw-faint)" : BAND_COLOUR[band],
       band,
-      word: BAND_WORD[band] ?? null,
+      word,
       sub: subParts.length ? subParts.join(" · ") : null,
       aria: `${wheel}: ${aria.join(", ")}`,
     };
   }) as TyresView["wheels"];
   const compound = f?.tyre_compound ? capitalised(f.tyre_compound) : null;
   const age = finite(f?.tyre_age_laps) ? `${f.tyre_age_laps} ${f.tyre_age_laps === 1 ? "lap" : "laps"}` : null;
-  const chip = compound ? [compound, age].filter(Boolean).join(" · ") : null;
-  const fuel = finite(f?.fuel_kg) ? `${num(f.fuel_kg, 1)} kg` : UNKNOWN;
-  // race strategy (pitwall.strategy): this race's own measured margin first, the game's figure until it is known
-  const margin =
-    measuredFuelMargin(s) ??
-    (finite(f?.fuel_remaining_laps_game) ? `${signedFixed(f.fuel_remaining_laps_game, 1)} laps (game)` : null);
+  const cold = showTemp && tyresCold(th);
+  const chip = cold ? COLD_CHIP : compound ? [compound, age].filter(Boolean).join(" · ") : null;
   const ers = finite(f?.ers_store_j) ? `${num(f.ers_store_j / 1e6, 1)} MJ` : UNKNOWN;
-  const energy = [
-    missing(entry, "fuel") ? null : `Fuel ${fuel}`,
-    margin,
-    missing(entry, "ers") ? null : `ERS ${ers}`,
-    unavailableLine(entry, ["fuel", "ers"]),
-  ]
+  // health lane: fuel from the tank level (Forza; GT7 once verified). Null for F1: the strategy's kilos stay.
+  const tank = tankFuelLine(ch?.fuel);
+  let fuelParts: (string | null)[];
+  let saidIds: FeatureId[] = ["fuel", "ers"];
+  if (tank?.estimates) {
+    fuelParts = [tank.text];
+    saidIds = ["ers"]; // Pitwall estimates this game's fuel: the catalogue's "not in Pitwall yet" no longer applies
+  } else if (tank) {
+    fuelParts = [missing(entry, "fuel") ? null : tank.text]; // no numbers; the catalogue's sentence when it has one
+  } else {
+    const fuel = finite(f?.fuel_kg) ? `${num(f.fuel_kg, 1)} kg` : UNKNOWN;
+    // race strategy (pitwall.strategy): this race's own measured margin first, the game's figure until it is known
+    const margin =
+      measuredFuelMargin(s) ??
+      (finite(f?.fuel_remaining_laps_game) ? `${signedFixed(f.fuel_remaining_laps_game, 1)} laps (game)` : null);
+    fuelParts = [missing(entry, "fuel") ? null : `Fuel ${fuel}`, margin];
+  }
+  const energy = [...fuelParts, missing(entry, "ers") ? null : `ERS ${ers}`, unavailableLine(entry, saidIds)]
     .filter(Boolean)
     .join(" · ");
-  const empty = tyresUnavailableText(entry);
+  // the block's own reason only when the game is known to send no tyre data (a frame without temperatures), never
+  // its "no car data yet" before the first frame (the grid of dashes says that)
+  const noTyreTemps = f != null && !(f.tyre_surface_temp_c ?? []).some(finite);
+  const tyresGone = ch?.tyres && ch.tyres.available === false && noTyreTemps ? ch.tyres.reason : null;
+  const empty = tyresUnavailableText(entry) ?? (tyresGone || null);
   return {
     chip,
+    chipTone: cold ? "warn" : "neutral",
     wheels,
     energy,
+    energyTone: tank?.tone === "warn" ? "warn" : "plain",
+    energyWarn: tank?.tone === "warn" && energy.startsWith(tank.text) ? tank.text : null,
+    temps: tempsLine(f, ch, !missing(entry, "brake_temps")),
+    slip: slipLine(slipSection(ch)),
     empty,
+    basis: empty || !showTemp ? null : tempBasis(th),
     caption: empty || !showTemp ? null : unavailableLine(entry, ["tyre_wear", "tyre_pressures"]),
   };
 }

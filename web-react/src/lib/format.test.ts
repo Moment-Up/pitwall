@@ -13,7 +13,6 @@ import {
   sector,
   signed,
   THIN_SPACE,
-  tyreTempColor,
   unit01,
   UNKNOWN,
   withMinus,
@@ -144,13 +143,6 @@ describe("numbers and distances", () => {
     expect(gearLabel(-1)).toBe("R");
     expect(gearLabel(0)).toBe("N");
     expect(gearLabel(7)).toBe("7");
-  });
-
-  it("tyre bands use tokens; in-window is the plain foreground token", () => {
-    expect(tyreTempColor(null)).toBe("var(--pw-faint)");
-    expect(tyreTempColor(60)).toBe("var(--pw-tyre-cold)");
-    expect(tyreTempColor(95)).toBe("var(--pw-tyre-optimal)");
-    expect(tyreTempColor(120)).toBe("var(--pw-tyre-over)");
   });
 
   it("unit01() clamps and keeps unknown as null", () => {

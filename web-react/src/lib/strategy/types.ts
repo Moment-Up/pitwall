@@ -93,6 +93,35 @@ export interface NeighbourStopView {
   traffic: boolean | null;
 }
 
+/** `pit.rejoin`: where the player would come out if they boxed now. The first five keys exist on every server; the
+ * rest come from strategy/rejoin.py (lane "health", "rejoin v2"): read only when `basis` is present, because the older
+ * rule silently dropped cars whose timing gap F1 25 had zeroed and was wrong on real races. */
+export interface RejoinView {
+  position: number | null;
+  gap_ahead_s: number | null;
+  gap_behind_s: number | null;
+  traffic: boolean | null;
+  game_position: number | null;
+  // --- health lane: rejoin v2 (all optional: absent from older servers) ---
+  /** "measured_loss": Pitwall's prediction from this race's pit loss; "estimated_loss": from the safety-car / VSC
+   * loss rule of thumb (loss_tier "heuristic"); "game_only": no stop measured yet, only the game's own figure
+   * (`position` is null). */
+  basis?: "measured_loss" | "estimated_loss" | "game_only" | string;
+  position_low?: number | null;
+  position_high?: number | null;
+  ahead_position?: number | null;
+  behind_position?: number | null;
+  road_ahead_s?: number | null;
+  road_behind_s?: number | null;
+  unknown_cars?: number | null;
+  /** The player is on the in-lap or in the pit lane: the last prediction made on track, held. */
+  frozen?: boolean;
+  loss_s?: number | null;
+  loss_tier?: Tier | null;
+  loss_n?: number | null;
+  // --- end health lane ---
+}
+
 export interface PitView {
   /** The game's count; null before the first timing tick (unknown, not 0). */
   stops_done: number | null;
@@ -111,13 +140,7 @@ export interface PitView {
   pit_loss: { median_s: number; range: Range; n: number } | null;
   pit_loss_sc: { full_s: number | null; virtual_s: number | null; tier: Tier } | null;
   pit_entry_m: number | null;
-  rejoin: {
-    position: number | null;
-    gap_ahead_s: number | null;
-    gap_behind_s: number | null;
-    traffic: boolean | null;
-    game_position: number | null;
-  } | null;
+  rejoin: RejoinView | null;
   undercut_ahead: CutView | null;
   undercut_threat: CutView | null;
   neighbour_stop: NeighbourStopView | null;

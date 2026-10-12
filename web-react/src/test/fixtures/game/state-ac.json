@@ -241,6 +241,20 @@
     ]
    },
    {
+    "id": "engine_temp",
+    "label": "Engine temperature",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Assetto Corsa",
+    "reason": "Assetto Corsa doesn't send engine temperature.",
+    "detail": "not sent (row ac_ps5)",
+    "note": null,
+    "fields": [
+     "engine_temp_c"
+    ]
+   },
+   {
     "id": "damage",
     "label": "Car damage",
     "group": "car",

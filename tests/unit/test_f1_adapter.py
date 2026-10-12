@@ -380,3 +380,31 @@ def test_synthetic_skeleton_round_trips_and_matches_lap_data_sectors(
 
 def test_marshal_zone_model_defaults() -> None:
     assert MarshalZone(0.5).flag is None and TrackZones().marshal_zones is None
+
+
+# --- health lane: engine temperature and the session's game settings ---------------------------------------------
+@pytest.mark.parametrize(("fmt", "raw"), [(2025, 260), (2026, 124)])
+def test_engine_temperature_is_mapped(fmt: int, raw: int) -> None:
+    """CarTelemetry.engineTemperature: uint16 in format 2025, uint8 in 2026 (spec); degrees C, never invented."""
+    sc = F1Scenario(packet_format=fmt)
+    (f,) = F1Adapter().decode(_telemetry_packet(sc, {"engineTemperature": raw, "speed": 100}), 1)
+    assert isinstance(f, CarFrame) and f.engine_temp_c == float(raw)
+
+
+@pytest.mark.parametrize("fmt", [2025, 2026])
+def test_session_game_settings_and_unknown_while_the_tail_is_unfilled(spec_doc: str, fmt: int) -> None:
+    unfilled = _decode_info(_spec_session_packet(spec_doc, fmt, _COMMON))  # gearboxAssist 0: the tail is unfilled
+    for key in ("tyre_temperature_model", "car_damage_setting", "low_fuel_mode", "pit_lane_tyre_sim"):
+        assert unfilled.extra[key] is None, key
+    settings = {"gearboxAssist": 3, "tyreTemperature": 1, "carDamage": 2, "lowFuelMode": 1, "pitLaneTyreSim": 0}
+    filled = _decode_info(_spec_session_packet(spec_doc, fmt, {**_COMMON, **settings}))
+    assert filled.extra["tyre_temperature_model"] == "surface_and_carcass"
+    assert (filled.extra["car_damage_setting"], filled.extra["low_fuel_mode"], filled.extra["pit_lane_tyre_sim"]) == (
+        2,
+        1,
+        0,
+    )
+    surface = _decode_info(_spec_session_packet(spec_doc, fmt, {**_COMMON, **settings, "tyreTemperature": 0}))
+    assert surface.extra["tyre_temperature_model"] == "surface"
+    odd = _decode_info(_spec_session_packet(spec_doc, fmt, {**_COMMON, **settings, "tyreTemperature": 7}))
+    assert odd.extra["tyre_temperature_model"] is None  # a value the spec does not define stays unknown

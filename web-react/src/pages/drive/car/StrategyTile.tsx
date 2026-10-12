@@ -8,7 +8,7 @@
 //   +1.8 s · closing 0.3/lap                           then the value across the tile (17 px numerals)
 //   Behind                                    DRS
 //   0.8 s · closing 0.2/lap
-//   Pit window                               OPEN
+//   Pit window · Box now ≈ P7 (P6–8)          OPEN      (health lane: where a stop now would rejoin, beside the label)
 //   L38-44 · best L41 (game)
 //   Undercut · Fuel · Weather (or Safety car under SC / VSC)
 //   L18 · Pit window is open: laps 18 to 22, best around 20.      (the newest call, verbatim: up to two lines, so
@@ -28,6 +28,8 @@ function Row({ r }: { r: StrategyRowView }) {
     <div className="pws-row" role="group" aria-label={r.aria} data-row={r.key} data-tone={r.tone} data-dim={r.dim ? "" : undefined}>
       <span className="pws-row__k" aria-hidden="true">
         {r.label}
+        {/* health lane: "Box now ≈ P7 (P6–8)", or a plain-words racecraft phrase; cut before the label is */}
+        {r.sub && <span className="pws-row__sub"> · {r.sub}</span>}
       </span>
       {r.tags.length > 0 && (
         <span className="pws-row__tags" aria-hidden="true">

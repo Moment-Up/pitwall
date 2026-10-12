@@ -27,7 +27,8 @@ said; this module decides what is worth saying:
   can use it. Lap messages expire ``LAP_MESSAGE_TTL_S`` after creation, a simple bound for "before
   the driver is well into the next lap". They carry ``lap_number`` and ``meta["lap_id"]``, so a later lap
   supersedes them and the scheduler's per-lap budget survives lap numbers restarting each session. Fuel calls are
-  race strategy's (``strategy.radio``): it is the only source of fuel alerts.
+  race strategy's (``strategy.radio``) for F1: it is the only source of F1 fuel alerts; car health
+  (``carhealth.radio``) calls tank-level fuel for Forza.
 
 * **The lap just finished, never "Lap N"** - a lap summary can only be said after the line, when the game's HUD
   (and the Drive header) already shows the next lap, so a bare "Lap 66, 1:13.897" sounds like the lap in progress.

@@ -12,6 +12,7 @@
 import type { Corner, Frame, LapSummary, Observation, Snapshot, TrackModel } from "../api";
 import type { LiveAiPace } from "../endpoints/review";
 import type { StrategyView } from "../strategy/types"; // race strategy (pitwall.strategy)
+import type { CarHealthView, RacecraftView } from "../carhealth/types"; // health lane (pitwall.carhealth)
 
 export type { LiveAiPace };
 import type { CoachrefBlock, ReferenceDescriptor } from "../endpoints/coachref";
@@ -128,6 +129,10 @@ export type FrameNext = Frame & {
   driver_status?: DriverStatus | null;
   /** model/telemetry.py FrameQuality bits (PAUSED 1<<2, REPLAY_OR_SPECTATING 1<<3, NOT_RACING 1<<6). */
   quality?: number | null;
+  // --- health lane (pitwall.carhealth) ---
+  /** F1 CarTelemetry engineTemperature (°C); absent on older servers, null for games that do not send it. */
+  engine_temp_c?: number | null;
+  // --- end health lane ---
 };
 
 /** D6 (coach/selection.py coach_block): what the radio picks for the latest compared lap under the seated
@@ -208,6 +213,15 @@ export interface SnapshotNext extends Snapshot {
    * through lib/strategy/view.ts snapStrategy(), which ignores unknown versions. */
   strategy?: StrategyView | null;
   // --- end race strategy ---
+  // --- health lane (pitwall.carhealth) ---
+  /** carhealth/view.py CarHealthView (lib/carhealth/types.ts); absent on servers without the car-health worker. A
+   * static key (lib/live.ts STATIC_KEYS): sent when it changed or with the static payload, null = none. Read it
+   * through lib/carhealth/view.ts snapCarHealth(), which ignores unknown versions and other sessions. */
+  car_health?: CarHealthView | null;
+  /** carhealth/racecraft.py RacecraftView: attack / defend per corner against the cars directly ahead and behind
+   * (F1 races; positions and corners only, no names). A static key like car_health. */
+  racecraft?: RacecraftView | null;
+  // --- end health lane ---
   /** coachref: the reference with its descriptor (who, which kind, labels); the four legacy keys are unchanged. */
   reference: LiveReference | null;
   /** coachref: the seated driver's reference choice and drill. Absent = a server without coachref. A kept key

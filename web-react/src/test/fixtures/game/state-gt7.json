@@ -179,7 +179,7 @@
     "status": "not_implemented",
     "evidence": null,
     "short": "Not in Pitwall yet",
-    "reason": "GT7 sends a fuel level, but sources disagree on its unit (litres or per cent), so Pitwall doesn't show fuel yet.",
+    "reason": "GT7 sends a fuel level, but none of your recordings shows it going down yet, so Pitwall doesn't estimate fuel.",
     "detail": "fuel_litres: 0x44 fuel level, unit conflicting (litres per PDTools, % per GT7Eng): not emitted until a capture settles it; SessionInfo.extra['fuel_fraction'] = level / capacity (row gt7)",
     "note": null,
     "fields": [
@@ -240,6 +240,20 @@
     "note": null,
     "fields": [
      "brake_temp_c"
+    ]
+   },
+   {
+    "id": "engine_temp",
+    "label": "Engine temperature",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by GT7",
+    "reason": "GT7 doesn't send engine temperature.",
+    "detail": "0x58/0x5C water/oil are constants 85/110 (not simulated) (row gt7_ps5)",
+    "note": null,
+    "fields": [
+     "engine_temp_c"
     ]
    },
    {

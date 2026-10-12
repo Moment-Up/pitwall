@@ -1,0 +1,153 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "F1 25 race, lap 2: pit exit 20 s ago on new softs, carcass model on, ABS off, TC medium",
+  "notes": "The spec's CarHealthView example; the cold figures mirror the F2 Jeddah stop (inside about 47 C against warm laps of about 87 C). Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": "s1",
+ "game": "f1_25",
+ "synthetic": false,
+ "tyres": {
+  "available": true,
+  "model": "carcass",
+  "compound": "soft",
+  "state": "cold",
+  "since": {
+   "lap": 2,
+   "reason": "pit_exit"
+  },
+  "index_c": 47.0,
+  "baseline_c": 87.5,
+  "baseline_source": "previous_stint",
+  "wheels": [
+   {
+    "wheel": "FL",
+    "band": "cold",
+    "window_c": 46.0,
+    "lap_median_c": 44.0,
+    "baseline_c": 86.0,
+    "pressure_psi": 19.5,
+    "wear_pct": 2.0
+   },
+   {
+    "wheel": "FR",
+    "band": "cold",
+    "window_c": 45.0,
+    "lap_median_c": 43.0,
+    "baseline_c": 87.0,
+    "pressure_psi": 19.5,
+    "wear_pct": 2.0
+   },
+   {
+    "wheel": "RL",
+    "band": "cold",
+    "window_c": 48.0,
+    "lap_median_c": 46.0,
+    "baseline_c": 88.0,
+    "pressure_psi": 18.2,
+    "wear_pct": 1.0
+   },
+   {
+    "wheel": "RR",
+    "band": "cold",
+    "window_c": 49.0,
+    "lap_median_c": 47.0,
+    "baseline_c": 89.0,
+    "pressure_psi": 18.2,
+    "wear_pct": 1.0
+   }
+  ],
+  "note": null,
+  "tier": "heuristic"
+ },
+ "brakes": {
+  "available": true,
+  "last_lap_max_c": [
+   982,
+   979,
+   961,
+   960
+  ],
+  "baseline_max_c": [
+   975,
+   972,
+   955,
+   954
+  ],
+  "word": "normal",
+  "reason": null
+ },
+ "engine": {
+  "available": true,
+  "lap_median_c": 124.0,
+  "baseline_c": 123.0,
+  "max_c": 127.0,
+  "word": "steady",
+  "reason": null
+ },
+ "slip": {
+  "available": true,
+  "abs": false,
+  "tc": 1,
+  "lockups_applicable": true,
+  "last_lap": {
+   "lap": 1,
+   "lockups": 3,
+   "lockup_s": 1.9,
+   "wheelspin": 4,
+   "wheelspin_s": 1.6,
+   "corners": [
+    {
+     "corner": "T1",
+     "text": "Turn 1",
+     "lockups": 2,
+     "wheelspin": 0
+    }
+   ]
+  },
+  "current": {
+   "lap": 2,
+   "lockups": 1,
+   "wheelspin": 0
+  },
+  "session": {
+   "laps": 1,
+   "lockups": 3,
+   "wheelspin": 4
+  },
+  "reason": null
+ },
+ "fuel": null,
+ "calls": [
+  {
+   "id": "hc-tyres_cold-2-1",
+   "topic": "tyres_cold",
+   "level": "normal",
+   "text": "New tyres are cold: give them a lap or two before you push.",
+   "text_simple": "Your tyres are cold, so there's less grip. Take the first corners gently.",
+   "lap": 2,
+   "t_unix": 1760000000,
+   "ttl_s": 40
+  }
+ ],
+ "thresholds": [
+  {
+   "name": "COLD_DROP_CARCASS_C",
+   "value": 20.0,
+   "unit": "C",
+   "heuristic": true,
+   "meaning": "cold when the inside temperature is this far under your warm laps",
+   "evidence": "F2 Jeddah/Bahrain PS5 2026-10-11"
+  },
+  {
+   "name": "WARM_DROP_CARCASS_C",
+   "value": 8.0,
+   "unit": "C",
+   "heuristic": true,
+   "meaning": "warm again within this of your warm laps",
+   "evidence": "F2 Jeddah/Bahrain PS5 2026-10-11"
+  }
+ ]
+}

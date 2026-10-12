@@ -15,6 +15,6 @@ the live ingest path, and nothing is persisted (results are worked out on reques
 
 Thresholds (``thresholds``) are labelled heuristic where they are; the API returns them with every result.
 Evidence tiers: line and inputs are recorded-tested (F1 PS5), balance and wheelspin recorded-tested (F1 MotionEx),
-lock-ups synthetic only (every real capture had ABS on), setup suggestions unit/synthetic. Nothing is
-live-validated.
+lock-ups recorded (F2 Bahrain on PS5 with ABS off: 50 lock-ups in 9 laps at slip -1.0; the earlier captures all had
+ABS on), setup suggestions unit/synthetic. Nothing is live-validated.
 """

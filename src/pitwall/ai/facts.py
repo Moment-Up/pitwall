@@ -37,6 +37,7 @@ from pitwall.analysis.laps import LapFlag
 from pitwall.analysis.strategy import fuel_estimate, pit_window, tyre_estimate
 from pitwall.analysis.track import TrackModel
 from pitwall.analysis.track_identity import corner_texts, resolve_corner_ref
+from pitwall.carhealth.facts import add_car_health_facts  # --- health lane ---
 from pitwall.carsetup.facts import session_setup_facts
 from pitwall.coach.reference_wording import lap_date
 from pitwall.core.session_analysis import SessionAnalysis
@@ -688,6 +689,7 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     # per-lap estimates are the facts.
     legacy = FactSheet() if add_strategy_facts(fs, (live or {}).get("strategy")) else fs
     # --- end race strategy ---
+    health = add_car_health_facts(fs, live)  # --- health lane --- tyre temps, brakes, engine, slip, fuel, racecraft
     frame = (live or {}).get("frame") or {}
     total_laps = (live or {}).get("session", {}) or {}
     total = total_laps.get("total_laps") if isinstance(total_laps, dict) else None
@@ -706,6 +708,8 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
         if fe.game_estimate_laps is not None:
             txt += f"; the game's own fuel figure (in-car display) is {fe.game_estimate_laps:+.1f} laps"
         legacy.add("fuel", txt + ".", asdict(fe))
+    elif "fuel_fraction" in health:  # --- health lane --- the tank-level fuel fact says it
+        pass
     elif entry is None or entry.feature("fuel").available:  # a game that never sends fuel has a "game" fact instead
         legacy.add("fuel", "Fuel usage per lap is not yet known (needs at least one complete green lap).")
     te = tyre_estimate(sa.laps)
@@ -737,7 +741,7 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     if isinstance(ers, int | float) and not isinstance(ers, bool):
         fs.add("ers", f"ERS store {ers / 1e6:.1f} MJ.", {"ers_store_mj": round(ers / 1e6, 1)})
     temps = frame.get("tyre_surface_temp_c")
-    if temps:
+    if temps and "tyre_temps" not in health:  # --- health lane --- its fact judges them against the warm laps
         fs.add(
             "tyres",
             f"Current tyre surface temps FL {temps[0]:.0f} C, FR {temps[1]:.0f} C, "

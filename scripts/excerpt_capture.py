@@ -9,6 +9,9 @@ between them are an artefact of excerpting, not of the game.
 
 Window bounds are seconds from the first packet in the source capture. ``--game-hint`` names the game in the
 metadata when the source does not (a live UDP capture does not know which game sent it; GT7 excerpts: ``gt7``).
+``--f1-packet-id`` (repeatable; F1 captures only) keeps only those F1 packet types, each packet still byte-for-byte:
+for a fixture that needs a long stretch of a few packet types (car health: Session, LapData, Event, CarTelemetry).
+The kept ids are recorded in the metadata.
 """
 
 from __future__ import annotations
@@ -34,7 +37,9 @@ def main() -> None:
     ap.add_argument("--description", default="")
     ap.add_argument("--game-hint", default=None, help="the game, when the source's metadata does not name it")
     ap.add_argument("--level", type=int, default=19)
+    ap.add_argument("--f1-packet-id", type=int, action="append", default=None, help="keep only these F1 packet ids")
     a = ap.parse_args()
+    keep_ids = None if a.f1_packet_id is None else frozenset(a.f1_packet_id)
 
     reader = CaptureReader(a.source)
     if reader.meta.synthetic:
@@ -51,6 +56,7 @@ def main() -> None:
             "excerpt_of": a.source.name,
             "excerpt_windows_s": [list(w) for w in windows],
             "note": "gaps between windows are excerpt artefacts, not game behaviour",
+            **({} if keep_ids is None else {"f1_packet_ids_kept": sorted(keep_ids)}),
         },
     )
     t0: int | None = None
@@ -59,6 +65,8 @@ def main() -> None:
         for pk in reader:
             t0 = pk.t_recv_ns if t0 is None else t0
             t = (pk.t_recv_ns - t0) / 1e9
+            if keep_ids is not None and (len(pk.data) < 7 or pk.data[6] not in keep_ids):
+                continue  # F1 header: byte 6 is m_packetId
             if any(lo <= t < hi for lo, hi in windows):
                 w.write(pk.t_recv_ns, pk.src_port, pk.data)
                 kept += 1

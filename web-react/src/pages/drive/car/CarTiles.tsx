@@ -4,8 +4,10 @@
 //
 //   Car (4)             speed · gear · RPM · throttle · brake · steering · bias · DRS · telemetry health
 //   Track (5)           TrackMap: sectors as set (D1), car, next corner, focus rings, brake notches, live yellows
-//   Tyres & energy (3)  FL FR / RL RR surface temperature (band colour + word), wear · pressure; fuel, ERS (what the
-//                       game does not send in words: one line for no tyre data, a caption for no wear / pressures)
+//   Tyres & energy (3)  FL FR / RL RR temperature (inside with the carcass model, else surface; colour + word against
+//                       the driver's own warm laps, health lane), wear · pressure; fuel, ERS; brakes · engine; the last
+//                       lap's lock-ups and wheelspin (what the game does not send in words: one line for no tyre data,
+//                       a caption for no wear / pressures)
 //   Inputs (4)          LiveTrace: speed / throttle / brake, last 12 s, canvas at 10 Hz
 //   Laps (5)            Pro DataGrid, 8 newest by current standing, R / PIT / INV; two-line rows below 600 px
 //   Coaching (3)        Pro ListView, up to 3 points of the last lap: corner chip, text, time in the corner
@@ -143,6 +145,29 @@ export function MapTile({ model, skeleton, lengthM, view, outline, prior, raceCo
 
 // ----------------------------------------------------------------------------------------------------- tyres
 
+/** The energy line; (health lane) low tank fuel is amber, its words first ("Fuel low: ≈ 2 laps (tank level)"). */
+function Energy({ v }: { v: TyresView }) {
+  if (!v.energyWarn) return <span>{v.energy}</span>;
+  return (
+    <span>
+      <span data-tone="warn">{v.energyWarn}</span>
+      {v.energy.slice(v.energyWarn.length)}
+    </span>
+  );
+}
+
+/** The foot: energy, then (health lane) brakes and engine, then the last lap's lock-ups and wheelspin, one per line. */
+function TyresFoot({ v }: { v: TyresView }) {
+  if (!v.temps && !v.slip) return <Energy v={v} />;
+  return (
+    <span className="pww-tyres__foot">
+      <Energy v={v} />
+      {v.temps && <span>{v.temps}</span>}
+      {v.slip && <span>{v.slip}</span>}
+    </span>
+  );
+}
+
 export const TyresTile = memo(function TyresTile({ v }: { v: TyresView }) {
   return (
     <Tile
@@ -150,12 +175,13 @@ export const TyresTile = memo(function TyresTile({ v }: { v: TyresView }) {
       title="Tyres & energy"
       aside={
         v.chip ? (
-          <Chip size="sm" variant="soft">
+          // health lane: "Cold tyres" is amber with its words (colour is never the only signal)
+          <Chip size="sm" variant="soft" color={v.chipTone === "warn" ? "warning" : undefined}>
             <Chip.Label>{v.chip}</Chip.Label>
           </Chip>
         ) : undefined
       }
-      foot={v.energy}
+      foot={<TyresFoot v={v} />}
       footWrap
     >
       {v.empty ? (
@@ -180,6 +206,7 @@ export const TyresTile = memo(function TyresTile({ v }: { v: TyresView }) {
           ))}
         </div>
       )}
+      {!v.empty && v.basis && <p className="pww-tyres__caption">{v.basis}</p>}
       {!v.empty && v.caption && <p className="pww-tyres__caption">{v.caption}</p>}
     </Tile>
   );

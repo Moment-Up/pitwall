@@ -204,6 +204,7 @@ FEATURES: tuple[FeatureDef, ...] = (
     FeatureDef("tyre_wear", "Tyre wear", "car", "tyre wear", ("tyre_wear_pct",)),
     FeatureDef("tyre_pressures", "Tyre pressures", "car", "tyre pressures", ("tyre_pressure_psi",)),
     FeatureDef("brake_temps", "Brake temperatures", "car", "brake temperatures", ("brake_temp_c",)),
+    FeatureDef("engine_temp", "Engine temperature", "car", "engine temperature", ("engine_temp_c",)),  # health lane
     FeatureDef("damage", "Car damage", "car", "damage", ("damage",)),
     FeatureDef("ers", "ERS / hybrid", "car", "ERS", ("ers_store_j",)),
     FeatureDef("drs", "DRS", "car", "DRS", ("drs_open",)),
@@ -246,21 +247,29 @@ DISTANCE_REASON: dict[str, str] = {
     "ac": "Assetto Corsa sends no lap distance: Pitwall works it out from the track position once the track length "
     "is known (your first full lap measures it).",
 }
-_FORZA_FUEL = "Forza sends only how full the tank is, not its size, so Pitwall doesn't show fuel yet."
+# --- health lane: Forza fuel is laps of fuel from how fast the tank level falls (carhealth.fuel); GT7 stays off until
+# a recording shows its level falling (all four owner captures read 100 / 100: no fuel used)
+FORZA_FUEL_GAMES = frozenset({"forza_motorsport", "forza_horizon"})
+FORZA_FUEL_REASON = (
+    "Forza sends only how full the tank is, so Pitwall works out laps of fuel from how fast the level falls; "
+    "no litres or kilos."
+)
+FORZA_FUEL_DETAIL = (
+    "SessionInfo.extra['fuel_fraction'] (Dash.Fuel 0..1, community docs) -> carhealth.fuel.TankFractionFuel"
+)
+GT7_FUEL_REASON = (
+    "GT7 sends a fuel level, but none of your recordings shows it going down yet, so Pitwall doesn't estimate fuel."
+)
+# --- end health lane ---
 NOT_IMPLEMENTED: dict[tuple[str, str], str] = {
     ("f1_25", "damage"): "F1 25 sends car damage, but Pitwall reads only tyre wear from it so far.",
-    ("gt7", "fuel"): "GT7 sends a fuel level, but sources disagree on its unit (litres or per cent), so Pitwall "
-    "doesn't show fuel yet.",
-    ("forza_motorsport", "fuel"): _FORZA_FUEL,
-    ("forza_horizon", "fuel"): _FORZA_FUEL,
+    ("gt7", "fuel"): GT7_FUEL_REASON,  # health lane (carhealth.thresholds.GT7_FUEL_ENABLED)
     ("gt7", "ers"): "GT7 may send an energy-recovery value of unknown units; Pitwall doesn't read it.",
     ("gt7", "setup_telemetry"): "GT7 sends only its gear ratios, not the rest of its car setup, and Pitwall doesn't "
     "read them as a setup.",
 }
 NOT_IMPLEMENTED_FIELD: dict[tuple[str, str], str] = {  # (adapter_game, feature) -> the field whose source is the detail
     ("gt7", "fuel"): "fuel_litres",
-    ("forza_motorsport", "fuel"): "fuel_kg",
-    ("forza_horizon", "fuel"): "fuel_kg",
     ("gt7", "ers"): "ers_store_j",
     ("gt7", "setup_telemetry"): "setup",
 }
@@ -704,6 +713,23 @@ def _feature(e: GameEntry, fd: FeatureDef, level: SupportLevel | None) -> GameFe
             "Not in Pitwall yet",
             f"Pitwall's official corner names {which}; {name} corners are numbered from your laps.",
             "no hand-checked track sheet for this game (analysis.track_identity.load_sheets)" + _row_tag(e),
+        )
+    if fd.id == "fuel" and ag in FORZA_FUEL_GAMES:  # health lane: laps of fuel from how fast the tank level falls
+        if level is S.UNVERIFIED:  # as step 6: nothing is known about this platform's telemetry
+            return make(
+                "unknown",
+                "Unknown",
+                f"Not known whether {name} on {e.platform_label} sends any telemetry.",
+                f"{row.notes}{_row_tag(e)}",
+            )
+        return make(
+            "partial",
+            "Partial",
+            FORZA_FUEL_REASON,
+            FORZA_FUEL_DETAIL + _row_tag(e),
+            weakest(level, S.COMMUNITY_DOCUMENTED),
+            None,
+            (),
         )
     if fd.id == "setup_recommendations":
         if ag in setup_games():
@@ -1375,6 +1401,12 @@ INTENT_FEATURES: dict[str, tuple[str, ...]] = {
     "gaps": ("field_data",),  # gaps and race position need the other cars' timing
     "weather": ("weather",),
     "setup": ("setup_telemetry", "setup_recommendations"),
+    # --- health lane ---
+    "car_health": ("tyre_temps", "brake_temps", "engine_temp"),
+    "rejoin": ("field_data",),
+    "attack": ("field_data",),
+    "defend": ("field_data",),
+    # --- end health lane ---
 }
 CAPABILITY_ONLY_INTENTS: frozenset[str] = frozenset(INTENT_FEATURES) - {"setup"}  # setup: technique first
 

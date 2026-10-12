@@ -93,6 +93,21 @@ class StrategySink(Protocol):
     def end_session(self, session_id: str) -> None: ...
 
 
+# --- health lane (pitwall.carhealth) ---
+class HealthSink(Protocol):
+    """Where the car health inputs go (``pitwall.carhealth.worker.CarHealthWorker``): O(1), never blocks ingest.
+    ``wants_field`` is a plain bool (True only in F1 races): field samples are handed over only then."""
+
+    wants_field: bool
+
+    def submit(self, session_id: str, item: Emitted) -> bool: ...
+
+    def end_session(self, session_id: str) -> None: ...
+
+
+# --- end health lane ---
+
+
 class SessionManager:
     def __init__(
         self,
@@ -107,11 +122,13 @@ class SessionManager:
         resume_candidate: Mapping[str, Any] | None = None,
         field: FieldSink | None = None,
         strategy: StrategySink | None = None,
+        health: HealthSink | None = None,  # --- health lane ---
     ) -> None:
         self.writer = writer
         self.live = live
         self.field = field  # layer L0b: the field model learns the track from the other cars (off this thread)
         self.strategy = strategy  # race strategy (pitwall.strategy): runs off this thread
+        self.health = health  # --- health lane --- car health (pitwall.carhealth): runs off this thread
         self.worker = worker
         self.source = source
         self.synthetic = synthetic
@@ -195,6 +212,8 @@ class SessionManager:
             self.field.end_session()
         if self.strategy is not None:  # race strategy (pitwall.strategy)
             self.strategy.end_session(sid)
+        if self.health is not None:  # --- health lane --- per-car buffers go with the session (privacy)
+            self.health.end_session(sid)
         log.info("session %s ended", sid)
         self.session_id = None
         self._game_uid = None
@@ -206,6 +225,11 @@ class SessionManager:
             # never persisted. Straight to the field worker (a lock-free append) or nowhere.
             if self.field is not None:
                 self.field.submit(e)
+            # --- health lane: attack / defend (F1 races only; one attribute load otherwise) ---
+            h = self.health
+            if h is not None and h.wants_field and self.session_id is not None:
+                h.submit(self.session_id, e)
+            # --- end health lane ---
             return
         if isinstance(e, CarLapHistory):
             # A car's lap list (pace vs AI): never starts a session or counts as activity; O(1) dict store.
@@ -217,6 +241,10 @@ class SessionManager:
             # session and are never persisted as such - a lock-free append to the strategy worker, or nowhere
             if self.strategy is not None and self.session_id is not None:
                 self.strategy.submit(self.session_id, e)
+            # --- health lane: race positions for attack / defend ---
+            if isinstance(e, RaceTiming) and self.health is not None and self.session_id is not None:
+                self.health.submit(self.session_id, e)
+            # --- end health lane ---
             return
         self._last_t_ns = e.t_recv_ns
         if self.drivers is not None:
@@ -226,6 +254,7 @@ class SessionManager:
         if isinstance(e, SessionInfo):
             self._on_session(e)
             self._to_strategy(e)
+            self._to_health(e)  # --- health lane ---
             return
         if isinstance(e, GameEvent) and self.session_id is None:
             # menus send button events with no session: drive PTT but don't create an empty session
@@ -251,6 +280,7 @@ class SessionManager:
             self.writer.submit(lambda c: repo.insert_setup(c, sid, e))
         if not isinstance(e, CarSetup):
             self._to_strategy(e)
+            self._to_health(e)  # --- health lane ---
 
     def _to_strategy(self, e: Emitted) -> None:
         """Race strategy (pitwall.strategy): the player's frames, laps, events and session info, after the session
@@ -264,6 +294,21 @@ class SessionManager:
         if isinstance(e, GameEvent) and e.kind == EventKind.BUTTON:
             return
         self.strategy.submit(sid, e)
+
+    # --- health lane ---
+    def _to_health(self, e: Emitted) -> None:
+        """Car health (pitwall.carhealth): the player's frames, laps, events and session info, as ``_to_strategy``
+        (one deque append; button events stay out)."""
+        sid = self.session_id
+        if self.health is None or sid is None:
+            return
+        if not isinstance(e, CarFrame | LapCompletion | SessionInfo | GameEvent):
+            return
+        if isinstance(e, GameEvent) and e.kind == EventKind.BUTTON:
+            return
+        self.health.submit(sid, e)
+
+    # --- end health lane ---
 
     def _on_session(self, info: SessionInfo) -> None:
         uid = info.session_uid

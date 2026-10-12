@@ -1,0 +1,12 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "lane spec 3.12",
+  "moment": "GET /api/car-health/settings, the defaults",
+  "notes": "Spec 3.12 defaults. Test data, not game data: the backend has not produced this block yet."
+ },
+ "tyre_calls": true,
+ "wear_calls": true,
+ "fuel_calls": true,
+ "slip_calls": "detailed"
+}

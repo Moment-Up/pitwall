@@ -1,0 +1,240 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from strategy edited-live-race-window-open and lane spec 3.6",
+  "moment": "race, lap 20 of 30, P6: pit window open; boxing now rejoins around P11 (P10-12), game says P10",
+  "notes": "strategy edited-live-race-window-open with pit.rejoin in the rejoin v2 shape (lane spec 3.6). Test data, not game data: the backend has not produced this block yet.",
+  "edits": [
+   "pit.rejoin: rejoin v2 keys (basis, range, neighbours, road traffic, loss)"
+  ]
+ },
+ "version": 1,
+ "mode": "race",
+ "reason": null,
+ "session_id": "s1",
+ "synthetic": false,
+ "lap": 20,
+ "total_laps": 30,
+ "laps_remaining": 10.4,
+ "position": 6,
+ "cars": 20,
+ "gaps": {
+  "ahead": {
+   "car_index": 7,
+   "gap_s": 1.8,
+   "settled": true,
+   "trend_s_per_lap": -0.3,
+   "trend_laps": 5,
+   "laps_to_1s": 2.7,
+   "within_1s": false,
+   "drs_range": false,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": {
+    "compound": "soft",
+    "age_laps": 19
+   }
+  },
+  "behind": {
+   "car_index": 14,
+   "gap_s": 0.8,
+   "settled": true,
+   "trend_s_per_lap": -0.2,
+   "trend_laps": 4,
+   "laps_to_1s": null,
+   "within_1s": true,
+   "drs_range": true,
+   "stops": 0,
+   "in_pit": false,
+   "tyre": {
+    "compound": "soft",
+    "age_laps": 19
+   }
+  },
+  "leader_s": 14.2,
+  "note": null
+ },
+ "tyres": {
+  "compound": "soft",
+  "age_laps": 19,
+  "stint_laps": 19,
+  "wear_pct": [
+   44,
+   49,
+   41,
+   43
+  ],
+  "limiting_wheel": "FR",
+  "rate_pct_per_lap": 2.6,
+  "rate_range": {
+   "low": 2.5,
+   "high": 2.7
+  },
+  "limit_pct": 70,
+  "laps_to_limit": {
+   "low": 7.8,
+   "high": 8.4
+  },
+  "enough_laps": true,
+  "note": null,
+  "game_laps_left": 2,
+  "game_usable_life": 21,
+  "new_set": {
+   "compound": "medium",
+   "gain_s": 0.9,
+   "deg_s_per_lap": 0.08,
+   "tier": "game"
+  }
+ },
+ "fuel": {
+  "fuel_kg": 14.7,
+  "per_lap_kg": 1.39,
+  "laps_used": 17,
+  "margin_laps": 0.2,
+  "margin_kg": 0.28,
+  "game_margin_laps": 0.1,
+  "status": "tight",
+  "lift_coast": null,
+  "burn_model": null
+ },
+ "pit": {
+  "stops_done": 0,
+  "stop_needed": true,
+  "two_stops": false,
+  "window": {
+   "open_lap": 18,
+   "close_lap": 22,
+   "ideal_lap": 20,
+   "close_source": "game",
+   "tier": "game"
+  },
+  "game_window": {
+   "ideal_lap": 19,
+   "latest_lap": 22
+  },
+  "pit_loss": {
+   "median_s": 19.2,
+   "range": {
+    "low": 18.6,
+    "high": 20.1
+   },
+   "n": 3
+  },
+  "pit_loss_sc": {
+   "full_s": 9.6,
+   "virtual_s": 11.5,
+   "tier": "heuristic"
+  },
+  "pit_entry_m": 5480,
+  "rejoin": {
+   "position": 11,
+   "gap_ahead_s": 0.6,
+   "gap_behind_s": 2.4,
+   "traffic": true,
+   "game_position": 10,
+   "position_low": 10,
+   "position_high": 12,
+   "ahead_position": 10,
+   "behind_position": 12,
+   "road_ahead_s": 0.6,
+   "road_behind_s": null,
+   "unknown_cars": 0,
+   "frozen": false,
+   "loss_s": 22.4,
+   "loss_tier": "measured",
+   "loss_n": 3,
+   "basis": "measured_loss"
+  },
+  "undercut_ahead": {
+   "status": "marginal",
+   "gap_s": 1.8,
+   "gain": {
+    "low": 0.63,
+    "high": 0.9
+   },
+   "reason": "gap 1.8 s against new tyres worth 0.6-0.9 s a lap; rejoins in traffic",
+   "tier": "game"
+  },
+  "undercut_threat": {
+   "status": "likely",
+   "gap_s": 0.8,
+   "gain": {
+    "low": 0.63,
+    "high": 0.9
+   },
+   "reason": "gap 0.8 s against new tyres worth 0.6-0.9 s a lap, assuming similar tyres",
+   "tier": "game"
+  },
+  "neighbour_stop": null,
+  "note": null
+ },
+ "safety_car": {
+  "status": "none",
+  "since_lap": null,
+  "box": null
+ },
+ "weather": {
+  "now": "clear",
+  "rain_pct": 3,
+  "track_temp_c": 41,
+  "accuracy": "perfect",
+  "forecast": [
+   {
+    "in_min": 0,
+    "weather": "clear",
+    "rain_pct": 3,
+    "in_laps": 0
+   },
+   {
+    "in_min": 5,
+    "weather": "clear",
+    "rain_pct": 2,
+    "in_laps": 3
+   },
+   {
+    "in_min": 10,
+    "weather": "light_cloud",
+    "rain_pct": 4,
+    "in_laps": 7
+   },
+   {
+    "in_min": 15,
+    "weather": "light_cloud",
+    "rain_pct": 5,
+    "in_laps": 10
+   },
+   {
+    "in_min": 30,
+    "weather": "clear",
+    "rain_pct": 2,
+    "in_laps": 21
+   }
+  ],
+  "next_change": null,
+  "crossover": null
+ },
+ "calls": [
+  {
+   "id": "c19-gap",
+   "topic": "gap",
+   "level": "detailed",
+   "text": "Car behind is within a second, DRS range.",
+   "text_simple": "Car close behind you.",
+   "audience": "all",
+   "lap": 19,
+   "t_unix": 1791700120.0,
+   "ttl_s": 20.0
+  },
+  {
+   "id": "c18-win",
+   "topic": "pit_window",
+   "level": "normal",
+   "text": "Pit window is open: laps 18 to 22, best around 20.",
+   "text_simple": "Pit stop window open: any lap from 18 to 22, best lap 20.",
+   "audience": "all",
+   "lap": 18,
+   "t_unix": 1791700030.0,
+   "ttl_s": 90.0
+  }
+ ]
+}

@@ -182,6 +182,24 @@ def _strategy_first(
     return phrase
 
 
+# --- health lane ---
+def _health_first(intent: str, fallback: Callable[[FactSheet], str | None] | None) -> Callable[[FactSheet], str | None]:
+    """Car health's instant answer (``carhealth.phrasing``) when the sheet has its facts, else ``fallback``."""
+
+    def phrase(sheet: FactSheet) -> str | None:
+        from pitwall.carhealth.phrasing import health_radio_answer
+
+        short = health_radio_answer(intent, sheet)
+        if short is not None:
+            return short
+        return fallback(sheet) if fallback is not None else None
+
+    return phrase
+
+
+# --- end health lane ---
+
+
 # One explicit table (plan 4.5): race strategy for the race questions (the safety car: strategy's box-or-stay call,
 # else the flags now), then pace vs AI, then the game's capability sentence for data it never sends. An intent with
 # no phrasing here (or a phrasing with nothing to say) is answered with ``engineer.deterministic_answer``.
@@ -198,6 +216,12 @@ PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
     "ai_pace": ai_pace,
     "ai_level": ai_level,
     **{g: capability(g) for g in ("damage", "ers", "sectors")},
+    # --- health lane: car health and attack / defend (carhealth.phrasing), rejoin (strategy.phrasing) ---
+    "car_health": _health_first("car_health", capability("car_health")),
+    "attack": _health_first("attack", capability("attack")),
+    "defend": _health_first("defend", capability("defend")),
+    "rejoin": _strategy_first("rejoin", capability("rejoin")),
+    # --- end health lane ---
 }
 
 
@@ -210,6 +234,18 @@ def radio_answer(intent: str, sheet: FactSheet, question: str | None = None) -> 
         said = strategy_position_answer(sheet)
         if said is not None:
             return said
+    # --- health lane: the question decides which temperature leads ("how are my brakes?" / "are my tyres cold?")
+    if intent == "car_health":
+        from pitwall.carhealth.phrasing import health_radio_answer
+
+        said = health_radio_answer(intent, sheet, question)
+        if said is not None:
+            return said
+    if intent == "tyres":
+        from pitwall.carhealth.phrasing import tyres_answer
+
+        return tyres_answer(sheet, question, PHRASERS["tyres"])
+    # --- end health lane ---
     fn = PHRASERS.get(intent)
     return fn(sheet) if fn else None
 

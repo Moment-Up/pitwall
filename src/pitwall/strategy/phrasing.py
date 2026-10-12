@@ -14,7 +14,7 @@ from pitwall.strategy.facts import SRC
 if TYPE_CHECKING:
     from pitwall.ai.facts import Fact, FactSheet
 
-INTENTS = frozenset({"strategy", "gaps", "fuel", "tyres", "weather", "safety_car"})
+INTENTS = frozenset({"strategy", "gaps", "fuel", "tyres", "weather", "safety_car", "rejoin"})  # rejoin: health lane
 
 
 def _facts(sheet: FactSheet) -> dict[str, Fact]:
@@ -39,12 +39,22 @@ def strategy_position_answer(sheet: FactSheet) -> str | None:
     return _say(pos, k.get("gap_ahead"))
 
 
+def _beginner(sheet: FactSheet) -> bool:
+    """The seated driver is a beginner (session fact ``skill_level``): their profile asks for simple wording."""
+    return any(f.topic == "session" and f.data.get("skill_level") == "beginner" for f in sheet.facts)
+
+
 def strategy_radio_answer(intent: str, sheet: FactSheet) -> str | None:
     if intent not in INTENTS:
         return None
     k = _facts(sheet)
     if not k:
         return None
+    if intent == "rejoin":  # --- health lane: "where will I come out?" ---
+        rj = k.get("rejoin")
+        if rj is not None and _beginner(sheet) and isinstance(rj.data.get("simple"), str):
+            return str(rj.data["simple"])
+        return _say(rj or k.get("rejoin_unknown"))
     if intent == "strategy":
         if "practice" in k:
             return _say(k["practice"], k.get("tyres"))

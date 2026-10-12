@@ -193,6 +193,11 @@
   --chip-bg: color-mix(in oklab, var(--success) 18%, var(--surface));
   --chip-fg: var(--success);
 }
+/* health lane: TYRES COLD (6 s after the tyres_cold call, amber like Drive › Car's "Cold tyres" chip, no animation). */
+.pwc-incident[data-kind="tyres_cold"] {
+  --chip-bg: color-mix(in oklab, var(--warning) 18%, var(--surface));
+  --chip-fg: var(--warning);
+}
 .pwc-wakechip {
   --chip-bg: color-mix(in oklab, var(--warning) 15%, transparent);
   --chip-fg: var(--warning);

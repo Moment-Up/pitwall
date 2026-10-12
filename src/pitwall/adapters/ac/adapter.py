@@ -325,6 +325,7 @@ AC_INFO = AdapterInfo(
         "tyre_pressure_psi": FieldSupport(_U, "not in RTCarInfo"),
         "tyre_wear_pct": FieldSupport(_U, "not in RTCarInfo"),
         "brake_temp_c": FieldSupport(_U, "not in RTCarInfo"),
+        "engine_temp_c": FieldSupport(_U, "not sent"),  # health lane
         "fuel_kg": FieldSupport(_U, "not in RTCarInfo"),
         "fuel_litres": FieldSupport(_U, "not in RTCarInfo"),
         "sector": FieldSupport(_U, "no sector data"),

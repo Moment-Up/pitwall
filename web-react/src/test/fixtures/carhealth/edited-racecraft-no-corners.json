@@ -1,0 +1,15 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "hand-built from the lane spec's JSON contract (3.11)",
+  "moment": "F1 25 race, lap 1: corners not learned yet",
+  "notes": "No comparison without the track's corners. Test data, not game data: the backend has not produced this block yet."
+ },
+ "version": 1,
+ "session_id": "s1",
+ "mode": "race",
+ "reason": "corners not learned yet",
+ "corners_source": null,
+ "ahead": null,
+ "behind": null
+}

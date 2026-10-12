@@ -290,7 +290,7 @@ circuits; `tests/recorded/test_gt7_ps5_real.py` pins excerpts of them) are given
    left positive - it agreed with the variant C road-wheel angles on 22,643 of 22,643 packets (road wheel = 0.068 x
    0x128 on 3 cars, a 1:14.7 ratio) - but 0x128 is clamped at exactly ±π while the road wheels keep turning. The
    sway/heave/surge units are still unknown.
-5. Fuel units for EVs and for cars whose capacity is not 100. **Open:** 100 / 100 in every packet (no fuel used).
+5. Fuel units for EVs and for cars whose capacity is not 100. **Open:** 100 / 100 in every packet (no fuel used). Still 100 / 100 on all 4 owner captures (2026-10-12), so Pitwall keeps GT7 fuel off (`carhealth.thresholds.GT7_FUEL_ENABLED`) until a recorded race with fuel consumption on, 5+ laps and a refuelling stop shows the level falling on every green lap (per-lap use within 10 %) and the refuel as a rise.
 6. The actual heartbeat timeout: stop the heartbeat and count packets until the stream stops. **Open.**
 
 Other facts of the same captures: the speed at 0x4C is the size of the velocity's component along the car's

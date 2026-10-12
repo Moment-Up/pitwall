@@ -53,6 +53,13 @@ class _Appends:
         self.ended += 1
 
 
+class _HealthAppends(_Appends):
+    """--- health lane --- the car health worker's side of the ingest thread: appends, and ``wants_field`` (an F1 race:
+    the worst case, every field sample goes to it too)."""
+
+    wants_field = True
+
+
 def _packets() -> list[CapturedPacket]:
     reader = CaptureReader(EXCERPT)
     assert not reader.meta.synthetic
@@ -62,6 +69,7 @@ def _packets() -> list[CapturedPacket]:
 def _run(packets: list[CapturedPacket]) -> tuple[np.ndarray, dict[str, int]]:
     live = LiveState()
     writer, worker, field, strategy = _Appends(), _Appends(), _Appends(), _Appends()
+    health = _HealthAppends()  # --- health lane ---
     sessions = SessionManager(
         cast(DbWriter, writer),
         live,
@@ -69,6 +77,7 @@ def _run(packets: list[CapturedPacket]) -> tuple[np.ndarray, dict[str, int]]:
         source="udp:20777",
         field=field,
         strategy=strategy,
+        health=health,
     )
     router = PacketRouter([F1Adapter()], sessions, live)
     times = np.empty(len(packets))
@@ -80,6 +89,7 @@ def _run(packets: list[CapturedPacket]) -> tuple[np.ndarray, dict[str, int]]:
         "field": sum(1 for (e,) in field.items if isinstance(e, FieldSample)),
         "timing": sum(1 for (_sid, e) in strategy.items if isinstance(e, RaceTiming)),
         "laps": sum(1 for (e,) in worker.items if type(e).__name__ == "LapJob"),
+        "health": len(health.items),  # --- health lane ---
     }
     return times, kinds
 
@@ -94,6 +104,7 @@ def test_every_lane_together_stays_inside_the_ingest_budget() -> None:
     kinds = runs[0][1]
     assert kinds["field"] > 1000 and kinds["timing"] > 30  # the field model and race strategy were both fed
     assert kinds["laps"] >= 1  # the player's laps reached the analysis worker
+    assert kinds["health"] > kinds["field"]  # --- health lane --- the player's items and the race's field samples
     us = np.min([r[0] for r in runs], axis=0) / 1e3
     median, p99, worst = np.percentile(us, 50), np.percentile(us, 99), us.max()
     numbers = f"median {median:.1f} us, p99 {p99:.1f} us, max {worst:.0f} us over {len(us)} packets"

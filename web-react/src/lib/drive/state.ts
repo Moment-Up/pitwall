@@ -35,13 +35,14 @@ import { badgeFor } from "../live";
 import { forward, gameLength, onLap } from "./geometry";
 import type { LiveEvent, SnapshotNext } from "./types";
 import { ageText, finite } from "./text";
+import { recentCall, snapCarHealth, tyreSection, tyresCold } from "../carhealth/view"; // health lane (pitwall.carhealth)
 
 export type DriveState = "offline" | "no_data" | "stale" | "ended" | "red_flag" | "pit_lane" | "garage" | "on_track";
 export type SafetyCar = "full" | "virtual" | "formation_lap";
 export type IncidentKind = "penalty" | "collision" | "flashback" | "fastest_lap" | "pit_entry" | "pit_exit";
 /** The status slot's short-lived chip: an incident, (lane motivation) a goal reached on the lap just completed, or
  * (coachref) the reference notice. */
-export type TransientKind = IncidentKind | "goal" | "notice";
+export type TransientKind = IncidentKind | "goal" | "notice" | "tyres_cold"; // health lane: TYRES COLD
 /** Every chip kind: the transient ones and the persistent DRILL chip (coachref). */
 export type ChipKind = TransientKind | "drill";
 
@@ -273,6 +274,7 @@ export const CHIP_RANK: Readonly<Record<TransientKind, number>> = Object.freeze(
   pit_exit: 5,
   fastest_lap: 6,
   notice: 7,
+  tyres_cold: 3, // health lane: below a penalty and a contact (and every band, e.g. RED FLAG); level with a goal
 });
 
 /** How long each transient chip may show (s). The notice's own life (2 or 6 s) comes with it (ChipNotice.lifeS). */
@@ -285,6 +287,7 @@ export const CHIP_LIFE_S: Readonly<Record<TransientKind, number>> = Object.freez
   pit_exit: CHIP_SHOW_S,
   fastest_lap: CHIP_SHOW_S,
   notice: CHIP_SHOW_S,
+  tyres_cold: CHIP_SHOW_S, // health lane
 });
 
 /** Device and server clocks may disagree by this much: a fact "from the future" by up to 2 s is still fresh. */
@@ -318,6 +321,12 @@ export function chipsOf({ snap: s, nowS, note, notice = null, drill = false }: C
   if (note && note.session_id === s.session_id && finite(note.t)) offer("goal", note.t);
   // coachref: the reference notice, last in rank (a newer notice replaces it in its store)
   if (notice && notice.text && finite(notice.t)) offer("notice", notice.t, notice.lifeS, notice.text);
+  // --- health lane: TYRES COLD for CHIP_SHOW_S from the radio's tyres_cold call (the moment the tyres turned cold
+  // after a pit exit or a safety car), while car_health still says cold ---
+  const ch = snapCarHealth(s);
+  const coldCall = tyresCold(tyreSection(ch)) ? recentCall(ch, "tyres_cold", nowS, CHIP_LIFE_S.tyres_cold) : null;
+  if (coldCall) offer("tyres_cold", coldCall.t_unix);
+  // --- end health lane ---
   return { transient: best, persistent: drill ? { kind: "drill", ageS: 0 } : null };
 }
 
@@ -588,6 +597,7 @@ const CHIP_TEXT: Record<ChipKind, string> = {
   pit_entry: "PIT ENTRY",
   pit_exit: "PIT EXIT",
   goal: "GOAL REACHED",
+  tyres_cold: "TYRES COLD", // health lane
 };
 
 /** A chip's words: the notice's own text, else the kind's. */

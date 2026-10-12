@@ -237,6 +237,20 @@
     ]
    },
    {
+    "id": "engine_temp",
+    "label": "Engine temperature",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "engine_temp_c"
+    ]
+   },
+   {
     "id": "damage",
     "label": "Car damage",
     "group": "car",

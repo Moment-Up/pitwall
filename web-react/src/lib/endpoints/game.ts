@@ -39,6 +39,7 @@ export type FeatureId =
   | "tyre_wear"
   | "tyre_pressures"
   | "brake_temps"
+  | "engine_temp" // health lane
   | "damage"
   | "ers"
   | "drs"
@@ -68,6 +69,7 @@ export const FEATURE_IDS: readonly FeatureId[] = [
   "tyre_wear",
   "tyre_pressures",
   "brake_temps",
+  "engine_temp", // health lane
   "damage",
   "ers",
   "drs",
@@ -146,7 +148,7 @@ export interface GameEntry {
   /** connect.py GameGuide.id: "f1_25" | "gt7" | "forza" | "ac" | "record" */
   guide_id: string | null;
   rig: { game: "f1_25" | "gt7"; platform: "ps5" | "pc" | null } | null;
-  /** All 23, in FEATURE_IDS order. */
+  /** All 24, in FEATURE_IDS order. */
   features: GameFeature[];
   notes: string[];
   /** Only GET /api/games/{id}. */

@@ -51,6 +51,10 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   lap (``used_kind``, ``reason`` when the choice could not be honoured), whether a change waits for the next lap
   (``pending``) and the practice drill (``drill``: running, or the result of the one that just ended). Published by
   ``core.coachref.CoachRef`` with one attribute swap. ``reference`` gains the descriptor of how it was chosen.
+* ``car_health`` / ``racecraft`` (health lane; ``/ws/live`` sends them when they changed, ``api.live_feed``): the car
+  health worker's ``CarHealthView`` (tyre temperatures against the driver's own warm laps, brakes, engine, lock-ups
+  and wheelspin, tank-level fuel; ~1.5 kB) and ``RacecraftView`` (attack / defend corners, F1 races; ~0.6 kB), at most
+  once a second (``carhealth.worker``); ``None`` until it has one for the live session, reset with the session.
 """
 
 from __future__ import annotations
@@ -218,6 +222,7 @@ def frame_to_dict(f: CarFrame) -> dict[str, Any]:
         "tyre_wear_pct": _wheels(f.tyre_wear_pct, 1),
         "tyre_compound": f.tyre_compound,
         "tyre_age_laps": f.tyre_age_laps,
+        "engine_temp_c": r(f.engine_temp_c, 0),  # --- health lane ---
         "fuel_kg": r(f.fuel_kg, 2),
         "fuel_remaining_laps_game": r(f.fuel_remaining_laps_game, 2),
         "ers_store_j": r(f.ers_store_j, 0),
@@ -302,6 +307,9 @@ class LiveState:
         self.strategy: dict[str, Any] | None = None  # race strategy (pitwall.strategy): StrategyView of this session
         self.strategy_rev = 0  # bumped when ``strategy`` changes (a new view, a new session): /ws/live sends it then
         self.coachref: dict[str, Any] | None = None  # --- coachref --- (core.coachref.CoachRef publishes it)
+        # --- health lane: carhealth.worker publishes them (CarHealthView / RacecraftView of the live session) ---
+        self.car_health: dict[str, Any] | None = None
+        self.racecraft: dict[str, Any] | None = None
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -482,6 +490,21 @@ class LiveState:
                 self.strategy = view
                 self.strategy_rev += 1
 
+    # --- health lane (pitwall.carhealth) ---
+    def set_car_health(self, session_id: str, view: dict[str, Any] | None) -> None:
+        """Publish the car health worker's view of ``session_id``; dropped if another session went live meanwhile."""
+        with self._lock:
+            if session_id == self.session_id:
+                self.car_health = view
+
+    def set_racecraft(self, session_id: str, view: dict[str, Any] | None) -> None:
+        """Publish the attack / defend view of ``session_id``; dropped if another session went live meanwhile."""
+        with self._lock:
+            if session_id == self.session_id:
+                self.racecraft = view
+
+    # --- end health lane ---
+
     def set_cue_plan(self, plan: CuePlan | None) -> None:
         """Install a cue plan built outside the engine (normally the engine plans from ``on_lap_result``)."""
         self.cues.set_plan(plan)
@@ -592,6 +615,8 @@ class LiveState:
             self.ai_pace = None
             self.strategy = None  # race strategy (pitwall.strategy)
             self.strategy_rev += 1
+            self.car_health = None  # --- health lane ---
+            self.racecraft = None
             self._bests_requested = None  # the next session packet asks for the new session's bests
             self._heads_up_key = None  # the cue engine drops its heads-ups on reset; the next knowledge re-installs
         self.coach.reset()
@@ -716,6 +741,8 @@ class LiveState:
             if include_strategy:  # race strategy: /ws/live sends it only when it changed (``strategy_rev``) or static
                 out["strategy"] = self.strategy
             out["coachref"] = self.coachref  # --- coachref --- reference choice + drill (small, every snapshot)
+            out["car_health"] = self.car_health  # --- health lane --- (/ws/live: when it changed)
+            out["racecraft"] = self.racecraft
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

@@ -172,6 +172,28 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
             re.I,
         ),
     ),
+    # --- health lane: "where will I come out?" before strategy ("pit", "box"); brakes, engine and "how's the car?"
+    # before tyres ("how are my tyre temps?" stays tyres: the tyres answer leads with the temperatures then)
+    (
+        "rejoin",
+        re.compile(
+            r"\b(?:where (?:will|would|do|'d) (?:i|we) (?:come out|rejoin|end up)|rejoin\w*|"
+            r"come out (?:in|at|behind|ahead|after)|(?:what|which) (?:position|place) (?:will|would) (?:i|we) "
+            r"(?:come out|rejoin)|if (?:i|we) (?:pit|box|stop) (?:now|this lap|next lap))\b",
+            re.I,
+        ),
+    ),
+    (
+        "car_health",
+        re.compile(
+            r"\b(?:brake (?:temp\w*|heat)|brakes? (?:are |is )?(?:hot|cold|overheat\w*|cooking|glowing)|"
+            r"how(?:['\u2019]s| is| are) (?:the |my )(?:brakes|engine|car)\b(?!\s+handl)|"
+            r"engine (?:temp\w*|heat|hot|overheat\w*)|is (?:the |my )?engine (?:ok|okay|hot|overheating)|car health|"
+            r"overheat\w*)\b",
+            re.I,
+        ),
+    ),
+    # --- end health lane ---
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
     (
         "strategy",
@@ -184,6 +206,28 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     # data some games never send (games.INTENT_FEATURES), before setup ("front wing broken": "wing" alone stays a
     # setup question) and before gaps ("damaged after the contact with the car ahead")
     ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
+    # --- health lane: attack / defend corners (before gaps: "where's the car behind quicker than me?"); "is the car
+    # behind catching me?" and "what should I do against the car behind?" stay gaps
+    (
+        "defend",
+        re.compile(
+            r"\b(?:defend\w*|hold (?:him|her|them|it) off|"
+            r"(?:where|which corner)\b[^.?!]*\bcar behind\b[^.?!]*"
+            r"\b(?:faster|quicker|gain\w*|attack|pass|overtake|try)|"
+            r"where (?:will|could|would|is) (?:the )?car behind\b[^.?!]*\b(?:attack|pass|overtake|try|make a move))\b",
+            re.I,
+        ),
+    ),
+    (
+        "attack",
+        re.compile(
+            r"\b(?:attack\w*|overtak\w*|make a (?:move|pass)|"
+            r"(?:where|which corner)\b[^.?!]*\b(?:pass|get past|faster than|quicker than|gain\w* on)\b[^.?!]*"
+            r"\b(?:car (?:ahead|in front)|him|her|them))\b",
+            re.I,
+        ),
+    ),
+    # --- end health lane ---
     # race gaps and position, never the driver's own reference ("how far behind my best am I?") and "position" only as
     # race position ("my position on the brake for turn 4" is braking)
     (
@@ -276,8 +320,14 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
 
 _TOPICS: dict[str, set[str]] = {
     # every intent keeps the "game" topic: what the game never sends is answered from it
-    "fuel": {"session", "game", "fuel", "strategy"},
-    "tyres": {"session", "game", "tyres", "strategy"},
+    "fuel": {"session", "game", "fuel", "strategy", "health"},  # health: health lane
+    "tyres": {"session", "game", "tyres", "strategy", "health"},
+    # --- health lane ---
+    "car_health": {"session", "game", "health", "tyres", "fuel"},
+    "rejoin": {"session", "game", "strategy"},
+    "attack": {"session", "game", "racecraft", "gaps"},
+    "defend": {"session", "game", "racecraft", "gaps"},
+    # --- end health lane ---
     "strategy": {"session", "game", "fuel", "tyres", "strategy", "gaps", "weather"},
     "safety_car": {"session", "game", "strategy", "flags"},
     "gaps": {"session", "game", "gaps"},
@@ -571,6 +621,14 @@ def _describe(g: GroundingResult) -> str:
     return "; ".join(parts) or "ok"
 
 
+# --- health lane: no fact to answer from (and nothing the game never sends): what is needed, in plain words
+HEALTH_NONE = {
+    "car_health": "No tyre, brake or engine temperatures yet: get a lap in and ask me again.",
+    "rejoin": "Where you'd come out needs a race with the other cars' timing and a pit stop measured.",
+    "attack": "Attack and defend need a race with the other cars' positions and two clean laps.",
+    "defend": "Attack and defend need a race with the other cars' positions and two clean laps.",
+}
+# --- end health lane ---
 RADIO_SHORT_CHARS = 120  # a short (radio) answer adds a second fact only while the two stay this short together
 
 
@@ -640,6 +698,28 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *,
         if sc is not None:
             return say(sc)
         return say(game) if game is not None else say(first("session"))
+    # --- health lane: car health, "where will I come out?", attack / defend ---
+    if n in ("car_health", "rejoin", "attack", "defend"):
+
+        def kind(topic: str, *kinds: str) -> Fact | None:
+            return next((f for k in kinds for f in facts if f.topic == topic and f.data.get("kind") == k), None)
+
+        if n == "car_health":
+            lead = kind("health", "tyre_temps")
+            rest = (kind("health", "brakes"), kind("health", "engine"))
+            if lead is not None or any(rest):
+                return say(lead, *rest)
+        elif n == "rejoin":
+            rj = kind("strategy", "rejoin", "rejoin_unknown")
+            if rj is not None:
+                return say(rj)
+        else:
+            side = "ahead" if n == "attack" else "behind"
+            rc = kind("racecraft", f"racecraft_{side}", f"racecraft_{side}_unknown", "racecraft_unknown")
+            if rc is not None:
+                return say(rc)
+        return say(game) if game is not None else HEALTH_NONE[n]
+    # --- end health lane ---
     if n == "gaps":  # race strategy (pitwall.strategy)
         gap = first("gaps", contains="ahead") or first("gaps", contains="leading")
         if gap is not None or first("gaps") is not None:

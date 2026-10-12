@@ -53,11 +53,12 @@ track_map              S·spec  P·rec   P·part  P·part  P·part
 official_corner_names  P·-     NI      NI      NI      NI
 ai_field               S·rec   NS      NS      NS      NS
 flags                  S·spec  NS      NS      NS      NS
-fuel                   S·spec  NI      NS      NI      NI
+fuel                   S·spec  NI      NS      P·comm  P·comm
 tyre_temps             S·spec  S·rec   NS      S·comm  S·comm
 tyre_wear              S·spec  NS      NS      S·comm  NS
 tyre_pressures         S·spec  NS      NS      NS      NS
 brake_temps            S·spec  NS      NS      NS      NS
+engine_temp            S·spec  NS      NS      NS      NS
 damage                 NI      NS      NS      NS      NS
 ers                    S·spec  NI      NS      NS      NS
 drs                    S·spec  NS      NS      NS      NS
@@ -91,7 +92,7 @@ def test_ids_are_unique_and_well_formed() -> None:
     assert len(ids) == len(set(ids)) == 23
     for i in ids:
         assert re.fullmatch(r"[a-z0-9_]+:(ps5|ps4|xbox|pc|any)", i), i
-    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 23
+    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 24  # + engine_temp
     assert {f.group for f in games.FEATURES} == {g for g, _ in games.GROUPS}
 
 
@@ -257,6 +258,7 @@ def test_platform_and_variant_profiles() -> None:
         "field_data",
         "setup_telemetry",
         "wheel_ptt",
+        "engine_temp",  # health lane: not in RTCarInfo, nor in the shared memory's documented physics page
     }
     fh_ps5 = profile("forza_horizon:ps5")
     assert all(v in ("NS", "NI", "U") for v in fh_ps5.values())
@@ -346,12 +348,17 @@ def test_code_fact_not_implemented() -> None:
     assert "CarSetup" not in Path(gt7_adapter.__file__).read_text(encoding="utf-8")  # ... Pitwall emits no setup
     assert set(games.NOT_IMPLEMENTED) == {
         ("f1_25", "damage"),
-        ("gt7", "fuel"),
-        ("forza_motorsport", "fuel"),
-        ("forza_horizon", "fuel"),
+        ("gt7", "fuel"),  # health lane: until a recording shows the level falling (carhealth.thresholds)
         ("gt7", "ers"),
         ("gt7", "setup_telemetry"),
     }
+    # health lane: Forza fuel is laps from how fast the tank level falls (carhealth.fuel), never litres or kilos
+    for eid in ("forza_motorsport:pc", "forza_horizon:xbox"):
+        e = games.entry(eid)
+        assert e is not None and e.feature("fuel").status == "partial", eid
+        assert e.feature("fuel").reason == games.FORZA_FUEL_REASON
+    gt7 = games.entry("gt7:ps5")
+    assert gt7 is not None and gt7.feature("fuel").reason == games.GT7_FUEL_REASON
 
 
 def test_code_fact_partial() -> None:
@@ -438,11 +445,16 @@ def test_adapter_declarations_added_for_documented_absences() -> None:
             "lap_history",
             "race_timing",
             "tyre_sets",
+            "engine_temp_c",  # health lane: car health
         },
-        Game.GT7: {"drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons"},
-        Game.FORZA_MOTORSPORT: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
-        Game.FORZA_HORIZON: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
-        Game.AC: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
+        Game.GT7: {"drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons", "engine_temp_c"},
+        Game.FORZA_MOTORSPORT: {
+            *("drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons", "engine_temp_c"),
+        },
+        Game.FORZA_HORIZON: {
+            *("drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons", "engine_temp_c"),
+        },
+        Game.AC: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons", "engine_temp_c"},
     }
     for r in PLANNED:
         before = old[_old_key(r)]["fields"]
@@ -582,7 +594,7 @@ def test_games_response_is_json_and_covers_every_entry() -> None:
     assert [e["id"] for e in body["entries"]] == [e.id for e in games.entries()]
     assert set(body["support_words"]) == {lvl.value for lvl in SupportLevel}
     assert all("fields" not in e and "guide" not in e for e in body["entries"])
-    assert all(len(e["features"]) == 23 for e in body["entries"])
+    assert all(len(e["features"]) == 24 for e in body["entries"])
 
 
 # ---------------------------------------------------------------------------------------------- review fixes

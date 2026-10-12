@@ -10,7 +10,8 @@
 * **Threat from the car behind**: the same bands on the gap behind, assuming similar tyres.
 * **Rejoin if the player boxes now**: race time after the stop = gap to the leader + pit loss; the rejoin position
   is one more than the cars (not in the pit lane) with a smaller gap to the leader, ``traffic`` = rejoining less than
-  ``TRAFFIC_S`` [H] behind a car. The game's own ``pitStopRejoinPosition`` is shown next to it (tier ``game``).
+  ``TRAFFIC_S`` [H] behind a car. The game's own ``pitStopRejoinPosition`` is shown next to it (tier ``game``). The
+  engine now uses ``strategy.rejoin`` (real F1 25 zeroes the gaps before a pit entry); ``rejoin`` here is its wrapper.
 * **A neighbour pitting**: where it rejoins relative to the player (its gap to the leader at pit entry + pit loss).
   The overcut is never given a number: lap data cannot separate out-lap warm-up from lane loss.
 """
@@ -102,29 +103,23 @@ def cut_view(
 def rejoin(
     player: CarTiming, cars: Sequence[CarTiming], loss_s: float | None, game_position: int | None
 ) -> dict[str, Any] | None:
-    """Where the player rejoins if they box now (``PitView.rejoin``); None without a pit loss or a leader gap."""
-    game = game_position if game_position else None
-    me = leader_s(player)
-    if loss_s is None or me is None:
-        if game is None:
-            return None
-        return {"position": None, "gap_ahead_s": None, "gap_behind_s": None, "traffic": None, "game_position": game}
-    t = me + loss_s
-    others = [
-        g
-        for c in cars
-        if not c.is_player and c.result_status == "active" and not c.pit_status and (g := leader_s(c)) is not None
-    ]
-    ahead = [g for g in others if g < t]
-    behind = [g for g in others if g >= t]
-    gap_ahead = None if not ahead else t - max(ahead)
-    gap_behind = None if not behind else min(behind) - t
+    """The first rejoin shape (``position``, gaps, ``traffic`` = less than ``TRAFFIC_S`` behind the car ahead, the
+    game's value), now a thin wrapper of ``strategy.rejoin.predict`` with only the game's own gaps. The engine uses
+    ``strategy.rejoin.RejoinPredictor`` (last-known and chained gaps, cars in the lane, the range, road traffic)."""
+    from pitwall.strategy.rejoin import Loss, predict  # rejoin imports this module
+
+    loss = None if loss_s is None else Loss(loss_s, loss_s, loss_s, 1, "measured")
+    resolved = {c.car_index: (g, None) for c in cars for g in (leader_s(c),)}
+    r = predict(player, cars, resolved=resolved, loss=loss, game_position=game_position)
+    if r is None:
+        return None
+    gap_ahead = r["gap_ahead_s"]
     return {
-        "position": 1 + len(ahead),
-        "gap_ahead_s": None if gap_ahead is None else round(gap_ahead, 1),
-        "gap_behind_s": None if gap_behind is None else round(gap_behind, 1),
-        "traffic": None if gap_ahead is None else gap_ahead < TRAFFIC_S,
-        "game_position": game,
+        "position": r["position"],
+        "gap_ahead_s": gap_ahead,
+        "gap_behind_s": r["gap_behind_s"],
+        "traffic": None if r["position"] is None or gap_ahead is None else gap_ahead < TRAFFIC_S,
+        "game_position": r["game_position"],
     }
 
 

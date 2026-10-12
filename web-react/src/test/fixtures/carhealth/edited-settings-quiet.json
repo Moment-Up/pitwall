@@ -1,0 +1,12 @@
+{
+ "_fixture": {
+  "tier": "edited",
+  "source": "lane spec 3.12",
+  "moment": "GET /api/car-health/settings, wear and fuel calls off, slip notes always",
+  "notes": "A household that changed three settings. Test data, not game data: the backend has not produced this block yet."
+ },
+ "tyre_calls": true,
+ "wear_calls": false,
+ "fuel_calls": false,
+ "slip_calls": "normal"
+}

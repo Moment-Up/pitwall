@@ -840,6 +840,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_validate import router as validate_router  # validation kit (lane validate)
 
     app.include_router(validate_router)
+    from pitwall.api.routes_carhealth import router as carhealth_router  # --- health lane ---
+
+    app.include_router(carhealth_router)
 
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias
