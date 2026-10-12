@@ -43,6 +43,13 @@
    TyreSetsInfo, player frames,      |  StrategyEngine (pure,     |--> notify("strategy_call") -> RadioHub
    laps, events, session info        |  game clock, no LLM)       |    -> RadioScheduler speak windows
                                      +----------------------------+
+ SessionManager --(deque append)--> +----------------------------+
+   every game: player frames, laps,  | RaceRadioWorker            |--> LiveState.race (<= 2 Hz, at once after a call)
+   events (no buttons), session      |  ("raceradio")             |--> notify("race_call") -> RadioHub
+   info; F1: RaceTiming and          |  RaceRadioEngine (pure,    |    -> raceradio.radio.race_message (driver's groups,
+   Participants (never persisted,    |  receive-time clock,       |       wording) -> RadioScheduler (RACE allowance)
+   never in live state or logs)      |  no LLM)                   |--> notify("radio_urgent") -> voice.urgent (red flag)
+                                     +----------------------------+
 ```
 
 ## Threads and the critical path
@@ -54,11 +61,14 @@
 | `db-writer` | all SQLite writes, one transaction per job | - |
 | `motivation` | after a live lap / at session end: mark goals reached (exactly once), notify `motivation` | run on ingest (its note handler only queues, O(1)) |
 | `strategy` | race strategy engine (`pitwall/strategy`): gaps, pit loss, tyres, fuel, weather, calls; per-lap records | touch sockets, block ingest (fed by one lock-free deque append per item) |
+| `raceradio` | race radio engine (`pitwall/raceradio`): flags, start and countdown, positions, rivals, penalties, damage; the live `race` view | touch sockets or the database, block ingest (one deque append per item) |
 | asyncio (uvicorn) | REST, WebSocket snapshots (pull model), LLM calls (async HTTP) | block on DB (uses `to_thread`) |
 
 Every ingest-thread hook of the v0.2.0 features is O(1) (a deque append, a field write or a counter). The combined
 budget is checked on the Austria race excerpt by `tests/recorded/test_ingest_budget_combined.py` (decode, session
-handling and every hook per packet: median, p99 and maximum under fixed limits).
+handling and every hook per packet: median, p99 and maximum under fixed limits), and with the race radio's sink and
+adapter mappings by `tests/recorded/test_ingest_budget_raceradio.py` (median 2.9 us, p99 35 us, max 0.5 ms on 13 208
+packets, M4 Max: unchanged).
 
 Backpressure: capture queue (200k packets) and lap queue are bounded; overflow is counted and logged, never
 silent. Dashboard clients pull snapshots at a fixed rate, so a slow browser cannot slow ingest; per-client
@@ -74,7 +84,9 @@ game reports it, F1 Session History; emitted only when it changed). Units in fie
 
 `CarSetup`, `LapCompletion`; F1 only: `FieldSample` (the other cars, field model), `RaceTiming` (every car's position,
 gaps and pit state at <= 2 Hz, plus one at each pit-status change) and `TyreSetsInfo` (the player's tyre sets on
-change), both for the race strategy engine. Units in field names; `None` = unknown; `Wheels` always FL, FR, RL, RR; per-game
+change), both for the race strategy engine, and `Participants` (who drives which car, on change; to the race radio
+only: never persisted, never in live state, names never logged). `CarFrame` carries the player's F1 `fia_flag`,
+`damage` (`CarDamage`) and `penalties` (`CarPenalties`), the objects rebuilt only when the game's values change. Units in field names; `None` = unknown; `Wheels` always FL, FR, RL, RR; per-game
 ground plane declared by the adapter (`AdapterInfo.ground_plane`). Field provenance per game in
 `AdapterInfo.fields` -> `/api/capabilities`.
 
@@ -185,6 +197,21 @@ laps and the one-sample untimed laps stored before those fixes and rebuilt the t
    `LiveState.strategy_rev` moved, at most every 2 s, and in a new session's first snapshot, left out otherwise (the
    client keeps it, `lib/live.ts` `STATIC_KEYS`).
 
+9. **Race radio** (`pitwall/raceradio/`, worker thread, off the ingest path, every game): the rules of
+   `flags.py` (red flag, safety car / VSC, yellow ahead and here, blue from the player's own FIA flag), `countdown.py`
+   (grid brief, lights out, laps to go with `strategy.laps_left`'s lapped-car rule, finish, minutes left),
+   `positions.py` (lap-one summary, settled changes, clean passes, pit exit), `rivals.py` (gap reports from its own
+   `strategy.gaps.GapTracker`, a car ahead pitting, fastest laps, retirements), `penalties.py` and `damage.py`, clocked
+   by the receive time (F1's session clock reads 0 during the start lights and runs backwards after a flashback).
+   `roster.py` is the only reader of Participants names: calls say official AI driver names from EA's table, a team
+   or a race number. Calls go to the radio hub as `race_call` notes (`radio.py` applies the seated driver's groups and
+   wording) and the red flag as the urgent note (`voice/urgent.py`); after a flashback a `race_retract` note drops
+   the unsaid position and damage calls. The live `RaceView` (`model.py`, at most 1.3 kB) rides `/ws/live` when it
+   changed (`ON_CHANGE_KEYS`) and `GET /api/race/live`. Deterministic answers (`answers.py`: who is ahead / behind /
+   leading, the position in any game, laps to go, penalties, damage, sector deltas) come from the `race` facts
+   (`ai/facts.py`). No storage: nothing of the race radio is persisted. Until the driver has a learned track model,
+   the radio's speak window looks ahead to the AI field's braking zones (`voice/field_zones.py`).
+
 ### Reference choice and practice drills (coachref)
 `core/coachref.py` (`CoachRef`, created by the runtime and attached to the `LapProcessor`) plugs into the lap
 pipeline at four points, all on the `lap-analysis` thread:
@@ -236,8 +263,10 @@ deterministically and are radio fast intents (feat/technique).
 ## Radio policy (`voice/scheduler.py`)
 One scheduler decides what is said and when. Message kinds (`voice/types.py`): `answer` and `control` (the driver's
 own questions and commands), `cue` (braking calls), `alert`, `lap_summary`, `strategy`, `goal`, `coaching` (also a
-drill point), `info` (detailed strategy notes) and `validation` (the kit's prompts). `ALLOWED_KINDS` per intensity:
-quiet = answers, control, alerts, cues and validation; normal adds lap summaries, goals, coaching and strategy;
+drill point), `race` (race radio calls: their own per-lap allowance `RACE_PER_LAP` 0 / 2 / 3, outside the talk
+budget; the finish is outside it too), `info` (detailed strategy notes) and `validation` (the kit's prompts).
+`ALLOWED_KINDS` per intensity: quiet = answers, control, alerts, cues and validation; normal adds lap summaries,
+goals, coaching, strategy and race calls;
 detailed adds info. Pending messages are dispatched by (priority, `KIND_RANK`, arrival): cues, answers and control
 first, then alerts, lap summary, strategy, goal, coaching, info, validation. On track, `TALK_PER_LAP` (0 / 2 / 4)
 caps the budgeted kinds (lap summary, goal, strategy, coaching, info) per driving lap; alerts, cues, answers and
@@ -249,6 +278,9 @@ apply. The gap also holds for a message the hub synthesised and held while somet
 summaries, goals and coaching go; strategy and alerts stay), and a new live session id calls `reset_session()` (the
 queue, budgets, repeat filter and a lap-bounded quiet period belong to the old session). The safety-car box and stay
 calls and critical fuel are alerts outside the budget. The final lap gets its summary but no coaching point.
+The red flag is the first producer of `Priority.URGENT` (`voice/urgent.py`: any thread posts `radio_urgent`; the hub
+queues it past quiet mode, intensity, the speak window and the gap). `voice/addressing.py` works the seated driver's
+first name into an addressable message after the scheduler hands it out (at most once a minute), before synthesis.
 Questions are answered short on the radio (`deterministic_answer(short=True)`: one or two facts in their spoken
 form). Strategy (`strategy/radio.py`) is the only source of fuel alerts.
 The `say` frames are in [voice-protocol.md](voice-protocol.md).

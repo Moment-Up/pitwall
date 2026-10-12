@@ -1318,3 +1318,71 @@ describe("log", () => {
     expect(radio.get().log.at(-1)?.text).toBe(`e${LOG_MAX + 9}`);
   });
 });
+
+// --- race radio (pitwall.raceradio): RACE calls and urgent messages (the red flag) ---
+
+describe("race radio messages", () => {
+  it("a race call is logged with its kind, and is not urgent", async () => {
+    const { radio, ws } = await goLive();
+    ws.text({
+      type: "say",
+      id: "race-rc-3-2",
+      kind: "race",
+      text: "Up to P5.",
+      speech: "Up to P 5.",
+      sample_rate: 24000,
+      n_bytes: 0,
+      meta: { topic: "race:position", group: "position", call: "position_change", urgent: false },
+    });
+    expect(radio.get().current).toMatchObject({ id: "race-rc-3-2", kind: "race", text: "Up to P5." });
+    expect(radio.get().current?.urgent).toBeUndefined();
+    expect(radio.get().log.at(-1)).toMatchObject({ kind: "race", text: "Up to P5.", id: "race-rc-3-2" });
+    expect(radio.get().log.at(-1)?.urgent).toBeUndefined();
+  });
+
+  it("an urgent alert (meta.urgent) is marked on the current message and the log entry", async () => {
+    const { radio, ws } = await goLive();
+    ws.text({
+      type: "say",
+      id: "urgent-1",
+      kind: "alert",
+      text: "Red flag, red flag. Slow down, back to the pits.",
+      speech: "Red flag, red flag. Slow down, back to the pits.",
+      sample_rate: 24000,
+      n_bytes: 0,
+      meta: { urgent: true, topic: "race:red" },
+    });
+    expect(radio.get().current).toMatchObject({ id: "urgent-1", kind: "alert", urgent: true });
+    expect(radio.get().log.at(-1)).toMatchObject({ id: "urgent-1", kind: "alert", urgent: true, meta: "text only" });
+  });
+
+  it("an urgent message that arrives while the driver transmits is still marked urgent", async () => {
+    const { radio, ws } = await goLive();
+    radio.pttPress();
+    ws.text({
+      type: "say",
+      id: "urgent-2",
+      kind: "alert",
+      text: "Red flag",
+      speech: "Red flag",
+      sample_rate: 24000,
+      n_bytes: 4800,
+      meta: { urgent: true },
+    });
+    expect(radio.get().current).toMatchObject({ id: "urgent-2", urgent: true });
+    expect(radio.get().log.find((e) => e.id === "urgent-2")).toMatchObject({
+      urgent: true,
+      meta: "not played: you were transmitting",
+    });
+  });
+
+  it("only a literal true is urgent", async () => {
+    const { radio, ws } = await goLive();
+    const meta = { urgent: "yes" };
+    ws.text({ type: "say", id: "a1", kind: "alert", text: "Yellow flag.", speech: "Yellow flag.", sample_rate: 24000, n_bytes: 0, meta });
+    expect(radio.get().current?.urgent).toBeUndefined();
+    expect(radio.get().log.at(-1)?.urgent).toBeUndefined();
+  });
+});
+
+// --- end race radio ---

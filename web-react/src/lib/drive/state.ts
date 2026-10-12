@@ -21,6 +21,10 @@
 //    flags. Before D4 the phase is inferred from a 10-event window, so stale still wins there.
 //  * Blue flags come from marshal zones, which show blue whenever ANY car is being lapped there. When the car's
 //    position and the zones are known, the band shows only while the car is inside a blue zone.
+//  * Race radio (pitwall.raceradio): when the server reads the player's OWN car flag (F1 vehicleFIAFlags, the race
+//    block's flags.you), that decides the blue band instead: on real captures only 4 % of "zone blue at the car"
+//    samples were the player's own blue flag. In practice and qualifying the band says a car behind is on a fast lap.
+//    The status line's position comes from the race block for any game (GT7 and Forza send no session type).
 //  * Incident chips need the event to concern the player (LiveEvent.player === true), because F1 reports every
 //    car's penalties, collisions and fastest laps. Flashback (player only by nature) shows unless player === false.
 //
@@ -36,6 +40,7 @@ import { badgeFor } from "../live";
 import { forward, gameLength, onLap } from "./geometry";
 import type { LiveEvent, SnapshotNext } from "./types";
 import { ageText, finite } from "./text";
+import { ownFlag, racePosition, snapRace } from "../raceradio/view"; // race radio (pitwall.raceradio)
 
 export type DriveState = "offline" | "no_data" | "stale" | "ended" | "red_flag" | "pit_lane" | "garage" | "on_track";
 export type SafetyCar = "full" | "virtual" | "formation_lap";
@@ -235,6 +240,10 @@ function yellowOf(s: SnapshotNext): YellowFlag | null {
 }
 
 function blueOf(s: SnapshotNext): boolean {
+  // --- race radio: the player's own car flag when the server reads it (F1); the marshal zones otherwise ---
+  const own = ownFlag(snapRace(s));
+  if (own !== null) return own === "blue";
+  // --- end race radio ---
   const hits = zoneHits(s, "blue");
   if (!hits) return false;
   const knowable = hits.every((h) => h.ahead != null);
@@ -502,7 +511,11 @@ export function statusSlot(
       const sub = [where, more].filter(Boolean).join(" · ") || null;
       return fill("yellow", "yellow", text, sub);
     }
-    if (o.blue) return fill("blue", "blue", "BLUE FLAG", "let the car behind through");
+    if (o.blue) {
+      // race radio: in practice and qualifying a blue flag means a car behind is on a fast lap
+      const session = snapRace(s)?.mode === "session";
+      return fill("blue", "blue", "BLUE FLAG", session ? "car behind on a fast lap" : "let the car behind through");
+    }
     if (state === "pit_lane") {
       const limit = s?.skeleton?.pit_speed_limit_kph;
       return fill("pit", "pit", "PIT LANE", finite(limit) ? `limit ${Math.round(limit)} km/h` : null);
@@ -541,7 +554,8 @@ export interface StatusLine {
   lap: string;
   /** Total laps when known (the slot shows "/ 25"), else null. */
   lapTotal: string | null;
-  /** "P4" in races when known, else null. */
+  /** "P4" when known: the race block's position for any game (race radio), else (older servers) in F1 races from the
+   * frame; null otherwise. */
   position: string | null;
 }
 
@@ -552,13 +566,15 @@ export function statusLine(s: SnapshotNext | null): StatusLine {
   const total = se?.total_laps;
   const race = !!type && type.toLowerCase().includes("race");
   const pos = f?.race_position;
+  // race radio: the server says when a position is a race position, for every game (GT7 and Forza included)
+  const racePos = racePosition(snapRace(s));
   return {
     track: se?.track_name || "-",
     carClass: classChip(se?.car_class),
     session: type ?? "-",
     lap: `Lap ${finite(f?.lap_number) ? f.lap_number : "-"}`,
     lapTotal: finite(total) && total > 0 ? String(total) : null,
-    position: race && finite(pos) && pos > 0 ? `P${pos}` : null,
+    position: racePos ?? (race && finite(pos) && pos > 0 ? `P${pos}` : null),
   };
 }
 

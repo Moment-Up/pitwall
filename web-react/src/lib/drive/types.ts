@@ -13,6 +13,7 @@ import type { Corner, Frame, LapSummary, Observation, Snapshot, TrackModel } fro
 import type { CarFamily, SessionCarFields } from "../carclass";
 import type { LiveAiPace } from "../endpoints/review";
 import type { StrategyView } from "../strategy/types"; // race strategy (pitwall.strategy)
+import type { RaceView } from "../raceradio/types"; // race radio (pitwall.raceradio)
 
 export type { LiveAiPace };
 import type { CoachrefBlock, ReferenceDescriptor } from "../endpoints/coachref";
@@ -223,6 +224,12 @@ export interface SnapshotNext extends Snapshot {
    * through lib/strategy/view.ts snapStrategy(), which ignores unknown versions. */
   strategy?: StrategyView | null;
   // --- end race strategy ---
+  // --- race radio (pitwall.raceradio) ---
+  /** raceradio/model.py RaceView (lib/raceradio/types.ts); absent on servers without race radio. A kept key
+   * (lib/live.ts STATIC_KEYS): /ws/live sends it when it changed (at most every 0.5 s, at once after a call) or with
+   * the static payload, null = none. Read it through lib/raceradio/view.ts snapRace(), which ignores unknown versions. */
+  race?: RaceView | null;
+  // --- end race radio ---
   /** coachref: the reference with its descriptor (who, which kind, labels); the four legacy keys are unchanged. */
   reference: LiveReference | null;
   /** coachref: the seated driver's reference choice and drill. Absent = a server without coachref. A kept key

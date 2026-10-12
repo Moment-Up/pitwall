@@ -43,8 +43,10 @@ import { Store } from "./store";
 
 export type Intensity = "quiet" | "normal" | "detailed";
 /** "strategy": the race engineer's proactive strategy calls (voice/types.py MessageKind.STRATEGY, pitwall.strategy);
- * "goal": a goal reached (MessageKind.GOAL); "validation": a rig validation prompt (MessageKind.VALIDATION). Every
- * `say` frame is spoken whatever its kind: a kind this dashboard does not know is only labelled INFO. */
+ * "goal": a goal reached (MessageKind.GOAL); "validation": a rig validation prompt (MessageKind.VALIDATION); "race": a
+ * race-situation call (MessageKind.RACE, pitwall.raceradio: positions, the start, laps to go). Every `say` frame is
+ * spoken whatever its kind: a kind this dashboard does not know is only labelled INFO. An urgent message (the red
+ * flag) is an "alert" whose `meta.urgent` is true. */
 export type SayKind =
   | "answer"
   | "control"
@@ -55,7 +57,8 @@ export type SayKind =
   | "info"
   | "strategy"
   | "goal"
-  | "validation";
+  | "validation"
+  | "race"; // race radio (pitwall.raceradio)
 export type LogKind = SayKind | "transcript" | "you" | "error" | "system";
 export type Phase = "idle" | "starting" | "live";
 export type ConnStatus = "offline" | "connecting" | "open" | "waiting";
@@ -135,6 +138,8 @@ export interface LogEntry {
   meta: string;
   id: string | null; // message id for `say` entries
   count: number; // identical consecutive entries are folded
+  /** race radio: the `say` frame's meta.urgent (the red flag; voice/urgent.py). Absent = not urgent. */
+  urgent?: boolean;
 }
 
 export interface CurrentMessage {
@@ -143,6 +148,8 @@ export interface CurrentMessage {
   text: string;
   at: number; // Date.now()
   audioS: number; // 0 = display only
+  /** race radio: the `say` frame's meta.urgent (the red flag; voice/urgent.py). Absent = not urgent. */
+  urgent?: boolean;
 }
 
 export interface RadioStats {
@@ -1421,12 +1428,13 @@ export class RadioStore extends Store<RadioState> {
     const rate = Math.floor(Number(m.sample_rate) || 0);
     const audioS = nBytes > 0 && rate > 0 ? nBytes / 2 / rate : 0;
     const text = String(m.text ?? "");
-    this.set({ current: { id: m.id, kind: m.kind, text, at: Date.now(), audioS } });
+    const urgent = m.meta?.urgent === true; // race radio: an urgent message (voice/urgent.py)
+    this.set({ current: { id: m.id, kind: m.kind, text, at: Date.now(), audioS, ...(urgent ? { urgent } : {}) } });
     if (this.transmitting()) {
       // Playing this over the driver would cut their transmission: the server drops mic audio while a message is
       // "speaking". Treat it as a barge-in instead: show it, do not play it, and tell the server to stop.
       this.pending = null; // its PCM (if any) is ignored
-      this.addLog(m.kind, text, "not played: you were transmitting", m.id);
+      this.addLog(m.kind, text, "not played: you were transmitting", m.id, urgent);
       this.send({ type: "stop_tts" });
       return;
     }
@@ -1437,6 +1445,7 @@ export class RadioStore extends Store<RadioState> {
       text,
       audioS > 0 ? `${audioS.toFixed(1)} s audio` : deviceSpeaks ? "device voice" : "text only",
       m.id,
+      urgent,
     );
     this.pending =
       audioS > 0 ? { id: m.id, kind: m.kind, sampleRate: rate, expected: nBytes, chunks: [], received: 0 } : null;
@@ -1776,14 +1785,16 @@ export class RadioStore extends Store<RadioState> {
     this.turnBy = by;
   }
 
-  private addLog(kind: LogKind, text: string, meta = "", id: string | null = null): void {
+  private addLog(kind: LogKind, text: string, meta = "", id: string | null = null, urgent = false): void {
     const log = this.get().log;
     const last = log[log.length - 1];
     if (last && id === null && last.kind === kind && last.text === text && last.meta === meta) {
       this.set({ log: [...log.slice(0, -1), { ...last, count: last.count + 1, at: Date.now() }] });
       return;
     }
-    const next = [...log, { seq: ++this.seq, at: Date.now(), kind, text, meta, id, count: 1 }];
+    const entry: LogEntry = { seq: ++this.seq, at: Date.now(), kind, text, meta, id, count: 1 };
+    if (urgent) entry.urgent = true; // race radio: an urgent message (the red flag)
+    const next = [...log, entry];
     this.set({ log: next.length > LOG_MAX ? next.slice(next.length - LOG_MAX) : next });
   }
 

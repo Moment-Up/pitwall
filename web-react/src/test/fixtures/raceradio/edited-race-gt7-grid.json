@@ -1,0 +1,37 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "race-radio spec 9.3 (RaceView v1 contract); section 2 GT7 findings",
+    "moment": "GT7 race before the rolling start: P8 of 14, 4 laps (0x84 gives the grid slot before the start)",
+    "notes": "Hand-built from the contract before the backend publishes the block: every value is chosen to exercise a dashboard rule, and figures follow the spec's real-data findings where it gives them. Test data, not game data; never shown as live. The position note's words are the backend's (raceradio/model.py); these follow spec 9.3's example."
+  },
+  "version": 1,
+  "session_id": "gt7-race",
+  "game": "gt7",
+  "mode": "race",
+  "reason": null,
+  "synthetic": false,
+  "position": 8,
+  "cars": 14,
+  "grid_position": 8,
+  "position_tier": "community_documented",
+  "position_note": "From GT7's race position; not yet checked against the game's screen.",
+  "lap": 0,
+  "total_laps": 4,
+  "laps_left": 4.0,
+  "final_lap": false,
+  "time_left_s": null,
+  "flags": null,
+  "penalties": null,
+  "damage": null,
+  "ahead": null,
+  "behind": null,
+  "calls": [
+    {
+      "t_unix": 1791680003.0,
+      "group": "start",
+      "call": "grid_brief",
+      "text": "Rolling start. P8 of 14, 4 laps."
+    }
+  ]
+}

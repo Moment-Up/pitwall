@@ -93,6 +93,8 @@ export const FEATURE_NOUNS: Readonly<Record<FeatureId, string>> = {
   weather: "weather",
   session_info: "the session type",
   field_data: "data about the other cars",
+  race_position: "your race position", // race radio
+  penalties: "penalties", // race radio
   setup_telemetry: "its car setup",
   setup_recommendations: "car setup recommendations",
   wheel_ptt: "wheel button presses",

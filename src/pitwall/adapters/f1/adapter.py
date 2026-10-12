@@ -19,8 +19,10 @@ from pitwall.adapters.f1 import enums
 from pitwall.adapters.f1 import packets as P
 from pitwall.adapters.structdef import StructDef
 from pitwall.model.telemetry import (
+    CarDamage,
     CarFrame,
     CarLapHistory,
+    CarPenalties,
     CarSetup,
     CarTiming,
     Emitted,
@@ -33,6 +35,8 @@ from pitwall.model.telemetry import (
     HistoryLap,
     LapCompletion,
     MarshalZone,
+    Participant,
+    Participants,
     Platform,
     RaceTiming,
     SessionInfo,
@@ -162,6 +166,20 @@ F1_25_INFO = AdapterInfo(
         "tyre_sets": FieldSupport(
             _S, "TyreSets (ID 12), player car: wear, laps left, usable life, lap delta vs fitted (game estimates)"
         ),
+        # --- race radio (pitwall.raceradio) ---
+        "damage": FieldSupport(
+            _S,
+            "CarDamage: wings, floor, diffuser, sidepod, gearbox, engine, brakes, tyre damage, DRS/ERS faults, engine "
+            "blown/seized (player car; RL,RR,FL,FR -> FL..RR); decoded on recorded PS5 races",
+        ),
+        "fia_flags": FieldSupport(_S, "CarStatus.vehicleFIAFlags (player car; -1 and undocumented values -> None)"),
+        "penalties": FieldSupport(
+            _S, "LapData penalties, warnings, corner-cutting warnings, unserved drive-throughs/stop-gos (player car)"
+        ),
+        "participants": FieldSupport(
+            _S, "Participants: AI flag, driverId, team, race number of every car (names: never stored or logged)"
+        ),
+        # --- end race radio ---
     },
     notes=(
         "Decodes UDP formats 2025 (F1 25) and 2026 (2026 Season Pack); format 2024 is rejected.",
@@ -361,6 +379,11 @@ class _TimingStructs:
 _TIMING_STRUCTS: dict[int, _TimingStructs] = {fmt: _TimingStructs(layout) for fmt, layout in P.LAYOUTS.items()}
 
 
+# --- race radio (pitwall.raceradio) -------------------------------------------------------------------------------
+_DAMAGE_FROM = _field_offset(P.CAR_DAMAGE, "tyresDamage")  # 16: everything after the tyre wear floats
+SHOW_ONLINE_NAMES: dict[int, bool] = {0: False, 1: True}  # ParticipantData.showOnlineNames
+
+
 def _timing_gap(minutes: int, ms: int) -> int | None:
     """A LapData delta in ms; None when not reported (0) or when a negative delta wrapped into the uint16."""
     if ms >= TIMING_GAP_WRAP_MS:
@@ -525,6 +548,13 @@ class F1Adapter:
         self._session_type_id: int | None = None
         self._tyre_sets_key: bytes | None = None
         self._formula_raw: int | None = None  # Session.formula as sent (2 = F2: no ERS); None before the first one
+        # race radio (pitwall.raceradio): the player's damage and penalty counters as cached objects (rebuilt only when
+        # the game's values change, so the CarFrame carries the same object meanwhile), the Participants table key
+        self._damage_key: bytes | None = None
+        self._damage_obj: CarDamage | None = None
+        self._pen_key: tuple[int, ...] | None = None
+        self._pen_obj: CarPenalties | None = None
+        self._participants_key: bytes | None = None
 
     # ------------------------------------------------------------------ structural validation
     def can_decode(self, data: bytes) -> bool:
@@ -700,6 +730,25 @@ class F1Adapter:
         self._prev_result = lap["resultStatus"]
         if lap["resultStatus"] != RESULT_FINISHED:
             self._prev_lap_snapshot = lap  # keep the last in-race snapshot for the final-lap sectors
+        # race radio (pitwall.raceradio): the player's penalty counters, rebuilt only when one changed (a tuple compare)
+        pen_key = (
+            lap["penalties"],
+            lap["totalWarnings"],
+            lap["cornerCuttingWarnings"],
+            lap["numUnservedDriveThroughPens"],
+            lap["numUnservedStopGoPens"],
+            lap["pitStopShouldServePen"],
+        )
+        if pen_key != self._pen_key:
+            self._pen_key = pen_key
+            self._pen_obj = CarPenalties(
+                time_penalties_s=pen_key[0],
+                warnings=pen_key[1],
+                corner_cutting_warnings=pen_key[2],
+                unserved_drive_throughs=pen_key[3],
+                unserved_stop_gos=pen_key[4],
+                serve_at_stop=bool(pen_key[5]),
+            )
         # One LapData pass for the all-car readers: AI pace watches results and pit laps, and hands the race timing the
         # same strided pit-status slice (one byte per car), so strategy's tick check costs no second slice.
         pits = self._watch_field_laps(data, h, t, out)
@@ -988,9 +1037,13 @@ class F1Adapter:
             f.brake_bias_front_pct = float(st["frontBrakeBias"])
             f.traction_control = st["tractionControl"]
             f.abs_active = bool(st["antiLockBrakes"])
+            f.fia_flag = enums.FIA_FLAGS.get(st["vehicleFIAFlags"])  # race radio: -1 / undocumented -> None
         dmg = self._damage
         if dmg is not None:
             f.tyre_wear_pct = Wheels.from_rl_rr_fl_fr(list(dmg["tyresWear"]))
+            f.damage = self._damage_obj  # race radio
+        if lap is not None:
+            f.penalties = self._pen_obj  # race radio
         f.quality = q
         out.append(f)
         if self.field_period_s is not None:
@@ -1077,7 +1130,29 @@ class F1Adapter:
 
     def _on_car_damage(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
         idx = h["playerCarIndex"]
-        self._damage = P.CAR_DAMAGE.unpack_from(data, P.HEADER.size + idx * P.CAR_DAMAGE.size)
+        off = P.HEADER.size + idx * P.CAR_DAMAGE.size
+        dmg = self._damage = P.CAR_DAMAGE.unpack_from(data, off)
+        # race radio (pitwall.raceradio): one CarDamage object while the damage bytes are unchanged (a 30-byte slice
+        # compare; the tyre wear floats before them change every packet and are mapped to tyre_wear_pct as before)
+        key = data[off + _DAMAGE_FROM : off + P.CAR_DAMAGE.size]
+        if key != self._damage_key:
+            self._damage_key = key
+            self._damage_obj = CarDamage(
+                front_left_wing_pct=dmg["frontLeftWingDamage"],
+                front_right_wing_pct=dmg["frontRightWingDamage"],
+                rear_wing_pct=dmg["rearWingDamage"],
+                floor_pct=dmg["floorDamage"],
+                diffuser_pct=dmg["diffuserDamage"],
+                sidepod_pct=dmg["sidepodDamage"],
+                gearbox_pct=dmg["gearBoxDamage"],
+                engine_pct=dmg["engineDamage"],
+                brakes_pct=Wheels.from_rl_rr_fl_fr(list(dmg["brakesDamage"])),
+                tyres_pct=Wheels.from_rl_rr_fl_fr(list(dmg["tyresDamage"])),
+                drs_fault=bool(dmg["drsFault"]),
+                ers_fault=bool(dmg["ersFault"]),
+                engine_blown=bool(dmg["engineBlown"]),
+                engine_seized=bool(dmg["engineSeized"]),
+            )
 
     def _on_participants(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
         idx = h["playerCarIndex"]
@@ -1098,6 +1173,36 @@ class F1Adapter:
             # race timing (pitwall.strategy) reports the same flags per car.
             # Unchanged rule (slots >= numActiveCars unknown); see docs follow-up on retired cars' slots.
             self._ai_controlled = tuple(bool(f) if i < n_active else None for i, f in enumerate(flags))
+        # race radio (pitwall.raceradio): the whole table, emitted only when it changed (a ~1.2 kB bytes compare every
+        # 5 s; decoded only on change). Names stay inside ``Participant`` (repr-less) and go to the race radio only.
+        key = data[start:]
+        if key != self._participants_key:
+            self._participants_key = key
+            cars: list[Participant] = []
+            for i in range(min(n_active, h["layout"].max_cars)):
+                row = pd.unpack_from(data, start + i * pd.size)
+                driver = row["driverId"]
+                raw = row["name"]
+                cars.append(
+                    Participant(
+                        car_index=i,
+                        ai_controlled=row["aiControlled"] == 1,
+                        driver_id=None if driver in enums.DRIVER_ID_NONE else driver,
+                        team_id=row["teamId"],
+                        race_number=row["raceNumber"] or None,
+                        name=raw.split(b"\0", 1)[0].decode("utf-8", errors="replace").strip(),
+                        show_online_names=SHOW_ONLINE_NAMES.get(row["showOnlineNames"]),
+                    )
+                )
+            out.append(
+                Participants(
+                    game=Game.F1_25,
+                    t_recv_ns=t,
+                    session_time_s=float(h["sessionTime"]),
+                    player_index=idx,
+                    cars=tuple(cars),
+                )
+            )
 
     def _on_session(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
         head = P.SESSION_HEAD.unpack_from(data, P.SESSION_HEAD_OFFSET)

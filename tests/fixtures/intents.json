@@ -232,6 +232,20 @@
     {"question": "Are both tyres on the left worn?", "intent": "tyres", "corner": null, "from": "F2"},
     {"question": "Do I need to use both compounds?", "intent": "stop_rules", "corner": null, "from": "F2"},
     {"question": "Is the stop compulsory in the feature race?", "intent": "stop_rules", "corner": null, "from": "F2"},
-    {"question": "Should I use overtake mode?", "intent": "ers", "corner": null, "from": "F2"}
+    {"question": "Should I use overtake mode?", "intent": "ers", "corner": null, "from": "F2"},
+    {"question": "Who's ahead?", "intent": "who_ahead", "corner": null, "from": "radio"},
+    {"question": "who is behind me", "intent": "who_ahead", "corner": null, "from": "radio"},
+    {"question": "Do I have a penalty?", "intent": "penalties", "corner": null, "from": "radio"},
+    {"question": "How many warnings have I got?", "intent": "penalties", "corner": null, "from": "radio"},
+    {"question": "How was sector 2?", "intent": "sectors", "corner": null, "from": "radio"},
+    {"question": "What's my damage?", "intent": "damage", "corner": null, "from": "radio"},
+    {"question": "How many laps left?", "intent": "laps_left", "corner": null, "from": "radio"},
+    {"question": "how many laps to go", "intent": "laps_left", "corner": null, "from": "radio"},
+    {"question": "Is this the last lap?", "intent": "laps_left", "corner": null, "from": "radio"},
+    {"question": "What lap are we on?", "intent": "laps_left", "corner": null, "from": "radio"},
+    {"question": "How many laps of fuel have I got?", "intent": "fuel", "corner": null, "from": "radio"},
+    {"question": "How many laps left on these tyres?", "intent": "tyres", "corner": null, "from": "radio"},
+    {"question": "How many laps have I done this week?", "intent": "week", "corner": null, "from": "radio"},
+    {"question": "How was that last lap?", "intent": "last_lap", "corner": null, "from": "radio"}
   ]
 }

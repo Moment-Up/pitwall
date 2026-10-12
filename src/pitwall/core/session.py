@@ -55,6 +55,7 @@ from pitwall.model.telemetry import (
     FieldSample,
     GameEvent,
     LapCompletion,
+    Participants,
     RaceTiming,
     SessionInfo,
     TyreSetsInfo,
@@ -93,6 +94,18 @@ class StrategySink(Protocol):
     def end_session(self, session_id: str) -> None: ...
 
 
+# --- race radio (pitwall.raceradio) ---
+class RaceSink(Protocol):
+    """Where the race radio inputs go (``pitwall.raceradio.worker.RaceRadioWorker``): O(1), never blocks ingest."""
+
+    def submit(self, session_id: str, item: Emitted) -> bool: ...
+
+    def end_session(self, session_id: str) -> None: ...
+
+
+# --- end race radio ---
+
+
 class SessionManager:
     def __init__(
         self,
@@ -107,11 +120,17 @@ class SessionManager:
         resume_candidate: Mapping[str, Any] | None = None,
         field: FieldSink | None = None,
         strategy: StrategySink | None = None,
+        race: RaceSink | None = None,
     ) -> None:
         self.writer = writer
         self.live = live
         self.field = field  # layer L0b: the field model learns the track from the other cars (off this thread)
         self.strategy = strategy  # race strategy (pitwall.strategy): runs off this thread
+        self.race = race  # race radio (pitwall.raceradio): runs off this thread, every game
+        # race radio: the latest Participants table (a reference; F1 sends it every 5 s but the adapter emits it only
+        # when it changed), handed to every session that starts after it - a table that came before the session's
+        # first item would otherwise never reach it
+        self._participants: Participants | None = None
         self.worker = worker
         self.source = source
         self.synthetic = synthetic
@@ -175,6 +194,8 @@ class SessionManager:
             )
         )
         self.live.reset_session(sid, self.source, self.synthetic, game)
+        if self.race is not None and self._participants is not None:  # race radio: who is in which car
+            self.race.submit(sid, self._participants)
         log.info(
             "session %s started (%s, source=%s, synthetic=%s, driver=%s)",
             sid,
@@ -205,6 +226,8 @@ class SessionManager:
             self.field.end_session()
         if self.strategy is not None:  # race strategy (pitwall.strategy)
             self.strategy.end_session(sid)
+        if self.race is not None:  # race radio (pitwall.raceradio)
+            self.race.end_session(sid)
         log.info("session %s ended", sid)
         self.session_id = None
         self._game_uid = None
@@ -227,6 +250,16 @@ class SessionManager:
             # session and are never persisted as such - a lock-free append to the strategy worker, or nowhere
             if self.strategy is not None and self.session_id is not None:
                 self.strategy.submit(self.session_id, e)
+            # --- race radio --- the field's timing to the race radio too
+            if isinstance(e, RaceTiming) and self.race is not None and self.session_id is not None:
+                self.race.submit(self.session_id, e)
+            return
+        if isinstance(e, Participants):
+            # --- race radio --- who drives which car (names inside): only ever to the race radio worker. Never starts
+            # a session, never persisted, never in live state, never logged.
+            self._participants = e
+            if self.race is not None and self.session_id is not None:
+                self.race.submit(self.session_id, e)
             return
         self._last_t_ns = e.t_recv_ns
         if self.drivers is not None:
@@ -236,6 +269,7 @@ class SessionManager:
         if isinstance(e, SessionInfo):
             self._on_session(e)
             self._to_strategy(e)
+            self._to_race(e)  # race radio
             return
         if isinstance(e, GameEvent) and self.session_id is None:
             # menus send button events with no session: drive PTT but don't create an empty session
@@ -261,6 +295,7 @@ class SessionManager:
             self.writer.submit(lambda c: repo.insert_setup(c, sid, e))
         if not isinstance(e, CarSetup):
             self._to_strategy(e)
+            self._to_race(e)  # race radio
 
     def _to_strategy(self, e: Emitted) -> None:
         """Race strategy (pitwall.strategy): the player's frames, laps, events and session info, after the session
@@ -274,6 +309,21 @@ class SessionManager:
         if isinstance(e, GameEvent) and e.kind == EventKind.BUTTON:
             return
         self.strategy.submit(sid, e)
+
+    # --- race radio (pitwall.raceradio) ---
+    def _to_race(self, e: Emitted) -> None:
+        """The race radio: the player's frames, laps, events (no button events) and session info, after the session
+        manager has handled them (one deque append), for every game."""
+        sid = self.session_id
+        if self.race is None or sid is None:
+            return
+        if not isinstance(e, CarFrame | LapCompletion | SessionInfo | GameEvent):
+            return
+        if isinstance(e, GameEvent) and e.kind == EventKind.BUTTON:
+            return
+        self.race.submit(sid, e)
+
+    # --- end race radio ---
 
     def _on_session(self, info: SessionInfo) -> None:
         uid = info.session_uid

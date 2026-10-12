@@ -1,6 +1,6 @@
 // Settings › Radio & voice, the rendering (spec 8; mockup settingsPage "radio"): left, how the engineer sounds
 // (voice on/off, this device or the Mac, device voice, speaking speed, the Mac's voice, Test voice); right, what the
-// radio says (braking calls, coaching) and diagnostics. One banner on top while the radio link is down, because the
+// radio says (braking calls, coaching, race radio's "say online players' names") and diagnostics. One banner on top while the radio link is down, because the
 // Mac's voice and the braking calls change only over the link.
 //
 // Pure: everything comes in as props (the radio state, the Mac's HTTP status, the store's actions), so the render
@@ -25,6 +25,8 @@ import {
   macState,
   macVoiceLabel,
   macVoiceView,
+  ONLINE_NAMES_TITLE,
+  RACE_CALLS_NOTE,
   sourceHint,
   speedText,
   testVoiceView,
@@ -32,6 +34,7 @@ import {
   voiceHint,
   voiceOn,
   type deviceNoun,
+  type OnlineNamesView,
 } from "./model";
 
 /** The radio store fields this page reads (selected with shallowEqual: the mic level is not among them). */
@@ -94,12 +97,25 @@ export interface RadioVoiceViewProps {
   /** How push-to-talk works (Setup › Controls): "Wheel in F1 25: UDP Action 3 (Circle) · iPad button · Space", and
    * where to change it. Undefined while unknown (an older server, or not loaded yet): the row is left out. */
   ptt?: { line: string; href: string };
+  /** race radio (P2): "Say online players' names" (model.onlineNamesView); absent or not shown = no row. */
+  onlineNames?: OnlineNamesView | null;
+  onOnlineNames?: (on: boolean) => void;
 }
 
 const SPEED_MIN = 0.8;
 const SPEED_MAX = 1.3;
 
-export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, goLive = true, ptt }: RadioVoiceViewProps) {
+export function RadioVoiceView({
+  r,
+  status,
+  radioFollowsDriver,
+  noun,
+  actions,
+  goLive = true,
+  ptt,
+  onlineNames = null,
+  onOnlineNames,
+}: RadioVoiceViewProps) {
   const link = linkState(r);
   const linkUp = link === "open";
   const mac = macState(linkUp ? r.server : null, status);
@@ -258,6 +274,16 @@ export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, g
                 </Link>
               </CellRow>
             ) : null}
+            {/* --- race radio (P2): household setting, read and stored on the Mac --- */}
+            {onlineNames?.shown && (
+              <SwitchRow
+                title={ONLINE_NAMES_TITLE}
+                hint={onlineNames.warn ? <span className="text-warning">{onlineNames.hint}</span> : onlineNames.hint}
+                isSelected={onlineNames.value === true}
+                isDisabled={onlineNames.disabled || !onOnlineNames}
+                onChange={(v) => onOnlineNames?.(v)}
+              />
+            )}
             <DiagnosticsRow
               mac={mac}
               summary={diagnosticsSummary({ source, deviceTtsCapable: deviceTts, noun, mac, link, micLabel: micChipView(r).label })}
@@ -267,6 +293,8 @@ export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, g
           <p className="m-0 px-1 text-sm text-muted">
             Braking calls and coaching are also on Drive › Radio, to change between runs.
           </p>
+          {/* --- race radio: the per-driver race calls live on the driver sheet --- */}
+          {onlineNames?.shown && <p className="m-0 px-1 text-sm text-muted">{RACE_CALLS_NOTE}</p>}
         </div>
       </div>
     </div>

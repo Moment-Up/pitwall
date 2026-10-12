@@ -94,6 +94,9 @@ class MessageKind(StrEnum):
     STRATEGY = "strategy"  # race strategy call (pitwall.strategy.radio): normal and detailed intensity
     GOAL = "goal"  # a goal reached (pitwall.motivation.radio): after the lap time, never holding its coaching back
     VALIDATION = "validation"  # a rig validation prompt (pitwall.validate.kit) while the driver runs a validation
+    # --- race radio ---
+    RACE = "race"  # race situation call (pitwall.raceradio): normal and detailed intensity, own per-lap allowance
+    # --- end race radio ---
 
 
 class Priority(IntEnum):

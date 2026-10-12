@@ -321,6 +321,34 @@
     ]
    },
    {
+    "id": "race_position",
+    "label": "Race position",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "race_position"
+    ]
+   },
+   {
+    "id": "penalties",
+    "label": "Penalties & warnings",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "penalties"
+    ]
+   },
+   {
     "id": "setup_telemetry",
     "label": "Car setup from the game",
     "group": "setup_radio",
@@ -382,6 +410,9 @@
  "_fixture": {
   "tier": "edited",
   "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
-  "moment": "GET /api/game after PUT acc:ps5"
+  "moment": "GET /api/game after PUT acc:ps5",
+  "edits": [
+   "race radio (feat/radio): race_position and penalties features inserted as src/pitwall/games.py emits them"
+  ]
  }
 }

@@ -92,6 +92,8 @@ from pitwall.coach.cues import (
 from pitwall.compat import is_windows
 from pitwall.core.live import LiveState
 from pitwall.motivation.radio import GoalLineGate, goal_message  # lane motivation
+from pitwall.voice.addressing import NameCaller  # race radio
+from pitwall.voice.field_zones import knowledge_model  # race radio: speak windows before a learned model
 from pitwall.voice.scheduler import (
     DRIVER_INITIATED,
     DRIVER_LAP_KINDS,
@@ -112,6 +114,9 @@ from pitwall.voice.types import (
     SynthResult,
     TtsEngine,
 )
+from pitwall.voice.urgent import URGENT_NOTE, urgent_message  # race radio: the urgent path
+
+ONLINE_NAME_REDACTED = "[online name]"  # race radio (raceradio.names.REDACTED): what history and observers keep
 
 if TYPE_CHECKING:
     from pitwall.drivers import CoachingLimits, Driver
@@ -161,6 +166,13 @@ FAST_INTENTS = frozenset(
         "week",
         "badges",
         "controls_where",  # Setup › Controls: "which button is brake bias?" from the saved layout (no session needed)
+        # --- race radio --- (raceradio.answers): who's ahead/behind, penalties, damage, sector deltas
+        "who_ahead",
+        "penalties",
+        "damage",
+        "sectors",
+        "laps_left",
+        # --- end race radio ---
     }
 )
 # While the car is moving every answer is deterministic (plan decision 2): with the local LLM at about 15 tokens a
@@ -393,6 +405,10 @@ class RadioHub:
         self._last_coached: dict[str, int] = {}  # corner -> lap last coached, for the current session only
         self._last_coached_sid: str | None = None
         self._goal_lines = GoalLineGate()  # lane motivation: at most 2 goal lines per session
+        # --- race radio --- the seated driver's race radio groups (drivers.RadioCallPrefs; None = all on) and name
+        self.race_prefs: object | None = None
+        self.addresser = NameCaller()
+        # --- end race radio ---
         self.ptt_down = False
         self.ptt_source: str | None = None
         self._ptt_client: RadioClient | None = None
@@ -904,6 +920,12 @@ class RadioHub:
                     short = radio_answer(intent.name, sheet, question)  # engineer-style phrasing for instant answers
                     if short:
                         ans_text = short
+            # --- race radio (raceradio.names): an online name in a "who's ahead?" answer, opt-in, never kept ---
+            personal = None if sheet is None or use_llm else self._online_name_answer(intent.name, question, sheet)
+            if personal is not None:
+                ans_text = personal[0]
+            logged = ans_text if personal is None else ans_text.replace(personal[1], ONLINE_NAME_REDACTED)
+            # --- end race radio ---
             rec.engineer_ms = int((time.perf_counter() - t0) * 1000)
             rec.llm = bool(ans and not ans.fallback and ans.model)
             self._apply_control(ans)
@@ -918,13 +940,15 @@ class RadioHub:
                     "fallback": ans.fallback,
                     "facts": [f["id"] for f in ans.facts],
                 }
-            self.history.appendleft({"role": "engineer", "text": ans_text, "t": time.time()})
+            if personal is not None:
+                msg.meta["personal"] = True  # race radio: kept out of history, observers, the audit and neural TTS
+            self.history.appendleft({"role": "engineer", "text": logged, "t": time.time()})
             self._observe(  # validation kit hook
                 "answer",
                 lambda: {
                     "msg_id": msg.id,
                     "question": question,
-                    "text": ans_text,
+                    "text": logged,
                     "intent": ans.intent if ans is not None else intent.name,
                     "grounded": ans.grounded if ans is not None else None,
                     "fallback": ans.fallback if ans is not None else True,
@@ -985,7 +1009,8 @@ class RadioHub:
             rec.tts_ms = int((time.perf_counter() - t0) * 1000)
         await self._yield_to_on_air(msg)
         self._deliver(msg, clip, rec, released)
-        if res is not None and res.neural and res.clip.pcm and self._can_verify():
+        personal = msg.meta.get("personal") is True  # race radio: an online name is never kept by the audit's log
+        if res is not None and res.neural and res.clip.pcm and self._can_verify() and not personal:
             self._spawn(self._audit(msg.speech, res))  # answers are not held back: checked after sending
 
     async def _yield_to_on_air(self, msg: RadioMessage) -> None:
@@ -1016,6 +1041,15 @@ class RadioHub:
         audio_needed = any(not c.device_tts for c in self.clients) or not self.clients
         if not msg.speech.strip() or not audio_needed:
             return None
+        fallback = getattr(self.tts, "synthesize_fallback", None)
+        if msg.meta.get("personal") is True and callable(fallback):  # race radio: the neural engine logs dropped words
+            try:
+                t0 = time.perf_counter()
+                clip = await asyncio.to_thread(fallback, msg.speech)
+                return SynthResult(clip, "say", False, (time.perf_counter() - t0) * 1000.0)
+            except Exception:
+                log.exception("fallback TTS failed; sending text only")
+                return None
         try:
             res = await asyncio.to_thread(self._synth_detailed, msg.speech)
         except Exception:
@@ -1302,6 +1336,14 @@ class RadioHub:
             self._loop.call_soon_threadsafe(self._enqueue_motivation, payload)
         elif kind == "strategy_call" and self._loop is not None:  # race strategy (pitwall.strategy)
             self._loop.call_soon_threadsafe(self._enqueue_strategy, payload)
+        # --- race radio ---
+        elif kind == "race_call" and self._loop is not None:
+            self._loop.call_soon_threadsafe(self._enqueue_race, payload)
+        elif kind == URGENT_NOTE and self._loop is not None:
+            self._loop.call_soon_threadsafe(self._enqueue_urgent, payload)
+        elif kind == "race_retract" and self._loop is not None:
+            self._loop.call_soon_threadsafe(self._retract_race, payload)
+        # --- end race radio ---
 
     def _enqueue_motivation(self, payload: dict[str, Any]) -> None:  # lane motivation (event loop only)
         simple = self.coaching_limits is not None and self.coaching_limits.simple_wording
@@ -1328,6 +1370,91 @@ class RadioHub:
         except Exception:
             log.exception("strategy call failed")
 
+    # --- race radio (pitwall.raceradio) ---
+    def _simple(self) -> bool:
+        limits = self.coaching_limits
+        return limits is not None and limits.simple_wording
+
+    def _enqueue_race(self, payload: dict[str, Any]) -> None:
+        """A race call (``raceradio.radio.race_message``: the seated driver's groups and wording) for the scheduler.
+
+        The radio follows the live session first: a new session's first call (GT7's rolling-start brief comes with the
+        session's first frame) can arrive before the tick notices the session, and the tick's reset would then drop
+        it with the old session's messages. A call of a session that is no longer the live one is dropped."""
+        try:
+            sid, live_sid = payload.get("session_id"), self.live.session_id
+            if isinstance(sid, str) and live_sid is not None and sid != live_sid:
+                log.debug("race call of an earlier session dropped")
+                return
+            self._follow_session()
+            from pitwall.raceradio.radio import race_message
+
+            msg = race_message(
+                payload, time.monotonic(), prefs=self.race_prefs, simple=self._simple(), intensity=self.intensity
+            )
+            if msg is not None:
+                self.scheduler.enqueue(msg)
+        except Exception:
+            log.exception("race call failed")
+
+    def _retract_race(self, payload: dict[str, Any]) -> None:
+        """A flashback undid what the unsaid race calls of ``payload["groups"]`` say (position, damage): drop them,
+        queued or held (``race_retract``, docs/voice-protocol.md)."""
+        try:
+            sid, groups = payload.get("session_id"), payload.get("groups")
+            if sid != self.live.session_id or not isinstance(groups, list):
+                return
+            wanted = {g for g in groups if isinstance(g, str)}
+            dropped = self.scheduler.drop_race_calls(wanted)
+            held = self._held
+            if held is not None and held[0].meta.get("race_call") and held[0].meta.get("group") in wanted:
+                self._held = None
+                dropped += 1
+            if dropped:
+                log.info("flashback: %d unsaid race call(s) dropped", dropped)
+        except Exception:
+            log.exception("race retract failed")
+
+    def _enqueue_urgent(self, payload: dict[str, Any]) -> None:
+        """An urgent call (``voice.urgent``): said at once, past quiet mode, intensity and speak windows."""
+        try:
+            self._follow_session()  # as a race call: the session change must not drop it
+            self.scheduler.enqueue(urgent_message(payload, time.monotonic(), simple=self._simple()))
+        except Exception:
+            log.exception("urgent call failed")
+
+    def _online_name_answer(self, intent: str, question: str, sheet: Any) -> tuple[str, str] | None:
+        """(answer, name): "who's ahead?" with the online name of the car, when the household opted in
+        (``raceradio.names``) and the race radio has no official AI driver name for it; else None."""
+        if intent != "who_ahead" or not getattr(self.live, "race_online_names", False):
+            return None
+        roster = getattr(self.live, "race_roster", None)
+        if roster is None or getattr(roster, "session_id", None) != self.live.session_id:
+            return None
+        from pitwall.raceradio.names import personal_who
+
+        return personal_who(sheet, question, roster)
+
+    def _check_name(self, name: str | None) -> None:
+        """A TTS engine that can say which words its G2P drops is asked once, off the loop; a dropped name disables
+        addressing (logged without the name)."""
+        check = getattr(self.tts, "g2p_dropped", None)
+        if name is None or not callable(check) or self._loop is None:
+            return
+
+        async def run() -> None:
+            try:
+                dropped = await asyncio.to_thread(check, name)
+            except Exception:
+                return
+            if dropped and self.addresser.name == name:
+                self.addresser.disable_name()
+                log.info("name not in the TTS lexicon: the radio will not address the driver by name")
+
+        self._spawn(run())
+
+    # --- end race radio ---
+
     def apply_driver(self, driver: Driver | None) -> None:
         """The seated driver changed or edited their profile (``DriverService.attach_radio``; event loop only).
 
@@ -1345,11 +1472,18 @@ class RadioHub:
                 dropped += 1
             if dropped:
                 log.info("seat change: %d unsaid message(s) about the previous driver's laps dropped", dropped)
+        seat_changed = self._seat_known and seated != self._seated_id  # race radio: the name confirms the seat
         self._seat_known, self._seated_id = True, seated
         self.coaching_limits = None if driver is None else driver.coaching
         if driver is not None:
             self._set_intensity(driver.preferences.coaching_intensity)
             self.voice_enabled = driver.preferences.voice_enabled
+        # --- race radio ---
+        prefs = None if driver is None else driver.preferences.radio_calls
+        self.race_prefs = prefs
+        self.addresser.set_driver(None if driver is None else driver.name, prefs is None or prefs.name, seat_changed)
+        self._check_name(self.addresser.name)
+        # --- end race radio ---
         self._last_coached.clear()
         self._send_state()
 
@@ -1400,6 +1534,13 @@ class RadioHub:
         on_track = f is not None and conn == "live" and not (int(f.quality) & 0b1100)
         ttb = None
         model = self.live.track_model
+        # --- race radio --- no learned model yet (a new track, a joined race): the AI field's and the physics prior's
+        # braking zones, so "unknown" is never taken for calm (voice.field_zones)
+        if not model:
+            session = getattr(self.live, "session", None)
+            track = getattr(session, "track_id", None)
+            model = knowledge_model(getattr(self.live, "track_knowledge", None), track)
+        # --- end race radio ---
         if f is not None and model and f.lap_distance_m is not None and f.speed_kph and f.speed_kph > 30:
             ttb = time_to_next_braking(model, f.lap_distance_m, f.speed_kph)
         to_cue = self.cues.seconds_to_next_cue()  # a cue is a braking zone for the speak window
@@ -1457,6 +1598,7 @@ class RadioHub:
         msg = self.scheduler.next_message(self.driving_state(), now, interrupt_only)
         if msg is None:
             return
+        msg = self.addresser.apply(msg, now)  # race radio: the driver's name now and then (voice.addressing)
         if not self.voice_enabled and msg.kind not in (MessageKind.ANSWER, MessageKind.CONTROL):
             return
         clip = await self._synthesize(msg, verify=not _urgent(msg))  # an urgent call is not held up by the check
@@ -1582,7 +1724,8 @@ class RadioHub:
                 "state": asdict(self.driving_state()),
             },
         )
-        self._deliver(msg, clip, LatencyRecord(kind="proactive", text=msg.text), msg.created_mono)
+        kind = "urgent" if msg.meta.get("urgent") is True else "proactive"  # race radio: notify -> first audio
+        self._deliver(msg, clip, LatencyRecord(kind=kind, text=msg.text), msg.created_mono)
         if interrupted is not None and interrupted[0].id != msg.id:
             self._rehold(interrupted, now)
 

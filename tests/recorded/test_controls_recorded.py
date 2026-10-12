@@ -21,8 +21,16 @@ from pitwall.validate import evidence as E
 from pitwall.validate.kit import ValidationKit
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "recorded"
-# the four F1-car excerpts (the F2 excerpts carry other button presses and are tested by the F2 recorded tests)
-F1_EXCERPTS = sorted(p for p in FIXTURES.glob("f1_25_2025_ps5_*.pwcap") if "_f2_" not in p.name)
+# the four F1-car excerpts these statuses were read from, by name: the F2 excerpts (tested by the F2 recorded tests) and
+# the race radio's excerpts carry other button presses (Triangle, Square)
+F1_EXCERPTS = [
+    p
+    for p in (
+        FIXTURES / f"f1_25_2025_ps5_{name}-excerpt.pwcap"
+        for name in ("austria_race", "imola_race-pitstop", "melbourne_race-start", "monza_race")
+    )
+    if p.exists()
+]
 # Every non-zero buttonStatus in the four committed PS5 excerpts (Cross, Circle and the Right Stick direction bits)
 STATUSES = {0x1, 0x4, 0x8000, 0x20000, 0x28000, 0x40000, 0x48000, 0x60000}
 

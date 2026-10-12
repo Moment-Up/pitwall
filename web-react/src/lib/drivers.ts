@@ -15,7 +15,10 @@
 import type { SessionRow } from "./api";
 import { authFetch } from "./auth";
 import type { CarFamily } from "./carclass";
+import type { RadioCallGroup, RadioCallPrefs, RadioWording } from "./raceradio/types"; // race radio
 import { Store } from "./store";
+
+export type { RadioCallGroup, RadioCallPrefs, RadioWording };
 
 export type SkillLevel = "beginner" | "intermediate" | "advanced";
 export type CoachingIntensity = "quiet" | "normal" | "detailed";
@@ -29,6 +32,14 @@ export interface DriverPreferences {
   /** "Usually plays": a games catalogue id (GET /api/games), selected when this driver takes the seat while no
    * telemetry is live. null = none; absent from servers before game selection (never sent to those). */
   default_game?: string | null;
+  // --- race radio (pitwall.raceradio) ---
+  /** Which race calls this driver hears (all on by default; the red flag ignores them). Absent from servers before
+   * race radio (never sent to those: they refuse unknown fields). */
+  radio_calls?: RadioCallPrefs;
+  /** Radio words: "auto" = simple words for beginners. Also switches coaching and strategy wording. Absent from
+   * servers before race radio. */
+  radio_wording?: RadioWording;
+  // --- end race radio ---
 }
 
 /** One best lap of a driver. F2 support: one per game, track and car family, so a track driven in an F1 and an F2
@@ -82,7 +93,11 @@ export interface Driver {
   stats: DriverStats;
 }
 
-export type DriverInput = Partial<DriverPreferences> & { name?: string };
+/** A POST or PATCH body. `radio_calls` may be partial on PATCH (the server merges it). */
+export type DriverInput = Partial<Omit<DriverPreferences, "radio_calls">> & {
+  name?: string;
+  radio_calls?: Partial<RadioCallPrefs>;
+};
 
 /** Session rows carry their owner (repo.list_sessions joins the driver's name). */
 export type DriverSessionRow = SessionRow & { driver_id: number | null; driver_name: string | null };
@@ -118,11 +133,77 @@ export const SKILL_LEVELS: { value: SkillLevel; label: string; radio: string; en
   },
 ];
 
+/** The hints say what the amount does to the race radio too (voice/scheduler.py RACE_PER_LAP: 2 normal, 3 detailed;
+ * quiet: alerts only - flags, penalties, damage - and answers). */
 export const INTENSITIES: { value: CoachingIntensity; label: string; hint: string }[] = [
-  { value: "quiet", label: "Quiet", hint: "Alerts and answers only." },
-  { value: "normal", label: "Normal", hint: "Lap summary and the top point." },
-  { value: "detailed", label: "Detailed", hint: "More points per lap (beginners still get one)." },
+  { value: "quiet", label: "Quiet", hint: "Alerts and answers only: flags, penalties, damage." },
+  { value: "normal", label: "Normal", hint: "Lap summary, the top point and up to 2 race calls a lap." },
+  {
+    value: "detailed",
+    label: "Detailed",
+    hint: "More points per lap (beginners still get one), 3 race calls a lap and rivals' fastest laps.",
+  },
 ];
+
+// --- race radio (pitwall.raceradio): the per-driver toggles and the wording choice (race-radio spec 10.4) ---
+
+/** The toggles in the order the driver sheet lists them, with their hints. Flags, rivals, penalties and damage come
+ * from F1's data only (GT7 and Forza send none of it): the hint says so, so a GT7 driver's parent knows those
+ * switches do nothing there. */
+export const RADIO_CALL_GROUPS: readonly { value: RadioCallGroup; label: string; hint: string | null }[] = [
+  {
+    value: "flags",
+    label: "Flags & race control",
+    hint: "Yellow, blue, safety car. Red flags are always on. F1 only.",
+  },
+  { value: "start", label: "Start & countdown", hint: "Lights out, laps to go, the finish." },
+  { value: "position", label: "Position", hint: "Places gained and lost, good overtakes." },
+  { value: "rivals", label: "Rivals & gaps", hint: "Gaps every few laps, cars pitting, retirements. F1 only." },
+  { value: "penalties", label: "Penalties & warnings", hint: "Time penalties, warnings, track limits. F1 only." },
+  { value: "damage", label: "Damage", hint: "Wing, floor, punctures. F1 only." },
+  { value: "name", label: "Say my name sometimes", hint: "At most once a minute." },
+];
+
+/** Every race call on: the server's default (drivers.py RadioCallPrefs). */
+export const ALL_RADIO_CALLS: Readonly<RadioCallPrefs> = Object.freeze({
+  flags: true,
+  start: true,
+  position: true,
+  rivals: true,
+  penalties: true,
+  damage: true,
+  name: true,
+});
+
+export const RADIO_WORDINGS: readonly { value: RadioWording; label: string }[] = [
+  { value: "auto", label: "Automatic" },
+  { value: "simple", label: "Simple" },
+  { value: "standard", label: "Standard" },
+];
+
+/** The toggles as stored, read leniently like the server (drivers.py from_stored): a missing or non-boolean value is
+ * its default (on). */
+export function radioCallsOf(raw: unknown): RadioCallPrefs {
+  const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const out = { ...ALL_RADIO_CALLS };
+  for (const g of RADIO_CALL_GROUPS) {
+    const v = o[g.value];
+    if (typeof v === "boolean") out[g.value] = v;
+  }
+  return out;
+}
+
+/** The wording as stored; anything else reads as "auto". */
+export function radioWordingOf(raw: unknown): RadioWording {
+  return raw === "simple" || raw === "standard" ? raw : "auto";
+}
+
+/** The server knows race-radio preferences: a profile it sent carries them (older servers refuse the fields). */
+export function raceRadioSupported(list: readonly Pick<Driver, "preferences">[]): boolean {
+  return list.some((d) => d.preferences.radio_calls !== undefined || d.preferences.radio_wording !== undefined);
+}
+
+// --- end race radio ---
 
 // Same palette the server picks from (pitwall.drivers.PALETTE). Data, not theme: a driver's colour is their identity.
 export const PALETTE = ["#ff6a2b", "#38bdf8", "#3ddc84", "#b36bff", "#ffb020", "#f472b6", "#ff4d5e", "#94a3b8"];

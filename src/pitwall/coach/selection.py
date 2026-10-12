@@ -31,6 +31,7 @@ from __future__ import annotations
 import dataclasses
 import threading
 from collections.abc import Mapping, MutableMapping, Sequence
+from dataclasses import replace
 from typing import Any
 
 from pitwall.drivers import COACHING_INTENSITIES, CoachingLimits, apply_coaching_limits, coaching_limits
@@ -73,7 +74,8 @@ def screen_limits(limits: CoachingLimits | None) -> CoachingLimits:
     lim = radio_limits(limits)
     if lim.max_per_lap > 0:
         return lim
-    return coaching_limits(lim.skill_level, "normal")
+    # race radio: keep the driver's wording choice (drivers.coaching_limits ``wording``)
+    return replace(coaching_limits(lim.skill_level, "normal"), simple_wording=lim.simple_wording)
 
 
 def _is_point(o: Mapping[str, Any]) -> bool:

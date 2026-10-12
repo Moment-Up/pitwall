@@ -10,7 +10,9 @@
 // Unknown values stay unknown: no mode is pre-selected before the Mac has said which one is on.
 
 import { INTENSITIES } from "../../../lib/drivers";
+import { isMissingRoute } from "../../../lib/endpoints/review";
 import type { VoiceStatus } from "../../../lib/endpoints/settings";
+import type { RaceSettings } from "../../../lib/raceradio/types";
 import {
   SERVER_VOICE_LABELS,
   VOICE_DISABLED,
@@ -316,6 +318,44 @@ export function diagnosticsSummary(input: {
   if (input.link === "off") return `Speech: ${tts} · radio off`;
   const link = input.link === "open" ? "link up" : "link down";
   return `Speech: ${tts} · ${link} · ${input.micLabel.toLowerCase()}`;
+}
+
+// --------------------------------------------------------------------------- race radio (P2): online names
+
+/** Say online players' names (household; GET/PUT /api/race/settings, race-radio spec 8.3): off by default. */
+export const ONLINE_NAMES_TITLE = "Say online players' names";
+/** Where the race calls are chosen (the coaching amount above also sets how many a lap). */
+export const RACE_CALLS_NOTE = "Race calls are set per driver: Settings › Drivers.";
+export const ONLINE_NAMES_HINT = "Only when you ask who's ahead or behind. Names are never saved or written to logs.";
+
+export interface OnlineNamesView {
+  /** The Mac has the setting. A server without it answers FastAPI's own 404: the row is left out. */
+  shown: boolean;
+  /** The stored value; null while unknown (nothing is pre-selected). */
+  value: boolean | null;
+  disabled: boolean;
+  hint: string;
+  /** The hint is a problem (unknown, or a change that was not saved). */
+  warn: boolean;
+}
+
+export function onlineNamesView(input: {
+  data: RaceSettings | undefined;
+  error: unknown;
+  saving: boolean;
+  saveError: string | null;
+}): OnlineNamesView {
+  const { data, error, saving, saveError } = input;
+  if (data === undefined && isMissingRoute(error)) {
+    return { shown: false, value: null, disabled: true, hint: ONLINE_NAMES_HINT, warn: false };
+  }
+  const value = data ? data.online_names : null;
+  if (saveError) return { shown: true, value, disabled: saving || value === null, hint: `Not saved: ${saveError}`, warn: true };
+  if (value === null) {
+    const hint = error ? "Unknown: the Mac has not answered." : "Reading the Mac's setting…";
+    return { shown: true, value, disabled: true, hint, warn: !!error };
+  }
+  return { shown: true, value, disabled: saving, hint: ONLINE_NAMES_HINT, warn: false };
 }
 
 // ------------------------------------------------------------------------------------------------- diagnostics

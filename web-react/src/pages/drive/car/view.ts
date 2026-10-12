@@ -24,6 +24,8 @@ import { decimal, gearLabel, grouped, num, tyreTempColor, unit01 } from "../../.
 import { featureOf, missing, tyresUnavailableText, unavailableLine } from "../../../lib/game";
 import { worldXZ } from "../../../lib/viz/track-map";
 import { measuredFuelMargin } from "../../../lib/strategy/view"; // race strategy (pitwall.strategy)
+import type { RaceView } from "../../../lib/raceradio/types"; // race radio (pitwall.raceradio)
+import { callLineText, positionNote, raceControlCall } from "../../../lib/raceradio/view"; // race radio
 
 /** The data on screen is current: not stale, not offline, and telemetry has arrived. */
 export function liveValues(model: Pick<DriveModel, "dim" | "state">): boolean {
@@ -386,9 +388,11 @@ const SESSION_WORDS: Record<string, string> = {
   pit_exit: "Pit exit",
 };
 
-const CAR_WORDS: Record<string, { mine: string; any: string }> = {
-  penalty: { mine: "Penalty for you", any: "Penalty issued" },
-  collision: { mine: "Contact", any: "Collision reported" },
+/** `other`: the event says it is another car's (`player: false`), so the line never reads as being about you;
+ * `any`: the event does not say whose car. */
+const CAR_WORDS: Record<string, { mine: string; other?: string; any: string }> = {
+  penalty: { mine: "Penalty for you", other: "Penalty for another car", any: "Penalty issued" },
+  collision: { mine: "Contact", other: "Contact between other cars", any: "Collision reported" },
   fastest_lap: { mine: "Your fastest lap of the session", any: "Fastest lap set" },
 };
 
@@ -407,27 +411,49 @@ const OTHER_CODES: Record<string, string> = {
 export function eventWords(e: Pick<LiveEvent, "kind" | "code" | "player">): string | null {
   if (SESSION_WORDS[e.kind]) return SESSION_WORDS[e.kind]!;
   const car = CAR_WORDS[e.kind];
-  if (car) return e.player === true ? car.mine : car.any;
+  if (car) return e.player === true ? car.mine : e.player === false ? (car.other ?? car.any) : car.any;
   if (e.kind === "other" && e.code && OTHER_CODES[e.code]) return OTHER_CODES[e.code]!;
   return null;
 }
 
+function ageSuffix(t: number | null | undefined, nowS: number): string {
+  const age = finite(t) && t <= nowS + 5 ? Math.max(0, nowS - t) : null;
+  return age != null ? ` · ${age < 5 ? "just now" : `${ageText(age)} ago`}` : "";
+}
+
 /** The map tile's footer: the newest race-control event and its age ("Race control · Penalty issued · 2 min ago").
- * With nothing to show and a game known not to send flags: "Race control · not sent by GT7". */
+ * With race radio, its newest race-control call wins when it is at least as new as that event: it gives the reason
+ * ("Race control · 3 second penalty: corner cutting · just now"). With nothing to show and a game known not to send
+ * flags: "Race control · not sent by GT7". */
 export function raceControlLine(
   events: readonly LiveEvent[] | null | undefined,
   nowS: number,
   entry: GameEntry | null = null,
+  race: RaceView | null = null,
 ): string {
+  let event: { words: string; t: number | null } | null = null;
   for (const e of events ?? []) {
     const w = eventWords(e);
     if (!w) continue;
-    const age = finite(e.t) && e.t <= nowS + 5 ? Math.max(0, nowS - e.t) : null;
-    return `Race control · ${w}${age != null ? ` · ${age < 5 ? "just now" : `${ageText(age)} ago`}` : ""}`;
+    event = { words: w, t: finite(e.t) ? e.t : null };
+    break;
   }
+  // --- race radio: the call carries the reason the event lacks ---
+  const call = raceControlCall(race);
+  if (call && (!event || event.t == null || call.t_unix >= event.t)) {
+    return `Race control · ${callLineText(call.text)}${ageSuffix(call.t_unix, nowS)}`;
+  }
+  // --- end race radio ---
+  if (event) return `Race control · ${event.words}${ageSuffix(event.t, nowS)}`;
   const flags = featureOf(entry, "flags");
   if (flags && missing(entry, "flags")) return `Race control · ${flags.short[0]!.toLowerCase()}${flags.short.slice(1)}`;
   return "Race control · nothing yet";
+}
+
+/** Race radio: the backend's note on the position's evidence (GT7, Forza: "not yet checked against the game's
+ * screen"), shown under the race-control line while a position is shown; null otherwise. */
+export function raceNote(race: RaceView | null | undefined): string | null {
+  return positionNote(race);
 }
 
 // ------------------------------------------------------------------------------------------------ map tile

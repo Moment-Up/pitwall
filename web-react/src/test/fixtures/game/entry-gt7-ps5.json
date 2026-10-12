@@ -321,6 +321,34 @@
    ]
   },
   {
+   "id": "race_position",
+   "label": "Race position",
+   "group": "session",
+   "status": "supported",
+   "evidence": "community_documented",
+   "short": "",
+   "reason": "GT7 sends your race position.",
+   "detail": "race_position: 0x84 when >= 1 (conflicting docs: pre-race grid position vs live position). PS5 recordings 2026-10-11: during races within 1..the field size (0x86) and moving one place at a time - the live position reading - but not yet compared with the game's HUD (row gt7_ps5)",
+   "note": null,
+   "fields": [
+    "race_position"
+   ]
+  },
+  {
+   "id": "penalties",
+   "label": "Penalties & warnings",
+   "group": "session",
+   "status": "not_sent",
+   "evidence": null,
+   "short": "Not sent by GT7",
+   "reason": "GT7 doesn't send penalties.",
+   "detail": "no penalties or warnings (gt7-protocol.md section 8) (row gt7_ps5)",
+   "note": null,
+   "fields": [
+    "penalties"
+   ]
+  },
+  {
    "id": "setup_telemetry",
    "label": "Car setup from the game",
    "group": "setup_radio",
@@ -611,6 +639,9 @@
  "_fixture": {
   "tier": "edited",
   "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
-  "moment": "GET /api/games/gt7:ps5 (guide left out)"
+  "moment": "GET /api/games/gt7:ps5 (guide left out)",
+  "edits": [
+   "race radio (feat/radio): race_position and penalties features inserted as src/pitwall/games.py emits them"
+  ]
  }
 }

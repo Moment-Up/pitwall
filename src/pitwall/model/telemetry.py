@@ -168,6 +168,75 @@ class CarFrame:
     traction_control: int | None = None
     abs_active: bool | None = None
 
+    # --- race radio (pitwall.raceradio): F1 only; None = not sent by this game, or not received yet -------------------
+    fia_flag: str | None = None  # the player's own FIA flag: "none" | "green" | "blue" | "yellow" (CarStatus)
+    damage: CarDamage | None = None  # the player's CarDamage (same object while the game's bytes are unchanged)
+    penalties: CarPenalties | None = None  # the player's LapData penalty counters (same object while unchanged)
+
+
+# --- race radio (pitwall.raceradio) --------------------------------------------------------------------------------
+@dataclass(slots=True, frozen=True, kw_only=True)
+class CarDamage:
+    """F1 CarDamage of the player (docs/research/f1-udp-spec.md section 5.10): percent 0..100 as the game sends them.
+
+    Real F1 25 (PS5): contact damage steps up within 0.6 s, a wing reads 100 when it is gone, a flashback restores the
+    pre-crash values and a pit stop resets a repaired part to 0; gearbox and engine "damage" rise like wear (+1 every
+    few laps), and ``tyres_pct`` is wear-like except that a puncture reads 100 on that wheel."""
+
+    front_left_wing_pct: int
+    front_right_wing_pct: int
+    rear_wing_pct: int
+    floor_pct: int
+    diffuser_pct: int
+    sidepod_pct: int
+    gearbox_pct: int  # behaves like wear in real data (+1 every few laps)
+    engine_pct: int  # idem
+    brakes_pct: Wheels[int]  # m_brakesDamage, RL,RR,FL,FR on the wire -> FL..RR
+    tyres_pct: Wheels[int]  # m_tyresDamage (wear-like; 100 after a puncture)
+    drs_fault: bool
+    ers_fault: bool
+    engine_blown: bool
+    engine_seized: bool
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class CarPenalties:
+    """F1 LapData penalty counters of the player (docs/research/f1-udp-spec.md section 5.2)."""
+
+    time_penalties_s: int  # m_penalties: accumulated time penalties to be added (s)
+    warnings: int  # m_totalWarnings
+    corner_cutting_warnings: int  # m_cornerCuttingWarnings
+    unserved_drive_throughs: int  # m_numUnservedDriveThroughPens
+    unserved_stop_gos: int  # m_numUnservedStopGoPens
+    serve_at_stop: bool  # m_pitStopShouldServePen
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class Participant:
+    """One car of F1 Participants. ``name`` is the game's text: an online ID for a human (or, in F1 World races, a real
+    player's ID on an AI car). It is personal data: never logged, persisted, put in facts, snapshots or proactive
+    radio calls (``pitwall.raceradio.roster`` is the only reader); ``repr`` leaves it out."""
+
+    car_index: int
+    ai_controlled: bool | None
+    driver_id: int | None  # 255 (format 2025) / 65535 (2026) -> None: a network human, or a player ID on an AI car
+    team_id: int | None
+    race_number: int | None
+    name: str = field(repr=False, compare=False)
+    show_online_names: bool | None
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class Participants:
+    """F1 Participants (every 5 s), emitted only when the table changed. Routed to the race radio only: never
+    persisted, never in live state, never logged (``Participant`` reprs leave names out)."""
+
+    game: Game
+    t_recv_ns: int
+    session_time_s: float | None
+    player_index: int
+    cars: tuple[Participant, ...]
+
 
 class SessionType(StrEnum):
     PRACTICE = "practice"
@@ -591,4 +660,5 @@ type Emitted = (
     | CarLapHistory
     | RaceTiming
     | TyreSetsInfo
+    | Participants  # race radio (pitwall.raceradio): F1 only, on change
 )

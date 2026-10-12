@@ -522,6 +522,8 @@ async def test_ac_sheet_says_what_the_game_does_not_send() -> None:
         "gaps",
         "weather",
         "setup",
+        "who_ahead",  # race radio
+        "penalties",  # race radio
     }
     assert groups == set(game)
     assert game["tyres"].say == (
@@ -538,13 +540,13 @@ async def test_ac_sheet_says_what_the_game_does_not_send() -> None:
     assert ans.text == "Assetto Corsa doesn't send tyre temperatures, tyre wear, tyre pressures or brake temperatures."
 
 
-def test_f1_sheet_has_only_the_damage_game_fact() -> None:
+def test_f1_sheet_has_no_game_fact() -> None:
+    """Race radio: F1 25 damage is read now (CarDamage -> CarFrame.damage), so F1 has no "not sent / not read" fact."""
     from pitwall.ai.facts import build_fact_sheet
 
     sheet = build_fact_sheet(_game_analysis("f1_25", "ps5"))
     game = [f for f in sheet.facts if f.topic == "game"]
-    assert [f.data["group"] for f in game] == ["damage"]
-    assert game[0].say == "F1 25 sends car damage, but Pitwall reads only tyre wear from it so far."
+    assert game == []
     assert any("not yet known" in f.text for f in sheet.facts if f.topic == "fuel")  # F1 sends fuel: it will come
     unknown_platform = build_fact_sheet(_game_analysis("f1_25", "unknown"))
     s = next(f for f in unknown_platform.facts if f.topic == "session")

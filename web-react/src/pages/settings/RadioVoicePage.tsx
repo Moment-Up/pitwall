@@ -3,18 +3,22 @@
 // Isabella), Test voice, braking calls, coaching and diagnostics. Everything goes through the module-level radio
 // store (lib/radio.ts, lane A): this page never opens its own link. While the radio is off it reads
 // GET /api/voice/status once (read-only) so the Mac's current voice and braking-call mode are shown, not guessed.
+// Race radio (P2): "Say online players' names" is a household setting stored on the Mac (GET/PUT /api/race/settings);
+// a server without it hides the row.
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { shallowEqual, useRadio } from "../../components/radio";
 import { useActiveDriver, useDrivers } from "../../hooks/stores";
 import { useApi } from "../../hooks/useApi";
 import { CONTROLS_KEYS, controlsApi } from "../../lib/endpoints/controls";
+import { cache } from "../../lib/cache";
+import { raceApi, raceKeys } from "../../lib/endpoints/race";
 import { SETTINGS_KEYS, systemApi } from "../../lib/endpoints/settings";
 import { href } from "../../lib/router";
 import { pttLine } from "../../lib/setup/controls";
 import { radio } from "../../lib/radio";
 import type { PageProps } from "../../routes";
-import { deviceNoun, linkState } from "./radio/model";
+import { deviceNoun, linkState, onlineNamesView } from "./radio/model";
 import { RadioVoiceView, pickRadioVoice } from "./radio/RadioVoiceView";
 
 export function RadioVoicePage(_props: PageProps) {
@@ -32,6 +36,23 @@ export function RadioVoicePage(_props: PageProps) {
     () => (typeof navigator === "undefined" ? "device" : deviceNoun(navigator.userAgent, navigator.maxTouchPoints ?? 0)),
     [],
   );
+  // --- race radio (P2): say online players' names ---
+  const race = useApi(raceKeys.settings, raceApi.settings, { maxAgeMs: 0 });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const onlineNames = onlineNamesView({ data: race.data, error: race.error, saving, saveError });
+  async function setOnlineNames(on: boolean): Promise<void> {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      cache.set(raceKeys.settings, await raceApi.saveSettings({ online_names: on }));
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+  // --- end race radio ---
   return (
     <RadioVoiceView
       r={r}
@@ -40,6 +61,8 @@ export function RadioVoicePage(_props: PageProps) {
       noun={noun}
       actions={radio}
       ptt={ptt}
+      onlineNames={onlineNames}
+      onOnlineNames={(on) => void setOnlineNames(on)}
     />
   );
 }

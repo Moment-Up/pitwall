@@ -339,6 +339,11 @@ AC_INFO = AdapterInfo(
         "track_zones": FieldSupport(_U, "no sector, marshal-zone or flag data"),
         "field_samples": FieldSupport(_U, "RTCarInfo describes the player's car only"),
         "buttons": FieldSupport(_U, "no wheel-button data"),
+        # --- race radio ---
+        "fia_flags": FieldSupport(_U, "not in RTCarInfo"),
+        "penalties": FieldSupport(_U, "not in RTCarInfo"),
+        "participants": FieldSupport(_U, "RTCarInfo describes the player's car only"),
+        # --- end race radio ---
     },
     notes=(
         "Implemented from Kunos' Remote Telemetry spec (field list) + observed sizes and two MIT clients (layout). "

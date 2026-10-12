@@ -1,0 +1,37 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "race-radio spec 9.3 (RaceView v1 contract); Forza race position from community docs (Dash.RacePosition, 0 -> None)",
+    "moment": "Forza race: P3 of 12, no race length (Forza does not send one)",
+    "notes": "Hand-built from the contract before the backend publishes the block: every value is chosen to exercise a dashboard rule, and figures follow the spec's real-data findings where it gives them. Test data, not game data; never shown as live. No Forza recording exists: Forza race radio is synthetic only (spec 13)."
+  },
+  "version": 1,
+  "session_id": "forza-race",
+  "game": "forza_motorsport",
+  "mode": "race",
+  "reason": null,
+  "synthetic": false,
+  "position": 3,
+  "cars": 12,
+  "grid_position": 5,
+  "position_tier": "community_documented",
+  "position_note": "From Forza's race position (community docs); not checked against the game's screen.",
+  "lap": 2,
+  "total_laps": null,
+  "laps_left": null,
+  "final_lap": null,
+  "time_left_s": null,
+  "flags": null,
+  "penalties": null,
+  "damage": null,
+  "ahead": null,
+  "behind": null,
+  "calls": [
+    {
+      "t_unix": 1791680200.0,
+      "group": "position",
+      "call": "position_change",
+      "text": "Up to P3."
+    }
+  ]
+}

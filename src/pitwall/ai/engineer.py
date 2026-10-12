@@ -135,6 +135,10 @@ _CONTROLS_WHERE = re.compile(
     re.I,
 )
 
+# --- race radio --- laps_left outside a race, and in a race whose length the game does not send
+NO_RACE_LAPS = "No race laps to count in this session."
+NO_RACE_LENGTH = "The game doesn't say how long this race is."
+
 _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("radio_check", re.compile(r"\b(radio check|can you hear me|do you (?:read|copy)(?: me)?|mic check)\b", re.I)),
     # --- coachref --- practice drills and the live reference, before "quiet", "focus" and a bare corner (they name
@@ -215,6 +219,10 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
+    # --- race radio --- penalties and warnings (raceradio.answers), before strategy ("should I pit to serve my
+    # drive-through?" is about the penalty)
+    ("penalties", re.compile(r"\b(penalt(?:y|ies)|warnings?|track limits|drive[- ]through|stop[- ]go)\b", re.I)),
+    # --- end race radio ---
     (
         "strategy",
         re.compile(
@@ -226,6 +234,28 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     # data some games never send (games.INTENT_FEATURES), before setup ("front wing broken": "wing" alone stays a
     # setup question) and before gaps ("damaged after the contact with the car ahead")
     ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
+    # --- race radio --- "who's ahead?", "who is behind me": the neighbours by name (official AI names only)
+    (
+        "who_ahead",
+        re.compile(
+            r"\bwho(?:['’]s| is| was)?\b(?:\s+\w+){0,3}?\s+(?:ahead|in front|behind|leading|in the lead|chasing me|"
+            r"following)\b|\bwhich (?:car|driver) is (?:ahead|behind|in front)\b",
+            re.I,
+        ),
+    ),
+    # laps to go, the lap number, "is this the last lap?" (raceradio.answers.laps_left): before last_lap ("last lap")
+    # and lap_times; never fuel, tyres or the week's laps (their own rules)
+    (
+        "laps_left",
+        re.compile(
+            r"\b(?:how many (?:more )?laps\b(?![^?.!]*\b(?:this week|today|fuel|tyres?|tires?)\b)"
+            r"|laps? (?:left|to go|remaining)\b(?!\s+(?:of|on)\b)"
+            r"|(?:what|which) lap (?:is (?:it|this)|are we on|am i on)"
+            r"|is (?:this|it) the (?:last|final) lap)",
+            re.I,
+        ),
+    ),
+    # --- end race radio ---
     # race gaps and position, never the driver's own reference ("how far behind my best am I?") and "position" only as
     # race position ("my position on the brake for turn 4" is braking)
     (
@@ -325,11 +355,16 @@ _TOPICS: dict[str, set[str]] = {
     "tyres": {"session", "game", "tyres", "strategy"},
     "strategy": {"session", "game", "fuel", "tyres", "strategy", "gaps", "weather"},
     "safety_car": {"session", "game", "strategy", "flags"},
-    "gaps": {"session", "game", "gaps"},
+    "gaps": {"session", "game", "gaps", "race"},  # race: the race radio's position (any game)
     "weather": {"session", "game", "weather", "tyres", "strategy"},
     # damage / ERS / flags were "general" questions before game selection: same facts (plus ERS), so a game that sends
     # the data gets the answer it always got; a game that never sends it answers from its "game" fact
-    "damage": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
+    "damage": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres", "race"},
+    # --- race radio ---
+    "who_ahead": {"session", "game", "race", "gaps"},
+    "penalties": {"session", "game", "race"},
+    "laps_left": {"session", "game", "race"},
+    # --- end race radio ---
     "ers": {"session", "game", "ers", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "drs": {"session", "game", "drs", "gaps"},  # F2 support: DRS now, enabled in the race, the car ahead's gap
     "stop_rules": {"session", "game", "rules", "strategy", "tyres"},  # rules not known, then the tyre statement
@@ -356,6 +391,7 @@ _TOPICS: dict[str, set[str]] = {
         "goals",
         "strategy",
         "drill",
+        "race",  # race radio
     },
     "ai_pace": {"session", "game", "ai"},  # pace vs AI difficulty
     "ai_level": {"session", "game", "ai"},
@@ -379,6 +415,7 @@ _TOPICS: dict[str, set[str]] = {
         "ai",
         "gaps",
         "goals",
+        "race",  # race radio
     },
 }
 
@@ -753,6 +790,13 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *,
         if drs or ahead is not None:
             return say(*drs[:2], ahead)
         return say(game) if game is not None else say(first("session"))
+    # --- race radio --- laps to go: the race radio's position fact (raceradio.answers phrases it), else not a race
+    if n == "laps_left":
+        race = first("race", contains="position")
+        if race is None:
+            return NO_RACE_LAPS
+        return say(race) if race.data.get("laps_to_go") is not None else NO_RACE_LENGTH
+    # --- end race radio ---
     general = (first("laps", contains="Best clean"), first("observations"))  # the answer before these intents
     if n == "ers":
         ers = first("ers")

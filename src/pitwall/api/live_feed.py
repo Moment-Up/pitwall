@@ -7,8 +7,8 @@ None when nothing changed. The dashboard keeps a key that a snapshot leaves out,
 
 * every snapshot: the car (``frame``), the connection, the session, laps, events, the coach and cue blocks, the game
   block and the bests (small, and a record must show as set at once);
-* ``ai_pace``, ``coachref`` and ``lap_totals`` (``ON_CHANGE_KEYS``): when they changed (their publishers swap whole
-  dicts) - a few times a lap, not twenty times a second;
+* ``ai_pace``, ``coachref``, ``lap_totals`` and the race radio's ``race`` (``ON_CHANGE_KEYS``): when they changed
+  (their publishers swap whole dicts) - a few times a lap (``race``: at most twice a second), not twenty times a second;
 * race strategy's view (2-3.5 kB): when it changed (``LiveState.strategy_rev``), at most every ``STRATEGY_EVERY_S``
   (at 20 snapshots a second a view in every changed one would be the whole size budget), or with a static payload
   when it changed since it last went;
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 STATIC_EVERY_S = 5.0
 STRATEGY_EVERY_S = 2.0
 FULL_EVERY_S = 60.0
-ON_CHANGE_KEYS = ("ai_pace", "coachref", "lap_totals")
+ON_CHANGE_KEYS = ("ai_pace", "coachref", "lap_totals", "race")  # race: the race radio's RaceView
 DIGEST_KEYS = ("track_model", "skeleton", "track_knowledge")
 _UNSET: Any = object()
 

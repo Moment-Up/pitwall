@@ -59,7 +59,7 @@ const ACC_PS5 = entry("acc:ps5", CAT);
 const ACC_PC = entry("acc:pc", CAT);
 
 describe("the catalogue fixture is the spec's contract", () => {
-  it("has 23 entries, each with the 23 features in order", () => {
+  it("has 23 entries, each with the 25 features in order", () => {
     expect(CAT.schema).toBe(1);
     expect(CAT.entries).toHaveLength(23);
     expect(new Set(CAT.entries.map((e) => e.id)).size).toBe(23);
@@ -340,9 +340,9 @@ describe("the feature list (Setup › Game)", () => {
     expect(car[0]!.id).toBe("tyre_temps");
     const firstUnavailable = car.findIndex((f) => !available(f));
     expect(car.slice(firstUnavailable).some(available)).toBe(false);
-    expect(groups.flatMap((g) => g.features)).toHaveLength(23);
-    expect(featureCounts(GT7)).toEqual({ available: 6, unavailable: 17, unknown: 0 });
-    expect(featureCounts(OTHER)).toEqual({ available: 0, unavailable: 0, unknown: 23 });
+    expect(groups.flatMap((g) => g.features)).toHaveLength(25); // + race radio: race_position, penalties
+    expect(featureCounts(GT7)).toEqual({ available: 7, unavailable: 18, unknown: 0 });
+    expect(featureCounts(OTHER)).toEqual({ available: 0, unavailable: 0, unknown: 25 });
   });
 
   it("evidence words are the server's support words", () => {

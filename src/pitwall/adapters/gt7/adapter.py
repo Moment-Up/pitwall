@@ -325,6 +325,11 @@ GT7_INFO = AdapterInfo(
         "field_samples": FieldSupport(_U, "telemetry covers the player's car only (gt7-protocol.md section 8)"),
         "damage": FieldSupport(_U, "not sent (gt7-protocol.md section 8)"),
         "buttons": FieldSupport(_U, "no wheel-button data (the 0x8E flags are car state)"),
+        # --- race radio ---
+        "fia_flags": FieldSupport(_U, "no race flags (gt7-protocol.md section 8)"),
+        "penalties": FieldSupport(_U, "no penalties or warnings (gt7-protocol.md section 8)"),
+        "participants": FieldSupport(_U, "no other cars or names (gt7-protocol.md section 8)"),
+        # --- end race radio ---
     },
     notes=(
         "Validated live on the owner's PS5 on 2026-10-11 (variant C): Pitwall's heartbeat and UDP 33740 listener "

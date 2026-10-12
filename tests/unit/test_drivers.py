@@ -912,6 +912,17 @@ def test_api_crud_and_active(api: tuple[TestClient, SimpleNamespace]) -> None:
         "coaching_intensity": "normal",
         "voice_enabled": True,
         "default_game": None,
+        # race radio: every group on, the wording follows the skill level
+        "radio_calls": {
+            "flags": True,
+            "start": True,
+            "position": True,
+            "rivals": True,
+            "penalties": True,
+            "damage": True,
+            "name": True,
+        },
+        "radio_wording": "auto",
     }
     assert client.post("/api/drivers", json={"name": "SAM"}).status_code == 409
     assert client.post("/api/drivers", json={"name": "X", "colour": "blue"}).status_code == 422

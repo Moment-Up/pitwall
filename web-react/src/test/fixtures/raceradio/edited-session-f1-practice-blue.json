@@ -1,0 +1,41 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "race-radio spec 9.3 (RaceView v1 contract)",
+    "moment": "F1 25 practice: a car behind on a fast lap, the player's own flag is blue",
+    "notes": "Hand-built from the contract before the backend publishes the block: every value is chosen to exercise a dashboard rule, and figures follow the spec's real-data findings where it gives them. Test data, not game data; never shown as live."
+  },
+  "version": 1,
+  "session_id": "f1-practice",
+  "game": "f1_25",
+  "mode": "session",
+  "reason": null,
+  "synthetic": false,
+  "position": null,
+  "cars": 20,
+  "grid_position": null,
+  "position_tier": "spec_implemented",
+  "position_note": null,
+  "lap": 3,
+  "total_laps": null,
+  "laps_left": null,
+  "final_lap": null,
+  "time_left_s": 1520.0,
+  "flags": {
+    "track": "green",
+    "you": "blue",
+    "yellow_ahead": null
+  },
+  "penalties": null,
+  "damage": null,
+  "ahead": null,
+  "behind": null,
+  "calls": [
+    {
+      "t_unix": 1791680050.0,
+      "group": "flags",
+      "call": "blue_flag",
+      "text": "Blue flag: car behind on a fast lap."
+    }
+  ]
+}

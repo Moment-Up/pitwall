@@ -244,6 +244,11 @@ def _fields(level: SupportLevel, motorsport: bool) -> dict[str, FieldSupport]:
         "track_zones": FieldSupport(_U, "no sector, marshal-zone or flag data"),
         "field_samples": FieldSupport(_U, "Data Out describes the player's car only"),
         "buttons": FieldSupport(_U, "no wheel-button data"),
+        # --- race radio ---
+        "fia_flags": FieldSupport(_U, "no race flags in Turn 10's Data Out field list"),
+        "penalties": FieldSupport(_U, "no penalties or warnings in Turn 10's Data Out field list"),
+        "participants": FieldSupport(_U, "Data Out describes the player's car only"),
+        # --- end race radio ---
     }
 
 

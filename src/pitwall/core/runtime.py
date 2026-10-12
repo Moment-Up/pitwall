@@ -48,6 +48,9 @@ from pitwall.integrations import (
 from pitwall.integrations import SECTION as INTEGRATIONS_STORE_SECTION
 from pitwall.model.telemetry import Game, Platform, SessionInfo
 from pitwall.motivation.worker import MotivationWorker  # lane motivation
+from pitwall.raceradio.names import SECTION as RACE_RADIO_SECTION  # race radio
+from pitwall.raceradio.names import online_names_enabled  # race radio
+from pitwall.raceradio.worker import RaceRadioWorker  # race radio
 from pitwall.settings_store import SecretStore, SettingsStore
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
@@ -196,6 +199,14 @@ class Runtime:
         # race strategy (pitwall.strategy): one worker for live F1 input, one per replay (calls only when not max speed)
         self.strategy = StrategyWorker(self.live, self.writer)
         self._replay_strategy: StrategyWorker | None = None
+        # --- race radio --- one worker for live input (every game), one per replay (calls only when not max speed)
+        self.race = RaceRadioWorker(self.live)
+        self._replay_race: RaceRadioWorker | None = None
+        # race radio, opt-in: online names in "who's ahead?" answers (a household setting, off by default)
+        self.live.race_online_names = online_names_enabled(self.store.get(RACE_RADIO_SECTION))
+        self._unsubscribe_race = self.store.subscribe(
+            RACE_RADIO_SECTION, lambda _s, v: setattr(self.live, "race_online_names", online_names_enabled(v))
+        )
         self.processor = LapProcessor(self.db, self.writer, self.live)
         self.worker = AnalysisWorker(self.processor)
         self.motivation = MotivationWorker(self.db, self.writer, self.live)  # lane motivation: goals reached
@@ -327,6 +338,7 @@ class Runtime:
             resume_candidate=self._resume_candidate(source),  # a restart mid-race continues the same session
             field=self.field if "f1" in keys else None,  # only F1 reports the whole field (one worker per runtime)
             strategy=self.strategy if "f1" in keys else None,  # race strategy (pitwall.strategy): F1 timing only
+            race=self.race,  # race radio: every game
         )
         router = PacketRouter(adapters_for(keys, self._known_tracks()), sessions, self.live)
         last_err: OSError | None = None
@@ -437,6 +449,7 @@ class Runtime:
             source=AC_SOURCE,
             drivers=self.drivers,
             resume_candidate=self._resume_candidate(AC_SOURCE),
+            race=self.race,  # race radio (AC: off, with its reason in the view)
         )
         platform = ac_platform(cfg)
         router = PacketRouter(
@@ -547,6 +560,8 @@ class Runtime:
             # race strategy (pitwall.strategy): a max-speed replay makes no radio calls (nobody is driving)
             strategy = StrategyWorker(self.live, self.writer, publish_calls=speed is not None, block_when_full=True)
             self._replay_strategy = strategy
+            race = RaceRadioWorker(self.live, publish_calls=speed is not None, block_when_full=True)  # race radio
+            self._replay_race = race
             self.live.knowledge = resolver
             sessions = SessionManager(
                 self.writer,
@@ -559,6 +574,7 @@ class Runtime:
                 drivers=self.drivers,
                 field=field,
                 strategy=strategy,
+                race=race,  # race radio
             )
             adapters = all_adapters(self._known_tracks(), ac_tracks=self._ac_known_tracks(), ac_platform=platform)
             if meta.game_hint != AC_CAPTURE_HINT:
@@ -571,6 +587,7 @@ class Runtime:
                 finish_router(router)
                 field.close(drain=True)  # learn what is still queued, publish the final view
                 strategy.close(timeout=30.0, drain=True)  # race strategy: finish the records and stops
+                race.close(timeout=30.0, drain=True)  # race radio: the final view
                 if self.live.knowledge is resolver:
                     self.live.knowledge = self.knowledge  # learned (L3) models feed the live resolver again
 
@@ -589,6 +606,9 @@ class Runtime:
         strategy, self._replay_strategy = self._replay_strategy, None
         if strategy is not None:
             strategy.close()
+        race, self._replay_race = self._replay_race, None  # race radio
+        if race is not None:
+            race.close()
         self.live.knowledge = self.knowledge
 
     def replay_status(self) -> dict[str, Any] | None:
@@ -623,6 +643,7 @@ class Runtime:
         self._unsubscribe()
         self._unsubscribe_game()
         self.controls.close()
+        self._unsubscribe_race()  # race radio
         self.drivers.unsubscribe(self._on_driver)
         self.stop_replay()
         with self._ilock:
@@ -640,5 +661,6 @@ class Runtime:
         self.motivation.close()  # lane motivation
         self.field.close()
         self.strategy.close(drain=True)
+        self.race.close()  # race radio
         self.writer.flush()
         self.writer.close()

@@ -1,0 +1,47 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "race-radio spec 9.3 (RaceView v1 contract)",
+    "moment": "a synthetic F1 race under a red flag (no real red flag was ever captured: synthetic only)",
+    "notes": "Hand-built from the contract before the backend publishes the block: every value is chosen to exercise a dashboard rule, and figures follow the spec's real-data findings where it gives them. Test data, not game data; never shown as live. synthetic: true as the backend marks every synthetic session's block."
+  },
+  "version": 1,
+  "session_id": "synthetic-red",
+  "game": "f1_25",
+  "mode": "race",
+  "reason": null,
+  "synthetic": true,
+  "position": 4,
+  "cars": 20,
+  "grid_position": 4,
+  "position_tier": "spec_implemented",
+  "position_note": null,
+  "lap": 3,
+  "total_laps": 5,
+  "laps_left": 2.7,
+  "final_lap": false,
+  "time_left_s": null,
+  "flags": {
+    "track": "red",
+    "you": "none",
+    "yellow_ahead": null
+  },
+  "penalties": null,
+  "damage": null,
+  "ahead": null,
+  "behind": null,
+  "calls": [
+    {
+      "t_unix": 1791680300.0,
+      "group": "flags",
+      "call": "red_flag",
+      "text": "Red flag, red flag. Slow down, back to the pits."
+    },
+    {
+      "t_unix": 1791680280.0,
+      "group": "flags",
+      "call": "yellow_ahead",
+      "text": "Yellow ahead, T9."
+    }
+  ]
+}

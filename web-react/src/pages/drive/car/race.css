@@ -1,0 +1,17 @@
+/*
+ * Drive › Car: race radio's note under the race-control line (lane "radio"; RaceControlFoot.tsx). Unlayered like
+ * wall.css: every selector starts with a `pww` class. The note is the backend's words on the position's evidence
+ * (GT7, Forza), smaller and fainter than the line it qualifies; both stay one line each, ellipsised.
+ */
+.pww-foot__line,
+.pww-foot__note {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pww-foot__note {
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--pw-faint);
+}

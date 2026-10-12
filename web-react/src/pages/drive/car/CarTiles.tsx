@@ -23,6 +23,7 @@ import type { BrakePrior, TrackOutline } from "../../../lib/viz/outline";
 import { sameProps } from "../coach/view";
 import { useMediaQuery } from "../coach/parts";
 import { Tile, Val } from "../wall-parts";
+import { RaceControlFoot } from "./RaceControlFoot"; // race radio (pitwall.raceradio)
 import type { CarTileView, CoachingTileView, LapRowView, LapsTileView, MeterView, TyresView, WallMapView } from "./view";
 
 // ------------------------------------------------------------------------------------------------------- car
@@ -115,11 +116,14 @@ export interface MapTileProps {
   outline: TrackOutline | null;
   prior: BrakePrior | null;
   raceControl: string;
+  /** race radio: the note on the race position's evidence (view.raceNote), shown under the line; null = none. */
+  raceNote?: string | null;
 }
 
-export function MapTile({ model, skeleton, lengthM, view, outline, prior, raceControl }: MapTileProps) {
+export function MapTile({ model, skeleton, lengthM, view, outline, prior, raceControl, raceNote = null }: MapTileProps) {
+  const foot = raceNote ? <RaceControlFoot line={raceControl} note={raceNote} /> : raceControl;
   return (
-    <Tile span={5} title="Track" aside={view.caption} foot={raceControl}>
+    <Tile span={5} title="Track" aside={view.caption} foot={foot}>
       <TrackMap
         model={model}
         skeleton={skeleton ?? null}

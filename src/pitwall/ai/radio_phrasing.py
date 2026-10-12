@@ -229,6 +229,22 @@ def _strategy_first(
     return phrase
 
 
+# --- race radio ---
+def _race(what: str) -> Callable[[FactSheet], str | None]:
+    """The race radio's deterministic answer (``raceradio.answers``) from the sheet's ``race`` facts."""
+
+    def phrase(sheet: FactSheet) -> str | None:
+        from pitwall.raceradio import answers  # lazy (see radio_answer)
+
+        fn: Callable[[FactSheet], str | None] = getattr(answers, what)
+        return fn(sheet)
+
+    return phrase
+
+
+# --- end race radio ---
+
+
 # One explicit table (plan 4.5): race strategy for the race questions (the safety car: strategy's box-or-stay call,
 # else the flags now), then pace vs AI, then the game's capability sentence for data it never sends. An intent with
 # no phrasing here (or a phrasing with nothing to say) is answered with ``engineer.deterministic_answer``.
@@ -247,19 +263,37 @@ PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
     "ers": _either(class_ers, capability("ers")),
     "drs": _either(drs_now, capability("drs")),
     "stop_rules": stop_rules,
-    **{g: capability(g) for g in ("damage", "sectors")},
+    "sectors": capability("sectors"),
+    # --- race radio (raceradio.answers): the live race view first, else what the game never sends ---
+    "damage": _either(_race("damage"), capability("damage")),
+    "penalties": _either(_race("penalties"), capability("penalties")),
+    "who_ahead": capability("who_ahead"),  # with the question: radio_answer
+    "laps_left": _race("laps_left"),  # else engineer.deterministic_answer: not a race
+    # --- end race radio ---
 }
 
 
 def radio_answer(intent: str, sheet: FactSheet, question: str | None = None) -> str | None:
     """The instant radio phrasing of ``intent``, else None. ``question``: a race position question ("what position
-    am I?") is answered with the position first (``strategy.phrasing``)."""
+    am I?") is answered with the position first (``strategy.phrasing``, then the race radio's position in any game);
+    "who's ahead / behind?" and "how was sector 2?" need the question too (``raceradio.answers``)."""
     if intent == "gaps" and question is not None and _POSITION_Q.search(question):
         from pitwall.strategy.phrasing import strategy_position_answer  # strategy imports ai.facts: keep this lazy
 
         said = strategy_position_answer(sheet)
         if said is not None:
             return said
+        said = _race("position")(sheet)  # --- race radio --- GT7 / Forza position (with its evidence note)
+        if said is not None:
+            return said
+    # --- race radio ---
+    if intent in ("who_ahead", "sectors"):
+        from pitwall.raceradio import answers  # lazy: raceradio imports voice, which imports this module's users
+
+        said = answers.who(sheet, question) if intent == "who_ahead" else answers.sector(sheet, question)
+        if said is not None:
+            return said
+    # --- end race radio ---
     fn = PHRASERS.get(intent)
     return fn(sheet) if fn else None
 
