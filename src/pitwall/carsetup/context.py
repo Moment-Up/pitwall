@@ -2,12 +2,15 @@
 
 Every answer says how it was reached, and ambiguity stays unknown (``None`` with a reason) instead of a guess:
 
-* **Car format.** The 2026 Season Pack cars report formula 13 ("F1 26") and team ids 476-486 in UDP format 2026
-  (EA 2026 spec, ``docs/research/f1-udp-spec.md`` section 7). In format 2025 a 2026 car can only show up as the
-  generic car (team 41, "F1 Generic"; F1Laps' format guide), which is also the F1 World car, so a generic car in
-  format 2025 is ambiguous and the driver picks. A real 2025 team id (0-9) in format 2025 cannot be a 2026 car
-  (2026 team ids do not fit the 2025 field), so it is a 2025 car. Classic cars, F2 and the beta formula have no
-  catalogue setups.
+* **Car format.** The car's class comes from ``pitwall.carclass`` (one module decides it). F1 cars: the 2026 Season
+  Pack cars report formula 13 ("F1 26") and team ids 476-486 in UDP format 2026 (EA 2026 spec,
+  ``docs/research/f1-udp-spec.md`` section 7). In format 2025 a 2026 car can only show up as the generic car (team
+  41, "F1 Generic"; F1Laps' format guide), which is also the F1 World car, so a generic car in format 2025 is
+  ambiguous and the driver picks. A real 2025 team id (0-9) in format 2025 cannot be a 2026 car (2026 team ids do
+  not fit the 2025 field), so it is a 2025 car. F2 cars: the 2024 teams (158-168) and, with formula F2, the 2025
+  teams (209-219 in format 2025, 465-475 in format 2026) are the ``f2`` format; the 2026 F2 cars (489-499) and an F2
+  car whose team is not known have no setups, and the driver is never asked to pick an F1 format for them. Classic
+  cars and the beta formula have no catalogue setups.
 * **Session kind.** Race and qualifying map directly. Time trial is one-lap pace, so it uses the qualifying setup;
   practice prepares the race, so it uses the race setup. Both say so in ``notes``.
 * **Conditions.** The game's current weather: rain and storm are wet, clear and cloud are dry. A forecast is not
@@ -19,16 +22,30 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from pitwall.carsetup.catalog import CarFormat, Conditions, SessionKind
+from pitwall import carclass
+from pitwall.carsetup.catalog import F2_NONE_AT_TRACK, CarFormat, Conditions, SessionKind
 
-F1_GAMES = frozenset({"f1_25"})
-TEAMS_2025 = frozenset(range(10))  # Mercedes .. Sauber (EA appendix, both formats)
-TEAMS_2026 = frozenset(range(476, 487))  # Mercedes '26 .. Cadillac '26 (format 2026 only)
-TEAMS_F2_2026 = frozenset(range(489, 500))  # F2 2026 teams (format 2026, PDF v1.2)
-GENERIC_TEAMS = frozenset({41, 104})  # F1 Generic, F1 Custom Team (My Team)
-FORMULA_2026 = "F1 26"
-FORMULAS_2025 = frozenset({"F1 Modern", "F1 Generic", "Esports", "F1 World", "F1 Elimination"})
-FORMULAS_UNSUPPORTED = frozenset({"F1 Classic", "F2", "Beta"})
+F1_GAMES = carclass.F1_GAMES
+TEAMS_2025 = carclass.TEAMS_F1_2025  # Mercedes .. Sauber (EA appendix, both formats)
+TEAMS_2026 = carclass.TEAMS_F1_2026  # Mercedes '26 .. Cadillac '26 (format 2026 only)
+TEAMS_F2_2026 = carclass.TEAMS_F2_2026  # F2 2026 teams (format 2026, PDF v1.2)
+GENERIC_TEAMS = carclass.TEAMS_F1_GENERIC  # F1 Generic, F1 Custom Team (My Team)
+FORMULA_2026 = carclass.FORMULA_2026
+FORMULAS_2025 = carclass.FORMULAS_F1
+FORMULAS_UNSUPPORTED = frozenset({carclass.FORMULA_CLASSIC, carclass.FORMULA_BETA})
+# F2 cars with catalogue setups (format "f2"): the 2024 teams always, the 2025 teams with formula F2
+F2_TEAMS_ALWAYS = carclass.TEAMS_F2_2024
+F2_TEAMS_WITH_FORMULA = carclass.TEAMS_F2_2025_OBSERVED | carclass.TEAMS_F2_2025
+F2_2026_REASON = "No setups for the 2026 F2 cars in Pitwall yet."
+F2_UNKNOWN_REASON = "Pitwall can't tell which F2 car this is, so it shows no setups."
+__all__ = [
+    "F2_2026_REASON",
+    "F2_NONE_AT_TRACK",
+    "F2_UNKNOWN_REASON",
+    "SetupContext",
+    "guess_car_format",
+    "session_context",
+]
 WET = frozenset({"light_rain", "heavy_rain", "storm"})
 DRY = frozenset({"clear", "light_cloud", "overcast"})
 
@@ -52,6 +69,18 @@ class SetupContext:
     conditions: Conditions | None
     reasons: dict[str, str] = field(default_factory=dict)
     notes: tuple[str, ...] = ()
+    car_class: carclass.CarClass | None = None
+
+    @property
+    def family(self) -> str | None:
+        """The car class family (``f1`` / ``f2`` / ``other``); None when the class is not known."""
+        return None if self.car_class is None else self.car_class.family
+
+    @property
+    def asks_car_format(self) -> bool:
+        """The driver may be asked to pick the car format: only an F1 car (or a car of unknown class) whose
+        generation the game does not tell. An F2 or classic car never is."""
+        return self.car_format is None and self.family in (None, "f1")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -59,6 +88,7 @@ class SetupContext:
             "track_name": self.track_name,
             "car_format": self.car_format,
             "car_format_certain": self.car_format_certain,
+            "car_class": None if self.car_class is None else self.car_class.to_dict(),
             "session": self.session,
             "conditions": self.conditions,
             "reasons": dict(self.reasons),
@@ -67,11 +97,7 @@ class SetupContext:
 
 
 def _team_id(car_id: object) -> int | None:
-    if isinstance(car_id, str) and car_id.startswith("f1:team:"):
-        tail = car_id.rsplit(":", 1)[1]
-        if tail.isdigit():
-            return int(tail)
-    return None
+    return carclass.team_id(car_id)
 
 
 def f1_track_id(track_id: object) -> int | None:
@@ -84,35 +110,33 @@ def f1_track_id(track_id: object) -> int | None:
 
 
 def guess_car_format(packet_format: object, formula: object, car_id: object) -> CarFormatGuess:
+    """The catalogue car format of a car (``carclass`` decides its class), with the reason. ``certain`` False means the
+    driver may pick (an F1 car whose generation is not known); an F2 or classic car without setups is certain."""
     team = _team_id(car_id)
-    fmt = packet_format if isinstance(packet_format, int) and not isinstance(packet_format, bool) else None
     form = formula if isinstance(formula, str) else None
+    cls = carclass.classify("f1_25", formula, car_id, packet_format)
     if form in FORMULAS_UNSUPPORTED:
         return CarFormatGuess(None, True, f"formula {form}: pitwall has no setups for these cars")
+    if cls is not None and cls.family == "f2":
+        return _f2_format(team, form, packet_format)
+    if cls is not None and cls.family != "f1":
+        return CarFormatGuess(None, True, f"formula {form}: pitwall has no setups for these cars")
+    gen, certain, why = carclass.f1_generation(packet_format, formula, car_id)
+    return CarFormatGuess(gen, certain, why)
+
+
+def _f2_format(team: int | None, formula: str | None, packet_format: object = None) -> CarFormatGuess:
+    """F2 cars: format ``f2`` for the 2024 teams, and for the 2025 teams when the formula says F2 (the observed ids
+    209-219 are named only with it); none for the 2026 F2 cars or an F2 car whose team is not known. The reason names
+    the car in words ("Hitech '25 (2025 F2 car)"), never a team id."""
+    name = carclass.f2_team_name(team, packet_format, formula)
+    if team in F2_TEAMS_ALWAYS:
+        return CarFormatGuess("f2", True, f"{name} (2024 F2 car)" if name else "a 2024 F2 car")
+    if team in F2_TEAMS_WITH_FORMULA and formula == carclass.FORMULA_F2:
+        return CarFormatGuess("f2", True, f"{name} (2025 F2 car)" if name else "a 2025 F2 car")
     if team in TEAMS_F2_2026:
-        return CarFormatGuess(None, True, f"team id {team} is an F2 2026 team: pitwall has no F2 setups")
-    if form == FORMULA_2026 or team in TEAMS_2026:
-        why = "formula F1 26" if form == FORMULA_2026 else f"2026 team id {team}"
-        return CarFormatGuess("f1_2026", True, f"{why} (2026 Season Pack car)")
-    if fmt == 2026:
-        if form in FORMULAS_2025 or team in TEAMS_2025:
-            return CarFormatGuess(
-                "f1_2025", True, "UDP format 2026 reports 2026 cars as formula F1 26; this is not one"
-            )
-        return CarFormatGuess(None, False, "UDP format 2026 without a formula or team that identifies the car")
-    if team in TEAMS_2025:
-        return CarFormatGuess(
-            "f1_2025", True, f"2025 team id {team} (in UDP format 2025 a 2026 car reports as the generic car)"
-        )
-    if team in GENERIC_TEAMS or team is None:
-        what = "the generic car" if team is not None else "an unknown car"
-        return CarFormatGuess(
-            None,
-            False,
-            f"{what} in UDP format {fmt or 'unknown'}: 2025 and 2026 cars cannot be told apart, choose the car "
-            "format (or set the game's UDP format to 2026)",
-        )
-    return CarFormatGuess(None, False, f"team id {team} is not a known F1 team")
+        return CarFormatGuess(None, True, F2_2026_REASON)
+    return CarFormatGuess(None, True, F2_UNKNOWN_REASON)
 
 
 def session_kind(session_type: object) -> tuple[SessionKind | None, str | None]:
@@ -149,6 +173,7 @@ def session_context(session: dict[str, Any]) -> SetupContext:
         reasons["track_id"] = f"track {session.get('track_id')!r} is not an F1 25 track id"
     guess = guess_car_format(info.get("packet_format"), info.get("formula"), session.get("car_id"))
     reasons["car_format"] = guess.reason
+    cls = carclass.classify_row(session)
     kind, note = session_kind(session.get("session_type"))
     if kind is None:
         reasons["session"] = f"session type {session.get('session_type')!r} is unknown"
@@ -168,4 +193,5 @@ def session_context(session: dict[str, Any]) -> SetupContext:
         conditions=cond,
         reasons=reasons,
         notes=tuple(notes),
+        car_class=cls,
     )

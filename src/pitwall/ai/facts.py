@@ -20,6 +20,13 @@ Flags (topic ``flags``): while the session is live, for a game that sends flags,
 marshal zones showing a yellow flag now (``LiveState``: ``session.safety_car_status``, ``marshal_flags``). Unknown
 stays unknown: no fact without a live session packet, and no "no yellow flags" without one.
 
+Car classes (``pitwall.carclass``): the session fact names the car class ("car F2 · Art GP '24 (car class F2)") and an
+F2 race by its F2 name ("Feature race (the game calls it Race 2)"). A class without ERS gets one ``ers`` fact saying
+so (F2: F1 25 sends 0 for every ERS field), so "how much ERS?" is answered, never with a made-up store. The race's
+stop rules are never known (EA's spec sends none): topic ``rules`` says so, with the F2 sprint / feature note, and no
+fact claims a stop is not needed. DRS (topic ``drs``): while live, whether the game allows DRS now and in how many
+metres, and whether DRS is enabled in the race (the strategy view).
+
 Pace vs AI (topic ``ai``): the session's pace against the typical AI car (``SessionAnalysis.ai_pace``) and, for a
 driver's own real driving, the suggested AI level at this track (``SessionAnalysis.ai_suggestion``). Every number in
 their driver-facing sentences is in the fact's text or data; an unknown AI level or too few AI laps is stated as such.
@@ -30,7 +37,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from pitwall import games
+from pitwall import carclass, games
 from pitwall.analysis.ai_level import MIN_SPAN
 from pitwall.analysis.coaching import is_incident
 from pitwall.analysis.laps import LapFlag
@@ -41,6 +48,7 @@ from pitwall.carsetup.facts import session_setup_facts
 from pitwall.coach.reference_wording import lap_date
 from pitwall.core.session_analysis import SessionAnalysis
 from pitwall.strategy.facts import add_strategy_facts  # race strategy (pitwall.strategy)
+from pitwall.strategy.view import pit_rules
 from pitwall.technique.facts import technique_facts  # feat/technique
 from pitwall.voice.proactive import coaching_text  # the radio form of a coaching point (short answers at speed)
 
@@ -146,8 +154,9 @@ AI_PACE_REASONS = {
     "time_trial": "a time trial has no AI opponents",
 }
 AI_LEVEL_BASIS = {"measured": "measured", "estimate_other_tracks": "estimated from other tracks"}
+# no number in it ("F1 25" would not be grounded in another game's session); F2 races count (review U9)
 NO_AI_COMPARISON = (
-    "This session has no AI comparison: Pitwall compares against the AI only in F1 sessions raced against AI cars."
+    "No comparison with the AI yet: Pitwall needs laps from the AI cars in an F1 game session raced against them."
 )
 _ORDINAL_SUFFIX = {1: "st", 2: "nd", 3: "rd"}
 
@@ -259,6 +268,107 @@ def _add_flags(fs: FactSheet, live: dict[str, Any] | None, entry: games.GameEntr
         {"safety_car": sc, "yellow_zones": yellow},
         say=" ".join(said),
     )
+
+
+# ---------------------------------------------------------------------------------------------- car class, rules, DRS
+ERS_CLASS_PREFIX = "Car class:"
+RULES_PREFIX = "Stop rules:"
+RULES_CLASS_PREFIX = "Real-world rules:"
+STOP_RULES_UNKNOWN = "The race's stop rules are not known."
+STOP_RULES_SAY = "I don't know this race's stop rules: the game doesn't send them."
+F2_NO_ERS_TEXT = (
+    "Car class: F2. F2 cars have no ERS: F1 25 sends 0 for every F2 car, so there is no ERS store or deployment to "
+    "manage."
+)
+F2_NO_ERS_SAY = "F2 cars have no ERS, so there's nothing to deploy."
+DRS_PREFIX = "DRS now:"
+
+
+def _add_class_facts(fs: FactSheet, cls: carclass.CarClass | None) -> None:
+    """Topic ``ers``: a car class without ERS says so (F2, recorded: the game sends 0 in every ERS field)."""
+    if cls is not None and cls.has_ers is False:
+        fs.add("ers", F2_NO_ERS_TEXT, {"car_class": cls.id, "has_ers": False}, say=F2_NO_ERS_SAY)
+
+
+def _add_rules(fs: FactSheet, s: dict[str, Any], cls: carclass.CarClass | None) -> None:
+    """Topic ``rules``: the race's tyre and pit-stop rules are not sent by the game (EA's spec has no field for
+    them), then, for an F2 race, what real F2 does and what the game was seen to do. Never "the stop is not
+    mandatory"."""
+    info = s.get("info")
+    weekend = info.get("weekend_structure") if isinstance(info, dict) else None
+    rules = pit_rules(cls, s.get("session_type_raw"), weekend)
+    fs.add(
+        "rules",
+        f"{RULES_PREFIX} {rules['text']} Whether a stop or both dry compounds are required is not known.",
+        {"known": False, "race": rules["race"]},
+        say=STOP_RULES_SAY,
+    )
+    if rules["class_note"]:
+        fs.add(
+            "rules",
+            f"{RULES_CLASS_PREFIX} {rules['class_note']}",
+            {"race": rules["race"], "car_class": cls.id if cls is not None else None},
+            say=rules["class_note"],
+        )
+
+
+DRS_NOT_LIVE_TEXT = "DRS now: not known (Pitwall reads the game's DRS flags only while the session is live)."
+DRS_NOT_LIVE_SAY = "I only see DRS while you're driving."
+
+
+def _add_drs(fs: FactSheet, live: dict[str, Any] | None, entry: games.GameEntry | None = None) -> None:
+    """Topic ``drs`` while the session is live: whether the game allows DRS now (and in how many metres it will), and
+    whether DRS is enabled in the race (the strategy view's DRS enabled / disabled events). Unknown stays unknown: for
+    a game that sends DRS, outside a live session one fact says it is only known live."""
+    sends = entry is not None and entry.feature("drs").available
+    conn = (live or {}).get("connection")
+    if not live or not isinstance(conn, dict) or conn.get("status") != "live":
+        if sends:
+            fs.add("drs", DRS_NOT_LIVE_TEXT, {"live": False}, say=DRS_NOT_LIVE_SAY)
+        return
+    frame = live.get("frame")
+    allowed = frame.get("drs_allowed") if isinstance(frame, dict) else None
+    dist = frame.get("drs_activation_m") if isinstance(frame, dict) else None
+    if isinstance(frame, dict) and frame.get("drs_open") is True:
+        # the flap is open: F1 25 sets the DRS-allowed flag only for a moment before it opens (recorded: 2 samples a
+        # lap against hundreds open), so an open flap answers "can I use DRS?" before the flag does
+        fs.add("drs", f"{DRS_PREFIX} open (the game's DRS flag).", {"open": True}, say="DRS is open.")
+    elif allowed is True:
+        fs.add(
+            "drs", f"{DRS_PREFIX} allowed (the game's DRS-allowed flag).", {"allowed": True}, say="DRS is allowed now."
+        )
+    elif allowed is False:
+        if isinstance(dist, int | float) and not isinstance(dist, bool) and dist > 0:
+            m = round(float(dist))
+            fs.add(
+                "drs",
+                f"{DRS_PREFIX} not allowed yet; available in {m} m (the game's DRS activation distance).",
+                {"allowed": False, "activation_m": m},
+                say=f"DRS isn't allowed yet: available in {m} m.",
+            )
+        else:
+            fs.add(
+                "drs",
+                f"{DRS_PREFIX} not allowed (the game's DRS-allowed flag).",
+                {"allowed": False},
+                say="DRS isn't allowed now.",
+            )
+    view = live.get("strategy")
+    enabled = view.get("drs_enabled") if isinstance(view, dict) and view.get("mode") == "race" else None
+    if enabled is True:
+        fs.add(
+            "drs",
+            "DRS in this race: enabled (the game's DRS enabled event).",
+            {"enabled": True},
+            say="DRS is enabled in this race.",
+        )
+    elif enabled is False:
+        fs.add(
+            "drs",
+            "DRS in this race: disabled now (the game's DRS disabled event).",
+            {"enabled": False},
+            say="DRS is disabled right now.",
+        )
 
 
 DRILL_PREFIX = "Drill running:"
@@ -451,11 +561,21 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     }
     if driver_name:
         session_data.update(driver=driver_name, skill_level=driver.get("skill_level"))
+    cls = carclass.classify_row(s)
+    labels = carclass.session_fields(s)
+    raw_type = s.get("session_type_raw") or s.get("session_type")
+    stype = labels["session_label"] or raw_type
+    if raw_type and stype and stype.lower() != str(raw_type).lower():  # "Feature race (the game calls it Race 2)"
+        stype = f"{stype} (the game calls it {raw_type})"
+    car_txt = labels["car_label"] or "unknown"
+    if cls is not None and cls.label:
+        if not car_txt.startswith(cls.label):  # "F2 · Art GP '24" and "F2 car" already name the class
+            car_txt += f" (car class {cls.label})"
+        session_data.update(car_class=cls.id)
     fs.add(
         "session",
-        f"Session: {game_txt} at {s.get('track_name') or 'unknown track'}, "
-        f"{s.get('session_type_raw') or s.get('session_type')}, "
-        f"car {s.get('car_name') or 'unknown'}, weather {w.get('condition') or 'unknown'}, "
+        f"Session: {game_txt} at {s.get('track_name') or 'unknown track'}, {stype}, "
+        f"car {car_txt}, weather {w.get('condition') or 'unknown'}, "
         f"{_temp_text('track', w.get('track_temp_c'))}, {_temp_text('air', w.get('air_temp_c'))}, "
         f"{len(sa.laps)} laps recorded."
         + driver_txt
@@ -712,7 +832,8 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     if te.wear_now_pct:
         fl, fr, rl, rr = te.wear_now_pct
         txt = (
-            f"Tyres: {te.compound or 'unknown compound'}, {te.age_laps if te.age_laps is not None else '?'} laps old; "
+            f"Tyres: {carclass.compound_words(te.compound) or 'unknown compound'}, "
+            f"{te.age_laps if te.age_laps is not None else '?'} laps old; "
             f"wear FL {fl:.1f}%, FR {fr:.1f}%, RL {rl:.1f}%, RR {rr:.1f}%"
         )
         if te.wear_rate_pct_per_lap:
@@ -736,6 +857,8 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     ers = frame.get("ers_store_j")
     if isinstance(ers, int | float) and not isinstance(ers, bool):
         fs.add("ers", f"ERS store {ers / 1e6:.1f} MJ.", {"ers_store_mj": round(ers / 1e6, 1)})
+    _add_class_facts(fs, cls)  # what the car class does not have (F2: no ERS)
+    _add_drs(fs, live, entry)  # DRS now (live)
     temps = frame.get("tyre_surface_temp_c")
     if temps:
         fs.add(
@@ -754,9 +877,17 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
                 pw,
             )
         else:
-            legacy.add("strategy", f"No tyre stop needed: {pw['reason']}.", pw)
+            # the game sends no stop rules: the tyres reaching the finish is all that can be said (never "no stop")
+            legacy.add(
+                "strategy",
+                f"No tyre stop needed: {pw['reason']}. {STOP_RULES_UNKNOWN}",
+                pw,
+                say="The tyres reach the finish.",
+            )
     elif not is_race:
         legacy.add("strategy", "This is not a race session, so no pit-window calculation applies.")
+    if is_race:
+        _add_rules(fs, s, cls)  # the race's stop rules: not sent by the game (F2: the sprint / feature note)
 
     # ---------------------------------------------------------------- car setup (pitwall.carsetup)
     for topic, text, data in session_setup_facts(s, sa.setup, driver.get("skill_level")):

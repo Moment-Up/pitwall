@@ -980,6 +980,24 @@ def test_api_delete_and_assign(api: tuple[TestClient, SimpleNamespace], clean_se
     assert client.delete("/api/drivers/999").status_code == 404
 
 
+def test_api_driver_sessions_are_the_same_rows_as_the_sessions_api(api: tuple[TestClient, SimpleNamespace]) -> None:
+    """Review > Sessions reads this route when a driver filter is on: an F2 session must carry its class there too
+    ("F2 · Hitech '25", "Sprint race"), never the raw "Race" / "Unknown team (id 214)"."""
+    client, rt = api
+    james = rt.drivers.default_id
+    rt.writer.call(lambda c: repo.insert_session(c, "f2s", "f1_25", "udp:20777", False, None, None, driver_id=james))
+    rt.writer.call(
+        lambda c: c.execute(
+            "UPDATE sessions SET car_id='f1:team:214', car_name='Unknown team (id 214)', session_type_raw='Race', "
+            'info=\'{"formula": "F2", "packet_format": 2025, "weekend_structure": [15, 16]}\' WHERE id=\'f2s\''
+        )
+    )
+    (row,) = client.get(f"/api/drivers/{james}/sessions").json()
+    assert row["car_label"] == "F2 · Hitech '25" and row["session_label"] == "Sprint race"
+    assert row["car_class"]["id"] == "f2" and row["car_class"]["has_ers"] is False
+    assert "game_entry_id" in row
+
+
 def test_api_creates_a_service_when_the_runtime_has_none(tmp_path: Path) -> None:
     db = Database(tmp_path / "lazy.sqlite3")
     writer = DbWriter(db)

@@ -21,6 +21,7 @@ from pitwall.adapters.ac.adapter import AcTrackGeometry
 from pitwall.adapters.base import GameAdapter
 from pitwall.analysis.brake_prior import BrakeEnvelope, PriorRefresher
 from pitwall.analysis.field_model import FieldSnapshot
+from pitwall.carclass import classify_info
 from pitwall.config import Settings
 from pitwall.controls.service import ControlsService
 from pitwall.core.coachref import CoachRef
@@ -139,20 +140,23 @@ def knowledge_feeds(
 ) -> tuple[Callable[[FieldSnapshot | None], None], Callable[[SessionInfo | None], None]]:
     """Field-worker callbacks: the AI-field layer (L0b) plus the physics heavy-stop prior (L1c) for the same track.
 
-    Both run on the field worker thread, never on ingest. The prior is rebuilt only when the track, its length or the
-    AI field's fitted brake envelope change (``PriorRefresher``); it only ever yields severity windows, never
-    positions or "brake" calls.
+    Both run on the field worker thread, never on ingest. The prior is rebuilt only when the track, its length, the car
+    class family (``carclass``: F2 has its own default braking curve, classic cars none) or the AI field's fitted brake
+    envelope change (``PriorRefresher``); it only ever yields severity windows, never positions or "brake" calls.
     """
     priors = PriorRefresher()
+    family: list[str | None] = [None]  # the session's car class family (carclass): the AI-field snapshot uses it
 
     def push(game: str, track_id: str | None, length: float | None, env: BrakeEnvelope | None) -> None:
-        changed, prior = priors.refresh(game, track_id, length, env)
+        changed, prior = priors.refresh(game, track_id, length, env, family[0])
         if changed:
             resolver.set_physics(None if prior is None else PhysicsPrior.from_payload(prior.to_payload()))
 
     def on_session(info: SessionInfo | None) -> None:
         resolver.set_session(info)
         if info is not None:
+            cls = classify_info(info)
+            family[0] = None if cls is None else cls.family  # F1 / unknown: the default model; F2: its own curve
             push(info.game.value, info.track_id, info.track_length_m, None)
 
     def on_snapshot(snap: FieldSnapshot | None) -> None:
@@ -201,6 +205,8 @@ class Runtime:
         )
         self.processor.coachref = self.coachref
         # --- coachref ---
+        # one-off data repairs (F1 25 one-shot laps, track models per car class), first on the analysis thread
+        self.worker.submit_task(self._run_repairs)
         self.inputs: dict[int, _Input] = {}
         self.ac: _AcInput | None = None  # Assetto Corsa client (when enabled with a console IP)
         self.input_errors: dict[str, str] = {}  # integration key -> last bind/start error (Connect page)
@@ -234,6 +240,12 @@ class Runtime:
         """Who is sending to the F1 port (Setup › Controls: a loopback sender is not a console)."""
         inp = self.inputs.get(self.integration_configs()["f1"].port)
         return [dict(s) for s in inp.listener.source_snapshot()] if inp is not None else []
+
+    def _run_repairs(self) -> None:
+        try:
+            self.processor.run_repairs()
+        except Exception:  # a repair must never stop the service; it runs again at the next start
+            log.exception("data repair failed")
 
     # ------------------------------------------------------------------ live UDP (all games)
     @property

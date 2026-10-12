@@ -40,6 +40,7 @@ GARAGE_LAP_DISTANCE_M = -500.0  # synthetic garage cars sit far before the line 
 GARAGE_POS = (0.0, 0.0, -60.0)  # synthetic pit box (x, y, z)
 GROUND_TRUTH_BRAKE_ON = 0.10  # same pedal threshold as analysis.braking / analysis.field_model
 GROUND_TRUTH_THROTTLE = 0.6
+FORMULA_F2 = 2  # Session.formula (EA spec 8.12)
 
 
 @dataclass(slots=True)
@@ -101,6 +102,10 @@ class F1Scenario:
     session_history: bool = False  # Session History packets for the AI cars, cycling at 20 Hz
     safety_car_periods: tuple[tuple[float, float], ...] = ()  # (start, end) session time with safetyCarStatus 1
     skip_results_after_player_finish: bool = False  # AI laps in progress are filled in at once at the player's finish
+    # Session.formula (EA spec 8.12): 0 F1 Modern (default, unchanged stream); 2 = F2, which streams what F1 25 sent
+    # for F2 cars on a real PS5 (2026-10-11): F2 tyre compounds (actual 12 soft / visual 20 soft), 0 in every ERS
+    # field and a 60 km/h pit speed limit. Still SYNTHETIC (SYNTHETIC_SESSION_UID): never evidence for the game.
+    formula: int = 0
 
     @property
     def layout(self) -> P.F1Layout:
@@ -389,10 +394,10 @@ def _session_packet(
             "trackLength": round(track.length_m),
             "sessionType": sc.session_type,
             "trackId": sc.track_id,
-            "formula": 0,
+            "formula": sc.formula,
             "sessionTimeLeft": 3600,
             "sessionDuration": 3600,
-            "pitSpeedLimit": 80,
+            "pitSpeedLimit": 60 if sc.formula == FORMULA_F2 else 80,
             "numMarshalZones": len(marshal),
         }
     )
@@ -720,6 +725,7 @@ def _stream(
 ) -> Iterator[CapturedPacket]:
     ai = ai or []
     track = tl.track
+    f2 = sc.formula == FORMULA_F2  # F2 car: F2 compounds, no ERS (see F1Scenario.formula)
     rng = np.random.default_rng(sc.seed)
     dt = 1.0 / sc.rate_hz
     session_end = float(starts[-1])
@@ -893,11 +899,11 @@ def _stream(
                 "maxRPM": 12500,
                 "idleRPM": 4000,
                 "maxGears": 8,
-                "actualTyreCompound": 18,
-                "visualTyreCompound": 16,
+                "actualTyreCompound": 12 if f2 else 18,
+                "visualTyreCompound": 20 if f2 else 16,
                 "tyresAgeLaps": lap - 1,
-                "ersStoreEnergy": 3.0e6,
-                "ersDeployMode": 1,
+                "ersStoreEnergy": 0.0 if f2 else 3.0e6,
+                "ersDeployMode": 0 if f2 else 1,
             },
             L.max_cars,
         )

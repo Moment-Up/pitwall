@@ -105,7 +105,7 @@ access were fetched; each source's terms summary and use policy are in the file 
 
 | Source | Basis | Notes |
 |---|---|---|
-| F1Laps community setups (f1laps.com) | robots.txt allows the setup pages and signals `ai-input=yes`; llms.txt invites agents to use the setup database; terms reserve copyright in site materials, no automation clause | 349 of the catalogue's 454 setups (2025 and 2026 cars, 28 track layouts, 130 named authors), each attributed to its author and linked to its F1Laps page; the 40 setting range limits were derived from about 1,010 published F1Laps setups. Published with credit by the maintainer's decision (2026-10-11); no written permission from F1Laps yet. |
+| F1Laps community setups (f1laps.com) | robots.txt allows the setup pages and signals `ai-input=yes`; llms.txt invites agents to use the setup database; terms reserve copyright in site materials, no automation clause | 379 of the catalogue's 484 setups (2025 and 2026 cars, 28 track layouts, 130 named authors; plus 30 F2 car setups for 5 tracks, crawled 2026-10-12), each attributed to its author and linked to its F1Laps page; the 40 F1 setting range limits were derived from about 1,010 published F1Laps setups, the 20 F2 ones from 730 published F2 setups and the owner's recorded F2 setups. Authors whose name is an e-mail address are left out entirely (never masked), so no credit is stripped. Published with credit by the maintainer's decision (2026-10-11, F2 included); no written permission from F1Laps yet. |
 | RacingGames.gg, PPE.pl, Last Word On Gaming, Gamosaurus | robots.txt allows the guide pages; no automated-access clause; content is "all rights reserved" / personal non-commercial use | Individual numeric values only, attributed and linked. |
 | u/derp3339's public Google Sheet | docs.google.com robots.txt allows `/spreadsheet` paths | Values only, attributed and linked; the sheet's content belongs to its author. |
 
@@ -125,6 +125,7 @@ users, database-right limits.
 | wesleyegberto/sim-race-engineer | MIT | P | Reads GT7 bytes the game never sets (tyre pressure/inner temps) - do not trust |
 | gt7coder/grandturismo-srs-proxy | MIT | P | Early, partly wrong packet layout |
 | neW1-/GT7Eng | GPL-3.0-or-later | C | Voice-loop ideas only. **Do not copy.** |
+| mantazzo/F1TV-HUD-Reworked | GPL | C | Consulted for one fact only, during the F2 design (2026-10-12): which 2025 F2 team names belong to the F1 25 team ids 209-219 that EA's document does not list. No code or data was used; Pitwall's names rest on the owner's recording and EA's own order for ids 465-475 (`docs/research/f1-udp-spec.md` section 10, item 19). **Do not copy.** |
 | snipem/gt7dashboard | GPL-3.0-only | C | Lap comparison ideas only. **Do not copy.** |
 | zetetos/gt-telemetry | MIT | P | Has a decrypted GT7 demo capture + track centrelines (candidate fixture data; check per-file licence before use) |
 | ddm999/gt7info | MIT-0 | P | Car/track ID tables (usable) |

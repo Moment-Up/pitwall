@@ -10,6 +10,7 @@
 //  * skeleton.marshal_zones[].flag is the flag at the last static push (every 5 s): live flags are marshal_flags.
 
 import type { Corner, Frame, LapSummary, Observation, Snapshot, TrackModel } from "../api";
+import type { CarFamily, SessionCarFields } from "../carclass";
 import type { LiveAiPace } from "../endpoints/review";
 import type { StrategyView } from "../strategy/types"; // race strategy (pitwall.strategy)
 
@@ -87,7 +88,15 @@ export type CornerNext = Corner & CornerIdentity;
 
 export interface TrackModelNext extends TrackModel {
   corners: CornerNext[];
+  /** F2 support: the family of the laps the model was built from; null = a model from before families (unknown). */
+  car_family?: CarFamily | null;
+  /** F2 support: false when this class has no model of its own here yet and another family's stands in (Drive says
+   * "Corners from F1 laps until your first clean F2 lap here."); null for non-F1 games. */
+  car_family_match?: boolean | null;
 }
+
+/** snapshot.session plus (F2 support) the car class, the car and the session in words (lib/carclass.ts). */
+export type SessionNext = NonNullable<Snapshot["session"]> & SessionCarFields;
 
 /** An observation as the live payload sends it, plus D6's glance texts. */
 export type ObservationNext = Observation & {
@@ -128,6 +137,10 @@ export type FrameNext = Frame & {
   driver_status?: DriverStatus | null;
   /** model/telemetry.py FrameQuality bits (PAUSED 1<<2, REPLAY_OR_SPECTATING 1<<3, NOT_RACING 1<<6). */
   quality?: number | null;
+  /** F2 support: CarStatus m_drsAllowed (EA spec 5.7); null = no CarStatus yet, or a game without DRS. */
+  drs_allowed?: boolean | null;
+  /** F2 support: metres until DRS is available (m_drsActivationDistance when above 0); null when 0 or unknown. */
+  drs_activation_m?: number | null;
 };
 
 /** D6 (coach/selection.py coach_block): what the radio picks for the latest compared lap under the seated
@@ -181,6 +194,8 @@ export interface LapTotals {
 }
 
 export interface SnapshotNext extends Snapshot {
+  /** F2 support: + car_class, car_label, session_label (all optional). ERS is null in every F2 frame (no ERS). */
+  session: SessionNext | null;
   frame: FrameNext | null;
   track_model?: TrackModelNext | null;
   observations: ObservationNext[];

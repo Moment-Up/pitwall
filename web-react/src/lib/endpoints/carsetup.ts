@@ -2,7 +2,7 @@
 // and the to_dict shapes in src/pitwall/carsetup/{recommend,compare,context,experiments}.py). Ported from the Svelte
 // reference web/src/lib/carsetup.ts; the pure helpers live in src/lib/setup/carsetup.ts.
 //
-// Rules the UI keeps visible: car formats (F1 25 cars vs 2026 Season Pack cars) are never mixed; wet is never served
+// Rules the UI keeps visible: car formats (F1 25 cars vs 2026 Season Pack cars vs F2 cars) are never mixed; wet is never served
 // from dry (a missing combination is a 404 whose detail is {reason, alternatives}); every value carries its
 // confidence and whether pitwall derived it; a setup is a starting point, never a guaranteed fix (the caveat).
 //
@@ -11,8 +11,11 @@
 
 import type { SessionRow } from "../api";
 import { authFetch } from "../auth";
+import type { CarClass, SessionCarFields } from "../carclass";
 
-export type CarFormat = "f1_2025" | "f1_2026";
+/** F2 support adds "f2" (the 2024 and 2025 F2 cars). A format belongs to one car family (lib/setup/carsetup.ts
+ * FORMAT_FAMILY): an F1 format is never offered for an F2 session, nor the reverse. */
+export type CarFormat = "f1_2025" | "f1_2026" | "f2";
 export type SessionKind = "race" | "qualifying";
 export type Conditions = "dry" | "wet";
 export type SetupStyle = "balanced" | "stable" | "aggressive";
@@ -25,7 +28,7 @@ export type NeedField = "car_format" | "session" | "conditions";
 export type ExperimentStatus = "proposed" | "running" | "concluded" | "abandoned";
 export type Verdict = "faster" | "slower" | "no_clear_difference" | "inconclusive";
 
-export const CAR_FORMATS: readonly CarFormat[] = ["f1_2025", "f1_2026"];
+export const CAR_FORMATS: readonly CarFormat[] = ["f1_2025", "f1_2026", "f2"];
 export const SESSION_KINDS: readonly SessionKind[] = ["race", "qualifying"];
 export const CONDITIONS: readonly Conditions[] = ["dry", "wet"];
 export const STYLES: readonly SetupStyle[] = ["balanced", "stable", "aggressive"];
@@ -43,7 +46,9 @@ export interface FormatInfo {
   id: CarFormat;
   label: string;
   description: string;
-  latest_handling_patch: HandlingPatch;
+  /** null when no handling change is known for the format (F2: none found in EA's notes). */
+  latest_handling_patch: HandlingPatch | null;
+  /** For F2: only the tracks with cited F2 setups. */
   tracks: { id: number; name: string }[];
   notes: string[];
 }
@@ -57,6 +62,8 @@ export interface ParamRange {
   max_confirmed: boolean;
   confidence: Confidence;
   note: string | null;
+  /** F2 support: what the range rests on (F2 evidence only, never copied from the F1 car); absent from older servers. */
+  sources?: string[];
 }
 
 export interface ParameterInfo {
@@ -150,6 +157,8 @@ export interface SetupRef {
   style: string | null;
   input: string | null;
   verified: string;
+  /** The source's own notes (lap time, session, team and season for F2 setups), when the server sends them. */
+  notes?: string | null;
 }
 
 export interface SetupResult {
@@ -230,8 +239,13 @@ export interface SetupDiff {
 export interface SetupContext {
   track_id: number | null;
   track_name: string | null;
+  /** F2 support: "f2" for the F2 cars Pitwall has setups for; null with a reason for 2026 F2 cars or an F2 car whose
+   * team is not known. */
   car_format: CarFormat | null;
   car_format_certain: boolean;
+  /** F2 support: the session's car class (absent from older servers; null for games without classes). The page never
+   * asks for a car format when its family is not F1. */
+  car_class?: CarClass | null;
   session: SessionKind | null;
   conditions: Conditions | null;
   reasons: Partial<Record<"game" | "track_id" | NeedField, string>>;
@@ -239,7 +253,8 @@ export interface SetupContext {
 }
 
 export interface SessionSetupResponse {
-  session: {
+  /** F2 support: + car_class, car_label, session_label (optional). */
+  session: SessionCarFields & {
     id: string;
     game: string | null;
     track_id: string | null;
@@ -258,9 +273,12 @@ export interface SessionSetupResponse {
     conditions: Conditions | null;
     style: SetupStyle | null;
   };
+  /** Never contains "car_format" when the session's class is not an F1 car (F2 support). */
   needs: NeedField[];
   setup: { t_recv_ns: number | null; fingerprint: string | null; params: Record<string, unknown> } | null;
   recommendation: SetupResult | null;
+  /** F2 support: alternatives only in the session's car family; "No F2 setups for this track in Pitwall yet." when
+   * the catalogue has none at the track. */
   unavailable: Unavailable | null;
   diff: SetupDiff | null;
   caveat: string;
@@ -328,8 +346,10 @@ export interface SetupExperiment {
   conclusion: string | null;
 }
 
-/** Session rows from /api/sessions also carry their owner (repo.list_sessions joins the driver) and car id. */
-export type SessionOption = SessionRow & { driver_id?: number | null; driver_name?: string | null; car_id?: string | null };
+/** Session rows from /api/sessions also carry their owner (repo.list_sessions joins the driver) and car id, and (F2
+ * support) the car class, the car and the session in words. */
+export type SessionOption = SessionRow &
+  SessionCarFields & { driver_id?: number | null; driver_name?: string | null; car_id?: string | null };
 
 // ---------------------------------------------------------------------------------------------- transport
 /** A non-2xx answer. ``detail`` is FastAPI's detail as sent (a string, a validation list or {reason, alternatives}). */
@@ -422,6 +442,7 @@ export interface RecommendationQuery {
 }
 
 export interface SessionSetupQuery {
+  /** An override: a format of another family than the session's class is refused with 422 (F2 support). */
   car_format?: CarFormat | null;
   session?: SessionKind | null;
   conditions?: Conditions | null;
@@ -484,8 +505,26 @@ export function proposeBody(b: ProposeBody): Record<string, unknown> {
   };
 }
 
+/**
+ * The catalogue as this build reads it. The F2 contract describes `formats.f2.tracks` as bare EA track ids, while
+ * every other format sends {id, name}: a bare id becomes {id, name: "Track <id>"} so a page never reads a name that
+ * is not there.
+ */
+export function normaliseCatalog(cat: CarSetupCatalog): CarSetupCatalog {
+  const formats = cat.formats.map((f) => ({
+    ...f,
+    latest_handling_patch: f.latest_handling_patch ?? null,
+    tracks: (Array.isArray(f.tracks) ? (f.tracks as unknown[]) : [])
+      .map((t) =>
+        typeof t === "number" ? { id: t, name: `Track ${t}` } : isRecord(t) && typeof t.id === "number" ? { id: t.id, name: typeof t.name === "string" ? t.name : `Track ${t.id}` } : null,
+      )
+      .filter((t): t is { id: number; name: string } => t !== null),
+  }));
+  return { ...cat, formats };
+}
+
 export const carsetupApi = {
-  catalog: () => req<CarSetupCatalog>("/api/carsetup/catalog"),
+  catalog: () => req<CarSetupCatalog>("/api/carsetup/catalog").then(normaliseCatalog),
   recommendation: (q: RecommendationQuery) => req<RecommendationResponse>(recommendationPath(q)),
   session: (sid: string, q: SessionSetupQuery = {}) => req<SessionSetupResponse>(sessionSetupPath(sid, q)),
   /** Recent sessions for the pickers (same rows as GET /api/sessions). */

@@ -29,6 +29,7 @@ import type {
 import { lapTime } from "../format";
 import { isReplaySource } from "./kpis";
 import { dayInSentence, dayTitle, finite, plural, readableCar, sessionLabels, spreadSeconds, trackLabel } from "./words";
+import { carText } from "../carclass";
 
 /** `?car=any`: every car at the track. */
 export const ANY_CAR = "any";
@@ -72,7 +73,7 @@ export interface TrackChoice {
 
 type ScopeRow = Pick<
   SessionListRow,
-  "game" | "track_id" | "track_name" | "car_name" | "started_unix" | "source" | "synthetic" | "lap_count"
+  "game" | "track_id" | "track_name" | "car_name" | "car_label" | "started_unix" | "source" | "synthetic" | "lap_count"
 > & { car_id?: string | null };
 
 function drivenRow(r: ScopeRow, includeSynthetic: boolean): boolean {
@@ -118,7 +119,7 @@ export function scopeChoices(rows: readonly ScopeRow[], opts: { includeSynthetic
       continue;
     }
     const c = t.cars.find((x) => x.id === carId);
-    const name = readableCar(r.car_name);
+    const name = carText(r); // the server's car_label ("F2 · Art GP '24") when it sends one
     if (c) {
       c.sessions += 1;
       if (r.started_unix > c.newest) c.newest = r.started_unix;
@@ -237,8 +238,8 @@ export function pointsFromRows(
       startedUnix: r.started_unix,
       synthetic: r.synthetic,
       carId: r.car_id ?? null,
-      carName: readableCar(r.car_name),
-      sessionType: r.session_type_raw ?? r.session_type ?? null,
+      carName: carText(r),
+      sessionType: r.session_label ?? r.session_type_raw ?? r.session_type ?? null,
       laps: r.lap_count,
       cleanLaps: finite(r.clean_lap_count) ? r.clean_lap_count : null,
       bestMs: posMs(r.best_clean_ms),

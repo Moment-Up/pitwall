@@ -8,10 +8,11 @@ import { Button, Chip, Disclosure } from "@heroui/react";
 import { ItemCard } from "@heroui-pro/react";
 import { DriverAvatar } from "../../../components/DriverAvatar";
 import { EvidenceChips, NumText, Unknown } from "../../../components/ui";
+import { carText } from "../../../lib/carclass";
 import type { Driver } from "../../../lib/drivers";
 import { lapTime, grouped } from "../../../lib/format";
 import { href, sessionPath } from "../../../lib/router";
-import { bestLaps, coachingLine, driverSubtitle } from "./model";
+import { bestLapKey, bestLaps, bestLapTracks, coachingLine, driverSubtitle } from "./model";
 
 export interface DriverCardProps {
   driver: Driver;
@@ -34,6 +35,7 @@ function Stat({ label, value }: { label: string; value: number | null | undefine
 
 export function DriverCard({ driver: d, radioFollows, switching, busy, onSeat, onEdit }: DriverCardProps) {
   const bests = bestLaps(d);
+  const tracks = bestLapTracks(d);
   return (
     <ItemCard
       className="flex-col items-stretch gap-4 rounded-3xl p-5"
@@ -72,7 +74,7 @@ export function DriverCard({ driver: d, radioFollows, switching, busy, onSeat, o
         <Disclosure className="-mx-1">
           <Disclosure.Heading>
             <Disclosure.Trigger className="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-1 text-left text-sm font-medium">
-              Best laps · {bests.length} {bests.length === 1 ? "track" : "tracks"}
+              Best laps · {tracks} {tracks === 1 ? "track" : "tracks"}
               <Disclosure.Indicator />
             </Disclosure.Trigger>
           </Disclosure.Heading>
@@ -80,7 +82,7 @@ export function DriverCard({ driver: d, radioFollows, switching, busy, onSeat, o
             <Disclosure.Body className="px-1 pb-1">
               <ul className="m-0 grid list-none gap-0.5 p-0">
                 {bests.map((b) => (
-                  <li key={`${b.game}|${b.track_id}`}>
+                  <li key={bestLapKey(b)}>
                     <a
                       href={href(sessionPath(b.session_id))}
                       className="grid min-h-11 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 rounded-xl px-2 py-1.5 no-underline hover:bg-default"
@@ -93,7 +95,8 @@ export function DriverCard({ driver: d, radioFollows, switching, busy, onSeat, o
                         <NumText text={lapTime(b.lap_time_ms)} />
                       </span>
                       <span className="col-span-2 truncate text-xs text-muted">
-                        {b.car_name ?? <Unknown label="car unknown" />}
+                        {/* "F2 · Art GP '24" (F2 support: one best per car family here), never a raw id */}
+                        {carText(b) ?? <Unknown label="car unknown" />}
                       </span>
                     </a>
                   </li>

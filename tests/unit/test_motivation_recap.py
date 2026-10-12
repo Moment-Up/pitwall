@@ -210,6 +210,13 @@ def test_work_on_order() -> None:
     single = [lap(1, 90_000, sid="d", flags=["standing_start"]), lap(2, 78_000, sid="d")]
     w3 = build(inp(sess("d"), single, None, counts=False)).work_on
     assert w3 is not None and w3.source == "single_clean_lap"
+    assert w3.text == "Only one clean lap: drive two or more next time so they can be compared."
+    # one-shot qualifying has one timed lap by design: never "drive two or more" (review U11)
+    osq = sess("o", session_type="qualifying", session_type_raw="One-Shot Qualifying", formula="F2")
+    w4 = build(inp(osq, [lap(1, 116_133, sid="o")], None, counts=False)).work_on
+    assert w4 is not None and w4.source == "single_clean_lap" and "two or more" not in w4.text
+    assert w4.text.startswith("One-shot qualifying has one timed lap")
+    assert "two or more" not in w4.text_simple
     rec = build(inp(sess("e"), laps("e", [71_000, 71_100]), None, counts=False))
     assert rec.work_on is None and rec.why["work_on"] == R.WHY_NOTHING_WORK
 

@@ -268,25 +268,119 @@ PLANNED: list[CapabilityRow] = [
 ]
 
 
+@dataclass(frozen=True, slots=True)
+class CarClassRow:
+    """How well one car class of a game is verified (``pitwall.carclass`` ids). A status is upgraded only with
+    evidence: F2 to ``live_validated`` only through the validation check ``f2_ps5`` (``validate.catalog``)."""
+
+    game: Game
+    id: str  # carclass.CarClassId
+    label: str | None
+    status: SupportLevel
+    notes: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"id": self.id, "label": self.label, "status": self.status.value, "notes": self.notes}
+
+
+# The notes are shown on Setup › Game ("How the car classes were tested"): plain words, no ids or file names (those are
+# in docs/status.md and the capability rows above).
+_F1_LIVE = (
+    "Tested live on the PS5 on 10 October 2026: an Austria race in the game's generic F1 car, every lap time as the "
+    "game reports it."
+)
+CAR_CLASSES: tuple[CarClassRow, ...] = (
+    CarClassRow(Game.F1_25, "f1_2025", "F1", S.LIVE_VALIDATED, _F1_LIVE),
+    CarClassRow(Game.F1_25, "f1", "F1", S.LIVE_VALIDATED, _F1_LIVE),
+    CarClassRow(
+        Game.F1_25,
+        "f1_2026",
+        "F1 (2026)",
+        S.SPEC_IMPLEMENTED,
+        "The 2026 Season Pack cars, from EA's 2026 telemetry document; not yet driven with Pitwall.",
+    ),
+    CarClassRow(
+        Game.F1_25,
+        "f2",
+        "F2",
+        S.RECORDED_VALIDATED,
+        "Tested on recordings of 12 F2 sessions on the owner's PS5 (11 October 2026): a sprint race at Melbourne in "
+        "the Hitech '25, then one-shot qualifying and feature races at Sakhir, Jeddah and Melbourne in the Art GP "
+        "'24. The game names the car F2 in every session, sends no ERS for it (every ERS value is 0), uses the F2 "
+        "tyres and a 60 km/h pit limit, and sends when DRS is allowed. Not yet checked live (Setup › Validation has an "
+        "F2 check). The 2026 F2 cars, and F2 cars with the game's telemetry set to the 2026 format, were never "
+        "recorded.",
+    ),
+    CarClassRow(
+        Game.F1_25,
+        "f1_classic",
+        "Classic F1",
+        S.SPEC_IMPLEMENTED,
+        "From EA's telemetry document only; nothing recorded, so whether the game sends ERS for these cars is not "
+        "known.",
+    ),
+    CarClassRow(
+        Game.F1_25, "other", None, S.UNVERIFIED, "Beta cars and car types Pitwall does not know: nothing tested."
+    ),
+)
+
+
+def car_class_rows(game: Game | str | None) -> list[CarClassRow]:
+    g = game.value if isinstance(game, Game) else game
+    return [c for c in CAR_CLASSES if c.game.value == g]
+
+
+# The F2 cars the recordings cover (row f2 above): UDP format 2025, the 2024 F2 cars (team ids 158-168) and the 2025
+# F2 cars as format 2025 reports them (209-219). A 2025 F2 car in format 2026 (465-475) or a 2026 F2 car (489-499) was
+# never recorded: spec_implemented only.
+F2_RECORDED_FORMATS = frozenset({2025})
+F2_RECORDED_TEAMS = frozenset({*range(158, 169), *range(209, 220)})
+
+
+def car_class_status(
+    game: Game | str | None, class_id: str, *, team: int | None = None, packet_format: int | None = None
+) -> str | None:
+    """The status of a car class in a game (``live_validated`` ...), None when the table has no row for it. With the
+    car's ``team`` and ``packet_format``: an F2 car of a variant no recording covers is ``spec_implemented``."""
+    for c in car_class_rows(game):
+        if c.id == class_id:
+            if (
+                class_id == "f2"
+                and c.status is S.RECORDED_VALIDATED
+                and (
+                    (packet_format is not None and packet_format not in F2_RECORDED_FORMATS)
+                    or (team is not None and team not in F2_RECORDED_TEAMS)
+                )
+            ):
+                return S.SPEC_IMPLEMENTED.value
+            return c.status.value
+    return None
+
+
+def car_classes_dict(game: Game | str | None) -> list[dict[str, Any]]:
+    """The class rows of a game for the API (``/api/capabilities`` F1 rows, ``/api/games`` F1 25 entries); one entry
+    per class id."""
+    return [c.to_dict() for c in car_class_rows(game)]
+
+
 def capability_matrix() -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for r in PLANNED:
         info = ADAPTER_INFOS.get(r.adapter_game) if r.adapter_game is not None else None
-        rows.append(
-            {
-                "key": r.key,
-                "game": r.game,
-                "platform": r.platform,
-                "platform_ids": list(r.platform_ids),
-                "transport": r.transport,
-                "status": r.status.value,
-                "implemented": r.implemented,
-                "notes": r.notes,
-                "fields": {k: asdict(v) for k, v in info.fields.items()}
-                if r.implemented and info is not None
-                else None,
-            }
-        )
+        row: dict[str, Any] = {
+            "key": r.key,
+            "game": r.game,
+            "platform": r.platform,
+            "platform_ids": list(r.platform_ids),
+            "transport": r.transport,
+            "status": r.status.value,
+            "implemented": r.implemented,
+            "notes": r.notes,
+            "fields": {k: asdict(v) for k, v in info.fields.items()} if r.implemented and info is not None else None,
+        }
+        if r.adapter_game is Game.F1_25:
+            row["car_classes"] = car_classes_dict(Game.F1_25)
+        rows.append(row)
     return rows
 
 

@@ -33,6 +33,7 @@ import { apexGameM } from "../../../lib/review/compare";
 import { comparePath } from "../../../lib/review/links";
 import { router } from "../../../lib/router";
 import { FORMAT_UNKNOWN, symptomViews, unavailableReasons, type SymptomView } from "../../../lib/technique/view";
+import { forFormatText, sizedFor } from "../../../lib/setup/carsetup";
 import {
   sameIdea,
   SPEED_CLASS_WORDS,
@@ -101,13 +102,17 @@ function SuggestionItem({
   params,
   titles,
   onTry,
+  serverFormat,
 }: {
   x: SuggestionView;
   params: Map<string, CarSetupCatalog["parameters"][number]>;
   titles: Map<string, string>;
   onTry: (i: TryInitial) => void;
+  /** The car format the server sized the changes for (F2 support: "for the F2 car" beside each change). */
+  serverFormat: CarFormat | null;
 }) {
   const initial = tryInitial(x);
+  const sized = sizedFor(x.forFormat, serverFormat);
   const p = params.get(x.parameter);
   const change = x.formatUnknown ? suggestionDirection(x, p) : suggestionChange(x, p);
   if (x.duplicateOf) {
@@ -125,7 +130,7 @@ function SuggestionItem({
       <Disclosure>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <span className="pw-num text-xl">{change}</span>
-          {x.forFormat && <span className="text-xs text-muted">for the {x.forFormat === "f1_2026" ? "2026" : "2025"} car you chose</span>}
+          {sized && <span className="text-xs text-muted">{forFormatText(sized)}</span>}
           <Disclosure.Heading className="m-0">
             <Disclosure.Trigger className="flex min-h-11 items-center gap-1 text-sm text-muted">
               Why
@@ -164,8 +169,10 @@ function SymptomCard({
   titles,
   simple,
   onTry,
+  serverFormat,
 }: {
   view: SymptomView;
+  serverFormat: CarFormat | null;
   params: Map<string, CarSetupCatalog["parameters"][number]>;
   /** Symptom id -> its title ("Entry understeer at T3"), for changes listed under an earlier symptom. */
   titles: Map<string, string>;
@@ -177,7 +184,7 @@ function SymptomCard({
   const list = (items: readonly SuggestionView[]) => (
     <ul className="m-0 grid list-none gap-1.5 p-0">
       {items.map((x) => (
-        <SuggestionItem key={x.parameter} x={x} params={params} titles={titles} onTry={onTry} />
+        <SuggestionItem key={x.parameter} x={x} params={params} titles={titles} onTry={onTry} serverFormat={serverFormat} />
       ))}
     </ul>
   );
@@ -314,7 +321,17 @@ function Body({
         </p>
       )}
       {car.length ? (
-        car.map((v) => <SymptomCard key={v.symptom.id} view={v} params={params} titles={titles} simple={simple} onTry={onTry} />)
+        car.map((v) => (
+          <SymptomCard
+            key={v.symptom.id}
+            view={v}
+            params={params}
+            titles={titles}
+            simple={simple}
+            onTry={onTry}
+            serverFormat={data.setup?.car_format ?? null}
+          />
+        ))
       ) : (
         <p className="m-0 text-[15px]">
           No handling problem showed on most laps and on your best lap, so there is no setup change to suggest from this

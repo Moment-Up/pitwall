@@ -37,7 +37,7 @@ def test_unknown_cases() -> None:
     stopped = cut_view("undercut", 0.5, True, G, car=car(0, 1, stops=2), player_stops=1, stop_needed=True)
     assert stopped is not None and stopped["reason"] == "the car ahead has already stopped"
     no_stop = cut_view("undercut", 0.5, True, G, car=ahead, player_stops=0, stop_needed=False)
-    assert no_stop is not None and no_stop["reason"] == "no stop needed"
+    assert no_stop is not None and no_stop["reason"] == "the tyres reach the finish"  # stop rules are not sent
     assert cut_view("undercut", 0.5, True, G, car=None, player_stops=0, stop_needed=True) is None
 
 

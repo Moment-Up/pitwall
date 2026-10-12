@@ -24,6 +24,7 @@ import {
 import { router, withQuery } from "../../../lib/router";
 import type { Route } from "../../../lib/route-parse";
 import {
+  formatFamily,
   parseSetupQuery,
   queryIsComplete,
   rememberFormat,
@@ -178,6 +179,7 @@ export function RecommendationView({ route, catalog }: { route: Route; catalog: 
           loading={sessions.data === undefined && !sessions.error}
           driverId={driver?.id ?? null}
           trackId={req.track}
+          family={formatFamily(req.format)}
           className="lg:col-span-7"
         />
         <TrackExperimentsCard trackId={req.track} trackName={trackName} params={params} sessions={sessions.data ?? []} className="lg:col-span-5" />

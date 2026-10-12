@@ -11,6 +11,7 @@
 // later.
 
 import type { LapTrace } from "../api";
+import { fitsFamily, type CarClass } from "../carclass";
 import type { TimingStatus } from "../../components/ui/types";
 import type { Driver } from "../drivers";
 import type { CandidatesResponse, RefOption } from "../endpoints/coachref";
@@ -120,7 +121,8 @@ export function lapOptions(rows: readonly LapsRow[]): LapOption[] {
 
 export interface RefOptionsInput {
   rows: readonly LapsRow[];
-  session: { id: string; game: string; track_id: string | null; driver_id: number | null } & EvidenceTier;
+  /** F2 support: `car_class` keeps another family's best lap out of the options. */
+  session: { id: string; game: string; track_id: string | null; driver_id: number | null; car_class?: CarClass | null } & EvidenceTier;
   /** The analysis' reference (may belong to another session of the same track and car). */
   analysisRef: RefLap | null | undefined;
   drivers: readonly Driver[];
@@ -205,7 +207,10 @@ export function refOptions(input: RefOptionsInput): LapOption[] {
     }
   } else if (timingEligible(s) && s.track_id) {
     for (const d of input.drivers) {
-      const best = d.stats.best_laps.find((b) => !b.synthetic && b.game === s.game && b.track_id === s.track_id);
+      // F2 support: one best per car family; another family's lap is never offered (an F1 lap is no reference here)
+      const best = d.stats.best_laps.find(
+        (b) => !b.synthetic && b.game === s.game && b.track_id === s.track_id && fitsFamily(b.car_family, s.car_class),
+      );
       if (!best || seen.has(best.lap_id)) continue;
       const own = d.id === s.driver_id;
       out.push({

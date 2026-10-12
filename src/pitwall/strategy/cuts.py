@@ -74,7 +74,7 @@ def cut_view(
         }
 
     if stop_needed is False:
-        return out("unknown", "no stop needed")
+        return out("unknown", "the tyres reach the finish")  # never "no stop needed": the stop rules are not sent
     if car.pit_status:
         return out("unknown", f"the {who} is in the pit lane")
     if car.num_pit_stops > player_stops:

@@ -1,11 +1,12 @@
 // No recommendation for the combination asked (the API's 404 {reason, alternatives}): the reason verbatim and the
-// combinations that do exist, closest first. Nothing is substituted silently (spec 7.3, P5).
+// combinations that do exist, closest first, in the asked car format's family only (F2 support: an F1 setup is never
+// offered for the F2 car, nor the reverse). Nothing is substituted silently (spec 7.3, P5).
 
 import { Button, Card } from "@heroui/react";
 import { EmptyState } from "@heroui-pro/react";
 import { useState } from "react";
 import type { CarFormat, CarSetupCatalog, Combination } from "../../../lib/endpoints/carsetup";
-import { comboKey, comboLabel } from "../../../lib/setup/carsetup";
+import { comboKey, comboLabel, familyAlternatives, formatFamily } from "../../../lib/setup/carsetup";
 
 const PREVIEW = 8;
 
@@ -54,6 +55,7 @@ export function UnavailableCard({
   current: { car_format?: CarFormat | null; track_id?: number | null };
   onPick: (c: Combination) => void;
 }) {
+  const shown = familyAlternatives(alts, formatFamily(current.car_format));
   return (
     <Card className="p-5" role="status">
       <EmptyState size="md" className="items-stretch text-left">
@@ -62,10 +64,10 @@ export function UnavailableCard({
           <EmptyState.Description className="text-base">{reason}</EmptyState.Description>
         </EmptyState.Header>
         <EmptyState.Content className="items-stretch">
-          {alts.length ? (
+          {shown.length ? (
             <>
               <span className="text-sm font-semibold text-muted">Setups that do exist</span>
-              <Alternatives alts={alts} catalog={catalog} current={current} onPick={onPick} />
+              <Alternatives alts={shown} catalog={catalog} current={current} onPick={onPick} />
             </>
           ) : (
             <p className="m-0 text-sm text-muted">The catalogue has no setup for this track and car yet.</p>

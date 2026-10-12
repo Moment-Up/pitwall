@@ -21,7 +21,8 @@ from pitwall.validate import evidence as E
 from pitwall.validate.kit import ValidationKit
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "recorded"
-F1_EXCERPTS = sorted(FIXTURES.glob("f1_25_2025_ps5_*.pwcap"))
+# the four F1-car excerpts (the F2 excerpts carry other button presses and are tested by the F2 recorded tests)
+F1_EXCERPTS = sorted(p for p in FIXTURES.glob("f1_25_2025_ps5_*.pwcap") if "_f2_" not in p.name)
 # Every non-zero buttonStatus in the four committed PS5 excerpts (Cross, Circle and the Right Stick direction bits)
 STATUSES = {0x1, 0x4, 0x8000, 0x20000, 0x28000, 0x40000, 0x48000, 0x60000}
 

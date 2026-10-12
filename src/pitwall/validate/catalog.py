@@ -408,6 +408,51 @@ CATALOG: tuple[ValidationItem, ...] = (
         input_check=("centre", "left", "right", "pedals"),
     ),
     ValidationItem(
+        id="f2_ps5",
+        group="games",
+        title="F2 cars in F1 25 on the PS5",
+        short="F2",
+        summary="A qualifying lap and a race in an F2 car: recognised as F2, every lap stored once, no ERS shown.",
+        why="F2 was checked on recordings of 2026-10-11 only; the F2 support (class, one-shot laps, no ERS, F2 "
+        "setups) has not run live.",
+        est_minutes=20,
+        prerequisites=("F1 25 on the PS5 sending to Pitwall (Setup › Connect).",),
+        steps=(
+            Step("Choose an F2 car (Grand Prix or F2 career): one-shot qualifying, then a short race."),
+            Step("On Drive, check that the car shows F2 and that there is no ERS on the car tile."),
+            Step("Afterwards open Setup › Car setup for the session: F2 setups, or a line saying there are none."),
+            Step(
+                "Optional, in the game's F2 setup screen: read the ends Pitwall has not confirmed yet.",
+                "Front camber max -2.50, rear camber max -1.00, front toe max 0.12, front suspension min 24, rear "
+                "anti-roll bar min 2, front ride height max 35, rear ride height max 60, brake pressure min 90 %, "
+                "brake bias max 69 %.",
+            ),
+        ),
+        attestations=(
+            Attest("drive_f2_no_ers", "Drive showed F2 and no ERS"),
+            Attest(
+                "setup_f2",
+                "Car setup showed F2 setups or said there are none, without asking for an F1 car format",
+            ),
+        ),
+        prompt="Did Drive and Car setup show the F2 car correctly?",
+        radio_brief="Validation: F2. One-shot qualifying and a short race in an F2 car, then check Drive and Car "
+        "setup.",
+        rule_text="Over every live F1 25 session in this run whose formula is F2: 2 or more timed laps"
+        + _H
+        + ", no lap stored twice with the same time (the one-shot qualifying duplicate), no lap of one sample, and no "
+        "ERS value published while the formula is F2, plus your two ticks. A duplicated lap, a one-sample lap or a "
+        "published ERS value fails.",
+        informs=(
+            Informs(
+                "F2 in F1 25 (PS5): recorded › Unverified: live run",
+                "F1 25 car class F2 (recorded_validated)",
+            ),
+        ),
+        candidate="If you agree with this run, the F2 car class may be marked as tested live (live_validated), with "
+        "the date and this run id; read range ends go into the F2 setup ranges as confirmed.",
+    ),
+    ValidationItem(
         id="game_selection",
         group="games",
         title="Game choice and the wrong-game banner",

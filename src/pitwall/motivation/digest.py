@@ -165,7 +165,7 @@ def new_track_text(i: dict[str, Any]) -> str:
 
 
 def _item(s: SessionRow, lap: LapRow, before_ms: int | None) -> dict[str, Any]:
-    scope = Scope(game=s.game, track_id=s.track_id, track_name=s.track_name, car_id=s.car_id, car_name=s.car_name)
+    scope = Scope(game=s.game, track_id=s.track_id, track_name=s.track_name, car_id=s.car_id, car_name=s.car_label)
     return {
         "scope": scope.to_dict(),
         "scope_text": scope.text() or s.track_name or "this track",
@@ -243,7 +243,7 @@ def build_digest(
                 "started_unix": s.started_unix,
                 "game": s.game,
                 "track_name": s.track_name,
-                "car_name": display_car(s.car_name),
+                "car_name": display_car(s.car_label),  # "F2 · Art GP '24" (carclass), never a raw id
                 "session_type": s.session_type,
                 "laps": len(laps),
                 "clean_laps": sum(1 for lap in laps if lap.clean),

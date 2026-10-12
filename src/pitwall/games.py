@@ -34,7 +34,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
 from pitwall.adapters.base import AdapterInfo, FieldSupport, SupportLevel
-from pitwall.capabilities import ADAPTER_INFOS, PLANNED, CapabilityRow
+from pitwall.capabilities import ADAPTER_INFOS, PLANNED, CapabilityRow, car_classes_dict
 from pitwall.compat import this_machine
 from pitwall.model.telemetry import Game
 
@@ -263,6 +263,10 @@ NOT_IMPLEMENTED_FIELD: dict[tuple[str, str], str] = {  # (adapter_game, feature)
     ("forza_horizon", "fuel"): "fuel_kg",
     ("gt7", "ers"): "ers_store_j",
     ("gt7", "setup_telemetry"): "setup",
+}
+# A car class of the game that differs from the rest for a feature (pitwall.carclass, capabilities.CAR_CLASSES).
+CLASS_NOTES: dict[tuple[str, str], str] = {
+    ("f1_25", "ers"): "F2 cars have no ERS: F1 25 sends 0 for them, so Pitwall shows none (recorded on PS5).",
 }
 F1_DAMAGE_DETAIL = "CarDamage (adapters/f1/packets.py) is decoded; only tyresWear is mapped (adapters/f1/adapter.py)"
 PARTIAL_FACTS: dict[tuple[str, str], str] = {
@@ -548,6 +552,10 @@ class GameEntry:
             "features": [f.to_dict() for f in self.features],
             "notes": list(info.notes) if info is not None and self.implemented else [],
         }
+        if self.adapter_game is not None and self.implemented:
+            classes = car_classes_dict(self.adapter_game)
+            if classes:  # F1 25: the car classes and how far each is verified (pitwall.carclass)
+                out["car_classes"] = classes
         if with_fields:
             out["fields"] = self.fields_dict()
             out["guide"] = None if guide is None else dict(guide)
@@ -775,6 +783,8 @@ def _feature(e: GameEntry, fd: FeatureDef, level: SupportLevel | None) -> GameFe
     note = None
     if fd.id == "track_map" and ag in outline_games():
         note = f"Pitwall ships the {name} circuit outlines, so the map shows before your first lap."
+    if (ag, fd.id) in CLASS_NOTES:  # a car class that differs (F2: no ERS), recorded
+        note = CLASS_NOTES[(ag, fd.id)]
     if fact is not None:
         return make("partial", "Partial", fact, detail, evidence, note, fields)
     if partial:
@@ -1024,6 +1034,16 @@ def entry_for_session(row: Mapping[str, Any] | None) -> GameEntry | None:
     fmt = info.get("packet_format") if isinstance(info, Mapping) else None
     platform = row.get("platform")
     return entry(resolve(game, platform if isinstance(platform, str) else None, variant_of(game, fmt)))
+
+
+def session_row_fields(row: Mapping[str, Any] | None) -> dict[str, Any]:
+    """What the API adds to every stored session row it sends (``/api/sessions``, ``/api/sessions/{sid}``,
+    ``/api/drivers/{id}/sessions``): ``game_entry_id`` (Review chips, sector columns) and the car class fields
+    ``car_class``, ``car_label``, ``session_label`` (worked out by ``carclass``, never stored)."""
+    from pitwall import carclass
+
+    e = entry_for_session(row)
+    return {"game_entry_id": e.id if e is not None else None, **carclass.session_fields(row)}
 
 
 def session_platform_known(row: Mapping[str, Any] | None) -> bool:
@@ -1368,7 +1388,8 @@ INTENT_FEATURES: dict[str, tuple[str, ...]] = {
     "tyres": ("tyre_temps", "tyre_wear", "tyre_pressures", "brake_temps"),
     "strategy": ("fuel", "tyre_wear"),
     "damage": ("damage",),
-    "ers": ("ers", "drs"),
+    "ers": ("ers",),
+    "drs": ("drs",),  # F2 support: DRS questions have their own intent (ai.engineer)
     "sectors": ("sectors",),
     "flags": ("flags",),
     "safety_car": ("flags",),  # the safety car and VSC come with the flags (F1 Session.safetyCarStatus)

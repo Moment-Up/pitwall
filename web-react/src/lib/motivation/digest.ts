@@ -11,7 +11,8 @@
 import { changeWords } from "../bests";
 import type { DigestImprovement, DigestSession, WeeklyDigest } from "../endpoints/motivation";
 import { lapTime } from "../format";
-import { readableCar, trackLabel } from "../review/words";
+import { trackLabel } from "../review/words";
+import { carText } from "../carclass";
 import { count, drivingTime, percent, shortDay, weekLabel } from "./format";
 import { goalTitle } from "./goals";
 
@@ -141,7 +142,7 @@ export function weekView(d: WeeklyDigest, simpleOverride?: boolean): WeekView {
       id: s.session_id,
       day: shortDay(s.started_unix),
       title: sessionTitle(s),
-      car: readableCar(s.car_name),
+      car: carText(s), // the server's car_label when it sends one (F2 support), else the stored name
       laps: `${s.clean_laps} of ${count(s.laps, "lap")} clean`,
       bestMs: s.best_clean_ms,
       pb: s.pb,

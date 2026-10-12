@@ -11,6 +11,7 @@
 // 404 from GET /api/games/{id} for an unknown id. A port conflict is not an error: it comes back as a GameAction.
 
 import { authFetch } from "../auth";
+import type { CarClassId } from "../carclass";
 import type { GameGuide } from "./connect";
 
 export type SupportLevel =
@@ -149,10 +150,23 @@ export interface GameEntry {
   /** All 23, in FEATURE_IDS order. */
   features: GameFeature[];
   notes: string[];
+  /** F2 support: the car classes of this game and how far each is tested (capabilities.CAR_CLASSES; F1 25 entries
+   * only). Absent from older servers and for other games. */
+  car_classes?: GameCarClass[];
   /** Only GET /api/games/{id}. */
   fields?: Record<string, GameField>;
   /** Only GET /api/games/{id}: the connect.py guide with this machine's values filled in. */
   guide?: GameGuide | null;
+}
+
+/** One car class of a game (GET /api/games, GET /api/capabilities F1 rows). */
+export interface GameCarClass {
+  id: CarClassId;
+  /** "F1", "F1 (2026)", "F2", "Classic F1"; null for other cars. */
+  label: string | null;
+  status: SupportLevel;
+  /** The evidence in words (the server's, verbatim): a sentence or a list of them. */
+  notes?: string | string[] | null;
 }
 
 export interface GamesResponse {

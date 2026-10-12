@@ -475,7 +475,7 @@ def test_display_text_keeps_the_answers_own_words(raw: str, shown: str) -> None:
         ("Do I have any damage?", "damage"),
         ("Is my front wing broken?", "damage"),
         ("How much battery have I got?", "ers"),
-        ("Can I use DRS here?", "ers"),
+        ("Can I use DRS here?", "drs"),
         ("What were my sector times?", "sectors"),
         ("Show me my splits", "sectors"),
         ("Any yellow flags out there?", "flags"),
@@ -515,6 +515,7 @@ async def test_ac_sheet_says_what_the_game_does_not_send() -> None:
         "strategy",
         "damage",
         "ers",
+        "drs",  # F2 support: DRS is its own group (it was ERS's)
         "sectors",
         "flags",
         "safety_car",
@@ -615,7 +616,7 @@ async def test_a_fact_is_said_once_even_when_two_slots_pick_it() -> None:
         ("Did I get a yellow flag in sector 2?", "flags", None),
         ("Is my front wing damaged?", "damage", None),
         ("What were my splits?", "sectors", None),
-        ("Where is the DRS zone?", "ers", None),
+        ("Where is the DRS zone?", "drs", None),
     ],
 )
 def test_capability_intents_never_take_over_older_questions(q: str, intent: str, corner: str | None) -> None:

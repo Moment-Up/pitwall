@@ -6,6 +6,7 @@ import {
   cleanLapsText,
   gainedView,
   gapToBestEver,
+  isOneShot,
   isReplaySource,
   lapsText,
   notUsedText,
@@ -146,6 +147,19 @@ describe("edge cases", () => {
     expect(k.spreadMs).toBeNull();
     expect(gainedView(k).sub).toBe("Needs a second clean lap");
     expect(steadinessSentence(null)).toBe("Needs 2 clean laps");
+  });
+
+  it("one-shot qualifying has one timed lap by design: never 'needs a second clean lap' (review U11)", () => {
+    expect(isOneShot("One-Shot Qualifying")).toBe(true);
+    expect(isOneShot("One-shot sprint shootout")).toBe(true);
+    expect(isOneShot("Qualifying 1")).toBe(false);
+    expect(isOneShot(null)).toBe(false);
+    const k = summaryKpis([lap(1, 116_133)]);
+    expect(gainedView(k, true)).toEqual({ change: null, sub: "One-shot qualifying has one timed lap" });
+    expect(steadinessSentence(null, true)).toBe("One-shot qualifying has one timed lap");
+    expect(gainedView(summaryKpis([lap(1, 116_133, false, ["flashback"])]), true).sub).toBe(
+      "One-shot qualifying has one timed lap",
+    );
   });
 
   it("the first clean lap was the best: zero gained, said in words", () => {

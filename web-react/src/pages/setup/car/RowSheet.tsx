@@ -19,7 +19,7 @@ import {
 } from "../../../lib/setup/carsetup";
 import { useWide } from "../shared/useMediaQuery";
 
-function SourceLine({ s, patch }: { s: SetupRef; patch: { version: string; date: string } | undefined }) {
+function SourceLine({ s, patch }: { s: SetupRef; patch: { version: string; date: string } | null | undefined }) {
   const old = predatesPatch(s, patch);
   return (
     <li className="grid gap-0.5 rounded-xl bg-surface-secondary px-3 py-2.5">

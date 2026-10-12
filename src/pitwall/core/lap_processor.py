@@ -20,6 +20,12 @@ Bests (dashboard D2): after every stored lap, and whenever the live session's co
 bests are recomputed (``repo.lap_bests``) on this thread and published with ``LiveState.set_bests``. A
 synthetic or replayed live session gets no driver or household bests.
 
+Car class families (``pitwall.carclass``): track models are kept per family (``f1`` / ``f2`` / ``other``) and cached
+per (game, track, family). A session's family uses its own model; until it has one, another family's model stands in
+(``repo.load_track_model``: *borrowed*, shown as such) and is replaced by a model of the session's family as soon as
+a clean lap of that family exists. One-off data repairs (``run_repairs``: the F1 25 one-shot laps) run on this thread
+at start, before any lap.
+
 Reference choice and practice drills (coachref, ``core/coachref.py``): with a ``CoachRef`` attached (the runtime
 attaches one; tests and tools usually do not), the reference comes from the driver's chosen reference (their best,
 the family record, another driver's best or a saved lap; compatible laps only) instead of the own-lap rule above,
@@ -42,6 +48,7 @@ from concurrent.futures import Future
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from pitwall import carclass
 from pitwall.analysis.coaching import is_incident, observations_for_comparison
 from pitwall.analysis.compare import (
     CornerDelta,
@@ -61,7 +68,7 @@ from pitwall.coach.reference_wording import reword_observations
 from pitwall.core.ai_pace import AiPaceJob, AiPaceProcessor
 from pitwall.core.live import BestsRequest, LiveState
 from pitwall.storage import repo
-from pitwall.storage.db import Database, DbWriter
+from pitwall.storage.db import Database, DbWriter, dumps
 
 if TYPE_CHECKING:
     from pitwall.core.coachref import CoachRef, ResolvedReference
@@ -137,7 +144,7 @@ class LapProcessor:
         self.writer = writer
         self.live = live
         self.coachref = coachref  # --- coachref --- reference choice + drills (None: the own-lap rule only)
-        self._models: dict[tuple[str, str], TrackModel] = {}
+        self._models: dict[tuple[str, str, str | None], TrackModel] = {}  # (game, track, car class family)
         self._ref_cache: dict[int, LapAnalysis] = {}
         self._sessions: dict[str, _SessionCache] = {}
         self.processed = 0
@@ -248,8 +255,13 @@ class LapProcessor:
         return result
 
     def refresh_bests(self, req: BestsRequest) -> None:
-        """The live session's context changed (``LiveState.set_bests_requester``): recompute its bests."""
+        """The live session's context changed (``LiveState.set_bests_requester``): recompute its bests, and before the
+        session's first lap show the stored track model (``publish_stored_model``)."""
         self._publish_bests(req.session_id, req.game, req.track_id, req.car_id, req.track_length_m)
+        try:
+            self.publish_stored_model(req.session_id)
+        except Exception:
+            log.exception("stored track model not published")
         if self.coachref is not None:  # --- coachref --- the live session / seat changed: republish the choice
             try:
                 self.coachref.on_context(req.session_id)
@@ -275,17 +287,14 @@ class LapProcessor:
         game, track_id, length = ctx.get("game"), ctx.get("track_id"), ctx.get("track_length_m")
         if not (game and track_id and isinstance(length, int | float) and length > 0):
             return
-        key = (str(game), str(track_id))
+        key = (str(game), str(track_id), ctx_family(ctx))
         model = self._models.get(key)
         if model is None and load_model:
-            with self.db.read() as c:
-                model = repo.load_track_model(c, key[0], key[1])
-            if model is not None and not lengths_compatible(model.length_m, float(length)):
-                model = None
-            if model is not None and model.corners:
-                if all(c.identity_tier is None for c in model.corners):  # stored models are learned-only
-                    model, _ = identify(model)
-                self._models[key] = model  # as LapProcessor._track_model would cache it
+            model = self._stored_model(key, float(length))
+            live = self.live
+            if model is not None and live is not None and self._is_live(session_id) and live.track_model is None:
+                # no lap of this session yet: the live screen shows the corners the reference is analysed with
+                live.set_track_model(track_model_payload(model, key[2]))
         if model is None or not model.corners:
             return
         driver_id, ref_id, desc = self._choose_reference(
@@ -309,6 +318,40 @@ class LapProcessor:
             return
         self._reference_analysis(ref_id, model, session_id, True, desc)
 
+    def _stored_model(self, key: tuple[str, str, str | None], length: float) -> TrackModel | None:
+        """The stored track model for ``key`` (game, track, car class family) and this layout length, identified and
+        cached as ``_track_model`` would cache it; None without one with corners."""
+        with self.db.read() as c:
+            model = repo.load_track_model(c, key[0], key[1], key[2])
+        if model is None or not model.corners or not lengths_compatible(model.length_m, length):
+            return None
+        if all(c.identity_tier is None for c in model.corners):  # stored models are learned-only
+            model, _ = identify(model)
+        self._models[key] = model
+        return model
+
+    def publish_stored_model(self, session_id: str) -> None:
+        """Before ``session_id``'s first lap: put the stored track model of its track (and car class family) on the live
+        screen, so corners, the track map and corner names are there from the start. One-shot qualifying has a single
+        lap, so without this its whole session showed "Corners appear after your first clean lap". Analysis thread."""
+        live = self.live
+        if live is None or not self._is_live(session_id) or self.has_lap(session_id) or live.track_model is not None:
+            return
+        ctx = self._live_ctx(session_id)
+        if ctx is None:
+            return
+        game, track_id, length = ctx.get("game"), ctx.get("track_id"), ctx.get("track_length_m")
+        if not (game and track_id and isinstance(length, int | float) and length > 0):
+            return
+        key = (str(game), str(track_id), ctx_family(ctx))
+        model = self._models.get(key)
+        if model is not None and not lengths_compatible(model.length_m, float(length)):
+            model = None
+        if model is None:
+            model = self._stored_model(key, float(length))
+        if model is not None and model.corners and self._is_live(session_id) and live.track_model is None:
+            live.set_track_model(track_model_payload(model, key[2]))
+
     def coachref_context(self, session_id: str) -> CoachrefContext:
         """The session's coaching context for the coachref service (drill options and targets). Analysis thread."""
         sc = self._sessions.get(session_id)
@@ -319,11 +362,11 @@ class LapProcessor:
         game, track_id, length = ctx.get("game"), ctx.get("track_id"), ctx.get("track_length_m")
         if not (game and track_id):
             return empty
-        key = (str(game), str(track_id))
+        key = (str(game), str(track_id), ctx_family(ctx))
         model = self._models.get(key)
         if model is None:
             with self.db.read() as c:
-                model = repo.load_track_model(c, key[0], key[1])
+                model = repo.load_track_model(c, key[0], key[1], key[2])
             if model is not None and all(c.identity_tier is None for c in model.corners):
                 model, _ = identify(model)
         if model is None or not model.corners:
@@ -441,46 +484,73 @@ class LapProcessor:
             else:
                 self.live.on_lap_result(summary, obs, comp, drill=drill)
 
+    def _build_model(
+        self,
+        game: str,
+        track_id: str,
+        track_name: str | None,
+        length: float,
+        plane: tuple[str, str],
+        family: str | None,
+    ) -> TrackModel | None:
+        """A new model version from the fastest clean laps of this length (and car class family), saved; None when
+        there is no such lap. Shared by the live path and the one-off repair (``run_repairs``)."""
+        with self.db.read() as c:
+            rows = repo.clean_laps_for(c, game, track_id, None, limit=5, track_length_m=length, family=family)
+            traces = [repo.load_lap_trace(c, r["id"]) for r in rows]
+        used = [(int(r["id"]), t) for r, t in zip(rows, traces, strict=True) if t is not None]
+        if not used:
+            return None
+        dts = [to_distance_domain(t, length) for _, t in used]
+        model = build_track_model(
+            game,
+            track_id,
+            track_name,
+            length,
+            dts,
+            ground_plane=plane,
+            source_lap_ids=[i for i, _ in used],
+            car_family=family,
+        )
+        self.writer.call(lambda c: repo.save_track_model(c, model))
+        self._ref_cache.clear()  # corner definitions changed
+        log.info(
+            "track model %s/%s v%d (%s) from %d laps: %d corners",
+            game,
+            track_id,
+            model.version,
+            family or "any car",
+            len(dts),
+            len(model.corners),
+        )
+        return model
+
     def _track_model(
         self, session_id: str, game: str, track_id: str, ctx: dict[str, Any], plane: tuple[str, str], lap: LapTrace
     ) -> TrackModel | None:
-        key = (game, track_id)
+        family = ctx_family(ctx)
+        key = (game, track_id, family)
         length = float(ctx["track_length_m"])
         model = self._models.get(key)
         if model is None:
             with self.db.read() as c:
-                model = repo.load_track_model(c, game, track_id)
+                model = repo.load_track_model(c, game, track_id, family)
         # one track id, two lengths: another layout (AC consoles send no layout name). The model is rebuilt from
         # laps of this length only - never from a mix - and the other layout's model is not used meanwhile.
         other_layout = model is not None and not lengths_compatible(model.length_m, length)
-        needs = model is None or other_layout or (model.n_laps < TRACK_MODEL_TARGET_LAPS and lap.clean)
+        # another car class family's model (or a legacy one of unknown family) stands in until a clean lap of this
+        # family exists; this lap being clean is that lap
+        stand_in = (
+            model is not None
+            and family is not None
+            and (model.car_family is None or model.car_family != family)
+            and lap.clean
+        )
+        needs = model is None or other_layout or stand_in or (model.n_laps < TRACK_MODEL_TARGET_LAPS and lap.clean)
         if needs:
-            with self.db.read() as c:
-                rows = repo.clean_laps_for(c, game, track_id, None, limit=5, track_length_m=length)
-                traces = [repo.load_lap_trace(c, r["id"]) for r in rows]
-            clean = [t for t in traces if t is not None]
-            if clean:
-                dts = [to_distance_domain(t, length) for t in clean]
-                model = build_track_model(
-                    game,
-                    track_id,
-                    ctx.get("track_name"),
-                    length,
-                    dts,
-                    ground_plane=plane,
-                    source_lap_ids=[int(r["id"]) for r in rows],
-                )
-                new_model = model
-                self.writer.call(lambda c: repo.save_track_model(c, new_model))
-                self._ref_cache.clear()  # corner definitions changed
-                log.info(
-                    "track model %s/%s v%d from %d laps: %d corners",
-                    game,
-                    track_id,
-                    model.version,
-                    len(dts),
-                    len(model.corners),
-                )
+            built = self._build_model(game, track_id, ctx.get("track_name"), length, plane, family)
+            if built is not None:
+                model = built
             elif other_layout:
                 assert model is not None
                 log.info(
@@ -499,8 +569,63 @@ class LapProcessor:
                     log.info("corner identity %s/%s: %s", game, track_id, mapping.summary())
             self._models[key] = model
             if self.live is not None and self._is_live(session_id):
-                self.live.set_track_model(track_model_payload(model))
+                self.live.set_track_model(track_model_payload(model, family))
         return model
+
+    # ------------------------------------------------------------------ one-off repairs (start of the service)
+    def run_repairs(self) -> dict[str, Any] | None:
+        """The F2 repair (``repo.repair_f2_v1``), once: delete the fake one-shot laps and the one-sample laps without a
+        time, tag every stored track model with its car class family, then rebuild a model of each family with clean
+        laps at every track whose models were superseded (through ``_build_model``, the live code), as a new version.
+        Guarded by the meta record (``repo.REPAIR_F2_V1_KEY``, status ``done``); an interrupted run resumes. Analysis
+        thread only (the runtime submits it first); returns the record, None when it ran before."""
+        with self.db.read() as c:
+            rec = repo.repair_record(c)
+        if rec is not None and rec.get("status") == "done":
+            return None
+        summary = self.writer.call(repo.repair_f2_v1)
+        with self.db.read() as c:
+            record = repo.repair_record(c) or {}
+        rebuilt: list[dict[str, Any]] = []
+        wanted: dict[tuple[str, str], set[str]] = {}  # (game, track) -> the families its superseded models were of
+        for sup in record.get("superseded") or []:  # this run's and an interrupted earlier run's
+            fams_of = {f for f in sup.get("families") or () if isinstance(f, str)}
+            wanted.setdefault((str(sup["game"]), str(sup["track_id"])), set()).update(fams_of)
+        for (game, track_id), families in sorted(wanted.items()):
+            with self.db.read() as c:
+                have = repo.track_model_families(c, game, track_id)
+                fams = repo.track_clean_lap_families(c, game, track_id)
+                old = repo.newest_track_model(c, game, track_id)
+            plane = old.ground_plane if old is not None else ("pos_x_m", "pos_z_m")
+            for f in fams:
+                fam, length = f["fam"], f["track_length_m"]
+                if fam not in families or fam in have or not isinstance(length, int | float) or length <= 0:
+                    continue
+                name = f["track_name"] if f["track_name"] else (old.track_name if old is not None else None)
+                model = self._build_model(game, track_id, name, float(length), plane, fam)
+                if model is not None:
+                    rebuilt.append({"game": game, "track_id": track_id, "family": fam, "version": model.version})
+        self._models.clear()
+        with self.db.read() as c:
+            record = repo.repair_record(c) or {}
+        record.update(
+            status="done",
+            done_unix=round(time.time(), 3),
+            tagged=summary["tagged"],
+            rebuilt=[*(record.get("rebuilt") or []), *rebuilt],
+        )
+        self.writer.call(lambda c: repo.set_meta(c, repo.REPAIR_F2_V1_KEY, dumps(record)))
+        if summary["deleted"] or summary["stubs"] or summary["superseded"] or rebuilt:
+            log.info(
+                "repair %s: %d fake one-shot lap(s) and %d one-sample untimed lap(s) deleted, %d track model(s) "
+                "superseded, %d rebuilt",
+                repo.REPAIR_F2_V1_KEY,
+                len(summary["deleted"]),
+                len(summary["stubs"]),
+                len(summary["superseded"]),
+                len(rebuilt),
+            )
+        return record
 
     def _choose_reference(
         self,
@@ -597,6 +722,13 @@ class LapProcessor:
         if desc is not None:  # --- coachref --- the descriptor (kind, holder, labels, clamp, frozen)
             summary = {**desc.to_dict(), **summary}
         self.live.set_reference(summary, an.dtrace)
+
+
+def ctx_family(ctx: dict[str, Any] | None) -> str | None:
+    """The car class family (``carclass``) of a lap context (``LapJob.context`` / ``coachref.ctx_from_*``)."""
+    if not ctx:
+        return None
+    return carclass.family_of(ctx.get("game"), ctx.get("formula"), ctx.get("car_id"), ctx.get("packet_format"))
 
 
 def _resolution_m(lap: LapTrace) -> float:

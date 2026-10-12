@@ -17,6 +17,7 @@ from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from typing import Any
 
+from pitwall import carclass
 from pitwall.storage.repo import REPLAY_SOURCE_PREFIX
 
 GOAL_KINDS = ("lap_time", "clean_streak", "consistency", "race_clean")
@@ -83,6 +84,8 @@ class SessionRow:
     total_laps: int | None  # race length (F1 sends it); stored from schema v3 only
     formula: str | None  # F1 "F1 World" / "F2" ...
     car_class_raw: int | None  # Forza CarClass
+    packet_format: int | None = None  # F1 UDP format (names the observed F2 team ids 209-219 in format 2025)
+    session_type_raw: str | None = None  # the game's own session name ("One-Shot Qualifying")
 
     @classmethod
     def from_row(cls, d: Mapping[str, Any]) -> SessionRow:
@@ -103,7 +106,15 @@ class SessionRow:
             total_laps=_int(d.get("total_laps")),
             formula=_str(d.get("formula")),
             car_class_raw=_int(d.get("car_class")),
+            packet_format=_int(d.get("packet_format")),
+            session_type_raw=_str(d.get("session_type_raw")),
         )
+
+    @property
+    def car_label(self) -> str | None:
+        """The car as the dashboard names it (``carclass.car_label``): "F2 · Art GP '24", "McLaren"; never a raw id."""
+        cls = carclass.classify(self.game, self.formula, self.car_id, self.packet_format)
+        return display_car(carclass.car_label(cls, self.car_name, self.car_id, self.packet_format))
 
     @property
     def replay(self) -> bool:
@@ -112,6 +123,11 @@ class SessionRow:
     @property
     def is_race(self) -> bool:
         return self.session_type == "race"
+
+    @property
+    def one_shot(self) -> bool:
+        """F1 one-shot qualifying (or sprint shootout): one timed lap by design."""
+        return (self.session_type_raw or "").lower().startswith("one-shot")
 
     @property
     def is_f1(self) -> bool:
@@ -344,9 +360,17 @@ def track_identified(track_id: str | None, track_name: str | None) -> bool:
 
 
 def in_car(name: str | None) -> str:
-    """`` in the Haas`` (empty when the car has no readable name)."""
+    """`` in the Haas`` (empty when the car has no readable name); a class label (``carclass.car_label``) reads
+    `` in the Art GP '24 F2 car`` / `` in an F2 car``."""
     shown = display_car(name)
-    return f" in the {shown}" if shown else ""
+    if not shown:
+        return ""
+    if " · " in shown:
+        cls, team = shown.split(" · ", 1)
+        return f" in the {team} {cls} car"
+    if shown.endswith(" car"):
+        return f" in {'an' if shown[:1] in 'AEFHILMNORSX' else 'a'} {shown}"
+    return f" in the {shown}"
 
 
 def game_label(game: str | None) -> str:

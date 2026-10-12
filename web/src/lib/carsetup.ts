@@ -8,7 +8,7 @@
 
 import { api, type SessionRow } from "./api";
 
-export type CarFormat = "f1_2025" | "f1_2026";
+export type CarFormat = "f1_2025" | "f1_2026" | "f2";
 export type SessionKind = "race" | "qualifying";
 export type Conditions = "dry" | "wet";
 export type SetupStyle = "balanced" | "stable" | "aggressive";
@@ -37,7 +37,8 @@ export interface FormatInfo {
   id: CarFormat;
   label: string;
   description: string;
-  latest_handling_patch: HandlingPatch;
+  /** null for a format without a known handling patch (F2) */
+  latest_handling_patch: HandlingPatch | null;
   tracks: { id: number; name: string }[];
   notes: string[];
 }

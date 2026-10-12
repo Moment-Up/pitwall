@@ -25,6 +25,7 @@ import time
 from collections import deque
 from typing import TYPE_CHECKING, Any
 
+from pitwall import carclass
 from pitwall.adapters.f1.enums import button_names
 from pitwall.storage import repo
 from pitwall.validate import evidence as E
@@ -598,6 +599,16 @@ class Collector:
             self.kit.timeline("cue_mode", f"Braking calls: {live.cues.mode}")
         if sid is not None and s is not None and status == "live":
             fresh = {k: s.extra[k] for k in _EXTRA_KEYS if k in s.extra}
+            if s.formula is not None:
+                fresh["formula"] = s.formula  # F2 (validation check f2_ps5)
+            if s.formula == "F2":
+                # an ERS value published for an F2 car (the adapter leaves it empty: F1 25 sends 0 for F2 cars)
+                f = live.frame
+                before = (run.session_extra.get(sid) or {}).get("ers_published")
+                if f is not None:
+                    fresh["ers_published"] = bool(before) or f.ers_store_j is not None
+                elif isinstance(before, bool):
+                    fresh["ers_published"] = before
             if fresh and run.session_extra.get(sid) != fresh:
                 run.session_extra[sid] = fresh
                 self.kit.dirty()
@@ -830,7 +841,7 @@ class Collector:
     # ------------------------------------------------------------------ database reads (worker thread)
     @staticmethod
     def _wants_db(selected: list[str]) -> bool:
-        return any(i in selected for i in ("ac_ps5", "gt7_ps5", "driver_switch"))
+        return any(i in selected for i in ("ac_ps5", "gt7_ps5", "f2_ps5", "driver_switch"))
 
     def schedule_db_refresh(self) -> None:
         if self._db_task is not None and not self._db_task.done():
@@ -892,7 +903,7 @@ class Collector:
         self, since: float, sids: set[str], switches: list[tuple[str | None, str | None, int | None]]
     ) -> tuple[list[tuple[dict[str, Any], list[dict[str, Any]], int, int | None]], list[Any]]:
         sessions: list[tuple[dict[str, Any], list[dict[str, Any]], int, int | None]] = []
-        corners_cache: dict[tuple[str, str], int | None] = {}
+        corners_cache: dict[tuple[str, str, str | None], int | None] = {}
         switch_rows: list[Any] = []
         with self.rt.db.read() as c:
             rows = [
@@ -907,7 +918,7 @@ class Collector:
                     rows.append(r)
             for r in sorted(rows, key=lambda x: float(x.get("started_unix") or 0)):
                 game = str(r.get("game"))
-                if game not in ("gt7", "ac"):
+                if game not in ("gt7", "ac", "f1_25"):  # f1_25: the F2 check (f2_ps5)
                     continue
                 laps = [
                     {
@@ -915,6 +926,7 @@ class Collector:
                         "lap_time_ms": lap.get("lap_time_ms"),
                         "clean": bool(lap.get("clean")),
                         "flags": list(lap.get("flags") or []),
+                        "n_samples": lap.get("n_samples"),  # the F2 check: a one-sample lap, a short duplicate
                     }
                     for lap in repo.list_laps(c, str(r["id"]))
                 ]
@@ -922,9 +934,10 @@ class Collector:
                 corners = None
                 tid = r.get("track_id")
                 if isinstance(tid, str):
-                    ck = (game, tid)
+                    fam = carclass.family_of_row(r)  # the session's car class family
+                    ck = (game, tid, fam)
                     if ck not in corners_cache:
-                        model = repo.load_track_model(c, game, tid)
+                        model = repo.load_track_model(c, game, tid, fam)
                         corners_cache[ck] = None if model is None else len(model.corners)
                     corners = corners_cache[ck]
                 sessions.append((r, laps, n_obs, corners))
@@ -1005,6 +1018,8 @@ _EXTRA_KEYS = (
     "rtcarinfo_size_field",
     "packet_format",
     "game_version",
+    "formula",  # F1 Session.formula (the F2 check)
+    "session_type_id",  # F1 Session.sessionType (the F2 check: one-shot qualifying)
 )
 
 

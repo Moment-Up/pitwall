@@ -25,11 +25,11 @@ from __future__ import annotations
 
 import logging
 from dataclasses import replace
-from typing import Any, get_args
+from typing import Any
 
 import numpy as np
 
-from pitwall.carsetup.catalog import CarFormat
+from pitwall.carsetup.catalog import CarFormat, formats_of_family
 from pitwall.carsetup.recommend import CAVEAT
 from pitwall.core.session_analysis import SessionAnalysis
 from pitwall.technique import thresholds as T
@@ -59,7 +59,8 @@ HANDLING_PREFIX = "Handling summary (heuristic thresholds)"
 SETUP_PREFIX = "Setup to try"
 SLIP_NONE_PREFIX = "Lock-ups and wheelspin"
 SYNTHETIC_TAG = "SYNTHETIC data, not your car"
-FORMATS: tuple[CarFormat, ...] = get_args(CarFormat)
+# the generic car hides its generation: the two F1 car formats it can be (never the F2 cars': another car class)
+FORMATS: tuple[CarFormat, ...] = formats_of_family("f1")
 # what each technique metric is called in a sentence (the summary fact, and the radio's topic answers)
 METRIC_WORDS: dict[str, str] = {
     "release": "brake release",

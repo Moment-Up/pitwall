@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from pitwall.motivation import goals as G
@@ -33,8 +33,10 @@ from pitwall.motivation.model import (
     Scope,
     SessionRow,
     gap_s,
+    is_f1_game,
     lap_time,
     seconds,
+    session_car_class,
     short_date,
 )
 
@@ -203,12 +205,20 @@ def _track_scope(s: SessionRow) -> Scope:
     return Scope(game=s.game, track_id=s.track_id, track_name=s.track_name, track_length_m=s.track_length_m)
 
 
+def _class_scope(s: SessionRow) -> Scope:
+    """The track and, in an F1 game that reports its formula, the car class (``f1_25:formula:F2``): an F2 car's lap
+    spread says nothing about an F1 car's at the same track (F2 support). Other games: the track only."""
+    cc = session_car_class(s) if is_f1_game(s.game) else None
+    return replace(_track_scope(s), car_class=cc, car_name=s.car_name if cc else None)
+
+
 def consistency_suggestion(
     history: History, skill: str, now_unix: float, scope: Scope | None = None
 ) -> Suggestion | None:
     """Steady laps at one track: a spread learned on a 23-second lap means nothing on a 95-second one, so the
     suggestion is tied to the track it was learned at (the scope's track when one is asked for; else the steadiest
-    session for its lap length, as spread / median lap time)."""
+    session for its lap length, as spread / median lap time) and, in F1 games, to the car class it was driven in
+    (``_class_scope``)."""
     recent = [s for s in _recent(history, now_unix) if s.track_id is not None]
     if scope is not None and scope.track_id is not None:
         recent = [s for s in recent if rules.scope_matches(_track_scope_of(scope), s)]
@@ -247,11 +257,13 @@ def consistency_suggestion(
         {"best_spread_ms": spread, "window_laps": k},
         [s.id],
     )
-    return Suggestion("consistency", float(target), {"window_laps": k}, _track_scope(s), basis)
+    return Suggestion("consistency", float(target), {"window_laps": k}, _class_scope(s), basis)
 
 
 def _track_scope_of(scope: Scope) -> Scope:
-    return Scope(game=scope.game, track_id=scope.track_id, track_length_m=scope.track_length_m)
+    return Scope(
+        game=scope.game, track_id=scope.track_id, track_length_m=scope.track_length_m, car_class=scope.car_class
+    )
 
 
 # ---------------------------------------------------------------------------------------------- clean race (F1)

@@ -13,6 +13,8 @@ import { api, type SessionRow } from "../../lib/api";
 import { prefs } from "../../lib/prefs";
 import { router, sessionPath, type AreaId } from "../../lib/router";
 import { dayTitle, sessionTitle } from "../../lib/review/words";
+import { classChip, type SessionCarFields } from "../../lib/carclass";
+import { sessionSearchText } from "../../lib/review/sessions";
 import { AREAS, pageSearchText } from "../../routes";
 import { EvidenceChips } from "../ui/EvidenceChips";
 import { navLock } from "./navLock";
@@ -39,10 +41,15 @@ function Row({ item }: { item: PaletteItem }) {
   );
 }
 
-function sessionDetail(s: SessionRow, nowMs: number): ReactNode {
+/** A session row as /api/sessions sends it (F2 support: + car_class, car_label, session_label). */
+type PaletteSession = SessionRow & SessionCarFields;
+
+function sessionDetail(s: PaletteSession, nowMs: number): ReactNode {
+  const cls = classChip(s.car_class); // "F2": F1 cars carry no chip
   return (
     <span className="inline-flex items-center gap-2">
       <EvidenceChips synthetic={s.synthetic} source={s.source} />
+      {cls && <span className="font-semibold">{cls}</span>}
       {dayTitle(s.started_unix, nowMs)}
     </span>
   );
@@ -75,13 +82,13 @@ export function CommandPalette({ isOpen, onOpenChange }: { isOpen: boolean; onOp
         run: () => go(`/${a.id}/${p.id}`, a.id, p.id),
       })),
     );
-    const recent: PaletteItem[] = [...(sessions ?? [])]
+    const recent: PaletteItem[] = [...((sessions ?? []) as PaletteSession[])]
       .sort((x, y) => y.started_unix - x.started_unix)
       .slice(0, RECENT_SESSIONS)
       .map((s) => ({
         id: `session:${s.id}`,
         label: sessionTitle(s),
-        textValue: `${sessionTitle(s)} ${s.car_name ?? ""} ${s.synthetic ? "synthetic" : ""}`,
+        textValue: sessionSearchText(s), // "F2" finds the F2 sessions
         detail: sessionDetail(s, nowMs),
         icon: <ChartLine aria-hidden="true" className="size-4" />,
         run: () => go(sessionPath(s.id), "review", "sessions"),

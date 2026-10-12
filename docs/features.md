@@ -21,6 +21,7 @@ Where a feature has less evidence than that, this page says so. [status.md](stat
 - [Pace against the AI](#pace-against-the-ai)
 - [How the race engineer makes strategy calls](#how-the-race-engineer-makes-strategy-calls)
 - [The AI engineer](#the-ai-engineer)
+- [F2 cars in F1 25](#f2-cars-in-f1-25)
 - [The classic dashboard](#the-classic-dashboard)
 
 ## Drive
@@ -444,8 +445,8 @@ nothing is validated until you test it on your rig. Details: [controls.md](contr
 
 ![Setup › Car setup](screenshots/14-setup-car-setup.png)
 
-F1 25 car setup recommendations built from a catalogue of 454 published setups (27 tracks for the 2025 cars, 24
-for the 2026 Season Pack cars, never mixed). Choose the track, session, weather and driving style; each value shows
+F1 25 car setup recommendations built from a catalogue of 484 published setups (27 tracks for the 2025 cars, 24
+for the 2026 Season Pack cars and 5 for the F2 cars, never mixed: see [F2 cars](#f2-cars-in-f1-25)). Choose the track, session, weather and driving style; each value shows
 its confidence, and disagreements between sources are called out. You can compare your own setup with the
 recommendation and try one change at a time. No recommended setup has yet been driven and checked by Pitwall.
 
@@ -702,6 +703,55 @@ It works with a local model (llama.cpp, LM Studio, Ollama, MLX or any OpenAI-com
 calls send only the fact sheet, the question (as text, never audio) and your last few exchanges; driver names are
 replaced with "the driver", and you can set a daily budget. Cloud providers are tested against mock servers only.
 Details: [llm-providers.md](llm-providers.md).
+
+## F2 cars in F1 25
+
+F1 25 lets you drive the F2 cars of the 2024 and 2025 seasons (F2 career, Grand Prix, Time Trial). Pitwall works out
+the car's class from what the game sends (its formula, else the car's team) every time it shows a session, so older
+sessions are recognised too. Evidence: **recorded** - 12 F2 sessions the owner drove on a PS5 on 2026-10-11 (F1 25
+v1.26, UDP format 2025) replayed through Pitwall, plus synthetic F2 streams; **not yet tested live** (validation
+check `f2_ps5`). See [status.md](status.md#f2-in-f1-25-ps5-recorded).
+
+- **Drive.** The car is named "F2 · Art GP '24" (or "F2 car" when the team is not known) with an F2 chip next to
+  the track (on phones too), and an F2 race is called a "Feature race" (the game's "Race 2") or, in a weekend that
+  also has a feature race, a "Sprint race" (its "Race"; the game sends the weekend's sessions). Session names are in
+  sentence case ("One-shot qualifying"). There is no ERS on the car tile: F1 25 sends 0 in every ERS field for an F2
+  car, which Pitwall shows as no ERS rather than an empty battery. F2 tyres read in words ("Super soft · 1 lap").
+  The corners come from your F2 laps and show from the start of the session (one-shot qualifying has only one lap);
+  until you have a clean F2 lap at a track, corners learned from F1 laps (or from older laps whose car was never
+  recorded) stand in, and the track says so ("Corners from F1 laps until your first clean F2 lap here."). "Your best
+  here" compares F2 with F2.
+- **Review.** Session titles and the session report use the same names ("Jeddah · Feature race", "car F2 · Art GP
+  '24"); the Drivers card keeps an F1 best and an F2 best apart at the same track, and badges name the car with its
+  class ("in the Hitech '25 F2 car"). One-shot qualifying stores your one lap once: before this, the game's
+  "finished" signal a moment after the line was stored as a second lap of one sample with the same time, and the
+  frame after the line as an empty "lap 2". The laps of that kind already stored are removed by a one-off repair at
+  the first start, and the track models made from them are rebuilt. A one-shot session never asks for "a second
+  clean lap": it says one-shot qualifying has one timed lap.
+- **Car setup.** An F2 car gets F2 setups only: the F2 car format has its own ranges, taken from F2 setups (never
+  copied from the F1 car: brake bias reaches 69 and rear suspension stops at 26), and 30 cited F2 setups for
+  Sakhir, Jeddah, Melbourne, Monaco and Monza, each with its author, link, date, source and the source's own notes
+  (lap time, session, team and season). Elsewhere the page says
+  "No F2 setups for this track in Pitwall yet." and your own setup still shows; Pitwall never asks an F2 driver to
+  pick an F1 car format. Setup experiments and the technique page's suggestions size their changes with the F2
+  ranges.
+- **Strategy.** F1 25 does not send a race's tyre or pit-stop rules, so Pitwall never says a stop is not mandatory:
+  the tile adds "Stop rules: not sent by the game", and for an F2 race what real F2 does (the feature race needs one
+  stop and both dry compounds; in a 5-lap race on the PS5 the game did not enforce it).
+- **The AI engineer and the radio.** "How much ERS have I got?" in an F2 car: "F2 cars have no ERS, so there's
+  nothing to deploy." "Was a pit stop mandatory?" or "What are the stop rules?" (rule words only, in a race): the
+  rules are not known, then the F2 note, then what the tyres say - never "no"; under a safety car the box call comes
+  first. A plain "Do I need to pit?" or "Do I need to box this lap?" keeps the strategy answer, in F1 and F2 alike.
+  "Is DRS available?" has its own answer from the game's DRS flags ("DRS is open.", "DRS isn't allowed yet:
+  available in 120 m."), then the car ahead when it is in DRS range.
+- **Physics heavy-stop warning.** F2 cars brake less hard than the default model: the warning uses an F2 braking
+  curve fitted from the F2 AI cars of the owner's races (median error 0 m, p90 38 m on 64 stops, in sample on 3
+  tracks), and an F1 session's AI fit never carries over into an F2 session.
+- **Game page.** F1 25 lists its car classes and how far each is tested: F1 tested live, F2 recorded, the 2026
+  Season Pack cars and classic F1 cars from the spec only.
+
+Not covered yet: the 2026 F2 cars (recognised as F2, but no setups and no recording), whether F2 teams differ in the
+game, and the rules of longer F2 races.
 
 ## The classic dashboard
 

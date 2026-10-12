@@ -100,7 +100,7 @@ def _car_scope(s: SessionRow) -> Scope:
 
 
 def _in_car(s: SessionRow) -> str:
-    return in_car(s.car_name)
+    return in_car(s.car_label)  # "in the Art GP '24 F2 car", "in the Hitech '25 F2 car": the class with the car
 
 
 def track_badges_allowed(s: SessionRow) -> bool:

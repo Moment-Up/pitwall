@@ -71,6 +71,10 @@ F1_25_INFO = AdapterInfo(
         "rpm": FieldSupport(_S, "CarTelemetry.engineRPM"),
         "max_rpm": FieldSupport(_S, "CarStatus.maxRPM"),
         "drs_open": FieldSupport(_S, "CarTelemetry.drs"),
+        "drs_allowed": FieldSupport(_S, "CarStatus.drsAllowed (0 not allowed, 1 allowed)"),
+        "drs_activation_m": FieldSupport(
+            _S, "CarStatus.drsActivationDistance (m until DRS is available; 0 = not available -> None)"
+        ),
         "ers_store_j": FieldSupport(_S, "CarStatus.ersStoreEnergy (J)"),
         "pos_x_m": FieldSupport(_S, "Motion.worldPositionX (m)"),
         "pos_y_m": FieldSupport(_S, "Motion.worldPositionY (m, up axis)"),
@@ -309,6 +313,11 @@ TIMING_HZ = 2.0  # RaceTiming rate (game clock): gaps update every 0.3-2 s on re
 MAX_TIMING_HZ = 10.0
 TIMING_GAP_WRAP_MS = 60_000  # a milliseconds part >= this is a negative delta wrapped into the uint16 (Monza: 65403)
 SESSION_TYPE_TIME_TRIAL = 18  # Session.sessionType (spec 8.5)
+FORMULA_F2 = 2  # Session.formula (spec 8.12): F2 cars have no ERS (the game sends 0 for them)
+# a final lap in exactly the previous lap's time (``_on_lap_data``): reported after this much session time without a
+# new time, if the car had been on that lap number for at least this fraction of the lap time
+FINAL_TIME_GRACE_S = 1.0
+FINAL_LAP_MIN_FRAC = 0.5
 
 # (pitStatus is read with AI pace's strided LD_PIT slice: one LapData pass, see ``_on_lap_data``)
 _TIMING_LAP = (
@@ -479,6 +488,14 @@ class F1Adapter:
         self._prev_lap_num: int | None = None
         self._prev_lap_snapshot: dict[str, Any] | None = None
         self._prev_result: int | None = None
+        # the last lap completion reported this session (lap number, the game's lastLapTimeInMS then; at the first
+        # LapData packet, the time it showed) and a final lap the result status announced before its new time arrived
+        # (see ``_on_lap_data``)
+        self._done_lap: int | None = None
+        self._done_ms: int | None = None
+        self._final_wait: int | None = None
+        self._final_wait_s: float | None = None  # session time the wait for a final lap's new time began
+        self._lap_since_s: float | None = None  # session time the current lap number began (None: joined mid-lap)
         self._sector3: dict[str, Any] | None = None
         self._last_setup_fp: str | None = None
         self._format: int | None = None
@@ -507,6 +524,7 @@ class F1Adapter:
         self._status_raw: bytes | None = None
         self._session_type_id: int | None = None
         self._tyre_sets_key: bytes | None = None
+        self._formula_raw: int | None = None  # Session.formula as sent (2 = F2: no ERS); None before the first one
 
     # ------------------------------------------------------------------ structural validation
     def can_decode(self, data: bytes) -> bool:
@@ -613,9 +631,16 @@ class F1Adapter:
         self._lap_raw = data
         lap_num = lap["currentLapNum"]
         prev = self._prev_lap_num
+        last_raw = lap["lastLapTimeInMS"]
+        now_s = float(h["sessionTime"])
+        if prev is None:
+            self._done_ms = last_raw  # joined mid-session: the time shown now belongs to a lap before this one
+        if lap_num != prev:
+            # when this lap number began; None when joined mid-session (the lap began before Pitwall saw it)
+            self._lap_since_s = now_s if prev is not None else None
         if prev is not None and lap_num == prev + 1 and self._prev_lap_snapshot is not None:
             snap = self._sector_snapshot(prev) or self._prev_lap_snapshot
-            last_ms = lap["lastLapTimeInMS"] or None
+            last_ms = last_raw or None
             s1 = _mins_ms(snap["sector1TimeMinutesPart"], snap["sector1TimeMSPart"]) or None
             s2 = _mins_ms(snap["sector2TimeMinutesPart"], snap["sector2TimeMSPart"]) or None
             s3 = last_ms - s1 - s2 if (last_ms and s1 and s2) else None
@@ -631,32 +656,42 @@ class F1Adapter:
                     final=lap["resultStatus"] == RESULT_FINISHED,
                 )
             )
+            self._done_lap, self._done_ms, self._final_wait, self._final_wait_s = prev, last_raw, None, None
         elif (
             prev is not None
             and lap_num == prev
             and lap["resultStatus"] == RESULT_FINISHED
-            and self._prev_result != RESULT_FINISHED
-            and lap["lastLapTimeInMS"]
+            and (self._prev_result != RESULT_FINISHED or self._final_wait == lap_num)
             and self._prev_lap_snapshot is not None
         ):
-            # Final lap of a race: the lap number does not advance at the chequered flag; instead the result
-            # status turns "finished" and lastLapTimeInMS updates (observed in F1 25 v1.26 on PS5).
-            snap = self._sector_snapshot(lap_num) or self._prev_lap_snapshot
-            last_ms = lap["lastLapTimeInMS"]
-            s1 = _mins_ms(snap["sector1TimeMinutesPart"], snap["sector1TimeMSPart"]) or None
-            s2 = _mins_ms(snap["sector2TimeMinutesPart"], snap["sector2TimeMSPart"]) or None
-            out.append(
-                LapCompletion(
-                    game=Game.F1_25,
-                    t_recv_ns=t,
-                    lap_number=lap_num,
-                    lap_time_ms=last_ms,
-                    sector_times_ms=[s1, s2, last_ms - s1 - s2 if (s1 and s2) else None],
-                    valid=not bool(snap["currentLapInvalid"]),
-                    session_time_s=h["sessionTime"],
-                    final=True,  # the driver took the chequered flag on this lap
-                )
-            )
+            # Final lap of a race: the lap number does not advance at the chequered flag; instead the result status
+            # turns "finished" and lastLapTimeInMS updates (observed in F1 25 v1.26 on PS5: the new time arrives in the
+            # same packet or one packet earlier). One-shot qualifying (recorded on PS5, 2026-10-11) is different: the
+            # lap number advances at the line (that completion is the lap), and 17 ms later the result turns
+            # "finished" with lastLapTimeInMS unchanged, on a lap that is never driven. So a final lap is reported
+            # only when the game's last-lap time changed since the last completion; with the time unchanged it waits
+            # for a new time on this lap number (a race's time arriving a packet late), which never comes after a
+            # one-shot lap. O(1) per packet.
+            #
+            # A final lap driven in exactly the previous lap's time (to the millisecond) never shows a new time: it is
+            # reported once the wait has lasted FINAL_TIME_GRACE_S of session time, if the car had been on this lap
+            # number for at least FINAL_LAP_MIN_FRAC of that time when the result turned "finished" (a one-shot
+            # lap number is 17 ms old then).
+            if last_raw and last_raw != self._done_ms:
+                self._final_completion(lap, lap_num, last_raw, h, t, out)
+            elif self._final_wait != lap_num:
+                self._final_wait = lap_num  # finished, no new time yet: report it only if one arrives
+                self._final_wait_s = now_s
+                self.stats.count("LAP_FINAL_WITHOUT_NEW_TIME")
+            elif (
+                last_raw
+                and self._final_wait_s is not None
+                and self._lap_since_s is not None
+                and now_s - self._final_wait_s >= FINAL_TIME_GRACE_S
+                and self._final_wait_s - self._lap_since_s >= FINAL_LAP_MIN_FRAC * last_raw / 1000.0
+            ):
+                self._final_completion(lap, lap_num, last_raw, h, t, out)  # the same time, genuinely
+                self.stats.count("LAP_FINAL_SAME_TIME")
         if lap["sector"] == 2:
             # Sector times are zeroed as the car crosses the line - sometimes a packet BEFORE the lap number or
             # result status changes (observed on PS5) - so keep the last sector-3 snapshot of each lap.
@@ -846,6 +881,28 @@ class F1Adapter:
             )
         )
 
+    def _final_completion(
+        self, lap: dict[str, Any], lap_num: int, last_ms: int, h: dict[str, Any], t: int, out: list[Emitted]
+    ) -> None:
+        """The driver's final lap (the chequered flag on ``lap_num``), timed ``last_ms`` by the game."""
+        assert self._prev_lap_snapshot is not None
+        snap = self._sector_snapshot(lap_num) or self._prev_lap_snapshot
+        s1 = _mins_ms(snap["sector1TimeMinutesPart"], snap["sector1TimeMSPart"]) or None
+        s2 = _mins_ms(snap["sector2TimeMinutesPart"], snap["sector2TimeMSPart"]) or None
+        out.append(
+            LapCompletion(
+                game=Game.F1_25,
+                t_recv_ns=t,
+                lap_number=lap_num,
+                lap_time_ms=last_ms,
+                sector_times_ms=[s1, s2, last_ms - s1 - s2 if (s1 and s2) else None],
+                valid=not bool(snap["currentLapInvalid"]),
+                session_time_s=h["sessionTime"],
+                final=True,  # the driver took the chequered flag on this lap
+            )
+        )
+        self._done_lap, self._done_ms, self._final_wait, self._final_wait_s = lap_num, last_ms, None, None
+
     def _sector_snapshot(self, lap_number: int) -> dict[str, Any] | None:
         s3 = self._sector3
         return s3 if s3 is not None and s3["currentLapNum"] == lap_number else None
@@ -916,8 +973,16 @@ class F1Adapter:
             f.fuel_kg = st["fuelInTank"]
             f.fuel_capacity_kg = st["fuelCapacity"]
             f.fuel_remaining_laps_game = st["fuelRemainingLaps"]
-            f.ers_store_j = st["ersStoreEnergy"]
-            f.ers_deploy_mode = st["ersDeployMode"]
+            if self._formula_raw is not None and self._formula_raw != FORMULA_F2:
+                # F2 cars have no ERS: F1 25 sends 0 in every ERS / hybrid field for them (recorded on PS5), which is
+                # "not there", not an empty battery. Before the session's first Session packet the formula is unknown,
+                # so the car may be an F2 car: no ERS value until then (joining a running F2 session once showed
+                # 14 frames of "ERS 0.0 MJ")
+                f.ers_store_j = st["ersStoreEnergy"]
+                f.ers_deploy_mode = st["ersDeployMode"]
+            f.drs_allowed = bool(st["drsAllowed"])
+            dist = st["drsActivationDistance"]
+            f.drs_activation_m = float(dist) if dist > 0 else None
             f.tyre_compound = enums.VISUAL_COMPOUNDS.get(st["visualTyreCompound"])
             f.tyre_age_laps = st["tyresAgeLaps"]
             f.brake_bias_front_pct = float(st["frontBrakeBias"])
@@ -1054,10 +1119,13 @@ class F1Adapter:
         tail_ok = tail["gearboxAssist"] in GEARBOX_ASSIST_DEFINED
         ai_raw = tail["aiDifficulty"]
         ai_difficulty = ai_raw if tail_ok and 0 <= ai_raw <= AI_DIFFICULTY_MAX else None
+        n_weekend = min(int(tail["numSessionsInWeekend"]), len(tail["weekendStructure"])) if tail_ok else 0
+        weekend = [int(x) for x in tail["weekendStructure"][:n_weekend]]
 
         self._paused = bool(head["gamePaused"])
         self._spectating = bool(head["isSpectating"])
         self._session_type_id = head["sessionType"]
+        self._formula_raw = head["formula"]
         track_id = head["trackId"]
         self._track_id = f"f1:{track_id}"
         stype_label, stype = enums.SESSION_TYPES.get(
@@ -1134,6 +1202,9 @@ class F1Adapter:
                     "num_safety_car_periods": tail["numSafetyCarPeriods"],
                     "num_vsc_periods": tail["numVirtualSafetyCarPeriods"],
                     "num_red_flag_periods": tail["numRedFlagPeriods"],
+                    # the weekend's session types in order (spec 8.5; F2: a "Race" is the sprint only before a
+                    # "Race 2", carclass.f2_race_kind); absent while the tail is unfilled or the game lists none
+                    **({"weekend_structure": weekend} if weekend else {}),
                 },
             )
         )

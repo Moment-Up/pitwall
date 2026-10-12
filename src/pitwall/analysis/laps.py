@@ -378,7 +378,11 @@ class LapAssembler:
         channels = {name: arr[:, i] for i, name in enumerate(CHANNELS)}
         flags = set(b.flags)
         dist = channels["distance_m"]
-        if len(dist) > 1:
+        if len(dist) < 2:
+            # a lap of one sample covers nothing: real F1 25 one-shot qualifying sent a "lap" that was never driven
+            # (one frame past the line), and it once counted as clean. Every game: fewer than 2 samples is incomplete.
+            flags.add(LapFlag.INCOMPLETE)
+        else:
             dd = np.diff(dist)
             dt = np.diff(channels["session_time_s"])
             jumps = dd > MAX_GAP_M
@@ -386,10 +390,10 @@ class LapAssembler:
                 flags.add(LapFlag.INCOMPLETE)  # packets missing
             elif np.any(jumps):
                 flags.add(LapFlag.DISTANCE_JUMP)
-            if self.track_length_m and np.nanmax(dist) < self.track_length_m - self._end_tolerance_m(
-                b.first.game if b.first else None
-            ):
-                flags.add(LapFlag.INCOMPLETE)
+        if self.track_length_m and np.nanmax(dist) < self.track_length_m - self._end_tolerance_m(
+            b.first.game if b.first else None
+        ):
+            flags.add(LapFlag.INCOMPLETE)  # the lap does not reach the line (also a one-sample lap)
         if b.stale > 0.2 * len(dist):
             flags.add(LapFlag.STALE_DATA)
         lap_time = completion.lap_time_ms if completion else None
@@ -467,8 +471,10 @@ class LapAssembler:
         self.on_lap(lap)
 
     def flush(self) -> None:
-        """Emit the in-progress lap as incomplete (e.g. session ended mid-lap)."""
-        if self._cur is not None and self._cur.rows:
+        """Emit the in-progress lap as incomplete (e.g. session ended mid-lap). A lap of fewer than 2 samples is
+        dropped: it covers nothing and has no time (real F1 25 one-shot qualifying ends one frame into a "lap 2" that is
+        never driven, which used to be stored and listed as a lap)."""
+        if self._cur is not None and len(self._cur.rows) >= 2:
             self._cur.flags.add(LapFlag.INCOMPLETE)
             self._finalise(self._cur, None)
         self._cur = None

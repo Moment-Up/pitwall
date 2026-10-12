@@ -6,6 +6,7 @@
 import { Button } from "@heroui/react";
 import { useState } from "react";
 import { useDrivers } from "../../../hooks/stores";
+import { carText } from "../../../lib/carclass";
 import type { SessionDetail } from "../../../lib/endpoints/review";
 import { reviewApi } from "../../../lib/endpoints/review";
 import { timingEligible } from "../../../lib/review/kpis";
@@ -15,7 +16,7 @@ import { errorText } from "./data";
 export interface PinReferenceProps {
   lapId: number;
   lapNumber: number;
-  session: Pick<SessionDetail, "driver_id" | "driver_name" | "track_name" | "car_name" | "synthetic" | "source">;
+  session: Pick<SessionDetail, "driver_id" | "driver_name" | "track_name" | "car_name" | "car_label" | "synthetic" | "source">;
   /** After a successful pin (the session's analyses are invalidated by the endpoint). */
   onPinned?: () => void;
   /** Button text; default "Pin lap N as reference". */
@@ -29,7 +30,9 @@ export function PinReference({ lapId, lapNumber, session, onPinned, label }: Pin
   if (!timingEligible(session)) return null;
   const owner = list.find((d) => d.id === session.driver_id)?.name ?? session.driver_name ?? null;
   const where = trackLabel(session);
-  const car = session.car_name ? ` in the ${session.car_name}` : " in this car";
+  // the car in words ("F2 · Art GP '24", F2 support), never a raw id ("team_214")
+  const text = carText(session);
+  const car = text ? ` in the ${text}` : " in this car";
 
   async function pin() {
     setStep("saving");

@@ -40,14 +40,16 @@ import type {
 } from "../api";
 import { ApiError } from "../api";
 import { authFetch } from "../auth";
+import type { CarFamily, SessionCarFields } from "../carclass";
 import { cache } from "../cache";
 import { drivers, type AssignResult } from "../drivers";
 
 /** How many sessions a list asks for (the server's default window is 50; a family's month fits in 200). */
 export const SESSION_LIST_LIMIT = 200;
 
-/** A session list row: `repo.list_sessions` (driver joined in) plus what D5 adds. */
-export interface SessionListRow extends SessionRow {
+/** A session list row: `repo.list_sessions` (driver joined in) plus what D5 adds, and (F2 support) the car class, the
+ * car and the session in words (`car_class`, `car_label`, `session_label`: lib/carclass.ts). */
+export interface SessionListRow extends SessionRow, SessionCarFields {
   driver_id: number | null;
   driver_name: string | null;
   car_id?: string | null;
@@ -136,6 +138,8 @@ export interface AiPacePoint {
   track_name: string | null;
   car_id: string | null;
   car_name: string | null;
+  /** The car in words ("F2 · Hitech '25"; never a raw id); null when nothing readable is known. Older servers: absent. */
+  car_label?: string | null;
   car_class: string | null;
   session_category: SessionCategory;
   weather_class: WeatherClass | null;
@@ -262,6 +266,10 @@ export interface ReviewCorner extends Corner {
 export interface ReviewTrackModel extends Omit<TrackModel, "corners"> {
   corners: ReviewCorner[];
   source_lap_ids?: number[];
+  /** F2 support: the family of the laps the model was built from (null = a model from before families). */
+  car_family?: CarFamily | null;
+  /** F2 support: false when another family's model stands in for this session's class; null for non-F1 games. */
+  car_family_match?: boolean | null;
 }
 
 /** A coaching observation as the analysis sends it (Observation.to_dict). D6 adds `text_simple` and `short`. */

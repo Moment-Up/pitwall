@@ -210,7 +210,28 @@ export function deletePrompt(d: Driver): string {
 
 /** The driver's best laps for the card: real ones first (in the server's track order), synthetic ones last. */
 export function bestLaps(d: Driver): Driver["stats"]["best_laps"] {
-  return [...d.stats.best_laps].sort((a, b) => Number(a.synthetic) - Number(b.synthetic));
+  // F2 support: a track driven in an F1 and an F2 car has one best per family; they stay next to each other
+  const all = d.stats.best_laps;
+  const firstAt = new Map<string, number>();
+  all.forEach((b, i) => {
+    const k = `${b.game}|${b.track_id}`;
+    if (!firstAt.has(k)) firstAt.set(k, i);
+  });
+  const at = (b: (typeof all)[number]) => firstAt.get(`${b.game}|${b.track_id}`) ?? 0;
+  return all
+    .map((b, i) => ({ b, i }))
+    .sort((x, y) => Number(x.b.synthetic) - Number(y.b.synthetic) || at(x.b) - at(y.b) || x.i - y.i)
+    .map((x) => x.b);
+}
+
+/** Tracks with a best lap (a track driven in two car families counts once). */
+export function bestLapTracks(d: Driver): number {
+  return new Set(d.stats.best_laps.map((b) => `${b.game}|${b.track_id}`)).size;
+}
+
+/** A best lap's key in a list: one per game, track and car family (F2 support). */
+export function bestLapKey(b: Driver["stats"]["best_laps"][number]): string {
+  return `${b.game}|${b.track_id}|${b.car_family ?? ""}`;
 }
 
 /** The swatches the colour picker offers: the palette, plus the driver's own colour when it is not in it (so

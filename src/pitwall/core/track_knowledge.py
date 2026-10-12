@@ -100,6 +100,8 @@ class PhysicsPrior:
     tags: tuple[SeverityTag, ...]
     source: str  # e.g. "qss@<model-hash>"
     tier: str = TIER_PHYSICS
+    car_family: str | None = None  # the carclass family whose braking curve and measured error it carries
+    caveat: str | None = None  # the family's caveat (its measured onset error), shown with the layer
 
     @classmethod
     def from_payload(cls, d: Mapping[str, Any]) -> PhysicsPrior | None:
@@ -121,12 +123,15 @@ class PhysicsPrior:
             label = turn.get("label") if isinstance(turn, Mapping) else None
             tags.append(SeverityTag(a, b, "heavy", gated=True, label=label if isinstance(label, str) else None))
         tier, source = d.get("tier"), d.get("source")
+        fam, caveat = d.get("car_family"), d.get("caveat")
         return cls(
             game=game,
             track_id=track_id,
             tags=tuple(tags),
             source=source if isinstance(source, str) else "physics",
             tier=tier if isinstance(tier, str) else TIER_PHYSICS,
+            car_family=fam if isinstance(fam, str) else None,
+            caveat=caveat if isinstance(caveat, str) else None,
         )
 
 
@@ -507,6 +512,8 @@ def resolve_track_knowledge(
             "available": pp is not None,
             "source": pp.source if pp is not None else None,
             "severity_tags": len(tags),
+            "car_family": pp.car_family if pp is not None else None,  # F2: its own braking curve and error
+            "caveat": pp.caveat if pp is not None else None,
         },
     }
     return TrackKnowledge(

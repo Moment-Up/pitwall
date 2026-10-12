@@ -30,6 +30,7 @@
 // the next lap" 6 s, "Change the reference when stopped" 2 s). The persistent chip is coachref's DRILL while a drill
 // runs, shown on the normal line only. StatusContent renders exactly what it returns.
 
+import { classChip } from "../carclass";
 import type { MotivationNote } from "../endpoints/motivation";
 import { badgeFor } from "../live";
 import { forward, gameLength, onLap } from "./geometry";
@@ -421,9 +422,15 @@ export function sessionTypeText(raw: string | null | undefined): string | null {
   return t ? t[0]!.toUpperCase() + t.slice(1).toLowerCase() : null;
 }
 
+/** The live session's type in words: the server's session_label when it sends one (F2: "Sprint race" for the game's
+ * "Race", "Feature race" for "Race 2"), else the game's own name. */
+export function liveSessionType(se: SnapshotNext["session"] | null | undefined): string | null {
+  return sessionTypeText(se?.session_label?.trim() || se?.session_type);
+}
+
 function completeSub(s: SnapshotNext | null): string | null {
   if (!s) return null;
-  const parts = [s.session?.track_name, sessionTypeText(s.session?.session_type)].filter(
+  const parts = [s.session?.track_name, liveSessionType(s.session)].filter(
     (p): p is string => typeof p === "string" && p.length > 0,
   );
   const total = s.lap_totals?.laps;
@@ -509,7 +516,7 @@ export function statusSlot(
     return { kind: "outline", tone: "warn", band: "mismatch", text: mismatch.text, sub: mismatch.sub, role: "status" };
   }
   if (state === "garage") {
-    const t = sessionTypeText(s?.session?.session_type);
+    const t = liveSessionType(s?.session);
     return status("ready", t ? `Ready · ${t}` : "Ready", "neutral");
   }
   return status("normal", statusLineText(s));
@@ -517,7 +524,7 @@ export function statusSlot(
 
 function statusLineText(s: SnapshotNext | null): string {
   const l = statusLine(s);
-  return [l.track, l.session, l.lap + (l.lapTotal ? ` / ${l.lapTotal}` : ""), l.position]
+  return [l.track, l.carClass, l.session, l.lap + (l.lapTotal ? ` / ${l.lapTotal}` : ""), l.position]
     .filter((x): x is string => !!x && x !== "-")
     .join(" · ");
 }
@@ -526,7 +533,9 @@ function statusLineText(s: SnapshotNext | null): string {
 
 export interface StatusLine {
   track: string;
-  /** Session type in words, "-" when unknown. */
+  /** F2 support: the car class chip next to the track ("F2", "Classic F1"); null for F1 cars and when unknown. */
+  carClass: string | null;
+  /** Session type in words ("Feature race" for F2's "Race 2"), "-" when unknown. */
   session: string;
   /** "Lap 7" or "Lap -". */
   lap: string;
@@ -539,12 +548,13 @@ export interface StatusLine {
 export function statusLine(s: SnapshotNext | null): StatusLine {
   const se = s?.session ?? null;
   const f = s?.frame ?? null;
-  const type = sessionTypeText(se?.session_type);
+  const type = liveSessionType(se);
   const total = se?.total_laps;
   const race = !!type && type.toLowerCase().includes("race");
   const pos = f?.race_position;
   return {
     track: se?.track_name || "-",
+    carClass: classChip(se?.car_class),
     session: type ?? "-",
     lap: `Lap ${finite(f?.lap_number) ? f.lap_number : "-"}`,
     lapTotal: finite(total) && total > 0 ? String(total) : null,

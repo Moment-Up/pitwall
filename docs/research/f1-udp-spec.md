@@ -2625,6 +2625,44 @@ Practical requirements: the console and the receiver must be on the same LAN/sub
 16. **Observed (PS5, F1 25 v1.26): `m_tyresWear` is whole percent.** 59 248 CarDamage samples across the 2026-10-10 races were all integral, so per-lap wear increments are quantised to 1 %; a stint's wear rate is best taken from the sum of per-lap increments (it telescopes, so the error stays one step over the stint).
 17. **Observed (PS5, full Austria race): the pit-lane timer resets at the pit exit, and `m_numPitStops` / `m_driverStatus` change at the box.** Car 14: `m_pitStatus` 0 → 1 at 4264 m on lap 65, 2 in the box 7.2 s later (stop 3353 ms), exit at 257 m on lap 66; `m_pitLaneTimeInLaneInMS` reached 20019 ms and read 0 again at the exit; `m_numPitStops` incremented and `m_driverStatus` went 2 (in lap) → 3 (out lap) when the car left the box. `m_pitStopTimerInMS` keeps the stop time until the exit. This is consistent with item 10: `m_driverStatus` takes only 0-4 and changes on in-lap / out-lap transitions in the spec's field order.
 18. **Observed (PS5, F1 25 v1.26): TyreSets `m_lapDeltaTime` tracks the fitted set's degradation.** It is the lap delta *versus the fitted set*: over laps 62-70 of the full Austria race the gain of new mediums over the fitted (37-45 laps old) mediums grew from 0.274 to 1.003 s, about 0.091 s a lap per lap, while the fitted set's `m_lifeSpan` ("laps left") fell one per lap (33 → 26) with `m_usableLife` 37. The player's TyreSets packet arrives about once a second (the game cycles through the cars).
+19. **Observed (PS5, F1 25 v1.26, format 2025, 2026-10-11): the 2025 F2 cars report team ids 209-219, which EA's F1
+    25 document does not list.** The owner's Melbourne race in a 2025 F2 car (Grand Prix mode, `m_formula` 2;
+    capture `20261011-011513`, fixture `f1_25_2025_ps5_f2_melbourne_gp-excerpt.pwcap`) has 22 cars, two on each id
+    209-219, the player on 214. The AI drivers' names pair up as the real 2025 F2 teams, and in the same order EA's
+    format-2026 list names ids 465-475 ("Art GP '25" ... "Invicta '25"), so id 209 + k is the team EA names at
+    465 + k (209 = Art GP '25, 214 = Hitech '25, 219 = Invicta '25). The 2024 F2 cars (one-shot qualifying and
+    feature races at Sakhir, Jeddah and Melbourne, capture `20261011-224147`) use the spec's own 158-168. Pitwall's
+    team table (`adapters/f1/enums.py` `TEAMS`) stays exactly as the spec has it (`team_name(214)` is "Unknown team
+    (id 214)"); the observed names live in `OBSERVED_F2_TEAMS_FMT2025` and are used for display only
+    (`carclass.car_label`), in format 2025 with formula F2 or no formula. A community HUD (mantazzo/F1TV-HUD-Reworked,
+    GPL) was read for this one fact only (see docs/licences.md); the naming rests on the recording.
+20. **Observed (PS5, F1 25 v1.26, 2026-10-11): F2 cars send 0 in every ERS and hybrid field.** Over the 12 F2
+    sessions of the two captures above, `m_ersStoreEnergy`, `m_ersDeployMode`, `m_enginePowerMGUK`,
+    `m_ersHarvestedThisLapMGUK`, `m_ersHarvestedThisLapMGUH` and `m_ersDeployedThisLap` are 0 for every car in every
+    Car Status packet (F2 cars have no ERS). Pitwall reports no ERS (None) for an F2 car instead of an empty store.
+    `m_drsAllowed` and `m_drsActivationDistance` are sent, in qualifying and in the races alike: the player's
+    distance counted down in 723 Car Status packets of the Melbourne sprint (laps 2-3), 934 of the Sakhir feature
+    race and 449 of the Jeddah feature race, and `m_drsAllowed` and a distance above 0 never occur in the same packet.
+    `m_drsAllowed` stays set only until the flap opens: at Melbourne it was set in 2 packets a lap while Car
+    Telemetry `m_drs` showed the flap open in 363 and 504 samples (laps 2 and 3); at Sakhir, where the flap was never
+    opened, it stayed set for 860 packets. So "not allowed" with the flap open means "in use", not "forbidden". The
+    F2 tyre compounds are actual 11 (super soft), 12 (soft), 13 (medium), 14 (hard), 15 (wet) and visual 19, 20, 21,
+    22 and 15, and `m_pitSpeedLimit` is 60. `m_weekendStructure` listed (15, 16) for the Melbourne weekend (a sprint,
+    then the feature race) and (9, 16) for the Sakhir and Jeddah weekends (one-shot qualifying, then the feature
+    race); `m_sessionDuration` was 2700 s for type 15, 3600 s for type 16 and 240 s for one-shot qualifying, and the
+    type-16 races' Final Classification gave the winner 25 points (Jeddah) and 26 (Sakhir, with the fastest lap).
+21. **Observed (PS5, F1 25 v1.26, 2026-10-11): the one-shot qualifying finishing sequence.** At the line the lap
+    number advances (1 -> 2) with `m_lastLapTimeInMS` set to the lap's time; 17 ms later (the next Lap Data packet)
+    `m_resultStatus` turns 3 ("finished") with `m_lastLapTimeInMS` unchanged, on lap 2, which is never driven. At a
+    race's chequered flag the lap number does not advance: the new `m_lastLapTimeInMS` arrives in the same packet as
+    "finished" or one packet earlier. Pitwall reports a final lap only when the last-lap time changed since the last
+    lap completion (and waits for a new time on the same lap number), so one-shot qualifying stores one lap; until
+    the fix it stored a one-sample second lap with the same time (3 such laps on the owner's database, removed by the
+    one-off repair `repair.f2_v1`). The completed one-shot lap is not tagged final (the result changes after it).
+    The session then ends one frame into lap 2: that one-sample, untimed "lap" is no longer stored either
+    (`LapAssembler.flush`; the same repair deletes the ones already stored). A final lap driven in exactly the
+    previous lap's time shows no new time: Pitwall reports it once 1 s of session time has passed with the car on that
+    lap number for at least half a lap's time (not recorded: no such lap is in the captures).
 
 ---
 

@@ -27,7 +27,7 @@ def _copy(item: object) -> list[str]:
 
 def test_ids_groups_steps_and_briefs() -> None:
     ids = [it.id for it in CATALOG]
-    assert len(ids) == len(set(ids)) == 13
+    assert len(ids) == len(set(ids)) == 14  # f2_ps5: F2 support; wheel_buttons: Setup › Controls
     groups = {g for g, _ in GROUPS}
     for it in CATALOG:
         assert it.group in groups and it.steps and it.prompt and it.rule_text and it.informs

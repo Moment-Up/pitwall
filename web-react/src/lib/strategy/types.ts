@@ -122,6 +122,20 @@ export interface PitView {
   undercut_threat: CutView | null;
   neighbour_stop: NeighbourStopView | null;
   note: string | null;
+  /** F2 support: the race's tyre and pit-stop rules, which the game never sends (absent from older servers). */
+  rules?: PitRules | null;
+}
+
+/** strategy/view.py pit.rules (F2 support). The game sends no tyre or pit-stop rules (EA spec), so `known` is always
+ * false: strategy never says a stop is not mandatory, it says the rules are not known. */
+export interface PitRules {
+  /** F2 only (recorded: the game's "Race" is the sprint, "Race 2" the feature race); null for F1 and unknown. */
+  race: "sprint" | "feature" | null;
+  known: false;
+  /** "The game doesn't send this race's tyre or pit-stop rules." (verbatim) */
+  text: string;
+  /** The F2 feature or sprint note (verbatim); null otherwise. */
+  class_note: string | null;
 }
 
 export type SafetyCarStatus = "none" | "full" | "virtual" | "formation_lap";
@@ -202,6 +216,9 @@ export interface StrategyView {
   weather: WeatherView | null;
   /** Newest first, max 3. */
   calls: CallView[];
+  /** F2 support, race mode: the game's DRS-enabled state (DRSE / DRSD events); null = not known yet; absent from older
+   * servers. */
+  drs_enabled?: boolean | null;
 }
 
 // ------------------------------------------------------------------------------------------- Review timeline

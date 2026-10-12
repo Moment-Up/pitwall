@@ -5,7 +5,9 @@
 //   1. Pro KPIGroup    "P8 → P3" · "Stops 1 (L24)" · "Pit loss 18.9 s (1 measured)" · "Fuel at the flag +0.4 laps"
 //   2. Race timeline   position (↑ better) and gaps, stops, SC / VSC bands, stint bar, weather row
 //   3. Stints          Pro DataGrid (two-line ListView rows below 600 px)
-//   4. Pit stops       yours, then "Other cars' stops (measured)" in a Disclosure, exclusions in words
+//   4. Pit stops       yours, then "Other cars' stops (measured)" in a Disclosure, exclusions in words; under them
+//                      "Stop rules: not sent by the game" (F2 support: F1 25 never sends a race's tyre or pit-stop
+//                      rules, so "You did not stop" is never read as "no stop was needed")
 //   5. Strategy calls  Pro ListView: lap, level chip, the backend's text verbatim (P9): for a driver with simple
 //                      wording the plain words they heard, and not the calls meant for experienced drivers
 //   6. Tier note       measured / (game) / (estimate), SYNTHETIC when the session is
@@ -42,6 +44,7 @@ import {
   type TimelineState,
 } from "../../../lib/strategy/timeline";
 import type { StrategyTimeline } from "../../../lib/strategy/types";
+import { STOP_RULES_LINE } from "../../../lib/strategy/view";
 import { STRATEGY_GLOSSARY } from "../../../lib/strategy/words";
 import { useMedia } from "../useMedia";
 import { StrategyGlossary } from "./strategy/StrategyGlossary";
@@ -345,6 +348,9 @@ function TimelineBody({
               </Disclosure.Content>
             </Disclosure>
           )}
+          <p className="m-0 text-xs text-muted" data-stop-rules="">
+            {STOP_RULES_LINE}
+          </p>
         </Section>
       </div>
 

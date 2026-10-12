@@ -2,9 +2,11 @@
 // while that driver stays in the seat), the track filter, day groups and the row's words. Pure except the two
 // storage helpers, which wrap every access in try/catch (private mode, blocked storage). Tested in node.
 
+import type { SessionRow } from "../api";
+import { carText, classChip, type SessionCarFields } from "../carclass";
 import type { SessionListRow } from "../endpoints/review";
 import { lapsText } from "./kpis";
-import { dayKey, dayTitle, readableCar, sessionTypeLabel, timeOfDay } from "./words";
+import { dayKey, dayTitle, sessionTitle, sessionTypeLabel, timeOfDay } from "./words";
 
 export type SessionFilter = number | "all";
 
@@ -116,13 +118,20 @@ export function groupByDay(rows: readonly SessionListRow[], nowMs: number): DayG
   return groups;
 }
 
-/** The row's second line: "Race · Haas · 10 laps · 19:41 · AI 35" (unknown parts left out; "AI 35" is the game's
- * AI difficulty, when it reported one, last so a narrow list truncates it before the rest). */
+/** The row's second line: "Race · Haas · 10 laps · 19:41 · AI 35", "Feature race · F2 · Art GP '24 · 5 laps · 23:34"
+ * (unknown parts left out; "AI 35" is the game's AI difficulty, when it reported one, last so a narrow list truncates
+ * it before the rest). The session and the car are the server's words when it sends them (session_label, car_label). */
 export function rowSubtitle(row: SessionListRow): string {
   const ai = typeof row.ai_difficulty === "number" && Number.isFinite(row.ai_difficulty) ? `AI ${row.ai_difficulty}` : null;
   // a raw id stored as the car's name ("team_214") is never shown (integration plan 5.8)
-  const parts = [sessionTypeLabel(row), readableCar(row.car_name), lapsText(row), timeOfDay(row.started_unix), ai];
+  const parts = [sessionTypeLabel(row), carText(row), lapsText(row), timeOfDay(row.started_unix), ai];
   return parts.filter((p): p is string => !!p).join(" · ");
+}
+
+/** What ⌘K matches a recent session on: its title, the class chip ("F2", so "F2" finds the F2 sessions), the car in
+ * words and "synthetic" for generated sessions. */
+export function sessionSearchText(s: SessionRow & SessionCarFields): string {
+  return [sessionTitle(s), classChip(s.car_class), carText(s), s.synthetic ? "synthetic" : null].filter(Boolean).join(" ");
 }
 
 /** Who a row belongs to, in words, when its driver is unknown: replays are nobody's driving. */

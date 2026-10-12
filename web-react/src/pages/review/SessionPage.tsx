@@ -26,7 +26,8 @@ import { href, queryParams, router, SESSION_TABS, type Route, type SessionTab } 
 import { densityFor, type SkillLevel } from "../../lib/review/density";
 import { askPath, tabPath } from "../../lib/review/links";
 import { unownedLabel } from "../../lib/review/sessions";
-import { readableCar, sessionTitle, weatherText, whenText } from "../../lib/review/words";
+import { sessionTitle, weatherText, whenText } from "../../lib/review/words";
+import { carText } from "../../lib/carclass";
 import { AskTab } from "./session/AskTab";
 import { CompareTab } from "./session/CompareTab";
 import { CornersTab } from "./session/CornersTab";
@@ -76,7 +77,8 @@ function HeaderChips({ session, skill }: { session: SessionDetail; skill: SkillL
   // The session's own game and platform ("F1 25 · PS5", plan 5.11), once the catalogue has loaded.
   const game = catalogue ? sessionGameLabel(catalogue, session, { platform: true }) : null;
   const entry = sessionEntry(catalogue, session);
-  const car = readableCar(session.car_name); // never a raw id ("team_214"), plan 5.8
+  // "F2 · Art GP '24" (the server's car_label, F2 support), else the stored name; never a raw id ("team_214"), plan 5.8
+  const car = carText(session);
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Chip size="lg" variant="soft" className="gap-1.5 pl-1">

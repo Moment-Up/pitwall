@@ -137,6 +137,7 @@ export function MapTile({ model, skeleton, lengthM, view, outline, prior, raceCo
         height="100%"
         className="pww-map"
       />
+      {view.borrowed && <p className="pww-map__note">{view.borrowed}</p>}
     </Tile>
   );
 }

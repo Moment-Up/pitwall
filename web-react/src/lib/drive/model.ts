@@ -6,6 +6,7 @@
 // the next call (session phase and the last shown corner survive snapshots that no longer carry them).
 
 import { changeWords, gapWords, type ChangeText } from "../bests";
+import { FAMILY_LABEL, familyCarText, familyOf, fitsFamily } from "../carclass";
 import type { Driver } from "../drivers";
 import type { SessionRecap } from "../endpoints/motivation";
 import { endedMotivation, readyGoal, type DriveMotivation, type ReadyGoalView } from "../motivation/drive";
@@ -14,6 +15,7 @@ import { INTENSITIES, SKILL_LEVELS } from "../drivers";
 import { dedupeComplete, recapFacts, type CompleteThings } from "./complete";
 import { motionOf, type Motion } from "./motion";
 import { aiEndLine } from "../review/aipace";
+import { ONE_SHOT_SUB, isOneShot } from "../review/kpis";
 import { coachPoint, lastLapNumber, simpleWording, topPoint, workOnWentWell, type CoachPoint } from "./coach";
 import { cornerAhead, cornerLabelOf, cornerLayout, focusReasonOf, isFocus, officialNameOf, type CornerView } from "./corner";
 import { callsModeText, cueView, lastCueOutcome, type CueBandView, type CuePause, type LastCueOutcome } from "./cues";
@@ -170,8 +172,9 @@ export interface ReadyCard {
   phase: "before_first_lap" | "between_runs";
   target: {
     /** The driver's best here. D2 (`bests.driver`: this game + track + car): green PB with its tag. Otherwise
-     * `stats.best_laps` (this game + track, ANY car): neutral, never green (4.6: not the timing scope), and `date`
-     * ends in "any car" unless the lap was set in this session's car ("3 Oct · any car"). */
+     * `stats.best_laps` (this game + track, ANY car of this car's family): neutral, never green (4.6: not the timing
+     * scope), and `date` ends in "any car" unless the lap was set in this session's car ("3 Oct · any car"). When the
+     * only best here is from another family (F2 support), `date` names that family instead: "3 Oct · F1 car". */
     yourBest: (TimingText & { date: string | null; anyCar: boolean }) | null;
     /** D2 only: the household record and who holds it. */
     record: (TimingText & { holder: string | null; holderColour: string | null; holderInitials: string | null }) | null;
@@ -396,7 +399,9 @@ function frozenCorner(s: SnapshotNext | null, name: string | null): CornerView |
  * "Your best here". With D2 the driver's best for this game + track + car is a PB (green, tagged). Without it (no
  * D2, or D2 has no best for this car) the profile's `stats.best_laps` entry for this game + track stands in: it may
  * come from any car, so it is not the timing scope (4.6) and is never green; it says "any car" unless it was set in
- * this session's car.
+ * this session's car. F2 support: best_laps holds one entry per car family, and only this car's family stands in
+ * (an F1 lap is no target for an F2 car); when the only best here is another family's it is shown as that ("F1 car"),
+ * never as "any car". Without classes (an older server, an entry of unknown family) it is as before.
  */
 function bestHere(s: SnapshotNext, driver: Driver | null, nowS: number): ReadyCard["target"]["yourBest"] {
   const bv = bestsOf(s);
@@ -408,11 +413,17 @@ function bestHere(s: SnapshotNext, driver: Driver | null, nowS: number): ReadyCa
   const track = s.session?.track_id;
   if (!driver || !game || !track) return null;
   const mine = driver.stats.best_laps.filter((b) => b.game === game && b.track_id === track && !b.synthetic);
-  const best = mine.reduce<(typeof mine)[number] | null>((a, b) => (a === null || b.lap_time_ms < a.lap_time_ms ? b : a), null);
+  const cls = s.session?.car_class;
+  const otherFamily = (b: (typeof mine)[number]) => !fitsFamily(b.car_family, cls);
+  const same = mine.filter((b) => !otherFamily(b));
+  const pool = same.length ? same : mine;
+  const best = pool.reduce<(typeof pool)[number] | null>((a, b) => (a === null || b.lap_time_ms < a.lap_time_ms ? b : a), null);
   if (!best) return null;
   const car = s.session?.car_name;
-  const anyCar = !(car && best.car_name && best.car_name === car);
-  const date = [dayText(best.set_unix, nowS), anyCar ? "any car" : null].filter(Boolean).join(" · ") || null;
+  const other = otherFamily(best);
+  const anyCar = other || !(car && best.car_name && best.car_name === car);
+  const which = other ? familyCarText(best.car_family) : anyCar ? "any car" : null;
+  const date = [dayText(best.set_unix, nowS), which].filter(Boolean).join(" · ") || null;
   return { text: lapTime(best.lap_time_ms), status: "neutral", tag: null, date, anyCar };
 }
 
@@ -425,7 +436,10 @@ function footerOf(s: SnapshotNext): string | null {
   if (sk && finite(sk.sector3_start_m)) parts.push(`S3 ${metres(sk.sector3_start_m)}`);
   const corners = s.track_model?.corners ?? [];
   if (corners.length) {
-    parts.push(`${thousands(corners.length)} corners learned`);
+    // F2 support: a model another family's laps built stands in until this class has a clean lap here
+    const from = s.track_model?.car_family_match === false ? familyOf(s.track_model.car_family) : null;
+    const fromLabel = from ? FAMILY_LABEL[from] : null;
+    parts.push(`${thousands(corners.length)} corners ${fromLabel ? `from ${fromLabel} laps` : "learned"}`);
     const tiers = new Set(corners.map((c) => c.identity_tier).filter(Boolean));
     parts.push(
       `names: ${tiers.has("sheet_verified") ? "verified track sheet" : tiers.has("sheet_seeded") ? "seeded track sheet" : "learned from laps"}`,
@@ -625,7 +639,13 @@ function endedCard(
     // with fewer than two clean laps there is nothing to gain from: say why (as Review does), not "first → best"
     gained: endedChange(
       gainedChange(counts.firstClean, counts.bestClean, 2, counts.clean),
-      counts.clean >= 2 ? "first clean lap → best" : counts.clean === 1 ? "Needs a second clean lap" : "Needs 2 clean laps",
+      counts.clean >= 2
+        ? "first clean lap → best"
+        : isOneShot(s.session?.session_type) && counts.clean <= 1
+          ? ONE_SHOT_SUB // one timed lap by design: a second clean lap is impossible advice
+          : counts.clean === 1
+            ? "Needs a second clean lap"
+            : "Needs 2 clean laps",
     ),
     toYourBest: !bv.driver
       ? null

@@ -23,12 +23,12 @@ How one recommendation (car format x track x session x conditions x style) is bu
    its ``sources``; the candidates' min/max is its ``spread``; a spread wider than ``DISAGREE_FRACTION`` of the
    range is written up as a disagreement instead of being averaged away. Confidence: ``high`` = three or more
    candidates and at least two thirds agree; ``medium`` = at least two agree; else ``low``.
-5. **Stable variant** (``stable`` style without a labelled stable setup): the balanced recommendation with the
-   catalogue rule ``stable_v1`` applied: one small step each in the directions the cited guides agree make an F1 25
-   car more forgiving (rear wing +1, rear anti-roll bar -1, on-throttle differential -5, off-throttle +5; the
-   catalogue rule records the sources and the one guide that disagrees on the on-throttle direction), clamped to
-   the format's range. Changed values are ``derived`` with the rule id; unchanged ones keep their provenance. No
-   other style is ever derived, and wet is never derived from dry.
+5. **Stable variant** (``stable`` style without a labelled stable setup, F1 formats only: ``STABLE_FORMATS``): the
+   balanced recommendation with the catalogue rule ``stable_v1`` applied: one small step each in the directions the
+   cited guides agree make an F1 25 car more forgiving (rear wing +1, rear anti-roll bar -1, on-throttle
+   differential -5, off-throttle +5; the catalogue rule records the sources and the one guide that disagrees on the
+   on-throttle direction), clamped to the format's range. Changed values are ``derived`` with the rule id; unchanged
+   ones keep their provenance. No other style is ever derived, and wet is never derived from dry.
 """
 
 from __future__ import annotations
@@ -57,6 +57,9 @@ from pitwall.carsetup.catalog import (
 AGREE_FRACTION = 0.10  # a candidate "agrees" when within 10 % of the parameter's range of the selected value
 DISAGREE_FRACTION = 0.25  # spreads wider than 25 % of the range are reported as disagreements
 STABLE_RULE_ID = "stable_v1"
+# The stable rule cites F1 25 guides about the F1 cars: it is applied to those formats only. An F2 beginner gets the
+# balanced F2 setup, labelled as such (``recommend``), never a variant derived from F1 advice.
+STABLE_FORMATS: frozenset[CarFormat] = frozenset({"f1_2025", "f1_2026"})
 # Applied to the balanced recommendation when no source labels a stable setup (catalogue rule ``stable_v1``). Each
 # entry is one small step, in the parameter's own unit, in the direction the cited guides give for a car that snaps
 # on exit or is nervous on entry; the guides give directions more reliably than amounts, so the steps are minimal.
@@ -109,6 +112,8 @@ def _candidates(
         and ((s.style in (None, "balanced")) if style == "balanced" else s.style == style)
     ]
     lhp = cat.formats[fmt].latest_handling_patch
+    if lhp is None:  # no handling patch is known for these cars (F2): nothing makes a setup out of date
+        return pool, True
     current = [s for s in pool if is_current(s, lhp.version, lhp.date)]
     return (current, True) if current else (pool, False)
 
@@ -169,7 +174,7 @@ def _build_one(
             "spread": [lo, hi] if len(given) >= 2 else None,
         }
     notes: list[str] = []
-    if not current:
+    if not current and info.latest_handling_patch is not None:
         notes.append(
             f"No candidate is known to be made for game version {info.latest_handling_patch.version} or later (the "
             f"latest handling patch, {info.latest_handling_patch.date}); every value is capped at low confidence."
@@ -245,7 +250,7 @@ def build_recommendations(cat: Catalog) -> list[dict[str, Any]]:
                         rec = _build_one(cat, fmt, track, session, cond, style)
                         if rec is not None:
                             built[style] = rec
-                    if "stable" not in built and "balanced" in built:
+                    if "stable" not in built and "balanced" in built and fmt in STABLE_FORMATS:
                         built["stable"] = _derive_stable(cat, built["balanced"])
                     out.extend(built[s] for s in STYLES if s in built)
     return out

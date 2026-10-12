@@ -144,13 +144,25 @@ export function bestLapSub(best: LapRef | null, status: TimingStatus = "neutral"
   return lap;
 }
 
+/** F1 one-shot qualifying ("One-Shot Qualifying", "One-Shot Sprint Shootout"): one timed lap by design. */
+export function isOneShot(sessionType: string | null | undefined): boolean {
+  return typeof sessionType === "string" && /^one-shot\b/i.test(sessionType.trim());
+}
+
+/** Said instead of "Needs a second clean lap" in one-shot qualifying, where a second lap is impossible. */
+export const ONE_SHOT_SUB = "One-shot qualifying has one timed lap";
+
 /** The Gained today tile: the change in words ("5.8 s faster", "level"), never a bare signed number (spec 6.3,
- * 9.6, bests.ts `changeWords`); null with fewer than two clean laps. */
-export function gainedView(k: Pick<SummaryKpis, "gainedMs" | "first" | "best" | "clean">): {
+ * 9.6, bests.ts `changeWords`); null with fewer than two clean laps (`oneShot`: one-shot qualifying says why). */
+export function gainedView(
+  k: Pick<SummaryKpis, "gainedMs" | "first" | "best" | "clean">,
+  oneShot = false,
+): {
   change: ChangeText | null;
   sub: string;
 } {
   if (k.gainedMs == null || !k.first || !k.best) {
+    if (oneShot && k.clean <= 1) return { change: null, sub: ONE_SHOT_SUB };
     return { change: null, sub: k.clean === 1 ? "Needs a second clean lap" : "Needs 2 clean laps" };
   }
   const change = changeWords(k.best.ms - k.first.ms);
@@ -210,8 +222,8 @@ export function gapToBestEver(
 }
 
 /** The Steadiness tile's sentence: "your clean laps were within 1.4 s of each other". */
-export function steadinessSentence(spreadMs: number | null): string {
-  if (spreadMs == null) return "Needs 2 clean laps";
+export function steadinessSentence(spreadMs: number | null, oneShot = false): string {
+  if (spreadMs == null) return oneShot ? ONE_SHOT_SUB : "Needs 2 clean laps";
   const s = spreadMs / 1000;
   return `Your clean laps were within ${s.toFixed(s >= 0.995 ? 1 : 2)} s of each other`;
 }

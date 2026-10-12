@@ -33,9 +33,10 @@ from typing import Annotated, Any
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from pitwall import carclass
 from pitwall.adapters.f1.enums import track_name
 from pitwall.carsetup import experiments as exps
-from pitwall.carsetup.catalog import Catalog, CatalogError, load_catalog
+from pitwall.carsetup.catalog import FORMAT_FAMILY, Catalog, CatalogError, formats_of_family, load_catalog
 from pitwall.carsetup.compare import diff_setup
 from pitwall.carsetup.context import session_context
 from pitwall.carsetup.recommend import (
@@ -138,7 +139,9 @@ def _catalog_body(cat: Catalog) -> dict[str, Any]:
                 "id": f.id,
                 "label": f.label,
                 "description": f.description,
-                "latest_handling_patch": {
+                "latest_handling_patch": None
+                if f.latest_handling_patch is None
+                else {
                     "version": f.latest_handling_patch.version,
                     "date": f.latest_handling_patch.date,
                     "note": f.latest_handling_patch.note,
@@ -146,6 +149,20 @@ def _catalog_body(cat: Catalog) -> dict[str, Any]:
                 },
                 "tracks": [{"id": t, "name": track_name(t)} for t in f.tracks],
                 "notes": list(f.notes),
+                # the format's own ranges (also under each parameter's "ranges"): F2's come from F2 evidence only
+                "ranges": {
+                    k: {
+                        "min": r.min,
+                        "max": r.max,
+                        "step": r.step,
+                        "min_confirmed": r.min_confirmed,
+                        "max_confirmed": r.max_confirmed,
+                        "confidence": r.confidence,
+                        "sources": list(r.sources),
+                        "note": r.note,
+                    }
+                    for k, r in f.ranges.items()
+                },
             }
             for f in cat.formats.values()
         ],
@@ -252,6 +269,13 @@ def get_session_setup(
     ctx = session_context(sess)
     try:
         fmt = parse_car_format(car_format) if car_format is not None else ctx.car_format
+        if fmt is not None and car_format is not None and ctx.family is not None and FORMAT_FAMILY[fmt] != ctx.family:
+            # never an F1 car's setups for an F2 car, or the reverse (F2 support)
+            cls_label = ctx.car_class.label if ctx.car_class is not None else None
+            raise SetupRequestError(
+                f"car format {fmt!r} is not for this session's car ({cls_label or 'its class'}); "
+                f"expected one of {', '.join(formats_of_family(ctx.family)) or 'none'}"
+            )
         kind = parse_session(session) if session is not None else ctx.session
         cond = parse_conditions(conditions) if conditions is not None else ctx.conditions
         chosen_style = parse_style(style) if style is not None else None
@@ -259,7 +283,14 @@ def get_session_setup(
     except SetupRequestError as e:
         raise HTTPException(422, str(e)) from e
     supported = "game" not in ctx.reasons and ctx.track_id is not None
-    needs = [n for n, v in (("car_format", fmt), ("session", kind), ("conditions", cond)) if v is None and supported]
+    # the car format is asked only of an F1 car whose generation the game does not tell (never of an F2 car)
+    asks = {"car_format": ctx.asks_car_format or car_format is not None, "session": True, "conditions": True}
+    needs = [
+        n
+        for n, v in (("car_format", fmt), ("session", kind), ("conditions", cond))
+        if v is None and supported and asks[n]
+    ]
+    labels = carclass.session_fields(sess)
     body: dict[str, Any] = {
         "session": {
             "id": sid,
@@ -269,6 +300,9 @@ def get_session_setup(
             "session_type": sess.get("session_type"),
             "session_type_raw": sess.get("session_type_raw"),
             "car_name": sess.get("car_name"),
+            "car_class": labels["car_class"],
+            "car_label": labels["car_label"],
+            "session_label": labels["session_label"],
             "weather": sess.get("weather") or {},
             "synthetic": bool(sess.get("synthetic")),
             "driver": None
@@ -296,10 +330,14 @@ def get_session_setup(
             "alternatives": [],
         }
         return body
+    if fmt is None and not ctx.asks_car_format:
+        # an F2 car with no setups (2026 F2 cars, or the team is not known) or a classic car: said, never asked
+        body["unavailable"] = {"reason": ctx.reasons.get("car_format", "no setups for this car"), "alternatives": []}
+        return body
     if fmt is None or kind is None or cond is None:
         body["unavailable"] = {
             "reason": "choose " + ", ".join(n.replace("_", " ") for n in needs) + " to see a recommendation",
-            "alternatives": available(cat, fmt, ctx.track_id),
+            "alternatives": available(cat, fmt, ctx.track_id, ctx.family),
         }
         return body
     try:

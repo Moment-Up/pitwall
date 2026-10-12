@@ -2,6 +2,7 @@
 // learning a new track in practice: every corner with its official label and long name, its direction, FOCUS, and
 // what the coach said about it on the last lap, verbatim (P9). No React; tested in plain node. Lane DV.
 
+import { borrowedCaption } from "../../../lib/carclass";
 import { comparePath } from "../../../lib/review/links";
 import { lapPicks, pointText, simpleWording } from "../../../lib/drive/coach";
 import { cornerAhead, focusReasonOf } from "../../../lib/drive/corner";
@@ -53,7 +54,8 @@ export interface TrackView {
   /** "14 corners · official names". */
   caption: string;
   /** The game's track-map note while there is no track model yet (game selection: "The track outline is known
-   * before your first lap."), else null. */
+   * before your first lap."); F2 support: while another family's model stands in, "Corners from F1 laps until your
+   * first clean F2 lap here."; else null. */
   note: string | null;
 }
 
@@ -132,6 +134,6 @@ export function trackView(
     carM: live && finite(d) ? d : null,
     flags: live ? (s?.marshal_flags ?? null) : null,
     caption,
-    note: tm ? null : (featureOf(entry, "track_map")?.note ?? null),
+    note: tm ? borrowedCaption(tm, s?.session?.car_class) : (featureOf(entry, "track_map")?.note ?? null),
   };
 }

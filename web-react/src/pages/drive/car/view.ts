@@ -11,6 +11,7 @@
 // tile leaves out. Only what the game is KNOWN not to send (not sent / not in Pitwall yet) is replaced by words or
 // hidden; an unknown feature keeps its "-". Without an entry (no catalogue yet, an older server) nothing changes.
 
+import { borrowedCaption, compoundWords, noErs } from "../../../lib/carclass";
 import { cornerAhead, cornerLabelOf } from "../../../lib/drive/corner";
 import { lapPicks, lastLapNumber, NO_REFERENCE_COACHING, pointText, simpleWording } from "../../../lib/drive/coach";
 import { gameLength } from "../../../lib/drive/geometry";
@@ -116,12 +117,12 @@ export interface TyreView {
 }
 
 export interface TyresView {
-  /** "Soft · 7 laps", or null when the game does not say. */
+  /** "Soft · 7 laps", "Super soft · 1 lap" (F2), or null when the game does not say. */
   chip: string | null;
   /** FL FR / RL RR (wheel order is always FL, FR, RL, RR). */
   wheels: [TyreView, TyreView, TyreView, TyreView];
   /** "Fuel 18.4 kg · +1.2 laps (game) · ERS 2.8 MJ"; what the game does not send in words ("Fuel, ERS: not in
-   * Pitwall yet"). */
+   * Pitwall yet"). A class without ERS (F2) has no ERS part at all, never "ERS -". */
   energy: string;
   /** The game sends no tyre data at all: one line instead of the wheel grid ("Assetto Corsa doesn't send tyre
    * data"), else null. */
@@ -146,10 +147,6 @@ const BAND_WORD: Partial<Record<TyreBand, string>> = { cold: "cold", cool: "cool
 function at(xs: readonly (number | null)[] | null | undefined, i: number): number | null {
   const v = xs?.[i];
   return finite(v) ? v : null;
-}
-
-function capitalised(s: string): string {
-  return s.length ? s[0]!.toUpperCase() + s.slice(1) : s;
 }
 
 export function tyresTile(s: SnapshotNext | null, entry: GameEntry | null = null): TyresView {
@@ -184,7 +181,7 @@ export function tyresTile(s: SnapshotNext | null, entry: GameEntry | null = null
       aria: `${wheel}: ${aria.join(", ")}`,
     };
   }) as TyresView["wheels"];
-  const compound = f?.tyre_compound ? capitalised(f.tyre_compound) : null;
+  const compound = compoundWords(f?.tyre_compound);
   const age = finite(f?.tyre_age_laps) ? `${f.tyre_age_laps} ${f.tyre_age_laps === 1 ? "lap" : "laps"}` : null;
   const chip = compound ? [compound, age].filter(Boolean).join(" · ") : null;
   const fuel = finite(f?.fuel_kg) ? `${num(f.fuel_kg, 1)} kg` : UNKNOWN;
@@ -193,10 +190,12 @@ export function tyresTile(s: SnapshotNext | null, entry: GameEntry | null = null
     measuredFuelMargin(s) ??
     (finite(f?.fuel_remaining_laps_game) ? `${signedFixed(f.fuel_remaining_laps_game, 1)} laps (game)` : null);
   const ers = finite(f?.ers_store_j) ? `${num(f.ers_store_j / 1e6, 1)} MJ` : UNKNOWN;
+  // F2 support: the class has no ERS (F1 25 sends 0 for F2 cars, the server sends null): no ERS part at all
+  const ersShown = !missing(entry, "ers") && !noErs(s?.session?.car_class);
   const energy = [
     missing(entry, "fuel") ? null : `Fuel ${fuel}`,
     margin,
-    missing(entry, "ers") ? null : `ERS ${ers}`,
+    ersShown ? `ERS ${ers}` : null,
     unavailableLine(entry, ["fuel", "ers"]),
   ]
     .filter(Boolean)
@@ -447,6 +446,9 @@ export interface WallMapView {
   flags: { game_number: number; flag: string }[] | null;
   /** "14 corners · official names" / "9 corners learned" / "Learning the track". */
   caption: string;
+  /** F2 support: another family's model stands in ("Corners from F1 laps until your first clean F2 lap here."), else
+   * null. */
+  borrowed: string | null;
 }
 
 export function mapTile(s: SnapshotNext | null, model: Pick<DriveModel, "dim" | "state" | "sectors">): WallMapView {
@@ -468,5 +470,6 @@ export function mapTile(s: SnapshotNext | null, model: Pick<DriveModel, "dim" | 
     carM: live && finite(d) ? d : null,
     flags: live ? (s?.marshal_flags ?? null) : null,
     caption,
+    borrowed: borrowedCaption(tm, s?.session?.car_class),
   };
 }

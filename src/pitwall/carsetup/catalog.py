@@ -8,9 +8,11 @@ value.
 Layout of the file (``schema_version`` 1):
 
 * ``formats``: one entry per car format (``f1_2025`` = the base-game 2025 cars, ``f1_2026`` = the 2026 Season Pack
-  cars). Each has its own parameter ranges and steps (with sources), its drivable track ids and the latest patch
-  that changed handling. The two formats are never mixed: a setup, a range or a recommendation belongs to exactly
-  one.
+  cars, ``f2`` = the F2 cars of the 2024 and 2025 seasons). Each has its own parameter ranges and steps (with
+  sources), its track ids (F1: drivable; F2: tracks with cited F2 setups) and the latest patch that changed handling
+  (None when no handling patch is known: F2). Formats are never mixed: a setup, a range or a recommendation belongs
+  to exactly one, and the F2 ranges come from F2 setups only (``FORMAT_FAMILY``: an F1 format is never offered for
+  an F2 car or the reverse).
 * ``parameters``: the setup-sheet parameters in the game's menu order, with plain-words effects (sourced).
 * ``sources``: every website / driver / creator cited, with a summary of its terms and pitwall's use policy.
 * ``source_setups``: the evidence, one record per published setup, values recorded as facts with attribution.
@@ -38,7 +40,7 @@ from importlib import resources
 from pathlib import Path
 from typing import Any, Literal, cast, get_args
 
-CarFormat = Literal["f1_2025", "f1_2026"]
+CarFormat = Literal["f1_2025", "f1_2026", "f2"]
 SessionKind = Literal["race", "qualifying"]
 SourceSession = Literal["race", "qualifying", "both"]
 Conditions = Literal["dry", "wet"]
@@ -50,6 +52,20 @@ UsePolicy = Literal["use", "use_limited", "do_not_use"]
 SelectionRule = Literal["single_source", "medoid", "derived"]
 
 CAR_FORMATS: tuple[CarFormat, ...] = get_args(CarFormat)
+# The car class family (pitwall.carclass) of each format: an F2 session is only ever offered F2 setups, and the reverse.
+FORMAT_FAMILY: Mapping[CarFormat, str] = {"f1_2025": "f1", "f1_2026": "f1", "f2": "f2"}
+
+
+# Formats whose ``tracks`` are the tracks with cited setups (any track can be driven): a track without setups is said
+# plainly, never "not drivable".
+F2_NONE_AT_TRACK = "No F2 setups for this track in Pitwall yet."
+
+
+def formats_of_family(family: str | None) -> tuple[CarFormat, ...]:
+    """The car formats of a ``carclass`` family (every format when the family is not known)."""
+    return tuple(f for f in CAR_FORMATS if family is None or FORMAT_FAMILY[f] == family)
+
+
 SESSIONS: tuple[SessionKind, ...] = get_args(SessionKind)
 SOURCE_SESSIONS: tuple[SourceSession, ...] = get_args(SourceSession)
 CONDITIONS: tuple[Conditions, ...] = get_args(Conditions)
@@ -235,7 +251,7 @@ class FormatInfo:
     id: CarFormat
     label: str
     description: str
-    latest_handling_patch: Patch
+    latest_handling_patch: Patch | None  # None: no handling patch is known for these cars (F2)
     tracks: tuple[int, ...]
     ranges: Mapping[str, Range]
     notes: tuple[str, ...]
@@ -411,7 +427,9 @@ def _parse_format(fid: str, r: _R, param_keys: set[str]) -> FormatInfo:
         id=fid,
         label=r.text("label"),
         description=r.text("description"),
-        latest_handling_patch=_parse_patch(r.obj("latest_handling_patch")),
+        latest_handling_patch=None
+        if r.d.get("latest_handling_patch") is None
+        else _parse_patch(r.obj("latest_handling_patch")),
         tracks=tuple(tracks),
         ranges=ranges,
         notes=r.texts("notes"),

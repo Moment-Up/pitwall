@@ -111,7 +111,9 @@ class CarFrame:
     rpm: float | None = None
     max_rpm: float | None = None
     drs_open: bool | None = None
-    ers_store_j: float | None = None
+    drs_allowed: bool | None = None  # the rules allow DRS now (F1 CarStatus.drsAllowed); None = not sent / not yet
+    drs_activation_m: float | None = None  # metres until DRS becomes available; None = not counting down or unknown
+    ers_store_j: float | None = None  # None also for a car without ERS (F1 25's F2 cars send 0: not an empty store)
     ers_deploy_mode: int | None = None  # game-specific enum, documented by adapter
 
     # --- motion (world frame, game coordinates) --------------------------------------------------

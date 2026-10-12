@@ -130,12 +130,40 @@ def test_steady_laps_are_suggested_for_one_track() -> None:
     h = history((gt7, short), (mel, long))
     s = S.consistency_suggestion(h, "beginner", NOW)
     assert s is not None and s.scope.track_id == "f1:0" and s.target == 700
-    assert s.to_dict()["scope_text"] == "Melbourne"
+    # F2 support: in an F1 game the suggestion is tied to the car class too (an F2 spread is not an F1 one)
+    assert s.to_dict()["scope_text"] == "Melbourne · any F1 World car"
     assert s.to_dict()["create"]["track_id"] == "f1:0" and s.to_dict()["create"]["car_id"] is None
+    assert s.scope.car_class == "f1_25:formula:F1 World"
     at_gt7 = S.consistency_suggestion(h, "beginner", NOW, Scope(game="gt7", track_id="gt7:circuit:920"))
     assert at_gt7 is None  # 0.3 s there is already at the floor: nothing to suggest, never Melbourne's
     at_mel = S.consistency_suggestion(h, "beginner", NOW, Scope(game="f1_25", track_id="f1:0"))
     assert at_mel is not None and at_mel.scope.track_name == "Melbourne"
+
+
+def test_steady_laps_suggestion_is_tied_to_the_car_class() -> None:
+    """F2 support: an F2 session's lap spread is never an F1 car's goal at the same track (and the reverse)."""
+    f2 = sess(
+        "f", T0, track_id="f1:0", track_name="Melbourne", track_length_m=5278.0, formula="F2", session_type="practice"
+    )
+    f2_laps = laps("f", [91_000, 91_900, 91_400])  # 0.9 s
+    f1 = sess(
+        "w",
+        T0 + 60,
+        track_id="f1:0",
+        track_name="Melbourne",
+        track_length_m=5278.0,
+        formula="F1 World",
+        session_type="practice",
+    )
+    f1_laps = laps("w", [80_000, 81_500, 80_600])  # 1.5 s
+    h = history((f2, f2_laps), (f1, f1_laps))
+    s = S.consistency_suggestion(h, "beginner", NOW)
+    assert s is not None and s.scope.car_class == "f1_25:formula:F2" and s.target == 800
+    assert s.to_dict()["scope_text"] == "Melbourne · any F2 car"
+    in_f1 = S.consistency_suggestion(
+        h, "beginner", NOW, Scope(game="f1_25", track_id="f1:0", car_class="f1_25:formula:F1 World")
+    )
+    assert in_f1 is not None and in_f1.scope.car_class == "f1_25:formula:F1 World" and in_f1.target == 1300
 
 
 def races(clean: bool) -> History:

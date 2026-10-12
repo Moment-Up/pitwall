@@ -455,6 +455,39 @@ export function evidenceWords(f: Pick<GameFeature, "evidence">, cat?: Catalogue 
   return cat?.support_words?.[f.evidence] ?? SUPPORT_WORDS[f.evidence] ?? null;
 }
 
+/** One car class of a game on Setup › Game (F2 support): the class, how far it is tested, the server's notes. */
+export interface CarClassRowView {
+  id: string;
+  /** "F1", "F2", "Classic F1", "Other cars". */
+  label: string;
+  /** The status words ("Tested on a recording") and their tone: green only for evidence from the real game (P8). */
+  chip: { label: string; tone: ReturnType<typeof supportTone> };
+  notes: string[];
+}
+
+/** The car classes an entry lists (F1 25 only; none for other games or older servers), in the server's order. The
+ * status is the server's (capabilities.CAR_CLASSES), never upgraded here: F2 says "Tested on a recording" until the
+ * live check (validation f2_ps5) upgrades it. Classes the driver cannot tell apart (the server's "f1_2025" and "f1"
+ * are both "F1", with the same status) are one row. */
+export function carClassRows(entry: GameEntry | null | undefined, cat?: Catalogue | null): CarClassRowView[] {
+  const out: CarClassRowView[] = [];
+  const seen = new Set<string>();
+  for (const c of entry?.car_classes ?? []) {
+    const label = c.label ?? "Other cars";
+    const key = `${label}|${c.status}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const notes = Array.isArray(c.notes) ? c.notes : typeof c.notes === "string" ? [c.notes] : [];
+    out.push({
+      id: c.id,
+      label,
+      chip: { label: cat?.support_words?.[c.status] ?? SUPPORT_WORDS[c.status] ?? c.status, tone: supportTone(c.status) },
+      notes: notes.filter((n): n is string => typeof n === "string" && n.trim().length > 0),
+    });
+  }
+  return out;
+}
+
 /** README "Status words" (the server sends its own as support_words; these are the fallback). */
 export const SUPPORT_WORDS: Readonly<Record<SupportLevel, string>> = {
   live_validated: "Tested live",

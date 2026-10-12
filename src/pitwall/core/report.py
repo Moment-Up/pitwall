@@ -13,6 +13,7 @@ from collections.abc import Mapping
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
+from pitwall import carclass
 from pitwall.ai.facts import fmt_lap
 from pitwall.analysis.strategy import fuel_estimate, tyre_estimate
 from pitwall.core.session_analysis import SessionAnalysis
@@ -96,13 +97,20 @@ def build_report(sa: SessionAnalysis, recap: Mapping[str, Any] | None = None) ->
     losses = sorted((c for c in corners if c["mean_time_delta_s"] is not None), key=lambda c: -c["mean_time_delta_s"])
 
     game = display_label(s.get("game"), s.get("platform"))
+    labels = carclass.session_fields(s)  # "F2 · Art GP '24", "Feature race" (carclass)
+    raw_type = s.get("session_type_raw") or ""
+    stype = labels["session_label"] or raw_type
+    if stype and raw_type and stype != raw_type:
+        stype = f"{stype} ({raw_type})"  # the game's own name too: "Feature race (Race 2)"
     md: list[str] = []
-    title = f"# Session report - {s.get('track_name') or 'unknown track'} ({s.get('session_type_raw') or ''})"
+    track = s.get("track_name") or "unknown track"
+    # "Jeddah · Feature race (Race 2)" when the class names the session differently; else the old "Jeddah (Race)"
+    title = f"# Session report - {track} · {stype}" if stype != raw_type else f"# Session report - {track} ({stype})"
     md.append(title)
     if s.get("synthetic"):
         md.append("\n> **SYNTHETIC DATA** - generated test telemetry, not a real driving session.\n")
     md.append(
-        f"\nGame: {game} | car {s.get('car_name') or '?'} | source `{s.get('source')}` | "
+        f"\nGame: {game} | car {labels['car_label'] or '?'} | source `{s.get('source')}` | "
         f"{_count(len(laps), 'lap')}, {len(clean)} clean\n"
     )
     if best:

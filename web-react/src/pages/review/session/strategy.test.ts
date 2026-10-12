@@ -6,6 +6,7 @@ import { createElement, type ComponentType } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../../lib/api";
+import { F2_CLASS } from "../../../lib/carclass-testkit";
 import type { Driver } from "../../../lib/drivers";
 import type { SessionDetail } from "../../../lib/endpoints/review";
 import { densityFor, type Density } from "../../../lib/review/density";
@@ -151,6 +152,9 @@ describe("Strategy tab: a race", () => {
     // other drivers are numbers, never names
     expect(text).not.toMatch(/Max|Lewis|Charles|Lando/);
     expect(html).not.toContain("SYNTHETIC");
+    // F2 support: "You did not stop" is never read as "no stop was needed": the game sends no stop rules
+    expect(text).toMatch(/You did not stop in this race\. .*Stop rules: not sent by the game/);
+    expect(html).toContain("data-stop-rules");
   });
 
   it("recorded: the engine's timeline over the committed Austria excerpt renders without inventing anything", () => {
@@ -262,6 +266,23 @@ describe("Session page: the Race tab, for races with strategy records only (inte
     // six tabs do not fit a phone (< 768 px): Ask leaves the strip there (the "Ask the engineer" button opens it)
     expect(html).toMatch(/max-md:hidden[^>]*>Ask|data-key="ask"[^>]*max-md:hidden/);
     expect(visible(html)).toContain("Ask the engineer");
+  });
+
+  it("F2 support: the title says the race as F2 calls it and the car chip the server's car words", () => {
+    const s: SessionDetail = {
+      ...austria(),
+      session_type_raw: "Race 2",
+      car_name: "team_158",
+      car_class: F2_CLASS,
+      car_label: "F2 · Art GP '24",
+      session_label: "Feature race",
+    };
+    cache.set(strategyKeys.session(s.id), timeline("edited-timeline-austria"));
+    const text = visible(page(s, "summary"));
+    expect(text).toContain("Austria · Feature race");
+    expect(text).toContain("F2 · Art GP '24");
+    expect(text).not.toContain("team_158");
+    expect(text).toMatch(/Summary Laps Compare Corners Race Ask/); // the session type stays "race": Race is listed
   });
 
   it("a race whose records are not known yet: five tabs (Race appears once they are)", () => {

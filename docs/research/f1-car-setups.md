@@ -24,7 +24,8 @@ How a stored session maps to a car format (`carsetup/context.py`):
 | UDP format 2026 with any other F1 formula / team | `f1_2025` (format 2026 reports 2026 cars as F1 26) |
 | UDP format 2025 with a real 2025 team id (0-9) | `f1_2025` (2026 teams do not fit the 2025 field; F1Laps reports 2026 cars in format 2025 as "F1 Generic") |
 | generic car (team 41 / 104) or unknown team in format 2025 | **unknown**: the driver picks (the real PS5 capture is this case: F1 World, "F1 Generic") |
-| F1 Classic, F2 (incl. F2 2026 teams 489-499), Beta | no catalogue |
+| F2 (formula "F2", or the F2 team ids; `pitwall.carclass`) | `f2`, see [section 11](#11-f2-cars) |
+| F1 Classic, Beta | no catalogue |
 
 Sessions now store the game's formula (`repo._session_info_extra`), so new sessions can be told apart; older
 sessions only have the packet format and the team id.
@@ -305,3 +306,77 @@ session pitwall cannot map (e.g. the generic car in format 2025) gets one fact t
    and the real PS5 setups against the ranges.
 3. When a patch changes handling, update the format's `latest_handling_patch`: older setups then stop counting as
    current.
+
+## 11. F2 cars
+
+_Added 2026-10-12 (F2 support). Data: the `f2` format and the `f1laps-25-f2-*` setups in
+`src/pitwall/carsetup/data/f1_25_setups.json`; evidence crawl and selection scripts in the maintainer's scratch
+folder (not shipped)._
+
+**Format.** `f2` = "F2 cars (2024 and 2025 seasons)". It covers the F2 2024 teams (ids 158-168) always, and the 2025
+teams (209-219 in UDP format 2025, observed; 465-475 in format 2026) when the session's formula is F2. The 2026 F2
+cars (489-499) have no setups ("No setups for the 2026 F2 cars in Pitwall yet."), and an F2 car whose team is not
+known has none either ("Pitwall can't tell which F2 car this is, so it shows no setups."): an F2 driver is never
+asked to choose an F1 car format, and an F1 format is refused for an F2 session (and the reverse). No F2 handling
+patch is known (v1.12 added the 2025 F2 cars; v1.13 changed tyres, colours and AI pit stops), so
+`latest_handling_patch` is null and no F2 setup counts as out of date.
+
+**Ranges rule.** F2 evidence only, never copied from the F1 car. Each range runs from the lowest to the highest value
+in 730 published F2 setups (F1Laps' F2 team filters for F1 25, captured from players' own game data; e-mail-named
+authors left out) and the owner's 21 recorded F2 setups (CarSetups packet, PS5, 2026-10-11; 9 distinct). An end is
+*confirmed* (no `*` below) only when at least 5 published setups sit exactly on it, or when the owner reads it from
+the game's F2 setup screen (validation check `f2_ps5` lists the unconfirmed ends). Steps are the menu's: wings 1,
+differentials 5, camber 0.1, toe 0.01, tyre pressures 0.1, everything else 1. The F2 car differs from the F1 car in
+two places: brake bias reaches 69 (one published setup; the F1 range stops at 60) and rear suspension stops at 26
+(dozens of setups sit on it; the F1 range goes to 41). `tests/recorded/test_f2_ps5.py` checks that the owner's F2
+setups fit.
+
+| Parameter | F2 range (* = unconfirmed end) | Step | F1 2025 range |
+|---|---|---|---|
+| front_wing | 0 to 50 | 1 | 0 to 50 |
+| rear_wing | 0 to 50 | 1 | 0 to 50 |
+| diff_on_throttle | 10 to 100 | 5 | 10 to 100 |
+| diff_off_throttle | 10 to 100 | 5 | 10 to 100 |
+| front_camber | -3.5 to -2.5* | 0.1 | -3.5 to -2.5 |
+| rear_camber | -2 to -1* | 0.1 | -2 to -1 |
+| front_toe | 0 to 0.12* | 0.01 | 0 to 0.2 |
+| rear_toe | 0.1 to 0.25 | 0.01 | 0.1 to 0.25 |
+| front_suspension | 24* to 41 | 1 | 2 to 41 |
+| rear_suspension | 1 to 26 | 1 | 1 to 41 |
+| front_arb | 1 to 21 | 1 | 1 to 21 |
+| rear_arb | 2* to 21 | 1 | 1 to 21 |
+| front_ride_height | 15 to 35* | 1 | 15 to 35 |
+| rear_ride_height | 40 to 60* | 1 | 40 to 60 |
+| brake_pressure | 90* to 100 | 1 | 85 to 100 |
+| brake_bias | 50 to 69* | 1 | 50 to 60 |
+| tyre_pressure_fr | 22.5 to 29.5 | 0.1 | 22.5 to 29.5 |
+| tyre_pressure_fl | 22.5 to 29.5 | 0.1 | 22.5 to 29.5 |
+| tyre_pressure_rr | 20.5 to 26.5 | 0.1 | 20.5 to 26.5 |
+| tyre_pressure_rl | 20.5 to 26.5 | 0.1 | 20.5 to 26.5 |
+
+**Selection.** For each track, session (time trial counts as qualifying) and dry conditions: the 3 fastest setups by
+the lap time the source shows, one per author. Left out: exact copies of a preset (the same values from 5 or more
+authors at a track: 373 of the 730), authors whose name is an e-mail address (14 authors, 38 setups: left out
+entirely, never masked, so no credit is stripped), values off the menu's steps, and wet or mixed setups (wet is
+never made up from dry). Every cited setup keeps its source, link, author and publication date; its notes give the
+lap time, the session and the team with its season as F1Laps labels them. One author is 2-3 s faster than everyone
+else at every track; their setups are cited as published. Recommendations come from the existing builder
+(`carsetup/build.py`, the medoid of the candidates); the stable variant's rule cites F1 25 guides about the F1 cars,
+so it is not applied to F2 (an F2 beginner gets the balanced F2 setup, labelled as such).
+
+| Track (EA id) | Session | Setups | Authors |
+|---|---|---|---|
+| Melbourne (0) | qualifying | 3 | idrisananda63, Saiyzzo, AlexZexu |
+| Melbourne (0) | race | 3 | idrisananda63, JuiceWrld, adugo |
+| Sakhir (3) | qualifying | 3 | idrisananda63, AlexZexu, pawsome |
+| Sakhir (3) | race | 3 | idrisananda63, adugo, pawsome |
+| Monaco (5) | qualifying | 3 | K33p1n, idrisananda63, AlexZexu |
+| Monaco (5) | race | 3 | idrisananda63, AlexZexu, pawsome |
+| Monza (11) | qualifying | 3 | idrisananda63, AlexZexu, SlickSticky |
+| Monza (11) | race | 3 | idrisananda63, Cedum, AlexZexu |
+| Jeddah (29) | qualifying | 3 | Saiyzzo, idrisananda63, AlexZexu |
+| Jeddah (29) | race | 3 | AlexZexu, pawsome, SlickSticky |
+
+Coverage is the 5 tracks the crawl covered (dry only). Elsewhere the page says "No F2 setups for this track in
+Pitwall yet."; the driver's own setup, the experiments and the technique page's setup suggestions still work, sized
+with the F2 ranges.

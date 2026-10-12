@@ -27,6 +27,7 @@ import uuid
 from dataclasses import asdict
 from typing import Any
 
+from pitwall import carclass
 from pitwall.analysis.coaching import Observation
 from pitwall.analysis.laps import LapTrace
 from pitwall.analysis.track import TrackModel
@@ -66,6 +67,34 @@ def _listed(table: str = "s") -> str:
 
 
 _LISTED = _listed()
+
+
+def _sql_list(values: list[str]) -> str:
+    return ", ".join("'" + v.replace("'", "''") + "'" for v in values)
+
+
+def family_sql(table: str = "s") -> str:
+    """SQL expression over a ``sessions`` row (alias ``table``): its car class family (``carclass.family_of``) -
+    'f1', 'f2', 'other' or NULL (another game, or an F1 row with neither a formula nor a known team id). Built from
+    ``carclass``'s tables, so the two never disagree (``tests/unit/test_carclass.py`` checks them row by row)."""
+    t = table
+    formula = f"json_extract({t}.info, '$.formula')"
+    f1_forms = _sql_list(sorted({*carclass.FORMULAS_F1, carclass.FORMULA_2026}))
+    f2_cars = _sql_list([f"f1:team:{i}" for i in sorted(carclass.TEAMS_F2)])
+    f1_cars = _sql_list([f"f1:team:{i}" for i in sorted(carclass.TEAMS_F1)])
+    games = _sql_list(sorted(carclass.F1_GAMES))
+    return (
+        f"(CASE WHEN {t}.game NOT IN ({games}) THEN NULL"
+        f" WHEN {formula} = '{carclass.FORMULA_F2}' THEN 'f2'"
+        f" WHEN {formula} IN ({f1_forms}) THEN 'f1'"
+        f" WHEN {formula} IS NOT NULL THEN 'other'"
+        f" WHEN {t}.car_id IN ({f2_cars}) THEN 'f2'"
+        f" WHEN {t}.car_id IN ({f1_cars}) THEN 'f1'"
+        " ELSE NULL END)"
+    )
+
+
+_FAMILY = family_sql()
 
 
 def new_session_id() -> str:
@@ -363,8 +392,12 @@ def clean_laps_for(
     driver_id: int | None = None,
     track_length_m: float | None = None,
     length_tolerance: float = 0.03,
+    family: str | None = None,
 ) -> list[dict[str, Any]]:
     """Fastest clean laps for a game/track(/car), across all sessions (of ``driver_id`` when given).
+
+    ``family``: only laps driven in a car of that ``carclass`` family (``family_sql``): an F2 lap never builds an F1
+    track model. None = any car (the pre-class behaviour, and every non-F1 game).
 
     Unscoped (``driver_id=None``: track models, unowned sessions) every session counts; scoped to a driver, only
     their driving does (replays are excluded, see the module docstring). Ties on lap time are broken by lap id so
@@ -384,6 +417,9 @@ def clean_laps_for(
     if driver_id is not None:
         q += f" AND s.driver_id=? AND {_DRIVEN}"
         args.append(driver_id)
+    if family is not None:
+        q += f" AND {_FAMILY} = ?"
+        args.append(family)
     q += " ORDER BY l.lap_time_ms ASC, l.id ASC LIMIT ?"
     args.append(limit)
     out = []
@@ -552,8 +588,9 @@ def driver_stats(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
     hidden): ``sessions`` (what ``delete_driver`` refuses on), ``laps``, ``clean_laps``, ``tracks`` and
     ``last_session_unix``, so the Drivers card never counts a menu's stub lap or dates a hidden session; ``laps``,
     ``clean_laps``, ``tracks`` and ``best_laps`` count driving only, never replays. A driver whose sessions are all
-    hidden is present with zeros. The best lap per (game, track) is picked with a window function (fastest, then
-    lowest lap id) so the lap id, session and car returned all belong to that one lap."""
+    hidden is present with zeros. The best lap per (game, track, car class family: ``family_sql``) is picked with a
+    window function (fastest, then lowest lap id) so the lap id, session and car returned all belong to that one lap;
+    a track driven in an F1 and an F2 car has two entries."""
     out: dict[int, dict[str, Any]] = {}
     for r in conn.execute(
         f"""SELECT s.driver_id, COUNT(CASE WHEN s.listed THEN 1 END) AS sessions,
@@ -578,19 +615,23 @@ def driver_stats(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
             "best_laps": [],
         }
     for r in conn.execute(
-        f"""SELECT driver_id, game, track_id, track_name, lap_time_ms, lap_id, session_id, car_name, synthetic,
-                  started_unix
+        f"""SELECT driver_id, game, track_id, track_name, lap_time_ms, lap_id, session_id, car_id, car_name, info,
+                  synthetic, started_unix, car_family
            FROM (SELECT s.driver_id, s.game, s.track_id, s.track_name, l.lap_time_ms, l.id AS lap_id,
-                        s.id AS session_id, s.car_name, s.synthetic, s.started_unix,
-                        ROW_NUMBER() OVER (PARTITION BY s.driver_id, s.game, s.track_id
+                        s.id AS session_id, s.car_id, s.car_name, s.info, s.synthetic, s.started_unix,
+                        {_FAMILY} AS car_family,
+                        ROW_NUMBER() OVER (PARTITION BY s.driver_id, s.game, s.track_id, {_FAMILY}
                                            ORDER BY l.lap_time_ms ASC, l.id ASC) AS rn
                  FROM laps l JOIN sessions s ON s.id = l.session_id
                  WHERE l.clean=1 AND l.lap_time_ms IS NOT NULL AND s.track_id IS NOT NULL
                    AND s.driver_id IS NOT NULL AND {_DRIVEN})
-           WHERE rn = 1 ORDER BY driver_id, synthetic, track_name"""
+           WHERE rn = 1 ORDER BY driver_id, synthetic, track_name, car_family"""
     ).fetchall():
         stats = out.get(int(r["driver_id"]))
         if stats is not None:
+            row = {"game": r["game"], "car_id": r["car_id"], "car_name": r["car_name"]}
+            row["info"] = json.loads(r["info"] or "{}")
+            labels = carclass.session_fields(row)
             stats["best_laps"].append(
                 {
                     "game": r["game"],
@@ -600,6 +641,8 @@ def driver_stats(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
                     "lap_id": r["lap_id"],
                     "session_id": r["session_id"],
                     "car_name": r["car_name"],
+                    "car_family": r["car_family"],  # one entry per (game, track, family): F1 and F2 bests apart
+                    "car_label": labels["car_label"],
                     "synthetic": bool(r["synthetic"]),
                     "set_unix": r["started_unix"],
                 }
@@ -734,12 +777,204 @@ def save_track_model(conn: sqlite3.Connection, model: TrackModel) -> int:
     return model.version
 
 
-def load_track_model(conn: sqlite3.Connection, game: str, track_id: str) -> TrackModel | None:
+def load_track_model(
+    conn: sqlite3.Connection, game: str, track_id: str, family: str | None = None
+) -> TrackModel | None:
+    """The track model to use. A superseded model (``TrackModel.superseded``) is never returned.
+
+    With ``family`` (``carclass`` family of the session's car): the newest model of that family; else the newest of
+    unknown family (a legacy model); else the newest of another family, which stands in until a clean lap of this
+    family exists (*borrowed*: ``track_model_borrowed``). Without a family: the newest model of any family."""
+    fam = "json_extract(model, '$.car_family')"
+    live = "COALESCE(json_extract(model, '$.superseded'), 0) = 0"
+    q = f"SELECT model FROM track_models WHERE game=? AND track_id=? AND {live}"
+    order = " ORDER BY version DESC LIMIT 1"
+    r = None
+    if family is not None:
+        r = conn.execute(q + f" AND {fam} = ?" + order, (game, track_id, family)).fetchone()
+        if r is None:
+            r = conn.execute(q + f" AND {fam} IS NULL" + order, (game, track_id)).fetchone()
+    if r is None:
+        r = conn.execute(q + order, (game, track_id)).fetchone()
+    return TrackModel.from_dict(json.loads(r["model"])) if r else None
+
+
+def newest_track_model(conn: sqlite3.Connection, game: str, track_id: str) -> TrackModel | None:
+    """The newest stored model of a track, superseded or not (its name and ground plane, for a rebuild)."""
     r = conn.execute(
-        "SELECT model FROM track_models WHERE game=? AND track_id=? ORDER BY version DESC LIMIT 1",
-        (game, track_id),
+        "SELECT model FROM track_models WHERE game=? AND track_id=? ORDER BY version DESC LIMIT 1", (game, track_id)
     ).fetchone()
     return TrackModel.from_dict(json.loads(r["model"])) if r else None
+
+
+def track_model_borrowed(model: TrackModel | None, family: str | None) -> bool:
+    """``model`` was built from another family's laps than ``family`` (it stands in for the family's own model)."""
+    return model is not None and family is not None and model.car_family is not None and model.car_family != family
+
+
+# ---------------------------------------------------------------- one-off repair: F1 25 one-shot laps (F2 v1)
+REPAIR_F2_V1_KEY = "repair.f2_v1"  # meta key: the repair below ran (its record, JSON)
+FAKE_FINAL_MAX_SAMPLES = 2
+
+
+def find_fake_final_laps(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Laps F1 25 one-shot qualifying made up before the adapter fix (``adapters.f1.adapter._on_lap_data``): the game
+    turned the result "finished" 17 ms after the lap number advanced, with the last-lap time unchanged, and that was
+    stored as a second, final lap of 1-2 samples with the previous lap's time. Criteria: game ``f1_25``, at most
+    ``FAKE_FINAL_MAX_SAMPLES`` samples, marked final, and the same lap time as the previous lap number of the session
+    (a real final lap of a race is thousands of samples; synthetic equal-time laps are too)."""
+    rows = conn.execute(
+        f"""SELECT l.id, l.session_id, l.lap_number, l.lap_time_ms, l.n_samples FROM laps l
+           JOIN sessions s ON s.id = l.session_id
+           JOIN laps p ON p.session_id = l.session_id AND p.lap_number = l.lap_number - 1
+           WHERE s.game = 'f1_25' AND l.n_samples <= {FAKE_FINAL_MAX_SAMPLES}
+             AND json_extract(l.meta, '$.final') = 1
+             AND l.lap_time_ms IS NOT NULL AND p.lap_time_ms = l.lap_time_ms
+           ORDER BY l.id"""
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+STUB_LAP_MAX_SAMPLES = 1
+
+
+def find_stub_laps(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Laps of at most ``STUB_LAP_MAX_SAMPLES`` sample and no lap time: the in-progress lap a session's end stored
+    before ``LapAssembler.flush`` dropped them (F1 25 one-shot qualifying ends one frame into a "lap 2" that is never
+    driven). They cover nothing and were listed as laps. A lap timed by the game but stored without a trace
+    (``NO_TRACE``: 0 samples, a lap time) is not one."""
+    rows = conn.execute(
+        f"""SELECT id, session_id, lap_number, lap_time_ms, n_samples FROM laps
+           WHERE n_samples <= {STUB_LAP_MAX_SAMPLES} AND lap_time_ms IS NULL ORDER BY id"""
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def lap_families(conn: sqlite3.Connection, lap_ids: list[int]) -> dict[int, str | None]:
+    """The car class family (``family_sql``) of each lap's session; laps that no longer exist are absent."""
+    out: dict[int, str | None] = {}
+    for i in range(0, len(lap_ids), _IN_CHUNK):
+        chunk = lap_ids[i : i + _IN_CHUNK]
+        marks = ",".join("?" * len(chunk))
+        for r in conn.execute(
+            f"SELECT l.id, {_FAMILY} AS fam FROM laps l JOIN sessions s ON s.id = l.session_id WHERE l.id IN ({marks})",
+            chunk,
+        ).fetchall():
+            out[int(r["id"])] = r["fam"]
+    return out
+
+
+def repair_f2_v1(conn: sqlite3.Connection) -> dict[str, Any]:
+    """Steps 1-2 of the one-off F2 repair (writer thread; ``core.lap_processor.LapProcessor.run_repairs`` runs it
+    once at start on the analysis worker and rebuilds what it supersedes). Safe to run again.
+
+    1. Delete the fake one-shot laps (``find_fake_final_laps``) and the one-sample laps without a time
+       (``find_stub_laps``); their observations go with them (foreign keys) and goal / reference / drill links to them
+       are cleared. The deleted rows are returned for the meta record (``deleted``, ``stubs``).
+    2. Tag every stored track model with the family of its source laps' sessions; a model whose source laps include
+       a deleted lap, or mix families, is marked superseded (never used again).
+
+    Returns ``{"deleted": [...], "stubs": [...], "tagged": n, "superseded": [{"id", "game", "track_id", "version",
+    "why"}]}``."""
+    stubs = find_stub_laps(conn)
+    if stubs:  # never in a track model (no time, so never clean): nothing to supersede
+        stub_ids = sorted(int(r["id"]) for r in stubs)
+        for i in range(0, len(stub_ids), _IN_CHUNK):
+            chunk = stub_ids[i : i + _IN_CHUNK]
+            conn.execute(f"DELETE FROM laps WHERE id IN ({','.join('?' * len(chunk))})", chunk)
+    fake = find_fake_final_laps(conn)
+    deleted_ids = {int(r["id"]) for r in fake}
+    for r, fam in zip(fake, (lap_families(conn, [int(r["id"])]).get(int(r["id"])) for r in fake), strict=True):
+        r["family"] = fam  # kept in the record: a model built from it still has a family after the delete
+    record = repair_record(conn) or {}
+    earlier = [d for d in record.get("deleted") or () if isinstance(d, dict) and isinstance(d.get("id"), int)]
+    # laps deleted by an earlier, interrupted run still supersede the models built from them
+    gone = deleted_ids | {int(d["id"]) for d in earlier}
+    gone_family = {int(d["id"]): d.get("family") for d in [*earlier, *fake]}
+    if deleted_ids:
+        marks = ",".join("?" * len(deleted_ids))
+        conn.execute(f"DELETE FROM laps WHERE id IN ({marks})", sorted(deleted_ids))
+    all_deleted = earlier + [d for d in fake if int(d["id"]) not in {int(e["id"]) for e in earlier}]
+    superseded: list[dict[str, Any]] = []
+    tagged = 0
+    for r in conn.execute("SELECT id, game, track_id, version, model FROM track_models ORDER BY id").fetchall():
+        m = json.loads(r["model"])
+        src = [int(x) for x in m.get("source_lap_ids") or () if isinstance(x, int) and not isinstance(x, bool)]
+        fams = lap_families(conn, src)
+        fams.update({i: gone_family[i] for i in src if i in gone_family and i not in fams})
+        known = {f for f in fams.values() if isinstance(f, str)}
+        family = next(iter(known)) if len(known) == 1 else None
+        why = None
+        if gone & set(src):
+            why = "built from a lap that was removed (one-shot qualifying duplicate)"
+        elif len(known) > 1:
+            why = "built from laps of more than one car class"
+        changed = m.get("car_family") != family or (why is not None and not m.get("superseded"))
+        if not changed:
+            continue
+        m["car_family"] = family
+        if why is not None:
+            m["superseded"] = True
+            superseded.append(
+                {
+                    "id": r["id"],
+                    "game": r["game"],
+                    "track_id": r["track_id"],
+                    "version": r["version"],
+                    "why": why,
+                    "families": sorted(known),  # rebuilt for these families (each from its own clean laps)
+                }
+            )
+        conn.execute("UPDATE track_models SET model=? WHERE id=?", (dumps(m), r["id"]))
+        tagged += 1
+    # the record, before any rebuild: an interrupted run resumes from it (``LapProcessor.run_repairs``)
+    known_sup = {int(x["id"]) for x in record.get("superseded") or () if isinstance(x, dict) and "id" in x}
+    all_sup = [*(record.get("superseded") or []), *(x for x in superseded if int(x["id"]) not in known_sup)]
+    known_stub = {int(x["id"]) for x in record.get("stubs") or () if isinstance(x, dict) and "id" in x}
+    all_stubs = [*(record.get("stubs") or []), *(x for x in stubs if int(x["id"]) not in known_stub)]
+    set_meta(
+        conn,
+        REPAIR_F2_V1_KEY,
+        dumps({**record, "status": "rebuilding", "deleted": all_deleted, "stubs": all_stubs, "superseded": all_sup}),
+    )
+    return {"deleted": fake, "stubs": stubs, "tagged": tagged, "superseded": superseded}
+
+
+def repair_record(conn: sqlite3.Connection) -> dict[str, Any] | None:
+    """The F2 repair's meta record (``{"status": "rebuilding" | "done", "deleted": [...], ...}``), None before it ran
+    or when unreadable."""
+    raw = get_meta(conn, REPAIR_F2_V1_KEY)
+    if not raw:
+        return None
+    try:
+        rec = json.loads(raw)
+    except ValueError:
+        return None
+    return rec if isinstance(rec, dict) else None
+
+
+def track_model_families(conn: sqlite3.Connection, game: str, track_id: str) -> set[str | None]:
+    """Families that have a usable (not superseded) model at a track."""
+    rows = conn.execute(
+        "SELECT DISTINCT json_extract(model, '$.car_family') AS fam FROM track_models WHERE game=? AND track_id=?"
+        " AND COALESCE(json_extract(model, '$.superseded'), 0) = 0",
+        (game, track_id),
+    ).fetchall()
+    return {r["fam"] for r in rows}
+
+
+def track_clean_lap_families(conn: sqlite3.Connection, game: str, track_id: str) -> list[dict[str, Any]]:
+    """Per family with clean timed laps at a track: the family, the track name and length of its newest session."""
+    rows = conn.execute(
+        f"""SELECT fam, track_name, track_length_m FROM (
+               SELECT {_FAMILY} AS fam, s.track_name, s.track_length_m,
+                      ROW_NUMBER() OVER (PARTITION BY {_FAMILY} ORDER BY s.started_unix DESC, l.id DESC) AS rn
+               FROM laps l JOIN sessions s ON s.id = l.session_id
+               WHERE l.clean = 1 AND l.lap_time_ms IS NOT NULL AND s.game = ? AND s.track_id = ?)
+           WHERE rn = 1 AND fam IS NOT NULL ORDER BY fam""",
+        (game, track_id),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 # ---------------------------------------------------------------- references
@@ -1223,9 +1458,9 @@ def max_lap_id(conn: sqlite3.Connection) -> int:
 
 
 _MOTIVATION_SESSION_COLS = """s.id, s.started_unix, s.ended_unix, s.game, s.track_id, s.track_name, s.track_length_m,
-    s.car_id, s.car_name, s.session_type, s.synthetic, s.source, s.driver_id,
+    s.car_id, s.car_name, s.session_type, s.session_type_raw, s.synthetic, s.source, s.driver_id,
     json_extract(s.info, '$.total_laps') AS total_laps, json_extract(s.info, '$.formula') AS formula,
-    json_extract(s.info, '$.car_class') AS car_class"""
+    json_extract(s.info, '$.car_class') AS car_class, json_extract(s.info, '$.packet_format') AS packet_format"""
 
 
 def motivation_sessions(
@@ -1502,7 +1737,9 @@ def driver_ai_pace_points(
     limit: int = 500,
 ) -> list[dict[str, Any]]:
     """One ``AiPacePoint`` per session of the driver's own real driving (never synthetic, never replays) whose AI
-    metrics are filled and whose AI difficulty and track are known: the newest ``limit``, returned oldest first."""
+    metrics are filled and whose AI difficulty and track are known: the newest ``limit``, returned oldest first.
+    ``car_label``: the car in words (``carclass.session_fields``: "F2 · Hitech '25"; never a raw id such as
+    "team_214"), None when nothing readable is known."""
     where = [
         f"s.driver_id=? AND {_DRIVEN} AND s.synthetic=0 AND s.track_id IS NOT NULL",
         "a.status IN ('ok','no_driver_lap') AND a.ai_difficulty IS NOT NULL AND a.ai_ref_ms IS NOT NULL",
@@ -1520,7 +1757,8 @@ def driver_ai_pace_points(
     rows = conn.execute(
         f"""SELECT s.id AS session_id, s.started_unix, s.game, s.track_id, s.track_name, s.car_id, s.car_name,
                   s.session_type, a.car_class, a.weather_class, a.online, a.status, a.ai_difficulty, a.ai_ref_ms,
-                  a.ai_best_ms, a.ai_cars, a.driver_best_ms, a.gap_ms, a.gap_pct, a.field_rank, a.field_size
+                  a.ai_best_ms, a.ai_cars, a.driver_best_ms, a.gap_ms, a.gap_pct, a.field_rank, a.field_size,
+                  s.info AS session_info
            FROM session_ai_pace a JOIN sessions s ON s.id = a.session_id
            WHERE {" AND ".join(where)}
            ORDER BY s.started_unix DESC, s.rowid DESC LIMIT ?""",
@@ -1529,6 +1767,10 @@ def driver_ai_pace_points(
     out: list[dict[str, Any]] = []
     for r in reversed(rows):
         d = dict(r)
+        info = json.loads(d.pop("session_info") or "{}")
+        d["car_label"] = carclass.session_fields(
+            {"game": d["game"], "car_id": d["car_id"], "car_name": d["car_name"], "info": info}
+        )["car_label"]
         d["session_category"] = d.pop("session_type") or "unknown"
         d["online"] = None if d["online"] is None else bool(d["online"])
         out.append(d)

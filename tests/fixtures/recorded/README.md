@@ -38,3 +38,13 @@ Committed captures (each a byte-for-byte excerpt of the maintainer's own PS5 ses
 - `gt7_c_ps5_3800m_car-reset-excerpt.pwcap`: GT7 on PS5, 2026-10-11 (20261011-124608, 349.5-353.5 s and
   457.5-461.0 s): a car reset during race lap 1 on a 3.8 km circuit, then lap 1->2 - the reset stays in the session
   (0.17 MB; the gap between the windows is an excerpt artefact)
+- `f1_25_2025_ps5_f2_one-shot-quali-line-excerpt.pwcap`: F1 25 v1.26 on PS5, F2 car (Art GP '24, formula F2),
+  2026-10-11 (20261011-224147, 571.6-579.0 s and 737.0-745.0 s): Sakhir one-shot qualifying - the session start, the
+  line crossing (lap 1 -> 2, 1:56.133) and the result turning "finished" 17 ms later with the last-lap time unchanged
+  (one lap stored, never a second) (0.54 MB)
+- `f1_25_2025_ps5_f2_jeddah_race-excerpt.pwcap`: the same capture, 3228.1-3236.0 s, 3356.5-3359.0 s and
+  3427.5-3429.5 s: Jeddah feature race ("Race 2") - the start, the DRS enabled event, DRS allowed for a moment; 0 in
+  every ERS field, F2 tyre sets (actual 11 / 13 / 15, visual 19 / 21 / 15), a 60 km/h pit limit (0.98 MB)
+- `f1_25_2025_ps5_f2_melbourne_gp-excerpt.pwcap`: F1 25 v1.26 on PS5, 2026-10-11 (20261011-011513, 100.0-101.0 s
+  and 136.5-146.0 s): a Grand Prix race in a 2025 F2 car - the player's team id 214 and the 22-car field on team ids
+  209-219, which EA's document does not list (1.12 MB)

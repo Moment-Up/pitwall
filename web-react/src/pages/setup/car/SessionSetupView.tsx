@@ -1,7 +1,9 @@
 // One session's setup vs the recommendation (spec 7.3, `#/setup/car/session/<id>?format=&session=&conditions=&style=`).
 // Data: GET /api/carsetup/sessions/{sid}. What the game reported (track, car format, session, weather) is shown with
 // its reason; a field Pitwall cannot tell (`needs`, e.g. the car format of a generic car) is asked with a Segment, and
-// the answer is kept in the route query. A field Pitwall cannot tell is asked with a Select (spec 7.3). Then the comparison as a Pro DataGrid (changed rows first), the backend's
+// the answer is kept in the route query. F2 support: the car format is never asked for a car that is not an F1 car,
+// the choices and alternatives are the session's car family's only, and an override of another family (refused with
+// 422) offers the car the game reported. A field Pitwall cannot tell is asked with a Select (spec 7.3). Then the comparison as a Pro DataGrid (changed rows first), the backend's
 // suggested change to test, and this session's experiments. Behaviour reference: web/src/views/CarSetupView.svelte.
 
 import { Alert, Button, Card, Chip, Label, ListBox, Select, Skeleton } from "@heroui/react";
@@ -29,18 +31,23 @@ import { pathOf, router, withQuery } from "../../../lib/router";
 import {
   alreadyTesting,
   changedFirst,
+  classCarText,
   CONDITIONS_LABEL,
   defaultStyle,
+  familyAlternatives,
+  formatChoices,
   formatLabel,
   formatShortLabel,
+  gameSessionText,
   isChanged,
   listText,
   NEED_LABEL,
   paramValue,
   parseSetupQuery,
+  refusedOverride,
   SESSION_LABEL,
   sessionLabel,
-  sessionTypeLabel,
+  setupFamily,
   setupHeading,
   setupQueryValues,
   sortAlternatives,
@@ -48,6 +55,7 @@ import {
   STYLE_LABEL,
   type SetupRequestQuery,
 } from "../../../lib/setup/carsetup";
+import { carText } from "../../../lib/carclass";
 import type { Route } from "../../../lib/route-parse";
 import { ExperimentCard } from "./ExperimentCard";
 import { DiffGrid } from "./DiffGrid";
@@ -106,6 +114,21 @@ export function SessionSetupView({ sid, route, catalog }: { sid: string; route: 
     router.replace(withQuery(pathOf("setup", "car", "session", sid), setupQueryValues({ ...q, ...next, track: null, driver: null })));
 
   if (!s) {
+    if (res.error && refusedOverride(res.error, q)) {
+      // F2 support: a car format of another family than the session's class (an F1 format for an F2 session)
+      return (
+        <Alert status="warning">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>That car format does not fit this session's car</Alert.Title>
+            <Alert.Description>{errorText(res.error)}</Alert.Description>
+          </Alert.Content>
+          <Button variant="secondary" className="min-h-11" onPress={() => go({ format: null })}>
+            Use the car the game reported
+          </Button>
+        </Alert>
+      );
+    }
     if (res.error) {
       return (
         <Alert status="danger">
@@ -142,9 +165,12 @@ export function SessionSetupView({ sid, route, catalog }: { sid: string; route: 
   const x = d?.experiment ?? null;
   const testing = x ? alreadyTesting(expList, x, sid) : false;
   const fmtLabel = rr ? formatLabel(catalog, rr.car_format) : "";
+  const family = setupFamily(s);
+  // F2 support: only the session's car family's formats (an F2 car is never offered an F1 format, nor the reverse)
+  const formats = formatChoices(catalog, s);
   const optionsFor = (f: NeedField): { id: string; label: string }[] =>
     f === "car_format"
-      ? catalog.formats.map((x) => ({ id: x.id, label: formatShortLabel(x.id, catalog) }))
+      ? formats.map((x) => ({ id: x.id, label: formatShortLabel(x.id, catalog) }))
       : f === "session"
         ? SESSION_KINDS.map((k) => ({ id: k, label: SESSION_LABEL[k] }))
         : CONDITIONS.map((c) => ({ id: c, label: CONDITIONS_LABEL[c] }));
@@ -203,7 +229,7 @@ export function SessionSetupView({ sid, route, catalog }: { sid: string; route: 
           <ContextItem label="Track" value={s.session.track_name ?? ctx.track_name ?? "Unknown track"} reasons={[ctx.reasons.track_id, ctx.reasons.game]} />
           <ContextItem
             label="Car"
-            value={chosen.car_format ? formatShortLabel(chosen.car_format, catalog) : "Unknown"}
+            value={chosen.car_format ? formatShortLabel(chosen.car_format, catalog) : (classCarText(ctx.car_class ?? s.session.car_class) ?? "Unknown")}
             chip={
               q.format
                 ? { text: "your choice", tone: "default" }
@@ -211,13 +237,13 @@ export function SessionSetupView({ sid, route, catalog }: { sid: string; route: 
                   ? { text: ctx.car_format_certain ? "certain" : "not certain", tone: ctx.car_format_certain ? "success" : "warning" }
                   : null
             }
-            reasons={[ctx.reasons.car_format, s.session.car_name ? `Game car: ${s.session.car_name}` : null]}
+            reasons={[ctx.reasons.car_format, carText(s.session) ? `Game car: ${carText(s.session)}` : null]}
           />
           <ContextItem
             label="Session"
             value={chosen.session ? SESSION_LABEL[chosen.session] : "Unknown"}
             chip={q.session ? { text: "your choice", tone: "default" } : null}
-            reasons={[`Game: ${sessionTypeLabel(s.session.session_type_raw ?? s.session.session_type)}`, ctx.reasons.session]}
+            reasons={[`Game: ${gameSessionText(s.session)}`, ctx.reasons.session]}
           />
           <ContextItem
             label="Conditions"
@@ -285,7 +311,7 @@ export function SessionSetupView({ sid, route, catalog }: { sid: string; route: 
           <Card.Title className="text-base font-semibold">No recommendation yet</Card.Title>
           <p className="m-0 text-[15px]">{s.unavailable.reason}</p>
           {(() => {
-            const alts = s.unavailable.alternatives.filter((a) => a.track_id === ctx.track_id);
+            const alts = familyAlternatives(s.unavailable.alternatives, family).filter((a) => a.track_id === ctx.track_id);
             if (!alts.length) return null;
             const sorted = sortAlternatives(alts, { car_format: chosen.car_format, track_id: ctx.track_id, session: chosen.session, conditions: chosen.conditions, style: chosen.style });
             return (
@@ -345,10 +371,14 @@ export function SessionSetupView({ sid, route, catalog }: { sid: string; route: 
                   <Alert.Indicator />
                   <Alert.Content>
                     <Alert.Title>Some of your values are outside the {fmtLabel} range</Alert.Title>
-                    <Alert.Description>This usually means the car format is wrong, so the differences below are not meaningful yet.</Alert.Description>
+                    <Alert.Description>
+                      {formats.some((f) => f.id !== rr.car_format)
+                        ? "This usually means the car format is wrong, so the differences below are not meaningful yet."
+                        : "They are outside the range Pitwall has for this car, so the differences below may not be meaningful yet."}
+                    </Alert.Description>
                   </Alert.Content>
                   <div className="flex flex-wrap gap-2">
-                    {catalog.formats
+                    {formats
                       .filter((f) => f.id !== rr.car_format)
                       .map((f) => (
                         <Button key={f.id} variant="secondary" className="min-h-11" onPress={() => go({ format: f.id as CarFormat })}>

@@ -65,7 +65,7 @@ from typing import Any
 
 import numpy as np
 
-from pitwall import games
+from pitwall import carclass, games
 from pitwall.analysis.distance import DistanceTrace
 from pitwall.analysis.track_skeleton import build_track_skeleton
 from pitwall.coach.cues import CoachingProfile, CueEngine, CuePlan, cue_labels
@@ -200,6 +200,8 @@ def frame_to_dict(f: CarFrame) -> dict[str, Any]:
         "rpm": r(f.rpm, 0),
         "max_rpm": r(f.max_rpm, 0),
         "drs_open": f.drs_open,
+        "drs_allowed": f.drs_allowed,
+        "drs_activation_m": r(f.drs_activation_m, 0),
         "pos": [r(f.pos_x_m, 2), r(f.pos_y_m, 2), r(f.pos_z_m, 2)],
         "g_lat": r(f.g_lat, 2),
         "g_lon": r(f.g_lon, 2),
@@ -257,6 +259,10 @@ class LiveState:
         self._lock = threading.Lock()
         self.frame: CarFrame | None = None
         self.session: SessionInfo | None = None
+        # car class, car and session labels of ``session`` (carclass.info_fields), worked out in ``on_session`` only
+        # when the formula, car, UDP format or session type change
+        self.session_class: dict[str, Any] = carclass.info_fields(None)
+        self._class_key: tuple[Any, ...] | None = None
         self.session_id: str | None = None
         self.source: str | None = None
         self.synthetic = False
@@ -390,6 +396,19 @@ class LiveState:
             self.session_state = SessionState(SESSION_RUNNING, cause, now)
 
     def on_session(self, info: SessionInfo) -> None:
+        ckey = (
+            info.game,
+            info.formula,
+            info.car_id,
+            info.car_name,
+            info.extra.get("packet_format"),
+            info.session_type_raw,
+            info.session_type,
+            tuple(info.extra.get("weekend_structure") or ()),
+        )
+        if ckey != self._class_key:  # O(1) per session packet; the labels are worked out on a change only
+            self._class_key = ckey
+            self.session_class = carclass.info_fields(info)
         self.session = info
         self.cues.on_session_info(info.safety_car_status, info.total_laps, info.session_type.value)
         z = info.track_zones
@@ -589,6 +608,8 @@ class LiveState:
             self.synthetic = synthetic
             self.session_game = game if session_id is not None else None
             self.session = None
+            self.session_class = carclass.info_fields(None)
+            self._class_key = None
             self.frame = None
             self.laps.clear()
             self.lap_totals = None
@@ -711,6 +732,7 @@ class LiveState:
                     "weather": asdict(s.weather),
                     "total_laps": s.total_laps,
                     "safety_car_status": s.safety_car_status,
+                    **self.session_class,  # car_class, car_label, session_label (carclass)
                 },
                 "frame": None if f is None else frame_to_dict(f),
                 "delta_s": None if self.delta_s is None else round(self.delta_s, 3),
