@@ -23,7 +23,7 @@ fully with the model switched off.
 ## Install
 
 <!-- --- lane install --- -->
-The quickest is one command, from v0.2.0 (not released yet: until then, download a release by hand as in 1. below).
+The quickest is one command (from v0.2.0).
 It downloads and checks the latest release, installs it into `~/Pitwall` and keeps your sessions there when you
 update with `uv run pitwall update`.
 
