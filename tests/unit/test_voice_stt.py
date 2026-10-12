@@ -586,7 +586,11 @@ def test_build_stt_unknown_engine_falls_back_with_warning(tmp_path: Path, caplog
 def test_build_stt_parakeet_unavailable_falls_back(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
+    import pitwall.voice.stt_sherpa as sherpa_mod
+
     monkeypatch.setattr(stt_mod, "_parakeet_supported", lambda: "parakeet-mlx not importable (ImportError)")
+    # off Apple silicon the factory falls back to sherpa-onnx (installed on Windows): not here
+    monkeypatch.setattr(sherpa_mod, "sherpa_supported", lambda: "sherpa-onnx not importable (ImportError)")
     with caplog.at_level(logging.WARNING, logger="pitwall.voice.stt"):
         engine = build_stt(_settings(tmp_path, stt_engine="parakeet"))
     assert isinstance(engine, NullStt)
@@ -621,6 +625,7 @@ def test_null_stt_reasons(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 
 def test_build_stt_parakeet_missing_package_detected(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setitem(sys.modules, "parakeet_mlx", None)  # import raises ImportError
+    monkeypatch.setitem(sys.modules, "sherpa_onnx", None)  # no CPU fallback either (Windows has it)
     assert isinstance(build_stt(_settings(tmp_path, stt_engine="parakeet")), NullStt)
 
 

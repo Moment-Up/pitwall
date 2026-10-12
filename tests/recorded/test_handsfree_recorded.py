@@ -88,10 +88,19 @@ async def test_real_button_events_key_push_to_talk_with_hands_free_armed(path: P
         hub._last_button_status = None
         downs = ups = mid_sentence = cut = 0
         seq = 0
+        answered: int | None = None  # "say" frames seen when push-to-talk was released (its answer is still to come)
         for status in statuses:
             was = hub.ptt_down
             if not was:
-                await settle(3)  # the last question's answer is out: end its playback, as the device reports
+                # The last question's answer is out (speech recognition and the answer run in worker threads: wait for
+                # it, bounded, rather than a fixed number of loop turns, which was too short on Windows' coarser clock),
+                # then end its playback, as the device reports.
+                for _ in range(500):
+                    if answered is None or (len(texts(sent, "say")) > answered and not hub._busy):
+                        break
+                    await asyncio.sleep(0.01)
+                answered = None
+                await settle(3)
                 if hub.speaking_id is not None:
                     hub._on_playback(hub.speaking_id, "ended")
                 hub._gate_until = 0.0
@@ -110,6 +119,7 @@ async def test_real_button_events_key_push_to_talk_with_hands_free_armed(path: P
                 hub.on_audio(client, b"\x10\x00" * 8000)
             elif was and not hub.ptt_down:
                 ups += 1
+                answered = len(texts(sent, "say"))
         if hub.handsfree.capturing:
             await hub.on_text(client, {"type": "vad", "state": "abort", "seq": seq, "reason": "suppressed"})
         await settle(5)
