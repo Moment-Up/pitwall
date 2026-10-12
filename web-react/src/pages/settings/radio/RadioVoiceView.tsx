@@ -26,6 +26,7 @@ import {
   macVoiceLabel,
   macVoiceView,
   ONLINE_NAMES_TITLE,
+  RACE_CALLS_NOTE,
   sourceHint,
   speedText,
   testVoiceView,
@@ -281,6 +282,8 @@ export function RadioVoiceView({
           <p className="m-0 px-1 text-sm text-muted">
             Braking calls and coaching are also on Drive › Radio, to change between runs.
           </p>
+          {/* --- race radio: the per-driver race calls live on the driver sheet --- */}
+          {onlineNames?.shown && <p className="m-0 px-1 text-sm text-muted">{RACE_CALLS_NOTE}</p>}
         </div>
       </div>
     </div>

@@ -171,10 +171,12 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
    by the receive time (F1's session clock reads 0 during the start lights and runs backwards after a flashback).
    `roster.py` is the only reader of Participants names: calls say official AI driver names from EA's table, a team
    or a race number. Calls go to the radio hub as `race_call` notes (`radio.py` applies the seated driver's groups and
-   wording) and the red flag as the urgent note (`voice/urgent.py`); the live `RaceView` (`model.py`, at most
-   1.2 kB) rides `/ws/live` when it changed (`ON_CHANGE_KEYS`) and `GET /api/race/live`. Deterministic answers
-   (`answers.py`: who is ahead / behind, the position in any game, penalties, damage, sector deltas) come from the
-   `race` facts (`ai/facts.py`). No storage: nothing of the race radio is persisted.
+   wording) and the red flag as the urgent note (`voice/urgent.py`); after a flashback a `race_retract` note drops
+   the unsaid position and damage calls. The live `RaceView` (`model.py`, at most 1.3 kB) rides `/ws/live` when it
+   changed (`ON_CHANGE_KEYS`) and `GET /api/race/live`. Deterministic answers (`answers.py`: who is ahead / behind /
+   leading, the position in any game, laps to go, penalties, damage, sector deltas) come from the `race` facts
+   (`ai/facts.py`). No storage: nothing of the race radio is persisted. Until the driver has a learned track model,
+   the radio's speak window looks ahead to the AI field's braking zones (`voice/field_zones.py`).
 
 ### Reference choice and practice drills (coachref)
 `core/coachref.py` (`CoachRef`, created by the runtime and attached to the `LapProcessor`) plugs into the lap

@@ -15,7 +15,13 @@ def test_with_name() -> None:
     assert with_name("Up to P5.", "Sam") == "Up to P5, Sam."
     assert with_name("Good move. P5.", "Sam") == "Good move, Sam. P5."
     assert with_name("Gap ahead 1.2s. Behind 0.8s.", "Sam") == "Gap ahead 1.2s, Sam. Behind 0.8s."  # not "1, Sam.2s"
-    assert with_name("Go, go", "Sam") == "Go, go, Sam"
+    assert with_name("Up to P5", "Sam") == "Up to P5, Sam"
+    # a first sentence with a comma or colon: the name first, never mid-sentence ("That lap, 1:15.576, James.")
+    assert with_name("That lap, 1:15.576. Flashback used.", "James") == "James, that lap, 1:15.576. Flashback used."
+    assert with_name("3 second penalty: cutting the track.", "James") == "James, 3 second penalty: cutting the track."
+    assert with_name("P8 after lap one, up 3.", "Sam") == "Sam, P8 after lap one, up 3."
+    assert with_name("Norris is pitting, P4.", "Sam") == "Sam, Norris is pitting, P4."  # a name keeps its capital
+    assert with_name("Rolling start. You start 12th of 12.", "Sam") == "Rolling start, Sam. You start 12th of 12."
 
 
 def test_first_name() -> None:

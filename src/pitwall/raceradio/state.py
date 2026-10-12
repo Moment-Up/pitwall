@@ -35,6 +35,7 @@ class RaceState:
     crossing_t: float = -math.inf  # the last time the player's lap number went up
     position: int | None = None  # the player's race position (frames; None = unknown)
     grid: int | None = None  # the player's starting position (see engine: position before the start)
+    grid_frozen: bool = False  # F1: the car has moved, the grid position no longer changes
     lights_out_t: float | None = None
     in_pits: bool = False
     racing: bool = False  # the latest frame is the player driving: not paused, a replay or out of the race

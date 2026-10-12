@@ -1,12 +1,14 @@
-"""Deterministic radio answers for the race questions: who is ahead / behind, the position (any game), penalties,
-damage and sector deltas. No LLM: every number comes from a fact's data (``ai.facts`` topic ``race``, built from the
-live snapshot's ``race`` block, and the lap facts' ``sectors_ms``), so the answers are grounded by construction.
-Labels are the race radio's non-personal ones (``raceradio.roster``): an official AI driver name, a team, "car 23" or
-"the car ahead"; never an online ID.
+"""Deterministic radio answers for the race questions: who is ahead / behind / leading, the position (any game), laps
+to go, penalties, damage and sector deltas. No LLM: every number comes from a fact's data (``ai.facts`` topic ``race``,
+built from the live snapshot's ``race`` block, and the lap facts' ``sectors_ms``), so the answers are grounded by
+construction. Labels are the race radio's non-personal ones (``raceradio.roster``): an official AI driver name, a team,
+"car 23" or "the car ahead"; never an online ID. "Who's leading?" never names the car ahead: the leader (F1 timing) or
+the player's own position.
 """
 
 from __future__ import annotations
 
+import math
 import re
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
@@ -56,8 +58,28 @@ def neighbour_text(d: Mapping[str, Any], side: str) -> str:
     return ", ".join(parts) + "."
 
 
+def asks_leader(question: str | None) -> bool:
+    """ "Who's leading?", "who is in the lead?" (not "who's behind me?")."""
+    q = question or ""
+    return bool(_LEAD.search(q)) and not _BEHIND.search(q)
+
+
+def leader_text(d: Mapping[str, Any], me: object = None) -> str:
+    """ "Verstappen is leading, 12.3 seconds ahead." / "The leader is 12.3 seconds ahead." from a ``leader`` fact."""
+    kind = d.get("label_kind")
+    gap = _gap_words(d.get("gap_s"))
+    label = str(d.get("label") or "")
+    if kind in ("driver", "team", "number") and label:
+        shown = cap(label) if kind in ("team", "number") else label
+        return f"{shown} is leading, {gap} ahead." if gap else f"{shown} is leading."
+    if gap:
+        return f"The leader is {gap} ahead."
+    return f"You're P{me}." if isinstance(me, int) else "You're not leading."
+
+
 def who(sheet: FactSheet, question: str | None = None) -> str | None:
-    """ "Norris is ahead, P4, 1.2 seconds." / behind; at the front: "You're leading, 2.4 seconds clear." """
+    """ "Norris is ahead, P4, 1.2 seconds." / behind; at the front: "You're leading, 2.4 seconds clear."; "who's
+    leading?" behind the leader: the leader, else "You're P5." (never the car ahead); last: "Nobody behind you." """
     pos = race_fact(sheet, "position")
     me = None if pos is None else pos.get("position")
     q = question or ""
@@ -65,15 +87,24 @@ def who(sheet: FactSheet, question: str | None = None) -> str | None:
         behind = race_fact(sheet, "behind")
         gap = None if behind is None else _gap_words(behind.get("gap_s"))
         return f"You're leading, {gap} clear." if gap else "You're leading."
+    if asks_leader(q):
+        lead = race_fact(sheet, "leader")
+        if lead is not None:
+            return leader_text(lead, me)
+        return f"You're P{me}." if isinstance(me, int) else None
     side = "behind" if _BEHIND.search(q) else "ahead"
     d = race_fact(sheet, side)
     if d is None:
+        cars = None if pos is None else pos.get("cars")
+        if side == "behind" and isinstance(me, int) and isinstance(cars, int) and me == cars:
+            return f"Nobody behind you: P{me} of {cars}."
         return None  # no field data (GT7, Forza): the game's capability sentence answers
     return neighbour_text(d, side)
 
 
 def position(sheet: FactSheet) -> str | None:
-    """ "P5 of 14, 3 laps to go." (+ GT7 / Forza: the evidence note)."""
+    """ "P5 of 14, 3 laps to go." The evidence note (GT7, Forza) stays on screen (Drive, the race view), never in the
+    spoken answer, as with the race calls."""
     d = race_fact(sheet, "position")
     if d is None or not isinstance(d.get("position"), int):
         return None
@@ -83,11 +114,31 @@ def position(sheet: FactSheet) -> str | None:
         msg += f", {laps} laps to go"
     elif laps == 1:
         msg += ", last lap"
-    msg += "."
-    note = d.get("note")
-    if isinstance(note, str) and note:
-        msg += f" {note}"
-    return msg
+    return msg + "."
+
+
+def _whole_laps_left(left: object) -> int | None:
+    """Laps to go counting the current one (as the countdown calls do): 1.4 left is 2 to go, 1.0 is the last lap."""
+    if not isinstance(left, int | float) or isinstance(left, bool) or not math.isfinite(left) or left <= 0:
+        return None
+    return max(1, math.ceil(left - 1e-6))
+
+
+def laps_left(sheet: FactSheet) -> str | None:
+    """ "Lap 8 of 10, 3 laps to go." / "Lap 10 of 10, last lap." (how many laps left, what lap is it, is this the
+    last lap). None without the race radio's position fact (practice, qualifying, no race)."""
+    d = race_fact(sheet, "position")
+    if d is None:
+        return None
+    lap, total = d.get("lap"), d.get("total_laps")
+    head = None
+    if isinstance(lap, int) and not isinstance(lap, bool) and lap > 0:
+        head = f"Lap {lap} of {total}" if isinstance(total, int) and total > 0 else f"Lap {lap}"
+    n = _whole_laps_left(d.get("laps_left"))
+    if n is None:
+        return f"{head}." if head else None
+    tail = "last lap" if n == 1 else f"{n} laps to go"
+    return f"{head}, {tail}." if head else f"{cap(tail)}."
 
 
 def penalties(sheet: FactSheet) -> str | None:
@@ -171,8 +222,11 @@ def sector(sheet: FactSheet, question: str | None = None) -> str | None:
         return msg + "."
     if not (isinstance(best, list) and len(best) == 3 and all(isinstance(x, int) and x > 0 for x in best)):
         return "Sectors: " + ", ".join(_sector_s(x) for x in secs) + "."
-    deltas = [
-        _delta(x, b).replace(" to your best", "").replace("level with your best", "level")
-        for x, b in zip(secs, best, strict=True)
+    off = [
+        f"sector {k + 1} {_delta(x, b).replace(' to your best', '')}"
+        for k, (x, b) in enumerate(zip(secs, best, strict=True))
+        if _delta(x, b) != "level with your best"
     ]
-    return "Sectors: " + ", ".join(deltas) + " to your best."
+    if not off:
+        return "Your best in every sector: " + ", ".join(_sector_s(x) for x in secs) + "."
+    return cap(", ".join(off)) + " to your best" + ("; the rest level." if len(off) < 3 else ".")

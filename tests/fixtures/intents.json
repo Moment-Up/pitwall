@@ -210,6 +210,14 @@
     {"question": "Do I have a penalty?", "intent": "penalties", "corner": null, "from": "radio"},
     {"question": "How many warnings have I got?", "intent": "penalties", "corner": null, "from": "radio"},
     {"question": "How was sector 2?", "intent": "sectors", "corner": null, "from": "radio"},
-    {"question": "What's my damage?", "intent": "damage", "corner": null, "from": "radio"}
+    {"question": "What's my damage?", "intent": "damage", "corner": null, "from": "radio"},
+    {"question": "How many laps left?", "intent": "laps_left", "corner": null, "from": "radio"},
+    {"question": "how many laps to go", "intent": "laps_left", "corner": null, "from": "radio"},
+    {"question": "Is this the last lap?", "intent": "laps_left", "corner": null, "from": "radio"},
+    {"question": "What lap are we on?", "intent": "laps_left", "corner": null, "from": "radio"},
+    {"question": "How many laps of fuel have I got?", "intent": "fuel", "corner": null, "from": "radio"},
+    {"question": "How many laps left on these tyres?", "intent": "tyres", "corner": null, "from": "radio"},
+    {"question": "How many laps have I done this week?", "intent": "week", "corner": null, "from": "radio"},
+    {"question": "How was that last lap?", "intent": "last_lap", "corner": null, "from": "radio"}
   ]
 }

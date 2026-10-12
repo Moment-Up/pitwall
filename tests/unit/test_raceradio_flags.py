@@ -186,11 +186,42 @@ def test_safety_car_from_the_session_packet_and_scar_one_call_per_period() -> No
     assert r.feed(event(3.0, "SCAR", safetyCarType=1, eventType=0)) == []  # the same period
     calls = r.feed(event(60.0, "SCAR", safetyCarType=1, eventType=1))
     assert [(c.call, c.text) for c in calls] == [("sc_ending", "Safety car in this lap.")]
-    calls = r.feed(event(90.0, "SCAR", safetyCarType=1, eventType=2))
+    assert r.feed(event(90.0, "SCAR", safetyCarType=1, eventType=2)) == []  # returned: in the pit lane, no green yet
+    calls = r.feed(event(96.0, "SCAR", safetyCarType=1, eventType=3))
     assert [(c.call, c.text, c.bypass_quiet) for c in calls] == [("green", "Green flag, racing.", False)]
-    assert r.feed(info(90.5, sc="full")) == []  # the 2 Hz packet lagging the SCAR edge: not a new period
-    assert r.feed(info(95.0, sc="none")) == []
+    assert r.feed(info(96.5, sc="full")) == []  # the 2 Hz packet lagging the SCAR edge: not a new period
+    assert r.feed(info(100.0, sc="full")) == []  # still lagging, past SCAR_LAG_S: no second period before "none"
+    assert r.feed(info(100.5, sc="none")) == []
     assert r.engine.flags.period == 1
+
+
+def test_safety_car_returned_is_not_green_and_a_lagging_session_packet_never_redeploys() -> None:
+    """The Session packet still reads "full" for seconds after SCAR "returned" (the car in the pit lane) and even
+    after "resume": one deployed, one ending and one green call, the green only at "resume" [synthetic probe]."""
+    r = race()
+    r.drive(0.0, 5.0, lap=3)
+    calls = list(r.feed(event(5.0, "SCAR", safetyCarType=1, eventType=0)))
+    t = 5.0
+    while t < 60.0:
+        t += 0.5
+        calls += r.feed(info(t, sc="full"), frame(t, lap=3))
+    calls += r.feed(event(60.0, "SCAR", safetyCarType=1, eventType=1))
+    while t < 90.0:
+        t += 0.5
+        calls += r.feed(info(t, sc="full"), frame(t, lap=4))
+    calls += r.feed(event(90.0, "SCAR", safetyCarType=1, eventType=2))
+    while t < 100.0:
+        t += 0.5
+        calls += r.feed(info(t, sc="full"), frame(t, lap=4))
+    assert [c.call for c in calls] == ["sc_deployed", "sc_ending"]  # no green while the car is still on its way in
+    calls += r.feed(event(100.0, "SCAR", safetyCarType=1, eventType=3))
+    while t < 110.0:
+        t += 0.5
+        calls += r.feed(info(t, sc="full" if t < 106.0 else "none"), frame(t, lap=4))
+    assert [c.call for c in calls] == ["sc_deployed", "sc_ending", "green"]
+    assert r.engine.flags.period == 1
+    # a new safety car after the Session packet read none again
+    assert [c.call for c in r.feed(info(140.0, sc="full"))] == ["sc_deployed"]
 
 
 def test_vsc_from_scar_then_green_from_the_session_packet() -> None:

@@ -102,30 +102,58 @@ reset), pinned by `tests/recorded/test_gt7_ps5_real.py`.
 The race radio (`src/pitwall/raceradio`, `docs/features.md`) has been run only on recordings and synthetic data; **it
 has not been heard live**. Each call carries its tier (`tier` in `/api/race/live` and on the radio):
 
-- **Recorded** (F1 25, PS5): yellow ahead, yellow here, blue flag, grid slot, lights out, laps to go, last lap, the
-  finish, the lap-one summary, position changes, clean passes, the pit-exit position, gaps, fastest laps,
-  retirements, warnings, time penalties (4/3, 4/4, 4/7, 4/29), a drive-through (0/34, a jump start in the Sakhir
-  sprint) and its DTSV, and wing, floor and diffuser damage. GT7 (PS5): the grid slot, the lap-one summary, laps to
-  go, last lap, the finish and position changes, from GT7's race position, not yet compared with the game's screen.
-- **Synthetic only**: the safety car and VSC (no real capture had one), the red flag (urgent, past quiet mode), stop-go,
-  disqualification, black flag and the serve reminders, lap invalidations (PENA 11/13/14/15), the car ahead pitting,
+- **Recorded** (F1 25, PS5): yellow ahead, yellow here, blue flag, grid slot (the formation-lap brief too: Imola),
+  lights out, laps to go, last lap, the finish, the lap-one summary, position changes, clean passes, the pit-exit
+  position, gaps, fastest laps, retirements, warnings, time penalties (4/3, 4/4, 4/7, 4/29), a drive-through (0/34,
+  a jump start in the Sakhir sprint) and its DTSV, and wing, floor and diffuser damage. GT7 (PS5): the grid slot, the
+  lap-one summary, laps to go, last lap, the finish and position changes, from GT7's race position, not yet compared
+  with the game's screen.
+- **Synthetic only**: the safety car and VSC (no real capture had one; green only at "resume race" or a Session status
+  of none), the red flag (urgent, past quiet mode), stop-go, disqualification, black flag and the serve reminders,
+  "Flag's out. Last lap." and the lapped last lap ("the leader finishes first": no capture produced them, so they are
+  tagged synthetic), lap invalidations (PENA 11/13/14/15), the car ahead pitting,
   punctures (tyre damage read 100 % in 10 real crashes, but each came with a terminal-damage retirement or a
   flashback, which silence the call), sidepod, brake, gearbox and engine damage, ERS and DRS faults, and minutes left
   in practice and qualifying. Forza positions follow community docs only.
 - **Live**: none.
 
-Checked on 2026-10-12 with `scripts/race_radio_check.py` over scratch copies of all the owner's F1 25 and GT7 captures
-(35 sessions, 30 of them races: 26 F1 25, 4 GT7; 771,336 frames), every proactive call through the radio policy at
-normal: 297 calls made, 239 heard, 3-7 heard in each 3-lap race; 0 "yellow ahead" calls for a zone that went yellow
-at, behind or within 150 m of the car (5 of the 7 were followed by the player's own yellow within 20 s), 0 blue calls
-without the car's blue flag or within 30 s of the last, 0 position calls that disagreed with the car's position or
-came on lap one or within 5 s of a flashback, 0 penalty or warning calls without the matching event and time, 0
-online names in any call (up to 20 known per session), 0 calls heard outside a speak window. The committed excerpts
+Checked on 2026-10-12 (after the review fixes below) with `scripts/race_radio_check.py` over scratch copies of all
+the owner's F1 25 and GT7 captures (36 sessions, 31 of them races: 27 F1 25, 4 GT7; 766,886 frames), every proactive
+call through the radio policy at normal: 287 calls made, 262 heard, 3-10 heard in each 3-lap race; 0 "yellow ahead"
+calls for a zone that went yellow at, behind or within 150 m of the car (6 of the 8 were followed by the player's own
+yellow within 20 s), 0 blue calls without the car's blue flag or within 30 s of the last, 0 position calls that
+disagreed with the car's position or came on lap one or within 5 s of a flashback, 0 penalty or warning calls without
+the matching event and time, 0 online names in any call (up to 20 known per session), 0 calls sent outside a speak
+window (brake and steering at the moment of sending). The script has no track model, so the speak window's look-ahead
+to the next braking zone is not simulated: 97 of the 263 spoken intervals met a frame that braked or cornered, an upper
+bound of what the live radio does with its look-ahead (unmeasured live). The committed excerpts
 (`tests/fixtures/recorded/*race-*-excerpt.pwcap`, scrubbed) pin a warning for contact, a 3 s penalty after a pass with
 no "clean pass", one blue call, one combined damage call with the front-wing advice, and GT7's last lap and finish
 (`tests/recorded/test_raceradio_real.py`). The red flag reaches the radio within 250 ms with the test voice
 (`tests/unit/test_hub_race_calls.py`); with Kokoro it has not been measured. Ingest with the race radio attached:
 median 2.9 us, p99 35 us per packet on 13,208 recorded packets (unchanged).
+
+Review fixes (2026-10-12, regression tests in `tests/unit/test_raceradio_review_fixes.py`; recorded on the owner's
+captures where noted, else on hand-made data):
+
+- Speak windows: before a learned track model exists (a new track, a joined race) the radio's look-ahead uses the AI
+  field's braking zones and the physics prior's tags (`voice/field_zones.py`); "unknown" was taken as calm, and
+  recorded runs put a lap time and a position call into Turn 1 and Turn 3 braking.
+- The start and countdown no longer use the per-lap race allowance, a move into P1 always gets through, and "Two laps
+  to go" is said only in races of 5 laps or more: Melbourne's 3-lap race heard 7 of 14 calls, without the move
+  into the lead; now 10 of 13 with it [recorded]. A countdown at the line goes out inside the lap summary.
+- Repeated blue flags, yellows and penalties are no longer swallowed by the 60 s identical-sentence filter: a lapped
+  Austria run lost its second blue flag (33 s after the first); now all 4 are heard [recorded].
+- Laps to go count the current lap ("2 laps to go" from 1.4 left; the second half of the last lap is "last lap"), and
+  "how many laps left?", "what lap are we on?" and "is this the last lap?" have their own answer.
+- "Who's leading?" names the leader (F1) or says the position, never the car ahead; "who's behind?" when last says
+  so. An opt-in online name is only said for the car the answer's gap is about.
+- GT7's grid slot is taken only before the rolling start (a join on lap 3 said "Up 5 from the grid"); F1's freezes
+  once the car moves (a missed lights-out event and a lap-one stop made the stop's position the grid).
+- A disqualification is said even when the lap data's "dsq" status arrives first; a flashback drops the unsaid
+  position and damage calls; severe damage within 10 s of a damage call is said with what else broke.
+- The finish says "on the road" with time penalties still to add, and never "Down N"; simple words never count
+  places lost; the name goes first when the first sentence has a comma ("Sam, that lap, 1:15.5.").
 
 ## Known gaps
 

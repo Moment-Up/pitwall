@@ -7,7 +7,10 @@
   virtual; events 0 deployed, 1 returning, 2 returned, 3 resume). SCAR type 0 and 3 (formation lap) are ignored [M]:
   real captures send them at the formation lap and an online start. One deployed / ending / green call per neutral
   period; a Session packet that contradicts a SCAR edge within ``SCAR_LAG_S`` is the 2 Hz packet lagging, not a new
-  period. [synthetic: no real capture has a safety car]
+  period. Green only on SCAR "resume" (3) or a Session status of none: "returned" (2) is the safety car entering the
+  pit lane, and the field may not race until the line (F1 infringement 36, overtaking under the safety car). After a
+  period closes the Session packet must read none before it can open another one (it lags the SCAR events); a SCAR
+  "deployed" always does. [synthetic: no real capture has a safety car]
 * **Yellow ahead** - a marshal zone showing yellow whose start lies ``YELLOW_MIN_AHEAD_M`` .. min(max(``YELLOW_NEAR_M``,
   ``YELLOW_LEAD_S`` x speed), ``YELLOW_MAX_M``) ahead of the car, once per zone and lap, at most every
   ``YELLOW_COOLDOWN_S``. A zone that turned yellow with the player inside it, less than ``YELLOW_MIN_AHEAD_M`` past its
@@ -77,6 +80,7 @@ class FlagWatcher:
         self._period_kind: str | None = None
         self._period_calls: set[str] = set()
         self._scar_t = -math.inf
+        self._need_none = False  # a period closed: the Session packet must read "none" before it opens another
         self._zone_flags: dict[int, str | None] = {}
         self._own: set[int] = set()
         self._called: set[tuple[int, int | None]] = set()
@@ -94,9 +98,11 @@ class FlagWatcher:
     # ------------------------------------------------------------------ session
     def on_session(self, st: RaceState, info: SessionInfo, out: list[CallSpec]) -> None:
         status = info.safety_car_status
+        if status == "none":
+            self._need_none = False
         if status is not None and st.t - self._scar_t >= SCAR_LAG_S:
             self.sc_status = status
-            if status in NEUTRAL and not self._open:
+            if status in NEUTRAL and not self._open and not self._need_none:
                 self._deploy(st, status, out)
             elif status == "none" and self._open:
                 self._green(st, out)
@@ -164,7 +170,7 @@ class FlagWatcher:
                     full = (self._period_kind or kind) == "full"
                     text, simple = W.SC_ENDING if full else W.VSC_ENDING
                     self._say(st, out, "sc_ending", text, simple, SC_TTL_S, bypass=False, data={"type": kind})
-            elif ev in (SCAR_RETURNED, SCAR_RESUME):
+            elif ev == SCAR_RESUME:  # "returned" (2) is the car entering the pit lane: no racing until the line
                 self.sc_status = "none"
                 if self._open:
                     self._green(st, out)
@@ -181,6 +187,7 @@ class FlagWatcher:
 
     def _green(self, st: RaceState, out: list[CallSpec]) -> None:
         self._open = False
+        self._need_none = True
         st.neutral = None
         if "green" not in self._period_calls:
             self._period_calls.add("green")

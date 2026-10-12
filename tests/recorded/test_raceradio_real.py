@@ -70,7 +70,8 @@ def test_melbourne_start_grid_brief_lights_out_and_lap_one() -> None:
 def test_austria_countdown_and_no_names() -> None:
     s = run("f1_25_2025_ps5_austria_race-excerpt.pwcap")
     said = [(c["call"], c["text"], c["lap"]) for c in s["calls"] if c["group"] == "start"]
-    assert ("laps_2", "Two laps to go.", 2) in said and ("last_lap", "Last lap.", 3) in said
+    # a 3-lap race: the grid brief said "3 laps", then "Last lap" (no "Two laps to go" on lap 2 any more)
+    assert ("last_lap", "Last lap.", 3) in said and not [c for c in said if c[0] == "laps_2"]
     assert "Driver " not in json.dumps(s) and s["checks"]["7_names"]["leaks"] == 0
 
 

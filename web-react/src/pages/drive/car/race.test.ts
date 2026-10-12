@@ -43,6 +43,15 @@ describe("race-control line with race radio", () => {
     expect(raceControlLine(events, 1001, null, positions)).toBe("Race control · Penalty issued · just now");
   });
 
+  it("another car's penalty or contact never reads as yours", () => {
+    expect(raceControlLine([ev("penalty", "PENA", 1000, false)], 1001)).toBe("Race control · Penalty for another car · just now");
+    expect(raceControlLine([ev("penalty", "PENA", 1000, true)], 1001)).toBe("Race control · Penalty for you · just now");
+    expect(raceControlLine([ev("collision", "COLL", 1000, false)], 1001)).toBe(
+      "Race control · Contact between other cars · just now",
+    );
+    expect(raceControlLine([ev("fastest_lap", "FTLP", 1000, false)], 1001)).toBe("Race control · Fastest lap set · just now");
+  });
+
   it("without a race block the line is as before", () => {
     const events = [ev("other", "OVTK", 999), ev("penalty", "PENA", 880)];
     expect(raceControlLine(events, 1000)).toBe("Race control · Penalty issued · 2 min ago");

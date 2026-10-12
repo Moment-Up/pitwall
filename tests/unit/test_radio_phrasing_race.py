@@ -66,7 +66,7 @@ def test_penalties_and_damage() -> None:
     assert radio_answer("penalties", clean, "any penalties?") == "No penalties and no warnings."
     dt = sheet(penalties={**race_block()["penalties"], "drive_throughs": 1, "time_s": 0, "warnings": 0})
     assert radio_answer("penalties", dt, "penalty?") == "A drive-through to serve."
-    assert radio_answer("damage", s, "What's my damage?") == "Puncture, rear left. Front wing, left damage, major."
+    assert radio_answer("damage", s, "What's my damage?") == "Puncture, rear left. Left front wing damage, major."
     none = sheet(damage={"grade": "none", "parts": [], "puncture": []})
     assert radio_answer("damage", none, "any damage?") == "No damage."
 
@@ -75,7 +75,9 @@ def test_position_in_gt7_with_its_evidence_note() -> None:
     note = "From GT7's race position; not yet checked against the game's screen."
     s = sheet(game="gt7", penalties=None, damage=None, ahead=None, behind=None, position=8, cars=14, laps_left=6.8,
               position_note=note, position_tier="community_documented")  # fmt: skip
-    assert radio_answer("gaps", s, "What position am I?") == f"P8 of 14, 7 laps to go. {note}"
+    # the note stays on screen (Drive) and in the fact, never in the spoken answer (as with the race calls)
+    assert radio_answer("gaps", s, "What position am I?") == "P8 of 14, 7 laps to go."
+    assert note in next(f.text for f in s.facts if f.topic == "race")
     assert radio_answer("penalties", s, "Do I have a penalty?") == "GT7 doesn't send penalties."
     assert radio_answer("who_ahead", s, "Who's ahead?") == "GT7 doesn't send data about the other cars."
 
@@ -108,6 +110,7 @@ def test_sector_deltas_from_the_lap_facts() -> None:
     assert said == f"Sector 2, {last.data['sectors_ms'][k] / 1000:.2f}: " + (
         "level with your best." if f"{abs(want):.2f}" == "0.00" else f"plus {want:.2f} to your best."
     )
-    assert radio_answer("sectors", s, "What were my splits?").startswith("Sectors: ")  # type: ignore[union-attr]
+    splits = radio_answer("sectors", s, "What were my splits?")
+    assert splits == "Sector 1 plus 0.01, sector 3 plus 0.56 to your best; the rest level."  # only what is off
     no_sectors = build_fact_sheet(_game_analysis("f1_25", "ps5"), None)  # the helper's laps have no sector times
     assert radio_answer("sectors", no_sectors, "How was sector 2?") is None

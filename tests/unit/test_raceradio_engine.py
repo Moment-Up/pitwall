@@ -133,7 +133,7 @@ def test_view_contract_on_a_busy_state() -> None:
     v = r.engine.view()
     assert set(v) == VIEW_KEYS and v["version"] == 1 and len(v["calls"]) == 3
     blob = json.dumps(v, allow_nan=False, separators=(",", ":"))  # compact, as the API's orjson sends it
-    assert len(blob.encode()) <= 1200, len(blob.encode())
+    assert len(blob.encode()) <= 1300, len(blob.encode())
     assert v["penalties"] == {
         "time_s": 15,
         "warnings": 3,

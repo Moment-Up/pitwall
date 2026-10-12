@@ -603,6 +603,7 @@ WORKER_DEADLINE_PER_SPEECH_S = 0.3
 WORKER_WORDS_PER_S = 2.6  # speech-time estimate for the deadline (same as the hub's)
 RESTART_BACKOFF_S = (1.0, 2.0, 5.0, 10.0, 30.0, 60.0)
 STABLE_AFTER_S = 60.0  # a worker up this long resets the back-off
+G2P_READY_WAIT_S = 60.0  # race radio: a name check waits this long for a cold worker (off the event loop)
 UNAVAILABLE_RECHECK_S = 60.0  # worker venv missing: look again this often (scripts/setup-tts.sh may run later)
 STATS_WINDOW = 50
 KEEP_WARM_IDLE_S = 300.0  # idle longer than this while a session is live: one throw-away synthesis (keep_warm)
@@ -1020,6 +1021,54 @@ class WorkerTts:
         if raw.sample_rate != self.sample_rate:
             raise TtsError(f"fallback rendered {raw.sample_rate} Hz, expected {self.sample_rate} Hz")
         return audio_post.process(raw)
+
+    # --- race radio (voice.addressing): would the G2P drop this word? ---
+    def g2p_dropped(self, text: str, wait_s: float = G2P_READY_WAIT_S) -> list[str] | None:
+        """The words of ``text`` the worker's G2P would drop (in neither misaki's dictionary nor the lexicon), from the
+        worker's ``g2p`` request (phonemes only, no audio); None when the worker is not ready within ``wait_s`` or
+        the request fails. Nothing is logged or counted: the text is the driver's own name (``voice.addressing``)."""
+        end = time.monotonic() + max(0.0, wait_s)
+        while not self._ready.wait(min(0.5, max(0.0, end - time.monotonic()))):
+            if time.monotonic() >= end or self._stop.is_set() or self._status in ("stopped", "unavailable"):
+                return None  # never holds a shutdown or a missing worker for the whole wait
+        prepared = prepare_text(text, self._lexicon)
+        if not prepared:
+            return []
+        with self._lock:
+            proc, gen = self._proc, self._gen
+            if proc is None or proc.stdin is None or proc.poll() is not None or not self.ready:
+                return None
+            rid = f"g{next(self._ids)}"
+            try:
+                proc.stdin.write((json.dumps({"op": "g2p", "id": rid, "text": prepared}) + "\n").encode())
+                proc.stdin.flush()
+            except (OSError, ValueError) as e:
+                self._kill(proc, f"request pipe closed: {e}")
+                return None
+            deadline = time.monotonic() + self.deadline_base_s
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    self._kill(proc, f"no g2p answer within {self.deadline_base_s:.1f} s")
+                    return None
+                try:
+                    g, kind, payload = self._frames.get(timeout=remaining)
+                except queue.Empty:
+                    continue
+                if g != gen:
+                    continue
+                obj = _loads(payload) if kind in ("E", "X") else None
+                if obj is None or obj.get("id") != rid:
+                    self._kill(proc, "worker exited" if kind is None else f"protocol error ({kind!r} frame)")
+                    return None
+                if kind == "X":
+                    if obj.get("fatal"):
+                        self._kill(proc, f"fatal worker error: {obj.get('error')}")
+                    return None
+                dropped = obj.get("dropped")
+                return [str(w) for w in dropped] if isinstance(dropped, list) else []
+
+    # --- end race radio ---
 
     def _deadline_s(self, text: str) -> float:
         speech_s = len(text.split()) / (WORKER_WORDS_PER_S * self.speed)

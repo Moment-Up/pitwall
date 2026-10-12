@@ -26,7 +26,7 @@ def test_one_call_after_the_real_jeddah_step_pattern_settles() -> None:
     assert r.drive(3.6, 5.0, damage=damage(floor=33, fl=100)) == []  # under 1.5 s since the last step
     calls = r.drive(5.1, 5.3, damage=damage(floor=33, fl=100))
     assert [(c.call, c.text, c.kind, c.priority, c.bypass_quiet) for c in calls] == [
-        ("damage", "Damage: front wing, left severe, floor major. Box for a new front wing.", "alert", "high", True)
+        ("damage", "Damage: left front wing severe, floor major. Box for a new front wing.", "alert", "high", True)
     ]
     assert calls[0].data["advise_box"] is True and calls[0].text_simple.startswith("The front wing is damaged.")
     assert calls[0].tier == "recorded"  # wings and floor: said on real captures
@@ -49,8 +49,19 @@ def test_non_severe_waits_for_the_cooldown_severe_always_goes() -> None:
     assert r.names == ["damage"]
     r.drive(9.1, 27.0, damage=damage(sidepod=15, diffuser=12))  # retried when the cooldown ends (20 s after 5.5)
     assert [c.text for c in r.calls[1:]] == ["Diffuser damage, minor."]
-    r.drive(28.0, 30.0, damage=damage(sidepod=15, diffuser=12, rw=100))
-    assert [c.text for c in r.calls[2:]] == ["Rear wing damage, severe."]
+    r.drive(28.0, 35.0, damage=damage(sidepod=15, diffuser=12, rw=100))
+    assert r.names == ["damage", "damage"]  # severe within 10 s of the last call: waits for what else breaks
+    r.drive(35.1, 36.0, damage=damage(sidepod=15, diffuser=12, rw=100, floor=70))
+    r.drive(36.1, 38.0, damage=damage(sidepod=15, diffuser=12, rw=100, floor=70))
+    assert [c.text for c in r.calls[2:]] == ["Damage: rear wing severe, floor severe."]  # one call for the incident
+
+
+def test_a_puncture_never_waits_for_the_severe_merge() -> None:
+    r = clean_race()
+    r.drive(4.0, 6.0, damage=damage(fl=80))
+    r.feed(frame(7.0, damage=damage(fl=80, tyres=(0, 0, 100, 0))))
+    calls = r.drive(7.1, 9.0, damage=damage(fl=80, tyres=(0, 0, 100, 0)))
+    assert [c.text for c in calls] == ["Puncture, rear left. Box this lap."]
 
 
 def test_both_front_wings_read_front_wing() -> None:

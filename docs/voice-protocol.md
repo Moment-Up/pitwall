@@ -58,7 +58,13 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
 - **Race radio** (kind **`race`** and `alert`, `pitwall/raceradio`): race situation calls (position, the start and
   countdown, lap one, gaps, warnings, minor damage) are kind `race`: normal and detailed intensity, with an allowance
   of their own while on track (2 a lap at `normal`, 3 at `detailed`; never the lap summary's or coaching's budget).
-  The finish (`meta.race_allowance` false) is said whatever the allowance. Flags, penalties and damage that matter
+  Calls marked `meta.race_allowance` false are said whatever the allowance: the grid brief and lights out (standing
+  still), the countdown (at the line), the finish (after the flag) and a move into P1. A countdown call made at the
+  line (`meta.merge_into_summary`) waits up to 6 s for that lap's `lap_summary` and is said inside it ("Lap 8,
+  1:29.4. Two laps to go."): one message, kind `lap_summary`, `meta.merged_race_call` the call id. Flags, penalties
+  and damage (`meta.repeat_ok`) are exempt from the 60 s identical-sentence filter: their own rules space them (a
+  second blue flag 30 s after the first is said). After a flashback the server drops the unsaid `position` and
+  `damage` calls (queued or held: the rewind undid them). Flags, penalties and damage that matter
   are `alert` (yellow, blue, the safety car, time penalties, major damage; a drive-through, stop-go, disqualification,
   black flag, a puncture or severe damage also past quiet mode); a rival's fastest lap and a far retirement are
   `info` (detailed only, never for simple wording). `meta` carries `topic` (`race:position`, `race:countdown`,
@@ -75,8 +81,10 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
 - **Name addressing** (`voice/addressing.py`): now and then the radio says the seated driver's first name ("Up to P5,
   Sam."): at most once a minute, on messages marked `meta.addressable` (lap one, a gained place, a clean pass, the
   finish, the last lap, the driver's fastest lap) and once on the first proactive message after a seat change; never
-  on an urgent call, a cue, an answer, an acknowledgement or a validation prompt. The driver's "Say my name" toggle
-  switches it off.
+  on an urgent call, a cue, an answer, an acknowledgement or a validation prompt. The name goes before the first
+  sentence end, or first when that sentence already has a comma or colon ("Sam, that lap, 1:15.5."). The driver's
+  "Say my name" toggle switches it off, and so does a Kokoro voice whose G2P would drop the name (asked once per
+  driver through the worker's `g2p` request; nothing is logged).
 - **Goal lines** (kind **`goal`**, `pitwall/motivation`): one short line when the driver reaches a goal, at most two a
   session, never with a lap time. `meta.topic` is `goal:<session id>`.
 - **Validation prompts** (kind **`validation`**, rig validation kit): spoken only while the driver runs a validation

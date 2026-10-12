@@ -218,6 +218,7 @@ PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
     "damage": _either(_race("damage"), capability("damage")),
     "penalties": _either(_race("penalties"), capability("penalties")),
     "who_ahead": capability("who_ahead"),  # with the question: radio_answer
+    "laps_left": _race("laps_left"),  # else engineer.deterministic_answer: not a race
     # --- end race radio ---
 }
 

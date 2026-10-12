@@ -226,4 +226,22 @@ class Rivals:
             "position": car.position,
             "gap_s": None if side.value_s is None else round(side.value_s, 1),
             "settled": side.settled,
+            "car_index": side.car_index,
+        }
+
+    @staticmethod
+    def leader_view(st: RaceState) -> dict[str, object] | None:
+        """The view's ``leader`` (F1 timing; non-personal label only): None when the player leads or it is unknown."""
+        rt, me = st.timing, st.me
+        if rt is None or me is None or me.position == 1:
+            return None
+        lead = next((c for c in rt.cars if c.position == 1 and not c.is_player), None)
+        if lead is None:
+            return None
+        kind, label = st.roster.label(lead.car_index, "the leader")
+        gap = me.gap_leader_ms
+        return {
+            "label": label,
+            "label_kind": kind,
+            "gap_s": round(gap / 1000, 1) if isinstance(gap, int) and gap > 0 else None,
         }

@@ -59,7 +59,7 @@ describe("the toggles and words as stored", () => {
   it("seven groups in the sheet's order, every one on by default", () => {
     expect(RADIO_CALL_GROUPS.map((g) => g.value)).toEqual(["flags", "start", "position", "rivals", "penalties", "damage", "name"]);
     expect(Object.values(ALL_RADIO_CALLS).every((v) => v === true)).toBe(true);
-    expect(RADIO_CALL_GROUPS.find((g) => g.value === "flags")?.hint).toBe("Yellow, blue, safety car. Red flags are always on.");
+    expect(RADIO_CALL_GROUPS.find((g) => g.value === "flags")?.hint).toBe("Yellow, blue, safety car. Red flags are always on. F1 only.");
     expect(RADIO_CALL_GROUPS.find((g) => g.value === "name")).toMatchObject({ label: "Say my name sometimes", hint: "At most once a minute." });
     expect(RADIO_WORDINGS.map((w) => w.label)).toEqual(["Automatic", "Simple", "Standard"]);
   });
@@ -128,13 +128,23 @@ describe("the driver form", () => {
     expect(withRadioCall(old, "damage", false)).toBe(old);
   });
 
-  it("the words hint says what Automatic means for this driver, and that coaching and strategy follow", () => {
+  it("the words hint shows an example, says what Automatic means for this driver, and that coaching follows", () => {
     expect(radioWordingHint("auto", "beginner")).toBe(
-      "Automatic: simple words for beginners (simple words for this driver). Also for coaching and strategy calls.",
+      'This driver is a beginner, so simple words: "You\'re up to 5th." Also for coaching and strategy calls.',
     );
-    expect(radioWordingHint("auto", "advanced")).toMatch(/standard words for this driver/);
-    expect(radioWordingHint("simple", "advanced")).toMatch(/^Simple words/);
-    expect(radioWordingHint("standard", "beginner")).toMatch(/^Race-engineer words/);
+    expect(radioWordingHint("auto", "advanced")).toBe(
+      'Race-engineer words for this driver\'s level: "Up to P5." Beginners get simple words. Also for coaching and strategy calls.',
+    );
+    expect(radioWordingHint("simple", "advanced")).toMatch(/^Simple words, one idea at a time: "You're up to 5th\."/);
+    expect(radioWordingHint("standard", "beginner")).toMatch(/^Race-engineer words: "Up to P5\."/);
+    for (const w of ["auto", "simple", "standard"] as const) {
+      expect(radioWordingHint(w, "beginner")).not.toMatch(/\((simple|standard) words for/); // never circular
+    }
+  });
+
+  it("the four F1-only groups say so; start and position work in every game", () => {
+    const f1Only = RADIO_CALL_GROUPS.filter((g) => g.hint?.endsWith("F1 only.")).map((g) => g.value);
+    expect(f1Only).toEqual(["flags", "rivals", "penalties", "damage"]);
   });
 });
 
@@ -151,7 +161,7 @@ describe("RaceRadioSettings (static markup)", () => {
       if (g.hint) expect(html).toContain(g.hint);
     }
     for (const w of RADIO_WORDINGS) expect(html).toContain(`>${w.label}<`);
-    expect(html).toContain("Automatic: simple words for beginners");
+    expect(html).toContain("This driver is a beginner, so simple words");
     expect(html).toContain('aria-label="Race radio"');
   });
 

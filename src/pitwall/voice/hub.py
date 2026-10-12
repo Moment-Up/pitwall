@@ -92,6 +92,7 @@ from pitwall.compat import is_windows
 from pitwall.core.live import LiveState
 from pitwall.motivation.radio import GoalLineGate, goal_message  # lane motivation
 from pitwall.voice.addressing import NameCaller  # race radio
+from pitwall.voice.field_zones import knowledge_model  # race radio: speak windows before a learned model
 from pitwall.voice.scheduler import (
     DRIVER_INITIATED,
     DRIVER_LAP_KINDS,
@@ -166,6 +167,7 @@ FAST_INTENTS = frozenset(
         "penalties",
         "damage",
         "sectors",
+        "laps_left",
         # --- end race radio ---
     }
 )
@@ -1285,6 +1287,8 @@ class RadioHub:
             self._loop.call_soon_threadsafe(self._enqueue_race, payload)
         elif kind == URGENT_NOTE and self._loop is not None:
             self._loop.call_soon_threadsafe(self._enqueue_urgent, payload)
+        elif kind == "race_retract" and self._loop is not None:
+            self._loop.call_soon_threadsafe(self._retract_race, payload)
         # --- end race radio ---
 
     def _enqueue_motivation(self, payload: dict[str, Any]) -> None:  # lane motivation (event loop only)
@@ -1339,6 +1343,24 @@ class RadioHub:
         except Exception:
             log.exception("race call failed")
 
+    def _retract_race(self, payload: dict[str, Any]) -> None:
+        """A flashback undid what the unsaid race calls of ``payload["groups"]`` say (position, damage): drop them,
+        queued or held (``race_retract``, docs/voice-protocol.md)."""
+        try:
+            sid, groups = payload.get("session_id"), payload.get("groups")
+            if sid != self.live.session_id or not isinstance(groups, list):
+                return
+            wanted = {g for g in groups if isinstance(g, str)}
+            dropped = self.scheduler.drop_race_calls(wanted)
+            held = self._held
+            if held is not None and held[0].meta.get("race_call") and held[0].meta.get("group") in wanted:
+                self._held = None
+                dropped += 1
+            if dropped:
+                log.info("flashback: %d unsaid race call(s) dropped", dropped)
+        except Exception:
+            log.exception("race retract failed")
+
     def _enqueue_urgent(self, payload: dict[str, Any]) -> None:
         """An urgent call (``voice.urgent``): said at once, past quiet mode, intensity and speak windows."""
         try:
@@ -1355,13 +1377,9 @@ class RadioHub:
         roster = getattr(self.live, "race_roster", None)
         if roster is None or getattr(roster, "session_id", None) != self.live.session_id:
             return None
-        from pitwall.raceradio.names import personal_who, side_of
+        from pitwall.raceradio.names import personal_who
 
-        name = roster.name(side_of(question))
-        if not name:
-            return None
-        text = personal_who(sheet, question, name)
-        return None if text is None else (text, name)
+        return personal_who(sheet, question, roster)
 
     def _check_name(self, name: str | None) -> None:
         """A TTS engine that can say which words its G2P drops is asked once, off the loop; a dropped name disables
@@ -1462,6 +1480,13 @@ class RadioHub:
         on_track = f is not None and conn == "live" and not (int(f.quality) & 0b1100)
         ttb = None
         model = self.live.track_model
+        # --- race radio --- no learned model yet (a new track, a joined race): the AI field's and the physics prior's
+        # braking zones, so "unknown" is never taken for calm (voice.field_zones)
+        if not model:
+            session = getattr(self.live, "session", None)
+            track = getattr(session, "track_id", None)
+            model = knowledge_model(getattr(self.live, "track_knowledge", None), track)
+        # --- end race radio ---
         if f is not None and model and f.lap_distance_m is not None and f.speed_kph and f.speed_kph > 30:
             ttb = time_to_next_braking(model, f.lap_distance_m, f.speed_kph)
         to_cue = self.cues.seconds_to_next_cue()  # a cue is a braking zone for the speak window

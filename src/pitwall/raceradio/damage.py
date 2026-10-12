@@ -9,8 +9,10 @@
 * **Puncture** [H; M: wear never jumps]: a wheel's tyre damage at ``PUNCTURE_MIN`` or more that rose by
   ``PUNCTURE_JUMP`` within ``PUNCTURE_WINDOW_S``. Always said first.
 * **When** - a part's grade rises above the grade last said for it: one message, the puncture first, then up to two
-  parts by grade. A non-severe call waits ``COOLDOWN_S`` [H] after the last damage call; severe damage and punctures
-  always go. Puncture and severe: ALERT HIGH past quiet mode; major: ALERT HIGH; minor: RACE NORMAL.
+  parts by grade. A non-severe call waits ``COOLDOWN_S`` [H] after the last damage call; severe damage waits until
+  ``SEVERE_MERGE_S`` [H] after it, so parts that break one after the other in one incident are said together, not one
+  call per part; a puncture always goes at once. Puncture and severe: ALERT HIGH past quiet mode; major: ALERT HIGH;
+  minor: RACE NORMAL.
 * **Re-baseline, silently** - after a flashback (the game restores the pre-crash values [M]) the next settled values
   become the said grades; a value going down (a pit-stop repair: the wing reads 0 again [M]) lowers its grade; the
   first values of a session (joined with damage already on the car) are the baseline. ``retired`` silences it all.
@@ -33,6 +35,7 @@ from pitwall.raceradio.state import RaceState
 
 SETTLE_S = 1.5  # [M]
 COOLDOWN_S = 20.0  # [H]
+SEVERE_MERGE_S = 10.0  # [H] severe damage this soon after a damage call waits and is said with what else broke
 PUNCTURE_MIN = 90  # [H; M]
 PUNCTURE_JUMP = 40  # [H; M]
 PUNCTURE_WINDOW_S = 3.0  # [H]
@@ -40,7 +43,7 @@ STEP_MIN = 10  # [H]
 STEP_WINDOW_S = 5.0  # [H]
 HISTORY_S = 6.0
 DAMAGE_TTL_S = 20.0
-VIEW_PARTS = 3  # the RaceView stays under 1.2 kB
+VIEW_PARTS = 3  # the RaceView stays under 1.3 kB
 WHEELS = ("FL", "FR", "RL", "RR")
 AERO = ("front_left_wing", "front_right_wing", "rear_wing", "floor", "diffuser", "sidepod")
 NONE, MINOR, MAJOR, SEVERE = 0, 1, 2, 3
@@ -96,6 +99,8 @@ class DamageWatcher:
             self._rebaseline = True
             self._pending = True
             self._changed_t = st.t
+            self._last_call = -math.inf  # the rewound incident's call is retracted: a new crash is a new call
+            self._retry_at = None
 
     def on_frame(self, st: RaceState, f: CarFrame, out: list[CallSpec]) -> None:
         d = f.damage
@@ -171,8 +176,12 @@ class DamageWatcher:
         if not punctures and not up:
             return
         severe = bool(punctures) or any(g == SEVERE for g in up.values())
-        if not severe and st.t - self._last_call < COOLDOWN_S:
+        since = st.t - self._last_call
+        if not severe and since < COOLDOWN_S:
             self._retry_at = self._last_call + COOLDOWN_S
+            return
+        if severe and not punctures and since < SEVERE_MERGE_S:
+            self._retry_at = self._last_call + SEVERE_MERGE_S  # one call for the incident, not one per part
             return
         self._last_call = st.t
         self._spoken.update(up)

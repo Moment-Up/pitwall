@@ -324,6 +324,8 @@ export function diagnosticsSummary(input: {
 
 /** Say online players' names (household; GET/PUT /api/race/settings, race-radio spec 8.3): off by default. */
 export const ONLINE_NAMES_TITLE = "Say online players' names";
+/** Where the race calls are chosen (the coaching amount above also sets how many a lap). */
+export const RACE_CALLS_NOTE = "Race calls are set per driver: Settings › Drivers.";
 export const ONLINE_NAMES_HINT = "Only when you ask who's ahead or behind. Names are never saved or written to logs.";
 
 export interface OnlineNamesView {

@@ -85,6 +85,15 @@ export interface RaceNeighbour {
   gap_s: number | null;
   /** false while the gap is in doubt (a position change, a car in the pit lane). */
   settled: boolean | null;
+  /** The game's car index (F1): an opt-in online name is only said for this same car. Absent from older servers. */
+  car_index?: number | null;
+}
+
+/** The race leader while the player is not leading (F1 timing): its non-personal label and the player's gap to it. */
+export interface RaceLeader {
+  label: string | null;
+  label_kind: LabelKind | null;
+  gap_s: number | null;
 }
 
 /** One proactive call as the snapshot keeps it (the last 3). */
@@ -97,7 +106,7 @@ export interface RaceCallView {
   text: string;
 }
 
-/** `snapshot["race"]` and GET /api/race/live (raceradio/model.py RaceView, version 1; at most 1.2 kB). */
+/** `snapshot["race"]` and GET /api/race/live (raceradio/model.py RaceView, version 1; at most 1.3 kB). */
 export interface RaceView {
   version: 1;
   session_id: string | null;
@@ -122,6 +131,8 @@ export interface RaceView {
   damage: RaceDamage | null;
   ahead: RaceNeighbour | null;
   behind: RaceNeighbour | null;
+  /** F1 races while the player is not P1 (answers "who's leading?"); absent from older servers. */
+  leader?: RaceLeader | null;
   calls: RaceCallView[];
 }
 

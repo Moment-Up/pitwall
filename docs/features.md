@@ -198,39 +198,46 @@ In a race the radio also calls the race itself, like a real engineer and spotter
   you caused: a zone that turned yellow with you in it, just past its start or just after you spun stays quiet);
   "Yellow flag." when your own car's flag turns yellow (confirmed a second later, so your own crash never gets one);
   "Blue flag. Let the car behind through." from your car's own flag only, never from a marshal zone (a zone shows blue
-  whenever any car is being lapped there); "Safety car, safety car. No overtaking.", "Safety car in this lap.",
-  "Green flag, racing."; and **"Red flag, red flag. Slow down, back to the pits."** at once, even at quiet intensity,
-  in quiet mode and mid-corner (it cannot be switched off).
+  whenever any car is being lapped there; a second one 30 s later is said too); "Safety car, safety car. No
+  overtaking.", "Safety car in this lap.", "Green flag, racing." (only when race control resumes the race, never while
+  the safety car is still on its way into the pit lane); and **"Red flag, red flag. Slow down, back to the pits."** at
+  once, even at quiet intensity, in quiet mode and mid-corner (it cannot be switched off).
 - **Start and countdown:** "P7 of 20, 3 laps." on the grid (GT7: "Rolling start. P8 of 14, 10 laps."), "Go, go." at
-  lights out, "Five laps to go." (races of 10 laps or more), "Two laps to go.", "Last lap." ("Last lap: the leader
-  finishes first." when you are lapped, "Flag's out. Last lap." when the leader finishes first), "Chequered flag. P5.
-  Up 2 from the grid.", and in practice and qualifying "Five minutes left in the session.", "One minute left."
+  lights out, "Five laps to go." (races of 10 laps or more), "Two laps to go." (races of 5 laps or more), "Last lap."
+  ("Last lap: the leader finishes first." when you are lapped, "Flag's out. Last lap." when the leader finishes
+  first), "Chequered flag. P5. Up 2 from the grid." ("P3 on the road, 5 seconds to add." with time penalties still to
+  add), and in practice and qualifying "Five minutes left in the session.", "One minute left." A countdown call at the
+  line is said with the lap time, as one message ("Lap 8, 1:29.4. Two laps to go.").
 - **Position:** "P8 after lap one, up 13." at the first line (never a call during lap 1's shuffle), then "Up to P5."
   / "Down to P12, lost 4." once a change has held for 3 s (at most every 20 s, merging changes), "Out of the pits in
   P9.", and "Good move on Norris. P4." for a clean pass (your own overtake, no contact, no penalty for it).
-- **Rivals** (F1): "Gap ahead 1.2s, closing. Behind 0.8s." on laps 3, 6, 9..., "Norris is pitting." (at detailed
+- **Rivals** (F1): "Gap ahead 1.2s, closing. Behind 0.8s." on laps 3, 6, 9... ("Leading by 2.4s, gap growing." in
+  the lead), "Norris is pitting." (at detailed
   intensity the strategy call says it instead), "Fastest lap of the race.", and at detailed intensity other cars'
   fastest laps and retirements far from you ("Hamilton is out.").
 - **Penalties and warnings** (F1): "5 second penalty: cutting the track.", "Drive-through penalty: a jump start.",
-  "Track limits warning, 2." (the count the game keeps), "Warning for contact.", "Drive-through served.", "Next lap
+  "Track limits: second warning." (the count the game keeps), "Warning for contact.", "Drive-through served.", "Next lap
   won't count either." It never guesses how many warnings are left before a penalty (the game does not say).
-- **Damage** (F1): "Damage: front wing severe, floor major. Box for a new front wing." once a crash has settled
-  (1.5 s), "Puncture, rear left. Box this lap.", "DRS fault."; never for wear, and silently reset after a flashback or
-  a repair.
-- **Your name** now and then: "Up to P5, Sam." (at most once a minute; and once after a seat change, to confirm who is
-  in the seat).
+- **Damage** (F1): "Damage: left front wing severe, floor major. Box for a new front wing." once a crash has settled
+  (1.5 s; parts that break within 10 s of a call are said together), "Puncture, rear left. Box this lap.", "DRS
+  fault."; never for wear, and silently reset after a flashback (which also drops unsaid position and damage calls)
+  or a repair.
+- **Your name** now and then: "Up to P5, Sam." or "Sam, P8 after lap one, up 3." (at most once a minute; and once
+  after a seat change, to confirm who is in the seat; never with a voice that cannot say it).
 
 Each driver can switch these groups off in Settings › Drivers (flags, start, position, rivals, penalties, damage, your
-name); the red flag is always on. Beginners hear simple words ("You're up to 5th.", "Puncture on the rear left tyre.
-Come into the pits."), and every driver can pick Automatic, Simple or Standard words there. Calls name other cars only
+name; flags, rivals, penalties and damage are F1 only); the red flag is always on. Beginners hear simple words
+("You're up to 5th.", "Puncture on the rear left tyre. Come into the pits.") and never a count of places lost, and
+every driver can pick Automatic, Simple or Standard words there. Calls name other cars only
 by the official AI driver names (Norris), a team (the Williams) or a race number (car 23), never a player's online ID:
 in F1 World races the AI cars carry real players' online IDs, so those cars are named by team or number too.
 
 Race calls have their own allowance (two a lap at normal intensity, three at detailed; none at quiet), so they never
-take the lap summary's or the coaching point's place; the finish is said whatever the allowance. Flags, penalties
-and damage that matter are alerts. Ask "who's ahead?", "do I have a penalty?", "what's my damage?", "how was sector
-2?" or "what position am I?" (any game: GT7 says its position is not yet checked against the game's screen) for an
-instant answer.
+take the lap summary's or the coaching point's place; the grid brief, lights out, the countdown, the finish and a move
+into the lead are said whatever the allowance. Flags, penalties and damage that matter are alerts. Ask "who's
+ahead?", "who's leading?", "do I have a penalty?", "what's my damage?", "how was sector 2?", "how many laps left?" or
+"what position am I?" (any game; GT7's position is not yet checked against the game's screen, which Drive shows) for
+an instant answer.
 
 | Game | Race radio |
 |---|---|

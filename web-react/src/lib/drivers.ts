@@ -126,22 +126,34 @@ export const SKILL_LEVELS: { value: SkillLevel; label: string; radio: string; en
   },
 ];
 
+/** The hints say what the amount does to the race radio too (voice/scheduler.py RACE_PER_LAP: 2 normal, 3 detailed;
+ * quiet: alerts only - flags, penalties, damage - and answers). */
 export const INTENSITIES: { value: CoachingIntensity; label: string; hint: string }[] = [
-  { value: "quiet", label: "Quiet", hint: "Alerts and answers only." },
-  { value: "normal", label: "Normal", hint: "Lap summary and the top point." },
-  { value: "detailed", label: "Detailed", hint: "More points per lap (beginners still get one)." },
+  { value: "quiet", label: "Quiet", hint: "Alerts and answers only: flags, penalties, damage." },
+  { value: "normal", label: "Normal", hint: "Lap summary, the top point and up to 2 race calls a lap." },
+  {
+    value: "detailed",
+    label: "Detailed",
+    hint: "More points per lap (beginners still get one), 3 race calls a lap and rivals' fastest laps.",
+  },
 ];
 
 // --- race radio (pitwall.raceradio): the per-driver toggles and the wording choice (race-radio spec 10.4) ---
 
-/** The toggles in the order the driver sheet lists them, with their hints (none where the label says it all). */
+/** The toggles in the order the driver sheet lists them, with their hints. Flags, rivals, penalties and damage come
+ * from F1's data only (GT7 and Forza send none of it): the hint says so, so a GT7 driver's parent knows those
+ * switches do nothing there. */
 export const RADIO_CALL_GROUPS: readonly { value: RadioCallGroup; label: string; hint: string | null }[] = [
-  { value: "flags", label: "Flags & race control", hint: "Yellow, blue, safety car. Red flags are always on." },
+  {
+    value: "flags",
+    label: "Flags & race control",
+    hint: "Yellow, blue, safety car. Red flags are always on. F1 only.",
+  },
   { value: "start", label: "Start & countdown", hint: "Lights out, laps to go, the finish." },
   { value: "position", label: "Position", hint: "Places gained and lost, good overtakes." },
-  { value: "rivals", label: "Rivals & gaps", hint: "Gaps every few laps, cars pitting, retirements." },
-  { value: "penalties", label: "Penalties & warnings", hint: null },
-  { value: "damage", label: "Damage", hint: null },
+  { value: "rivals", label: "Rivals & gaps", hint: "Gaps every few laps, cars pitting, retirements. F1 only." },
+  { value: "penalties", label: "Penalties & warnings", hint: "Time penalties, warnings, track limits. F1 only." },
+  { value: "damage", label: "Damage", hint: "Wing, floor, punctures. F1 only." },
   { value: "name", label: "Say my name sometimes", hint: "At most once a minute." },
 ];
 

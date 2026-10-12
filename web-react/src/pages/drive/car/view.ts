@@ -389,9 +389,11 @@ const SESSION_WORDS: Record<string, string> = {
   pit_exit: "Pit exit",
 };
 
-const CAR_WORDS: Record<string, { mine: string; any: string }> = {
-  penalty: { mine: "Penalty for you", any: "Penalty issued" },
-  collision: { mine: "Contact", any: "Collision reported" },
+/** `other`: the event says it is another car's (`player: false`), so the line never reads as being about you;
+ * `any`: the event does not say whose car. */
+const CAR_WORDS: Record<string, { mine: string; other?: string; any: string }> = {
+  penalty: { mine: "Penalty for you", other: "Penalty for another car", any: "Penalty issued" },
+  collision: { mine: "Contact", other: "Contact between other cars", any: "Collision reported" },
   fastest_lap: { mine: "Your fastest lap of the session", any: "Fastest lap set" },
 };
 
@@ -410,7 +412,7 @@ const OTHER_CODES: Record<string, string> = {
 export function eventWords(e: Pick<LiveEvent, "kind" | "code" | "player">): string | null {
   if (SESSION_WORDS[e.kind]) return SESSION_WORDS[e.kind]!;
   const car = CAR_WORDS[e.kind];
-  if (car) return e.player === true ? car.mine : car.any;
+  if (car) return e.player === true ? car.mine : e.player === false ? (car.other ?? car.any) : car.any;
   if (e.kind === "other" && e.code && OTHER_CODES[e.code]) return OTHER_CODES[e.code]!;
   return null;
 }

@@ -10,11 +10,19 @@
 * **Lights out** - F1 LGOT in a race on lap 1: "Go, go." No speak window, ``LIGHTS_TTL_S``; it is motivation, not a
   reaction aid (about 0.4-0.6 s after the lights).
 * **Laps to go** - at each line crossing in a race, with ``strategy.laps_left`` (F1: the lapped-car rule on the
-  field's timing; GT7: laps only): five laps to go (races of 10 laps or more), two laps to go, last lap (the lapped
-  variant when the leader finishes first). CHQF while the player is still racing and the last lap was not said: "Flag's
-  out. Last lap." Each once per session.
+  field's timing; GT7: laps only): five laps to go (races of 10 laps or more), two laps to go (races of 5 laps or more:
+  a 3-lap race heard its length in the grid brief and gets "Last lap" next), last lap (the lapped variant when the
+  leader finishes first). CHQF while the player is still racing and the last lap was not said: "Flag's out. Last lap."
+  Each once per session.
 * **Finish** - F1: the final ``LapCompletion``; GT7: the completion of lap ``total_laps``: the position and the change
-  from the grid. Then the session is ``finished`` (only urgent calls after it).
+  from the grid; with time penalties still to add (F1 LapData), the position "on the road" and the seconds instead of
+  the change. Then the session is ``finished`` (only urgent calls after it).
+* **Allowance** - the grid brief, lights out, the countdown and the finish are outside the per-lap race allowance
+  (``allowance=False``): said standing still, at the line or after the flag, they must not starve a lap's position
+  news or warnings (a 3-lap race heard 7 of 14 calls with them counted [M]).
+* **Evidence** - "Flag's out. Last lap." and the lapped last lap came from no real capture: tagged synthetic whatever
+  the call's name. The formation-lap brief is recorded (Imola, 2026-10-11: "P3 of 20, 32 laps." in the formation-lap
+  session; the race session after it skipped its own).
 * **Minutes left** - F1 practice and qualifying: five minutes and one minute left, only for a positive time left
   (one-shot qualifying sends 0 [M]). [synthetic]
 """
@@ -38,6 +46,7 @@ COUNTDOWN_TTL_S = 30.0
 FINISH_TTL_S = 60.0
 MINUTES_TTL_S = 30.0
 LAPS_5_MIN_TOTAL = 10
+LAPS_2_MIN_TOTAL = 5
 MINUTE_MARKS = (300.0, 60.0)
 Memo = dict[tuple[str | None, int | None], float]
 
@@ -110,6 +119,7 @@ class Countdown:
                         text_simple=simple,
                         ttl_s=LIGHTS_TTL_S,
                         needs_window=False,
+                        allowance=False,  # said at the start, not part of lap 1's race news
                     )
                 )
         elif (
@@ -122,7 +132,9 @@ class Countdown:
             and st.position not in (None, 1)
             and self._once("last_lap")
         ):
-            out.append(self._last_lap(W.LAST_LAP_FLAG, "flag"))
+            spec = self._last_lap(W.LAST_LAP_FLAG, "flag")
+            spec.tier = "synthetic"  # no real capture made it (the countdown said "Last lap" at the line first)
+            out.append(spec)
 
     # ------------------------------------------------------------------ frames and laps
     def tick(self, st: RaceState, out: list[CallSpec]) -> None:
@@ -178,6 +190,7 @@ class Countdown:
                 text_simple=simple,
                 ttl_s=ttl,
                 needs_window=window,
+                allowance=False,  # said standing on the grid (or before the rolling start)
                 data={"grid": grid, "cars": st.cars, "laps": st.total_laps, "rolling": rolling},
             )
         )
@@ -191,12 +204,18 @@ class Countdown:
         if left is None:
             return
         n = round(left)
-        if n == 5 and (st.total_laps or 0) >= LAPS_5_MIN_TOTAL and self._once("laps_5"):
+        total = st.total_laps or 0
+        if n == 5 and total >= LAPS_5_MIN_TOTAL and self._once("laps_5"):
             out.append(self._laps(5, "normal"))
-        elif n == 2 and self._once("laps_2"):
+        elif n == 2 and total >= LAPS_2_MIN_TOTAL and self._once("laps_2"):
             out.append(self._laps(2, "high"))
         elif n == 1 and self._once("last_lap"):
-            out.append(self._last_lap(W.LAST_LAP_LAPPED if source == "leader" else W.LAST_LAP, source or "laps"))
+            lapped = source == "leader"
+            spec = self._last_lap(W.LAST_LAP_LAPPED if lapped else W.LAST_LAP, source or "laps")
+            spec.data["at_line"] = True
+            if lapped:
+                spec.tier = "synthetic"  # no real capture had the leader finish first
+            out.append(spec)
 
     @staticmethod
     def _laps(n: int, priority: Any) -> CallSpec:
@@ -210,7 +229,8 @@ class Countdown:
             text_simple=simple,
             ttl_s=COUNTDOWN_TTL_S,
             topic="race:countdown",
-            data={"laps_left": n},
+            allowance=False,  # at the line: never starves the lap's position news
+            data={"laps_left": n, "at_line": True},
         )
 
     @staticmethod
@@ -225,6 +245,7 @@ class Countdown:
             ttl_s=COUNTDOWN_TTL_S,
             topic="race:countdown",
             addressable=True,
+            allowance=False,  # at the line: never starves the lap's position news
             data={"source": source},
         )
 
@@ -239,7 +260,9 @@ class Countdown:
             done = False
         if not done or not self._once("finish"):
             return
-        text, simple = W.finish(st.position, st.grid)
+        pen = None if st.frame is None or st.frame.penalties is None else st.frame.penalties.time_penalties_s
+        to_add = pen if isinstance(pen, int) and pen > 0 and st.f1 else None
+        text, simple = W.finish(st.position, st.grid, to_add)
         out.append(
             CallSpec(
                 group="start",
@@ -252,7 +275,7 @@ class Countdown:
                 topic="race:countdown",
                 addressable=True,
                 allowance=False,  # after the flag: never starved by the last lap's race allowance
-                data={"position": st.position, "grid": st.grid},
+                data={"position": st.position, "grid": st.grid, "time_penalties_s": to_add},
             )
         )
         st.finished = True

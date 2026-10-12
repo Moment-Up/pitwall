@@ -130,7 +130,8 @@ def test_every_scripted_call_is_made_once_tagged_synthetic() -> None:
     ]
     assert by["damage"]["text"] == "Puncture, rear right. Box this lap."
     assert by["retirement"]["text"] == "Russell is out."  # once: the re-send after the flashback is ignored
-    assert by["finish"]["text"] == "Chequered flag. P1. Up 3 from the grid."
+    # the scripted 5 s penalty is still to add at the flag: the position on the road, never "P1" alone
+    assert by["finish"]["text"] == "Chequered flag. P1 on the road, 5 seconds to add."
     assert all(c.get("synthetic") is True or c.get("meta", {}).get("synthetic") is True for c in seen)
     assert all(c.get("tier", c.get("meta", {}).get("tier")) == "synthetic" for c in seen)
 

@@ -46,7 +46,7 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   merge: ``/ws/live`` sends it with the 5 s static payload, in a new session's first snapshot and when ``strategy_rev``
   changed (a new view), at most every ``api.app.STRATEGY_EVERY_S``, and leaves the key out otherwise (the client keeps
   the previous value within the session). Every other caller (REST, fact sheets) gets it in every snapshot.
-* ``race`` (race radio, ``pitwall.raceradio``; <= 1.2 kB; ``/ws/live`` sends it when it changed, ``ON_CHANGE_KEYS``):
+* ``race`` (race radio, ``pitwall.raceradio``; <= 1.3 kB; ``/ws/live`` sends it when it changed, ``ON_CHANGE_KEYS``):
   the race radio's ``RaceView`` (position in any game, flags, penalties, damage, the last calls), published by the
   race radio worker at most twice a second and at once after a call; ``None`` until it has one for the live session.
 * ``coachref`` (small; ``/ws/live`` sends it like ``ai_pace``: ``api.app.ON_CHANGE_KEYS``): the seated driver's
@@ -733,7 +733,7 @@ class LiveState:
             if include_strategy:  # race strategy: /ws/live sends it only when it changed (``strategy_rev``) or static
                 out["strategy"] = self.strategy
             out["coachref"] = self.coachref  # --- coachref --- reference choice + drill (small, every snapshot)
-            out["race"] = self.race  # --- race radio --- RaceView (<= 1.2 kB; /ws/live sends it when it changed)
+            out["race"] = self.race  # --- race radio --- RaceView (<= 1.3 kB; /ws/live sends it when it changed)
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

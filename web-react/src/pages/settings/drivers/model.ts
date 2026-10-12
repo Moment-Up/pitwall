@@ -156,12 +156,13 @@ export function withRadioCall(f: DriverForm, group: RadioCallGroup, on: boolean)
   return { ...f, radio_calls: { ...f.radio_calls, [group]: on } };
 }
 
-/** What the radio words choice does; with "Automatic", what it means for this skill level. */
+/** What the radio words choice does, with an example; with "Automatic", what it means for this skill level. */
 export function radioWordingHint(w: RadioWording, skill: SkillLevel): string {
-  if (w === "simple") return "Simple words, one idea at a time. Also for coaching and strategy calls.";
-  if (w === "standard") return "Race-engineer words. Also for coaching and strategy calls.";
-  const now = skill === "beginner" ? "simple words for this driver" : "standard words for this driver";
-  return `Automatic: simple words for beginners (${now}). Also for coaching and strategy calls.`;
+  const also = "Also for coaching and strategy calls.";
+  if (w === "simple") return `Simple words, one idea at a time: "You're up to 5th." ${also}`;
+  if (w === "standard") return `Race-engineer words: "Up to P5." ${also}`;
+  if (skill === "beginner") return `This driver is a beginner, so simple words: "You're up to 5th." ${also}`;
+  return `Race-engineer words for this driver's level: "Up to P5." Beginners get simple words. ${also}`;
 }
 
 /** The "Usually plays" choice that means none. */

@@ -81,7 +81,7 @@ def test_track_limit_warnings_say_the_count_read_after_the_pena() -> None:
     r.feed(frame(1.1, penalties=pens(cc=1)))
     calls = r.feed(frame(1.31, penalties=pens(cc=2, warnings=2)))
     assert [(c.text, c.text_simple, c.data["track_limits"]) for c in calls] == [
-        ("Track limits warning, 2.", "Warning for cutting the track. Keep inside the white lines.", 2)
+        ("Track limits: second warning.", "Warning for cutting the track. Keep inside the white lines.", 2)
     ]
     assert r.feed(pena(10.0, 5, inf=4)) == []  # at most one warning call every 20 s
     calls = r.feed(pena(25.0, 5, inf=4))

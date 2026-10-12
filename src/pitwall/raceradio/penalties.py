@@ -45,6 +45,7 @@ SILENT_TYPES = frozenset({10, 12})
 NEXT_INVALID = frozenset({11, 13})
 PREVIOUS_INVALID = frozenset({14, 15})
 REMINDER, WARNING, RETIRED = 3, 5, 16
+OUT_OF_RACE_TYPES = frozenset({6, 17})  # DSQ, black flag timer: said even after the lap data's "dsq" status
 
 
 class PenaltyWatcher:

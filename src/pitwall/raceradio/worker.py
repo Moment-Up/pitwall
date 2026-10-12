@@ -8,12 +8,16 @@
 
   - each call to ``LiveState.notify("race_call", RaceCall.to_dict())`` (the radio hub filters it by the seated
     driver's groups and wording and queues it for the scheduler); an urgent call (the red flag) to
-    ``LiveState.notify(voice.urgent.URGENT_NOTE, ...)`` instead; neither when ``publish_calls`` is off (max-speed
-    replays: nobody is driving);
+    ``LiveState.notify(voice.urgent.URGENT_NOTE, ...)`` instead; after a flashback
+    ``LiveState.notify("race_retract", {"session_id", "groups"})`` (the hub drops those groups' unsaid calls); none of
+    them when ``publish_calls`` is off (max-speed replays: nobody is driving);
   - the view to ``LiveState.set_race`` (snapshot ``race``) at most every ``view_interval_s``, and at once after a call.
 
 * The formation-lap memo (``countdown.Memo``) outlives the engines: a formation-lap session is a separate game session
   [M], and the race session that follows must not say the grid brief again.
+* Engines are kept per session id (the last ``ENGINES_KEPT``): two sources feeding at once (UDP and Assetto Corsa)
+  each keep their engine's state instead of rebuilding it on every switch. The view published is the live
+  session's engine.
 * ``start=False`` (tests, headless tools): ``process_pending`` runs the same steps on the caller's thread.
 """
 
@@ -22,7 +26,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from collections import deque
+from collections import OrderedDict, deque
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
@@ -41,6 +45,8 @@ VIEW_INTERVAL_S = 0.5
 POLL_S = 0.02
 BLOCK_POLL_S = 0.001
 RACE_CALL_NOTE = "race_call"
+RACE_RETRACT_NOTE = "race_retract"
+ENGINES_KEPT = 2
 
 
 class RaceRadioWorker:
@@ -62,7 +68,8 @@ class RaceRadioWorker:
         self.view_interval_s = max(0.0, view_interval_s)
         self._clock = clock
         self._q: deque[tuple[str, object | None]] = deque()
-        self.engine: RaceRadioEngine | None = None
+        self.engine: RaceRadioEngine | None = None  # the engine of the latest item
+        self._engines: OrderedDict[str, RaceRadioEngine] = OrderedDict()  # per session id, the newest last
         self.memo: Memo = {}
         self._last_view = -1e9
         self._stop = threading.Event()
@@ -149,19 +156,28 @@ class RaceRadioWorker:
 
     def _handle(self, session_id: str, item: object | None) -> None:
         try:
-            eng = self.engine
             if item is None:
-                if eng is not None and eng.session_id == session_id:
-                    eng.end()
+                ended = self._engines.pop(session_id, None)
+                if ended is not None:
+                    ended.end()
+                    self.engine = ended
                     self._publish_view(force=True)
                 return
-            if eng is None or eng.session_id != session_id:
-                if eng is not None:
-                    eng.end()
-                eng = self.engine = RaceRadioEngine(session_id, track_model=self._track_model, memo=self.memo)
+            eng = self._engines.get(session_id)
+            if eng is None:
+                eng = RaceRadioEngine(session_id, track_model=self._track_model, memo=self.memo)
+                self._engines[session_id] = eng
+                while len(self._engines) > ENGINES_KEPT:
+                    _sid, old = self._engines.popitem(last=False)
+                    old.end()
                 self._last_view = -1e9
-                if self.live is not None and self.publish_calls:
-                    self.live.race_roster = NeighbourNames(eng)  # opt-in answers only (raceradio.names); never stored
+            else:
+                self._engines.move_to_end(session_id)
+            if eng is not self.engine:
+                self.engine = eng
+                live = self.live
+                if live is not None and self.publish_calls and live.session_id == session_id:
+                    live.race_roster = NeighbourNames(eng)  # opt-in answers only (raceradio.names); never stored
             eng.feed(item)
             self.processed += 1
             if self._drain_engine(eng):
@@ -176,9 +192,13 @@ class RaceRadioWorker:
         return None if live is None else live.track_model
 
     def _drain_engine(self, eng: RaceRadioEngine) -> bool:
-        """Hand out the engine's calls. True when there was one (the view shows it at once)."""
+        """Hand out the engine's calls (and a flashback's retraction). True when there was a call (the view shows it
+        at once)."""
         calls = eng.take_calls()
         live = self.live
+        stale = eng.take_retractions()
+        if stale and self.publish_calls and live is not None:
+            live.notify(RACE_RETRACT_NOTE, {"session_id": eng.session_id, "groups": list(stale)})
         for call in calls:
             self.calls += 1
             if not self.publish_calls or live is None:
@@ -191,8 +211,11 @@ class RaceRadioWorker:
         return bool(calls)
 
     def _publish_view(self, force: bool = False) -> None:
-        eng, live = self.engine, self.live
-        if eng is None or live is None:
+        live = self.live
+        if live is None:
+            return
+        eng = self._engines.get(live.session_id or "") or self.engine  # the live session's engine first
+        if eng is None:
             return
         now = self._clock()
         if not force and now - self._last_view < self.view_interval_s:

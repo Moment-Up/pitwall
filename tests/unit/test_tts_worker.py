@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+import logging
 import math
 import random
 import sys
@@ -382,7 +383,7 @@ FAKE_WORKER = textwrap.dedent(
         voices = {v: v for v in ("bm_fable", "bm_george", "bf_emma", "bf_isabella", "af_heart")}
 
         def g2p(self, text):
-            return text, [], []
+            return text, [], (["Zzyzx"] if "Zzyzx" in text else [])
 
         def synth(self, text, voice, speed):
             if args.fake_log:
@@ -483,6 +484,23 @@ def test_worker_tts_speaks_through_the_worker_once_ready(fake_worker: Path, tmp_
     finally:
         w.close()
     assert w.status == "stopped" and not w.ready
+
+
+def test_g2p_dropped_asks_the_worker_and_logs_nothing(fake_worker: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """Race radio name addressing (voice.addressing): the worker's g2p request says which words it would drop."""
+    w = make_worker(fake_worker)
+    assert w.g2p_dropped("Zzyzx", wait_s=0.0) is None  # not started: unknown, never a guess
+    w.start()
+    try:
+        wait_for(lambda: w.ready)
+        with caplog.at_level(logging.DEBUG):
+            assert w.g2p_dropped("Zzyzx") == ["Zzyzx"]
+            assert w.g2p_dropped("Sam") == []
+        assert "Zzyzx" not in caplog.text and w.diagnostics()["dropped_words"] == {}  # the name is never kept
+        assert w.synthesize_detailed("Still talking.").engine == "kokoro"  # the pipe is in step after it
+    finally:
+        w.close()
+    assert w.g2p_dropped("Sam", wait_s=5.0) is None  # stopped: returns at once
 
 
 def test_worker_timeout_kills_falls_back_and_restarts(fake_worker: Path) -> None:

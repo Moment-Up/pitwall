@@ -51,12 +51,15 @@ class NeighbourNames:
     def session_id(self) -> str:
         return self._engine.session_id
 
-    def name(self, side: str) -> str | None:
+    def name(self, side: str, car_index: int | None = None) -> str | None:
         """The personal name of the car on ``side`` ("ahead" | "behind"), None for an official AI driver, a generic
-        placeholder or an unknown car."""
+        placeholder or an unknown car. ``car_index``: the car the answer's position and gap are about (the snapshot's,
+        up to 0.5 s old); a different car on that side now gives None, never one car's name with another's gap."""
         eng = self._engine
         gaps = eng.rivals.gaps
         idx = (gaps.ahead if side == "ahead" else gaps.behind).car_index
+        if idx is None or car_index is None or idx != car_index:
+            return None
         roster = eng.st.roster
         if roster.label(idx)[0] == "driver":
             return None  # the official name is said already
@@ -67,13 +70,21 @@ def side_of(question: str | None) -> str:
     return "behind" if _BEHIND.search(question or "") else "ahead"
 
 
-def personal_who(sheet: FactSheet, question: str | None, name: str) -> str | None:
-    """ "<name> is ahead, P4, 1.2 seconds." from the race facts, with the online name for the label."""
+def personal_who(sheet: FactSheet, question: str | None, names: NeighbourNames) -> tuple[str, str] | None:
+    """(answer, name): "<name> is ahead, P4, 1.2 seconds." from the race facts with the online name of that same car
+    for the label; None for "who's leading?" (the leader is not a neighbour), the player leading, or no such name."""
+    if answers.asks_leader(question):
+        return None
     side = side_of(question)
     d = answers.race_fact(sheet, side)
-    if d is None:
+    pos = answers.race_fact(sheet, "position")
+    if d is None or (pos is not None and pos.get("position") == 1 and side == "ahead"):
         return None
-    return answers.neighbour_text({**d, "label": name, "label_kind": "name"}, side)
+    idx = d.get("car_index")
+    name = names.name(side, idx if isinstance(idx, int) and not isinstance(idx, bool) else None)
+    if not name:
+        return None
+    return answers.neighbour_text({**d, "label": name, "label_kind": "name"}, side), name
 
 
 def redact(text: str, name: str) -> str:

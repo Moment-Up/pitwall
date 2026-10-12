@@ -9,8 +9,10 @@ dashboard ignores it and reads the snapshot's ``race`` block (the last three cal
 ``synthetic`` (only on generated data, or the session itself is synthetic) or ``community`` (Forza: community docs,
 no recording). ``synthetic`` says whether the session is a synthetic stream.
 
-``RaceView`` (snapshot key ``race``, ``GET /api/race/live``; version 1, at most ~1.2 kB): every key always present,
-unknown values ``null`` (never NaN), units in key names.
+``RaceView`` (snapshot key ``race``, ``GET /api/race/live``; version 1, at most ~1.3 kB): every key always present,
+unknown values ``null`` (never NaN), units in key names. ``ahead`` / ``behind`` carry the car's index (``car_index``:
+an opt-in online name is only said for that same car, ``raceradio.names``); ``leader`` (F1 races, the player not P1)
+the leader's non-personal label and the player's gap to it.
 """
 
 from __future__ import annotations
@@ -206,5 +208,6 @@ def off_view(
         "damage": None,
         "ahead": None,
         "behind": None,
+        "leader": None,
         "calls": [],
     }

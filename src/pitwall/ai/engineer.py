@@ -114,6 +114,10 @@ _REFERENCE_WHO = re.compile(
 )
 # --- coachref ---
 
+# --- race radio --- laps_left outside a race, and in a race whose length the game does not send
+NO_RACE_LAPS = "No race laps to count in this session."
+NO_RACE_LENGTH = "The game doesn't say how long this race is."
+
 _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("radio_check", re.compile(r"\b(radio check|can you hear me|do you (?:read|copy)(?: me)?|mic check)\b", re.I)),
     # --- coachref --- practice drills and the live reference, before "quiet", "focus" and a bare corner (they name
@@ -194,6 +198,18 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         re.compile(
             r"\bwho(?:['’]s| is| was)?\b(?:\s+\w+){0,3}?\s+(?:ahead|in front|behind|leading|in the lead|chasing me|"
             r"following)\b|\bwhich (?:car|driver) is (?:ahead|behind|in front)\b",
+            re.I,
+        ),
+    ),
+    # laps to go, the lap number, "is this the last lap?" (raceradio.answers.laps_left): before last_lap ("last lap")
+    # and lap_times; never fuel, tyres or the week's laps (their own rules)
+    (
+        "laps_left",
+        re.compile(
+            r"\b(?:how many (?:more )?laps\b(?![^?.!]*\b(?:this week|today|fuel|tyres?|tires?)\b)"
+            r"|laps? (?:left|to go|remaining)\b(?!\s+(?:of|on)\b)"
+            r"|(?:what|which) lap (?:is (?:it|this)|are we on|am i on)"
+            r"|is (?:this|it) the (?:last|final) lap)",
             re.I,
         ),
     ),
@@ -302,6 +318,7 @@ _TOPICS: dict[str, set[str]] = {
     # --- race radio ---
     "who_ahead": {"session", "game", "race", "gaps"},
     "penalties": {"session", "game", "race"},
+    "laps_left": {"session", "game", "race"},
     # --- end race radio ---
     "ers": {"session", "game", "ers", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "sectors": {"session", "game", "laps"},
@@ -665,6 +682,13 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *,
         if gap is not None or first("gaps") is not None:
             return say(gap, first("gaps", contains="behind"))
         return say(game) if game is not None else say(first("session"))
+    # --- race radio --- laps to go: the race radio's position fact (raceradio.answers phrases it), else not a race
+    if n == "laps_left":
+        race = first("race", contains="position")
+        if race is None:
+            return NO_RACE_LAPS
+        return say(race) if race.data.get("laps_to_go") is not None else NO_RACE_LENGTH
+    # --- end race radio ---
     general = (first("laps", contains="Best clean"), first("observations"))  # the answer before these intents
     if n == "ers":
         ers = first("ers")

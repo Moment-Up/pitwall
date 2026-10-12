@@ -26,8 +26,12 @@ Acceptance checks (race-radio spec 11.4) per race session:
 5. every ``position_change`` says the LapData position at the call; none within 5 s of a flashback; none on lap 1;
 6. every ``penalty`` / ``warning`` maps to a PENA of the player (type, infringement, time);
 7. no personal name anywhere (count);
-8. every non-urgent call the scheduler hands out on track is in a speak window (brake < 0.05, |steer| < 0.12), except
-   the grid brief and lights out (standing on the grid / at the launch).
+8. every non-urgent call the scheduler hands out on track is in a speak window (brake < 0.05, |steer| < 0.12) at the
+   moment it is sent, except the grid brief and lights out (standing on the grid / at the launch). Reported too, not
+   failed: ``spoken_overlaps``, the calls whose spoken interval (send + ``LATENCY_S``, then ``estimate_speech_s``) met
+   a frame that was braking or cornering. The script has no track model, so the speak window's braking-zone look-ahead
+   (the learned model, or before it the AI field's braking zones: ``voice.field_zones``) is not simulated and those
+   overlaps are an upper bound of what the live radio does.
 """
 
 from __future__ import annotations
@@ -56,6 +60,7 @@ from pitwall.model.telemetry import (
     Participants,
     SessionInfo,
 )
+from pitwall.raceradio.countdown import Memo
 from pitwall.raceradio.engine import RaceRadioEngine
 from pitwall.raceradio.model import RaceCall
 from pitwall.raceradio.radio import race_message
@@ -93,6 +98,7 @@ class SessionRun:
     flbk: list[float] = field(default_factory=list)
     lgot: list[float] = field(default_factory=list)
     payload_blobs: list[str] = field(default_factory=list)
+    speaking: list[dict[str, Any]] = field(default_factory=list)  # dispatched calls whose audio may still be playing
 
 
 def decode(packets: Iterable[CapturedPacket]) -> Iterator[tuple[CapturedPacket, Any]]:
@@ -133,6 +139,7 @@ def run(packets: Iterable[CapturedPacket], uid_filter: str | None = None) -> lis
     t_first: float | None = None
     participants: Participants | None = None
     first: list[float] = []
+    memo: Memo = {}  # as the race radio worker: a formation-lap session's brief is not said again by the race after it
 
     def tap(ps: Iterable[CapturedPacket]) -> Iterator[CapturedPacket]:
         for p in ps:
@@ -159,7 +166,7 @@ def run(packets: Iterable[CapturedPacket], uid_filter: str | None = None) -> lis
         if cur is None:
             if isinstance(item, Participants):
                 continue
-            cur = SessionRun(len(sessions), None, RaceRadioEngine(f"session-{len(sessions)}"), t_first)
+            cur = SessionRun(len(sessions), None, RaceRadioEngine(f"session-{len(sessions)}", memo=memo), t_first)
             sessions.append(cur)
             if participants is not None:
                 _observe(cur, participants, t)
@@ -188,6 +195,7 @@ def run(packets: Iterable[CapturedPacket], uid_filter: str | None = None) -> lis
             if msg is not None:
                 cur.scheduler.enqueue(msg)
         if isinstance(item, CarFrame):
+            _spoken(cur, item, t)
             _dispatch(cur, item, t, t_first)
         if isinstance(item, GameEvent) and item.kind is EventKind.SESSION_ENDED:
             cur = None
@@ -228,6 +236,25 @@ def _observe(s: SessionRun, item: Any, t: float) -> None:
                 s.zone_onsets.setdefault(z.game_number, []).append((t, -1.0 if inside else past))
 
 
+def _calm(f: CarFrame) -> bool:
+    return (f.brake or 0.0) < CALM_BRAKE and abs(f.steering or 0.0) < CALM_STEERING
+
+
+def _spoken(s: SessionRun, f: CarFrame, t: float) -> None:
+    """Mark the dispatched calls whose (estimated) audio is playing in a frame that brakes or corners on track."""
+    if not s.speaking:
+        return
+    on_track = not (f.quality & NOT_DRIVING)
+    keep = []
+    for d in s.speaking:
+        if t > d["_end"]:
+            continue
+        keep.append(d)
+        if t >= d["_start"] and on_track and not _calm(f):
+            d["_ref"]["spoken_overlap"] = True
+    s.speaking = keep
+
+
 def _dispatch(s: SessionRun, f: CarFrame, t: float, t_first: float) -> None:
     state = _state(f)
     speaking = t < s.busy_until
@@ -235,22 +262,24 @@ def _dispatch(s: SessionRun, f: CarFrame, t: float, t_first: float) -> None:
     if msg is None:
         return
     s.busy_until = t + LATENCY_S + estimate_speech_s(msg.speech)
-    s.dispatched.append(
-        {
-            "t": round(t - t_first, 2),
-            "id": msg.id,
-            "call": msg.meta.get("call"),
-            "text": msg.text,
-            "urgent": msg.priority >= Priority.URGENT,
-            "needs_window": msg.needs_speak_window,
-            "on_track": state.on_track,
-            "brake": f.brake,
-            "steering": f.steering,
-            "speed": f.speed_kph,
-            "lap": f.lap_number,
-            "kind": msg.kind.value,
-        }
-    )
+    d = {
+        "t": round(t - t_first, 2),
+        "id": msg.id,
+        "call": msg.meta.get("call"),
+        "text": msg.text,
+        "urgent": msg.priority >= Priority.URGENT,
+        "needs_window": msg.needs_speak_window,
+        "on_track": state.on_track,
+        "brake": f.brake,
+        "steering": f.steering,
+        "speed": f.speed_kph,
+        "lap": f.lap_number,
+        "kind": msg.kind.value,
+        "spoken_overlap": False,
+    }
+    s.dispatched.append(d)
+    if msg.needs_speak_window and msg.priority < Priority.URGENT:
+        s.speaking.append({"_start": t + LATENCY_S, "_end": s.busy_until, "_ref": d})
 
 
 def _result(s: SessionRun) -> dict[str, Any]:
@@ -331,7 +360,13 @@ def _result(s: SessionRun) -> dict[str, Any]:
         )
         if not calm and not launch:
             window_bad.append(d["t"])
-    checks["8_speak_window"] = {"violations": window_bad, "dispatched": len(s.dispatched), "ok": not window_bad}
+    overlaps = [d["t"] for d in s.dispatched if d.get("spoken_overlap")]
+    checks["8_speak_window"] = {
+        "violations": window_bad,
+        "dispatched": len(s.dispatched),
+        "spoken_overlaps": overlaps,  # informational: no braking-zone look-ahead here (module docstring)
+        "ok": not window_bad,
+    }
     by_group = Counter(c["group"] for c in calls)
     return {
         "session": s.index,

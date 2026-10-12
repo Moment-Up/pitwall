@@ -7,7 +7,9 @@
   single position call before it: lap 1 churns (up to 42 changes on a real online start [M]).
 * **Position change** - after lap 1, once the position has held for ``SETTLE_S`` [H], at most every ``COOLDOWN_S`` [H]
   (several changes merge into one call: "Down to P12, lost 4."), not within ``FLBK_S`` of a flashback, not in the pits.
-  After lap 1 real races had 0-14 changes, at most 2 reverted within 3 s [M].
+  After lap 1 real races had 0-14 changes, at most 2 reverted within 3 s [M]. A move into P1 is outside the per-lap
+  race allowance: taking the lead is always heard. A flashback also retracts unsaid position calls (the engine's
+  ``take_retractions``).
 * **Pit exit** - ``PIT_EXIT_S`` after leaving the pit lane in a race: "Out of the pits in P9."
 * **Clean pass** (F1) - instead of the change call: a gain of exactly one place, the player's own OVTK in the settle
   window, no collision involving the player within ``COLL_WINDOW_S`` of it, no penalty for the player within
@@ -129,21 +131,21 @@ class PositionTracker:
                 self._last_praise = t
                 name = st.roster.driver_name(passed)
                 text, simple = W.clean_pass(pos, name)
-                out.append(
-                    self._spec(
-                        "clean_pass",
-                        text,
-                        simple,
-                        {"position": pos, "before": spoken, "passed": passed, "passed_name": name},
-                        addressable=True,
-                    )
+                spec = self._spec(
+                    "clean_pass",
+                    text,
+                    simple,
+                    {"position": pos, "before": spoken, "passed": passed, "passed_name": name},
+                    addressable=True,
                 )
+                spec.allowance = pos != 1  # taking the lead always gets through
+                out.append(spec)
                 self._said(st, pos)
                 return
         text, simple = W.position_change(pos, spoken)
-        out.append(
-            self._spec("position_change", text, simple, {"position": pos, "before": spoken}, addressable=gain > 0)
-        )
+        spec = self._spec("position_change", text, simple, {"position": pos, "before": spoken}, addressable=gain > 0)
+        spec.allowance = pos != 1  # a move into the lead always gets through
+        out.append(spec)
         self._said(st, pos)
 
     def _pass_of(self, st: RaceState) -> tuple[float, int | None] | None:

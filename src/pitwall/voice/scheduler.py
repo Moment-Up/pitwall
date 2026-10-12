@@ -40,6 +40,11 @@ proactive kind waits for a speak window except urgent alerts and cues:
   cap per analysed lap (``COACHING_PER_LAP``) still applies on top, and so do the strategy planner's own limits and
   the goal lines' per-session cap. Race calls (RACE) have an allowance of their own (``RACE_PER_LAP``: 2 normal, 3
   detailed), counted the same way, so they never starve the lap summary or coaching, nor the other way round.
+  Race radio extras (delimited blocks): a call marked ``meta["repeat_ok"]`` (flags, penalties, damage: the race radio
+  rule has its own cooldown) is exempt from the repeat window, so a second blue flag 30 s after the first is said; a
+  countdown call made at the line (``meta["merge_into_summary"]``) waits up to ``SUMMARY_MERGE_HOLD_S`` for that
+  lap's summary and goes out inside it ("Lap 8, 1:29.4. Two laps to go."), one transmission instead of two;
+  ``drop_race_calls`` drops unsaid race calls a flashback made stale.
 * **Interrupting** - while the radio is talking, only an ``URGENT`` message or a ``CUE`` is handed out, and only
   when it outranks the message on air (urgent > cue > everything else). The caller cancels the current playback
   and says it, so a red flag does not wait for a 6 s lap summary to finish and a braking cue does not land after
@@ -85,9 +90,11 @@ ended or was cancelled.
 
 from __future__ import annotations
 
+import dataclasses  # race radio: a countdown call folded into the lap summary
 import math
 import re
 import threading
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Literal
 
@@ -163,6 +170,10 @@ _TALK_LAPS_KEPT = 8
 # --- race radio --- race calls said per driving lap while on track: their own allowance, counted like the talk budget
 RACE_PER_LAP: dict[Intensity, int] = {"quiet": 0, "normal": 2, "detailed": 3}  # [H]
 RACE_ALLOWANCE_KEY = "race_allowance"  # meta False: a race call outside the allowance (the finish, after the flag)
+REPEAT_OK_KEY = "repeat_ok"  # meta True: exempt from the repeat window (the race radio rule has its own cooldown)
+SUMMARY_MERGE_KEY = "merge_into_summary"  # meta True: a call made at the line, said inside that lap's summary
+SUMMARY_MERGE_HOLD_S = 6.0  # [H] such a call waits this long for the lap summary (analysis lands within ~1-2 s)
+RACE_CALL_KEY = "race_call"  # meta: the race radio call id (raceradio.radio)
 # --- end race radio ---
 
 LapKey = tuple[str, int | str | None]
@@ -223,6 +234,8 @@ def _urgent(msg: RadioMessage) -> bool:
 
 def _repeat_filtered(msg: RadioMessage) -> bool:
     """Subject to the identical-sentence repeat window (see module docstring for the exemptions)."""
+    if msg.meta.get(REPEAT_OK_KEY) is True:  # race radio: a second blue flag or penalty is news
+        return False
     return msg.kind not in DRIVER_INITIATED and msg.kind is not MessageKind.CUE and not _urgent(msg)
 
 
@@ -235,6 +248,24 @@ def _budgeted(msg: RadioMessage) -> bool:
 def _race_counted(msg: RadioMessage) -> bool:
     """Counts toward the per-lap race allowance (urgent calls never do, nor a call marked outside it)."""
     return msg.kind is MessageKind.RACE and not _urgent(msg) and msg.meta.get(RACE_ALLOWANCE_KEY) is not False
+
+
+def _line_call(msg: RadioMessage) -> bool:
+    """A race call made at the line that a lap summary may carry ("Two laps to go.")."""
+    return msg.kind is MessageKind.RACE and msg.meta.get(SUMMARY_MERGE_KEY) is True and not _urgent(msg)
+
+
+def _with_line_call(summary: RadioMessage, call: RadioMessage) -> RadioMessage:
+    """The lap summary with the line call after it: one transmission, the summary's kind, budget and lap identity."""
+    return dataclasses.replace(
+        summary,
+        text=f"{summary.text} {call.text}",
+        speech=f"{summary.speech} {call.speech}",
+        expires_mono=None  # no expiry on either side: neither drops it
+        if summary.expires_mono is None or call.expires_mono is None
+        else max(summary.expires_mono, call.expires_mono),
+        meta={**summary.meta, "merged_race_call": call.meta.get(RACE_CALL_KEY)},
+    )
 
 
 # --- end race radio ---
@@ -400,6 +431,20 @@ class RadioScheduler:
                 self._pending = [
                     e for e in self._pending if not (e[1].kind is msg.kind and _lap_identity(e[1]) not in (None, lap))
                 ]
+            # --- race radio --- a countdown call made at the line and the lap summary go out as one message
+            if msg.kind is MessageKind.LAP_SUMMARY:
+                line = next((e for e in self._pending if _line_call(e[1])), None)
+                if line is not None:
+                    self._pending.remove(line)
+                    msg = _with_line_call(msg, line[1])
+            elif _line_call(msg):
+                summaries = [e for e in self._pending if e[1].kind is MessageKind.LAP_SUMMARY]
+                summary = max(summaries, key=lambda e: e[0]) if summaries else None
+                if summary is not None:
+                    i = self._pending.index(summary)
+                    self._pending[i] = (summary[0], _with_line_call(summary[1], msg))
+                    return True
+            # --- end race radio ---
             self._seq += 1
             self._pending.append((self._seq, msg))
             if len(self._pending) > self.max_pending:
@@ -440,6 +485,18 @@ class RadioScheduler:
             if self._quiet is not None and not self._quiet.indefinite:
                 self._quiet = None
             return n
+
+    # --- race radio ---
+    def drop_race_calls(self, groups: Collection[str]) -> int:
+        """Drop the queued race calls of ``groups`` (a flashback undid what they say); returns how many."""
+        with self._lock:
+            n = len(self._pending)
+            self._pending = [
+                e for e in self._pending if not (e[1].meta.get(RACE_CALL_KEY) and e[1].meta.get("group") in groups)
+            ]
+            return n - len(self._pending)
+
+    # --- end race radio ---
 
     def drop_driver_messages(self) -> int:
         """Somebody else took the seat: drop the queued lap summaries, goal lines and coaching points (they are about
@@ -486,6 +543,8 @@ class RadioScheduler:
             }
             for entry in candidates:
                 msg = entry[1]
+                if _line_call(msg) and now_mono - msg.created_mono < SUMMARY_MERGE_HOLD_S:
+                    continue  # race radio: waiting for the lap summary to carry it
                 if self._eligible(msg, state, quiet, gap_ok, summary_laps):
                     self._pending.remove(entry)
                     self._dispatched(msg, state, now_mono)

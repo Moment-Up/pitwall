@@ -86,7 +86,7 @@ def grid_brief(grid: int | None, cars: int | None, laps: int | None, *, rolling:
     text = lead + ", ".join(parts) + "."
     if grid is not None:
         simple = f"{lead}You start {ordinal(grid)}" + (f" of {cars}." if cars else ".")
-        if laps and not rolling:
+        if laps:
             simple += f" {laps} laps."
     else:
         simple = text
@@ -107,12 +107,19 @@ LAST_LAP_FLAG = "Flag's out. Last lap."
 LAST_LAP_SIMPLE = "This is the last lap."
 
 
-def finish(pos: int | None, grid: int | None) -> tuple[str, str]:
+def finish(pos: int | None, grid: int | None, time_to_add_s: int | None = None) -> tuple[str, str]:
+    """The finish: the position and places gained from the grid (never "down N": the result is said, not the loss).
+    With time penalties still to add the position is the one on the road, said as such."""
     if pos is None:
         return "Chequered flag.", "That's the finish."
+    if time_to_add_s:
+        return (
+            f"Chequered flag. P{pos} on the road, {time_to_add_s} seconds to add.",
+            f"That's the finish. You crossed the line {ordinal(pos)}; {time_to_add_s} seconds will be added.",
+        )
     text = f"Chequered flag. P{pos}."
-    if grid is not None and grid != pos:
-        text += f" Up {grid - pos} from the grid." if pos < grid else f" Down {pos - grid}."
+    if grid is not None and pos < grid:
+        text += f" Up {grid - pos} from the grid."
     return text, f"That's the finish. You came {ordinal(pos)}."
 
 
@@ -130,7 +137,7 @@ def lap1_summary(pos: int, grid: int | None) -> tuple[str, str]:
         n = grid - pos
         return f"P{pos} after lap one, up {n}.", f"After lap one you're {ordinal(pos)}. That's {places(n)} up."
     n = pos - grid
-    return f"P{pos} after lap one, down {n}.", f"After lap one you're {ordinal(pos)}. That's {places(n)} down."
+    return f"P{pos} after lap one, down {n}.", f"After lap one you're {ordinal(pos)}."  # simple: no count of losses
 
 
 def position_change(pos: int, before: int) -> tuple[str, str]:
@@ -154,11 +161,14 @@ def clean_pass(pos: int, name: str | None) -> tuple[str, str]:
 
 # ---------------------------------------------------------------------------------------------------- rivals
 def _trend(side: str, slope: float | None) -> str:
-    """Trend words for a gap's slope (s/lap) when |slope| >= TREND_MIN."""
+    """Trend words for a gap's slope (s/lap) when |slope| >= TREND_MIN; ``leading``: the gap to the car behind, said
+    as the leader's gap ("gap growing"), never "dropping back" (which reads as the leader losing ground)."""
     if slope is None:
         return ""
     if side == "ahead":
         return ", closing" if slope < 0 else ", pulling away"
+    if side == "leading":
+        return ", gap shrinking" if slope < 0 else ", gap growing"
     return ", closing" if slope < 0 else ", dropping back"
 
 
@@ -169,7 +179,7 @@ def gap_report(
     if leading:
         if behind is None:
             return None
-        text = f"Leading by {behind:.1f}s{_trend('behind', behind_slope)}."
+        text = f"Leading by {behind:.1f}s{_trend('leading', behind_slope)}."
         return text, f"You're leading by {behind:.1f}s."
     parts: list[str] = []
     if ahead is not None:
@@ -327,9 +337,15 @@ def serve_reminder(infringement: int | None) -> tuple[str, str]:
     return "Penalty still to serve.", "You still have a penalty to serve."
 
 
+_COUNT_WORDS = {1: "first", 2: "second", 3: "third", 4: "fourth", 5: "fifth"}
+
+
 def warning(infringement: int | None, track_limit_count: int | None) -> tuple[str, str]:
     if infringement in TRACK_LIMIT_INFRINGEMENTS:
-        text = f"Track limits warning, {track_limit_count}." if track_limit_count else "Track limits warning."
+        if track_limit_count and track_limit_count > 0:
+            text = f"Track limits: {_COUNT_WORDS.get(track_limit_count, ordinal(track_limit_count))} warning."
+        else:
+            text = "Track limits warning."
         return text, "Warning for cutting the track. Keep inside the white lines."
     if infringement in CONTACT_INFRINGEMENTS:
         return "Warning for contact.", "Warning for contact. Give the other cars more room."
@@ -348,8 +364,8 @@ PREVIOUS_LAP_INVALID = "Your previous lap was deleted too."
 # ---------------------------------------------------------------------------------------------------- damage
 GRADES = ("none", "minor", "major", "severe")
 PART_WORDS: dict[str, str] = {
-    "front_left_wing": "front wing, left",
-    "front_right_wing": "front wing, right",
+    "front_left_wing": "left front wing",
+    "front_right_wing": "right front wing",
     "front_wing": "front wing",
     "rear_wing": "rear wing",
     "floor": "floor",
@@ -363,9 +379,9 @@ WHEEL_WORDS: dict[str, str] = {"FL": "front left", "FR": "front right", "RL": "r
 
 
 def part_words(part: str, *, simple: bool = False) -> str:
-    """ "front wing, left"; brakes: "brakes, rear left" (``brakes_RL``)."""
+    """ "left front wing"; brakes: "rear left brakes" (``brakes_RL``)."""
     if part.startswith("brakes_"):
-        return "brakes" if simple else f"brakes, {WHEEL_WORDS[part[7:]]}"
+        return "brakes" if simple else f"{WHEEL_WORDS[part[7:]]} brakes"
     return (SIMPLE_PART_WORDS if simple else PART_WORDS)[part]
 
 

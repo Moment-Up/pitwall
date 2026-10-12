@@ -11,7 +11,11 @@ another game), with the reason in words.
 Common suppression: while the player is ``retired`` (PENA 16, or a result status out of the race; a flashback clears
 it - real data: a terminal-damage retirement followed by a flashback 14 s later [M]) or ``finished`` (after the finish
 call), and while the latest frame is paused, a replay or out of the race, only urgent calls go out (the grid brief and
-the finish are made on the grid and at the flag). Synthetic sessions make every call, tagged ``synthetic``.
+the finish are made on the grid and at the flag; a disqualification or black flag is said even when the lap data's
+"dsq" status came first). Synthetic sessions make every call, tagged ``synthetic``.
+
+Flashback: ``take_retractions`` hands out the groups whose unsaid calls a flashback made stale (position, damage): the
+worker tells the radio hub to drop them (``race_retract``, docs/voice-protocol.md).
 """
 
 from __future__ import annotations
@@ -39,7 +43,7 @@ from pitwall.raceradio.countdown import Countdown, Memo
 from pitwall.raceradio.damage import DamageWatcher
 from pitwall.raceradio.flags import SLOW_KPH, FlagWatcher
 from pitwall.raceradio.model import CALLS_SHOWN, RECORDED_CALLS, VIEW_VERSION, CallSpec, RaceCall, clean, off_view
-from pitwall.raceradio.penalties import PenaltyWatcher
+from pitwall.raceradio.penalties import OUT_OF_RACE_TYPES, PenaltyWatcher
 from pitwall.raceradio.positions import PositionTracker
 from pitwall.raceradio.rivals import Rivals
 from pitwall.raceradio.state import F1_GAMES, IN_PITS, OUT_OF_RACE, RaceState
@@ -56,6 +60,7 @@ FORZA_GAMES = (Game.FORZA_MOTORSPORT, Game.FORZA_HORIZON)
 GRID_MAX_KPH = 5.0
 NOT_DRIVING = FrameQuality.PAUSED | FrameQuality.REPLAY_OR_SPECTATING | FrameQuality.NOT_RACING
 RACING_EXEMPT = frozenset({"grid_brief", "finish", "lights_out"})  # made on the grid / at the flag
+STALE_AFTER_FLASHBACK = ("position", "damage")  # groups whose unsaid calls a flashback makes stale
 NOTES = {
     Game.GT7: "From GT7's race position; not yet checked against the game's screen.",
     Game.FORZA_MOTORSPORT: "From Forza's race position (community docs); not checked on a real recording.",
@@ -94,6 +99,7 @@ class RaceRadioEngine:
         self._seq = 0
         self._max_crossed: int | None = None
         self._pending: list[RaceCall] = []
+        self._retract: tuple[str, ...] = ()  # groups whose unsaid calls a flashback made stale (take_retractions)
         self.recent: deque[RaceCall] = deque(maxlen=CALLS_SHOWN)
         self.dropped = 0  # calls suppressed (retired, finished, not driving, mode off)
         self.ended = False
@@ -197,15 +203,21 @@ class RaceRadioEngine:
 
     def _grid(self, f: CarFrame) -> None:
         """The player's starting position: on the grid before lights out (F1; LapData gridPosition is 0-based on real
-        PS5 data [M], so the grid-time position is used), the first race frame (GT7), lap 1's first frame (Forza)."""
+        PS5 data [M], so the grid-time position is used), before the rolling start (GT7: no lap number yet), lap 1's
+        first frame (Forza). F1: frozen once the car has moved, so a missed lights-out event and a stop on lap 1 never
+        make the stop's position the grid. A join after the start leaves it unknown."""
         st = self.st
         if not st.race or st.position is None:
             return
         if st.f1:
-            standing = f.speed_kph is not None and f.speed_kph < GRID_MAX_KPH and (f.lap_number or 1) <= 1
-            if st.lights_out_t is None and standing:
+            if st.grid_frozen:
+                return
+            speed = f.speed_kph
+            if speed is not None and speed >= GRID_MAX_KPH:
+                st.grid_frozen = True  # moving: the start (or the formation lap) has begun
+            elif speed is not None and st.lights_out_t is None and (f.lap_number or 1) <= 1:
                 st.grid = st.position
-        elif st.grid is None and (st.game is Game.GT7 or (f.lap_number or 0) <= 1):
+        elif st.grid is None and (f.lap_number is None if st.game is Game.GT7 else (f.lap_number or 0) <= 1):
             st.grid = st.position
 
     def _crossing(self, new_lap: int, out: list[CallSpec]) -> None:
@@ -242,6 +254,7 @@ class RaceRadioEngine:
         if code == "FLBK":
             st.flbk_t = st.t
             st.retired = False
+            self._retract = STALE_AFTER_FLASHBACK  # the unsaid position and damage calls are about the undone lap
         elif code == "LGOT":
             if st.grid is None:
                 st.grid = st.position
@@ -257,11 +270,12 @@ class RaceRadioEngine:
     def _emit(self, spec: CallSpec) -> None:
         st = self.st
         if not spec.urgent:
+            out_of_race = spec.call == "penalty" and spec.data.get("penalty_type") in OUT_OF_RACE_TYPES
             blocked = (
                 st.mode == "off"
-                or st.retired
+                or (st.retired and not out_of_race)
                 or (st.finished and spec.call != "finish")
-                or (not st.racing and spec.call not in RACING_EXEMPT)
+                or (not st.racing and spec.call not in RACING_EXEMPT and not out_of_race)
             )
             if blocked:
                 self.dropped += 1
@@ -306,6 +320,11 @@ class RaceRadioEngine:
 
     def take_calls(self) -> list[RaceCall]:
         out, self._pending = self._pending, []
+        return out
+
+    def take_retractions(self) -> tuple[str, ...]:
+        """The groups whose unsaid calls a flashback made stale since the last call (empty: none)."""
+        out, self._retract = self._retract, ()
         return out
 
     def end(self) -> None:
@@ -366,6 +385,7 @@ class RaceRadioEngine:
             damage=self.damage.view(),
             ahead=self.rivals.side_view(st, self.rivals.gaps.ahead) if st.f1 and st.race else None,
             behind=self.rivals.side_view(st, self.rivals.gaps.behind) if st.f1 and st.race else None,
+            leader=self.rivals.leader_view(st) if st.f1 and st.race else None,
         )
         out["version"] = VIEW_VERSION
         view: dict[str, Any] = clean(out)

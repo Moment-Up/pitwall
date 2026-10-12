@@ -27,6 +27,7 @@ their driver-facing sentences is in the fact's text or data; an unknown AI level
 
 from __future__ import annotations
 
+import math  # race radio: laps to go (ceil)
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -281,11 +282,19 @@ def _add_race(fs: FactSheet, live: dict[str, Any] | None, session_id: str | None
         return
     pos, cars, grid = _int(race.get("position")), _int(race.get("cars")), _int(race.get("grid_position"))
     left = race.get("laps_left")
-    to_go = round(left) if isinstance(left, int | float) and not isinstance(left, bool) and left > 0 else None
+    # laps to go count the current lap, as the countdown calls do: 1.4 left is 2 to go (never round: 0.5 -> 0)
+    to_go: int | None = None
+    if isinstance(left, int | float) and not isinstance(left, bool) and math.isfinite(left) and left > 0:
+        to_go = max(1, math.ceil(left - 1e-6))
     note = race.get("position_note") if isinstance(race.get("position_note"), str) else None
     if pos is not None:
+        lap, total = _int(race.get("lap")), _int(race.get("total_laps"))
         text = f"{RACE_PREFIX} position P{pos}" + (f" of {cars}" if cars else "")
-        text += (f", started P{grid}" if grid else "") + (f", {to_go} laps to go" if to_go else "") + "."
+        text += f", started P{grid}" if grid else ""
+        text += f", lap {lap} of {total}" if lap and total else ""
+        if to_go is not None:
+            text += ", last lap" if to_go == 1 else f", {to_go} laps to go"
+        text += "."
         if note:
             text += f" {note}"
         fs.add(
@@ -298,6 +307,8 @@ def _add_race(fs: FactSheet, live: dict[str, Any] | None, session_id: str | None
                 "grid": grid,
                 "laps_left": left,
                 "laps_to_go": to_go,
+                "lap": lap,
+                "total_laps": total,
                 "tier": race.get("position_tier"),
                 "note": note,
             },
@@ -322,7 +333,20 @@ def _add_race(fs: FactSheet, live: dict[str, Any] | None, session_id: str | None
                 "position": _int(d.get("position")),
                 "gap_s": gap,
                 "settled": d.get("settled"),
+                "car_index": _int(d.get("car_index")),  # an opt-in online name only for this same car (names)
             },
+        )
+    lead = race.get("leader")
+    if isinstance(lead, dict):
+        kind = str(lead.get("label_kind") or "car")
+        label = str(lead.get("label") or "the leader")
+        gap = lead.get("gap_s")
+        fs.add(
+            "race",
+            f"{RACE_PREFIX} leader {label} ({_LABEL_KIND_WORDS.get(kind, kind)})"
+            + (f", {gap:.1f} s ahead of the player" if isinstance(gap, int | float) else "")
+            + ".",
+            {"kind": "leader", "label": label, "label_kind": kind, "gap_s": gap},
         )
     pen = race.get("penalties")
     if isinstance(pen, dict):
