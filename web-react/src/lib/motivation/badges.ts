@@ -26,7 +26,11 @@ export function streakTiles(s: Streaks | null | undefined): StreakTile[] {
       key: "weeks",
       title: "Weeks in a row",
       value: w ? w.current_weeks : null,
-      sub: w ? (w.best_weeks > w.current_weeks ? `best ${count(w.best_weeks, "week")}` : "weeks with a timed lap") : "-",
+      sub: w
+        ? w.best_weeks > w.current_weeks
+          ? `best ${count(w.best_weeks, "week")}`
+          : `${w.current_weeks === 1 ? "week" : "weeks"} with a timed lap`
+        : "-",
     },
     {
       key: "week_sessions",

@@ -515,10 +515,11 @@ describe("Ready card fits (plan 2.5): slots are capped, nothing is hidden", () =
   ).process.getBuiltinModule("node:fs");
   const CSS = fs.readFileSync(new URL("./coach.css", import.meta.url), "utf8");
 
-  it("no column hides its content (overflow: hidden): the fit is measured, not clipped", () => {
+  it("no column hides its content (overflow: hidden): the fit is measured, and a long column scrolls, never clips", () => {
     const col = /(?:^|\n)\.pwc-ready__col \{([^}]*)\}/.exec(CSS)?.[1] ?? "";
     expect(col).toMatch(/min-height:\s*0/);
-    expect(col).not.toMatch(/overflow/);
+    expect(col).not.toMatch(/overflow[^:]*:\s*hidden/);
+    expect(col).toMatch(/overflow-y:\s*auto/); // the safety net (coachref): scrolls inside the card
   });
 
   it("the iPad mini's compact rows show one FOCUS row before the first lap; the Last lap point keeps 4 lines", () => {

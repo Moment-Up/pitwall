@@ -54,7 +54,7 @@ from pitwall.voice.hub import (
     compose_cue_clip,
     trim_silence,
 )
-from pitwall.voice.scheduler import RadioScheduler
+from pitwall.voice.scheduler import MIN_GAP_S, RadioScheduler
 from pitwall.voice.speech import to_speech
 from pitwall.voice.types import AudioClip, MessageKind, Priority, RadioMessage, SttResult
 
@@ -1323,6 +1323,49 @@ async def test_cue_cuts_a_lap_summary_which_is_said_again_later() -> None:
     await hub.stop()
 
 
+async def test_a_message_cut_twice_is_not_said_a_third_time() -> None:
+    """UX review: at 6x a lap summary cut by braking calls was re-said four times in 15 s. It is said again once."""
+    hub, _client, _sent, _ = await make_hub("all")
+    ready_audio(hub)
+    summary = RadioMessage("p1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 4, 1:05.7.", "Lap 4", time.monotonic())
+    hub._deliver(summary, AUDIO, None, None)
+    assert hub.deliver_cue(make_event(1), time.monotonic()) is None
+    await settle(3)
+    again = hub._held
+    assert again is not None and again[0].meta.get("resent") == 1
+    hub._held = None
+    hub._deliver(again[0], AUDIO, None, None)  # said again, and cut again by the next corner's call
+    hub.speaking_id = again[0].id
+    hub._on_air = (again[0], AUDIO)
+    hub._rehold((again[0], AUDIO), time.monotonic())
+    assert hub._held is None
+    await hub.stop()
+
+
+async def test_a_new_session_drops_the_old_sessions_unsaid_messages() -> None:
+    """A new live session: the scheduler forgets the old one (queue, budgets, repeat filter) and a held lap summary
+    about it is dropped; urgent calls are untouched."""
+    hub, _client, _sent, _ = await make_hub("all")
+    assert hub._tick_task is not None
+    hub._tick_task.cancel()
+    hub.live.reset_session("s1", "udp:20777", False)
+    await hub._tick(time.monotonic())
+    hub.scheduler.enqueue(
+        RadioMessage("p1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 4, 1:05.7.", "Lap 4", time.monotonic())
+    )
+    held = RadioMessage("g1", MessageKind.GOAL, Priority.NORMAL, "Goal reached.", "Goal reached.", time.monotonic())
+    hub._hold((held, None, None))
+    hub.live.reset_session("s2", "udp:20777", False)
+    hub._follow_session()
+    assert hub.scheduler.pending() == [] and hub._held is None
+    hub.scheduler.enqueue(
+        RadioMessage("p2", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 1, 1:06.0.", "Lap 1", time.monotonic())
+    )
+    hub._follow_session()  # the same session: nothing dropped
+    assert [m.id for m in hub.scheduler.pending()] == ["p2"]
+    await hub.stop()
+
+
 @pytest.mark.parametrize(
     ("kind", "priority", "reason"),
     [
@@ -1649,7 +1692,35 @@ async def test_urgent_call_never_queues_behind_a_held_message() -> None:
     driving(hub, brake=0.0, steering=0.0, d=200.0)  # calm straight again (no cue plan: no cue ahead)
     await hub._tick(time.monotonic())
     await settle(3)
+    assert says(sent, "lap_summary") == [] and hub._held is not None  # the gap after the alert first (R2)
+    await hub._tick(time.monotonic() + MIN_GAP_S + 0.05)
+    await settle(3)
     assert [m["id"] for m in says(sent, "lap_summary")] == ["p7"] and hub._held is None
+    await hub.stop()
+
+
+async def test_a_held_message_keeps_the_gap_after_an_answer() -> None:
+    """Acceptance R2: a coaching point held while an answer played went out 1.1 s after the answer ended. A held
+    proactive message now keeps the scheduler's 2 s gap after anything the radio said (urgent calls do not)."""
+    hub, client, sent, _ = await make_hub("all")
+    assert hub._tick_task is not None
+    hub._tick_task.cancel()
+    driving(hub, brake=0.0, steering=0.0, d=200.0)
+    answer = hub._msg(MessageKind.ANSWER, Priority.HIGH, "Drill stopped.", bypass=True)
+    hub._deliver(answer, AUDIO, None, None)
+    point = RadioMessage("c1", MessageKind.COACHING, Priority.NORMAL, "T3, losing 0.12 s.", "T3", time.monotonic())
+    hub._hold((point, None, None))
+    await hub._tick(time.monotonic())
+    assert says(sent, "coaching") == []  # the answer is still on air
+    await hub.on_text(client, {"type": "playback", "id": answer.id, "state": "ended"})
+    ended = time.monotonic()
+    for dt in (0.0, 1.1, MIN_GAP_S - 0.1):
+        await hub._tick(ended + dt)
+        await settle(2)
+        assert says(sent, "coaching") == [], dt
+    await hub._tick(ended + MIN_GAP_S + 0.05)
+    await settle(3)
+    assert [m["text"] for m in says(sent, "coaching")] == ["T3, losing 0.12 s."]
     await hub.stop()
 
 

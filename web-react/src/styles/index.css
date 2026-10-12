@@ -561,6 +561,19 @@
   }
 }
 
+/* Toasts (the lap toast off track): below the page header, so they never cover its actions ("Add driver"), and the
+ * close button keeps its 20 px look with a 44 px target (P12). */
+@layer components {
+  .toast-region.toast-region--top-end {
+    top: calc(env(safe-area-inset-top, 0px) + 72px);
+  }
+  .toast .toast__close-button::after {
+    content: "";
+    position: absolute;
+    inset: -12px;
+  }
+}
+
 /* Sideways scroller (components/ScrollRow.tsx): no scrollbar over the 44 px targets; an end with more content past it
  * fades out (data-fade), the visible "more this way" cue. Callers set the width (and any edge bleed). */
 @layer components {

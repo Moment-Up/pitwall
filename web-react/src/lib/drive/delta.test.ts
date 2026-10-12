@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DELTA_NEUTRAL_S, deltaText, deltaTone, deltaView, referenceLabel } from "./delta";
 import { NO_OVERLAYS, type DriveOverlays, type DriveState } from "./state";
-import { fixture, snap } from "./testkit";
+import { fixture, lap, snap } from "./testkit";
 import { MINUS } from "./text";
 
 const O = (over: Partial<DriveOverlays> = {}): DriveOverlays => ({ ...NO_OVERLAYS, ...over });
@@ -85,6 +85,9 @@ describe("deltaView", () => {
     expect(deltaView(snap({ delta_s: null, reference: null }), "on_track", O(), false).reason).toBe(
       "No reference yet: your first clean lap becomes the reference",
     );
+    // a clean lap is in, not yet published as the reference: no longer "your first clean lap" (UX review)
+    const after = snap({ delta_s: null, reference: null, laps: [lap(2, 90_000)] });
+    expect(deltaView(after, "on_track", O(), false).reason).toBe("Delta from your next lap");
     const out = snap({ delta_s: null });
     out.frame = { ...out.frame!, driver_status: "out_lap" };
     expect(deltaView(out, "on_track", O(), false).reason).toBe("Out lap");

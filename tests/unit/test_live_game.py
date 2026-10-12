@@ -151,7 +151,20 @@ def test_no_data_detects_nothing() -> None:
         "detected": None,
         "mismatch": None,
         "suggestion": None,
+        "selected_source": "dashboard",
+        "selected_by": None,
     }
+
+
+def test_the_game_block_says_why_the_game_is_selected() -> None:
+    """Plan 0.3 step 1: after a seat change the chip says why ("GT7 · Sam usually plays GT7"): the block carries
+    the selection's source and the driver whose usual game it is."""
+    fresh = LiveState()
+    fresh.set_game_selection(games.new_selection("gt7:ps5", "driver_default", by_driver_id=2))
+    g = fresh.snapshot()["game"]
+    assert (g["selected_source"], g["selected_by"]) == ("driver_default", 2)
+    fresh.set_game_selection(None)
+    assert "selected_source" not in fresh.snapshot()["game"]
 
 
 def test_a_new_session_names_its_own_game_not_another_ports() -> None:

@@ -266,6 +266,11 @@ export interface SnapshotGame {
   mismatch: GameMismatch | null;
   /** Live suggestions only. */
   suggestion: GameSuggestion | null;
+  /** Why the selected game is selected ("dashboard" | "cli" | "driver_default"); absent with no selection and on
+   * older servers. */
+  selected_source?: string | null;
+  /** source "driver_default": the driver whose usual game it is. */
+  selected_by?: number | null;
 }
 
 /** A non-2xx answer with FastAPI's detail in words (422 invalid id or console IP, 404 unknown entry). */

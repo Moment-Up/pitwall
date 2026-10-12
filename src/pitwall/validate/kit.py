@@ -303,7 +303,8 @@ class ValidationKit:
             expires_mono=mono + PROMPT_TTL_S,
             bypass_quiet=True,
             needs_speak_window=True,
-            meta={"topic": "validation"},
+            # its own topic: a prompt queued after it must not replace the reply to the driver's command
+            meta={"topic": "validation:reply"},
         )
         try:
             hub.scheduler.enqueue(msg)

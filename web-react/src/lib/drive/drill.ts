@@ -308,8 +308,19 @@ export function drillBlock(s: SnapshotNext | null | undefined): DrillBlockView |
       corner: d.corner,
     };
   }
-  if (d && d.status !== "abandoned" && d.attempts.length > 0) return { kind: "result", result: drillResult(s, d) };
+  if (d && d.status !== "abandoned" && d.attempts.length > 0 && drivenHere(s, d)) {
+    return { kind: "result", result: drillResult(s, d) };
+  }
   return { kind: "none", suggestion: drillSuggestion(s) };
+}
+
+/** The drill was driven in the session on screen: its result belongs on this session's Ready card. A result from an
+ * earlier session (another track, last night) waits in Review › Coaching instead: here it would push out "Last lap:"
+ * and the FOCUS row, and before a first lap it is about somewhere else (acceptance B3). */
+function drivenHere(s: SnapshotNext, d: DrillView): boolean {
+  if (d.session_id != null && s.session_id != null) return d.session_id === s.session_id;
+  const laps = new Set(s.laps.map((l) => l.lap_id));
+  return d.attempts.some((a) => a.lap_id != null && laps.has(a.lap_id));
 }
 
 // ------------------------------------------------------------------------------------------ Session complete

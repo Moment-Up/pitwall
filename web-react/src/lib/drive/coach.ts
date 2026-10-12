@@ -11,6 +11,7 @@
 // `short` makes that rare). Stationary (pit, garage, after the session) the card shows the full text at 22 px.
 
 import { cornerLabelOf } from "./corner";
+import { hasCleanLap } from "./delta";
 import type { ObservationNext, SnapshotNext } from "./types";
 import { confidenceWord, finite } from "./text";
 
@@ -143,6 +144,8 @@ function emptyPoint(empty: string): CoachPoint {
 }
 
 export const NO_REFERENCE_COACHING = "Coaching starts after your first clean lap";
+/** A clean lap is in, its comparison not yet: coaching follows from the next lap. */
+export const COACHING_NEXT_LAP = "Coaching from your next lap";
 
 /** Simple wording: D6's block says what the seated driver's profile wants; else the caller's profile flag. */
 export function simpleWording(s: SnapshotNext, profileSimple: boolean): boolean {
@@ -151,7 +154,7 @@ export function simpleWording(s: SnapshotNext, profileSimple: boolean): boolean 
 
 /** The coaching point for the shown corner (spec signature). `moving` = on track (glance texts allowed). */
 export function coachPoint(s: SnapshotNext, corner: string | null, simple: boolean, moving: boolean): CoachPoint {
-  if (!s.reference && !s.coach) return emptyPoint(NO_REFERENCE_COACHING);
+  if (!s.reference && !s.coach) return emptyPoint(hasCleanLap(s) ? COACHING_NEXT_LAP : NO_REFERENCE_COACHING);
   if (corner == null) return emptyPoint("No corner ahead yet");
   const last = lastLapNumber(s);
   if (s.coach) {

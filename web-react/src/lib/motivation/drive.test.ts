@@ -50,7 +50,8 @@ describe("the Ready card's goal row (between runs)", () => {
 describe("the Session complete card's 3 things", () => {
   it("with the recap: three things in the recap's wording and the badges it earned", () => {
     const e = endedMotivation(m({ recap: mfx.recapReached() }), SID);
-    expect(e.things?.items.map((t) => t.heading)).toEqual(["Goal reached", "Went well", "One to work on"]);
+    // a new personal best and a goal: the best leads, the goal keeps the Progress slot (plan 2.6)
+    expect(e.things?.items.map((t) => t.heading)).toEqual(["Went well", "One to work on", "Goal reached"]);
     expect(e.thingsLoading).toBe(false);
     expect(e.badges).toEqual(["First time under 1:10 at Austria in the Haas", "First goal reached", "First time under 1:11 at Austria in the Haas"]);
     const beginner = endedMotivation(m({ recap: { ...mfx.recapBeginner(), session_id: SID } }), SID);
@@ -73,7 +74,7 @@ describe("the seat changed: another driver's session is never celebrated as the 
     const e = endedMotivation(m({ recap: theirs() }), SID, 2);
     expect(e.owner).toBe("Alex");
     expect(e.badges).toEqual([]);
-    expect(e.things?.items[0]!.heading).toBe("Goal reached"); // still that session's things, under Alex's name
+    expect(e.things?.items[2]!.heading).toBe("Goal reached"); // still that session's things, under Alex's name
     const own = endedMotivation(m({ recap: theirs() }), SID, 1);
     expect(own.owner).toBeNull();
     expect(own.badges.length).toBeGreaterThan(0);

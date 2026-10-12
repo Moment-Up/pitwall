@@ -62,6 +62,9 @@ export function GoalsPage({ route }: PageProps) {
     <div className="grid grid-cols-1 gap-4">
       <ScopeBar
         s={s}
+        // goals and badges count the driver everywhere: the track and car only say where a new lap-time goal goes
+        forWhat="New lap-time goals for"
+        realNote={false}
         actions={
           <Button variant="ghost" className="min-h-11" onPress={() => router.navigate(s.pathFor("progress"))}>
             <ChartLine aria-hidden="true" />

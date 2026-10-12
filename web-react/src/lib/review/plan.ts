@@ -140,12 +140,29 @@ export interface Habit {
   consistency: string;
 }
 
-/** Habits (spec 6.8): corrections that carry the coach's consistency string, ranked, one per corner and kind. */
+/** The braking-point kinds: braking earlier than the reference, and braking later without a faster exit. */
+const BRAKE_POINT_KINDS: ReadonlySet<string> = new Set(["brake_early", "brake_late_overdrive"]);
+
+/** One braking-point row per corner: when a corner shows both directions over the session ("62 m later" and "43 m
+ * earlier" at the same Turn 3, which reads as opposite advice), only the more frequent one is kept (the higher ranked
+ * on a tie). Other kinds are untouched. */
+export function oneBrakePointPerCorner(items: readonly CoachingItem[]): CoachingItem[] {
+  const best = new Map<string, CoachingItem>();
+  for (const i of items) {
+    if (!BRAKE_POINT_KINDS.has(i.kind)) continue;
+    const prev = best.get(i.corner);
+    if (!prev || i.seen > prev.seen) best.set(i.corner, i);
+  }
+  return items.filter((i) => !BRAKE_POINT_KINDS.has(i.kind) || best.get(i.corner) === i);
+}
+
+/** Habits (spec 6.8): corrections that carry the coach's consistency string, ranked, one per corner and kind (one
+ * braking-point direction per corner). */
 export function habits(
   analysis: Pick<SessionAnalysis, "observations" | "comparisons" | "track_model"> | null | undefined,
   max = 6,
 ): Habit[] {
-  return rankItems(groupObservations(analysis).filter((i) => !i.positive && !!i.latest.consistency))
+  return oneBrakePointPerCorner(rankItems(groupObservations(analysis).filter((i) => !i.positive && !!i.latest.consistency)))
     .slice(0, max)
     .map((item) => {
       const id = cornerIdentity(analysis?.track_model, item.corner, item.latest.corner_label);

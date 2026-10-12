@@ -221,7 +221,8 @@ def test_mounted_in_the_app(tmp_path: Path) -> None:
 
 def test_ws_live_sends_the_view_only_when_it_changed(tmp_path: Path) -> None:
     """The view (2-3.5 kB) rides the static merge (v0.2.0 plan 6.2): /ws/live sends it with the static payload and
-    when ``strategy_rev`` moved, and leaves the key out of other snapshots (the dashboard keeps the previous value)."""
+    when ``strategy_rev`` moved (at most every ``STRATEGY_EVERY_S``), and leaves the key out of other snapshots (the
+    dashboard keeps the previous value)."""
     import orjson
 
     from pitwall.api.app import create_app

@@ -182,7 +182,7 @@ describe("Getting faster? one computed sentence", () => {
     const pts = pointsFromProgress(fixtures.progressAustriaHaas());
     expect(fasterSentence(pts, you)).toBe("Yes: your best here dropped 1.2 s over 2 sessions, and the last one set it.");
     expect(fasterSentence(pts, whoFor({ id: 2, name: "Alex" }, 1, 3))).toContain("Alex's best here dropped 1.2 s");
-    expect(whoFor({ id: 3, name: "James" }, 1, 3).poss).toBe("James'");
+    expect(whoFor({ id: 3, name: "James" }, 1, 3).poss).toBe("James's");
   });
 
   it("across different cars the sentence says the change mixes car and driver, and the tile has no trend", () => {

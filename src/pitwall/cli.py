@@ -833,8 +833,8 @@ def ai_pace_backfill(
     base = f"http://{client_host(settings.http_host)}:{settings.http_port}"
     if not force and _http("GET", f"{base}/api/health", timeout_s=SERVER_PROBE_S) is not None:
         typer.echo(
-            f"Something answers on {base} (a running Pitwall?): stop the service first, or set PITWALL_DATA_DIR to a "
-            "copy of the data folder. --force runs anyway.",
+            f"Something answers on {base} (a running Pitwall?): stop the service first, or point PITWALL_DATA_DIR at "
+            "a copy of the data folder and add --force (the check only sees the HTTP port).",
             err=True,
         )
         raise typer.Exit(1)

@@ -94,6 +94,23 @@ async def test_briefs_are_rate_limited_and_wait_for_a_speak_window(kit: tuple[Va
     assert len(radio.queued) == 3
 
 
+async def test_a_prompt_never_replaces_the_reply_to_a_command(kit: tuple[ValidationKit, FakeRadio]) -> None:
+    """The reply to the driver's own command and the run's prompts are on different topics: a prompt queued before
+    the reply is said must not replace it (topic replacement, ``RadioScheduler.enqueue``)."""
+    from pitwall.voice.scheduler import RadioScheduler
+
+    k, radio = kit
+    k.start_run(["ipad_home_screen"], None, True)
+    (brief,) = radio.queued
+    k._announce("Report saved.")
+    reply = radio.queued[-1]
+    assert reply.meta == {"topic": "validation:reply"} and reply.id != brief.id
+    sched = RadioScheduler("normal")
+    sched.enqueue(reply)
+    sched.enqueue(brief)
+    assert {m.id for m in sched.pending()} == {reply.id, brief.id}
+
+
 async def test_no_radio_or_prompts_off_means_silence(kit: tuple[ValidationKit, FakeRadio]) -> None:
     k, radio = kit
     radio.clients = []

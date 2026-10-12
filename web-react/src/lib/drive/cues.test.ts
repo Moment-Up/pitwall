@@ -75,7 +75,7 @@ describe("cue band", () => {
     expect(cueView(cues({ muted: "quiet mode" }), "T15")).toMatchObject({ next: null, note: "Calls paused: quiet mode", muted: true });
     expect(cueView(cues({ next: null, reason: "no reference lap yet" }), "T15")).toEqual({
       next: null,
-      note: "No reference lap yet",
+      note: "Braking calls start after your first clean lap", // never the server's reason ("new driver: waiting...")
       muted: true,
       radioOff: false,
       ai: false,
@@ -204,7 +204,7 @@ describe("AI field heads-ups (an AI reference, never the driver's own calls)", (
     const v = cueView(s.cues, null, s.track_model);
     expect(v).toEqual({ next: null, note: `${AI_REFERENCE}: heavy braking ahead · 1.0 km`, muted: false, radioOff: false, ai: true });
     expect(cueView(s.cues, null, null, null, true).note).toBe(`${AI_REFERENCE}: heavy braking ahead · -`);
-    expect(cueView({ ...s.cues!, next: null }, null).note).toBe(`${AI_REFERENCE}: no reference lap yet`);
+    expect(cueView({ ...s.cues!, next: null }, null).note).toBe(`${AI_REFERENCE} until your first clean lap`);
     expect(cueView({ ...s.cues!, next: null, reason: null, source: "field" }, null).note).toBe(`${AI_REFERENCE}: no call ahead`);
     // pauses still win
     expect(cueView(s.cues, null, null, "red_flag").note).toBe("Calls paused");

@@ -7,6 +7,7 @@ using ONLY values from the facts' structured data, so answers stay grounded by c
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -200,6 +201,17 @@ PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
 }
 
 
-def radio_answer(intent: str, sheet: FactSheet) -> str | None:
+def radio_answer(intent: str, sheet: FactSheet, question: str | None = None) -> str | None:
+    """The instant radio phrasing of ``intent``, else None. ``question``: a race position question ("what position
+    am I?") is answered with the position first (``strategy.phrasing``)."""
+    if intent == "gaps" and question is not None and _POSITION_Q.search(question):
+        from pitwall.strategy.phrasing import strategy_position_answer  # strategy imports ai.facts: keep this lazy
+
+        said = strategy_position_answer(sheet)
+        if said is not None:
+            return said
     fn = PHRASERS.get(intent)
     return fn(sheet) if fn else None
+
+
+_POSITION_Q = re.compile(r"\b(?:position|place|p\d{1,2})\b", re.I)

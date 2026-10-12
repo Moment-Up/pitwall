@@ -10,6 +10,7 @@ import {
   concatChunks,
   engineerTalking,
   levelFromRms,
+  listDeviceVoices,
   loadSettings,
   LOG_MAX,
   pcm16ToFloat32,
@@ -1082,6 +1083,22 @@ describe("settings over the radio link", () => {
     ws.serverClose(1006);
     expect(radio.ask("anyone?")).toBe(false);
     expect(radio.get().log.at(-1)).toMatchObject({ kind: "you", text: "anyone?", meta: "not sent: radio offline" });
+  });
+});
+
+describe("device voices (Settings › Radio & voice)", () => {
+  it("lists Premium, then Enhanced, then standard; British first within a quality, then by name", () => {
+    setup({
+      speech: true,
+      voices: [
+        { name: "Albert", lang: "en-US", voiceURI: "com.apple.speech.synthesis.voice.Albert" },
+        { name: "Daniel", lang: "en-GB", voiceURI: "com.apple.voice.compact.en-GB.Daniel" },
+        { name: "Zoe (Enhanced)", lang: "en-US", voiceURI: "com.apple.voice.enhanced.en-US.Zoe" },
+        { name: "Amélie", lang: "fr-CA", voiceURI: "com.apple.voice.compact.fr-CA.Amelie" },
+        { name: "Jamie (Premium)", lang: "en-GB", voiceURI: "com.apple.voice.premium.en-GB.Jamie" },
+      ],
+    });
+    expect(listDeviceVoices().map((v) => v.name)).toEqual(["Jamie (Premium)", "Zoe (Enhanced)", "Daniel", "Albert"]);
   });
 });
 

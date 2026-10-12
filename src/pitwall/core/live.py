@@ -37,15 +37,17 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   F1 UDP format, arriving or paused) and a live suggestion while nothing is selected (``games.snapshot_block``). Its
   status counts only packets a decoder accepted (``last_accepted_mono``). Computed on the web thread from attributes
   the ingest thread already writes; the ingest thread never calls into ``games``.
-* ``ai_pace`` (every snapshot): the live session's pace vs the AI (``LiveAiPace``: status, AI difficulty, the typical
+* ``ai_pace`` (``/ws/live``: when it changed, with the 5 s static payload and in a new session's first snapshot):
+  the live session's pace vs the AI (``LiveAiPace``: status, AI difficulty, the typical
   AI car's best lap, the driver's best clean lap, the gap and rank), published by ``core.ai_pace.AiPaceProcessor``
   after every lap of the player and at the session's end; ``None`` until then and for non-F1 games.
 * ``strategy``: the race strategy engineer's ``StrategyView`` (``pitwall.strategy.view``, about 2-3.5 kB), published
   by the strategy worker at most twice a second; ``None`` until it has one for the live session. It rides the static
-  merge: ``/ws/live`` sends it with the 5 s static payload and whenever ``strategy_rev`` changed (a new view, or a new
-  session), and leaves the key out otherwise (the client keeps the previous value within the session). Every other
-  caller (REST, fact sheets) gets it in every snapshot.
-* ``coachref`` (every snapshot, small): the seated driver's reference choice, what the analysis used for the last
+  merge: ``/ws/live`` sends it with the 5 s static payload, in a new session's first snapshot and when ``strategy_rev``
+  changed (a new view), at most every ``api.app.STRATEGY_EVERY_S``, and leaves the key out otherwise (the client keeps
+  the previous value within the session). Every other caller (REST, fact sheets) gets it in every snapshot.
+* ``coachref`` (small; ``/ws/live`` sends it like ``ai_pace``: ``api.app.ON_CHANGE_KEYS``): the seated driver's
+  reference choice, what the analysis used for the last
   lap (``used_kind``, ``reason`` when the choice could not be honoured), whether a change waits for the next lap
   (``pending``) and the practice drill (``drill``: running, or the result of the one that just ended). Published by
   ``core.coachref.CoachRef`` with one attribute swap. ``reference`` gains the descriptor of how it was chosen.
@@ -224,6 +226,31 @@ def frame_to_dict(f: CarFrame) -> dict[str, Any]:
     }
 
 
+def _with_lap(totals: dict[str, Any] | None, lap: dict[str, Any]) -> dict[str, Any]:
+    """The session's lap counts with one more lap (a new dict: /ws/live compares the published object).
+
+    ``laps``/``clean`` count every lap result; ``first_clean_ms``/``best_clean_ms`` the clean timed laps;
+    ``not_clean_flags`` the distinct flags of the laps that did not count, ``not_clean_invalid`` whether one was
+    invalid without its flag and ``not_clean_other`` whether one had no reason at all (the dashboard's words)."""
+    t = dict(totals or {"laps": 0, "clean": 0, "not_clean": 0, "first_clean_ms": None, "best_clean_ms": None})
+    t["laps"] += 1
+    ms = lap.get("lap_time_ms")
+    timed = isinstance(ms, int) and not isinstance(ms, bool) and ms > 0
+    flags = [str(f) for f in lap.get("flags") or ()]
+    if lap.get("clean") and timed:
+        t["clean"] += 1
+        t["first_clean_ms"] = t["first_clean_ms"] if t["first_clean_ms"] is not None else ms
+        t["best_clean_ms"] = ms if t["best_clean_ms"] is None else min(t["best_clean_ms"], ms)
+    elif not lap.get("clean"):
+        t["not_clean"] += 1
+        t["not_clean_flags"] = sorted(set(t.get("not_clean_flags", ())) | set(flags))
+        if lap.get("valid") is False and "invalid" not in flags:
+            t["not_clean_invalid"] = True
+        if not flags and lap.get("valid") is not False:
+            t["not_clean_other"] = True
+    return t
+
+
 class LiveState:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -241,6 +268,7 @@ class LiveState:
         self.last_packet_mono = 0.0
         self.decode_stats: dict[str, Any] = {}
         self.laps: deque[dict[str, Any]] = deque(maxlen=60)
+        self.lap_totals: dict[str, Any] | None = None  # the whole session's lap counts (``laps`` keeps the newest)
         self.observations: list[dict[str, Any]] = []
         self.last_comparison: dict[str, Any] | None = None
         self.events: deque[dict[str, Any]] = deque(maxlen=30)
@@ -408,6 +436,7 @@ class LiveState:
         # --- coachref ---
         with self._lock:
             self.laps.appendleft(lap)
+            self.lap_totals = _with_lap(self.lap_totals, lap)
             self.observations = observations
             self.last_comparison = comparison
         # replan before notifying, so the radio's speak window already knows the next lap's cues
@@ -546,6 +575,7 @@ class LiveState:
             self.session = None
             self.frame = None
             self.laps.clear()
+            self.lap_totals = None
             self.observations = []
             self.last_comparison = None
             self.events.clear()
@@ -607,7 +637,7 @@ class LiveState:
         if status == "stale" and age is not None and sel is not None and sel.since_unix > time.time() - age:
             status = "no_data"  # chosen after the data stopped: the selection is what the household plays now
         real = not self.synthetic and not (self.source or "").startswith("replay:")
-        return games.snapshot_block(
+        block = games.snapshot_block(
             None if sel is None else sel.id,
             adapter_game,
             platform,
@@ -617,6 +647,10 @@ class LiveState:
             configured,
             stale_mismatch=age is not None and age < games.PAUSED_S,
         )
+        if sel is not None:  # why it is selected (the game chip: "GT7 · Sam usually plays GT7", plan 0.3 step 1)
+            block["selected_source"] = sel.source
+            block["selected_by"] = sel.by_driver_id
+        return block
 
     def effective_game_id(self) -> str | None:
         """The game the data in front of the driver comes from: the live session's, else the selection (radio)."""
@@ -666,6 +700,8 @@ class LiveState:
                 "delta_s": None if self.delta_s is None else round(self.delta_s, 3),
                 "reference": self.reference,
                 "laps": list(self.laps)[:20],
+                # the session's counts over every lap (Session complete, the Ready card's last run): "laps" is capped
+                "lap_totals": self.lap_totals,
                 "observations": self.observations[:8],
                 "events": list(self.events)[:10],
             }

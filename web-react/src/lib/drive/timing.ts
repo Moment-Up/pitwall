@@ -246,6 +246,18 @@ export function notCleanList(lap: { clean: boolean; valid: boolean | null; flags
   return words.length ? [...new Set(words)] : ["not clean"];
 }
 
+/** Why the session's laps did not count, in words ("out lap, pit in"), from the server's whole-session totals. */
+export function notCleanTotalsList(t: {
+  not_clean_flags?: string[];
+  not_clean_invalid?: boolean;
+  not_clean_other?: boolean;
+}): string[] {
+  const words = (t.not_clean_flags ?? []).map((f) => FLAG_WORDS[f] ?? f.replace(/_/g, " "));
+  if (t.not_clean_invalid) words.unshift("invalid");
+  if (t.not_clean_other) words.push("not clean");
+  return [...new Set(words)];
+}
+
 /** Why a lap is not clean, in words ("out lap, flashback"); null when clean. */
 export function notCleanWords(lap: { clean: boolean; valid: boolean | null; flags: string[] }): string | null {
   const w = notCleanList(lap);

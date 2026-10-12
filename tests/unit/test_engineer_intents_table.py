@@ -81,3 +81,42 @@ async def test_every_question_has_a_grounded_deterministic_answer() -> None:
         if ans.intent not in CONTROL | DRILL:
             assert ans.fallback and ans.grounded, row
             assert check_grounding(ans.cited_text, sheet.facts).ok, row
+
+
+async def test_every_radio_answer_at_speed_is_short() -> None:
+    """Plan 4.3 with the final review's H1: while the car is moving every question gets the deterministic answer, so
+    that answer is one or two facts in their spoken form (``short=True``), never a fact list read out through the
+    next braking zones (it was 27 s for "How am I doing?" and 42 s for a setup question). Grounded as before."""
+    from pitwall.ai.radio_phrasing import radio_answer
+    from pitwall.voice.scheduler import estimate_speech_s
+
+    snap = {
+        "connection": {"status": "live"},
+        "session": {"safety_car_status": "none", "total_laps": 71},
+        "marshal_flags": [],
+        "frame": {},
+    }
+    sheet = build_fact_sheet(_game_analysis("f1_25", "ps5"), snap)
+    engineer = RaceEngineer(None)
+    for row in QUESTIONS:
+        ans = await engineer.answer(row["question"], sheet, use_llm=False, short=True)
+        said = radio_answer(ans.intent, sheet, row["question"]) or ans.text
+        assert estimate_speech_s(said) <= 12.0, (row["question"], said)  # the estimate errs long (2.6 words/s)
+        if ans.intent not in CONTROL | DRILL:
+            assert check_grounding(ans.cited_text, sheet.facts).ok, row
+    summary = await engineer.answer("How am I doing?", sheet, use_llm=False, short=True)
+    assert summary.text.count(". ") <= 1 and "Best clean lap" in summary.text  # the best lap and the top point
+    setup = await engineer.answer("Should I change my front wing?", sheet, use_llm=False, short=True)
+    assert setup.text.startswith("Rule out technique first.")
+
+
+async def test_the_full_summary_says_a_personal_best_set_this_session_once() -> None:
+    """UX review: the summary said the same 1:24.528 twice (the session's best clean lap and the personal best, the
+    same lap). Review › Ask's full answer keeps one of them."""
+    sa = _game_analysis("f1_25", "ps5")
+    best = min((lap for lap in sa.laps if lap["clean"] and lap.get("lap_time_ms")), key=lambda x: x["lap_time_ms"])
+    sa.driver = {"id": 1, "name": "Sam", "skill_level": "advanced"}
+    sa.personal_best = {**best, "session_id": sa.session["id"]}
+    sheet = build_fact_sheet(sa, None)
+    ans = await RaceEngineer(None).answer("Give me a summary of this session.", sheet, use_llm=False)
+    assert "Best clean lap this session" in ans.text and "personal best" not in ans.text

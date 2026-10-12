@@ -113,6 +113,9 @@ const NO_REFERENCE_REASONS: ReadonlySet<string> = new Set([
 ]);
 /** coachref: what the band says when the delta has its reference before the first lap (calls need a lap). */
 export const CALLS_AFTER_FIRST_LAP = "Braking calls start after your first lap";
+/** No reference of the driver's own yet (a new driver, the first laps here): plain words instead of the server's
+ * reason ("new driver: waiting for a lap against their reference" ran off the band). */
+export const CALLS_AFTER_FIRST_CLEAN_LAP = "Braking calls start after your first clean lap";
 
 /**
  * The cue band. `pause` is the Drive state's own pause; `frozen` = the position is not current (stale, offline):
@@ -165,9 +168,12 @@ export function cueView(
   }
   if (ai) {
     const why = fieldPlanWhy(c.reason);
+    if (why && NO_REFERENCE_REASONS.has(why)) return { ...band(`${AI_REFERENCE} until your first clean lap`), radioOff, ai };
     return { ...band(why ? `${AI_REFERENCE}: ${why}` : `${AI_REFERENCE}: no call ahead`), radioOff, ai };
   }
-  if (hasReference && c.reason && NO_REFERENCE_REASONS.has(c.reason)) return { ...band(CALLS_AFTER_FIRST_LAP), radioOff };
+  if (c.reason && NO_REFERENCE_REASONS.has(c.reason)) {
+    return { ...band(hasReference ? CALLS_AFTER_FIRST_LAP : CALLS_AFTER_FIRST_CLEAN_LAP), radioOff };
+  }
   if (c.reason) return { ...band(sentence(c.reason)), radioOff };
   return { ...band("No call ahead"), radioOff };
 }

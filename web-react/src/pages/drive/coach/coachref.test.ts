@@ -194,7 +194,7 @@ describe("the Ready card (spec 10.2)", () => {
 
   it("just ended: Drill result with hits, best, trend, a dot a lap, Again and Done", () => {
     const s = withLive(fixture(BETWEEN), "live-drill");
-    s.coachref!.drill = crFixture<DrillView>("drill-completed");
+    s.coachref!.drill = { ...crFixture<DrillView>("drill-completed"), session_id: s.session_id }; // driven here
     const html = render(model(s));
     const text = visible(html);
     expect(text).toContain("Drill result T11 · Brake point Closer 3 of 4 on the point Best: 1 m from the point");
@@ -202,6 +202,14 @@ describe("the Ready card (spec 10.2)", () => {
     expect(text).toMatch(/Again Done/);
     expect(html.match(/class="pwc-dot"/g)).toHaveLength(5);
     expect(html).toContain('data-outcome="unmeasured" aria-label="Lap 4 of 5: not measured, no braking measured"');
+  });
+
+  it("a result from an earlier session (another track) stays off this Ready card: Last lap and FOCUS stay (B3)", () => {
+    const s = withLive(fixture(BETWEEN), "live-drill");
+    s.coachref!.drill = crFixture<DrillView>("drill-completed"); // driven in another session
+    const text = visible(render(model(s)));
+    expect(text).not.toContain("Drill result");
+    expect(text).toContain("FOCUS");
   });
 
   it("a server without coachref: today's Ready card (no control, no drill)", () => {

@@ -183,7 +183,7 @@ function phaseOf(s: SnapshotNext, memo: DriveMemo, nowS: number): Phase {
 }
 
 /** Not driving yet: no car frame, in the garage, or the session is known and no lap has started. */
-function inGarage(s: SnapshotNext): boolean {
+export function inGarage(s: SnapshotNext): boolean {
   const f = s.frame;
   if (!f) return true;
   if (f.pit_status === 2 || f.driver_status === "in_garage") return true;
@@ -426,8 +426,10 @@ function completeSub(s: SnapshotNext | null): string | null {
   const parts = [s.session?.track_name, sessionTypeText(s.session?.session_type)].filter(
     (p): p is string => typeof p === "string" && p.length > 0,
   );
-  const n = s.laps.length;
-  if (n > 0) parts.push(n >= 20 ? "20+ laps" : `${n} ${n === 1 ? "lap" : "laps"}`);
+  const total = s.lap_totals?.laps;
+  const n = typeof total === "number" && Number.isFinite(total) && total >= s.laps.length ? total : s.laps.length;
+  // an older server sends only the newest 20 laps and no totals: "20+" then
+  if (n > 0) parts.push(n >= 20 && total == null ? "20+ laps" : `${n} ${n === 1 ? "lap" : "laps"}`);
   return parts.length ? parts.join(" · ") : null;
 }
 

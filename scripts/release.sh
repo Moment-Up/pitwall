@@ -28,8 +28,12 @@ status() {
   curl -fsS -m 2 http://127.0.0.1:8770/api/health 2>/dev/null \
     | python3 -c 'import sys,json; print(json.load(sys.stdin)["connection"]["status"])' 2>/dev/null || echo down
 }
-serving_from_rel() {  # the launchd service is set to run from $REL and answers on its port
-  grep -q "<string>$REL</string>" "$PLIST" 2>/dev/null && [[ "$(status)" != "down" ]]
+serving_from_rel() {  # the launchd service is set to run from $REL and is running (or answers on its port)
+  grep -qF "<string>$REL</string>" "$PLIST" 2>/dev/null || return 1
+  # not only the HTTP probe: it reads a slow answer (2 s timeout) or a restart in progress as "not serving"
+  launchctl print "gui/$(id -u)/com.pitwall.server" 2>/dev/null | grep -q "state = running" && return 0
+  pgrep -f "$REL/.venv/bin/pitwall serve" >/dev/null 2>&1 && return 0
+  [[ "$(status)" != "down" ]]
 }
 backup_db() {  # backup_db <data dir>: an online SQLite backup (safe while the idle service keeps the file open)
   local db="$1/pitwall.sqlite3" dest
@@ -67,7 +71,8 @@ for app in web web-react; do
 done
 (cd "$REL" && uv sync --all-extras --frozen -q)
 echo "release: running tests"
-(cd "$REL" && uv run --frozen pytest -q -p no:cacheprovider -m "not live and not llm and not voice" -x >/tmp/pitwall-release-tests.log 2>&1) || {
+# the tests assert built-in defaults: run them without the caller's PITWALL_* settings (moved ports, voice off...)
+(cd "$REL" && env $(env | sed -n 's/^\(PITWALL_[A-Za-z0-9_]*\)=.*/-u \1/p') uv run --frozen pytest -q -p no:cacheprovider -m "not live and not llm and not voice" -x >/tmp/pitwall-release-tests.log 2>&1) || {
   echo "release: TESTS FAILED - not releasing (see /tmp/pitwall-release-tests.log)" >&2; tail -5 /tmp/pitwall-release-tests.log >&2; exit 1; }
 tail -1 /tmp/pitwall-release-tests.log
 echo "release: building dashboards"
@@ -77,7 +82,7 @@ if [[ -d "$REL/web-react" ]]; then
 fi
 echo "release: waiting until nobody is driving"
 wait_idle
-if grep -q "<string>$REL</string>" "$PLIST" 2>/dev/null; then
+if grep -qF "<string>$REL</string>" "$PLIST" 2>/dev/null; then
   # in place (the service was stopped, or RELEASE_IN_PLACE=1): the data folder stays the service's own
   backup_db "$(plutil -extract EnvironmentVariables.PITWALL_DATA_DIR raw "$PLIST" 2>/dev/null || echo "$ROOT/data")"
   "$SVC" restart

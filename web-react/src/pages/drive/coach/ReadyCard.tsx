@@ -14,18 +14,21 @@
 // here", and column 3 is "Last lap: <point>" (the last lap's top point, full text: plan 5.1), the Radio calls block
 // with one FOCUS row, and no Radio line (the radio strip below says it). Go live stays in the radio strip (one copy
 // on Drive). Unknown values are "-". The columns never hide what does not fit (no overflow: hidden): the slots are
-// capped instead, and the fit is measured in a browser at both iPad sizes.
+// capped instead, the fit is measured in a browser at both iPad sizes, and a column scrolls rather than clips.
 //
 // Coachref (plan 2.5, F9): "Delta reference" is the reference control (Sam's best ⌄) on a server with coachref, the
-// static line otherwise. Column 3 becomes the Drill block while a drill runs or its result waits for Done (no FOCUS
-// rows: the plan is the drill corner only); between runs a suggested drill ("Drill T3 · Brake point") joins the
-// "Last lap:" point it comes from, in place of the FOCUS row.
+// static line otherwise. Column 3 becomes the Drill block while a drill runs or its result (driven in this session)
+// waits for Done (no FOCUS rows: the plan is the drill corner only); between runs a suggested drill ("Drill T3 ·
+// Brake point") joins the "Last lap:" point it comes from, in place of the FOCUS row. A column that still runs long
+// scrolls inside the card (a safety net: the slots are capped so it never has to at the two iPad sizes).
 
 import { Avatar, Button, Card, Chip } from "@heroui/react";
 import { memo, useState, type ReactNode } from "react";
 import { TimingTag, Unknown } from "../../../components/ui";
 import { micChipView, shallowEqual, useRadio } from "../../../components/radio";
 import { usePrefs } from "../../../hooks/stores";
+import { useDriverNames, useGameCatalog, useSnapshotGame } from "../../../hooks/useGame";
+import { seatGameLine } from "../../../lib/game";
 import { inkOn } from "../../../lib/drivers";
 import { prefs } from "../../../lib/prefs";
 import type { DriveDrillView, ReadyCard as ReadyCardView } from "../../../lib/drive/model";
@@ -121,8 +124,10 @@ function LargeTextHint() {
 }
 
 /** coachref: "Delta reference" as the control (Sam's best ⌄) with the lap it resolves to and the braking note;
- * on a server without coachref, the static line. */
-function ReferenceKv({ refControl, text }: { refControl: RefControlView | null | undefined; text: string }) {
+ * on a server without coachref, the static line. `compact` (a goal row shares the column): the control, a pending
+ * change and a refusal's reason only - the lap and the braking note are in the picker (the column must fit the card
+ * at 1180 x 820 and 1133 x 744, review M4). */
+function ReferenceKv({ refControl, text, compact = false }: { refControl: RefControlView | null | undefined; text: string; compact?: boolean }) {
   if (!refControl?.available) {
     return (
       <Kv k="Delta reference" text>
@@ -134,9 +139,9 @@ function ReferenceKv({ refControl, text }: { refControl: RefControlView | null |
     <div className="pwc-refready">
       <div className="pwc-kv__k">Delta reference</div>
       <RefControl view={refControl} variant="ready" />
-      <span className="pwc-kv__note">{refControl.waiting ?? text}</span>
+      {(refControl.waiting || !compact) && <span className="pwc-kv__note">{refControl.waiting ?? text}</span>}
       {refControl.reason && <span className="pwc-refready__note">{refControl.reason}</span>}
-      {refControl.brakeNote && <span className="pwc-refready__note">{refControl.brakeNote}</span>}
+      {refControl.brakeNote && !compact && <span className="pwc-refready__note">{refControl.brakeNote}</span>}
     </div>
   );
 }
@@ -194,7 +199,7 @@ function TargetColumn({ ready, refControl }: { ready: ReadyCardView; refControl:
             <Unknown />
           )}
         </Kv>
-        <ReferenceKv refControl={refControl} text={target.reference} />
+        <ReferenceKv refControl={refControl} text={target.reference} compact={!!goal} />
       </div>
       {goal && <GoalRow goal={goal} />}
     </section>
@@ -278,6 +283,12 @@ function TodayColumn({
   );
 }
 
+/** "GT7 · Sam usually plays GT7" after the seat change picked the game (plan 0.3 step 1); nothing otherwise. */
+function SeatGame() {
+  const line = seatGameLine(useSnapshotGame(), useGameCatalog(), useDriverNames());
+  return line ? <p className="m-0 mb-3 text-[15px] text-muted">{line}</p> : null;
+}
+
 export interface ReadyCardProps {
   ready: ReadyCardView;
   /** coachref: the delta reference control (Target column). */
@@ -307,6 +318,7 @@ export const ReadyCard = memo(function ReadyCard({ ready, refControl = null, dri
             </Chip>
           )}
         </div>
+        <SeatGame />
         <SeatSwitcher />
       </section>
       <TargetColumn ready={ready} refControl={refControl} />

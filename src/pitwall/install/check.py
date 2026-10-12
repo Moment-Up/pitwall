@@ -139,7 +139,7 @@ def compute_status(
         "schema": 1,
         "current": current,
         "install_kind": kind,
-        "mode": mode if mode in MODES else "auto",
+        "mode": mode if mode in MODES else "manual",  # unknown: never contact GitHub on its own (D2)
         "checked_unix": None if off else cache.checked_unix,
         "checking": checking,
         "update_available": update_available,
@@ -164,7 +164,7 @@ class UpdateChecker:
         clock: Callable[[], float] = time.time,
     ) -> None:
         self.data_dir = data_dir
-        self.mode = mode if mode in MODES else "auto"
+        self.mode = mode if mode in MODES else "manual"  # unknown: never contact GitHub on its own (D2)
         self.root = root
         self.fetcher = fetcher
         self.clock = clock

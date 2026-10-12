@@ -80,9 +80,13 @@ _AI = r"(?:ai|a\.?\s?i\.?|computer|bots?)"
 # "no, stop the drill"); a question that mentions a drill ("how did the drill go?", "should I do a drill at turn 4?")
 # asks for its status, and a negation ("don't start a drill", "do not stop the drill") does neither.
 _DRILL_LEAD = (
-    r"^\s*(?:(?:no|nope|yes|yeah|ok(?:ay)?|right|copy)\s*[,.!]+\s*)?"  # "No, stop the drill"
+    # "No, stop the drill", "Yes stop the drill", "Alright, stop the drill", "I'm done, stop the drill": "no" needs its
+    # punctuation (a bare "no stop the drill" stays ambiguous), the others may run straight on
+    r"^\s*(?:(?:no|nope|copy|i[\u2019']?m\s+done|done)\s*[,.!]+\s*|"
+    r"(?:yes|yeah|ok(?:ay)?|right|alright|all\s+right|so)\s*[,.!]*\s*)?"
     r"(?!.*?\b(?:don[\u2019']?t|do\s+not|not|never|no)\b.*?\bdrill\b)"  # no negation before "drill"
     r"(?:(?:please|ok(?:ay)?|right|now|can\s+you|could\s+you|will\s+you|would\s+you|let[\u2019']?s|let\s+me|"
+    r"can\s+we|could\s+we|will\s+we|shall\s+we|"
     r"i\s+want\s+to|i[\u2019']?d\s+like\s+to|i\s+would\s+like\s+to|can\s+i|could\s+i)\s+)*"
 )
 _DRILL_STATUS = re.compile(
@@ -102,7 +106,9 @@ _DRILL_START = re.compile(
 # Questions about time, a corner or the AI stay with their own rules ("what did I lose against the reference").
 _REFERENCE_WHO = re.compile(
     r"^(?!.*\b(?:los[et]|losing|gain\w*|faster|slower|quicker|time|gap|delta|turn|corner|t\s?\d{1,2}|ai|computer|"
-    r"bots?|fuel|tyres?|tires?|setup|pit)\b)"
+    # race questions ("what position am I racing for?", "which car am I racing against?") are about other cars; a bare
+    # "who am I racing against?" stays the reference (the lap the delta and the calls use)
+    r"bots?|fuel|tyres?|tires?|setup|pit|position|place|cars?|ahead|behind|front)\b)"
     r".*\b(?:who|what|which)\S*(?:\s+\S+){0,4}?\s+(?:compared|comparing|racing|against|reference)\b",
     re.I,
 )
@@ -156,6 +162,16 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     # the tyres OK in the wet?"); the plain weather words last (below), so "where should I brake at turn 4 in the
     # rain?" stays braking and "what setup for rain?" setup
     ("weather", re.compile(r"\b(inters?|intermediates?|forecast|wet)\b", re.I)),
+    # rain and a drying track before strategy too ("should I pit for the rain?", "is it drying, should I stay out?"),
+    # unless the question is about braking, setup, laps, sectors or time (those keep their own rules below)
+    (
+        "weather",
+        re.compile(
+            r"^(?!.*\b(?:brak\w*|setup|set\s*up|los[et]|losing|slow\w*|faster|quicker|line|laps?|sectors?|time)\b)"
+            r".*\b(rain(?:ing|y)?|drying)\b",
+            re.I,
+        ),
+    ),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
     (
         "strategy",
@@ -175,8 +191,8 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         re.compile(
             r"^(?!.*\b(?:best|reference|pb|personal best|delta|record)\b).*?"
             r"\b(gaps?|interval|car (?:ahead|behind|in front)|behind me|in front of me|how far (?:ahead|behind|back)|"
-            r"catching|within a second|drs range|in drs|(?:what|which) position|race position|"
-            r"position (?:am i|are we))\b",
+            r"catching|within a second|drs range|in drs|(?:what|which) (?:position|place)|race position|"
+            r"(?:position|place) (?:am i|are we))\b",
             re.I,
         ),
     ),
@@ -262,7 +278,7 @@ _TOPICS: dict[str, set[str]] = {
     # every intent keeps the "game" topic: what the game never sends is answered from it
     "fuel": {"session", "game", "fuel", "strategy"},
     "tyres": {"session", "game", "tyres", "strategy"},
-    "strategy": {"session", "game", "fuel", "tyres", "strategy", "gaps"},
+    "strategy": {"session", "game", "fuel", "tyres", "strategy", "gaps", "weather"},
     "safety_car": {"session", "game", "strategy", "flags"},
     "gaps": {"session", "game", "gaps"},
     "weather": {"session", "game", "weather", "tyres", "strategy"},
@@ -396,8 +412,15 @@ class RaceEngineer:
         self.drill_handler: DrillHandler | None = None
 
     async def answer(
-        self, question: str, sheet: FactSheet, history: list[dict[str, str]] | None = None, use_llm: bool = True
+        self,
+        question: str,
+        sheet: FactSheet,
+        history: list[dict[str, str]] | None = None,
+        use_llm: bool = True,
+        short: bool = False,
     ) -> EngineerAnswer:
+        """``short``: the radio's deterministic answer (``deterministic_answer(short=True)``): one or two facts in
+        their spoken form, never a list read out at speed. Review › Ask keeps the full answer."""
         t0 = time.perf_counter()
         intent = detect_intent(question)
         if intent.name in ("control_quiet", "control_resume"):
@@ -418,7 +441,7 @@ class RaceEngineer:
             )
         intent = named_corner(intent, question, sheet)  # feat/technique: "Stowe", "the Hairpin"
         facts = self._select(intent, sheet)
-        det = deterministic_answer(intent, facts, sheet)
+        det = deterministic_answer(intent, facts, sheet, short=short)
         # only data the game never sends / Pitwall does not read: a known fact, not something to explain
         capability = games.capability_only(intent.name, games.entry_of_sheet(sheet))
         if not use_llm or self.provider is None or capability:
@@ -548,10 +571,25 @@ def _describe(g: GroundingResult) -> str:
     return "; ".join(parts) or "ok"
 
 
-def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) -> str:
+RADIO_SHORT_CHARS = 120  # a short (radio) answer adds a second fact only while the two stay this short together
+
+
+def _spoken(f: Fact) -> str:
+    """A fact's radio form: its ``data["radio"]`` when the fact has one (an observation as the radio says it
+    proactively), else its driver-facing sentence."""
+    radio = f.data.get("radio")
+    return radio if isinstance(radio, str) and radio.strip() else f.plain
+
+
+def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *, short: bool = False) -> str:
     """Template answers composed only from the facts' driver-facing sentences (``Fact.plain``), each followed by its
     citation, so the result is grounded by construction (``check_grounding`` accepts it). ``RaceEngineer`` shows the
-    driver ``display_text`` of it: the same sentences without the citations."""
+    driver ``display_text`` of it: the same sentences without the citations.
+
+    ``short`` (the radio): the first fact in its spoken form (``_spoken``), plus the second only while both fit in
+    ``RADIO_SHORT_CHARS``. The summary is the best clean lap (else the last lap) and the top point; a setup question
+    is the top point after "rule out technique first". An answer read out at speed must not run through the next
+    braking zones."""
 
     def first(
         topic: str, corner: str | None = None, contains: str | None = None, group: str | None = None
@@ -567,6 +605,11 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
         chosen = list({f.id: f for f in fs if f is not None}.values())  # a fact said once (tyres: no wear fact)
         if not chosen:
             return "I don't have enough data for that yet - complete a few clean laps and ask again."
+        if short:
+            lead = _spoken(chosen[0])
+            if len(chosen) > 1 and len(lead) + 1 + len(_spoken(chosen[1])) <= RADIO_SHORT_CHARS:
+                return f"{lead} [{chosen[0].id}] {_spoken(chosen[1])} [{chosen[1].id}]"
+            return f"{lead} [{chosen[0].id}]"
         return " ".join(f"{f.plain} [{f.id}]" for f in chosen)
 
     n = intent.name
@@ -664,6 +707,8 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
             first("laps", contains="Theoretical"),
         )
     if n == "setup":
+        if short:
+            return "Rule out technique first. " + say(first("observations") or first("corners", contains="Biggest"))
         diff = first("setup", contains="Driver's setup vs recommended")
         return "Before changing the setup, let's rule out technique. " + say(
             first("corners", contains="Biggest"),
@@ -674,10 +719,17 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet) ->
             game,
         )
     if n == "summary":
+        best = first("laps", contains="Best clean")
+        if short:
+            return say(best or first("laps", contains=LAST_LAP_PREFIX), first("observations"))
+        pb = first("laps", contains="personal best")
+        same_lap = pb is not None and best is not None and pb.data.get("lap") == best.data.get("lap")
+        if same_lap and pb is not None and "set this session" in pb.text:
+            pb = None  # this session's best clean lap is the personal best: said once
         ai = first("ai", contains=AI_PACE_PREFIX)
         return say(
-            first("laps", contains="Best clean"),
-            first("laps", contains="personal best"),
+            best,
+            pb,
             first("corners", contains="Biggest"),
             first("observations"),
             first("fuel"),

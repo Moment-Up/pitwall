@@ -782,8 +782,15 @@ def test_lap_summary_without_usable_reference() -> None:
 
 def test_lap_summary_personal_best() -> None:
     # best_clean_ms may already include this lap (the hub computes it after the lap is published)
-    assert lap_summary_text(lap(ms=65_506), 65_506, REF) == (
-        "That lap, 1:05.506, personal best, minus 0.120 to your reference."
+    assert (
+        lap_summary_text(lap(ms=65_506), 65_506, REF)
+        == (
+            "That lap, 1:05.506, personal best, 0.120 faster than before."  # never "personal best, minus 0.120 to your best"
+        )
+    )
+    sam = {**REF, "own": False, "label_to": "Sam's best"}  # another driver's lap: the delta to them stays
+    assert (
+        lap_summary_text(lap(ms=65_506), 65_506, sam) == "That lap, 1:05.506, personal best, minus 0.120 to Sam's best."
     )
     assert "personal best" in (lap_summary_text(lap(ms=65_400), 65_506, REF) or "")
     assert "personal best" not in (lap_summary_text(lap(ms=65_600), 65_506, REF) or "")
@@ -1092,3 +1099,12 @@ def test_quiet_request_flow() -> None:
     # quiet period outlasts the lap messages: they expire unspoken
     assert s.next_message(replace(CALM, lap_number=8), 60.0, speaking=False) is None
     assert s.pending() == []
+
+
+def test_the_final_lap_gets_its_summary_but_no_coaching_point() -> None:
+    """UX review: "T3, losing 0.12 s" was said after the chequered flag. The session ended on that lap: no next lap
+    can use a coaching point, so the radio says the lap and stops there."""
+    final = lap(32, 80_886, clean=True, final=True)
+    msgs = lap_messages(final, OBSERVATIONS, 65_000, REF, "normal", 100.0)
+    assert [m.kind for m in msgs] == [MessageKind.LAP_SUMMARY] and msgs[0].text.startswith("Final lap")
+    assert any(m.kind is MessageKind.COACHING for m in lap_messages(lap(), OBSERVATIONS, 65_000, REF, "normal", 0.0))

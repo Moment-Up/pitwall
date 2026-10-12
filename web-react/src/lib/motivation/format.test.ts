@@ -84,7 +84,7 @@ describe("lap targets", () => {
     expect(isF1Game("gt7")).toBe(false);
     expect(isF1Game(null)).toBe(false);
     expect(possessive("Sam")).toBe("Sam's");
-    expect(possessive("James")).toBe("James'");
+    expect(possessive("James")).toBe("James's");
   });
 });
 

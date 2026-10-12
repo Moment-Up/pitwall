@@ -503,6 +503,7 @@ class MotivationService:
             history=history.until(session_id) if history is not None else None,
             goals=goals if counts else [],
             why_progress=why,
+            now_unix=time.time(),
         )
         rec = R.build_recap(inp, lap_nums)
         full = history if history is not None else History([s], {s.id: laps}, {})

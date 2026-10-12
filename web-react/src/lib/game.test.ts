@@ -32,6 +32,7 @@ import {
   rigDefaultGame,
   rigNotice,
   rigPlatformNotice,
+  seatGameLine,
   selectedEntry,
   selectionReason,
   sessionEntry,
@@ -188,6 +189,17 @@ describe("gameChip (rail / app bar)", () => {
     const v = gameChip(snapGame("gt7"), CAT);
     expect(v).toMatchObject({ text: "GT7", tone: "neutral" });
     expect(v?.aria).toBe("Game: Gran Turismo 7 on PS5 selected");
+  });
+
+  it("a seat change picked it: the chip says why, and so does the Ready card's seat line (plan 0.3 step 1)", () => {
+    const g = { ...snapGame("gt7"), selected_source: "driver_default", selected_by: 2 };
+    const names = new Map([[2, "Sam"]]);
+    expect(gameChip(g, CAT, names)?.aria).toBe("Game: Gran Turismo 7 on PS5 selected. Selected because Sam usually plays GT7");
+    expect(seatGameLine(g, CAT, names)).toBe("GT7 · Sam usually plays GT7");
+    // chosen on the dashboard, an unknown driver, or another game's data on screen: no seat line
+    expect(seatGameLine({ ...g, selected_source: "dashboard" }, CAT, names)).toBeNull();
+    expect(seatGameLine(g, CAT, new Map())).toBeNull();
+    expect(seatGameLine({ ...snapGame("mismatch"), selected_source: "driver_default", selected_by: 2 }, CAT, names)).toBeNull();
   });
 
   it("another game's data: the effective short label, warn, the server's mismatch words", () => {
@@ -530,9 +542,9 @@ describe("review fixes (game selection round 1)", () => {
 });
 
 describe("why the selected game is selected (integration plan 1.3, walk finding 13)", () => {
-  const names = new Map([[2, "Thomas"]]);
+  const names = new Map([[2, "Sam"]]);
   it("a seat change: the driver whose usual game it is, by name", () => {
-    expect(selectionReason({ source: "driver_default", by_driver_id: 2 }, GT7, names)).toBe("Selected because Thomas usually plays GT7");
+    expect(selectionReason({ source: "driver_default", by_driver_id: 2 }, GT7, names)).toBe("Selected because Sam usually plays GT7");
     // the server's name wins (it knows a driver this device has not loaded yet)
     expect(selectionReason({ source: "driver_default", by_driver_id: 3, by_driver_name: "Jo" }, GT7, names)).toBe(
       "Selected because Jo usually plays GT7",

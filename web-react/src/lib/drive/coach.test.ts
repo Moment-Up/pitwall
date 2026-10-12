@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  COACHING_NEXT_LAP,
   NO_REFERENCE_COACHING,
   coachPoint,
   evidenceLine,
@@ -203,5 +204,16 @@ describe("whole-lap picks for the state cards", () => {
     expect(wentWell).toMatchObject({ tag: "good" });
     const d6 = workOnWentWell(fixture("recorded-d246-austria-session-ended"), false);
     expect(d6.workOn?.source).toBe("d6");
+  });
+});
+
+describe("placeholders after the first clean lap (UX review)", () => {
+  it("says 'from your next lap' once a clean lap is in but not yet the reference", () => {
+    const first = snap({ reference: null, laps: [] });
+    expect(coachPoint(first, "T9", false, true).empty).toBe(NO_REFERENCE_COACHING);
+    const one = snap({ reference: null, laps: [lap(2, 90_000)] });
+    expect(coachPoint(one, "T9", false, true).empty).toBe(COACHING_NEXT_LAP);
+    const notClean = snap({ reference: null, laps: [lap(1, 95_000, [], { clean: false, flags: ["standing_start"] })] });
+    expect(coachPoint(notClean, "T9", false, true).empty).toBe(NO_REFERENCE_COACHING);
   });
 });

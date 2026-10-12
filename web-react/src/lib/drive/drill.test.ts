@@ -189,7 +189,7 @@ describe("the Ready card's Drill block (spec 10.2)", () => {
 
   it("just ended: the result (hits of scored laps, best, trend, one dot a lap, Again with the same drill)", () => {
     const s = withLive(fixture(BETWEEN), "live-drill");
-    s.coachref!.drill = crFixture<DrillView>("drill-completed");
+    s.coachref!.drill = { ...crFixture<DrillView>("drill-completed"), session_id: s.session_id };
     const b = drillBlock(s);
     expect(b?.kind).toBe("result");
     if (b?.kind !== "result") return;
@@ -206,6 +206,21 @@ describe("the Ready card's Drill block (spec 10.2)", () => {
     });
     expect(b.result.dots.map((d) => d.outcome)).toEqual(["hit", "miss", "hit", "unmeasured", "hit"]);
     expect(b.result.dots[3]?.aria).toBe("Lap 4 of 5: not measured, no braking measured");
+  });
+
+  it("a result from another session (another track, last night) is not this Ready card's: Last lap and FOCUS stay", () => {
+    const s = withLive(fixture(BETWEEN), "live-drill");
+    s.coachref!.drill = crFixture<DrillView>("drill-completed"); // driven in session e3e0d6df9e22
+    expect(s.session_id).not.toBe(s.coachref!.drill.session_id);
+    expect(drillBlock(s)?.kind).toBe("none");
+    const m = model(s);
+    expect(m.drill.block?.kind ?? "none").toBe("none");
+    // without a session id on the drill (an older server): the laps tell (none of its attempt laps is on screen)
+    s.coachref!.drill = { ...crFixture<DrillView>("drill-completed"), session_id: null };
+    expect(drillBlock(s)?.kind).toBe("none");
+    const here = s.laps[0]!.lap_id;
+    s.coachref!.drill = { ...s.coachref!.drill, attempts: s.coachref!.drill.attempts.map((a, i) => (i ? a : { ...a, lap_id: here })) };
+    expect(drillBlock(s)?.kind).toBe("result");
   });
 
   it("a stopped speed drill says when it stopped; an abandoned one (no laps) shows the start buttons again", () => {

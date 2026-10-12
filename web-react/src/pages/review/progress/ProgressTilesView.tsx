@@ -85,7 +85,8 @@ export function ProgressTilesView({
       >
         <TimingValue ms={best.ms} kind="lap" status={best.status} size="kpi" />
       </Tile>
-      <Tile title="Sessions" glossary={glossary} sub={`at ${trackLabel}${carLabel ? ` in the ${carLabel}` : ""}`}>
+      {/* the count says its rule (plan 5.7): every session on record here, timed lap or not */}
+      <Tile title="Sessions" glossary={glossary} sub={`on record at ${trackLabel}${carLabel ? ` in the ${carLabel}` : ""}`}>
         <Big>{tiles.sessions}</Big>
       </Tile>
       {clean.known ? (

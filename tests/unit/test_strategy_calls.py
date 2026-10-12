@@ -45,7 +45,8 @@ def test_safety_car_box_and_stay_out() -> None:
     assert v.text == "Virtual safety car. Pitting next lap is an option." and v.ttl_s == 60.0
     stay = {**box, "stop_needed": False}
     (s,) = p.plan(ctx(sc_status="full", sc_period=3, sc_box=stay))
-    assert s.topic == "sc_stay" and s.level == "normal" and "no stop needed" in s.text
+    assert s.topic == "sc_stay" and s.level == "alert" and s.priority == "high" and s.bypass_quiet  # plan 3.1
+    assert "no stop needed" in s.text
     assert s.text_simple == "Safety car: your tyres last to the finish, so no pit stop."
 
 

@@ -37,7 +37,11 @@ import {
   type KindChoice,
   type SheetCorner,
 } from "../../../lib/drive/drill";
+import { useRadio } from "../../../components/radio";
 import { useMediaQuery } from "./parts";
+
+/** Plan 3.5: shown in the drill sheet while the radio is on quiet (drill points are coaching: screen only then). */
+export const QUIET_RADIO_NOTE = "Radio is on quiet: drill results show on screen.";
 
 const PHONE = "(max-width: 767px)";
 
@@ -335,6 +339,7 @@ export function DrillSheet({
   lapsLeft = null,
 }: DrillSheetProps) {
   const phone = useMediaQuery(PHONE);
+  const quiet = useRadio((s) => s.settings.intensity === "quiet");
   const stored = useStoredCorners(isOpen && !live.length ? track : null);
   const corners = live.length ? live : (stored.corners ?? []);
   const [corner, setCorner] = useState<string | null>(() => startCorner(corners, initialCorner));
@@ -367,6 +372,8 @@ export function DrillSheet({
     </div>
   );
   const intro = "Several laps on one corner with one measurable target. The radio and the calls talk only about that corner.";
+  // plan 3.5 / decision 4: drill points are coaching, so quiet intensity keeps them off the radio
+  const quietNote = quiet ? <p className="m-0 text-sm text-foreground">{QUIET_RADIO_NOTE}</p> : null;
 
   if (phone) {
     return (
@@ -379,6 +386,7 @@ export function DrillSheet({
               <Sheet.Header>
                 <Sheet.Heading className="pr-10 text-lg font-semibold">Practice drill</Sheet.Heading>
                 <p className="m-0 text-sm text-muted">{intro}</p>
+                {quietNote}
               </Sheet.Header>
               <Sheet.Body className="overflow-y-auto pb-[max(1rem,env(safe-area-inset-bottom))]">{isOpen && body}</Sheet.Body>
             </Sheet.Dialog>
@@ -396,6 +404,7 @@ export function DrillSheet({
             <Modal.Header>
               <Modal.Heading>Practice drill</Modal.Heading>
               <p className="m-0 text-sm text-muted">{intro}</p>
+              {quietNote}
             </Modal.Header>
             <Modal.Body>{isOpen && body}</Modal.Body>
           </Modal.Dialog>

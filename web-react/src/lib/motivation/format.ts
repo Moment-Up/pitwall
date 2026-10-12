@@ -64,9 +64,9 @@ export function percent(fraction: number | null | undefined): number | null {
   return Math.round(Math.min(1, Math.max(0, fraction)) * 1000) / 10;
 }
 
-/** "Sam's", "James'" (the same rule as Review's `whoFor`). */
+/** "Sam's", "James's": always 's, as the server's reference labels say it ("James's best"; Review's `whoFor` too). */
 export function possessive(name: string): string {
-  return `${name}'${name.endsWith("s") ? "" : "s"}`;
+  return `${name}'s`;
 }
 
 /** "1 lap", "8 laps". */

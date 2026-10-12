@@ -82,8 +82,30 @@ describe("dedupeComplete: each fact once, Went well > Best lap tag > Progress > 
     const v = dedupe(recap(pb, many), { tag: "PB", lapId: BEST_LAP_ID });
     expect(v.bestTag).toBe(false);
     expect(v.things?.items).toHaveLength(3);
-    expect(v.badges.map((b) => b.key)).toEqual(["clean_streak:5", "ten_clean_session"]);
+    // "5 clean laps in a row" and "10 clean laps in one session" are one clean run: the second goes (UX review)
+    expect(v.badges.map((b) => b.key)).toEqual(["clean_streak:5", "busy_week:3"]);
     expect(v.badges).toHaveLength(ENDED_BADGES_MAX);
+  });
+
+  it("a reached clean-laps goal and the clean-run badges say one thing: the goal stays, the badges go", () => {
+    const goal = item(
+      "progress",
+      "goal_reached",
+      "8 clean laps in a row (on lap 9).",
+      { goal_id: 7, values: { target: 8, value: 8, goals: 1, goal_kind: "clean_streak" } },
+      "goal:7",
+    );
+    const streak = item("went_well", "clean_streak", "10 clean laps in a row.", {});
+    const v = dedupe(
+      recap(streak, [
+        badge("clean_streak:10", "clean_streak", "10 clean laps in a row"),
+        badge("ten_clean_session", "ten_clean_session", "10 clean laps in one session"),
+        badge("busy_week:3", "busy_week", "3 sessions in one week"),
+      ], goal),
+      null,
+    );
+    expect(v.things?.items.map((t) => t.source)).toEqual(["goal_reached", "clean_streak", "observation"]); // celebration first
+    expect(v.badges.map((b) => b.key)).toEqual(["busy_week:3"]);
   });
 
   it("a goal reached: the Progress celebration keeps it, the 'goals reached' badge would only repeat it", () => {

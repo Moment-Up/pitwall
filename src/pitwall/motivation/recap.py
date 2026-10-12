@@ -196,6 +196,8 @@ class RecapInput:
     history: History | None  # the owner's driving (None when the session does not count)
     goals: Sequence[GoalRow] = ()  # the owner's goals (any status)
     why_progress: str | None = None  # why progress is empty when ``counts`` is False
+    # when the recap is read: an older session's week is "the week of Mon 5 Oct", not "this week" (None: its own week)
+    now_unix: float | None = None
 
 
 def _track(s: SessionRow) -> str:
@@ -310,12 +312,14 @@ def _hygiene(laps: Sequence[LapRow]) -> Thing | None:
     if n == 1:
         lap = bad[0]
         if "invalid" in lap.flags or lap.valid is False:
-            why = "the game invalidated it"
+            why, plain = "the game invalidated it", "the game cancelled it"
         elif "flashback" in lap.flags:
-            why = "a flashback was used on it"
+            why, plain = "a flashback was used on it", "a flashback"
         else:
-            why = "the car was reset to the track"
+            why, plain = "the car was reset to the track", "a reset to the track"
         text = f"Lap {lap.lap_number} did not count: {why}."
+        # a beginner's Work on is advice, not only a count (UX review)
+        simple = f"Lap {lap.lap_number} did not count ({plain}): keep it on the track next time."
     else:
         reasons = []
         if invalid:
@@ -325,12 +329,12 @@ def _hygiene(laps: Sequence[LapRow]) -> Thing | None:
         if reset:
             reasons.append(f"{reset} reset to the track")
         text = f"{n} of {total} laps did not count: {', '.join(reasons)}."
-    did = "timed lap did" if n == 1 else "timed laps did"
+        simple = f"{n} timed laps did not count this time: keep them on the track next time."
     return Thing(
         "work_on",
         "lap_hygiene",
         text,
-        f"{n} {did} not count this time.",
+        simple,
         lap_id=bad[0].id,
         lap_number=bad[0].lap_number,
         values={"not_counted": n, "laps": total, "invalidated": invalid, "flashbacks": flashback, "resets": reset},
@@ -399,7 +403,8 @@ def _goal_reached(inp: RecapInput, lap_numbers: Mapping[int, int]) -> Thing | No
         lap_id=g.achieved_lap_id,
         lap_number=n,
         goal_id=g.id,
-        values={"target": g.target, "value": v, "goals": len(reached)},
+        # goal_kind: the card shows "8 clean laps in a row" once, not again as a clean-run badge (complete.ts)
+        values={"target": g.target, "value": v, "goals": len(reached), "goal_kind": g.kind},
         fact_key=f"goal:{g.id}",
     )
 
@@ -526,12 +531,20 @@ def progress_thing(
     ]
     n_laps = sum(len(rules.timed(history.laps_of(x.id))) for x in in_week)
     n = len(in_week)
+    current = inp.now_unix is None or rules.week_of(inp.now_unix) == week
+    if current:
+        text = f"{count_words(n, 'session')} with a timed lap this week, {count_words(n_laps, 'lap')} so far."
+        simple = f"You set lap times in {count_words(n, 'session')} this week."
+    else:  # read later: the week the session was driven in, counted up to it
+        when = f"the week of {week:%a} {week.day} {week:%b}"
+        text = f"{count_words(n, 'session')} with a timed lap in {when}, {count_words(n_laps, 'lap')} by then."
+        simple = f"You set lap times in {count_words(n, 'session')} in {when}."
     return Thing(
         "progress",
         "sessions_week",
-        f"{count_words(n, 'session')} with a timed lap this week, {count_words(n_laps, 'lap')} so far.",
-        f"You have driven {n} time{'s' if n != 1 else ''} this week.",
-        values={"sessions": n, "laps": n_laps, "week_start": week.isoformat()},
+        text,
+        simple,
+        values={"sessions": n, "laps": n_laps, "week_start": week.isoformat(), "this_week": current},
     )
 
 

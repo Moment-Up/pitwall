@@ -189,6 +189,7 @@ export function CoachingPage({ route }: PageProps) {
                   <WorkingOnCard
                     key={w.item.key}
                     eyebrow={w.item.key === focusKey ? WORK_ON_SESSION_HEADING : null}
+                    evidence={w.item.key === focusKey ? (workOn?.evidence ?? null) : null}
                     w={w}
                     sessionId={plan.sessionId}
                     refLapId={analysis.ref_lap_id}

@@ -209,6 +209,6 @@ describe("the footnote (spec 9)", () => {
       "From Sam's real driving: synthetic and replayed sessions never count.",
       "This game does not report track limits, so 'clean' means no pit lap, reset or flashback.",
     ]);
-    expect(goalsFootnote("James", null)[0]).toContain("From James' real driving");
+    expect(goalsFootnote("James", null)[0]).toContain("From James's real driving");
   });
 });

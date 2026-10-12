@@ -30,6 +30,15 @@ def _say(*fs: Fact | None) -> str | None:
     return " ".join(parts) if parts else None
 
 
+def strategy_position_answer(sheet: FactSheet) -> str | None:
+    """ "What position am I?": the race position first, then the gap to the car ahead (None without strategy facts)."""
+    k = _facts(sheet)
+    pos = k.get("position")
+    if pos is None:
+        return None
+    return _say(pos, k.get("gap_ahead"))
+
+
 def strategy_radio_answer(intent: str, sheet: FactSheet) -> str | None:
     if intent not in INTENTS:
         return None

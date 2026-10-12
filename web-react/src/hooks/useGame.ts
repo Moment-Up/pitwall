@@ -4,13 +4,14 @@
 //   const g = useSnapshotGame();           // snapshot.game, a stable object (re-renders only when it changes)
 //   const eff = useEffectiveEntry();       // the game of the data on screen (detected, else selected)
 //   const sel = useSelectedEntry();        // the game the household plays (setup flows)
+//   const names = useDriverNames();        // driver id -> name ("Selected because Sam usually plays GT7")
 //   const st = useGameState(true, 2000);   // GET /api/game, refetched when the selection changes (and polled)
 //   await selectGame({ id: "gt7:ps5" });   // PUT /api/game, then the caches it touches are invalidated
 //
 // With an older server (no /api/games, no snapshot.game) every hook answers undefined / null and pages render as
 // before.
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { cache } from "../lib/cache";
 import { CONNECT_KEYS } from "../lib/endpoints/connect";
 import {
@@ -25,7 +26,7 @@ import {
   type SnapshotGame,
 } from "../lib/endpoints/game";
 import { effectiveEntry, selectedEntry, stableGameSelector } from "../lib/game";
-import { useLive } from "./stores";
+import { useDrivers, useLive } from "./stores";
 import { useApi } from "./useApi";
 
 /** The catalogue (static per server version). Undefined until it loads, and with a server that predates it. */
@@ -38,6 +39,12 @@ const snapshotGameOf = stableGameSelector();
 /** snapshot.game, the same object while its content is unchanged (lib/game.ts stableGameSelector). */
 export function useSnapshotGame(): SnapshotGame | undefined {
   return useLive((s) => snapshotGameOf(s.snap));
+}
+
+/** Driver id -> name (the game chip's and the Ready card's "Sam usually plays GT7"). */
+export function useDriverNames(): ReadonlyMap<number, string> {
+  const list = useDrivers((s) => s.drivers);
+  return useMemo(() => new Map(list.map((d) => [d.id, d.name])), [list]);
 }
 
 export function useEffectiveEntry(): GameEntry | null {

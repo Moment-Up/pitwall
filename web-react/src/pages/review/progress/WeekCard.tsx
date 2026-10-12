@@ -223,7 +223,7 @@ export function WeekCard({ driverId, simple }: { driverId: number; simple: boole
             </div>
           )}
           <p className="m-0 text-[13px] text-muted">
-            Real driving only: a session counts once it has a timed lap; synthetic and replayed sessions are left out.
+            A session counts once it has a timed lap.
           </p>
         </>
       )}

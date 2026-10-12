@@ -3,7 +3,7 @@ import { live, offlineSnapshot } from "../live";
 import { DEFAULT_PREFS, type Prefs } from "../prefs";
 import { driveModel, type DriveModelInput } from "./model";
 import { EMPTY_MEMO } from "./state";
-import { asLive, driver, fixture, newestT, snap, stopped } from "./testkit";
+import { asLive, driver, fixture, frame, lap, newestT, snap, stopped } from "./testkit";
 import { MINUS, THIN } from "./text";
 import type { SnapshotNext } from "./types";
 
@@ -165,11 +165,35 @@ describe("driveModel: each state", () => {
     expect(m.ended).toMatchObject({ toYourBest: null, toRecord: null });
   });
 
+  it("counts the whole session from the server's lap totals, not the newest 20 laps (a 32-lap race)", () => {
+    const s = stopped(fixture("recorded-austria-session-ended"));
+    const laps = Array.from({ length: 20 }, (_, i) => lap(32 - i, 85_400 + i * 10));
+    const m = model({
+      ...s,
+      laps,
+      lap_totals: {
+        laps: 32,
+        clean: 26,
+        not_clean: 6,
+        first_clean_ms: 90_000,
+        best_clean_ms: 85_400,
+        not_clean_flags: ["pit_in", "pit_out"],
+      },
+    });
+    expect(m.ended?.clean).toEqual({ clean: 26, total: 32, text: "26 of 32", sub: "6 not used: pit in, out lap" });
+    expect(m.ended?.gained.text).toBe("4.6 s faster");
+    expect(m.status.sub).toContain("32 laps");
+    // an older server (no totals): counted from the 20 laps it sends, and the band says "20+"
+    const old = model({ ...s, laps, lap_totals: undefined });
+    expect(old.ended?.clean).toMatchObject({ clean: 20, total: 20 });
+    expect(old.status.sub).toContain("20+ laps");
+  });
+
   it("lists every reason a lap was not used once", () => {
     const m = model(stopped(fixture("recorded-austria-excerpt-session-ended")));
     expect(m.ended?.clean).toEqual({ clean: 0, total: 3, text: "0 of 3", sub: "3 not used: incomplete, standing start" });
     expect(m.ended?.best).toBeNull();
-    expect(m.ended?.gained.text).toBe("-");
+    expect(m.ended?.gained).toMatchObject({ text: "-", sub: "Needs 2 clean laps" }); // Review's words (kpis.ts)
   });
 
   it("red flag keeps the hero, pauses the calls and blanks the delta", () => {
@@ -499,5 +523,21 @@ describe("driveModel: overlays and D-additions", () => {
     expect(m.ready).toBeNull();
     expect(m.ended).toBeNull();
     expect(model(snap({ frame: null })).card).toBe("ready");
+  });
+});
+
+describe("in the game's menus (packets every few seconds): no layout flicker (UX review)", () => {
+  it("a car last seen in the garage keeps the Ready card under the No signal band while the data is stale", () => {
+    const garage = stopped(snap({ laps: [], frame: frame({ pit_status: 2, speed_kph: 0, lap_number: 1, current_lap_time_ms: 0 }) }));
+    const live = model(garage);
+    expect(live).toMatchObject({ state: "garage", card: "ready" });
+    const stale = { ...garage, connection: { ...garage.connection, status: "stale" as const, last_packet_age_s: 2.4 } };
+    const m = model(stale);
+    expect(m).toMatchObject({ state: "stale", card: "ready", hero: { kind: "card" } });
+    expect(m.status).toMatchObject({ band: "stale" });
+    expect(m.ready).not.toBeNull();
+    // on track when the data stopped: the on-track layout, dimmed (as before)
+    const onTrack = { ...snap(), connection: { ...snap().connection, status: "stale" as const, last_packet_age_s: 2.4 } };
+    expect(model(onTrack).card).toBeNull();
   });
 });

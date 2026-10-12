@@ -114,7 +114,7 @@ async def test_a_seat_change_drops_the_previous_drivers_lap_messages() -> None:
     hub.apply_driver(_driver(1, "James"))  # James edits his profile: same driver, nothing dropped
     assert len(sched.pending()) == 6
     hub._held = (_msg("held", MessageKind.LAP_SUMMARY), None, None)  # synthesised, waiting for a speak window
-    hub.apply_driver(_driver(2, "Thomas"))
+    hub.apply_driver(_driver(2, "Sam"))
     assert sorted(m.id for m in sched.pending()) == ["fuel", "info", "strat"]  # about the car: kept
     assert hub._held is None
     hub._held = (_msg("held-strat", MessageKind.STRATEGY), None, None)

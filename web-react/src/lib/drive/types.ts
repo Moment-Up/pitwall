@@ -165,12 +165,30 @@ export interface SessionStateInfo {
   chequered_flag: boolean;
 }
 
+/** core/live.py lap_totals: the whole session's lap counts (``laps`` holds only the newest 20). */
+export interface LapTotals {
+  laps: number;
+  clean: number;
+  not_clean: number;
+  first_clean_ms: number | null;
+  best_clean_ms: number | null;
+  /** The distinct flags of the laps that did not count ("out_lap", "pit_in"). */
+  not_clean_flags?: string[];
+  /** A lap was invalid without the "invalid" flag. */
+  not_clean_invalid?: boolean;
+  /** A lap did not count for no stated reason. */
+  not_clean_other?: boolean;
+}
+
 export interface SnapshotNext extends Snapshot {
   frame: FrameNext | null;
   track_model?: TrackModelNext | null;
   observations: ObservationNext[];
   events: LiveEvent[];
   laps: LapSummary[];
+  /** The session's counts over every lap; absent on older servers (then counted from ``laps``). A kept key
+   * (lib/live.ts STATIC_KEYS): sent when it changed. */
+  lap_totals?: LapTotals | null;
   cues?: CueSnapshot;
   /** D2 */
   bests?: BestsBlock | null;
@@ -181,7 +199,8 @@ export interface SnapshotNext extends Snapshot {
   /** D6 */
   coach?: CoachBlock | null;
   /** AI pace: this session against the AI (null until the analysis worker has a summary, and for games without AI
-   * difficulty). Its `session_id` says which session it belongs to. */
+   * difficulty). Its `session_id` says which session it belongs to. A kept key (lib/live.ts STATIC_KEYS): sent when
+   * it changed or with the static payload. */
   ai_pace?: LiveAiPace | null;
   // --- race strategy (pitwall.strategy) ---
   /** strategy/view.py StrategyView (lib/strategy/types.ts); absent on servers without the strategy engine. A static
@@ -191,7 +210,8 @@ export interface SnapshotNext extends Snapshot {
   // --- end race strategy ---
   /** coachref: the reference with its descriptor (who, which kind, labels); the four legacy keys are unchanged. */
   reference: LiveReference | null;
-  /** coachref: the seated driver's reference choice and drill. Absent = a server without coachref. */
+  /** coachref: the seated driver's reference choice and drill. Absent = a server without coachref. A kept key
+   * (lib/live.ts STATIC_KEYS): sent when it changed or with the static payload. */
   coachref?: CoachrefBlock | null;
 }
 

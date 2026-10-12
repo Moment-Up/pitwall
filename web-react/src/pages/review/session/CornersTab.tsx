@@ -20,7 +20,9 @@ import {
   filterCards,
   filterCounts,
   lapsSpokenText,
+  cornersShown,
   liveFocusFor,
+  notesShown,
   type CornerCard,
   type CornerCardObservation,
   type CornersFilter,
@@ -28,9 +30,9 @@ import {
 import type { Density } from "../../../lib/review/density";
 import { comparePath } from "../../../lib/review/links";
 import { timeSigned, timeWords } from "../../../lib/review/compare";
+import { useWideScreen } from "../useMedia";
 import { CornerTechnique, useCornerTechnique, type CornerTechniqueCtx } from "./technique/CornerTechnique"; // feat/technique
 
-const SHOWN = 3;
 
 function ObservationRow({ o }: { o: CornerCardObservation }) {
   if (o.incident) {
@@ -68,9 +70,10 @@ function CornerCardView({
   technique?: CornerTechniqueCtx;
 }) {
   const [all, setAll] = useState(false);
+  const limit = notesShown(useWideScreen());
   const lines = averageLines(card.summary);
   const timeLine = averageTimeText(card.summary, signed);
-  const shown = all ? card.observations : card.observations.slice(0, SHOWN);
+  const shown = all ? card.observations : card.observations.slice(0, limit);
   const spoken = lapsSpokenText(card);
   const tone =
     card.meanTimeS == null || Math.abs(card.meanTimeS) < 0.01 ? "text-foreground" : card.meanTimeS > 0 ? "text-behind" : "text-ahead";
@@ -107,21 +110,20 @@ function CornerCardView({
               <ObservationRow key={o.key} o={o} />
             ))}
           </ul>
-          {card.observations.length > SHOWN && (
-            <div>
-              <Button variant="ghost" size="sm" className="min-h-11" onPress={() => setAll((v) => !v)}>
-                {all ? "Show fewer" : `Show all ${card.observations.length}`}
-              </Button>
-            </div>
-          )}
         </div>
       ) : (
         <p className="m-0 text-sm text-muted">The coach had nothing to say here in this session.</p>
       )}
-      <div className="mt-auto">
+      {/* one row: the notes' Show all beside See it on the lap (a phone's page stays short, acceptance B7) */}
+      <div className="mt-auto flex flex-wrap items-center gap-2">
         <Button variant="secondary" className="min-h-11" onPress={() => onCompare(card)}>
           See it on the lap
         </Button>
+        {card.observations.length > limit && (
+          <Button variant="ghost" size="sm" className="min-h-11" onPress={() => setAll((v) => !v)}>
+            {all ? "Show fewer notes" : `Show all ${card.observations.length} notes`}
+          </Button>
+        )}
       </div>
     </Card>
   );
@@ -150,7 +152,10 @@ export function CornersTab({ session, analysis, density }: CornersTabProps) {
   );
   const counts = filterCounts(cards);
   const [filter, setFilter] = useState<CornersFilter>(counts.work > 0 || !cards.length ? "work" : "all");
-  const shown = filterCards(cards, filter);
+  const wide = useWideScreen();
+  const [allCorners, setAllCorners] = useState(false);
+  const filtered = filterCards(cards, filter);
+  const shown = filtered.slice(0, cornersShown(wide, filtered.length, allCorners));
   const lengthM = session.track_length_m ?? null;
   const technique = useCornerTechnique(session.id, density); // feat/technique
 
@@ -192,7 +197,15 @@ export function CornersTab({ session, analysis, density }: CornersTabProps) {
             <CornerCardView key={c.key} card={c} signed={density.signedBadges} onCompare={onCompare} technique={technique} />
           ))}
         </div>
-      ) : (
+      ) : null}
+      {shown.length < filtered.length ? (
+        <div>
+          <Button variant="secondary" className="min-h-11" onPress={() => setAllCorners(true)}>
+            Show all {filtered.length} corners
+          </Button>
+        </div>
+      ) : null}
+      {shown.length ? null : (
         <p className="m-0 text-sm text-muted">{EMPTY[filter]}</p>
       )}
       {cards.some((c) => c.observations.some((o) => o.incident)) && (

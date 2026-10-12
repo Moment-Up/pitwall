@@ -7,7 +7,7 @@ describe("streak tiles (spec 4.7)", () => {
     const tiles = streakTiles(mfx.badges().streaks);
     expect(tiles.map((t) => [t.title, t.value, t.sub])).toEqual([
       // counts say their rule (integration plan 5.7): a session counts when it has a timed lap
-      ["Weeks in a row", 1, "weeks with a timed lap"],
+      ["Weeks in a row", 1, "week with a timed lap"], // "1 week", never "1 weeks"
       ["Sessions this week", 17, "with a timed lap, from Monday"],
       ["Best clean run", 6, "2 laps in the last session"],
       ["New bests in a row", 0, "sessions with a new personal best"],

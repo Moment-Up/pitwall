@@ -366,8 +366,13 @@ def test_a_drivers_usual_game_is_selected_on_a_seat_change(client: TestClient) -
 
 def test_engineer_answers_capability_questions_before_any_session(client: TestClient) -> None:
     """D8: with no session recorded, a question only about data the selected game never sends is answered from the
-    game's capabilities (deterministic, grounded, no LLM); any other question still needs a session (409)."""
-    assert client.post("/api/engineer/ask", json={"question": "any damage?"}).status_code == 409  # nothing selected
+    game's capabilities (deterministic, grounded, no LLM); any other question gets a plain "no session yet" answer
+    (plan 6.5: never a raw 409)."""
+    nothing = client.post("/api/engineer/ask", json={"question": "any damage?"})  # nothing selected
+    assert nothing.status_code == 200 and nothing.json()["session_id"] is None
+    assert (
+        nothing.json()["text"] == "No session yet: choose your game in Setup › Game, or drive a lap and ask me again."
+    )
     client.put("/api/game", json={"id": "ac:ps5", "ensure_input": False})
     r = client.post("/api/engineer/ask", json={"question": "how are my tyres?"})
     assert r.status_code == 200
@@ -378,7 +383,10 @@ def test_engineer_answers_capability_questions_before_any_session(client: TestCl
     )
     client.put("/api/game", json={"id": "gt7:ps5", "ensure_input": False})
     # GT7 sends tyre temperatures: the tyres question is about data, so it waits for a session
-    assert client.post("/api/engineer/ask", json={"question": "how are my tyres?"}).status_code == 409
+    tyres = client.post("/api/engineer/ask", json={"question": "how are my tyres?"})
+    assert tyres.status_code == 200 and tyres.json()["model"] is None
+    want = "No session yet: ask about the game (what Gran Turismo 7 sends), or drive a lap and ask again."
+    assert tyres.json()["text"] == want
     fuel = client.post("/api/engineer/ask", json={"question": "how much fuel do I have?"}).json()
     assert fuel["model"] is None and fuel["text"].startswith("GT7 sends a fuel level, but sources disagree")
     assert client.get("/api/engineer/history").json() == []  # nothing stored without a session

@@ -697,6 +697,11 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  /* a safety net (coachref): the reference control, its lap and the braking note, a goal row or a drill block can make
+     a column taller than the card; it then scrolls inside the card instead of being clipped by .pwc-ready.card */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 .pwc-who {
   margin: 14px 0 10px;

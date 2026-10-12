@@ -29,10 +29,10 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Coaching from your own reference lap (deterministic) | yes | yes | **yes** (coaching produced in the live races) | the radio and the card saying the same point, live | `ipad_one_message` |
 | Live braking cues | yes | yes | no | timing on track | `cues_timing` |
 | Radio: push-to-talk, speech recognition, voices | yes | yes | partly (a radio check over an iPad and one AirPod was heard; the F1 25 wheel button is read live) | a driver asking by push-to-talk; the new dashboard's Go live on an iPad; Kokoro and Windows voices on a radio | `radio_ptt`, `radio_kokoro` |
-| Radio policy: speak windows, two (four) messages a lap, order, seat change | yes | yes (recordings over loopback) | no | heard live on track | `radio_speak_windows`, `radio_budget` *(new)* |
-| Engineer intents and instant answers while moving | yes (187-question fixture, every answer grounded) | yes | no | asked by voice on track | `radio_ptt` |
+| Radio policy: speak windows, two (four) messages a lap, order, seat change | yes | yes (the v0.2.0 acceptance run, owner captures over loopback: at most 2 a lap at normal, every message in a calm stretch, the seat change; the 2 s gap after a held message failed there and is fixed since, unit-tested) | no | heard live on track | `radio_speak_windows`, `radio_budget` *(new)* |
+| Engineer intents and instant answers while moving | yes (204-question fixture, every answer grounded and short enough for the radio) | yes (the acceptance run: every typed question on track got its intent, no "Copy, checking."; the long answers it found are shortened since, unit-tested) | no | asked by voice on track | `radio_ptt` |
 | Lap naming on the radio and Drive ("That lap", "Out-lap", "Final lap") | yes | yes (Melbourne and Imola excerpts; 18 owner captures) | no | heard live; an out lap from the garage in practice; a pit-lane race start | `radio_speak_windows` |
-| Drive at speed: moving or stopped, one status line, at most two chips, the cards | yes | yes (recorded snapshots; card fit measured in a desktop browser at iPad and phone sizes) | no | on an iPad during a session | `ipad_glance` |
+| Drive at speed: moving or stopped, one status line, at most two chips, the cards | yes | yes (recorded snapshots; the Ready and Session complete cards measured with every slot filled, the reference control, goal row and drill blocks included, at 1180 x 820 and 1133 x 744 in a desktop browser) | no | on an iPad during a session | `ipad_glance` |
 | Game selection and what each game sends | yes | yes (F1 25 and Assetto Corsa excerpts) | no | GT7, Forza or Assetto Corsa selected with a live console | `game_selection` |
 | Driver profiles and seat changes | yes | yes | no | splitting a live session on a switch | `driver_switch` |
 | Pace against the AI (F1 25) | yes | yes (six PS5 sessions, exact to the millisecond) | no | a real safety car; time trial and the 2026 format; a real "measured" level suggestion | `ai_pace_result` *(new)* |
@@ -66,11 +66,15 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
 - **Reference choice and drills:** the finished-drill card is tested as a render only; recorded evidence comes from a
   development script until an excerpt with a complete lap is committed. "Choose a corner…" on the Ready card shows
   between runs with a suggested drill only (the plan's slot limits); drills can always be started by radio.
-- **Radio:** a spoken "quiet until lap N" carries into the next session (the scheduler is not reset on a new
-  session id); 3.4's goal-and-summary merge and answer topics are left for 0.2.1.
+- **Radio:** 3.4's goal-and-summary merge and answer topics are left for 0.2.1.
 - **Review:** the Ask page (outside a session) offers only the AI question beyond the defaults; Sessions is not yet
   filtered by the selected game.
 - **Validation kit:** the new catalogue items above (`radio_budget`, `strategy_calls`, `goal_line`, `drill_cycle`,
   `ai_pace_result`, `technique_balance`, `reference_choice`) are not in the catalogue yet.
-- **Acceptance:** the end-to-end acceptance run of the v0.2.0 plan (section 8) and the rollback rehearsal on a
-  migrated database have not been run yet.
+- **Acceptance:** the end-to-end acceptance run of the v0.2.0 plan (section 8) ran once in a scratch folder on
+  12 Oct (migrations and the rollback rehearsal on a copy of the live database passed). Its five failures (the Ready
+  card with an old drill result, Session complete's order with a goal and a record, the phone Corners page, a held
+  radio message inside the 2 s gap, the live snapshot size) are fixed since and re-checked one by one (browser fit
+  measurements, the snapshot sizes on the committed Austria excerpt, unit tests); the full run has not been repeated.
+- **Review:** the "AI reference" heads-up wording and the "SB your best today" legend keep their words until the 0.2.1
+  vocabulary pass; Connect's game menu paths still use ">".

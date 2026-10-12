@@ -443,9 +443,12 @@ def test_time_to_next_braking_treats_entered_zone_as_now() -> None:
 class NoLlmEngineer(RaceEngineer):
     """Fails the test if the radio ever asks for an LLM answer."""
 
-    async def answer(self, question: str, sheet: Any, history: Any = None, use_llm: bool = True) -> Any:
+    async def answer(
+        self, question: str, sheet: Any, history: Any = None, use_llm: bool = True, short: bool = False
+    ) -> Any:
         assert not use_llm, question
-        return await super().answer(question, sheet, history, use_llm=False)
+        assert short, question  # the radio always asks for the short (spoken) answer
+        return await super().answer(question, sheet, history, use_llm=False, short=short)
 
 
 async def _hub_without_session(selected: str | None) -> tuple[RadioHub, list[Any]]:
@@ -518,9 +521,11 @@ class RecordingEngineer(RaceEngineer):
         super().__init__(None)
         self.use_llm: list[tuple[str, bool]] = []
 
-    async def answer(self, question: str, sheet: Any, history: Any = None, use_llm: bool = True) -> Any:
+    async def answer(
+        self, question: str, sheet: Any, history: Any = None, use_llm: bool = True, short: bool = False
+    ) -> Any:
         self.use_llm.append((question, use_llm))
-        return await super().answer(question, sheet, history, use_llm=False)
+        return await super().answer(question, sheet, history, use_llm=False, short=short)
 
 
 async def test_f1_questions_about_data_it_sends_go_to_the_llm_path() -> None:

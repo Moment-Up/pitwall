@@ -193,3 +193,19 @@ export function liveFocusFor(
   if (!s || !session.track_id || s.game !== session.game || s.track_id !== session.track_id) return [];
   return [...(snap?.cues?.focus ?? [])];
 }
+
+/** Coach notes shown per corner before "Show all N": 3 on a tablet or a computer, 1 on a phone (below 768 px, the
+ * same condition that collapses the technique sections): three notes a corner made a phone's Corners tab 7 000 px
+ * long (acceptance B7). */
+export function notesShown(wide: boolean): number {
+  return wide ? 3 : 1;
+}
+
+/** Corner cards shown on a phone before "Show all N corners" (most time first): with every corner open the page ran
+ * past 7 000 px (acceptance B7: at most 4 000; a card is about 500 px with its one note). A tablet or a computer shows
+ * them all. */
+export const PHONE_CORNERS = 5;
+
+export function cornersShown(wide: boolean, n: number, all: boolean): number {
+  return wide || all ? n : Math.min(n, PHONE_CORNERS);
+}

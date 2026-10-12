@@ -2,16 +2,18 @@
 // and the connection dot, 56 px wide, 11 px / 600) and the phone app bar (before the connection pill). It reads the
 // effective entry's short label ("GT7"), or "Game?" when nothing is selected or detected. A small dot marks the warn
 // tone (another game's data is arriving, or nothing is selected): never colour alone, the accessible name and the
-// title carry the words (P4). A tap opens Setup › Game through the Drive lock (a hold while it applies).
+// title carry the words (P4), including why the game is selected ("Sam usually plays GT7"). A tap opens Setup › Game
+// through the Drive lock (a hold while it applies).
 // Renders nothing until the catalogue loads, and with a server that predates game selection.
 
-import { useGameCatalog, useSnapshotGame } from "../hooks/useGame";
+import { useDriverNames, useGameCatalog, useSnapshotGame } from "../hooks/useGame";
 import { gameChip } from "../lib/game";
 import { LockableNavLink } from "./shell/LockableNavLink";
 import { holdNeeded, useDriveLock } from "./shell/useDriveLock";
 
 export function GameChip({ variant }: { variant: "rail" | "appbar" }) {
-  const view = gameChip(useSnapshotGame(), useGameCatalog());
+  const names = useDriverNames();
+  const view = gameChip(useSnapshotGame(), useGameCatalog(), names);
   const lock = useDriveLock();
   if (!view) return null;
   const warn = view.tone === "warn";

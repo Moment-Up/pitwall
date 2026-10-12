@@ -2,8 +2,8 @@
 
 Level -> kind: ``alert`` -> ``MessageKind.ALERT`` (every intensity), ``normal`` -> ``MessageKind.STRATEGY`` (normal and
 detailed), ``detailed`` -> ``MessageKind.INFO`` (detailed only). Priority comes from the call; ``bypass_quiet`` only
-for the safety-car opportunity and critical fuel. ``meta["topic"] = "strategy:<topic>"``, so a newer call on the same
-topic replaces an unsaid older one ("fuel critical" replaces "fuel is tight").
+for the safety-car box-or-stay call and critical fuel. ``meta["topic"] = "strategy:<topic>"``, so a newer call on the
+same topic replaces an unsaid older one ("fuel critical" replaces "fuel is tight").
 """
 
 from __future__ import annotations

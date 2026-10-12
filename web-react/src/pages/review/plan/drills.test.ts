@@ -220,3 +220,40 @@ describe("Work on: Drill this (spec 10.6)", () => {
     expect(visible(renderWorkOn())).not.toContain("Drill this");
   });
 });
+
+describe("Review › Coaching: the session's own work-on card shows the Summary's count (UX review)", () => {
+  it("evidence: the recap's line when given, else the coach's own window", async () => {
+    stubDom();
+    const { WorkingOnCard } = await import("./WorkingOnCard");
+    const latest = {
+      ...(fixture("edited-garage-between-runs").observations[0] as unknown as CoachingItem["latest"]),
+      consistency: "6 of the last 6 laps",
+    };
+    const item: CoachingItem = {
+      key: "T1:low_min_speed",
+      corner: "T1",
+      kind: "low_min_speed",
+      positive: false,
+      latest,
+      latestLapId: 31,
+      lapNumbers: [2, 3],
+      seen: 25,
+      compared: 31,
+      meanImpactS: 0.3,
+      meanConfidence: 0.9,
+      meanPriority: 0.3,
+      score: 1,
+      repeated: true,
+    };
+    const w = { item, label: "T1", name: null, spoken: "Turn 1", apexM: null, trend: null };
+    const base = { w, sessionId: "s1", refLapId: 2, atM: null, simple: false, textPx: 17 };
+    const own = visible(
+      renderToStaticMarkup(createElement(WorkingOnCard, { ...base, evidence: "Seen on 25 of 31 laps compared with your reference" })),
+    );
+    expect(own).toContain("Seen on 25 of 31 laps compared with your reference");
+    expect(own).not.toContain("6 of the last 6 laps");
+    const other = visible(renderToStaticMarkup(createElement(WorkingOnCard, base)));
+    expect(other).toContain("6 of");
+    vi.unstubAllGlobals();
+  });
+});

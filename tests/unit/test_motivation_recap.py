@@ -11,6 +11,7 @@ import pytest
 
 from pitwall.drivers import coaching_limits
 from pitwall.motivation import recap as R
+from pitwall.motivation import rules
 from pitwall.motivation.model import GoalRow, History, LapRow, SessionRow
 from tests.unit.motivation_data import AUSTRIA_HAAS, DAY, T0, goal, history, lap, laps, sess
 
@@ -198,11 +199,11 @@ def test_work_on_order() -> None:
     w = build(inp(sess("b"), bad, None, counts=False)).work_on
     assert w is not None and w.source == "lap_hygiene"
     assert w.text == "2 of 4 laps did not count: 1 invalidated by the game, 1 with a flashback."
-    assert w.text_simple == "2 timed laps did not count this time."
+    assert w.text_simple == "2 timed laps did not count this time: keep them on the track next time."
     one = [lap(1, 71_000, sid="g"), lap(2, 70_000, sid="g", valid=False), lap(3, 71_000, sid="g")]
     w1 = build(inp(sess("g"), one, None, counts=False)).work_on
     assert w1 is not None and w1.text == "Lap 2 did not count: the game invalidated it."
-    assert w1.text_simple == "1 timed lap did not count this time."
+    assert w1.text_simple == "Lap 2 did not count (the game cancelled it): keep it on the track next time."
     incomplete = [lap(1, None, sid="c", flags=["incomplete"]), lap(2, 78_000, sid="c", flags=["incomplete"])]
     w2 = build(inp(sess("c"), incomplete, None, counts=False)).work_on
     assert w2 is not None and w2.source == "no_clean_lap"
@@ -367,3 +368,24 @@ def test_a_beginner_hears_what_they_did_rather_than_nothing() -> None:
     assert rec.went_well is not None and rec.went_well.source == "drove"
     assert rec.went_well.text_simple == "You drove 2 laps at Suzuka."
     assert build(inp(sf, f, history((sf, f)), skill="advanced")).went_well is None
+
+
+def test_an_older_session_names_its_own_week_not_this_week() -> None:
+    """UX review: a 10 Oct session read on 12 Oct said "4 sessions with a timed lap this week". Read in a later week
+    it names the week it was driven in, counted up to it; the simple wording keeps the counting rule too."""
+    a = laps("a", [71_000, 71_100])
+    sa = sess("a", T0)
+    hist = history((sa, a))
+    same = R.progress_thing(R.RecapInput(**{**vars_of(inp(sa, a, hist)), "now_unix": T0 + 3600}), [], {})
+    assert same is not None and same.text == "1 session with a timed lap this week, 2 laps so far."
+    assert same.text_simple == "You set lap times in 1 session this week."
+    later = R.progress_thing(R.RecapInput(**{**vars_of(inp(sa, a, hist)), "now_unix": T0 + 9 * DAY}), [], {})
+    week = rules.week_of(T0)
+    when = f"the week of {week:%a} {week.day} {week:%b}"
+    assert later is not None and later.text == f"1 session with a timed lap in {when}, 2 laps by then."
+    assert later.text_simple == f"You set lap times in 1 session in {when}."
+    assert later.values["this_week"] is False
+
+
+def vars_of(i: R.RecapInput) -> dict[str, Any]:
+    return {f: getattr(i, f) for f in R.RecapInput.__dataclass_fields__}

@@ -2,7 +2,8 @@
 // thing that went well, one to work on and one about progress, as a Pro ItemCardGroup of three ItemCards. The texts
 // are the server's (the coach's observation verbatim; plain words otherwise), in the VIEWED driver's wording
 // (density, 6.10), each with its evidence line. Work on links to the lap it was seen on (Compare); a progress item
-// about a goal opens the driver's goals. An empty item is "-" with the server's reason. SYNTHETIC / REPLAY chips on
+// about a goal opens the driver's goals; Work on also offers "Drill this" while the driver is live at that track
+// (coachref). An empty item is "-" with the server's reason. SYNTHETIC / REPLAY chips on
 // the header (P8): their progress never counts.
 
 import { ChartLine, ChevronRight, CircleCheck, StarFill, TriangleExclamation } from "@gravity-ui/icons";
@@ -14,6 +15,7 @@ import { router } from "../../../lib/router";
 import { comparePath, progressPath } from "../../../lib/review/links";
 import type { ThingIcon, ThingsView, ThingView } from "../../../lib/motivation/recap";
 import { useWideScreen } from "../useMedia";
+import { DrillThisButton } from "./DrillThisButton";
 
 const ICON: Record<ThingIcon, ReactNode> = {
   check: <CircleCheck aria-hidden="true" />,
@@ -38,18 +40,34 @@ export interface ThreeThingsCardProps {
   apexOf?: (corner: string | null) => number | null;
 }
 
+/** The coach's observation kind of a Work on item (its key is `corner:kind`), for "Drill this". */
+function observationKind(t: ThingView): string | null {
+  const k = t.observationKey;
+  const i = k ? k.lastIndexOf(":") : -1;
+  return k && i > 0 ? k.slice(i + 1) : null;
+}
+
 function Action({ t, sessionId, driverId, refLapId, apex }: { t: ThingView; sessionId: string; driverId: number | null; refLapId: number | null; apex: number | null }) {
   if (t.kind === "work_on" && t.lapId != null) {
+    const kind = t.source === "observation" ? observationKind(t) : null;
     return (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="min-h-11 px-3"
-        onPress={() => router.navigate(comparePath(sessionId, { ref: refLapId, lap: t.lapId, at: apex }))}
-      >
-        See it on the lap
-        <ChevronRight aria-hidden="true" />
-      </Button>
+      <>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="min-h-11 px-3"
+          onPress={() => router.navigate(comparePath(sessionId, { ref: refLapId, lap: t.lapId, at: apex }))}
+        >
+          See it on the lap
+          <ChevronRight aria-hidden="true" />
+        </Button>
+        {/* coachref (plan 0.3 step 4): drill this corner, while this session's driver is live at the track */}
+        {t.corner && kind && (
+          <span className="ml-3 inline-flex">
+            <DrillThisButton sessionId={sessionId} corner={t.corner} observationKind={kind} />
+          </span>
+        )}
+      </>
     );
   }
   if (t.kind === "progress" && t.goalId != null && driverId != null) {

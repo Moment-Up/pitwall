@@ -252,3 +252,11 @@ def test_an_unwritable_cache_does_not_retry_every_minute(tmp_path: Path) -> None
     assert not c.wants_auto_refresh(live=False)
     clock.t += 601
     assert c.wants_auto_refresh(live=False)
+
+
+def test_an_unknown_mode_never_contacts_github_on_its_own(tmp_path: Path) -> None:
+    """Decision D2: the default is manual, and a mistyped PITWALL_UPDATE_CHECK falls back to manual too (auto would
+    contact GitHub)."""
+    status = compute_status(CheckCache(), current="v0.2.0", kind="git", mode="sometimes", root=tmp_path)
+    assert status["mode"] == "manual"
+    assert UpdateChecker(tmp_path, "sometimes", tmp_path).mode == "manual"

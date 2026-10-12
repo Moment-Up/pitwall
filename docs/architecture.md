@@ -144,8 +144,9 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
    game's own glitches, every car's pit visits and the measured pit loss, undercut / rejoin, safety car / VSC,
    forecast, and rate-limited proactive calls through the radio scheduler. Per-lap `StrategyLapRecord`s and pit
    stops are stored (tables `strategy_laps`, `pit_stops`, schema v5) for Review › Strategy. The live view
-   (`strategy`, about 2-3.5 kB) rides the static merge on `/ws/live`: sent when `LiveState.strategy_rev` moved and
-   with the 5 s static payload, left out otherwise (the client keeps it, `lib/live.ts` `STATIC_KEYS`).
+   (`strategy`, about 2-3.5 kB) rides the static merge on `/ws/live` (`api/live_feed.py`): sent when
+   `LiveState.strategy_rev` moved, at most every 2 s, and in a new session's first snapshot, left out otherwise (the
+   client keeps it, `lib/live.ts` `STATIC_KEYS`).
 
 ### Reference choice and practice drills (coachref)
 `core/coachref.py` (`CoachRef`, created by the runtime and attached to the `LapProcessor`) plugs into the lap
@@ -205,8 +206,14 @@ first, then alerts, lap summary, strategy, goal, coaching, info, validation. On 
 caps the budgeted kinds (lap summary, goal, strategy, coaching, info) per driving lap; alerts, cues, answers and
 validation are outside it. Every proactive message waits for a speak window (off the brake, steering nearly straight,
 time before the next braking zone); the 2 s gap, the 60 s repeat filter and topic replacement (newest wins) still
-apply. `RadioHub.apply_driver` calls `drop_driver_messages()` when another driver sits down (unsaid lap summaries,
-goals and coaching go; strategy and alerts stay). Strategy (`strategy/radio.py`) is the only source of fuel alerts.
+apply. The gap also holds for a message the hub synthesised and held while something else was on air: it is released
+2 s after the radio went quiet, never at once (`RadioHub._gap_ok`). A message cut by a braking cue is said again once
+(`MAX_RESENDS`). `RadioHub.apply_driver` calls `drop_driver_messages()` when another driver sits down (unsaid lap
+summaries, goals and coaching go; strategy and alerts stay), and a new live session id calls `reset_session()` (the
+queue, budgets, repeat filter and a lap-bounded quiet period belong to the old session). The safety-car box and stay
+calls and critical fuel are alerts outside the budget. The final lap gets its summary but no coaching point.
+Questions are answered short on the radio (`deterministic_answer(short=True)`: one or two facts in their spoken
+form). Strategy (`strategy/radio.py`) is the only source of fuel alerts.
 The `say` frames are in [voice-protocol.md](voice-protocol.md).
 
 ## Goals, badges and summaries (`motivation/`)
@@ -247,11 +254,14 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
   mismatch line and the full coaching text; `state.ts` `statusSlot` is the one priority order of the status line and
   `chipsOf` the stateless chip rule (the highest-ranked short-lived chip within its life; DRILL as the persistent
   chip); `complete.ts` `dedupeComplete` shows each fact of Session complete once, by the server's `fact_key`.
-- **Live snapshot keys** (`core/live.py`, every snapshot unless noted): the frame, session, laps and events (every-car
-  events carry `player` when F1 says whose they are), `session_state`, `coach`, `bests` (D2), `game`, `ai_pace`,
-  `strategy` (static merge: sent when `strategy_rev` moved or with the 5 s static payload; absent means keep the last
-  value, `null` none), `coachref` (the reference choice and drill), then the static keys every 5 s (`track_model`,
-  `last_comparison`, `skeleton`, `track_knowledge`).
+- **Live snapshot keys** (`core/live.py`; what each `/ws/live` snapshot carries is `api/live_feed.py`'s rule): every
+  snapshot has the frame, session, laps (the newest 20) and events (every-car events carry `player` when F1 says whose
+  they are), `session_state`, `coach`, `bests` (D2) and `game` (with `selected_source` / `selected_by`: why the game is
+  selected). Sent when they changed: `ai_pace`, `coachref` (the reference choice and drill) and `lap_totals` (the
+  whole session's lap counts); `strategy` when it changed, at most every 2 s. The static keys go every 5 s
+  (`last_comparison` always; `track_model`, `skeleton` and `track_knowledge` only when they changed). A new session's
+  first snapshot and one a minute carry everything. Absent means keep the last value within the session, `null`
+  none (`lib/live.ts` `STATIC_KEYS`).
 - **Two car class encodings** until the 0.2.1 single source: goals and badges store `car_class` as
   `"<game>:formula:<name>"`, pace against the AI as the game's class name (`"F1 World"`); they are never joined.
 

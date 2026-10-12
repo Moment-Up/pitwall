@@ -46,6 +46,7 @@ import {
   connectionPill,
   driveState,
   evidence,
+  inGarage,
   statusLine,
   statusSlot,
   type ConnectionPill,
@@ -64,6 +65,7 @@ import {
   lapTimesView,
   legendOf,
   notCleanList,
+  notCleanTotalsList,
   sessionBest,
   sectorCells,
   tagOf,
@@ -432,14 +434,40 @@ function footerOf(s: SnapshotNext): string | null {
   return parts.length ? parts.join(" · ") : null;
 }
 
-function cleanCounts(s: SnapshotNext): { clean: number; total: number; firstClean: number | null; bestClean: number | null } {
+interface CleanCounts {
+  clean: number;
+  total: number;
+  firstClean: number | null;
+  bestClean: number | null;
+  notClean: number;
+  /** Why the laps that did not count did not ("out lap, pit in"). */
+  reasons: string[];
+}
+
+/** The session's lap counts: the server's whole-session totals (``lap_totals``), else counted from ``laps`` (an older
+ * server: its newest 20 laps only). */
+export function cleanCounts(s: SnapshotNext): CleanCounts {
+  const t = s.lap_totals;
+  if (t && finite(t.laps) && t.laps >= s.laps.length) {
+    return {
+      clean: t.clean,
+      total: t.laps,
+      firstClean: finite(t.first_clean_ms) ? t.first_clean_ms : null,
+      bestClean: finite(t.best_clean_ms) ? t.best_clean_ms : null,
+      notClean: t.not_clean,
+      reasons: notCleanTotalsList(t),
+    };
+  }
   const clean = s.laps.filter((l) => l.clean && finite(l.lap_time_ms) && l.lap_time_ms > 0);
   const times = clean.map((l) => l.lap_time_ms as number);
+  const notClean = s.laps.filter((l) => !l.clean);
   return {
     clean: clean.length,
     total: s.laps.length,
     firstClean: clean.length ? (clean[clean.length - 1]!.lap_time_ms as number) : null, // laps[] is newest first
     bestClean: times.length ? Math.min(...times) : null,
+    notClean: notClean.length,
+    reasons: [...new Set(notClean.flatMap((l) => notCleanList(l)))],
   };
 }
 
@@ -554,8 +582,6 @@ function endedCard(
   const counts = cleanCounts(s);
   const sb = sessionBest(s, bv);
   const st: TimingStatus = sb?.status ?? "neutral";
-  const notClean = s.laps.filter((l) => !l.clean);
-  const reasons = [...new Set(notClean.flatMap((l) => notCleanList(l)))];
   const hh = bv.household;
   const holder = hh && s.bests?.household?.driver_id != null ? drivers.find((d) => d.id === s.bests?.household?.driver_id) : null;
   const gap = (ref: number | null | undefined, sub: string | null): EndedChange =>
@@ -594,9 +620,13 @@ function endedCard(
       clean: counts.clean,
       total: counts.total,
       text: `${counts.clean} of ${counts.total}`,
-      sub: notClean.length ? `${notClean.length} not used: ${reasons.join(", ")}` : null,
+      sub: counts.notClean ? `${counts.notClean} not used: ${counts.reasons.join(", ")}` : null,
     },
-    gained: endedChange(gainedChange(counts.firstClean, counts.bestClean, 2, counts.clean), "first clean lap → best"),
+    // with fewer than two clean laps there is nothing to gain from: say why (as Review does), not "first → best"
+    gained: endedChange(
+      gainedChange(counts.firstClean, counts.bestClean, 2, counts.clean),
+      counts.clean >= 2 ? "first clean lap → best" : counts.clean === 1 ? "Needs a second clean lap" : "Needs 2 clean laps",
+    ),
     toYourBest: !bv.driver
       ? null
       : st === "pb" || st === "rec"
@@ -692,9 +722,21 @@ export function driveModel(input: DriveModelInput): DriveModel {
   };
   // The Ready and Session complete cards wait for the car to stop: after the line at the session's end the band says
   // SESSION COMPLETE (or CHEQUERED FLAG) over the normal screen until then (a cool-down lap is still driving).
+  // In the game's menus a packet arrives every few seconds, so the data keeps going stale between them: a car last
+  // seen in the garage keeps its Ready card under the "No signal" band instead of switching to the on-track layout
+  // and back (UX review: six layout switches in 70 s).
+  const staleGarage = state === "stale" && !!s && inGarage(s);
   const card =
-    state === "no_data" ? "no_data" : !still ? null : state === "garage" ? "ready" : state === "ended" ? "ended" : null;
-  let hero = heroOf(s, state === "ended" && !card ? "on_track" : state, corner, dim);
+    state === "no_data"
+      ? "no_data"
+      : !still
+        ? null
+        : state === "garage" || staleGarage
+          ? "ready"
+          : state === "ended"
+            ? "ended"
+            : null;
+  let hero = heroOf(s, state === "ended" && !card ? "on_track" : staleGarage && card ? "garage" : state, corner, dim);
   // --- coachref: the running drill's corner wears a DRILL chip instead of FOCUS ---
   const dCorner = drillCorner(s);
   if (hero.kind === "corner" && dCorner != null && hero.corner.name === dCorner) hero = { ...hero, drill: true };

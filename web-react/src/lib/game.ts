@@ -173,7 +173,11 @@ export interface GameChipView {
 }
 
 /** The rail / app bar chip. Null until the catalogue loads, or with an older server (no snapshot.game). */
-export function gameChip(snapGame: SnapshotGame | null | undefined, cat: Catalogue | null | undefined): GameChipView | null {
+export function gameChip(
+  snapGame: SnapshotGame | null | undefined,
+  cat: Catalogue | null | undefined,
+  names: ReadonlyMap<number, string> = new Map(),
+): GameChipView | null {
   if (!snapGame || !cat) return null;
   const sel = selectedEntry(cat, snapGame);
   const eff = effectiveEntry(cat, snapGame);
@@ -195,7 +199,29 @@ export function gameChip(snapGame: SnapshotGame | null | undefined, cat: Catalog
   if (eff && eff.id !== sel.id) {
     return { text: shown.short_label, tone: "neutral", aria: `Game: ${name(eff)} data on screen; ${name(sel)} selected` };
   }
-  return { text: shown.short_label, tone: "neutral", aria: `Game: ${name(sel)} selected` };
+  const why = selectionReason(snapSelection(snapGame), sel, names);
+  return { text: shown.short_label, tone: "neutral", aria: `Game: ${name(sel)} selected${why ? `. ${why}` : ""}` };
+}
+
+/** The snapshot's selection source as `selectionReason` reads it (null on older servers or with nothing selected). */
+function snapSelection(g: SnapshotGame): SelectionWho | null {
+  return typeof g.selected_source === "string" ? { source: g.selected_source, by_driver_id: g.selected_by ?? null } : null;
+}
+
+/** The Ready card's seat line after a seat change picked the game (plan 0.3 step 1): "GT7 · Sam usually plays GT7";
+ * null unless the driver's usual game chose it (and its data is not another game's). */
+export function seatGameLine(
+  snapGame: SnapshotGame | null | undefined,
+  cat: Catalogue | null | undefined,
+  names: ReadonlyMap<number, string> = new Map(),
+): string | null {
+  if (!snapGame || !cat || snapGame.selected_source !== "driver_default") return null;
+  const sel = selectedEntry(cat, snapGame);
+  const eff = effectiveEntry(cat, snapGame);
+  if (!sel || (eff && eff.id !== sel.id)) return null;
+  const id = snapGame.selected_by ?? null;
+  const who = id != null ? names.get(id)?.trim() : null;
+  return who ? `${sel.short_label} · ${who} usually plays ${sel.short_label}` : null;
 }
 
 // ---------------------------------------------------------------------------------------------- Drive status slot

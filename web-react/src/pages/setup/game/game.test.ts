@@ -108,8 +108,8 @@ describe("Setup › Game picker", () => {
       renderToStaticMarkup(
         createElement(GamePicker, { catalogue: CAT, selectedId: "gt7:ps5", pending: null, onChoose: noop, result: null, error: null, reason }),
       );
-    const html = render("Selected because Thomas usually plays GT7");
-    expect(text(html)).toContain("Selected because Thomas usually plays GT7. Choose another platform or game to change it.");
+    const html = render("Selected because Sam usually plays GT7");
+    expect(text(html)).toContain("Selected because Sam usually plays GT7. Choose another platform or game to change it.");
     expect(html.split("data-game-reason").length - 1).toBe(1);
     expect(render(null)).not.toContain("data-game-reason");
   });

@@ -7,7 +7,8 @@
 //               Brake within 5 m of Sam's braking point          [ Stop drill ]
 //   just ended  Drill result · T3 · Brake point   2 of 3 on the point · Best: 1 m from the point  [Closer]
 //               ● ○ ●  (filled = hit, ring = miss, dash = not measured)       [ Again ]  [ Done ]
-//               (it stays, also after a driver change or in a later session, until Done puts it away)
+//               (it stays in the session it was driven in, until Done puts it away; a later session's Ready card
+//               keeps its "Last lap:" point and FOCUS, and the result waits in Review › Coaching)
 //
 // Status slot while driving: [DRILL · T3 · 3/5 · 2 ✓] (accent-soft, 44 px tall, at most 220 px); a tap shows the
 // target and Stop drill (56 px; allowed while moving: one tap, and it only makes the radio say less). The popover

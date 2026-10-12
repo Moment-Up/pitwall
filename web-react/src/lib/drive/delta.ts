@@ -70,6 +70,17 @@ export function referenceLabel(
 }
 
 const NO_REFERENCE = "No reference yet: your first clean lap becomes the reference";
+/** A clean lap is in but the analysis has not published it as the reference yet (UX review: the placeholder kept
+ * promising "your first clean lap" a lap after it). */
+const DELTA_NEXT_LAP = "Delta from your next lap";
+
+/** This session already has a clean timed lap (it becomes the reference once the analysis publishes it). */
+export function hasCleanLap(s: SnapshotNext | null | undefined): boolean {
+  if (!s) return false;
+  const t = s.lap_totals;
+  if (t && typeof t.clean === "number" && t.clean > 0) return true;
+  return s.laps.some((l) => l.clean && typeof l.lap_time_ms === "number" && l.lap_time_ms > 0);
+}
 
 function unknownReason(s: SnapshotNext | null, state: DriveState): string | null {
   switch (state) {
@@ -92,7 +103,8 @@ function unknownReason(s: SnapshotNext | null, state: DriveState): string | null
       if (!s?.reference) {
         // coachref: another driver's lap is chosen and not in place yet: the Ready card's words (waitingText).
         const waiting = waitingText(s?.coachref?.choice);
-        return waiting ? `No reference yet: ${waiting}` : NO_REFERENCE;
+        if (waiting) return `No reference yet: ${waiting}`;
+        return hasCleanLap(s) ? DELTA_NEXT_LAP : NO_REFERENCE;
       }
       const ds = s.frame?.driver_status;
       if (ds === "out_lap") return "Out lap";

@@ -42,7 +42,11 @@ export function CoachPage(_props: PageProps) {
   const noData = model.state === "no_data" || replaced;
   const connect = useConnectInfo(noData);
   const effective = effectiveEntry(catalogue, snapGame);
-  const game = useMemo(() => coachGameView(effective), [effective]);
+  // The session on screen (a Session complete card kept after a seat change picked another game) is that session's
+  // game: a screen never says "Not sent by GT7" beside F1 data (lib/game.ts). Its captions follow its own game.
+  const sessionGame = useLive((s) => (s.snap as SnapshotNext | null)?.session?.game ?? null);
+  const shownEntry = sessionGame && effective?.adapter_game && effective.adapter_game !== sessionGame ? null : effective;
+  const game = useMemo(() => coachGameView(shownEntry), [shownEntry]);
   const [notNow, setNotNow] = useState(pickerDismissed);
   const askGame = noData && !!catalogue && !!snapGame && snapGame.selected_id === null && !notNow;
   const listening = noData ? noTelemetryView(connect, noTelemetryGame(selected)).listening : null;

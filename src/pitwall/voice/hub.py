@@ -91,7 +91,14 @@ from pitwall.coach.cues import (
 from pitwall.compat import is_windows
 from pitwall.core.live import LiveState
 from pitwall.motivation.radio import GoalLineGate, goal_message  # lane motivation
-from pitwall.voice.scheduler import DRIVER_LAP_KINDS, SPEECH_LATENCY_S, speak_window_ok, spoken_word_count
+from pitwall.voice.scheduler import (
+    DRIVER_INITIATED,
+    DRIVER_LAP_KINDS,
+    MIN_GAP_S,
+    SPEECH_LATENCY_S,
+    speak_window_ok,
+    spoken_word_count,
+)
 from pitwall.voice.tts import speech_mismatch
 from pitwall.voice.types import (
     MIC_SAMPLE_RATE,
@@ -171,6 +178,8 @@ CUE_OUTPUT_ALLOWANCE_S = 0.05  # device "started" -> in the ear (BT HFP output 3
 MAX_OUTPUT_LATENCY_S = 0.5  # a device-reported output delay beyond this is not believed
 CUE_LATENCY_SMOOTHING = 0.3  # weight of a new fire -> audible measurement
 YIELD_POLL_S = 0.02  # an answer waiting for a cue / urgent call on air re-checks this often
+RESENT_KEY = "resent"  # meta: how many times a cut proactive message was said again (``_rehold``)
+MAX_RESENDS = 1
 YIELD_MAX_S = 8.0  # ...and never waits longer than this (a lost "ended" report must not swallow the answer)
 CUE_SYNTH_DEFAULT_S = 0.4  # `say` synthesis per call [measured, voice/tts.py]: last resort when an engine
 #                            neither measures itself (WorkerTts) nor states a typical time and no part was timed
@@ -390,6 +399,8 @@ class RadioHub:
         self._held: _Ready | None = None
         # an urgent call waiting only for the driver's transmission or another urgent call to end
         self._held_urgent: _Ready | None = None
+        self._air_free_mono = -math.inf  # monotonic time the radio last went silent (the 2 s gap counts from it)
+        self._radio_sid: str | None = None  # the live session the scheduler's queue and budgets belong to
         self._dispatched: dict[str, float] = {}  # proactive message id -> dispatch time (latency feedback)
         self._tasks: set[asyncio.Task[Any]] = set()  # strong refs: un-referenced tasks can be GC'd mid-flight
         self._on_air: tuple[RadioMessage, AudioClip | None] | None = None  # last delivered (valid while speaking)
@@ -834,10 +845,11 @@ class RadioHub:
                 no_game = entry is None and intent.name in games.CAPABILITY_ONLY_INTENTS
                 ans_text, ans = (NO_GAME_REPLY if no_game else NO_SESSION_REPLY), None
             else:
-                ans = await self.engineer.answer(question, sheet, use_llm=use_llm)
+                # short: a deterministic radio answer is one or two facts, never a list read out at speed
+                ans = await self.engineer.answer(question, sheet, use_llm=use_llm, short=True)
                 ans_text = ans.text
                 if not use_llm:
-                    short = radio_answer(intent.name, sheet)  # engineer-style phrasing for instant answers
+                    short = radio_answer(intent.name, sheet, question)  # engineer-style phrasing for instant answers
                     if short:
                         ans_text = short
             rec.engineer_ms = int((time.perf_counter() - t0) * 1000)
@@ -1204,6 +1216,7 @@ class RadioHub:
                 self._measure_cue(cue, now, path, output_s)
         elif state == "ended" and msg_id == self.speaking_id:
             self.speaking_id = None
+            self._air_free_mono = now
             self._gate_until = now + GATE_TAIL_S
             self._send_state()
         self._observe(  # validation kit hook
@@ -1223,6 +1236,7 @@ class RadioHub:
         if self.speaking_id is not None:
             self._broadcast({"type": "cancel", "id": self.speaking_id})
             self.speaking_id = None
+            self._air_free_mono = time.monotonic()
             self._gate_until = time.monotonic() + GATE_TAIL_S
             self._send_state()
 
@@ -1366,8 +1380,10 @@ class RadioHub:
         a cue or a slow LLM answer."""
         self._sync_cue_gate()
         self._check_tts_engine(now)
+        self._follow_session()
         if self.speaking_id is not None and now > self._speaking_deadline:
             self.speaking_id = None  # device never reported playback end
+            self._air_free_mono = now
             self._gate_until = now + GATE_TAIL_S
             self._send_state()
         if not self.clients or self.ptt_down:
@@ -1407,7 +1423,7 @@ class RadioHub:
         elif _urgent(msg):
             may_go = self._urgent_may_cut()
         else:
-            radio_free = self.speaking_id is None and not self._busy
+            radio_free = self.speaking_id is None and not self._busy and self._gap_ok(msg, now)
             may_go = radio_free and (
                 not msg.needs_speak_window
                 or speak_window_ok(self.driving_state(), self._speech_duration(msg, clip), DELIVERY_LEAD_S)
@@ -1426,6 +1442,8 @@ class RadioHub:
         if msg.expired(now):
             self._held = None
             return False
+        if not self._gap_ok(msg, now):
+            return False  # the radio only just went quiet: keep the scheduler's gap after it
         if (
             msg.needs_speak_window
             and not _urgent(msg)
@@ -1435,6 +1453,34 @@ class RadioHub:
         self._held = None
         self._send_ready(held, now)
         return True
+
+    def _gap_ok(self, msg: RadioMessage, now: float) -> bool:
+        """The scheduler's minimum gap (``min_gap_s``) after the radio last went silent, for a proactive message that
+        was synthesised or held while something else was on air. Urgent calls, cues, answers and acknowledgements are
+        exempt, as in the scheduler."""
+        if _urgent(msg) or msg.kind in DRIVER_INITIATED or msg.kind is MessageKind.CUE:
+            return True
+        gap = getattr(self.scheduler, "min_gap_s", MIN_GAP_S)
+        gap_s = float(gap) if isinstance(gap, int | float) else MIN_GAP_S
+        return now >= self._air_free_mono + gap_s
+
+    def _follow_session(self) -> None:
+        """A new live session: the scheduler's queue, budgets and repeat filter belong to the old one
+        (``RadioScheduler.reset_session``), and so does a held lap summary, goal line or coaching point."""
+        sid = self.live.session_id
+        if sid is None or sid == self._radio_sid:
+            return
+        previous, self._radio_sid = self._radio_sid, sid
+        if previous is None:
+            return  # the first session this radio sees: nothing of an older one is queued
+        reset = getattr(self.scheduler, "reset_session", None)
+        dropped = reset() if callable(reset) else 0
+        held = self._held
+        if held is not None and held[0].kind in DRIVER_LAP_KINDS:
+            self._held = None
+            dropped = (dropped if isinstance(dropped, int) else 0) + 1
+        if dropped:
+            log.info("new session: %s unsaid message(s) about the previous session dropped", dropped)
 
     def _hold(self, ready: _Ready) -> None:
         """Keep a synthesised message for later. Urgent calls have their own slot; the other slot keeps the more
@@ -1626,12 +1672,19 @@ class RadioHub:
         return on_air
 
     def _rehold(self, interrupted: tuple[RadioMessage, AudioClip | None], now: float) -> None:
-        """A proactive message cut by a cue is said again (in full, under a new id) in the next speak window."""
+        """A proactive message cut by a cue is said again (in full, under a new id) in the next speak window, once:
+        a message cut a second time is dropped (``MAX_RESENDS``), so a busy stretch never repeats it lap after lap."""
         msg, clip = interrupted
         if msg.kind in (MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.CUE) or msg.expired(now):
             return
+        resent = msg.meta.get(RESENT_KEY, 0)
+        count = resent if isinstance(resent, int) and not isinstance(resent, bool) else 0
+        if count >= MAX_RESENDS:
+            log.info("message %r cut again: not said a third time", msg.text)
+            return
         if self._held is None:
-            self._held = (dataclasses.replace(msg, id=f"m{next(self._ids)}"), clip, None)
+            again = dataclasses.replace(msg, id=f"m{next(self._ids)}", meta={**msg.meta, RESENT_KEY: count + 1})
+            self._held = (again, clip, None)
 
     def _cue_speech(self, parts: Sequence[str]) -> str:
         return ", ".join(sp for sp in (self.to_speech(p).strip() for p in parts) if sp)

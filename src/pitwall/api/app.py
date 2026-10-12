@@ -29,6 +29,7 @@ from pitwall.analysis.distance import to_distance_domain
 from pitwall.analysis.track_identity import corner_texts, identify, track_model_payload
 from pitwall.analysis.track_skeleton import skeleton_from_session_row
 from pitwall.api.auth import AccessPolicy, detect_tailscale
+from pitwall.api.live_feed import LiveFeed
 from pitwall.config import Settings, get_settings
 from pitwall.core.runtime import Runtime
 from pitwall.core.session_analysis import SessionAnalyzer
@@ -309,28 +310,11 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
 
         r.live.subscribe(on_note)
         period = 1.0 / max(1.0, settings.live_ws_hz)
-        last_version = -1
-        last_static = 0.0
-        last_game: Any = None
-        last_strategy_rev = -1
+        feed = LiveFeed()  # what each snapshot carries: api/live_feed.py (keys the client keeps go when they changed)
         try:
             while True:
-                now = time.monotonic()
-                static = now - last_static > 5.0
-                # Race strategy rides the static merge: its view (2-3.5 kB) goes with the static payload and when it
-                # changed (<= 2 Hz); otherwise the key is left out and the client keeps the previous value.
-                strategy_rev = r.live.strategy_rev
-                send_strategy = static or strategy_rev != last_strategy_rev
-                snap = r.live.snapshot(include_static=static, include_strategy=send_strategy)
-                # The game block changes without a new frame (a selection made on another device or by the CLI, a
-                # detection going live -> stale): send it at once instead of with the next 5 s static payload.
-                game = snap.get("game")
-                if snap["version"] != last_version or static or game != last_game or send_strategy:
-                    last_version = snap["version"]
-                    last_game = game
-                    last_strategy_rev = strategy_rev
-                    if static:
-                        last_static = now
+                snap = feed.next(r.live, time.monotonic())
+                if snap is not None:
                     await ws.send_bytes(orjson.dumps({"type": "snapshot", "data": snap}))
                 while not notes.empty():
                     kind, payload = notes.get_nowait()
@@ -562,12 +546,21 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             from pitwall.ai.engineer import detect_intent
 
             entry = games.entry(r.live.effective_game_id())
-            if games.capability_only(detect_intent(body.question).name, entry) and entry is not None:
+            intent = detect_intent(body.question)
+            if games.capability_only(intent.name, entry) and entry is not None:
                 cap = await request.app.state.engineer.answer(
                     body.question, games.capability_sheet(entry), [], use_llm=False
                 )
                 return {"session_id": None, **asdict(cap)}
-            raise HTTPException(409, "no sessions recorded yet for the driver in the seat")
+            # any other question: a plain answer (not an error) saying what can be asked before the first lap
+            from pitwall.ai.engineer import EngineerAnswer
+
+            if entry is None:
+                text = "No session yet: choose your game in Setup › Game, or drive a lap and ask me again."
+            else:
+                text = f"No session yet: ask about the game (what {entry.label} sends), or drive a lap and ask again."
+            none_yet = EngineerAnswer(text, text, intent.name, intent.corner, [], True, True, cited_text=text)
+            return {"session_id": None, **asdict(none_yet)}
         sa = await asyncio.to_thread(request.app.state.analyzer.analyse, sid, None)
         if sa is None:
             raise HTTPException(404, "session not found")

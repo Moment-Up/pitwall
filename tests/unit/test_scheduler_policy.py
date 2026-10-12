@@ -356,3 +356,27 @@ def test_safety_car_box_call_bypasses_quiet_mode_and_the_budget() -> None:
     said = drain(sched, ON_TRACK, start=2000.0)
     assert said[0].kind is MessageKind.ALERT and said[0].text.startswith("Fuel critical")
     assert len([m for m in said if m.kind is MessageKind.STRATEGY]) == 2  # the alert spent none of the allowance
+
+
+def test_safety_car_stay_out_call_is_never_squeezed_out_by_the_budget() -> None:
+    """Plan 3.1 / 0.3: "no stop needed" under the safety car is an alert like the box call. A lap whose allowance the
+    summary and coaching point already spent still says it, and it bypasses quiet mode."""
+    from pitwall.strategy.calls import CallContext, CallPlanner
+
+    planner = CallPlanner(clock=lambda: 1.0)
+    box = {"pit_loss_s": 10.2, "green_pit_loss_s": 19.4, "stop_needed": False, "this_lap": True, "tier": "heuristic"}
+    ctx = CallContext(
+        t=100.0, lap=10, total_laps=50, laps_remaining=40.0, player_in_pit=False, blocked=None,
+        sc_status="full", sc_period=1, sc_box=box,
+    )  # fmt: skip
+    (stay,) = planner.plan(ctx)
+    sched = RadioScheduler("normal")
+    sched.enqueue(msg("sum", MessageKind.LAP_SUMMARY, lap=10))
+    sched.enqueue(msg("pt", MessageKind.COACHING, lap=10))
+    said = drain(sched, ON_TRACK)
+    assert [m.id for m in said] == ["sum", "pt"]  # this lap's allowance is spent
+    sched.set_quiet(indefinite=True)
+    sc = strategy_message(stay.to_dict(), 20.0)
+    assert sc.kind is MessageKind.ALERT and sc.priority is Priority.HIGH and sc.bypass_quiet
+    sched.enqueue(sc)
+    assert [m.id for m in drain(sched, ON_TRACK, start=20.0)] == [sc.id]

@@ -77,6 +77,23 @@ def spec_doc() -> str:
     return p.read_text(encoding="utf-8")  # UTF-8 on every OS (Windows' locale default would garble it)
 
 
+# Opt-in tiers that talk to a real game, LLM or audio device: they may need the shell's PITWALL_* settings.
+_REAL_WORLD_MARKERS = ("live", "llm", "voice")
+
+
+@pytest.fixture(autouse=True)
+def _shell_pitwall_env_hidden(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests see the built-in defaults, not the developer's shell: a shell that moved ``PITWALL_HTTP_PORT`` off 8770
+    or switched voice off (the integration rules do both) must not change what a unit test asserts, and
+    ``scripts/release.sh`` runs the suite from whatever shell starts it. ``PITWALL_DATA_DIR`` is kept: it only ever
+    points a stray default at a scratch folder. The opt-in live, LLM and voice tiers keep the whole environment."""
+    if any(request.node.get_closest_marker(m) is not None for m in _REAL_WORLD_MARKERS):
+        return
+    for name in list(os.environ):
+        if name.upper().startswith("PITWALL_") and name.upper() != "PITWALL_DATA_DIR":
+            monkeypatch.delenv(name)
+
+
 @pytest.fixture
 def no_pitwall_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Hide ``PITWALL_*`` variables of the shell running the tests (a CI job or a developer may set some, e.g. to

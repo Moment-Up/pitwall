@@ -23,7 +23,8 @@ said; this module decides what is worth saying:
   than Sam") and the lap summary says the reference's radio label ("plus 0.792 to Sam's best").
 * **Practice drills** (coachref) - while a drill runs the lap's coach block says ``drill_only``: no lap summary and
   no other point, only the drill attempt (a ``kind: "drill"`` point, spoken verbatim from its text).
-* **Still actionable** - lap messages expire ``LAP_MESSAGE_TTL_S`` after creation, a simple bound for "before
+* **Still actionable** - the final lap (the session ended on it) gets its summary but no coaching point: no next lap
+  can use it. Lap messages expire ``LAP_MESSAGE_TTL_S`` after creation, a simple bound for "before
   the driver is well into the next lap". They carry ``lap_number`` and ``meta["lap_id"]``, so a later lap
   supersedes them and the scheduler's per-lap budget survives lap numbers restarting each session. Fuel calls are
   race strategy's (``strategy.radio``): it is the only source of fuel alerts.
@@ -160,11 +161,18 @@ def _lap_summary(
         return None
     head = [lap_label(lap), fmt_lap_time(ms)]
     delta = _reference_delta_ms(lap, ms, reference)
-    if lap.get("clean") and best_clean_ms is not None and ms <= best_clean_ms:
+    new_best = lap.get("clean") and best_clean_ms is not None and ms <= best_clean_ms
+    if new_best:
         head.append("personal best" if delta is None or delta <= 0 else "session best")
     shown, spoken = list(head), list(head)
     to_ref = (reference or {}).get("label_to") or "your reference"  # --- coachref --- e.g. "Sam's best"
-    if delta == 0:
+    if new_best and delta is not None and delta < 0 and (reference or {}).get("own") is not False:
+        # a new personal best against the driver's own reference: "personal best, 0.908 faster than before", never
+        # "personal best, minus 0.908 to your best"
+        gain = f"{abs(delta) / 1000:.3f} faster than before"
+        shown.append(gain)
+        spoken.append(gain)
+    elif delta == 0:
         shown.append(f"level with {to_ref}")
         spoken.append(f"level with {to_ref}")
     elif delta is not None:
@@ -320,7 +328,9 @@ def lap_messages(
 
     costed: set[str] = set()  # corners whose loss was already stated (it is shared by all their observations)
     shared = _block_for(coach, lap)
-    if shared is not None:
+    if lap.get("final") is True and drilling is None:
+        chosen = []  # the session ended on this lap (the chequered flag): no next lap can use a coaching point
+    elif shared is not None:
         chosen = [] if shared.get("radio_quiet") else list(shared.get("picked") or [])
     else:
         chosen = pick_points(observations, limits, lap_number, last_coached, intensity=level)

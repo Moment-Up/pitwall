@@ -294,7 +294,7 @@ export function whoFor(viewed: Pick<Driver, "id" | "name"> | null, seatedId: num
   const self = !viewed || viewed.id === seatedId || drivers <= 1;
   const name = viewed?.name ?? "This driver";
   if (self) return { Poss: "Your", poss: "your", name, self };
-  const p = `${name}'${name.endsWith("s") ? "" : "s"}`;
+  const p = `${name}'s`; // "James's", as the server's reference labels say it
   return { Poss: p, poss: p, name, self };
 }
 

@@ -389,7 +389,7 @@ export function listDeviceVoices(): DeviceVoice[] {
     .sort(
       (a, b) =>
         QUALITY_RANK[a.quality] - QUALITY_RANK[b.quality] ||
-        Number(!b.lang.toLowerCase().includes("gb")) - Number(!a.lang.toLowerCase().includes("gb")) ||
+        Number(!a.lang.toLowerCase().includes("gb")) - Number(!b.lang.toLowerCase().includes("gb")) ||
         a.name.localeCompare(b.name),
     );
 }

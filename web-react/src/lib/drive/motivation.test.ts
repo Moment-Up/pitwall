@@ -102,8 +102,8 @@ describe("Session complete card: 3 things", () => {
     const recap = { ...mfx.recapReached(), session_id: s.session_id as string };
     const m = driveModel({ snap: s, connected: true, nowS: newestT(s) + 1, driver: driver(), motivation: { note: null, recap, status: "ready" } });
     expect(m.state).toBe("ended");
-    // the celebration first, as on the radio
-    expect(m.ended?.things?.items.map((t) => t.heading)).toEqual(["Goal reached", "Went well", "One to work on"]);
+    // the new personal best leads (plan 2.6, acceptance B4); the goal reached keeps the Progress slot
+    expect(m.ended?.things?.items.map((t) => t.heading)).toEqual(["Went well", "One to work on", "Goal reached"]);
     expect(m.ended?.thingsLoading).toBe(false);
     // three earned: "First goal reached" only repeats the Goal reached item (plan 2.6); the two newest of the rest
     expect(m.ended?.badges).toEqual(["First time under 1:10 at Austria in the Haas", "First time under 1:11 at Austria in the Haas"]);

@@ -43,7 +43,7 @@ def test_refuses_while_anything_answers(
     monkeypatch.setattr(cli, "_http", fake)
     r = runner.invoke(cli.app, ["ai-pace", "backfill", "--captures", str(settings.data_dir), "--dry-run"])
     assert r.exit_code == 1
-    assert "stop the service first, or set PITWALL_DATA_DIR to a copy" in r.output
+    assert "stop the service first, or point PITWALL_DATA_DIR at a copy" in r.output and "--force" in r.output
     assert fake.calls and fake.calls[0].endswith("/api/health")
     assert not settings.db_path.exists()  # the database was never opened (nor created, nor migrated)
 

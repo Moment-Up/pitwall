@@ -256,6 +256,9 @@ describe("Drive and Review views on the recorded bodies", () => {
     expect(coach.text).toBe(point.short);
     const stopped = live("live-lv-attempt1");
     stopped.coachref!.drill = rec<DrillView>("drill-stopped-austria");
+    // an Austria result at Las Vegas is another session's: this Ready card keeps its own points (acceptance B3)
+    expect(drillBlock(stopped)!.kind).toBe("none");
+    stopped.coachref!.drill = { ...rec<DrillView>("drill-stopped-austria"), session_id: stopped.session_id };
     const res = drillBlock(stopped)!;
     expect(res.kind).toBe("result");
     for (const re of FORBIDDEN) expect(words([chip, block, coach, res])).not.toMatch(re);

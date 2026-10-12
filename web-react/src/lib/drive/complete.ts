@@ -12,6 +12,9 @@
 //   first_clean:<game>:<track>:<car>     the first clean laps here (Went well "First clean lap here …", Progress
 //                                        "Your first clean laps at …", the "First clean lap at …" badge)
 //   goal:<id>                            a goal reached (Progress, the "goals reached" badge)
+//   clean_run                            a run of clean laps (Went well "10 clean laps in a row", a reached clean-laps
+//                                        goal, the "N clean laps in a row" and "10 clean laps in one session" badges:
+//                                        three ways of saying one session's clean run, shown once - UX review)
 // The card adds what only it shows, and derives keys for an older server that sends none:
 //   record:<lap id>    the Best lap tile's REC tag (a new family record: its own fact)
 //   pb:<lap id>        the tile's PB tag, and a first-ever best ("first clean lap here" is the best here too)
@@ -82,7 +85,10 @@ export function thingKeys(t: ThingView, server?: string | null): string[] {
       derived = ["first_clean"];
       break;
     case "goal_reached":
-      derived = [...(t.goalId != null ? [`goal:${t.goalId}`] : []), "goals_reached"];
+      derived = [...(t.goalId != null ? [`goal:${t.goalId}`] : []), "goals_reached", ...(t.goalKind === "clean_streak" ? ["clean_run"] : [])];
+      break;
+    case "clean_streak":
+      derived = ["clean_run"];
       break;
     case "pb_streak":
       derived = ["pb_streak"];
@@ -115,6 +121,10 @@ export function badgeKeys(b: Badge): string[] {
     case "goals_reached":
       derived = ["goals_reached"];
       break;
+    case "clean_streak":
+    case "ten_clean_session":
+      derived = ["clean_run"];
+      break;
     default:
       derived = [];
   }
@@ -139,7 +149,10 @@ export function dedupeComplete(input: CompleteInput): CompleteView {
   const tk = tagKey(input.best);
   const bestTag = tk == null || claim([tk]);
   const progress = items.find((t) => t.kind === "progress");
-  const keepProgress = !progress || claim(thingKeys(progress, input.facts?.progress));
+  const progressKeys = progress ? thingKeys(progress, input.facts?.progress) : [];
+  // a goal reached is never dropped (the celebration): it only claims what Went well has not said yet
+  const keepProgress =
+    !progress || (progress.source === "goal_reached" ? (claim(progressKeys.filter((k) => !seen.has(k))), true) : claim(progressKeys));
   const badges: Badge[] = [];
   for (const b of input.badges) {
     if (badges.length >= ENDED_BADGES_MAX) break;

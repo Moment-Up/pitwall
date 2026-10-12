@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { averageLines, averageTimeText, cornerCards, filterCards, filterCounts, lapsSpokenText, liveFocusFor } from "./corner-cards";
+import { averageLines, averageTimeText, cornerCards, filterCards, filterCounts, lapsSpokenText, liveFocusFor, notesShown, cornersShown, PHONE_CORNERS } from "./corner-cards";
 import { fixtures } from "./testkit";
 
 describe("Corners tab (spec 6.6)", () => {
@@ -77,5 +77,22 @@ describe("Corners tab (spec 6.6)", () => {
 
   it("no analysis, no cards", () => {
     expect(cornerCards(undefined, null)).toEqual([]);
+  });
+});
+
+describe("notes per corner (acceptance B7: the phone page stays under 4 000 px)", () => {
+  it("3 coach notes a corner on a tablet, 1 on a phone (Show all N opens the rest)", () => {
+    expect(notesShown(true)).toBe(3);
+    expect(notesShown(false)).toBe(1);
+  });
+});
+
+describe("corners on a phone (acceptance B7)", () => {
+  it("the 5 that cost most, then Show all; every corner on a tablet", () => {
+    expect(PHONE_CORNERS).toBe(5);
+    expect(cornersShown(false, 11, false)).toBe(5);
+    expect(cornersShown(false, 11, true)).toBe(11);
+    expect(cornersShown(false, 4, false)).toBe(4);
+    expect(cornersShown(true, 11, false)).toBe(11);
   });
 });

@@ -2,10 +2,11 @@
 // copy of the live database) and the newest one's analysis from the live API. Hand-made inputs only for cases the
 // recorded data has none of (a corner fixed for two sessions, a live cue plan).
 import { describe, expect, it } from "vitest";
-import { itemText } from "./coaching";
+import { itemText, type CoachingItem } from "./coaching";
 import {
   cornerTrendAt,
   habits,
+  oneBrakePointPerCorner,
   planSession,
   radioFocus,
   recentlyFixed,
@@ -154,5 +155,23 @@ describe("The radio will focus on", () => {
     expect(radioFocus(live({ cues: { mode: "focus", reason: "no reference lap yet", focus: [], cues: [] } }), james, AUSTRIA)).toMatchObject({
       reason: "No plan yet: no reference lap yet.",
     });
+  });
+});
+
+describe("habits: one braking-point direction per corner (UX review)", () => {
+  const item = (key: string, kind: string, seen: number): CoachingItem =>
+    ({ key, corner: key.split(":")[0]!, kind, seen }) as unknown as CoachingItem;
+
+  it("Turn 3 braking later on 2 laps and earlier on 5: only 'earlier' stays; other kinds and corners are untouched", () => {
+    const items = [
+      item("T3:brake_late_overdrive", "brake_late_overdrive", 2),
+      item("T3:low_min_speed", "low_min_speed", 4),
+      item("T3:brake_early", "brake_early", 5),
+      item("T5:brake_late_overdrive", "brake_late_overdrive", 3),
+    ];
+    expect(oneBrakePointPerCorner(items).map((i) => i.key)).toEqual(["T3:low_min_speed", "T3:brake_early", "T5:brake_late_overdrive"]);
+    // a tie keeps the higher ranked (the first)
+    const tie = [item("T3:brake_late_overdrive", "brake_late_overdrive", 3), item("T3:brake_early", "brake_early", 3)];
+    expect(oneBrakePointPerCorner(tie).map((i) => i.key)).toEqual(["T3:brake_late_overdrive"]);
   });
 });

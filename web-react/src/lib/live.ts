@@ -66,8 +66,10 @@ const WATCHDOG_TICK_MS = 1000;
 export const FOREGROUND_RECONNECT_MS = 2000;
 
 /** The snapshot keys the server sends only with its ~5 s static payload (core/live.py snapshot(include_static)).
- * "strategy" (race strategy) is sent with it and whenever it changed (LiveState.strategy_rev): absent keeps the previous
- * value within the session, null means none, and a new session starts without it. */
+ * "strategy" (race strategy) is sent with it and when it changed (LiveState.strategy_rev, at most every 2 s);
+ * "ai_pace", "coachref" and "lap_totals" with it and whenever they changed (api/app.py ON_CHANGE_KEYS). Absent keeps the previous
+ * value within the session, null means none, and a new session starts without them (the server sends them all again
+ * in a new session's first snapshot). */
 export const STATIC_KEYS = [
   "track_model",
   "skeleton",
@@ -75,6 +77,9 @@ export const STATIC_KEYS = [
   "last_comparison",
   "track_knowledge",
   "strategy",
+  "ai_pace",
+  "coachref",
+  "lap_totals",
 ] as const;
 
 /** Merge the static parts of the previous snapshot into one that omitted them, within the same session (a new session

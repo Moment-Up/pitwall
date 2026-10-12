@@ -29,6 +29,8 @@ export interface ThingView {
   lapId: number | null;
   lapNumber: number | null;
   goalId: number | null;
+  /** The reached goal's kind ("clean_streak", "lap_time"...), when the server says (newer servers). */
+  goalKind: string | null;
   observationKey: string | null;
 }
 
@@ -54,8 +56,11 @@ const BASE: Readonly<Record<ThingKind, { heading: string; tone: ThingTone; icon:
 
 const ORDER: readonly ThingKind[] = ["went_well", "work_on", "progress"];
 /** A goal reached comes first: the radio celebrates before it coaches, and so does the card (on a phone it is the
- * one item above the fold). */
+ * one item above the fold). Not when Went well is a new best: a new family record or personal best always leads
+ * (integration plan 2.6), and the goal keeps the Progress slot. */
 const CELEBRATION_ORDER: readonly ThingKind[] = ["progress", "went_well", "work_on"];
+/** Went well sources that are a new best (a personal best, or the first clean laps here: the best here too). */
+const NEW_BEST: ReadonlySet<ThingSource> = new Set(["pb", "first_clean"]);
 
 function thingView(kind: ThingKind, item: ThingItem | null, why: string | null, simple: boolean): ThingView {
   const base = BASE[kind];
@@ -71,6 +76,7 @@ function thingView(kind: ThingKind, item: ThingItem | null, why: string | null, 
       lapId: null,
       lapNumber: null,
       goalId: null,
+      goalKind: null,
       observationKey: null,
     };
   }
@@ -90,15 +96,19 @@ function thingView(kind: ThingKind, item: ThingItem | null, why: string | null, 
     lapId: item.lap_id,
     lapNumber: item.lap_number,
     goalId: item.goal_id,
+    goalKind: typeof item.values?.goal_kind === "string" ? item.values.goal_kind : null,
     observationKey: item.observation_key,
   };
 }
 
-/** The three items of a recap, in the order went well, work on, progress (a goal reached: progress first). `simple`
+/** The three items of a recap, in the order went well, work on, progress (a goal reached: progress first, unless
+ * Went well is a new best). `simple`
  * = the reader's wording (Review: the viewed driver's density; Drive: the recap's own `simple`). `sessionLabel`: the
  * work-on item reads WORK_ON_SESSION_HEADING (Review's Summary). */
 export function thingsView(r: SessionRecap, simple: boolean, opts: { sessionLabel?: boolean } = {}): ThingsView {
-  const order = r.things?.progress?.source === "goal_reached" ? CELEBRATION_ORDER : ORDER;
+  const well = r.things?.went_well?.source;
+  const celebrate = r.things?.progress?.source === "goal_reached" && !(well && NEW_BEST.has(well));
+  const order = celebrate ? CELEBRATION_ORDER : ORDER;
   const items = order.map((k) => {
     const v = thingView(k, r.things?.[k] ?? null, r.why_empty?.[k] ?? null, simple);
     return k === "work_on" && opts.sessionLabel ? { ...v, heading: WORK_ON_SESSION_HEADING } : v;

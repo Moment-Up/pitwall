@@ -127,7 +127,9 @@ describe("Review › Goals: goals, the week and badges", () => {
     honest(text, "goals");
     // the scope bar of Progress: the driver, and the track and car a new lap-time goal is for; a way back to Progress
     expect(text).toContain("Austria");
-    expect(text).toContain("Real sessions only");
+    expect(text).toContain("New lap-time goals for Track Austria"); // what the track and car pick here (UX review)
+    expect(text).not.toContain("Real sessions only"); // said once on this page, by the goals' note
+    expect(text).toContain("From Sam's real driving");
     expect(text).toContain("Progress");
     // Goals
     expect(text).toContain("Goals 3 active · 2 reached in the last 30 days");
@@ -155,7 +157,7 @@ describe("Review › Goals: goals, the week and badges", () => {
     expect(text).toContain("from 50% to 75% of the way");
     expect(text).toContain("Printable page");
     expect(text).toContain("Copy as text");
-    expect(text).toContain("Real driving only: a session counts once it has a timed lap");
+    expect(text).toContain("A session counts once it has a timed lap"); // "real driving only" is said once, by the goals
     expect(text).not.toContain("Badges this week");
     expect(text).not.toContain("+2 more");
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Week after"/); // the current week: nothing after it

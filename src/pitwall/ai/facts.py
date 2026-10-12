@@ -42,6 +42,13 @@ from pitwall.coach.reference_wording import lap_date
 from pitwall.core.session_analysis import SessionAnalysis
 from pitwall.strategy.facts import add_strategy_facts  # race strategy (pitwall.strategy)
 from pitwall.technique.facts import technique_facts  # feat/technique
+from pitwall.voice.proactive import coaching_text  # the radio form of a coaching point (short answers at speed)
+
+
+def _temp_text(where: str, c: object) -> str:
+    """ "track 31 C", or "track temperature unknown" (unknown stays unknown, never "None C")."""
+    known = isinstance(c, int | float) and not isinstance(c, bool)
+    return f"{where} {c} C" if known else f"{where} temperature unknown"
 
 
 def fmt_lap(ms: int | None) -> str:
@@ -449,7 +456,8 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
         f"Session: {game_txt} at {s.get('track_name') or 'unknown track'}, "
         f"{s.get('session_type_raw') or s.get('session_type')}, "
         f"car {s.get('car_name') or 'unknown'}, weather {w.get('condition') or 'unknown'}, "
-        f"track {w.get('track_temp_c')} C, air {w.get('air_temp_c')} C, {len(sa.laps)} laps recorded."
+        f"{_temp_text('track', w.get('track_temp_c'))}, {_temp_text('air', w.get('air_temp_c'))}, "
+        f"{len(sa.laps)} laps recorded."
         + driver_txt
         + (" NOTE: this is SYNTHETIC test data, not a real driving session." if synthetic else ""),
         session_data,
@@ -496,16 +504,17 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
         same_car = s.get("car_id") is not None  # repo.personal_best was scoped to this car only when it is known
         where = "set this session" if pb.get("session_id") == s.get("id") else "set in an earlier session"
         car = "in this car" if same_car else "in any car (this session's car is unknown)"
-        txt = (
-            f"{driver_name}'s personal best at {s.get('track_name') or 'this track'} {car}: "
-            f"{fmt_lap(pb_ms)} (lap {pb['lap_number']}, {where})"
-        )
+        at = f"personal best at {s.get('track_name') or 'this track'} {car}: {fmt_lap(pb_ms)} (lap {pb['lap_number']}"
+        txt = f"{driver_name}'s {at}, {where})"
+        # a live sheet is said to the driver in the seat, whose session it is: "Your personal best", never their name
+        pb_say = f"Your {at}, {where})" if live is not None else None
         data: dict[str, Any] = {"lap": pb["lap_number"], "lap_time_s": pb_ms / 1000, "same_car": same_car}
         if best is not None and same_car and pb.get("session_id") != s.get("id"):
             gap_s = (best["lap_time_ms"] - pb_ms) / 1000
             txt += f"; this session's best clean lap is {gap_s:.3f}s off it"
+            pb_say = None if pb_say is None else f"{pb_say}; this session's best clean lap is {gap_s:.3f}s off it"
             data["gap_s"] = gap_s
-        fs.add("laps", txt + ".", data)
+        fs.add("laps", txt + ".", data, say=None if pb_say is None else pb_say + ".")
     # --- coachref --- the live delta's reference when it is another driver's lap (snapshot.reference, chosen with
     # core.coachref). Before the session's own reference fact, so a deterministic "reference" answer names it.
     live_ref = (live or {}).get("reference")
@@ -660,7 +669,14 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
             fs.add(
                 "observations",
                 f"Coaching observation (lap {o['lap_number']}, confidence {o['confidence']:.2f}): {o['text']}{cons}",
-                {"kind": o["kind"], "value": o["value"], "impact_s": o["impact_s"], "lap": o["lap_number"]},
+                {
+                    "kind": o["kind"],
+                    "value": o["value"],
+                    "impact_s": o["impact_s"],
+                    "lap": o["lap_number"],
+                    # the radio's answer at speed says the point as the radio's own coaching call does (short)
+                    "radio": coaching_text(o),
+                },
                 corner=o["corner"],
                 say=f"{o['text']}{cons}",  # the driver hears the point, not the label or the confidence score
             )

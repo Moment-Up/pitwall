@@ -320,7 +320,9 @@ class CallPlanner:
         name = _SC_NAME[ctx.sc_status]
         text = f"{name}. Tyres reach the finish: no stop needed."
         simple = f"{name}: your tyres last to the finish, so no pit stop."
-        return self._make("sc_stay", ctx, "normal", "normal", text, 30.0, data={"status": ctx.sc_status}, simple=simple)
+        # plan 3.1: the safety-car box-or-stay call is an alert, never squeezed out by the lap's talk budget
+        data = {"status": ctx.sc_status}
+        return self._make("sc_stay", ctx, "alert", "high", text, 30.0, bypass=True, data=data, simple=simple)
 
     def _t_fuel_critical(self, ctx: CallContext) -> StrategyCall | None:
         m = ctx.fuel_margin_laps

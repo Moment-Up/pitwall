@@ -21,13 +21,25 @@ describe("Today's 3 things (spec 4.8): the server's items, laid out", () => {
   });
 
   it("a goal reached this session is the celebration: Goal reached, the star, success tone", () => {
-    const prog = thingsView(mfx.recapReached(), false).items[0]; // the celebration first
+    const r = mfx.recapReached();
+    r.things.went_well = { ...r.things.went_well!, source: "clean_streak" }; // not a new best: the celebration leads
+    const prog = thingsView(r, false).items[0];
     expect(prog).toMatchObject({ heading: "Goal reached", icon: "star", tone: "success", goalId: 4, source: "goal_reached" });
     expect(prog.text).toBe("A lap under 1:10.000 (1:09.981 on lap 7).");
-    expect(thingsView(mfx.recapReached(), true).items[0].text).toBe("You did it: beat 1:10.000.");
-    const two = mfx.recapReached();
+    expect(thingsView(r, true).items[0].text).toBe("You did it: beat 1:10.000.");
+    const two = structuredClone(r);
     two.things.progress = { ...two.things.progress!, values: { ...two.things.progress!.values, goals: 2 } };
     expect(thingsView(two, false).items[0].heading).toBe("2 goals reached");
+  });
+
+  it("a new best and a goal in one session: Went well (the best) leads, the goal keeps the Progress slot (plan 2.6)", () => {
+    const v = thingsView(mfx.recapReached(), false); // went well: a new personal best
+    expect(v.items.map((t) => t.kind)).toEqual(["went_well", "work_on", "progress"]);
+    expect(v.items[0]).toMatchObject({ heading: "Went well", source: "pb" });
+    expect(v.items[2]).toMatchObject({ heading: "Goal reached", source: "goal_reached" });
+    const first = mfx.recapReached();
+    first.things.went_well = { ...first.things.went_well!, source: "first_clean" }; // a first-ever best here
+    expect(thingsView(first, false).items[0].kind).toBe("went_well");
   });
 
   it("simple wording for a beginner", () => {

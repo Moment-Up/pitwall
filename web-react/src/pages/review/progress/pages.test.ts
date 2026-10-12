@@ -140,7 +140,7 @@ describe("Progress (6.9) with D5", () => {
     expect(text.indexOf("Getting faster?")).toBeLessThan(text.indexOf("What changed?"));
     expect(text).toContain("Each dot is the best clean lap of one session here");
     // James is not in the seat (Jo is): his name, not "your"
-    expect(text).toContain("James' best here dropped 1.2 s over 2 sessions");
+    expect(text).toContain("James's best here dropped 1.2 s over 2 sessions");
     // two drivers but no family answer cached yet: neutral board, any car
     expect(text).toContain("Best lap at this track in any car, so the cars may differ.");
   });

@@ -48,7 +48,19 @@ function Picker({
   );
 }
 
-export function ScopeBar({ s, actions }: { s: ReviewScope; actions?: ReactNode }) {
+export function ScopeBar({
+  s,
+  actions,
+  forWhat = null,
+  realNote = true,
+}: {
+  s: ReviewScope;
+  actions?: ReactNode;
+  /** What the track and car choose, said before them (Review › Goals: "New lap-time goals for"). */
+  forWhat?: string | null;
+  /** "Real sessions only…" under the bar (off where the page already says it once, Review › Goals). */
+  realNote?: boolean;
+}) {
   const { drivers, viewed, scope } = s;
   const track = scope?.track ?? null;
   const carItems = track
@@ -90,6 +102,7 @@ export function ScopeBar({ s, actions }: { s: ReviewScope; actions?: ReactNode }
           </Chip>
         ) : null}
 
+        {track && forWhat && <span className="text-[15px] text-muted">{forWhat}</span>}
         {track && (
           <Picker
             label="Track"
@@ -123,9 +136,9 @@ export function ScopeBar({ s, actions }: { s: ReviewScope; actions?: ReactNode }
               <EvidenceChips synthetic size="md" />
               Generated data, not from a game: never a PB or a record.
             </span>
-          ) : (
+          ) : realNote ? (
             <span className="text-sm text-muted">Real sessions only: replays and synthetic data are left out.</span>
-          )}
+          ) : null}
           {s.hasSynthetic && (
             <Switch isSelected={s.includeSynthetic} onChange={s.setIncludeSynthetic}>
               <Switch.Content className="min-h-11">

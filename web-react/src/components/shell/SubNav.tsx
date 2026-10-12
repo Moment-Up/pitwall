@@ -91,8 +91,9 @@ export const SubNav = memo(function SubNav({ area, placement = "area", band = "n
             // the band at once (bands appear without animation).
             drive
               ? "h-11 min-w-[76px] text-[15px] transition-none [&_[data-slot=segment-indicator]]:transition-none"
-              : // Tighter on phones, so Review's four pages fit a 390 px screen; Settings' five scroll (AreaHeader).
-                "h-11 px-3.5 text-[15px] md:px-5"
+              : // Tighter on phones, so Review's five pages fit a 390 px screen (14 px, 8 px sides below 400 px: Ask was
+                // cut off); Settings' longer labels scroll (AreaHeader).
+                "h-11 px-3.5 text-[15px] max-[400px]:px-2 max-[400px]:text-[14px] md:px-5"
           } ${BAND_CLASS[band].item} ${lockedFor(p.id) ? LOCK_HOST_CLASS : ""}`}
         >
           {p.label}
