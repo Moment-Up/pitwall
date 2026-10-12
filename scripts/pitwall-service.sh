@@ -27,8 +27,11 @@ install() {
   fi
   [[ -x "$BIN" ]] || { echo "missing $BIN - run 'uv sync --all-extras' in $APP_DIR first" >&2; exit 1; }
   mkdir -p "$LOG_DIR" "$(dirname "$PLIST")"
-  # stop a manually started server so the service can bind the ports
-  pkill -f "pitwall serve" 2>/dev/null || true
+  # stop a manually started server that holds the service's port (8770) so the service can bind it; never other
+  # Pitwall servers (scratch/test servers on other ports keep running)
+  for pid in $(lsof -nP -t -iTCP:8770 -sTCP:LISTEN 2>/dev/null); do
+    if ps -o command= -p "$pid" 2>/dev/null | grep -q "pitwall serve"; then kill "$pid" 2>/dev/null || true; fi
+  done
   launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
   cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
