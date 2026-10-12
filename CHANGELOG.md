@@ -9,6 +9,8 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
+## v0.2.1 - 2026-10-12
+
 - Gran Turismo 7 on PS5 is tested live (the owner's races on 2026-10-11, lap times equal to the game's). PS4 is
   still untested.
 - GT7: one session per race. Menus, replays, loading screens and car resets no longer start sessions, and the empty
@@ -20,6 +22,7 @@ The release workflow copies a release's bullet points into its GitHub release no
 - GT7: lap distance follows the car's velocity (within about 0.2 % per lap; the speed it used before fell up to
   1.5 % short on laps with an off). Tested on recordings.
 - GT7: the throttle shown is your pedal, not the throttle after traction control. Tested on recordings.
+- The README and install guide no longer say the one-line installer is unreleased.
 
 ## v0.2.0 - 2026-10-12
 
