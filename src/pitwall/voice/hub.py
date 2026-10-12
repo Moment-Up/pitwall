@@ -57,7 +57,8 @@ Live braking cues (``coach.cues``) bypass the scheduler queue because they are t
 * **Spotter calls** (``voice.spotter_radio``, F1 25 only): pre-synthesised, URGENT, delivered on the next loop turn
   like cues; they cut a cue (dropped), a proactive message or an answer (said again once), wait in a one-slot mailbox
   behind another spotter call, an urgent call or the driver's transmission, and reach device-voice iPads as PCM too.
-  While a car is alongside no speak window opens (``DrivingState.traffic_alongside``).
+  A clear never cuts a cue (it waits for it), and a cue cuts a clear or a "still there" on air. While a car is
+  alongside no speak window opens (``DrivingState.traffic_alongside``).
 * **Urgent calls** skip the speak window (scheduler contract) and are never stuck behind anything but the
   driver's own transmission and another urgent call: while the radio talks, holds a message for its window or
   answers a question, the scheduler is polled with ``speaking=True``, which hands out only messages that outrank
@@ -1672,8 +1673,8 @@ class RadioHub:
         on_air = self._on_air_message()
         if on_air is not None:
             m = on_air[0]
-            if m.kind is MessageKind.SPOTTER:  # --- spotter ---
-                return "spotter call on air"
+            if m.kind is MessageKind.SPOTTER:  # --- spotter --- a cue cuts a clear or a still there, nothing else
+                return None if self.spotter.yields_to_cue(m) else "spotter call on air"
             if m.kind is MessageKind.CUE:
                 return "previous cue still playing"
             if m.kind in (MessageKind.ANSWER, MessageKind.CONTROL):

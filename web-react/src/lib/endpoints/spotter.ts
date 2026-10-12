@@ -135,6 +135,7 @@ function status(v: unknown): SpotterStatus {
     send_rate_low: o.send_rate_low === true,
     dims: dims(o.dims),
     audio: audio(o.audio),
+    wording: o.wording === "standard" || o.wording === "simple" ? o.wording : null,
   };
 }
 

@@ -2,11 +2,13 @@
 ``/api/`` route). Contract: spec section 8, docs/features.md "Spotter (F1 25)".
 
 Endpoints
-    GET  /api/spotter            settings, availability, status (rate, car size, audio), latency, counters, recent
+    GET  /api/spotter            settings, availability, status (rate, car size, audio, the wording in effect),
+                                 latency, counters, recent
     PUT  /api/spotter/settings   partial body: validated (422 on an unknown key or a bad value), persisted in the
                                  ``SettingsStore`` section "spotter", applied at once; returns the GET payload
-    POST /api/spotter/test       "Car left", then "Clear left" 1.2 s later, through the real spotter radio path
-                                 (``meta.test``); 409 when the radio is off (voice disabled, or no radio connected)
+    POST /api/spotter/test       "Car left", then "Clear left" 1.2 s later (in the wording in use: ``says``), through
+                                 the real spotter radio path (``meta.test``); 409 when the radio is off (voice
+                                 disabled, or no radio connected)
 
 Everything here is deterministic; nothing calls an LLM.
 """
@@ -20,6 +22,7 @@ from typing import Any
 from fastapi import APIRouter, HTTPException, Request
 
 from pitwall import games
+from pitwall.spotter.phrases import phrase_text
 from pitwall.spotter.settings import SECTION, merge, parse_stored
 
 router = APIRouter(prefix="/api/spotter", tags=["spotter"])
@@ -47,6 +50,13 @@ def payload(request: Request) -> dict[str, Any]:
     status = worker.status()
     radio = hub.spotter if hub is not None else None
     status["audio"] = radio.status() if radio is not None else {"ready": False, "engine": None, "reason": "voice off"}
+    # what the driver hears now: "auto" follows the seated driver's profile (Settings shows it beside Auto)
+    wording = rt.spotter_settings.wording
+    status["wording"] = (
+        ("simple" if radio.simple(wording) else "standard")
+        if radio is not None
+        else (wording if wording != "auto" else None)
+    )
     counters = worker.counters()
     latency: dict[str, Any]
     if radio is not None:
@@ -100,4 +110,5 @@ async def test_spotter(request: Request) -> dict[str, Any]:
     if not hub.clients:
         raise HTTPException(409, "no radio connected")
     hub.spotter.test()
-    return {"ok": True, "says": ["Car left.", "Clear left."], "gap_s": 1.2}
+    simple = hub.spotter.simple()  # the test speaks the wording in use ("Car on your left." for a beginner)
+    return {"ok": True, "says": [phrase_text(p, simple) for p in ("car_left", "clear_left")], "gap_s": 1.2}

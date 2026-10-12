@@ -164,7 +164,8 @@ F1_25_INFO = AdapterInfo(
             SupportLevel.RECORDED_VALIDATED,
             "Motion of every car at the menu send rate: position, velocity, forward and right unit vectors; "
             "worldRightDir = the driver's right (checked against steering on 3 PS5 captures: "
-            "tests/recorded/test_spotter_recorded.py); format 2026 spec only",
+            "docs/research/f1-spotter-data.md; the committed Monza excerpt: tests/recorded/test_spotter_recorded.py); "
+            "format 2026 spec only",
         ),
         # --- end spotter ---
     },

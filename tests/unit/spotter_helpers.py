@@ -54,9 +54,12 @@ def motion(
     lap: bool = True,
     t_recv_ns: int | None = None,
     player: int = 0,
+    player_yaw_deg: float = 0.0,
 ) -> DecodedMotion:
+    """The player at the origin travelling along +Z (heading ``player_yaw_deg`` away from it: a slide); other cars
+    placed relative to the direction of travel."""
     rows: list[tuple[float, ...]] = [EMPTY] * N_CARS
-    rows[player] = row(0.0, 0.0, 0.0, 0.0, 0.0, speed, 0.0)
+    rows[player] = row(0.0, 0.0, 0.0, 0.0, 0.0, speed, player_yaw_deg)
     status = [(0, 0, 0)] * N_CARS
     status[player] = player_status
     for i, c in cars.items():

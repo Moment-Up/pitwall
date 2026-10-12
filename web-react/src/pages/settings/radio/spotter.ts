@@ -30,12 +30,21 @@ export const WORDINGS: readonly WordingChoice[] = [
 
 export const TOGGLE_HINTS = {
   audio: "The calls on the radio. Off: bars only.",
-  visual: "Amber or red bars at the screen edges on every Drive page.",
-  qualifying: "Races only by default. Never in time trial.",
-  practice: "Races only by default. Never in time trial.",
+  visual: "On every Drive page: amber while a car is alongside (the block shows where, front at the top), red when it is very close.",
+  qualifying: "Also calls cars in qualifying. Never in time trial (ghost cars).",
+  practice: "Also calls cars in practice sessions.",
   still_there: "Repeats the call while a car stays alongside (at most twice).",
-  hold_your_line: "When a car alongside is very close and closing in.",
+  hold_your_line: "Said once when a car alongside is very close and moving in.",
 } as const;
+
+/** The Wording hint: Auto also says what the seated driver hears now. */
+export function wordingHint(wording: SpotterWording, effective: "standard" | "simple" | null): string | undefined {
+  const base = WORDINGS.find((w) => w.value === wording)?.hint;
+  if (wording !== "auto" || effective === null) return base;
+  return effective === "simple"
+    ? "Follows the seated driver's profile: simple wording now (beginner)."
+    : "Follows the seated driver's profile: standard wording now.";
+}
 
 /** The last answer with the changes not saved yet laid over (a switch shows its new position at once). */
 export function withPending(info: SpotterInfo, pending: Partial<SpotterSettings>): SpotterInfo {
@@ -101,13 +110,17 @@ export function statusView(info: SpotterInfo): StatusView {
       warn = true;
     }
   }
-  const p95 = info.latency.started_ms?.p95 ?? null;
-  if (p95 !== null) parts.push(`${msText(p95)} to playback (p95)`);
+  // latency lives in Spotter diagnostics: the status line says only what a driver (or a parent) can act on
   if (info.counters.errors > 0) {
     parts.push(`${info.counters.errors} ${info.counters.errors === 1 ? "error" : "errors"}`);
     warn = true;
   }
-  return { title: st.active ? "Active" : reasonText(st.reason), detail: parts.join(" · "), warn };
+  const title = st.active
+    ? "Active"
+    : st.reason === "not_available" && info.availability.reason === "game_not_supported"
+      ? "Not available for this game"
+      : reasonText(st.reason);
+  return { title, detail: parts.join(" · "), warn };
 }
 
 /** The send-rate warning (spec 3.6: below 30 Hz the spotter decides later and may clear wrongly once). */
@@ -175,10 +188,10 @@ export function testView(info: SpotterInfo, state: SpotterTestState): TestView {
   }
   if (!info.settings.audio) return { enabled: false, hint: "Spoken calls are off.", warn: false };
   if (state === "sending") return { enabled: false, hint: "Sending…", warn: false };
-  if (state === "sent") return { enabled: true, hint: "Sent: listen for “Car left”, then “Clear left”.", warn: false };
+  if (state === "sent") return { enabled: true, hint: "Sent: listen for a car on your left, then clear.", warn: false };
   if (state === "radio_off") return { enabled: true, hint: "No radio is connected: go live first.", warn: true };
   if (typeof state === "object") return { enabled: true, hint: state.error, warn: true };
-  return { enabled: true, hint: "Says “Car left”, then “Clear left”, on every connected radio.", warn: false };
+  return { enabled: true, hint: "Says a car on your left, then clear, in the wording in use, on every connected radio.", warn: false };
 }
 
 // ------------------------------------------------------------------------------------------------- diagnostics
@@ -200,6 +213,7 @@ const DROP_WORDS: Record<string, string> = {
   voice_off: "voice off",
   stale: "too old",
   urgent_on_air: "urgent message on air",
+  cue_on_air: "after a braking cue",
   not_heard: "onset not heard",
 };
 

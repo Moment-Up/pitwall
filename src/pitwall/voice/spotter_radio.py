@@ -9,23 +9,45 @@ file only carries short, delimited hooks.
 voice off, no radio connected, spoken calls off        nothing played, counted ``dropped:<reason>``; ``heard`` reset
 driver transmitting (PTT down)                         held in the mailbox (half duplex: playing would feed the mic)
 a spotter call or a non-spotter urgent call on air     mailbox (equal ranks never cut each other)
+a braking cue on air, the call is a clear              mailbox until the cue ends (a clear is never urgent enough to
+                                                       cost a braking cue; it is said a moment later)
 a cue, a proactive message or an answer/control        cut: a proactive message or answer/control is said again once
 on air                                                 (``rehold_after_spotter``); a cut cue is dropped
 the radio is idle                                      played at once
 ====================================================  ===============================================================
 
-``still_there`` is HIGH, not URGENT: it never cuts anything and waits in the mailbox while the radio is busy.
+Which call may cut what on air is the scheduler's one rule (``scheduler.may_interrupt``: urgent > cue > the rest,
+equal ranks never cut each other) plus the clear-before-cue exception above. ``still_there`` is HIGH, not URGENT: it
+never cuts anything and waits in the mailbox while the radio is busy; a car arriving ("Car left.", "Three wide.") cuts
+a still there on air, and no other spotter call cuts another. The other way round, a braking cue cuts a clear or a
+``still_there`` on air (``yields_to_cue``; the hub's cue gate); it never cuts an onset or ``hold_your_line``.
 
-**Mailbox**: one slot, the newest call replaces the older one. Released when the spotter clip on air ends (the
-device's ``ended`` report, or a backstop timer of the clip's length + 0.15 s + the measured start latency), when PTT
-goes up, when the urgent call on air ends and on every hub tick. Before playing, the call is re-checked against the
-worker's state: an onset needs its side(s) still occupied and is at most 1.0 s old; a clear needs the side still
-clear, nothing newer on that side and at most 1.0 s; ``still_there`` needs the car still there and at most 0.5 s.
+**Mailbox**: one slot. A newer call replaces the held one unless it matters less (``still_there`` < a clear < an
+onset, three wide or ``hold_your_line``): an onset waiting for the radio is never pushed out by a clear or a
+``still_there`` (a clear lost that way is said by the resync below). A held clear is said as the sides are when it
+is released (the resync below: "Clear all round." when the other side has gone too). Released when the spotter clip
+on air ends (the device's ``ended`` report, or a backstop timer of the clip's length + 0.15 s + the measured start
+latency), when PTT goes up, when the urgent call on air ends and on every hub tick. Before playing, the call is
+re-checked against the worker's state: an onset needs its side(s) still occupied and is at most 1.0 s old; a clear
+needs the side still clear, nothing newer on that side and at most 1.0 s; ``still_there`` needs the car still there
+and at most 0.5 s. A ``final`` clear (decided as a gate closed with the positions still valid: the engine has
+already moved to a new epoch) needs only the side still clear, and is dropped once the radio has heard from a newer
+epoch.
 
 **Heard pairing**: what the driver actually heard. An onset sets ``heard[side]`` (three wide: both), a clear resets
 it (clear all round: both). A clear is never played for a side whose onset was not heard; an onset is not repeated
-for a side already heard; a ``still_there`` for a side not heard is said as that side's onset (its onset was lost
-while the driver transmitted). An engine reset (a gate closed, a flashback) starts a new ``epoch``: ``heard`` resets.
+for a side already heard; a ``still_there`` or ``hold_your_line`` for a side not heard is said as that side's onset
+(its onset was lost while the driver transmitted). An engine reset (a gate closed, a flashback) starts a new ``epoch``:
+``heard`` resets.
+
+**Resync**: a call can be lost in the mailbox (replaced by a newer call, held through a transmission, too old by the
+time the radio is free: a clear decided early in a 1.6 s "three wide" clip). Whenever the radio is free and the
+mailbox empty (a clip ended, PTT up, every tick), ``heard`` is compared with the worker's ``announced``: one onset is
+said for a side announced and occupied but not heard ("Three wide." when both are), or one clear for a side heard but
+no longer announced nor occupied. So the driver is never left with a car that has gone, and the next car on that side
+is never dropped as ``already_heard``. Never while a newer engine call is still on its way to the loop (the worker's
+``last_seq`` is ahead of what the loop received), never without the phrase's audio, and never across an epoch (a
+muted spotter never says clear).
 
 **Audio**: clips made in advance (``voice.spotter_audio``) go to every client, device-voice iPads included
 (``RadioHub._deliver(pcm_to_all=True)``: the iPad plays PCM whenever ``n_bytes > 0``), so nothing is synthesised on
@@ -55,6 +77,7 @@ from pitwall.spotter.model import (
     CAR_LEFT,
     CAR_RIGHT,
     CLEAR_ALL_ROUND,
+    CLEAR_KINDS,
     CLEAR_LEFT,
     CLEAR_RIGHT,
     HOLD_YOUR_LINE,
@@ -62,12 +85,14 @@ from pitwall.spotter.model import (
     RIGHT,
     STILL_THERE,
     THREE_WIDE,
+    Side,
     SpotterCall,
     SpotterState,
 )
 from pitwall.spotter.phrases import onset_phrase_id, phrase_id, phrase_text
 from pitwall.spotter.settings import DEFAULTS, SpotterSettings
 from pitwall.spotter.stats import Ring
+from pitwall.voice.scheduler import may_interrupt
 from pitwall.voice.spotter_audio import SpotterAudio
 from pitwall.voice.types import MessageKind, Priority, RadioMessage, SynthResult
 
@@ -89,6 +114,24 @@ LOG_EVERY_S = 60.0
 QUEUED_WARN_MS = 30.0
 RECENT = 20
 SIDE_INDEX = {"left": LEFT, "right": RIGHT}
+# what a held call is worth in the mailbox: a newer call that matters less never replaces it
+_MAIL_RANK = {STILL_THERE: 0, CLEAR_LEFT: 1, CLEAR_RIGHT: 1, CLEAR_ALL_ROUND: 1}  # onsets, three wide, hold: 2
+# phrases a braking cue may cut (``yields_to_cue``): information, never a car arriving or closing in
+_STILL = frozenset({"still_there_left", "still_there_right"})
+_CUE_FIRST = frozenset({CLEAR_LEFT, CLEAR_RIGHT, CLEAR_ALL_ROUND}) | _STILL
+_NEW_CAR = frozenset({CAR_LEFT, CAR_RIGHT, THREE_WIDE})  # may cut a still there on air
+
+
+def _probe(priority: Priority) -> RadioMessage:
+    """A stand-in message for the scheduler's interrupt rule (it reads only the kind and the priority)."""
+    return RadioMessage(id="", kind=MessageKind.SPOTTER, priority=priority, text="", speech="", created_mono=0.0)
+
+
+_PROBE_URGENT, _PROBE_HIGH = _probe(Priority.URGENT), _probe(Priority.HIGH)
+
+
+def _mail_rank(call: SpotterCall) -> int:
+    return _MAIL_RANK.get(call.kind, 2)
 
 
 @dataclasses.dataclass(slots=True)
@@ -116,8 +159,10 @@ class SpotterRadio:
         self._build_again = False
         self._audio_key: tuple[object, ...] | None = None
         self._test_task: asyncio.Task[None] | None = None
+        self._seen_seq = 0  # newest engine seq received in this epoch (resync waits for calls still in flight)
         # stats
         self.received = 0
+        self.resynced = 0
         self.spoken: Counter[str] = Counter()
         self.dropped: Counter[str] = Counter()
         self.queued_ms = Ring()  # t2 - t0 of calls played at once (the pipeline)
@@ -159,8 +204,10 @@ class SpotterRadio:
             loop.call_soon_threadsafe(self.deliver, call)
 
     # ------------------------------------------------------------------ settings, audio
-    def simple(self) -> bool:
-        w = self.settings.wording
+    def simple(self, wording: str | None = None) -> bool:
+        """Simple (beginner) wording in effect: the setting (``wording`` overrides it: the API's just-saved value),
+        "auto" following the seated driver's profile."""
+        w = self.settings.wording if wording is None else wording
         if w != "auto":
             return w == "simple"
         limits = self.hub.coaching_limits
@@ -245,6 +292,7 @@ class SpotterRadio:
         elif self.settings.enabled and self._audio_key is None and self._build_task is None:
             self.request_audio()
         self.release()
+        self.resync()
         self._log_minute(now)
 
     def on_tts_changed(self) -> None:
@@ -258,9 +306,11 @@ class SpotterRadio:
                 self._measure_started(inf)
         elif state == "ended":
             self.release()
+            self.resync()
 
     def on_ptt_up(self) -> None:
         self.release()
+        self.resync()
 
     def state_block(self) -> dict[str, Any]:
         """The ``spotter`` object of the radio ``state`` frame (docs/voice-protocol.md)."""
@@ -291,8 +341,12 @@ class SpotterRadio:
             self._origin = call.origin
         if not call.test:
             if call.epoch != self._epoch:
+                if call.final:
+                    return self._drop(call, "stale")  # the radio has already heard from a newer epoch
                 self._epoch = call.epoch
                 self.heard = [False, False]  # the engine forgot its traffic: so do we
+                self._seen_seq = 0
+            self._seen_seq = max(self._seen_seq, call.seq)
             if not self.settings.enabled:
                 return self._drop(call, "disabled")
             if not self.settings.audio:
@@ -312,6 +366,8 @@ class SpotterRadio:
         return self._play(call, held)
 
     def _block_reason(self, call: SpotterCall) -> str | None:
+        """Why the call must wait (None = play it now): the scheduler's interrupt rule plus the clear-before-cue
+        exception (the module docstring)."""
         hub = self.hub
         if hub.ptt_down:
             return "ptt"
@@ -320,16 +376,25 @@ class SpotterRadio:
             return None
         m = on_air[0]
         if m.kind is MessageKind.SPOTTER:
+            if call.kind in _NEW_CAR and m.meta.get("phrase") in _STILL:
+                return None  # a car arriving cuts "Still left." (information about a car the driver knows)
             return "spotter_on_air"
-        if m.priority >= Priority.URGENT:
-            return "urgent_on_air"
-        if not call.urgent:
-            return "radio_busy"  # still_there never cuts anything
-        return None
+        if m.kind is MessageKind.CUE and call.kind in CLEAR_KINDS:
+            return "cue_on_air"
+        if may_interrupt(_PROBE_URGENT if call.urgent else _PROBE_HIGH, m):
+            return None
+        return "urgent_on_air" if m.priority >= Priority.URGENT else "radio_busy"  # still_there never cuts anything
+
+    def yields_to_cue(self, msg: RadioMessage) -> bool:
+        """The hub's cue gate: a braking cue may cut this spotter clip on air (a clear or a still there)."""
+        return msg.meta.get("phrase") in _CUE_FIRST
 
     def _hold(self, call: SpotterCall, reason: str) -> None:
         old = self._mailbox
         if old is not None:
+            if _mail_rank(call) < _mail_rank(old):
+                self._drop(call, reason, replaced=True)  # the held call matters more; a lost clear is resynced
+                return
             self._drop(old, self._mailbox_reason or "replaced", replaced=True)
         self._mailbox = call
         self._mailbox_reason = reason
@@ -340,11 +405,57 @@ class SpotterRadio:
             return
         reason = self._mailbox_reason or "mailbox"
         self._mailbox = self._mailbox_reason = None
+        if call.kind in CLEAR_KINDS and not (call.test or call.final) and self.resync() is not None:
+            return  # a held clear: said as the sides are now ("Clear all round." when the other side went too)
         if not call.test and not self._valid(call):
             self._drop(call, reason)  # waited too long (or the car went): counted under why it waited
             return
         self.received -= 1  # deliver counts it again
         self.deliver(call, held=True)
+
+    def resync(self) -> str | None:
+        """Say what the driver missed (see **Resync** above). Returns the call kind said, or None."""
+        if self._mailbox is not None or self._epoch is None or not (self.settings.enabled and self.settings.audio):
+            return None
+        hub = self.hub
+        if not hub.voice_enabled or not hub.clients:
+            return None
+        origin = self._origin if callable(getattr(self._origin, "state", None)) else self.worker
+        st = origin.state() if origin is not None else None
+        if not isinstance(st, SpotterState) or not st.active or st.epoch != self._epoch:
+            return None
+        if max(st.last_seq) > self._seen_seq:
+            return None  # a newer engine call is on its way to the loop: it speaks for itself
+        h, ann, occ = self.heard, st.announced, st.occupied
+        onset = [ann[x] and occ[x] and not h[x] for x in (LEFT, RIGHT)]
+        clear = [h[x] and not ann[x] and not occ[x] for x in (LEFT, RIGHT)]
+        kind: str
+        side: Side | None
+        if any(onset):
+            if all(ann) and all(occ):
+                kind, side = THREE_WIDE, None
+            else:
+                kind, side = (CAR_LEFT, "left") if onset[LEFT] else (CAR_RIGHT, "right")
+        elif any(clear):
+            if all(clear):
+                kind, side = CLEAR_ALL_ROUND, None
+            else:
+                kind, side = (CLEAR_LEFT, "left") if clear[LEFT] else (CLEAR_RIGHT, "right")
+        else:
+            return None
+        now = recv_clock_ns()
+        call = SpotterCall(kind, side, max(st.last_seq), st.epoch, 0.0, now, now, origin=origin)
+        if self._block_reason(call) is not None:
+            return None  # the next release, PTT up or tick tries again
+        got = self._phrase(call)
+        if isinstance(got, str) or (
+            self.audio.get(got[0], self.simple()) is None and not any(c.device_tts for c in hub.clients)
+        ):
+            return None  # nothing to say, or no audio yet: never a drop counted every tick
+        if self._play(call, held=True, resync=True) is not None:
+            return None
+        self.resynced += 1
+        return kind
 
     def _state(self, call: SpotterCall) -> SpotterState | None:
         origin = call.origin
@@ -357,11 +468,15 @@ class SpotterRadio:
         st = self._state(call)
         if st is None:
             return True
+        occ = st.occupied
+        k = call.kind
+        if call.final:  # decided as the gate closed: the engine is already in a newer epoch
+            if k in (CLEAR_LEFT, CLEAR_RIGHT):
+                return not occ[SIDE_INDEX[k[6:]]]
+            return k == CLEAR_ALL_ROUND and not any(occ)
         if st.epoch != call.epoch:
             return False
         age = (recv_clock_ns() - call.t_decided_ns) / 1e9
-        occ = st.occupied
-        k = call.kind
         if k in (CAR_LEFT, CAR_RIGHT):
             return age <= ONSET_MAX_AGE_S and occ[SIDE_INDEX[k[4:]]]
         if k == THREE_WIDE:
@@ -400,10 +515,15 @@ class SpotterRadio:
             x = SIDE_INDEX[side]
             return (phrase_id(k, side), [], []) if h[x] else (onset_phrase_id(side), [x], [])
         if k == HOLD_YOUR_LINE:
+            hx = SIDE_INDEX.get(call.side or "")
+            if hx is not None and not h[hx]:
+                return (onset_phrase_id(call.side or "left"), [hx], [])  # its onset was lost: say that first
             return (k, [], [])
         return "unknown"
 
-    def _play(self, call: SpotterCall, held: bool = False) -> str | None:
+    def _play(self, call: SpotterCall, held: bool = False, *, resync: bool = False) -> str | None:
+        """Say the call now (heard pairing applied). ``resync``: made up by ``resync`` (no packet behind it: no
+        latency is recorded)."""
         hub = self.hub
         got = self._phrase(call)
         if isinstance(got, str):
@@ -416,7 +536,7 @@ class SpotterRadio:
             self.request_audio(force=True)
             return self._drop(call, "audio_not_ready")  # silence must not cut what is on air
         now = time.monotonic()
-        meta: dict[str, object] = {"spotter": call.kind, "side": call.side, "seq": call.seq}
+        meta: dict[str, object] = {"spotter": call.kind, "side": call.side, "seq": call.seq, "phrase": pid}
         if call.test:
             meta["test"] = True
         msg = RadioMessage(
@@ -441,7 +561,7 @@ class SpotterRadio:
             self.rehold_after_spotter(interrupted, now)
         self.spoken[call.kind] += 1
         q = (t2 - call.t_recv_ns) / 1e6
-        plausible = 0 <= t2 - call.t_recv_ns <= MAX_PLAUSIBLE_NS and not call.test
+        plausible = 0 <= t2 - call.t_recv_ns <= MAX_PLAUSIBLE_NS and not call.test and not resync
         if plausible and held:
             self.held_ms.add((t2 - call.t_decided_ns) / 1e6)
         elif plausible:
@@ -460,6 +580,7 @@ class SpotterRadio:
                 "phrase": pid,
                 "spoken": True,
                 "held": held,
+                "resync": resync,
                 "queued_ms": round(q, 1) if plausible else None,
                 "started_ms": None,
                 "msg_id": msg.id,
@@ -521,6 +642,7 @@ class SpotterRadio:
             hub._on_playback(msg_id, "ended", None)  # as if the device had reported it (it may never)
         else:
             self.release()
+            self.resync()
 
     # ------------------------------------------------------------------ latency
     def _measure_started(self, inf: _Inflight) -> None:
@@ -580,7 +702,12 @@ class SpotterRadio:
         return out
 
     def counters(self) -> dict[str, Any]:
-        return {"received": self.received, "spoken": dict(self.spoken), "dropped": dict(self.dropped)}
+        return {
+            "received": self.received,
+            "spoken": dict(self.spoken),
+            "dropped": dict(self.dropped),
+            "resynced": self.resynced,
+        }
 
     def status(self) -> dict[str, Any]:
         st = self.audio.status()

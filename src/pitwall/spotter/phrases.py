@@ -24,11 +24,11 @@ PHRASES: dict[str, tuple[str, str]] = {
     "car_right": ("Car right.", "Car on your right."),
     "clear_left": ("Clear left.", "Left side clear."),
     "clear_right": ("Clear right.", "Right side clear."),
-    "three_wide": ("Three wide, you're in the middle.", "Cars on both sides. Stay in the middle."),
+    "three_wide": ("Three wide.", "Cars on both sides."),  # you are in the middle: the outside car is "car left"
     "clear_all_round": ("Clear all round.", "All clear."),
-    "still_there_left": ("Still there.", "Still on your left."),
-    "still_there_right": ("Still there.", "Still on your right."),
-    "hold_your_line": ("Hold your line.", "Keep it steady, car very close."),
+    "still_there_left": ("Still left.", "Still on your left."),  # the side: "Still there." was ambiguous after
+    "still_there_right": ("Still right.", "Still on your right."),  # "Three wide."
+    "hold_your_line": ("Hold your line.", "Steady, car close."),
 }
 PHRASE_IDS: tuple[str, ...] = tuple(PHRASES)
 WORDINGS: tuple[str, ...] = ("standard", "simple")
@@ -40,16 +40,16 @@ KEY_WORDS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "car_right": (("car", "right"), ("car", "right")),
     "clear_left": (("clear", "left"), ("left", "clear")),
     "clear_right": (("clear", "right"), ("right", "clear")),
-    "three_wide": (("three", "wide", "middle"), ("both", "sides", "middle")),
+    "three_wide": (("three", "wide"), ("both", "sides")),
     "clear_all_round": (("clear", "all"), ("all", "clear")),
-    "still_there_left": (("still", "there"), ("still", "left")),
-    "still_there_right": (("still", "there"), ("still", "right")),
+    "still_there_left": (("still", "left"), ("still", "left")),
+    "still_there_right": (("still", "right"), ("still", "right")),
     "hold_your_line": (("hold", "line"), ("steady", "close")),
 }
 
 
 def phrase_id(kind: str, side: str | None) -> str:
-    """The phrase for a call. A ``still_there`` without a side uses the left phrase (both are "Still there.")."""
+    """The phrase for a call. A ``still_there`` always has a side (the engine's); without one it uses the left."""
     if kind == STILL_THERE:
         return f"still_there_{side or 'left'}"
     if kind in (CAR_LEFT, CAR_RIGHT, CLEAR_LEFT, CLEAR_RIGHT, THREE_WIDE, CLEAR_ALL_ROUND, HOLD_YOUR_LINE):
@@ -58,7 +58,8 @@ def phrase_id(kind: str, side: str | None) -> str:
 
 
 def onset_phrase_id(side: str) -> str:
-    """A ``still_there`` the driver has not heard the onset of is said as the onset (spec section 5.3)."""
+    """A ``still_there`` or ``hold_your_line`` the driver has not heard the onset of is said as the onset (spec
+    section 5.3)."""
     return CAR_LEFT if side == "left" else CAR_RIGHT
 
 

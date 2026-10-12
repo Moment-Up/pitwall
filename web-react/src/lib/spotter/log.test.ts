@@ -24,11 +24,11 @@ describe("spotterRun", () => {
   });
 
   it("a run: oldest first in one sentence, counted", () => {
-    const log = [e("spotter", "Car left."), e("spotter", "Clear left."), e("spotter", "Three wide, you're in the middle.")];
+    const log = [e("spotter", "Car left."), e("spotter", "Clear left."), e("spotter", "Three wide.")];
     expect(spotterRun(log, 2)).toMatchObject({
       start: 0,
       seq: log[2]!.seq,
-      text: "Car left, clear left, three wide, you're in the middle",
+      text: "Car left, clear left, three wide",
       count: "(3 calls)",
     });
   });

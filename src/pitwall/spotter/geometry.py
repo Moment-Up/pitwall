@@ -9,8 +9,14 @@ Geometry (spec section 3.2), in the player's frame:
   PS5 F1 25 races ``worldRightDir`` is the driver's RIGHT (it agreed with the steering sign on 87-99.9% of samples)
   and ``f x r`` points down, so ``u = r x f`` is up (handedness-safe; ``analysis/track_geometry.py``: F1's X/Z plane
   is mirrored).
-* For each other car j: ``d = p_j - p_player``; ``lon = d.f`` (+ ahead), ``lat = d.r`` (+ right), ``vert = d.u``;
-  ``vr = (v_j - v_p).f`` and ``vl = (v_j - v_p).r``.
+* For each other car j: ``d = p_j - p_player``; ``lon = d.f`` (+ ahead), ``lat = d.r`` (+ right), ``vert = d.u``.
+* ``vr`` and ``vl`` are how fast ``lon`` and ``lat`` change in the player's frame, which turns with the player:
+  ``vr = (v_j - v_p).f + d.(df/dt)`` and ``vl = (v_j - v_p).r + d.(dr/dt)``. The rotation terms come from the
+  player's vectors in the previous packet on the game clock (``prev``, at most ``ROT_MAX_DT_S`` earlier). Without
+  them, two cars holding a constant gap through a corner read as closing at (yaw rate x lon): against finite
+  differences of ``lat`` on the owner's races the error was 0.63 m/s at the median and 3.7 m/s at p90, with them
+  0.02 and 0.16 (docs/research/f1-spotter-data.md). With no usable previous packet (the first packet, a gap, a
+  rewind) the terms are left out.
 * Every car is the same ``L x W`` rectangle, oriented by its own vectors: ``ext_lon = L/2 |f_j.f| + W/2 |r_j.f|``,
   ``ext_lat = L/2 |f_j.r| + W/2 |r_j.r|``; the bodies overlap lengthwise when ``|lon| < reach = L/2 + ext_lon``,
   and ``gap = |lat| - W/2 - ext_lat`` is the side-to-side clearance.
@@ -34,6 +40,7 @@ from pitwall.spotter.model import DecodedMotion
 
 DIR_SCALE = 32767.0  # EA spec: "divide by 32767.0f" for the normalised int16 direction vectors
 VECTOR_MIN, VECTOR_MAX = 0.95, 1.05
+ROT_MIN_DT_S, ROT_MAX_DT_S = 1e-3, 0.25  # the frame's rotation from two packets this far apart (game clock)
 
 MOTION_FIELDS = (
     "worldPositionX",
@@ -127,8 +134,8 @@ class Rel:
     vert: float  # + above
     reach: float  # bodies overlap lengthwise when |lon| < reach
     gap: float  # side-to-side clearance (negative = the boxes overlap sideways)
-    vr: float  # relative longitudinal speed (+ the other car moves ahead)
-    vl: float  # relative lateral speed (+ the other car moves to the player's right)
+    vr: float  # d lon / dt in the player's turning frame (+ the other car moves ahead)
+    vl: float  # d lat / dt in the player's turning frame (+ the other car moves to the player's right)
     obstacle: bool  # racing on track (status filters) and not above/below (bridges)
 
 
@@ -158,9 +165,14 @@ def basis(row: tuple[float, ...]) -> Basis | None:
 
 
 def relative(
-    m: DecodedMotion, length_m: float, width_m: float, vert_max_m: float = 3.0
+    m: DecodedMotion,
+    length_m: float,
+    width_m: float,
+    vert_max_m: float = 3.0,
+    prev: tuple[float, Basis] | None = None,
 ) -> tuple[Basis | None, list[Rel]]:
-    """The player's basis and every other valid car relative to it (cars with invalid vectors are left out)."""
+    """The player's basis and every other valid car relative to it (cars with invalid vectors are left out).
+    ``prev``: (session time, basis) of the player in the previous packet, for the frame's rotation (module doc)."""
     cars = m.cars
     pi = m.player_index
     if pi >= len(cars):
@@ -170,6 +182,13 @@ def relative(
         return None, []
     fx, fy, fz = b.f
     rx, ry, rz = b.r
+    dfx = dfy = dfz = drx = dry = drz = 0.0
+    if prev is not None:
+        dt = m.session_time_s - prev[0]
+        if ROT_MIN_DT_S < dt <= ROT_MAX_DT_S:
+            (pfx, pfy, pfz), (prx, pry, prz) = prev[1].f, prev[1].r
+            dfx, dfy, dfz = (fx - pfx) / dt, (fy - pfy) / dt, (fz - pfz) / dt
+            drx, dry, drz = (rx - prx) / dt, (ry - pry) / dt, (rz - prz) / dt
     ux, uy, uz = b.u
     px, py, pz = b.p
     pvx, pvy, pvz = b.v
@@ -207,8 +226,8 @@ def relative(
                 vert,
                 half_l + ext_lon,
                 abs(lat) - half_w - ext_lat,
-                dvx * fx + dvy * fy + dvz * fz,
-                dvx * rx + dvy * ry + dvz * rz,
+                dvx * fx + dvy * fy + dvz * fz + dx * dfx + dy * dfy + dz * dfz,
+                dvx * rx + dvy * ry + dvz * rz + dx * drx + dy * dry + dz * drz,
                 obstacle,
             )
         )

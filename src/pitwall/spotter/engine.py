@@ -19,12 +19,21 @@ Per packet, when every gate is open:
    axes (lengthwise closing faster than 0.5 m/s, sideways faster than 1.0 m/s). "Clear all round" ends an episode
    that went three wide. Both sides clearing in the same packet make one call.
 4. **Still there** 4 s after the side's last call, then every 6 s, at most 2 per episode; **hold your line** once
-   per episode when an announced car is within 0.4 m and closing sideways at 0.5 m/s or more for 100 ms, at least
-   1 s after that side's onset.
+   per episode when an announced car side by side (overlapping lengthwise by half a car or more) is within 0.4 m and
+   closing sideways at 0.8 m/s or more for 150 ms, at least 1 s after that side's onset.
 
 Gates (section 3.6, the first closed one is ``reason``): a closed gate forgets all traffic and never says "clear"
-(a muted spotter never says clear). A flashback, or the game clock going back by more than 50 ms, resets and mutes
-for 1 s of game time. Each reset bumps ``epoch``, so the radio forgets which onsets the driver heard.
+(a muted spotter never says clear), with one exception: when the gate that closes leaves the positions valid (the
+player slowed below 20 km/h, entered the pit lane or finished), a side announced and empty at that packet, with
+nothing arriving, gets its clear (``SpotterCall.final``), so the driver is not left believing a car is still there.
+"spin" closes while the player slides more than 30 degrees from the direction of travel (or travels backwards): left
+and right turn with the car, so no call would mean anything; it opens again 0.3 s after the slide is back under 15
+degrees (the next car alongside is a new episode; nothing is said about the traffic before the slide). A flashback,
+or the game clock going back by more than 50 ms, resets and mutes for 1 s of game time. Each reset bumps ``epoch``, so
+the radio forgets which onsets the driver heard.
+
+Relative speeds (``Rel.vr`` / ``vl``) include the player's frame rotation (``spotter.geometry``), so two cars holding
+a constant gap through a corner are not "closing".
 """
 
 from __future__ import annotations
@@ -36,7 +45,7 @@ from typing import Any
 
 from pitwall.model.telemetry import EventKind, SessionInfo
 from pitwall.spotter.dims import CarDims, dims_for
-from pitwall.spotter.geometry import Rel, relative
+from pitwall.spotter.geometry import Basis, Rel, relative
 from pitwall.spotter.model import (
     CAR_LEFT,
     CAR_RIGHT,
@@ -62,6 +71,7 @@ PRACTICE_TYPES = frozenset({1, 2, 3, 4})
 TIME_TRIAL_TYPE = 18  # never: rival and PB ghost cars occupy slots (LapData tail timeTrialPBCarIdx / RivalCarIdx)
 SAFETY_CAR_SILENT = frozenset({"full", "virtual", "formation_lap"})
 RESULT_ACTIVE = 2
+FINAL_CLEAR_GATES = frozenset({"pit", "finished", "slow"})  # the positions are still valid when these close
 _EPS = 1e-6
 
 
@@ -87,13 +97,22 @@ class SpotterParams:
     still_first_s: float = 4.0  # [H]
     still_every_s: float = 6.0  # [H]
     still_max: int = 2  # [H] per episode
+    # hold your line (review of 12 Oct, 26 owner race sessions): 0.4 m / 0.5 m/s / 0.1 s on every member fired on 56
+    # of 190 onsets (29%), a third of them for cars no longer overlapping lengthwise (members by the stay margin) or
+    # only diagonally; with the frame's rotation, 0.8 m/s for 0.15 s and half a car of side-by-side overlap: 21 of
+    # 193 (11%). Onsets, clears and recall unchanged (docs/research/f1-spotter-data.md, "Review fixes").
     hold_gap_m: float = 0.4  # [H]
-    hold_closing_mps: float = 0.5  # [H]
-    hold_sustain_s: float = 0.1  # [H]
+    hold_closing_mps: float = 0.8  # [H]
+    hold_sustain_s: float = 0.15  # [H]
     hold_after_onset_s: float = 1.0  # [H]
+    hold_overlap_frac: float = 0.5  # [H] the bodies overlap lengthwise by at least this x L: side by side
     vert_max_m: float = 3.0  # [H] crossover bridges
     speed_on_kph: float = 30.0  # [H] the spotter arms above this ...
     speed_off_kph: float = 20.0  # [H] ... and disarms below this
+    spin_on_deg: float = 30.0  # [H] slip (heading vs direction of travel) above this: "spin" (backwards: 180)
+    spin_off_deg: float = 15.0  # [H] ... and back under this ...
+    spin_calm_s: float = 0.3  # [H] ... for this long (game clock) before the gate opens again
+    spin_min_mps: float = 5.0  # below this the slip angle means nothing (the "slow" gate covers it)
     rewind_s: float = 0.05  # the game clock going back by more than this = a flashback / rewind
     flashback_mute_s: float = 1.0
     traffic_hold_s: float = 1.0  # [H] proactive radio waits this long after a side cleared
@@ -137,7 +156,7 @@ class SpotterEngine:
         self.trace = PacketTrace()
         self.motion_hz: float | None = None
         self.data_age_ms: float | None = None
-        self.reason: str | None = "not_available"
+        self.reason: str | None = "not_available" if settings.enabled else "disabled"
         self.active = False
         self.state_obj = SpotterState()
         self.view_dict: dict[str, Any] = {}
@@ -147,6 +166,9 @@ class SpotterEngine:
         self._mute_until: float | None = None
         self._last_t: float | None = None
         self._moving = False
+        self._spinning = False
+        self._spin_calm_t: float | None = None
+        self._prev_basis: tuple[float, Basis] | None = None  # the frame's rotation (geometry.relative)
         self._seen_motion = False
         self._times: deque[float] = deque(maxlen=RATE_WINDOW)
         self._offsets: deque[float] = deque(maxlen=AGE_WINDOW)
@@ -175,6 +197,8 @@ class SpotterEngine:
         self._update_dims()
         if not settings.enabled:
             self._reset_episode()
+            self.active = False  # off: no Motion reaches the engine until it is on again (the worker skips it)
+            self.reason = "disabled"
         self._publish(None)
 
     def set_ear_latency(self, seconds: float) -> None:
@@ -194,11 +218,13 @@ class SpotterEngine:
         elif k == EventKind.FLASHBACK.value:
             self._reset_episode()
             self._mute_pending = True
+            self._prev_basis = None
             self._publish(None)
         elif k in (EventKind.SESSION_STARTED.value, EventKind.SESSION_ENDED.value):
             self._reset_episode()
             self._lights_out_t = None
             self._last_t = None
+            self._prev_basis = None
             self._publish(None)
 
     def reset(self) -> None:
@@ -206,7 +232,7 @@ class SpotterEngine:
         self._new_session()
         self._info = None
         self._update_dims()
-        self.reason = "not_available"
+        self.reason = "not_available" if self.settings.enabled else "disabled"
         self.active = False
         self._publish(None)
 
@@ -233,6 +259,7 @@ class SpotterEngine:
         if self._last_t is not None and t < self._last_t - p.rewind_s:
             self._reset_episode()  # flashback / restart: the game clock went back
             self._mute_until = t + p.flashback_mute_s
+            self._prev_basis = None
         elif self._mute_pending:
             self._mute_until = t + p.flashback_mute_s
         self._mute_pending = False
@@ -245,17 +272,21 @@ class SpotterEngine:
         if not s.enabled:
             self._close("disabled")
             return []
-        b, rels = relative(m, self.dims.length_m, self.dims.width_m, p.vert_max_m)
+        b, rels = relative(m, self.dims.length_m, self.dims.width_m, p.vert_max_m, self._prev_basis)
         if b is None:
             self.invalid += 1  # skipped: counted, no state change
+            self._prev_basis = None
             return []
+        self._prev_basis = (t, b)
         speed = b.speed_kph
         trace.speed_kph = speed
         self._moving = speed >= (p.speed_off_kph if self._moving else p.speed_on_kph)
+        self._update_spin(b, t)
         reason = self._gate(m, t, red_flag)
         if reason is not None:
+            final = self._final_clears(reason, t, rels, m, now_ns)
             self._close(reason)
-            return []
+            return final
         self.active = True
         self.reason = None
         trace.gate_open = True
@@ -282,6 +313,9 @@ class SpotterEngine:
         self._mute_until = None
         self._last_t = None
         self._moving = False
+        self._spinning = False
+        self._spin_calm_t = None
+        self._prev_basis = None
         self._seen_motion = False
         self._times = deque(maxlen=RATE_WINDOW)
         self._offsets = deque(maxlen=AGE_WINDOW)
@@ -358,9 +392,51 @@ class SpotterEngine:
             return "pit"
         if res != RESULT_ACTIVE:
             return "finished"
+        if self._spinning:
+            return "spin"
         if not self._moving:
             return "slow"
         return None
+
+    def _update_spin(self, b: Basis, t: float) -> None:
+        """The "spin" gate's state, with hysteresis: slip above ``spin_on_deg`` (or travelling backwards) closes it;
+        it opens once the slip stays at or under ``spin_off_deg`` for ``spin_calm_s`` of game time."""
+        p = self.params
+        v, f, r = b.v, b.f, b.r
+        vf = v[0] * f[0] + v[1] * f[1] + v[2] * f[2]
+        vs = v[0] * r[0] + v[1] * r[1] + v[2] * r[2]
+        if math.hypot(vf, vs) < p.spin_min_mps:
+            self._spinning = False  # too slow for a slip angle: the "slow" gate decides
+            self._spin_calm_t = None
+            return
+        slip = math.degrees(math.atan2(abs(vs), vf))
+        if slip > p.spin_on_deg:
+            self._spinning = True
+            self._spin_calm_t = None
+        elif self._spinning:
+            if slip > p.spin_off_deg:
+                self._spin_calm_t = None
+            elif self._spin_calm_t is None:
+                self._spin_calm_t = t
+            elif t - self._spin_calm_t >= p.spin_calm_s - _EPS:
+                self._spinning = False
+                self._spin_calm_t = None
+
+    def _final_clears(self, reason: str, t: float, rels: list[Rel], m: DecodedMotion, now_ns: int) -> list[SpotterCall]:
+        """A gate that leaves the positions valid closes (``FINAL_CLEAR_GATES``): the clear of every announced side
+        that is empty at this packet with nothing arriving (the module docstring). Called before ``_close``."""
+        announced = self._announced
+        if reason not in FINAL_CLEAR_GATES or not self.active or not any(announced):
+            return []
+        width = self.dims.width_m
+        members, _gt = self._membership(rels, width)
+        clear = [announced[x] and not members[x] and not self._arriving(x, rels, width) for x in (LEFT, RIGHT)]
+        if not any(clear):
+            return []
+        if all(clear) or (self._episode_three and not any(announced[x] and not clear[x] for x in (LEFT, RIGHT))):
+            return [self._call(CLEAR_ALL_ROUND, None, t, m, now_ns, final=True)]
+        x = LEFT if clear[LEFT] else RIGHT
+        return [self._call(CLEAR_LEFT if x == LEFT else CLEAR_RIGHT, x, t, m, now_ns, final=True)]
 
     def _close(self, reason: str) -> None:
         if self.active or any(self._announced) or any(self._raw):
@@ -401,7 +477,15 @@ class SpotterEngine:
         return False
 
     def _call(
-        self, kind: str, side: int | None, t: float, m: DecodedMotion, now_ns: int, onset_ms: float | None = None
+        self,
+        kind: str,
+        side: int | None,
+        t: float,
+        m: DecodedMotion,
+        now_ns: int,
+        onset_ms: float | None = None,
+        *,
+        final: bool = False,
     ) -> SpotterCall:
         self._seq += 1
         if side is None:
@@ -417,17 +501,18 @@ class SpotterEngine:
             t_recv_ns=m.t_recv_ns,
             t_decided_ns=now_ns,
             onset_game_ms=onset_ms,
+            final=final,
         )
 
-    def _step(self, t: float, rels: list[Rel], m: DecodedMotion, now_ns: int) -> list[SpotterCall]:
+    def _membership(self, rels: list[Rel], width: float) -> tuple[list[set[int]], list[bool]]:
+        """Who is alongside per side (join / stay hysteresis against ``_members``) and the geometric truth."""
         p = self.params
-        s = self.settings
-        width = self.dims.width_m
-        obst = {r.idx: r for r in rels if r.obstacle}
         members: list[set[int]] = [set(), set()]
         gt = [False, False]
         old = self._members
-        for r in obst.values():
+        for r in rels:
+            if not r.obstacle:
+                continue
             side = LEFT if r.lat < 0 else RIGHT
             if enters(r, width, p):
                 gt[side] = True
@@ -439,6 +524,14 @@ class SpotterEngine:
                 and abs(r.lon) < r.reach + p.lon_stay_margin_m
             ):
                 members[side].add(r.idx)
+        return members, gt
+
+    def _step(self, t: float, rels: list[Rel], m: DecodedMotion, now_ns: int) -> list[SpotterCall]:
+        p = self.params
+        s = self.settings
+        width = self.dims.width_m
+        obst = {r.idx: r for r in rels if r.obstacle}
+        members, gt = self._membership(rels, width)
         self._members = members
         self.trace.gt = (gt[LEFT], gt[RIGHT])
         raw = self._raw
@@ -541,7 +634,11 @@ class SpotterEngine:
                     continue
                 for j in members[x]:
                     r = obst[j]
-                    if r.gap <= p.hold_gap_m and -_sign(r.lat) * r.vl >= p.hold_closing_mps:
+                    if (
+                        r.gap <= p.hold_gap_m
+                        and -_sign(r.lat) * r.vl >= p.hold_closing_mps
+                        and r.reach - abs(r.lon) >= p.hold_overlap_frac * self.dims.length_m
+                    ):
                         close_side = x
             if close_side is not None:
                 if self._hold_since is None:

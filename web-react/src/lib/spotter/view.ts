@@ -173,7 +173,7 @@ export function barsView(block: SpotterBlock | null | undefined, ctx: BarsContex
 /** Why the spotter is silent, for Settings (spec 3.6). Unknown or null while inactive: "Inactive". */
 export const REASON_TEXT: Readonly<Record<SpotterReason, string>> = {
   disabled: "Off",
-  not_available: "Not available for this game",
+  not_available: "Waiting for F1 25 data",
   session_type: "Silent in this session type",
   red_flag: "Silent: red flag",
   safety_car: "Silent: safety car",
@@ -183,6 +183,7 @@ export const REASON_TEXT: Readonly<Record<SpotterReason, string>> = {
   flashback: "Silent after a flashback",
   pit: "Silent in the pits",
   finished: "Silent after the finish",
+  spin: "Silent in a spin",
   slow: "Silent below 30 km/h",
 };
 

@@ -144,3 +144,32 @@ def test_rings_and_percentiles() -> None:
         r.add(v)
     assert r.summary() == {"p50": 3.0, "p95": 40.0, "max": 40.0, "n": 3}
     assert Ring().summary() == {"p50": None, "p95": None, "max": None, "n": 0}
+
+
+def test_off_no_decode_no_engine_and_switching_off_turns_the_bars_off() -> None:
+    """Off is the default: a Motion item is counted (and marks F1 Motion as seen) without being decoded."""
+    live = LiveState()
+    w = SpotterWorker(live, SpotterSettings(), start=False)
+    items = _items()
+    for it in items:
+        w.submit(it)
+    w.process_pending()
+    assert w.items > 0 and w.engine.packets == 0 and w.motion_seen and w.status()["reason"] == "disabled"
+    assert live.spotter is not None and live.spotter["enabled"] is False and live.spotter["active"] is False
+    # on, a car alongside, then off mid-overlap: the bars go off at the next item, nothing is said
+    calls: list[SpotterCall] = []
+    w = SpotterWorker(live, ON, sink=calls.append, start=False)
+    half = 0
+    while not calls:
+        w.submit(items[half])
+        w.process_pending()
+        half += 1
+    assert [c.kind for c in calls] == ["car_left"] and live.spotter["left"]["state"] != "clear"
+    w.apply_settings(SpotterSettings())
+    for it in items[half:]:
+        w.submit(it)
+    w.process_pending()
+    assert [c.kind for c in calls] == ["car_left"]
+    assert (
+        live.spotter["active"] is False and live.spotter["left"]["state"] == "clear" and w.engine.reason == "disabled"
+    )

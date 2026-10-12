@@ -71,12 +71,16 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   calls.
 - **Spotter calls** (kind **`spotter`**, F1 25, `pitwall/spotter` + `voice/spotter_radio.py`; off by default):
   `meta` = `{"spotter": "car_left"|"car_right"|"three_wide"|"clear_left"|"clear_right"|"clear_all_round"|"still_there"|
-  "hold_your_line", "side": "left"|"right"|null, "seq": int, "test"?: true}` (no car index, no names). The audio is
-  synthesised in advance and sent as PCM to **every** client, device-voice clients included (`n_bytes` > 0 and no
-  `device_tts` flag: clients play PCM whenever there is some); without a clip, device-voice clients get the text as
-  usual. A spotter call cuts a cue, a proactive message or an answer (the latter two are said again once; the cue is
-  dropped, and is not sent while a spotter call is on air), never another spotter call or an urgent call; it waits
-  while the driver transmits. `still_there` is sent at `HIGH` priority and never cuts anything. Every intensity and
+  "hold_your_line", "side": "left"|"right"|null, "seq": int, "phrase": str, "test"?: true}` (no car index, no names;
+  `phrase` is what was said: `car_left` for a `still_there` or `hold_your_line` whose onset the driver never heard,
+  `still_there_left` for a still there on the left). The audio is synthesised in advance and sent as PCM to **every**
+  client, device-voice clients included (`n_bytes` > 0 and no `device_tts` flag: clients play PCM whenever there is
+  some); without a clip, device-voice clients get the text as usual. A spotter call cuts a cue, a proactive message or
+  an answer (the latter two are said again once; the cue is dropped), never another spotter call or an urgent call; it
+  waits while the driver transmits. A clear never cuts a cue: it waits for the cue to end; a cue cuts a clear or a
+  still there on air, and is not sent while any other spotter call is on air. `still_there` is sent at `HIGH`
+  priority and never cuts anything. A call lost while the radio was busy is made up when it is free (the driver hears
+  the side as it is then). Every intensity and
   quiet mode include it; `voice_enabled` false mutes it. Older clients label the kind `INFO` and still play it. The
   `state` frame's `spotter` object says whether it is on, whether its audio is ready and the spotter's own voice
   (null = the engineer's). REST: `GET /api/spotter`, `PUT /api/spotter/settings`, `POST /api/spotter/test`.

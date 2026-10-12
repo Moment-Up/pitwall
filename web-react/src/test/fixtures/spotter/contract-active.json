@@ -31,6 +31,7 @@
       "reason": null,
       "motion_hz": 59.9,
       "send_rate_low": false,
+      "wording": "standard",
       "dims": {
         "length_m": 5.5,
         "width_m": 2.0,

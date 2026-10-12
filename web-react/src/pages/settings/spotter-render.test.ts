@@ -70,7 +70,8 @@ describe("Settings › Radio & voice › Spotter", () => {
     const m = render();
     const t = text(m);
     expect(t).toContain("Active");
-    expect(t).toContain("60 Hz · audio ready · 190 ms to playback (p95)");
+    expect(t).toContain("60 Hz · audio ready");
+    expect(t).not.toContain("to playback (p95)");
     for (const row of ROWS) expect(t).toContain(row);
     expect(t).toContain("Spotter voice");
     expect(t).toContain("Same as engineer");

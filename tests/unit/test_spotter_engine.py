@@ -172,18 +172,18 @@ def _squeeze(closing: float, gap_end: float, start: float = 11.2) -> object:
 
 def test_hold_your_line_needs_close_closing_sustained_and_after_one_second() -> None:
     e = engine()
-    calls = run(e, _squeeze(0.6, 0.2), 10.0, 14.0)  # type: ignore[arg-type]
+    calls = run(e, _squeeze(1.0, 0.2), 10.0, 14.0)  # type: ignore[arg-type]
     assert kinds(calls) == ["car_left", "hold_your_line"]
     hold = calls[1]
     assert hold.side == "left" and hold.session_time_s - calls[0].session_time_s >= PARAMS.hold_after_onset_s
     # once per episode
-    assert "hold_your_line" not in kinds(run(e, _squeeze(0.6, 0.2, start=14.0), 14.0, 15.0))  # type: ignore[arg-type]
+    assert "hold_your_line" not in kinds(run(e, _squeeze(1.0, 0.2, start=14.0), 14.0, 15.0))  # type: ignore[arg-type]
     # too slow a squeeze, or not close enough: nothing
-    assert kinds(run(engine(), _squeeze(0.3, 0.2), 10.0, 14.0)) == ["car_left"]  # type: ignore[arg-type]
-    assert kinds(run(engine(), _squeeze(0.6, 0.6), 10.0, 14.0)) == ["car_left"]  # type: ignore[arg-type]
+    assert kinds(run(engine(), _squeeze(0.6, 0.2), 10.0, 14.0)) == ["car_left"]  # type: ignore[arg-type]
+    assert kinds(run(engine(), _squeeze(1.0, 0.45), 10.0, 14.0)) == ["car_left"]  # type: ignore[arg-type]
     # too early after the onset (the car closes in at once)
     e = engine()
-    calls = run(e, lambda t: {1: Car(0.0, -2.3, vlat=0.6)}, 10.0, 10.9)
+    calls = run(e, lambda t: {1: Car(0.0, -2.3, vlat=1.0)}, 10.0, 10.9)
     assert kinds(calls) == ["car_left"]
 
 
@@ -218,7 +218,7 @@ def _first_reason(**kw: object) -> str | None:
 
 
 def test_gate_reasons_in_order() -> None:
-    assert REASONS[0] == "disabled" and REASONS[-1] == "slow"
+    assert REASONS[0] == "disabled" and REASONS[-2:] == ("spin", "slow")
     e = SpotterEngine()  # off by default
     e.feed_motion(motion(10.0, ALONGSIDE_L), 0)
     assert e.reason == "disabled"
@@ -234,6 +234,8 @@ def test_gate_reasons_in_order() -> None:
     assert _first_reason(player_status=(1, 4, 2)) == "pit"
     assert _first_reason(player_status=(0, 4, 3)) == "finished"
     assert _first_reason(speed=5.0) == "slow"
+    assert _first_reason(player_yaw_deg=40.0) == "spin"
+    assert _first_reason(player_yaw_deg=40.0, speed=3.0) == "slow"  # no slip angle that slow
     assert _first_reason() is None
     e = engine()
     e.feed_motion(motion(10.0, ALONGSIDE_L), 0, red_flag=True)
@@ -352,3 +354,67 @@ def test_calls_carry_the_decision_stamps() -> None:
     assert c.kind == "car_left" and c.side == "left" and c.t_decided_ns == 77
     assert c.t_recv_ns == 5_003 and c.onset_game_ms == pytest.approx(50.0, abs=0.01)
     assert e.state().last_seq == (c.seq, 0) and e.state().occupied == (True, False)
+
+
+# --- review fixes: the spin gate, the clear when a gate with valid positions closes ---
+def test_spin_gate_hysteresis_and_backwards() -> None:
+    e = engine()
+    assert kinds(run(e, lambda t: ALONGSIDE_L, 10.0, 11.0)) == ["car_left"]
+    epoch = e.state().epoch
+    for yaw in (10.0, 25.0, 29.0):  # a slide under 30 degrees: still racing
+        e.feed_motion(motion(11.1, ALONGSIDE_L, player_yaw_deg=yaw), 0)
+        assert e.reason is None
+    assert e.feed_motion(motion(11.2, ALONGSIDE_L, player_yaw_deg=35.0), 0) == []  # forgets, never says clear
+    assert e.reason == "spin" and e.state().epoch > epoch and e.state().announced == (False, False)
+    e.feed_motion(motion(11.3, ALONGSIDE_L, player_yaw_deg=180.0), 0)  # travelling backwards
+    assert e.reason == "spin"
+    assert run(e, lambda t: ALONGSIDE_L, 11.4, 11.85, player_yaw_deg=20.0) == []  # 20 > 15: not calm yet
+    assert run(e, lambda t: ALONGSIDE_L, 11.9, 12.15, player_yaw_deg=10.0) == []  # calm for less than 0.3 s
+    assert e.reason == "spin"
+    assert kinds(run(e, lambda t: ALONGSIDE_L, 12.2, 12.4, player_yaw_deg=10.0)) == ["car_left"]  # a new episode
+
+
+@pytest.mark.parametrize(
+    ("closing", "kw", "final"),
+    [
+        ("slow", {"speed": 15 / 3.6}, True),
+        ("pit", {"player_status": (1, 4, 2)}, True),
+        ("finished", {"player_status": (0, 4, 3)}, True),
+        ("spin", {"player_yaw_deg": 90.0}, False),  # left and right turn with the car: no call means anything
+    ],
+)
+def test_a_gate_with_valid_positions_says_the_pending_clear(closing: str, kw: dict[str, object], final: bool) -> None:
+    e = engine()
+    assert kinds(run(e, lambda t: ALONGSIDE_L, 10.0, 11.0)) == ["car_left"]
+    seq = e.state().last_seq[0]
+    assert run(e, lambda t: {}, 11.02, 11.1) == []  # gone, the 150 ms clear not yet due
+    calls = e.feed_motion(motion(11.12, {}, **kw), 0)  # type: ignore[arg-type]
+    assert e.reason == closing
+    if final:
+        (c,) = calls
+        assert c.kind == "clear_left" and c.final and c.seq > seq and c.epoch < e.state().epoch
+    else:
+        assert calls == []
+
+
+def test_no_final_clear_while_the_car_is_still_there_or_arriving() -> None:
+    e = engine()
+    assert kinds(run(e, lambda t: ALONGSIDE_L, 10.0, 11.0)) == ["car_left"]
+    assert e.feed_motion(motion(11.02, ALONGSIDE_L, speed=15 / 3.6), 0) == []  # still alongside: no clear
+    e = engine()
+    assert kinds(run(e, lambda t: ALONGSIDE_L, 10.0, 11.0)) == ["car_left"]
+    run(e, lambda t: {}, 11.02, 11.1)
+    arriving = {1: Car(-7.0, -3.2, vlon=10.0)}  # 1.5 m behind the overlap, closing at 10 m/s
+    assert e.feed_motion(motion(11.12, arriving, speed=15 / 3.6), 0) == []
+    e = engine()
+    assert kinds(run(e, lambda t: ALONGSIDE_L, 10.0, 11.0)) == ["car_left"]
+    e.feed_session(race_info(safety_car="full"))
+    assert e.feed_motion(motion(11.02, {}), 0) == [] and e.reason == "safety_car"  # positions may be stale: silent
+
+
+def test_three_wide_then_a_final_clear_all_round() -> None:
+    e = engine()
+    assert kinds(run(e, lambda t: {**ALONGSIDE_L, **ALONGSIDE_R}, 10.0, 11.0)) == ["three_wide"]
+    run(e, lambda t: {}, 11.02, 11.1)
+    (c,) = e.feed_motion(motion(11.12, {}, player_status=(1, 4, 2)), 0)
+    assert c.kind == "clear_all_round" and c.side is None and c.final

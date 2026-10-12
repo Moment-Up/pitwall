@@ -15,6 +15,8 @@
   kept (session info and events stay, in order), the debounce timers restart (a call is never made on stale data)
   and the skipped items are counted.
 * ``apply_settings`` and ``set_ear_latency`` are attribute swaps; the thread picks them up at its next item.
+* Off (the default): a Motion item is counted and marks F1 Motion as seen (``motion_seen``: availability), and
+  nothing else - no decode, no engine (about 1 us instead of 11 us a packet, 60 times a second).
 * ``start=False`` (tests, ``scripts/spotter_check.py``): ``process_pending`` runs the same steps on the caller's
   thread.
 """
@@ -237,18 +239,26 @@ class SpotterWorker:
             self.errors += 1
             log.exception("spotter item failed")
 
-    def _sync(self) -> None:
+    def _sync(self) -> bool:
+        """Apply new settings and the ear latency; True when the settings changed."""
         e = self.engine
-        if self.settings is not e.settings:
+        changed = self.settings is not e.settings
+        if changed:
             e.apply_settings(self.settings)
         ear = self._ear_latency_s
         if ear is not None:
             self._ear_latency_s = None
             e.set_ear_latency(ear)
+        return changed
 
     def _motion(self, fm: FieldMotion) -> None:
         self.items += 1
-        self._sync()
+        changed = self._sync()
+        if not self.settings.enabled:
+            if changed or not self.motion_seen:
+                self.motion_seen = True
+                self._publish()  # the engine's "disabled" view (bars off), once
+            return
         m = decode(fm)
         if m is None:
             self.invalid += 1
@@ -304,6 +314,10 @@ class SpotterWorker:
 
     def _stale(self) -> None:
         e = self.engine
+        if not self.settings.enabled:
+            if self._sync():
+                self._publish()  # switched off with no Motion flowing: the bars go off anyway
+            return
         if not self.motion_seen or (e.reason == "stale" and not e.active):
             return
         try:

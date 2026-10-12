@@ -44,6 +44,7 @@ REASONS: tuple[str, ...] = (
     "flashback",
     "pit",
     "finished",
+    "spin",
     "slow",
 )
 
@@ -79,6 +80,9 @@ class SpotterCall:
     t_decided_ns: int  # t1: when the engine decided (recv clock, worker thread)
     onset_game_ms: float | None = None  # game clock from the overlap's start to the decision (onsets)
     test: bool = False  # POST /api/spotter/test: no real car, validity checks skipped
+    # a clear decided as a gate closed (slow, pit, finished: positions still valid): the engine has already forgotten
+    # the episode (new epoch), so the radio checks only that the side is still clear
+    final: bool = False
     origin: Any = field(default=None, compare=False, repr=False)  # the worker that made it (validity checks)
 
     @property

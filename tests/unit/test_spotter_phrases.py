@@ -46,8 +46,8 @@ def test_no_numbers_short_and_side_first(pid: str, wording: str, text: str) -> N
         assert len(words) <= 6
     lower = [w.lower() for w in words]
     for side in ("left", "right"):
-        if side in lower and pid not in ("still_there_left", "still_there_right"):
-            assert lower.index(side) <= 3, text  # the key word arrives early
+        if side in lower and (wording == "standard" or pid not in ("still_there_left", "still_there_right")):
+            assert lower.index(side) <= (1 if wording == "standard" else 3), text  # the key word arrives early
     assert text.endswith(".")
     for american in ("center", "color", "program"):
         assert american not in text.lower()
@@ -56,8 +56,12 @@ def test_no_numbers_short_and_side_first(pid: str, wording: str, text: str) -> N
 def test_standard_and_simple_texts() -> None:
     assert phrase_text("car_left", False) == "Car left."
     assert phrase_text("car_left", True) == "Car on your left."
-    assert phrase_text("three_wide", False) == "Three wide, you're in the middle."
+    assert phrase_text("three_wide", False) == "Three wide."
+    assert phrase_text("three_wide", True) == "Cars on both sides."
+    assert phrase_text("hold_your_line", True) == "Steady, car close."
     assert phrase_text("still_there_right", True) == "Still on your right."
+    assert phrase_text("still_there_left", False) == "Still left."  # the side, also after "Three wide."
+    assert phrase_text("still_there_right", False) == "Still right."
     assert onset_phrase_id("right") == "car_right"
 
 
@@ -68,12 +72,13 @@ def test_standard_and_simple_texts() -> None:
         ("car_left", False, "car right", False),  # never left heard as right
         ("car_left", False, "car left and right", False),
         ("clear_right", True, "Right side clear", True),
-        ("still_there_left", False, "Still there.", True),
-        ("still_there_left", False, "Still there left", False),  # no side expected
-        ("three_wide", False, "Three wide, you're in the middle.", True),
+        ("still_there_left", False, "Still left.", True),
+        ("still_there_left", False, "Still there.", False),  # the side is the point
+        ("still_there_right", False, "Still left.", False),
+        ("three_wide", False, "Three wide.", True),
         ("three_wide", False, "Free wide", False),
         ("clear_all_round", False, "Clear, all around.", True),
-        ("hold_your_line", True, "keep it steady car very close", True),
+        ("hold_your_line", True, "steady car close", True),
     ],
 )
 def test_heard_check(pid: str, simple: bool, heard: str, ok: bool) -> None:

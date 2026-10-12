@@ -230,7 +230,8 @@ UDP thread: F1Adapter._on_motion --(FieldMotion: 2 packet refs + 4 ints)--> Sess
             +-> SpotterWorker.submit(item): SimpleQueue.put (C, non-blocking)                 [~1 us, no decode]
             SessionInfo and GameEvent{lights_out, flashback, red_flag, session_started, session_ended,
             chequered_flag} also forwarded; reset(session_id) on SessionManager._start / end()
-spotter thread: q.get(timeout=0.25) -> decode (subset_struct) -> SpotterEngine.feed_motion -> live.spotter (swap)
+spotter thread: q.get(timeout=0.25) -> [off: count, return] decode (subset_struct) -> SpotterEngine.feed_motion
+            -> live.spotter (swap)
             +-> calls -> sink(call) = SpotterRadio.on_call_threadsafe -> loop.call_soon_threadsafe(deliver)
 asyncio loop: SpotterRadio.deliver -> mailbox / cut rules -> RadioHub._deliver(PCM made in advance, pcm_to_all)
 ```
@@ -238,9 +239,12 @@ asyncio loop: SpotterRadio.deliver -> mailbox / cut rules -> RadioHub._deliver(P
 The engine (`spotter/engine.py`) is pure: every time comes in as an argument and every duration is on the game clock
 (header `sessionTime`), so receive bunching cannot shorten a debounce. Geometry (`spotter/geometry.py`): each car is
 an `L x W` box (`spotter/dims.py`, per formula) in the player's frame from its forward and right vectors
-(`worldRightDir` is the driver's right on real data). Gates, in order: disabled, not available, session type, red
-flag, safety car (unknown counts as on), lights out + delay, paused, stale (no Motion for 250 ms), flashback mute,
-pit, finished, slow; a closed gate forgets the traffic and never says "clear". The live block (`spotter` in every
+(`worldRightDir` is the driver's right on real data); relative speeds include the frame's rotation (the player's
+vectors in the previous packet), so a constant gap through a corner is not "closing". Gates, in order: disabled, not
+available, session type, red flag, safety car (unknown counts as on), lights out + delay, paused, stale (no Motion for
+250 ms), flashback mute, pit, finished, spin (slip above 30 degrees, open again 0.3 s under 15), slow; a closed gate
+forgets the traffic and never says "clear", except pit, finished and slow, which leave the positions valid: an
+announced side empty at that packet gets its clear (`SpotterCall.final`). The live block (`spotter` in every
 `/ws/live` snapshot, about 230 bytes, with the car `length_m` in use for the bar scale) is swapped whole on every
 Motion item and does not bump `LiveState.version`; `api/live_feed.py` sends a changed block without a new frame, so
 the block going stale when Motion stops (a pause) reaches the iPad at once.
@@ -251,7 +255,10 @@ urgent path): urgent (Priority.URGENT: urgent alerts and spotter calls) > cue > 
 cut each other. Spotter messages (`MessageKind.SPOTTER`) never go through the scheduler queue (its 100 ms tick is too
 slow), are exempt from the budget, gap, repeat filter and speak window, and are allowed at every intensity. While a
 car is alongside (`DrivingState.traffic_alongside`) no speak window opens, so a lap summary never starts wheel to
-wheel. Delivery, the one-slot mailbox, heard pairing and the latency stamps are in `voice/spotter_radio.py`; the
+wheel. The spotter's own refinements, in `voice/spotter_radio.py`: a clear never cuts a cue (it waits; the hub's cue
+gate lets a cue cut a clear or a still there on air), the mailbox never lets a clear or a still there push out a held
+onset, and a resync says what the driver missed (heard vs the worker's announced state) whenever the radio is free.
+Delivery, the one-slot mailbox, heard pairing, the resync and the latency stamps are in `voice/spotter_radio.py`; the
 phrase audio (both wordings, per engine and voice, STT-checked when the model is loaded) in
 `voice/spotter_audio.py`. Settings: `SettingsStore` section `"spotter"` (`spotter/settings.py`), applied by attribute
 swaps; nothing is persisted in the database.

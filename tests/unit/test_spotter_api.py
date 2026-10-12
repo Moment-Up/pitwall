@@ -37,6 +37,7 @@ def test_get_defaults_put_persist_and_validate(tmp_path: Path) -> None:
         st = body["status"]
         assert st["active"] is False and st["dims"]["width_m"] == 2.0 and st["send_rate_low"] is False
         assert st["reason"] == "disabled"
+        assert st["wording"] == "standard"  # "auto" resolved: no seated driver asks for simple wording
         assert set(body["latency"]) >= {"n", "decide_ms", "queued_ms", "started_ms", "onset_game_ms", "data_age_ms"}
         assert set(body["counters"]) >= {"calls", "suppressed_short", "dropped", "items", "skipped", "invalid"}
         r = c.put("/api/spotter/settings", json={"enabled": True, "start_delay_s": 3, "voice": "bm_george"})
@@ -49,6 +50,7 @@ def test_get_defaults_put_persist_and_validate(tmp_path: Path) -> None:
         for bad in ({"enabled": "yes"}, {"volume": 1}, {"wording": "loud"}, {"car_length_m": 9}):
             assert c.put("/api/spotter/settings", json=bad).status_code == 422
         assert c.put("/api/spotter/settings", json={"voice": None}).json()["settings"]["voice"] is None
+        assert c.put("/api/spotter/settings", json={"wording": "simple"}).json()["status"]["wording"] == "simple"
     app2 = _app(tmp_path)
     with TestClient(app2) as c:
         assert c.get("/api/spotter").json()["settings"]["start_delay_s"] == 3.0  # survives a restart

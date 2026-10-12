@@ -19,6 +19,7 @@ import {
   voiceFromOption,
   voiceView,
   withPending,
+  wordingHint,
 } from "./spotter";
 
 const info = (n: "contract-active" | "contract-off" | "contract-gt7" | "contract-low-rate"): SpotterInfo => parseSpotterInfo(spotterFixture(n))!;
@@ -45,16 +46,34 @@ describe("master switch", () => {
 });
 
 describe("status line", () => {
-  it("active: rate, audio and the playback latency (never 'to the ear')", () => {
+  it("active: rate and audio; latency only in the diagnostics (never 'to the ear')", () => {
     const v = statusView(info("contract-active"));
-    expect(v).toEqual({ title: "Active", detail: "60 Hz · audio ready · 190 ms to playback (p95)", warn: false });
-    expect(v.detail).not.toMatch(/ear/);
+    expect(v).toEqual({ title: "Active", detail: "60 Hz · audio ready", warn: false });
+    expect(v.detail).not.toMatch(/ear|p95|ms/);
+  });
+
+  it("no motion yet on F1 waits; another game is 'not available'", () => {
+    const i = info("contract-active");
+    const closed = { ...i, status: { ...i.status, active: false, reason: "not_available" as const } };
+    expect(statusView({ ...closed, availability: { available: true, game: "f1_25", reason: "no_motion" } }).title).toBe(
+      "Waiting for F1 25 data",
+    );
+    expect(statusView({ ...closed, availability: { available: false, game: "gt7", reason: "game_not_supported" } }).title).toBe(
+      "Not available for this game",
+    );
+  });
+
+  it("Auto says which wording the seated driver hears now", () => {
+    expect(wordingHint("auto", "simple")).toBe("Follows the seated driver's profile: simple wording now (beginner).");
+    expect(wordingHint("auto", "standard")).toBe("Follows the seated driver's profile: standard wording now.");
+    expect(wordingHint("auto", null)).toBe("Follows the seated driver's profile: simple wording for beginners.");
+    expect(wordingHint("standard", "simple")).toBe("Short calls: “Car left.” “Clear left.”");
   });
 
   it("a closed gate, a low send rate, unverified phrases and an error warn", () => {
     expect(statusView(info("contract-low-rate"))).toEqual({
       title: "Silent: safety car",
-      detail: "20 Hz · preparing audio · 2 phrases unverified · 190 ms to playback (p95) · 1 error",
+      detail: "20 Hz · preparing audio · 2 phrases unverified · 1 error",
       warn: true,
     });
     expect(sendRateWarning(info("contract-low-rate"))).toBe("Set UDP Send Rate to 60 Hz for the spotter (now 20 Hz).");
@@ -69,14 +88,14 @@ describe("status line", () => {
       ...i,
       status: { ...i.status, audio: { ...i.status.audio!, ready: false, engine, phrases: 0, clip_s: {} } },
     });
-    expect(statusView(withAudio("none")).detail).toBe("60 Hz · no Mac voice · 190 ms to playback (p95)");
-    expect(statusView(withAudio(null)).detail).toBe("60 Hz · radio off · 190 ms to playback (p95)");
-    expect(statusView(withAudio("kokoro")).detail).toBe("60 Hz · preparing audio · 190 ms to playback (p95)");
+    expect(statusView(withAudio("none")).detail).toBe("60 Hz · no Mac voice");
+    expect(statusView(withAudio(null)).detail).toBe("60 Hz · radio off");
+    expect(statusView(withAudio("kokoro")).detail).toBe("60 Hz · preparing audio");
   });
 
   it("spoken calls off says so; nothing known yet is an empty detail", () => {
     const a = withPending(info("contract-active"), { audio: false });
-    expect(statusView(a).detail).toBe("60 Hz · spoken calls off · 190 ms to playback (p95)");
+    expect(statusView(a).detail).toBe("60 Hz · spoken calls off");
     const off = info("contract-off");
     expect(statusView(off)).toEqual({ title: "Off", detail: "", warn: false });
   });
@@ -130,9 +149,9 @@ describe("voice", () => {
 
 describe("test button", () => {
   it.each([
-    ["idle", true, "Says “Car left”, then “Clear left”, on every connected radio.", false],
+    ["idle", true, "Says a car on your left, then clear, in the wording in use, on every connected radio.", false],
     ["sending", false, "Sending…", false],
-    ["sent", true, "Sent: listen for “Car left”, then “Clear left”.", false],
+    ["sent", true, "Sent: listen for a car on your left, then clear.", false],
     ["radio_off", true, "No radio is connected: go live first.", true],
   ] as const)("%s", (state, enabled, hint, warn) => {
     expect(testView(info("contract-active"), state)).toEqual({ enabled, hint, warn });

@@ -32,7 +32,7 @@ describe("parseSpotterInfo", () => {
       v: 1,
       settings: { ...SPOTTER_DEFAULTS },
       availability: { available: false, game: null, reason: null },
-      status: { active: false, reason: null, motion_hz: null, send_rate_low: false, dims: null, audio: null },
+      status: { active: false, reason: null, motion_hz: null, send_rate_low: false, dims: null, audio: null, wording: null },
       latency: { n: 0, decide_ms: null, queued_ms: null, started_ms: null, onset_game_ms: null, data_age_ms: null },
       counters: { calls: {}, suppressed_short: 0, dropped: {}, items: 0, skipped: 0, invalid: 0, errors: 0 },
       recent: [],

@@ -23,6 +23,7 @@ import {
   TOGGLE_HINTS,
   voiceFromOption,
   voiceView,
+  wordingHint,
   WORDINGS,
   type SpotterTestState,
 } from "./spotter";
@@ -146,7 +147,7 @@ export function SpotterCard({ info, error, saveError, engine, voices, test, acti
           />
           <SegmentRow<SpotterWording>
             title="Wording"
-            hint={WORDINGS.find((w) => w.value === s.wording)?.hint}
+            hint={wordingHint(s.wording, info.status.wording)}
             value={s.wording}
             choices={WORDINGS}
             onChange={(w) => set({ wording: w })}

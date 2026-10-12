@@ -194,36 +194,44 @@ live strategy. How these are decided: [below](#how-the-race-engineer-makes-strat
 ### Spotter (F1 25)
 
 A spotter calls cars alongside, like the one on a real team radio: "Car left." when a car comes alongside, "Clear
-left." when it has gone, "Three wide, you're in the middle." when there is a car on each side, "Clear all round." when
-a three-wide ends, "Still there." while a car stays alongside (after 4 s, then every 6 s, at most twice) and "Hold your
-line." once when a car alongside is within about 40 cm and closing in. Beginners (a driver profile with simple
-wording, or the spotter's own Wording setting) hear "Car on your left.", "Left side clear.", "Cars on both sides. Stay
-in the middle.", "All clear.", "Still on your left." and "Keep it steady, car very close.". There are no numbers in
-the calls.
+left." when it has gone, "Three wide." when there is a car on each side, "Clear all round." when a three-wide ends,
+"Still left." while a car stays alongside (after 4 s, then every 6 s, at most twice) and "Hold your line." once when
+a car side by side with you is within about 40 cm and moving in. Beginners (a driver profile with simple wording, or
+the spotter's own Wording setting) hear "Car on your left.", "Left side clear.", "Cars on both sides.", "All clear.",
+"Still on your left." and "Steady, car close.". There are no numbers in the calls. A call that could not be said (the
+driver was transmitting, a braking call was playing, or a newer call took its place) is made up as soon as the radio
+is free: the driver hears the side as it is then, never a stale "car left" or a missing "clear".
 
 - **F1 25 only**, because it is the only game that sends every car's position and heading (GT7, Assetto Corsa and
   Forza send the player's car only). **Off by default**: switch it on in Settings > Radio & voice > Spotter.
 - **When it speaks**: in races (qualifying and practice only if you switch them on; never in time trial, where ghost
   cars occupy the slots), from 5 s after lights out (adjustable 0-20 s). It is silent under the safety car, the
   virtual safety car and on the formation lap, during a red flag, while paused or spectating, in the pit lane, after
-  you finish, below 30 km/h, and for 1 s after a flashback. A muted spotter never says "clear".
+  you finish, below 30 km/h, in a spin (sliding more than 30 degrees, until 0.3 s after you have caught it) and for
+  1 s after a flashback. A muted spotter never says "clear", except when you slow down, enter the pit lane or finish
+  with a car just gone: then you hear the "clear" it was about to say.
 - **Timing**: a car counts as alongside when it overlaps your car lengthwise within about one lane; the call comes
   after 50 ms of overlap, "clear" 150 ms after the last overlap and never while another car is about to arrive on that
   side. Everything is timed on the game's own clock, so Wi-Fi bunching cannot shorten it. An overlap that will be
-  over before the call reaches your ear is not spoken (the bars still show it).
+  over before the call reaches your ear is not spoken (the bars still show it). Speeds are measured as your car
+  turns, so two cars running side by side through a corner are not "closing in".
 - **On the radio**: the calls are recorded in advance for the voice in use, so they play the moment they are
-  decided. They interrupt a lap summary, a coaching point or an answer (which is said again afterwards) and a braking
-  call (which is dropped), but never another spotter call or an urgent call (they wait their turn); "Still there."
-  never interrupts anything. While a car is alongside, the engineer's unprompted messages wait. Quiet mode and the
+  decided. They interrupt a lap summary, a coaching point or an answer (which is said again afterwards), and a car
+  arriving or closing in interrupts a braking call (which is dropped); a "clear" waits for the braking call to end,
+  and a braking call cuts a "clear" or a "still there". Spotter calls never interrupt another spotter call or an
+  urgent call: the newest call waits in a one-call slot (a car arriving is never pushed out by a "clear"), and what
+  could not be said is made up when the radio is free. "Still left." never interrupts anything. While a car is alongside, the engineer's unprompted messages wait. Quiet mode and the
   quiet intensity do not silence the spotter (it has its own switch); the radio's voice switch does.
 - **On the iPad**: amber bars at the left and right edges of every Drive page while a car is alongside, red when it
   is very close, with the car's position along the bar. They need the spotter on and its "iPad bars" option.
 - **Send rate**: set the game's UDP Send Rate to 60 Hz. At the default 20 Hz the calls come about 70 ms later; below
   30 Hz the settings card warns.
 
-Evidence: tested on 26 recorded race sessions from the owner's PS5 (170 minutes of racing: every overlap of 1 s or more
-called, no wrong "clear"; the reference positions come from the same data) and on synthetic scenarios. **Not yet heard
-on track.** Details: [research/f1-spotter-data.md](research/f1-spotter-data.md).
+Evidence: tested on 26 recorded race sessions from the owner's PS5 (169 minutes of racing). These counts are the
+spotter's decisions: every overlap of 1 s or more called (121/121), no wrong "clear" (the reference positions come from
+the same data). What the driver would hear was simulated on the same races at measured clip lengths: a car that had
+gone was still believed alongside for at most about 1 s (up to 9 s before the radio's resync). And on synthetic
+scenarios. **Not yet heard on track.** Details: [research/f1-spotter-data.md](research/f1-spotter-data.md).
 <!-- --- end spotter --- -->
 
 Evidence: a radio check over an iPad and one AirPod through Tailscale has been heard on hardware, using the classic

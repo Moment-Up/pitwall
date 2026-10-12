@@ -31,6 +31,7 @@
       "reason": "safety_car",
       "motion_hz": 20.1,
       "send_rate_low": true,
+      "wording": "standard",
       "dims": {
         "length_m": 5.5,
         "width_m": 2.0,

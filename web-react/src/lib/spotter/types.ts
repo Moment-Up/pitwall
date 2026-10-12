@@ -40,6 +40,7 @@ export type SpotterReason =
   | "flashback"
   | "pit"
   | "finished"
+  | "spin"
   | "slow";
 
 export const SPOTTER_REASONS: readonly SpotterReason[] = [
@@ -54,6 +55,7 @@ export const SPOTTER_REASONS: readonly SpotterReason[] = [
   "flashback",
   "pit",
   "finished",
+  "spin",
   "slow",
 ];
 
@@ -180,6 +182,8 @@ export interface SpotterStatus {
   send_rate_low: boolean;
   dims: SpotterDims | null;
   audio: SpotterAudio | null;
+  /** The wording the driver hears now ("auto" resolved from the seated driver's profile); null when unknown. */
+  wording: "standard" | "simple" | null;
 }
 
 /** p50 / p95 / max of one latency ring (ms); null where the ring is empty. */

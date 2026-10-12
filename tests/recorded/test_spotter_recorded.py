@@ -123,8 +123,10 @@ def test_austria_race_excerpt_calls_are_pinned() -> None:
     (tr,) = collect(CaptureReader(AUSTRIA), min_motion=100)
     got = [(c.kind, round(c.session_time_s, 2)) for _i, c in tr.calls]
     assert got == [
-        ("car_right", 83.73),
-        ("hold_your_line", 86.37),
+        # 83.67-84.0 s the player slides at up to 36 degrees (113 km/h): the spin gate holds the call until 0.3 s
+        # after the slide is back under 15 degrees (it was 83.73, mid-slide)
+        ("car_right", 84.35),
+        ("hold_your_line", 86.42),  # 0.8 m/s for 0.15 s, side by side (was 86.37 at 0.5 m/s for 0.1 s)
         ("clear_right", 87.39),
         ("car_right", 87.89),
         ("clear_right", 88.29),

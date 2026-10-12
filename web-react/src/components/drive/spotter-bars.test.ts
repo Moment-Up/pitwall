@@ -29,8 +29,8 @@ describe("SpotterBarsView", () => {
       expect(m).toContain('aria-hidden="true"');
       const px = (n: number) => (n === 0 ? "0" : `${n}px`);
       expect(m).toContain(`left:${px(rect.left)};top:${px(rect.top)};width:${px(rect.width)};height:${px(rect.height)}`);
-      expect(m).toContain(`width:${BAR_W}px`);
-      expect(BAR_W).toBe(12);
+      expect(m).toContain(`width:${BAR_W}`);
+      expect(BAR_W).toBe("clamp(12px, 2.5vw, 32px)");
     },
   );
 

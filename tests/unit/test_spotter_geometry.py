@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import math
 
 import pytest
@@ -146,3 +147,44 @@ def test_invalid_player_vectors() -> None:
     nan = (math.nan, *rows[1][1:])
     m = decode(_fm(2025, {0: nan, 1: rows[1]}, {0: ON, 1: ON}))
     assert m is not None and relative(m, L, W)[0] is None
+
+
+# --- review fix: relative speeds in the player's turning frame ---
+def _circle(t: float, w: float, lon: float, lat: float, speed: float = 50.0) -> tuple[float, ...]:
+    """SYNTHETIC: a point ``lon`` ahead and ``lat`` right of a player driving a circle at ``speed``, heading w*t
+    (forward (sin h, 0, cos h), right (-cos h, 0, sin h): the game's convention). Velocity: central differences."""
+
+    def pos(tt: float) -> tuple[float, float]:
+        h = w * tt
+        radius = speed / w
+        px, pz = radius * (1 - math.cos(h)), radius * math.sin(h)
+        return px + lon * math.sin(h) - lat * math.cos(h), pz + lon * math.cos(h) + lat * math.sin(h)
+
+    e = 1e-4
+    (x, z), (xa, za), (xb, zb) = pos(t), pos(t - e), pos(t + e)
+    return row(x, 0.0, z, (xb - xa) / (2 * e), 0.0, (zb - za) / (2 * e), math.degrees(w * t))
+
+
+@pytest.mark.parametrize("w", [0.5, -0.5])
+def test_relative_speeds_include_the_frame_rotation(w: float) -> None:
+    """SYNTHETIC: two cars holding station through a 100 m corner. Without the rotation terms they read as moving
+    sideways at w x lon (1 m/s at 2 m ahead); with them, nothing moves in the player's frame."""
+    dt = 1 / 60
+    status = {i: (0, 4, 2) for i in range(3)}
+
+    def at(t: float) -> FieldMotion:
+        rows = {0: _circle(t, w, 0.0, 0.0), 1: _circle(t, w, 2.0, -2.2), 2: _circle(t, w, -2.0, 2.2)}
+        return dataclasses.replace(_fm(2025, rows, status), session_time_s=t)
+
+    m0, m1 = decode(at(10.0)), decode(at(10.0 + dt))
+    assert m0 is not None and m1 is not None
+    b0, _ = relative(m0, L, W)
+    assert b0 is not None
+    _b, plain = relative(m1, L, W)
+    _b, turning = relative(m1, L, W, prev=(m0.session_time_s, b0))
+    assert len(plain) == len(turning) == 2
+    for p, q in zip(plain, turning, strict=True):
+        assert p.lat == pytest.approx(q.lat) and abs(p.vl) == pytest.approx(abs(w * p.lon), abs=0.05)
+        assert abs(q.vl) < 0.05 and abs(q.vr) < 0.05
+    _b, gap = relative(m1, L, W, prev=(m0.session_time_s - 0.3, b0))  # more than 0.25 s apart: no rotation term
+    assert [g.vl for g in gap] == [p.vl for p in plain]

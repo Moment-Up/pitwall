@@ -1,10 +1,13 @@
 """Synthetic F1 25 streams for the spotter (SYNTHETIC - never evidence of game compatibility).
 
-Each scenario puts the player on a straight (world +Z, at ``speed_mps``) and moves other cars around it on known
-paths given RELATIVE to the player (``lon`` metres ahead, ``lat`` metres to the right, keyframes linearly
-interpolated), with the expected spotter calls. Packets are encoded with the same spec-checked ``StructDef``s the
-decoder uses (Motion, LapData, Session, Event), with ``worldRightDir = (-cos h, 0, sin h)`` for heading ``h``: the
-real game's convention (forward x right points down; docs/research/f1-spotter-data.md), so ``lat`` > 0 is world -X.
+Each scenario puts the player on a straight (world +Z, at ``speed_mps``) or on a constant-radius corner
+(``yaw_rate_dps``), and moves other cars around it on known paths given RELATIVE to the player's direction of travel
+(``lon`` metres ahead, ``lat`` metres to the right, keyframes linearly interpolated; their world velocities are the
+exact derivatives, so a car holding station in a corner turns with the player), with the expected spotter calls.
+``player_slip_deg`` turns the player's body away from its direction of travel (a spin). Packets are encoded with the
+same spec-checked ``StructDef``s the decoder uses (Motion, LapData, Session, Event), with ``worldRightDir = (-cos h, 0,
+sin h)`` for heading ``h``: the real game's convention (forward x right points down; docs/research/f1-spotter-data.md),
+so ``lat`` > 0 is world -X on the straight.
 
 Streams carry ``SYNTHETIC_SESSION_UID`` and are flagged synthetic everywhere. The F1 stream generator
 (``sim.f1_stream``) is not used: it encodes no right vector, and these scenarios need exact relative motion.
@@ -68,7 +71,10 @@ class SpotterScenario:
     expected: tuple[str, ...]  # call kinds, in order
     duration_s: float = 10.0
     rate_hz: float = 60.0
-    speed_mps: float = 60.0
+    speed_mps: float = 60.0  # the player's speed (constant, or ``speed_keys``)
+    speed_keys: Keys | None = None  # the player's speed over time (m/s), instead of ``speed_mps``
+    yaw_rate_dps: float = 0.0  # the player's direction of travel turns at this rate (+ left, - right): a corner
+    player_slip_deg: Keys = ((0.0, 0.0),)  # the player's heading minus its direction of travel (a spin)
     session_type: int = 15  # Race
     formula: int = 0  # F1 Modern
     packet_format: int = P.PACKET_FORMAT_2025
@@ -139,18 +145,48 @@ class _Gen:
         body = sd.pack(details or {}) if sd is not None else b""
         return self.header(P.PacketId.EVENT, t) + code.encode() + body.ljust(P.EVENT_DETAILS_SIZE, b"\x00")
 
+    def distance(self, t: float) -> float:
+        """The player's distance travelled (m)."""
+        sc = self.sc
+        if sc.speed_keys is None:
+            return sc.speed_mps * t
+        if t <= 0:
+            return 0.0
+        ts = np.linspace(0.0, t, max(2, round(t * 200) + 1))
+        vs = np.interp(ts, [k[0] for k in sc.speed_keys], [k[1] for k in sc.speed_keys])
+        return float(np.sum((vs[1:] + vs[:-1]) * np.diff(ts)) / 2.0)
+
+    def travel(self, t: float) -> tuple[tuple[float, float, float], float]:
+        """The player's position and direction of travel (heading, rad: forward = (sin h, 0, cos h))."""
+        sc = self.sc
+        d = self.distance(t)
+        if not sc.yaw_rate_dps:
+            return (0.0, 0.0, d), 0.0
+        w = math.radians(sc.yaw_rate_dps)
+        speed = sc.speed_mps if sc.speed_keys is None else _at(sc.speed_keys, t)
+        h = w * t
+        radius = speed / w  # constant speed on a corner (``speed_keys`` is for straights)
+        return (radius * (1.0 - math.cos(h)), 0.0, radius * math.sin(h)), h
+
+    def place(self, c: CarPath, t: float) -> tuple[float, float, float]:
+        """A car's world position from its path relative to the player's direction of travel."""
+        (px, _py, pz), h = self.travel(t)
+        lon, lat = _at(c.lon, t), _at(c.lat, t)
+        f = (math.sin(h), math.cos(h))
+        r = (-math.cos(h), math.sin(h))  # the game's right vector for heading h (x, z)
+        return (px + lon * f[0] + lat * r[0], c.up_m, pz + lon * f[1] + lat * r[1])
+
     def lap(self, t: float) -> bytes:
         sc = self.sc
         lay = self.layout
         rows = [P.LAP_DATA.pack({}) for _ in range(lay.max_cars)]
-        rows[PLAYER] = P.LAP_DATA.pack(
-            {"currentLapNum": 1, "lapDistance": sc.speed_mps * t, "driverStatus": 4, "resultStatus": 2}
-        )
+        dist = self.distance(t)
+        rows[PLAYER] = P.LAP_DATA.pack({"currentLapNum": 1, "lapDistance": dist, "driverStatus": 4, "resultStatus": 2})
         for c in sc.cars:
             rows[c.index] = P.LAP_DATA.pack(
                 {
                     "currentLapNum": 1,
-                    "lapDistance": sc.speed_mps * t + _at(c.lon, t),
+                    "lapDistance": dist + _at(c.lon, t),
                     "pitStatus": c.pit_status,
                     "driverStatus": c.driver_status,
                     "resultStatus": c.result_status,
@@ -161,36 +197,24 @@ class _Gen:
     def motion(self, t: float) -> bytes:
         sc = self.sc
         lay = self.layout
-        v = sc.speed_mps
         empty = lay.car_motion.pack({})
         rows = [empty] * lay.max_cars
-        pz = v * t
-        rows[PLAYER] = pack_row((0.0, 0.0, pz, 0.0, 0.0, v, 0, 0, 32767, -32767, 0, 0), sc.packet_format)
-        h = 1e-3
+        e = 1e-3  # velocities: central differences of the exact paths
+
+        def row(pos: tuple[float, float, float], vel: tuple[float, ...], heading: float) -> bytes:
+            fwd = (math.sin(heading), 0.0, math.cos(heading))
+            right = (-math.cos(heading), 0.0, math.sin(heading))
+            return pack_row((*pos, *vel, *(32767 * x for x in fwd), *(32767 * x for x in right)), sc.packet_format)
+
+        (p0, h) = self.travel(t)
+        a, _ = self.travel(t - e)
+        b, _ = self.travel(t + e)
+        vel = tuple((b[i] - a[i]) / (2 * e) for i in range(3))
+        rows[PLAYER] = row(p0, vel, h + math.radians(_at(sc.player_slip_deg, t)))
         for c in sc.cars:
-            lon, lat = _at(c.lon, t), _at(c.lat, t)
-            dlon = (_at(c.lon, t + h) - _at(c.lon, t - h)) / (2 * h)
-            dlat = (_at(c.lat, t + h) - _at(c.lat, t - h)) / (2 * h)
-            yaw = math.radians(_at(c.yaw_deg, t))
-            fwd = (math.sin(yaw), 0.0, math.cos(yaw))
-            right = (-math.cos(yaw), 0.0, math.sin(yaw))
-            rows[c.index] = pack_row(
-                (
-                    -lat,
-                    c.up_m,
-                    pz + lon,
-                    -dlat,
-                    0.0,
-                    v + dlon,
-                    32767 * fwd[0],
-                    32767 * fwd[1],
-                    32767 * fwd[2],
-                    32767 * right[0],
-                    32767 * right[1],
-                    32767 * right[2],
-                ),
-                sc.packet_format,
-            )
+            a, b = self.place(c, t - e), self.place(c, t + e)
+            cvel = tuple((b[i] - a[i]) / (2 * e) for i in range(3))
+            rows[c.index] = row(self.place(c, t), cvel, h + math.radians(_at(c.yaw_deg, t)))
         return self.header(P.PacketId.MOTION, t) + b"".join(rows)
 
 
@@ -317,7 +341,7 @@ def scenarios() -> list[SpotterScenario]:
                 CarPath(
                     1,
                     lon=((0.0, 0.0), (3.2, 0.0), (4.2, 12.0)),
-                    lat=((0.0, -3.0), (1.5, -3.0), (2.8, -2.2), (3.2, -2.2)),
+                    lat=((0.0, -3.0), (1.5, -3.0), (2.6, -1.95), (3.2, -1.95)),  # ~1 m/s in, to contact
                 ),
             ),
             (CAR_LEFT, HOLD_YOUR_LINE, CLEAR_LEFT),
@@ -375,6 +399,39 @@ def scenarios() -> list[SpotterScenario]:
             (CAR_LEFT,),
             duration_s=6.0,
             lights_out_s=0.0,
+        ),
+        SpotterScenario(
+            "o_corner_side_by_side",
+            "three wide through a 100 m right-hander, both cars holding a constant 0.2 m gap (one ahead, one"
+            " behind): nothing closes in the player's turning frame, so no hold your line (without the frame's"
+            " rotation both read as closing at 1 m/s)",
+            (
+                CarPath(1, lon=_lr(2.0), lat=_lr(-2.2)),
+                CarPath(2, lon=_lr(-2.0), lat=_lr(2.2)),
+            ),
+            (THREE_WIDE,),
+            duration_s=3.9,
+            speed_mps=50.0,
+            yaw_rate_dps=-math.degrees(0.5),  # 50 m/s on a 100 m radius, turning right
+        ),
+        SpotterScenario(
+            "p_spin",
+            "a car alongside, then the player spins (360 degrees in 1 s): silent from the slide until 0.3 s after"
+            " it ends, then the car is called again (a new episode)",
+            (CarPath(1, lon=_lr(0.0), lat=_lr(-3.2)),),
+            (CAR_LEFT, CAR_LEFT),
+            duration_s=5.0,
+            speed_mps=25.0,
+            player_slip_deg=((0.0, 0.0), (2.0, 0.0), (3.0, 360.0)),
+        ),
+        SpotterScenario(
+            "q_slow_clear",
+            "a car alongside drops back as the player slows below 20 km/h: the gate closes before the clear's"
+            " 150 ms, and the clear is still said (the positions are valid)",
+            (CarPath(1, lon=((0.0, 0.0), (1.9, 0.0), (2.1, -9.0)), lat=_lr(-3.2)),),  # gone at 2.06 s
+            (CAR_LEFT, CLEAR_LEFT),
+            duration_s=4.0,
+            speed_keys=((0.0, 10.0), (2.0, 10.0), (2.2, 5.0)),
         ),
     ]
 

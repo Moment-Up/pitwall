@@ -31,6 +31,7 @@
       "reason": "disabled",
       "motion_hz": null,
       "send_rate_low": false,
+      "wording": "standard",
       "dims": null,
       "audio": null
     },

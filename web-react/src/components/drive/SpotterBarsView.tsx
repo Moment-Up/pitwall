@@ -15,8 +15,9 @@ export interface BarsRect {
   height: number;
 }
 
-/** Bar width (spec 9.1). */
-export const BAR_W = 12;
+/** Bar width: 12 px on a phone, up to 32 px on an iPad in landscape (12 px is about 2 mm on an iPad at arm's length:
+ * too thin for the corner of the eye). */
+export const BAR_W = "clamp(12px, 2.5vw, 32px)";
 
 function Bar({ side, bar }: { side: "left" | "right"; bar: SideBar }) {
   const close = bar.tone === "close";
