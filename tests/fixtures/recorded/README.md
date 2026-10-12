@@ -37,6 +37,9 @@ Committed captures (each a byte-for-byte excerpt of the maintainer's own PS5 ses
 - `f1_25_2025_ps5_bahrain-f2_race-lockups-abs-off-excerpt.pwcap`: the same capture's F2 Bahrain race (session
   ...752346, ABS off), lap 2: five lock-ups, wheels fully locked (slip -1.0) - car health's lock-up counts (1.52 MB).
   Only the Session, LapData, CarTelemetry, CarStatus and MotionEx packets of the windows, each unchanged
+- `f1_25_2025_ps5_monza_race-start-spotter-excerpt.pwcap`: F1 25, Monza race of 2026-10-10 (20261010-204720,
+  25.7-58.0 s from the first packet: lights out -2 s to +30 s) - the spotter's busiest moment: 6 overlaps of 0.3 s or
+  more, two of them three wide (3.29 MB; `tests/recorded/test_spotter_recorded.py`)
 - `ac_ps5_ks_silverstone_probe-excerpt.pwcap`: Assetto Corsa (PS4 build) on PS5, live probe 2026-10-11
 - `gt7_c_ps5_oval_race-start-3laps-excerpt.pwcap`: Gran Turismo 7 (variant C) on PS5, 2026-10-11 (20261011-013533,
   18.0-96.0 s): the load, the rolling start of a 10-lap race on a 0.92 km oval, laps 1-3 timed (24.286 / 23.222 /

@@ -986,14 +986,16 @@ class WorkerTts:
     def synthesize(self, text: str) -> AudioClip:
         return self.synthesize_detailed(text).clip
 
-    def synthesize_detailed(self, text: str) -> SynthResult:
-        """Kokoro if the worker is ready and answers in time, else ``say`` (``TtsError`` if neither works)."""
+    def synthesize_detailed(self, text: str, voice: str | None = None) -> SynthResult:
+        """Kokoro if the worker is ready and answers in time, else ``say`` (``TtsError`` if neither works).
+        ``voice`` (spotter): another Kokoro voice for this request only; None = the engineer's voice. The fallback
+        always speaks with its own voice."""
         t0 = time.perf_counter()
         if not text.strip():
             return SynthResult(AudioClip(b"", self.sample_rate), self.name, True, 0.0)
         if self.ready:
             try:
-                clip, worker_ms = self._worker_synth(text)
+                clip, worker_ms = self._worker_synth(text, voice)
             except _WorkerFailure as e:
                 reason = str(e)
                 log.warning("kokoro TTS failed (%s); this message uses %s", reason, self.active)
@@ -1074,7 +1076,7 @@ class WorkerTts:
         speech_s = len(text.split()) / (WORKER_WORDS_PER_S * self.speed)
         return self.deadline_base_s + self.deadline_per_speech_s * speech_s
 
-    def _worker_synth(self, text: str) -> tuple[AudioClip, float]:
+    def _worker_synth(self, text: str, voice: str | None = None) -> tuple[AudioClip, float]:
         self._last_used = time.monotonic()
         prepared = prepare_text(text, self._lexicon)
         if not prepared:
@@ -1094,7 +1096,7 @@ class WorkerTts:
                     self._kill(proc, "worker exited while idle")
                     raise _WorkerFailure("worker exited while idle")
             rid = f"r{next(self._ids)}"
-            request = {"id": rid, "text": prepared, "voice": self._voice, "speed": self.speed}
+            request = {"id": rid, "text": prepared, "voice": voice or self._voice, "speed": self.speed}
             try:
                 proc.stdin.write((json.dumps(request) + "\n").encode())
                 proc.stdin.flush()

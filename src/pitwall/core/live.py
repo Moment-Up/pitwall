@@ -324,6 +324,9 @@ class LiveState:
         # --- health lane: carhealth.worker publishes them (CarHealthView / RacecraftView of the live session) ---
         self.car_health: dict[str, Any] | None = None
         self.racecraft: dict[str, Any] | None = None
+        # --- spotter --- the SpotterWorker swaps in its block (spec 8.3) on every Motion item; None = no F1 Motion
+        self.spotter: dict[str, Any] | None = None
+        # --- end spotter ---
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -671,6 +674,7 @@ class LiveState:
             self.race = None  # race radio (pitwall.raceradio)
             self.car_health = None  # --- health lane ---
             self.racecraft = None
+            self.spotter = None  # --- spotter ---
             self._bests_requested = None  # the next session packet asks for the new session's bests
             self._heads_up_key = None  # the cue engine drops its heads-ups on reset; the next knowledge re-installs
         self.coach.reset()
@@ -799,6 +803,7 @@ class LiveState:
             out["race"] = self.race  # --- race radio --- RaceView (<= 1.3 kB; /ws/live sends it when it changed)
             out["car_health"] = self.car_health  # --- health lane --- (/ws/live: when it changed)
             out["racecraft"] = self.racecraft
+            out["spotter"] = self.spotter  # --- spotter --- ~220 bytes, every snapshot (the bars must be instant)
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

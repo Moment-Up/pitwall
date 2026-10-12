@@ -365,6 +365,20 @@
     ]
    },
    {
+    "id": "spotter",
+    "label": "Spotter (cars alongside)",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send every car's position and heading.",
+    "detail": "Data Out describes the player's car only (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "field_motion"
+    ]
+   },
+   {
     "id": "setup_telemetry",
     "label": "Car setup from the game",
     "group": "setup_radio",
@@ -447,7 +461,9 @@
   "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
   "moment": "GET /api/game after PUT forza_motorsport:pc",
   "edits": [
-   "race radio (feat/radio): race_position and penalties features inserted as src/pitwall/games.py emits them"
+   "race radio (feat/radio): race_position and penalties features inserted as src/pitwall/games.py emits them",
+   "car health (feat/health): engine_temp feature, Forza fuel from the tank level and GT7's fuel reason, as src/pitwall/games.py emits them",
+   "spotter (feat/spotter): the spotter feature inserted as src/pitwall/games.py emits it"
   ]
  }
 }

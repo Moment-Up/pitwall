@@ -651,6 +651,31 @@ class TyreSetsInfo:
     fitted_index: int | None  # m_fittedIdx; an index past the array -> None
 
 
+# --- spotter ---
+@dataclass(slots=True, frozen=True, kw_only=True)
+class FieldMotion:
+    """Every car's motion at the game's Motion send rate, for the spotter (``pitwall.spotter``). NOT decoded here.
+
+    The F1 adapter emits one per Motion packet when built with ``field_motion=True``: two references to packets it
+    already holds (no copy, no decode) and four integers, so the ingest thread's cost is one object. The spotter
+    worker decodes both packets off the ingest thread with the spec-checked subset structs. Never persisted, never
+    starts or splits a session. ``lap`` is the latest LapData packet of the session (F1 25 sends it in the same frame,
+    before Motion: frame skew 0 on 19 real PS5 captures), ``None`` before the first one.
+    """
+
+    game: Game
+    t_recv_ns: int  # receive clock of the Motion packet (``compat.recv_clock_ns`` on the UDP thread)
+    session_time_s: float  # header sessionTime: the game clock every spotter duration is measured on
+    frame_id: int
+    player_index: int
+    packet_format: int  # 2025 or 2026 (selects the car array layout)
+    motion: bytes  # the whole Motion packet
+    lap: bytes | None  # the latest whole LapData packet, or None
+
+
+# --- end spotter ---
+
+
 # Union of everything an adapter can emit after decoding one packet.
 type Emitted = (
     CarFrame
@@ -663,4 +688,5 @@ type Emitted = (
     | RaceTiming
     | TyreSetsInfo
     | Participants  # race radio (pitwall.raceradio): F1 only, on change
+    | FieldMotion  # spotter
 )

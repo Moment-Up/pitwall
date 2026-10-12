@@ -51,6 +51,7 @@ export type FeatureId =
   | "race_position"
   | "penalties"
   // --- end race radio ---
+  | "spotter" // --- spotter --- (games.py FeatureDef "spotter")
   | "setup_telemetry"
   | "setup_recommendations"
   | "wheel_ptt";
@@ -83,6 +84,7 @@ export const FEATURE_IDS: readonly FeatureId[] = [
   "field_data",
   "race_position", // race radio
   "penalties", // race radio
+  "spotter", // --- spotter ---
   "setup_telemetry",
   "setup_recommendations",
   "wheel_ptt",
@@ -155,7 +157,7 @@ export interface GameEntry {
   /** connect.py GameGuide.id: "f1_25" | "gt7" | "forza" | "ac" | "record" */
   guide_id: string | null;
   rig: { game: "f1_25" | "gt7"; platform: "ps5" | "pc" | null } | null;
-  /** All 26, in FEATURE_IDS order. */
+  /** All 27, in FEATURE_IDS order. */
   features: GameFeature[];
   notes: string[];
   /** F2 support: the car classes of this game and how far each is tested (capabilities.CAR_CLASSES; F1 25 entries

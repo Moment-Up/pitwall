@@ -180,6 +180,7 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
                     settings, rt.live, radio_engineer, rt.db, app.state.analyzer, rt.drivers, ptt=rt.controls.ptt_now()
                 )
                 hub.start()
+                hub.attach_spotter(rt.spotter)  # --- spotter --- calls of the live (and real-time replay) worker
                 app.state.hub = hub
                 # The radio follows whoever is in the seat: their coaching amount, voice switch and skill limits.
                 loop = asyncio.get_running_loop()
@@ -872,6 +873,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_carhealth import router as carhealth_router  # --- health lane ---
 
     app.include_router(carhealth_router)
+    from pitwall.api.routes_spotter import router as spotter_router  # --- spotter ---
+
+    app.include_router(spotter_router)
 
     # ------------------------------------------------------------------ static dashboard
     # React + HeroUI dashboard (web-react/, hash-routed) at "/", built with `npm run build:root`. /next/ stays an alias

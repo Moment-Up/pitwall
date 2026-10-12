@@ -215,6 +215,8 @@ FEATURES: tuple[FeatureDef, ...] = (
     FeatureDef("race_position", "Race position", "session", "your race position", ("race_position",)),
     FeatureDef("penalties", "Penalties & warnings", "session", "penalties", ("penalties",)),
     # --- end race radio ---
+    # --- spotter ---
+    FeatureDef("spotter", "Spotter (cars alongside)", "session", "every car's position and heading", ("field_motion",)),
     FeatureDef("setup_telemetry", "Car setup from the game", "setup_radio", "its car setup", ("setup",)),
     FeatureDef(
         "setup_recommendations",

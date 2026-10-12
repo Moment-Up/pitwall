@@ -54,6 +54,10 @@ from pitwall.raceradio.names import SECTION as RACE_RADIO_SECTION  # race radio
 from pitwall.raceradio.names import online_names_enabled  # race radio
 from pitwall.raceradio.worker import RaceRadioWorker  # race radio
 from pitwall.settings_store import SecretStore, SettingsStore
+from pitwall.spotter.model import SpotterCall  # --- spotter ---
+from pitwall.spotter.settings import SECTION as SPOTTER_SECTION  # --- spotter ---
+from pitwall.spotter.settings import SpotterSettings, parse_stored  # --- spotter ---
+from pitwall.spotter.worker import SpotterWorker  # --- spotter ---
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
 from pitwall.strategy.worker import StrategyWorker
@@ -216,6 +220,12 @@ class Runtime:
         self._replay_health: CarHealthWorker | None = None
         self._unsubscribe_health = self.store.subscribe(carhealth_settings.SECTION, self._on_health_settings)
         # --- end health lane ---
+        # --- spotter --- every car's Motion (F1 only) on its own thread; the radio hub attaches its sink to it
+        self.spotter_settings: SpotterSettings = parse_stored(self.store.get(SPOTTER_SECTION))
+        self.spotter = SpotterWorker(self.live, self.spotter_settings)
+        self._replay_spotter: SpotterWorker | None = None
+        self._unsubscribe_spotter = self.store.subscribe(SPOTTER_SECTION, self._on_spotter_settings)
+        # --- end spotter ---
         self.processor = LapProcessor(self.db, self.writer, self.live)
         self.worker = AnalysisWorker(self.processor)
         self.motivation = MotivationWorker(self.db, self.writer, self.live)  # lane motivation: goals reached
@@ -349,8 +359,9 @@ class Runtime:
             strategy=self.strategy if "f1" in keys else None,  # race strategy (pitwall.strategy): F1 timing only
             race=self.race,  # race radio: every game
             health=self.health,  # --- health lane --- every game
+            spotter=self.spotter if "f1" in keys else None,  # --- spotter --- F1 sends every car's Motion
         )
-        router = PacketRouter(adapters_for(keys, self._known_tracks()), sessions, self.live)
+        router = PacketRouter(adapters_for(keys, self._known_tracks(), field_motion="f1" in keys), sessions, self.live)
         last_err: OSError | None = None
         listener: UdpListener | None = None
         for attempt in range(attempts):
@@ -577,6 +588,11 @@ class Runtime:
                 self.live, settings=self.health.settings, publish_calls=speed is not None, block_when_full=True
             )
             self._replay_health = health
+            # --- spotter --- the replay's own worker; its calls reach the radio only at a real-time speed
+            spotter = SpotterWorker(
+                self.live, self.spotter_settings, sink=self._replay_spotter_sink, publish_calls=speed is not None
+            )
+            self._replay_spotter = spotter
             self.live.knowledge = resolver
             sessions = SessionManager(
                 self.writer,
@@ -591,8 +607,11 @@ class Runtime:
                 strategy=strategy,
                 race=race,  # race radio
                 health=health,  # --- health lane ---
+                spotter=spotter,  # --- spotter ---
             )
-            adapters = all_adapters(self._known_tracks(), ac_tracks=self._ac_known_tracks(), ac_platform=platform)
+            adapters = all_adapters(
+                self._known_tracks(), ac_tracks=self._ac_known_tracks(), ac_platform=platform, field_motion=True
+            )
             if meta.game_hint != AC_CAPTURE_HINT:
                 # AC is detected by datagram size alone, so only AC's own captures (client, probe, synthetic writer:
                 # game_hint 'ac-remote') are decoded as AC; a raw recording of another game never is.
@@ -605,6 +624,7 @@ class Runtime:
                 strategy.close(timeout=30.0, drain=True)  # race strategy: finish the records and stops
                 race.close(timeout=30.0, drain=True)  # race radio: the final view
                 health.close(timeout=30.0, drain=True)  # --- health lane ---
+                spotter.close()  # --- spotter ---
                 if self.live.knowledge is resolver:
                     self.live.knowledge = self.knowledge  # learned (L3) models feed the live resolver again
 
@@ -629,6 +649,9 @@ class Runtime:
         health, self._replay_health = self._replay_health, None  # --- health lane ---
         if health is not None:
             health.close()
+        spotter, self._replay_spotter = self._replay_spotter, None  # --- spotter ---
+        if spotter is not None:
+            spotter.close()
         self.live.knowledge = self.knowledge
 
     def replay_status(self) -> dict[str, Any] | None:
@@ -669,12 +692,30 @@ class Runtime:
 
     # --- end health lane ---
 
+    # --- spotter ---
+    def _on_spotter_settings(self, _section: str, values: dict[str, Any]) -> None:
+        """Settings > Radio & voice > Spotter changed (any thread): attribute swaps on the workers."""
+        self.spotter_settings = parse_stored(values)
+        self.spotter.apply_settings(self.spotter_settings)
+        replay = self._replay_spotter
+        if replay is not None:
+            replay.apply_settings(self.spotter_settings)
+
+    def _replay_spotter_sink(self, call: SpotterCall) -> None:
+        """A real-time replay's calls go wherever the live worker's go (the radio hub attaches to that one)."""
+        sink = self.spotter.sink
+        if sink is not None:
+            sink(call)
+
+    # --- end spotter ---
+
     def close(self) -> None:
         self._unsubscribe()
         self._unsubscribe_game()
         self.controls.close()
         self._unsubscribe_race()  # race radio
         self._unsubscribe_health()  # --- health lane ---
+        self._unsubscribe_spotter()  # --- spotter ---
         self.drivers.unsubscribe(self._on_driver)
         self.stop_replay()
         with self._ilock:
@@ -694,5 +735,6 @@ class Runtime:
         self.strategy.close(drain=True)
         self.race.close()  # race radio
         self.health.close()  # --- health lane --- (nothing to persist)
+        self.spotter.close()  # --- spotter ---
         self.writer.flush()
         self.writer.close()

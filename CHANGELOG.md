@@ -74,6 +74,12 @@ The release workflow copies a release's bullet points into its GitHub release no
   held or tapped. Not yet tested on an iPad.
 - Windows: spoken questions work with built-in speech recognition (Parakeet via sherpa-onnx), downloaded on first
   run with its progress shown. Not yet run on a Windows PC.
+- Spotter (F1 25, off by default): "Car left.", "Clear left.", "Three wide." on the radio, and amber bars at the
+  edges of Drive on the iPad. Tested on 26 recorded PS5 races; not yet heard on track.
+- Settings › Radio & voice › Spotter: switch it on, pick its words and voice, choose sessions and test it. Set the
+  game's UDP send rate to 60 Hz.
+- Spotter calls and the red flag cut in over anything but each other; every other message waits for a calm moment
+  and its share of the lap. Tested with unit tests and recordings; not yet heard live.
 
 ## v0.2.1 - 2026-10-12
 

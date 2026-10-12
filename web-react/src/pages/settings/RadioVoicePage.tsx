@@ -18,9 +18,10 @@ import { href } from "../../lib/router";
 import { pttLine } from "../../lib/setup/controls";
 import { radio } from "../../lib/radio";
 import type { PageProps } from "../../routes";
-import { deviceNoun, linkState, onlineNamesView } from "./radio/model";
+import { deviceNoun, linkState, macState, onlineNamesView } from "./radio/model";
 import { RadioVoiceView, pickRadioVoice } from "./radio/RadioVoiceView";
 import { CarHealthCard } from "./radio/CarHealthCard"; // health lane (pitwall.carhealth)
+import { SpotterSettingsCard } from "./radio/SpotterSettings"; // --- spotter ---
 
 export function RadioVoicePage(_props: PageProps) {
   const r = useRadio(pickRadioVoice, shallowEqual);
@@ -54,6 +55,10 @@ export function RadioVoicePage(_props: PageProps) {
     }
   }
   // --- end race radio ---
+  /* --- spotter: the Mac's engine and Kokoro voices for the spotter's own voice --- */
+  const mac = macState(linkUp ? r.server : null, status.data);
+  const spotter = <SpotterSettingsCard engine={mac?.tts ?? null} voices={mac?.tts_voices ?? []} />;
+  /* --- end spotter --- */
   return (
     <RadioVoiceView
       r={r}
@@ -65,6 +70,7 @@ export function RadioVoicePage(_props: PageProps) {
       onlineNames={onlineNames}
       onOnlineNames={(on) => void setOnlineNames(on)}
       carHealth={<CarHealthCard />}
+      spotter={spotter}
     />
   );
 }

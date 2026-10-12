@@ -59,7 +59,7 @@ const ACC_PS5 = entry("acc:ps5", CAT);
 const ACC_PC = entry("acc:pc", CAT);
 
 describe("the catalogue fixture is the spec's contract", () => {
-  it("has 23 entries, each with the 26 features in order", () => {
+  it("has 23 entries, each with the 27 features in order", () => {
     expect(CAT.schema).toBe(1);
     expect(CAT.entries).toHaveLength(23);
     expect(new Set(CAT.entries.map((e) => e.id)).size).toBe(23);
@@ -89,6 +89,12 @@ describe("the catalogue fixture is the spec's contract", () => {
     expect(st(FH, "tyre_wear")).toBe("not_sent");
     expect(featureOf(F1, "ai_field")?.evidence).toBe("recorded_validated");
     expect(featureOf(entry("f1_25:pc", CAT), "ai_field")?.evidence).toBe("spec_implemented");
+    // --- spotter --- F1 25 sends every car's Motion (recorded on PS5 only); the other games send the player's car alone
+    expect(st(F1, "spotter")).toBe("supported");
+    expect(featureOf(F1, "spotter")?.evidence).toBe("recorded_validated");
+    expect(st(GT7, "spotter")).toBe("not_sent");
+    expect(st(FM, "spotter")).toBe("not_sent");
+    expect(st(AC, "spotter")).toBe("not_sent");
     expect(ACC_PS5.features.every((f) => f.status === "not_sent")).toBe(true);
     expect(ACC_PC.features.every((f) => f.status === "not_implemented")).toBe(true);
     expect(OTHER.features.every((f) => f.status === "unknown")).toBe(true);
@@ -344,10 +350,10 @@ describe("the feature list (Setup › Game)", () => {
     expect(car[0]!.id).toBe("tyre_temps");
     const firstUnavailable = car.findIndex((f) => !available(f));
     expect(car.slice(firstUnavailable).some(available)).toBe(false);
-    // + race radio (race_position, penalties), + health lane (engine temperature)
-    expect(groups.flatMap((g) => g.features)).toHaveLength(26);
-    expect(featureCounts(GT7)).toEqual({ available: 7, unavailable: 19, unknown: 0 });
-    expect(featureCounts(OTHER)).toEqual({ available: 0, unavailable: 0, unknown: 26 });
+    // + race radio (race_position, penalties), + health lane (engine temperature), + spotter
+    expect(groups.flatMap((g) => g.features)).toHaveLength(27);
+    expect(featureCounts(GT7)).toEqual({ available: 7, unavailable: 20, unknown: 0 });
+    expect(featureCounts(OTHER)).toEqual({ available: 0, unavailable: 0, unknown: 27 });
   });
 
   it("evidence words are the server's support words", () => {

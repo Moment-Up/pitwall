@@ -108,6 +108,10 @@ export interface RadioVoiceViewProps {
   onOnlineNames?: (on: boolean) => void;
   /** (health lane) Shown under "On the radio": the "Car health calls" card (RadioVoicePage passes it). */
   carHealth?: ReactNode;
+  /* --- spotter --- */
+  /** The F1 spotter's card (pages/settings/radio/SpotterSettings.tsx), under "On the radio"; absent = none. */
+  spotter?: ReactNode;
+  /* --- end spotter --- */
 }
 
 const SPEED_MIN = 0.8;
@@ -124,6 +128,7 @@ export function RadioVoiceView({
   onlineNames = null,
   onOnlineNames,
   carHealth = null,
+  spotter,
 }: RadioVoiceViewProps) {
   const link = linkState(r);
   const linkUp = link === "open";
@@ -307,6 +312,7 @@ export function RadioVoiceView({
           {/* --- race radio: the per-driver race calls live on the driver sheet --- */}
           {onlineNames?.shown && <p className="m-0 px-1 text-sm text-muted">{RACE_CALLS_NOTE}</p>}
           {carHealth /* health lane: the "Car health calls" card */}
+          {spotter /* --- spotter --- */}
         </div>
       </div>
     </div>

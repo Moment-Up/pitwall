@@ -149,7 +149,7 @@ describe("What the game sends", () => {
     expect(t).toContain(gt7.support.summary!); // one plain sentence under the title ...
     expect(t).toContain("How this was tested"); // ... the technical note behind a disclosure
     expect(t).toContain("A green Supported was checked with the real game or a recording");
-    expect(t).toContain("7 available · 19 not available"); // race radio: GT7 race position; health lane: engine temperature
+    expect(t).toContain("7 available · 20 not available"); // race radio: GT7 race position; health lane: engine temperature; spotter
     for (const g of ["Timing", "Coaching", "Track", "Car & tyres", "Session & race", "Setup & radio"]) expect(t).toContain(g);
     expect(t).toContain("GT7 doesn't send tyre wear.");
     expect(t).toContain("Not in Pitwall yet");
@@ -177,17 +177,17 @@ describe("What the game sends", () => {
     const html = renderToStaticMarkup(createElement(FeaturesCard, { entry: entry("other:any", CAT), catalogue: CAT, wide: false }));
     const t = text(html);
     expect(t).toContain("What this game sends");
-    expect(t).toContain("0 available · 0 not available · 26 unknown");
+    expect(t).toContain("0 available · 0 not available · 27 unknown");
     expect(t).not.toContain("Not sent");
     expect(t).toContain("Pitwall doesn't know what this game sends.");
-    expect(t).toContain("All 26 features"); // 26 identical rows behind one disclosure
+    expect(t).toContain("All 27 features"); // 27 identical rows behind one disclosure
   });
 
   it("ACC on PS5: one sentence, the rows behind a disclosure, and Not sent is never red", () => {
     const html = renderToStaticMarkup(createElement(FeaturesCard, { entry: entry("acc:ps5", CAT), catalogue: CAT, wide: true }));
     const t = text(html);
     expect(t).toContain("ACC on PS5 has no telemetry output.");
-    expect(t).toContain("All 26 features");
+    expect(t).toContain("All 27 features");
     expect(t).not.toContain("Telemetry fields");
     expect(html).not.toMatch(/chip--danger[^>]*>[^<]*<[^>]*>Not sent/);
   });

@@ -19,6 +19,10 @@ None when nothing changed. The dashboard keeps a key that a snapshot leaves out,
   longer resends 25 kB that has not changed every 5 s.
 
 A new session (the client drops every kept key then) and every ``FULL_EVERY_S`` (a safety net) send everything.
+
+--- spotter --- The ``spotter`` block (every snapshot) is swapped by the spotter worker without a version bump. While
+frames arrive the version moves at the same rate, but when Motion stops (a pause, the game's menus) the worker's last
+swap (the block going "stale") would otherwise wait for the next static payload: a changed block is a reason to send.
 """
 
 from __future__ import annotations
@@ -53,6 +57,7 @@ class LiveFeed:
         "last_full",
         "last_game",
         "last_sid",
+        "last_spotter",  # --- spotter ---
         "last_static",
         "last_strategy_rev",
         "last_strategy_sent",
@@ -68,6 +73,7 @@ class LiveFeed:
         self.last_strategy_rev = -1
         self.last_strategy_sent = -math.inf
         self.last_sid: Any = _UNSET
+        self.last_spotter: Any = _UNSET  # --- spotter --- the block last sent (the worker swaps whole dicts)
         self.sent: dict[str, Any] = {}  # on-change key -> value sent; digest key -> hash of the JSON sent
 
     def next(self, live: LiveState, now: float) -> dict[str, Any] | None:
@@ -98,10 +104,20 @@ class LiveFeed:
         # the game block changes without a new frame (a selection made on another device or by the CLI, a detection
         # going live -> stale): it goes at once, not with the next static payload
         game = snap.get("game")
-        if not (snap["version"] != self.last_version or static or game != self.last_game or send_strategy or changed):
+        spotter = snap.get("spotter")  # --- spotter ---
+        spotter_moved = spotter is not self.last_spotter and spotter != self.last_spotter
+        if not (
+            snap["version"] != self.last_version
+            or static
+            or game != self.last_game
+            or send_strategy
+            or changed
+            or spotter_moved
+        ):
             return None
         self.last_version = snap["version"]
         self.last_game = game
+        self.last_spotter = spotter
         self.last_sid = snap.get("session_id")
         if send_strategy:
             self.last_strategy_rev = strategy_rev

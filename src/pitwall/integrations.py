@@ -285,6 +285,7 @@ def adapters_for(
     *,
     ac_tracks: Mapping[str, AcTrackGeometry] | None = None,
     ac_platform: Platform = Platform.UNKNOWN,
+    field_motion: bool = False,  # spotter: the F1 adapter emits FieldMotion (every car's Motion, by reference)
 ) -> list[GameAdapter]:
     """Fresh adapter instances for the given integrations, in auto-detection order.
 
@@ -302,7 +303,7 @@ def adapters_for(
     wanted = set(keys)
     out: list[GameAdapter] = []
     if "f1" in wanted:
-        out.append(F1Adapter())
+        out.append(F1Adapter(field_motion=field_motion))  # spotter: field_motion
     if "gt7" in wanted:
         out.append(GT7Adapter(known_track_ids=known.get("gt7", ())))
     if "forza" in wanted:
@@ -317,6 +318,7 @@ def all_adapters(
     *,
     ac_tracks: Mapping[str, AcTrackGeometry] | None = None,
     ac_platform: Platform = Platform.UNKNOWN,
+    field_motion: bool = False,  # spotter
 ) -> list[GameAdapter]:
     """Every decoder (replay of any capture, whichever game recorded it)."""
-    return adapters_for(SPECS, known_tracks, ac_tracks=ac_tracks, ac_platform=ac_platform)
+    return adapters_for(SPECS, known_tracks, ac_tracks=ac_tracks, ac_platform=ac_platform, field_motion=field_motion)

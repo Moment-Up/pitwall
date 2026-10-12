@@ -1,0 +1,30 @@
+{
+  "_fixture": {
+    "tier": "contract",
+    "source": "F1 spotter design spec 8.3 (the /ws/live spotter block contract); hand-written, not server output",
+    "recorded": "2026-10-12",
+    "what": "spotter switched off (the default)"
+  },
+  "response": {
+    "v": 1,
+    "enabled": false,
+    "active": false,
+    "reason": "disabled",
+    "left": {
+      "state": "clear",
+      "lon_m": null,
+      "gap_m": null,
+      "cars": 0
+    },
+    "right": {
+      "state": "clear",
+      "lon_m": null,
+      "gap_m": null,
+      "cars": 0
+    },
+    "three_wide": false,
+    "traffic": false,
+    "rate_hz": null,
+    "seq": 0
+  }
+}

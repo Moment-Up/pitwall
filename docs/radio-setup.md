@@ -42,6 +42,14 @@ build from source without a HeroUI Pro licence, has its Radio page at `…:8443/
    changes the fallback action, which keeps working too. Setup › Controls › Test shows whether the button reaches
    Pitwall. UDP telemetry must be on (see [F1 25 settings](install.md#f1-25-tested-live-on-ps5)). In other games
    Pitwall can't see wheel buttons: use the on-screen button (or Space on a keyboard).
+<!-- --- spotter --- -->
+6. **Spotter (F1 25, optional)**: switch it on in Settings > Radio & voice > Spotter. It needs the game's **UDP Send
+   Rate at 60 Hz** (at the default 20 Hz calls come about 70 ms later; the card warns below 30 Hz). A **wired**
+   PS5 and computer help: on the owner's Wi-Fi about 1 packet in 10 arrived 45-75 ms late (p99 about 90 ms), and
+   that delay is added to every call. Settings > Radio & voice > Spotter > **Test spotter** says "Car left", then
+   "Clear left" on the connected radio. The calls are recorded in advance in the radio's voice (or the spotter's
+   own Kokoro voice), so the iPad plays them as audio even when it speaks the engineer's messages with its own voice.
+<!-- --- end spotter --- -->
 
 ## Each session
 

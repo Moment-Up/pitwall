@@ -69,6 +69,7 @@
 | `strategy` | race strategy engine (`pitwall/strategy`): gaps, pit loss, tyres, fuel, weather, calls; per-lap records | touch sockets, block ingest (fed by one lock-free deque append per item) |
 | `raceradio` | race radio engine (`pitwall/raceradio`): flags, start and countdown, positions, rivals, penalties, damage; the live `race` view | touch sockets or the database, block ingest (one deque append per item) |
 | `carhealth` | car health (`pitwall/carhealth`): tyre temperatures against the warm laps, brakes, engine, lock-ups and wheelspin, tank-level fuel, attack / defend; calls | touch sockets or SQLite, block ingest (one deque append per item; field samples only while `wants_field`) |
+| `spotter` | the spotter (`pitwall/spotter`): decodes every car's Motion, runs the state machine on the game clock, publishes `live.spotter`, hands calls to the radio loop | block ingest (fed by one `SimpleQueue.put` per Motion packet), touch the DB |
 | asyncio (uvicorn) | REST, WebSocket snapshots (pull model), LLM calls (async HTTP) | block on DB (uses `to_thread`) |
 
 Every ingest-thread hook of the v0.2.0 features is O(1) (a deque append, a field write or a counter). The combined
@@ -335,6 +336,53 @@ Speech engines (`voice/stt.py` `build_stt`): Parakeet through parakeet-mlx on Ap
 Windows): Parakeet TDT 0.6B v2 int8 on the CPU, its four files pinned by revision, size and SHA-256, downloaded on the
 first `warmup()` to `<app support>/stt/` (or read from `PITWALL_STT_SHERPA_DIR`), with the same gate, resampling and
 racing-term corrections as Parakeet. `pitwall doctor` reports both (`voice_stt`, `voice_handsfree`).
+
+<!-- --- spotter --- -->
+## Spotter fast path (`spotter/`, `voice/spotter_radio.py`)
+
+F1 25 only (the other games send the player's car only). No LLM anywhere on this path.
+
+```
+UDP thread: F1Adapter._on_motion --(FieldMotion: 2 packet refs + 4 ints)--> SessionManager.handle (first branch)
+            +-> SpotterWorker.submit(item): SimpleQueue.put (C, non-blocking)                 [~1 us, no decode]
+            SessionInfo and GameEvent{lights_out, flashback, red_flag, session_started, session_ended,
+            chequered_flag} also forwarded; reset(session_id) on SessionManager._start / end()
+spotter thread: q.get(timeout=0.25) -> [off: count, return] decode (subset_struct) -> SpotterEngine.feed_motion
+            -> live.spotter (swap)
+            +-> calls -> sink(call) = SpotterRadio.on_call_threadsafe -> loop.call_soon_threadsafe(deliver)
+asyncio loop: SpotterRadio.deliver -> mailbox / cut rules -> RadioHub._deliver(PCM made in advance, pcm_to_all)
+```
+
+The engine (`spotter/engine.py`) is pure: every time comes in as an argument and every duration is on the game clock
+(header `sessionTime`), so receive bunching cannot shorten a debounce. Geometry (`spotter/geometry.py`): each car is
+an `L x W` box (`spotter/dims.py`, per formula) in the player's frame from its forward and right vectors
+(`worldRightDir` is the driver's right on real data); relative speeds include the frame's rotation (the player's
+vectors in the previous packet), so a constant gap through a corner is not "closing". Gates, in order: disabled, not
+available, session type, red flag, safety car (unknown counts as on), lights out + delay, paused, stale (no Motion for
+250 ms), flashback mute, pit, finished, spin (slip above 30 degrees, open again 0.3 s under 15), slow; a closed gate
+forgets the traffic and never says "clear", except pit, finished and slow, which leave the positions valid: an
+announced side empty at that packet gets its clear (`SpotterCall.final`). The live block (`spotter` in every
+`/ws/live` snapshot, about 230 bytes, with the car `length_m` in use for the bar scale) is swapped whole on every
+Motion item and does not bump `LiveState.version`; `api/live_feed.py` sends a changed block without a new frame, so
+the block going stale when Motion stops (a pause) reaches the iPad at once.
+Offline: `spotter/score.py` (geometric ground truth) behind `scripts/spotter_check.py` and the recorded tests.
+
+Radio priority contract: the one urgent path (`voice/scheduler.py` `may_interrupt`, asked by the scheduler, the hub's
+urgent slot and cue gate, and `voice/spotter_radio.py`): urgent calls (Priority.URGENT: the red flag and other
+race-control urgent alerts from `voice/urgent.py`, and spotter calls) may interrupt anything except another urgent
+call; urgent > cue > everything else; equal ranks never cut each other (a red flag waits for a spotter call on air,
+and a spotter call for the red flag). Its one exception is the clear-before-cue mark (`YIELDS_TO_CUE_KEY`): a spotter
+clear or "still there" is cut by a braking cue and never cuts one. Everything else follows the per-lap allowances and
+speak windows. Spotter messages (`MessageKind.SPOTTER`) never go through the scheduler queue (its 100 ms tick is too
+slow), are exempt from the budget, gap, repeat filter and speak window, and are allowed at every intensity. While a
+car is alongside (`DrivingState.traffic_alongside`) no speak window opens, so a lap summary never starts wheel to
+wheel. The spotter's own refinements, in `voice/spotter_radio.py`: its clears and still theres carry the clear-before-cue
+mark, the mailbox never lets a clear or a still there push out a held onset, and a resync says what the driver missed (heard vs the worker's announced state) whenever the radio is free.
+Delivery, the one-slot mailbox, heard pairing, the resync and the latency stamps are in `voice/spotter_radio.py`; the
+phrase audio (both wordings, per engine and voice, STT-checked when the model is loaded) in
+`voice/spotter_audio.py`. Settings: `SettingsStore` section `"spotter"` (`spotter/settings.py`), applied by attribute
+swaps; nothing is persisted in the database.
+<!-- --- end spotter --- -->
 
 ## Goals, badges and summaries (`motivation/`)
 Pure rules (`rules.py`: clean runs, steady-lap windows, scopes, F1 race outcomes, personal bests, week arithmetic),

@@ -106,7 +106,8 @@ def check_entry(e: dict[str, Any], *, full: bool = False) -> None:
     assert set(t) == {"kind", "summary", "port", "console_port", "console_ip", "in_game_setting"}
     assert t["kind"] in KINDS and t["console_ip"] in ("required", "optional", "no")
     assert e["rig"] is None or (set(e["rig"]) == {"game", "platform"} and e["rig"]["game"] in ("f1_25", "gt7"))
-    assert len(e["features"]) == 26  # 23 + race radio (race_position, penalties) + engine_temp (health lane)
+    # 23 + race radio (race_position, penalties) + engine_temp (health lane) + spotter
+    assert len(e["features"]) == 27
     for f in e["features"]:
         assert set(f) == FEATURE_KEYS
         assert f["status"] in STATUSES and f["group"] in GROUPS

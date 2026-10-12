@@ -1710,3 +1710,34 @@ describe("hands-free and the talk button (lane handsfree)", () => {
     expect(radio.get().settings.talkButton).toBeNull();
   });
 });
+
+// --- spotter ---------------------------------------------------------------------------------------------------
+describe("spotter calls (kind spotter, lib/spotter)", () => {
+  it("are played and logged, but never replace the engineer's message on screen", async () => {
+    const { radio, ws, ctx } = await goLive();
+    sayAudio(ws, "a1", 2400, "answer");
+    ctx.clips()[0]?.end();
+    ws.clear();
+    sayAudio(ws, "s1", 1200, "spotter");
+    expect(radio.get().current).toMatchObject({ id: "a1", kind: "answer" }); // the answer stays in view
+    expect(radio.get().log.at(-1)).toMatchObject({ id: "s1", kind: "spotter", text: "text s1", meta: "0.1 s audio" });
+    expect(ctx.clips()).toHaveLength(2);
+    expect(radio.get().speakingId).toBe("s1");
+    expect(ws.json()).toEqual([{ type: "playback", id: "s1", state: "started" }]);
+  });
+
+  it("a spotter call that cuts a message plays at once (cancel, then the call: no queueing behind the cut clip)", async () => {
+    const { ws, ctx } = await goLive();
+    sayAudio(ws, "p1", 24000, "lap_summary"); // 1 s
+    ws.clear();
+    ws.text({ type: "cancel", id: "p1" }); // the hub cuts it for the urgent call
+    sayAudio(ws, "s1", 1200, "spotter");
+    const spot = ctx.clips().at(-1);
+    expect(spot?.startAt).toBe(0); // not 1 s later
+    expect(ws.json()).toEqual([
+      { type: "playback", id: "p1", state: "ended" },
+      { type: "playback", id: "s1", state: "started" },
+    ]);
+  });
+});
+// --- end spotter -----------------------------------------------------------------------------------------------

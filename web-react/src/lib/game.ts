@@ -96,6 +96,7 @@ export const FEATURE_NOUNS: Readonly<Record<FeatureId, string>> = {
   field_data: "data about the other cars",
   race_position: "your race position", // race radio
   penalties: "penalties", // race radio
+  spotter: "every car's position and heading", // --- spotter ---
   setup_telemetry: "its car setup",
   setup_recommendations: "car setup recommendations",
   wheel_ptt: "wheel button presses",

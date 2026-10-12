@@ -97,6 +97,7 @@ class MessageKind(StrEnum):
     # --- race radio ---
     RACE = "race"  # race situation call (pitwall.raceradio): normal and detailed intensity, own per-lap allowance
     # --- end race radio ---
+    SPOTTER = "spotter"  # --- spotter --- cars alongside (pitwall.spotter): pre-synthesised, never queued
 
 
 class Priority(IntEnum):
@@ -139,3 +140,6 @@ class DrivingState:
     lap_distance_m: float | None
     # seconds until the next braking zone at current speed (from the track model), None if unknown
     time_to_next_braking_s: float | None
+    # --- spotter --- a car alongside now, or a side cleared less than 1 s ago (spotter enabled and active only);
+    # proactive messages wait it out (``scheduler.speak_window_ok``). None = unknown / spotter off.
+    traffic_alongside: bool | None = None

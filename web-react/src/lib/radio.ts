@@ -82,7 +82,10 @@ export type SayKind =
   | "strategy"
   | "goal"
   | "validation"
-  | "race"; // race radio (pitwall.raceradio)
+  | "race" // race radio (pitwall.raceradio)
+  /* --- spotter --- */
+  | "spotter"; // F1 spotter calls (MessageKind.SPOTTER: "car left", "clear left"; lib/spotter); never shown as `current`
+/* --- end spotter --- */
 /** "car" (health lane): a car health call (cold tyres, fuel, lock-ups), logged by its `meta.source`; spoken as its kind. */
 export type LogKind = SayKind | "car" | "transcript" | "you" | "error" | "system";
 export type Phase = "idle" | "starting" | "live";
@@ -123,6 +126,10 @@ export interface RadioServerState {
   clients?: number;
   /** Hands-free (lane handsfree), validated by parseHandsFreeState; absent on a server without it. */
   handsfree?: HandsFreeServerState;
+  /* --- spotter --- spec 8.4: on, its phrase audio made, its own Kokoro voice (null = the engineer's). Absent on
+   * servers without the spotter. Informational: the settings card reads GET /api/spotter. */
+  spotter?: { enabled: boolean; audio_ready: boolean; voice: string | null };
+  /* --- end spotter --- */
 }
 
 /** Who keyed the mic on this device: the screen button / Space, or a learned talk button. */
@@ -1711,7 +1718,12 @@ export class RadioStore extends Store<RadioState> {
     const text = String(m.text ?? "");
     const urgent = m.meta?.urgent === true; // race radio: an urgent message (voice/urgent.py)
     const logKind: LogKind = m.meta?.["source"] === "car_health" ? "car" : m.kind; // health lane: CAR in the log
-    this.set({ current: { id: m.id, kind: m.kind, text, at: Date.now(), audioS, ...(urgent ? { urgent } : {}) } });
+    /* --- spotter: a spotter call never replaces the engineer's message on screen (the Drive bars show it, and the
+     * log folds it); it is logged and played like any other message --- */
+    if (m.kind !== "spotter") {
+      this.set({ current: { id: m.id, kind: m.kind, text, at: Date.now(), audioS, ...(urgent ? { urgent } : {}) } });
+    }
+    /* --- end spotter --- */
     if (this.transmitting()) {
       // Playing this over the driver would cut their transmission: the server drops mic audio while a message is
       // "speaking". Treat it as a barge-in instead: show it, do not play it, and tell the server to stop.

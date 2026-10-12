@@ -58,10 +58,19 @@ Live braking cues (``coach.cues``) bypass the scheduler queue because they are t
   connected radio mute cues; a muted, late or blocked cue is dropped, never said late. Proactive messages treat
   the next cue like a braking zone: the speak window must close before it fires, and a message whose synthesis
   finished while a cue was playing is held, never cut over it.
-* **Urgent calls** skip the speak window (scheduler contract) and are never stuck behind anything but the
-  driver's own transmission and another urgent call: while the radio talks, holds a message for its window or
-  answers a question, the scheduler is polled with ``speaking=True``, which hands out only messages that outrank
-  what is on air. An urgent call cuts a cue or a proactive message (the latter is said again later).
+* **Spotter calls** (``voice.spotter_radio``, F1 25 only): pre-synthesised, URGENT, delivered on the next loop turn
+  like cues; they cut a cue (dropped), a proactive message or an answer (said again once), wait in a one-slot mailbox
+  behind another spotter call, an urgent call or the driver's transmission, and reach device-voice iPads as PCM too.
+  A clear never cuts a cue (it waits for it), and a cue cuts a clear or a "still there" on air. While a car is
+  alongside no speak window opens (``DrivingState.traffic_alongside``).
+* **Urgent calls** (the urgent path: the red flag and race-control urgent alerts from ``voice.urgent``, and spotter
+  calls) follow ONE rule, ``scheduler.may_interrupt``, wherever the hub decides (its urgent slot, the cue gate,
+  ``_yield_to_on_air``) and in ``voice.spotter_radio``: they may interrupt anything except another urgent call, skip
+  the speak window, and are never stuck behind anything but the driver's own transmission and another urgent call
+  (a red flag waits for a spotter call on air, and a spotter call for the red flag). While the radio talks, holds a
+  message for its window or answers a question, the scheduler is polled with ``speaking=True``, which hands out only
+  messages that outrank what is on air. An urgent call cuts a cue or a proactive message (the latter is said again
+  later). Everything else waits for a free radio, the gap, its speak window and its per-lap allowance.
 """
 
 from __future__ import annotations
@@ -108,9 +117,13 @@ from pitwall.voice.scheduler import (
     DRIVER_LAP_KINDS,
     MIN_GAP_S,
     SPEECH_LATENCY_S,
+    interrupt_rank,
+    is_urgent,
+    may_interrupt,
     speak_window_ok,
     spoken_word_count,
 )
+from pitwall.voice.spotter_radio import SpotterRadio  # --- spotter ---
 from pitwall.voice.tts import speech_mismatch
 from pitwall.voice.types import (
     MIC_SAMPLE_RATE,
@@ -129,6 +142,7 @@ ONLINE_NAME_REDACTED = "[online name]"  # race radio (raceradio.names.REDACTED):
 
 if TYPE_CHECKING:
     from pitwall.drivers import CoachingLimits, Driver
+    from pitwall.spotter.worker import SpotterWorker  # --- spotter ---
 
 log = logging.getLogger(__name__)
 
@@ -290,8 +304,9 @@ type _Ready = tuple[RadioMessage, AudioClip | None, float | None]  # (message, a
 type RadioObserver = Callable[[str, dict[str, Any]], None]
 
 
-def _urgent(msg: RadioMessage) -> bool:
-    return msg.priority >= Priority.URGENT
+_urgent = is_urgent  # the urgent path is the scheduler's (voice.scheduler.may_interrupt): one definition
+# a braking cue as the interrupt rule sees it (kind CUE; cues are never urgent)
+_CUE_PROBE = RadioMessage(id="", kind=MessageKind.CUE, priority=Priority.HIGH, text="", speech="", created_mono=0.0)
 
 
 @dataclass(slots=True)
@@ -488,11 +503,20 @@ class RadioHub:
         self._tts_started = False
         self._keep_warm_mono = 0.0
         self.handsfree = HandsFreeController(self, enabled=handsfree)  # --- hands-free (lane handsfree) ---
+        self.spotter = SpotterRadio(self)  # --- spotter --- delivery, mailbox, heard pairing, phrase audio
 
     def _spawn(self, coro: Any) -> None:
         task = asyncio.create_task(coro)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+
+    # --- spotter ---
+    def attach_spotter(self, worker: SpotterWorker) -> None:
+        """Spotter calls of ``worker`` (the runtime's live worker) are said on this radio (event loop only)."""
+        self.spotter.attach(worker)
+        self._send_state()
+
+    # --- end spotter ---
 
     # --- validation kit hooks (lane validate) -------------------------------------------------------------------
     # Observers see what the radio did (docs/architecture.md, "Rig validation kit"). With no observer attached the
@@ -616,6 +640,7 @@ class RadioHub:
 
     async def stop(self) -> None:
         self.handsfree.close()  # --- hands-free (lane handsfree) ---
+        self.spotter.detach()  # --- spotter ---
         self.live.unsubscribe(self._on_live_note)
         self.live.unsubscribe_buttons(self._on_button_threadsafe)
         self.cues.set_sink(None)
@@ -698,6 +723,7 @@ class RadioHub:
             "clients": len(self.clients),
             "cue_mode": self.cues.mode,
             "handsfree": self.handsfree.state(),  # --- hands-free (lane handsfree) ---
+            "spotter": self.spotter.state_block(),  # --- spotter ---
         }
 
     def _send_state(self) -> None:
@@ -814,6 +840,7 @@ class RadioHub:
         self._ptt_client = None
         released = time.monotonic()
         self._send_state()
+        self.spotter.on_ptt_up()  # --- spotter --- a call held while the driver transmitted
         if clip.duration_s < MIN_UTTERANCE_S:
             return
         self._spawn(self._handle_utterance(clip, released))
@@ -1061,7 +1088,10 @@ class RadioHub:
         limit = time.monotonic() + YIELD_MAX_S
         while True:
             on_air = self._on_air_message()
-            if on_air is None or not (on_air[0].kind is MessageKind.CUE or _urgent(on_air[0])):
+            # wait for anything that outranks ``msg`` (a cue, an urgent call) and for any spotter clip
+            if on_air is None or not (
+                on_air[0].kind is MessageKind.SPOTTER or interrupt_rank(on_air[0]) > interrupt_rank(msg)
+            ):
                 return
             if time.monotonic() >= min(limit, self._speaking_deadline):
                 return
@@ -1148,6 +1178,7 @@ class RadioHub:
                 log.exception("could not save the radio voice choice")
         self._tts_seen = self._tts_key()
         self._cue_clients_changed()  # retime and rebuild cue audio in the new voice
+        self.spotter.on_tts_changed()  # --- spotter --- phrases in the new voice
         self._send_state()
         return now
 
@@ -1160,6 +1191,7 @@ class RadioHub:
             self._send_state()
             self._push_cue_timing()
             self._request_cue_audio()
+            self.spotter.on_tts_changed()  # --- spotter ---
         if self._cue_part_unchecked and now - self._cue_recheck_mono >= CUE_RECHECK_S and self._can_verify():
             self._cue_recheck_mono = now  # the STT is up now: check the parts rendered before it was
             self._request_cue_audio()
@@ -1268,12 +1300,19 @@ class RadioHub:
         return max(1.0, len(msg.speech.split()) / WORDS_PER_S)
 
     def _deliver(
-        self, msg: RadioMessage, clip: AudioClip | None, rec: LatencyRecord | None, released: float | None
+        self,
+        msg: RadioMessage,
+        clip: AudioClip | None,
+        rec: LatencyRecord | None,
+        released: float | None,
+        *,
+        pcm_to_all: bool = False,  # --- spotter --- device-voice clients get the clip too (they play any PCM)
     ) -> None:
         """Send a message: PCM for audio devices, text for devices that speak it themselves."""
         has_speech = bool(msg.speech.strip())
-        audio_clients = [c for c in self.clients if not c.device_tts]
-        device_clients = [c for c in self.clients if c.device_tts]
+        all_pcm = pcm_to_all and clip is not None and bool(clip.pcm)  # --- spotter ---
+        audio_clients = [c for c in self.clients if not c.device_tts or all_pcm]
+        device_clients = [c for c in self.clients if c.device_tts and not all_pcm]
         n_bytes = len(clip.pcm) if clip else 0
         cancelled_id = self.speaking_id  # validation kit: what this message cuts, if anything
         if self.speaking_id is not None:
@@ -1357,6 +1396,7 @@ class RadioHub:
                 "latency": None if observed is None else asdict(observed[0]),
             },
         )
+        self.spotter.on_playback(msg_id, state)  # --- spotter --- latency stamp t3; release the mailbox
 
     def _cancel_speaking(self) -> None:
         if self.speaking_id is not None:
@@ -1612,6 +1652,7 @@ class RadioHub:
             lap_number=f.lap_number if f else None,
             lap_distance_m=f.lap_distance_m if f else None,
             time_to_next_braking_s=ttb,
+            traffic_alongside=self.spotter.traffic(),  # --- spotter ---
         )
 
     async def _tick_loop(self) -> None:
@@ -1635,6 +1676,7 @@ class RadioHub:
         self._check_tts_engine(now)
         self._follow_session()
         self.handsfree.tick(now)  # --- hands-free (lane handsfree) ---
+        self.spotter.tick(now)  # --- spotter --- settings, audio rebuilds, mailbox release
         if self.speaking_id is not None and now > self._speaking_deadline:
             self.speaking_id = None  # device never reported playback end
             self._air_free_mono = now
@@ -1646,7 +1688,7 @@ class RadioHub:
         if urgent is not None:
             if urgent[0].expired(now):
                 self._held_urgent = None
-            elif self._urgent_may_cut():
+            elif self._urgent_may_cut(urgent[0]):
                 self._held_urgent = None
                 self._send_ready(urgent, now)
             return
@@ -1677,7 +1719,7 @@ class RadioHub:
         if self.ptt_down:
             may_go = False
         elif _urgent(msg):
-            may_go = self._urgent_may_cut()
+            may_go = self._urgent_may_cut(msg)
         else:
             radio_free = (
                 self.speaking_id is None
@@ -1763,10 +1805,11 @@ class RadioHub:
         else:
             log.info("message %r dropped: %r is already held", msg.text, current[0].text)
 
-    def _urgent_may_cut(self) -> bool:
-        """An urgent call may go out now: nothing urgent is on air (equal ranks never cut each other)."""
+    def _urgent_may_cut(self, msg: RadioMessage) -> bool:
+        """An urgent call may go out now: the one interrupt rule (``scheduler.may_interrupt``) lets it cut what is on
+        air - anything but another urgent call (a spotter call included)."""
         on_air = self._on_air_message()
-        return on_air is None or not _urgent(on_air[0])
+        return on_air is None or may_interrupt(msg, on_air[0])
 
     def _send_ready(self, ready: _Ready, now: float) -> None:
         """Deliver a proactive message. A proactive message it cuts (only an urgent call cuts one) is said again
@@ -1817,6 +1860,7 @@ class RadioHub:
             "tts_engine": self._tts_diagnostics(),
             "tts_check": {**self.tts_check, "enabled": self.verify_tts, "recent": list(self.tts_check_log)},
             "handsfree_diag": self.handsfree.diagnostics(),  # --- hands-free (lane handsfree) ---
+            "spotter": {"audio": self.spotter.status(), **self.spotter.counters()},  # --- spotter ---
         }
 
     def _tts_diagnostics(self) -> dict[str, Any]:
@@ -1908,8 +1952,10 @@ class RadioHub:
                 return "previous cue still playing"
             if m.kind in (MessageKind.ANSWER, MessageKind.CONTROL):
                 return "answer on air"
-            if m.priority >= Priority.URGENT:
-                return "urgent message on air"
+            # the one interrupt rule: a cue never cuts an urgent call (a spotter onset, the red flag), but does cut a
+            # spotter clear or "still there" (YIELDS_TO_CUE_KEY) and anything proactive
+            if not may_interrupt(_CUE_PROBE, m):
+                return "spotter call on air" if m.kind is MessageKind.SPOTTER else "urgent message on air"
         return None
 
     def _cue_mute_reason(self) -> str | None:
@@ -1940,7 +1986,9 @@ class RadioHub:
         """A proactive message cut by a cue is said again (in full, under a new id) in the next speak window, once:
         a message cut a second time is dropped (``MAX_RESENDS``), so a busy stretch never repeats it lap after lap."""
         msg, clip = interrupted
-        if msg.kind in (MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.CUE) or msg.expired(now):
+        if msg.kind in (MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.CUE, MessageKind.SPOTTER) or msg.expired(
+            now
+        ):  # --- spotter --- a cut spotter call is never said later
             return
         resent = msg.meta.get(RESENT_KEY, 0)
         count = resent if isinstance(resent, int) and not isinstance(resent, bool) else 0

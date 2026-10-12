@@ -67,6 +67,7 @@ session_info           P·spec  NS      NS      NS      NS
 field_data             S·rec   NS      NS      NS      NS
 race_position          S·spec  S·comm  NS      S·comm  S·comm
 penalties              S·spec  NS      NS      NS      NS
+spotter                S·rec   NS      NS      NS      NS
 setup_telemetry        S·spec  NI      NS      NS      NS
 setup_recommendations  P·-     NI      NI      NI      NI
 wheel_ptt              S·spec  NS      NS      NS      NS
@@ -94,8 +95,8 @@ def test_ids_are_unique_and_well_formed() -> None:
     assert len(ids) == len(set(ids)) == 23
     for i in ids:
         assert re.fullmatch(r"[a-z0-9_]+:(ps5|ps4|xbox|pc|any)", i), i
-    # + race radio (race_position, penalties), + health lane (engine_temp)
-    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 26
+    # + race radio (race_position, penalties), + health lane (engine_temp), + spotter
+    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 27
     assert {f.group for f in games.FEATURES} == {g for g, _ in games.GROUPS}
 
 
@@ -245,7 +246,8 @@ def test_golden_profiles() -> None:
 
 def test_platform_and_variant_profiles() -> None:
     ps5 = profile("f1_25:ps5")
-    pc_like = {**ps5, "ai_field": "S·spec", "field_data": "S·spec"}  # the entry level caps the recorded fields
+    # the entry level caps the recorded fields (spotter: every car's Motion, recorded on the PS5 only)
+    pc_like = {**ps5, "ai_field": "S·spec", "field_data": "S·spec", "spotter": "S·spec"}
     assert profile("f1_25:pc") == profile("f1_25:xbox") == pc_like
     for p in ("ps5", "xbox", "pc"):  # the corner names were hand-checked with format 2025 only
         assert profile(f"f1_25_2026:{p}") == {**pc_like, "official_corner_names": "NI"}
@@ -259,6 +261,7 @@ def test_platform_and_variant_profiles() -> None:
     assert {k for k, v in ac_comm.items() if v == "NS"} - local == {
         "ai_field",
         "field_data",
+        "spotter",  # spotter: RTCarInfo is the player's car only
         "setup_telemetry",
         "wheel_ptt",
         "race_position",  # race radio: not in the UDP remote telemetry (RTCarInfo)
@@ -461,21 +464,26 @@ def test_adapter_declarations_added_for_documented_absences() -> None:
             "penalties",
             "participants",
             "engine_temp_c",  # health lane: car health
+            "field_motion",  # spotter: every car's Motion (recorded-validated on the owner's PS5 races)
         },
         Game.GT7: {
             *("drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons", "engine_temp_c"),
+            "field_motion",  # spotter: declared unsupported (player's car only)
             *RACE_RADIO_ABSENT,
         },
         Game.FORZA_MOTORSPORT: {
             *("drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons", "engine_temp_c"),
+            "field_motion",
             *RACE_RADIO_ABSENT,
         },
         Game.FORZA_HORIZON: {
             *("drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons", "engine_temp_c"),
+            "field_motion",
             *RACE_RADIO_ABSENT,
         },
         Game.AC: {
             *("drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons", "engine_temp_c"),
+            "field_motion",
             *RACE_RADIO_ABSENT,
         },
     }
@@ -621,7 +629,7 @@ def test_games_response_is_json_and_covers_every_entry() -> None:
     assert [e["id"] for e in body["entries"]] == [e.id for e in games.entries()]
     assert set(body["support_words"]) == {lvl.value for lvl in SupportLevel}
     assert all("fields" not in e and "guide" not in e for e in body["entries"])
-    assert all(len(e["features"]) == 26 for e in body["entries"])
+    assert all(len(e["features"]) == 27 for e in body["entries"])
 
 
 # ---------------------------------------------------------------------------------------------- review fixes
