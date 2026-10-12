@@ -793,15 +793,18 @@ async def test_go_ahead_waits_for_a_calm_stretch_on_track() -> None:
     r.hub.apply_driver(_driver(handsfree=True))
     drive(r.hub, 220.0)  # brake and steering unknown: never calm
     await r.segment(c, 1)
+    drive(r.hub, 220.0)  # fresh data (stale data would not be "on track")
     hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + 0.05)
     await settle(10)
     assert r.says() == []
+    drive(r.hub, 220.0)
     hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + hf_mod.ACK_WAIT_S + 0.1)
     assert hf._follow is not None and hf._follow.phase == "window" and r.says() == []
     hf._follow = None
     hf._acks.clear()
     drive(r.hub, 220.0, calm=True)  # off the brakes, straight, no braking zone known
     await r.segment(c, 2)
+    drive(r.hub, 220.0, calm=True)
     hf.tick(time.monotonic() + hf_mod.TRIGGER_GRACE_S + 0.05)
     await settle(20)
     assert r.says() == ["Go ahead."]
