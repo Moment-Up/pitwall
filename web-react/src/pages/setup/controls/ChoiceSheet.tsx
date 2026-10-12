@@ -4,13 +4,14 @@
 //   Game      "Pitwall reads its telemetry" (F1 25, GT7, Forza, AC, ACC, iRacing), "Controls only" (LMU, rF2, AMS2,
 //             RaceRoom, AC EVO), and "Other game…" (a name and the functions it has; generic steps, unverified)
 //   Platform  the game's, narrowed to the wheel's
-//   Wheel     saved wheels, the brand templates (with how much the research knows), or "Build my own"
+//   Wheel     a search box, saved wheels, the brand templates (plain names, how much the research knows, "PC only"
+//             where the wheel isn't made for the console), "Not listed? Pick the closest, or Build my own"
 //   Preset    Beginner / Advanced
 
-import { Button, Checkbox, Header, Input, Label, ListBox, Select, TextField } from "@heroui/react";
+import { Button, Checkbox, Header, Input, Label, ListBox, SearchField, Select, TextField } from "@heroui/react";
 import { Segment, Sheet } from "@heroui-pro/react";
 import { useState, type Key, type ReactNode } from "react";
-import type { ControlsCatalog, ControlsState, PlatformId, Preset, WheelDef } from "../../../lib/endpoints/controls";
+import type { ControlsCatalog, ControlsState, PlatformId, Preset, TemplateSummary, WheelDef } from "../../../lib/endpoints/controls";
 import type { Driver } from "../../../lib/drivers";
 import {
   PLATFORM_LABEL,
@@ -20,6 +21,8 @@ import {
   gameGroups,
   isSavedWheel,
   platformsFor,
+  signalPlatform,
+  templateKnows,
   type Choice,
   type ControlsQuery,
 } from "../../../lib/setup/controls";
@@ -28,11 +31,22 @@ import { useWide } from "../shared/useMediaQuery";
 const OTHER = "other";
 const BUILD = "__build__";
 
-const COMPLETENESS: Record<string, string> = {
-  full: "controls and what they send",
-  controls: "controls, not what they send",
-  counts: "only how many controls",
-};
+/** "PC only" when the wheel's signals are known only for other platforms than the one chosen. */
+export function notFor(t: Pick<TemplateSummary, "signal_platforms">, platform: PlatformId): string | null {
+  const sp = t.signal_platforms;
+  if (!sp || !sp.length || sp.includes(signalPlatform(platform))) return null;
+  return sp.length === 1 && sp[0] === "pc" ? "PC only" : `Not for ${PLATFORM_LABEL[platform]}`;
+}
+
+/** The wheel search: brand, plain name or research name, any word order. */
+export function matchesWheel(t: Pick<TemplateSummary, "brand" | "name" | "display_name">, q: string): boolean {
+  const hay = `${t.brand} ${t.display_name ?? ""} ${t.name}`.toLowerCase();
+  return q
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((w) => hay.includes(w));
+}
 
 export interface ChoiceSheetProps {
   open: boolean;
@@ -64,6 +78,9 @@ export function ChoiceSheet({ open, onClose, catalog, state, drivers, seatedId, 
   const game = gameById(catalog, choice.game);
   const platforms = platformsFor(game, wheel);
   const [otherName, setOtherName] = useState(choice.gameName ?? "");
+  const [find, setFind] = useState("");
+  const shownTemplates = catalog.templates.filter((t) => t.id !== "custom" && matchesWheel(t, find));
+  const gameLabel = (g: { label: string; platform_labels?: Partial<Record<PlatformId, string>> }) => g.platform_labels?.[choice.platform] ?? g.label;
   // A saved wheel by its id, an unsaved one by its template (its virtual id is not a saved wheel).
   const wheelValue = wheel ? (isSavedWheel(wheel) ? wheel.id : wheel.template) : null;
   return (
@@ -121,7 +138,7 @@ export function ChoiceSheet({ open, onClose, catalog, state, drivers, seatedId, 
               >
                 <Label className="text-sm font-medium">Game</Label>
                 <Select.Trigger className="min-h-12">
-                  <Select.Value>{() => (choice.game === OTHER ? `Other game${choice.gameName ? `: ${choice.gameName}` : ""}` : (game?.label ?? "-"))}</Select.Value>
+                  <Select.Value>{() => (choice.game === OTHER ? `Other game${choice.gameName ? `: ${choice.gameName}` : ""}` : game ? gameLabel(game) : "-")}</Select.Value>
                   <Select.Indicator />
                 </Select.Trigger>
                 <Select.Popover className="min-w-[280px]">
@@ -129,8 +146,8 @@ export function ChoiceSheet({ open, onClose, catalog, state, drivers, seatedId, 
                     <ListBox.Section aria-label="Pitwall reads its telemetry">
                       <Header className="px-2 pt-2 pb-1 text-sm font-semibold text-muted">Pitwall reads its telemetry</Header>
                       {groups.telemetry.map((g) => (
-                        <ListBox.Item key={g.id} id={g.id} textValue={g.label} className="min-h-12">
-                          {g.label}
+                        <ListBox.Item key={g.id} id={g.id} textValue={gameLabel(g)} className="min-h-12">
+                          {gameLabel(g)}
                           <ListBox.ItemIndicator />
                         </ListBox.Item>
                       ))}
@@ -138,8 +155,8 @@ export function ChoiceSheet({ open, onClose, catalog, state, drivers, seatedId, 
                     <ListBox.Section aria-label="Controls only">
                       <Header className="px-2 pt-2 pb-1 text-sm font-semibold text-muted">Controls only</Header>
                       {groups.controlsOnly.map((g) => (
-                        <ListBox.Item key={g.id} id={g.id} textValue={g.label} className="min-h-12">
-                          {g.label}
+                        <ListBox.Item key={g.id} id={g.id} textValue={gameLabel(g)} className="min-h-12">
+                          {gameLabel(g)}
                           <ListBox.ItemIndicator />
                         </ListBox.Item>
                       ))}
@@ -175,7 +192,7 @@ export function ChoiceSheet({ open, onClose, catalog, state, drivers, seatedId, 
                       Start from F1 25's layout (not checked for {otherName.trim()})
                     </Button>
                   ) : null}
-                  <span className="text-sm font-medium">Which of these does it have? Pitwall has no research for it, so every row stays unverified.</span>
+                  <span className="text-sm font-medium">Tick what it has. Pitwall has no research for it, so every row stays unverified.</span>
                   <div className="grid gap-0 sm:grid-cols-2">
                     {catalog.functions
                       .filter((f) => f.id !== "ptt_pitwall")
@@ -186,7 +203,7 @@ export function ChoiceSheet({ open, onClose, catalog, state, drivers, seatedId, 
                           onChange={(on: boolean) => onApply({ fns: on ? [...choice.otherFns, f.id] : choice.otherFns.filter((x) => x !== f.id) })}
                         >
                           <Checkbox.Content className="min-h-11 items-start gap-2 py-1">
-                            <Checkbox.Control className="mt-0.5">
+                            <Checkbox.Control className="mt-0.5 border-2 border-[var(--pw-line-strong)] bg-surface">
                               <Checkbox.Indicator />
                             </Checkbox.Control>
                             <span className="grid">
@@ -210,57 +227,78 @@ export function ChoiceSheet({ open, onClose, catalog, state, drivers, seatedId, 
                 </Segment>
               </Field>
 
-              <Select
-                aria-label="Wheel"
-                value={wheelValue}
-                onChange={(k: Key | null) => {
-                  if (k == null) return;
-                  if (String(k) === BUILD) onBuild();
-                  else onApply({ wheel: String(k) });
-                }}
-              >
-                <Label className="text-sm font-medium">Wheel</Label>
-                <Select.Trigger className="min-h-12">
-                  <Select.Value>{() => wheel?.name ?? "Pick your wheel"}</Select.Value>
-                  <Select.Indicator />
-                </Select.Trigger>
-                <Select.Popover className="min-w-[300px]">
-                  <ListBox aria-label="Wheels">
-                    {state.wheels.length ? (
-                      <ListBox.Section aria-label="My wheels">
-                        <Header className="px-2 pt-2 pb-1 text-sm font-semibold text-muted">My wheels</Header>
-                        {state.wheels.map((w) => (
-                          <ListBox.Item key={w.id} id={w.id} textValue={w.name} className="min-h-12">
-                            {w.name}
-                            <ListBox.ItemIndicator />
-                          </ListBox.Item>
-                        ))}
-                      </ListBox.Section>
-                    ) : null}
-                    {[...new Set(catalog.templates.filter((t) => t.id !== "custom").map((t) => t.brand))].map((brand) => (
-                      <ListBox.Section key={brand} aria-label={brand}>
-                        <Header className="px-2 pt-2 pb-1 text-sm font-semibold text-muted">{brand}</Header>
-                        {catalog.templates
-                          .filter((t) => t.brand === brand)
-                          .map((t) => (
-                            <ListBox.Item key={t.id} id={t.id} textValue={t.name} className="min-h-12">
-                              <span className="grid">
-                                <span>{t.name}</span>
-                                <span className="text-xs text-muted">Research: {COMPLETENESS[t.completeness] ?? t.completeness}</span>
-                              </span>
+              <div className="grid gap-2">
+                <SearchField aria-label="Find your wheel" value={find} onChange={setFind}>
+                  <Label className="text-sm font-medium">Wheel</Label>
+                  <SearchField.Group>
+                    <SearchField.SearchIcon />
+                    <SearchField.Input className="h-11 text-base" placeholder="Find your wheel: G923, T248, KS…" />
+                    <SearchField.ClearButton />
+                  </SearchField.Group>
+                </SearchField>
+                <Select
+                  aria-label="Wheel"
+                  value={wheelValue}
+                  onChange={(k: Key | null) => {
+                    if (k == null) return;
+                    if (String(k) === BUILD) onBuild();
+                    else onApply({ wheel: String(k) });
+                  }}
+                >
+                  <Select.Trigger className="min-h-12">
+                    <Select.Value>{() => wheel?.name ?? "Pick your wheel"}</Select.Value>
+                    <Select.Indicator />
+                  </Select.Trigger>
+                  <Select.Popover className="min-w-[300px]">
+                    <ListBox aria-label="Wheels">
+                      {state.wheels.length && !find ? (
+                        <ListBox.Section aria-label="My wheels">
+                          <Header className="px-2 pt-2 pb-1 text-sm font-semibold text-muted">My wheels</Header>
+                          {state.wheels.map((w) => (
+                            <ListBox.Item key={w.id} id={w.id} textValue={w.name} className="min-h-12">
+                              {w.name}
                               <ListBox.ItemIndicator />
                             </ListBox.Item>
                           ))}
+                        </ListBox.Section>
+                      ) : null}
+                      {[...new Set(shownTemplates.map((t) => t.brand))].map((brand) => (
+                        <ListBox.Section key={brand} aria-label={brand}>
+                          <Header className="px-2 pt-2 pb-1 text-sm font-semibold text-muted">{brand}</Header>
+                          {shownTemplates
+                            .filter((t) => t.brand === brand)
+                            .map((t) => {
+                              const off = notFor(t, choice.platform);
+                              return (
+                                <ListBox.Item key={t.id} id={t.id} textValue={`${t.brand} ${t.display_name ?? t.name}`} className="min-h-12">
+                                  <span className="grid">
+                                    <span>{t.display_name ?? t.name}</span>
+                                    <span className="text-xs text-muted">
+                                      {templateKnows(t)}
+                                      {off ? ` · ${off}` : ""}
+                                    </span>
+                                  </span>
+                                  <ListBox.ItemIndicator />
+                                </ListBox.Item>
+                              );
+                            })}
+                        </ListBox.Section>
+                      ))}
+                      <ListBox.Section aria-label="Build my own">
+                        <ListBox.Item id={BUILD} textValue="Build my own" className="min-h-12">
+                          <span className="grid">
+                            <span>Build my own…</span>
+                            <span className="text-xs text-muted">Not listed? Pick the closest, or describe yours.</span>
+                          </span>
+                        </ListBox.Item>
                       </ListBox.Section>
-                    ))}
-                    <ListBox.Section aria-label="Build my own">
-                      <ListBox.Item id={BUILD} textValue="Build my own" className="min-h-12">
-                        Build my own…
-                      </ListBox.Item>
-                    </ListBox.Section>
-                  </ListBox>
-                </Select.Popover>
-              </Select>
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+                <span className="text-sm text-muted">
+                  {find && !shownTemplates.length ? `No wheel in the research matches "${find}". ` : ""}Not listed? Pick the closest, or Build my own.
+                </span>
+              </div>
 
               <Field label="Preset">
                 <Segment aria-label="Preset" size="md" selectedKey={choice.preset} onSelectionChange={(k: Key) => onApply({ preset: String(k) as Preset })} className="w-max">

@@ -25,6 +25,7 @@ ranking). The words shown are "Official", "Inferred", "Community", "Pitwall's su
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import cache
@@ -66,6 +67,15 @@ EVIDENCE_RANK: Mapping[str, int] = {**RIG_EVIDENCE_RANK, "seen": 4, "H": 1}
 
 class CatalogError(ValueError):
     """The controls catalogue files do not match the expected schema."""
+
+
+def in_sentence(label: str) -> str:
+    """A function's label inside a sentence: "Brake bias" -> "brake bias", but acronyms stay ("ABS", "DRS / active
+    aero", "ERS / hybrid mode", "MFD / black box"), so the radio never says "abs"."""
+    first = label.partition(" ")[0]
+    if len(first) >= 2 and first.replace("-", "").isupper():
+        return label
+    return label[:1].lower() + label[1:]
 
 
 def weakest(*labels: str | None) -> str | None:
@@ -147,6 +157,8 @@ class GameFunction:
     not_possible: str | None = None
     text: str | None = None
     research_note: str = ""
+    always_shared: bool = False  # the game has one button for both (GT7: DRS is the Overtake button)
+    native_found: bool = True  # False: the research found no binding name (``native_name`` describes the setting)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -162,6 +174,7 @@ class GameFunction:
             "evidence": self.evidence,
             "source_ids": list(self.source_ids),
             "platform_note": self.platform_note,
+            "native_found": self.native_found,  # additive
         }
 
 
@@ -190,11 +203,18 @@ class GameDef:
     presets: Mapping[str, tuple[str, ...]]
     mfd_on_dpad: bool
     preset_warning: str
+    platform_labels: Mapping[str, str] = field(default_factory=dict)  # Forza on PS5 is Forza Horizon
+    platform_notes: Mapping[str, str] = field(default_factory=dict)
+
+    def label_on(self, platform: str | None) -> str:
+        """The game's name on this platform ("Forza Horizon (PS5)")."""
+        return self.platform_labels.get(platform or "", self.label)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "id": self.id,
             "label": self.label,
+            "platform_labels": dict(self.platform_labels),  # additive
             "telemetry_keys": list(self.telemetry_keys),
             "platforms": list(self.platforms),
             "button_path": self.button_path,
@@ -221,6 +241,7 @@ class TemplateDef:
     source_ids: tuple[str, ...]
     system_controls: frozenset[str] = frozenset()
     only_in_games: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
+    display_name: str = ""  # plain words for the picker (the research ``name`` keeps its notes)
 
     def summary(self) -> dict[str, Any]:
         return {
@@ -231,6 +252,12 @@ class TemplateDef:
             "platforms": dict(self.platforms_text),
             "completeness": self.completeness,
             "shape": self.shape,
+            # additive: the picker's words, the consoles the wheel's signals are known for, and how many of its
+            # controls the research places on the wheel
+            "display_name": self.display_name or self.name,
+            "signal_platforms": list(self.signal_platforms),
+            "controls_total": len(self.controls),
+            "controls_placed": sum(1 for c in self.controls if c.zone != "unplaced"),
         }
 
 
@@ -243,6 +270,18 @@ class FixedByGame:
     evidence: str
     source_ids: tuple[str, ...]
     text: str
+
+
+@dataclass(frozen=True, slots=True)
+class GameDefault:
+    """A game's own published default buttons for one wheel template (F1 25: EA's Logitech G923 list)."""
+
+    game: str
+    template: str
+    platforms: tuple[str, ...]
+    evidence: str
+    source_ids: tuple[str, ...]
+    assignments: tuple[tuple[str, str, str, str], ...]  # (function, action, control id, slot)
 
 
 @dataclass(frozen=True, slots=True)
@@ -264,6 +303,7 @@ class Catalog:
     games: Mapping[str, GameDef]
     templates: Mapping[str, TemplateDef]
     fixed_by_game: tuple[FixedByGame, ...]
+    game_defaults: tuple[GameDefault, ...]
     not_possible: Mapping[str, str]
     evidence_labels: Mapping[str, str]
     sources: Mapping[str, Source]
@@ -287,6 +327,24 @@ class Catalog:
         if game_key is None:
             return None
         return next((g for g in self.games.values() if game_key in g.telemetry_keys), None)
+
+    def fixed_for(self, game: str, template: str | None, function: str) -> FixedByGame | None:
+        """The game's fixed control for this function on this wheel template (GT7's coloured sticks)."""
+        return next(
+            (
+                fx
+                for fx in self.fixed_by_game
+                if fx.game == game and fx.template == template and function in fx.controls
+            ),
+            None,
+        )
+
+    def default_for(self, game: str, template: str | None, platform: str) -> GameDefault | None:
+        """The game's own published default buttons for this wheel on this platform, if the research has them."""
+        return next(
+            (d for d in self.game_defaults if d.game == game and d.template == template and platform in d.platforms),
+            None,
+        )
 
     def label(self, function: str) -> str:
         f = self.functions.get(function)
@@ -316,6 +374,31 @@ class Catalog:
             "sources": {k: s.to_dict() for k, s in self.sources.items()},
             "diagram": self.diagram,
         }
+
+
+_TRAILING_NOTE = re.compile(r"\s*\(([^()]*)\)\s*$")
+
+
+def split_name(text: str) -> tuple[str, str | None]:
+    """ "Activate/Deactivate DRS/S Mode (2026 cars: ...)" -> the name, and the bracketed note for a second line."""
+    m = _TRAILING_NOTE.search(text)
+    if m is None or m.start() == 0:
+        return text.strip(), None
+    return text[: m.start()].strip(), m.group(1).strip() or None
+
+
+def native_parts(row: GameFunction | None, action: str) -> tuple[str, str | None]:
+    """The game's own name for one action (the big heading of a step) and its bracketed note, without the research's
+    long row name ("MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (...)" becomes "MFD Menu Down")."""
+    if row is None or not row.native_found:
+        return "", None
+    full = row.native_name
+    plain = row.actions.get(action) if action in row.actions else None
+    head, n1 = split_name(plain or full)
+    n2 = split_name(full)[1] if plain and ";" not in full else None
+    notes = [n for n in (n1, n2) if n and n.lower() not in ("mfd shortcut",) and n.lower() not in head.lower()]
+    note = "; ".join(dict.fromkeys(notes)) or None
+    return head, (note[0].upper() + note[1:]) if note else None
 
 
 # ---------------------------------------------------------------------------------------------- parsing helpers
@@ -511,6 +594,8 @@ def parse_catalog(games_doc: object, wheels_doc: object, overlay_doc: object) ->
                 not_possible=np_topic,
                 text=spec.get("text"),
                 research_note=str(r.get("note") or ""),
+                always_shared=bool(spec.get("always_shared", False)),
+                native_found=bool(spec.get("native_found", True)),
             )
         presets_raw = _obj(go.get("presets"), f"{p}.presets")
         presets: dict[str, tuple[str, ...]] = {}
@@ -545,6 +630,16 @@ def parse_catalog(games_doc: object, wheels_doc: object, overlay_doc: object) ->
             presets=presets,
             mfd_on_dpad=bool(go.get("mfd_on_dpad")),
             preset_warning=_str(go.get("preset_warning"), f"{p}.preset_warning"),
+            platform_labels={
+                str(k): str(v)
+                for k, v in _obj(go.get("platform_labels") or {}, f"{p}.platform_labels").items()
+                if _choice(k, PLATFORMS, f"{p}.platform_labels")
+            },
+            platform_notes={
+                str(k): str(v)
+                for k, v in _obj(go.get("platform_notes") or {}, f"{p}.platform_notes").items()
+                if _choice(k, PLATFORMS, f"{p}.platform_notes")
+            },
         )
     if set(games) != set(research_games):
         raise CatalogError(f"$overlay.games: expected every research game {sorted(research_games)}")
@@ -613,6 +708,7 @@ def parse_catalog(games_doc: object, wheels_doc: object, overlay_doc: object) ->
             source_ids=check_sources(_strs(rt.get("sources"), f"$wheels.{tid}.sources"), f"$wheels.{tid}.sources"),
             system_controls=system,
             only_in_games=only,
+            display_name=_str(to.get("display_name"), f"{p}.display_name", optional=True),
         )
     if list(templates) != list(research_tmpl):
         raise CatalogError("$overlay.templates: expected every research template, in research order")
@@ -639,6 +735,37 @@ def parse_catalog(games_doc: object, wheels_doc: object, overlay_doc: object) ->
                 _choice(fx.get("evidence"), EVIDENCE, f"{p}.evidence"),
                 check_sources(_strs(fx.get("sources"), f"{p}.sources"), f"{p}.sources"),
                 _str(fx.get("text"), f"{p}.text"),
+            )
+        )
+
+    defaults: list[GameDefault] = []
+    for i, raw in enumerate(_list(ov.get("game_defaults") or [], "$overlay.game_defaults")):
+        p = f"$overlay.game_defaults[{i}]"
+        gd = _obj(raw, p)
+        game = _str(gd.get("game"), f"{p}.game")
+        tid = _str(gd.get("template"), f"{p}.template")
+        if game not in games or tid not in templates:
+            raise CatalogError(f"{p}: unknown game or template")
+        tctl = {c.id: c for c in templates[tid].controls}
+        asg: list[tuple[str, str, str, str]] = []
+        for j, a in enumerate(_list(gd.get("assignments"), f"{p}.assignments")):
+            ad = _obj(a, f"{p}.assignments[{j}]")
+            fn, act = _str(ad.get("function"), f"{p}.assignments[{j}].function"), _str(ad.get("action"), f"{p}")
+            cid, slot = _str(ad.get("control"), f"{p}.assignments[{j}].control"), _str(ad.get("slot"), f"{p}")
+            row = games[game].functions.get(fn)
+            if row is None or act not in row.actions:
+                raise CatalogError(f"{p}.assignments[{j}]: {fn}.{act} is not an action of {game}")
+            if cid not in tctl or slot not in tctl[cid].slots():
+                raise CatalogError(f"{p}.assignments[{j}]: {cid}:{slot} is not a slot of {tid}")
+            asg.append((fn, act, cid, slot))
+        defaults.append(
+            GameDefault(
+                game,
+                tid,
+                tuple(_choice(x, PLATFORMS, f"{p}.platforms") for x in _strs(gd.get("platforms"), f"{p}.platforms")),
+                _choice(gd.get("evidence"), EVIDENCE, f"{p}.evidence"),
+                check_sources(_strs(gd.get("sources"), f"{p}.sources"), f"{p}.sources"),
+                tuple(asg),
             )
         )
 
@@ -677,6 +804,7 @@ def parse_catalog(games_doc: object, wheels_doc: object, overlay_doc: object) ->
         games=games,
         templates=templates,
         fixed_by_game=tuple(fixed),
+        game_defaults=tuple(defaults),
         not_possible=not_possible,
         evidence_labels=evidence_labels,
         sources=sources,

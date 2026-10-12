@@ -116,11 +116,12 @@ describe("the page shell", () => {
     expect(html).toContain('data-testid="controls-loading"');
   });
 
-  it("no wheel: Pick your wheel, with quick picks, every template and Build my own", () => {
+  it("no wheel: Pick your wheel, brands first (any wheel, not one maker's), search every template and Build my own", () => {
     const t = honest(render(NoWheelCard, { catalog: cfix.catalog(), onPick: noop, onChange: noop, onBuild: noop }));
     expect(t).toContain("Pick your wheel");
-    expect(t).toContain("Fanatec");
-    expect(t).toContain("All 23 wheels");
+    for (const b of ["Fanatec", "Logitech", "Thrustmaster", "MOZA", "Simagic", "Other"]) expect(t).toContain(b);
+    expect(t).not.toContain("GT DD Pro"); // no one wheel is offered as if it were yours
+    expect(t).toContain("Search all 23 wheels");
     expect(t).toContain("Build my own");
   });
 });
@@ -133,7 +134,7 @@ describe("Layout", () => {
     const html = render(LayoutView, { v, a: actions });
     const t = honest(html);
     expect(html).toMatch(/data-testid="save-state"[^>]*>Not saved yet</);
-    expect(t).toContain("Everyone on this console user");
+    expect(t).toContain("Everyone on this PS5 profile");
     expect(t).toContain("Only James");
     expect(t).toContain("Brake bias +");
     expect(t).toContain("F1 25: Brake Bias Increase");
@@ -141,7 +142,7 @@ describe("Layout", () => {
     expect(t).toContain("Can't change while driving in F1 25");
     expect(t).toContain("In F1 25, traction control and ABS are assists you set in the menu, not while driving.");
     expect(t).toContain("Not in F1 25");
-    expect(t).toContain("No free control: use the MFD");
+    expect(t).toContain("Not on your wheel");
     expect(t).toContain("No free control left for Differential. Use the MFD.");
     expect(t).toContain("Kept for driving");
     expect(t).toContain("Same button as Pit limiter.");
@@ -161,7 +162,7 @@ describe("Layout", () => {
     expect(v.dirty).toBe(false);
     const html = render(LayoutView, { v, a: actions });
     const t = honest(html);
-    expect(t).toContain("Saved for everyone on this console user");
+    expect(t).toContain("Saved for everyone on this PS5 profile");
     expect(t).toContain("UDP Action 3 on Circle");
     expect(t).toMatch(/Seen by Pitwall \d+ Oct/);
     expect(html).toContain('href="/api/controls/layouts/l_9f8e7d6c/card.html?driver_id=1"');
@@ -295,8 +296,8 @@ describe("Test", () => {
     expect(t).toContain("Skipped");
     expect(t).toContain("We saw Circle or B, not UDP Action 3");
     expect(html).toContain('data-testid="test-finished"');
-    expect(t).toContain("Test finished: 2 of 5 seen by Pitwall.");
-    expect(t).toContain("Seen by Pitwall is not validated: the validation kit's live run is.");
+    expect(t).toContain("Test finished: 2 seen · 1 something else seen · 1 not seen · 1 skipped.");
+    expect(t).toContain("To count it as proof, run Setup › Validation › Wheel buttons with F1 25 on the console.");
   });
 
   it("a stream sent from this computer: the run shows, says it isn't saved, and the finish says nothing was saved", () => {
@@ -424,7 +425,7 @@ describe("an isolated server's answers render (pitwall serve on 127.0.0.1, no ga
     expect(v.layout?.id).toBe(state.layouts[0]!.id);
     expect(v.dirty).toBe(false);
     const t = honest(render(LayoutView, { v, a: actions }));
-    expect(t).toContain("Saved for everyone on this console user");
+    expect(t).toContain("Saved for everyone on this PS5 profile");
     const { stepControl } = await import("../../../lib/setup/controls");
     for (const s of cfix.isolated.guide().steps) expect(stepControl(s, v.rows), s.label).not.toBeNull();
     const run = honest(render(TestRun, { v, test: cfix.isolated.testWaiting(), onSkip: noop, onStop: noop, onAgain: noop, busy: false }));

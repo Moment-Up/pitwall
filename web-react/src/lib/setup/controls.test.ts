@@ -183,7 +183,7 @@ describe("layouts and push-to-talk", () => {
     s.layouts.push(sam);
     s.drivers["2"]!.layouts["f1_25:ps5"] = "l_sam";
     expect(pttConflict(s, "f1_25", "ps5", new Map([[2, "Sam"]]))).toBe(
-      "The shared layout uses UDP Action 3 for Talk to Pitwall and Sam's uses UDP Action 1. The game keeps one set of buttons per console user, so one of them won't work.",
+      "The shared layout uses UDP Action 3 for Talk to Pitwall and Sam's uses UDP Action 1. The game keeps one set of buttons per PS5 profile, so one of them won't work.",
     );
   });
 
@@ -504,10 +504,22 @@ describe("Map it", () => {
 });
 
 describe("test words, copy text and the wheel editor", () => {
-  it("presses in words; replayed and synthetic presses are tagged", () => {
+  it("presses in words; replayed, synthetic and this computer's presses are tagged; the stick noise can be hidden", async () => {
+    const { bitName, isNoise, originTag, testSummary, testItemChip } = await import("./controls");
     const [down, up] = cfix.testRunning().feed;
-    expect(pressText(down!)).toBe("UDP Action 3 down");
-    expect(pressText(up!)).toBe("UDP Action 3 up");
+    expect(pressText(down!)).toBe("UDP Action 3: pressed");
+    expect(pressText(up!)).toBe("UDP Action 3: released");
+    const p = { pressed: ["Cross or A", "Right Stick Up"], released: ["Right Stick Down"], origin: "live" };
+    expect(pressText(p, "ps5", false)).toBe("Cross: pressed");
+    expect(pressText(p, "xbox")).toBe("A: pressed · Right Stick Up: pressed · Right Stick Down: released");
+    expect(bitName("Options or Menu", "pc")).toBe("Options or Menu");
+    expect(isNoise({ pressed: ["Right Stick Up"], released: ["Right Stick Down"] })).toBe(true);
+    expect(isNoise(p)).toBe(false);
+    expect(originTag("loopback")).toBe("THIS COMPUTER");
+    const items = [{ state: "detected" }, { state: "timeout" }, { state: "skipped" }, { state: "skipped" }] as Parameters<typeof testSummary>[0]["items"];
+    expect(testSummary({ items })).toBe("1 seen · 1 not seen · 2 skipped");
+    expect(testItemChip({ state: "detected", saved: false }, false).label).toBe("Seen here (not saved)");
+    expect(testItemChip({ state: "detected", saved: true }, true).label).toBe("Seen by Pitwall");
   });
 
   it("copy text: header, research-only line, rows with the game's names, the lists", () => {
@@ -518,7 +530,7 @@ describe("test words, copy text and the wheel editor", () => {
     expect(t).toContain("  Talk to Pitwall: Circle (UDP Action 1)  [F1 25: UDP Action 1]");
     expect(t).toContain("  Brake bias +: R2  [F1 25: Brake Bias Increase]");
     expect(t).toContain("Can't change while driving in F1 25:");
-    expect(t).toContain("No free control: use the MFD:");
+    expect(t).toContain("Not on your wheel:");
     expect(t).not.toMatch(/\bundefined\b|\bnull\b|NaN/);
     const g = cfix.recGt7();
     expect(layoutText({ header: "x", rows: [], rec: g, game: "GT7", saved: true })).toContain("Talk to Pitwall: GT7 doesn't send wheel button presses");
@@ -542,14 +554,22 @@ describe("Identify", () => {
     expect(bitToPad("L2 or LT", "xbox")).toBe("lt");
     expect(bitToPad("UDP Action 3", "ps5")).toBeNull();
     expect(bitToPad("Cross or A", "pc")).toBeNull();
-    const live = [{ pressed: ["L1 or LB"], origin: "live", t_unix: 10 }];
+    // the same pad button on its own twice, live from the console; the Right Stick noise in between is ignored
+    const live = [
+      { pressed: ["L1 or LB"], origin: "live", t_unix: 9 },
+      { pressed: ["Right Stick Up"], origin: "live", t_unix: 9.5 },
+      { pressed: ["L1 or LB"], origin: "live", t_unix: 10 },
+    ];
     expect(identifiedSignal(live, "ps5")).toEqual({
       bits: ["L1 or LB"],
       signal: { kind: "pad", value: "l1", evidence: "seen", source_ids: [], seen: { t_unix: 10, bits: ["L1 or LB"], game: "f1_25", platform: "ps5" } },
     });
-    expect(identifiedSignal([{ pressed: ["L1 or LB"], origin: "replay", t_unix: 10 }], "ps5")).toBeNull();
+    expect(identifiedSignal(live.slice(0, 1), "ps5")).toBeNull(); // once is not enough (backing out of a menu)
+    expect(identifiedSignal(live.map((p) => ({ ...p, origin: "replay" })), "ps5")).toBeNull();
+    expect(identifiedSignal(live.map((p) => ({ ...p, local: true })), "ps5")).toBeNull(); // pitwall send on this computer
     expect(identifiedSignal([...live, { pressed: ["R1 or RB"], origin: "live", t_unix: 11 }], "ps5")).toBeNull(); // two controls
-    expect(identifiedSignal([{ pressed: ["UDP Action 3"], origin: "live", t_unix: 10 }], "ps5")).toBeNull();
+    expect(identifiedSignal([{ pressed: ["Cross or A", "Circle or B"], origin: "live", t_unix: 8 }, ...live.slice(2)], "ps5")).toBeNull();
+    expect(identifiedSignal([{ pressed: ["UDP Action 3"], origin: "live", t_unix: 10 }, { pressed: ["UDP Action 3"], origin: "live", t_unix: 11 }], "ps5")).toBeNull();
   });
 });
 
@@ -569,12 +589,14 @@ describe("refinements from the visual check", () => {
   });
 
   it("reserved markers say what they are kept for in a word", async () => {
-    const { reservedShort } = await import("./controls");
+    const { reservedShort, markerLabel } = await import("./controls");
     const by = (id: string) => jamesWheel().controls.find((c) => c.id === id)!;
     expect(reservedShort(by("paddle_left"))).toBe("Gear");
     expect(reservedShort(by("tuning"))).toBe("Menu");
     expect(reservedShort(by("ps"))).toBe("PS");
-    expect(reservedShort(by("hub_left"))).toBe("Console");
+    expect(reservedShort(by("hub_left"))).toBe(markerLabel(by("hub_left").label)); // its own name, not "Console" twice
+    expect(markerLabel("Yellow-ring stick")).toBe("YEL");
+    expect(markerLabel("Blue stick")).toBe("BLU");
   });
 
   it("the drawing stops above empty trays, and keeps them when something is in one", async () => {
@@ -624,5 +646,58 @@ describe("the list: one row per function", () => {
     expect(bb.label).toBe("Brake bias");
     expect(bb.rows.map(actionWhere)).toEqual(["+ R2", "\u2212 L2"]);
     expect(groups.find((g) => g.function === "mfd")!.rows.map(actionWhere)).toEqual(["Menu stick up", "Menu stick down", "Menu stick left", "Menu stick right"]);
+  });
+});
+
+describe("review fixes: any wheel, the game's own words, honest warnings", () => {
+  it("the game's name for one action, its bracketed note on a second line, no research tokens", async () => {
+    const { nativeFor, splitName, stripTokens } = await import("./controls");
+    expect(splitName("Activate/Deactivate DRS/S Mode (2026 cars: Active Aero)")).toEqual({ name: "Activate/Deactivate DRS/S Mode", note: "2026 cars: Active Aero" });
+    expect(splitName("Pit Limiter")).toEqual({ name: "Pit Limiter", note: null });
+    const mfd = f1.functions.find((x) => x.function === "mfd")!;
+    expect(nativeFor(mfd, "down").name).toBe("MFD Menu Down"); // not "MFD + MFD Menu Up/Down/Left/Right; panel shortcuts (...)"
+    expect(nativeFor({ ...mfd, native_found: false }, "down")).toEqual({ name: "", note: null }); // RaceRoom: no name claimed
+    const bb = f1.functions.find((x) => x.function === "brake_bias")!;
+    expect(nativeFor(bb, "inc")).toEqual({ name: "Brake Bias Increase", note: null }); // "(MFD shortcut)" is the step's group
+    expect(stripTokens("the exact screen names are not re-checked [U]")).toBe("the exact screen names are not re-checked");
+  });
+
+  it("warnings that differ only by their control are said once, in the plural, above the list", async () => {
+    const { commonWarnings, ownWarnings, signalWarnings, warningFamily } = await import("./controls");
+    const unknown = { kind: "unknown" as const, value: null, evidence: "U" as const, source_ids: [] };
+    const [a] = signalWarnings(unknown, "F1 25", "Cross", "pc");
+    const [b] = signalWarnings(unknown, "F1 25", "Circle", "pc");
+    expect(a).toBe("What Cross sends on PC isn't known: check it in the game.");
+    expect(signalWarnings(unknown, "F1 25", "Menu stick", "ps5", "push")[0]).toBe("What Menu stick sends when pushed in on PlayStation isn't known: check it in the game.");
+    expect(warningFamily(a!)).toBe(warningFamily(b!));
+    const rows = [{ warnings: [a!] }, { warnings: [b!] }, { warnings: [a!] }];
+    const common = commonWarnings(rows);
+    expect(common).toEqual(["What these controls send on PC isn't known: check each one in the game."]);
+    expect(ownWarnings({ warnings: [a!], reason: "" }, common)).toEqual([]);
+  });
+
+  it("the game's own defaults are not steps of Map it, and are said once", () => {
+    const rec = cfix.recF1Advanced();
+    const rows = rowsFor(plainAssignments(rec), rec).map((r) => (r.function === "drs_aero" ? { ...r, origin: "game_default" as const } : r));
+    expect(rows.some((r) => r.function === "drs_aero" && r.control_id)).toBe(true);
+    const g = draftGuide(rows, f1);
+    expect(g.steps.some((s) => s.label.startsWith("DRS"))).toBe(false);
+    expect(g.steps.length).toBe(rows.filter((r) => r.control_id && !r.fixed && r.function !== "drs_aero").length);
+    expect(g.intro).toContain("Already set by F1 25 for this wheel (its own defaults): DRS / active aero. Nothing to change there.");
+  });
+
+  it("the wheel picker: plain names, what the research knows, PC-only marks, search", async () => {
+    const { templateKnows } = await import("./controls");
+    const { notFor, matchesWheel } = await import("../../pages/setup/controls/ChoiceSheet");
+    expect(templateKnows({ completeness: "full", controls_total: 17, controls_placed: 2 })).toBe("Buttons and signals known, positions not");
+    expect(templateKnows({ completeness: "full", controls_total: 19, controls_placed: 19 })).toBe("Buttons and signals known, positions too");
+    expect(templateKnows({ completeness: "counts" })).toBe("Only how many controls");
+    expect(notFor({ signal_platforms: ["pc"] }, "ps5")).toBe("PC only");
+    expect(notFor({ signal_platforms: ["ps", "pc"] }, "ps5")).toBeNull();
+    expect(notFor({}, "ps5")).toBeNull();
+    const t = { brand: "Thrustmaster", name: "T248 (PS5/PS4/PC) and T248X (Xbox/PC) - Thrustmaster's 'hybrid' wheel family [A]", display_name: "T248 / T248X" };
+    expect(matchesWheel(t, "t248")).toBe(true);
+    expect(matchesWheel(t, "thrustmaster t248x")).toBe(true);
+    expect(matchesWheel(t, "g923")).toBe(false);
   });
 });

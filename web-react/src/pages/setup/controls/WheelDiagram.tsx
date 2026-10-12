@@ -39,6 +39,9 @@ function fill(m: Marker, hi: boolean): { box: string; text: string; stroke: stri
   }
 }
 
+/** How far (diagram units) a marker's tap area reaches beyond it. */
+const HIT = 8;
+
 export function WheelDiagram({ wheel, rows, reserved, catalog, highlight = null, onMarker, showZones = false, className = "", label }: WheelDiagramProps) {
   const geometry = diagramFor(catalog, wheel.shape);
   const { markers } = useMemo(() => layoutMarkers({ wheel, rows, reserved, geometry, catalog }), [wheel, rows, reserved, geometry, catalog]);
@@ -56,6 +59,26 @@ export function WheelDiagram({ wheel, rows, reserved, catalog, highlight = null,
           ? Object.entries(geometry.zones).map(([id, z]) => (
               <rect key={id} x={z.x} y={z.y} width={z.w} height={z.h} rx={6} fill="none" stroke="var(--separator)" strokeDasharray="2 3" />
             ))
+          : null}
+        {/* Bigger, invisible tap areas under the markers (a marker is drawn small; a finger is not). Drawn first, so a
+            tap on a marker itself always reaches that marker. */}
+        {onMarker
+          ? markers
+              .filter((m) => m.control_id)
+              .map((m) => (
+                <rect
+                  key={`hit-${m.id}`}
+                  x={m.x - HIT}
+                  y={m.y - HIT}
+                  width={m.w + 2 * HIT}
+                  height={m.h + 2 * HIT}
+                  fill="transparent"
+                  pointerEvents="all"
+                  data-hit={m.control_id ?? undefined}
+                  onClick={() => onMarker(m.control_id!)}
+                  style={{ cursor: "pointer" }}
+                />
+              ))
           : null}
         {markers.map((m) => {
           const hi = highlight !== null && m.control_id === highlight;

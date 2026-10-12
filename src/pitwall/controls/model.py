@@ -42,7 +42,7 @@ PlatformId = Literal["ps5", "ps4", "xbox", "pc"]
 SignalPlatform = Literal["ps", "xbox", "pc"]
 Evidence = Literal["V", "A", "U", "D", "H", "seen"]
 Preset = Literal["beginner", "advanced"]
-Origin = Literal["recommended", "driver", "game_fixed", "kept"]
+Origin = Literal["recommended", "driver", "game_fixed", "kept", "game_default"]
 CheckResult = Literal["detected", "effect_seen", "other_bits", "not_seen"]
 
 PLATFORMS: tuple[str, ...] = get_args(PlatformId)
@@ -116,6 +116,7 @@ MAX_NAME = 40
 MAX_LABEL = 32
 MAX_NOTE = 200
 MAX_POSITIONS = 24
+MAX_DETAIL = 120  # a stored test result's detail
 UDP_ACTIONS = range(1, 13)
 
 
@@ -199,6 +200,12 @@ def _int(v: object, path: str, lo: int, hi: int) -> int:
     if isinstance(v, bool) or not isinstance(v, int) or not lo <= v <= hi:
         raise _err(path, f"expected a whole number from {lo} to {hi}")
     return v
+
+
+def clip(text: str, max_len: int = MAX_DETAIL) -> str:
+    """At most ``max_len`` characters, ending in "…" when cut (a stored detail must never be dropped for length)."""
+    text = text.strip()
+    return text if len(text) <= max_len else text[: max_len - 1].rstrip() + "…"
 
 
 def _num(v: object, default: float = 0.0) -> float:
@@ -532,7 +539,8 @@ class Assignment:
 _KEY = re.compile(r"^([a-z0-9_]{1,32})\.([a-z0-9_]{1,16})$")
 
 
-def parse_assignment(raw: object, path: str) -> Assignment:
+def parse_assignment(raw: object, path: str, *, lenient: bool = False) -> Assignment:
+    """Strict for API input; ``lenient`` (stored data) shortens an over-long test detail instead of failing."""
     d = _obj(raw, path)
     function = d.get("function")
     action = d.get("action")
@@ -555,10 +563,13 @@ def parse_assignment(raw: object, path: str) -> Assignment:
     check = None
     if d.get("check") is not None:
         c = _obj(d["check"], f"{path}.check")
+        detail_raw = c.get("detail") or ""
+        if lenient and isinstance(detail_raw, str):
+            detail_raw = clip(detail_raw)
         check = Check(
             cast(CheckResult, _choice(c.get("result"), CHECK_RESULTS, f"{path}.check.result")),
             _num(c.get("t_unix")),
-            _text(c.get("detail") or "", f"{path}.check.detail", 120, allow_empty=True),
+            _text(detail_raw, f"{path}.check.detail", MAX_DETAIL, allow_empty=True),
             "live",
         )
     return Assignment(key, function, action, cid, slot, udp, origin, check)
@@ -657,8 +668,11 @@ def parse_layout(raw: object, path: str = "layout") -> Layout:
 
 
 def check_layout_against_wheel(layout: Layout, wheel: WheelDef) -> None:
-    """Every control id and slot of the layout exists on its wheel (strict; 422)."""
+    """Every control id and slot of the layout exists on its wheel (strict; 422). A slot must be one the control has
+    now (``WheelControl.slots``: a push only when the control has one, rotary positions in their modes)."""
     for a in layout.assignments:
+        if a.udp_action is not None and layout.game != "f1_25":
+            raise ControlsValidationError(f"{a.key}: UDP Actions exist only in F1 25")
         if a.control_id is None:
             if a.slot is not None:
                 raise ControlsValidationError(f"{a.key}: a slot needs a control")
@@ -666,10 +680,8 @@ def check_layout_against_wheel(layout: Layout, wheel: WheelDef) -> None:
         c = wheel.control(a.control_id)
         if c is None:
             raise ControlsValidationError(f"{a.key}: {wheel.name} has no control {a.control_id!r}")
-        if a.slot is not None and not valid_slot(c.kind, a.slot, c.positions):
+        if a.slot is not None and a.slot not in c.slots():
             raise ControlsValidationError(f"{a.key}: {a.slot!r} is not a slot of {c.label}")
-        if a.udp_action is not None and layout.game != "f1_25":
-            raise ControlsValidationError(f"{a.key}: UDP Actions exist only in F1 25")
 
 
 # ---------------------------------------------------------------------------------------------- per-driver choices
@@ -872,13 +884,13 @@ def _lenient_layout(raw: object, path: str) -> Layout | None:
         if isinstance(asg, list):
             for i, a in enumerate(asg[:MAX_ASSIGNMENTS]):
                 try:
-                    pa = parse_assignment(a, f"{path}.assignments[{i}]")
+                    pa = parse_assignment(a, f"{path}.assignments[{i}]", lenient=True)
                 except ControlsValidationError as e:
                     log.warning("controls: skipping a stored assignment (%s)", e)
                     continue
                 if pa.key not in keys:
                     keys.add(pa.key)
-                    good.append(a)
+                    good.append(pa.to_dict())
         d["assignments"] = good
         return parse_layout(d, path)
     except ControlsValidationError as e:

@@ -11,9 +11,12 @@ Research-only guidance: nothing here is validated on your rig until you run the 
 - **Map it**: step-by-step cards for the game's own controls screen, in the game's menu order, with the game's own
   name for each action next to Pitwall's plain label.
 - **Test** (F1 25 only): press each mapped UDP Action button; Pitwall shows what F1 25 reports. **Identify** shows what
-  any control sends.
+  any control sends. "Try again" retests one item.
 - **My wheel**: start from one of 23 researched templates (or from scratch), place controls on a 14-zone grid, and
-  say what each one sends where you know it.
+  say what each one sends where you know it. Most templates have the maker's button table but no positions: the
+  Layout asks you to place them first ("Place them one by one", then "Next unplaced") instead of drawing an empty
+  ring. With no wheel saved and no rim in the rig profile, the page asks "Pick your wheel" (brands first, a search,
+  "Build my own"); it never assumes the owner's own wheel or console.
 - **Printable card** (`card.html`, A4 landscape) and plain text for sharing.
 - The **radio** follows the seated driver's F1 25 layout for push-to-talk, without a restart, and answers "which
   button is brake bias?" from the saved layout.
@@ -43,8 +46,15 @@ Everything is deterministic (no LLM). Pitwall suggests where things go, never th
 | H | Your entry | what you entered |
 | seen | Seen by Pitwall | observed by the F1 25 button test on your rig |
 
-An assignment's evidence is the weakest of the game's row and the wheel's signal. The app never says "validated":
-only the owner's live run in the validation kit (`wheel_buttons`) is evidence for `docs/status.md`.
+An assignment's evidence is the weakest of the game's row and the wheel's signal, and at most Community (U) when the
+game row itself is unverified (RaceRoom's brake bias, TC, ABS, ESP and engine map, iRacing's wings, AMS2's stability
+toggle): those rows carry "Unverified in {game}: check the game's controls list for it", and where the research found
+no binding name (RaceRoom) no name of the game's is printed. The app never says "validated": only the owner's live run
+in the validation kit (`wheel_buttons`) is evidence for `docs/status.md`.
+
+Evidence is never taken from the dashboard: a signal you type or change is H; an unchanged one keeps its stored or
+template letter; "Seen by Pitwall" is stored only when the probe saw that pad button pressed from F1 25 live, sent by
+a console or another PC, in the last two minutes (the press it saw is kept, not the dashboard's).
 
 ## What Pitwall sees, per game
 
@@ -61,8 +71,10 @@ Outside F1 25, Pitwall push-to-talk is the iPad's talk button, or Space on a key
 
 - **Ride height**: in no researched game (F1 25 and GT7 show it only in the setup; iRacing's weight jacker on some
   oval cars is the nearest thing).
-- **Aero**: wing angles are a setup item everywhere. F1 25 2026 cars switch Active Aero to Straight Line Mode on the
-  DRS/S Mode button, inside the zones only; other games have DRS or a rear flap on cars that have it.
+- **Aero**: in most researched games wing angles are a setup item. iRacing lists front and rear wing buttons for cars
+  that have them (community, unverified). F1 25 2026 cars switch Active Aero to Straight Line Mode on the DRS/S Mode
+  button, inside the zones only; other games have DRS or a rear flap on cars that have it. In GT7, DRS is the
+  Overtake button (unverified which cars), so it is placed on Overtake's control, never on a second one.
 - **GT7 stability (ASM) and ABS**: pause menu only (Assistance Settings), not on a button. TCS changes on the MFD.
 - **F1 25 traction control and ABS**: assists set in the menu.
 
@@ -81,12 +93,22 @@ sentences.
    MFD's. Game-specific signals are used last, with a warning; folded signals score lower and only one control per
    fold group is used; unknown signals say "check it in the game". GT DD Pro's coloured sticks are used only in GT7
    (community sources say other games can't read them; Identify can check that in F1 25).
-5. Fixed by the game first (GT7 sets the GT DD Pro's coloured sticks itself), then what the driver keeps.
+5. Fixed by the game first (GT7 sets the GT DD Pro's coloured sticks itself; which colour does what is
+   community-reported, and every answer, card and step says so), then what the driver keeps, then the game's own
+   published defaults for the wheel (F1 25 on the Logitech G923: EA's list, origin `game_default`, "Already set by
+   F1 25"; Dial Right / Left read as clockwise / anticlockwise [A]). Map it skips those, and the "preset may already
+   use these buttons" warning is dropped for that wheel.
 6. Talk to Pitwall (F1 25): a plain button whose signal is its own, thumb first, never an encoder, rotary switch,
    funky turn, gear paddle or folded signal.
 7. The rest by priority: `suitability + 2 x reach x frequency + signal penalty`; ties break on the wheel's control
    order. F1 25's pit limiter shares the DRS button (the game's own default) only when no button is left.
-8. What doesn't fit: "No free control left for {fn}. Use the MFD." where the game's MFD holds it.
+8. What doesn't fit: "No free control left for {fn}. Use the MFD." where the game's MFD holds it (listed under "Not on
+   your wheel"; the assign sheet can swap a function with a control in use).
+
+The layout API refuses what the game can't do: a function the game keeps in a menu or on its MFD pages on a button
+(unless the game fixes it on that wheel), an action the game doesn't have, a UDP Action on anything but Talk to Pitwall
+in F1 25, and GT7's DRS away from the Overtake button. A wheel edit that would leave a layout with a slot the control no
+longer has (a stick turned into a button) is refused with a 409 naming the layout.
 
 ## Storage
 
@@ -94,21 +116,27 @@ The SettingsStore section `"controls"` in `data/settings.json` (schema 1; no SQL
 controls each), layouts (at most 32, 48 assignments each), the household's and each driver's choices. A missing
 section means defaults; nothing is written until the first save. Every wheel and layout has a `rev`: a save with an
 older `rev` gets a 409, so two iPads can't overwrite each other. A bad stored item is skipped and logged, never
-hiding the rest. Bindings live per console user: drivers who share one should share a layout ("Everyone on this
-console user", the default owner).
+hiding the rest; a test result longer than its limit (120 characters) is shortened on reading, never dropped with its
+assignment. Bindings live per console profile (or PC user): drivers who share one should share a layout ("Everyone on
+this PS5 profile", the default owner).
 
 ## How to test (F1 25)
 
 1. Save a layout in Setup › Controls (keep your existing UDP Action button with "I already have this on a button").
-2. Map the rest in F1 25 with Map it (Controls > your wheel's preset; groups Control Scheme, MFD Shortcuts, UDP Custom
-   Actions). F1 25 may drop or swap an action that was already on a button: check its list after each change.
-3. Back out to the garage or a menu (whether F1 25 sends presses while its controls screen is open is unknown), open
-   Test and press each mapped button; change brake bias and ERS mode once. Wheel push-to-talk is paused while a test
-   runs. An item's 60 seconds start only while F1 25 is live. Replays and generated streams show in the feed,
-   labelled, and never count. A stream sent from this computer (`pitwall send`, a loopback replay, or F1 25 running
-   on the same PC as Pitwall) runs the test and shows what it sees, but nothing is saved: the page says "Shown here,
-   not saved", as the validation kit does for loopback streams.
-4. Identify: tap a control, press it, and save what F1 25 reported as its PlayStation (or Xbox, PC) signal.
+2. Map the rest in F1 25 with Map it (Controls, then the entry for your wheel [A: from EA's controls hub; the console
+   screen names are not checked]; groups Control Scheme, MFD Shortcuts, UDP Custom Actions). F1 25 may drop or swap an
+   action that was already on a button: check its list after each change.
+3. Open Test and press each mapped button; button presses work from F1 25's menus (the recorded captures show them).
+   For brake bias and ERS mode, sit in the garage or drive: their starting value comes from a fresh car frame (a held
+   frame from earlier driving is never used), and Pitwall assumes "+" raises the value and "−" lowers it (from the
+   action names [D], unverified): a change the other way, or a + and − that moved it the same way, is shown as "may be
+   swapped" and not saved. Wheel push-to-talk is paused while a test runs. An item's 60 seconds start only while F1 25
+   is live. Replays and generated streams show in the feed, labelled, and never count. A press sent from this computer
+   (`pitwall send`, a loopback replay, or F1 25 running on the same PC as Pitwall) is tagged "This computer": the test
+   shows it but saves nothing ("Seen here (not saved)"), as the validation kit does for loopback streams. The Right
+   Stick noise is hidden unless "Show stick noise" is on.
+4. Identify: pick a control, tap Listen now, press it on its own twice, and save what F1 25 reported as its PlayStation
+   (or Xbox) signal. Presses before Listen now, from this computer or a replay, and the stick noise never count.
 5. For evidence, run the validation kit's `wheel_buttons` item (Setup › Validation): it passes when every UDP Action
    in the seated driver's F1 25 layout reached Pitwall live during the run.
 

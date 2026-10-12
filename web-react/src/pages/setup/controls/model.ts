@@ -78,7 +78,7 @@ export function buildView(i: BuildInputs): ControlsView {
   const saved = forWheel?.layout.assignments ?? null;
   const assignments = i.draft ?? saved ?? plainAssignments(i.rec);
   const rows = layoutRows({ assignments, rec: i.rec, catalog: i.catalog, game, wheel: i.wheel, platform: i.choice.platform });
-  const gameLabel = gameName(game, i.choice.gameName);
+  const gameLabel = game?.platform_labels?.[i.choice.platform] ?? gameName(game, i.choice.gameName);
   return {
     catalog: i.catalog,
     state: i.state,

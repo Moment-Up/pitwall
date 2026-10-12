@@ -212,6 +212,11 @@
     {"question": "Button for the pit limiter?", "intent": "controls_where", "corner": null, "from": "controls"},
     {"question": "Which button is push to talk?", "intent": "controls_where", "corner": null, "from": "controls"},
     {"question": "Where's the ERS mode on my wheel?", "intent": "controls_where", "corner": null, "from": "controls"},
-    {"question": "What brake bias should I run?", "intent": "setup", "corner": null, "from": "controls"}
+    {"question": "What brake bias should I run?", "intent": "setup", "corner": null, "from": "controls"},
+    {"question": "What sticks out from my last lap?", "intent": "last_lap", "corner": null, "from": "controls"},
+    {"question": "Which paddles do I use for downshifts in turn 3?", "intent": "corner", "corner": "T3", "from": "controls"},
+    {"question": "What switch point for turn 1?", "intent": "corner", "corner": "T1", "from": "controls"},
+    {"question": "Which toggles matter most?", "intent": "general", "corner": null, "from": "controls"},
+    {"question": "What rotary is the ABS on?", "intent": "controls_where", "corner": null, "from": "controls"}
   ]
 }

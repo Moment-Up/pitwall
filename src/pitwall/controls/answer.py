@@ -17,7 +17,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from pitwall.adapters.f1.enums import ERS_DEPLOY_MODE
-from pitwall.controls.catalog import PTT_FUNCTION, Catalog, GameDef
+from pitwall.controls.catalog import PTT_FUNCTION, Catalog, GameDef, in_sentence
 from pitwall.controls.model import Assignment, ControlsState, WheelDef
 from pitwall.controls.recommend import DIRECTION_WORDS
 
@@ -103,10 +103,10 @@ def answer(
         if row.not_possible:
             return _trim(cat.not_possible[row.not_possible].replace("{game}", game.label))
         if row.in_race == "pause_menu" or row.binding == "menu":
-            return _trim(f"In {game.label}, {label.lower()} is a menu setting. It can't go on a button.")
-        return _trim(f"In {game.label}, {label.lower()} is set before the race, not while driving.")
+            return _trim(f"In {game.label}, {in_sentence(label)} is a menu setting. It can't go on a button.")
+        return _trim(f"In {game.label}, {in_sentence(label)} is set before the race, not while driving.")
     if row is None and fn != PTT_FUNCTION:
-        return _trim(f"{game.label} has no {label.lower()} control in Pitwall's research.")
+        return _trim(f"{game.label} has no {in_sentence(label)} control in Pitwall's research.")
     layout = None
     if platform is not None:
         layout = state.layout_for(driver_id, game.id, platform)
@@ -117,6 +117,8 @@ def answer(
     wheel = state.wheel(layout.wheel_id)
     mine = [a for a in layout.assignments if a.function == fn]
     if not mine:
+        if row is not None and row.binding == "mfd":  # GT7 TC / brake balance / fuel map, ACC engine map
+            return _trim(f"{label} isn't on your wheel: in {game.label} you change it on the MFD.")
         tail = " Use the MFD." if row is not None and row.menu_group == "MFD Shortcuts" else ""
         return _trim(f"{label} isn't on your wheel in your {game.label} layout.{tail}")
     by_action: Mapping[str, Assignment] = {a.action: a for a in mine}
@@ -126,13 +128,15 @@ def answer(
         text = f"Talk to me with {_where(wheel, a)}{n}."
     elif "inc" in by_action and "dec" in by_action:
         text = (
-            f"In your layout, {label.lower()} + is {_where(wheel, by_action['inc'])} "
+            f"In your layout, {in_sentence(label)} + is {_where(wheel, by_action['inc'])} "
             f"and − is {_where(wheel, by_action['dec'])}."
         )
     elif mine[0].origin == "game_fixed":
-        text = f"{label} is on {_where(wheel, mine[0])}: {game.label} sets it itself."
+        fx = cat.fixed_for(game.id, wheel.template if wheel is not None else None, fn)
+        community = " (community-reported)" if fx is None or fx.evidence != "V" else ""
+        text = f"{label} is on {_where(wheel, mine[0])}{community}: {game.label} sets it itself."
     else:
-        text = f"In your layout, {label.lower()} is {_where(wheel, mine[0])}."
+        text = f"In your layout, {in_sentence(label)} is {_where(wheel, mine[0])}."
     if live is not None:
         if fn == "brake_bias" and live.brake_bias_front_pct is not None:
             text += f" It's {live.brake_bias_front_pct:g} percent front now."

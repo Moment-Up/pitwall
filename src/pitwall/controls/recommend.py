@@ -31,7 +31,16 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from typing import Any
 
-from pitwall.controls.catalog import MFD_FUNCTION, PTT_FUNCTION, Catalog, GameDef, GameFunction, weakest
+from pitwall.controls.catalog import (
+    MFD_FUNCTION,
+    PTT_FUNCTION,
+    Catalog,
+    GameDef,
+    GameFunction,
+    in_sentence,
+    native_parts,
+    weakest,
+)
 from pitwall.controls.model import (
     Assignment,
     Origin,
@@ -100,6 +109,8 @@ class RecommendedAssignment:
     conditions: tuple[str, ...]
     warnings: tuple[str, ...]
     pitwall_sees: str | None
+    in_race: str | None = None  # the game row's (after the platform note): "unverified" rows are capped at U
+    native_note: str | None = None  # the bracketed part of the game's name ("2026 cars: ...")
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -116,6 +127,8 @@ class RecommendedAssignment:
             "conditions": list(self.conditions),
             "warnings": list(self.warnings),
             "pitwall_sees": self.pitwall_sees,
+            "in_race": self.in_race,  # additive
+            "native_note": self.native_note,  # additive
         }
 
 
@@ -249,6 +262,16 @@ def needs_of(fn: str, row: GameFunction | None, cat: Catalog, prio: tuple[float,
     return out
 
 
+def allowed_actions(cat: Catalog, fn: str, row: GameFunction | None) -> frozenset[str]:
+    """The actions a layout may bind for a function in a game (the row's, else the taxonomy shape's), as the
+    recommendation places them."""
+    if fn == PTT_FUNCTION:
+        return frozenset({"hold"})
+    if fn not in cat.functions:
+        return frozenset()
+    return frozenset(a for need in needs_of(fn, row, cat, (0.0, 0)) for a in need.actions)
+
+
 # ---------------------------------------------------------------------------------------------- the engine
 @dataclass(slots=True)
 class _Ctx:
@@ -259,6 +282,8 @@ class _Ctx:
     platform: str
     wheel: WheelDef
     rows: dict[str, GameFunction | None]
+    candidates: dict[str, GameFunction | None] = field(default_factory=dict)
+    defaults_known: bool = False  # the game's own default buttons for this wheel are known (EA's G923 list)
     slots: list[SlotRef] = field(default_factory=list)
     used: set[tuple[str, str]] = field(default_factory=set)
     placed: list[RecommendedAssignment] = field(default_factory=list)
@@ -276,6 +301,11 @@ def _penalty(cat: Catalog, s: SlotRef) -> float:
     return float(p or 0.0)
 
 
+def _cap(text: str) -> str:
+    """A sentence that starts with a game's name the driver typed ("this game") starts with a capital."""
+    return text[:1].upper() + text[1:]
+
+
 def _fmt(template: str, **kw: Any) -> str:
     text = template.format(**kw)
     return text if len(text) <= MAX_REASON else text[: MAX_REASON - 1].rstrip() + "…"
@@ -285,19 +315,25 @@ def _signal_for(c: WheelControl, sp: str | None) -> Signal | None:
     return c.signal(sp)
 
 
-def _warnings(ctx: _Ctx, slots: Sequence[SlotRef], row: GameFunction | None) -> list[str]:
+def _warnings(
+    ctx: _Ctx, slots: Sequence[SlotRef], row: GameFunction | None, *, game_default: bool = False
+) -> list[str]:
+    """Each names its control, so a list of them still says which one is meant. The game's own default for a control
+    shows the game reads it, so a game-specific signal needs no warning there."""
     cat = ctx.cat
     out: list[str] = []
-    if ctx.game is not None:
+    if ctx.game is not None and not ctx.defaults_known:
         out.append(ctx.game.preset_warning)
     plat = {"ps": "PlayStation", "xbox": "Xbox", "pc": "PC"}.get(ctx.sp or "", ctx.platform)
     for s in slots:
+        ctl = s.control.label
         if s.game_specific:
-            out.append(cat.warnings["game_specific"].format(game=ctx.game_label))
+            if not game_default:
+                out.append(cat.warnings["game_specific"].format(game=ctx.game_label, ctl=ctl))
         elif s.folded:
-            out.append(cat.warnings["folded"])
+            out.append(cat.warnings["folded"].format(ctl=ctl))
         elif s.kind == "unknown":
-            out.append(cat.warnings["unknown"].format(platform=plat))
+            out.append(cat.warnings["unknown_push" if s.slot == "push" else "unknown"].format(platform=plat, ctl=ctl))
         if s.control.kind == "multi_position" and s.slot in ("cw", "ccw") and s.control.mps_mode != "enc":
             out.append(cat.warnings["mps_mode"])
     if row is not None and row.platform_note and ctx.platform != "pc":
@@ -314,10 +350,11 @@ def _action_label(cat: Catalog, fn: str, action: str) -> str:
     return f"{base} {DIRECTION_WORDS.get(action, action)}"
 
 
-def _native(row: GameFunction | None, fn: str, udp: int | None) -> str:
+def _native(row: GameFunction | None, fn: str, action: str, udp: int | None) -> tuple[str, str | None]:
+    """The game's own name for this one action ("Brake Bias Increase", "MFD Menu Down") and its bracketed note."""
     if fn == PTT_FUNCTION and udp is not None:
-        return f"UDP Action {udp}"
-    return row.native_name if row is not None else ""
+        return f"UDP Action {udp}", None
+    return native_parts(row, action) if row is not None else ("", None)
 
 
 def _emit(
@@ -340,7 +377,15 @@ def _emit(
     wheel_ev: str | None = sig.evidence if sig is not None else (c.evidence if c is not None else None)
     game_ev = row.evidence if row is not None else None
     evidence = weakest(game_ev, wheel_ev) if c is not None else game_ev
-    warnings = _warnings(ctx, [slot] if slot is not None else [], row) + list(extra_warnings)
+    warnings = _warnings(ctx, [slot] if slot is not None else [], row, game_default=origin == "game_default") + list(
+        extra_warnings
+    )
+    cand = ctx.candidates.get(fn, row)
+    in_race = cand.in_race if cand is not None else None
+    if in_race == "unverified" and fn != PTT_FUNCTION:
+        # the game may have no such button at all (RaceRoom: only the telemetry says the setting exists)
+        warnings.append(ctx.cat.warnings["unverified_row"].format(game=ctx.game_label))
+        evidence = weakest(evidence, "U") if evidence is not None else None
     a = Assignment(
         key=f"{fn}.{action}",
         function=fn,
@@ -352,12 +397,13 @@ def _emit(
         check=check,
     )
     sees = row.pitwall_sees if row is not None else None
+    native, native_note = _native(row, fn, action, udp)
     if fn == PTT_FUNCTION and udp is not None:
         sees = f"BUTN bit (UDP Action {udp})"
     ra = RecommendedAssignment(
         assignment=a,
         label=_action_label(ctx.cat, fn, action),
-        native=_native(row, fn, udp),
+        native=native,
         menu_group=row.menu_group if row is not None else None,
         control_label=c.label if c is not None else None,
         signal=sig,
@@ -369,6 +415,8 @@ def _emit(
         conditions=row.conditions if row is not None else (),
         warnings=tuple(dict.fromkeys(warnings)),
         pitwall_sees=sees,
+        in_race=in_race,
+        native_note=native_note,
     )
     ctx.placed.append(ra)
     ctx.placed_fns.setdefault(fn, []).append(ra)
@@ -523,6 +571,8 @@ def _single_reason(ctx: _Ctx, fn: str, shape: str, s: SlotRef) -> str:
     words = ctx.cat.freq_words.get(fdef.freq, fdef.freq)
     if shape == "hold" and reach == "thumb":
         return _fmt(r["hold:thumb"], fn=fdef.label, ctl=s.control.label)
+    if fdef.freq == "rare" and reach == "thumb":
+        return _fmt(r["single:thumb_rare"], fn=fdef.label, ctl=s.control.label)
     if fdef.freq == "rare" and reach != "thumb":
         return _fmt(r["single:far"], fn=fdef.label, ctl=s.control.label)
     if reach == "thumb":
@@ -572,17 +622,17 @@ def _row_text(cat: Catalog, game_label: str, row: GameFunction, why: str) -> str
     if row.text:
         return row.text
     if row.not_possible:
-        return cat.not_possible[row.not_possible].replace("{game}", game_label)
+        return _cap(cat.not_possible[row.not_possible].replace("{game}", game_label))
     label = cat.label(row.function)
     if why == "pause_menu":
-        return f"In {game_label}, {label.lower()} is only in the pause menu, so it can't go on a button."
+        return f"In {game_label}, {in_sentence(label)} is only in the pause menu, so it can't go on a button."
     if why == "menu":
-        return f"In {game_label}, {label.lower()} is a menu setting, so it can't go on a button."
+        return f"In {game_label}, {in_sentence(label)} is a menu setting, so it can't go on a button."
     if why == "no":
-        return f"In {game_label}, {label.lower()} is set before the race, not while driving."
+        return f"In {game_label}, {in_sentence(label)} is set before the race, not while driving."
     if row.in_race == "unverified":
-        return f"No {label.lower()} control was found for {game_label} (unverified)."
-    return f"{game_label} has no {label.lower()} control."
+        return f"No {in_sentence(label)} control was found for {game_label} (unverified)."
+    return f"{game_label} has no {in_sentence(label)} control."
 
 
 def other_rows(cat: Catalog, functions: Sequence[str]) -> dict[str, GameFunction | None]:
@@ -635,17 +685,21 @@ def recommend(
     if game is None and game_id != "other":
         raise KeyError(f"unknown game {game_id!r}")
     sp = signal_platform(platform)
-    game_label = game.label if game is not None else (game_name or "this game")
+    game_label = game.label_on(platform) if game is not None else (game_name or "this game")
     rows: dict[str, GameFunction | None] = (
         dict(game.functions) if game is not None else dict(other_rows(cat, other_functions))
     )
     ctx = _Ctx(cat, game, game_label, sp, platform, wheel, rows)
+    game_default = cat.default_for(game_id, wheel.template, platform) if game is not None else None
+    ctx.defaults_known = game_default is not None
     notes: list[str] = []
     template = cat.templates.get(wheel.template or "")
     if wheel.platforms and sp is not None and sp not in wheel.platforms:
         notes.append(f"{wheel.name} isn't listed for this console: every control is shown as unknown.")
     if game is not None and platform not in game.platforms:
         notes.append(f"{game.label} wasn't researched on this platform.")
+    if game is not None and platform in game.platform_notes:
+        notes.append(game.platform_notes[platform])
 
     # 2. partition
     not_on_wheel: list[dict[str, str]] = []
@@ -675,6 +729,7 @@ def recommend(
                 )
         else:
             candidates[fn] = replace(row, in_race=in_race) if in_race != row.in_race else row
+    ctx.candidates = candidates
     if game is not None:
         for topic in cat.owner_topics:
             if topic in rows:
@@ -684,7 +739,7 @@ def recommend(
                 if topic == "ride_height"
                 else cat.not_possible["aero"]
                 if topic == "drs_aero"
-                else f"No {cat.label(topic).lower()} control was found for {game_label} in the research."
+                else f"No {in_sentence(cat.label(topic))} control was found for {game_label} in the research."
             )
             not_in_game.append({"function": topic, "label": cat.label(topic), "text": text})
 
@@ -792,6 +847,32 @@ def recommend(
         if sref is None and wc is not None and a.slot is not None:
             ctx.used.add((wc.id, a.slot))
 
+    # 5b. the game's own published defaults for this wheel (F1 25: EA's G923 list): already set, nothing to change.
+    # Two functions the game puts on one button (DRS and pit limiter on L2) share it; a slot the driver keeps for
+    # something else wins.
+    if game_default is not None:
+        seeded: set[tuple[str, str]] = set()
+        placed_keys = {p.assignment.key for p in ctx.placed}
+        for fn, act, cid, slot_id in game_default.assignments:
+            key = (cid, slot_id)
+            if fn not in candidates or f"{fn}.{act}" in placed_keys or (key in ctx.used and key not in seeded):
+                continue
+            sref = next((s for s in slots if s.control.id == cid and s.slot == slot_id), None)
+            wc = wheel.control(cid)
+            _emit(
+                ctx,
+                fn,
+                act,
+                sref if key not in seeded else None,
+                _fmt(cat.reasons["default:game"], fn=cat.label(fn), ctl=wc.label if wc else cid, game=game_label),
+                origin="game_default",
+                control_id=cid,
+                slot_name=slot_id,
+            )
+            ctx.used.add(key)
+            seeded.add(key)
+            placed_keys.add(f"{fn}.{act}")
+
     # 6. Talk to Pitwall
     if game is not None and game.button_path == "f1_butn":
         n = ptt_kept.udp_action if ptt_kept is not None and ptt_kept.udp_action else udp_action
@@ -822,7 +903,7 @@ def recommend(
             "control_id": ptt_cid,
             "text": (
                 f"Hold {ctl_label} to talk to Pitwall: map it to UDP Action {n} in F1 25 "
-                "(Controls > your wheel's preset > UDP Custom Actions)."
+                "(Controls, then your wheel's entry, then UDP Custom Actions)."
                 if ctl_label
                 else f"Map a spare button to UDP Action {n} in F1 25 to talk to Pitwall from the wheel."
             ),
@@ -830,7 +911,7 @@ def recommend(
     else:
         pitwall_ptt = {
             "path": "screen",
-            "text": cat.not_possible["wheel_ptt_no_telemetry"].replace("{game}", game_label),
+            "text": _cap(cat.not_possible["wheel_ptt_no_telemetry"].replace("{game}", game_label)),
         }
 
     # 6b. the MFD on its D-pad (also kept for the MFD when the preset does not list it)
@@ -867,7 +948,7 @@ def recommend(
         if fn in ctx.placed_fns and fn != MFD_FUNCTION:
             continue
         row = candidates[fn]
-        if row is not None and row.binding == "mfd":
+        if row is not None and (row.binding == "mfd" or row.always_shared):
             continue
         prio = (-cat.freq_weight.get(cat.functions[fn].freq, 1.0), order[fn])
         for need in needs_of(fn, row, cat, prio):
@@ -893,6 +974,21 @@ def recommend(
             if partly and need.actions[0] == "hold":
                 label += " (hold)"
             unplaced.append({"function": need.function, "label": label, "text": _menu_text(ctx, need.function, label)})
+    for fn in wanted:  # one button for both (GT7: DRS is the Overtake button): on the host's control, or unplaced
+        row = candidates[fn]
+        if row is None or not row.always_shared or fn in ctx.placed_fns:
+            continue
+        for need in needs_of(fn, row, cat, (0.0, 0)):
+            if not _share(ctx, need):
+                other = cat.label(row.shares_with[0]) if row.shares_with else "another"
+                unplaced.append(
+                    {
+                        "function": fn,
+                        "label": cat.label(fn),
+                        "text": f"{cat.label(fn)}: {game_label} uses the {other} button for it. Place {other} first.",
+                    }
+                )
+                break
     for fn, row in candidates.items():  # changed on the MFD pages: no button of its own
         if row is not None and row.binding == "mfd" and fn not in ctx.placed_fns:
             unplaced.append(
@@ -949,11 +1045,18 @@ def _share(ctx: _Ctx, need: Need) -> bool:
         if len(placed) == 1:
             host = placed[0].assignment
             fn_label, other_label = ctx.cat.label(need.function), ctx.cat.label(other)
-            reason = (
-                ctx.cat.reasons["shared:f1_drs_pit"]
-                if ctx.game is not None and ctx.game.id == "f1_25"
-                else f"{fn_label} on the same control as {other_label}: the game shares it."
-            )
+            host_ctl = ctx.wheel.control(host.control_id)
+            if row.always_shared:
+                reason = ctx.cat.reasons["shared:same_button"].format(
+                    fn=fn_label,
+                    ctl=host_ctl.label if host_ctl is not None else "that control",
+                    game=ctx.game_label,
+                    other=other_label,
+                )
+            elif ctx.game is not None and ctx.game.id == "f1_25":
+                reason = ctx.cat.reasons["shared:f1_drs_pit"]
+            else:
+                reason = f"{fn_label} on the same control as {other_label}: the game shares it."
             _emit(
                 ctx, need.function, need.actions[0], None, _fmt(reason), control_id=host.control_id, slot_name=host.slot
             )

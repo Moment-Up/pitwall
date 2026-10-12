@@ -181,6 +181,8 @@ function ControlSheet({
   onChange,
   onRemove,
   onClose,
+  onNext,
+  left = 0,
 }: {
   control: WheelControl | null;
   wheel: WheelDef;
@@ -188,6 +190,10 @@ function ControlSheet({
   onChange: (c: WheelControl) => void;
   onRemove: (id: string) => void;
   onClose: () => void;
+  /** Open the next control not placed yet (the sheet stays open, so every control is placed in one pass). */
+  onNext?: (() => void) | null;
+  /** How many controls are not placed yet, besides this one. */
+  left?: number;
 }) {
   const wide = useWide();
   const last = useRef<WheelControl | null>(null);
@@ -296,6 +302,11 @@ function ControlSheet({
                   <Button className="min-h-11" size="lg" variant="secondary" onPress={onClose}>
                     Done
                   </Button>
+                  {onNext ? (
+                    <Button className="min-h-11" size="lg" onPress={onNext} data-testid="next-unplaced">
+                      Next unplaced ({left}) ›
+                    </Button>
+                  ) : null}
                 </Sheet.Footer>
               </>
             ) : null}
@@ -342,6 +353,12 @@ export function WheelEditor({ catalog, state, initial, query }: WheelEditorProps
   const unplaced = draft.controls.filter((c) => c.zone === "unplaced");
   const brands = useMemo(() => [...new Set(catalog.templates.filter((t) => t.id !== "custom").map((t) => t.brand))], [catalog.templates]);
   const control = draft.controls.find((c) => c.id === editing) ?? null;
+  // The next control still to place: after this one in the list, else the first one before it.
+  const nextUnplaced = (() => {
+    const at = draft.controls.findIndex((c) => c.id === editing);
+    const after = draft.controls.slice(at + 1).find((c) => c.zone === "unplaced");
+    return after ?? draft.controls.slice(0, Math.max(0, at)).find((c) => c.zone === "unplaced") ?? null;
+  })();
 
   const set = (patch: Partial<WheelDef>) => setDraft((d) => ({ ...d, ...patch }));
   const run = async (f: () => Promise<void>) => {
@@ -513,9 +530,16 @@ export function WheelEditor({ catalog, state, initial, query }: WheelEditorProps
           <Alert.Indicator />
           <Alert.Content>
             <Alert.Description>
-              {template?.completeness === "counts" ? COUNTS_BANNER : `${unplaced.length} controls are not placed yet: tap each one and choose where it is.`}
+              {template?.completeness === "counts"
+                ? COUNTS_BANNER
+                : `${unplaced.length} ${unplaced.length === 1 ? "control is" : "controls are"} not placed yet: say where each one is (about two minutes).`}
             </Alert.Description>
           </Alert.Content>
+          {unplaced.length ? (
+            <Button className="min-h-11" onPress={() => setEditing(unplaced[0]!.id)} data-testid="place-controls">
+              Place them one by one ›
+            </Button>
+          ) : null}
         </Alert>
       ) : null}
 
@@ -619,6 +643,8 @@ export function WheelEditor({ catalog, state, initial, query }: WheelEditorProps
           setEditing(null);
         }}
         onClose={() => setEditing(null)}
+        onNext={nextUnplaced ? () => setEditing(nextUnplaced.id) : null}
+        left={unplaced.filter((x) => x.id !== editing).length}
       />
     </div>
   );

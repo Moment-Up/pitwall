@@ -221,6 +221,14 @@ class Runtime:
         # the seated driver's F1 25 layout. Built whether or not voice is on (the app attaches the radio hub).
         self.controls = ControlsService(self.store, self.live, self.drivers, settings.voice_ptt_button)
         self.controls.senders = self._f1_senders
+        self.controls.last_sender_ip = self._f1_last_ip
+
+    def _f1_last_ip(self) -> str | None:
+        """The F1 listener's last sender (ingest thread, O(1)): the controls probe tags presses from this computer."""
+        for inp in list(self.inputs.values()):
+            if "f1" in inp.keys:
+                return inp.listener.last_ip
+        return None
 
     def _f1_senders(self) -> list[dict[str, Any]]:
         """Who is sending to the F1 port (Setup › Controls: a loopback sender is not a console)."""

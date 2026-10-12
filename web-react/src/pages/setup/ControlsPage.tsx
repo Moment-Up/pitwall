@@ -9,7 +9,7 @@
 
 import { Alert, Button, Card, Skeleton } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
-import { useMemo, useState, type Key, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type Key, type ReactNode } from "react";
 import { ScrollRow } from "../../components/ScrollRow";
 import { useActiveDriver, useDrivers } from "../../hooks/stores";
 import { useApi } from "../../hooks/useApi";
@@ -29,6 +29,7 @@ import {
 } from "../../lib/endpoints/controls";
 import { parseControlsParam, router } from "../../lib/router";
 import {
+  PLATFORM_LABEL,
   controlsPath,
   fitToWheel,
   gameById,
@@ -36,6 +37,7 @@ import {
   parseControlsQuery,
   plainAssignments,
   resolveChoice,
+  templateKnows,
   type ControlsQuery,
   type ControlsView as ViewId,
 } from "../../lib/setup/controls";
@@ -84,34 +86,58 @@ function Failed({ title, error, onRetry }: { title: string; error: Error; onRetr
   );
 }
 
-/** No wheel yet (design 2.5 step 4): pick a template or build one. */
+/** Brands first (any wheel, not one maker's): a tap lists that brand's wheels from the research. */
+const BRANDS = ["Fanatec", "Logitech", "Thrustmaster", "MOZA", "Simagic"] as const;
+
+/** No wheel yet (design 2.5 step 4): pick a brand, then a wheel from the research, or build one. */
 export function NoWheelCard({ catalog, onPick, onChange, onBuild }: { catalog: ControlsCatalog; onPick: (template: string) => void; onChange: () => void; onBuild: () => void }) {
-  const quick = ["fanatec_gt_dd_pro_wheel", "fanatec_csl_elite_mclaren_gt3_v2", "logitech_g923_ps", "logitech_g923_xbox", "thrustmaster_t248"]
-    .map((id) => catalog.templates.find((t) => t.id === id))
-    .filter((t) => t !== undefined);
+  const [brand, setBrand] = useState<string | null>(null);
+  const others = [...new Set(catalog.templates.filter((t) => t.id !== "custom" && !(BRANDS as readonly string[]).includes(t.brand)).map((t) => t.brand))];
+  const list = brand === "other" ? catalog.templates.filter((t) => others.includes(t.brand)) : catalog.templates.filter((t) => t.brand === brand);
+  const btn = "h-auto min-h-14 w-full justify-start whitespace-normal px-4 py-2 text-left";
   return (
     <Card className="gap-4 p-5" data-testid="no-wheel">
       <Card.Header className="gap-1">
         <Card.Title className="text-lg font-semibold">Pick your wheel</Card.Title>
         <Card.Description className="text-[15px] text-muted">
-          Pitwall suggests which button does what once it knows your wheel. Any wheel, rim or button box works: pick one from the research, or describe
-          your own.
+          Pitwall suggests which button does what once it knows your wheel. Any wheel, rim or button box works: pick yours from the research, or
+          describe your own.
         </Card.Description>
       </Card.Header>
       <Card.Content className="grid gap-3">
-        <div className="grid gap-2 sm:grid-cols-2">
-          {quick.map((t) => (
-            <Button key={t.id} variant="secondary" className="h-auto min-h-14 justify-start px-4 py-2 text-left" onPress={() => onPick(t.id)}>
-              <span className="grid">
-                <span className="font-semibold">{t.brand}</span>
-                <span className="text-sm font-normal text-muted">{t.name}</span>
-              </span>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="group" aria-label="Brand">
+          {BRANDS.map((b) => (
+            <Button key={b} variant={brand === b ? "primary" : "secondary"} className="min-h-12 w-full" onPress={() => setBrand(brand === b ? null : b)}>
+              {b}
             </Button>
           ))}
+          <Button variant={brand === "other" ? "primary" : "secondary"} className="min-h-12 w-full" onPress={() => setBrand(brand === "other" ? null : "other")}>
+            Other
+          </Button>
         </div>
+        {brand ? (
+          <div className="grid gap-2 sm:grid-cols-2" data-testid="no-wheel-list">
+            {list.map((t) => (
+              <Button key={t.id} variant="secondary" className={btn} onPress={() => onPick(t.id)}>
+                <span className="grid min-w-0">
+                  <span className="font-semibold break-words">
+                    {t.brand} {t.display_name ?? t.name}
+                  </span>
+                  <span className="text-sm font-normal break-words text-muted">{templateKnows(t)}</span>
+                </span>
+              </Button>
+            ))}
+            <Button variant="ghost" className={btn} onPress={onBuild}>
+              <span className="grid min-w-0">
+                <span className="font-semibold">Not listed? Build my own</span>
+                <span className="text-sm font-normal break-words text-muted">Or pick the closest wheel and change what differs.</span>
+              </span>
+            </Button>
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <Button className="min-h-11" variant="secondary" onPress={onChange}>
-            All {catalog.templates.length - 1} wheels…
+            Search all {catalog.templates.length - 1} wheels…
           </Button>
           <Button className="min-h-11" variant="ghost" onPress={onBuild}>
             Build my own
@@ -151,11 +177,20 @@ export function ControlsPage({ route }: PageProps) {
     [q, state.data, catalog.data, selected, driverId, driver],
   );
   const savedWheel = base.wheel?.kind === "saved" ? (state.data?.wheels.find((w) => w.id === base.wheel!.id) ?? null) : null;
+  // A link to a wheel saved on another device: this device's copy of the state is older, so read it again once.
+  const refreshedFor = useRef<string | null>(null);
+  const missingSaved = base.wheel?.kind === "saved" && state.data && !savedWheel ? base.wheel.id : null;
+  useEffect(() => {
+    if (!missingSaved || refreshedFor.current === missingSaved) return;
+    refreshedFor.current = missingSaved;
+    void state.refresh();
+  }, [missingSaved, state]);
   const tplId = base.wheel?.kind === "template" ? base.wheel.id : null;
   const tpl = useApi(tplId ? CONTROLS_KEYS.template(tplId) : null, () => controlsApi.template(tplId!), { maxAgeMs: CATALOG_MAX_AGE_MS });
   const wheel = savedWheel ?? (tplId ? (tpl.data ?? null) : null);
-  // A platform the wheel doesn't have (MOZA on PS5) becomes one it has, unless the URL asked for it.
+  // A platform the wheel doesn't have (MOZA on PS5) becomes one it has, unless the URL asked for it; the page says so.
   const choice = fitToWheel(base, gameById(catalog.data, base.game), wheel, q.platform !== null);
+  const switched = wheel && choice.platform !== base.platform ? `${wheel.name} isn't made for ${PLATFORM_LABEL[base.platform]}, so this shows ${PLATFORM_LABEL[choice.platform]}.` : null;
   const recQ: RecommendationQuery | null =
     wheel && state.data
       ? {
@@ -266,6 +301,11 @@ export function ControlsPage({ route }: PageProps) {
       {wheel && !isSavedWheel(wheel) ? (
         <p className="m-0 text-sm text-muted">This wheel comes from the research and is saved with your layout. Change it in My wheel.</p>
       ) : null}
+      {switched ? (
+        <p className="m-0 text-sm text-warning" data-testid="platform-switched">
+          {switched}
+        </p>
+      ) : null}
     </Card>
   );
   const segment = (
@@ -283,7 +323,8 @@ export function ControlsPage({ route }: PageProps) {
     <div className="grid min-w-0 gap-4 [&>*]:min-w-0" data-testid="controls-page">
       {header}
       {segment}
-      <ResearchBanner />
+      {/* Map it is used from the seat: its step stays on screen, and the step cards say what is unverified. */}
+      {view === "map" ? null : <ResearchBanner />}
       {body}
       {catalog.data && state.data ? (
         <ChoiceSheet

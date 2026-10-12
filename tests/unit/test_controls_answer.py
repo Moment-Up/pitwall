@@ -50,7 +50,7 @@ def test_answers_from_the_saved_layout() -> None:
         "Talk to me with Triangle, UDP Action 3."
     )
     assert answer(CAT, st, "What button is DRS?", game=F1, platform="ps5", driver_id=1) == (
-        "In your layout, drs / active aero is Square."
+        "In your layout, DRS / active aero is Square."
     )
     for q in ("which button is brake bias", "where is the diff on my wheel", "button for the pit limiter?"):
         assert len(answer(CAT, st, q, game=F1, platform="ps5", driver_id=1, live=live).split()) <= 30
@@ -99,3 +99,34 @@ def test_a_long_research_sentence_is_cut_at_a_clause_not_mid_clause() -> None:
         "No game Pitwall knows lets you change ride height while driving. F1 25 and GT7 only show it in the car setup."
     )
     assert len(out.split()) <= MAX_WORDS and _trim("Short answer.") == "Short answer."
+
+
+def _gt7_state(template: str) -> M.ControlsState:
+    from pitwall.controls.recommend import recommend
+
+    w = M.parse_wheel({**tmpl(template).to_dict(), "id": "w_00000002", "rev": 1})
+    rec = recommend(CAT, w, "gt7", "ps5", "advanced")
+    lay = M.Layout("l_00000002", 1, "gt7", None, "ps5", w.id, 1, "advanced", None, rec.plain_assignments())
+    return M.ControlsState(wheels=(w,), layouts=(lay,)).with_owner_choice(lay)
+
+
+def test_gt7_coloured_sticks_keep_their_community_caveat() -> None:
+    """Which coloured stick does what is community-reported (Fanatec's own article gives no mapping)."""
+    st = _gt7_state("fanatec_gt_dd_pro_wheel")
+    bb = answer(CAT, st, "Which button is brake bias?", game=GT7, platform="ps5", driver_id=1)
+    assert "(community-reported)" in bb and "sets it itself" in bb
+
+
+def test_mfd_only_functions_say_so() -> None:
+    """GT7 changes TC, brake balance and fuel map only on its MFD: with no fixed stick, the answer says so."""
+    st = _gt7_state("logitech_g923_ps")
+    tc = answer(CAT, st, "Which button is traction control?", game=GT7, platform="ps5", driver_id=1)
+    assert tc == "Traction control isn't on your wheel: in Gran Turismo 7 you change it on the MFD."
+
+
+def test_acronyms_stay_in_capitals() -> None:
+    from pitwall.controls.catalog import in_sentence
+
+    assert in_sentence("ABS") == "ABS" and in_sentence("DRS / active aero") == "DRS / active aero"
+    assert in_sentence("ERS / hybrid mode") == "ERS / hybrid mode" and in_sentence("Brake bias") == "brake bias"
+    assert in_sentence("TC cut / slip") == "TC cut / slip" and in_sentence("Pit limiter") == "pit limiter"

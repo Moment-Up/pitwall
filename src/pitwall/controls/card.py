@@ -13,7 +13,7 @@ import time
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from pitwall.controls.catalog import PTT_FUNCTION, Catalog
+from pitwall.controls.catalog import PTT_FUNCTION, Catalog, native_parts, split_name
 from pitwall.controls.model import Assignment, Layout, WheelDef
 from pitwall.controls.recommend import Recommendation
 
@@ -65,12 +65,16 @@ def diagram_svg(cat: Catalog, wheel: WheelDef, assignments: Sequence[Assignment]
         x, y, zw, zh = shape["zones"][c.zone]
         row = zone_rows.get(c.zone, 0)
         zone_rows[c.zone] = row + 1
-        ty = y + 11 + row * 11
+        ty = y + 12 + row * 13
         if ty > y + zh:
             continue  # a full zone: the table lists every control anyway
-        text = f"{c.label[:10]}: {' '.join(dict.fromkeys(marks))}"
-        fit = max(8, int((zw - 4) / 4.3))  # about 4.3 user units per character at font size 8
-        font = 'font-size="8" font-family="Helvetica, Arial, sans-serif"'
+        text = f"{c.label[:12]}: {' '.join(dict.fromkeys(marks))}"
+        fit = max(8, int((zw - 4) / 5.4))  # about 5.4 user units per character at font size 10
+        # a white halo keeps the label readable where it crosses the wheel's outline
+        font = (
+            'font-size="10" font-weight="600" font-family="Helvetica, Arial, sans-serif" stroke="#fff" '
+            'stroke-width="3" paint-order="stroke" stroke-linejoin="round"'
+        )
         parts.append(
             f'<text x="{x + 2}" y="{ty}" {font}>{_e(text if len(text) <= fit else text[: fit - 1] + "…")}</text>'
         )
@@ -80,6 +84,7 @@ def diagram_svg(cat: Catalog, wheel: WheelDef, assignments: Sequence[Assignment]
 
 def _rows(cat: Catalog, layout: Layout, wheel: WheelDef, rec: Recommendation | None) -> list[tuple[str, ...]]:
     game = cat.games.get(layout.game)
+    game_label = game.label if game is not None else (layout.game_name or "the game")
     out: list[tuple[str, ...]] = []
     menus: dict[tuple[str, str | None], list[str]] = {}  # a menu function's directions on one control: one row
     for a in layout.assignments:
@@ -103,10 +108,17 @@ def _rows(cat: Catalog, layout: Layout, wheel: WheelDef, rec: Recommendation | N
             native = f"UDP Action {a.udp_action}"
         else:
             row = game.functions.get(a.function) if game is not None else None
-            native = row.native_name if row is not None else ""
+            native = native_parts(row, a.action)[0] if row is not None else ""
+            if group in menus and row is not None and row.native_found:  # one row for a menu's directions
+                native = split_name(row.native_name.split(";")[0])[0]
         check = ""
         if a.check is not None:
             check = f"{CHECK_WORDS.get(a.check.result, a.check.result)} {_date(a.check.t_unix)}"
+        elif a.origin == "game_default":
+            check = f"{game_label}'s own default"
+        if a.origin == "game_fixed" and game is not None:
+            fx = cat.fixed_for(game.id, wheel.template, a.function)
+            label += " (set by the game; colour community-reported)" if fx is None or fx.evidence != "V" else ""
         out.append((ctl, label, native, check))
     return out
 
@@ -118,8 +130,8 @@ def _ptt_line(layout: Layout, wheel: WheelDef, rec: Recommendation | None) -> st
         c = wheel.control(a.control_id)
         where = f"hold {c.label}" if c is not None else "hold your talk button"
         return (
-            f"{where[0].upper() + where[1:]}: UDP Action {a.udp_action} in F1 25 (Controls > your wheel's preset > "
-            "UDP Custom Actions)."
+            f"{where[0].upper() + where[1:]}: UDP Action {a.udp_action} in F1 25 (Controls, then your wheel's entry, "
+            "then UDP Custom Actions)."
         )
     if rec is not None and rec.pitwall_ptt.get("path") == "screen":
         return str(rec.pitwall_ptt.get("text") or "") or None
@@ -141,10 +153,15 @@ def card_html(
     )
     rows = "".join("<tr>" + "".join(f"<td>{_e(v)}</td>" for v in r) + "</tr>" for r in _rows(cat, layout, wheel, rec))
     cant = ""
-    if rec is not None and (rec.not_on_wheel or rec.not_in_game):
-        texts = dict.fromkeys(x["text"] for x in (*rec.not_on_wheel, *rec.not_in_game))  # one line per sentence
-        items = "".join(f"<li>{_e(t)}</li>" for t in texts)
-        cant = f"<h2>Can't change while driving in {_e(game_label)}</h2><ul>{items}</ul>"
+    if rec is not None:
+        sections = (
+            (f"Can't change while driving in {game_label}", rec.not_on_wheel),
+            (f"Not in {game_label}", rec.not_in_game),
+        )
+        for heading, group in sections:
+            texts = dict.fromkeys(x["text"] for x in group)  # one line per sentence
+            if texts:
+                cant += f"<h2>{_e(heading)}</h2><ul>{''.join(f'<li>{_e(t)}</li>' for t in texts)}</ul>"
     ptt_text = _ptt_line(layout, wheel, rec)
     ptt = f'<p class="ptt"><b>Talk to Pitwall:</b> {_e(ptt_text)}</p>' if ptt_text else ""
     where = ""
@@ -191,8 +208,12 @@ def card_text(
         lines.append(f"{ctl}: {label}{extra}" + (f" ({check})" if check else ""))
     if rec is not None:
         lines += ["", "Talk to Pitwall: " + (_ptt_line(layout, wheel, rec) or "")]
-        if rec.not_on_wheel or rec.not_in_game:
-            lines += ["", f"Can't change while driving in {game_label}:"]
-            lines += [f"- {t}" for t in dict.fromkeys(x["text"] for x in (*rec.not_on_wheel, *rec.not_in_game))]
+        sections = (
+            (f"Can't change while driving in {game_label}:", rec.not_on_wheel),
+            (f"Not in {game_label}:", rec.not_in_game),
+        )
+        for heading, group in sections:
+            if group:
+                lines += ["", heading, *(f"- {t}" for t in dict.fromkeys(x["text"] for x in group))]
     lines += ["", "Research only: nothing here is validated on your rig."]
     return "\n".join(lines) + "\n"

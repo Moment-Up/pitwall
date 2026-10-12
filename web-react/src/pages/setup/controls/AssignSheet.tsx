@@ -1,7 +1,8 @@
 // Editing a layout (design 4): a Pro Sheet (right on iPad, bottom on phones).
 //   row     tap a function in the list: only the free controls or slots that suit it (a pair as one encoder or two
 //           directions of one stick, a hold never on a turn, Talk to Pitwall only on a plain button with its own
-//           signal), "Not on the wheel", and "I already have this on a button". Talk to Pitwall also picks its UDP Action.
+//           signal), a swap with a control in use (saying what moves where), "Not on the wheel", and "I already have
+//           this on a button". Talk to Pitwall also picks its UDP Action.
 //   control tap a marker on the diagram: the game's functions this control can do (never pause-menu or menu-only ones).
 // Nothing is saved here: the layout on screen changes and Save sends it.
 
@@ -13,9 +14,11 @@ import {
   PTT_FN,
   assignTo,
   fnById,
+  functionActions,
   functionOptions,
   gameFn,
   markKept,
+  slotFits,
   slotOptions,
   slotWord,
   type LayoutRow,
@@ -76,9 +79,42 @@ function RowBody({ v, row, onChange, onDone }: { v: ControlsView; row: LayoutRow
     zones: v.catalog.zones,
     game: v.gameLabel,
   };
-  const both = fn.shape === "pair" || fn.shape === "menu" ? slotOptions({ ...common, action: null }) : [];
+  // "Both on one control" only for what really has two or four actions here (a team radio menu is one press).
+  const acts = functionActions(fn, gfn);
+  const multi = (fn.shape === "pair" && acts.length === 2) || (fn.shape === "menu" && ["up", "down", "left", "right"].every((d) => acts.includes(d)));
+  const both = multi ? slotOptions({ ...common, action: null }) : [];
   const single = slotOptions({ ...common, action: row.action });
   const isPtt = row.function === PTT_FN;
+  // Swap with a control in use: this action takes that control, and what was there takes this one's (or leaves the
+  // wheel when it doesn't fit there). One action at a time, never a fixed or a game-default one.
+  const fnOf = (id: string) => fnById(v.catalog, id);
+  const swaps =
+    multi || isPtt
+      ? []
+      : v.rows.filter(
+          (r) =>
+            r.function !== row.function &&
+            r.control &&
+            r.slot &&
+            !r.fixed &&
+            r.function !== PTT_FN &&
+            !v.reserved.has(r.control.id) &&
+            slotFits(fn.shape, r.control.kind, r.slot) &&
+            v.rows.filter((x) => x.function === r.function).length === 1,
+        );
+  const swap = (other: LayoutRow) => {
+    const otherFn = fnOf(other.function);
+    const back = row.control && row.slot && otherFn && slotFits(otherFn.shape, row.control.kind, row.slot) ? row.control : null;
+    let next = assignTo(v.assignments, row.function, other.control, [{ action: row.action, slot: other.slot }]);
+    next = assignTo(next, other.function, back, [{ action: other.action, slot: back ? row.slot : null }]);
+    onChange(next);
+    onDone();
+  };
+  const swapDetail = (other: LayoutRow) => {
+    const otherFn = fnOf(other.function);
+    const fits = row.control && row.slot && otherFn && slotFits(otherFn.shape, row.control.kind, row.slot);
+    return fits ? `${other.label} moves to ${row.where}` : `${other.label} leaves the wheel (it moves to the MFD list)`;
+  };
   const apply = (control: WheelControl | null, slots: { action: string; slot: Assignment["slot"] }[]) => {
     onChange(assignTo(v.assignments, row.function, control, slots, "driver", row.udp_action));
     onDone();
@@ -136,7 +172,7 @@ function RowBody({ v, row, onChange, onDone }: { v: ControlsView; row: LayoutRow
         </section>
       ) : null}
       <section className="grid gap-1" aria-label="Free controls">
-        <h3 className="m-0 text-sm font-semibold text-muted">{both.length ? `Only ${row.label}` : "Free controls that suit it"}</h3>
+        <h3 className="m-0 text-sm font-semibold text-muted">{both.length ? `Free controls for ${row.label} alone` : "Free controls"}</h3>
         {single.length ? (
           byControl(single).map((g) =>
             g.options.length === 1 ? (
@@ -171,9 +207,17 @@ function RowBody({ v, row, onChange, onDone }: { v: ControlsView; row: LayoutRow
             ),
           )
         ) : (
-          <p className="m-0 text-sm text-muted">No free control suits it. Free one up, or use the game's MFD.</p>
+          <p className="m-0 text-sm text-muted">No free control suits it.{swaps.length ? " Swap it with one in use below." : " Use the game's MFD, or clear a control first."}</p>
         )}
       </section>
+      {swaps.length ? (
+        <section className="grid gap-1" aria-label="Swap with a control in use" data-testid="swap-options">
+          <h3 className="m-0 text-sm font-semibold text-muted">Swap with a control in use</h3>
+          {swaps.map((r) => (
+            <OptionButton key={r.key} title={`${r.where} (now ${r.label})`} detail={swapDetail(r)} onPress={() => swap(r)} />
+          ))}
+        </section>
+      ) : null}
       {row.control && !isPtt ? <OptionButton title="Not on the wheel" detail="Use the game's MFD or menu instead." onPress={() => apply(null, [{ action: row.action, slot: null }])} /> : null}
     </>
   );

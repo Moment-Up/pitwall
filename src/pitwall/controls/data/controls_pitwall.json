@@ -1007,14 +1007,14 @@
    ],
    "button_path": "f1_butn",
    "menu": {
-    "where": "Controls > [your wheel's preset]",
-    "evidence": "V",
+    "where": "Controls, then the entry for your wheel",
+    "evidence": "A",
     "groups": [
      "Control Scheme",
      "MFD Shortcuts",
      "UDP Custom Actions"
     ],
-    "note": "EA's controls hub lists driving controls, MFD shortcuts and UDP custom actions per device; the exact screen names on the console are not re-checked [U]"
+    "note": "EA's controls hub lists the driving controls, MFD shortcuts and UDP custom actions for each device; their names on the console screen are not checked"
    },
    "functions": {
     "drs_aero": {
@@ -1227,7 +1227,7 @@
     ]
    },
    "mfd_on_dpad": true,
-   "preset_warning": "F1 25's preset for this wheel may already use this control (EA publishes default wheel buttons only for the Logitech G923)."
+   "preset_warning": "F1 25's preset for your wheel may already use some of these buttons: check each one in Map it (EA publishes default wheel buttons only for the Logitech G923)."
   },
   {
    "id": "gt7",
@@ -1244,7 +1244,7 @@
     "where": "the game's button assignment screen for your wheel",
     "evidence": "A",
     "groups": [],
-    "note": "the official manual says each listed wheel has its own button assignment screen; the exact menu path was not researched"
+    "note": "The official manual says each listed wheel has its own button assignment screen; the exact menu path was not researched"
    },
    "functions": {
     "tc": {
@@ -1299,11 +1299,15 @@
      "in_race": "conditional",
      "binding": "direct",
      "conditions": [
-      "DRS cars only; which button is unverified"
+      "DRS cars only; GT7 uses the Overtake button for it (unverified)"
      ],
      "actions": {
       "press": "Nitro / Overtake (unverified for DRS)"
-     }
+     },
+     "shares_with": [
+      "overtake"
+     ],
+     "always_shared": true
     },
     "wing": {
      "in_race": "no",
@@ -1384,7 +1388,7 @@
     ]
    },
    "mfd_on_dpad": true,
-   "preset_warning": "GT7's preset for this wheel may already use this control."
+   "preset_warning": "GT7's preset for your wheel may already use some of these buttons: check each one in Map it."
   },
   {
    "id": "ac",
@@ -1403,7 +1407,7 @@
     "where": "the game's Controls screen",
     "evidence": null,
     "groups": [],
-    "note": "binding names are from the PC version (community); the console list was not found"
+    "note": "Binding names are from the PC version (community); the console list was not found"
    },
    "functions": {
     "tc": {
@@ -1530,7 +1534,7 @@
     ]
    },
    "mfd_on_dpad": false,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it."
   },
   {
    "id": "acc",
@@ -1549,7 +1553,7 @@
     "where": "the game's Controls screen",
     "evidence": null,
     "groups": [],
-    "note": "exact menu path not researched; Kunos release notes describe the bindings; console defaults were not found"
+    "note": "Exact menu path not researched; Kunos release notes describe the bindings; console defaults were not found"
    },
    "functions": {
     "tc": {
@@ -1668,7 +1672,7 @@
     ]
    },
    "mfd_on_dpad": true,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it."
   },
   {
    "id": "forza_motorsport",
@@ -1757,7 +1761,13 @@
     ]
    },
    "mfd_on_dpad": true,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it.",
+   "platform_labels": {
+    "ps5": "Forza Horizon (PS5)"
+   },
+   "platform_notes": {
+    "ps5": "On PS5 only Forza Horizon exists. These rows come from the Forza Motorsport research (Xbox, PC) and the official Forza Horizon 5 wheel article: check each one in the game."
+   }
   },
   {
    "id": "iracing",
@@ -1773,7 +1783,7 @@
     "where": "the sim's Controls screen",
     "evidence": null,
     "groups": [],
-    "note": "iRacing's own page lists keyboard defaults (most car controls not assigned); the exact menu path was not researched"
+    "note": "IRacing's own page lists keyboard defaults (most car controls not assigned); the exact menu path was not researched"
    },
    "functions": {
     "brake_bias": {
@@ -1969,7 +1979,7 @@
     ]
    },
    "mfd_on_dpad": false,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it."
   },
   {
    "id": "lmu",
@@ -1983,7 +1993,7 @@
     "where": "the game's Controls screen",
     "evidence": null,
     "groups": [],
-    "note": "the official guide explains binding; the exact menu path is not copied here"
+    "note": "The official guide explains binding; the exact menu path is not copied here"
    },
    "functions": {
     "tc": {
@@ -2137,7 +2147,7 @@
     ]
    },
    "mfd_on_dpad": false,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it."
   },
   {
    "id": "rf2",
@@ -2151,7 +2161,7 @@
     "where": "the sim's Controls screen",
     "evidence": null,
     "groups": [],
-    "note": "exact menu path not researched"
+    "note": "Exact menu path not researched"
    },
    "functions": {
     "tc": {
@@ -2235,7 +2245,7 @@
     ]
    },
    "mfd_on_dpad": false,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it."
   },
   {
    "id": "ams2",
@@ -2249,7 +2259,7 @@
     "where": "the game's Controls screen",
     "evidence": null,
     "groups": [],
-    "note": "exact menu path not researched"
+    "note": "Exact menu path not researched"
    },
    "functions": {
     "brake_bias": {
@@ -2364,7 +2374,7 @@
     ]
    },
    "mfd_on_dpad": false,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it."
   },
   {
    "id": "r3e",
@@ -2378,28 +2388,33 @@
     "where": "the game's Controls screen",
     "evidence": null,
     "groups": [],
-    "note": "bindings were not found; telemetry only says these settings exist"
+    "note": "Bindings were not found; telemetry only says these settings exist"
    },
    "functions": {
     "tc": {
      "in_race": "unverified",
-     "binding": "direct"
+     "binding": "direct",
+     "native_found": false
     },
     "abs": {
      "in_race": "unverified",
-     "binding": "direct"
+     "binding": "direct",
+     "native_found": false
     },
     "stability": {
      "in_race": "unverified",
-     "binding": "direct"
+     "binding": "direct",
+     "native_found": false
     },
     "brake_bias": {
      "in_race": "unverified",
-     "binding": "direct"
+     "binding": "direct",
+     "native_found": false
     },
     "engine_map": {
      "in_race": "unverified",
-     "binding": "direct"
+     "binding": "direct",
+     "native_found": false
     },
     "overtake": {
      "in_race": "conditional",
@@ -2443,7 +2458,7 @@
     ]
    },
    "mfd_on_dpad": false,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it."
   },
   {
    "id": "ac_evo",
@@ -2457,7 +2472,7 @@
     "where": "the game's Controls screen",
     "evidence": null,
     "groups": [],
-    "note": "exact menu path not researched"
+    "note": "Exact menu path not researched"
    },
    "functions": {
     "tc": {
@@ -2546,7 +2561,7 @@
     ]
    },
    "mfd_on_dpad": false,
-   "preset_warning": "The game's own preset may already use this control."
+   "preset_warning": "The game's own preset may already use some of these buttons: check each one in Map it."
   }
  ],
  "fixed_by_game": [
@@ -2581,7 +2596,7 @@
   },
   {
    "topic": "aero",
-   "text": "Wing angles are a setup item in every game researched. F1 25 2026 cars switch Active Aero to Straight Line Mode on the DRS/S Mode button inside the zones only; other games have DRS on cars that have it."
+   "text": "In most games researched, wing angles are set in the car setup, not while driving. iRacing lists front and rear wing buttons for cars that have them (community, unverified). F1 25's 2026 cars switch Active Aero to Straight Line Mode with the DRS/S Mode button, inside the zones only; other games have DRS on cars that have it."
   },
   {
    "topic": "gt7_asm",
@@ -2609,23 +2624,23 @@
   ]
  },
  "reasons": {
-  "pair:encoder": "{fn} on {ctl}: you change it during a race, and turning one encoder gives + and - under your thumb.",
-  "pair:encoder_far": "{fn} on {ctl}: you change it during a race, and turning one encoder gives + and -.",
-  "pair:rocker": "{fn} on {ctl}: one rocker, up for +, down for -.",
-  "pair:dpad": "{fn} on {ctl} ({a} for +, {b} for -): opposite directions of one stick are easy to find by feel.",
-  "pair:buttons_same_zone": "{fn} on {a_ctl} (+) and {b_ctl} (-): two buttons side by side.",
-  "pair:buttons": "{fn} on {a_ctl} (+) and {b_ctl} (-): the best free buttons left.",
+  "pair:encoder": "{fn} on {ctl}: you change it during a race, and turning one encoder gives + and − under your thumb.",
+  "pair:encoder_far": "{fn} on {ctl}: you change it during a race, and turning one encoder gives + and −.",
+  "pair:rocker": "{fn} on {ctl}: one rocker, up for +, down for −.",
+  "pair:dpad": "{fn} on {ctl} ({a} for +, {b} for −): opposite directions of one control are easy to find by feel.",
+  "pair:buttons_same_zone": "{fn}: + on {a_ctl} and − on {b_ctl}, two buttons side by side.",
+  "pair:buttons": "{fn}: + on {a_ctl} and − on {b_ctl}, the best free buttons left.",
   "ptt:f1": "Talk to Pitwall on {ctl}: a plain button you can hold with your thumb. Map it to UDP Action {n} in F1 25 so Pitwall sees it.",
   "hold:thumb": "{fn} on {ctl}: you need it at a precise moment, so it's under your thumb.",
   "toggle:any": "{fn} on {ctl}: you press it a few times a race.",
   "rare:any": "{fn} on {ctl}: you rarely need it, so it's on a control you have to reach for.",
   "shared:f1_drs_pit": "Pit limiter on the same button as DRS: F1 25 does this by default (pit limiter in the pit lane, DRS on track).",
-  "mfd:dpad": "MFD on {ctl}: {game} uses the D-pad for its MFD pages, so the stick that sends the D-pad suits it.",
+  "mfd:dpad": "MFD on {ctl}: {game} uses the D-pad for its MFD pages, so the control that sends the D-pad suits it.",
   "fixed:game": "{fn}: {text}",
   "unplaced": "No free control left for {fn}. {fallback}",
-  "pair:funky": "{fn} on {ctl}: turning the funky switch gives + and - without letting go of the wheel.",
-  "pair:rotary": "{fn} on {ctl}: the rotary switch clicks + and - (set it to ENC mode if your wheel has modes).",
-  "pair:buttons_mirrored": "{fn} on {a_ctl} (+) and {b_ctl} (-): the same button on each side of the wheel.",
+  "pair:funky": "{fn} on {ctl}: turning the funky switch gives + and − without letting go of the wheel.",
+  "pair:rotary": "{fn} on {ctl}: the rotary switch clicks + and − (set it to ENC mode if your wheel has modes).",
+  "pair:buttons_mirrored": "{fn}: + on {a_ctl} and − on {b_ctl}, the same button on each side of the wheel.",
   "ptt:f1_far": "Talk to Pitwall on {ctl}: a plain button you can hold. Map it to UDP Action {n} in F1 25 so Pitwall sees it.",
   "ptt:screen": "{game} doesn't send button presses, so talk to Pitwall with the iPad's talk button or hold Space on a keyboard.",
   "single:thumb": "{fn} on {ctl}: you use it {freq}, so it's under your thumb.",
@@ -2633,15 +2648,20 @@
   "single:far": "{fn} on {ctl}: you rarely need it, so it's on a control you have to reach for.",
   "menu:control": "{fn} on {ctl}: four directions on one control, as the game's menu expects.",
   "kept": "{fn} stays on {ctl}: you said you already have it there.",
-  "mfd_binding": "{fn}: {game} changes it on its MFD pages, so it needs no button of its own."
+  "mfd_binding": "{fn}: {game} changes it on its MFD pages, so it needs no button of its own.",
+  "single:thumb_rare": "{fn} on {ctl}: you rarely need it, but this thumb button was free.",
+  "shared:same_button": "{fn} on {ctl}: {game} uses the {other} button for it (unverified).",
+  "default:game": "{fn} on {ctl}: {game}'s own default for this wheel, so there's nothing to change."
  },
  "warnings": {
-  "game_specific": "Works only if {game} reads this wheel's extra buttons (unverified).",
-  "folded": "This control sends the same signal as another control, so the game can't tell them apart.",
-  "unknown": "What this control sends on {platform} isn't known: check it in the game.",
+  "game_specific": "{ctl} works only if {game} reads this wheel's extra buttons (unverified).",
+  "folded": "{ctl} sends the same signal as another control, so the game can't tell them apart.",
+  "unknown": "What {ctl} sends on {platform} isn't known: check it in the game.",
   "mps_mode": "Rotary switches step + and - only in ENC mode.",
   "only_games": "Community sources say only {games} reads this control (unverified).",
-  "platform_note": "{note}"
+  "platform_note": "{note}",
+  "unverified_row": "Unverified in {game}: check the game's controls list for it.",
+  "unknown_push": "What {ctl} sends when pushed in on {platform} isn't known: check it in the game."
  },
  "templates": [
   {
@@ -3276,7 +3296,8 @@
    "notes": [
     "Positions from Fanatec's manual figure and 2025 video (docs/research/gt-dd-pro-ps5-walkthrough.md).",
     "No Xbox: this wheel is not Xbox-licensed (inferred)."
-   ]
+   ],
+   "display_name": "Gran Turismo DD Pro wheel"
   },
   {
    "id": "fanatec_csl_elite_mclaren_gt3_v2",
@@ -4106,7 +4127,8 @@
    "notes": [
     "Positions from Fanatec's quick-guide figure (inferred).",
     "Xbox: the rotary switches send nothing and both encoders send LT/RT (Fanatec's table)."
-   ]
+   ],
+   "display_name": "CSL Elite McLaren GT3 V2"
   },
   {
    "id": "fanatec_cs_formula_v25",
@@ -5155,7 +5177,8 @@
    "notes": [
     "Positions from Fanatec's V2.5 X figure (inferred).",
     "Xbox only with the V2.5 X version."
-   ]
+   ],
+   "display_name": "ClubSport Formula V2.5 / V2.5 X"
   },
   {
    "id": "fanatec_csl_p1_v2",
@@ -5700,7 +5723,8 @@
     "Positions from Fanatec's quick-guide figure (inferred).",
     "Buttons 3, 4 and 11 are game-specific on PlayStation.",
     "An Xbox version exists; its table was not read."
-   ]
+   ],
+   "display_name": "CSL P1 V2"
   },
   {
    "id": "fanatec_csl_elite_wrc",
@@ -6267,7 +6291,8 @@
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram.",
     "Fanatec's WRC page shows the P1 V2 mapping image; the WRC's own table was not found."
-   ]
+   ],
+   "display_name": "CSL Elite WRC"
   },
   {
    "id": "fanatec_cs_f1_esports_v2",
@@ -6821,7 +6846,8 @@
    "notes": [
     "Positions from Fanatec's quick-guide figure (inferred).",
     "On PlayStation three controls send Cross: neither the game nor F1's button data can tell them apart."
-   ]
+   ],
+   "display_name": "ClubSport F1 Esports V2"
   },
   {
    "id": "fanatec_podium_button_module_rally",
@@ -7435,7 +7461,8 @@
    ],
    "notes": [
     "PC button numbers above 32 are invisible to games that read only 32 buttons."
-   ]
+   ],
+   "display_name": "Podium Button Module Rally"
   },
   {
    "id": "logitech_g923_ps",
@@ -7967,7 +7994,8 @@
    "notes": [
     "Logitech's guide: starred buttons need supported games on PS5/PS4; on PC every button can be assigned.",
     "Positions are not in the research: place the controls on the diagram."
-   ]
+   ],
+   "display_name": "G923 for PlayStation and PC"
   },
   {
    "id": "logitech_g923_xbox",
@@ -8445,7 +8473,8 @@
    "notes": [
     "Logitech's guide: starred items need supported games on Xbox; on PC every button can be assigned.",
     "Positions are not in the research: place the controls on the diagram."
-   ]
+   ],
+   "display_name": "G923 for Xbox and PC"
   },
   {
    "id": "logitech_pro_racing_wheel_xbox",
@@ -9007,7 +9036,8 @@
    "notes": [
     "A PS/PC version exists; it was not read.",
     "G923 compatibility mode makes the wheel show up as a G923."
-   ]
+   ],
+   "display_name": "PRO Racing Wheel for Xbox and PC"
   },
   {
    "id": "logitech_rs_wheel_hub",
@@ -9810,7 +9840,8 @@
    "notes": [
     "Labels are the PC (Xbox-style) names with the PS names used on the RS50 PS base.",
     "On console, some buttons only work in newer titles that support them."
-   ]
+   ],
+   "display_name": "RS Wheel Hub"
   },
   {
    "id": "thrustmaster_t248",
@@ -10491,7 +10522,8 @@
     "The face buttons are not in the research table: add them on the diagram.",
     "PS: the encoders work only in games that support Thrustmaster encoders.",
     "Xbox: the encoders turn into D-pad presses (the console protocol limits them)."
-   ]
+   ],
+   "display_name": "T248 / T248X"
   },
   {
    "id": "thrustmaster_t_gt_ii",
@@ -11132,7 +11164,8 @@
    ],
    "notes": [
     "L3 and R3 are on the base, not the wheel."
-   ]
+   ],
+   "display_name": "T-GT II"
   },
   {
    "id": "thrustmaster_sf1000_addon",
@@ -11562,7 +11595,8 @@
     "Up to 25 action buttons (maker's figure), not listed in the research: add them on the diagram.",
     "Three central rotaries, the PHASE rotary and a Y/N toggle are not in the generic mappings.",
     "Its screen's UDP mode reads the game's UDP telemetry and may compete with Pitwall for F1's output."
-   ]
+   ],
+   "display_name": "Ferrari SF1000 wheel add-on"
   },
   {
    "id": "thrustmaster_ts_pc_racer",
@@ -11693,7 +11727,8 @@
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram.",
     "Buttons were not counted in the research."
-   ]
+   ],
+   "display_name": "TS-PC Racer wheel"
   },
   {
    "id": "moza_es_esx",
@@ -12442,7 +12477,8 @@
    ],
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram."
-   ]
+   ],
+   "display_name": "ES / ESX"
   },
   {
    "id": "moza_cs_v2p",
@@ -12726,7 +12762,8 @@
    ],
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram."
-   ]
+   ],
+   "display_name": "CS V2P"
   },
   {
    "id": "moza_gs_v2p",
@@ -13253,7 +13290,8 @@
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram.",
     "5 encoders plus 2 thumb encoders with push."
-   ]
+   ],
+   "display_name": "GS V2P"
   },
   {
    "id": "moza_ks",
@@ -13736,7 +13774,8 @@
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram.",
     "The knobs can work as buttons or dials (MOZA's spec sheet)."
-   ]
+   ],
+   "display_name": "KS"
   },
   {
    "id": "moza_fsr2",
@@ -14219,7 +14258,8 @@
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram.",
     "MOZA's own pages disagree on the encoder counts."
-   ]
+   ],
+   "display_name": "FSR2"
   },
   {
    "id": "simagic_gt_neo",
@@ -14680,7 +14720,8 @@
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram.",
     "Listed with 4 paddle modules."
-   ]
+   ],
+   "display_name": "GT NEO"
   },
   {
    "id": "simucube_tahko_gt21",
@@ -14789,7 +14830,8 @@
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram.",
     "Other controls are not listed in the research."
-   ]
+   ],
+   "display_name": "Tahko GT-21"
   },
   {
    "id": "cammus_c12",
@@ -15206,7 +15248,8 @@
    "notes": [
     "This template only says how many controls the rim has. Place them on the diagram.",
     "Counts from a community source."
-   ]
+   ],
+   "display_name": "C12"
   },
   {
    "id": "custom",
@@ -15227,7 +15270,8 @@
    "controls": [],
    "notes": [
     "Add each control and place it on the diagram. In F1 25, Test › Identify shows what each one sends."
-   ]
+   ],
+   "display_name": "My own wheel or button box"
   }
  ],
  "diagram": {
@@ -15593,5 +15637,164 @@
     }
    }
   }
- }
+ },
+ "game_defaults_note": "F1 25's own default wheel buttons, from EA's controls hub (the research's default_wheel for the Logitech G923). Dial Right / Dial Left are read as clockwise / anticlockwise [A]. Only what the research states per platform is listed: on the Xbox G923 only DRS (Y), Overtake (A) and brake bias (dial).",
+ "game_defaults": [
+  {
+   "game": "f1_25",
+   "template": "logitech_g923_ps",
+   "platforms": [
+    "ps5",
+    "ps4",
+    "pc"
+   ],
+   "evidence": "V",
+   "sources": [
+    "ea26_wheel_ps",
+    "ea26_mfd_wheel_ps"
+   ],
+   "assignments": [
+    {
+     "function": "drs_aero",
+     "action": "press",
+     "control": "l2",
+     "slot": "press"
+    },
+    {
+     "function": "pit_limiter",
+     "action": "press",
+     "control": "l2",
+     "slot": "press"
+    },
+    {
+     "function": "overtake",
+     "action": "press",
+     "control": "r2",
+     "slot": "press"
+    },
+    {
+     "function": "brake_bias",
+     "action": "inc",
+     "control": "dial",
+     "slot": "cw"
+    },
+    {
+     "function": "brake_bias",
+     "action": "dec",
+     "control": "dial",
+     "slot": "ccw"
+    },
+    {
+     "function": "diff",
+     "action": "inc",
+     "control": "plus",
+     "slot": "press"
+    },
+    {
+     "function": "diff",
+     "action": "dec",
+     "control": "minus",
+     "slot": "press"
+    },
+    {
+     "function": "mfd",
+     "action": "select",
+     "control": "face_circle",
+     "slot": "press"
+    },
+    {
+     "function": "mfd",
+     "action": "up",
+     "control": "dpad",
+     "slot": "up"
+    },
+    {
+     "function": "mfd",
+     "action": "down",
+     "control": "dpad",
+     "slot": "down"
+    },
+    {
+     "function": "mfd",
+     "action": "left",
+     "control": "dpad",
+     "slot": "left"
+    },
+    {
+     "function": "mfd",
+     "action": "right",
+     "control": "dpad",
+     "slot": "right"
+    },
+    {
+     "function": "radio_menu",
+     "action": "press",
+     "control": "face_square",
+     "slot": "press"
+    },
+    {
+     "function": "look",
+     "action": "press",
+     "control": "l3",
+     "slot": "press"
+    },
+    {
+     "function": "camera",
+     "action": "press",
+     "control": "r3",
+     "slot": "press"
+    },
+    {
+     "function": "reset",
+     "action": "press",
+     "control": "face_triangle",
+     "slot": "press"
+    },
+    {
+     "function": "pit_request",
+     "action": "press",
+     "control": "r2",
+     "slot": "press"
+    }
+   ]
+  },
+  {
+   "game": "f1_25",
+   "template": "logitech_g923_xbox",
+   "platforms": [
+    "xbox"
+   ],
+   "evidence": "V",
+   "sources": [
+    "ea26_wheel_xbox",
+    "ea25_mfd_wheel_xbox"
+   ],
+   "assignments": [
+    {
+     "function": "drs_aero",
+     "action": "press",
+     "control": "face_y",
+     "slot": "press"
+    },
+    {
+     "function": "overtake",
+     "action": "press",
+     "control": "face_a",
+     "slot": "press"
+    },
+    {
+     "function": "brake_bias",
+     "action": "inc",
+     "control": "dial",
+     "slot": "cw"
+    },
+    {
+     "function": "brake_bias",
+     "action": "dec",
+     "control": "dial",
+     "slot": "ccw"
+    }
+   ]
+  }
+ ]
 }

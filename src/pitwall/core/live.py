@@ -306,7 +306,7 @@ class LiveState:
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
-        self.button_origin = "live"  # origin of the last on_button call (controls probe; see on_button)
+        self._button_event_listeners: list[Callable[[int, str], None]] = []
 
     # ------------------------------------------------------------- notifications
     def subscribe(self, fn: Callable[[str, dict[str, Any]], None]) -> None:
@@ -324,13 +324,24 @@ class LiveState:
         if fn in self._button_listeners:
             self._button_listeners.remove(fn)
 
+    def subscribe_button_events(self, fn: Callable[[int, str], None]) -> None:
+        """Button bit-flags with their origin ("live" | "replay" | "synthetic"), passed with each call: a replay runs
+        its own session manager thread next to live UDP, so a shared "last origin" field could mislabel a press."""
+        self._button_event_listeners.append(fn)
+
+    def unsubscribe_button_events(self, fn: Callable[[int, str], None]) -> None:
+        if fn in self._button_event_listeners:
+            self._button_event_listeners.remove(fn)
+
     def on_button(self, status: int, origin: str = "live") -> None:
-        """A game's button bit-flags. ``origin`` ("live" | "replay" | "synthetic") is stored before the fan-out, so a
-        listener (the controls button probe) can tell a replayed press from a live one; the radio hub ignores it."""
-        self.button_origin = origin
+        """A game's button bit-flags. ``subscribe_buttons`` listeners (the radio hub) get the status only;
+        ``subscribe_button_events`` listeners (the controls button probe) also get ``origin``."""
         for fn in list(self._button_listeners):
             with contextlib.suppress(Exception):
                 fn(status)
+        for fe in list(self._button_event_listeners):
+            with contextlib.suppress(Exception):
+                fe(status, origin)
 
     def notify(self, kind: str, payload: dict[str, Any]) -> None:
         for fn in list(self._listeners):

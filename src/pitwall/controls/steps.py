@@ -13,7 +13,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from pitwall.controls.catalog import PTT_FUNCTION, Catalog, weakest
+from pitwall.controls.catalog import PTT_FUNCTION, Catalog, in_sentence, native_parts, split_name, weakest
+
+__all__ = ["guide", "physical", "split_name"]
 from pitwall.controls.model import Assignment, WheelControl, WheelDef, signal_platform
 from pitwall.controls.recommend import ACTION_SUFFIX, DIRECTION_WORDS, other_rows
 
@@ -45,6 +47,13 @@ def _platform_words(cat: Catalog, c: WheelControl, slot: str | None, sp: str | N
     return None
 
 
+def _same_words(words: str, c: WheelControl, slot: str | None) -> bool:
+    """ "Press SQUARE (Square)": the platform's words add nothing when they are the control's own name."""
+    w = words.strip().lower()
+    names = {c.label.lower(), f"{c.label} {slot}".lower(), f"{c.label} {DIRECTION_WORDS.get(slot or '', '')}".lower()}
+    return w in names
+
+
 def physical(cat: Catalog, c: WheelControl, slot: str | None, sp: str | None) -> str:
     name = c.label.upper()
     k = c.kind
@@ -61,7 +70,7 @@ def physical(cat: Catalog, c: WheelControl, slot: str | None, sp: str | None) ->
     else:
         text = f"Press {name}"
     words = _platform_words(cat, c, slot, sp)
-    return f"{text} ({words})" if words else text
+    return f"{text} ({words})" if words and not _same_words(words, c, slot) else text
 
 
 def _label(cat: Catalog, a: Assignment) -> str:
@@ -71,6 +80,11 @@ def _label(cat: Catalog, a: Assignment) -> str:
     if a.action in ACTION_SUFFIX:
         return base + ACTION_SUFFIX[a.action]
     return f"{base} {DIRECTION_WORDS.get(a.action, a.action)}"
+
+
+def _capped(evidence: str | None, unverified: bool) -> str | None:
+    """A row the research couldn't confirm in the game is at most Community, however official its source."""
+    return weakest(evidence, "U") if unverified and evidence is not None else evidence
 
 
 def guide(
@@ -85,7 +99,7 @@ def guide(
 ) -> dict[str, Any]:
     game = cat.games.get(game_id)
     sp = signal_platform(platform)
-    label = game.label if game is not None else (game_name or "this game")
+    label = game.label_on(platform) if game is not None else (game_name or "this game")
     rows: Mapping[str, Any] = game.functions if game is not None else other_rows(cat, other_functions)
     groups = list(game.menu.groups) if game is not None else []
     intro: list[str] = []
@@ -96,17 +110,31 @@ def guide(
             intro.append(f"In {label}, open {game.menu.where}.")
         if game.menu.note and game.menu.evidence is not None:
             intro.append(game.menu.note[0].upper() + game.menu.note[1:] + ".")
-        intro.append(game.preset_warning)
+        defaults = [a for a in assignments if a.origin == "game_default"]
+        if defaults:
+            names = ", ".join(dict.fromkeys(cat.label(a.function) for a in defaults))
+            intro.append(f"Already set by {label} for this wheel (its own defaults): {names}. Nothing to change there.")
+        else:
+            intro.append(game.preset_warning)
         if game.id == "f1_25":
             intro.append(F1_REBIND)
         fixed = [a for a in assignments if a.origin == "game_fixed"]
         if fixed:
-            names = ", ".join(cat.label(a.function) for a in fixed)
-            intro.append(f"Nothing to map for {names}: {label} sets those itself.")
+            names = ", ".join(dict.fromkeys(cat.label(a.function) for a in fixed))
+            community = any(
+                (fx := cat.fixed_for(game.id, wheel.template, a.function)) is not None and fx.evidence != "V"
+                for a in fixed
+            )
+            tail = " (which coloured stick does what is community-reported)" if community else ""
+            intro.append(f"Nothing to map for {names}: {label} sets those itself{tail}.")
     else:
         intro.extend(cat.other_game_steps)
     order = {fn: i for i, fn in enumerate(rows)}
-    todo = [a for a in assignments if a.origin != "game_fixed" and (a.control_id is not None or a.udp_action)]
+    todo = [
+        a
+        for a in assignments
+        if a.origin not in ("game_fixed", "game_default") and (a.control_id is not None or a.udp_action)
+    ]
 
     def sort_key(a: Assignment) -> tuple[int, int, str]:
         row = rows.get(a.function)
@@ -118,15 +146,14 @@ def guide(
     for a in sorted(todo, key=sort_key):
         row = rows.get(a.function)
         c = wheel.control(a.control_id)
-        native = (
-            f"UDP Action {a.udp_action}"
-            if a.function == PTT_FUNCTION and a.udp_action
-            else (getattr(row, "native_name", "") or "")
-        )
-        plain = row.actions.get(a.action) if row is not None and a.action in row.actions else None
+        native_note: str | None = None
+        if a.function == PTT_FUNCTION and a.udp_action:
+            native = f"UDP Action {a.udp_action}"
+        elif game is not None:
+            native, native_note = native_parts(row, a.action)
+        else:
+            native = ""  # "Other game": no research, so no name of the game's is claimed
         lab = _label(cat, a)
-        if plain and plain != native and game is not None and a.function != PTT_FUNCTION:
-            lab = f"{lab} ({plain})"
         if c is not None:
             phys = physical(cat, c, a.slot, sp)
         elif a.function == PTT_FUNCTION:
@@ -137,6 +164,11 @@ def guide(
         conds = list(getattr(row, "conditions", ()) or ()) if row is not None else []
         if conds:  # "Only: 2025 cars: DRS, in DRS zones; 2026 cars: ..."
             notes.append("Only: " + "; ".join(conds) + ".")
+        if game is not None and row is not None and not getattr(row, "native_found", True):
+            notes.append(f"The research found no name for this in {label}: look for {in_sentence(lab)} in its list.")
+        unverified = game is not None and getattr(row, "in_race", None) == "unverified"
+        if unverified:
+            notes.append(f"Unverified in {label}: it may not be in the game's list at all.")
         if game is None:
             syn = cat.functions[a.function].synonyms if a.function in cat.functions else ()
             if syn:
@@ -144,10 +176,11 @@ def guide(
         sig = c.signal(sp) if c is not None else None
         if sig is not None:
             kind, _v = sig.slot(a.slot)
+            name = c.label if c is not None else "this control"
             if kind == "game_specific":
-                notes.append(cat.warnings["game_specific"].format(game=label))
+                notes.append(cat.warnings["game_specific"].format(game=label, ctl=name))
             elif kind == "unknown":
-                notes.append("What this control sends isn't known: check it in the game.")
+                notes.append(f"What {name} sends isn't known: check it in the game.")
         game_ev = getattr(row, "evidence", None)
         wheel_ev = (sig.evidence if sig is not None else c.evidence) if c is not None else None
         steps.append(
@@ -155,9 +188,10 @@ def guide(
                 "n": len(steps) + 1,
                 "group": getattr(row, "menu_group", None),
                 "native": native,
+                "native_note": native_note,  # additive: the bracketed part of the game's name, for a second line
                 "label": lab,
                 "physical": phys,
-                "evidence": weakest(game_ev, wheel_ev) if c is not None else game_ev,
+                "evidence": _capped(weakest(game_ev, wheel_ev) if c is not None else game_ev, unverified),
                 "note": " ".join(notes) or None,
             }
         )

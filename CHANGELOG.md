@@ -21,6 +21,9 @@ The release workflow copies a release's bullet points into its GitHub release no
 - Radio push-to-talk follows your saved F1 25 layout without a restart (UDP Action 1 keeps working). Tested on
   synthetic data, not live.
 - Ask the engineer "which button is brake bias?": it answers from your saved layout. Tested on synthetic data.
+- F1 25 on a Logitech G923 starts from EA's own default buttons and only adds what is missing. Research only.
+- Setup › Controls asks you to pick your wheel (brands first, or search) instead of assuming a Fanatec, and asks you
+  to place the controls of a wheel the research has no drawing for. Research only.
 
 ## v0.2.1 - 2026-10-12
 

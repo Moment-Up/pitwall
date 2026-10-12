@@ -80,6 +80,7 @@ class UdpListener:
         self.capture: BackgroundCaptureWriter | None = None
         self.received = 0
         self.handler_errors = 0
+        self.last_ip: str | None = None  # the sender of the last datagram (receive thread; read by Setup › Controls)
         self.sources: dict[str, SourceStats] = {}
         self._stop = threading.Event()
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -153,6 +154,7 @@ class UdpListener:
 
     def _track(self, addr: tuple[str, int], n_bytes: int, now: float) -> None:
         ip = str(addr[0])
+        self.last_ip = ip
         st = self.sources.get(ip)
         if st is None:
             if len(self.sources) >= MAX_TRACKED_SOURCES:  # bounded: evict the stalest sender

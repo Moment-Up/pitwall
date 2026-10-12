@@ -256,7 +256,8 @@ def ac_guide(ac_console_ip: str | None = None, ac_platform: str | None = None) -
     )
 
 
-PTT_MENU_PATH = "Controls > (your wheel's preset) > UDP Custom Actions"  # EA's controls hub groups (F1 25) [V]
+# F1 25: inferred from EA's controls hub (its groups are official; the console screen names are not checked) [A]
+PTT_MENU_PATH = "Controls, then your wheel's entry, then UDP Custom Actions"
 
 
 def ptt_words(settings: Settings, ptt: dict[str, Any] | None = None) -> str:

@@ -104,7 +104,8 @@ def test_research_evidence_maps_to_letters() -> None:
 
 def test_menu_paths_and_evidence() -> None:
     f1 = CAT.games["f1_25"].menu
-    assert f1.where == "Controls > [your wheel's preset]" and f1.evidence == "V"
+    # inferred from EA's controls hub (official); the screen names on the console are not checked
+    assert f1.where == "Controls, then the entry for your wheel" and f1.evidence == "A" and "not checked" in f1.note
     assert f1.groups == ("Control Scheme", "MFD Shortcuts", "UDP Custom Actions")
     assert CAT.games["gt7"].menu.evidence == "A"
     for gid in ("ac", "acc", "iracing", "lmu", "rf2", "ams2", "r3e", "ac_evo", "forza_motorsport"):
@@ -141,7 +142,10 @@ def test_api_shape_matches_the_contract() -> None:
         "research_depth",
         "functions",
         "presets",
+        "platform_labels",
     }
+    forza = CAT.games["forza_motorsport"]
+    assert forza.label_on("ps5") == "Forza Horizon (PS5)" and forza.label_on("xbox") == forza.label
     assert set(g["functions"][0]) == {
         "function",
         "in_race",
@@ -155,8 +159,23 @@ def test_api_shape_matches_the_contract() -> None:
         "evidence",
         "source_ids",
         "platform_note",
+        "native_found",
     }
-    assert set(api["templates"][0]) == {"id", "brand", "name", "type", "platforms", "completeness", "shape"}
+    assert set(api["templates"][0]) == {
+        "id",
+        "brand",
+        "name",
+        "type",
+        "platforms",
+        "completeness",
+        "shape",
+        "display_name",
+        "signal_platforms",
+        "controls_total",
+        "controls_placed",
+    }
+    names = {t["id"]: t["display_name"] for t in api["templates"]}
+    assert names["thrustmaster_t248"] == "T248 / T248X" and not any("[" in n or "not read" in n for n in names.values())
     assert set(api["kinds"]["encoder"]) == {"label", "slots", "pairs"}
     assert set(api["diagram"]["shapes"]) == {"round", "d", "formula", "box"}
     text = json.dumps({k: v for k, v in api.items() if k != "sources"})

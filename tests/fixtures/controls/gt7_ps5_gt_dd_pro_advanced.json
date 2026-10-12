@@ -9,10 +9,10 @@
     "mfd.left -> menu_stick:left (recommended, ev A)",
     "mfd.right -> menu_stick:right (recommended, ev A)",
     "overtake.press -> face_triangle:press (recommended, ev A)",
-    "drs_aero.press -> face_square:press (recommended, ev A)",
-    "look.press -> face_circle:press (recommended, ev U)",
-    "lights.press -> face_cross:press (recommended, ev U)",
-    "camera.press -> tab_l2:press (recommended, ev A)"
+    "look.press -> face_square:press (recommended, ev U)",
+    "lights.press -> face_circle:press (recommended, ev U)",
+    "camera.press -> face_cross:press (recommended, ev A)",
+    "drs_aero.press -> face_triangle:press (recommended, ev A)"
   ],
   "pitwall_ptt": {
     "path": "screen"

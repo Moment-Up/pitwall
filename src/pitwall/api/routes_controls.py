@@ -44,11 +44,12 @@ from fastapi.responses import HTMLResponse, PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from pitwall import games
+from pitwall.adapters.f1.enums import button_names
 from pitwall.controls import model as M
 from pitwall.controls.card import card_html, card_text
-from pitwall.controls.catalog import PTT_FUNCTION, Catalog, load_catalog
+from pitwall.controls.catalog import PTT_FUNCTION, Catalog, in_sentence, load_catalog
 from pitwall.controls.probe import TestItem, build_items
-from pitwall.controls.recommend import Recommendation, recommend
+from pitwall.controls.recommend import Recommendation, allowed_actions, other_rows, recommend
 from pitwall.controls.steps import guide
 from pitwall.controls.templates import default_wheel, resolve_wheel, template_wheel
 from pitwall.storage import repo
@@ -144,7 +145,7 @@ class AssignmentIn(_Body):
     control_id: str | None = Field(default=None, pattern=r"^[a-z0-9_]{1,40}$")
     slot: str | None = Field(default=None, max_length=10)
     udp_action: int | None = Field(default=None, ge=1, le=12)
-    origin: Literal["recommended", "driver", "game_fixed", "kept"] = "driver"
+    origin: Literal["recommended", "driver", "game_fixed", "kept", "game_default"] = "driver"
     check: CheckIn | None = None
 
 
@@ -178,6 +179,8 @@ class DriverPut(_Body):
 class TestStart(_Body):
     layout_id: str | None = Field(default=None, pattern=r"^l_[0-9a-f]{8}$")
     mode: Literal["layout", "identify"] = "layout"
+    # additive: test only these assignment keys ("Try again" on one item)
+    keys: list[Annotated[str, Field(max_length=50)]] | None = Field(default=None, max_length=M.MAX_ASSIGNMENTS)
 
 
 # ---------------------------------------------------------------------------------------------- helpers
@@ -231,14 +234,19 @@ def _seated(request: Request) -> int | None:
 
 
 def _rig(request: Request) -> tuple[str | None, str | None]:
-    """The rig profile's (platform, rim), via the rig module's lenient parser."""
+    """The rig profile's (platform, rim), via the rig module's lenient parser - but only the keys the stored section
+    holds: ``RigProfile`` defaults to the owner's own rig (PS5, GT DD Pro), which a new household doesn't have."""
     from pitwall.rig.recommend import RigProfile
 
     try:
-        p = RigProfile.from_stored(_store(request).get("rig"))
+        raw = _store(request).get("rig")
+        if not isinstance(raw, dict) or not raw:
+            return None, None
+        p = RigProfile.from_stored(raw)
     except Exception:
         return None, None
-    return p.platform, p.rim
+    # a stored value the rig module rejected falls back to its default there: that is not this household's either
+    return (p.platform if raw.get("platform") == p.platform else None), (p.rim if raw.get("rim") == p.rim else None)
 
 
 def _setting_udp(request: Request) -> int:
@@ -250,6 +258,7 @@ def _setting_udp(request: Request) -> int:
 
 def _wheel_from_create(cat: Catalog, body: WheelCreate) -> M.WheelDef:
     now = time.time()
+    start: M.WheelDef | None = None  # what the evidence is carried from: the template's draft, else nothing
     if body.template:
         if body.template not in cat.templates:
             raise HTTPException(404, f"unknown template {body.template!r}")
@@ -257,6 +266,7 @@ def _wheel_from_create(cat: Catalog, body: WheelCreate) -> M.WheelDef:
         w = replace(w, rev=1)
         if body.controls is None and body.parts is None:
             return w
+        start = w
         raw = {**w.to_dict(), "name": body.name}
     else:
         raw = {
@@ -281,24 +291,58 @@ def _wheel_from_create(cat: Catalog, body: WheelCreate) -> M.WheelDef:
     if body.controls is not None:
         raw["controls"] = [c.model_dump(exclude_none=False) for c in body.controls]
     try:
-        return M.parse_wheel(raw)
+        made = M.parse_wheel(raw)
     except M.ControlsValidationError as e:
         raise _422(e) from e
+    return _carry_evidence(made, start if start is not None else replace(made, controls=()), cat)
 
 
 def _check_assignments(cat: Catalog, game: str, wheel: M.WheelDef, asg: list[M.Assignment]) -> None:
+    """What the game can do: a known function of the game, an action it has, nothing on a button that the game keeps
+    in a menu or on its MFD pages, and UDP Actions only for Talk to Pitwall in F1 25."""
     g = cat.games.get(game)
+    label = g.label if g is not None else "This game"
     for a in asg:
         if a.function not in cat.functions:
             raise HTTPException(422, f"{a.key}: {a.function!r} is not a function Pitwall knows")
-        if g is not None and a.function not in g.functions and a.function != PTT_FUNCTION:
-            raise HTTPException(422, f"{a.key}: {g.label} has no {cat.label(a.function).lower()}")
-        if g is not None and a.function == PTT_FUNCTION and g.button_path != "f1_butn" and a.control_id is not None:
-            raise HTTPException(422, f"{g.label} doesn't send button presses: Talk to Pitwall can't go on the wheel")
-        if g is not None and a.function in g.functions:
-            row = g.functions[a.function]
-            if row.binding in ("menu", "none") and a.origin != "game_fixed":
-                raise HTTPException(422, f"{a.key}: in {g.label} this can't go on a button")
+        if a.udp_action is not None and (a.function != PTT_FUNCTION or g is None or g.button_path != "f1_butn"):
+            raise HTTPException(422, f"{a.key}: UDP Actions are only for Talk to Pitwall in F1 25")
+        if a.function == PTT_FUNCTION:
+            if (g is None or g.button_path != "f1_butn") and (a.control_id is not None or a.udp_action is not None):
+                raise HTTPException(422, f"{label} doesn't send button presses: Talk to Pitwall can't go on the wheel")
+            if a.action != "hold":
+                raise HTTPException(422, f"{a.key}: Talk to Pitwall is held, so its action is hold")
+            continue
+        if g is not None and a.function not in g.functions:
+            raise HTTPException(422, f"{a.key}: {g.label} has no {in_sentence(cat.label(a.function))}")
+        row = g.functions[a.function] if g is not None else other_rows(cat, [a.function]).get(a.function)
+        if a.origin == "game_fixed":
+            fixed = any(
+                fx.game == game and fx.template == wheel.template and fx.controls.get(a.function) == a.control_id
+                for fx in cat.fixed_by_game
+            )
+            if not fixed:
+                raise HTTPException(422, f"{a.key}: {label} doesn't fix this on {wheel.name}")
+            continue
+        if row is not None and (row.binding in ("menu", "none", "mfd") or row.in_race in ("no", "pause_menu")):
+            where = "on its MFD pages" if row.binding == "mfd" else "in a menu"
+            raise HTTPException(422, f"{a.key}: in {label} this is changed {where}, so it can't go on a button")
+        if a.action not in allowed_actions(cat, a.function, row):
+            raise HTTPException(422, f"{a.key}: {label} has no {a.action!r} for {in_sentence(cat.label(a.function))}")
+    if g is not None:  # one button for both in the game (GT7: DRS is the Overtake button)
+        on: dict[str, set[str | None]] = {}
+        for a in asg:
+            on.setdefault(a.function, set()).add(a.control_id)
+        for fn, ctls in on.items():
+            row = g.functions.get(fn)
+            if row is not None and row.always_shared and row.shares_with:
+                host = on.get(row.shares_with[0])
+                if host is not None and ctls != host:
+                    raise HTTPException(
+                        422,
+                        f"In {g.label}, {in_sentence(cat.label(fn))} uses the {cat.label(row.shares_with[0])} button: "
+                        "put them on the same control.",
+                    )
 
 
 def _assignments(items: list[AssignmentIn]) -> list[M.Assignment]:
@@ -398,6 +442,41 @@ def create_wheel(request: Request, body: WheelCreate) -> dict[str, Any]:
     return wheel.to_dict()
 
 
+def _same_signal(a: M.Signal | None, b: M.Signal | None) -> bool:
+    if a is None or b is None:
+        return False
+    return (a.kind, a.value, dict(a.per_slot)) == (b.kind, b.value, dict(b.per_slot))
+
+
+def _carry_evidence(new: M.WheelDef, cur: M.WheelDef, cat: Catalog) -> M.WheelDef:
+    """Evidence is never taken from the client: an unchanged control or signal keeps what was stored (or the
+    template's research letter); anything changed is your entry (H). "Seen by Pitwall" comes only from Identify."""
+    tmpl = cat.templates.get(new.template or "")
+    tmpl_controls = {c.id: c for c in tmpl.controls} if tmpl is not None else {}
+    out: list[M.WheelControl] = []
+    for c in new.controls:
+        old = cur.control(c.id)
+        base = tmpl_controls.get(c.id)
+        if old is not None and old.kind == c.kind:
+            ev: M.Evidence = old.evidence
+        elif base is not None and base.kind == c.kind:
+            ev = base.evidence
+        else:
+            ev = "H"
+        sigs: dict[str, M.Signal] = {}
+        for plat, sig in c.signals.items():
+            prev = old.signals.get(plat) if old is not None else None
+            orig = base.signals.get(plat) if base is not None and base.kind == c.kind else None
+            if _same_signal(sig, prev) and prev is not None:
+                sigs[plat] = prev
+            elif _same_signal(sig, orig) and orig is not None:
+                sigs[plat] = orig
+            else:
+                sigs[plat] = replace(sig, evidence="H", seen=None, source_ids=())
+        out.append(replace(c, evidence=ev, signals=sigs))
+    return replace(new, controls=tuple(out))
+
+
 @router.put("/wheels/{wheel_id}")
 def put_wheel(request: Request, wheel_id: WheelId, body: WheelPut) -> dict[str, Any]:
     store = _store(request)
@@ -411,15 +490,20 @@ def put_wheel(request: Request, wheel_id: WheelId, body: WheelPut) -> dict[str, 
         raw = body.model_dump(exclude={"id", "created_unix", "updated_unix"})
         raw.update({"id": wheel_id, "rev": cur.rev + 1, "created_unix": cur.created_unix, "updated_unix": time.time()})
         try:
-            wheel = M.parse_wheel(raw)
+            wheel = _carry_evidence(M.parse_wheel(raw), cur, _cat())
         except M.ControlsValidationError as e:
             raise _422(e) from e
+        cat = _cat()
         for lay in state.layouts_using(wheel_id):
-            for a in lay.assignments:
-                if a.control_id is not None and wheel.control(a.control_id) is None:
-                    raise HTTPException(
-                        409, f"{a.control_id!r} is used by a layout ({lay.game}, {lay.platform}): change that first"
-                    )
+            try:
+                M.check_layout_against_wheel(lay, wheel)
+            except M.ControlsValidationError as e:
+                g = cat.games.get(lay.game)
+                game = g.label if g is not None else (lay.game_name or lay.game)
+                plat = {"ps5": "PS5", "ps4": "PS4", "xbox": "Xbox", "pc": "PC"}.get(lay.platform, lay.platform)
+                raise HTTPException(
+                    409, f"Your {game} layout on {plat} ({lay.id}) uses this: {e}. Change that layout first."
+                ) from e
         M.save_state(store, state.with_wheel(wheel))
     return wheel.to_dict()
 
@@ -462,7 +546,10 @@ def import_wheel(request: Request, body: dict[str, Any]) -> dict[str, Any]:
     tmpl = cat.templates.get(str(raw.get("template") or ""))
     tmpl_controls = {c.id: c for c in tmpl.controls} if tmpl is not None else {}
     controls = []
-    for c in raw.get("controls") or []:
+    raw_controls = raw.get("controls") or []
+    if not isinstance(raw_controls, list):
+        raise HTTPException(422, "controls: expected a list")
+    for c in raw_controls:
         if not isinstance(c, dict):
             raise HTTPException(422, "controls: expected objects")
         c = dict(c)
@@ -470,7 +557,10 @@ def import_wheel(request: Request, body: dict[str, Any]) -> dict[str, Any]:
         same = base is not None and base.kind == c.get("kind")
         c["evidence"] = base.evidence if same and base is not None else "H"
         sigs = {}
-        for p, s in (c.get("signals") or {}).items():
+        raw_sigs = c.get("signals") or {}
+        if not isinstance(raw_sigs, dict):
+            raise HTTPException(422, "signals: expected an object of platform -> signal")
+        for p, s in raw_sigs.items():
             if not isinstance(s, dict):
                 raise HTTPException(422, "signals: expected objects")
             bs = base.signals.get(p) if same and base is not None else None
@@ -499,6 +589,39 @@ def import_wheel(request: Request, body: dict[str, Any]) -> dict[str, Any]:
     return wheel.to_dict()
 
 
+SEEN_WINDOW_S = 120.0  # Identify: the press must be this recent
+
+
+def _evidence_checked(request: Request, platform: str, sig: M.Signal) -> M.Signal:
+    """What you type is your entry (H). "Seen by Pitwall" only when the probe saw that pad button pressed from F1 25
+    live, sent by a console or another PC (not this computer), in the last two minutes; the press it saw is kept."""
+    if sig.evidence != "seen":
+        return replace(sig, evidence="H", seen=None, source_ids=())
+    cat = _cat()
+    pd = cat.pad_def(platform, sig.value) if sig.kind == "pad" and not sig.per_slot else None
+    if pd is None or pd.bit is None:
+        raise HTTPException(422, "Only one console button that F1 25 reports can be saved as seen by Pitwall.")
+    probe = _service(request).probe
+    now = time.time()
+    hit = next(
+        (
+            e
+            for e in reversed(probe.since(max(0, probe.seq - 64)))
+            if e.origin == "live" and e.pressed & pd.bit and now - e.t_unix <= SEEN_WINDOW_S
+        ),
+        None,
+    )
+    if hit is None:
+        raise HTTPException(
+            409,
+            f"Pitwall hasn't seen {pd.label} pressed from F1 25 on your console or PC in the last two minutes. "
+            "Press the control again with F1 25 sending telemetry.",
+        )
+    plat = sig.seen.platform if sig.seen is not None else {"ps": "ps5", "xbox": "xbox", "pc": "pc"}[platform]
+    seen = M.Seen(hit.t_unix, tuple(button_names(hit.pressed)), "f1_25", plat)
+    return replace(sig, seen=seen, source_ids=())
+
+
 @router.put("/wheels/{wheel_id}/controls/{control_id}/signal")
 def put_signal(request: Request, wheel_id: WheelId, control_id: ControlId, body: SignalPut) -> dict[str, Any]:
     store = _store(request)
@@ -519,6 +642,7 @@ def put_signal(request: Request, wheel_id: WheelId, control_id: ControlId, body:
                     raise M.ControlsValidationError(f"signal.per_slot: {slot!r} is not a slot of {c.label}")
         except M.ControlsValidationError as e:
             raise _422(e) from e
+        sig = _evidence_checked(request, body.platform, sig)
         nc = replace(c, signals={**c.signals, body.platform: sig})
         nw = replace(
             w,
@@ -803,15 +927,14 @@ def start_test(request: Request, body: TestStart) -> dict[str, Any]:
             label = game.label if game is not None else (lay.game_name or "This game")
             raise HTTPException(422, NO_BUTTONS.format(game=label))
     if body.mode == "identify":
-        items = [
-            TestItem(
-                "identify", "identify", "Back out to the garage or a menu, then press a control on your wheel.", {}
-            )
-        ]
+        items = [TestItem("identify", "identify", "Press a control on your wheel on its own, twice.", {})]
     else:
         if lay is None:
             raise HTTPException(422, "Pick a saved F1 25 layout to test.")
         items = build_items(lay, wheel, cat.label)
+        if body.keys is not None:
+            want = set(body.keys)
+            items = [it for it in items if it.key in want]
         if not items:
             raise HTTPException(422, "This layout has no UDP Action or brake bias / ERS buttons to test.")
     try:

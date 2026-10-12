@@ -2,9 +2,11 @@
 // game's Controls screen with the iPad at about 70 cm. It reuses the rig walkthrough's step card pattern (chamfered
 // "thing to do now", 64 px ‹ Previous / Done, next ›, sticky from 768 px):
 //
-//   Where: Controls > [your wheel's preset] (Official)        ← intro: the menu path and its evidence
+//   Where: Controls, then the entry for your wheel [Inferred]   ← intro: the menu path and its evidence (one line
+//                                                                 after the first step)
 //   Step 6 of 10 · MFD Shortcuts                     Done
-//   Brake Bias Increase                        (32 px, the game's own name, verbatim)
+//   Brake Bias Increase                        (32 px, the game's own name for this one action, verbatim; a bracketed
+//                                               note of the game's name goes on a second line)
 //   ↓
 //   Press R2                                   (48 px, the physical instruction)
 //   [mini diagram, the control in the accent]  [Inferred]
@@ -14,7 +16,7 @@
 // here (lib/setup/controls.ts draftGuide). Ticks are a per-device convenience (localStorage, try/catch), never data.
 
 import { Button, Card } from "@heroui/react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRadio } from "../../../components/radio";
 import { useApi } from "../../../hooks/useApi";
 import { CONTROLS_KEYS, controlsApi } from "../../../lib/endpoints/controls";
@@ -29,6 +31,7 @@ import {
   stepControl,
   stepGroups,
   stepSig,
+  stripTokens,
   type MapTicks,
 } from "../../../lib/setup/controls";
 import { Fold, TickIcon } from "../rig/parts";
@@ -64,30 +67,47 @@ export function MapView({ v, n }: { v: ControlsView; n: number | null }) {
   const allDone = steps.length > 0 && steps.every((s) => ticks[stepSig(s)]);
   const go = (k: number) => router.replace(controlsPath("map", v.query, k + 1));
   const highlight = step ? stepControl(step, v.rows) : null;
+  const placed = v.wheel.controls.find((c) => c.id === highlight)?.zone !== "unplaced";
   const done = step ? ticks[stepSig(step)] === true : false;
   const whereEv = evidenceChip(guide.where_evidence, v.catalog.evidence_labels);
   const f1 = seesButtons(v.game);
+  const intro = guide.intro.map((t) => {
+    const x = stripTokens(t);
+    return x ? x[0]!.toUpperCase() + x.slice(1) : x;
+  });
+  // A new step scrolls its card to the top and moves focus to its heading, so the instruction is never above the
+  // screen (phones) or under the sticky Previous / Done bar (iPad).
+  const stepRef = useRef<HTMLDivElement | null>(null);
+  const headRef = useRef<HTMLParagraphElement | null>(null);
+  const firstIdx = useRef(idx);
+  useEffect(() => {
+    if (idx === firstIdx.current) return;
+    firstIdx.current = -2;
+    stepRef.current?.scrollIntoView?.({ block: "start", behavior: "smooth" });
+    headRef.current?.focus({ preventScroll: true });
+  }, [idx]);
 
   return (
     <div className="grid min-w-0 gap-4 [&>*]:min-w-0">
-      <Card className="gap-2 px-5 py-4" data-testid="map-intro">
-        <p className="m-0 text-[17px]">
-          <span className="font-semibold">Where:</span> {guide.where}
-        </p>
-        <div className="flex flex-wrap items-center gap-2">
+      <Card className={`gap-2 px-5 ${idx <= 0 ? "py-4" : "py-2"}`} data-testid="map-intro">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <p className="m-0 text-[17px]">
+            <span className="font-semibold">Where:</span> {stripTokens(guide.where)}
+          </p>
           {whereEv ? <Chips chips={[whereEv]} size="md" /> : <span className="text-sm text-muted">Exact menu path not researched.</span>}
-          {!saved ? <span className="text-sm text-muted">From the layout on screen (not saved yet).</span> : null}
         </div>
-        {/* The intro in full on the first step; after that it folds away so the step stays above the fold. */}
+        {!saved && idx <= 0 ? <span className="text-sm text-muted">From the layout on screen (not saved yet).</span> : null}
+        {/* The intro in full on the first step; after that the card is one line and the intro folds away, so the step
+            stays on screen. */}
         {idx <= 0
-          ? guide.intro.map((t) => (
+          ? intro.map((t) => (
               <p key={t} className="m-0 text-[15px] text-muted">
                 {t}
               </p>
             ))
-          : guide.intro.length ? (
+          : intro.length ? (
               <Fold title="About this screen">
-                {guide.intro.map((t) => (
+                {intro.map((t) => (
                   <p key={t} className="m-0 text-[15px] text-muted">
                     {t}
                   </p>
@@ -110,7 +130,7 @@ export function MapView({ v, n }: { v: ControlsView; n: number | null }) {
         </Card>
       ) : (
         <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px] [&>*]:min-w-0">
-          <Card className="pw-chamfer gap-3 px-5 pt-4 pb-5 md:px-6" aria-label={`Step ${idx + 1} of ${steps.length}`} data-testid="map-step">
+          <Card ref={stepRef} className="pw-chamfer scroll-mt-20 gap-3 px-5 pt-4 pb-5 md:px-6" aria-label={`Step ${idx + 1} of ${steps.length}`} data-testid="map-step">
             <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
               <span className="text-sm font-semibold text-muted">
                 Step {idx + 1} of {steps.length}
@@ -122,18 +142,24 @@ export function MapView({ v, n }: { v: ControlsView; n: number | null }) {
                 </span>
               ) : null}
             </div>
-            <p className="m-0 text-sm text-muted">{v.gameLabel} calls it</p>
-            <p className="m-0 text-[32px] leading-tight font-semibold text-balance" data-testid="map-native">
-              {step.native}
+            <p className="m-0 text-sm text-muted">{step.native ? `${v.gameLabel} calls it` : `Look for it in ${v.gameLabel}'s list`}</p>
+            <p ref={headRef} tabIndex={-1} className="m-0 text-[32px] leading-tight font-semibold text-balance outline-none" data-testid="map-native">
+              {step.native || step.label}
             </p>
+            {step.native_note ? (
+              <p className="m-0 text-[15px] text-muted" data-testid="map-native-note">
+                {step.native_note}
+              </p>
+            ) : null}
             <p className="m-0 text-sm text-muted">
-              {step.label !== step.native ? `${step.label} · ` : ""}then on your wheel
+              {step.native && step.label !== step.native ? `${step.label} · ` : ""}then on your wheel
             </p>
             <p className="m-0 text-[40px] leading-[1.1] font-bold tracking-[-0.01em] text-balance md:text-[48px]" data-testid="map-physical">
               {step.physical}
             </p>
-            <div className="grid items-center gap-3 sm:grid-cols-[minmax(0,320px)_1fr]">
-              <WheelDiagram wheel={v.wheel} rows={v.rows} reserved={v.reserved} catalog={v.catalog} highlight={highlight} />
+            <div className={`grid items-center gap-3 ${placed ? "sm:grid-cols-[minmax(0,320px)_1fr]" : ""}`}>
+              {/* A control not placed on the drawing can't be shown on it: the words above say which one. */}
+              {placed ? <WheelDiagram wheel={v.wheel} rows={v.rows} reserved={v.reserved} catalog={v.catalog} highlight={highlight} /> : null}
               <div className="grid gap-2">
                 <Chips chips={[evidenceChip(step.evidence, v.catalog.evidence_labels)].filter((c) => c !== null)} size="md" />
                 {step.note ? <p className="m-0 text-[15px] text-muted">{step.note}</p> : null}
@@ -194,7 +220,7 @@ export function MapView({ v, n }: { v: ControlsView; n: number | null }) {
                         }`}
                       >
                         <span className="w-6 shrink-0 text-right font-mono text-xs">{s.n}</span>
-                        <span className="min-w-0 flex-1 truncate">{s.native}</span>
+                        <span className="min-w-0 flex-1 truncate">{s.native || s.label}</span>
                         <span className="flex w-[18px] shrink-0 justify-center">{ticks[stepSig(s)] ? <TickIcon /> : null}</span>
                       </button>
                     );

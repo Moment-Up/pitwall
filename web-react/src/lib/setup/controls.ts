@@ -35,6 +35,7 @@ import type {
   Signal,
   SignalPlatform,
   Slot,
+  TemplateSummary,
   TestItemState,
   WheelControl,
   WheelDef,
@@ -197,6 +198,34 @@ export function signalText(signal: Signal | null | undefined, slot: Slot | strin
 }
 
 const ACTION_MARK: Record<string, string> = { inc: "+", dec: "−" };
+
+/** Research text carries evidence tokens ("[U]", "[A]"): the page shows evidence as chips, never as tokens. */
+export function stripTokens(text: string): string {
+  return text
+    .replace(/\s*\[(?:V|A|U|D|H)\]/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/** "Activate/Deactivate DRS/S Mode (2026 cars: ...)" -> the name and its bracketed note (shown on a second line), as
+ * the backend's catalog.split_name reads it. */
+export function splitName(text: string): { name: string; note: string | null } {
+  const m = /\s*\(([^()]*)\)\s*$/.exec(text);
+  if (!m || m.index === 0) return { name: text.trim(), note: null };
+  return { name: text.slice(0, m.index).trim(), note: m[1]!.trim() || null };
+}
+
+/** The game's own name for one action ("Brake Bias Increase", "MFD Menu Down"), never the research's long row name;
+ * "" when the research found no binding name (RaceRoom). Mirrors catalog.native_parts. */
+export function nativeFor(gfn: Pick<GameFunction, "actions" | "native_name" | "native_found"> | null | undefined, action: string): { name: string; note: string | null } {
+  if (!gfn || gfn.native_found === false) return { name: "", note: null };
+  const plain = gfn.actions[action];
+  const head = splitName(plain ?? gfn.native_name);
+  const second = plain && !gfn.native_name.includes(";") ? splitName(gfn.native_name).note : null;
+  const notes = [head.note, second].filter((n): n is string => !!n && n.toLowerCase() !== "mfd shortcut" && !head.name.toLowerCase().includes(n.toLowerCase()));
+  const note = [...new Set(notes)].join("; ");
+  return { name: head.name, note: note ? note[0]!.toUpperCase() + note.slice(1) : null };
+}
 
 /** Pitwall's plain label for one action: "Brake bias +", "MFD up", "Talk to Pitwall". */
 export function actionLabel(fn: Pick<FunctionDef, "label" | "shape"> | undefined, fnId: string, action: string): string {
@@ -417,7 +446,7 @@ export function layoutKey(game: string, platform: PlatformId): string {
 
 export interface FoundLayout {
   layout: Layout;
-  /** Whose it is: this driver's own, or everyone's on this console user. */
+  /** Whose it is: this driver's own, or everyone's on this console profile (or PC). */
   scope: "driver" | "household";
 }
 
@@ -468,7 +497,7 @@ export function pttConflict(
   if (!a || !b) return null;
   return `${a.who === "Everyone" ? "The shared layout" : `${a.who}'s layout`} uses UDP Action ${a.n} for Talk to Pitwall and ${
     b.who === "Everyone" ? "the shared layout" : `${b.who}'s`
-  } uses UDP Action ${b.n}. The game keeps one set of buttons per console user, so one of them won't work.`;
+  } uses UDP Action ${b.n}. The game keeps one set of buttons per ${platform === "pc" ? "PC user" : `${PLATFORM_LABEL[platform]} profile`}, so one of them won't work.`;
 }
 
 // ---------------------------------------------------------------------------------------------- rows
@@ -480,8 +509,10 @@ export interface LayoutRow {
   label: string;
   /** Marker text ("BB+"). */
   short: string;
-  /** The game's own name, verbatim research text ("Brake Bias Increase"). */
+  /** The game's own name for this action, verbatim research text ("Brake Bias Increase"). */
   native: string;
+  /** The bracketed note of the game's name ("2026 cars: ..."), for a second line. */
+  native_note: string | null;
   menu_group: string | null;
   control_id: string | null;
   control: WheelControl | null;
@@ -501,6 +532,8 @@ export interface LayoutRow {
   check: AssignmentCheck | null;
   /** The game sets it itself (GT7 coloured sticks): not editable. */
   fixed: boolean;
+  /** The game row is unverified (the game may not have it at all). */
+  unverified: boolean;
 }
 
 const ORIGIN_REASON: Record<Assignment["origin"], string> = {
@@ -508,6 +541,7 @@ const ORIGIN_REASON: Record<Assignment["origin"], string> = {
   driver: "You chose this control.",
   kept: "You already had this on a button, so Pitwall kept it.",
   game_fixed: "The game sets this itself.",
+  game_default: "The game's own default for this wheel, so there's nothing to change.",
 };
 
 function sameAssignment(a: Pick<Assignment, "key" | "control_id" | "slot">, b: Pick<Assignment, "key" | "control_id" | "slot">): boolean {
@@ -539,13 +573,16 @@ export function layoutRows(i: RowInputs): LayoutRow[] {
     const gameEv = anyRec?.evidence_parts.game ?? gfn?.evidence ?? null;
     const evidence = rec ? rec.evidence : control ? weakest(gameEv, signal?.evidence ?? null) : gameEv;
     const reason = (a.origin === "kept" ? ORIGIN_REASON.kept : rec?.reason) || ORIGIN_REASON[a.origin] || anyRec?.reason || "";
+    const own = nativeFor(gfn, a.action);
+    const recNative = rec ?? anyRec;
     return {
       key: a.key,
       function: a.function,
       action: a.action,
       label: anyRec?.label || actionLabel(fn, a.function, a.action),
       short: actionShort(fn, a.function, a.action),
-      native: anyRec?.native || gfn?.actions[a.action] || gfn?.native_name || UNKNOWN,
+      native: (recNative && recNative.key === a.key ? recNative.native : "") || own.name || (i.game ? "" : UNKNOWN),
+      native_note: (recNative && recNative.key === a.key ? recNative.native_note : null) ?? own.note,
       menu_group: anyRec?.menu_group ?? gfn?.menu_group ?? null,
       control_id: a.control_id,
       control,
@@ -558,21 +595,49 @@ export function layoutRows(i: RowInputs): LayoutRow[] {
       reason,
       evidence,
       conditions: anyRec?.conditions ?? gfn?.conditions ?? [],
-      warnings: rec?.warnings ?? signalWarnings(signal, i.game?.label ?? "the game"),
+      warnings: rec?.warnings ?? signalWarnings(signal, i.game?.label ?? "the game", control?.label ?? null, i.platform, a.slot),
       pitwall_sees: anyRec?.pitwall_sees ?? gfn?.pitwall_sees ?? null,
       check: a.check,
       fixed: a.origin === "game_fixed",
+      unverified: (rec?.in_race ?? anyRec?.in_race ?? gfn?.in_race) === "unverified",
     };
   });
 }
 
-/** The warnings a signal carries (design 3, step 4), in the page's words. */
-export function signalWarnings(signal: Signal | null | undefined, game: string): string[] {
+const PLATFORM_WORD: Record<SignalPlatform, string> = { ps: "PlayStation", xbox: "Xbox", pc: "PC" };
+
+/** The warnings a signal carries (design 3, step 4), in the backend's words: each names its control, so a list of
+ * them still says which one is meant. */
+export function signalWarnings(
+  signal: Signal | null | undefined,
+  game: string,
+  control: string | null = null,
+  platform: PlatformId | null = null,
+  slot: Slot | string | null = null,
+): string[] {
   if (!signal) return [];
-  if (signal.kind === "game_specific") return [`Works only if ${game} reads this wheel's extra buttons (unverified).`];
-  if (signal.kind === "folded") return ["Shares its signal with another control: the game can't tell them apart."];
-  if (signal.kind === "unknown") return ["Pitwall doesn't know what this control sends: check it in the game."];
+  const ctl = control ?? "This control";
+  const { kind } = slotSignal(signal, slot);
+  if (kind === "game_specific") return [`${ctl} works only if ${game} reads this wheel's extra buttons (unverified).`];
+  if (kind === "folded") return [`${ctl} sends the same signal as another control, so the game can't tell them apart.`];
+  if (kind === "unknown") {
+    const on = platform ? ` on ${PLATFORM_WORD[signalPlatform(platform)]}` : "";
+    const what = control ?? "this control";
+    return [slot === "push" ? `What ${what} sends when pushed in${on} isn't known: check it in the game.` : `What ${what} sends${on} isn't known: check it in the game.`];
+  }
   return [];
+}
+
+/** Warnings that differ only by their control ("What Cross sends on PC isn't known", "What Circle sends ...") are one
+ * family: said once, in the plural, when most rows have one. */
+export function warningFamily(w: string): string {
+  let m = /^What .+? sends(?: when pushed in)? on (.+?) isn't known: check it in the game\.$/.exec(w);
+  if (m) return `What these controls send on ${m[1]} isn't known: check each one in the game.`;
+  m = /^.+? works only if (.+?) reads this wheel's extra buttons \(unverified\)\.$/.exec(w);
+  if (m) return `Some of these controls work only if ${m[1]} reads this wheel's extra buttons (unverified).`;
+  m = /^Unverified in (.+?): check the game's controls list for it\.$/.exec(w);
+  if (m) return `Unverified in ${m[1]}: check the game's controls list for each one.`;
+  return w;
 }
 
 export interface FunctionGroup {
@@ -647,7 +712,9 @@ export function rowChips(row: LayoutRow, labels?: Partial<Record<Evidence, strin
   const c = checkChip(row.check);
   if (c) out.push(c);
   if (row.fixed) out.push({ label: "Set by the game", tone: "default" });
+  if (row.origin === "game_default") out.push({ label: "The game's default", tone: "default", title: "Already set by the game for this wheel" });
   if (row.origin === "kept") out.push({ label: "Already on a button", tone: "default" });
+  if (row.unverified) out.push({ label: "Unverified in this game", tone: "warning" });
   return out;
 }
 
@@ -656,13 +723,13 @@ export function rowChips(row: LayoutRow, labels?: Partial<Record<Evidence, strin
 export function commonWarnings(rows: readonly Pick<LayoutRow, "warnings">[], share = 0.75): string[] {
   if (rows.length < 2) return [];
   const count = new Map<string, number>();
-  for (const r of rows) for (const w of new Set(r.warnings)) count.set(w, (count.get(w) ?? 0) + 1);
+  for (const r of rows) for (const w of new Set(r.warnings.map(warningFamily))) count.set(w, (count.get(w) ?? 0) + 1);
   return [...count.entries()].filter(([, n]) => n >= 2 && n >= share * rows.length).map(([w]) => w);
 }
 
-/** A row's own warnings: without the common ones and without what its reason already says. */
+/** A row's own warnings: without the common ones (or their family) and without what its reason already says. */
 export function ownWarnings(row: Pick<LayoutRow, "warnings" | "reason">, common: readonly string[]): string[] {
-  return row.warnings.filter((w) => !common.includes(w) && !row.reason.includes(w.replace(/\.$/, "")));
+  return row.warnings.filter((w) => !common.includes(w) && !common.includes(warningFamily(w)) && !row.reason.includes(w.replace(/\.$/, "")));
 }
 
 /** Rows that share one control slot (F1 DRS and pit limiter): `key` -> the other labels on the same slot. */
@@ -816,14 +883,23 @@ export interface Marker {
 }
 
 /** What a reserved control's marker says: "Gear", "Clutch", "Menu", "Mode", "PS"; else "Console". */
-export function reservedShort(c: Pick<WheelControl, "kind" | "signals">): string {
+export function reservedShort(c: Pick<WheelControl, "kind" | "signals"> & Partial<Pick<WheelControl, "label">>): string {
   if (c.kind === "shift_paddle") return "Gear";
   if (c.kind === "analogue_paddle") return "Clutch";
   if (c.kind === "device_menu") return "Menu";
   if (c.kind === "mode_selector" || c.kind === "virtual_layer") return "Mode";
   const pad = Object.values(c.signals).find((sg) => sg?.kind === "pad" && sg.value && SYSTEM_PAD.has(sg.value.toLowerCase()));
   if (pad?.value) return pad.value.toLowerCase() === "ps" ? "PS" : padWord(pad.value).replace(" button", "");
-  return "Console";
+  return c.label ? markerLabel(c.label) : "Console";
+}
+
+const COLOUR_SHORT: Record<string, string> = { yellow: "YEL", green: "GRN", red: "RED", blue: "BLU", orange: "ORG", white: "WHT", black: "BLK", purple: "PUR" };
+
+/** A free control's marker words: the coloured sticks as YEL / GRN / RED / BLU, the rest as they are. */
+export function markerLabel(label: string): string {
+  const m = /^(yellow|green|red|blue|orange|white|black|purple)\b/i.exec(label.trim());
+  if (m) return COLOUR_SHORT[m[1]!.toLowerCase()]!;
+  return label.replace(/ button$/i, "");
 }
 
 /** A free control's label cut to `max` characters with "…". */
@@ -943,7 +1019,7 @@ export function layoutMarkers(i: MarkerInputs): { markers: Marker[]; unplaced: W
       const rows = byControl.get(c.id) ?? [];
       const mt = markerText(rows, fnShort);
       const kind: MarkerKind = rows.length ? "assigned" : i.reserved.has(c.id) ? "reserved" : "free";
-      const fit = fitText(rows.length ? mt.text : kind === "reserved" ? reservedShort(c) : c.label, g.cw);
+      const fit = fitText(rows.length ? mt.text : kind === "reserved" ? reservedShort(c) : markerLabel(c.label), g.cw);
       markers.push({
         id: c.id,
         control_id: c.id,
@@ -1137,7 +1213,7 @@ export function slotOptions(i: OptionInputs): SlotOption[] {
     if (isPtt && !pttFits(c, i.platform)) continue;
     const slots = controlSlots(c, i.platform);
     const sig = c.signals[sp];
-    const warnings = signalWarnings(sig, i.game);
+    const warnings = signalWarnings(sig, i.game, c.label, i.platform);
     const detail = `${zoneLabel(c)} · ${signalText(sig)}`;
     const editing = i.action ? [i.action] : actions;
     if (i.fn.shape === "pair" && editing.length === 2) {
@@ -1321,22 +1397,31 @@ export function draftGuide(rows: readonly LayoutRow[], game: GameDef | null | un
   };
   const list = rows
     .map((r, k) => ({ r, k }))
-    .filter(({ r }) => r.control_id && !r.fixed)
+    .filter(({ r }) => r.control_id && !r.fixed && r.origin !== "game_default")
     .sort((a, b) => rank(a.r.menu_group) - rank(b.r.menu_group) || a.k - b.k)
     .map(({ r }) => r);
   const steps: MapStep[] = list.map((r, k) => ({
     n: k + 1,
     group: r.menu_group,
-    native: r.function === PTT_FN && r.udp_action ? `UDP Action ${r.udp_action}` : r.native,
+    native: r.function === PTT_FN && r.udp_action ? `UDP Action ${r.udp_action}` : r.native === UNKNOWN ? "" : r.native,
+    native_note: r.function === PTT_FN ? null : r.native_note,
     label: r.label,
     physical: physicalText(r.control, r.slot),
     evidence: r.evidence,
-    note: r.function === PTT_FN && seesButtons(game) ? "Pitwall listens for this one. Back out to the garage or menu, then test it." : null,
+    note: r.function === PTT_FN && seesButtons(game) ? "Pitwall listens for this one. Test it once it's mapped." : r.unverified ? "Unverified in this game: it may not be in its list at all." : null,
   }));
+  // one name per function: "Brake bias", not "Brake bias +" and "Brake bias −"; "MFD / black box", not its directions
+  const base = (label: string) => label.replace(/ (?:[+\u2212]|\(open\)|up|down|left|right|clockwise|anticlockwise)$/, "");
+  const defaults = [...new Set(rows.filter((r) => r.origin === "game_default").map((r) => base(r.label)))];
+  const intro: string[] = [];
+  if (game) {
+    if (game.menu.note) intro.push(stripTokens(game.menu.note).replace(/([^.])$/, "$1."));
+    if (defaults.length) intro.push(`Already set by ${game.label} for this wheel (its own defaults): ${defaults.join(", ")}. Nothing to change there.`);
+  } else intro.push(...otherSteps);
   return {
     where: game?.menu.where ?? "the game's Controls screen",
     where_evidence: game?.menu.evidence ?? null,
-    intro: game ? (game.menu.note ? [game.menu.note] : []) : [...otherSteps],
+    intro,
     steps,
     outro: seesButtons(game) ? ["Open Test and press each one once."] : ["Check each one on track."],
   };
@@ -1423,16 +1508,57 @@ export function udpBit(n: number): number {
   return 0x00100000 * 2 ** (n - 1);
 }
 
-/** "UDP Action 3 down", "Circle or B up"; replayed and synthetic presses say so. */
-export function pressText(p: { pressed: string[]; released: string[]; origin: string }): string {
-  const parts = [...p.pressed.map((b) => `${b} down`), ...p.released.map((b) => `${b} up`)];
+/** The Right Stick direction bits: in the recorded F1 PS5 captures they change all the time while driving (they
+ * probably follow the pedals, unverified), so the feeds hide them unless asked. */
+export const NOISY_BITS: ReadonlySet<string> = new Set(["Right Stick Left", "Right Stick Right", "Right Stick Up", "Right Stick Down"]);
+
+/** A BUTN bit name in the console's own words: "Cross or A" is "Cross" on a PlayStation and "A" on an Xbox. */
+export function bitName(bit: string, platform: PlatformId | null = null): string {
+  const i = bit.indexOf(" or ");
+  if (i < 0 || !platform || signalPlatform(platform) === "pc") return bit;
+  return signalPlatform(platform) === "xbox" ? bit.slice(i + 4) : bit.slice(0, i);
+}
+
+/** Only the stick noise changed. */
+export function isNoise(p: { pressed: string[]; released: string[] }): boolean {
+  const all = [...p.pressed, ...p.released];
+  return all.length > 0 && all.every((b) => NOISY_BITS.has(b));
+}
+
+/** "UDP Action 3: pressed · Circle: released"; the stick noise only when asked. */
+export function pressText(p: { pressed: string[]; released: string[]; origin: string }, platform: PlatformId | null = null, noise = true): string {
+  const keep = (b: string) => noise || !NOISY_BITS.has(b);
+  const parts = [...p.pressed.filter(keep).map((b) => `${bitName(b, platform)}: pressed`), ...p.released.filter(keep).map((b) => `${bitName(b, platform)}: released`)];
   return parts.join(" · ") || "No change";
 }
 
 export function originTag(origin: string): string | null {
   if (origin === "replay") return "REPLAY";
   if (origin === "synthetic") return "SYNTHETIC";
+  if (origin === "loopback") return "THIS COMPUTER";
   return null;
+}
+
+/** "1 seen · 2 not seen · 2 skipped" (a finished or stopped test). */
+export function testSummary(t: Pick<ControlsTest, "items">): string {
+  const n = (f: (s: TestItemState) => boolean) => t.items.filter((i) => f(i.state)).length;
+  const parts = [
+    [n((s) => s === "detected" || s === "effect_seen"), "seen"],
+    [n((s) => s === "other_bits"), "something else seen"],
+    [n((s) => s === "timeout"), "not seen"],
+    [n((s) => s === "skipped"), "skipped"],
+    [n((s) => s === "waiting"), "not tested"],
+  ] as const;
+  return parts
+    .filter(([k]) => k > 0)
+    .map(([k, w]) => `${k} ${w}`)
+    .join(" · ");
+}
+
+/** An item's chip: a result shown but not saved (a stream from this computer) is neutral, never "Seen by Pitwall". */
+export function testItemChip(item: Pick<ControlsTest["items"][number], "state" | "saved">, saves: boolean | undefined): ChipSpec {
+  if ((item.state === "detected" || item.state === "effect_seen") && saves === false && item.saved !== true) return { label: "Seen here (not saved)", tone: "default" };
+  return TEST_STATE[item.state];
 }
 
 /** Done items (a result or skipped) out of all. */
@@ -1488,8 +1614,17 @@ export function layoutText(i: CopyInputs): string {
   };
   section(`Can't change while driving in ${i.game}`, i.rec?.not_on_wheel ?? []);
   section(`Not in ${i.game}`, i.rec?.not_in_game ?? []);
-  section("No free control: use the MFD", i.rec?.unplaced ?? []);
+  section("Not on your wheel", i.rec?.unplaced ?? []);
   return lines.join("\n");
+}
+
+/** "Buttons and signals known, positions not": what the research knows about a template, in words. */
+export function templateKnows(t: Pick<TemplateSummary, "completeness" | "controls_total" | "controls_placed">): string {
+  if (t.completeness === "counts") return "Only how many controls";
+  const placed = t.controls_total != null && t.controls_placed != null ? t.controls_placed >= t.controls_total && t.controls_total > 0 : null;
+  const what = t.completeness === "full" ? "Buttons and signals known" : "Buttons known, signals not";
+  if (placed === null) return what;
+  return placed ? `${what}, positions too` : `${what}, positions not`;
 }
 
 // ---------------------------------------------------------------------------------------------- wheel editor
@@ -1594,18 +1729,33 @@ export function bitToPad(bit: string, platform: PlatformId): string | null {
   return BIT_PAD[bit]?.[sp] ?? null;
 }
 
-/** What Identify can save from the live presses it saw: one pad signal when exactly one pad bit went down. */
+/** What Identify can save from the presses it saw: one pad button, pressed on its own twice in a row, live from a
+ * console or another PC (never a replay, a synthetic stream or a stream from this computer; the stick noise is
+ * ignored). The server checks it again against what it saw before it stores "Seen by Pitwall". */
 export function identifiedSignal(
-  presses: readonly { pressed: string[]; origin: string; t_unix: number }[],
+  presses: readonly { pressed: string[]; origin: string; t_unix: number; local?: boolean }[],
   platform: PlatformId,
 ): { signal: Signal; bits: string[] } | null {
-  const live = presses.filter((p) => p.origin === "live" && p.pressed.length);
-  const bits = [...new Set(live.flatMap((p) => p.pressed))];
-  const pads = [...new Set(bits.map((b) => bitToPad(b, platform)).filter((x): x is string => x !== null))];
-  if (pads.length !== 1 || !live.length) return null;
-  const t = live.at(-1)!.t_unix;
+  const live = presses
+    .filter((p) => p.origin === "live" && !p.local)
+    .map((p) => ({ p, bits: p.pressed.filter((b) => !NOISY_BITS.has(b)) }))
+    .filter((x) => x.bits.length);
+  const last = live.slice(-2);
+  if (last.length < 2 || last.some((x) => x.bits.length !== 1)) return null;
+  const value = bitToPad(last[0]!.bits[0]!, platform);
+  if (value === null || value !== bitToPad(last[1]!.bits[0]!, platform)) return null;
+  const bits = last[1]!.bits;
+  const t = last[1]!.p.t_unix;
   return {
     bits,
-    signal: { kind: "pad", value: pads[0]!, evidence: "seen", source_ids: [], seen: { t_unix: t, bits, game: "f1_25", platform } },
+    signal: { kind: "pad", value, evidence: "seen", source_ids: [], seen: { t_unix: t, bits, game: "f1_25", platform } },
   };
+}
+
+/** Why Identify can't save yet, in words (null when it can, or nothing was pressed). */
+export function identifyHint(presses: readonly { pressed: string[]; origin: string; local?: boolean }[]): string | null {
+  const real = presses.filter((p) => p.pressed.some((b) => !NOISY_BITS.has(b)));
+  if (!real.length) return null;
+  if (real.every((p) => p.origin !== "live" || p.local)) return "Shown here, not saved: these presses came from this computer or a replay, not your console.";
+  return "Press the control on its own, twice. Only a console button F1 25 reports can be saved (not a UDP Action).";
 }

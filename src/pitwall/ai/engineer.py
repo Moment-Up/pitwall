@@ -115,9 +115,12 @@ _REFERENCE_WHO = re.compile(
 # --- coachref ---
 # Setup › Controls: "which button is brake bias?", "where is DRS on my wheel?", "button for the pit limiter?" (never
 # "what brake bias should I run?", which stays a setup question). Answered from the saved layout, never the LLM.
+# Only a question that also names a control function counts ("what sticks out from my last lap?", "which paddles do I
+# use for downshifts in turn 3?" and "what switch point for turn 1?" keep their own intents), and never one about a
+# corner.
 _CONTROL_WORDS = r"(?:buttons?|switch(?:es)?|dials?|knobs?|rotar(?:y|ies)|encoders?|paddles?|sticks?|toggles?|rockers?)"
 _CONTROLS_WHERE = re.compile(
-    r"\b(?:which|what)\s+(?:\w+\s+)?" + _CONTROL_WORDS + r"\b"
+    r"\b(?:which|what)\s+(?:\w+\s+)?" + _CONTROL_WORDS + r"\b(?!\s+(?:out|point)\b)"
     r"|\bwhere(?:['\u2019]s|\s+is|\s+are|\s+do\s+i\s+find)\b.{0,40}?\bon\s+(?:my|the)\s+(?:wheel|rim|button\s*box)\b"
     r"|\b" + _CONTROL_WORDS + r"\s+for\b",
     re.I,
@@ -346,6 +349,18 @@ _TOPICS: dict[str, set[str]] = {
 }
 
 
+def _names_control_function(q: str) -> bool:
+    """Setup › Controls: does the question name a function a wheel control can do (brake bias, DRS, push-to-talk)?"""
+    try:
+        from pitwall.controls.answer import match_function
+        from pitwall.controls.catalog import load_catalog
+
+        return match_function(load_catalog(), q) is not None
+    except Exception:  # the catalogue is packaged; if it can't load, the question goes to the other intents
+        log.exception("controls catalogue unavailable for intent detection")
+        return False
+
+
 def detect_intent(question: str) -> Intent:
     q = question.strip()
     corner = None
@@ -355,6 +370,8 @@ def detect_intent(question: str) -> Intent:
         corner = f"T{_WORDS_TO_NUM.get(raw, raw)}"
     for name, rx in _RULES:
         if rx.search(q):
+            if name == "controls_where" and (corner or not _names_control_function(q)):
+                continue
             if name == "control_quiet":
                 n = re.search(r"\b(\d+|" + "|".join(_WORDS_TO_NUM) + r")\s+laps?\b", q, re.I)
                 laps = None

@@ -629,9 +629,15 @@ class Collector:
             pressed = ev.pressed
             if not pressed:
                 continue
-            tier: Tier = (
-                self.tier_now() if ev.origin == "live" else ("recorded" if ev.origin == "replay" else "synthetic")
-            )
+            tier: Tier
+            if ev.origin == "live":
+                tier = self.tier_now()
+            elif ev.origin == "replay":
+                tier = "recorded"
+            elif ev.origin == "loopback":  # sent from this computer (the probe's tag)
+                tier = "loopback"
+            else:
+                tier = "synthetic"
             rec = ButtonRecord(
                 ev.t_unix,
                 tier,

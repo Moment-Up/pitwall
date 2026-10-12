@@ -187,9 +187,24 @@ def test_invariants_for_every_template_game_platform_and_preset() -> None:
         if game.button_path != "f1_butn":
             assert rec.pitwall_ptt["path"] == "screen"
             assert all(a.assignment.function != PTT_FUNCTION for a in rec.assignments)
+        # one native action, one control: a function the game puts on another's button (GT7: DRS is Overtake) is
+        # placed on that button, never on a second control
+        for a in rec.assignments:
+            row = game.functions.get(a.assignment.function)
+            if row is not None and row.always_shared:
+                hosts = {h.assignment.control_id for h in rec.assignments if h.assignment.function in row.shares_with}
+                assert hosts == {a.assignment.control_id}, (tid, gid, platform, preset, a.assignment)
+            if row is not None and row.in_race == "unverified":
+                assert a.evidence in (None, "U", "D", "H"), (gid, a.assignment.key, a.evidence)
+                assert any(w.startswith("Unverified in") for w in a.warnings)
         shared = [a for a in rec.assignments if a.assignment.function == "pit_limiter"]
         drs = [a for a in rec.assignments if a.assignment.function == "drs_aero"]
-        if shared and drs and shared[0].assignment.control_id == drs[0].assignment.control_id:
+        if (
+            shared
+            and drs
+            and shared[0].assignment.control_id == drs[0].assignment.control_id
+            and shared[0].assignment.origin != "game_default"  # EA's own G923 default shares L2
+        ):
             used = {(a.assignment.control_id, a.assignment.slot) for a in rec.assignments}
             reserved = {r["control_id"] for r in rec.reserved}
             slots = expand_slots(wheel, sp, reserved)
@@ -226,3 +241,62 @@ def test_an_encoder_out_of_thumb_reach_is_not_said_to_be_under_the_thumb() -> No
     reasons = {a.assignment.control_id: a.reason for a in rec.assignments if a.assignment.slot == "cw"}
     assert "under your thumb" in reasons["thumb_enc"]
     assert "under your thumb" not in reasons["box_enc"] and "turning one encoder" in reasons["box_enc"]
+
+
+def test_gt7_drs_goes_on_the_overtake_button() -> None:
+    """GT7 has one Overtake button and DRS uses it: DRS on its own button would be a button that does nothing."""
+    for tid in ("logitech_g923_ps", "fanatec_gt_dd_pro_wheel", "thrustmaster_t248"):
+        rec = recommend(CAT, tmpl(tid), "gt7", "ps5", "advanced")
+        by = {a.assignment.function: a.assignment for a in rec.assignments}
+        if "overtake" in by:
+            assert by["drs_aero"].control_id == by["overtake"].control_id, tid
+            assert "Overtake" in next(a.reason for a in rec.assignments if a.assignment.function == "drs_aero")
+
+
+def test_raceroom_unverified_rows_are_marked_and_never_official() -> None:
+    """RaceRoom's bindings were not found: only the telemetry says brake bias etc. exist. Those rows are placed with
+    an "Unverified" warning, evidence at most Community, and no made-up binding name."""
+    rec = recommend(CAT, tmpl("fanatec_cs_formula_v25"), "r3e", "pc", "advanced")
+    rows = [a for a in rec.assignments if a.assignment.function in ("brake_bias", "tc", "abs", "engine_map")]
+    assert rows
+    for a in rows:
+        assert a.evidence in ("U", None) and a.in_race == "unverified" and a.native == ""
+        assert "Unverified in RaceRoom: check the game's controls list for it." in a.warnings
+
+
+def test_f1_on_a_g923_starts_from_eas_own_defaults() -> None:
+    """EA publishes F1 25's default buttons for the Logitech G923: they are kept as they are (nothing to rebind) and
+    only what is missing is placed; the "preset may already use these buttons" warning is not needed."""
+    rec = recommend(CAT, tmpl("logitech_g923_ps"), "f1_25", "ps5", "advanced")
+    by = {a.assignment.key: a for a in rec.assignments}
+    want = {
+        "drs_aero.press": ("l2", "press"),
+        "pit_limiter.press": ("l2", "press"),
+        "overtake.press": ("r2", "press"),
+        "brake_bias.inc": ("dial", "cw"),
+        "brake_bias.dec": ("dial", "ccw"),
+        "diff.inc": ("plus", "press"),
+        "mfd.select": ("face_circle", "press"),
+        "mfd.down": ("dpad", "down"),
+        "radio_menu.press": ("face_square", "press"),
+        "reset.press": ("face_triangle", "press"),
+    }
+    for key, (cid, slot) in want.items():
+        a = by[key].assignment
+        assert (a.control_id, a.slot, a.origin) == (cid, slot, "game_default"), key
+    assert by["ptt_pitwall.hold"].assignment.origin == "recommended"  # placed on a free button
+    assert {u["function"] for u in rec.unplaced} >= {"ers_mode", "engine_map"}  # no free control: the MFD
+    assert not any("extra buttons" in w for w in by["diff.inc"].warnings)  # EA's own default: F1 25 reads +
+    taken = {
+        (a.assignment.control_id, a.assignment.slot) for a in rec.assignments if a.assignment.origin != "game_default"
+    }
+    defaults = {
+        (a.assignment.control_id, a.assignment.slot) for a in rec.assignments if a.assignment.origin == "game_default"
+    }
+    assert not taken & defaults  # nothing of EA's defaults is moved or doubled up
+    assert all(CAT.games["f1_25"].preset_warning not in a.warnings for a in rec.assignments)
+    xb = recommend(CAT, tmpl("logitech_g923_xbox"), "f1_25", "xbox", "advanced")
+    xby = {a.assignment.key: a.assignment for a in xb.assignments}
+    assert (xby["drs_aero.press"].control_id, xby["drs_aero.press"].origin) == ("face_y", "game_default")
+    other = recommend(CAT, tmpl("thrustmaster_t248"), "f1_25", "ps5", "advanced")
+    assert all(a.assignment.origin != "game_default" for a in other.assignments)

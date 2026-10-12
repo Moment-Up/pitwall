@@ -1,7 +1,8 @@
 """Runtime wiring of Setup › Controls: the button probe, the test runner, push-to-talk following and the engineer's
 "which button" answers. Built by ``core.runtime.Runtime`` whether or not voice is on.
 
-* The probe subscribes to ``LiveState.subscribe_buttons`` (ingest thread, O(1)).
+* The probe subscribes to ``LiveState.subscribe_button_events`` (ingest thread, O(1)); a live press whose F1 sender
+  is this computer is tagged "loopback" (``last_sender_ip``, set by the runtime).
 * The PTT follower subscribes to the ``"controls"`` and ``"game"`` settings sections and to seat changes; the app
   attaches the radio hub with ``attach_radio`` (hub calls are marshalled onto its loop by the caller's lambdas).
 * Test results (live only) are written into the layout's ``assignment.check`` under ``model.write_lock``; the
@@ -18,10 +19,11 @@ from dataclasses import replace
 from typing import Any
 
 from pitwall import games
+from pitwall.compat import recv_clock_ns
 from pitwall.controls.answer import LiveValues
 from pitwall.controls.answer import answer as controls_answer
 from pitwall.controls.catalog import Catalog, GameDef, load_catalog
-from pitwall.controls.model import PLATFORMS, Check, load_state, save_state, write_lock
+from pitwall.controls.model import PLATFORMS, Check, clip, load_state, save_state, write_lock
 from pitwall.controls.probe import ButtonProbe, TestRunner
 from pitwall.controls.ptt import PttFollower
 
@@ -38,8 +40,10 @@ class ControlsService:
         self.store = store
         self.live = live
         self.drivers = drivers
-        self.probe = ButtonProbe(origin_of=lambda: str(getattr(live, "button_origin", "live")))
-        live.subscribe_buttons(self.probe.on_button)
+        # the F1 listener's last sender address (``UdpListener.last_ip``), set by the runtime: O(1) on the ingest thread
+        self.last_sender_ip: Callable[[], str | None] = lambda: None
+        self.probe = ButtonProbe(is_local=self._last_sender_local)
+        live.subscribe_button_events(self.probe.on_button)
         self.tests = TestRunner(self.probe, self.availability, on_result=self.save_check)
         # the F1 listener's senders (``UdpListener.source_snapshot``), set by the runtime: a stream sent from this
         # computer (``pitwall send``, a loopback replay) is not the owner's wheel, so its presses are never stored
@@ -91,6 +95,15 @@ class ControlsService:
             rig = None
         return rig if rig in PLATFORMS else None
 
+    def _last_sender_local(self) -> bool:
+        ip = self.last_sender_ip()
+        if not ip:
+            return False
+        try:
+            return ipaddress.ip_address(ip.split("%", 1)[0]).is_loopback
+        except ValueError:
+            return False
+
     def loopback_sender(self) -> bool:
         """The freshest F1 sender is this computer (``pitwall send`` or a loopback replay), not a console or PC."""
         try:
@@ -132,13 +145,23 @@ class ControlsService:
         sess = getattr(self.live, "session", None)
         game = getattr(getattr(sess, "game", None), "value", None)
         f = getattr(self.live, "frame", None)
+        # only a fresh car frame counts: in the menus F1 25 sends button presses but no car telemetry, and the frame
+        # held from earlier driving (or another session) is not a starting value for a brake bias / ERS check
+        t_ns = getattr(f, "t_recv_ns", None)
+        if f is not None and (not isinstance(t_ns, int) or recv_clock_ns() - t_ns > FRESH_S * 1e9):
+            f = None
         values: dict[str, float | None] = {
             "brake_bias_front_pct": None if f is None else f.brake_bias_front_pct,
             "ers_deploy_mode": None if f is None or f.ers_deploy_mode is None else float(f.ers_deploy_mode),
         }
         conn = self.live.connection()
         if conn.get("status") != "live":
-            return False, "No live F1 25 data: drive out or sit in the garage with UDP Telemetry on.", values
+            return (
+                False,
+                "Pitwall isn't receiving F1 25 right now: turn on UDP Telemetry in F1 25's settings. Button presses "
+                "work from menus; for brake bias and ERS, sit in the garage or drive.",
+                values,
+            )
         source = str(getattr(self.live, "source", "") or "")
         if getattr(self.live, "synthetic", False) or source.startswith("replay:"):
             return False, "The data is a replay or a generated stream: presses there are not your wheel.", values
@@ -151,7 +174,10 @@ class ControlsService:
         return True, None, values
 
     # -------------------------------------------------------------- results
-    def save_check(self, layout_id: str, key: str, check: Check) -> None:
+    def save_check(self, layout_id: str, key: str, check: Check | None) -> None:
+        """Store (or, with ``None``, clear) one assignment's live test result; the detail is kept to its limit."""
+        if check is not None:
+            check = replace(check, detail=clip(check.detail))
         with write_lock:
             state = load_state(self.store)
             lay = state.layout(layout_id)
@@ -221,4 +247,4 @@ class ControlsService:
         self._unsubs = []
         with contextlib.suppress(Exception):
             self.drivers.unsubscribe(self._on_driver)
-        self.live.unsubscribe_buttons(self.probe.on_button)
+        self.live.unsubscribe_button_events(self.probe.on_button)

@@ -143,6 +143,8 @@ export interface GameFunction {
   evidence: Evidence | null;
   source_ids: string[];
   platform_note: string | null;
+  /** Additive: false when the research found no binding name (`native_name` then only describes the setting). */
+  native_found?: boolean;
 }
 
 export interface GameDef {
@@ -157,6 +159,8 @@ export interface GameDef {
   research_depth: Record<string, string>;
   functions: GameFunction[];
   presets: Record<Preset, string[]>;
+  /** Additive: the game's name on a platform where it differs (Forza on PS5 is Forza Horizon). */
+  platform_labels?: Partial<Record<PlatformId, string>>;
 }
 
 export interface TemplateSummary {
@@ -169,6 +173,13 @@ export interface TemplateSummary {
   /** full: controls + signals; controls: no signals; counts: numbers only. */
   completeness: "full" | "controls" | "counts";
   shape: WheelShape;
+  /** Additive: plain words for the picker (the research `name` keeps its notes). */
+  display_name?: string;
+  /** Additive: the consoles the research knows this wheel's signals for. */
+  signal_platforms?: SignalPlatform[];
+  /** Additive: how many controls the template has, and how many the research places on the wheel. */
+  controls_total?: number;
+  controls_placed?: number;
 }
 
 export interface ZoneBox {
@@ -256,7 +267,8 @@ export interface AssignmentCheck {
   origin: "live";
 }
 
-export type AssignmentOrigin = "recommended" | "driver" | "game_fixed" | "kept";
+/** game_default: the game's own published default for this wheel (F1 25: EA's Logitech G923 list). */
+export type AssignmentOrigin = "recommended" | "driver" | "game_fixed" | "kept" | "game_default";
 
 export interface Assignment {
   /** "<function>.<action>", e.g. "brake_bias.inc". */
@@ -342,6 +354,10 @@ export interface RecommendedAssignment extends Assignment {
   conditions: string[];
   warnings: string[];
   pitwall_sees: string | null;
+  /** Additive: the game row's in-race status ("unverified": the game may not have it at all). */
+  in_race?: InRace | null;
+  /** Additive: the bracketed part of the game's own name ("2026 cars: Active Aero ..."), for a second line. */
+  native_note?: string | null;
 }
 
 export type PitwallPtt = { path: "udp_action"; udp_action: number; control_id: string | null; text: string } | { path: "screen"; text: string };
@@ -367,8 +383,10 @@ export interface Recommendation {
 export interface MapStep {
   n: number;
   group: string | null;
-  /** What the game calls it (verbatim research name). */
+  /** What the game calls this one action (verbatim research name, without its bracketed note). */
   native: string;
+  /** Additive: the bracketed note of the game's name, shown on a second line. */
+  native_note?: string | null;
   /** Pitwall's plain label. */
   label: string;
   /** "Turn the LEFT ENCODER clockwise" | "Press TRIANGLE". */
@@ -406,7 +424,10 @@ export interface ButtonPress {
   /** Names of the bits that went down ("UDP Action 3", "Circle or B"). */
   pressed: string[];
   released: string[];
-  origin: "live" | "replay" | "synthetic";
+  /** loopback: live, but sent from this computer (pitwall send, F1 25 on this PC): shown, never saved. */
+  origin: "live" | "replay" | "synthetic" | "loopback";
+  /** Additive: sent from this computer. */
+  local?: boolean;
 }
 
 export interface ControlsTest {
@@ -646,7 +667,9 @@ export const controlsApi = {
   /** Partial: only what changed. Answers that driver's (or the household's) controls. */
   putDriver: (driverId: number | "household", body: Partial<DriverControls>) =>
     send<DriverControls & { driver_id: string }>("PUT", controlsPaths.driver(driverId), body),
-  startTest: (layoutId: string) => send<ControlsTest>("POST", controlsPaths.test(), { layout_id: layoutId }),
+  /** `keys`: test only these assignments ("Try again" on one item). */
+  startTest: (layoutId: string, keys: string[] | null = null) =>
+    send<ControlsTest>("POST", controlsPaths.test(), keys ? { layout_id: layoutId, keys } : { layout_id: layoutId }),
   /** The current (or last) test; null when none has run. */
   test: async (): Promise<ControlsTest | null> => {
     try {
