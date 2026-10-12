@@ -60,7 +60,7 @@ been run with a game (release zips are checked on a Linux CI runner with synthet
 ## Install with one command
 
 <!-- --- lane install --- -->
-From v0.2.0 (not released yet: until then, [install from a release](#install-from-a-release)), each release also
+From v0.2.0, each release also
 has two installers. They download the latest release, check it, install it into a folder of its own and keep your
 sessions in one data folder that every later version uses.
 
