@@ -60,6 +60,7 @@ describe("kindChip", () => {
     ["strategy", "STRATEGY", "ref"],
     ["goal", "GOAL", "success"],
     ["validation", "TEST", "default"],
+    ["spotter", "SPOTTER", "warning"], // --- spotter ---
     ["transcript", "YOU", "default"],
     ["you", "YOU", "default"],
     ["error", "ERROR", "danger"],

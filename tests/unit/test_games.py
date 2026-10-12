@@ -64,6 +64,7 @@ drs                    S·spec  NS      NS      NS      NS
 weather                S·spec  NS      NS      NS      NS
 session_info           P·spec  NS      NS      NS      NS
 field_data             S·rec   NS      NS      NS      NS
+spotter                S·rec   NS      NS      NS      NS
 setup_telemetry        S·spec  NI      NS      NS      NS
 setup_recommendations  P·-     NI      NI      NI      NI
 wheel_ptt              S·spec  NS      NS      NS      NS
@@ -91,7 +92,7 @@ def test_ids_are_unique_and_well_formed() -> None:
     assert len(ids) == len(set(ids)) == 23
     for i in ids:
         assert re.fullmatch(r"[a-z0-9_]+:(ps5|ps4|xbox|pc|any)", i), i
-    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 23
+    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 24  # + spotter
     assert {f.group for f in games.FEATURES} == {g for g, _ in games.GROUPS}
 
 
@@ -241,7 +242,8 @@ def test_golden_profiles() -> None:
 
 def test_platform_and_variant_profiles() -> None:
     ps5 = profile("f1_25:ps5")
-    pc_like = {**ps5, "ai_field": "S·spec", "field_data": "S·spec"}  # the entry level caps the recorded fields
+    # the entry level caps the recorded fields (spotter: every car's Motion, recorded on the PS5 only)
+    pc_like = {**ps5, "ai_field": "S·spec", "field_data": "S·spec", "spotter": "S·spec"}
     assert profile("f1_25:pc") == profile("f1_25:xbox") == pc_like
     for p in ("ps5", "xbox", "pc"):  # the corner names were hand-checked with format 2025 only
         assert profile(f"f1_25_2026:{p}") == {**pc_like, "official_corner_names": "NI"}
@@ -255,6 +257,7 @@ def test_platform_and_variant_profiles() -> None:
     assert {k for k, v in ac_comm.items() if v == "NS"} - local == {
         "ai_field",
         "field_data",
+        "spotter",  # spotter: RTCarInfo is the player's car only
         "setup_telemetry",
         "wheel_ptt",
     }
@@ -438,11 +441,29 @@ def test_adapter_declarations_added_for_documented_absences() -> None:
             "lap_history",
             "race_timing",
             "tyre_sets",
+            "field_motion",  # spotter: every car's Motion (recorded-validated on the owner's PS5 races)
         },
-        Game.GT7: {"drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons"},
-        Game.FORZA_MOTORSPORT: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
-        Game.FORZA_HORIZON: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
-        Game.AC: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
+        # spotter: field_motion declared unsupported (player's car only) for the other games
+        Game.GT7: {"drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons", "field_motion"},
+        Game.FORZA_MOTORSPORT: {
+            "drs_open",
+            "ers_store_j",
+            "damage",
+            "track_zones",
+            "field_samples",
+            "buttons",
+            "field_motion",
+        },
+        Game.FORZA_HORIZON: {
+            "drs_open",
+            "ers_store_j",
+            "damage",
+            "track_zones",
+            "field_samples",
+            "buttons",
+            "field_motion",
+        },
+        Game.AC: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons", "field_motion"},
     }
     for r in PLANNED:
         before = old[_old_key(r)]["fields"]
@@ -582,7 +603,7 @@ def test_games_response_is_json_and_covers_every_entry() -> None:
     assert [e["id"] for e in body["entries"]] == [e.id for e in games.entries()]
     assert set(body["support_words"]) == {lvl.value for lvl in SupportLevel}
     assert all("fields" not in e and "guide" not in e for e in body["entries"])
-    assert all(len(e["features"]) == 23 for e in body["entries"])
+    assert all(len(e["features"]) == 24 for e in body["entries"])  # spotter: + "spotter"
 
 
 # ---------------------------------------------------------------------------------------------- review fixes

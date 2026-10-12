@@ -210,6 +210,8 @@ FEATURES: tuple[FeatureDef, ...] = (
     FeatureDef("weather", "Weather", "session", "weather", ("weather",)),
     FeatureDef("session_info", "Session type & results", "session", "the session type", ("session_type",)),
     FeatureDef("field_data", "Other cars' data", "session", "data about the other cars", ("field_samples",)),
+    # --- spotter ---
+    FeatureDef("spotter", "Spotter (cars alongside)", "session", "every car's position and heading", ("field_motion",)),
     FeatureDef("setup_telemetry", "Car setup from the game", "setup_radio", "its car setup", ("setup",)),
     FeatureDef(
         "setup_recommendations",

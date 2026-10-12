@@ -54,6 +54,7 @@
 | `db-writer` | all SQLite writes, one transaction per job | - |
 | `motivation` | after a live lap / at session end: mark goals reached (exactly once), notify `motivation` | run on ingest (its note handler only queues, O(1)) |
 | `strategy` | race strategy engine (`pitwall/strategy`): gaps, pit loss, tyres, fuel, weather, calls; per-lap records | touch sockets, block ingest (fed by one lock-free deque append per item) |
+| `spotter` | the spotter (`pitwall/spotter`): decodes every car's Motion, runs the state machine on the game clock, publishes `live.spotter`, hands calls to the radio loop | block ingest (fed by one `SimpleQueue.put` per Motion packet), touch the DB |
 | asyncio (uvicorn) | REST, WebSocket snapshots (pull model), LLM calls (async HTTP) | block on DB (uses `to_thread`) |
 
 Every ingest-thread hook of the v0.2.0 features is O(1) (a deque append, a field write or a counter). The combined
@@ -218,6 +219,43 @@ calls and critical fuel are alerts outside the budget. The final lap gets its su
 Questions are answered short on the radio (`deterministic_answer(short=True)`: one or two facts in their spoken
 form). Strategy (`strategy/radio.py`) is the only source of fuel alerts.
 The `say` frames are in [voice-protocol.md](voice-protocol.md).
+
+<!-- --- spotter --- -->
+## Spotter fast path (`spotter/`, `voice/spotter_radio.py`)
+
+F1 25 only (the other games send the player's car only). No LLM anywhere on this path.
+
+```
+UDP thread: F1Adapter._on_motion --(FieldMotion: 2 packet refs + 4 ints)--> SessionManager.handle (first branch)
+            +-> SpotterWorker.submit(item): SimpleQueue.put (C, non-blocking)                 [~1 us, no decode]
+            SessionInfo and GameEvent{lights_out, flashback, red_flag, session_started, session_ended,
+            chequered_flag} also forwarded; reset(session_id) on SessionManager._start / end()
+spotter thread: q.get(timeout=0.25) -> decode (subset_struct) -> SpotterEngine.feed_motion -> live.spotter (swap)
+            +-> calls -> sink(call) = SpotterRadio.on_call_threadsafe -> loop.call_soon_threadsafe(deliver)
+asyncio loop: SpotterRadio.deliver -> mailbox / cut rules -> RadioHub._deliver(PCM made in advance, pcm_to_all)
+```
+
+The engine (`spotter/engine.py`) is pure: every time comes in as an argument and every duration is on the game clock
+(header `sessionTime`), so receive bunching cannot shorten a debounce. Geometry (`spotter/geometry.py`): each car is
+an `L x W` box (`spotter/dims.py`, per formula) in the player's frame from its forward and right vectors
+(`worldRightDir` is the driver's right on real data). Gates, in order: disabled, not available, session type, red
+flag, safety car (unknown counts as on), lights out + delay, paused, stale (no Motion for 250 ms), flashback mute,
+pit, finished, slow; a closed gate forgets the traffic and never says "clear". The live block (`spotter` in every
+`/ws/live` snapshot, about 230 bytes, with the car `length_m` in use for the bar scale) is swapped whole on every
+Motion item and does not bump `LiveState.version`; `api/live_feed.py` sends a changed block without a new frame, so
+the block going stale when Motion stops (a pause) reaches the iPad at once.
+Offline: `spotter/score.py` (geometric ground truth) behind `scripts/spotter_check.py` and the recorded tests.
+
+Radio priority contract (`voice/scheduler.py`, `interrupt_rank` / `may_interrupt`, the same rule as the radio lane's
+urgent path): urgent (Priority.URGENT: urgent alerts and spotter calls) > cue > everything else; equal ranks never
+cut each other. Spotter messages (`MessageKind.SPOTTER`) never go through the scheduler queue (its 100 ms tick is too
+slow), are exempt from the budget, gap, repeat filter and speak window, and are allowed at every intensity. While a
+car is alongside (`DrivingState.traffic_alongside`) no speak window opens, so a lap summary never starts wheel to
+wheel. Delivery, the one-slot mailbox, heard pairing and the latency stamps are in `voice/spotter_radio.py`; the
+phrase audio (both wordings, per engine and voice, STT-checked when the model is loaded) in
+`voice/spotter_audio.py`. Settings: `SettingsStore` section `"spotter"` (`spotter/settings.py`), applied by attribute
+swaps; nothing is persisted in the database.
+<!-- --- end spotter --- -->
 
 ## Goals, badges and summaries (`motivation/`)
 Pure rules (`rules.py`: clean runs, steady-lap windows, scopes, F1 race outcomes, personal bests, week arithmetic),

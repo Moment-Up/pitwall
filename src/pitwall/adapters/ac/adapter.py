@@ -338,6 +338,7 @@ AC_INFO = AdapterInfo(
         "damage": FieldSupport(_U, "not in RTCarInfo"),
         "track_zones": FieldSupport(_U, "no sector, marshal-zone or flag data"),
         "field_samples": FieldSupport(_U, "RTCarInfo describes the player's car only"),
+        "field_motion": FieldSupport(_U, "RTCarInfo describes the player's car only"),  # spotter
         "buttons": FieldSupport(_U, "no wheel-button data"),
     },
     notes=(

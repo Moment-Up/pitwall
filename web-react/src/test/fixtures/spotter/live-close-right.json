@@ -1,0 +1,30 @@
+{
+  "_fixture": {
+    "tier": "contract",
+    "source": "F1 spotter design spec 8.3 (the /ws/live spotter block contract); hand-written, not server output",
+    "recorded": "2026-10-12",
+    "what": "a car on the right within 0.4 m (close), 2.4 m ahead"
+  },
+  "response": {
+    "v": 1,
+    "enabled": true,
+    "active": true,
+    "reason": null,
+    "left": {
+      "state": "clear",
+      "lon_m": null,
+      "gap_m": null,
+      "cars": 0
+    },
+    "right": {
+      "state": "close",
+      "lon_m": 2.4,
+      "gap_m": 0.3,
+      "cars": 1
+    },
+    "three_wide": false,
+    "traffic": true,
+    "rate_hz": 59.8,
+    "seq": 1236
+  }
+}

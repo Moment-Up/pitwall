@@ -12,6 +12,7 @@
 import type { Corner, Frame, LapSummary, Observation, Snapshot, TrackModel } from "../api";
 import type { LiveAiPace } from "../endpoints/review";
 import type { StrategyView } from "../strategy/types"; // race strategy (pitwall.strategy)
+import type { SpotterBlock } from "../spotter/types"; // --- spotter --- F1 spotter (pitwall.spotter)
 
 export type { LiveAiPace };
 import type { CoachrefBlock, ReferenceDescriptor } from "../endpoints/coachref";
@@ -213,6 +214,12 @@ export interface SnapshotNext extends Snapshot {
   /** coachref: the seated driver's reference choice and drill. Absent = a server without coachref. A kept key
    * (lib/live.ts STATIC_KEYS): sent when it changed or with the static payload. */
   coachref?: CoachrefBlock | null;
+  // --- spotter ---
+  /** F1 spotter (spotter/worker.py, spec 8.3): in every snapshot; null when there is no F1 session, absent on servers
+   * without the spotter. Not a kept key (lib/live.ts STATIC_KEYS): a snapshot without it means "no block". Read it
+   * through lib/spotter/view.ts parseSpotterBlock(), which ignores unknown versions. */
+  spotter?: SpotterBlock | null;
+  // --- end spotter ---
 }
 
 /** snapshot.reference: the legacy summary plus the coachref descriptor (every addition optional: older servers). */

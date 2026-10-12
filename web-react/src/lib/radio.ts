@@ -55,7 +55,10 @@ export type SayKind =
   | "info"
   | "strategy"
   | "goal"
-  | "validation";
+  | "validation"
+  /* --- spotter --- */
+  | "spotter"; // F1 spotter calls (MessageKind.SPOTTER: "car left", "clear left"; lib/spotter); never shown as `current`
+/* --- end spotter --- */
 export type LogKind = SayKind | "transcript" | "you" | "error" | "system";
 export type Phase = "idle" | "starting" | "live";
 export type ConnStatus = "offline" | "connecting" | "open" | "waiting";
@@ -92,6 +95,10 @@ export interface RadioServerState {
   telemetry: "live" | "stale" | "no_data";
   ptt_source: "screen" | "wheel" | null;
   clients?: number;
+  /* --- spotter --- spec 8.4: on, its phrase audio made, its own Kokoro voice (null = the engineer's). Absent on
+   * servers without the spotter. Informational: the settings card reads GET /api/spotter. */
+  spotter?: { enabled: boolean; audio_ready: boolean; voice: string | null };
+  /* --- end spotter --- */
 }
 
 export type VoiceSource = "device" | "server";
@@ -1421,7 +1428,10 @@ export class RadioStore extends Store<RadioState> {
     const rate = Math.floor(Number(m.sample_rate) || 0);
     const audioS = nBytes > 0 && rate > 0 ? nBytes / 2 / rate : 0;
     const text = String(m.text ?? "");
-    this.set({ current: { id: m.id, kind: m.kind, text, at: Date.now(), audioS } });
+    /* --- spotter: a spotter call never replaces the engineer's message on screen (the Drive bars show it, and the
+     * log folds it); it is logged and played like any other message --- */
+    if (m.kind !== "spotter") this.set({ current: { id: m.id, kind: m.kind, text, at: Date.now(), audioS } });
+    /* --- end spotter --- */
     if (this.transmitting()) {
       // Playing this over the driver would cut their transmission: the server drops mic audio while a message is
       // "speaking". Treat it as a barge-in instead: show it, do not play it, and tell the server to stop.

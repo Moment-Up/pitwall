@@ -135,7 +135,14 @@ def drain(sched: RadioScheduler, state: DrivingState, start: float = 1.0, polls:
 
 # ================================================================ kinds and intensity
 def test_kinds_per_intensity() -> None:
-    quiet = {MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.ALERT, MessageKind.CUE, MessageKind.VALIDATION}
+    quiet = {
+        MessageKind.ANSWER,
+        MessageKind.CONTROL,
+        MessageKind.ALERT,
+        MessageKind.CUE,
+        MessageKind.VALIDATION,
+        MessageKind.SPOTTER,  # spotter: its own switch; quiet promises "urgent calls only"
+    }
     normal = quiet | {MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.COACHING, MessageKind.STRATEGY}
     assert ALLOWED_KINDS["quiet"] == quiet
     assert ALLOWED_KINDS["normal"] == normal

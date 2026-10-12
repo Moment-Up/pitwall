@@ -1,0 +1,30 @@
+{
+  "_fixture": {
+    "tier": "contract",
+    "source": "F1 spotter design spec 8.3 (the /ws/live spotter block contract); hand-written, not server output",
+    "recorded": "2026-10-12",
+    "what": "three wide, the player in the middle"
+  },
+  "response": {
+    "v": 1,
+    "enabled": true,
+    "active": true,
+    "reason": null,
+    "left": {
+      "state": "alongside",
+      "lon_m": 0.6,
+      "gap_m": 1.1,
+      "cars": 1
+    },
+    "right": {
+      "state": "alongside",
+      "lon_m": -0.4,
+      "gap_m": 0.8,
+      "cars": 1
+    },
+    "three_wide": true,
+    "traffic": true,
+    "rate_hz": 59.8,
+    "seq": 1237
+  }
+}

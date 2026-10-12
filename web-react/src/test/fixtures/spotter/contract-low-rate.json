@@ -1,0 +1,135 @@
+{
+  "_fixture": {
+    "tier": "contract",
+    "source": "F1 spotter design spec 8.2 (the GET /api/spotter contract); hand-written, not server output",
+    "recorded": "2026-10-12",
+    "what": "GET /api/spotter at the game's 20 Hz default, under a safety car, audio still preparing with 2 phrases unverified; recent calls newest first, as the worker keeps them"
+  },
+  "response": {
+    "v": 1,
+    "settings": {
+      "enabled": true,
+      "audio": true,
+      "visual": true,
+      "qualifying": false,
+      "practice": false,
+      "start_delay_s": 0,
+      "wording": "simple",
+      "voice": "bf_emma",
+      "still_there": true,
+      "hold_your_line": true,
+      "car_length_m": null,
+      "car_width_m": null
+    },
+    "availability": {
+      "available": true,
+      "game": "f1_25",
+      "reason": null
+    },
+    "status": {
+      "active": false,
+      "reason": "safety_car",
+      "motion_hz": 20.1,
+      "send_rate_low": true,
+      "dims": {
+        "length_m": 5.5,
+        "width_m": 2.0,
+        "formula": "F1 World",
+        "source": "regs"
+      },
+      "audio": {
+        "ready": false,
+        "engine": "kokoro",
+        "voice": "bm_george",
+        "phrases": 18,
+        "unverified": 2,
+        "fallback": 1,
+        "clip_s": {
+          "car_left": 0.46,
+          "clear_left": 0.52
+        }
+      }
+    },
+    "latency": {
+      "n": 41,
+      "decide_ms": {
+        "p50": 0.1,
+        "p95": 0.3,
+        "max": 1.2
+      },
+      "queued_ms": {
+        "p50": 2.1,
+        "p95": 6.4,
+        "max": 11.0
+      },
+      "started_ms": {
+        "p50": 150,
+        "p95": 190,
+        "max": 240
+      },
+      "onset_game_ms": {
+        "p50": 50,
+        "p95": 67,
+        "max": 84
+      },
+      "data_age_ms": {
+        "p50": 6,
+        "p95": 71,
+        "max": 104
+      }
+    },
+    "counters": {
+      "calls": {
+        "car_left": 9,
+        "clear_left": 8,
+        "three_wide": 1
+      },
+      "suppressed_short": 3,
+      "dropped": {
+        "ptt": 1,
+        "voice_off": 0,
+        "stale": 2,
+        "urgent_on_air": 0,
+        "not_heard": 1
+      },
+      "items": 18234,
+      "skipped": 0,
+      "invalid": 0,
+      "errors": 1
+    },
+    "recent": [
+      {
+        "t_unix": 1791817204.6,
+        "kind": "still_there",
+        "side": "right",
+        "spoken": true,
+        "queued_ms": 2.5,
+        "started_ms": 176
+      },
+      {
+        "t_unix": 1791817203.0,
+        "kind": "car_right",
+        "side": "right",
+        "spoken": false,
+        "queued_ms": null,
+        "started_ms": null
+      },
+      {
+        "t_unix": 1791817201.4,
+        "kind": "clear_left",
+        "side": "left",
+        "spoken": true,
+        "queued_ms": 2.8,
+        "started_ms": null
+      },
+      {
+        "t_unix": 1791817200.0,
+        "kind": "car_left",
+        "side": "left",
+        "spoken": true,
+        "queued_ms": 3.2,
+        "started_ms": 190
+      }
+    ]
+  }
+}

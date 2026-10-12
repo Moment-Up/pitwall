@@ -37,6 +37,7 @@ export const KIND_CHIP: Record<LogKind, KindChip> = {
   strategy: { label: "STRATEGY", tone: "ref" }, // race strategy calls (pitwall.strategy)
   goal: { label: "GOAL", tone: "success" }, // a goal reached (pitwall.motivation)
   validation: { label: "TEST", tone: "default" }, // a rig validation prompt (pitwall.validate)
+  spotter: { label: "SPOTTER", tone: "warning" }, // --- spotter --- F1 spotter calls (amber, like the Drive edge bars)
   transcript: { label: "YOU", tone: "default" },
   you: { label: "YOU", tone: "default" },
   error: { label: "ERROR", tone: "danger" },

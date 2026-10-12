@@ -7,6 +7,7 @@
 
 import { messageAge } from "../../../components/radio/radio-view";
 import type { CueMode, Intensity, LogKind, RadioServerState, RadioState } from "../../../lib/radio";
+import { spotterRun } from "../../../lib/spotter/log"; // --- spotter ---
 
 export type ChipTone = "success" | "warning" | "danger" | "default" | "accent";
 
@@ -56,11 +57,19 @@ export interface LogRow {
   meta: string | null;
 }
 
-/** The log, newest first (the store keeps it oldest first). */
+/** The log, newest first (the store keeps it oldest first). A run of consecutive spotter calls is one row. */
 export function logRows(log: RadioState["log"], nowMs: number): LogRow[] {
   const out: LogRow[] = [];
   for (let i = log.length - 1; i >= 0; i--) {
     const e = log[i]!;
+    /* --- spotter: fold the run into one compact row (lib/spotter/log.ts) --- */
+    const run = spotterRun(log, i);
+    if (run) {
+      out.push({ seq: run.seq, kind: "spotter", text: run.text, count: run.count, age: messageAge(run.at, nowMs), meta: run.meta });
+      i = run.start;
+      continue;
+    }
+    /* --- end spotter --- */
     out.push({
       seq: e.seq,
       kind: e.kind,

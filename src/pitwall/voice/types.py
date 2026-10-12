@@ -94,6 +94,7 @@ class MessageKind(StrEnum):
     STRATEGY = "strategy"  # race strategy call (pitwall.strategy.radio): normal and detailed intensity
     GOAL = "goal"  # a goal reached (pitwall.motivation.radio): after the lap time, never holding its coaching back
     VALIDATION = "validation"  # a rig validation prompt (pitwall.validate.kit) while the driver runs a validation
+    SPOTTER = "spotter"  # --- spotter --- cars alongside (pitwall.spotter): pre-synthesised, never queued
 
 
 class Priority(IntEnum):
@@ -136,3 +137,6 @@ class DrivingState:
     lap_distance_m: float | None
     # seconds until the next braking zone at current speed (from the track model), None if unknown
     time_to_next_braking_s: float | None
+    # --- spotter --- a car alongside now, or a side cleared less than 1 s ago (spotter enabled and active only);
+    # proactive messages wait it out (``scheduler.speak_window_ok``). None = unknown / spotter off.
+    traffic_alongside: bool | None = None

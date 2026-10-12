@@ -25,6 +25,7 @@ from pitwall.model.telemetry import (
     CarTiming,
     Emitted,
     EventKind,
+    FieldMotion,
     FieldSample,
     FracZone,
     FrameQuality,
@@ -158,6 +159,14 @@ F1_25_INFO = AdapterInfo(
         "tyre_sets": FieldSupport(
             _S, "TyreSets (ID 12), player car: wear, laps left, usable life, lap delta vs fitted (game estimates)"
         ),
+        # --- spotter ---
+        "field_motion": FieldSupport(
+            SupportLevel.RECORDED_VALIDATED,
+            "Motion of every car at the menu send rate: position, velocity, forward and right unit vectors; "
+            "worldRightDir = the driver's right (checked against steering on 3 PS5 captures: "
+            "tests/recorded/test_spotter_recorded.py); format 2026 spec only",
+        ),
+        # --- end spotter ---
     },
     notes=(
         "Decodes UDP formats 2025 (F1 25) and 2026 (2026 Season Pack); format 2024 is rejected.",
@@ -445,7 +454,12 @@ class F1Adapter:
     """
 
     def __init__(
-        self, field_hz: float = FIELD_HZ, *, field_include_player: bool = False, timing_hz: float = TIMING_HZ
+        self,
+        field_hz: float = FIELD_HZ,
+        *,
+        field_include_player: bool = False,
+        timing_hz: float = TIMING_HZ,
+        field_motion: bool = False,  # spotter: emit a FieldMotion (two packet references) per Motion packet
     ) -> None:
         if not (math.isfinite(field_hz) and 0.0 <= field_hz <= MAX_FIELD_HZ):
             raise ValueError(f"field_hz must be 0-{MAX_FIELD_HZ:g} Hz, got {field_hz}")
@@ -460,6 +474,7 @@ class F1Adapter:
         # race strategy (pitwall.strategy): all-car RaceTiming at <= timing_hz of game clock (0 disables)
         self.timing_period_s: float | None = 1.0 / timing_hz if timing_hz > 0 else None
         self.timing_ticks = 0  # RaceTiming items emitted (all sessions)
+        self.field_motion = field_motion  # spotter
         self.reset()
 
     def reset(self) -> None:
@@ -598,6 +613,21 @@ class F1Adapter:
         self._gscale = h["layout"].gforce_scale
         self._motion_frame = h["frameIdentifier"]
         self._motion_raw = data  # all cars, for the next field tick: a reference, not a copy
+        # --- spotter --- one object holding the Motion and latest LapData references; decoded off this thread
+        if self.field_motion:
+            out.append(
+                FieldMotion(
+                    game=Game.F1_25,
+                    t_recv_ns=t,
+                    session_time_s=h["sessionTime"],
+                    frame_id=self._motion_frame,
+                    player_index=idx,
+                    packet_format=h["packetFormat"],
+                    motion=data,
+                    lap=self._lap_raw,
+                )
+            )
+        # --- end spotter ---
 
     def _on_motion_ex(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
         """feat/technique: MotionEx (ID 13) is player-car-only extra motion data. One cached ``unpack_from``; it

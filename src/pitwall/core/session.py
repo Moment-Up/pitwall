@@ -52,6 +52,7 @@ from pitwall.model.telemetry import (
     CarSetup,
     Emitted,
     EventKind,
+    FieldMotion,
     FieldSample,
     GameEvent,
     LapCompletion,
@@ -93,6 +94,29 @@ class StrategySink(Protocol):
     def end_session(self, session_id: str) -> None: ...
 
 
+# --- spotter ---
+class SpotterSink(Protocol):
+    """Where every car's Motion goes (``pitwall.spotter.worker.SpotterWorker``): one queue put, never blocks ingest."""
+
+    def submit(self, item: FieldMotion | SessionInfo | GameEvent) -> bool: ...
+
+    def reset(self, session_id: str | None) -> None: ...
+
+
+# the events the spotter's gates follow (lights out, flashback, red flag, session start/end, chequered flag)
+SPOTTER_EVENTS = frozenset(
+    {
+        EventKind.LIGHTS_OUT,
+        EventKind.FLASHBACK,
+        EventKind.RED_FLAG,
+        EventKind.SESSION_STARTED,
+        EventKind.SESSION_ENDED,
+        EventKind.CHEQUERED_FLAG,
+    }
+)
+# --- end spotter ---
+
+
 class SessionManager:
     def __init__(
         self,
@@ -107,8 +131,10 @@ class SessionManager:
         resume_candidate: Mapping[str, Any] | None = None,
         field: FieldSink | None = None,
         strategy: StrategySink | None = None,
+        spotter: SpotterSink | None = None,
     ) -> None:
         self.writer = writer
+        self.spotter = spotter  # --- spotter --- every car's Motion, off this thread
         self.live = live
         self.field = field  # layer L0b: the field model learns the track from the other cars (off this thread)
         self.strategy = strategy  # race strategy (pitwall.strategy): runs off this thread
@@ -175,6 +201,8 @@ class SessionManager:
             )
         )
         self.live.reset_session(sid, self.source, self.synthetic, game)
+        if self.spotter is not None:  # --- spotter ---
+            self.spotter.reset(sid)
         log.info(
             "session %s started (%s, source=%s, synthetic=%s, driver=%s)",
             sid,
@@ -195,12 +223,19 @@ class SessionManager:
             self.field.end_session()
         if self.strategy is not None:  # race strategy (pitwall.strategy)
             self.strategy.end_session(sid)
+        if self.spotter is not None:  # --- spotter ---
+            self.spotter.reset(None)
         log.info("session %s ended", sid)
         self.session_id = None
         self._game_uid = None
 
     # ------------------------------------------------------------------ stream
     def handle(self, e: Emitted) -> None:
+        if isinstance(e, FieldMotion):
+            # --- spotter --- every car's Motion at the send rate: one queue put (no decode), never a session item
+            if self.spotter is not None:
+                self.spotter.submit(e)
+            return
         if isinstance(e, FieldSample):
             # Another car's sample (layer L0b): not the player's data - it never starts or splits a session and is
             # never persisted. Straight to the field worker (a lock-free append) or nowhere.
@@ -226,6 +261,8 @@ class SessionManager:
         if isinstance(e, SessionInfo):
             self._on_session(e)
             self._to_strategy(e)
+            if self.spotter is not None:  # --- spotter --- after the session logic (a new session reset it first)
+                self.spotter.submit(e)
             return
         if isinstance(e, GameEvent) and self.session_id is None:
             # menus send button events with no session: drive PTT but don't create an empty session
@@ -243,6 +280,8 @@ class SessionManager:
             self._assembler.feed_completion(e)
         elif isinstance(e, GameEvent):
             self._on_event(e)
+            if self.spotter is not None and e.kind in SPOTTER_EVENTS:  # --- spotter ---
+                self.spotter.submit(e)
         elif isinstance(e, CarSetup):
             self._setup_fp = e.fingerprint()
             self._last_setup = e

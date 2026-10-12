@@ -321,6 +321,20 @@
    ]
   },
   {
+   "id": "spotter",
+   "label": "Spotter (cars alongside)",
+   "group": "session",
+   "status": "not_sent",
+   "evidence": null,
+   "short": "Not sent by GT7",
+   "reason": "GT7 doesn't send every car's position and heading.",
+   "detail": "telemetry covers the player's car only (gt7-protocol.md section 8) (row gt7_ps5)",
+   "note": null,
+   "fields": [
+    "field_motion"
+   ]
+  },
+  {
    "id": "setup_telemetry",
    "label": "Car setup from the game",
    "group": "setup_radio",
@@ -592,6 +606,11 @@
    "source": "no sectors, marshal zones or race flags (gt7-protocol.md section 8)"
   },
   "field_samples": {
+   "level": "unsupported",
+   "status": "not_sent",
+   "source": "telemetry covers the player's car only (gt7-protocol.md section 8)"
+  },
+  "field_motion": {
    "level": "unsupported",
    "status": "not_sent",
    "source": "telemetry covers the player's car only (gt7-protocol.md section 8)"

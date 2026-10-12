@@ -243,6 +243,7 @@ def _fields(level: SupportLevel, motorsport: bool) -> dict[str, FieldSupport]:
         "damage": FieldSupport(_U, "not in Turn 10's Data Out field list"),
         "track_zones": FieldSupport(_U, "no sector, marshal-zone or flag data"),
         "field_samples": FieldSupport(_U, "Data Out describes the player's car only"),
+        "field_motion": FieldSupport(_U, "Data Out describes the player's car only"),  # spotter
         "buttons": FieldSupport(_U, "no wheel-button data"),
     }
 

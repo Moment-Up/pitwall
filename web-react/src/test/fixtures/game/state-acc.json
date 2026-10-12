@@ -321,6 +321,20 @@
     ]
    },
    {
+    "id": "spotter",
+    "label": "Spotter (cars alongside)",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC on PS5 has no telemetry output.",
+    "detail": "No external telemetry on consoles. Only the separately labelled video-analysis option could apply. (row acc_console)",
+    "note": null,
+    "fields": [
+     "field_motion"
+    ]
+   },
+   {
     "id": "setup_telemetry",
     "label": "Car setup from the game",
     "group": "setup_radio",

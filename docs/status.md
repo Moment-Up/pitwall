@@ -30,6 +30,7 @@ One row per feature. "Next check" names the validation kit item that would give 
 | F1 25 2026 Season Pack (format 2026) | yes | no | no | everything beyond the spec | - |
 | Coaching from your own reference lap (deterministic) | yes | yes | **yes** (coaching produced in the live races) | the radio and the card saying the same point, live | `ipad_one_message` |
 | Live braking cues | yes | yes | no | timing on track | `cues_timing` |
+| F1 spotter (cars alongside) | yes (13 scenarios, at 60, 20 and 10 Hz, formats 2025 and 2026) | yes (26 owner PS5 race sessions, 170 min: every overlap of 1 s or more called (123/123), 0 wrong clears; ground truth from the same positions) | no | heard on track; audio latency to the ear; format 2026; online lobbies beyond one race; the car box against the game's collision shapes | a live F1 race with the spotter on (manual) |
 | Radio: push-to-talk, speech recognition, voices | yes | yes | partly (a radio check over an iPad and one AirPod was heard; the F1 25 wheel button is read live) | a driver asking by push-to-talk; the new dashboard's Go live on an iPad; Kokoro and Windows voices on a radio | `radio_ptt`, `radio_kokoro` |
 | Radio policy: speak windows, two (four) messages a lap, order, seat change | yes | yes (the v0.2.0 acceptance run, owner captures over loopback: at most 2 a lap at normal, every message in a calm stretch, the seat change; the 2 s gap after a held message failed there and is fixed since, unit-tested) | no | heard live on track | `radio_speak_windows`, `radio_budget` *(new)* |
 | Engineer intents and instant answers while moving | yes (204-question fixture, every answer grounded and short enough for the radio) | yes (the acceptance run: every typed question on track got its intent, no "Copy, checking."; the long answers it found are shortened since, unit-tested) | no | asked by voice on track | `radio_ptt` |
@@ -108,6 +109,8 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   later; incomplete laps; safety-car laps are judged by the live safety-car state, not stored per lap yet.
 - **Game selection:** the owner's seven open questions from the game selection review.
 - **Technique:** lock-ups are synthetic only; the rig check has no lock-up measure yet.
+- **Spotter:** no validation-kit item yet (a live F1 race with the spotter on and the owner listening is the next,
+  manual, check); it stays off by default until then.
 - **Race strategy:** the predicted rejoin place is right only 44.6 % of the time on a second session id; safety car,
   VSC, rain and your own stop are synthetic only.
 - **Pace against the AI:** the active-car count and assist guards; the safety-car exclusion is synthetic only; time

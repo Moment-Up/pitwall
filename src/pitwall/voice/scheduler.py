@@ -17,6 +17,9 @@ proactive kind waits for a speak window except urgent alerts and cues:
 * STRATEGY (normal calls), INFO (detailed calls) - ``strategy.radio``, topic ``strategy:<topic>``. Budget.
 * GOAL - ``motivation.radio``, topic ``goal:<session>``, no lap identity. Budget.
 * VALIDATION - ``validate.kit`` prompts during a validation run, topic ``validation``. No budget; said last.
+* SPOTTER - cars alongside (``pitwall.spotter``, delivered by the hub's ``voice.spotter_radio``, never through this
+  queue: the 100 ms tick is too slow). URGENT (``still_there`` HIGH); every intensity; no budget, gap, repeat filter
+  or speak window. While a car is alongside (``DrivingState.traffic_alongside``) no speak window opens.
 
 * **Intensity** (``ALLOWED_KINDS``) - quiet: answers, acknowledgements, alerts, cues and validation prompts (the
   driver opted into a validation run); normal adds the lap summary, goal lines, coaching and strategy calls; detailed
@@ -118,7 +121,14 @@ DRIVER_LAP_KINDS = frozenset({MessageKind.LAP_SUMMARY, MessageKind.GOAL, Message
 # CUE (predictive braking, phase 6) is its own opt-in feature, so coaching intensity does not filter it. A validation
 # prompt is said at every intensity: the driver started the validation run, and the kit only queues during one.
 _QUIET_KINDS = frozenset(
-    {MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.ALERT, MessageKind.CUE, MessageKind.VALIDATION}
+    {
+        MessageKind.ANSWER,
+        MessageKind.CONTROL,
+        MessageKind.ALERT,
+        MessageKind.CUE,
+        MessageKind.VALIDATION,
+        MessageKind.SPOTTER,  # --- spotter --- its own switch; quiet promises "urgent calls only"
+    }
 )
 _NORMAL_KINDS = _QUIET_KINDS | {MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.COACHING, MessageKind.STRATEGY}
 _DETAILED_KINDS = _NORMAL_KINDS | {MessageKind.INFO}
@@ -132,6 +142,7 @@ COACHING_PER_LAP: dict[Intensity, int | None] = {"quiet": 0, "normal": 1, "detai
 # Dispatch order within a priority (then first in first out): in a race lap the lap time, then the strategy call,
 # then the goal line, then the coaching point. Validation prompts go last, when nothing else is eligible.
 KIND_RANK: dict[MessageKind, int] = {
+    MessageKind.SPOTTER: 0,  # --- spotter --- (spotter calls never go through this queue; defensive)
     MessageKind.CUE: 0,
     MessageKind.ANSWER: 0,
     MessageKind.CONTROL: 0,
@@ -190,6 +201,8 @@ def speak_window_ok(state: DrivingState, duration_s: float, lead_s: float = 0.0)
     least ``SPEAK_WINDOW_MARGIN_S`` before the next braking zone."""
     if not state.on_track:
         return True
+    if state.traffic_alongside:  # --- spotter --- never start a sentence while wheel to wheel
+        return False
     brake, steering = state.brake, state.steering
     if brake is None or steering is None:
         return False  # unknown is not calm
@@ -210,7 +223,12 @@ def _urgent(msg: RadioMessage) -> bool:
 
 def _repeat_filtered(msg: RadioMessage) -> bool:
     """Subject to the identical-sentence repeat window (see module docstring for the exemptions)."""
-    return msg.kind not in DRIVER_INITIATED and msg.kind is not MessageKind.CUE and not _urgent(msg)
+    return (
+        msg.kind not in DRIVER_INITIATED
+        and msg.kind is not MessageKind.CUE
+        and msg.kind is not MessageKind.SPOTTER  # --- spotter ---
+        and not _urgent(msg)
+    )
 
 
 def _budgeted(msg: RadioMessage) -> bool:
@@ -218,11 +236,21 @@ def _budgeted(msg: RadioMessage) -> bool:
     return msg.kind in BUDGETED and not _urgent(msg)
 
 
-def _interrupt_rank(msg: RadioMessage) -> int:
-    """How strongly a message may cut into playback: 2 urgent, 1 cue, 0 never."""
+# --- spotter: urgent interrupt contract --- (the radio lane defines the same rule: keep one copy at the merge)
+def interrupt_rank(msg: RadioMessage) -> int:
+    """2 = urgent (Priority.URGENT: urgent alerts, spotter calls), 1 = cue, 0 = never interrupts."""
     if _urgent(msg):
         return 2
     return 1 if msg.kind is MessageKind.CUE else 0
+
+
+def may_interrupt(new: RadioMessage, on_air: RadioMessage | None) -> bool:
+    """A strictly higher interrupt rank. Equal ranks never cut each other (two urgent calls, two spotter calls)."""
+    return interrupt_rank(new) > (0 if on_air is None else interrupt_rank(on_air))
+
+
+_interrupt_rank = interrupt_rank  # the existing call sites
+# --- end spotter: urgent interrupt contract ---
 
 
 def _lap_identity(msg: RadioMessage) -> LapKey | None:
@@ -491,7 +519,12 @@ class RadioScheduler:
         if state.on_track and _budgeted(msg) and spent >= TALK_PER_LAP[self._intensity]:
             return False  # this lap's allowance is used up: wait for the next lap (or expiry)
         urgent = _urgent(msg)
-        gap_exempt = urgent or msg.kind in DRIVER_INITIATED or msg.kind is MessageKind.CUE
+        gap_exempt = (
+            urgent
+            or msg.kind in DRIVER_INITIATED
+            or msg.kind is MessageKind.CUE
+            or msg.kind is MessageKind.SPOTTER  # --- spotter ---
+        )
         if not gap_exempt and not gap_ok:
             return False
         if not msg.needs_speak_window or urgent:

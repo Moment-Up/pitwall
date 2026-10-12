@@ -18,6 +18,7 @@ import { AreaActionsContext, AreaHeader } from "./AreaHeader";
 import { BottomTabBar } from "./BottomTabBar";
 import { GameAlert } from "./GameAlert";
 import { useRadio } from "../radio";
+import { SpotterBars } from "../drive/SpotterBars"; // --- spotter ---
 import { ScrollRow } from "../ScrollRow";
 import { NavRail } from "./NavRail";
 import { PhoneAppBar } from "./PhoneAppBar";
@@ -92,6 +93,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <SubNav area="drive" placement="drive" className="w-max" />
               </ScrollRow>
               {children}
+              {/* --- spotter --- */}
+              <SpotterBars />
+              {/* --- end spotter --- */}
             </div>
           ) : (
             <div className={`mx-auto w-full max-w-[1680px] px-4 md:px-6 ${miniBar ? "pb-24" : "pb-8"}`}>

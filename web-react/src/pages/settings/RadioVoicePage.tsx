@@ -11,8 +11,9 @@ import { useApi } from "../../hooks/useApi";
 import { SETTINGS_KEYS, systemApi } from "../../lib/endpoints/settings";
 import { radio } from "../../lib/radio";
 import type { PageProps } from "../../routes";
-import { deviceNoun, linkState } from "./radio/model";
+import { deviceNoun, linkState, macState } from "./radio/model";
 import { RadioVoiceView, pickRadioVoice } from "./radio/RadioVoiceView";
+import { SpotterSettingsCard } from "./radio/SpotterSettings"; // --- spotter ---
 
 export function RadioVoicePage(_props: PageProps) {
   const r = useRadio(pickRadioVoice, shallowEqual);
@@ -25,6 +26,10 @@ export function RadioVoicePage(_props: PageProps) {
     () => (typeof navigator === "undefined" ? "device" : deviceNoun(navigator.userAgent, navigator.maxTouchPoints ?? 0)),
     [],
   );
+  /* --- spotter: the Mac's engine and Kokoro voices for the spotter's own voice --- */
+  const mac = macState(linkUp ? r.server : null, status.data);
+  const spotter = <SpotterSettingsCard engine={mac?.tts ?? null} voices={mac?.tts_voices ?? []} />;
+  /* --- end spotter --- */
   return (
     <RadioVoiceView
       r={r}
@@ -32,6 +37,7 @@ export function RadioVoicePage(_props: PageProps) {
       radioFollowsDriver={radioFollowsDriver}
       noun={noun}
       actions={radio}
+      spotter={spotter}
     />
   );
 }

@@ -1,0 +1,56 @@
+{
+  "_fixture": {
+    "tier": "contract",
+    "source": "F1 spotter design spec 8.2 (the GET /api/spotter contract); hand-written, not server output",
+    "recorded": "2026-10-12",
+    "what": "GET /api/spotter with the defaults (master off), F1 25 connected"
+  },
+  "response": {
+    "v": 1,
+    "settings": {
+      "enabled": false,
+      "audio": true,
+      "visual": true,
+      "qualifying": false,
+      "practice": false,
+      "start_delay_s": 5.0,
+      "wording": "auto",
+      "voice": null,
+      "still_there": true,
+      "hold_your_line": true,
+      "car_length_m": null,
+      "car_width_m": null
+    },
+    "availability": {
+      "available": true,
+      "game": "f1_25",
+      "reason": null
+    },
+    "status": {
+      "active": false,
+      "reason": "disabled",
+      "motion_hz": null,
+      "send_rate_low": false,
+      "dims": null,
+      "audio": null
+    },
+    "latency": {
+      "n": 0,
+      "decide_ms": null,
+      "queued_ms": null,
+      "started_ms": null,
+      "onset_game_ms": null,
+      "data_age_ms": null
+    },
+    "counters": {
+      "calls": {},
+      "suppressed_short": 0,
+      "dropped": {},
+      "items": 0,
+      "skipped": 0,
+      "invalid": 0,
+      "errors": 0
+    },
+    "recent": []
+  }
+}

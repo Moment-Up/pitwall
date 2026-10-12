@@ -325,6 +325,20 @@
     ]
    },
    {
+    "id": "spotter",
+    "label": "Spotter (cars alongside)",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send every car's position and heading.",
+    "detail": "Data Out describes the player's car only (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "field_motion"
+    ]
+   },
+   {
     "id": "setup_telemetry",
     "label": "Car setup from the game",
     "group": "setup_radio",

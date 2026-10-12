@@ -45,6 +45,7 @@ export type FeatureId =
   | "weather"
   | "session_info"
   | "field_data"
+  | "spotter" // --- spotter --- (games.py FeatureDef "spotter")
   | "setup_telemetry"
   | "setup_recommendations"
   | "wheel_ptt";
@@ -74,6 +75,7 @@ export const FEATURE_IDS: readonly FeatureId[] = [
   "weather",
   "session_info",
   "field_data",
+  "spotter", // --- spotter ---
   "setup_telemetry",
   "setup_recommendations",
   "wheel_ptt",
@@ -146,7 +148,7 @@ export interface GameEntry {
   /** connect.py GameGuide.id: "f1_25" | "gt7" | "forza" | "ac" | "record" */
   guide_id: string | null;
   rig: { game: "f1_25" | "gt7"; platform: "ps5" | "pc" | null } | null;
-  /** All 23, in FEATURE_IDS order. */
+  /** All 24, in FEATURE_IDS order. */
   features: GameFeature[];
   notes: string[];
   /** Only GET /api/games/{id}. */

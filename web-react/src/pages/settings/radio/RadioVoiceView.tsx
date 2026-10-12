@@ -7,6 +7,7 @@
 // tests drive it with plain objects. RadioVoicePage wires it to the stores.
 
 import { Alert, Button } from "@heroui/react";
+import type { ReactNode } from "react";
 import { GoLiveButton, micChipView } from "../../../components/radio";
 import type { VoiceStatus } from "../../../lib/endpoints/settings";
 import type { RadioState, RadioStore, VoiceSource } from "../../../lib/radio";
@@ -91,12 +92,16 @@ export interface RadioVoiceViewProps {
   actions: RadioActions;
   /** Show the Go live button in the banner (false in render tests that check the copy only). */
   goLive?: boolean;
+  /* --- spotter --- */
+  /** The F1 spotter's card (pages/settings/radio/SpotterSettings.tsx), under "On the radio"; absent = none. */
+  spotter?: ReactNode;
+  /* --- end spotter --- */
 }
 
 const SPEED_MIN = 0.8;
 const SPEED_MAX = 1.3;
 
-export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, goLive = true }: RadioVoiceViewProps) {
+export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, goLive = true, spotter }: RadioVoiceViewProps) {
   const link = linkState(r);
   const linkUp = link === "open";
   const mac = macState(linkUp ? r.server : null, status);
@@ -257,6 +262,7 @@ export function RadioVoiceView({ r, status, radioFollowsDriver, noun, actions, g
           <p className="m-0 px-1 text-sm text-muted">
             Braking calls and coaching are also on Drive › Radio, to change between runs.
           </p>
+          {spotter /* --- spotter --- */}
         </div>
       </div>
     </div>

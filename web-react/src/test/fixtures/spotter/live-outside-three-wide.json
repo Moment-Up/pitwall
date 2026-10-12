@@ -1,0 +1,30 @@
+{
+  "_fixture": {
+    "tier": "contract",
+    "source": "F1 spotter design spec 8.3 (the /ws/live spotter block contract); hand-written, not server output",
+    "recorded": "2026-10-12",
+    "what": "the player outside a three-wide: two cars on the right"
+  },
+  "response": {
+    "v": 1,
+    "enabled": true,
+    "active": true,
+    "reason": null,
+    "left": {
+      "state": "clear",
+      "lon_m": null,
+      "gap_m": null,
+      "cars": 0
+    },
+    "right": {
+      "state": "alongside",
+      "lon_m": 1.2,
+      "gap_m": 0.7,
+      "cars": 2
+    },
+    "three_wide": false,
+    "traffic": true,
+    "rate_hz": 59.8,
+    "seq": 1238
+  }
+}

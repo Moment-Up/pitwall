@@ -302,6 +302,9 @@ class LiveState:
         self.strategy: dict[str, Any] | None = None  # race strategy (pitwall.strategy): StrategyView of this session
         self.strategy_rev = 0  # bumped when ``strategy`` changes (a new view, a new session): /ws/live sends it then
         self.coachref: dict[str, Any] | None = None  # --- coachref --- (core.coachref.CoachRef publishes it)
+        # --- spotter --- the SpotterWorker swaps in its block (spec 8.3) on every Motion item; None = no F1 Motion
+        self.spotter: dict[str, Any] | None = None
+        # --- end spotter ---
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -592,6 +595,7 @@ class LiveState:
             self.ai_pace = None
             self.strategy = None  # race strategy (pitwall.strategy)
             self.strategy_rev += 1
+            self.spotter = None  # --- spotter ---
             self._bests_requested = None  # the next session packet asks for the new session's bests
             self._heads_up_key = None  # the cue engine drops its heads-ups on reset; the next knowledge re-installs
         self.coach.reset()
@@ -716,6 +720,7 @@ class LiveState:
             if include_strategy:  # race strategy: /ws/live sends it only when it changed (``strategy_rev``) or static
                 out["strategy"] = self.strategy
             out["coachref"] = self.coachref  # --- coachref --- reference choice + drill (small, every snapshot)
+            out["spotter"] = self.spotter  # --- spotter --- ~220 bytes, every snapshot (the bars must be instant)
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison
