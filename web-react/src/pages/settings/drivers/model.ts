@@ -5,17 +5,28 @@
 // Radio settings (coaching amount, engineer voice) and the skill level's on-track coaching rules are only offered
 // while the server says the radio follows the seated driver (`radioFollowsDriver`): until then they would change
 // nothing on track, so the page describes only what the skill level does today.
+//
+// Race radio (pitwall.raceradio; race-radio spec 9.5, 10.4): seven call toggles and the radio words, stored with the
+// profile. Offered only by a server that sends them (older servers refuse unknown fields, so the form never sends
+// them there): `radio_calls` / `radio_wording` undefined = not offered.
 
 import {
+  ALL_RADIO_CALLS,
   INTENSITIES,
   NO_INITIALS,
   PALETTE,
   SKILL_LEVELS,
   initialsFor,
+  radioCallsOf,
+  radioWordingOf,
+  raceRadioSupported,
   type CoachingIntensity,
   type CoachingLimits,
   type Driver,
   type DriverInput,
+  type RadioCallGroup,
+  type RadioCallPrefs,
+  type RadioWording,
   type SkillLevel,
 } from "../../../lib/drivers";
 import type { GameEntry } from "../../../lib/endpoints/game";
@@ -35,6 +46,12 @@ export interface DriverForm {
   /** "Usually plays" (games catalogue id, null = none). undefined: not offered (a server before game selection, or
    * untouched on a new driver), so it is never sent. */
   default_game?: string | null;
+  // --- race radio ---
+  /** Which race calls the driver hears. undefined: not offered (a server before race radio), so it is never sent. */
+  radio_calls?: RadioCallPrefs;
+  /** Radio words. undefined: not offered, never sent. */
+  radio_wording?: RadioWording;
+  // --- end race radio ---
 }
 
 export const NAME_MAX = 40;
@@ -52,7 +69,8 @@ export function nextColour(list: readonly Driver[]): string {
   return PALETTE.find((c) => !used.has(c.toLowerCase())) ?? PALETTE[0] ?? "#ff6a2b";
 }
 
-/** A new driver's form: beginner, normal coaching, voice on, the next free colour. */
+/** A new driver's form: beginner, normal coaching, voice on, the next free colour; every race call on and automatic
+ * radio words when the server knows race radio. */
 export function newDriverForm(list: readonly Driver[]): DriverForm {
   return {
     id: null,
@@ -63,20 +81,26 @@ export function newDriverForm(list: readonly Driver[]): DriverForm {
     skill_level: "beginner",
     coaching_intensity: "normal",
     voice_enabled: true,
+    ...(raceRadioSupported(list) ? { radio_calls: { ...ALL_RADIO_CALLS }, radio_wording: "auto" as const } : {}),
   };
 }
 
 export function formFromDriver(d: Driver): DriverForm {
+  const p = d.preferences;
   return {
     id: d.id,
     name: d.name,
-    initials: d.preferences.initials,
+    initials: p.initials,
     initialsTouched: true,
-    colour: d.preferences.colour,
-    skill_level: d.preferences.skill_level,
-    coaching_intensity: d.preferences.coaching_intensity,
-    voice_enabled: d.preferences.voice_enabled,
-    default_game: d.preferences.default_game,
+    colour: p.colour,
+    skill_level: p.skill_level,
+    coaching_intensity: p.coaching_intensity,
+    voice_enabled: p.voice_enabled,
+    default_game: p.default_game,
+    // race radio: a profile from a server that knows it; a missing or odd value reads as its default
+    ...(raceRadioSupported([d])
+      ? { radio_calls: radioCallsOf(p.radio_calls), radio_wording: radioWordingOf(p.radio_wording) }
+      : {}),
   };
 }
 
@@ -118,8 +142,26 @@ export function formBody(f: DriverForm): FormResult {
       coaching_intensity: f.coaching_intensity,
       voice_enabled: f.voice_enabled,
       ...(f.default_game !== undefined ? { default_game: f.default_game } : {}),
+      ...(f.radio_calls !== undefined ? { radio_calls: { ...f.radio_calls } } : {}),
+      ...(f.radio_wording !== undefined ? { radio_wording: f.radio_wording } : {}),
     },
   };
+}
+
+// ------------------------------------------------------------------------------------------- race radio
+
+/** The form with one race-call toggle changed (a form without race radio is returned as it is). */
+export function withRadioCall(f: DriverForm, group: RadioCallGroup, on: boolean): DriverForm {
+  if (!f.radio_calls) return f;
+  return { ...f, radio_calls: { ...f.radio_calls, [group]: on } };
+}
+
+/** What the radio words choice does; with "Automatic", what it means for this skill level. */
+export function radioWordingHint(w: RadioWording, skill: SkillLevel): string {
+  if (w === "simple") return "Simple words, one idea at a time. Also for coaching and strategy calls.";
+  if (w === "standard") return "Race-engineer words. Also for coaching and strategy calls.";
+  const now = skill === "beginner" ? "simple words for this driver" : "standard words for this driver";
+  return `Automatic: simple words for beginners (${now}). Also for coaching and strategy calls.`;
 }
 
 /** The "Usually plays" choice that means none. */

@@ -40,6 +40,7 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Pace against the AI (F1 25) | yes | yes (six PS5 sessions, exact to the millisecond) | no | a real safety car; time trial and the 2026 format; a real "measured" level suggestion | `ai_pace_result` *(new)* |
 | Technique: racing line, brake and throttle, handling balance, setup suggestions | yes | yes (F1 25 PS5 laps; the line on a GT7 capture) | no | lock-ups (every real capture had ABS on); a setup suggestion driven and checked | `technique_balance` *(new)* |
 | Race strategy engineer (F1 25) | yes | yes (Austria and Monza excerpts; a full 71-lap Austria race) | no | safety car, VSC, rain and your own stop (synthetic only) | `strategy_calls` *(new)* |
+| Race radio: flags, penalties, start and countdown, positions and rivals, damage (F1 25, GT7) | yes | yes (F1 25 PS5: yellow, blue, the start, laps to go, the finish, position changes and clean passes, gaps, warnings, time penalties, a drive-through and its service, wing/floor/diffuser damage, retirements, fastest laps; GT7 PS5: the start, lap one, laps to go, the finish and positions; 5 excerpts and 30 of the owner's races, see [below](#race-radio-unreleased)) | no | everything heard on track; the safety car, VSC, red flag, stop-go, disqualification, black flag, reminders, lap invalidations, the car ahead pitting, punctures, minutes left and faults (synthetic only); GT7 positions against the game's screen; Forza (community docs only) | `race_radio` *(new)* |
 | Goals, streaks, badges, weekly digest, 3 things, session report | yes | yes (owner's PS5 captures replayed in a scratch database) | no | used after a live session | `goal_line` *(new)* |
 | Reference choice and practice drills | yes | yes (owner's F1 25 captures through `scripts/coachref_check.py`; no committed excerpt has a complete lap) | no | a drill driven on purpose; another driver's lap as the live reference | `drill_cycle`, `reference_choice` *(new)* |
 | Rig validation kit | yes | yes | n/a | nothing passes until it is run live, by design | every item |
@@ -96,6 +97,36 @@ races, not yet compared with the HUD), the rev-limit RPM, clutch and the derived
 Recorded-tier fixtures: `tests/fixtures/recorded/gt7_c_ps5_*` (the race start and 3 laps, leaving a race, a car
 reset), pinned by `tests/recorded/test_gt7_ps5_real.py`.
 
+## Race radio (unreleased)
+
+The race radio (`src/pitwall/raceradio`, `docs/features.md`) has been run only on recordings and synthetic data; **it
+has not been heard live**. Each call carries its tier (`tier` in `/api/race/live` and on the radio):
+
+- **Recorded** (F1 25, PS5): yellow ahead, yellow here, blue flag, grid slot, lights out, laps to go, last lap, the
+  finish, the lap-one summary, position changes, clean passes, the pit-exit position, gaps, fastest laps,
+  retirements, warnings, time penalties (4/3, 4/4, 4/7, 4/29), a drive-through (0/34, a jump start in the Sakhir
+  sprint) and its DTSV, and wing, floor and diffuser damage. GT7 (PS5): the grid slot, the lap-one summary, laps to
+  go, last lap, the finish and position changes, from GT7's race position, not yet compared with the game's screen.
+- **Synthetic only**: the safety car and VSC (no real capture had one), the red flag (urgent, past quiet mode), stop-go,
+  disqualification, black flag and the serve reminders, lap invalidations (PENA 11/13/14/15), the car ahead pitting,
+  punctures (tyre damage read 100 % in 10 real crashes, but each came with a terminal-damage retirement or a
+  flashback, which silence the call), sidepod, brake, gearbox and engine damage, ERS and DRS faults, and minutes left
+  in practice and qualifying. Forza positions follow community docs only.
+- **Live**: none.
+
+Checked on 2026-10-12 with `scripts/race_radio_check.py` over scratch copies of all the owner's F1 25 and GT7 captures
+(35 sessions, 30 of them races: 26 F1 25, 4 GT7; 771,336 frames), every proactive call through the radio policy at
+normal: 297 calls made, 239 heard, 3-7 heard in each 3-lap race; 0 "yellow ahead" calls for a zone that went yellow
+at, behind or within 150 m of the car (5 of the 7 were followed by the player's own yellow within 20 s), 0 blue calls
+without the car's blue flag or within 30 s of the last, 0 position calls that disagreed with the car's position or
+came on lap one or within 5 s of a flashback, 0 penalty or warning calls without the matching event and time, 0
+online names in any call (up to 20 known per session), 0 calls heard outside a speak window. The committed excerpts
+(`tests/fixtures/recorded/*race-*-excerpt.pwcap`, scrubbed) pin a warning for contact, a 3 s penalty after a pass with
+no "clean pass", one blue call, one combined damage call with the front-wing advice, and GT7's last lap and finish
+(`tests/recorded/test_raceradio_real.py`). The red flag reaches the radio within 250 ms with the test voice
+(`tests/unit/test_hub_race_calls.py`); with Kokoro it has not been measured. Ingest with the race radio attached:
+median 2.9 us, p99 35 us per packet on 13,208 recorded packets (unchanged).
+
 ## Known gaps
 
 Kept open for after v0.2.0 (none of them changes what Pitwall claims):
@@ -116,6 +147,9 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   development script until an excerpt with a complete lap is committed. "Choose a corner…" on the Ready card shows
   between runs with a suggested drill only (the plan's slot limits); drills can always be started by radio.
 - **Radio:** 3.4's goal-and-summary merge and answer topics are left for 0.2.1.
+- **Race radio:** nothing heard live; F1 25's `gridPosition` is 0-based at a race start on the PS5 (pole = 0), so the
+  race radio takes the grid slot from the position before lights out (the strategy engine's grid position is
+  one off; not changed here). Online names in "who's ahead?" are opt-in (off) and use the `say` voice.
 - **Review:** the Ask page (outside a session) offers only the AI question beyond the defaults; Sessions is not yet
   filtered by the selected game.
 - **Validation kit:** the new catalogue items above (`radio_budget`, `strategy_calls`, `goal_line`, `drill_cycle`,

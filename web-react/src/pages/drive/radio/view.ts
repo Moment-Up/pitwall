@@ -54,6 +54,8 @@ export interface LogRow {
   age: string;
   /** Diagnostic detail the store attached ("listen-only: …"), shown after the age. */
   meta: string | null;
+  /** race radio: an urgent message (the red flag): its chip says URGENT. */
+  urgent: boolean;
 }
 
 /** The log, newest first (the store keeps it oldest first). */
@@ -68,6 +70,7 @@ export function logRows(log: RadioState["log"], nowMs: number): LogRow[] {
       count: e.count > 1 ? `×${e.count}` : null,
       age: messageAge(e.at, nowMs),
       meta: e.meta ? e.meta : null,
+      urgent: e.urgent === true,
     });
   }
   return out;

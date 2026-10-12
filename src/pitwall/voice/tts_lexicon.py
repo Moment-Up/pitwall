@@ -183,9 +183,10 @@ def prepare_text(text: str, lexicon: Lexicon | None = None) -> str:
 
 def known_names() -> list[str]:
     """Every corner, layout, track, team and driver name pitwall knows (for the lexicon coverage test)."""
-    from pitwall.adapters.f1.enums import TEAMS, TRACKS
+    from pitwall.adapters.f1.enums import DRIVER_RADIO_NAMES, TEAMS, TRACKS
 
     names: set[str] = set(DRIVER_NAMES) | set(EXTRA_NAMES) | set(TRACKS.values()) | set(TEAMS.values())
+    names |= set(DRIVER_RADIO_NAMES.values())  # race radio: the game's AI drivers as the radio says them
     try:
         from pitwall.analysis.track_identity import load_sheets
 

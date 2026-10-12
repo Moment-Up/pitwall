@@ -24,7 +24,8 @@ export interface KindChip {
  * Message and log kinds -> chip. Spec 4.3 names ENGINEER, LAP, CUE, ALERT; the colours follow the mockup (LAP
  * accent, CUE danger = the brake colour, ALERT warning, ENGINEER the info blue). One table, so a colour decision is
  * a one-line change. The v0.2.0 radio policy (voice/scheduler.py) adds STRATEGY (race calls), GOAL (a goal reached)
- * and TEST (a rig validation prompt).
+ * and TEST (a rig validation prompt); race radio (pitwall.raceradio) adds RACE (positions, the start, laps to go) and
+ * URGENT (an alert whose meta says urgent: the red flag, see kindChip).
  */
 export const KIND_CHIP: Record<LogKind, KindChip> = {
   answer: { label: "ENGINEER", tone: "ref" },
@@ -37,6 +38,7 @@ export const KIND_CHIP: Record<LogKind, KindChip> = {
   strategy: { label: "STRATEGY", tone: "ref" }, // race strategy calls (pitwall.strategy)
   goal: { label: "GOAL", tone: "success" }, // a goal reached (pitwall.motivation)
   validation: { label: "TEST", tone: "default" }, // a rig validation prompt (pitwall.validate)
+  race: { label: "RACE", tone: "accent" }, // a race-situation call (pitwall.raceradio)
   transcript: { label: "YOU", tone: "default" },
   you: { label: "YOU", tone: "default" },
   error: { label: "ERROR", tone: "danger" },
@@ -46,8 +48,16 @@ export const KIND_CHIP: Record<LogKind, KindChip> = {
 /** A kind this dashboard does not know yet (a newer server): it is still spoken, and labelled INFO. */
 const UNKNOWN_KIND: KindChip = { label: "INFO", tone: "default" };
 
-export function kindChip(kind: LogKind | string | null | undefined): KindChip {
+/** race radio: an urgent message (voice/urgent.py, the red flag) is an ALERT the radio says at once. */
+export const URGENT_CHIP: KindChip = { label: "URGENT", tone: "danger" };
+
+/** The chip for a message kind; `meta.urgent` (the `say` frame's, kept on the log entry) turns an alert into URGENT. */
+export function kindChip(
+  kind: LogKind | string | null | undefined,
+  meta?: { urgent?: boolean | null } | null,
+): KindChip {
   if (!kind) return { label: "RADIO", tone: "default" };
+  if (kind === "alert" && meta?.urgent === true) return URGENT_CHIP;
   return Object.prototype.hasOwnProperty.call(KIND_CHIP, kind) ? KIND_CHIP[kind as LogKind] : UNKNOWN_KIND;
 }
 

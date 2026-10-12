@@ -210,6 +210,10 @@ FEATURES: tuple[FeatureDef, ...] = (
     FeatureDef("weather", "Weather", "session", "weather", ("weather",)),
     FeatureDef("session_info", "Session type & results", "session", "the session type", ("session_type",)),
     FeatureDef("field_data", "Other cars' data", "session", "data about the other cars", ("field_samples",)),
+    # --- race radio (pitwall.raceradio) ---
+    FeatureDef("race_position", "Race position", "session", "your race position", ("race_position",)),
+    FeatureDef("penalties", "Penalties & warnings", "session", "penalties", ("penalties",)),
+    # --- end race radio ---
     FeatureDef("setup_telemetry", "Car setup from the game", "setup_radio", "its car setup", ("setup",)),
     FeatureDef(
         "setup_recommendations",
@@ -248,7 +252,6 @@ DISTANCE_REASON: dict[str, str] = {
 }
 _FORZA_FUEL = "Forza sends only how full the tank is, not its size, so Pitwall doesn't show fuel yet."
 NOT_IMPLEMENTED: dict[tuple[str, str], str] = {
-    ("f1_25", "damage"): "F1 25 sends car damage, but Pitwall reads only tyre wear from it so far.",
     ("gt7", "fuel"): "GT7 sends a fuel level, but sources disagree on its unit (litres or per cent), so Pitwall "
     "doesn't show fuel yet.",
     ("forza_motorsport", "fuel"): _FORZA_FUEL,
@@ -264,7 +267,6 @@ NOT_IMPLEMENTED_FIELD: dict[tuple[str, str], str] = {  # (adapter_game, feature)
     ("gt7", "ers"): "ers_store_j",
     ("gt7", "setup_telemetry"): "setup",
 }
-F1_DAMAGE_DETAIL = "CarDamage (adapters/f1/packets.py) is decoded; only tyresWear is mapped (adapters/f1/adapter.py)"
 PARTIAL_FACTS: dict[tuple[str, str], str] = {
     ("f1_25", "session_info"): "The session type comes from the game; the final classification isn't read yet.",
     ("forza_horizon", "lap_timing"): "Free roam and sprints have no laps; circuit races are timed.",
@@ -664,11 +666,8 @@ def _feature(e: GameEntry, fd: FeatureDef, level: SupportLevel | None) -> GameFe
     # 4. the game sends it, Pitwall doesn't read it yet
     ni = NOT_IMPLEMENTED.get((ag, fd.id))
     if ni is not None:
-        if (ag, fd.id) == ("f1_25", "damage"):
-            detail = F1_DAMAGE_DETAIL
-        else:
-            field_key = NOT_IMPLEMENTED_FIELD[(ag, fd.id)]
-            detail = f"{field_key}: {info.fields[field_key].source}"
+        field_key = NOT_IMPLEMENTED_FIELD[(ag, fd.id)]
+        detail = f"{field_key}: {info.fields[field_key].source}"
         return make("not_implemented", "Not in Pitwall yet", ni, detail + _row_tag(e))
     # 5. code facts
     if fd.id == "official_corner_names":
@@ -1372,7 +1371,12 @@ INTENT_FEATURES: dict[str, tuple[str, ...]] = {
     "sectors": ("sectors",),
     "flags": ("flags",),
     "safety_car": ("flags",),  # the safety car and VSC come with the flags (F1 Session.safetyCarStatus)
-    "gaps": ("field_data",),  # gaps and race position need the other cars' timing
+    # gaps need the other cars' timing; the race position comes from the player's own car in GT7 and Forza too
+    "gaps": ("field_data", "race_position"),
+    # --- race radio ---
+    "who_ahead": ("field_data",),
+    "penalties": ("penalties",),
+    # --- end race radio ---
     "weather": ("weather",),
     "setup": ("setup_telemetry", "setup_recommendations"),
 }

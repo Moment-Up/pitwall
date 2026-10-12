@@ -38,3 +38,20 @@ Committed captures (each a byte-for-byte excerpt of the maintainer's own PS5 ses
 - `gt7_c_ps5_3800m_car-reset-excerpt.pwcap`: GT7 on PS5, 2026-10-11 (20261011-124608, 349.5-353.5 s and
   457.5-461.0 s): a car reset during race lap 1 on a 3.8 km circuit, then lap 1->2 - the reset stays in the session
   (0.17 MB; the gap between the windows is an excerpt artefact)
+- Race radio (`tests/recorded/test_raceradio_real.py`, cut with `scripts/excerpt_capture.py`, names scrubbed; times
+  are seconds into the source capture, found with `scripts/race_radio_check.py --marks`):
+  - `f1_25_2025_ps5_austria-reverse_race-yellow-warnings-excerpt.pwcap`: F1 25, Austria (Reverse) race lap 1
+    (20261010-193550, 89-93 s and 103-117 s): a contact warning (PENA 5/4) at 91.15 s; the player's own FIA flag
+    yellow 105.31 s, green, yellow again, green, none while cars stream past after its own contact (1.98 MB)
+  - `f1_25_2025_ps5_monza_race-pass-then-penalty-excerpt.pwcap`: F1 25, Monza race lap 2 (20261010-204720,
+    126-141 s): a pass to P1 at 129.16 s and a 3 s corner-cutting penalty (PENA 4/7) 0.9 s later, the place lost at
+    135.17 s, the own FIA flag yellow at 137.69 s (1.60 MB)
+  - `f1_25_2025_ps5_austria_race-blue-damage-excerpt.pwcap`: F1 25, Austria race lap 69, lapped (20261011-185757,
+    100-116 s and 125-132 s): FIA blue at 103.01 s and 110.15 s, a crash at 111.57 s (both front wings gone, a
+    puncture), PENA 16/42 (retired) at 112.48 s; a flashback at 126.24 s, RTMT re-sent at 126.98 s (1.63 MB)
+  - `f1_25_2025_ps5_jeddah_race-damage-steps-excerpt.pwcap`: F1 25, Jeddah sprint lap 1 (20261011-224147,
+    3236-3250 s): contact damage stepping up from 3240.43 s (front wing 71 -> 100, floor 10 -> 99 within 0.8 s), a
+    contact warning at 3244.37 s, a flashback at 3247.25 s (1.18 MB)
+  - `gt7_c_ps5_3800m_race-last-lap-finish-excerpt.pwcap`: GT7 on PS5, 4-lap race on the 3.8 km circuit
+    (20261011-124608, 1198-1210 s and 1302-1310 s): the lap 3 -> 4 line at 1203.24 s, lap 4 done (P4) at 1306.71 s
+    (0.45 MB; the excerpt starts mid-race, so its grid is an artefact)

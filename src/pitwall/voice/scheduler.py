@@ -17,10 +17,14 @@ proactive kind waits for a speak window except urgent alerts and cues:
 * STRATEGY (normal calls), INFO (detailed calls) - ``strategy.radio``, topic ``strategy:<topic>``. Budget.
 * GOAL - ``motivation.radio``, topic ``goal:<session>``, no lap identity. Budget.
 * VALIDATION - ``validate.kit`` prompts during a validation run, topic ``validation``. No budget; said last.
+* RACE - race situation calls (``raceradio``: position, countdown, lap 1, gaps, warnings, minor damage; topics
+  ``race:<topic>``). Not the talk budget: their own per-lap allowance (``RACE_PER_LAP``). Race control, penalties and
+  damage that matter are ALERTs (the red flag the first URGENT producer: ``voice.urgent``).
 
 * **Intensity** (``ALLOWED_KINDS``) - quiet: answers, acknowledgements, alerts, cues and validation prompts (the
-  driver opted into a validation run); normal adds the lap summary, goal lines, coaching and strategy calls; detailed
-  adds INFO (strategy detail). Quiet intensity is "alerts and answers only", as its acknowledgement promises.
+  driver opted into a validation run); normal adds the lap summary, goal lines, coaching, strategy calls and race
+  calls; detailed adds INFO (strategy detail, race detail). Quiet intensity is "alerts and answers only", as its
+  acknowledgement promises.
 * **Urgency and order** - the queue is ordered by ``Priority``, then by ``KIND_RANK``, then first in first out. So
   a race lap is said in this order: the lap time, the strategy call, the goal line, the coaching point (practice and
   qualifying have no strategy calls: lap time, goal line, coaching). ``URGENT`` skips quiet mode, the speak window
@@ -34,7 +38,8 @@ proactive kind waits for a speak window except urgent alerts and cues:
   budget: the speak window is open anyway, and the flag-time goal line or the last lap's summary must not be
   starved. Alerts, urgent calls, cues, answers, acknowledgements and validation prompts never count. The coaching
   cap per analysed lap (``COACHING_PER_LAP``) still applies on top, and so do the strategy planner's own limits and
-  the goal lines' per-session cap.
+  the goal lines' per-session cap. Race calls (RACE) have an allowance of their own (``RACE_PER_LAP``: 2 normal, 3
+  detailed), counted the same way, so they never starve the lap summary or coaching, nor the other way round.
 * **Interrupting** - while the radio is talking, only an ``URGENT`` message or a ``CUE`` is handed out, and only
   when it outranks the message on air (urgent > cue > everything else). The caller cancels the current playback
   and says it, so a red flag does not wait for a 6 s lap summary to finish and a braking cue does not land after
@@ -54,7 +59,7 @@ proactive kind waits for a speak window except urgent alerts and cues:
   sets the talk budget and caps coaching points per lap. The coaching cap is counted per lap *identity*:
   ``meta["lap_id"]`` when the builder sets it, else the lap number.
 * **Seat change** - ``drop_driver_messages`` drops the queued lap summaries, goal lines and coaching points (they
-  are about the previous driver's laps) and keeps alerts, strategy calls and INFO (they are about the car).
+  are about the previous driver's laps) and keeps alerts, strategy calls, race calls and INFO (about the car).
 * **Workload / track position** - ``needs_speak_window`` messages wait for a calm part of the lap: off the
   brake, near-straight steering, and enough time before the next braking zone to finish the sentence with a
   margin to spare. That time covers audio reaching the driver (``speech_latency_s``: whole-message synthesis
@@ -121,6 +126,9 @@ _QUIET_KINDS = frozenset(
     {MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.ALERT, MessageKind.CUE, MessageKind.VALIDATION}
 )
 _NORMAL_KINDS = _QUIET_KINDS | {MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.COACHING, MessageKind.STRATEGY}
+# --- race radio ---
+_NORMAL_KINDS |= {MessageKind.RACE}
+# --- end race radio ---
 _DETAILED_KINDS = _NORMAL_KINDS | {MessageKind.INFO}
 ALLOWED_KINDS: dict[Intensity, frozenset[MessageKind]] = {
     "quiet": _QUIET_KINDS,
@@ -142,6 +150,7 @@ KIND_RANK: dict[MessageKind, int] = {
     MessageKind.COACHING: 5,
     MessageKind.INFO: 6,
     MessageKind.VALIDATION: 7,
+    MessageKind.RACE: 2,  # race radio: ties with the lap summary (first in, first out)
 }
 
 # Unprompted messages said per driving lap while on track (the driver's workload at speed). Urgent calls, alerts,
@@ -151,6 +160,10 @@ BUDGETED = frozenset(
     {MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.STRATEGY, MessageKind.COACHING, MessageKind.INFO}
 )
 _TALK_LAPS_KEPT = 8
+# --- race radio --- race calls said per driving lap while on track: their own allowance, counted like the talk budget
+RACE_PER_LAP: dict[Intensity, int] = {"quiet": 0, "normal": 2, "detailed": 3}  # [H]
+RACE_ALLOWANCE_KEY = "race_allowance"  # meta False: a race call outside the allowance (the finish, after the flag)
+# --- end race radio ---
 
 LapKey = tuple[str, int | str | None]
 
@@ -218,6 +231,15 @@ def _budgeted(msg: RadioMessage) -> bool:
     return msg.kind in BUDGETED and not _urgent(msg)
 
 
+# --- race radio ---
+def _race_counted(msg: RadioMessage) -> bool:
+    """Counts toward the per-lap race allowance (urgent calls never do, nor a call marked outside it)."""
+    return msg.kind is MessageKind.RACE and not _urgent(msg) and msg.meta.get(RACE_ALLOWANCE_KEY) is not False
+
+
+# --- end race radio ---
+
+
 def _interrupt_rank(msg: RadioMessage) -> int:
     """How strongly a message may cut into playback: 2 urgent, 1 cue, 0 never."""
     if _urgent(msg):
@@ -262,6 +284,7 @@ class RadioScheduler:
         "_on_air",
         "_pending",
         "_quiet",
+        "_race_spent",
         "_recent_text",
         "_seq",
         "_talk_lap",
@@ -297,6 +320,7 @@ class RadioScheduler:
         self._coaching_spoken: dict[LapKey, int] = {}  # lap identity -> coaching points dispatched for it
         self._talk_spent: dict[LapKey, int] = {}  # driving lap -> budgeted messages dispatched on track during it
         self._talk_lap: int | None = None  # the driving lap the talk budget is counting
+        self._race_spent: dict[LapKey, int] = {}  # race radio: driving lap -> race calls dispatched on track during it
 
     # ------------------------------------------------------------------ preferences
     @property
@@ -410,6 +434,7 @@ class RadioScheduler:
             self._pending.clear()
             self._coaching_spoken.clear()
             self._talk_spent.clear()
+            self._race_spent.clear()  # race radio
             self._talk_lap = None
             self._recent_text.clear()
             if self._quiet is not None and not self._quiet.indefinite:
@@ -438,6 +463,7 @@ class RadioScheduler:
                 # a new driving lap, or lap numbers restarting in the next session: a new allowance
                 self._talk_lap = state.lap_number
                 self._talk_spent.clear()
+                self._race_spent.clear()  # race radio
             if self._quiet is not None and not self._quiet.active(state.lap_number):
                 self._quiet = None
             quiet = self._quiet is not None
@@ -490,6 +516,11 @@ class RadioScheduler:
         spent = self._talk_spent.get(self._talk_key(msg, state), 0)
         if state.on_track and _budgeted(msg) and spent >= TALK_PER_LAP[self._intensity]:
             return False  # this lap's allowance is used up: wait for the next lap (or expiry)
+        # --- race radio ---
+        race_spent = self._race_spent.get(self._talk_key(msg, state), 0)
+        if state.on_track and _race_counted(msg) and race_spent >= RACE_PER_LAP[self._intensity]:
+            return False  # this lap's race allowance is used up
+        # --- end race radio ---
         urgent = _urgent(msg)
         gap_exempt = urgent or msg.kind in DRIVER_INITIATED or msg.kind is MessageKind.CUE
         if not gap_exempt and not gap_ok:
@@ -513,6 +544,13 @@ class RadioScheduler:
             self._talk_spent[key] = self._talk_spent.get(key, 0) + 1
             while len(self._talk_spent) > _TALK_LAPS_KEPT:
                 del self._talk_spent[next(iter(self._talk_spent))]
+        # --- race radio ---
+        if state.on_track and _race_counted(msg):
+            key = self._talk_key(msg, state)
+            self._race_spent[key] = self._race_spent.get(key, 0) + 1
+            while len(self._race_spent) > _TALK_LAPS_KEPT:
+                del self._race_spent[next(iter(self._race_spent))]
+        # --- end race radio ---
 
     @staticmethod
     def _budget_key(msg: RadioMessage, state: DrivingState) -> LapKey:

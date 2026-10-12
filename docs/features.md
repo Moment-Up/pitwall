@@ -190,6 +190,61 @@ screen's radio strip. Ask
 "when should I pit?", "gap to the car ahead?", "is it going to rain?" or "fuel?" for an instant answer from the
 live strategy. How these are decided: [below](#how-the-race-engineer-makes-strategy-calls).
 
+### Race radio
+
+In a race the radio also calls the race itself, like a real engineer and spotter's race control (`pitwall/raceradio`):
+
+- **Flags and race control** (F1): "Yellow ahead, T9." for a yellow zone 150 m to about 10 s ahead of you (never one
+  you caused: a zone that turned yellow with you in it, just past its start or just after you spun stays quiet);
+  "Yellow flag." when your own car's flag turns yellow (confirmed a second later, so your own crash never gets one);
+  "Blue flag. Let the car behind through." from your car's own flag only, never from a marshal zone (a zone shows blue
+  whenever any car is being lapped there); "Safety car, safety car. No overtaking.", "Safety car in this lap.",
+  "Green flag, racing."; and **"Red flag, red flag. Slow down, back to the pits."** at once, even at quiet intensity,
+  in quiet mode and mid-corner (it cannot be switched off).
+- **Start and countdown:** "P7 of 20, 3 laps." on the grid (GT7: "Rolling start. P8 of 14, 10 laps."), "Go, go." at
+  lights out, "Five laps to go." (races of 10 laps or more), "Two laps to go.", "Last lap." ("Last lap: the leader
+  finishes first." when you are lapped, "Flag's out. Last lap." when the leader finishes first), "Chequered flag. P5.
+  Up 2 from the grid.", and in practice and qualifying "Five minutes left in the session.", "One minute left."
+- **Position:** "P8 after lap one, up 13." at the first line (never a call during lap 1's shuffle), then "Up to P5."
+  / "Down to P12, lost 4." once a change has held for 3 s (at most every 20 s, merging changes), "Out of the pits in
+  P9.", and "Good move on Norris. P4." for a clean pass (your own overtake, no contact, no penalty for it).
+- **Rivals** (F1): "Gap ahead 1.2s, closing. Behind 0.8s." on laps 3, 6, 9..., "Norris is pitting." (at detailed
+  intensity the strategy call says it instead), "Fastest lap of the race.", and at detailed intensity other cars'
+  fastest laps and retirements far from you ("Hamilton is out.").
+- **Penalties and warnings** (F1): "5 second penalty: cutting the track.", "Drive-through penalty: a jump start.",
+  "Track limits warning, 2." (the count the game keeps), "Warning for contact.", "Drive-through served.", "Next lap
+  won't count either." It never guesses how many warnings are left before a penalty (the game does not say).
+- **Damage** (F1): "Damage: front wing severe, floor major. Box for a new front wing." once a crash has settled
+  (1.5 s), "Puncture, rear left. Box this lap.", "DRS fault."; never for wear, and silently reset after a flashback or
+  a repair.
+- **Your name** now and then: "Up to P5, Sam." (at most once a minute; and once after a seat change, to confirm who is
+  in the seat).
+
+Each driver can switch these groups off in Settings › Drivers (flags, start, position, rivals, penalties, damage, your
+name); the red flag is always on. Beginners hear simple words ("You're up to 5th.", "Puncture on the rear left tyre.
+Come into the pits."), and every driver can pick Automatic, Simple or Standard words there. Calls name other cars only
+by the official AI driver names (Norris), a team (the Williams) or a race number (car 23), never a player's online ID:
+in F1 World races the AI cars carry real players' online IDs, so those cars are named by team or number too.
+
+Race calls have their own allowance (two a lap at normal intensity, three at detailed; none at quiet), so they never
+take the lap summary's or the coaching point's place; the finish is said whatever the allowance. Flags, penalties
+and damage that matter are alerts. Ask "who's ahead?", "do I have a penalty?", "what's my damage?", "how was sector
+2?" or "what position am I?" (any game: GT7 says its position is not yet checked against the game's screen) for an
+instant answer.
+
+| Game | Race radio |
+|---|---|
+| F1 25 | everything above |
+| GT7 | grid brief (rolling start), laps to go, last lap, finish, lap-one summary, position changes (from GT7's race position, not yet compared with the game's screen) |
+| Forza | position changes and the lap-one summary (community docs only, no recording) |
+| Assetto Corsa | your name only |
+
+Evidence: replayed on the owner's PS5 F1 25 races and GT7 races (recorded) for yellow, blue, position, lap one, the
+start, laps to go, the finish, warnings, time penalties, a drive-through and its service, wing, floor and diffuser
+damage, retirements, fastest laps and gaps; the safety car, VSC, red flag, stop-go, disqualification, black flag,
+reminders, lap invalidations, the car ahead pitting, punctures (every real one came with a retirement or a
+flashback), minutes left and ERS/DRS faults only on synthetic data. Nothing of it has been heard live yet.
+
 Evidence: a radio check over an iPad and one AirPod through Tailscale has been heard on hardware, using the classic
 dashboard's Radio page. The new dashboard's Go live and push-to-talk over Tailscale have not been tried on an iPad yet.
 The F1 25 wheel button is read live from the game on PS5, but spoken questions from the iPad, by screen or wheel
@@ -479,7 +534,10 @@ bests and coaching follow them, and the radio and braking calls switch with them
 session hands the seat over, splitting the session if laps were already driven (verified on synthetic streams
 only). Each profile has a skill level (beginner, intermediate, advanced; a fresh install's first profile starts at
 intermediate) and a coaching intensity (quiet, normal, detailed); see [below](#how-the-coach-decides-what-to-say)
-and [What the radio says](#what-the-radio-says). Driver cards count everything on record, timed or not.
+and [What the radio says](#what-the-radio-says). Driver cards count everything on record, timed or not. Each profile
+also has the [race radio](#race-radio) groups (flags, start, position, rivals, penalties, damage, "say my name") and
+the radio's words: Automatic (simple words for beginners), Simple or Standard; the words choice also sets the
+coaching and strategy wording.
 
 ### Radio & voice
 
@@ -523,7 +581,9 @@ of the lap except braking cues, alerts and your own answers.
 |---|---|---|
 | Answers to your questions, "Copy" acknowledgements | no | at once, even at quiet intensity |
 | Braking cues | no | timed to your braking point; by the braking calls mode |
-| Red flag and other urgent alerts | no | at once |
+| Red flag and other urgent alerts | no | at once, past quiet mode, intensity and the calm-moment wait |
+| Race control, penalties, damage that matter (race radio alerts) | no | yellow, blue, safety car, penalties, major damage |
+| Race calls (position, countdown, lap one, gaps, warnings, minor damage) | their own: 2 a lap (3 detailed) | the finish whatever the allowance |
 | Strategy alerts (safety car box or stay out, critical fuel) | no | also at quiet intensity |
 | Lap summary | yes | a newer lap's summary replaces an unsaid one |
 | Strategy call | yes | in a race, after the lap summary |
@@ -544,6 +604,9 @@ points are dropped; strategy and car alerts stay.
 | Urgent alerts, strategy alerts | yes | yes | yes | yes | on screen |
 | Lap summary, goal, coaching, drill point | - | 2 a lap | 4 a lap | held | - |
 | Strategy normal / detailed | - | 2 a lap / - | 4 a lap | held | - |
+| Race radio alerts: yellow, blue, time penalties, major damage, safety car ending, green | yes | yes | yes | held | - |
+| Safety car / VSC out, drive-through, stop-go, DSQ, black flag, puncture, severe damage | yes | yes | yes | yes | - |
+| Race calls: position, countdown, lap one, gaps, warnings, minor damage | - | 2 a lap | 3 a lap | held | - |
 | Validation prompt (run active) | yes | yes | yes | held | - |
 
 At quiet intensity a drill's points show on the screen only. This policy is tested on unit tests and on recordings

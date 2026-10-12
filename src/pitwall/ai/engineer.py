@@ -173,6 +173,10 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
         ),
     ),
     ("tyres", re.compile(r"\b(tyres?|tires?|wear|degradation|deg|grip|tyre temps?)\b", re.I)),
+    # --- race radio --- penalties and warnings (raceradio.answers), before strategy ("should I pit to serve my
+    # drive-through?" is about the penalty)
+    ("penalties", re.compile(r"\b(penalt(?:y|ies)|warnings?|track limits|drive[- ]through|stop[- ]go)\b", re.I)),
+    # --- end race radio ---
     (
         "strategy",
         re.compile(
@@ -184,6 +188,16 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     # data some games never send (games.INTENT_FEATURES), before setup ("front wing broken": "wing" alone stays a
     # setup question) and before gaps ("damaged after the contact with the car ahead")
     ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
+    # --- race radio --- "who's ahead?", "who is behind me": the neighbours by name (official AI names only)
+    (
+        "who_ahead",
+        re.compile(
+            r"\bwho(?:['’]s| is| was)?\b(?:\s+\w+){0,3}?\s+(?:ahead|in front|behind|leading|in the lead|chasing me|"
+            r"following)\b|\bwhich (?:car|driver) is (?:ahead|behind|in front)\b",
+            re.I,
+        ),
+    ),
+    # --- end race radio ---
     # race gaps and position, never the driver's own reference ("how far behind my best am I?") and "position" only as
     # race position ("my position on the brake for turn 4" is braking)
     (
@@ -280,11 +294,15 @@ _TOPICS: dict[str, set[str]] = {
     "tyres": {"session", "game", "tyres", "strategy"},
     "strategy": {"session", "game", "fuel", "tyres", "strategy", "gaps", "weather"},
     "safety_car": {"session", "game", "strategy", "flags"},
-    "gaps": {"session", "game", "gaps"},
+    "gaps": {"session", "game", "gaps", "race"},  # race: the race radio's position (any game)
     "weather": {"session", "game", "weather", "tyres", "strategy"},
     # damage / ERS / flags were "general" questions before game selection: same facts (plus ERS), so a game that sends
     # the data gets the answer it always got; a game that never sends it answers from its "game" fact
-    "damage": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres"},
+    "damage": {"session", "game", "laps", "corners", "observations", "reference", "fuel", "tyres", "race"},
+    # --- race radio ---
+    "who_ahead": {"session", "game", "race", "gaps"},
+    "penalties": {"session", "game", "race"},
+    # --- end race radio ---
     "ers": {"session", "game", "ers", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "sectors": {"session", "game", "laps"},
     "flags": {"session", "game", "flags", "laps", "corners", "observations", "reference", "fuel", "tyres"},
@@ -309,6 +327,7 @@ _TOPICS: dict[str, set[str]] = {
         "goals",
         "strategy",
         "drill",
+        "race",  # race radio
     },
     "ai_pace": {"session", "game", "ai"},  # pace vs AI difficulty
     "ai_level": {"session", "game", "ai"},
@@ -332,6 +351,7 @@ _TOPICS: dict[str, set[str]] = {
         "ai",
         "gaps",
         "goals",
+        "race",  # race radio
     },
 }
 

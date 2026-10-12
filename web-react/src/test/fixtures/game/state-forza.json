@@ -325,6 +325,34 @@
     ]
    },
    {
+    "id": "race_position",
+    "label": "Race position",
+    "group": "session",
+    "status": "supported",
+    "evidence": "community_documented",
+    "short": "",
+    "reason": "Forza Motorsport sends your race position.",
+    "detail": "race_position: Dash.RacePosition (0 -> None) (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "race_position"
+    ]
+   },
+   {
+    "id": "penalties",
+    "label": "Penalties & warnings",
+    "group": "session",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by Forza Motorsport",
+    "reason": "Forza Motorsport doesn't send penalties.",
+    "detail": "no penalties or warnings in Turn 10's Data Out field list (row forza_motorsport)",
+    "note": null,
+    "fields": [
+     "penalties"
+    ]
+   },
+   {
     "id": "setup_telemetry",
     "label": "Car setup from the game",
     "group": "setup_radio",
@@ -405,6 +433,9 @@
  "_fixture": {
   "tier": "edited",
   "source": "game-selection spec section 9 contract, emitted by src/pitwall/games.py (branch game-selection) from hand-built inputs: no game data, no running server",
-  "moment": "GET /api/game after PUT forza_motorsport:pc"
+  "moment": "GET /api/game after PUT forza_motorsport:pc",
+  "edits": [
+   "race radio (feat/radio): race_position and penalties features inserted as src/pitwall/games.py emits them"
+  ]
  }
 }

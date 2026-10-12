@@ -9,6 +9,22 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
+- Race radio: flags and race control in a race, the red flag at once even in quiet mode. Tested on recordings (F1 25,
+  PS5); safety car, VSC and red flag on synthetic data only.
+- Race radio: your grid slot, lights out, laps to go, the last lap and the finish. Tested on recordings of F1 25 and
+  GT7 races.
+- Race radio: your position after lap one, places gained or lost, clean passes and gaps every three laps. Tested on
+  recordings; GT7 positions not yet checked against its screen.
+- Race radio: penalties and warnings with the reason, car damage and punctures (F1 25). Tested on recordings;
+  punctures, stop-go and disqualification on synthetic data only.
+- Race calls have their own allowance (two a lap at normal), so they never push out the lap summary. Not yet heard
+  live.
+- Settings › Drivers: switch race radio groups off and choose Automatic, Simple or Standard words. Other cars are
+  named by AI driver, team or number, never an online ID.
+- Ask "who's ahead?", "do I have a penalty?", "what's my damage?" or "how was sector 2?"; "what position am I?" now
+  works in GT7 too.
+- The radio sometimes uses your first name ("Up to P5, Sam."), at most once a minute.
+
 ## v0.2.1 - 2026-10-12
 
 - Gran Turismo 7 on PS5 is tested live (the owner's races on 2026-10-11, lap times equal to the game's). PS4 is

@@ -1,0 +1,82 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "race-radio spec 9.3 (RaceView v1 contract)",
+    "moment": "F1 25 race, lap 6 of 10: P7 of 20 from P9, a 3 s corner-cutting penalty just issued, minor front-wing damage",
+    "notes": "Hand-built from the contract before the backend publishes the block: every value is chosen to exercise a dashboard rule, and figures follow the spec's real-data findings where it gives them. Test data, not game data; never shown as live. Penalty 4/7 and the warning counts as section 2 saw them (Monza: 3 s, corner cutting gained time)."
+  },
+  "version": 1,
+  "session_id": "f1-race",
+  "game": "f1_25",
+  "mode": "race",
+  "reason": null,
+  "synthetic": false,
+  "position": 7,
+  "cars": 20,
+  "grid_position": 9,
+  "position_tier": "spec_implemented",
+  "position_note": null,
+  "lap": 6,
+  "total_laps": 10,
+  "laps_left": 4.6,
+  "final_lap": false,
+  "time_left_s": null,
+  "flags": {
+    "track": "green",
+    "you": "none",
+    "yellow_ahead": null
+  },
+  "penalties": {
+    "time_s": 3,
+    "warnings": 2,
+    "track_limits": 1,
+    "drive_throughs": 0,
+    "stop_gos": 0,
+    "serve_at_stop": false
+  },
+  "damage": {
+    "grade": "minor",
+    "parts": [
+      {
+        "part": "front_left_wing",
+        "pct": 18,
+        "grade": "minor"
+      }
+    ],
+    "puncture": []
+  },
+  "ahead": {
+    "label": "Norris",
+    "label_kind": "driver",
+    "position": 6,
+    "gap_s": 1.2,
+    "settled": true
+  },
+  "behind": {
+    "label": "the Williams",
+    "label_kind": "team",
+    "position": 8,
+    "gap_s": 0.8,
+    "settled": false
+  },
+  "calls": [
+    {
+      "t_unix": 1791680130.05,
+      "group": "penalties",
+      "call": "penalty",
+      "text": "3 second penalty: corner cutting."
+    },
+    {
+      "t_unix": 1791680129.16,
+      "group": "position",
+      "call": "position_change",
+      "text": "Up to P7."
+    },
+    {
+      "t_unix": 1791680092.4,
+      "group": "start",
+      "call": "lap1_summary",
+      "text": "P8 after lap one, up 1."
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "race-radio spec 9.3 (RaceView v1 contract); mode table 5.0",
+    "moment": "GT7 time trial / free run: race radio off with the backend's reason",
+    "notes": "Hand-built from the contract before the backend publishes the block: every value is chosen to exercise a dashboard rule, and figures follow the spec's real-data findings where it gives them. Test data, not game data; never shown as live."
+  },
+  "version": 1,
+  "session_id": "gt7-free",
+  "game": "gt7",
+  "mode": "off",
+  "reason": "GT7 sends a race position only in races",
+  "synthetic": false,
+  "position": null,
+  "cars": null,
+  "grid_position": null,
+  "position_tier": "community_documented",
+  "position_note": null,
+  "lap": null,
+  "total_laps": null,
+  "laps_left": null,
+  "final_lap": null,
+  "time_left_s": null,
+  "flags": null,
+  "penalties": null,
+  "damage": null,
+  "ahead": null,
+  "behind": null,
+  "calls": []
+}

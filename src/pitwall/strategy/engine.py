@@ -19,7 +19,6 @@ rebuilt, gap samples, pit visits and fuel windows after it are dropped, and reco
 
 from __future__ import annotations
 
-import math
 import statistics
 import time
 from collections import deque
@@ -56,6 +55,7 @@ from pitwall.strategy import cuts
 from pitwall.strategy.calls import CallContext, CallPlanner, StrategyCall
 from pitwall.strategy.fuel import BurnWindows, fuel_status, lift_corners
 from pitwall.strategy.gaps import GapEvent, GapTracker, laps_to_within
+from pitwall.strategy.laps_left import lap_fraction, laps_remaining
 from pitwall.strategy.pitloss import PitTracker
 from pitwall.strategy.safety_car import SafetyCarState, box_opportunity, entry_ttl_s
 from pitwall.strategy.tyres import GameTyres
@@ -418,31 +418,20 @@ class StrategyEngine:
         return [e.lap_time_ms for n, e in sorted(self.ledger.items()) if e.green and e.lap_time_ms is not None][-last:]
 
     def laps_remaining(self) -> float | None:
+        """Laps left in the race: ``strategy.laps_left.laps_remaining`` (the lapped-car rule) on this engine's state."""
         if self.mode != "race" or self.total_laps is None or self._lap is None:
             return None
         last = self.ledger.get(self.total_laps)
-        if (last is not None and last.complete) or (
-            self.player is not None and self.player.result_status not in (None, "active")
-        ):
-            return 0.0  # took the flag (or out of the race): nothing left to run
         f = self.frame
-        frac = 0.0
-        if f is not None and f.lap_distance_m is not None and self.track_length_m and f.lap_distance_m > 0:
-            frac = min(1.0, f.lap_distance_m / self.track_length_m)
-        base = self.total_laps - self._lap + 1 - frac
-        to_line = 1.0 - frac
-        cars = () if self.timing is None else self.timing.cars
-        if any(c.result_status == "finished" for c in cars):
-            return max(0.0, min(base, to_line))  # the flag is out: the race ends at the next line
-        # Lapped: the race ends at the first line crossing after the leader takes the flag (the leader's laps left,
-        # in its own laps, at about the player's pace).
-        lead = next((c for c in cars if c.position == 1 and c.result_status == "active"), None)
-        if lead is not None and not lead.is_player and self.track_length_m:
-            lead_frac = min(1.0, max(0.0, lead.lap_distance_m) / self.track_length_m)
-            lead_left = self.total_laps - lead.lap_number + 1 - lead_frac
-            if lead_left < base:
-                base = to_line + max(0, math.ceil(lead_left - to_line - 1e-9))
-        return max(0.0, base)
+        return laps_remaining(
+            total_laps=self.total_laps,
+            lap=self._lap,
+            lap_frac=lap_fraction(None if f is None else f.lap_distance_m, self.track_length_m),
+            cars=() if self.timing is None else self.timing.cars,
+            track_length_m=self.track_length_m,
+            took_flag=last is not None and last.complete,
+            player_result=None if self.player is None else self.player.result_status,
+        )
 
     def _derive(self) -> Derived:
         if not self._dirty:

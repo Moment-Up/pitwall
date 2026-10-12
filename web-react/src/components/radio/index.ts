@@ -25,6 +25,7 @@ export {
   messageAge,
   micChipView,
   pttView,
+  URGENT_CHIP,
   type GoLiveView,
   type KindChip,
   type PttView,

@@ -58,12 +58,14 @@ tyre_temps             S·spec  S·rec   NS      S·comm  S·comm
 tyre_wear              S·spec  NS      NS      S·comm  NS
 tyre_pressures         S·spec  NS      NS      NS      NS
 brake_temps            S·spec  NS      NS      NS      NS
-damage                 NI      NS      NS      NS      NS
+damage                 S·spec  NS      NS      NS      NS
 ers                    S·spec  NI      NS      NS      NS
 drs                    S·spec  NS      NS      NS      NS
 weather                S·spec  NS      NS      NS      NS
 session_info           P·spec  NS      NS      NS      NS
 field_data             S·rec   NS      NS      NS      NS
+race_position          S·spec  S·comm  NS      S·comm  S·comm
+penalties              S·spec  NS      NS      NS      NS
 setup_telemetry        S·spec  NI      NS      NS      NS
 setup_recommendations  P·-     NI      NI      NI      NI
 wheel_ptt              S·spec  NS      NS      NS      NS
@@ -91,7 +93,7 @@ def test_ids_are_unique_and_well_formed() -> None:
     assert len(ids) == len(set(ids)) == 23
     for i in ids:
         assert re.fullmatch(r"[a-z0-9_]+:(ps5|ps4|xbox|pc|any)", i), i
-    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 23
+    assert [f.id for f in games.FEATURES] == list(games.FEATURE_IDS) and len(games.FEATURES) == 25  # + race radio
     assert {f.group for f in games.FEATURES} == {g for g, _ in games.GROUPS}
 
 
@@ -257,6 +259,8 @@ def test_platform_and_variant_profiles() -> None:
         "field_data",
         "setup_telemetry",
         "wheel_ptt",
+        "race_position",  # race radio: not in the UDP remote telemetry (RTCarInfo)
+        "penalties",
     }
     fh_ps5 = profile("forza_horizon:ps5")
     assert all(v in ("NS", "NI", "U") for v in fh_ps5.values())
@@ -333,7 +337,7 @@ def test_code_fact_not_implemented() -> None:
 
     damage_fields = {name for name, _ in P.CAR_DAMAGE.fields}
     assert "frontLeftWingDamage" in damage_fields and "tyresWear" in damage_fields  # F1 sends damage ...
-    assert not any("damage" in f.name or "wing" in f.name for f in dc_fields(CarFrame))  # ... Pitwall maps none
+    assert "damage" in {f.name for f in dc_fields(CarFrame)}  # ... and the race radio maps it (CarFrame.damage)
     assert GT7_INFO.fields["fuel_litres"].level is S.UNVERIFIED
     assert GT7_INFO.fields["ers_store_j"].level is S.UNVERIFIED
     for info in (FORZA_MOTORSPORT_INFO, FORZA_HORIZON_INFO):
@@ -345,7 +349,6 @@ def test_code_fact_not_implemented() -> None:
     assert "gear_ratios" in {name for name, _ in gt7_packets.BASE_FIELDS}
     assert "CarSetup" not in Path(gt7_adapter.__file__).read_text(encoding="utf-8")  # ... Pitwall emits no setup
     assert set(games.NOT_IMPLEMENTED) == {
-        ("f1_25", "damage"),
         ("gt7", "fuel"),
         ("forza_motorsport", "fuel"),
         ("forza_horizon", "fuel"),
@@ -422,6 +425,9 @@ def _old_key(r: Any) -> tuple[str, str]:
     return (r.game, GT7_OLD_PLATFORM if r.key in GT7_ROWS else r.platform)
 
 
+RACE_RADIO_ABSENT = ("fia_flags", "penalties", "participants")  # race radio: declared "not sent" for every other game
+
+
 def test_adapter_declarations_added_for_documented_absences() -> None:
     old = {(r["game"], r["platform"]): r for r in json.loads(GOLDEN_MATRIX.read_text(encoding="utf-8"))}
     added = {
@@ -438,11 +444,32 @@ def test_adapter_declarations_added_for_documented_absences() -> None:
             "lap_history",
             "race_timing",
             "tyre_sets",
+            # race radio
+            "damage",
+            "fia_flags",
+            "penalties",
+            "participants",
         },
-        Game.GT7: {"drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons"},
-        Game.FORZA_MOTORSPORT: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
-        Game.FORZA_HORIZON: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
-        Game.AC: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons"},
+        Game.GT7: {"drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons", *RACE_RADIO_ABSENT},
+        Game.FORZA_MOTORSPORT: {
+            "drs_open",
+            "ers_store_j",
+            "damage",
+            "track_zones",
+            "field_samples",
+            "buttons",
+            *RACE_RADIO_ABSENT,
+        },
+        Game.FORZA_HORIZON: {
+            "drs_open",
+            "ers_store_j",
+            "damage",
+            "track_zones",
+            "field_samples",
+            "buttons",
+            *RACE_RADIO_ABSENT,
+        },
+        Game.AC: {"drs_open", "ers_store_j", "damage", "track_zones", "field_samples", "buttons", *RACE_RADIO_ABSENT},
     }
     for r in PLANNED:
         before = old[_old_key(r)]["fields"]
@@ -570,10 +597,12 @@ def test_capability_sentences_and_only() -> None:
     assert games.capability_only("fuel", gt7)  # not read yet: still a known fact, not data
     assert not games.capability_only("setup", ac)  # setup keeps its technique-first answer
     assert not games.capability_only("tyres", None)
-    assert games.capability_only("damage", f1) and not games.capability_only("weather", f1)
+    assert not games.capability_only("damage", f1) and not games.capability_only("weather", f1)  # race radio
+    assert games.capability_only("penalties", gt7) and not games.capability_only("penalties", f1)
+    assert not games.capability_only("gaps", gt7)  # GT7 sends its race position: "what position am I?" has data
     acc = games.entry("acc:ps5")
     assert games.capability_sentence(acc, ["fuel", "tyre_wear"]) == "ACC on PS5 has no telemetry output."
-    assert [g for g, *_ in games.capability_facts(f1)] == ["damage"]  # type: ignore[arg-type]
+    assert [g for g, *_ in games.capability_facts(f1)] == []  # type: ignore[arg-type]  # race radio: damage read
 
 
 def test_games_response_is_json_and_covers_every_entry() -> None:
@@ -582,7 +611,7 @@ def test_games_response_is_json_and_covers_every_entry() -> None:
     assert [e["id"] for e in body["entries"]] == [e.id for e in games.entries()]
     assert set(body["support_words"]) == {lvl.value for lvl in SupportLevel}
     assert all("fields" not in e and "guide" not in e for e in body["entries"])
-    assert all(len(e["features"]) == 23 for e in body["entries"])
+    assert all(len(e["features"]) == 25 for e in body["entries"])
 
 
 # ---------------------------------------------------------------------------------------------- review fixes

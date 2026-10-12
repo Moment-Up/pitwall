@@ -57,6 +57,10 @@ SkillLevel = Literal["beginner", "intermediate", "advanced"]
 CoachingIntensity = Literal["quiet", "normal", "detailed"]
 SKILL_LEVELS: tuple[SkillLevel, ...] = ("beginner", "intermediate", "advanced")
 COACHING_INTENSITIES: tuple[CoachingIntensity, ...] = ("quiet", "normal", "detailed")
+# --- race radio --- the radio's words: "auto" (simple for beginners, as the skill level says), "simple", "standard"
+RadioWording = Literal["auto", "simple", "standard"]
+RADIO_WORDINGS: tuple[RadioWording, ...] = ("auto", "simple", "standard")
+# --- end race radio ---
 
 # Name of the first profile on a fresh install when ``settings.driver_name`` (PITWALL_DRIVER_NAME) is not a usable
 # name. Only the very first creation uses it: an existing database keeps its driver rows exactly as they are.
@@ -170,6 +174,62 @@ def _parse_stored_initials(value: object) -> str:
     return NO_INITIALS if value == NO_INITIALS else parse_initials(value)
 
 
+# --- race radio ---------------------------------------------------------------------------------------------------
+@dataclass(frozen=True, slots=True)
+class RadioCallPrefs:
+    """Which race radio groups this driver hears (``pitwall.raceradio``; the red flag is always on). ``name``: the
+    radio says the driver's first name now and then (``voice.addressing``)."""
+
+    flags: bool = True
+    start: bool = True
+    position: bool = True
+    rivals: bool = True
+    penalties: bool = True
+    damage: bool = True
+    name: bool = True
+
+    def to_dict(self) -> dict[str, bool]:
+        return asdict(self)
+
+    @classmethod
+    def from_stored(cls, raw: object) -> RadioCallPrefs:
+        """Lenient: unknown keys are ignored and a non-bool value falls back to its default (on)."""
+        if not isinstance(raw, Mapping):
+            return cls()
+        return cls(**{k: v for k, v in raw.items() if k in RADIO_CALL_GROUPS and isinstance(v, bool)})
+
+    def merged(self, changes: Mapping[str, object]) -> RadioCallPrefs:
+        """Strict partial update (API input): only the known groups, only true/false."""
+        for k, v in changes.items():
+            if k not in RADIO_CALL_GROUPS:
+                raise DriverValidationError(f"unknown race radio group {k!r}; expected one of {RADIO_CALL_GROUPS}")
+            if not isinstance(v, bool):
+                raise DriverValidationError(f"race radio group {k!r} must be true or false, got {v!r}")
+        return replace(self, **changes)  # type: ignore[arg-type]
+
+
+RADIO_CALL_GROUPS: tuple[str, ...] = ("flags", "start", "position", "rivals", "penalties", "damage", "name")
+
+
+def parse_radio_wording(value: object) -> RadioWording:
+    if isinstance(value, str):
+        v = value.strip().lower()
+        for w in RADIO_WORDINGS:
+            if v == w:
+                return w
+    raise DriverValidationError(f"unknown radio wording {value!r}; expected one of {', '.join(RADIO_WORDINGS)}")
+
+
+def parse_radio_calls(value: object) -> RadioCallPrefs:
+    """Strict (API input): a complete or partial object of group -> bool."""
+    if not isinstance(value, Mapping):
+        raise DriverValidationError("radio_calls must be an object of group: true/false")
+    return RadioCallPrefs().merged(value)
+
+
+# --- end race radio ---
+
+
 # ---------------------------------------------------------------------------------------------- preferences
 @dataclass(frozen=True, slots=True)
 class DriverPreferences:
@@ -179,6 +239,8 @@ class DriverPreferences:
     coaching_intensity: CoachingIntensity = "normal"
     voice_enabled: bool = True
     default_game: str | None = None  # games catalogue id: on a seat change, selected while telemetry is not live
+    radio_calls: RadioCallPrefs = field(default_factory=RadioCallPrefs)  # race radio groups (pitwall.raceradio)
+    radio_wording: RadioWording = "auto"  # race radio: also decides CoachingLimits.simple_wording
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -205,6 +267,8 @@ class DriverPreferences:
         take("coaching_intensity", parse_coaching_intensity)
         take("voice_enabled", _parse_bool)
         take("default_game", parse_default_game)  # a game the catalogue no longer has reads as none
+        take("radio_calls", RadioCallPrefs.from_stored)  # race radio (lenient per group)
+        take("radio_wording", parse_radio_wording)
         return out
 
 
@@ -233,9 +297,7 @@ KEEP = _Keep()
 
 
 def _replace(p: DriverPreferences, **changes: Any) -> DriverPreferences:
-    d = p.to_dict()
-    d.update(changes)
-    return DriverPreferences(**d)
+    return replace(p, **changes)  # dataclasses.replace: nested preferences (radio_calls) stay objects
 
 
 # ---------------------------------------------------------------------------------------------- coaching limits
@@ -323,14 +385,17 @@ _SKILL_RULES: Mapping[SkillLevel, _SkillRules] = {
 }
 
 
-def coaching_limits(skill_level: str, intensity: str = "normal") -> CoachingLimits:
+def coaching_limits(skill_level: str, intensity: str = "normal", wording: str = "auto") -> CoachingLimits:
     """Pure: the coaching budget and filters for a skill level at a coaching intensity.
 
     Skill decides *what* is worth saying (confidence, impact, rule kinds, wording); intensity decides *how much*
-    (quiet / normal / detailed), but never lifts a beginner above one point per lap. Raises
+    (quiet / normal / detailed), but never lifts a beginner above one point per lap. ``wording`` (the driver's radio
+    words, race radio): "simple" / "standard" override the skill level's ``simple_wording``; "auto" keeps it. One
+    switch for race calls, strategy plain words, goal lines and coaching wording alike. Raises
     ``DriverValidationError`` for unknown values."""
     level = parse_skill_level(skill_level)
     inten = parse_coaching_intensity(intensity)
+    words = parse_radio_wording(wording)
     rules = _SKILL_RULES[level]
     total, corrective, positive = rules.per_lap[inten]
     return CoachingLimits(
@@ -342,7 +407,7 @@ def coaching_limits(skill_level: str, intensity: str = "normal") -> CoachingLimi
         max_corrective_per_lap=corrective,
         max_positive_per_lap=positive,
         allowed_kinds=rules.allowed_kinds,
-        simple_wording=rules.simple_wording,
+        simple_wording={"simple": True, "standard": False}.get(words, rules.simple_wording),
         mention_consistency=rules.mention_consistency,
         corner_repeat_gap_laps=rules.corner_repeat_gap_laps,
     )
@@ -415,7 +480,8 @@ class Driver:
 
     @property
     def coaching(self) -> CoachingLimits:
-        return coaching_limits(self.preferences.skill_level, self.preferences.coaching_intensity)
+        p = self.preferences
+        return coaching_limits(p.skill_level, p.coaching_intensity, p.radio_wording)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -690,6 +756,8 @@ class DriverService:
         coaching_intensity: str = "normal",
         voice_enabled: bool = True,
         default_game: str | None = None,
+        radio_calls: Mapping[str, object] | None = None,
+        radio_wording: str = "auto",
     ) -> Driver:
         clean = clean_name(name)
         prefs = DriverPreferences(
@@ -699,6 +767,8 @@ class DriverService:
             coaching_intensity=parse_coaching_intensity(coaching_intensity),
             voice_enabled=_parse_bool(voice_enabled),
             default_game=parse_default_game(default_game),
+            radio_calls=RadioCallPrefs() if radio_calls is None else parse_radio_calls(radio_calls),
+            radio_wording=parse_radio_wording(radio_wording),
         )
         pick_colour = colour is None
 
@@ -728,9 +798,11 @@ class DriverService:
         coaching_intensity: str | None = None,
         voice_enabled: bool | None = None,
         default_game: str | _Keep | None = KEEP,
+        radio_calls: Mapping[str, object] | None = None,
+        radio_wording: str | None = None,
     ) -> Driver:
-        """Partial update: only the given fields change (``default_game``: None clears it, ``KEEP`` leaves it). Never
-        bumps the seat version (no session effect)."""
+        """Partial update: only the given fields change (``default_game``: None clears it, ``KEEP`` leaves it;
+        ``radio_calls`` merges the groups given into the stored ones). Never bumps the seat version."""
         changes: dict[str, Any] = {}
         if colour is not None:
             changes["colour"] = parse_colour(colour)
@@ -744,6 +816,10 @@ class DriverService:
             changes["voice_enabled"] = _parse_bool(voice_enabled)
         if not isinstance(default_game, _Keep):
             changes["default_game"] = parse_default_game(default_game)
+        if radio_wording is not None:
+            changes["radio_wording"] = parse_radio_wording(radio_wording)
+        if radio_calls is not None:
+            parse_radio_calls(radio_calls)  # strict: refuse a bad group before the writer job
         new_name = clean_name(name) if name is not None else None
 
         def job(c: sqlite3.Connection) -> _Refused | None:
@@ -755,6 +831,8 @@ class DriverService:
                 if other is not None and int(other["id"]) != driver_id:
                     return _refuse(c, DriverConflictError(f"a driver called {new_name!r} already exists"))
             current = Driver.from_row(row).preferences
+            if radio_calls is not None:  # race radio: a partial update of the groups
+                changes["radio_calls"] = current.radio_calls.merged(radio_calls)
             prefs = _replace(current, **changes).to_dict() if changes else None
             repo.update_driver(c, driver_id, new_name, prefs)
             return None

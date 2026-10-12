@@ -145,6 +145,13 @@ that does not fit waits for the next lap or expires. When another driver sits do
 messages are dropped. At quiet intensity drill points show on the screen only. Full table:
 [features.md](features.md#what-the-radio-says).
 
+**Race radio.** In a race the engineer also calls flags, the start and laps to go, positions, gaps, penalties and
+damage ([features.md](features.md#race-radio)), with an allowance of its own (two race calls a lap at normal, three
+at detailed) so they never push out the lap summary or the coaching point. Each driver chooses the groups they hear
+in Settings › Drivers › Race radio (flags, start, position, rivals, penalties, damage, "say my name sometimes"; the
+red flag is always on) and the radio's words (Automatic: simple words for beginners; Simple; Standard). Ask "who's
+ahead?", "do I have a penalty?", "what's my damage?" or "how was sector 2?" at any time.
+
 ## Troubleshooting
 
 - *No microphone permission prompt / mic unavailable*: you are on http:// - use the https Tailscale URL.

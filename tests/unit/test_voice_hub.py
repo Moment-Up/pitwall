@@ -548,10 +548,13 @@ async def test_f1_questions_about_data_it_sends_go_to_the_llm_path() -> None:
         sent.append(item)
 
     await hub.connect(RadioClient(send=send))
-    for q in ("Any yellow flags?", "How much battery do I have?", "What were my splits?"):
+    for q in ("Any yellow flags?", "How much battery do I have?"):
         hub.ask_text(q)
         await settle(60)
         assert (q, True) in eng.use_llm, q
+    hub.ask_text("What were my splits?")  # race radio: sector deltas are a fast, deterministic answer now
+    await settle(60)
+    assert ("What were my splits?", False) in eng.use_llm
     said = [m["text"] for m in texts(sent, "say")]
     assert "Copy, checking." in said
     assert not any("complete a few clean laps" in t for t in said), said

@@ -274,7 +274,7 @@ export const RadioLog = memo(function RadioLog() {
             {(r) => (
               <ListView.Item id={r.seq} textValue={r.text}>
                 <div className="pww-logrow">
-                  <RadioKindChip kind={r.kind} size="sm" />
+                  <RadioKindChip kind={r.kind} urgent={r.urgent} size="sm" />
                   <span className="pww-logrow__text">
                     {r.text}
                     {r.count && <span className="text-faint"> {r.count}</span>}

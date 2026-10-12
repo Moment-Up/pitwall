@@ -40,7 +40,7 @@ from collections import Counter
 from typing import Annotated, Any
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from pitwall.analysis import ai_level
 from pitwall.analysis.ai_pace import AI_PACE_METHOD_VERSION
@@ -53,6 +53,7 @@ from pitwall.drivers import (
     DriverService,
     DriverValidationError,
     NotFoundError,
+    RadioWording,
     SkillLevel,
 )
 from pitwall.storage import repo
@@ -77,6 +78,8 @@ class DriverCreate(BaseModel):
     coaching_intensity: Intensity = "normal"
     voice_enabled: bool = True
     default_game: str | None = None  # games catalogue id ("Usually plays")
+    radio_calls: dict[str, StrictBool] | None = None  # race radio groups (all on when omitted)
+    radio_wording: RadioWording = "auto"
 
 
 class DriverUpdate(BaseModel):
@@ -88,6 +91,8 @@ class DriverUpdate(BaseModel):
     coaching_intensity: Intensity | None = None
     voice_enabled: bool | None = None
     default_game: str | None = None  # null clears it (only when sent: omitted leaves it unchanged)
+    radio_calls: dict[str, StrictBool] | None = None  # race radio: the groups sent are merged into the stored ones
+    radio_wording: RadioWording | None = None
 
 
 class DriverRef(BaseModel):
@@ -162,6 +167,8 @@ def create_driver(request: Request, body: DriverCreate) -> dict[str, Any]:
             coaching_intensity=body.coaching_intensity,
             voice_enabled=body.voice_enabled,
             default_game=body.default_game,
+            radio_calls=body.radio_calls,
+            radio_wording=body.radio_wording,
         )
     except DriverError as e:
         raise _http(e) from e

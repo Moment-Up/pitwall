@@ -15,7 +15,8 @@ import type { HistoryPoint } from "../../../lib/live";
 import type { BrakePrior, TrackOutline } from "../../../lib/viz/outline";
 import { DriveFrame } from "../DriveFrame";
 import { CarTile, CoachingTile, InputsTile, LapsTile, MapTile, TyresTile } from "./CarTiles";
-import { carTile, coachingTile, lapsTile, mapTile, raceControlLine, tyresTile, WALL_LAPS } from "./view";
+import { carTile, coachingTile, lapsTile, mapTile, raceControlLine, raceNote, tyresTile, WALL_LAPS } from "./view";
+import { snapRace } from "../../../lib/raceradio/view"; // race radio (pitwall.raceradio)
 import { StrategyTile } from "./StrategyTile"; // race strategy (pitwall.strategy)
 import { strategyTile } from "../../../lib/strategy/view"; // race strategy (pitwall.strategy)
 
@@ -48,6 +49,7 @@ export function CarScreen({
   // Every snapshot arrives as fresh JSON, so the views are cheap to rebuild and each tile is memoised on its
   // content instead: the laps and coaching tiles re-render once a lap, not per frame.
   const strategy = strategyTile(snap, model, { simple, nowS }); // race strategy (pitwall.strategy)
+  const race = snapRace(snap); // race radio (pitwall.raceradio)
   return (
     <DriveFrame status={model.status} maySleep={maySleep} layout="car" dim={model.dim} state={model.state}>
       <CarTile v={carTile(snap, model, entry)} />
@@ -58,7 +60,8 @@ export function CarScreen({
         view={mapTile(snap, model)}
         outline={outline}
         prior={prior}
-        raceControl={raceControlLine(snap?.events, nowS, entry)}
+        raceControl={raceControlLine(snap?.events, nowS, entry, race)}
+        raceNote={raceNote(race)}
       />
       <TyresTile v={tyresTile(snap, entry)} />
       {/* --- race strategy (pitwall.strategy): in a race the Inputs slot shows the Strategy tile; the mode only

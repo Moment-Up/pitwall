@@ -204,6 +204,12 @@
     {"question": "Will it rain before my pit window?", "intent": "weather", "corner": null, "from": "final-review"},
     {"question": "Is the track drying, should I stay out?", "intent": "weather", "corner": null, "from": "final-review"},
     {"question": "Where am I losing time in the rain?", "intent": "losing_time", "corner": null, "from": "final-review"},
-    {"question": "What place am I?", "intent": "gaps", "corner": null, "from": "final-review"}
+    {"question": "What place am I?", "intent": "gaps", "corner": null, "from": "final-review"},
+    {"question": "Who's ahead?", "intent": "who_ahead", "corner": null, "from": "radio"},
+    {"question": "who is behind me", "intent": "who_ahead", "corner": null, "from": "radio"},
+    {"question": "Do I have a penalty?", "intent": "penalties", "corner": null, "from": "radio"},
+    {"question": "How many warnings have I got?", "intent": "penalties", "corner": null, "from": "radio"},
+    {"question": "How was sector 2?", "intent": "sectors", "corner": null, "from": "radio"},
+    {"question": "What's my damage?", "intent": "damage", "corner": null, "from": "radio"}
   ]
 }

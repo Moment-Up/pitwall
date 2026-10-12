@@ -27,13 +27,15 @@ export function chipToneProps(tone: RadioTone): {
 
 export interface RadioKindChipProps {
   kind: LogKind | string | null | undefined;
+  /** race radio: the message is urgent (the red flag): an alert shows URGENT. */
+  urgent?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
 }
 
-/** The kind as a caps signal word in its colour: ENGINEER, LAP, CUE, ALERT, YOU... (also for log rows). */
-export function RadioKindChip({ kind, size = "lg", className = "" }: RadioKindChipProps) {
-  const chip = kindChip(kind);
+/** The kind as a caps signal word in its colour: ENGINEER, LAP, CUE, ALERT, RACE, URGENT, YOU... (log rows too). */
+export function RadioKindChip({ kind, urgent = false, size = "lg", className = "" }: RadioKindChipProps) {
+  const chip = kindChip(kind, { urgent });
   const tone = chipToneProps(chip.tone);
   return (
     <Chip
@@ -83,7 +85,7 @@ export function RadioMessage({ size = "strip", outcome, showAge, hideAfterS, cla
   if (size === "mini") {
     return (
       <span className={`flex min-w-0 items-center gap-2 ${className}`}>
-        {msg && <RadioKindChip kind={msg.kind} size="sm" />}
+        {msg && <RadioKindChip kind={msg.kind} urgent={msg.urgent} size="sm" />}
         <span className={`min-w-0 truncate text-sm ${msg ? "" : "text-muted"}`}>
           {msg ? msg.text : idleMessage({ phase, micCapable })}
           {extra && <span className="text-muted"> · {extra}</span>}
@@ -99,7 +101,7 @@ export function RadioMessage({ size = "strip", outcome, showAge, hideAfterS, cla
     return (
       <div className={`pw-radio-msg flex min-w-0 flex-col items-center gap-4 text-center ${className}`} aria-live="polite">
         <span className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-          <RadioKindChip kind={msg ? msg.kind : null} />
+          <RadioKindChip kind={msg ? msg.kind : null} urgent={msg?.urgent} />
           {msg && (
             <span className="flex items-center gap-2 text-sm text-faint">
               {speaking && <VolumeFill aria-label="Speaking" className="size-4 text-foreground" />}
@@ -121,7 +123,7 @@ export function RadioMessage({ size = "strip", outcome, showAge, hideAfterS, cla
 
   return (
     <div className={`flex min-w-0 flex-1 items-center gap-3 ${className}`}>
-      <RadioKindChip kind={msg ? msg.kind : null} />
+      <RadioKindChip kind={msg ? msg.kind : null} urgent={msg?.urgent} />
       <p
         className={`m-0 min-w-0 truncate text-[length:var(--pw-d-xs,22px)] leading-[1.2] font-medium ${msg ? "" : "text-muted"}`}
         title={msg ? msg.text : undefined}

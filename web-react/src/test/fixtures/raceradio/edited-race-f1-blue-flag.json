@@ -1,0 +1,65 @@
+{
+  "_fixture": {
+    "tier": "edited",
+    "source": "race-radio spec 9.3 (RaceView v1 contract)",
+    "moment": "F1 25 race, the player lapped: their own car flag is blue (vehicleFIAFlags 2)",
+    "notes": "Hand-built from the contract before the backend publishes the block: every value is chosen to exercise a dashboard rule, and figures follow the spec's real-data findings where it gives them. Test data, not game data; never shown as live. Section 2: blue (2) was seen only in the lapped, damaged Austria run; marshal zones are not the source."
+  },
+  "version": 1,
+  "session_id": "f1-blue",
+  "game": "f1_25",
+  "mode": "race",
+  "reason": null,
+  "synthetic": false,
+  "position": 19,
+  "cars": 20,
+  "grid_position": 12,
+  "position_tier": "spec_implemented",
+  "position_note": null,
+  "lap": 8,
+  "total_laps": 10,
+  "laps_left": 2.4,
+  "final_lap": false,
+  "time_left_s": null,
+  "flags": {
+    "track": "green",
+    "you": "blue",
+    "yellow_ahead": null
+  },
+  "penalties": {
+    "time_s": 0,
+    "warnings": 0,
+    "track_limits": 0,
+    "drive_throughs": 0,
+    "stop_gos": 0,
+    "serve_at_stop": false
+  },
+  "damage": {
+    "grade": "severe",
+    "parts": [
+      {
+        "part": "front_right_wing",
+        "pct": 100,
+        "grade": "severe"
+      },
+      {
+        "part": "floor",
+        "pct": 33,
+        "grade": "major"
+      }
+    ],
+    "puncture": [
+      "RL"
+    ]
+  },
+  "ahead": null,
+  "behind": null,
+  "calls": [
+    {
+      "t_unix": 1791680410.5,
+      "group": "flags",
+      "call": "blue_flag",
+      "text": "Blue flag. Let the car behind through."
+    }
+  ]
+}

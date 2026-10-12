@@ -1,8 +1,9 @@
 // Add or edit a driver (spec 8): a Pro Sheet (right on iPad and Mac, bottom on phones, spec 3.4) with name, initials,
 // colour, skill level (with what it changes), the game they usually play, coaching on the radio and the engineer's
 // voice. The radio settings only appear while the radio follows the seated driver (they would change nothing on track
-// otherwise); "Usually plays" only while the server supports it (GameState.driver_defaults). Delete lives in the
-// footer and asks through an AlertDialog (DeleteDriverDialog).
+// otherwise); "Usually plays" only while the server supports it (GameState.driver_defaults). Race radio (the call
+// toggles and the radio words, RaceRadioSettings) shows with the radio settings when the server knows race radio.
+// Delete lives in the footer and asks through an AlertDialog (DeleteDriverDialog).
 
 import {
   Button,
@@ -28,8 +29,10 @@ import {
   usualGameValue,
   withInitials,
   withName,
+  withRadioCall,
   type DriverForm,
 } from "./model";
+import { RaceRadioSettings } from "./RaceRadioSettings"; // race radio (pitwall.raceradio)
 
 export interface DriverSheetProps {
   /** The form to edit; null = closed. */
@@ -286,6 +289,17 @@ export function DriverSheet({
                           <CellSwitch.Control />
                         </CellSwitch.Trigger>
                       </CellSwitch>
+
+                      {/* --- race radio (pitwall.raceradio): only from a server that knows it --- */}
+                      {f.radio_calls && f.radio_wording && (
+                        <RaceRadioSettings
+                          calls={f.radio_calls}
+                          wording={f.radio_wording}
+                          skill={f.skill_level}
+                          onCall={(g, on) => setF(withRadioCall(f, g, on))}
+                          onWording={(w) => setF({ ...f, radio_wording: w })}
+                        />
+                      )}
                     </>
                   ) : (
                     <Description className="text-sm">

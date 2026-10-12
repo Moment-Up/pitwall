@@ -261,6 +261,99 @@ def _add_flags(fs: FactSheet, live: dict[str, Any] | None, entry: games.GameEntr
     )
 
 
+# --- race radio (pitwall.raceradio) --------------------------------------------------------------------------------
+RACE_PREFIX = "Race:"
+_LABEL_KIND_WORDS = {"driver": "AI driver", "team": "team", "number": "race number", "car": "unnamed car"}
+
+
+def _int(v: object) -> int | None:
+    return v if isinstance(v, int) and not isinstance(v, bool) else None
+
+
+def _add_race(fs: FactSheet, live: dict[str, Any] | None, session_id: str | None) -> None:
+    """Topic ``race``: the live race radio's view of this session (snapshot ``race``): the position, the cars ahead and
+    behind (non-personal labels only: an official AI driver name, a team, a race number, never an online ID), the
+    penalties and warnings, the damage. Nothing when the block is not this session's or the race radio is off."""
+    race = (live or {}).get("race")
+    if not isinstance(race, dict) or race.get("mode") == "off" or session_id is None:
+        return
+    if race.get("session_id") != session_id:
+        return
+    pos, cars, grid = _int(race.get("position")), _int(race.get("cars")), _int(race.get("grid_position"))
+    left = race.get("laps_left")
+    to_go = round(left) if isinstance(left, int | float) and not isinstance(left, bool) and left > 0 else None
+    note = race.get("position_note") if isinstance(race.get("position_note"), str) else None
+    if pos is not None:
+        text = f"{RACE_PREFIX} position P{pos}" + (f" of {cars}" if cars else "")
+        text += (f", started P{grid}" if grid else "") + (f", {to_go} laps to go" if to_go else "") + "."
+        if note:
+            text += f" {note}"
+        fs.add(
+            "race",
+            text,
+            {
+                "kind": "position",
+                "position": pos,
+                "cars": cars,
+                "grid": grid,
+                "laps_left": left,
+                "laps_to_go": to_go,
+                "tier": race.get("position_tier"),
+                "note": note,
+            },
+        )
+    for side in ("ahead", "behind"):
+        d = race.get(side)
+        if not isinstance(d, dict):
+            continue
+        kind = str(d.get("label_kind") or "car")
+        label = str(d.get("label") or f"the car {side}")
+        gap = d.get("gap_s")
+        fs.add(
+            "race",
+            f"{RACE_PREFIX} car {side}: {label} ({_LABEL_KIND_WORDS.get(kind, kind)}), P{d.get('position')}"
+            + (f", gap {gap:.1f} s" if isinstance(gap, int | float) else ", gap unknown")
+            + ("" if d.get("settled") else " (not settled)")
+            + ".",
+            {
+                "kind": side,
+                "label": label,
+                "label_kind": kind,
+                "position": _int(d.get("position")),
+                "gap_s": gap,
+                "settled": d.get("settled"),
+            },
+        )
+    pen = race.get("penalties")
+    if isinstance(pen, dict):
+        fs.add(
+            "race",
+            f"{RACE_PREFIX} penalties {pen.get('time_s')} s, warnings {pen.get('warnings')} "
+            f"({pen.get('track_limits')} track limits), drive-throughs to serve {pen.get('drive_throughs')}, "
+            f"stop-gos to serve {pen.get('stop_gos')}.",
+            {
+                "kind": "penalties",
+                **{
+                    k: pen.get(k)
+                    for k in ("time_s", "warnings", "track_limits", "drive_throughs", "stop_gos", "serve_at_stop")
+                },
+            },
+        )
+    dmg = race.get("damage")
+    if isinstance(dmg, dict):
+        parts = [p for p in dmg.get("parts") or [] if isinstance(p, dict)]
+        words = ", ".join(f"{p.get('part')} {p.get('pct')}% ({p.get('grade')})" for p in parts) or "none"
+        punct = [w for w in dmg.get("puncture") or [] if isinstance(w, str)]
+        fs.add(
+            "race",
+            f"{RACE_PREFIX} damage {words}" + (f"; puncture {', '.join(punct)}" if punct else "") + ".",
+            {"kind": "damage", "grade": dmg.get("grade"), "parts": parts, "puncture": punct},
+        )
+
+
+# --- end race radio ---
+
+
 DRILL_PREFIX = "Drill running:"
 
 
@@ -463,6 +556,7 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
         session_data,
     )
     _add_flags(fs, live, entry)  # early: never pushed out of a long sheet's selection (FactSheet.select)
+    _add_race(fs, live, s.get("id"))  # --- race radio --- position, neighbours, penalties, damage (live race block)
     _add_drill(fs, live, s.get("id"))  # coachref: the running drill, early for the same reason
 
     # ---------------------------------------------------------------- laps
@@ -474,7 +568,12 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
         fs.add(
             "laps",
             f"Lap {lap['lap_number']}: {fmt_lap(lap.get('lap_time_ms'))} ({status}){sec_txt}.",
-            {"lap": lap["lap_number"], "lap_time_s": (lap.get("lap_time_ms") or 0) / 1000, "clean": lap["clean"]},
+            {
+                "lap": lap["lap_number"],
+                "lap_time_s": (lap.get("lap_time_ms") or 0) / 1000,
+                "clean": lap["clean"],
+                "sectors_ms": sectors if len(sectors) == 3 else None,  # race radio: sector deltas on request
+            },
         )
     clean = [lap for lap in timed if lap["clean"]]
     best: dict[str, Any] | None = min(clean, key=lambda x: x["lap_time_ms"]) if clean else None
@@ -496,7 +595,11 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
                 "laps",
                 f"Theoretical best from best clean sectors: {fmt_lap(theo)} "
                 f"({(best['lap_time_ms'] - theo) / 1000:.3f}s quicker than the best clean lap).",
-                {"lap_time_s": theo / 1000, "gap_s": (best["lap_time_ms"] - theo) / 1000},
+                {
+                    "lap_time_s": theo / 1000,
+                    "gap_s": (best["lap_time_ms"] - theo) / 1000,
+                    "best_sectors_ms": [min(s1), min(s2), min(s3)],  # race radio: sector deltas on request
+                },
             )
     pb = sa.personal_best
     if driver_name and pb and pb.get("lap_time_ms"):

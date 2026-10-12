@@ -46,6 +46,9 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   merge: ``/ws/live`` sends it with the 5 s static payload, in a new session's first snapshot and when ``strategy_rev``
   changed (a new view), at most every ``api.app.STRATEGY_EVERY_S``, and leaves the key out otherwise (the client keeps
   the previous value within the session). Every other caller (REST, fact sheets) gets it in every snapshot.
+* ``race`` (race radio, ``pitwall.raceradio``; <= 1.2 kB; ``/ws/live`` sends it when it changed, ``ON_CHANGE_KEYS``):
+  the race radio's ``RaceView`` (position in any game, flags, penalties, damage, the last calls), published by the
+  race radio worker at most twice a second and at once after a call; ``None`` until it has one for the live session.
 * ``coachref`` (small; ``/ws/live`` sends it like ``ai_pace``: ``api.app.ON_CHANGE_KEYS``): the seated driver's
   reference choice, what the analysis used for the last
   lap (``used_kind``, ``reason`` when the choice could not be honoured), whether a change waits for the next lap
@@ -302,6 +305,10 @@ class LiveState:
         self.strategy: dict[str, Any] | None = None  # race strategy (pitwall.strategy): StrategyView of this session
         self.strategy_rev = 0  # bumped when ``strategy`` changes (a new view, a new session): /ws/live sends it then
         self.coachref: dict[str, Any] | None = None  # --- coachref --- (core.coachref.CoachRef publishes it)
+        self.race: dict[str, Any] | None = None  # --- race radio --- RaceView of this session (pitwall.raceradio)
+        # --- race radio, opt-in names (raceradio.names): live only, never in a snapshot or serialised ---
+        self.race_roster: Any = None  # NeighbourNames of the live session (set by the race radio worker)
+        self.race_online_names = False  # the household setting (SettingsStore "race_radio"), set by the runtime
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -482,6 +489,15 @@ class LiveState:
                 self.strategy = view
                 self.strategy_rev += 1
 
+    # --- race radio (pitwall.raceradio) ---
+    def set_race(self, session_id: str, view: dict[str, Any] | None) -> None:
+        """Publish the race radio worker's view of ``session_id``; dropped if another session went live meanwhile."""
+        with self._lock:
+            if session_id == self.session_id:
+                self.race = view
+
+    # --- end race radio ---
+
     def set_cue_plan(self, plan: CuePlan | None) -> None:
         """Install a cue plan built outside the engine (normally the engine plans from ``on_lap_result``)."""
         self.cues.set_plan(plan)
@@ -592,6 +608,7 @@ class LiveState:
             self.ai_pace = None
             self.strategy = None  # race strategy (pitwall.strategy)
             self.strategy_rev += 1
+            self.race = None  # race radio (pitwall.raceradio)
             self._bests_requested = None  # the next session packet asks for the new session's bests
             self._heads_up_key = None  # the cue engine drops its heads-ups on reset; the next knowledge re-installs
         self.coach.reset()
@@ -716,6 +733,7 @@ class LiveState:
             if include_strategy:  # race strategy: /ws/live sends it only when it changed (``strategy_rev``) or static
                 out["strategy"] = self.strategy
             out["coachref"] = self.coachref  # --- coachref --- reference choice + drill (small, every snapshot)
+            out["race"] = self.race  # --- race radio --- RaceView (<= 1.2 kB; /ws/live sends it when it changed)
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison
