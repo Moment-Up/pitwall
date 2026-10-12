@@ -478,6 +478,10 @@ describe("settings storage", () => {
       deviceVoice: null,
       deviceRate: 1,
       version: 1,
+      handsFree: false,
+      wakeWord: "pitwall",
+      handsFreeConsent: false,
+      talkButton: null,
     });
     expect(loadSettings(false).voiceSource).toBe("server");
   });
@@ -491,6 +495,10 @@ describe("settings storage", () => {
       deviceVoice: null,
       deviceRate: 1,
       version: 2,
+      handsFree: false,
+      wakeWord: "pitwall",
+      handsFreeConsent: false,
+      talkButton: null,
     });
   });
 
@@ -545,7 +553,7 @@ describe("goLive", () => {
     ws.open();
     expect(ws.json()).toEqual([
       { type: "hello", client: "ipad", sample_rate: 16000, version: 1, tts_mode: "server" },
-      { type: "settings", voice_enabled: true, intensity: "normal", tts_mode: "server" },
+      { type: "settings", voice_enabled: true, intensity: "normal", tts_mode: "server", handsfree: false, wake_word: "pitwall" },
       { type: "ping", t: expect.any(Number) },
     ]);
     expect(radio.get().conn).toBe("open");
@@ -1033,8 +1041,8 @@ describe("settings over the radio link", () => {
     radio.setIntensity("quiet");
     radio.setVoiceEnabled(false);
     expect(ws.json()).toEqual([
-      { type: "settings", voice_enabled: true, intensity: "quiet", tts_mode: "server" },
-      { type: "settings", voice_enabled: false, intensity: "quiet", tts_mode: "server" },
+      { type: "settings", voice_enabled: true, intensity: "quiet", tts_mode: "server", handsfree: false, wake_word: "pitwall" },
+      { type: "settings", voice_enabled: false, intensity: "quiet", tts_mode: "server", handsfree: false, wake_word: "pitwall" },
     ]);
     expect(JSON.parse(env.local.getItem(SETTINGS_KEY) ?? "{}")).toMatchObject({ intensity: "quiet", voiceEnabled: false });
   });
@@ -1126,7 +1134,7 @@ describe("settings version migration (one-time switch to the Mac's natural voice
     expect(radio.get().settings).toMatchObject({ voiceSource: "device", version: 1 });
     ws.text(STATE);
     expect(radio.get().settings).toMatchObject({ voiceSource: "server", version: 2 });
-    expect(ws.json()).toEqual([{ type: "settings", voice_enabled: true, intensity: "normal", tts_mode: "server" }]);
+    expect(ws.json()).toEqual([{ type: "settings", voice_enabled: true, intensity: "normal", tts_mode: "server", handsfree: false, wake_word: "pitwall" }]);
     expect(radio.get().log.at(-1)?.text).toMatch(/^Switched to the Mac's natural voice/);
     expect(JSON.parse(env.local.getItem(SETTINGS_KEY) ?? "{}")).toMatchObject({ voiceSource: "server", version: 2 });
   });
@@ -1136,7 +1144,7 @@ describe("settings version migration (one-time switch to the Mac's natural voice
     ws.clear();
     radio.setVoiceSource("device");
     expect(radio.get().settings).toMatchObject({ voiceSource: "device", version: 2 });
-    expect(ws.json()[0]).toEqual({ type: "settings", voice_enabled: true, intensity: "normal", tts_mode: "device" });
+    expect(ws.json()[0]).toEqual({ type: "settings", voice_enabled: true, intensity: "normal", tts_mode: "device", handsfree: false, wake_word: "pitwall" });
     ws.serverClose(1006);
     vi.advanceTimersByTime(600);
     FakeSocket.last().open();
@@ -1395,3 +1403,310 @@ describe("race radio messages", () => {
 });
 
 // --- end race radio ---
+
+// ------------------------------------------------------------------------------------ hands-free (lane handsfree)
+// The store's side of hands-free (lib/handsfree.ts rules): settings, the energy VAD's `vad` frames (after the audio
+// frame they confirm), suppression, the server's hands-free block and events, and the Bluetooth talk button.
+
+describe("hands-free and the talk button (lane handsfree)", () => {
+  const HF = {
+    available: true,
+    reason: null,
+    armed: 1,
+    scope: "stationary",
+    active: true,
+    paused: null,
+    capturing: false,
+    follow_up: false,
+    wake_words: ["pitwall", "radio"],
+    counts: { heard: 0, addressed: 0, ignored: 0, rejected: 0 },
+  };
+  const CONSENTED = { version: 2, handsFree: true, handsFreeConsent: true };
+  const db = (v: number) => 10 ** (v / 20);
+
+  /** Live with hands-free on (consent given) and a Mac that can do it; the VAD calibrated on a quiet room. */
+  async function liveHandsFree(settings: object = CONSENTED, hf: object | null = HF) {
+    const r = await goLive({ settings });
+    if (hf) r.ws.text({ ...STATE, handsfree: hf });
+    for (let i = 0; i < 31; i++) r.node.frame(db(-70));
+    r.ws.clear();
+    return r;
+  }
+
+  function vads(ws: FakeSocket): Record<string, unknown>[] {
+    return ws.json().filter((m) => m.type === "vad");
+  }
+
+  it("stores the device settings, each validated; hands-free stays off without the privacy consent", () => {
+    setup({ settings: { handsFree: true, wakeWord: "radio", talkButton: { kind: "key", code: "PageDown" } } });
+    expect(loadSettings(false)).toMatchObject({
+      handsFree: false,
+      handsFreeConsent: false,
+      wakeWord: "radio",
+      talkButton: { kind: "key", code: "PageDown" },
+    });
+    setup({ settings: { handsFree: true, handsFreeConsent: true, wakeWord: "hey", talkButton: { kind: "key", code: "KeyA" } } });
+    expect(loadSettings(false)).toMatchObject({ handsFree: true, handsFreeConsent: true, wakeWord: "pitwall", talkButton: null });
+  });
+
+  it("turning on needs the consent; then handsfree and wake_word go out with the settings and are stored", async () => {
+    const { radio, ws, env } = await goLive();
+    ws.clear();
+    radio.setHandsFree(true);
+    expect(ws.json()).toEqual([]);
+    expect(radio.get().settings.handsFree).toBe(false);
+    radio.acceptHandsFreeConsent();
+    radio.setWakeWord("radio");
+    radio.setWakeWord("radio"); // unchanged: nothing sent
+    radio.setWakeWord("hey" as never);
+    expect(ws.json()).toEqual([
+      { type: "settings", voice_enabled: true, intensity: "normal", tts_mode: "server", handsfree: true, wake_word: "pitwall" },
+      { type: "settings", voice_enabled: true, intensity: "normal", tts_mode: "server", handsfree: true, wake_word: "radio" },
+    ]);
+    expect(JSON.parse(env.local.getItem(SETTINGS_KEY) ?? "{}")).toMatchObject({
+      handsFree: true,
+      handsFreeConsent: true,
+      wakeWord: "radio",
+    });
+    expect(radio.get().log.at(-1)?.text).toBe("Hands-free on");
+    radio.setHandsFree(false);
+    expect(ws.json().at(-1)).toMatchObject({ handsfree: false });
+    expect(radio.get().handsFree.vad).toBe("off");
+    radio.setHandsFree(true); // consent is remembered
+    expect(ws.json().at(-1)).toMatchObject({ handsfree: true });
+  });
+
+  it("validates the server's hands-free block (a malformed one is dropped)", async () => {
+    const { radio, ws } = await goLive();
+    ws.text({ ...STATE, handsfree: { ...HF, scope: "driving", armed: 2 } });
+    expect(radio.get().server?.handsfree).toMatchObject({ available: true, scope: "driving", armed: 2 });
+    ws.text({ ...STATE, handsfree: "yes" });
+    expect(radio.get().server && "handsfree" in radio.get().server!).toBe(false);
+  });
+
+  it("calibrates for a second, then sends vad start after the frame that confirmed it, and end after 0.7 s quiet", async () => {
+    const { radio, ws, node } = await liveHandsFree();
+    expect(radio.get().handsFree).toMatchObject({ vad: "listening", floorDb: -70, thresholdDb: -50 });
+    for (let i = 0; i < 3; i++) node.frame(db(-30));
+    expect(vads(ws)).toEqual([]);
+    node.frame(db(-30));
+    // ordered after the binary frame it confirms: the server's ring already holds it
+    expect(ws.sent.at(-2)).toBeInstanceOf(ArrayBuffer);
+    expect(JSON.parse(ws.sent.at(-1) as string)).toEqual({ type: "vad", state: "start", seq: 1 });
+    expect(radio.get().handsFree.vad).toBe("speech");
+    for (let i = 0; i < 21; i++) node.frame(db(-70));
+    expect(vads(ws)).toHaveLength(1);
+    node.frame(db(-70));
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "end", seq: 1, reason: "silence" });
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "start", seq: 2 });
+  });
+
+  it("the mic chip's local state: starting while calibrating after hands-free is turned on", async () => {
+    const { radio, node } = await goLive({ settings: { version: 2, handsFreeConsent: true } });
+    radio.setHandsFree(true);
+    expect(radio.get().handsFree.vad).toBe("calibrating");
+    for (let i = 0; i < 31; i++) node.frame(db(-70));
+    expect(radio.get().handsFree.vad).toBe("listening");
+  });
+
+  it("no vad frames while hands-free is off here, on a Mac without hands-free, or when it is unavailable", async () => {
+    for (const [settings, hf] of [
+      [{ version: 2 }, HF],
+      [CONSENTED, null],
+      [CONSENTED, { ...HF, available: false, reason: "disabled" }],
+    ] as const) {
+      const { ws, node } = await liveHandsFree(settings, hf);
+      for (let i = 0; i < 30; i++) node.frame(db(-30));
+      expect(vads(ws)).toEqual([]);
+      expect(ws.binaries().length).toBe(30); // the audio itself streams as always
+    }
+  });
+
+  it("no segment while the engineer talks here, nor for 300 ms after", async () => {
+    const { ws, node, ctx } = await liveHandsFree();
+    sayAudio(ws, "m1", 2400, "answer", 24000);
+    for (let i = 0; i < 10; i++) node.frame(db(-30)); // the AirPod hears the engineer
+    expect(vads(ws)).toEqual([]);
+    ctx.clips()[0]?.end();
+    for (let i = 0; i < 10; i++) node.frame(db(-30));
+    expect(vads(ws)).toEqual([]);
+    vi.advanceTimersByTime(300);
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    expect(vads(ws)).toEqual([{ type: "vad", state: "start", seq: 1 }]);
+  });
+
+  it("no segment while the server says it is speaking or busy, or a PTT is down anywhere", async () => {
+    const { ws, node } = await liveHandsFree();
+    for (const patch of [{ speaking: true }, { busy: true }, { ptt: true, ptt_source: "wheel" }]) {
+      ws.text({ ...STATE, handsfree: HF, ...patch });
+      for (let i = 0; i < 10; i++) node.frame(db(-30));
+    }
+    expect(vads(ws)).toEqual([]);
+  });
+
+  it("push-to-talk during a segment aborts it; the press itself goes out first", async () => {
+    const { radio, ws, node } = await liveHandsFree();
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    radio.pttPress();
+    node.frame(db(-30));
+    expect(ws.json().filter((m) => m.type === "vad" || m.type === "ptt")).toEqual([
+      { type: "vad", state: "start", seq: 1 },
+      { type: "ptt", down: true },
+      { type: "vad", state: "abort", seq: 1, reason: "suppressed" },
+    ]);
+  });
+
+  it("turning hands-free off during a segment aborts it", async () => {
+    const { radio, ws, node } = await liveHandsFree();
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    radio.setHandsFree(false);
+    node.frame(db(-30));
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "abort", seq: 1, reason: "suppressed" });
+  });
+
+  it("a mic that ends or is reopened during a segment aborts it at once (the server stops recording)", async () => {
+    const { radio, ws, node, env } = await liveHandsFree();
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "start", seq: 1 });
+    env.streams[0]!.track.fire("ended");
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "abort", seq: 1, reason: "mic" });
+    await settle(); // re-acquired: a fresh capture, calibrated afresh, and no second abort for the same segment
+    expect(radio.get().mic).toBe("live");
+    expect(vads(ws).filter((m) => m.state === "abort")).toHaveLength(1);
+    for (let i = 0; i < 31; i++) node.frame(db(-70));
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    expect(vads(ws).at(-1)).toEqual({ type: "vad", state: "start", seq: 2 });
+  });
+
+  it("tallies the server's events; an addressed question is logged as a hands-free transcript", async () => {
+    const { radio, ws, node } = await liveHandsFree();
+    for (let i = 0; i < 4; i++) node.frame(db(-30));
+    for (let i = 0; i < 22; i++) node.frame(db(-70));
+    vi.advanceTimersByTime(400);
+    ws.text({ type: "handsfree", event: "accepted", seq: 1 });
+    ws.text({ type: "handsfree", event: "addressed", seq: 1, wake: "pitwall", audio_s: 2.2 });
+    ws.text({ type: "transcript", text: "how's my fuel", stt_ms: 180, audio_s: 2.2, source: "handsfree", wake: "pitwall" });
+    expect(radio.get().log.at(-1)).toMatchObject({
+      kind: "transcript",
+      text: "how's my fuel",
+      meta: "hands-free · STT 180 ms · 2.2 s audio · +400 ms after you stopped",
+    });
+    ws.text({ type: "handsfree", event: "rejected", seq: 2, reason: "too_long", audio_s: 8.6 });
+    expect(radio.get().handsFree.events).toEqual({ accepted: 1, rejected: 1, ignored: 0, addressed: 1, tooLong: 1 });
+    expect(radio.get().handsFree.last).toMatchObject({ event: "rejected", reason: "too_long" });
+  });
+
+  it("ignored speech leaves nothing in the log", async () => {
+    const { radio, ws } = await liveHandsFree();
+    const before = radio.get().log.length;
+    ws.text({ type: "handsfree", event: "ignored", seq: 1, reason: "not_addressed", audio_s: 1.4 });
+    expect(radio.get().log).toHaveLength(before);
+    expect(radio.get().handsFree.events.ignored).toBe(1);
+  });
+
+  it("talk button held: ptt down with source remote at once, the release after the hang time", async () => {
+    const { radio, ws } = await goLive();
+    ws.clear();
+    radio.talkButtonDown();
+    expect(ws.json()).toEqual([{ type: "ptt", down: true, source: "remote" }]);
+    expect(radio.get()).toMatchObject({ pttHeld: true, handsFree: expect.objectContaining({ button: "held" }) });
+    vi.advanceTimersByTime(500);
+    radio.talkButtonUp();
+    expect(radio.get().pttHeld).toBe(false);
+    vi.advanceTimersByTime(250 + 150);
+    expect(ws.json().at(-1)).toEqual({ type: "ptt", down: false });
+    expect(radio.get().handsFree.button).toBe("off");
+  });
+
+  it("talk button tapped: stays on air until the driver goes quiet after speaking", async () => {
+    const { radio, ws, node } = await liveHandsFree({ version: 2 });
+    radio.talkButtonDown();
+    vi.advanceTimersByTime(100);
+    radio.talkButtonUp();
+    expect(radio.get()).toMatchObject({ pttHeld: true, handsFree: expect.objectContaining({ button: "tap" }) });
+    for (let i = 0; i < 30; i++) node.frame(db(-30)); // speaking
+    for (let i = 0; i < 24; i++) node.frame(db(-70));
+    expect(radio.get().pttHeld).toBe(true);
+    node.frame(db(-70)); // 0.8 s quiet
+    expect(radio.get().pttHeld).toBe(false);
+    vi.advanceTimersByTime(250 + 150);
+    expect(ws.json().filter((m) => m.type === "ptt")).toEqual([
+      { type: "ptt", down: true, source: "remote" },
+      { type: "ptt", down: false },
+    ]);
+  });
+
+  it("talk button tapped and nothing said: released after 4 s; a second press ends a tap at once", async () => {
+    const { radio, node } = await liveHandsFree({ version: 2 });
+    radio.talkButtonDown();
+    radio.talkButtonUp();
+    for (let i = 0; i < 124; i++) node.frame(db(-70));
+    expect(radio.get().pttHeld).toBe(true);
+    node.frame(db(-70));
+    expect(radio.get().pttHeld).toBe(false);
+    vi.advanceTimersByTime(1000);
+    radio.talkButtonDown();
+    radio.talkButtonUp();
+    expect(radio.get().handsFree.button).toBe("tap");
+    vi.advanceTimersByTime(1000);
+    radio.talkButtonDown(); // ends it
+    expect(radio.get().pttHeld).toBe(false);
+    expect(radio.get().handsFree.button).toBe("off");
+    radio.talkButtonUp();
+    expect(radio.get().pttHeld).toBe(false);
+  });
+
+  it("a tapped transmission ends after 12 s even without audio frames", async () => {
+    const { radio, ws } = await goLive();
+    radio.talkButtonDown();
+    radio.talkButtonUp();
+    for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(2000);
+      ws.text(STATE); // the link stays alive
+    }
+    vi.advanceTimersByTime(1999);
+    expect(radio.get().pttHeld).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(radio.get().pttHeld).toBe(false);
+  });
+
+  it("the talk button does nothing while the radio is off, the link down, or the screen button holds the mic", async () => {
+    const { radio, ws } = await goLive();
+    radio.pttPress();
+    ws.clear();
+    radio.talkButtonDown();
+    radio.talkButtonUp();
+    expect(ws.json()).toEqual([]);
+    radio.pttRelease(true);
+    ws.serverClose(1006);
+    radio.talkButtonDown();
+    expect(radio.get().pttHeld).toBe(false);
+    radio.stop();
+    radio.talkButtonDown();
+    expect(radio.get().pttHeld).toBe(false);
+  });
+
+  it("a dropped link ends a tapped transmission", async () => {
+    const { radio, ws } = await goLive();
+    radio.talkButtonDown();
+    radio.talkButtonUp();
+    ws.serverClose(1006);
+    expect(radio.get()).toMatchObject({ pttHeld: false, handsFree: expect.objectContaining({ button: "off" }) });
+  });
+
+  it("stores the learned talk button (validated) and forgets it", async () => {
+    const { radio, env } = await goLive();
+    radio.setTalkButton({ kind: "gamepad", id: "Xbox Wireless Controller", button: 3 });
+    expect(radio.get().settings.talkButton).toEqual({ kind: "gamepad", id: "Xbox Wireless Controller", button: 3 });
+    expect(JSON.parse(env.local.getItem(SETTINGS_KEY) ?? "{}").talkButton).toEqual({
+      kind: "gamepad",
+      id: "Xbox Wireless Controller",
+      button: 3,
+    });
+    radio.setTalkButton({ kind: "key", code: "KeyA" });
+    expect(radio.get().settings.talkButton).toBeNull();
+    radio.setTalkButton(null);
+    expect(radio.get().settings.talkButton).toBeNull();
+  });
+});

@@ -81,6 +81,7 @@ class DriverCreate(BaseModel):
     default_game: str | None = None  # games catalogue id ("Usually plays")
     radio_calls: dict[str, StrictBool] | None = None  # race radio groups (all on when omitted)
     radio_wording: RadioWording = "auto"
+    handsfree_while_driving: bool = False  # lane handsfree
 
 
 class DriverUpdate(BaseModel):
@@ -94,6 +95,7 @@ class DriverUpdate(BaseModel):
     default_game: str | None = None  # null clears it (only when sent: omitted leaves it unchanged)
     radio_calls: dict[str, StrictBool] | None = None  # race radio: the groups sent are merged into the stored ones
     radio_wording: RadioWording | None = None
+    handsfree_while_driving: bool | None = None  # lane handsfree
 
 
 class DriverRef(BaseModel):
@@ -170,6 +172,7 @@ def create_driver(request: Request, body: DriverCreate) -> dict[str, Any]:
             default_game=body.default_game,
             radio_calls=body.radio_calls,
             radio_wording=body.radio_wording,
+            handsfree_while_driving=body.handsfree_while_driving,
         )
     except DriverError as e:
         raise _http(e) from e

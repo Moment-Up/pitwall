@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { HANDS_FREE_IDLE } from "../../lib/handsfree";
 import type { RadioServerState, RadioState } from "../../lib/radio";
 import {
   goLiveView,
@@ -38,7 +39,7 @@ function state(over: Partial<RadioState> = {}): RadioState {
     level: 0,
     rttMs: 20,
     pttHeld: false,
-    settings: { voiceEnabled: true, intensity: "normal", voiceSource: "server", deviceVoice: null, deviceRate: 1, version: 2 },
+    settings: { voiceEnabled: true, intensity: "normal", voiceSource: "server", deviceVoice: null, deviceRate: 1, version: 2, handsFree: false, wakeWord: "pitwall", handsFreeConsent: false, talkButton: null },
     error: null,
     serverVoiceTest: "idle",
     retryInS: null,
@@ -47,6 +48,7 @@ function state(over: Partial<RadioState> = {}): RadioState {
     allVoices: [],
     micCapable: true,
     deviceTtsCapable: false,
+    handsFree: HANDS_FREE_IDLE,
     ...over,
   };
 }

@@ -2,6 +2,14 @@
 // across routes; these hooks only read it. Start and stop it with radio.goLive() (inside a tap) and radio.stop().
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  PAD_POLL_MS,
+  PadWatcher,
+  sameTalkButton,
+  talkPadEdges,
+  type GetPads,
+  type TalkButton,
+} from "../../lib/handsfree";
 import { pttUsable, radio, type RadioState, type RadioStore } from "../../lib/radio";
 
 /** Shallow equality for selector results that are small objects (view models). */
@@ -132,4 +140,133 @@ export function pttPressController(target: PttTarget = radio): PttPressControlle
       target.pttRelease();
     },
   };
+}
+
+// --- hands-free (lane handsfree): the learned Bluetooth talk button -------------------------------------------------
+
+/** What the talk-button bindings need from the store (the radio singleton; a fake in tests). */
+export type TalkTarget = Pick<RadioStore, "get" | "talkButtonDown" | "talkButtonUp">;
+
+/** The talk button may go down now: the radio can key the mic, or it is keyed already (a tap to end it). */
+function talkReady(target: TalkTarget): boolean {
+  const s = target.get();
+  return pttUsable(s) || s.pttHeld;
+}
+
+/**
+ * A learned key as the talk button: down on keydown (not auto-repeats, not while typing or with a modifier, only while
+ * the radio can talk), up on keyup. Only that key is consumed (capture phase), so nothing else on the page changes.
+ */
+export function talkKeyHandlers(code: string, target: TalkTarget = radio): PttKeyHandlers {
+  let held = false;
+  const release = () => {
+    if (!held) return;
+    held = false;
+    target.talkButtonUp();
+  };
+  return {
+    release,
+    keydown: (e) => {
+      if (e.code !== code || isTyping(e.target) || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (!held && !talkReady(target)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.repeat || held) return;
+      held = true;
+      target.talkButtonDown();
+    },
+    keyup: (e) => {
+      if (e.code !== code || !held) return;
+      e.preventDefault();
+      e.stopPropagation();
+      release();
+    },
+  };
+}
+
+export interface PadTalkPoller {
+  /** One poll of navigator.getGamepads() (every PAD_POLL_MS while mounted). */
+  tick: () => void;
+  /** Let go of a held button (unmount, page hidden). */
+  release: () => void;
+}
+
+/** The browser's controllers (none where the Gamepad API is missing). */
+export const browserPads: GetPads = () =>
+  typeof navigator !== "undefined" && typeof navigator.getGamepads === "function"
+    ? (navigator.getGamepads() as unknown as ReturnType<GetPads>)
+    : [];
+
+/** A learned controller button as the talk button: edges from successive polls drive the store. */
+export function padTalkPoller(
+  button: Extract<TalkButton, { kind: "gamepad" }>,
+  target: TalkTarget = radio,
+  getPads: GetPads = browserPads,
+  hidden: () => boolean = () => typeof document !== "undefined" && document.visibilityState === "hidden",
+): PadTalkPoller {
+  const watcher = new PadWatcher();
+  let held = false;
+  const release = () => {
+    if (!held) return;
+    held = false;
+    target.talkButtonUp();
+  };
+  return {
+    release,
+    tick: () => {
+      if (hidden()) {
+        release();
+        watcher.reset(); // a button held while hidden is not a press when the page comes back
+        return;
+      }
+      let pads: ReturnType<GetPads>;
+      try {
+        pads = getPads();
+      } catch {
+        return; // a browser that refuses the Gamepad API (permissions policy)
+      }
+      for (const e of talkPadEdges(watcher.poll(pads), button)) {
+        if (e.down && !held) {
+          if (!talkReady(target)) continue;
+          held = true;
+          target.talkButtonDown();
+        } else if (!e.down && held) {
+          release();
+        }
+      }
+    },
+  };
+}
+
+/**
+ * The learned talk button on the pages where it applies (Drive pages while the radio is live, like Space): a key
+ * through capture-phase listeners, a controller button through polling while the page is visible.
+ */
+export function useTalkButton(enabled = true): void {
+  const button = useRadio((s) => s.settings.talkButton, sameTalkButton);
+  const key = button?.kind === "key" ? button.code : null;
+  const padId = button?.kind === "gamepad" ? button.id : null;
+  const padButton = button?.kind === "gamepad" ? button.button : -1;
+  useEffect(() => {
+    if (!enabled || key === null) return;
+    const h = talkKeyHandlers(key);
+    window.addEventListener("keydown", h.keydown, { capture: true });
+    window.addEventListener("keyup", h.keyup, { capture: true });
+    window.addEventListener("blur", h.release);
+    return () => {
+      window.removeEventListener("keydown", h.keydown, { capture: true });
+      window.removeEventListener("keyup", h.keyup, { capture: true });
+      window.removeEventListener("blur", h.release);
+      h.release();
+    };
+  }, [enabled, key]);
+  useEffect(() => {
+    if (!enabled || padId === null) return;
+    const poller = padTalkPoller({ kind: "gamepad", id: padId, button: padButton });
+    const t = setInterval(poller.tick, PAD_POLL_MS);
+    return () => {
+      clearInterval(t);
+      poller.release();
+    };
+  }, [enabled, padId, padButton]);
 }

@@ -24,6 +24,7 @@ import type { DriveModel } from "../../../lib/drive/model";
 import { engineerTalking, pttActive, radio, type CueMode, type Intensity } from "../../../lib/radio";
 import { router } from "../../../lib/router";
 import { DriveFrame } from "../DriveFrame";
+import { HandsFreeSwitch } from "./HandsFreeSwitch"; // --- hands-free (lane handsfree)
 import { Tile } from "../wall-parts";
 import {
   audioBlocked,
@@ -224,6 +225,7 @@ export const RadioStage = memo(function RadioStage({ liveCueMode }: { liveCueMod
       <MicLevel />
       <StageButtons />
       <StageSegments liveCueMode={liveCueMode} />
+      <HandsFreeSwitch />
     </Tile>
   );
 });

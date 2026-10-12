@@ -1,5 +1,6 @@
 // Drive › Radio view models (design spec 5.3), against the Svelte RadioView's behaviour.
 import { describe, expect, it } from "vitest";
+import { HANDS_FREE_IDLE } from "../../../lib/handsfree";
 import type { LogEntry, RadioServerState, RadioState } from "../../../lib/radio";
 import { audioBlocked, cueModeView, goLiveNote, intensityOf, linkChip, logRows, quietText } from "./view";
 
@@ -32,7 +33,7 @@ function state(over: Partial<RadioState> = {}): RadioState {
     level: 0,
     rttMs: 23.6,
     pttHeld: false,
-    settings: { voiceEnabled: true, intensity: "quiet", voiceSource: "server", deviceVoice: null, deviceRate: 1, version: 2 },
+    settings: { voiceEnabled: true, intensity: "quiet", voiceSource: "server", deviceVoice: null, deviceRate: 1, version: 2, handsFree: false, wakeWord: "pitwall", handsFreeConsent: false, talkButton: null },
     error: null,
     serverVoiceTest: "idle",
     retryInS: null,
@@ -41,6 +42,7 @@ function state(over: Partial<RadioState> = {}): RadioState {
     allVoices: [],
     micCapable: true,
     deviceTtsCapable: false,
+    handsFree: HANDS_FREE_IDLE,
     ...over,
   };
 }

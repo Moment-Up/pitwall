@@ -23,6 +23,7 @@ import {
   NAME_MAX,
   NO_USUAL_GAME,
   formBody,
+  handsFreeDrivingHint,
   previewInitials,
   skillEffects,
   swatchesFor,
@@ -44,6 +45,8 @@ export interface DriverSheetProps {
   canDelete: boolean;
   /** "Usually plays" options (model.usualGameOptions); null hides the control (a server without driver defaults). */
   usualGames: { id: string; label: string }[] | null;
+  /** Offer "Hands-free while driving" (lane handsfree: the server reports the preference; model.handsFreeSupported). */
+  handsFree?: boolean;
   onSave: (f: DriverForm) => Promise<void>;
   onDelete: () => void;
   onClose: () => void;
@@ -62,6 +65,7 @@ export function DriverSheet({
   wide,
   canDelete,
   usualGames,
+  handsFree = false,
   onSave,
   onDelete,
   onClose,
@@ -299,6 +303,24 @@ export function DriverSheet({
                           onCall={(g, on) => setF(withRadioCall(f, g, on))}
                           onWording={(w) => setF({ ...f, radio_wording: w })}
                         />
+                      )}
+
+                      {/* --- hands-free (lane handsfree): the seated driver's profile sets where hands-free listens */}
+                      {handsFree && (
+                        <CellSwitch
+                          isSelected={f.handsfree_while_driving === true}
+                          onChange={(v) => setF({ ...f, handsfree_while_driving: v })}
+                        >
+                          <CellSwitch.Trigger className="h-auto min-h-14 py-2">
+                            <span className="grid min-w-0 flex-1">
+                              <CellSwitch.Label>Hands-free while driving</CellSwitch.Label>
+                              <span className="text-xs text-muted">
+                                {handsFreeDrivingHint(f.handsfree_while_driving === true)}
+                              </span>
+                            </span>
+                            <CellSwitch.Control />
+                          </CellSwitch.Trigger>
+                        </CellSwitch>
                       )}
                     </>
                   ) : (

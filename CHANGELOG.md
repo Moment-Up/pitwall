@@ -68,6 +68,12 @@ The release workflow copies a release's bullet points into its GitHub release no
   shows it going down.
 - Settings › Radio & voice: Car health calls, for the whole household (tyre temperature, tyre wear, fuel, and the
   lock-up and wheelspin notes).
+- Radio: hands-free talking. Say "Pitwall" or "Radio", then your question. Off until you turn it on; only while
+  stopped unless the driver allows it while driving. Not yet tried with a real voice.
+- Radio: a Bluetooth page turner, foot pedal or game controller can be your talk button (Settings › Radio & voice),
+  held or tapped. Not yet tested on an iPad.
+- Windows: spoken questions work with built-in speech recognition (Parakeet via sherpa-onnx), downloaded on first
+  run with its progress shown. Not yet run on a Windows PC.
 
 ## v0.2.1 - 2026-10-12
 

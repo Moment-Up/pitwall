@@ -22,7 +22,13 @@ dependencies = [
 
 [project.optional-dependencies]
 devtools = ["mcp>=1.2"]
-voice = ["parakeet-mlx>=0.5.3; sys_platform == 'darwin' and platform_machine == 'arm64'"]
+voice = [
+    "parakeet-mlx>=0.5.3; sys_platform == 'darwin' and platform_machine == 'arm64'",
+    # lane handsfree: Parakeet on the CPU for Windows (voice/stt_sherpa.py); Apache-2.0, ONNX Runtime bundled in the
+    # core wheel. The core is listed too: uv locks sherpa-onnx from its linux_armv7l wheel, whose metadata omits it.
+    "sherpa-onnx>=1.13.8,<1.14; sys_platform == 'win32'",
+    "sherpa-onnx-core>=1.13.8,<1.14; sys_platform == 'win32'",
+]
 
 [project.scripts]
 pitwall = "pitwall.cli:app"
@@ -77,5 +83,5 @@ mypy_path = "src"
 warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-module = ["scipy.*", "zstandard.*", "mcp.*", "parakeet_mlx.*", "mlx.*", "librosa.*"]
+module = ["scipy.*", "zstandard.*", "mcp.*", "parakeet_mlx.*", "mlx.*", "librosa.*", "sherpa_onnx.*"]
 ignore_missing_imports = true

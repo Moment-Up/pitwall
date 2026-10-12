@@ -5,6 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../../lib/api";
+import { HANDS_FREE_IDLE } from "../../../lib/handsfree";
 import { RadioVoiceView, type RadioActions, type RadioVoiceViewProps } from "./RadioVoiceView";
 import { ONLINE_NAMES_HINT, ONLINE_NAMES_TITLE, onlineNamesView } from "./model";
 
@@ -81,6 +82,10 @@ describe("the row on Settings › Radio & voice", () => {
     setDeviceVoice: vi.fn(),
     setDeviceRate: vi.fn(),
     testDeviceVoice: vi.fn(),
+    setHandsFree: vi.fn(),
+    acceptHandsFreeConsent: vi.fn(),
+    setWakeWord: vi.fn(),
+    setTalkButton: vi.fn(),
   });
 
   function render(over: Partial<RadioVoiceViewProps> = {}): string {
@@ -91,7 +96,18 @@ describe("the row on Settings › Radio & voice", () => {
         retryInS: null,
         error: null,
         server: null,
-        settings: { voiceEnabled: true, intensity: "normal", voiceSource: "server", deviceVoice: null, deviceRate: 1, version: 2 },
+        settings: {
+          voiceEnabled: true,
+          intensity: "normal",
+          voiceSource: "server",
+          deviceVoice: null,
+          deviceRate: 1,
+          version: 2,
+          handsFree: false,
+          wakeWord: "pitwall",
+          handsFreeConsent: false,
+          talkButton: null,
+        },
         deviceVoices: [],
         deviceTtsCapable: true,
         micCapable: true,
@@ -99,6 +115,7 @@ describe("the row on Settings › Radio & voice", () => {
         mic: "off",
         micSilent: false,
         pttHeld: false,
+        handsFree: HANDS_FREE_IDLE,
       },
       status: undefined,
       radioFollowsDriver: false,

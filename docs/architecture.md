@@ -308,6 +308,34 @@ Forza's tank-level fuel, cold tyres after a stop, wear outside F1 races and (det
 wheelspin notes, with the strategy kinds (alert / strategy / info) and topics `health:<topic>`.
 The `say` frames are in [voice-protocol.md](voice-protocol.md).
 
+## Hands-free talking and speech engines (`voice/handsfree.py`, `voice/stt_sherpa.py`)
+Lane handsfree ([research/handsfree.md](research/handsfree.md)). `HandsFreeController` is the hub's hands-free side,
+called from small hooks marked `# --- hands-free (lane handsfree) ---` in `voice/hub.py` (connect/disconnect, `stop`,
+`state()`, `on_text` for `vad` / `settings` / the `ptt` source, `on_audio`, `_ptt_down_now`, `_deliver`, `_tick`,
+`_after_synthesis`, `apply_driver`, `_follow_session`, `status()`, and two in the question pipeline: a spoken reply
+while the speech model is still starting in `_handle_utterance`, and an empty fact sheet for a radio check / quiet /
+resume before any session in `_answer`); everything runs on the event loop and nothing on the UDP thread. Per armed device it keeps a 0.5 s ring buffer (filled only when it may listen; a frame from an unarmed
+device is dropped at once), captures between the browser's `vad` start and end, and processes one segment at a time
+(at most two queued): length checks, the STT energy gate at -50 dBFS (the browser's), the speech engine in a worker
+thread, `match_wake` (pure: up to two fillers; "pitwall" on one or two joined words, within one edit for any question
+and two edits only before a racing question; "radio" on one word), then the echo guard (the radio's last 10 s of
+words; an addressed transcript only against lines that start with the wake word). An addressed question goes to the
+hub's own `_answer` (deterministic while moving); anything else is dropped without a trace (logs and observers carry
+reasons, lengths and levels only). `MotionGate` is Drive's stationary rule (`web-react/src/lib/drive/motion.ts`) plus
+the frame's paused/replay flags and a 5 s hold when the stream stops while the car moves (an incident gap), updated at
+10 Hz in the tick; the scope is the seated driver's `handsfree_while_driving` (`drivers.py`, stored in the preferences
+JSON: no schema change). While `holds_radio` (a capture, a segment in the speech engine, the wake word alone waiting
+for its question, "Say again?" waiting), the tick and `_after_synthesis` treat the radio as busy (only urgent calls go
+out); anything delivered ends the capture ("Say again?" when an addressed one is cut). Its own replies ("Go ahead.",
+"Say again?") wait for a free radio and, on track, a speak window; the once-a-session "paused while driving" hint waits
+for a settled stop and is an `info` message a braking call may cut. The browser side (`web-react/src/lib/handsfree.ts`: the energy VAD,
+the learned Bluetooth key or gamepad button) is the dashboard's.
+Speech engines (`voice/stt.py` `build_stt`): Parakeet through parakeet-mlx on Apple silicon; elsewhere
+`stt_engine=parakeet` resolves to `SherpaParakeetStt` when sherpa-onnx imports (the `voice` extra installs it on
+Windows): Parakeet TDT 0.6B v2 int8 on the CPU, its four files pinned by revision, size and SHA-256, downloaded on the
+first `warmup()` to `<app support>/stt/` (or read from `PITWALL_STT_SHERPA_DIR`), with the same gate, resampling and
+racing-term corrections as Parakeet. `pitwall doctor` reports both (`voice_stt`, `voice_handsfree`).
+
 ## Goals, badges and summaries (`motivation/`)
 Pure rules (`rules.py`: clean runs, steady-lap windows, scopes, F1 race outcomes, personal bests, week arithmetic),
 `goals.py`, `suggest.py`, `badges.py`, `recap.py` (Today's 3 things), `digest.py` + `html.py` (weekly digest),

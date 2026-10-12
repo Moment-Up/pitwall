@@ -129,7 +129,7 @@ any time and prints a fix for each problem.
 |---|---|---|---|---|
 | Status | **Tested live** with F1 25 on PS5; CI runs the test suite | Should work; not run yet | **CI-tested on Windows** (GitHub runners), not yet validated live with a game on a Windows PC | Should work; not yet run with a game or by a user (each release is checked on a Linux CI runner, see below) |
 | Telemetry, coaching, dashboard, CLI | Yes | Should work | CI-tested | Should work |
-| Spoken questions (speech recognition) | Yes (Parakeet, built in) | Only with a whisper.cpp server | Only with a whisper.cpp server | Only with a whisper.cpp server |
+| Spoken questions (speech recognition) | Yes (Parakeet, built in) | Only with a whisper.cpp server (or sherpa-onnx installed by hand) | Yes, Parakeet on the CPU via sherpa-onnx (CI-installed, not yet tried on a Windows PC) | Only with a whisper.cpp server (or sherpa-onnx installed by hand) |
 | Engineer voice on the computer | macOS voices, or the optional natural voice (Kokoro) | macOS voices | Windows' built-in voices (SAPI, CI-tested, not yet heard on a radio) | None (text) |
 | Start at login | launchd (`scripts/pitwall-service.sh`) | launchd | Task Scheduler (`scripts/windows/service.ps1`) | No script yet |
 | Install helpers | - | - | `install.ps1`, `firewall.ps1`, `smoke.ps1` | - |
@@ -213,8 +213,14 @@ live session; the live PS5 tests so far used the classic dashboard.
   (four at detailed), in a fixed order; braking cues, alerts and your answers do not count. While the car is moving
   every answer is instant, from the facts. You can say "Stop talking for two laps". Tested on replayed sessions;
   not yet heard in a live session.
-- Speech recognition with Parakeet on Apple Silicon. A whisper.cpp server can be used instead on any platform;
-  that path is tested against a mock server only.
+- Speech recognition with Parakeet on Apple Silicon, and on Windows the same model family on the CPU through
+  sherpa-onnx (installed by `uv sync --all-extras`; its model, about 660 MB, downloads the first time a radio
+  connects; not yet tried on a Windows PC). A whisper.cpp server can be used instead on any platform; that path is
+  tested against a mock server only.
+- Talking without the wheel button: the screen button, Space on a Mac, a Bluetooth page turner, pedal or spare game
+  controller paired with the iPad, or hands-free with a wake word ("Pitwall, what's my fuel?"). Hands-free is off
+  until each device turns it on, listens only while the car is stopped unless the driver allows it while driving, and
+  throws away everything not addressed to the radio. Synthetic and recorded evidence only: not yet tried on the rig.
 - Voices: the Mac's `say` voices, Windows' built-in voices, the iPad's or browser's own voice, or an optional
   natural voice (Kokoro) on Apple Silicon. The natural voice is tested on synthetic phrases only, and the Windows
   voices in CI only; neither has been heard in a live session.
@@ -498,6 +504,10 @@ Third-party work Pitwall uses or relies on:
   ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), in the MLX conversion
   mlx-community/parakeet-tdt-0.6b-v3, run with **parakeet-mlx** (Apache-2.0). Downloaded from Hugging Face on first
   use; not included.
+- **Parakeet TDT 0.6B v2** speech recognition model by NVIDIA
+  ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)), in the int8 ONNX conversion
+  csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8, run with **sherpa-onnx** (Apache-2.0, ONNX Runtime bundled,
+  MIT) on Windows. Downloaded from Hugging Face on first use; not included.
 - **Kokoro-82M** voice model by hexgrad (Apache-2.0), in the MLX conversion by mlx-community, run with
   **mlx-audio** (MIT) and **misaki** (Apache-2.0). Installed by `scripts/setup-tts.sh`; not included.
 - **HeroUI** (`@heroui/react`, `@heroui/styles`), Apache-2.0 (per their LICENSE files). **HeroUI Pro**

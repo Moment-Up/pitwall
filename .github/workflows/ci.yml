@@ -93,7 +93,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: uv sync
-        run: uv sync --all-extras
+        run: uv sync --all-extras --locked  # --locked: lane handsfree (A7), as the one-line installer runs it
       # --- lane install ---
       - name: install.ps1 parses (Windows PowerShell 5.1)
         shell: powershell
@@ -136,6 +136,11 @@ jobs:
           icacls data
           if ($by['network_profile'].detail -match 'could not read') { throw 'doctor could not read the network profile through PowerShell' }
           if ($by['firewall'].status -ne 'warn') { throw "firewall before any rule exists: $($by['firewall'].status) - $($by['firewall'].detail)" }
+          # --- lane handsfree (A7): the voice extra installed sherpa-onnx, so spoken questions use Parakeet on the CPU ---
+          if ($by['voice_stt'].status -ne 'ok' -or $by['voice_stt'].detail -notmatch 'sherpa-onnx') { throw "voice_stt: $($by['voice_stt'].status) - $($by['voice_stt'].detail)" }
+          if (-not $by.ContainsKey('voice_handsfree')) { throw "doctor has no 'voice_handsfree' check" }
+          Write-Output "voice_stt: $($by['voice_stt'].detail)"
+          # --- end lane handsfree ---
           Write-Output "doctor summary: $($r.summary | ConvertTo-Json -Compress)"
           exit 0
       - name: smoke.ps1 - server, recorded + synthetic F1 streams over UDP (PowerShell 7)

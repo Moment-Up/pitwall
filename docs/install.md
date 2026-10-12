@@ -256,7 +256,8 @@ cd pitwall
 uv sync --all-extras
 ```
 
-`--all-extras` adds speech recognition (`parakeet-mlx`, installed only on Apple Silicon Macs) and a developer tool.
+`--all-extras` adds speech recognition (`parakeet-mlx`, installed only on Apple Silicon Macs; `sherpa-onnx` on
+Windows) and a developer tool.
 Plain `uv sync` installs Pitwall without speech recognition.
 
 ### Build a dashboard
@@ -568,13 +569,18 @@ The radio is on by default. It needs no extra setup to take typed questions and 
 |---|---|---|
 | Mac with Apple Silicon | Parakeet, installed by `uv sync --all-extras` | The natural voice (Kokoro, optional), else the macOS voices |
 | Intel Mac | a whisper.cpp server | the macOS voices |
-| Windows | a whisper.cpp server | Windows' built-in voices (SAPI) |
+| Windows | Parakeet on the CPU via sherpa-onnx, installed by `uv sync --all-extras` (not yet tried on a Windows PC) | Windows' built-in voices (SAPI) |
 | Linux | a whisper.cpp server | none (text, or the iPad's own voice) |
 
 On every computer the iPad or phone can speak with its own voice instead (Settings › Radio & voice › Engineer
 voice), and typed questions always work.
 
-- **Parakeet** downloads its model, about 2.5 GB, the first time a radio connects.
+- **Parakeet** downloads its model, about 2.5 GB, the first time a radio connects. On Windows the sherpa-onnx engine
+  downloads its own model, about 660 MB, into `%LOCALAPPDATA%\pitwall\stt` the first time a radio connects (offline
+  install and options: [radio-setup.md](radio-setup.md#voices-and-speech-recognition-by-platform)).
+- **Hands-free talking** (a wake word, "Pitwall, ...") and a **Bluetooth button** work with any game once speech
+  recognition works: [radio-setup.md](radio-setup.md#talking-to-the-engineer). `PITWALL_VOICE_HANDSFREE=false` turns
+  hands-free off for every device.
 - **whisper.cpp.** Run a [whisper.cpp](https://github.com/ggml-org/whisper.cpp) server and set
   `PITWALL_STT_ENGINE=whispercpp` and `PITWALL_WHISPERCPP_URL` (default `http://127.0.0.1:8178`) in `.env`. This
   path has only been tested against a mock server. Without speech recognition, push-to-talk questions do not work
@@ -689,7 +695,9 @@ background service and the firewall rules; the tests ran from a git checkout, no
 scripts in `scripts\windows` (guide: [scripts/windows/README.md](../scripts/windows/README.md)) do the install
 (`install.ps1`), run the server (`pitwall.ps1`), open the firewall for the local subnet on Private networks
 (`firewall.ps1 add`, as administrator) and start Pitwall at logon (`service.ps1 install`). The radio speaks with
-Windows' built-in voices; spoken questions need a whisper.cpp server. `smoke.ps1` checks an install end to end
+Windows' built-in voices; spoken questions use Parakeet on the CPU via sherpa-onnx (installed by `install.ps1`'s
+`uv sync --all-extras`; its model downloads the first time a radio connects; not yet tried on a Windows PC).
+`smoke.ps1` checks an install end to end
 without a game. The Connect page lists the address of the default network connection.
 
 ## Updating
@@ -835,7 +843,8 @@ someone opens Settings › System or runs a command, and `pitwall doctor` only r
 (`data/update_check.json`, which `uv run pitwall update` also refreshes).
 
 Downloaded speech models live in `~/.cache/huggingface` (Parakeet) and
-`~/Library/Application Support/pitwall` (the natural voice). The background service's logs are in
+`~/Library/Application Support/pitwall` (the natural voice); on Windows the speech model is in
+`%LOCALAPPDATA%\pitwall\stt`. The background service's logs are in
 `~/Library/Logs/pitwall` (macOS) or `%LOCALAPPDATA%\pitwall\logs` (Windows).
 
 The data folder holds:
@@ -905,8 +914,9 @@ link from `uv run pitwall token` once on that device.
 **No microphone on the iPad.** You are on `http://`. Use the Tailscale HTTPS address. If audio comes out of the
 iPad speaker, reconnect the AirPod to the iPad and tap Go live again.
 
-**The radio has no speech recognition.** Parakeet needs an Apple Silicon Mac and `uv sync --all-extras`. Elsewhere,
-use a whisper.cpp server (`PITWALL_STT_ENGINE=whispercpp`). The log says why the engine is unavailable.
+**The radio has no speech recognition.** Parakeet needs an Apple Silicon Mac and `uv sync --all-extras`; on Windows
+the same command installs sherpa-onnx (`uv run pitwall doctor` says whether its model is ready). Elsewhere, use a
+whisper.cpp server (`PITWALL_STT_ENGINE=whispercpp`). The log says why the engine is unavailable.
 
 **The engineer sounds robotic.** On a Mac, the natural voice is not installed, still starting (it takes a few
 seconds after Pitwall starts) or has restarted, so the macOS voice is speaking. Run `scripts/setup-tts.sh`. Radio &

@@ -443,6 +443,14 @@
 }
 /* A Drive page: the selection indicator jumps, it never slides (9.5). Pro Segment's own transition is 0.25 s. */
 .pww-segs .segment__indicator { transition: none; }
+/* --- hands-free (lane handsfree): the switch under the segments, one note line under it */
+.pww-hf {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.pww-hf .pww-segs__note { margin: 0; max-width: 30rem; }
 .pww-golive-note {
   max-width: 30rem;
   margin: 0;

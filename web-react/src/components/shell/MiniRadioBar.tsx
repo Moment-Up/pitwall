@@ -9,8 +9,20 @@
 import { ArrowUpRightFromSquare } from "@gravity-ui/icons";
 import { ActionBar } from "@heroui-pro/react";
 import { Button, Chip } from "@heroui/react";
-import { PushToTalkButton, RadioMessage } from "../radio";
+import { PushToTalkButton, RadioMessage, shallowEqual, useRadio } from "../radio";
+import { miniBarPrefix } from "../radio/handsfree-view";
 import { router } from "../../lib/router";
+
+/** `● RADIO`, or `● LISTENING` (accent) while hands-free listens on this device (lane handsfree). */
+function RadioPrefix() {
+  const p = useRadio(miniBarPrefix, shallowEqual);
+  return (
+    <Chip size="sm" variant="soft" color={p.tone} className="gap-1.5 font-bold tracking-[0.08em]">
+      <span aria-hidden="true" className="size-2 rounded-full bg-current" />
+      <Chip.Label>{p.label}</Chip.Label>
+    </Chip>
+  );
+}
 
 /** `visible` = the radio is live and no Drive page is open (AppShell decides, and pads pages by 96 px meanwhile). */
 export function MiniRadioBar({ visible }: { visible: boolean }) {
@@ -20,10 +32,7 @@ export function MiniRadioBar({ visible }: { visible: boolean }) {
     <div className="contents [&_.action-bar]:bottom-[calc(var(--pw-tabbar-h,64px)+env(safe-area-inset-bottom)+12px)] [&_.action-bar]:px-4 md:[&_.action-bar]:bottom-[calc(18px+env(safe-area-inset-bottom))] md:[&_.action-bar]:left-[var(--pw-rail-w,72px)]">
       <ActionBar aria-label="Radio" isOpen={visible} className="max-w-[640px]">
         <ActionBar.Prefix>
-          <Chip size="sm" variant="soft" color="success" className="gap-1.5 font-bold tracking-[0.08em]">
-            <span aria-hidden="true" className="size-2 rounded-full bg-current" />
-            <Chip.Label>RADIO</Chip.Label>
-          </Chip>
+          <RadioPrefix />
         </ActionBar.Prefix>
         <ActionBar.Content className="min-w-0 max-w-[440px]">
           {visible && <RadioMessage size="mini" hideAfterS={8} />}

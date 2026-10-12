@@ -13,10 +13,14 @@ while the car is moving (``MOVING_KPH``) get the deterministic answer at once, w
 The LLM explains only when the car is stationary (and in Review › Ask). The radio policy for unprompted messages
 (intensity, order, the per-lap talk budget, the seat-change drop) is ``voice.scheduler``'s.
 
+Hands-free talking (``voice.handsfree``, lane handsfree): a device may also talk without a button, starting with a
+wake word; ``HandsFreeController`` owns it and the hub calls it from small hooks marked "hands-free (lane handsfree)".
+
 Without a server STT engine (``NullStt``: Parakeet cannot run, or it is switched off) the state carries
-``stt_reason``. On Windows - where that is the normal case - a push-to-talk utterance then gets an error frame naming
-the reason plus a short spoken ``NO_STT_REPLY`` instead of "Say again?". macOS keeps its behaviour (the utterance
-goes to ``NullStt``, which hears nothing: "Say again?"). Typed questions, cues and proactive messages work as usual.
+``stt_reason``. On Windows (sherpa-onnx not installed, or speech recognition switched off) a push-to-talk utterance
+then gets an error frame naming the reason plus a short spoken ``NO_STT_REPLY`` instead of "Say again?". macOS keeps
+its behaviour (the utterance goes to ``NullStt``, which hears nothing: "Say again?"). Typed questions, cues and
+proactive messages work as usual.
 
 Live braking cues (``coach.cues``) bypass the scheduler queue because they are time-critical:
 
@@ -94,6 +98,11 @@ from pitwall.core.live import LiveState
 from pitwall.motivation.radio import GoalLineGate, goal_message  # lane motivation
 from pitwall.voice.addressing import NameCaller  # race radio
 from pitwall.voice.field_zones import knowledge_model  # race radio: speak windows before a learned model
+from pitwall.voice.handsfree import (  # --- hands-free (lane handsfree) ---
+    STT_STARTING_REPLY,
+    HandsFreeController,
+    no_session_sheet,
+)
 from pitwall.voice.scheduler import (
     DRIVER_INITIATED,
     DRIVER_LAP_KINDS,
@@ -382,6 +391,7 @@ class RadioHub:
         cue_mode: str = DEFAULT_CUE_MODE,
         verify_tts: bool = True,
         persist_voice: Callable[[str], None] | None = None,
+        handsfree: bool = True,  # --- hands-free (lane handsfree) --- False = PITWALL_VOICE_HANDSFREE=false
     ) -> None:
         self.live = live
         self.engineer = engineer
@@ -477,6 +487,7 @@ class RadioHub:
         self._tts_start: asyncio.TimerHandle | None = None
         self._tts_started = False
         self._keep_warm_mono = 0.0
+        self.handsfree = HandsFreeController(self, enabled=handsfree)  # --- hands-free (lane handsfree) ---
 
     def _spawn(self, coro: Any) -> None:
         task = asyncio.create_task(coro)
@@ -604,6 +615,7 @@ class RadioHub:
                 log.exception("TTS engine %s failed to start; its fallback speaks", self.tts.name)
 
     async def stop(self) -> None:
+        self.handsfree.close()  # --- hands-free (lane handsfree) ---
         self.live.unsubscribe(self._on_live_note)
         self.live.unsubscribe_buttons(self._on_button_threadsafe)
         self.cues.set_sink(None)
@@ -649,6 +661,7 @@ class RadioHub:
 
     async def disconnect(self, client: RadioClient) -> None:
         self.clients.discard(client)
+        self.handsfree.forget(client)  # --- hands-free (lane handsfree) ---
         self._cue_clients_changed()
         if client.task:
             client.task.cancel()
@@ -667,7 +680,7 @@ class RadioHub:
         return {
             "type": "state",
             "ptt": self.ptt_down,
-            "listening": self.ptt_down,
+            "listening": self.ptt_down or self.handsfree.capturing,  # --- hands-free (lane handsfree) ---
             "speaking": self.speaking_id is not None,
             "busy": self._busy,
             "quiet": quiet,
@@ -684,6 +697,7 @@ class RadioHub:
             "wheel_ptt_paused": self.wheel_ptt_paused(),
             "clients": len(self.clients),
             "cue_mode": self.cues.mode,
+            "handsfree": self.handsfree.state(),  # --- hands-free (lane handsfree) ---
         }
 
     def _send_state(self) -> None:
@@ -699,10 +713,14 @@ class RadioHub:
                 self._cue_clients_changed()
             client.put(self.state())
         elif t == "ptt":
+            # --- hands-free (lane handsfree) --- "remote": a learned Bluetooth button
+            source = "remote" if msg.get("source") == "remote" else "screen"
             if msg.get("down"):
-                self._ptt_down_now(source="screen", client=client)
+                self._ptt_down_now(source=source, client=client)
             else:
-                self._ptt_up(source="screen")
+                self._ptt_up(source=source)
+        elif t == "vad":  # --- hands-free (lane handsfree) ---
+            self.handsfree.on_vad(client, msg)
         elif t == "playback":
             self._on_playback(str(msg.get("id")), str(msg.get("state")), client, _output_latency(msg))
         elif t == "stop_tts":
@@ -729,6 +747,10 @@ class RadioHub:
                     self.set_tts_voice(str(msg["tts_voice"]))
                 except ValueError as e:
                     client.put({"type": "error", "message": str(e)})
+            if "handsfree" in msg or "wake_word" in msg:  # --- hands-free (lane handsfree) --- per device
+                err = self.handsfree.configure(client, msg)
+                if err is not None:
+                    client.put({"type": "error", "message": err})
             self._cue_clients_changed()
             self._send_state()
         elif t == "voices":  # diagnostic report of the voices the device's browser exposes
@@ -753,6 +775,7 @@ class RadioHub:
         now = time.monotonic()
         client.mic_live = True
         client.last_audio_mono = now
+        self.handsfree.on_audio(client, data, now)  # --- hands-free (lane handsfree) --- (unarmed: discarded)
         if not self.ptt_down:
             return  # not listening: discard (never stored)
         if self._ptt_client is not None and client is not self._ptt_client:
@@ -771,6 +794,7 @@ class RadioHub:
     def _ptt_down_now(self, source: str, client: RadioClient | None) -> None:
         if self.ptt_down:
             return
+        self.handsfree.abort("ptt", source)  # --- hands-free (lane handsfree) --- push-to-talk wins
         if self.speaking_id is not None:
             self._cancel_speaking()  # barge-in
             self._gate_until = time.monotonic() + BARGE_IN_GATE_S
@@ -868,6 +892,10 @@ class RadioHub:
         except Exception as e:
             log.exception("STT failed")
             self._broadcast({"type": "error", "message": f"speech recognition failed: {e}"})
+            if getattr(self.stt, "loaded", True) is False:  # --- hands-free (lane handsfree) --- model still starting
+                await self.say(
+                    self._msg(MessageKind.CONTROL, Priority.HIGH, STT_STARTING_REPLY, bypass=True), None, released
+                )
             return
         rec.stt_ms = res.latency_ms
         rec.text = res.text
@@ -914,6 +942,8 @@ class RadioHub:
                 sheet = FactSheet()  # the saved button layout answers it, before the first lap too
             if sheet is None and cap and entry is not None:
                 sheet = games.capability_sheet(entry)  # no session yet: the game's capabilities are still known
+            if sheet is None:  # --- hands-free (lane handsfree) --- a radio check / quiet / resume needs no session
+                sheet = no_session_sheet(intent)
             no_game = False
             if sheet is None:
                 no_game = entry is None and intent.name in games.CAPABILITY_ONLY_INTENTS
@@ -1249,6 +1279,8 @@ class RadioHub:
         if self.speaking_id is not None:
             self._cancel_speaking()  # newest high-priority message wins
         spoken = n_bytes > 0 or (has_speech and bool(device_clients))
+        if spoken:  # --- hands-free (lane handsfree) --- echo guard; cuts a capture
+            self.handsfree.on_spoken(msg, time.monotonic(), self._speech_duration(msg, clip))
         self.speaking_id = msg.id if spoken else None
         self._on_air = (msg, clip) if spoken else None
         grace = PLAYBACK_REPORT_GRACE_S if n_bytes else DEVICE_TTS_GRACE_S  # device voices: unknown speaking rate
@@ -1510,6 +1542,7 @@ class RadioHub:
         self._check_name(self.addresser.name)
         # --- end race radio ---
         self._last_coached.clear()
+        self.handsfree.set_driver(driver)  # --- hands-free (lane handsfree) --- the profile sets the scope
         self._send_state()
 
     def _set_intensity(self, intensity: str) -> None:
@@ -1601,6 +1634,7 @@ class RadioHub:
         self._sync_cue_gate()
         self._check_tts_engine(now)
         self._follow_session()
+        self.handsfree.tick(now)  # --- hands-free (lane handsfree) ---
         if self.speaking_id is not None and now > self._speaking_deadline:
             self.speaking_id = None  # device never reported playback end
             self._air_free_mono = now
@@ -1617,9 +1651,10 @@ class RadioHub:
                 self._send_ready(urgent, now)
             return
         speaking = self.speaking_id is not None
-        if not speaking and not self._busy and self._release_held(now):
+        capturing = self.handsfree.holds_radio  # --- hands-free (lane handsfree) --- only urgent calls cut it
+        if not speaking and not self._busy and not capturing and self._release_held(now):
             return
-        interrupt_only = speaking or self._busy or self._held is not None
+        interrupt_only = speaking or self._busy or self._held is not None or capturing
         msg = self.scheduler.next_message(self.driving_state(), now, interrupt_only)
         if msg is None:
             return
@@ -1644,7 +1679,12 @@ class RadioHub:
         elif _urgent(msg):
             may_go = self._urgent_may_cut()
         else:
-            radio_free = self.speaking_id is None and not self._busy and self._gap_ok(msg, now)
+            radio_free = (
+                self.speaking_id is None
+                and not self._busy
+                and not self.handsfree.holds_radio  # --- hands-free (lane handsfree) ---
+                and self._gap_ok(msg, now)
+            )
             may_go = radio_free and (
                 not msg.needs_speak_window
                 or speak_window_ok(self.driving_state(), self._speech_duration(msg, clip), DELIVERY_LEAD_S)
@@ -1692,6 +1732,7 @@ class RadioHub:
         if sid is None or sid == self._radio_sid:
             return
         previous, self._radio_sid = self._radio_sid, sid
+        self.handsfree.new_session()  # --- hands-free (lane handsfree) ---
         if previous is None:
             return  # the first session this radio sees: nothing of an older one is queued
         reset = getattr(self.scheduler, "reset_session", None)
@@ -1765,6 +1806,7 @@ class RadioHub:
                     "device_tts": c.device_tts,
                     "dropped": c.dropped,
                     "voices": c.voices,
+                    **self.handsfree.client_info(c),  # --- hands-free (lane handsfree) ---
                 }
                 for c in self.clients
             ],
@@ -1774,6 +1816,7 @@ class RadioHub:
             "cues": {**self.cues.snapshot(), "timing_log": list(self.cue_timing)[:20]},
             "tts_engine": self._tts_diagnostics(),
             "tts_check": {**self.tts_check, "enabled": self.verify_tts, "recent": list(self.tts_check_log)},
+            "handsfree_diag": self.handsfree.diagnostics(),  # --- hands-free (lane handsfree) ---
         }
 
     def _tts_diagnostics(self) -> dict[str, Any]:

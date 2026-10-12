@@ -241,6 +241,8 @@ class DriverPreferences:
     default_game: str | None = None  # games catalogue id: on a seat change, selected while telemetry is not live
     radio_calls: RadioCallPrefs = field(default_factory=RadioCallPrefs)  # race radio groups (pitwall.raceradio)
     radio_wording: RadioWording = "auto"  # race radio: also decides CoachingLimits.simple_wording
+    # lane handsfree: hands-free talking also listens while the car moves (off: only while it is stationary)
+    handsfree_while_driving: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -269,6 +271,7 @@ class DriverPreferences:
         take("default_game", parse_default_game)  # a game the catalogue no longer has reads as none
         take("radio_calls", RadioCallPrefs.from_stored)  # race radio (lenient per group)
         take("radio_wording", parse_radio_wording)
+        take("handsfree_while_driving", _parse_bool)  # lane handsfree
         return out
 
 
@@ -503,6 +506,7 @@ class Driver:
             "skill_level": p.skill_level,
             "coaching_intensity": p.coaching_intensity,
             "voice_enabled": p.voice_enabled,
+            "handsfree_while_driving": p.handsfree_while_driving,  # lane handsfree
         }
 
 
@@ -758,6 +762,7 @@ class DriverService:
         default_game: str | None = None,
         radio_calls: Mapping[str, object] | None = None,
         radio_wording: str = "auto",
+        handsfree_while_driving: bool = False,  # lane handsfree
     ) -> Driver:
         clean = clean_name(name)
         prefs = DriverPreferences(
@@ -769,6 +774,7 @@ class DriverService:
             default_game=parse_default_game(default_game),
             radio_calls=RadioCallPrefs() if radio_calls is None else parse_radio_calls(radio_calls),
             radio_wording=parse_radio_wording(radio_wording),
+            handsfree_while_driving=_parse_bool(handsfree_while_driving),
         )
         pick_colour = colour is None
 
@@ -800,6 +806,7 @@ class DriverService:
         default_game: str | _Keep | None = KEEP,
         radio_calls: Mapping[str, object] | None = None,
         radio_wording: str | None = None,
+        handsfree_while_driving: bool | None = None,  # lane handsfree
     ) -> Driver:
         """Partial update: only the given fields change (``default_game``: None clears it, ``KEEP`` leaves it;
         ``radio_calls`` merges the groups given into the stored ones). Never bumps the seat version."""
@@ -820,6 +827,8 @@ class DriverService:
             changes["radio_wording"] = parse_radio_wording(radio_wording)
         if radio_calls is not None:
             parse_radio_calls(radio_calls)  # strict: refuse a bad group before the writer job
+        if handsfree_while_driving is not None:
+            changes["handsfree_while_driving"] = _parse_bool(handsfree_while_driving)
         new_name = clean_name(name) if name is not None else None
 
         def job(c: sqlite3.Connection) -> _Refused | None:

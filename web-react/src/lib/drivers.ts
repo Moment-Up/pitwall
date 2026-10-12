@@ -40,6 +40,9 @@ export interface DriverPreferences {
    * servers before race radio. */
   radio_wording?: RadioWording;
   // --- end race radio ---
+  /** Hands-free also listens while this driver is on track (lane handsfree). Absent from servers without hands-free
+   * (never sent to those); false = only while the car is stopped. */
+  handsfree_while_driving?: boolean;
 }
 
 /** One best lap of a driver. F2 support: one per game, track and car family, so a track driven in an F1 and an F2

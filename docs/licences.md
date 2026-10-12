@@ -31,6 +31,8 @@ Classification: **P** = permissive (MIT/BSD/Apache/ISC/MPL file-level), **C** = 
 | mlx / mlx-metal (via parakeet-mlx) | 0.32.3 | MIT | P |
 | librosa, dacite, huggingface-hub (via parakeet-mlx) | 1.0.0, 1.9.2, 2.2.0 | ISC, MIT, Apache-2.0 | P |
 | soxr (via librosa) | 1.1.0 | LGPL-2.1-or-later | weak copyleft: unmodified, dynamically loaded library; replaceable |
+| sherpa-onnx (`voice` extra, Windows only; speech-to-text, lane handsfree) | 1.13.8 | Apache-2.0 (LICENSE file in the wheel) | P |
+| sherpa-onnx-core (via sherpa-onnx; Windows only) | 1.13.8 | Apache-2.0 (wheel metadata; the wheel carries no licence file) | P (bundles ONNX Runtime, MIT, Microsoft: unmodified shared library; its notice is not in the wheel, so a redistributed build should add ONNX Runtime's MIT notice) |
 
 Dev: pytest 9.1.1 (MIT), pytest-asyncio 1.4.0 (Apache-2.0), ruff 0.17.0 (MIT), mypy 2.4.0 (MIT).
 
@@ -167,7 +169,11 @@ makers' mapping figures by a person). Sources: [research/controls-research.md](r
 |---|---|---|---|
 | parakeet-mlx (STT, **in use**: the default `PITWALL_STT_ENGINE=parakeet`) | Apache-2.0 | P | installed with the `voice` extra (Apple Silicon only) |
 | NVIDIA Parakeet-TDT 0.6B v3 weights (`nvidia/parakeet-tdt-0.6b-v3`, MLX conversion `mlx-community/parakeet-tdt-0.6b-v3`) | CC-BY-4.0 (NVIDIA) | P (attribution) | **In use.** Downloaded at runtime from Hugging Face on first use (by `parakeet-mlx`), never shipped in the repo. Attribution: "Parakeet-TDT 0.6B v3 by NVIDIA, CC-BY-4.0" |
+| sherpa-onnx + sherpa-onnx-core (STT on Windows, **in use**: `PITWALL_STT_ENGINE=parakeet` off Apple silicon, or `sherpa`) | Apache-2.0 (ONNX Runtime inside: MIT) | P | installed with the `voice` extra on Windows only (`sys_platform == 'win32'`); pure dependency, no code copied |
+| NVIDIA Parakeet-TDT 0.6B v2 weights (`nvidia/parakeet-tdt-0.6b-v2`), int8 ONNX conversion `csukuangfj/sherpa-onnx-nemo-parakeet-tdt-0.6b-v2-int8` (revision `1ab9323565ddb038682214b292f588070a538ce2`) | CC-BY-4.0 (NVIDIA; the conversion's card says cc-by-4.0 too) | P (attribution) | **In use on Windows.** Downloaded at runtime from Hugging Face the first time a radio connects (pinned files, size and SHA-256 checked; `voice/stt_sherpa.py`), never shipped in the repo. Attribution: "Parakeet-TDT 0.6B v2 by NVIDIA, CC-BY-4.0" |
 | whisper.cpp (fallback STT, optional `whisper-server` sidecar over HTTP) | MIT | P | not installed by Pitwall |
+| onnx-asr (considered for Windows STT) | MIT | P | not used: needs a separate onnxruntime with excluded versions; sherpa-onnx chosen (docs/research/handsfree.md) |
+| faster-whisper (considered for Windows STT) | MIT | P | not used: heavy dependencies, and whisper hallucinates on near-silence, a risk for hands-free listening |
 | pysilero-vad / silero-vad-lite | MIT | P | not used yet |
 | ~~kokoro-onnx (TTS)~~ | MIT code, Apache-2.0 weights | P | Not used: superseded by Kokoro via mlx-audio (see "Radio voice (TTS worker)" below); kokoro-onnx loads GPL phonemizer/espeak at import and scored lower |
 | piper-tts (Pi option) | GPL-3.0 | C | separate process only |

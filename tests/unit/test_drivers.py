@@ -923,6 +923,7 @@ def test_api_crud_and_active(api: tuple[TestClient, SimpleNamespace]) -> None:
             "name": True,
         },
         "radio_wording": "auto",
+        "handsfree_while_driving": False,
     }
     assert client.post("/api/drivers", json={"name": "SAM"}).status_code == 409
     assert client.post("/api/drivers", json={"name": "X", "colour": "blue"}).status_code == 422
@@ -1309,3 +1310,36 @@ def test_api_reports_radio_following_and_invalidates_on_patch(
     assert analyzer.analyse(sid) is not None and analyzer._cache
     assert client.patch(f"/api/drivers/{rt.drivers.default_id}", json={"skill_level": "beginner"}).status_code == 200
     assert not analyzer._cache
+
+
+# ---------------------------------------------------------------------------------------------- lane handsfree
+def test_handsfree_while_driving_round_trips_and_parses_leniently(svc: DriverService) -> None:
+    """Hands-free talking listens only while the car is stationary unless the seated driver's profile allows it while
+    driving: an additive preference (no schema change), off by default, told to the radio like any profile edit."""
+    james = svc.active
+    assert james is not None and james.preferences.handsfree_while_driving is False
+    seen: list[bool | None] = []
+    svc.subscribe(lambda d: seen.append(None if d is None else d.preferences.handsfree_while_driving))
+    on = svc.update(james.id, handsfree_while_driving=True)
+    assert on.preferences.handsfree_while_driving is True and on.summary()["handsfree_while_driving"] is True
+    assert seen == [True]  # the radio re-applies the seated driver (scope "driving")
+    assert svc.get(james.id).preferences.handsfree_while_driving is True  # stored
+    assert svc.update(james.id, coaching_intensity="detailed").preferences.handsfree_while_driving is True  # kept
+    sam = svc.create("Sam", handsfree_while_driving=True)
+    assert sam.preferences.handsfree_while_driving is True
+    with pytest.raises(DriverValidationError):
+        svc.update(james.id, handsfree_while_driving="yes")  # type: ignore[arg-type]
+    assert DriverPreferences.from_stored({"handsfree_while_driving": True}, "Sam").handsfree_while_driving is True
+    assert DriverPreferences.from_stored({"handsfree_while_driving": "on"}, "Sam").handsfree_while_driving is False
+    assert DriverPreferences.from_stored({"voice_enabled": False}, "Sam").handsfree_while_driving is False  # old rows
+
+
+def test_api_patch_handsfree_while_driving(api: tuple[TestClient, SimpleNamespace]) -> None:
+    client, _rt = api
+    james = client.get("/api/drivers").json()["drivers"][0]
+    r = client.patch(f"/api/drivers/{james['id']}", json={"handsfree_while_driving": True})
+    assert r.status_code == 200 and r.json()["preferences"]["handsfree_while_driving"] is True
+    assert client.get(f"/api/drivers/{james['id']}").json()["preferences"]["handsfree_while_driving"] is True
+    assert client.patch(f"/api/drivers/{james['id']}", json={"handsfree_while_driving": "maybe"}).status_code == 422
+    sam = client.post("/api/drivers", json={"name": "Sam", "handsfree_while_driving": True}).json()
+    assert sam["preferences"]["handsfree_while_driving"] is True

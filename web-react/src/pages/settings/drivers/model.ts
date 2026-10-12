@@ -52,6 +52,8 @@ export interface DriverForm {
   /** Radio words. undefined: not offered, never sent. */
   radio_wording?: RadioWording;
   // --- end race radio ---
+  /** Hands-free while driving (lane handsfree). undefined: not offered (a server without hands-free), never sent. */
+  handsfree_while_driving?: boolean;
 }
 
 export const NAME_MAX = 40;
@@ -97,6 +99,7 @@ export function formFromDriver(d: Driver): DriverForm {
     coaching_intensity: p.coaching_intensity,
     voice_enabled: p.voice_enabled,
     default_game: p.default_game,
+    handsfree_while_driving: p.handsfree_while_driving, // lane handsfree
     // race radio: a profile from a server that knows it; a missing or odd value reads as its default
     ...(raceRadioSupported([d])
       ? { radio_calls: radioCallsOf(p.radio_calls), radio_wording: radioWordingOf(p.radio_wording) }
@@ -144,6 +147,7 @@ export function formBody(f: DriverForm): FormResult {
       ...(f.default_game !== undefined ? { default_game: f.default_game } : {}),
       ...(f.radio_calls !== undefined ? { radio_calls: { ...f.radio_calls } } : {}),
       ...(f.radio_wording !== undefined ? { radio_wording: f.radio_wording } : {}),
+      ...(f.handsfree_while_driving !== undefined ? { handsfree_while_driving: f.handsfree_while_driving } : {}),
     },
   };
 }
@@ -163,6 +167,18 @@ export function radioWordingHint(w: RadioWording, skill: SkillLevel): string {
   if (w === "standard") return `Race-engineer words: "Up to P5." ${also}`;
   if (skill === "beginner") return `This driver is a beginner, so simple words: "You're up to 5th." ${also}`;
   return `Race-engineer words for this driver's level: "Up to P5." Beginners get simple words. ${also}`;
+}
+
+// --- hands-free (lane handsfree) ---
+
+/** The server knows the hands-free preference (a server without hands-free never reports it: nothing is offered). */
+export function handsFreeSupported(list: readonly Driver[]): boolean {
+  return list.some((d) => typeof d.preferences.handsfree_while_driving === "boolean");
+}
+
+/** The driver sheet's switch hint (spec §7). */
+export function handsFreeDrivingHint(on: boolean): string {
+  return on ? "On: also listens on track (a braking call can cut you off: say it again)." : "Off: only while the car is stopped.";
 }
 
 /** The "Usually plays" choice that means none. */
@@ -193,6 +209,7 @@ export function driverSubtitle(d: Driver, radioFollows: boolean): string {
   if (!radioFollows) return skill;
   const parts = [skill, `coaching ${intensityLabel(d.preferences.coaching_intensity).toLowerCase()}`];
   if (!d.preferences.voice_enabled) parts.push("voice off");
+  if (d.preferences.handsfree_while_driving === true) parts.push("hands-free on track"); // lane handsfree
   return parts.join(" · ");
 }
 

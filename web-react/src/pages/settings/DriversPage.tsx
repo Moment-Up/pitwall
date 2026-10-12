@@ -22,6 +22,7 @@ import {
   canDelete,
   formBody,
   formFromDriver,
+  handsFreeSupported,
   newDriverForm,
   sortDrivers,
   usualGameOptions,
@@ -211,6 +212,7 @@ export function DriversPage(_props: PageProps) {
         wide={wide}
         canDelete={canDelete(list)}
         usualGames={usualGames}
+        handsFree={handsFreeSupported(list)}
         onSave={save}
         onDelete={() => {
           if (form?.id != null) setDeletingId(form.id);
