@@ -78,16 +78,21 @@ database's track ids, as the service is, both circuits get the ids the live run 
   time without a trace ("no trace").
 - **The frozen stream after leaving a race was driving.** GT7 then repeats one packet (on track, not paused, 45.9
   m/s) for minutes; it was integrated into a 16.8 km "lap 5" while the dashboard showed 165 km/h. Those packets are
-  now dropped and end the session after 2 s.
+  now dropped and end the session after 2 s. "Moving" is judged on the velocity (at least 0.5 m/s), not on the speed
+  field, which reads near 0 while the car slides sideways: a stream frozen mid-spin ends the session too (synthetic
+  packets only; no real capture froze mid-spin). A repeated packet is never integrated.
 
 Fields the recordings settled (now `recorded_validated`, each with its evidence in the adapter's field notes): speed
-(0x4C is the speedometer, not the path speed: it drops in slides, so lap distance now integrates the velocity
-vector, within 0.2 % of the driven path instead of losing up to 3.9 %), throttle (0x13C is the pedal, 0x91 the
-throttle after TCS - the frames now carry the pedal), brake, gear (0 is reverse), rpm, position, velocity, the tick
-clock, packet id, lap count, lap times, the current-lap timer, lap total, best lap, car code, tyre temperatures,
-lap distance and track length. Still community-documented: steering (the sign is right, but 0x128 clamps at
-+/-pi, so its scale tops out at 40 %), race position (a live position in races, not yet compared with the HUD), the
-rev-limit RPM, clutch and the derived track id; fuel stays unread (100 / 100 throughout: the unit is still open).
+(0x4C is the car's speed along its own axis, not the path speed: it falls towards 0 when the car slides sideways, so
+lap distance now integrates the velocity vector - 0.08-0.18 % short of the driven path on the 11 timed laps, where
+the speed field fell 0.09-1.52 % short), throttle (0x13C is the pedal, 0x91 the throttle after TCS - the frames now
+carry the pedal), brake, gear (forward gears; 0 and 15 stay unknown: 0 appeared only in spins with the clutch out,
+and reverse and neutral were never selected), rpm, position, velocity, the tick clock, packet id, lap count, lap
+times, the current-lap timer, lap total, best lap, car code, tyre temperatures, lap distance and track length (the
+shortest lap of the session that matches the circuit: 914.7 m and 3,799.0 m). Still community-documented: steering
+(the sign is right, but 0x128 clamps at +/-pi, so its scale tops out at 40 %), race position (a live position in
+races, not yet compared with the HUD), the rev-limit RPM, clutch and the derived track id; fuel stays unread (100 /
+100 throughout: the unit is still open).
 Recorded-tier fixtures: `tests/fixtures/recorded/gt7_c_ps5_*` (the race start and 3 laps, leaving a race, a car
 reset), pinned by `tests/recorded/test_gt7_ps5_real.py`.
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import socket
 import time
 from pathlib import Path
@@ -13,9 +14,13 @@ from fastapi.testclient import TestClient
 from pitwall import integrations as I
 from pitwall.adapters.ac import packets as P
 from pitwall.adapters.ac.adapter import AcTrackGeometry
+from pitwall.adapters.base import SupportLevel
+from pitwall.capabilities import PLANNED, CapabilityRow
 from pitwall.config import Settings
 from pitwall.core import runtime as runtime_mod
 from pitwall.core.runtime import Runtime
+from pitwall.games import LEVEL_ORDER
+from pitwall.model.telemetry import Game
 
 
 def free_port() -> int:
@@ -135,6 +140,55 @@ def test_port_conflicts() -> None:
     c = I.IntegrationConfig("gt7", False, 5301)
     assert I.port_conflicts([a, b, c]) == ["port 5301: f1, forza"]
     assert I.port_conflicts([a, c]) == []
+
+
+_PLATFORM_IDS = {"PS5": "ps5", "PS4": "ps4", "PC": "pc", "Xbox": "xbox"}  # status-string names -> catalogue ids
+_INTEGRATION_GAMES = {
+    "f1": {Game.F1_25},
+    "gt7": {Game.GT7},
+    "forza": {Game.FORZA_MOTORSPORT, Game.FORZA_HORIZON},
+    "ac": {Game.AC},
+}
+
+
+def _status_parts(status: str) -> list[tuple[SupportLevel, list[str]]]:
+    """``"live_validated (PS5) · community_documented (PS4)"`` -> [(level, [platform, ...]), ...]; a part names its
+    platforms in brackets or after "on" (then the brackets are a note); a bare level names none."""
+    parts: list[tuple[SupportLevel, list[str]]] = []
+    for part in status.split(" · "):
+        m = re.fullmatch(r"([a-z_]+)(?: on (\w+))?(?: \(([^)]*)\))?", part)
+        assert m is not None, part
+        names = [m[2]] if m[2] else [n.strip() for n in m[3].split(",")] if m[3] else []
+        parts.append((SupportLevel(m[1]), names))
+    return parts
+
+
+@pytest.mark.parametrize("key", sorted(_INTEGRATION_GAMES))
+def test_integration_status_strings_match_the_capability_matrix(key: str) -> None:
+    """The Connect tab's evidence chip reads the integration's status string: it must say what capabilities.py says,
+    per platform and in its headline (the strongest level of the game's rows, which the chip shows)."""
+    rows = [r for r in PLANNED if r.adapter_game in _INTEGRATION_GAMES[key]]
+    assert rows, key
+
+    def strongest(rs: list[CapabilityRow]) -> SupportLevel:
+        return min((r.status for r in rs), key=LEVEL_ORDER.index)
+
+    parts = _status_parts(I.SPECS[key].status)
+    assert parts[0][0] == strongest(rows), I.SPECS[key].status
+    for level, names in parts:
+        for name in names:
+            covering = [r for r in rows if _PLATFORM_IDS[name] in r.platform_ids]
+            assert covering and strongest(covering) == level, (key, name, level)
+    assert set(I.SPECS) == {*_INTEGRATION_GAMES, *I.CAPTURE_ONLY}  # a new integration needs its entry here
+
+
+def test_gt7_status_shows_the_live_ps5_and_the_untested_ps4() -> None:
+    by_key = {r.key: r for r in PLANNED}
+    assert (
+        I.SPECS["gt7"].status
+        == (f"{by_key['gt7_ps5'].status.value} (PS5) · {by_key['gt7_ps4'].status.value} (PS4)")
+        == "live_validated (PS5) · community_documented (PS4)"
+    )
 
 
 def test_every_integration_has_an_adapter_and_detection_is_exclusive() -> None:

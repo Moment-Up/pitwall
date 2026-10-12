@@ -62,7 +62,10 @@ class IntegrationSpec:
     default_port: int
     port_editable: bool  # GT7's reply port is fixed by the game
     needs_console_ip: bool  # the app must send to the console (GT7 heartbeat, AC handshake)
-    status: str  # capability status shown next to the toggle (see capabilities.py for evidence)
+    # Capability status shown next to the toggle: "<level> (<platforms>)" or "<level> on <platform> (<note>)" parts
+    # joined by " · ", strongest first. Each must equal capabilities.py's rows for those platforms (a unit test ties
+    # them together); the evidence is there.
+    status: str
     listens: bool = True  # False: no UDP port is bound on this Mac (AC's client uses an ephemeral port)
 
 
@@ -70,8 +73,15 @@ SPECS: dict[str, IntegrationSpec] = {
     "f1": IntegrationSpec(
         "f1", "EA SPORTS F1 25", ("PS5", "Xbox Series X|S", "PC"), 20777, True, False, "live_validated (PS5)"
     ),
+    # The PS5 was validated live on 2026-10-11 (capabilities.py row gt7_ps5); no PS4 has been tested (gt7_ps4).
     "gt7": IntegrationSpec(
-        "gt7", "Gran Turismo 7", ("PS5", "PS4"), GT7_RECEIVE_PORT, False, True, "community_documented"
+        "gt7",
+        "Gran Turismo 7",
+        ("PS5", "PS4"),
+        GT7_RECEIVE_PORT,
+        False,
+        True,
+        "live_validated (PS5) · community_documented (PS4)",
     ),
     "forza": IntegrationSpec(
         "forza",

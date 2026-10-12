@@ -185,7 +185,7 @@ There is **no ABS-active flag**. Lockups have to be inferred from wheel speed co
 ### 4.2 Gear byte (u8 at 0x90)
 - `current = byte & 0x0F`, `suggested = byte >> 4`.
 - Suggested gear 15 means "no suggestion" (PDTools, gt7-udp).
-- Reverse/neutral encoding of the current gear: Kaitai says "0 = reverse, 15 = neutral", and zetetos' library treats 15 as neutral. **Unverified**: confirm with a capture by selecting N and R.
+- Reverse/neutral encoding of the current gear: Kaitai says "0 = reverse, 15 = neutral", and zetetos' library treats 15 as neutral. **Unverified**: confirm with a capture by selecting N and R. The owner's PS5 captures of 2026-10-11 did not settle it (section 11, question 3), so Pitwall maps 0 and 15 to unknown.
 
 ---
 
@@ -280,8 +280,12 @@ circuits; `tests/recorded/test_gt7_ps5_real.py` pins excerpts of them) are given
    was below 0x13C on all 6,297 packets with the TCS flag set (61-92 units lower on average) and above it only while
    the clutch was in (downshift blips): 0x91 is the throttle after TCS, 0x13C the driver's pedal (the Kaitai
    reading). 0x13D equalled 0x92 on 7,068 of 7,070 braking packets, so brake input vs after-ABS output stays open.
-3. Reverse/neutral encoding in the gear nibble. **Reverse answered:** every gear-0 packet that moved, moved backwards
-   (171 packets; none forwards), so 0 = reverse (Kaitai). 15 (neutral) never appeared.
+3. Reverse/neutral encoding in the gear nibble. **Open.** Gear 0 appeared only in spins: 4 episodes (875 packets),
+   each straight after a spin in 2nd or 3rd gear, with the throttle pedal released (at most 4 of 255), the in-gear
+   flag clear and the clutch out in 477 of the 552 live packets (gears 1-3 had the in-gear flag set over 90 % of the
+   time), and the car sliding backwards relative to its body at up to 30.5 m/s (0x4C read at most 15.5 m/s: it
+   collapses in a spin). That fits "no gear engaged during a spin" as well as reverse. R and N were never selected,
+   and 15 never appeared. Still to do: a capture selecting N and R.
 4. Sign convention of the steering wheel rotation at 0x128, and units of sway/heave/surge. **Sign answered:** radians,
    left positive - it agreed with the variant C road-wheel angles on 22,643 of 22,643 packets (road wheel = 0.068 x
    0x128 on 3 cars, a 1:14.7 ratio) - but 0x128 is clamped at exactly ±π while the road wheels keep turning. The
@@ -289,15 +293,19 @@ circuits; `tests/recorded/test_gt7_ps5_real.py` pins excerpts of them) are given
 5. Fuel units for EVs and for cars whose capacity is not 100. **Open:** 100 / 100 in every packet (no fuel used).
 6. The actual heartbeat timeout: stop the heartbeat and count packets until the stream stops. **Open.**
 
-Other facts of the same captures: the speed at 0x4C equals the velocity magnitude to 0.1 % (median) while the tyres
-grip, is never above it, and drops to 22-47 % of it in slides; the rotation at 0x1C..0x2B has unit norm in every
-packet (a quaternion); the lap count and total are −1/−1 in menus (not 0); the last-lap field updates in the packet of
-the counter increment; the variant C lap timer at 0x15C reads within one tick of the last-lap value just before the
-line and, on race lap 1, starts 150-383 ms before the line; the reserved bytes 0xD4..0xF3 are all zero; a car reset
-shows as a single packet with the loading flag (and CarOnTrack) set; after the player leaves a race the console
-repeats one packet, CarOnTrack set and paused clear, with only the packet id changing, for minutes (20 min in one
-capture). Menus, replays and the menus' background laps stream at 60 Hz too, background laps and replays with
-CarOnTrack clear.
+Other facts of the same captures: the speed at 0x4C is the size of the velocity's component along the car's
+longitudinal axis - reading 0x1C..0x2B as a quaternion (x, y, z, w, as PDTools does), |velocity · rotated −Z axis|
+matched 0x4C within 3.3 mm/s on all 59,242 advancing on-track packets above 1 m/s - so it equals the velocity
+magnitude while the tyres grip and falls towards 0 when the car slides sideways (493 of those packets below half the
+velocity magnitude, the lowest at 0.00004 of it). Integrated over the 11 timed laps (car-reset jumps excluded), 0x4C
+fell 0.09-1.52 % short of the position path and the velocity magnitude 0.08-0.18 %. The rotation at 0x1C..0x2B has
+unit norm in every packet (a quaternion); the lap count and total are −1/−1 in menus (not 0); the last-lap field
+updates in the packet of the counter increment; the variant C lap timer at 0x15C reads within one tick of the last-lap
+value just before the line and, on race lap 1, starts 150-383 ms before the line; the reserved bytes 0xD4..0xF3 are
+all zero; a car reset shows as a single packet with the loading flag (and CarOnTrack) set; after the player leaves a
+race the console repeats one packet, CarOnTrack set and paused clear, with only the packet id changing, for minutes
+(20 min in one capture). Menus, replays and the menus' background laps stream at 60 Hz too, background laps and
+replays with CarOnTrack clear.
 
 ## Sources
 - Nenkai, PDTools, `PDTools.SimulatorInterface` and `PDTools.Crypto/SimulationInterface` (MIT): https://github.com/Nenkai/PDTools/tree/master/PDTools.SimulatorInterface

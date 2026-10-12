@@ -211,7 +211,7 @@ def test_field_values_and_relations_on_the_oval(race: list[Row]) -> None:
     assert all(1 <= p <= 14 for p in pos) and all(abs(b - a) <= 1 for a, b in itertools.pairwise(pos))
 
 
-def test_frames_carry_the_pedal_the_reverse_gear_and_the_road_wheel_steering_sign(
+def test_frames_carry_the_pedal_the_forward_gears_and_the_road_wheel_steering_sign(
     race: list[Row], race_run: Run, reset: list[Row], reset_run: Run
 ) -> None:
     by_id = {f["packet_id"]: f for _, f, _ in race}
@@ -219,9 +219,17 @@ def test_frames_carry_the_pedal_the_reverse_gear_and_the_road_wheel_steering_sig
         assert fr.throttle == pytest.approx(by_id[fr.frame_id]["throttle_alt"] / 255)  # the pedal (0x13C)
     a = race_run.adapter
     assert a.steering_sign == -1.0 and a._steer_agree > 1000 and a._steer_disagree == 0  # 0x128 left positive
-    # gear nibble 0 decodes as reverse (Kaitai; 15 = neutral never appears on a real capture)
-    raw0 = {f["packet_id"] for _, f, _ in reset if f["gears"] & 0x0F == 0}
-    assert raw0 and {fr.gear for fr in reset_run.frames if fr.frame_id in raw0} == {-1}
+    # forward gears as sent; gear nibble 0 (Kaitai: reverse) is unknown. In this excerpt it is the tail of a gear-0 run
+    # that began in a spin, the car almost stopped: the pedal released, the in-gear flag clear and the clutch out on
+    # every packet - no gear engaged fits that as well as reverse, and R was never selected. 15 (Kaitai: neutral) never
+    # appears.
+    by_reset = {f["packet_id"]: f for _, f, _ in reset}
+    assert all(fr.gear == by_reset[fr.frame_id]["gears"] & 0x0F for fr in reset_run.frames if fr.gear is not None)
+    raw0 = {pid for pid, f in by_reset.items() if f["gears"] & 0x0F == 0}
+    frames0 = [fr for fr in reset_run.frames if fr.frame_id in raw0]
+    assert len(raw0) == 107 and frames0 and all(fr.gear is None for fr in frames0)
+    for f in (by_reset[pid] for pid in raw0):
+        assert f["throttle_alt"] == 0 and not f["flags"] & P.Flags.IN_GEAR and f["clutch_engagement"] < 0.5
     assert all(f["gears"] & 0x0F != 15 for rows in (race, reset) for _, f, _ in rows)
 
 
@@ -367,6 +375,17 @@ def test_a_known_oval_is_identified_from_race_lap_1(race: list[Row]) -> None:
     i_comp1 = next(i for i, e in run.order if isinstance(e, LapCompletion) and e.lap_number == 1)
     assert i_track == i_comp1 and {e.track_id for _, e in run.items(SessionInfo) if e.track_id} == {OVAL_ID}
     assert run.adapter.known_track_ids == [OVAL_ID]  # nothing new learned
+    # The published length, as the service runs (seeded with the database's ids): race lap 1 (932.6 m, a wider line)
+    # identifies the oval, so it starts at the id's rounded 920 m; lap 2 measures 914.7 m and lowers it - ahead of
+    # lap 2's completion - and the longer lap 3 leaves it there. Never the registry length alone for the session.
+    infos = [(k, e) for k, (_, e) in enumerate(run.order) if isinstance(e, SessionInfo) and e.track_id]
+    lengths = [e.track_length_m for _, e in infos]
+    published = [x for n, x in enumerate(lengths) if n == 0 or x != lengths[n - 1]]
+    assert published[0] == 920.0 and len(published) == 2 and published[1] == pytest.approx(914.7, abs=0.1)
+    k_lower = next(k for k, e in infos if e.track_length_m != 920.0)
+    k_comp2 = next(k for k, (_, e) in enumerate(run.order) if isinstance(e, LapCompletion) and e.lap_number == 2)
+    assert run.order[k_lower][0] == run.order[k_comp2][0] and k_lower < k_comp2  # same packet, ahead of lap 2
+    assert run.lap(2).clean and run.lap(3).clean and LapFlag.INCOMPLETE not in run.lap(1).flags
 
 
 # ------------------------------------------------------------------------------------------------ end to end

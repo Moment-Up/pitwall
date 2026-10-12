@@ -72,6 +72,27 @@ def test_empty_sessions_are_hidden_from_lists_latest_and_counts_never_deleted(c:
     assert repo.get_session(c, "menu") is not None  # still there, by id
 
 
+def test_driver_totals_count_listed_sessions_only(c: sqlite3.Connection) -> None:
+    """The Drivers card's lap total, track count and last session use the same "listed" filter as its session count:
+    a menu's stub lap, or a hidden session at a known track, counts for nothing (the owner's driver showed 139 laps
+    against 137 in the listed sessions)."""
+    d = repo.insert_driver(c, "Driver", {})
+    _session(c, "driven", 100.0, d)
+    repo.insert_lap(c, "driven", _lap(2, 23_222, 1393), None)
+    repo.insert_lap(c, "driven", _lap(3, None, 40), None)  # an untimed lap of a listed session still counts
+    _session(c, "stub", 200.0, d)  # hidden: one 2-sample untimed lap (the GT7 menus)...
+    repo.insert_lap(c, "stub", _lap(1, None, 2), None)
+    _session(c, "menu", 300.0, d)  # ...and a later hidden one at a track the driver never drove
+    c.execute("UPDATE sessions SET track_id='gt7:sf:0:0:0:1000:360' WHERE id IN ('stub', 'menu')")
+    c.execute("UPDATE sessions SET track_id='gt7:sf:0:100:90:920:340' WHERE id='driven'")
+    c.commit()
+    stats = repo.driver_stats(c)[d]
+    assert stats["sessions"] == repo.count_driver_sessions(c, d) == 1
+    assert stats["laps"] == sum(len(repo.list_laps(c, r["id"])) for r in repo.list_sessions(c, 50, driver_id=d)) == 2
+    assert stats["tracks"] == 1 and stats["last_session_unix"] == 100.0
+    assert len(repo.list_sessions(c, 50, include_empty=True)) == 3  # nothing deleted
+
+
 def test_a_driver_with_only_empty_sessions_can_be_deleted_and_they_are_kept(c: sqlite3.Connection) -> None:
     keep = repo.insert_driver(c, "Keep", {})
     gone = repo.insert_driver(c, "Gone", {})
@@ -81,11 +102,20 @@ def test_a_driver_with_only_empty_sessions_can_be_deleted_and_they_are_kept(c: s
     repo.insert_lap(c, "driven", _lap(2, 23_222, 1393), None)
     c.commit()
     assert repo.count_driver_sessions(c, gone) == 0 and repo.driver_stats(c)[gone]["sessions"] == 0
+    assert repo.driver_stats(c)[gone]["last_session_unix"] is None  # only hidden sessions: present, with zeros
     assert repo.delete_driver(c, gone) == 0
-    assert repo.get_session(c, "menu")["driver_id"] is None  # type: ignore[index]  # kept, nobody's driving
+    assert repo.get_session(c, "menu")["driver_id"] is None  # type: ignore[index]  # kept, detached
     with pytest.raises(ValueError, match="still owns 1 session"):
         repo.delete_driver(c, owner)
     assert repo.get_driver(c, keep) is not None
+    # the next start's default-driver backfill gives the detached empty session to the default driver (see
+    # delete_driver), where it stays hidden: nothing to list, nothing counted
+    assert keep not in repo.driver_stats(c)
+    assert repo.ensure_default_driver(c, "Keep", {}) == keep
+    assert repo.get_session(c, "menu")["driver_id"] == keep  # type: ignore[index]
+    assert repo.count_driver_sessions(c, keep) == 0 and repo.list_sessions(c, 50, driver_id=keep) == []
+    zeros = {"sessions": 0, "laps": 0, "clean_laps": 0, "tracks": 0, "last_session_unix": None, "best_laps": []}
+    assert repo.driver_stats(c)[keep] == zeros
 
 
 def test_a_lap_without_a_trace_keeps_its_time_and_has_no_trace(c: sqlite3.Connection) -> None:

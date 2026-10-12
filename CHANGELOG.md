@@ -16,9 +16,9 @@ The release workflow copies a release's bullet points into its GitHub release no
 - GT7: every lap the game times is kept, including race lap 1 (marked "race start") and laps around a car reset.
   Tested on recordings.
 - GT7: leaving a race no longer shows the car still moving or adds a long fake lap; the session ends. Tested on
-  recordings.
-- GT7: lap distance follows the car's velocity (within about 0.2 % per lap, not up to 4 % off after a slide).
-  Tested on recordings.
+  recordings (a race left mid-spin: on synthetic data only).
+- GT7: lap distance follows the car's velocity (within about 0.2 % per lap; the speed it used before fell up to
+  1.5 % short on laps with an off). Tested on recordings.
 - GT7: the throttle shown is your pedal, not the throttle after traction control. Tested on recordings.
 
 ## v0.2.0 - 2026-10-12

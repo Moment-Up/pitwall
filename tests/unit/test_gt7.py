@@ -568,9 +568,10 @@ def test_unset_and_sentinel_values_map_to_none() -> None:
     assert f.quality & FrameQuality.NOT_RACING  # lap 0 is not a timed lap
     info = _info(out)
     assert info.car_id is None and info.total_laps is None and info.extra["fuel_fraction"] is None  # EV: no fuel
-    # 15 = neutral per Kaitai, never seen on a real capture: unverified. 0 = reverse (Kaitai; the owner's PS5 captures
-    # showed gear 0 only while backing up)
-    assert _decode_one(_packet(gears=0xF0))[0].gear == -1
+    # 0 / 15 = reverse / neutral per Kaitai, unverified: the owner's PS5 captures showed 0 only in spins with the clutch
+    # out (no gear engaged fits as well as reverse) and never 15; R and N were never selected
+    assert _decode_one(_packet(gears=0xF0))[0].gear is None
+    assert [_decode_one(_packet(gears=0xF0 | g))[0].gear for g in (1, 5, 14)] == [1, 5, 14]
 
 
 def test_non_finite_auxiliary_values_map_to_none() -> None:
@@ -758,6 +759,73 @@ def test_frozen_stream_at_speed_ends_the_session_and_is_never_integrated() -> No
     still = {"position": (5.0, 0.0, 0.0), "velocity": (0.0, 0.0, 0.0), "speed": 0.0}
     outs = [b.decode(_packet(packet_id=pid + k, **still), 0) for k in range(STALL_END_TICKS * 3)]
     assert all(len(_frames(o)) == 1 for o in outs) and b.session_uid is not None
+
+
+def _anchored(a: GT7Adapter) -> tuple[float, int]:
+    """Open a session and drive (48 m/s along x) across the line into lap 2: the lap distance is anchored. Returns the
+    last frame's lap distance and the next packet id."""
+    _, pid = _drive(a, OPEN_TICKS + 5, 1)
+    out, pid = _drive(a, 10, pid, lap_count=2, last_lap_ms=60_000)
+    dist = _frames(out)[-1].lap_distance_m
+    assert dist is not None and dist > 0.0
+    return dist, pid
+
+
+@pytest.mark.parametrize(
+    ("speed", "velocity"),
+    [
+        (2.0, (0.0, 0.0, 25.0)),  # frozen mid-spin: 0x4C (the speed along the car's axis) far below the velocity
+        (0.0, (0.0, 0.0, 25.0)),  # ...or 0 while the car slides sideways
+        (4.0, (4.0, 0.0, 0.0)),  # frozen while crawling
+        (0.6, (0.0, 0.6, 0.0)),  # just above FROZEN_MIN_SPEED_MPS
+    ],
+)
+def test_frozen_stream_is_judged_on_the_velocity_not_the_speed_field(
+    speed: float, velocity: tuple[float, float, float]
+) -> None:
+    """0x4C is |velocity . body forward| on the owner's PS5 (it reads near 0 while the car slides sideways). Judged on
+    0x4C, as before, a stream frozen in a spin never looked "at speed": it was integrated at the true velocity for as
+    long as it ran (1.5 km a minute at 25 m/s) and its session never ended. The velocity magnitude decides: dropped,
+    never integrated, the session ends."""
+    a = GT7Adapter()
+    dist, pid = _anchored(a)
+    first = {"position": (pid * 0.8 + 1.0, 0.0, 0.0), "velocity": velocity, "speed": speed, "lap_count": 2}
+    out = a.decode(_packet(packet_id=pid, last_lap_ms=60_000, **first), 0)  # the snapshot itself: still advancing
+    (fr,) = _frames(out)
+    clock = a._clock_s
+    outs = [a.decode(_packet(packet_id=pid + 1 + k, last_lap_ms=60_000, **first), 0) for k in range(3600)]
+    assert all(o == [] for o in outs[: STALL_END_TICKS - 1])  # no frame, no distance, no clock
+    assert _ended(outs[STALL_END_TICKS - 1]) == ["frozen"] and a.session_uid is None and a._clock_s == clock
+    assert not any(_frames(o) for o in outs) and fr.lap_distance_m is not None and fr.lap_distance_m < dist + 2.0
+
+
+def test_a_short_frozen_run_is_bridged_by_one_tick_never_by_its_length() -> None:
+    """A frozen run that ends before STALL_END_TICKS (on the owner's PS5: the first packet after a pause) did not move
+    the car: the next advancing packet integrates one tick, as after a pause, and the clock advances one tick."""
+    a = GT7Adapter()
+    _, pid = _anchored(a)
+    frozen = {"position": (pid * 0.8, 0.0, 0.0), "velocity": (48.0, 0.0, 0.0), "speed": 48.0, "lap_count": 2}
+    (before,) = _frames(a.decode(_packet(packet_id=pid, last_lap_ms=60_000, **frozen), 0))
+    clock = a._clock_s
+    for k in range(1, 61):  # 1 s frozen at 48 m/s
+        assert a.decode(_packet(packet_id=pid + k, last_lap_ms=60_000, **frozen), 0) == []
+    resumed = dict(frozen, position=(pid * 0.8 + 0.8, 0.0, 0.0))
+    (after,) = _frames(a.decode(_packet(packet_id=pid + 61, last_lap_ms=60_000, **resumed), 0))
+    assert a.session_uid is not None and a.stats.by_type["frozen"] == 60
+    assert after.lap_distance_m == pytest.approx((before.lap_distance_m or 0.0) + 0.8)  # one tick, not 61 (48.8 m)
+    assert a._clock_s == pytest.approx(clock + 1 / 60)
+
+
+def test_a_repeated_payload_below_the_frozen_speed_is_never_integrated() -> None:
+    """Below FROZEN_MIN_SPEED_MPS a repeated payload may be a car standing still in a running simulation: its frames are
+    emitted and the session stays, but it adds no distance (it did not move)."""
+    a = GT7Adapter()
+    _, pid = _anchored(a)
+    crawl = {"position": (pid * 0.8, 0.0, 0.0), "velocity": (0.0, 0.0, 0.4), "speed": 0.0, "lap_count": 2}
+    outs = [a.decode(_packet(packet_id=pid + k, last_lap_ms=60_000, **crawl), 0) for k in range(STALL_END_TICKS * 3)]
+    frames = [fr for o in outs for fr in _frames(o)]
+    assert len(frames) == STALL_END_TICKS * 3 and a.session_uid is not None and "frozen" not in a.stats.by_type
+    assert len({fr.lap_distance_m for fr in frames[1:]}) == 1  # 360 ticks at 0.4 m/s would have added 2.4 m
 
 
 def test_two_seconds_off_track_end_the_session() -> None:

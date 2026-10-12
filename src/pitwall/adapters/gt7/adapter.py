@@ -14,10 +14,14 @@ deterministically and with documented provenance (``AdapterInfo.fields`` marks e
   and bridged exactly like a lost packet (one bad value must not poison a lap's distance or the track id).
   Real PS5 captures: game lap time = non-paused ticks / 60 within 10 ms on every flying lap.
 * **Lap distance** (``lap_distance_m``): trapezoidal integration of the velocity magnitude (0x10..0x18) over tick
-  time, reset to 0 at each start/finish crossing. Not the speed field 0x4C: on the real captures 0x4C equals the
-  velocity magnitude while the tyres grip but drops to 22-47 % of it in slides, so integrating it lost up to 1.5 %
-  of a lap with an incident; the velocity magnitude matches the position path to -0.1..-0.2 %. The distance is
-  emitted only while *anchored* - i.e. after a line crossing was observed while moving with continuous packets.
+  time, reset to 0 at each start/finish crossing. Not the speed field 0x4C: on the real captures 0x4C is the size
+  of the velocity's component along the car's longitudinal axis (|velocity . body -Z|, 0x1C..0x2B read as a
+  quaternion; within 3.3 mm/s on all 59,242 advancing on-track packets above 1 m/s), so it equals the velocity
+  magnitude while the tyres grip and falls towards 0 when the car slides sideways. Integrating it fell 0.09-1.52 %
+  short of the position path on the 11 timed laps (the most on the 3 laps with a car reset), the velocity
+  magnitude 0.08-0.18 % (reset jumps excluded). A packet that does not advance (``_signature`` equal to the
+  previous one's) and is not paused is never integrated (see Session boundaries). The distance is emitted only while
+  *anchored* - i.e. after a line crossing was observed while moving with continuous packets.
   Joining mid-lap, a standing start (the grid offset to the line is unknown), a teleport (car reset to track) or a
   stream gap of more than 5 s leave the distance ``None`` until the next crossing: unknown stays unknown.
   Leaving the out-lap (lap 0 -> 1 while moving) or a rolling race start on a track whose line is not yet known
@@ -43,11 +47,12 @@ deterministically and with documented provenance (``AdapterInfo.fields`` marks e
   total turning). A lap matching a known signature (the registry: ``known_track_ids`` from the database plus
   tracks learned by this process) identifies the track - a lap with small, bridged packet gaps is good enough
   for that. A *new* track is learned only from two gap-free laps that agree closely, so one odd lap (a spin, an
-  excursion, a pit lane) can never define a track. The published ``track_length_m`` is this session's own
-  measurement - the shorter of the identifying lap(s) and the registry length - never the registry length
-  alone: ``LapAssembler`` calls a lap incomplete when it ends short of that length, so an over-estimate would
-  disqualify every lap on the circuit. Synthetic sessions never add to the registry. Track *names* are unknown
-  (``track_name`` is a descriptive label).
+  excursion, a pit lane) can never define a track. The published ``track_length_m`` is never longer than the
+  registry length or this session's own measurements: it starts as the shorter of the identifying lap(s) and the
+  registry length, and every later gap-free lap that matches the track and measures shorter lowers it (a race lap 1
+  on a wider line may identify the track; the next flying lap then sets the length). ``LapAssembler`` calls a lap
+  incomplete when it ends short of that length, so an over-estimate would disqualify every lap on the circuit.
+  Synthetic sessions never add to the registry. Track *names* are unknown (``track_name`` is a descriptive label).
 * **Session boundaries**: GT7 has no session uid, and it streams at 60 Hz in menus, replays, the menus'
   background laps and, after the player leaves a race, as one frozen packet repeated with only the packet id
   changing. On the owner's PS5 the earlier rule (a new session after every load, retry or car reset) turned 4
@@ -57,9 +62,14 @@ deterministically and with documented provenance (``AdapterInfo.fields`` marks e
   outside a session. An open session keeps paused packets and *ends* (``GameEvent`` ``session_ended`` with the
   reason in ``code``, after any held completion) on: a loading run that is not a car reset; a car change; a
   packet-id restart; the lap counter going back or the time of day rewinding 10 s or more while on track (doc
-  section 9's retry detector); ``STALL_END_TICKS`` of a frozen payload at speed (the simulation stopped: those
-  packets are dropped, never integrated); or ``OFF_TRACK_END_TICKS`` without CarOnTrack (results, replays,
-  menus). A **car reset** (the game puts the car back on track after an off) is a loading run of at most
+  section 9's retry detector); ``STALL_END_TICKS`` of a frozen payload (not advancing, not paused) with the
+  velocity magnitude at or above ``FROZEN_MIN_SPEED_MPS`` (the simulation stopped: a running one moves the car, and
+  the position is part of the payload; the velocity, not 0x4C, which reads near 0 while the car slides sideways in a
+  spin); or ``OFF_TRACK_END_TICKS`` without CarOnTrack (results, replays, menus). Frozen packets are dropped: no
+  frame, no clock, no distance - the next packet that advances integrates one tick, as after a pause. Below
+  ``FROZEN_MIN_SPEED_MPS`` a repeated payload cannot be told from a car standing still in a running simulation (never
+  seen on the real captures): its frames are emitted and the session stays, but it is never integrated either.
+  A **car reset** (the game puts the car back on track after an off) is a loading run of at most
   ``RESET_MAX_LOADING_TICKS`` with the car on track on both sides, the same car, lap count and lap total and, on
   variant C, the lap timer continuing (0 <= delta < 1 s): the session continues and the reset is a teleport (the
   lap keeps the game's time, its trace stops at the reset). A session's uid is ``gt7:<t_recv_ns of the packet
@@ -72,8 +82,9 @@ deterministically and with documented provenance (``AdapterInfo.fields`` marks e
 
 Inputs: the throttle is the driver's pedal - 0x13C on variants ~ and C (on the real captures 0x91 was below it on
 every TCS-active packet and above it only during downshift blips: 0x91 is the throttle after TCS), 0x91 on A and B,
-which have nothing else. Gear 0 is reverse (Kaitai; on the real captures only ever seen backing up), 15 neutral
-(never seen: unverified, ``None``).
+which have nothing else. Gears 1..14 are forward gears; 0 and 15 are ``None``: Kaitai reads them as reverse and
+neutral, but the real captures never had R or N selected - gear 0 appeared only in spins, with the pedal released
+and the clutch out (no gear engaged fits it as well as reverse), and 15 never (doc section 11, question 3).
 
 Steering (B/~/C): the wheel angle at 0x128 is in radians, left positive (the real captures: the sign agreed with
 the variant C road-wheel angles at 0x160/0x164 on every packet). It is normalised to -1..+1 by a nominal +/-450 deg
@@ -132,6 +143,9 @@ DAY_MS = 24 * 3_600_000  # time-of-day values outside (0, DAY_MS) are treated as
 # menus and replays last <= 0.1 s, a car reset is a 1-packet loading pulse, a frozen post-race stream lasts minutes.
 OPEN_TICKS = 30  # 0.5 s of live packets (on track, not loading or paused, advancing) open a session
 STALL_END_TICKS = 120  # 2 s of a frozen payload at speed (not paused): the simulation stopped, the session ends
+# "At speed" is the velocity magnitude, never 0x4C (which reads near 0 while the car slides sideways): a running
+# simulation moves a car this fast >= 8 mm per tick, far above the float32 resolution of the position in the payload.
+FROZEN_MIN_SPEED_MPS = 0.5
 OFF_TRACK_END_TICKS = 120  # 2 s without CarOnTrack (results, replay, menus): the session ends
 RESET_MAX_LOADING_TICKS = 30  # a loading run this short, car on track on both sides, may be a car reset...
 RESET_TIMER_MAX_MS = 1_000  # ...if the variant C lap timer continued across it (0 <= delta < 1 s)
@@ -172,8 +186,9 @@ GT7_INFO = AdapterInfo(
     fields={
         "speed_kph": FieldSupport(
             _R,
-            f"0x4C speed (m/s, abs) x 3.6. {_PS5}: 0..59.9 m/s; equal to the velocity magnitude to 0.1 % (median) "
-            "while the tyres grip, never above it, 22-47 % of it in slides (not the path speed)",
+            f"0x4C speed (m/s, abs) x 3.6. {_PS5}: 0..59.9 m/s; |velocity . body forward| (within 3.3 mm/s on all "
+            "59,242 advancing on-track packets above 1 m/s): the velocity magnitude while the tyres grip, towards 0 "
+            "when the car slides sideways (not the path speed)",
         ),
         "throttle": FieldSupport(
             _R,
@@ -190,8 +205,10 @@ GT7_INFO = AdapterInfo(
         "clutch": FieldSupport(_C, f"0xF4 clutch pedal 0..1 ({_PS5}: only 0 or 1 seen)"),
         "gear": FieldSupport(
             _R,
-            "0x90 low nibble: 1..14 forward, 0 reverse (-1, Kaitai), 15 neutral (never seen: None). "
-            f"{_PS5}: 1..5 matching each car's ratios; every gear-0 packet that moved, moved backwards (171)",
+            "0x90 low nibble: 1..14 forward; 0 and 15 -> None (Kaitai: reverse / neutral, unverified). "
+            f"{_PS5}: 1..5 matching each car's ratios. 0 appeared only in spins (4 episodes, 875 packets: pedal "
+            "released, in-gear flag clear and clutch out in 477 of 552 live packets, sliding at up to 30.5 m/s); R "
+            "and N were never selected, so 0 is not shown to be reverse; 15 never appeared",
         ),
         "rpm": FieldSupport(_R, f"0x3C engine RPM. {_PS5}: 0..8,869, equal to 0xFC with the clutch engaged"),
         "max_rpm": FieldSupport(
@@ -213,7 +230,7 @@ GT7_INFO = AdapterInfo(
         "vel_x_mps": FieldSupport(
             _R,
             f"0x10..0x18 world velocity (m/s). {_PS5}: its integrated magnitude matches the position path to "
-            "-0.07..-0.18 % per lap",
+            "-0.08..-0.18 % per lap (11 timed laps, reset jumps excluded)",
         ),
         "session_time_s": FieldSupport(
             _R,
@@ -228,8 +245,9 @@ GT7_INFO = AdapterInfo(
         ),
         "lap_distance_m": FieldSupport(
             _R,
-            f"{_DERIVED} since the last line crossing. {_PS5}: -0.07..-0.18 % from the position path on all 13 "
-            "anchored race laps (integrating the speed field lost up to 3.9 % on a lap with an off)",
+            f"{_DERIVED} since the last line crossing. {_PS5}: -0.08..-0.18 % from the position path on the 11 timed "
+            "laps, reset jumps excluded (integrating the speed field 0x4C: -0.09..-1.52 %, the most on laps with a "
+            "car reset)",
         ),
         "current_lap_time_ms": FieldSupport(
             _R,
@@ -268,8 +286,9 @@ GT7_INFO = AdapterInfo(
         ),
         "track_length_m": FieldSupport(
             _R,
-            f"{_DERIVED}: this session's identifying lap(s), never longer than the registry's length. {_PS5}: "
-            "learned as 914.7 m (oval) and 3,799 m, each within 0.2 % of its lap's position path",
+            f"{_DERIVED}: the shortest of this session's identifying lap(s) and later gap-free laps matching the "
+            f"track, never longer than the registry's length. {_PS5}: 914.7 m (oval) and 3,799.0 m once a flying lap "
+            "was measured, each within 0.2 % of its lap's position path",
         ),
         "car_id": FieldSupport(
             _R,
@@ -510,13 +529,11 @@ class _SessionState:
 
 
 def _gear(byte: int) -> int | None:
-    """Low nibble of 0x90 (doc section 4.2): 1..14 forward; 0 reverse (Kaitai; on the owner's PS5 captures gear 0
-    appeared only while backing up, 171 packets, never moving forwards); 15 neutral per Kaitai, never seen on a real
-    capture, so unverified: ``None``."""
+    """Low nibble of 0x90 (doc section 4.2): 1..14 forward. 0 and 15 are ``None``: Kaitai reads them as reverse and
+    neutral, but on the owner's PS5 captures gear 0 appeared only in spins, with the pedal released and the clutch out
+    (no gear engaged fits that as well as reverse), and 15 never; R and N were never selected (doc section 11, 3)."""
     g = byte & 0x0F
-    if g == 0:
-        return -1
-    return g if g <= 14 else None
+    return g if 1 <= g <= 14 else None
 
 
 def _ascii(raw: bytes) -> str | None:
@@ -711,10 +728,13 @@ class GT7Adapter:
 
         # 3. the open session's boundaries (no session uid in GT7)
         speed: float = p["speed"]
+        vel: tuple[float, float, float] = p["velocity"]
+        vmag = math.hypot(*vel)  # NaN for a corrupt velocity: never "frozen", and dropped in 4b
+        stalled = not paused and not advancing and prev_sig is not None  # nothing changed: never integrated (7.)
         s = self._s
         if s is not None:
             reason = self._end_reason(s, p, on_track, restarted)
-            frozen = not paused and not advancing and prev_sig is not None and abs(speed) >= ANCHOR_MIN_SPEED_MPS
+            frozen = stalled and vmag >= FROZEN_MIN_SPEED_MPS
             self._stall_run = self._stall_run + 1 if frozen else 0
             self._off_run = 0 if on_track else self._off_run + 1
             if reason is None and self._stall_run >= STALL_END_TICKS:
@@ -723,8 +743,12 @@ class GT7Adapter:
                 reason = "off_track"
             if reason is not None:
                 self._end_session(t, reason, out)
-            elif frozen:  # moving at speed without moving: the simulation is not running. Never integrated.
+            elif frozen:  # moving without moving: the simulation is not running. No frame, no clock, no distance.
                 self.stats.count("frozen")
+                prev = self._prev
+                if prev is not None:  # the next packet that advances integrates one tick, as after a pause
+                    prev.running = False
+                    prev.pid = pid
                 return False
 
         # 4. no session: one opens after OPEN_TICKS live packets (nothing is emitted before)
@@ -747,11 +771,9 @@ class GT7Adapter:
 
         # 4b. corrupt motion: dropped and bridged like a lost packet (the next packet integrates across it)
         pos: tuple[float, float, float] = p["position"]
-        vel: tuple[float, float, float] = p["velocity"]
         if not all(math.isfinite(x) for x in (speed, *pos, *vel)):
             self.stats.count("non_finite_motion")
             return False
-        vmag = math.hypot(*vel)
 
         # 5. a completion waiting for last_lap_ms (released before anything of this packet is emitted)
         last_ms: int = p["last_lap_ms"]
@@ -788,7 +810,8 @@ class GT7Adapter:
                     self.stats.count("teleport")
                     self._unanchor(s, lost=True)
                 else:
-                    s.dist_m += 0.5 * (vmag + prev.vmag_mps) * dt
+                    if not stalled:  # a repeated payload (a car standing still) did not move: never integrated
+                        s.dist_m += 0.5 * (vmag + prev.vmag_mps) * dt
                     s.lap_elapsed_s += dt
                     s.max_gap_ticks = max(s.max_gap_ticks, ticks)
                     self._sample_turn(s, speed, vel)
@@ -1016,15 +1039,17 @@ class GT7Adapter:
 
     def _identify_track(self, s: _SessionState, shape: _LapShape, t: int, out: list[Emitted]) -> None:
         """Identify the session's track from one measured lap (registry match) or learn it from two agreeing
-        gap-free laps. Publishes the result (SessionInfo) when the track becomes known."""
-        if s.track is not None:
-            return
+        gap-free laps. Publishes the result (SessionInfo) when the track becomes known. Once it is known, a shorter
+        gap-free lap that matches it lowers the published length (``_lower_length``)."""
         assert s.sf is not None
         if not MIN_TRACK_LENGTH_M <= shape.length_m <= MAX_TRACK_LENGTH_M:
             self.stats.count("implausible_lap_length")
             return
         sx, sz, sh = s.sf
         cand = TrackSignature.measured(sx, sz, sh, shape.length_m, shape.turn_deg)
+        if s.track is not None:
+            self._lower_length(s, s.track, cand, shape, t, out)
+            return
         known = self._best_known(cand)
         if known is not None:
             self._set_track(s, known, min(known.length_m, shape.length_m), shape, t, out)
@@ -1048,6 +1073,27 @@ class GT7Adapter:
         else:
             length_m = min(length_m, track.length_m)
         self._set_track(s, track, length_m, shape, t, out)
+
+    def _lower_length(
+        self,
+        s: _SessionState,
+        track: TrackSignature,
+        cand: TrackSignature,
+        shape: _LapShape,
+        t: int,
+        out: list[Emitted],
+    ) -> None:
+        """Lower the published length to a later lap's measurement when that lap is gap-free, matches the session's
+        track and is shorter (race lap 1 on a wider line, 932.6 m on the owner's oval, can identify a 920 m registry
+        id; the next flying lap measured 914.7 m). Never raised: an over-estimate makes complete laps incomplete
+        (module docstring). Published at once, ahead of the lap's completion."""
+        if s.track_length_m is None or shape.length_m >= s.track_length_m or not shape.gap_free:
+            return
+        if not track.matches(cand):
+            return  # outside the layout's length or turning tolerance (a big cut, a pit lane): not this layout
+        log.info("GT7 track %s: published length %.1f m -> %.1f m", track.track_id, s.track_length_m, shape.length_m)
+        s.track_length_m = shape.length_m
+        self._emit_session_info(s, t, out)
 
     def _set_track(
         self, s: _SessionState, track: TrackSignature, length_m: float, shape: _LapShape, t: int, out: list[Emitted]

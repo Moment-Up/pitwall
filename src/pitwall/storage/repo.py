@@ -474,10 +474,12 @@ def delete_driver(conn: sqlite3.Connection, driver_id: int, reassign_to: int | N
     """Delete a driver, first moving their sessions to ``reassign_to``; returns the number of sessions moved.
 
     Without ``reassign_to`` a driver who still owns listed sessions is refused (``ValueError``): recorded laps are
-    never deleted as a side effect of removing a profile. Their empty (hidden) sessions are left without a driver,
-    like replays: nothing in them is anybody's driving. Their pinned references move with the sessions but are
-    deactivated, so they cannot override the receiving driver's own choice. Meta keys naming the deleted driver
-    are moved to the receiving driver (or cleared). Raises ``KeyError`` for an unknown driver or target.
+    never deleted as a side effect of removing a profile. Their empty (hidden) sessions are kept and detached
+    (``driver_id`` NULL) so the driver row can go; the default-driver backfill (``ensure_default_driver``, at the next
+    start) then gives them to the default driver, where they stay hidden and count for nothing. With
+    ``reassign_to``, every session moves, and the pinned references move with them but are deactivated, so they
+    cannot override the receiving driver's own choice. Meta keys naming the deleted driver are moved to the
+    receiving driver (or cleared). Raises ``KeyError`` for an unknown driver or target.
     """
     if conn.execute("SELECT 1 FROM drivers WHERE id=?", (driver_id,)).fetchone() is None:
         raise KeyError(f"driver {driver_id} not found")
@@ -546,21 +548,26 @@ def default_driver_id(conn: sqlite3.Connection) -> int | None:
 def driver_stats(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
     """Per-driver totals and best clean lap per track, keyed by driver id (drivers with no sessions are absent).
 
-    ``sessions`` counts the listed sessions the driver owns (it is what ``delete_driver`` refuses on, and what their
-    session list shows: empty sessions are hidden); ``laps``, ``clean_laps``, ``tracks`` and ``best_laps`` count
-    driving only, never replays.
-    The best lap per (game, track) is picked with a window function (fastest, then lowest lap id) so the lap id,
-    session and car returned all belong to that one lap."""
+    Every total counts the driver's *listed* sessions only - what their session list shows (empty sessions are
+    hidden): ``sessions`` (what ``delete_driver`` refuses on), ``laps``, ``clean_laps``, ``tracks`` and
+    ``last_session_unix``, so the Drivers card never counts a menu's stub lap or dates a hidden session; ``laps``,
+    ``clean_laps``, ``tracks`` and ``best_laps`` count driving only, never replays. A driver whose sessions are all
+    hidden is present with zeros. The best lap per (game, track) is picked with a window function (fastest, then
+    lowest lap id) so the lap id, session and car returned all belong to that one lap."""
     out: dict[int, dict[str, Any]] = {}
     for r in conn.execute(
-        f"""SELECT s.driver_id, COUNT(DISTINCT CASE WHEN {_LISTED} THEN s.id END) AS sessions,
-                  COUNT(CASE WHEN {_DRIVEN} THEN l.id END) AS laps,
-                  COALESCE(SUM(CASE WHEN {_DRIVEN} THEN l.clean END), 0) AS clean_laps,
-                  COUNT(DISTINCT CASE WHEN s.track_id IS NOT NULL AND {_DRIVEN}
+        f"""SELECT s.driver_id, COUNT(CASE WHEN s.listed THEN 1 END) AS sessions,
+                  COALESCE(SUM(CASE WHEN s.listed AND s.driven THEN lc.n END), 0) AS laps,
+                  COALESCE(SUM(CASE WHEN s.listed AND s.driven THEN lc.clean END), 0) AS clean_laps,
+                  COUNT(DISTINCT CASE WHEN s.listed AND s.driven AND s.track_id IS NOT NULL
                                       THEN s.game || '/' || s.track_id END) AS tracks,
-                  MAX(s.started_unix) AS last_session_unix
-           FROM sessions s LEFT JOIN laps l ON l.session_id = s.id
-           WHERE s.driver_id IS NOT NULL GROUP BY s.driver_id"""
+                  MAX(CASE WHEN s.listed THEN s.started_unix END) AS last_session_unix
+           FROM (SELECT s.id, s.driver_id, s.game, s.track_id, s.started_unix,
+                        {_LISTED} AS listed, {_DRIVEN} AS driven
+                 FROM sessions s WHERE s.driver_id IS NOT NULL) s
+           LEFT JOIN (SELECT session_id, COUNT(*) AS n, SUM(clean) AS clean FROM laps GROUP BY session_id) lc
+                  ON lc.session_id = s.id
+           GROUP BY s.driver_id"""
     ).fetchall():
         out[int(r["driver_id"])] = {
             "sessions": int(r["sessions"]),
