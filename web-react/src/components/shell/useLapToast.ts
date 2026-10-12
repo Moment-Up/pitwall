@@ -1,4 +1,4 @@
-// "Lap 7 analysed · 2 coaching points" with an Open action (spec 2.6), top right, only when not on track: Drive never
+// "Lap 7 done · 2 coaching points" with an Open action (spec 2.6), top right, only when not on track: Drive never
 // shows toasts on track (App also unmounts the toast region then). A lap analysed while on track is not queued for
 // later - it would be old news by the time the car stops.
 

@@ -195,7 +195,10 @@ describe("coaching tile", () => {
     const s = fixture("recorded-d246-suzuka-on-track-brake-ahead");
     const v = coachingTile(s, false);
     expect(v.source).toBe("d6");
-    expect(v.title).toBe(`Coaching · lap ${s.coach!.lap_number}`);
+    // lap 4 is the lap just finished (the status line shows lap 5): "last lap", never a bare "lap 4"
+    expect(s.coach!.lap_number).toBe(4);
+    expect(s.frame!.lap_number).toBe(5);
+    expect(v.title).toBe("Coaching · last lap");
     expect(v.items.length).toBeLessThanOrEqual(WALL_POINTS);
     expect(v.items.length).toBeGreaterThan(0);
     const first = s.coach!.picked.filter((o) => o.kind !== "incident")[0]!;
@@ -206,6 +209,14 @@ describe("coaching tile", () => {
       expect(it.impactTone === "ahead").toBe(it.impact?.startsWith("−") ?? false);
       if (it.good) expect(it.chip).toMatch(/ · good$/);
     }
+  });
+
+  it("names an older lap by its number, the lap just finished (also at the flag) as the last lap", () => {
+    const s = fixture("recorded-d246-suzuka-on-track-brake-ahead");
+    // the car already two laps on (lap 5's analysis still on its way): lap 4 is no longer the last lap
+    expect(coachingTile({ ...s, frame: { ...s.frame!, lap_number: 6 } }, false).title).toBe("Coaching · lap 4");
+    // at the chequered flag the game keeps the final lap's number
+    expect(coachingTile({ ...s, frame: { ...s.frame!, lap_number: 4 } }, false).title).toBe("Coaching · last lap");
   });
 
   it("before D6: the top observations by priority, verbatim, never an incident", () => {

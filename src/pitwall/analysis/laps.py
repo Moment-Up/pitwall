@@ -3,6 +3,21 @@
 Handles: flashbacks/rewinds (session time going backwards), pit in/out laps, partial laps (joined
 mid-lap or packet loss), and pause/spectate frames. Every exclusion is recorded in ``LapTrace.flags`` so
 that reference-lap selection can reject compromised laps instead of silently comparing them.
+
+A lap keeps the game's own number (``CarFrame.lap_number``; F1: ``currentLapNum``): race lap 1 is lap 1, a
+scenario that starts at lap 62 starts at 62, and in-, out- and opening laps are numbered like any other lap.
+
+* **Pit laps** follow the car's pit-lane state through the lap (``CarFrame.pit_status``: 1 pit lane, 2 pit area;
+  0, or unknown, is not known to be in the pit lane). A lap that *starts* in the pit lane is an out lap
+  (``pit_out``), the pit lane after running on track makes an in lap (``pit_in``), and only a lap that enters
+  and leaves the pit lane (a drive-through, or a stop whose box is inside one lap) is both. Real F1 25 Imola:
+  the pit exit is 449 m past the line, so the out lap runs 0-449 m in the pit lane and is an out lap only.
+  A flashback rewinds the pit-lane state with the trace: the pit flags are those of the frames the lap keeps
+  (rewound from the pit entry back onto the track, an in lap is a clean in lap again until the car re-enters).
+* **Standing start**: race lap 1 from the grid is timed by the game but is not a flying lap. It is recognised
+  from its first frame, wherever the grid is (real F1 25: Melbourne -164 m, Las Vegas +2.6 m, Austria +132 m):
+  lap 1, lap timer under ``STANDING_START_MAX_MS``, car stationary (``STANDING_START_MAX_KPH``) and not in the
+  pit lane. A flying first lap (one-shot qualifying from -306 m) or a scenario joined at speed is not one.
 """
 
 from __future__ import annotations
@@ -64,6 +79,8 @@ ASSIST_COVER_FRAC = 0.9  # feat/technique: an assist value must cover this share
 MAX_GAP_M = 60.0  # a distance step larger than this is either data loss or a game-side distance jump
 MAX_TIME_GAP_S = 1.0  # a session-time gap larger than this (no flashback) means lost packets -> incomplete
 EDGE_TOLERANCE_M = 60.0  # lap must start/end within this distance of the line to count as complete
+STANDING_START_MAX_MS = 1000  # race lap 1's timer this close to 0 at its first frame: the lap starts here
+STANDING_START_MAX_KPH = 5.0  # ... with the car (nearly) stationary: a grid slot, not a flying start
 # Games whose lap distance pitwall derives (GT7: integrated speed; Forza: odometer) instead of reading it: the
 # end-of-lap check scales with the lap, because ~1% drift is ~70 m at Spa and ~200 m on the Nordschleife.
 DERIVED_DISTANCE_GAMES = frozenset({Game.GT7, Game.FORZA_MOTORSPORT, Game.FORZA_HORIZON})
@@ -78,10 +95,10 @@ class LapFlag:
     INVALID = "invalid"  # game-declared invalid (track limits etc.)
     PAUSED = "paused"
     STALE_DATA = "stale_data"
-    STANDING_START = "standing_start"
+    STANDING_START = "standing_start"  # race lap 1 from the grid: timed, but not comparable to flying laps
     # lap distance jumped with no time gap (e.g. reset to track after an off): timed, but distance alignment is
     # locally broken, so not used as a reference
-    DISTANCE_JUMP = "distance_jump"  # race lap 1 from the grid: timed, but not comparable to flying laps
+    DISTANCE_JUMP = "distance_jump"
 
 
 @dataclass(slots=True)
@@ -198,6 +215,47 @@ class _Building:
     # feat/technique: moving frames per assist value (O(1) per frame; CarStatus can lag or be zeroed at a start)
     abs_moving: dict[bool, int] = field(default_factory=dict)
     tc_moving: dict[int, int] = field(default_factory=dict)
+    # pit-lane state through the lap: (session time, in the pit lane) at each change, so a flashback can rewind it
+    pit_runs: list[tuple[float, bool]] = field(default_factory=list)
+
+
+_PIT_FLAGS = frozenset({LapFlag.PIT_IN, LapFlag.PIT_OUT})
+
+
+def _pit_flags(runs: list[tuple[float, bool]]) -> set[str]:
+    """The pit flags of a lap from its pit-lane runs (alternating: in the pit lane or not, in order).
+
+    A first run in the pit lane is an out lap; the pit lane after running on track, an in lap; back on track
+    after that entry, both (a drive-through, or a stop whose box is inside the lap)."""
+    flags: set[str] = set()
+    on_track = entered = False
+    for _, in_pit in runs:
+        if in_pit:
+            if on_track:
+                flags.add(LapFlag.PIT_IN)
+                entered = True
+            else:
+                flags.add(LapFlag.PIT_OUT)
+        else:
+            if entered:
+                flags.add(LapFlag.PIT_OUT)
+            on_track = True
+    return flags
+
+
+def _standing_start(f: CarFrame) -> bool:
+    """Race lap 1 beginning from the grid: the lap timer at ~0 with the car stationary, outside the pit lane.
+
+    Wherever the grid is relative to the line (it can be behind it: negative lap distance). Unknown speed or lap
+    time is not a standing start (unknown stays unknown)."""
+    return (
+        f.lap_number == 1
+        and f.current_lap_time_ms is not None
+        and f.current_lap_time_ms < STANDING_START_MAX_MS
+        and f.speed_kph is not None
+        and f.speed_kph < STANDING_START_MAX_KPH
+        and not f.pit_status
+    )
 
 
 class LapAssembler:
@@ -246,10 +304,13 @@ class LapAssembler:
             cur = self._cur = None
         if cur is None:
             cur = self._cur = _Building(lap_number=f.lap_number, first=f)
-            if f.lap_distance_m > EDGE_TOLERANCE_M:
-                if f.lap_number == 1 and (f.current_lap_time_ms or 0) < 1000:
-                    # race start: the grid can be well past the line (Austria: 132 m) - the lap is complete
-                    # and timed by the game, just not comparable with flying laps
+            if _standing_start(f):
+                # race start from the grid, wherever the grid is (Melbourne: 164 m behind the line, Austria: 132 m
+                # past it): the lap is complete and timed by the game, just not comparable with flying laps
+                cur.flags.add(LapFlag.STANDING_START)
+            elif f.lap_distance_m > EDGE_TOLERANCE_M:
+                if f.lap_number == 1 and (f.current_lap_time_ms or 0) < STANDING_START_MAX_MS:
+                    # lap 1 first seen past the line at ~0 lap time while already moving: still the race start
                     cur.flags.add(LapFlag.STANDING_START)
                 else:
                     cur.flags.add(LapFlag.INCOMPLETE)  # joined mid-lap
@@ -259,8 +320,13 @@ class LapAssembler:
             if t_new < cur.rows[-1][0] - 1e-6:
                 cur.flags.add(LapFlag.FLASHBACK)
                 cur.rows = [r for r in cur.rows if r[0] < t_new]
-        if f.pit_status:
-            cur.flags.add(LapFlag.PIT_IN if cur.rows and cur.rows[-1][2] > 100 else LapFlag.PIT_OUT)
+                # the pit-lane state rewinds too: a pit entry (or exit) the driver flashed back over never happened
+                runs = cur.pit_runs = [r for r in cur.pit_runs if r[0] < t_new]
+                cur.flags = (cur.flags - _PIT_FLAGS) | _pit_flags(runs)
+        in_pit = bool(f.pit_status)  # in the pit lane (1) or pit area (2); 0, or unknown, is not
+        if not cur.pit_runs or cur.pit_runs[-1][1] != in_pit:
+            cur.pit_runs.append((_val(f.session_time_s), in_pit))
+            cur.flags |= _pit_flags(cur.pit_runs)
         if f.quality & (FrameQuality.STALE_LAP_DATA | FrameQuality.STALE_POSITION):
             cur.stale += 1
         if cur.first_fuel_kg is None and f.fuel_kg is not None:
@@ -316,6 +382,8 @@ class LapAssembler:
             # during the lap, or not sent)
             "abs_active": _dominant(b.abs_moving),
             "traction_control": _dominant(b.tc_moving),
+            # the driver's last lap of the session (LapCompletion.final; None = the game does not say)
+            "final": completion.final if completion else None,
         }
         lap = LapTrace(
             lap_number=b.lap_number,

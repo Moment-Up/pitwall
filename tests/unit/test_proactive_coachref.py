@@ -32,12 +32,14 @@ def obs(kind: str, value: float, ref_name: str | None = "Sam", **kw: Any) -> dic
 
 
 def test_lap_summary_names_the_reference() -> None:
-    assert lap_summary_text(LAP, None, SAM_REF) == "Lap 4, 1:31.204, plus 0.792 to Sam's best."
-    assert lap_summary_text(LAP, None, {**SAM_REF, "lap_time_ms": 91_204}) == "Lap 4, 1:31.204, level with Sam's best."
+    assert lap_summary_text(LAP, None, SAM_REF) == "That lap, 1:31.204, plus 0.792 to Sam's best."
+    assert (
+        lap_summary_text(LAP, None, {**SAM_REF, "lap_time_ms": 91_204}) == "That lap, 1:31.204, level with Sam's best."
+    )
     legacy = {"lap_id": 12, "lap_time_ms": 90_412}  # a reference without a descriptor (no coachref)
-    assert lap_summary_text(LAP, None, legacy) == "Lap 4, 1:31.204, plus 0.792 to your reference."
+    assert lap_summary_text(LAP, None, legacy) == "That lap, 1:31.204, plus 0.792 to your reference."
     own = {**legacy, "label_to": "your best", "own": True}
-    assert lap_summary_text(LAP, None, own) == "Lap 4, 1:31.204, plus 0.792 to your best."
+    assert lap_summary_text(LAP, None, own) == "That lap, 1:31.204, plus 0.792 to your best."
 
 
 def test_coaching_points_name_the_other_driver() -> None:

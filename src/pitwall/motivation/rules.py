@@ -111,8 +111,8 @@ def run_ending_at(laps: Sequence[LapRow], lap_id: int, after_lap_id: int = 0) ->
 
 
 def standing_start(lap: LapRow, session_type: str | None) -> bool:
-    """Race lap 1 [H]: from the grid, not comparable with flying laps (a standing start is not always flagged in
-    real F1 25 data)."""
+    """Race lap 1 [H]: from the grid, not comparable with flying laps (laps stored before 2026-10-11 lack the
+    standing-start flag when the F1 25 grid is behind or near the line)."""
     return session_type == "race" and lap.lap_number == 1
 
 

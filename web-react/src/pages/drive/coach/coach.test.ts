@@ -275,7 +275,7 @@ describe("states (4.7)", () => {
     expect(text).toContain("Next corner");
     expect(text).toContain("T11 Hairpin");
     expect(text).toMatch(/BRAKE T11 brake in \d+ m/);
-    expect(text).toContain("Work on · L4");
+    expect(text).toContain("Work on · last lap");
     expect(text).toContain("AHEAD");
     expect(html).toContain('data-side="ahead"');
     expect(text).toMatch(/S1 .*S2 .*S3/);

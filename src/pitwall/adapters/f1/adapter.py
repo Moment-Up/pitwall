@@ -628,6 +628,7 @@ class F1Adapter:
                     sector_times_ms=[s1, s2, s3],
                     valid=not bool(snap["currentLapInvalid"]),
                     session_time_s=h["sessionTime"],
+                    final=lap["resultStatus"] == RESULT_FINISHED,
                 )
             )
         elif (
@@ -653,6 +654,7 @@ class F1Adapter:
                     sector_times_ms=[s1, s2, last_ms - s1 - s2 if (s1 and s2) else None],
                     valid=not bool(snap["currentLapInvalid"]),
                     session_time_s=h["sessionTime"],
+                    final=True,  # the driver took the chequered flag on this lap
                 )
             )
         if lap["sector"] == 2:

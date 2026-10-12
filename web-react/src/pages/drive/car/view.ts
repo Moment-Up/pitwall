@@ -12,7 +12,7 @@
 // hidden; an unknown feature keeps its "-". Without an entry (no catalogue yet, an older server) nothing changes.
 
 import { cornerAhead, cornerLabelOf } from "../../../lib/drive/corner";
-import { lapPicks, NO_REFERENCE_COACHING, pointText, simpleWording } from "../../../lib/drive/coach";
+import { lapPicks, lastLapNumber, NO_REFERENCE_COACHING, pointText, simpleWording } from "../../../lib/drive/coach";
 import { gameLength } from "../../../lib/drive/geometry";
 import type { DriveModel } from "../../../lib/drive/model";
 import { ageText, finite, signedFixed, UNKNOWN } from "../../../lib/drive/text";
@@ -327,7 +327,7 @@ export interface CoachItemView {
 }
 
 export interface CoachingTileView {
-  /** "Coaching · lap 6", or "Coaching · last lap". */
+  /** "Coaching · last lap" (the lap just finished, or unknown), "Coaching · lap 6" for an older lap. */
   title: string;
   items: CoachItemView[];
   empty: string | null;
@@ -349,7 +349,8 @@ export function coachingTile(s: SnapshotNext | null, profileSimple: boolean, max
   const simple = simpleWording(s, profileSimple);
   const shown = picks.slice(0, max);
   const lap = s.coach?.lap_number ?? shown[0]?.lap_number ?? null;
-  const title = finite(lap) ? `Coaching · lap ${lap}` : "Coaching · last lap";
+  // the lap just finished is "last lap", never its bare number: the status line already shows the lap after it
+  const title = !finite(lap) || lap === lastLapNumber(s) ? "Coaching · last lap" : `Coaching · lap ${lap}`;
   const items = shown.map((o): CoachItemView => {
     const label = cornerLabelOf(s.track_model, o.corner);
     const { impact, tone } = impactOf(o);

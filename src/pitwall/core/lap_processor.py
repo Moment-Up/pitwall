@@ -618,6 +618,7 @@ def _lap_summary(lap: LapTrace, lap_id: int) -> dict[str, Any]:
         "valid": lap.valid,
         "clean": lap.clean,
         "flags": sorted(lap.flags),
+        "final": lap.meta.get("final"),  # the driver's last lap of the session (None = the game does not say)
         "tyre_compound": lap.meta.get("tyre_compound"),
         "fuel_used_kg": (
             round(lap.meta["fuel_start_kg"] - lap.meta["fuel_end_kg"], 3)

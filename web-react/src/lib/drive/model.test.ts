@@ -48,7 +48,7 @@ describe("driveModel: on track (real Suzuka, braking call ahead)", () => {
   });
 
   it("fills the coach card, delta, sectors, laps and ribbon", () => {
-    expect(m.coach).toMatchObject({ tagText: "Work on · L4", heading: null, full: false, source: "observation" });
+    expect(m.coach).toMatchObject({ tagText: "Work on · last lap", heading: null, full: false, source: "observation" });
     expect(m.delta).toMatchObject({ text: `${MINUS}0.60`, word: "AHEAD", refLabel: "Lap 3 · 1:37.191 · today" });
     expect(m.sectors.caption).toBe("Last lap · L4");
     expect(m.laps.lap.text).toBe("0:39.8");
@@ -196,13 +196,17 @@ describe("driveModel: each state", () => {
       aria: "Pit lane: 78 of 80 km/h",
     });
     expect(m.cue.note).toBe("Calls resume on your out lap");
-    // moving down the pit lane (78 km/h): the same corner's point as a glance; the full text once stopped (plan 2.1)
+    // lap 4 is the lap just finished (the header shows lap 5): "from last lap", never "from L4". Moving down the pit
+    // lane (78 km/h): the same corner's point as a glance; the full text once stopped (plan 2.1)
     expect(m.stationary).toBe(false);
     const still = model(stopped(fixture("edited-pit-lane")));
-    expect(m.coach).toMatchObject({ heading: "Next run · from L4", full: false, tag: "work_on", corner: still.coach.corner });
-    expect(still.coach).toMatchObject({ heading: "Next run · from L4", full: true, tag: "work_on", size: 22, clamp: false });
+    expect(m.coach).toMatchObject({ heading: "Next run · from last lap", full: false, tag: "work_on", corner: still.coach.corner });
+    expect(still.coach).toMatchObject({ heading: "Next run · from last lap", full: true, tag: "work_on", size: 22, clamp: false });
     expect(still.coach.text).toMatch(/^Turn 9 \(Degner 2\)/);
     expect(m.delta.reason).toBe("No delta in the pit lane");
+    const later = fixture("edited-pit-lane");
+    later.frame = { ...later.frame!, lap_number: 6 }; // lap 5's analysis still on its way: lap 4 is an older lap
+    expect(model(later).coach.heading).toBe("Next run · from L4");
     const fast = fixture("edited-pit-lane");
     fast.frame = { ...fast.frame!, speed_kph: 84.4 };
     expect(model(fast).hero).toMatchObject({ kind: "pit", speedText: "84", over: true });
@@ -453,7 +457,7 @@ describe("driveModel: overlays and D-additions", () => {
 
   it("with D2/D4/D6 shows the radio's point (short text); tier 2 timing only with driver or household bests", () => {
     const m = model(fixture("recorded-d246-suzuka-on-track-brake-ahead"));
-    expect(m.coach).toMatchObject({ source: "d6", size: 30, tagText: "Work on · L4" });
+    expect(m.coach).toMatchObject({ source: "d6", size: 30, tagText: "Work on · last lap" });
     expect(m.coach.text!.length).toBeLessThanOrEqual(48);
     expect(m.tier).toBe(1); // a replay: D2 keeps no records for it
     const live = model(asLive(fixture("edited-d1-d6")));

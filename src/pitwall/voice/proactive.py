@@ -28,6 +28,13 @@ said; this module decides what is worth saying:
   supersedes them and the scheduler's per-lap budget survives lap numbers restarting each session. Fuel calls are
   race strategy's (``strategy.radio``): it is the only source of fuel alerts.
 
+* **The lap just finished, never "Lap N"** - a lap summary can only be said after the line, when the game's HUD
+  (and the Drive header) already shows the next lap, so a bare "Lap 66, 1:13.897" sounds like the lap in progress.
+  The summary names the lap by what it was: "That lap", "Opening lap" (race lap 1 from the grid), "Out-lap",
+  "In-lap", "Pit lap" (in and out of the pit lane within one lap) or "Final lap" (the game says the driver's
+  session ended on it). The game's lap number stays in ``lap_number`` and ``meta["lap_number"]``, as everywhere
+  else (Review, the engineer, Drive's "L66" tags for older laps).
+
 ``lap`` and ``observations`` have the shapes ``LiveState.on_lap_result`` publishes (``lap_processor._lap_summary``
 and ``Observation.to_dict``). ``speech`` is ``voice.speech.to_speech`` of the display text (lap times, corner
 names, units), except the lap summary, whose reference delta is spoken in the radio convention ("plus zero point
@@ -104,13 +111,41 @@ def _message(
 
 
 # ---------------------------------------------------------------------------------------------- lap summary
+LAP_THAT = "That lap"
+LAP_OPENING = "Opening lap"  # race lap 1 from the grid (standing start)
+LAP_OUT = "Out-lap"
+LAP_IN = "In-lap"
+LAP_PIT = "Pit lap"  # into and out of the pit lane within one lap (a drive-through)
+LAP_FINAL = "Final lap"  # the game says the driver's session ended with this lap (chequered flag)
+
+
+def lap_label(lap: Mapping[str, Any]) -> str:
+    """How the radio names the lap just finished: never by its bare number (see the module docstring).
+
+    ``Final lap`` first (it is the one the driver is waiting for), then the pit laps, then race lap 1 from the grid.
+    """
+    if lap.get("final") is True:
+        return LAP_FINAL
+    flags = set(lap.get("flags") or ())
+    if "pit_in" in flags and "pit_out" in flags:
+        return LAP_PIT
+    if "pit_in" in flags:
+        return LAP_IN
+    if "pit_out" in flags:
+        return LAP_OUT
+    if "standing_start" in flags:
+        return LAP_OPENING
+    return LAP_THAT
+
+
 def lap_summary_text(
     lap: Mapping[str, Any], best_clean_ms: int | None, reference: Mapping[str, Any] | None
 ) -> str | None:
-    """'Lap 4, 1:05.706, plus 0.080 to your reference.' or None when the lap has no time.
+    """'That lap, 1:05.706, plus 0.080 to your reference.' or None when the lap has no time.
 
     ``best_clean_ms`` is the best clean lap known so far (it may include this lap): a clean lap at or under it is
-    called a personal best.
+    called a personal best, or a session best when it is still slower than the reference (a faster lap from
+    another session).
     """
     texts = _lap_summary(lap, best_clean_ms, reference)
     return None if texts is None else texts[0]
@@ -123,12 +158,11 @@ def _lap_summary(
     ms = lap.get("lap_time_ms")
     if not isinstance(ms, int) or isinstance(ms, bool) or ms <= 0:
         return None
-    n = lap.get("lap_number")
-    head = [f"Lap {n}" if isinstance(n, int) else "Lap complete", fmt_lap_time(ms)]
-    if lap.get("clean") and best_clean_ms is not None and ms <= best_clean_ms:
-        head.append("personal best")
-    shown, spoken = list(head), list(head)
+    head = [lap_label(lap), fmt_lap_time(ms)]
     delta = _reference_delta_ms(lap, ms, reference)
+    if lap.get("clean") and best_clean_ms is not None and ms <= best_clean_ms:
+        head.append("personal best" if delta is None or delta <= 0 else "session best")
+    shown, spoken = list(head), list(head)
     to_ref = (reference or {}).get("label_to") or "your reference"  # --- coachref --- e.g. "Sam's best"
     if delta == 0:
         shown.append(f"level with {to_ref}")
@@ -142,10 +176,6 @@ def _lap_summary(
         notes.append("That lap was invalidated.")
     if "flashback" in flags:
         notes.append("Flashback used.")
-    if "pit_in" in flags:
-        notes.append("In-lap.")
-    elif "pit_out" in flags:
-        notes.append("Out-lap.")
     return " ".join([", ".join(shown) + ".", *notes]), " ".join([", ".join(spoken) + ".", *notes])
 
 
@@ -283,7 +313,7 @@ def lap_messages(
                 now_mono,
                 LAP_MESSAGE_TTL_S,
                 lap_number=lap_number,
-                meta={LAP_ID_KEY: lap_id, "lap_time_ms": ms, "delta_ms": delta},
+                meta={LAP_ID_KEY: lap_id, "lap_number": lap_number, "lap_time_ms": ms, "delta_ms": delta},
                 speech_source=summary[1],
             )
         )

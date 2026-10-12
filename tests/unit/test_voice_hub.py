@@ -551,3 +551,37 @@ async def test_f1_questions_about_data_it_sends_go_to_the_llm_path() -> None:
     assert "Copy, checking." in said
     assert not any("complete a few clean laps" in t for t in said), said
     await hub.stop()
+
+
+# ---------------------------------------------------------------- lap summary: the session's best clean lap
+def _clean_lap(n: int, ms: int) -> dict[str, Any]:
+    return {"lap_id": 100 + n, "lap_number": n, "lap_time_ms": ms, "valid": True, "clean": True, "flags": []}
+
+
+async def _summary_after_lap_25(d2_session_best_ms: int | None) -> str:
+    """A 25-lap session whose fastest clean lap (lap 2, 1:20.000) is older than the snapshot's 20 laps; lap 25
+    (1:20.500) is the fastest of those 20."""
+    from pitwall.voice.proactive import lap_messages
+
+    live = LiveState()
+    sched = FakeScheduler()
+    hub = RadioHub(live, RaceEngineer(None), FakeStt(), FakeTts(), sched, sheet, lambda s: s, lap_messages=lap_messages)
+    live.reset_session("s1", "test", False)
+    for n in range(1, 26):
+        live.laps.appendleft(_clean_lap(n, 80_000 if n == 2 else 80_500 if n == 25 else 81_000 + n))
+    if d2_session_best_ms is not None:  # D2 (repo.lap_bests): every clean lap of this session, from the database
+        live.bests = {"session": {"lap_ms": d2_session_best_ms, "sectors_ms": [None, None, None]}}
+    hub._enqueue_lap({"lap": live.laps[0], "observations": []})
+    summaries = [m.text for m in sched.queue if m.kind is MessageKind.LAP_SUMMARY]
+    assert len(summaries) == 1
+    return summaries[0]
+
+
+async def test_a_lap_slower_than_an_earlier_one_is_not_the_session_best_after_lap_20() -> None:
+    """The snapshot holds only the latest 20 laps: from lap 21 on, the best of those was called "personal best"
+    (or "session best") although an earlier lap of the session was faster. The session's D2 best covers them."""
+    assert await _summary_after_lap_25(80_000) == "That lap, 1:20.500."
+    # D2 not published yet (track unknown): the recent laps alone, as before
+    assert await _summary_after_lap_25(None) == "That lap, 1:20.500, personal best."
+    # D2 not including this lap yet: this lap is still the best
+    assert await _summary_after_lap_25(80_600) == "That lap, 1:20.500, personal best."

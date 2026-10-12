@@ -4,6 +4,8 @@ import {
   coachPoint,
   evidenceLine,
   lapPicks,
+  lapSuffix,
+  lastLapNumber,
   pointText,
   rankedObservations,
   needsClamp,
@@ -12,7 +14,7 @@ import {
   topPoint,
   workOnWentWell,
 } from "./coach";
-import { fixture, snap } from "./testkit";
+import { fixture, frame, lap, snap } from "./testkit";
 import type { ObservationNext } from "./types";
 
 function obs(over: Partial<ObservationNext>): ObservationNext {
@@ -41,7 +43,7 @@ describe("coach card before D6 (top observation for the shown corner)", () => {
     expect(p).toMatchObject({
       tag: "work_on",
       lap: 4,
-      tagText: "Work on · L4",
+      tagText: "Work on · last lap", // the header shows lap 5: the point is from the lap just finished
       text: "Turn 11 (Hairpin): you're braking about 12 m earlier than your reference (lap 3), losing 0.15 s through the corner.",
       size: 26,
       source: "observation",
@@ -53,7 +55,7 @@ describe("coach card before D6 (top observation for the shown corner)", () => {
 
   it("praises with a Good tag", () => {
     const s = fixture("recorded-suzuka-on-track-brake-ahead");
-    expect(coachPoint(s, "T4", false, true)).toMatchObject({ tag: "good", tagText: "Good · L4" });
+    expect(coachPoint(s, "T4", false, true)).toMatchObject({ tag: "good", tagText: "Good · last lap" });
   });
 
   it("never shows an incident as coaching (the radio skips them too)", () => {
@@ -69,7 +71,11 @@ describe("coach card before D6 (top observation for the shown corner)", () => {
 
   it("says there is no note, or that coaching starts after the first clean lap", () => {
     const s = fixture("recorded-suzuka-on-track-in-corner");
-    expect(coachPoint(s, "T1", false, true)).toMatchObject({ tag: null, text: null, empty: "No note for T2 on lap 4" });
+    expect(coachPoint(s, "T1", false, true)).toMatchObject({
+      tag: null,
+      text: null,
+      empty: "No note for T2 on the last lap",
+    });
     expect(coachPoint(snap({ reference: null }), "T9", false, true).empty).toBe(NO_REFERENCE_COACHING);
     expect(coachPoint(snap(), null, false, true).empty).toBe("No corner ahead yet");
   });
@@ -79,7 +85,7 @@ describe("coach card with D6 (one message, two channels)", () => {
   it("shows the radio's point for the corner, the short text on track", () => {
     const s = fixture("recorded-d246-suzuka-on-track-brake-ahead");
     const p = coachPoint(s, "T7", false, true);
-    expect(p).toMatchObject({ source: "d6", tagText: "Work on · L4", size: 30 });
+    expect(p).toMatchObject({ source: "d6", tagText: "Work on · last lap", size: 30 });
     expect(p.text).toBe(s.coach?.by_corner.T7?.short);
     expect(p.text!.length).toBeLessThanOrEqual(48);
     // stationary: the full text
@@ -98,7 +104,7 @@ describe("coach card with D6 (one message, two channels)", () => {
 
   it("does not fall back to observations when D6 has no point for the corner", () => {
     const s = fixture("recorded-d246-suzuka-on-track-in-corner");
-    expect(coachPoint(s, "T1", false, true)).toMatchObject({ text: null, empty: "No note for T2 on lap 4" });
+    expect(coachPoint(s, "T1", false, true)).toMatchObject({ text: null, empty: "No note for T2 on the last lap" });
   });
 
   it("orders a lap's points: picked first, then the other corners, corrective before praise", () => {
@@ -109,6 +115,45 @@ describe("coach card with D6 (one message, two channels)", () => {
     const firstPraise = picks.findIndex((o) => o.positive);
     expect(picks.slice(firstPraise).every((o) => o.positive)).toBe(true);
     expect(new Set(picks.map((o) => o.id)).size).toBe(picks.length);
+  });
+});
+
+describe("the lap a point is from (the game's numbering; the header shows the lap in progress)", () => {
+  // Real F1 25 Austria scenario (20261010-221749): on lap 65 of 71 the radio coached Turn 7 from lap 64 and the card
+  // said "Work on · L64" under "Lap 65 / 71", which read as one lap out. The lap just finished is "last lap".
+  const at = (now: number, latest: number, pointLap: number) =>
+    snap({
+      frame: frame({ lap_number: now }),
+      laps: [lap(latest, 71_800), lap(latest - 1, 71_745)],
+      observations: [obs({ id: "p", lap_number: pointLap, corner: "T9" })],
+    });
+
+  it("tags a point from the lap just finished 'last lap'", () => {
+    const s = at(65, 64, 64);
+    expect(lastLapNumber(s)).toBe(64);
+    expect(coachPoint(s, "T9", false, true).tagText).toBe("Work on · last lap");
+    expect(coachPoint(at(65, 64, 64), "T9", false, false).lap).toBe(64); // the number stays on the point
+  });
+
+  it("keeps the lap number for an older lap", () => {
+    expect(coachPoint(at(66, 65, 64), "T9", false, true).tagText).toBe("Work on · L64");
+  });
+
+  it("is not 'last lap' while the car is past the lap after it (that lap's analysis still on its way)", () => {
+    const s = at(67, 65, 65);
+    expect(lastLapNumber(s)).toBeNull();
+    expect(coachPoint(s, "T9", false, true).tagText).toBe("Work on · L65");
+  });
+
+  it("at the chequered flag the game keeps the final lap's number: the final lap is the last lap", () => {
+    expect(coachPoint(at(71, 71, 71), "T9", false, false).tagText).toBe("Work on · last lap");
+  });
+
+  it("words the suffix", () => {
+    expect(lapSuffix(64, 64)).toBe(" · last lap");
+    expect(lapSuffix(64, 65)).toBe(" · L64");
+    expect(lapSuffix(64, null)).toBe(" · L64");
+    expect(lapSuffix(null, 64)).toBe("");
   });
 });
 

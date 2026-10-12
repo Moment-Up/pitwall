@@ -406,6 +406,9 @@ class LapCompletion:
     sector_times_ms: list[int | None] = field(default_factory=list)
     valid: bool | None = None
     session_time_s: float | None = None
+    # the driver's session ended with this lap: the game reports their result as finished at this line crossing
+    # (F1: LapData.resultStatus 3, the chequered flag). None = the game does not say.
+    final: bool | None = None
 
 
 @dataclass(slots=True, kw_only=True)

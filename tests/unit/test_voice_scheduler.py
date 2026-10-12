@@ -743,6 +743,7 @@ def lap(
     clean: bool = True,
     valid: bool | None = True,
     flags: list[str] | None = None,
+    final: bool | None = False,
 ) -> dict[str, Any]:
     return {
         "lap_id": lap_id,
@@ -752,6 +753,7 @@ def lap(
         "valid": valid,
         "clean": clean,
         "flags": flags or [],
+        "final": final,
         "tyre_compound": "soft",
         "fuel_used_kg": 1.4,
     }
@@ -767,36 +769,88 @@ def test_fmt_lap_time() -> None:
 
 
 def test_lap_summary_against_reference() -> None:
-    assert lap_summary_text(lap(), 65_000, REF) == "Lap 4, 1:05.706, plus 0.080 to your reference."
-    assert lap_summary_text(lap(ms=65_506), 65_000, REF) == "Lap 4, 1:05.506, minus 0.120 to your reference."
-    assert lap_summary_text(lap(ms=65_626), 65_000, REF) == "Lap 4, 1:05.626, level with your reference."
+    assert lap_summary_text(lap(), 65_000, REF) == "That lap, 1:05.706, plus 0.080 to your reference."
+    assert lap_summary_text(lap(ms=65_506), 65_000, REF) == "That lap, 1:05.506, minus 0.120 to your reference."
+    assert lap_summary_text(lap(ms=65_626), 65_000, REF) == "That lap, 1:05.626, level with your reference."
 
 
 def test_lap_summary_without_usable_reference() -> None:
-    assert lap_summary_text(lap(), None, None) == "Lap 4, 1:05.706."
-    assert lap_summary_text(lap(), None, {**REF, "lap_time_ms": None}) == "Lap 4, 1:05.706."
-    assert lap_summary_text(lap(), None, {**REF, "lap_id": 104}) == "Lap 4, 1:05.706."  # the lap is the reference
+    assert lap_summary_text(lap(), None, None) == "That lap, 1:05.706."
+    assert lap_summary_text(lap(), None, {**REF, "lap_time_ms": None}) == "That lap, 1:05.706."
+    assert lap_summary_text(lap(), None, {**REF, "lap_id": 104}) == "That lap, 1:05.706."  # the lap is the reference
 
 
 def test_lap_summary_personal_best() -> None:
     # best_clean_ms may already include this lap (the hub computes it after the lap is published)
     assert lap_summary_text(lap(ms=65_506), 65_506, REF) == (
-        "Lap 4, 1:05.506, personal best, minus 0.120 to your reference."
+        "That lap, 1:05.506, personal best, minus 0.120 to your reference."
     )
     assert "personal best" in (lap_summary_text(lap(ms=65_400), 65_506, REF) or "")
     assert "personal best" not in (lap_summary_text(lap(ms=65_600), 65_506, REF) or "")
     assert "personal best" not in (lap_summary_text(lap(ms=65_400), None, REF) or "")
+    # the lap is the reference, or there is none yet: the best clean lap there is
+    assert lap_summary_text(lap(), 65_706, {**REF, "lap_id": 104}) == "That lap, 1:05.706, personal best."
+    assert lap_summary_text(lap(), 65_706, None) == "That lap, 1:05.706, personal best."
+
+
+def test_lap_summary_session_best_when_the_reference_is_faster() -> None:
+    """Real F1 25 Austria scenario (20261010-221749): the session's best clean lap, still 4.6 s off a faster
+    reference from another session, was called a personal best ("..., personal best, plus 4.580 ...")."""
+    ref = {"lap_id": 7, "lap_number": 63, "lap_time_ms": 71_745, "session_id": "earlier"}
+    assert lap_summary_text(lap(62, 76_325, lap_id=200), 76_325, ref) == (
+        "That lap, 1:16.325, session best, plus 4.580 to your reference."
+    )
 
 
 def test_lap_summary_notes_and_no_best_for_compromised_laps() -> None:
     invalid = lap(ms=64_000, clean=False, valid=False, flags=["invalid"])
     assert lap_summary_text(invalid, 65_506, REF) == (
-        "Lap 4, 1:04.000, minus 1.626 to your reference. That lap was invalidated."
+        "That lap, 1:04.000, minus 1.626 to your reference. That lap was invalidated."
     )
     fb = lap(clean=False, flags=["flashback"])
-    assert lap_summary_text(fb, 70_000, REF) == "Lap 4, 1:05.706, plus 0.080 to your reference. Flashback used."
-    assert (lap_summary_text(lap(clean=False, flags=["pit_in"]), None, None) or "").endswith("In-lap.")
-    assert (lap_summary_text(lap(clean=False, flags=["pit_out"]), None, None) or "").endswith("Out-lap.")
+    assert lap_summary_text(fb, 70_000, REF) == "That lap, 1:05.706, plus 0.080 to your reference. Flashback used."
+
+
+# Real F1 25 lap times from the owner's captures (the game's own lap history; the drive-through is made up, no capture
+# has one), worded as the radio now says them.
+@pytest.mark.parametrize(
+    ("the_lap", "want"),
+    [
+        # Imola race lap 1 from the grid (20261011-195612)
+        (lap(1, 86_788, clean=False, flags=["standing_start"]), "Opening lap, 1:26.788."),
+        # Imola lap 14: into the pits at 4810 m
+        (lap(14, 94_412, clean=False, flags=["pit_in"]), "In-lap, 1:34.412."),
+        # Imola lap 15: out of the pit lane at 449 m (the game's driverStatus: 3 = out lap)
+        (lap(15, 105_838, clean=False, flags=["pit_out"]), "Out-lap, 1:45.838."),
+        # a drive-through: into and out of the pit lane within one lap
+        (lap(9, 98_000, clean=False, flags=["pit_in", "pit_out"]), "Pit lap, 1:38.000."),
+        # Imola lap 32 at the chequered flag: the game kept the lap number and set resultStatus "finished"
+        (lap(32, 80_886, clean=True, final=True), "Final lap, 1:20.886."),
+        # Suzuka one-shot qualifying (flying lap 1, invalidated)
+        (lap(1, 96_228, clean=False, valid=False, flags=["invalid"]), "That lap, 1:36.228. That lap was invalidated."),
+        # Austria scenario lap 65 (20261010-221749, a flashback)
+        (lap(65, 74_344, clean=False, flags=["flashback"]), "That lap, 1:14.344. Flashback used."),
+    ],
+)
+def test_lap_summary_names_the_finished_lap_never_its_bare_number(the_lap: dict[str, Any], want: str) -> None:
+    """The summary is said after the line, when the game's HUD already shows the next lap: "Lap 66, 1:13.897" sounded
+    one lap out. The lap is named by what it was; its game number stays on the message (``lap_number``, meta)."""
+    (m,) = lap_messages(the_lap, [], None, None, "normal", 0.0)
+    assert m.text == want
+    n = the_lap["lap_number"]
+    for said in (m.text, m.speech):
+        assert not said.startswith(f"Lap {n}") and f"Lap {n}," not in said
+    assert m.lap_number == n and m.meta["lap_number"] == n
+    assert m.speech == to_speech(want)
+
+
+def test_lap_summary_final_lap_wins_and_unknown_final_is_not_final() -> None:
+    assert (lap_summary_text(lap(5, 80_000, clean=False, flags=["pit_out"], final=True), None, None) or "").startswith(
+        "Final lap,"
+    )
+    assert lap_summary_text(lap(final=None), None, None) == "That lap, 1:05.706."  # the game does not say
+    no_flags = {k: v for k, v in lap().items() if k not in ("flags", "final")}  # an older payload
+    assert lap_summary_text(no_flags, None, None) == "That lap, 1:05.706."
 
 
 def test_no_summary_without_lap_time() -> None:
@@ -892,7 +946,7 @@ OBSERVATIONS = [
 def test_lap_messages_normal_summary_plus_top_confident_point() -> None:
     msgs = lap_messages(lap(), OBSERVATIONS, 65_000, REF, "normal", 100.0)
     assert [m.text for m in msgs] == [
-        "Lap 4, 1:05.706, plus 0.080 to your reference.",
+        "That lap, 1:05.706, plus 0.080 to your reference.",
         "T4, losing 0.08 s: minimum speed 8 km/h down.",
     ]
     summary, coach = msgs
@@ -907,14 +961,14 @@ def test_lap_messages_normal_summary_plus_top_confident_point() -> None:
         assert m.needs_speak_window and not m.bypass_quiet
     assert len({m.id for m in msgs}) == 2
     # display keeps three decimals; speech says the delta the radio way and normalises units / corner names
-    assert summary.speech == to_speech("Lap 4, 1:05.706, +0.080s to your reference.")
+    assert summary.speech == to_speech("That lap, 1:05.706, +0.080s to your reference.")
     assert "0.080" not in summary.speech and "1:05" not in summary.speech
     assert coach.speech == to_speech(coach.text) and "T4" not in coach.speech
 
 
 def test_lap_summary_speech_keeps_notes_and_level_wording() -> None:
     (m,) = lap_messages(lap(ms=65_626, clean=False, flags=["flashback"]), [], None, REF, "normal", 0.0)
-    assert m.text == "Lap 4, 1:05.626, level with your reference. Flashback used."
+    assert m.text == "That lap, 1:05.626, level with your reference. Flashback used."
     assert m.speech == to_speech(m.text)
 
 

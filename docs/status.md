@@ -381,7 +381,7 @@ report.md}` (no database change).
 - **Limits:** race goals are F1 only (GT7, AC and Forza send no session type or penalties) and only for sessions
   recorded from this version (`total_laps` is stored in `sessions.info` from v3; older races are not evaluable). In
   GT7, AC and Forza "clean" means no pit lap, reset or flashback (no track-limit data). Race lap 1 is skipped by
-  steady-lap windows because F1 25 flags only some race lap 1s as standing starts.
+  steady-lap windows because laps stored before 2026-10-11 flag only some F1 25 race lap 1s as standing starts.
 - **Migration checked by hand:** a v2 database made by the base commit's code (`git archive 181d85c src`, Austria
   fixture replayed) opened with this branch: version 3, `goals` and `ix_goals_driver` created, sessions and laps
   intact, a goal created and a recap served; reopening is idempotent; the old build reopening it writes version 2 and
@@ -485,6 +485,48 @@ report.md}` (no database change).
 - Community files: issue forms, PR template, CONTRIBUTING.md, SECURITY.md, CHANGELOG.md. Capability statuses in
   `capabilities.py` are unchanged.
 <!-- --- end lane install --- -->
+## Lap numbering on the radio and Drive; pit-lap and race-start flags (2026-10-11)
+- **Report:** "the radio is 1 lap out to the game because the first lap is the learning lap and not being counted".
+  Nothing was renumbered or dropped: every stored lap keeps the game's `currentLapNum` (in the owner's 18 F1 25
+  captures, 81 of 81 timed laps with a Session History entry have the game's own time for that number). The radio said "Lap 66,
+  1:13.897" for the lap just finished, which it can only say after the line, when the game's HUD and the Drive header
+  already show 67; the coach chip read "Work on · L64" under "Lap 65 / 71".
+- **Built:** the lap summary names the lap by what it was, never "Lap N," (`voice/proactive.py`): "That lap, 1:13.897,
+  plus 0.080 to your reference.", "Opening lap" (race lap 1 from the grid), "Out-lap", "In-lap", "Pit lap" (in and
+  out of the pit lane within one lap) and "Final lap" (new `LapCompletion.final`: F1 `resultStatus` turned finished
+  at the line; summary key `final`). The game's lap number stays on the message (`lap_number`, `meta.lap_number`).
+  "Personal best" is said only when the lap is also at or under the reference; a session's best that is still slower
+  than a reference from another session is a "session best". Drive's coach chip says "Work on · last lap" /
+  "Good · last lap" for the lap just finished ("· L64" for older laps; "No note for T2 on the last lap"); the lap toast
+  says "Lap 66 done · 2 coaching points".
+- **Fixed flags** (`analysis/laps.py`): an out lap is `pit_out` only (a lap that starts in the pit lane; real Imola:
+  exit 449 m, laps 15 and 31 were `pit_in, pit_out` and the radio said "In-lap" for them), an in lap `pit_in` only,
+  both only when the car enters and leaves the pit lane within one lap. Race lap 1 is a standing start wherever the
+  grid is (first frame: lap 1, timer under 1 s, under 5 km/h, not in the pit lane): Melbourne (-164 m), Austria
+  Reverse (-162 m), Montreal (-50 m), Las Vegas (+2.6 m) and Silverstone Reverse (+56 m) used to count lap 1 as a
+  clean lap, call it a personal best and coach lap 2 against it. A flying one-shot qualifying lap and the Austria
+  scenario's lap 62 stay unflagged.
+- **Evidence (recorded captures, not a live session):** new excerpts `f1_25_2025_ps5_melbourne_race-start-excerpt`
+  and `f1_25_2025_ps5_imola_race-pitstop-excerpt` (`tests/recorded/test_lap_numbering_real.py`: stored number and
+  time = the game's, the flags, the radio text, and a pipeline replay where every lap note arrives while the game's
+  next frame shows lap N+1, or lap N at the flag). Replays of the full Imola, Melbourne, Suzuka and Austria-scenario
+  captures before/after, and a scratch server (HTTP 8850 / UDP 20850, LLM off, text-only radio) fed Melbourne and
+  Imola with `pitwall send --speed 10`: 33 lap summaries heard, 31 with the HUD one lap ahead and 2 "Final lap" at
+  the flag, none starting "Lap N,".
+- **Unverified:** an out lap from the garage in practice or qualifying (no such capture), a pit-lane race start, F1
+  time trial lap 1, the new wording heard live on the iPad. Out of scope and unchanged: braking cues still block race
+  lap 1 only when the grid is past 60 m (`coach/cues.py` `STANDING_START_M`), and in/out laps still get coaching.
+- **Review follow-ups (2026-10-11):** a flashback rewinds the pit-lane state with the trace (`analysis/laps.py`
+  `pit_runs`): a flashback from the pit entry back onto the track, or from the track back into the pit exit, used to
+  make the lap `pit_in, pit_out` ("Pit lap"; an in lap was "In-lap" before the fix above). Drive's Car tab title
+  says "Coaching · last lap" and the pit-lane chip "Next run · from last lap" for the lap just finished (they said
+  "lap 66" / "from L66" under "Lap 67"). The radio's "personal best" / "session best" also counts the session's
+  laps older than the snapshot's latest 20 (D2 `bests.session`): from lap 21 a lap slower than an earlier one was
+  called a best. Answers to questions say "Your last lap against your reference lap (lap 64)" and "Last lap, T5,
+  against the reference" for the lap just driven ("Lap 66" only for an older lap). Evidence: unit tests (synthetic
+  frames with Imola's pit geometry, recorded Drive fixtures), and the owner's 18 F1 25 captures (101 laps, 15 with a
+  flashback, 6 pit laps) give the same flags before and after; no capture has a flashback across the pit lane or a
+  session past 32 laps.
 
 ## Next
 1. Dashboard v2 rig acceptance (spec 14.5) on the iPad with live PS5 telemetry. Remove `/next/` and the Svelte

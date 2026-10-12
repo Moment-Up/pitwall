@@ -19,8 +19,9 @@ export type CoachTextSize = 30 | 26 | 22;
 export interface CoachPoint {
   /** "drill": a practice drill's attempt (coachref, lib/drive/drill.ts). */
   tag: "work_on" | "good" | "drill" | null;
+  /** The game's number of the lap the point is from. */
   lap: number | null;
-  /** "Work on · L6" / "Good · L6". */
+  /** "Work on · last lap" / "Good · last lap" for a point from the lap just finished; "Work on · L6" for older laps. */
   tagText: string | null;
   text: string | null;
   size: CoachTextSize;
@@ -83,14 +84,39 @@ function latestLap(s: SnapshotNext): number | null {
   return finite(l) ? l : null;
 }
 
-function view(o: ObservationNext, source: "d6" | "observation", simple: boolean, moving: boolean): CoachPoint {
+/**
+ * The game's number of the lap the driver just finished: the latest completed lap, unless the car is already past
+ * the lap after it (that lap's analysis still on its way), else null. A point from it is tagged "last lap", not
+ * "L66": the header shows the lap in progress ("Lap 67"), so a bare "L66" next to it reads as one lap out. At the
+ * chequered flag the game keeps the final lap's number, so the final lap is still the last lap.
+ */
+export function lastLapNumber(s: SnapshotNext): number | null {
+  const l = s.laps[0]?.lap_number;
+  if (!finite(l)) return null;
+  const now = s.frame?.lap_number;
+  return finite(now) && now > l + 1 ? null : l;
+}
+
+/** " · last lap" for the lap just finished, " · L6" for an older lap, "" when unknown. */
+export function lapSuffix(lap: number | null, last: number | null): string {
+  if (lap == null) return "";
+  return lap === last ? " · last lap" : ` · L${lap}`;
+}
+
+function view(
+  o: ObservationNext,
+  source: "d6" | "observation",
+  simple: boolean,
+  moving: boolean,
+  last: number | null,
+): CoachPoint {
   const text = pointText(o, simple, moving);
   const tag = o.positive ? "good" : "work_on";
   const lap = finite(o.lap_number) ? o.lap_number : null;
   return {
     tag,
     lap,
-    tagText: `${tag === "good" ? "Good" : "Work on"}${lap != null ? ` · L${lap}` : ""}`,
+    tagText: `${tag === "good" ? "Good" : "Work on"}${lapSuffix(lap, last)}`,
     text,
     size: textSize(text, moving),
     clamp: needsClamp(text, moving),
@@ -127,16 +153,18 @@ export function simpleWording(s: SnapshotNext, profileSimple: boolean): boolean 
 export function coachPoint(s: SnapshotNext, corner: string | null, simple: boolean, moving: boolean): CoachPoint {
   if (!s.reference && !s.coach) return emptyPoint(NO_REFERENCE_COACHING);
   if (corner == null) return emptyPoint("No corner ahead yet");
+  const last = lastLapNumber(s);
   if (s.coach) {
     const o = s.coach.by_corner[corner];
-    if (o) return view(o, "d6", simpleWording(s, simple), moving);
+    if (o) return view(o, "d6", simpleWording(s, simple), moving, last);
   } else {
     const o = rankedObservations(s).find((x) => x.corner === corner);
-    if (o) return view(o, "observation", simple, moving);
+    if (o) return view(o, "observation", simple, moving, last);
   }
   const lap = latestLap(s);
   const label = cornerLabelOf(s.track_model, corner);
-  return emptyPoint(`No note for ${label}${lap != null ? ` on lap ${lap}` : ""}`);
+  const on = lap == null ? "" : lap === last ? " on the last lap" : ` on lap ${lap}`;
+  return emptyPoint(`No note for ${label}${on}`);
 }
 
 /**
@@ -160,7 +188,7 @@ export function lapPicks(s: SnapshotNext): { picks: ObservationNext[]; source: "
 export function topPoint(s: SnapshotNext, simple: boolean): CoachPoint | null {
   const { picks, source } = lapPicks(s);
   const o = picks.find((x) => !x.positive) ?? picks[0];
-  return o ? view(o, source, simpleWording(s, simple), false) : null;
+  return o ? view(o, source, simpleWording(s, simple), false, lastLapNumber(s)) : null;
 }
 
 /** One Work on and one Went well (Session complete card). */
@@ -172,5 +200,9 @@ export function workOnWentWell(s: SnapshotNext, simple: boolean): { workOn: Coac
   const sw = simpleWording(s, simple);
   const w = picks.find((x) => !x.positive);
   const g = picks.find((x) => x.positive);
-  return { workOn: w ? view(w, source, sw, false) : null, wentWell: g ? view(g, source, sw, false) : null };
+  const last = lastLapNumber(s);
+  return {
+    workOn: w ? view(w, source, sw, false, last) : null,
+    wentWell: g ? view(g, source, sw, false, last) : null,
+  };
 }

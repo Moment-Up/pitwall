@@ -68,6 +68,8 @@ def test_lap_completions_match_game_timing(packets: list[CapturedPacket]) -> Non
     assert got == GAME_TIMING
     for _lap, total, s1, s2, s3 in GAME_TIMING:
         assert s1 + s2 + s3 == total
+    # the final lap: the game keeps the lap number at the flag and sets resultStatus "finished" (the radio's "Final lap")
+    assert [c.final for c in done] == [False, False, True]
 
 
 def test_standing_start_begins_past_the_line_and_waits_on_the_grid(packets: list[CapturedPacket]) -> None:

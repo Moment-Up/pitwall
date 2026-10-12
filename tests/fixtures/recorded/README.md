@@ -23,4 +23,8 @@ Committed captures (each a byte-for-byte excerpt of the maintainer's own PS5 ses
 - `f1_25_2025_ps5_austria_race-excerpt.pwcap`: F1 25 v1.26, Austria race - standing start, lap changes, finish
 - `f1_25_2025_ps5_monza_race-excerpt.pwcap`: F1 25, Monza race lap 3, 560-2250 m (T1-2, T4-5) - every packet
   unchanged apart from the participant names
+- `f1_25_2025_ps5_melbourne_race-start-excerpt.pwcap`: F1 25, Melbourne 3-lap race - the grid 164 m behind the
+  timing line (negative lap distance), lights out, lap 1->2 and lap 2->3 (lap numbering, standing start)
+- `f1_25_2025_ps5_imola_race-pitstop-excerpt.pwcap`: F1 25, Imola race pit stop - lap 14 pit entry (4810 m) and the
+  line crossed in the pit lane, lap 15 leaving the pit lane (exit 449 m), lap 15->16 (in-lap / out-lap flags)
 - `ac_ps5_ks_silverstone_probe-excerpt.pwcap`: Assetto Corsa (PS4 build) on PS5, live probe 2026-10-11

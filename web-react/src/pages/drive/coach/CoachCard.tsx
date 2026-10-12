@@ -1,10 +1,14 @@
 // The coach card (design spec 4.3 #4, 4.5; mockup coachCard): the one coaching point for the corner in the hero,
 // the same point the radio picked (D6), verbatim. The UI adds no advice (P9).
 //
-//   [Work on · L6]  Stowe: you braked about 12 m earlier than on your reference lap and lost about 0.11 s here.
+//   [Work on · last lap]  Stowe: you braked about 12 m earlier than on your reference lap and lost about 0.11 s here.
+//
+// The chip names the lap the point is from: "last lap" for the lap just finished (the header already shows the lap in
+// progress, so "L6" under "Lap 7" would read as one lap out), "L6" for an older lap.
 //
 // Length rule: 30 px up to 60 characters, else 26 px clamped to 3 lines while moving (never smaller); stationary
-// (pit lane) the full text at 22 px with its evidence line under a "Next run · from L6" chip.
+// (pit lane) the full text at 22 px with its evidence line under a "Next run · from last lap" chip ("from L6" for
+// an older lap).
 
 import { Card, Chip } from "@heroui/react";
 import { memo } from "react";
