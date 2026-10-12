@@ -225,6 +225,20 @@ def test_team_names_match_the_spec_appendix(spec_doc: str) -> None:
     assert enums.team_name(8) == "McLaren" and enums.team_name(162) == "DAMS '24"
 
 
+def test_observed_f2_team_ids_stay_out_of_the_spec_table_and_are_documented(spec_doc: str) -> None:
+    """F2 support: ids 209-219 (observed in format 2025) are not in EA's table, follow its order for 465-475, and
+    are written up in the spec's section 10 with their evidence."""
+    from pitwall.adapters.f1 import enums
+    from pitwall.adapters.f1.spec_check import section
+
+    observed = enums.OBSERVED_F2_TEAMS_FMT2025
+    assert set(observed) == set(range(209, 220)) and not set(observed) & set(_spec_teams(spec_doc))
+    assert list(observed.values()) == [enums.TEAMS[i] for i in range(465, 476)]
+    errata = section(spec_doc, "## 10. Known issues", "## 11.")
+    assert "209-219" in errata and "465-475" in errata and "20261011-011513" in errata
+    assert "send 0 in every ERS and hybrid field" in errata and "one-shot qualifying finishing sequence" in errata
+
+
 def test_session_car_name_comes_from_the_team_table() -> None:
     """Synthetic packets, only to exercise the id -> name mapping (no game-compatibility claim)."""
     from pitwall.sim.f1_stream import F1Scenario, generate_f1_session

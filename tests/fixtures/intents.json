@@ -1,5 +1,5 @@
 {
-  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge. final-review = the v0.2.0 final review: race questions never go to the reference rule, drill commands led by 'alright', 'yes', 'can we', rain questions before strategy, 'what place am I?'.",
+  "about": "Engineer intents (v0.2.0 plan 4.1-4.8): question -> {intent, corner} as ai/engineer.py detect_intent routes it. Checked by tests/unit/test_engineer_intents_table.py; the acceptance run (plan 8.4 R8) replays every question as a typed radio ask. from: review = the plan review run of the ordered table, a lane name = that lane's own intent tests, ask.ts = Review > Ask suggestions, F1 = added with the intents fix. coachref = the drill commands, drill questions (a question never starts or stops a drill; a negation does neither) and \"who am I compared with?\", joined at the coachref merge. F2 = the F2 support intents (drs split from ers, stop_rules: the race's stop rules are not known). final-review = the v0.2.0 final review: race questions never go to the reference rule, drill commands led by 'alright', 'yes', 'can we', rain questions before strategy, 'what place am I?'.",
   "questions": [
     {"question": "How am I doing so far?", "intent": "summary", "corner": null, "from": "review"},
     {"question": "What's my gap to the AI?", "intent": "ai_pace", "corner": null, "from": "review"},
@@ -7,7 +7,7 @@
     {"question": "How am I doing on my goals?", "intent": "goals", "corner": null, "from": "review"},
     {"question": "Am I on target?", "intent": "general", "corner": null, "from": "review"},
     {"question": "What's my target lap time?", "intent": "lap_times", "corner": null, "from": "review"},
-    {"question": "Can I use DRS?", "intent": "ers", "corner": null, "from": "review"},
+    {"question": "Can I use DRS?", "intent": "drs", "corner": null, "from": "review"},
     {"question": "Am I in DRS range?", "intent": "gaps", "corner": null, "from": "review"},
     {"question": "What position am I?", "intent": "gaps", "corner": null, "from": "review"},
     {"question": "Should I box for inters?", "intent": "weather", "corner": null, "from": "review"},
@@ -63,7 +63,7 @@
     {"question": "Do I have any damage?", "intent": "damage", "corner": null, "from": "ai"},
     {"question": "Is my front wing broken?", "intent": "damage", "corner": null, "from": "ai"},
     {"question": "How much battery have I got?", "intent": "ers", "corner": null, "from": "ai"},
-    {"question": "Can I use DRS here?", "intent": "ers", "corner": null, "from": "ai"},
+    {"question": "Can I use DRS here?", "intent": "drs", "corner": null, "from": "ai"},
     {"question": "What were my sector times?", "intent": "sectors", "corner": null, "from": "ai"},
     {"question": "Show me my splits", "intent": "sectors", "corner": null, "from": "ai"},
     {"question": "Any yellow flags out there?", "intent": "flags", "corner": null, "from": "ai"},
@@ -84,7 +84,7 @@
     {"question": "Did I get a yellow flag in sector 2?", "intent": "flags", "corner": null, "from": "ai"},
     {"question": "Is my front wing damaged?", "intent": "damage", "corner": null, "from": "ai"},
     {"question": "What were my splits?", "intent": "sectors", "corner": null, "from": "ai"},
-    {"question": "Where is the DRS zone?", "intent": "ers", "corner": null, "from": "ai"},
+    {"question": "Where is the DRS zone?", "intent": "drs", "corner": null, "from": "ai"},
     {"question": "how am I doing against the AI?", "intent": "ai_pace", "corner": null, "from": "ai_pace_api"},
     {"question": "am I faster than the AI", "intent": "ai_pace", "corner": null, "from": "ai_pace_api"},
     {"question": "how's my pace vs the AI", "intent": "ai_pace", "corner": null, "from": "ai_pace_api"},
@@ -204,6 +204,13 @@
     {"question": "Will it rain before my pit window?", "intent": "weather", "corner": null, "from": "final-review"},
     {"question": "Is the track drying, should I stay out?", "intent": "weather", "corner": null, "from": "final-review"},
     {"question": "Where am I losing time in the rain?", "intent": "losing_time", "corner": null, "from": "final-review"},
-    {"question": "What place am I?", "intent": "gaps", "corner": null, "from": "final-review"}
+    {"question": "What place am I?", "intent": "gaps", "corner": null, "from": "final-review"},
+    {"question": "Is DRS available?", "intent": "drs", "corner": null, "from": "F2"},
+    {"question": "Did I get DRS?", "intent": "drs", "corner": null, "from": "F2"},
+    {"question": "Was a pit stop mandatory?", "intent": "stop_rules", "corner": null, "from": "F2"},
+    {"question": "Do I have to pit?", "intent": "stop_rules", "corner": null, "from": "F2"},
+    {"question": "Do I need to use both compounds?", "intent": "stop_rules", "corner": null, "from": "F2"},
+    {"question": "Is the stop compulsory in the feature race?", "intent": "stop_rules", "corner": null, "from": "F2"},
+    {"question": "Should I use overtake mode?", "intent": "ers", "corner": null, "from": "F2"}
   ]
 }

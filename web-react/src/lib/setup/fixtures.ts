@@ -5,6 +5,9 @@
 
 import type {
   CarSetupCatalog,
+  Combination,
+  FormatInfo,
+  ParamRange,
   RecommendationResponse,
   SessionSetupResponse,
   SetupExperiment,
@@ -27,8 +30,33 @@ function load<T>(name: string): FixtureFile<T> {
   return structuredClone(f) as FixtureFile<T>;
 }
 
+/** F2 support (carsetup-f2-contract-edited.json): the contract's F2 car format, F2-only ranges from the research crawl,
+ * the F2 combinations, and three session answers (Sakhir with F2 setups, Silverstone without, a 2026 F2 car). */
+export interface F2Contract {
+  format: FormatInfo;
+  ranges: Record<string, ParamRange>;
+  available: Combination[];
+  sessions: { sakhir: SessionSetupResponse; silverstone: SessionSetupResponse; f2_2026: SessionSetupResponse };
+}
+
+/** The recorded catalogue with the contract's F2 format added (format, per-parameter ranges, combinations). */
+function catalogWithF2(): CarSetupCatalog {
+  const cat = load<CarSetupCatalog>("carsetup-catalog").body;
+  const f2 = load<F2Contract>("carsetup-f2-contract-edited").body;
+  cat.formats.push(f2.format);
+  for (const p of cat.parameters) {
+    const r = f2.ranges[p.key];
+    if (r) p.ranges.f2 = r;
+  }
+  cat.available.push(...f2.available);
+  return cat;
+}
+
 export const fixtures = {
   catalog: () => load<CarSetupCatalog>("carsetup-catalog").body,
+  /** F2 support: the recorded catalogue plus the contract's F2 format (edited). */
+  catalogWithF2,
+  f2: () => load<F2Contract>("carsetup-f2-contract-edited").body,
   recSilverstone: () => load<RecommendationResponse>("carsetup-rec-silverstone").body,
   recSilverstoneBeginner: () => load<RecommendationResponse>("carsetup-rec-silverstone-beginner").body,
   unavailableImola2026: () => load<{ detail: Unavailable }>("carsetup-unavailable-imola-2026"),

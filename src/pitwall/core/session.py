@@ -464,6 +464,9 @@ class SessionManager:
             "track_temp_c": info.weather.track_temp_c if info else None,
             "assists": dict(info.assists) if info else {},
             "setup_fp": self._setup_fp,
+            # the car class (pitwall.carclass): track models and references are kept per class family
+            "formula": info.formula if info else None,
+            "packet_format": info.extra.get("packet_format") if info else None,
         }
         self.worker.submit(LapJob(session_id=sid, lap=lap, context=ctx, ground_plane=self._ground_plane))
         self._submit_ai(final=False)

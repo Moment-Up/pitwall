@@ -1036,6 +1036,71 @@ def gt7_verdict(f: GameFacts, times_match: bool | None, phases: Sequence[InputPh
     return state("inconclusive", missing + reasons, checks, metrics, now)
 
 
+# ================================================================================================ F2 (F1 25 on PS5)
+F2_MIN_TIMED_LAPS = 2  # H
+
+
+@dataclass(slots=True)
+class F2Facts:
+    """The F1 25 sessions of the run whose formula is F2 (``evidence.f2_facts``)."""
+
+    sessions: int = 0
+    timed_laps: list[int] = field(default_factory=list)  # lap times (ms), every F2 session
+    duplicates: list[str] = field(default_factory=list)  # "lap 2 (1:56.133)": the same time as the lap before it
+    ers_published: bool | None = None  # an ERS value was published while the formula was F2; None = no frame seen
+    tracks: list[str] = field(default_factory=list)
+
+
+def f2_verdict(f: F2Facts, drive_f2_no_ers: bool | None, setup_f2: bool | None, now: float) -> AutoState:
+    times = ", ".join(_fmt_lap(x) for x in f.timed_laps[:6]) if f.timed_laps else "none"
+    checks = [
+        check("f2_session", "An F1 25 session with formula F2", f.sessions > 0, str(f.sessions), ">= 1"),
+        check(
+            "timed_laps",
+            "Laps timed in an F2 car",
+            len(f.timed_laps) >= F2_MIN_TIMED_LAPS,
+            f"{len(f.timed_laps)}: {times}",
+            f">= {F2_MIN_TIMED_LAPS}",
+            True,
+        ),
+        check(
+            "no_duplicate",
+            "No lap stored twice with the same time",
+            not f.duplicates,
+            ", ".join(f.duplicates) or "none",
+            "none",
+        ),
+        check(
+            "no_ers",
+            "No ERS value published while the formula is F2",
+            None if f.ers_published is None else not f.ers_published,
+            None if f.ers_published is None else ("published" if f.ers_published else "none"),
+            "none",
+        ),
+        check("drive_f2_no_ers", "Drive showed F2 and no ERS (your tick)", drive_f2_no_ers, None, "yes"),
+        check("setup_f2", "Car setup showed F2 setups or said there are none (your tick)", setup_f2, None, "yes"),
+    ]
+    metrics: dict[str, float | int | str | None] = {
+        "sessions": f.sessions,
+        "timed_laps": len(f.timed_laps),
+        "duplicates": len(f.duplicates),
+        "tracks": ", ".join(f.tracks) or None,
+    }
+    if not f.sessions:
+        return state("no_evidence", ["No F2 session (F1 25, formula F2) in this run yet"], [], metrics, now)
+    if f.duplicates:
+        return state("fail", [f"A lap was stored twice: {', '.join(f.duplicates)}"], checks, metrics, now)
+    if f.ers_published:
+        return state("fail", ["An ERS value was published for an F2 car"], checks, metrics, now)
+    if all(c.status == "met" for c in checks):
+        return state("pass", [f"{len(f.timed_laps)} laps timed in an F2 car, each stored once"], checks, metrics, now)
+    missing = [] if f.timed_laps else ["No timed lap in an F2 car yet"]
+    missing.append(f"{sum(1 for c in checks if c.status == 'met')} of {len(checks)} checks met")
+    if drive_f2_no_ers is not True or setup_f2 is not True:
+        missing.append("Tick the two checks when you have looked at Drive and Car setup")
+    return state("inconclusive", missing, checks, metrics, now)
+
+
 def steer_sign(left: InputPhaseRecord, right: InputPhaseRecord) -> tuple[bool | None, str] | None:
     """(sign as expected, value) from the left and right phases, or None without their readings.
 

@@ -44,6 +44,13 @@ Design decisions:
   events with no re-acceleration in between are one stop (``_chain``), so a solve that lifts for a moment does not
   split one heavy stop into two light ones. Across sigmas a stop is matched by apex (60 m) or by an apex inside the
   primary zone's braking phase, judging the biggest part; the primary-sigma zone itself must pass the gate.
+* **Per car class family (``pitwall.carclass``).** F2 cars brake less hard than the default model (and than F1 25's F1
+  cars), so the default braking curve is chosen per family (``default_envelope``): ``f1`` (and an F1 car whose class is
+  not known yet) keeps the default ``VehicleModel`` and ``ONSET_EVIDENCE``; ``f2`` starts from ``F2_ENVELOPE``, fitted
+  from the F2 AI field of the owner's recorded F2 races, with its own measured error (``ONSET_EVIDENCE_F2``); ``other``
+  (classic cars, Beta) gets no physics warning at all. A session's own AI-field fit still replaces the default, and
+  ``PriorRefresher`` rebuilds from the family's default on a change of family, so an F1 session's fit never carries
+  over into an F2 session or the reverse.
 * **Off the hot path.** Solving costs ~0.1 s per track (4 sigmas, pure NumPy/Python, holds the GIL): call it from a
   background worker, never the ingest thread. ``build_brake_prior`` is cached per (game, track, lap length to 0.1 m,
   envelope rounded by ``BrakeEnvelope.rounded``); the envelope's ``source`` is part of the key, so a refitting caller
@@ -110,6 +117,32 @@ ONSET_EVIDENCE: Mapping[str, Any] = MappingProxyType(
         "calibrated_envelope_p90_abs_m": 62.0,  # research section 5.3 envelope, 23.6 + 0.00228 v^2
     }
 )
+# --- F2 (carclass family "f2") --------------------------------------------------------------------------------------
+# The F2 default braking curve: ``field_model.fit_brake_envelope`` over every full-brake sample (brake >= 0.95, >= 80
+# km/h) of the F2 AI cars in the owner's 12 recorded F2 sessions (F1 25 v1.26 on PS5, 2026-10-11: captures
+# 20261011-011513 and 20261011-224147, Melbourne, Sakhir and Jeddah): 2,556 samples, b0 21.22 m/s^2, b1 0.001457 1/m,
+# RMSE 2.77 m/s^2, i.e. 2.28 g at 100 km/h, 2.62 g at 200 km/h, 3.19 g at 300 km/h (the default model: 1.9 / 5.5 g).
+F2_ENVELOPE_SOURCE = "F2 default"
+ONSET_UNCERTAINTY_M_F2 = 100.0  # no F2 stop fell outside it (ONSET_EVIDENCE_F2), so the F1 margin is kept
+ONSET_ERROR_P90_M_F2 = 38.0
+# Predicted minus driver onset (m) with F2_ENVELOPE on the owner's clean F2 laps (same rule as ONSET_EVIDENCE). IN
+# SAMPLE: the curve was fitted from the AI cars of the same sessions, on these 3 layouts only.
+ONSET_EVIDENCE_F2: Mapping[str, Any] = MappingProxyType(
+    {
+        "captures": "data/captures 20261011-011513 and 20261011-224147 (PS5 F1 25 v1.26, F2 cars, formula 2)",
+        "layouts": 3,
+        "clean_flying_laps": 12,
+        "stops": 64,
+        "median_m": 0.0,
+        "p90_abs_m": ONSET_ERROR_P90_M_F2,
+        "worst_late_m": 73.0,
+        "worst_early_m": -59.0,
+        "predicted_late_share": 0.5,
+        "outside_window": 0,
+        "in_sample": True,  # fitted from the AI field of the same sessions: not yet checked on other F2 tracks
+        "f1_default_on_f2_laps": {"median_m": 26.5, "p90_abs_m": 51.0, "worst_late_m": 107.0, "outside_window": 1},
+    }
+)
 # Plausible full-brake decel (g) of a BrakeEnvelope: F1 25's AI field is ~4.0 g at 300 km/h and ~2.6 g at 100 km/h;
 # pitwall's default VehicleModel 5.5 g / 1.9 g. Outside these the fit is noise, not a car.
 ENVELOPE_PLAUSIBLE_G: dict[float, tuple[float, float]] = {100.0: (1.0, 7.0), 300.0: (2.0, 7.0)}
@@ -123,26 +156,41 @@ POSITIONAL_REASON = (
     "V5 not passed: onset placement is unvalidated on >= 3 tracks of Time Trial captures (research section 5.4), and "
     f"on real races its p90 error is {ONSET_ERROR_P90_M:.0f} m; only the non-positional severity tag may be voiced"
 )
+CAVEAT_F2 = (
+    "Physics estimate from the game outline with an F2 braking curve: a heads-up that a heavy stop is coming, never a "
+    f"braking point. On real F2 laps its p90 error is {ONSET_ERROR_P90_M_F2:.0f} m (3 tracks so far); brake where your "
+    "own laps say."
+)
+POSITIONAL_REASON_F2 = (
+    "V5 not passed: onset placement with the F2 braking curve is measured in sample on 3 tracks only, p90 error "
+    f"{ONSET_ERROR_P90_M_F2:.0f} m; only the non-positional severity tag may be voiced"
+)
 
 __all__ = [
     "CAVEAT",
+    "CAVEAT_F2",
     "ENVELOPE_PLAUSIBLE_G",
+    "F2_ENVELOPE",
     "HEAVY_DROP_KPH",
     "MAX_APEX_RADIUS_M",
     "ONSET_ERROR_P90_M",
     "ONSET_EVIDENCE",
+    "ONSET_EVIDENCE_F2",
     "ONSET_UNCERTAINTY_M",
     "SIGMA_ENSEMBLE_M",
     "TIER_PHYSICS_PREDICTED",
     "BrakeEnvelope",
     "BrakePrior",
+    "FamilyPrior",
     "OutlineError",
     "PriorRefresher",
     "PriorWindow",
     "SolvedZone",
     "brake_prior_from_outline",
     "build_brake_prior",
+    "default_envelope",
     "driver_onset",
+    "family_prior",
     "solve_zones",
 ]
 
@@ -188,6 +236,57 @@ class BrakeEnvelope:
 
     def apply(self, vehicle: VehicleModel) -> VehicleModel:
         return dataclasses.replace(vehicle, brake_base=self.brake_base, brake_aero=self.brake_aero)
+
+
+F2_ENVELOPE = BrakeEnvelope(21.2, 0.00146, F2_ENVELOPE_SOURCE)  # see ONSET_EVIDENCE_F2
+
+
+@dataclass(frozen=True, slots=True)
+class FamilyPrior:
+    """The physics prior's per-family settings: whether a car class family gets a heads-up at all, its default braking
+    curve (None = the default ``VehicleModel``), its window margin and the measured error the displays quote."""
+
+    family: str | None
+    enabled: bool
+    envelope: BrakeEnvelope | None
+    margin_m: float
+    p90_m: float
+    evidence: Mapping[str, Any]
+    caveat: str
+    positional_reason: str
+
+
+_F1_PRIOR = FamilyPrior(
+    None, True, None, ONSET_UNCERTAINTY_M, ONSET_ERROR_P90_M, ONSET_EVIDENCE, CAVEAT, POSITIONAL_REASON
+)
+_FAMILY_PRIORS: Mapping[str, FamilyPrior] = MappingProxyType(
+    {
+        "f1": dataclasses.replace(_F1_PRIOR, family="f1"),
+        "f2": FamilyPrior(
+            "f2",
+            True,
+            F2_ENVELOPE,
+            ONSET_UNCERTAINTY_M_F2,
+            ONSET_ERROR_P90_M_F2,
+            ONSET_EVIDENCE_F2,
+            CAVEAT_F2,
+            POSITIONAL_REASON_F2,
+        ),
+        "other": dataclasses.replace(_F1_PRIOR, family="other", enabled=False),
+    }
+)
+
+
+def family_prior(family: str | None) -> FamilyPrior:
+    """Settings for a ``carclass`` family; an unknown family (or None: the class is not known yet) is treated as F1,
+    the default model's evidence."""
+    return _FAMILY_PRIORS.get(family, _F1_PRIOR) if family is not None else _F1_PRIOR
+
+
+def default_envelope(family: str | None) -> BrakeEnvelope | None:
+    """The default braking curve of a family: None = the default ``VehicleModel`` (F1, unknown); ``F2_ENVELOPE`` for
+    F2. Family ``other`` has no prior at all (``family_prior(...).enabled``)."""
+    return family_prior(family).envelope
 
 
 @dataclass(frozen=True, slots=True)
@@ -379,6 +478,7 @@ class PriorWindow:
     direction: str | None
     turn: dict[str, Any] | None  # {"label", "name", "voice_ok"} from a hand-verified sheet turn, else None
     per_sigma: list[dict[str, float]] = field(default_factory=list)
+    onset_error_p90_m: float = ONSET_ERROR_P90_M  # the family's measured error (FamilyPrior.p90_m)
 
     @property
     def window_start_m(self) -> float:
@@ -397,7 +497,7 @@ class PriorWindow:
             "wraps": b < a,
             "segments_m": _segments(a, b, length),
             "uncertainty_m": round(self.uncertainty_m, 1),
-            "onset_error_p90_m": ONSET_ERROR_P90_M,
+            "onset_error_p90_m": self.onset_error_p90_m,
             "onset_spread_m": round(self.onset_spread_m, 1),
             "est_onset_m": round(self.est_onset_m, 1),
             "est_apex_m": round(self.est_apex_m, 1),
@@ -427,6 +527,7 @@ class BrakePrior:
     windows: list[PriorWindow]
     rejected: list[dict[str, Any]]
     lap_time_s: float  # primary-sigma QSS lap time: a diagnostic, not a validation metric
+    car_family: str | None = None  # carclass family the prior is for (None = not known: the F1 default)
 
     @property
     def source(self) -> str:
@@ -447,8 +548,10 @@ class BrakePrior:
 
     def to_payload(self) -> dict[str, Any]:
         L = self.track_length_m
+        fp = family_prior(self.car_family)
         return {
             "game": self.game,
+            "car_family": self.car_family,
             "track_id": self.track_id,
             "layout_key": self.layout_key,
             "tier": TIER_PHYSICS_PREDICTED,
@@ -467,10 +570,10 @@ class BrakePrior:
             "primary_sigma_m": PRIMARY_SIGMA_M,
             "gate": {"min_drop_kph": HEAVY_DROP_KPH, "max_apex_radius_m": MAX_APEX_RADIUS_M, "every_sigma": True},
             "positional": False,
-            "positional_reason": POSITIONAL_REASON,
+            "positional_reason": fp.positional_reason,
             "min_lead_s": MIN_LEAD_S,
-            "onset_error": {k: v for k, v in ONSET_EVIDENCE.items() if k != "captures"},
-            "caveat": CAVEAT,
+            "onset_error": {k: v for k, v in fp.evidence.items() if k != "captures"},
+            "caveat": fp.caveat,
             "windows": [w.to_dict(L) for w in self.windows],
             "rejected": self.rejected,
             "diagnostics": {"qss_lap_time_s": round(self.lap_time_s, 2)},
@@ -503,8 +606,11 @@ def brake_prior_from_outline(
     envelope: BrakeEnvelope | None = None,
     sigmas_m: Sequence[float] = SIGMA_ENSEMBLE_M,
     primary_sigma_m: float = PRIMARY_SIGMA_M,
+    family: str | None = None,
 ) -> BrakePrior:
-    """Gated heavy-stop windows for ``outline`` (see the module docstring)."""
+    """Gated heavy-stop windows for ``outline`` (see the module docstring). ``family``: the ``carclass`` family whose
+    margin and measured error the windows carry (the braking curve itself is ``vehicle`` / ``envelope``)."""
+    fp = family_prior(family)
     sigmas = tuple(float(s) for s in sigmas_m)
     if primary_sigma_m not in sigmas:
         raise ValueError("primary_sigma_m must be one of sigmas_m")
@@ -555,7 +661,7 @@ def brake_prior_from_outline(
                 est_onset_m=z.onset_m,
                 est_apex_m=z.apex_m,
                 est_end_m=z.end_m,
-                uncertainty_m=max(ONSET_UNCERTAINTY_M, spread),
+                uncertainty_m=max(fp.margin_m, spread),
                 onset_spread_m=spread,
                 est_entry_kph=z.entry_kph,
                 est_apex_kph=z.apex_kph,
@@ -575,6 +681,7 @@ def brake_prior_from_outline(
                     }
                     for sg, c in sorted(matches.items())
                 ],
+                onset_error_p90_m=fp.p90_m,
             )
         )
     windows.sort(key=lambda w: w.est_onset_m)
@@ -592,28 +699,40 @@ def brake_prior_from_outline(
         windows=windows,
         rejected=rejected,
         lap_time_s=lap_time,
+        car_family=family,
     )
 
 
 def build_brake_prior(
-    game: str, track_id: str, track_length_m: float | None = None, envelope: BrakeEnvelope | None = None
+    game: str,
+    track_id: str,
+    track_length_m: float | None = None,
+    envelope: BrakeEnvelope | None = None,
+    family: str | None = None,
 ) -> BrakePrior:
     """Cached prior for ``(game, track_id)``; ``track_length_m`` should be the session's ``m_trackLength``.
 
-    The cache key is the lap length to 0.1 m and ``envelope.rounded()`` (its ``source`` included: keep it constant).
-    A miss costs ~0.1 s of solving with the GIL held, so call this from a background worker, never from ingest.
-    Raises ``OutlineError`` (a ``ValueError``) when there is no usable outline (see ``track_geometry.build_outline``).
+    ``family`` (``carclass``): without an ``envelope`` the family's default braking curve (``default_envelope``) is
+    solved, and the windows carry the family's margin and measured error; family ``other`` has no prior
+    (``ValueError``). The cache key is the family, the lap length to 0.1 m and ``envelope.rounded()`` (its
+    ``source`` included: keep it constant). A miss costs ~0.1 s of solving with the GIL held, so call this from a
+    background worker, never from ingest. Raises ``OutlineError`` (a ``ValueError``) when there is no usable outline
+    (``track_geometry``).
     """
+    fp = family_prior(family)
+    if not fp.enabled:
+        raise ValueError(f"no physics prior for car class family {family!r}")
+    env = envelope if envelope is not None else fp.envelope
     length = None if track_length_m is None else round(float(track_length_m), 1)
-    return _build_brake_prior(game, track_id, length, None if envelope is None else envelope.rounded())
+    return _build_brake_prior(game, track_id, length, None if env is None else env.rounded(), family)
 
 
 @functools.lru_cache(maxsize=64)
 def _build_brake_prior(
-    game: str, track_id: str, track_length_m: float | None, envelope: BrakeEnvelope | None
+    game: str, track_id: str, track_length_m: float | None, envelope: BrakeEnvelope | None, family: str | None
 ) -> BrakePrior:
     outline = build_outline(game, track_id, track_length_m)
-    return brake_prior_from_outline(outline, envelope=envelope)
+    return brake_prior_from_outline(outline, envelope=envelope, family=family)
 
 
 class PriorRefresher:
@@ -628,7 +747,7 @@ class PriorRefresher:
     __slots__ = ("_envelope", "_prior", "_track")
 
     def __init__(self) -> None:
-        self._track: tuple[str, str, float] | None = None
+        self._track: tuple[str, str, float, str | None] | None = None
         self._envelope: BrakeEnvelope | None = None
         self._prior: BrakePrior | None = None
 
@@ -637,27 +756,34 @@ class PriorRefresher:
         return self._prior
 
     def refresh(
-        self, game: str, track_id: str | None, track_length_m: float | None, envelope: BrakeEnvelope | None = None
+        self,
+        game: str,
+        track_id: str | None,
+        track_length_m: float | None,
+        envelope: BrakeEnvelope | None = None,
+        family: str | None = None,
     ) -> tuple[bool, BrakePrior | None]:
         """``(changed, prior)``. ``changed`` False: the caller's current prior still stands. Otherwise ``prior`` is the
-        new one, or None when this track has no usable outline or no lap length is known (unknown stays unknown:
-        clear the layer)."""
+        new one, or None when this track has no usable outline, no lap length is known (unknown stays unknown: clear
+        the layer) or the car class family gets no physics prior (``other``). ``family`` (``carclass``) is part of the
+        key: a change of family rebuilds from that family's default braking curve (``default_envelope``), so one
+        family's AI-field fit never carries over to the other."""
         if not track_id or track_length_m is None or not math.isfinite(track_length_m) or track_length_m <= 0.0:
             changed = self._track is not None
             self._track, self._envelope, self._prior = None, None, None
             return changed, None
-        key = (game, track_id, round(float(track_length_m), 1))
+        key = (game, track_id, round(float(track_length_m), 1), family)
         same_track = key == self._track
         if same_track and (
-            self._prior is None  # no outline for this track: an envelope cannot create one
+            self._prior is None  # no outline for this track (or no prior for this family): an envelope cannot help
             or envelope is None
             or (self._envelope is not None and not envelope.differs_from(self._envelope))
         ):
             return False, self._prior
-        use = envelope
+        use = envelope if envelope is not None else default_envelope(family)
         try:
-            prior: BrakePrior | None = build_brake_prior(game, track_id, key[2], use)
-        except ValueError:  # OutlineError: no outline for this game/track, or the length gate refused it
+            prior: BrakePrior | None = build_brake_prior(game, track_id, key[2], use, family)
+        except ValueError:  # OutlineError (no outline / length gate), or a family with no physics prior
             prior = None
         self._track, self._envelope, self._prior = key, use, prior
         return True, prior

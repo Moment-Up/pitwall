@@ -3,6 +3,12 @@
 The API returns ``THRESHOLDS`` with each result (``thresholds[]``) so the dashboard can show "how this is measured".
 A *heuristic* threshold is Pitwall's judgement, tested on recorded data (F1 25 on PS5) but not validated live;
 the others are numerical choices (smoothing, search windows) or shared with ``analysis.braking``.
+
+F2 cars (``pitwall.carclass``) use the same thresholds. Evidence, recorded on the owner's PS5 (2026-10-11, captures
+20261011-011513 and -224147, clean F2 laps): the mid-corner front-minus-rear slip angle at the limit has medians of
+1.5 deg (Sakhir, 34 corner passes), 2.1 deg (Jeddah, 43) and 2.5 deg (Melbourne, 30), inside the +0.4 to +2.9 deg
+that real neutral F1 corners read and below ``US_DIFF_DEG``. The corner speed classes stay at 120 / 200 km/h: on those
+three tracks every F2 corner is slow or medium, so F2 sessions show no "fast" corners.
 """
 
 from __future__ import annotations

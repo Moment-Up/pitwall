@@ -211,6 +211,14 @@
   flex: 1 1 auto;
   min-height: 0;
 }
+/* F2 support: another class's corners stand in ("Corners from F1 laps until your first clean F2 lap here."). */
+.pww-map__note {
+  flex: none;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--muted);
+}
 
 /* ============================================================================================ laps tile (5.1) */
 .pww-laps .data-grid { min-width: 0; }

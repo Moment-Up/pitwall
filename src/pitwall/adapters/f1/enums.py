@@ -208,6 +208,15 @@ def team_name(team_id: int) -> str:
     return TEAMS.get(team_id, f"Unknown team (id {team_id})")
 
 
+# OBSERVED, not in EA's F1 25 document (docs/research/f1-udp-spec.md section 10, item 19): in UDP format 2025 the
+# 2025 F2 cars (added in v1.12) report team ids 209-219, which the spec does not list. The owner's PS5 recording
+# (F1 25 v1.26, 2026-10-11, Melbourne F2 race, 20261011-011513) has all 22 cars, two per id 209-219, with the 2025 F2
+# driver pairings; EA's own format-2026 list names the same eleven teams, in the same order, as ids 465-475. So id
+# 209 + k is the team EA names at 465 + k. Used only for display (``carclass.car_label``), never for ``car_id`` or
+# ``SessionInfo.car_name``, which keep the spec's neutral fallback ("Unknown team (id 214)").
+OBSERVED_F2_TEAMS_FMT2025: dict[int, str] = {209 + k: TEAMS[465 + k] for k in range(11)}
+
+
 # ParticipantData.platform
 PLATFORMS: dict[int, Platform] = {
     1: Platform.PC,  # Steam

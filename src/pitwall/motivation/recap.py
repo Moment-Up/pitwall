@@ -221,7 +221,7 @@ def _scope_bests(history: History, s: SessionRow) -> list[rules.SessionBest]:
 def went_well(inp: RecapInput, bests: Sequence[rules.SessionBest]) -> Thing | None:
     s, laps = inp.session, inp.laps
     mine = next((b for b in bests if b.session.id == s.id), None)
-    car = in_car(s.car_name)  # bests are per car: "at Austria" alone is false after a faster lap in another car
+    car = in_car(s.car_label)  # bests are per car: "at Austria" alone is false after a faster lap in another car
     if inp.counts and mine is not None and mine.is_pb and mine.previous_ms is not None:
         track = _track(s)
         return Thing(
@@ -479,8 +479,8 @@ def progress_thing(
         return Thing(
             "progress",
             "pb_streak",
-            f"New best at {track}{in_car(s.car_name)} in {n} sessions in a row.",
-            f"Faster than ever at {track}{in_car(s.car_name)}, {n} times in a row.",
+            f"New best at {track}{in_car(s.car_label)} in {n} sessions in a row.",
+            f"Faster than ever at {track}{in_car(s.car_label)}, {n} times in a row.",
             lap_id=bests[idx].lap.id,
             lap_number=bests[idx].lap.lap_number,
             values={"sessions": n},
@@ -513,7 +513,7 @@ def progress_thing(
             values={"best_ms": mine.best_ms, "pb_ms": mine.previous_ms, "gap_ms": gap},
         )
     if mine is not None and mine.previous_ms is None and first_clean_key(s) not in said:
-        car = in_car(s.car_name)
+        car = in_car(s.car_label)
         return Thing(
             "progress",
             "first_session",

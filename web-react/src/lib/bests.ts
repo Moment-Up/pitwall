@@ -15,8 +15,10 @@
 //
 // The session list is a window (the newest SESSION_LIST_LIMIT sessions). When it is cut off, an older faster lap can
 // be outside it, so a REC / PB found in the window is only claimed when each driver's all-time best at the track
-// (`stats.best_laps`, any car) cannot contradict it; otherwise the lap keeps the badge that is certain (SB).
+// (`stats.best_laps`, any car of the same car family: an F1 lap never contradicts an F2 PB) cannot contradict it;
+// otherwise the lap keeps the badge that is certain (SB).
 
+import { fitsFamily, type CarClass, type CarFamily } from "./carclass";
 import type { Driver } from "./drivers";
 
 export type BestBadge = "rec" | "pb" | "sb" | "neutral";
@@ -70,6 +72,8 @@ export interface ScopeRow {
   source?: string | null;
   best_clean_ms: number | null;
   started_unix: number;
+  /** F2 support: the session's car class (absent from older servers). */
+  car_class?: CarClass | null;
 }
 
 /** Real driving: never synthetic, never a replay (`source` "replay:…"). */
@@ -126,7 +130,8 @@ function fastest(rows: readonly ScopeRow[]): Holder | null {
   return best;
 }
 
-/** A driver's all-time best at a track in any car (`stats.best_laps`): a lower bound for the certainty check. */
+/** A driver's all-time best at a track in any car of one family (`stats.best_laps`): a lower bound for the certainty
+ * check. */
 export interface AllTimeBest {
   driverId: number;
   game: string;
@@ -134,6 +139,8 @@ export interface AllTimeBest {
   ms: number;
   sessionId: string;
   synthetic: boolean;
+  /** F2 support: the car family the best was set in; null / absent = unknown (it then counts for every family). */
+  family?: CarFamily | null;
 }
 
 export function allTimeBests(drivers: readonly Pick<Driver, "id" | "stats">[] | null | undefined): AllTimeBest[] {
@@ -141,7 +148,15 @@ export function allTimeBests(drivers: readonly Pick<Driver, "id" | "stats">[] | 
   for (const d of drivers ?? []) {
     for (const b of d.stats?.best_laps ?? []) {
       if (positive(b.lap_time_ms)) {
-        out.push({ driverId: d.id, game: b.game, trackId: b.track_id, ms: b.lap_time_ms, sessionId: b.session_id, synthetic: b.synthetic });
+        out.push({
+          driverId: d.id,
+          game: b.game,
+          trackId: b.track_id,
+          ms: b.lap_time_ms,
+          sessionId: b.session_id,
+          synthetic: b.synthetic,
+          family: b.car_family ?? null,
+        });
       }
     }
   }
@@ -168,7 +183,8 @@ export interface BestsOptions {
   allTime?: readonly AllTimeBest[];
 }
 
-/** No all-time best of anyone (or of `driverId`) at this track is faster than, or ties elsewhere with, `h`. */
+/** No all-time best of anyone (or of `driverId`) at this track, in a car of this family, is faster than, or ties
+ * elsewhere with, `h`. */
 function confirmed(h: Holder, session: ScopeRow, allTime: readonly AllTimeBest[], driverId: number | null): boolean {
   return allTime
     .filter(
@@ -176,6 +192,7 @@ function confirmed(h: Holder, session: ScopeRow, allTime: readonly AllTimeBest[]
         !a.synthetic &&
         a.game === session.game &&
         a.trackId === session.track_id &&
+        fitsFamily(a.family, session.car_class) &&
         (driverId == null || a.driverId === driverId),
     )
     .every((a) => a.sessionId === h.sessionId || a.ms > h.ms);

@@ -17,6 +17,7 @@ import math
 from typing import TYPE_CHECKING, Any
 
 from pitwall.analysis.strategy import MIN_STINT_LAPS, WHEEL_CODES, WHEELS
+from pitwall.carclass import classify_info, f2_race_kind
 from pitwall.strategy.gaps import car_gap_view
 
 if TYPE_CHECKING:
@@ -24,6 +25,15 @@ if TYPE_CHECKING:
     from pitwall.strategy.engine import StrategyEngine
 
 VIEW_VERSION = 1
+# The race's tyre and pit-stop rules (``pit.rules``): EA's spec has no field for them (no mandatory stop, no compound
+# rule), so they are never known and Pitwall never says a stop is not mandatory. F2 (pitwall.carclass): the recorded
+# weekend names the sprint "Race" and the feature race "Race 2".
+RULES_TEXT = "The game doesn't send this race's tyre or pit-stop rules."
+F2_FEATURE_NOTE = (
+    "In real F2 the feature race needs one pit stop and both dry compounds. In a 5-lap race on PS5, F1 25 did not "
+    "enforce this; longer races are not known."
+)
+F2_SPRINT_NOTE = "In real F2 the sprint has no compulsory stop; the game doesn't say whether it follows that."
 NOTE_NOT_ENOUGH_LAPS = f"not enough laps on this set yet: {MIN_STINT_LAPS} green laps needed"
 NOTE_NO_TREND = "not enough laps for a trend yet"
 NOTE_NO_PIT_LOSS = "no pit stop measured in this race yet"
@@ -38,6 +48,14 @@ def clean(v: Any) -> Any:
     if isinstance(v, list | tuple):
         return [clean(x) for x in v]
     return v
+
+
+def pit_rules(car_class: Any, session_type_raw: object) -> dict[str, Any]:
+    """``pit.rules`` of a race: never known (``known`` False), with the F2 sprint / feature note for an F2 race.
+    ``car_class``: a ``carclass.CarClass`` (or None); ``session_type_raw``: the game's session name."""
+    race = f2_race_kind(car_class, session_type_raw)
+    note = F2_FEATURE_NOTE if race == "feature" else F2_SPRINT_NOTE if race == "sprint" else None
+    return {"race": race, "known": False, "text": RULES_TEXT, "class_note": note}
 
 
 def off_view(reason: str | None, session_id: str | None = None, synthetic: bool = False) -> dict[str, Any]:
@@ -59,6 +77,7 @@ def off_view(reason: str | None, session_id: str | None = None, synthetic: bool 
         "pit": None,
         "safety_car": None,
         "weather": None,
+        "drs_enabled": None,  # race mode: the game's DRS enabled / disabled events (DRSE / DRSD); None = not known
         "calls": [],
     }
 
@@ -86,7 +105,7 @@ def build_view(e: StrategyEngine) -> dict[str, Any]:
         weather=e.weather.view(d.lap_time_s),
     )
     if race:
-        out.update(gaps=_gaps(e), pit=_pit(e), safety_car=_safety_car(e))
+        out.update(gaps=_gaps(e), pit=_pit(e), safety_car=_safety_car(e), drs_enabled=e.drs_enabled)
         out["calls"] = [call_entry(c) for c in e.recent_calls]
     return clean(out)  # type: ignore[no-any-return]
 
@@ -240,6 +259,7 @@ def _pit(e: StrategyEngine) -> dict[str, Any]:
         "undercut_threat": d.threat,
         "neighbour_stop": d.neighbour,
         "note": note,
+        "rules": pit_rules(classify_info(e.info), e.info.session_type_raw if e.info is not None else None),
     }
 
 

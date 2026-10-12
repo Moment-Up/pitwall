@@ -9,6 +9,7 @@
 // game / track) or 422 (length gate refused, or no lap length known): unknown stays unknown, so no map is drawn
 // rather than a wrong one.
 
+import type { CarFamily } from "../carclass";
 import { positive } from "./scale";
 
 export interface TrackOutline {
@@ -58,9 +59,13 @@ export interface BrakePrior {
   label: string;
   length_m: number;
   positional: false;
+  /** Verbatim; F2 support: per car family (the F2 one quotes the F2 curve's own error). */
   caveat: string;
   onset_error: { p90_abs_m: number; stops: number; layouts: number };
   windows: PriorWindow[];
+  /** F2 support: the car family whose braking curve this is (other cars get no physics warning); absent from older
+   * servers. */
+  car_family?: CarFamily | null;
 }
 
 /** Query string of both prior endpoints; the session's own lap length when known (else the server uses the sheet's

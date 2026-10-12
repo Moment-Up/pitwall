@@ -55,6 +55,7 @@ from pitwall.drivers import (
     NotFoundError,
     SkillLevel,
 )
+from pitwall.games import session_row_fields
 from pitwall.storage import repo
 
 router = APIRouter(prefix="/api/drivers", tags=["drivers"])
@@ -258,7 +259,10 @@ def driver_sessions(
     except DriverError as e:
         raise _http(e) from e
     with request.app.state.runtime.db.read() as c:
-        return repo.list_sessions(c, limit, driver_id=driver_id)
+        rows = repo.list_sessions(c, limit, driver_id=driver_id)
+    for row in rows:  # same rows as /api/sessions: game_entry_id + car_class, car_label, session_label
+        row.update(session_row_fields(row))
+    return rows
 
 
 # ---------------------------------------------------------------------------------------------- progress (D5)

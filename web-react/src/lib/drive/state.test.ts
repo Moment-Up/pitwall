@@ -383,9 +383,10 @@ describe("status line, pill, evidence", () => {
       lap: "Lap 5",
       lapTotal: "5",
       position: "P16",
+      carClass: null,
     });
-    expect(statusLine(snap())).toMatchObject({ session: "Practice", lapTotal: null, position: null });
-    expect(statusLine(null)).toEqual({ track: "-", session: "-", lap: "Lap -", lapTotal: null, position: null });
+    expect(statusLine(snap())).toMatchObject({ session: "Practice", lapTotal: null, position: null, carClass: null });
+    expect(statusLine(null)).toEqual({ track: "-", carClass: null, session: "-", lap: "Lap -", lapTotal: null, position: null });
     expect(sessionTypeText("unknown")).toBeNull();
     expect(sessionTypeText("time_trial")).toBe("Time trial");
   });

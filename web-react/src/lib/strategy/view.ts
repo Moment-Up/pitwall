@@ -6,7 +6,9 @@
 // change only at a session change, so nothing moves while driving (P2). Six fixed rows (the label, then the value):
 //   Ahead       "+1.8 s · closing 0.3/lap"        tags IN PIT / DRS / CLOSE / 1 STOP; unsettled values dimmed
 //   Behind      "0.8 s · closing 0.2/lap"         DRS, or CLOSE and closing, is amber (with its word, never colour alone)
-//   Pit window  "L38-44 · best L41" / "L41" / "No stop needed" / "Not enough laps yet"
+//   Pit window  "L38-44 · best L41" / "L41" / "No stop needed" / "Not enough laps yet"; beside its label, with "No stop
+//               needed", "Stop rules: not sent by the game" (F2 support: the game never sends the race's tyre or
+//               pit-stop rules, so "no stop needed" is about the tyres, never the rules)
 //   Undercut    "ahead marginal · behind threat"; "Laps to go" instead when no stop is needed (and for simple wording)
 //   Fuel        "+0.4 laps" / "−0.3 laps · lift & coast 2.1 s/lap" / "On the limit" (amber when tight or short)
 //   Weather     "Light rain in 10 min · 7 laps" / "Light rain after the flag" / "Dry for 15 min"; under SC / VSC the
@@ -95,6 +97,9 @@ export interface StrategyRowView {
   label: string;
   /** One line; "-" when unknown. */
   text: string;
+  /** Small words on the label's line where the tags go (the row has none then): "Stop rules: not sent by the game"
+   * beside "No stop needed" (F2 support); null otherwise. */
+  note: string | null;
   /** Amber text (within a second, fuel tight / short, rain coming, a safety car): the tags say why in words. */
   tone: "plain" | "warn";
   /** The value is the last settled one while the gap is in doubt (position change, a car in the pit lane). */
@@ -126,7 +131,7 @@ export interface StrategyTileOptions {
 }
 
 function row(key: StrategyRowKey, label: string, text: string, extra: Partial<StrategyRowView> = {}): StrategyRowView {
-  const r: StrategyRowView = { key, label, text, tone: "plain", dim: false, tags: [], aria: "", ...extra };
+  const r: StrategyRowView = { key, label, text, note: null, tone: "plain", dim: false, tags: [], aria: "", ...extra };
   if (!r.aria) r.aria = `${label}: ${text === UNKNOWN ? "unknown" : text}`;
   return r;
 }
@@ -205,12 +210,24 @@ function gapRow(v: StrategyView, side: "ahead" | "behind", simple: boolean): Str
   });
 }
 
+/** Beside "No stop needed" when the server says the race's rules are not known (F2 support, contract
+ * dashboard_strings.strategy_tile_rules_line). */
+export const STOP_RULES_LINE = "Stop rules: not sent by the game";
+
+/** The race's stop rules are not known (the server's pit.rules; absent from older servers, which then say nothing). */
+export function stopRulesUnknown(v: Pick<StrategyView, "pit"> | null | undefined): boolean {
+  return v?.pit?.rules?.known === false;
+}
+
 function windowRow(v: StrategyView, simple: boolean): StrategyRowView {
   const label = simple ? "Pit stop" : "Pit window";
   const p = v.pit;
   if (!p) return unknownRow("window", label);
   if (p.stop_needed === false) {
-    return row("window", label, (p.stops_done ?? 0) > 0 ? "No more stops needed" : "No stop needed");
+    // a tyre statement, never a rule: the game does not send whether a stop is compulsory
+    const text = (p.stops_done ?? 0) > 0 ? "No more stops needed" : "No stop needed";
+    const note = stopRulesUnknown(v) ? STOP_RULES_LINE : null;
+    return row("window", label, text, { note, aria: `${label}: ${text}${note ? `. ${note}` : ""}` });
   }
   const w = p.window;
   if (w) {

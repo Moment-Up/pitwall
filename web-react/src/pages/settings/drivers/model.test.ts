@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { PALETTE, type CoachingLimits, type Driver } from "../../../lib/drivers";
 import {
+  bestLapKey,
   bestLaps,
+  bestLapTracks,
   canDelete,
   coachingLine,
   coachingSummary,
@@ -105,6 +107,33 @@ describe("cards", () => {
       stats: { ...JAMES.stats, best_laps: [lap("A", true), lap("B", false), lap("C", false)] },
     });
     expect(bestLaps(d).map((b) => b.track_id)).toEqual(["B", "C", "A"]);
+  });
+
+  it("F2 support: one best per car family; a track's bests stay together and count as one track", () => {
+    const lap = (track: string, family: "f1" | "f2" | null, car: string | null) => ({
+      game: "f1_25",
+      track_id: track,
+      track_name: track,
+      lap_time_ms: 90_000,
+      lap_id: 1,
+      session_id: "s",
+      car_name: car,
+      synthetic: false,
+      set_unix: 0,
+      car_family: family,
+      car_label: family === "f2" ? `F2 · ${car}` : car,
+    });
+    const d = driver(9, "X", {
+      stats: {
+        ...JAMES.stats,
+        best_laps: [lap("Jeddah", "f1", "McLaren"), lap("Sakhir", "f2", "Art GP '24"), lap("Jeddah", "f2", "Art GP '24")],
+      },
+    });
+    expect(bestLaps(d).map((b) => `${b.track_id} ${b.car_family}`)).toEqual(["Jeddah f1", "Jeddah f2", "Sakhir f2"]);
+    expect(bestLapTracks(d)).toBe(2);
+    const keys = d.stats.best_laps.map(bestLapKey);
+    expect(new Set(keys).size).toBe(3); // unique list keys
+    expect(bestLapKey(lap("Jeddah", null, null))).toBe("f1_25|Jeddah|");
   });
 });
 

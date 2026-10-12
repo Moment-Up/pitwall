@@ -1,7 +1,8 @@
 # Status
 
 _Last updated: 2026-10-12 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
-yet unless the Live column says so. After it: Gran Turismo 7 on the PS5, from the owner's races of 2026-10-11)._
+yet unless the Live column says so. After it: Gran Turismo 7 on the PS5, from the owner's races of 2026-10-11; F2
+cars in F1 25, recorded)._
 
 What works, how far each part has been tested, and what is still unverified. Every claim is tied to one evidence
 tier:
@@ -28,6 +29,7 @@ One row per feature. "Next check" names the validation kit item that would give 
 |---|---|---|---|---|---|
 | F1 25 telemetry, format 2025 (PS5) | yes | yes (Austria, Monza, Melbourne, Imola excerpts) | **yes** (Austria races, 2026-10-10: ~190k packets, 0 rejected, lap and sector times exact) | PC and Xbox (same spec, untested) | - |
 | F1 25 2026 Season Pack (format 2026) | yes | no | no | everything beyond the spec | - |
+| F2 cars in F1 25 (PS5) | yes | yes (12 F2 sessions of 2026-10-11 replayed; 3 committed excerpts) | no | a live run; mandatory stops at longer race lengths; 2026 F2 cars | `f2_ps5` |
 | Coaching from your own reference lap (deterministic) | yes | yes | **yes** (coaching produced in the live races) | the radio and the card saying the same point, live | `ipad_one_message` |
 | Live braking cues | yes | yes | no | timing on track | `cues_timing` |
 | Radio: push-to-talk, speech recognition, voices | yes | yes | partly (a radio check over an iPad and one AirPod was heard; the F1 25 wheel button is read live) | a driver asking by push-to-talk; the new dashboard's Go live on an iPad; Kokoro and Windows voices on a radio | `radio_ptt`, `radio_kokoro` |
@@ -95,6 +97,43 @@ races, not yet compared with the HUD), the rev-limit RPM, clutch and the derived
 100 throughout: the unit is still open).
 Recorded-tier fixtures: `tests/fixtures/recorded/gt7_c_ps5_*` (the race start and 3 laps, leaving a race, a car
 reset), pinned by `tests/recorded/test_gt7_ps5_real.py`.
+
+## F2 in F1 25 (PS5): recorded
+
+The owner drove F2 cars in F1 25 on 2026-10-11 (PS5, v1.26, UDP format 2025) with the live service: a Grand Prix
+race at Melbourne in a 2025 F2 car (team id 214, capture `20261011-011513`), then one-shot qualifying and feature
+races at Sakhir, Jeddah and Melbourne in the Art GP '24 (team 158, `20261011-224147`): 12 F2 sessions, every Session
+packet with formula 2. Pitwall had no notion of the car's class: the car showed as "team_214" or a 2024 team name, an
+F1 car format was asked for on Car setup, ERS showed as an empty store, and one-shot qualifying stored every lap
+twice. Since 2026-10-12, recorded evidence (the two captures replayed through the current code into a scratch
+database: 12 sessions, all classed F2 with the right labels, 24 timed laps, each one-shot session with its one lap
+and no duplicate; fixtures `tests/fixtures/recorded/f1_25_2025_ps5_f2_*`, pinned by `tests/recorded/test_f2_ps5.py`):
+
+- **What works (recorded):** the class from the formula (else the team id) with the labels "F2 · Art GP '24" /
+  "F2 · Hitech '25" and "Sprint race" / "Feature race"; the 2025 F2 team ids 209-219, which EA's document does not
+  list, named after EA's own 465-475 (`docs/research/f1-udp-spec.md` section 10, item 19); no ERS (the game sends 0
+  in every ERS field for every F2 car, item 20); the DRS fields; F2 tyre compounds; the 60 km/h pit limit; one lap
+  per one-shot qualifying (item 21; the 3 duplicate laps already stored are deleted at the first start by the
+  one-off repair `repair.f2_v1`, which also marks the 6 Sakhir and Jeddah track models built from them superseded
+  and rebuilds both from clean F2 laps); track models, driver bests and consistency goals kept per class; F2 car
+  setups (ranges from F2 evidence, 30 cited setups for 5 tracks); the physics warning with an F2 braking curve
+  (fitted from the F2 AI field of these sessions, in sample: 64 stops on 3 tracks, median 0 m, p90 38 m, none
+  outside the 100 m margin; the F1 default had median +26.5 m, p90 51 m and 1 stop outside); stop rules that are
+  never claimed.
+- **Not yet verified:** a live run (validation check `f2_ps5`, which can upgrade the class to live); whether F1 25
+  enforces the mandatory stop and both compounds in longer F2 races (in a 5-lap race on the PS5 it did not); the
+  2026 F2 cars (recognised from the formula only: no setups, no recording); whether F2 teams differ in the game;
+  the F2 range ends not yet confirmed in the game's setup screen (listed in `f2_ps5`).
+- **Known gap:** the one-shot qualifying lap is not tagged as the session's final lap (the game turns the result
+  "finished" 17 ms after the line), so the radio may give one coaching point after it.
+- **Known gap:** a one-shot qualifying session recorded from now on also keeps the 1-sample lap the game starts after
+  the line, as an untimed incomplete lap (as any session that ends just after a line crossing), so Review says
+  "1 of 2" clean laps there; sessions repaired by `repair.f2_v1` say "1 of 1". Seen streaming the recordings over
+  loopback to a scratch server on 2026-10-12.
+- **End to end (2026-10-12):** both captures streamed over loopback UDP to a scratch server (the Melbourne race at
+  1.5x, the Jeddah and Melbourne one-shot and feature sessions at 3x) with the dashboard at iPad and phone sizes:
+  the F2 chip, "Sprint race" / "Feature race", "Super soft · 1 lap" and no ERS on Drive; F2 cars and the stop-rules
+  line in Review; F2 setups with credits; the engineer's ERS, DRS, tyre, strategy and stop-rules answers (no LLM).
 
 ## Known gaps
 

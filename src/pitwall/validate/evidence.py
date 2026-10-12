@@ -513,6 +513,33 @@ def game_facts(
     return f
 
 
+def f2_facts(sessions: Sequence[SessionSummary], tiers: TierPred) -> R.F2Facts:
+    """The run's F1 25 sessions whose formula is F2: their timed laps, any lap stored twice with the same time as the
+    lap before it (the one-shot qualifying duplicate), and whether an ERS value was published for the F2 car."""
+    ss = sorted(
+        (s for s in sessions if s.game == "f1_25" and tiers(s.tier) and s.extra.get("formula") == "F2"),
+        key=lambda s: s.started_unix,
+    )
+    f = R.F2Facts(sessions=len(ss))
+    for s in ss:
+        if s.track_name and s.track_name not in f.tracks:
+            f.tracks.append(s.track_name)
+        timed = sorted(
+            (lap for lap in s.laps if lap.get("lap_time_ms") is not None), key=lambda x: int(x.get("lap_number") or 0)
+        )
+        f.timed_laps += [int(lap["lap_time_ms"]) for lap in timed]
+        for a, b in itertools.pairwise(timed):
+            if (
+                int(b.get("lap_number") or 0) == int(a.get("lap_number") or 0) + 1
+                and b["lap_time_ms"] == a["lap_time_ms"]
+            ):
+                f.duplicates.append(f"lap {b['lap_number']} ({R._fmt_lap(int(b['lap_time_ms']))})")
+        seen = s.extra.get("ers_published")
+        if isinstance(seen, bool):
+            f.ers_published = seen or bool(f.ers_published)
+    return f
+
+
 # ================================================================================================ tier views
 @dataclass(slots=True)
 class View:
@@ -688,6 +715,11 @@ def _gt7(v: View, ctx: AutoContext) -> AutoState:
     return R.gt7_verdict(f, ctx.attest.get("times_match"), [p for p in v.phases if p.item_id == "gt7_ps5"], ctx.now)
 
 
+def _f2(v: View, ctx: AutoContext) -> AutoState:
+    f = f2_facts(v.sessions, v.tiers)
+    return R.f2_verdict(f, ctx.attest.get("drive_f2_no_ers"), ctx.attest.get("setup_f2"), ctx.now)
+
+
 def _game_sel(v: View, ctx: AutoContext) -> AutoState:
     return R.game_selection_verdict([t for t in v.game if in_windows(t.t_unix, ctx.windows, ctx.now)], ctx.now)
 
@@ -720,6 +752,7 @@ RULES: dict[str, tuple[Rule, Count]] = {
     ),
     "ac_ps5": (_ac, _n_game("ac")),
     "gt7_ps5": (_gt7, _n_game("gt7")),
+    "f2_ps5": (_f2, lambda v, _c: sum(1 for s in v.sessions if s.game == "f1_25" and s.extra.get("formula") == "F2")),
     "game_selection": (_game_sel, lambda v, c: sum(1 for t in v.game if in_windows(t.t_unix, c.windows, c.now))),
     "driver_switch": (_switch, lambda v, c: sum(1 for s in v.switches if in_windows(s.t_unix, c.windows, c.now))),
 }

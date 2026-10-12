@@ -95,10 +95,36 @@ for a mismatch; an ambiguous platform resolves to the weakest-evidence main entr
 packets or changes an adapter. Selecting GT7 switches its input on only with a console IP: without one the input
 broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup › Game "Search the network").
 
+## Car classes (`carclass.py`)
+One module decides which kind of car a session was driven in, so no other module keeps its own formula or team
+tables: `classify(game, formula, car_id, packet_format)` (and `classify_row` / `classify_info`) returns a `CarClass`
+(`f1_2025`, `f1_2026`, `f1`, `f2`, `f1_classic`, `other`) with its family (`f1`, `f2`, `other`), label, whether it has
+ERS, a chip flag and the capability status (`capabilities.CAR_CLASSES`, looked up lazily). The class is worked out at
+read time from `SessionInfo.formula` (EA spec 8.12; `F2` = formula 2), else from the spec's team ids for rows stored
+without a formula, never stored itself (schema 6 unchanged); non-F1 games get no class. `car_label` names the car
+("F2 · Art GP '24", "F2 car", never a raw id; ids 209-219 in format 2025 are named after EA's 465-475, the observed
+F2 2025 teams) and `session_label` the session ("Sprint race" / "Feature race" for F2's "Race" / "Race 2"). The
+live snapshot (`core/live.py`, recomputed only when the formula, car, format or session type change), the session
+rows of the API, the report, recap, digest, the engineer's facts and the car setup context all ask it.
+`repo.family_sql()` is its SQL twin (checked against it row by row) for queries that filter or partition by family.
+
+The family keys three things: **track models** (`analysis/track.py` `TrackModel.car_family` and `superseded`, in the
+stored JSON; `repo.load_track_model(..., family)` picks the family's newest model, else a legacy one of unknown
+family, else another family's, which is *borrowed* and shown as such; `core/lap_processor.py` caches models per
+(game, track, family) and replaces a borrowed model on the family's first clean lap), the **physics heavy-stop
+warning** (`analysis/brake_prior.py` `default_envelope(family)`: the default model for F1, `F2_ENVELOPE` fitted from
+the F2 AI field for F2, none for `other`; `PriorRefresher` keys on the family, so one family's AI fit never carries
+over), and the **setup car format** (`carsetup.catalog.FORMAT_FAMILY`: an F2 session is only ever offered the `f2`
+format). The F1 adapter reports no ERS (None) for F2 cars (formula 2: the game sends 0) and reads the DRS fields of
+Car Status; the one-shot qualifying finish is reported as one lap (`_on_lap_data`). A one-off repair
+(`repo.repair_f2_v1`, meta key `repair.f2_v1`, run by `LapProcessor.run_repairs` on the analysis worker at start)
+removed the one-shot duplicate laps stored before that fix and rebuilt the track models made from them.
+
 ## Analysis pipeline (deterministic)
 1. **Lap assembly** (`analysis/laps.py`): lap boundaries from the game's lap counter + official lap time;
    flashbacks detected by session time going backwards (rewound samples dropped, lap flagged); pit in/out,
-   joined-mid-lap, packet-loss gaps -> `incomplete`; game-declared invalid -> `invalid`; race lap 1 timed from the
+   joined-mid-lap, packet-loss gaps, a lap of fewer than 2 samples or short of the line -> `incomplete`;
+   game-declared invalid -> `invalid`; race lap 1 timed from the
    start signal (GT7 rolling starts) -> `race_start`; a lap the game timed that the adapter could not place on the
    track (`LapCompletion.untraced`) is stored with its time and no samples -> `no_trace` (+ `incomplete`). Only
    `clean` laps can be references or train the track model. Games that stream in their menus (GT7) decide in the
@@ -107,7 +133,8 @@ broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup 
    each metre gives the cumulative delta. Edges extrapolated with measured speed (<=25 m).
 3. **Track model** (`analysis/track.py`): corners = significant speed minima (prominence 8 km/h) of the
    median of up to 5 clean laps; entry = braking onset, exit = full throttle; analysis segments partition the
-   lap so corner deltas sum to the lap delta. Versioned per (game, track); frozen after 3 laps.
+   lap so corner deltas sum to the lap delta. Versioned per (game, track), one model per car class family (built
+   from that family's clean laps only); frozen after 3 laps.
 4. **Braking** (`analysis/braking.py`): hysteresis 0.10/0.05, stab merging, sub-sample onset/release,
    time-to-peak, release time, trail-braking distance, coasting, throttle pickup/full.
 5. **Comparison** (`analysis/compare.py`): compatibility gate (game/track/car/wet-dry/assists block;

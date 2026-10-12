@@ -1067,15 +1067,33 @@ def corner_texts(model: TrackModel) -> dict[str, CornerText]:
     }
 
 
-def track_model_payload(model: TrackModel) -> dict[str, Any]:
+BORROWED_CAPTION = "Corners from {other_label} laps until your first clean {label} lap here."
+
+
+def track_model_payload(model: TrackModel, family: str | None = None) -> dict[str, Any]:
     """``model.to_dict(identity=True)`` plus ``corner_text`` ({learned name: {short, long, voice}}) for the API and
     live state, so the dashboard shows the same labels as coaching and speech without re-implementing these rules.
+
+    Car class families (``pitwall.carclass``): ``car_family`` (from the model) and ``car_family_match`` - False when
+    ``family`` (the session's) has no model of its own yet and this model of another family stands in, None when
+    either family is unknown (non-F1 games) - with ``car_family_note``, the caption that says so.
     """
+    from pitwall.carclass import family_label
+
+    match: bool | None = None
+    note: str | None = None
+    if family is not None and model.car_family is not None:
+        match = model.car_family == family
+        other, own = family_label(model.car_family), family_label(family)
+        if not match and other and own:
+            note = BORROWED_CAPTION.format(other_label=other, label=own)
     return {
         **model.to_dict(identity=True),
         "corner_text": {
             k: {"short": v.short, "long": v.long, "voice": v.voice} for k, v in corner_texts(model).items()
         },
+        "car_family_match": match,
+        "car_family_note": note,
     }
 
 

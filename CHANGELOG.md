@@ -9,6 +9,20 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
+- F1 25 recognises F2 cars: an "F2" chip on Drive, the car by name ("F2 · Art GP '24") and the "Sprint race" and
+  "Feature race". Tested on recordings of PS5 F2 sessions; not yet live.
+- One-shot qualifying no longer stores your lap twice; the extra laps already stored are removed once at start and
+  their learned corners rebuilt. Tested on recordings and a copy of the database.
+- F2 cars have no ERS: Drive shows none and the engineer says so. DRS questions now get a DRS answer. Tested on
+  recordings.
+- The engineer never says a pit stop is not mandatory: F1 25 doesn't send a race's stop rules, so Pitwall says they
+  are unknown. Tested on recordings.
+- Car setups for the F2 car: F2 ranges and cited community setups (author, link, source) for 5 tracks; elsewhere "No
+  F2 setups for this track in Pitwall yet". Ranges not yet checked in the game.
+- Learned corners, the heavy-stop warning and "Your best here" are kept apart for F1 and F2 cars. Tested on
+  recordings.
+- Setup › Game lists the car classes and how each was tested: F2 on recordings, F1 live.
+
 ## v0.2.1 - 2026-10-12
 
 - Gran Turismo 7 on PS5 is tested live (the owner's races on 2026-10-11, lap times equal to the game's). PS4 is

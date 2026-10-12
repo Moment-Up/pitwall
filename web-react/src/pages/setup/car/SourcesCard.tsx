@@ -1,12 +1,14 @@
 // The setups behind a recommendation (spec 7.3 "Sources"): a Pro ListView of the cited community setups, newest first,
 // each with author, date, game version, when Pitwall checked the values and a link; a warning when one may predate the
-// car format's latest handling patch. Below: the sites' terms and how to read confidence, in Disclosures.
+// car format's latest handling patch (a format without a known handling patch, like F2, has none). Every setup keeps
+// its full credit (setupCredit: source, author, date, link), F2 setups included, with the source's own notes (lap
+// time, session, team and season) when the server sends them. Below: the sites' terms and how to read confidence.
 
 import { Card, Chip, Disclosure, Link } from "@heroui/react";
 import type { ReactNode } from "react";
 import { ListView } from "@heroui-pro/react";
 import type { CarSetupCatalog, RecommendationResponse, SourceInfo } from "../../../lib/endpoints/carsetup";
-import { CONFIDENCE_HINT, CONFIDENCE_LABEL, predatesPatch, sortedSetups } from "../../../lib/setup/carsetup";
+import { CONFIDENCE_HINT, CONFIDENCE_LABEL, predatesPatch, setupCredit, sortedSetups } from "../../../lib/setup/carsetup";
 
 function Fold({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -55,6 +57,7 @@ export function SourcesCard({ rec, catalog }: { rec: RecommendationResponse; cat
                     {s.published ? `Published ${s.published}` : "Date not stated"} · {s.patch ? `game v${s.patch}` : "game version not stated"} ·{" "}
                     {[s.session, s.conditions, s.style, s.input].filter(Boolean).join(" · ")} · checked {s.verified}
                   </ListView.Description>
+                  {s.notes ? <ListView.Description className="whitespace-normal">{s.notes}</ListView.Description> : null}
                 </div>
               </ListView.ItemContent>
               <ListView.ItemAction className="flex items-center gap-2">
@@ -63,7 +66,13 @@ export function SourcesCard({ rec, catalog }: { rec: RecommendationResponse; cat
                     <Chip.Label>{old === "yes" ? "Before" : "May predate"} patch {patch.version}</Chip.Label>
                   </Chip>
                 ) : null}
-                <Link href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center px-2 text-sm">
+                <Link
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Open ${setupCredit(s)}`}
+                  className="inline-flex min-h-11 items-center px-2 text-sm"
+                >
                   Open
                 </Link>
               </ListView.ItemAction>

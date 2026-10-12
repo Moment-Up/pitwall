@@ -2,6 +2,7 @@
 // lane S's DriveStatusSlot the frame (kind / tone / role, the Segment, the lock hint).
 //
 //   normal   ● Live  Silverstone  Practice  Lap 7 / -  P4  [SYNTHETIC] [PENALTY] [Screen may sleep]
+//   F2       ● Live  Jeddah [F2]  Feature race  Lap 3 / 5  P4   (the class chip, F2 support: never for F1 cars)
 //   no data  ● No data  Waiting for telemetry  Listening on UDP 20777
 //   ready    ● Live  Silverstone  Ready · Practice
 //   fill     YELLOW FLAG · SECTOR 3 · ZONE 16   380 m ahead          (26 px / 800 caps, detail 20 px)
@@ -46,6 +47,18 @@ export interface StatusContentProps {
   listening?: string | null;
   /** coachref: the running drill's chip (the persistent chip: the normal line only, plan 2.3). */
   drill?: DrillChipView | null;
+}
+
+/** F2 support: the car class next to the track ("F2", "Classic F1"; none for F1 cars). A neutral chip that never
+ * shrinks; phones hide it with the track (coach.css), the slot's words still carry it. */
+function ClassChip({ text }: { text: string | null }) {
+  if (!text) return null;
+  return (
+    <Chip size="lg" className="pwc-classchip">
+      <span className="sr-only">Car class </span>
+      <Chip.Label>{text}</Chip.Label>
+    </Chip>
+  );
 }
 
 function Pill({ status }: { status: StatusView }) {
@@ -203,6 +216,7 @@ export const StatusContent = memo(function StatusContent({ status, maySleep, lis
         <>
           <Pill status={status} />
           <span className={`pwc-trk ${l.track === "-" ? "text-faint" : ""}`}>{l.track}</span>
+          <ClassChip text={l.carClass} />
           <span className="pwc-meta">{status.text}</span>
           <Chips status={status} maySleep={maySleep} onBand={false} drill={drill} />
         </>
@@ -212,6 +226,7 @@ export const StatusContent = memo(function StatusContent({ status, maySleep, lis
       <>
         <Pill status={status} />
         <span className={`pwc-trk ${l.track === "-" ? "text-faint" : ""}`}>{l.track}</span>
+        <ClassChip text={l.carClass} />
         <span className="pwc-meta">{l.session}</span>
         <span className="pwc-lapno">
           {l.lap} <span className="pwc-lapno__total">/ {l.lapTotal ?? "-"}</span>

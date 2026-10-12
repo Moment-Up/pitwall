@@ -10,6 +10,8 @@
 //   0.8 s · closing 0.2/lap
 //   Pit window                               OPEN
 //   L38-44 · best L41 (game)
+//   Pit window       Stop rules: not sent by the game     (F2 support: beside "No stop needed", small; a tyre
+//   No stop needed                                         statement, never a rule)
 //   Undercut · Fuel · Weather (or Safety car under SC / VSC)
 //   L18 · Pit window is open: laps 18 to 22, best around 20.      (the newest call, verbatim: up to two lines, so
 //                                                                  "brake at your normal point" is never cut off)
@@ -29,7 +31,7 @@ function Row({ r }: { r: StrategyRowView }) {
       <span className="pws-row__k" aria-hidden="true">
         {r.label}
       </span>
-      {r.tags.length > 0 && (
+      {r.tags.length > 0 ? (
         <span className="pws-row__tags" aria-hidden="true">
           {r.tags.map((t) => (
             <span key={t.text} className="pws-tag" data-tone={t.tone}>
@@ -37,6 +39,12 @@ function Row({ r }: { r: StrategyRowView }) {
             </span>
           ))}
         </span>
+      ) : (
+        r.note && (
+          <span className="pws-row__note" aria-hidden="true">
+            {r.note}
+          </span>
+        )
       )}
       <span className="pws-row__v" aria-hidden="true">
         <Val text={r.text} />

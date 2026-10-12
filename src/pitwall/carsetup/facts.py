@@ -31,6 +31,8 @@ log = logging.getLogger(__name__)
 
 TOPIC = "setup"
 MAX_DIFF_FACTS = 5
+# How a recommendation's car format is named in the fact (F2 support: the F2 cars' own ranges and setups)
+FORMAT_WORDS = {"f2": "F2 cars of the 2024 and 2025 seasons, with F2 ranges and F2 setups only"}
 
 
 def setup_facts(
@@ -45,9 +47,10 @@ def setup_facts(
     values = ", ".join(f"{r.label} {r.display}{(' ' + r.unit) if r.unit else ''}" for r in known)
     derived = [r.label for r in result.rows if r.derived]
     low = [r.label for r in result.rows if r.confidence == "low" and r.value is not None]
+    cars = FORMAT_WORDS.get(result.car_format) or f"{result.car_format.replace('_', ' ')} cars"
     head = (
         f"Recommended {result.style} {result.conditions} {result.session} setup for {result.track_name} "
-        f"({result.car_format.replace('_', ' ')} cars), from {', '.join(authors) or 'no named source'}: {values}."
+        f"({cars}), from {', '.join(authors) or 'no named source'}: {values}."
     )
     out: list[tuple[str, str, dict[str, Any]]] = [
         (TOPIC, head, {"id": result.id, "values": {r.key: r.value for r in known}, "sources": authors})

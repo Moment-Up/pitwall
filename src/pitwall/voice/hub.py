@@ -152,6 +152,8 @@ FAST_INTENTS = frozenset(
         "line",  # feat/technique: deterministic, corner-aware answers (no phraser)
         "technique",
         "balance",
+        "drs",  # F2 support: DRS now and the car ahead in DRS range (deterministic)
+        "stop_rules",  # F2 support: the race's stop rules are not known (never via the LLM)
         "ai_pace",  # pace vs AI difficulty: radio_phrasing.ai_pace / ai_level
         "ai_level",
         "goals",  # lane motivation: goal facts (plan decision 1), and the week's counts and badges split from it

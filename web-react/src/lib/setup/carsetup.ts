@@ -7,6 +7,7 @@
 // formats, conditions and sessions are never silently substituted (servedAs mirrors recommend.recommend's order and
 // returns null rather than another format or the other conditions); the catalogue caveat is shown verbatim.
 
+import { classChip, classOf, familyOf, fitsFamily, type CarClass, type CarFamily, type SessionCarFields } from "../carclass";
 import type {
   CarFormat,
   CarSetupCatalog,
@@ -16,11 +17,13 @@ import type {
   DiffRow,
   Direction,
   ExperimentStatus,
+  FormatInfo,
   NeedField,
   ParameterInfo,
   SelectionRule,
   SessionKind,
   SessionOption,
+  SessionSetupResponse,
   SetupExperiment,
   SetupResult,
   SetupRow,
@@ -29,7 +32,7 @@ import type {
   SuggestedExperiment,
   Verdict,
 } from "../endpoints/carsetup";
-import { CAR_FORMATS, CONDITIONS, SESSION_KINDS, STYLES } from "../endpoints/carsetup";
+import { CAR_FORMATS, CarSetupError, CONDITIONS, SESSION_KINDS, STYLES } from "../endpoints/carsetup";
 import { MINUS, UNKNOWN } from "../format";
 
 // ---------------------------------------------------------------------------------------------- labels
@@ -74,12 +77,80 @@ export function defaultStyle(skill: SkillLevel | null | undefined): SetupStyle {
   return skill === "beginner" ? "stable" : "balanced";
 }
 
-/** "2025 car" / "2026 car" for the request sentence (the catalogue label is long); the label otherwise. */
+/** "2025 car" / "2026 car" / "F2 car" for the request sentence (the catalogue label is long); the label otherwise. */
 export function formatShortLabel(id: CarFormat | null | undefined, cat?: CarSetupCatalog | null): string {
   if (!id) return UNKNOWN;
+  if (id === "f2") return "F2 car";
   const year = /(\d{4})$/.exec(id)?.[1];
   if (year) return `${year} car`;
   return cat?.formats.find((f) => f.id === id)?.label ?? id;
+}
+
+// ---------------------------------------------------------------------------------------------- car families (F2)
+/** The car family each format belongs to: formats are never mixed across families (an F1 format is never offered
+ * for an F2 session, nor "f2" for an F1 one; the API refuses such an override with 422). */
+export const FORMAT_FAMILY: Readonly<Record<CarFormat, CarFamily>> = { f1_2025: "f1", f1_2026: "f1", f2: "f2" };
+
+/** The family of a format; null for an unknown format. */
+export function formatFamily(fmt: CarFormat | string | null | undefined): CarFamily | null {
+  return fmt && fmt in FORMAT_FAMILY ? FORMAT_FAMILY[fmt as CarFormat] : null;
+}
+
+/** The catalogue's formats of one family, in catalogue order; every format when the family is not known (an older
+ * server, a session without a class), as before. */
+export function familyFormats(formats: readonly FormatInfo[], family: CarFamily | null | undefined): FormatInfo[] {
+  return family ? formats.filter((f) => formatFamily(f.id) === family) : [...formats];
+}
+
+/** A session's car family on the setup page: the context's class, else the session's. */
+export function setupFamily(res: Pick<SessionSetupResponse, "context" | "session"> | null | undefined): CarFamily | null {
+  return familyOf(res?.context.car_class ?? res?.session.car_class ?? null);
+}
+
+/** The car format choices for a session: only its family's (F2 support), every format when the class is unknown. */
+export function formatChoices(cat: Pick<CarSetupCatalog, "formats">, res: Pick<SessionSetupResponse, "context" | "session">): FormatInfo[] {
+  return familyFormats(cat.formats, setupFamily(res));
+}
+
+/** Alternatives in the requested format's family only ("Alternatives come only from the same family"). */
+export function familyAlternatives(alts: readonly Combination[], family: CarFamily | null | undefined): Combination[] {
+  return family ? alts.filter((a) => formatFamily(a.car_format) === family) : [...alts];
+}
+
+/** The car on the setup page when there is no format: the class in words for a car that is not an F1 car ("F2 car",
+ * "Classic F1 car"), else null (an F1 car's format is chosen with the picker). */
+export function classCarText(cls: CarClass | null | undefined): string | null {
+  const c = classOf(cls);
+  return c && c.family !== "f1" && c.label ? `${c.label} car` : null;
+}
+
+/** A session-setup request the API refused with 422 while a car format override is set: the override is of another
+ * family than the session's class (F2 support). The page then offers the car the game reported. */
+export function refusedOverride(e: unknown, q: { format: CarFormat | null }): boolean {
+  return q.format !== null && e instanceof CarSetupError && e.status === 422;
+}
+
+/** What a handling suggestion is sized for: the page's own format when it had to size it ("the 2025 car you chose"),
+ * else F2 when the server sized it for the F2 car; null otherwise (an F1 car the game reported needs no words). */
+export function sizedFor(pageFormat: CarFormat | null | undefined, serverFormat: CarFormat | null | undefined): CarFormat | null {
+  if (pageFormat) return pageFormat;
+  return serverFormat === "f2" ? "f2" : null;
+}
+
+/** "for the 2025 car you chose", "for the 2026 car you chose", "for the F2 car" (the game reports the F2 car, it is
+ * never a choice). */
+export function forFormatText(fmt: CarFormat): string {
+  return fmt === "f2" ? "for the F2 car" : `for the ${fmt === "f1_2026" ? "2026" : "2025"} car you chose`;
+}
+
+/** A parameter's range for a format in words, for the experiment form: "F2 car menu: 1 to 26" when both ends are
+ * confirmed, else "F2 car: 1 to 26 in published setups"; null when the format has no range for it. */
+export function rangeText(p: Pick<ParameterInfo, "decimals" | "ranges"> | undefined, fmt: CarFormat | null | undefined): string | null {
+  const r = p && fmt ? p.ranges[fmt] : undefined;
+  if (!r) return null;
+  const span = `${fixed(p, r.min)} to ${fixed(p, r.max)}`;
+  const car = formatShortLabel(fmt);
+  return r.min_confirmed && r.max_confirmed ? `${car} menu: ${span}` : `${car}: ${span} in published setups`;
 }
 
 export function formatLabel(cat: CarSetupCatalog | null | undefined, id: CarFormat | null | undefined): string {
@@ -273,6 +344,13 @@ export function patchOlder(a: string | null | undefined, b: string | null | unde
   return false;
 }
 
+/** A cited setup's credit in one line: "Alex's setup on F1Laps, published 2025-08-01" ("a setup on F1Laps" without an
+ * author, "date not stated" without a date). Every published setup keeps it (F2 support: credits are never stripped). */
+export function setupCredit(s: { source_name: string; author: string | null; published: string | null }): string {
+  const who = s.author?.trim() ? `${s.author.trim()}'s setup` : "a setup";
+  return `${who} on ${s.source_name}, ${s.published ? `published ${s.published}` : "date not stated"}`;
+}
+
 /** Cited setups newest first; a setup without a date last. */
 export function sortedSetups<S extends { published: string | null }>(setups: Record<string, S>): S[] {
   return Object.values(setups).sort((a, b) => (b.published ?? "").localeCompare(a.published ?? ""));
@@ -442,6 +520,11 @@ function firstTrackWithSetup(cat: CarSetupCatalog, fmt: CarFormat): number | nul
  * (else the first), and the track / session / weather of the latest real (not synthetic) F1 session when that track
  * is drivable with that format, else the first track that has a setup, race, dry. A track the format does not have
  * is replaced by the format's first track. Null when the catalogue has no format at all.
+ *
+ * F2 support: without a format in the query the latest real session's car family picks it (an F2 session opens on
+ * the F2 car; a remembered format of another family is not used), and the track, session and weather come from the
+ * latest session of the format's family. Sessions without a class (an older server) count for every family, so
+ * nothing changes there.
  */
 export function resolveRequest(
   q: SetupRequestQuery,
@@ -450,11 +533,22 @@ export function resolveRequest(
   rememberedFormat: CarFormat | null = null,
 ): ResolvedRequest | null {
   const ids = cat.formats.map((f) => f.id);
-  const format = (q.format && ids.includes(q.format) ? q.format : null) ?? (rememberedFormat && ids.includes(rememberedFormat) ? rememberedFormat : null) ?? ids[0];
+  const real = (s: SessionOption) => !s.synthetic && f1TrackId(s.track_id) !== null;
+  // the newest session's family decides only when the catalogue has a format of it (a catalogue without F2 setups
+  // keeps the remembered F1 format)
+  const newest = q.format === null ? familyOf(sessions.find(real)?.car_class) : null;
+  const newestFamily = newest !== null && ids.some((id) => formatFamily(id) === newest) ? newest : null;
+  const remembered =
+    rememberedFormat && ids.includes(rememberedFormat) && (newestFamily === null || formatFamily(rememberedFormat) === newestFamily)
+      ? rememberedFormat
+      : null;
+  const ofFamily = newestFamily ? ids.find((id) => formatFamily(id) === newestFamily) : undefined;
+  const format = (q.format && ids.includes(q.format) ? q.format : null) ?? remembered ?? ofFamily ?? ids[0];
   if (!format) return null;
   const f = cat.formats.find((x) => x.id === format);
   if (!f) return null;
-  const latest = q.track === null ? sessions.find((s) => !s.synthetic && f1TrackId(s.track_id) !== null) : undefined;
+  const family = formatFamily(format);
+  const latest = q.track === null ? sessions.find((s) => real(s) && fitsFamily(s.car_class, family)) : undefined;
   const lt = latest ? f1TrackId(latest.track_id) : null;
   const seedFromSession = latest !== undefined && lt !== null && f.tracks.some((t) => t.id === lt);
   let track = q.track !== null && f.tracks.some((t) => t.id === q.track) ? q.track : null;
@@ -513,11 +607,27 @@ export function when(unix: number | null | undefined): string {
   return unix ? new Date(unix * 1000).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : UNKNOWN;
 }
 
-/** "Silverstone · Race · 11 Oct 2026, 14:20 · James" (the synthetic tier is shown as a chip next to it). */
-export function sessionLabel(s: Pick<SessionOption, "track_name" | "track_id" | "session_type" | "session_type_raw" | "started_unix"> & { driver_name?: string | null }): string {
-  const parts = [s.track_name ?? s.track_id ?? "Unknown track", sessionTypeLabel(s.session_type_raw ?? s.session_type), when(s.started_unix)];
+/** "Silverstone · Race · 11 Oct 2026, 14:20 · James", "Jeddah · Feature race · … · James · F2" (F2 support: the
+ * server's session_label, and the class chip of a car that is not an F1 car). The synthetic tier is shown as a chip
+ * next to it. */
+export function sessionLabel(
+  s: Pick<SessionOption, "track_name" | "track_id" | "session_type" | "session_type_raw" | "started_unix"> &
+    Pick<SessionCarFields, "session_label" | "car_class"> & { driver_name?: string | null },
+): string {
+  const type = s.session_label?.trim() || sessionTypeLabel(s.session_type_raw ?? s.session_type);
+  const parts = [s.track_name ?? s.track_id ?? "Unknown track", type, when(s.started_unix)];
   if (s.driver_name) parts.push(s.driver_name);
+  const cls = classChip(s.car_class);
+  if (cls) parts.push(cls);
   return parts.join(" · ");
+}
+
+/** What the game called the session, for the setup page's "Game:" line: "Feature race (Race 2)" when the server's
+ * label differs from the game's name (F2), else the game's name ("Race"). */
+export function gameSessionText(s: Pick<SessionSetupResponse["session"], "session_type" | "session_type_raw" | "session_label">): string {
+  const raw = sessionTypeLabel(s.session_type_raw ?? s.session_type);
+  const label = s.session_label?.trim();
+  return label && label !== raw ? `${label} (${raw})` : raw;
 }
 
 /** Sessions the car setup catalogue covers (its game), newest first as the API sends them. */
@@ -535,7 +645,14 @@ export function latestSessionFor(
   driverId: number | null,
   /** Prefer sessions at this EA track id (the track on screen), falling back to any track. */
   trackId: number | null = null,
+  /** F2 support: prefer sessions of this car family (the format on screen), falling back to any. */
+  family: CarFamily | null = null,
 ): SessionOption | null {
+  if (family !== null) {
+    const fam = sessions.filter((s) => fitsFamily(s.car_class, family));
+    const hit = fam.length ? latestSessionFor(fam, game, driverId, trackId) : null;
+    if (hit) return hit;
+  }
   if (trackId !== null) {
     const here = setupSessions(sessions, game).filter((s) => f1TrackId(s.track_id) === trackId && !s.synthetic);
     const hit = (driverId !== null ? here.find((s) => s.driver_id === driverId) : undefined) ?? here[0];

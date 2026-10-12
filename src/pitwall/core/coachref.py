@@ -56,6 +56,7 @@ from typing import TYPE_CHECKING, Any, Literal, Protocol, TypeVar, cast
 
 import numpy as np
 
+from pitwall import carclass
 from pitwall.analysis.coaching import observations_for_comparison
 from pitwall.analysis.compare import (
     CornerMetrics,
@@ -266,6 +267,7 @@ def ctx_from_session_info(info: SessionInfo) -> dict[str, Any]:
         "track_temp_c": info.weather.track_temp_c,
         "assists": dict(info.assists),
         "formula": info.formula,
+        "packet_format": info.extra.get("packet_format"),
         "setup_fp": None,
     }
 
@@ -1158,7 +1160,8 @@ class CoachRef:
             sb = repo.get_session(c, b.meta["session_id"])
             if sa is None or sb is None:
                 raise NotFound("lap not found")
-            model = repo.load_track_model(c, sa["game"], sa["track_id"]) if sa.get("track_id") else None
+            fam = carclass.family_of_row(sb)  # the compared lap's car class family
+            model = repo.load_track_model(c, sa["game"], sa["track_id"], fam) if sa.get("track_id") else None
             info_a = repo.lap_with_context(c, ref)
             info_b = repo.lap_with_context(c, lap)
             assert info_a is not None and info_b is not None
@@ -1198,7 +1201,7 @@ class CoachRef:
         return {
             "comparison": comp.to_dict(),
             "observations": [o.to_dict() for o in obs],
-            "track_model": track_model_payload(model),
+            "track_model": track_model_payload(model, fam),
             "reference": out,
         }
 

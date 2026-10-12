@@ -89,7 +89,10 @@ INPUT_KEYS = {
 
 def check_entry(e: dict[str, Any], *, full: bool = False) -> None:
     """Hand-written validator of ``GameEntry`` (web-react/src/lib/endpoints/game.ts, design spec section 9.2)."""
-    assert set(e) == ENTRY_KEYS | ({"fields", "guide"} if full else set()), set(e) ^ ENTRY_KEYS
+    classes = {"car_classes"} if e.get("adapter_game") == "f1_25" and e.get("implemented") else set()  # F2 support
+    assert set(e) == ENTRY_KEYS | classes | ({"fields", "guide"} if full else set()), set(e) ^ ENTRY_KEYS
+    for c in e.get("car_classes", ()):
+        assert set(c) == {"id", "label", "status", "notes"} and c["status"] in LEVELS
     assert e["platform"] in PLATFORMS and e["group"] in ("main", "more")
     assert e["id"] == f"{e['game_key']}:{e['platform']}"
     assert isinstance(e["implemented"], bool) and isinstance(e["notes"], list)

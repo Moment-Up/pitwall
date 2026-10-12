@@ -426,8 +426,11 @@ def test_adapter_declarations_added_for_documented_absences() -> None:
     old = {(r["game"], r["platform"]): r for r in json.loads(GOLDEN_MATRIX.read_text(encoding="utf-8"))}
     added = {
         # session_type/buttons: game selection; the MotionEx slip and yaw channels: technique analysis;
-        # ai_difficulty/lap_history: pace vs AI difficulty; race_timing/tyre_sets: race strategy
+        # ai_difficulty/lap_history: pace vs AI difficulty; race_timing/tyre_sets: race strategy;
+        # drs_allowed/drs_activation_m: F2 support (the engineer's DRS answers)
         Game.F1_25: {
+            "drs_allowed",
+            "drs_activation_m",
             "session_type",
             "buttons",
             "yaw_rate_rps",
@@ -474,6 +477,8 @@ def test_capability_matrix_golden() -> None:
         o = old[_old_key(r)]
         n = dict(n)
         assert n.pop("key") == r.key and isinstance(n.pop("platform_ids"), list)
+        classes = n.pop("car_classes", None)  # F2 support: the car class rows ride the F1 rows (an addition)
+        assert (classes is not None) is (r.adapter_game is Game.F1_25), r.key
         if n["fields"] is not None:  # section 2.2 declarations are the only additions (levels: the test above)
             n["fields"] = {k: v for k, v in n["fields"].items() if k in o["fields"]}
         o = {**o, "notes": o["notes"].replace(" Enable on the Connect page.", "")}  # stale since game selection

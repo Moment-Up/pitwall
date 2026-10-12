@@ -1,0 +1,681 @@
+{
+ "_fixture": {
+  "source": "contract.json v1 (F2 support design, 12 Oct 2026): formats.f2, session.context.car_class, the setup strings; ranges from the F1Laps F2 research crawl (768 F2 setups, f2_setup_ranges_observed.json, 2026-10-12); session rows recorded from the owner's F2 sessions (16b73e89c55b, Sakhir Race 2)",
+  "status": 200,
+  "note": "contract: what the F2 backend sends, built before it existed; not recorded from a server. Ranges: [min, max] are the extremes seen in F2 setups, an end confirmed when 5 or more setups sit on it; steps as the F1 car menu.",
+  "edited": [
+   "format, ranges and available: built from the contract and the research crawl",
+   "sessions.silverstone: Sakhir edited to Silverstone (no F2 setups there) with the contract reason",
+   "sessions.f2_2026: Sakhir edited to a 2026 F2 car (team 490) with the contract reason"
+  ]
+ },
+ "body": {
+  "format": {
+   "id": "f2",
+   "label": "F2 cars (2024 and 2025 seasons)",
+   "description": "The F2 cars of the 2024 and 2025 seasons (formula F2, team ids 158-168, and 209-219 / 465-475 with formula F2).",
+   "latest_handling_patch": null,
+   "tracks": [
+    {
+     "id": 3,
+     "name": "Sakhir (Bahrain)"
+    },
+    {
+     "id": 29,
+     "name": "Jeddah"
+    },
+    {
+     "id": 0,
+     "name": "Melbourne"
+    },
+    {
+     "id": 5,
+     "name": "Monaco"
+    },
+    {
+     "id": 11,
+     "name": "Monza"
+    }
+   ],
+   "notes": [
+    "Ranges come from F2 setups only, never from the F1 car: F2 brake bias reaches 69 and rear suspension piles up at 26."
+   ]
+  },
+  "ranges": {
+   "front_wing": {
+    "min": 0.0,
+    "max": 50.0,
+    "step": 1.0,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "rear_wing": {
+    "min": 0.0,
+    "max": 50.0,
+    "step": 1.0,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "diff_on_throttle": {
+    "min": 10.0,
+    "max": 100.0,
+    "step": 5.0,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "diff_off_throttle": {
+    "min": 10.0,
+    "max": 100.0,
+    "step": 5.0,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "front_camber": {
+    "min": -3.5,
+    "max": -2.5,
+    "step": 0.1,
+    "min_confirmed": true,
+    "max_confirmed": false,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "rear_camber": {
+    "min": -2.0,
+    "max": -1.0,
+    "step": 0.1,
+    "min_confirmed": true,
+    "max_confirmed": false,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "front_toe": {
+    "min": 0.0,
+    "max": 0.12,
+    "step": 0.01,
+    "min_confirmed": true,
+    "max_confirmed": false,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "rear_toe": {
+    "min": 0.1,
+    "max": 0.25,
+    "step": 0.01,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "front_suspension": {
+    "min": 24.0,
+    "max": 41.0,
+    "step": 1.0,
+    "min_confirmed": false,
+    "max_confirmed": true,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "rear_suspension": {
+    "min": 1.0,
+    "max": 26.0,
+    "step": 1.0,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "front_arb": {
+    "min": 1.0,
+    "max": 21.0,
+    "step": 1.0,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "rear_arb": {
+    "min": 2.0,
+    "max": 21.0,
+    "step": 1.0,
+    "min_confirmed": false,
+    "max_confirmed": true,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "front_ride_height": {
+    "min": 15.0,
+    "max": 35.0,
+    "step": 1.0,
+    "min_confirmed": true,
+    "max_confirmed": false,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "rear_ride_height": {
+    "min": 40.0,
+    "max": 60.0,
+    "step": 1.0,
+    "min_confirmed": true,
+    "max_confirmed": false,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "brake_pressure": {
+    "min": 90.0,
+    "max": 100.0,
+    "step": 1.0,
+    "min_confirmed": false,
+    "max_confirmed": true,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "brake_bias": {
+    "min": 50.0,
+    "max": 69.0,
+    "step": 1.0,
+    "min_confirmed": true,
+    "max_confirmed": false,
+    "confidence": "medium",
+    "note": "An end seen in fewer than 5 published F2 setups: the game menu may go further.",
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "tyre_pressure_fr": {
+    "min": 22.5,
+    "max": 29.5,
+    "step": 0.1,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "tyre_pressure_fl": {
+    "min": 22.5,
+    "max": 29.5,
+    "step": 0.1,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "tyre_pressure_rr": {
+    "min": 20.5,
+    "max": 26.5,
+    "step": 0.1,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   },
+   "tyre_pressure_rl": {
+    "min": 20.5,
+    "max": 26.5,
+    "step": 0.1,
+    "min_confirmed": true,
+    "max_confirmed": true,
+    "confidence": "high",
+    "note": null,
+    "sources": [
+     "f1laps"
+    ]
+   }
+  },
+  "available": [
+   {
+    "car_format": "f2",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 3,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 3,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 3,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 29,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 29,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 29,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 0,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 0,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 0,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 5,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 5,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 5,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 11,
+    "session": "race",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   },
+   {
+    "car_format": "f2",
+    "track_id": 11,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "balanced",
+    "derived": false
+   },
+   {
+    "car_format": "f2",
+    "track_id": 11,
+    "session": "qualifying",
+    "conditions": "dry",
+    "style": "stable",
+    "derived": true
+   }
+  ],
+  "sessions": {
+   "sakhir": {
+    "session": {
+     "id": "16b73e89c55b",
+     "game": "f1_25",
+     "track_id": "f1:3",
+     "track_name": "Sakhir (Bahrain)",
+     "session_type": "race",
+     "session_type_raw": "Race 2",
+     "car_name": "Art GP '24",
+     "weather": {
+      "condition": "clear",
+      "track_temp_c": 44.0,
+      "air_temp_c": 30.0,
+      "rain_percentage": 1.0
+     },
+     "synthetic": false,
+     "driver": {
+      "id": 1,
+      "name": "James",
+      "skill_level": "advanced"
+     },
+     "car_class": {
+      "id": "f2",
+      "family": "f2",
+      "label": "F2",
+      "formula": "F2",
+      "certain": true,
+      "has_ers": false,
+      "chip": true,
+      "evidence": "recorded_validated",
+      "notes": [
+       "F2 cars have no ERS: F1 25 sends 0 for them."
+      ]
+     },
+     "car_label": "F2 · Art GP '24",
+     "session_label": "Feature race"
+    },
+    "context": {
+     "track_id": 3,
+     "track_name": "Sakhir (Bahrain)",
+     "car_format": "f2",
+     "car_format_certain": true,
+     "session": "race",
+     "conditions": "dry",
+     "reasons": {
+      "car_format": "formula F2 and F2 team id 158 (2024 F2 car)"
+     },
+     "notes": [],
+     "car_class": {
+      "id": "f2",
+      "family": "f2",
+      "label": "F2",
+      "formula": "F2",
+      "certain": true,
+      "has_ers": false,
+      "chip": true,
+      "evidence": "recorded_validated",
+      "notes": [
+       "F2 cars have no ERS: F1 25 sends 0 for them."
+      ]
+     }
+    },
+    "chosen": {
+     "car_format": "f2",
+     "session": "race",
+     "conditions": "dry",
+     "style": null
+    },
+    "needs": [],
+    "setup": null,
+    "recommendation": null,
+    "unavailable": null,
+    "diff": null,
+    "caveat": "A setup is a starting point, not a guaranteed fix: rule out technique first (braking point, entry speed, brake release, throttle), then change one thing at a time and compare laps."
+   },
+   "silverstone": {
+    "session": {
+     "id": "f2silverstone",
+     "game": "f1_25",
+     "track_id": "f1:7",
+     "track_name": "Silverstone",
+     "session_type": "race",
+     "session_type_raw": "Race",
+     "car_name": "Art GP '24",
+     "weather": {
+      "condition": "overcast",
+      "track_temp_c": 24.0,
+      "air_temp_c": 18.0
+     },
+     "synthetic": false,
+     "driver": {
+      "id": 1,
+      "name": "James",
+      "skill_level": "advanced"
+     },
+     "car_class": {
+      "id": "f2",
+      "family": "f2",
+      "label": "F2",
+      "formula": "F2",
+      "certain": true,
+      "has_ers": false,
+      "chip": true,
+      "evidence": "recorded_validated",
+      "notes": [
+       "F2 cars have no ERS: F1 25 sends 0 for them."
+      ]
+     },
+     "car_label": "F2 · Art GP '24",
+     "session_label": "Sprint race"
+    },
+    "context": {
+     "track_id": 7,
+     "track_name": "Silverstone",
+     "car_format": "f2",
+     "car_format_certain": true,
+     "session": "race",
+     "conditions": "dry",
+     "reasons": {
+      "car_format": "formula F2 and F2 team id 158 (2024 F2 car)"
+     },
+     "notes": [],
+     "car_class": {
+      "id": "f2",
+      "family": "f2",
+      "label": "F2",
+      "formula": "F2",
+      "certain": true,
+      "has_ers": false,
+      "chip": true,
+      "evidence": "recorded_validated",
+      "notes": [
+       "F2 cars have no ERS: F1 25 sends 0 for them."
+      ]
+     }
+    },
+    "chosen": {
+     "car_format": "f2",
+     "session": "race",
+     "conditions": "dry",
+     "style": null
+    },
+    "needs": [],
+    "setup": null,
+    "recommendation": null,
+    "unavailable": {
+     "reason": "No F2 setups for this track in Pitwall yet.",
+     "alternatives": []
+    },
+    "diff": null,
+    "caveat": "A setup is a starting point, not a guaranteed fix: rule out technique first (braking point, entry speed, brake release, throttle), then change one thing at a time and compare laps."
+   },
+   "f2_2026": {
+    "session": {
+     "id": "f22026",
+     "game": "f1_25",
+     "track_id": "f1:3",
+     "track_name": "Sakhir (Bahrain)",
+     "session_type": "race",
+     "session_type_raw": "Race 2",
+     "car_name": "Unknown team (id 490)",
+     "weather": {
+      "condition": "clear",
+      "track_temp_c": 44.0,
+      "air_temp_c": 30.0,
+      "rain_percentage": 1.0
+     },
+     "synthetic": false,
+     "driver": {
+      "id": 1,
+      "name": "James",
+      "skill_level": "advanced"
+     },
+     "car_class": {
+      "id": "f2",
+      "family": "f2",
+      "label": "F2",
+      "formula": "F2",
+      "certain": true,
+      "has_ers": false,
+      "chip": true,
+      "evidence": "recorded_validated",
+      "notes": [
+       "F2 cars have no ERS: F1 25 sends 0 for them."
+      ]
+     },
+     "car_label": "F2 car",
+     "session_label": "Feature race"
+    },
+    "context": {
+     "track_id": 3,
+     "track_name": "Sakhir (Bahrain)",
+     "car_format": null,
+     "car_format_certain": true,
+     "session": "race",
+     "conditions": "dry",
+     "reasons": {
+      "car_format": "No setups for the 2026 F2 cars in Pitwall yet."
+     },
+     "notes": [],
+     "car_class": {
+      "id": "f2",
+      "family": "f2",
+      "label": "F2",
+      "formula": "F2",
+      "certain": true,
+      "has_ers": false,
+      "chip": true,
+      "evidence": "recorded_validated",
+      "notes": [
+       "F2 cars have no ERS: F1 25 sends 0 for them."
+      ]
+     }
+    },
+    "chosen": {
+     "car_format": null,
+     "session": "race",
+     "conditions": "dry",
+     "style": null
+    },
+    "needs": [],
+    "setup": null,
+    "recommendation": null,
+    "unavailable": {
+     "reason": "No setups for the 2026 F2 cars in Pitwall yet.",
+     "alternatives": []
+    },
+    "diff": null,
+    "caveat": "A setup is a starting point, not a guaranteed fix: rule out technique first (braking point, entry speed, brake release, throttle), then change one thing at a time and compare laps."
+   }
+  }
+ }
+}

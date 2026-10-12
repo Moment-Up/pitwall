@@ -759,7 +759,7 @@ def test_packaged_catalogue_stores_evidence_and_builds_recommendations_at_load(c
 
 
 def test_packaged_values_are_in_range_on_step_and_sourced(cat: Catalog) -> None:
-    assert set(cat.formats) == {"f1_2025", "f1_2026"}
+    assert set(cat.formats) == {"f1_2025", "f1_2026", "f2"}
     assert cat.source_setups and cat.recommendations
     for s in cat.source_setups.values():
         assert cat.sources[s.source].use_policy != "do_not_use"
@@ -817,10 +817,13 @@ def test_packaged_parameters_cover_the_udp_setup(cat: Catalog) -> None:
 
 def test_packaged_catalogue_covers_every_track_and_never_mixes_formats(cat: Catalog) -> None:
     for fid, fmt in cat.formats.items():
-        assert fmt.tracks and fmt.latest_handling_patch.version
+        # F2: no handling patch is known, and the stable rule (F1 guides) is not applied to F2 cars
+        assert fmt.tracks and (fmt.latest_handling_patch is None) is (fid == "f2")
+        if fmt.latest_handling_patch is not None:
+            assert fmt.latest_handling_patch.version
         for track in fmt.tracks:
             assert cat.find(fid, track, "race", "dry", "balanced") is not None, (fid, track)
-            assert cat.find(fid, track, "race", "dry", "stable") is not None, (fid, track)
+            assert (cat.find(fid, track, "race", "dry", "stable") is not None) is (fid != "f2"), (fid, track)
     for rec in cat.recommendations.values():
         for sid in rec.candidates:
             s = cat.source_setups[sid]
@@ -837,6 +840,8 @@ def test_api_serves_the_packaged_catalogue(tmp_path: Path) -> None:
     try:
         with TestClient(app) as client:
             body = client.get("/api/carsetup/catalog").json()
-        assert {f["id"] for f in body["formats"]} == {"f1_2025", "f1_2026"} and body["sources"]
+        assert {f["id"] for f in body["formats"]} == {"f1_2025", "f1_2026", "f2"} and body["sources"]
+        f2 = next(f for f in body["formats"] if f["id"] == "f2")
+        assert f2["label"] == "F2 cars (2024 and 2025 seasons)" and f2["latest_handling_patch"] is None
     finally:
         writer.close()

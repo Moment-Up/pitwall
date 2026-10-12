@@ -1,12 +1,13 @@
 // Start an experiment (spec 7.3): a HeroUI Modal with the parameter, the new value and a hypothesis, from a session
 // Pitwall has the setup of (the "before" session). One parameter at a time; the backend checks the value against the
-// car format's menu range and answers 422 / 409 in words, shown in the Modal.
+// car format's menu range and answers 422 / 409 in words, shown in the Modal. Under the value, the format's range for
+// the setting ("F2 car: 1 to 26 in published setups"): F2 support sizes changes with the F2 car's own ranges.
 
 import { Button, Description, Input, Label, ListBox, Modal, Select, TextArea, TextField } from "@heroui/react";
 import { useState } from "react";
 import { cache } from "../../../lib/cache";
 import { carsetupApi, errorText, type CarFormat, type ParameterInfo } from "../../../lib/endpoints/carsetup";
-import { paramValue, parseNumber, setupValue, valueProblem } from "../../../lib/setup/carsetup";
+import { paramValue, parseNumber, rangeText, setupValue, valueProblem } from "../../../lib/setup/carsetup";
 
 export interface NewExperimentModalProps {
   isOpen: boolean;
@@ -31,6 +32,7 @@ export function NewExperimentModal({ isOpen, onOpenChange, sessionId, carFormat,
   const from = setupValue(params, key);
   const value = parseNumber(text);
   const problem = text.trim() ? valueProblem(p, carFormat, value, from) : null;
+  const range = rangeText(p, carFormat);
 
   async function submit() {
     if (value === null || problem) return;
@@ -86,7 +88,7 @@ export function NewExperimentModal({ isOpen, onOpenChange, sessionId, carFormat,
                 <Label>New value{p?.unit ? ` (${p.unit})` : ""}</Label>
                 <Input inputMode="decimal" className="min-h-11 font-mono text-base" />
                 <Description>
-                  {problem ?? `Yours in this session: ${paramValue(p, from)}`}
+                  {problem ?? [`Yours in this session: ${paramValue(p, from)}`, range].filter(Boolean).join(" · ")}
                 </Description>
               </TextField>
               <TextField value={hyp} onChange={setHyp} maxLength={500}>

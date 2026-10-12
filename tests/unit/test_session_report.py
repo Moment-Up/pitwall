@@ -100,6 +100,23 @@ def test_no_recap_no_three_things_and_one_reason_when_nothing_to_say() -> None:
     assert md2.count("No timed laps in this session") == 1 and "## Today's 3 things" in md2
 
 
+def test_an_f2_session_names_its_car_and_race() -> None:
+    """F2 (carclass): the car as "F2 · Art GP '24" (never the raw "Unknown team" fallback) and the game's "Race 2" as
+    the feature race, keeping the game's own name."""
+    sa = _sa(
+        track_name="Jeddah",
+        session_type_raw="Race 2",
+        car_id="f1:team:158",
+        car_name="Art GP '24",
+        info={"formula": "F2", "packet_format": 2025},
+    )
+    md = R.build_report(sa)["markdown"]
+    assert md.startswith("# Session report - Jeddah · Feature race (Race 2)\n")
+    assert "| car F2 · Art GP '24 |" in md
+    md_f1 = R.build_report(_sa())["markdown"]
+    assert md_f1.startswith("# Session report - Austria (race)\n")  # no class label: the old title, unchanged
+
+
 def test_ai_line_and_synthetic() -> None:
     sa = _sa(game="synthetic", platform="pc", synthetic=True)
     sa.ai_pace = {

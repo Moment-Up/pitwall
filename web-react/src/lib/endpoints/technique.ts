@@ -233,7 +233,8 @@ export interface SetupSuggestion {
 }
 
 export interface SetupEngineer {
-  car_format: "f1_2025" | "f1_2026" | null;
+  /** F2 support: "f2" sizes the changes with the F2 ranges. */
+  car_format: CarFormat | null;
   setup_known: boolean;
   suggestions: SetupSuggestion[];
   caveat: string;

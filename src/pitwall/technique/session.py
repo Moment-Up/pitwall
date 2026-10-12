@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 
+from pitwall import carclass
 from pitwall.analysis.braking import BrakingEvent
 from pitwall.analysis.coaching import is_incident
 from pitwall.analysis.compare import (
@@ -37,7 +38,7 @@ from pitwall.analysis.compare import (
 from pitwall.analysis.laps import LapFlag
 from pitwall.analysis.track import Corner, TrackModel
 from pitwall.analysis.track_identity import CornerText, corner_texts, identify
-from pitwall.carsetup.catalog import CarFormat, CatalogError, load_catalog
+from pitwall.carsetup.catalog import FORMAT_FAMILY, CarFormat, CatalogError, load_catalog
 from pitwall.carsetup.compare import stored_values
 from pitwall.carsetup.context import session_context
 from pitwall.core.session_analysis import SessionAnalysis, SessionAnalyzer, session_ctx
@@ -72,7 +73,7 @@ from pitwall.technique.line import (
 )
 from pitwall.technique.rig import NOTE_ABS, AssistInfo, PedalInfo, assist_info, pedal_info
 from pitwall.technique.samples import Native, m2, native, rnd, runs, xz_list
-from pitwall.technique.setup_map import LockupSymptom, SetupEngineer, suggest
+from pitwall.technique.setup_map import FORMAT_UNKNOWN, LockupSymptom, SetupEngineer, suggest
 from pitwall.technique.thresholds import threshold_infos
 
 if TYPE_CHECKING:
@@ -847,6 +848,8 @@ def setup_engineer(
             p = cat.param(k)
             if p is not None:
                 stored[k] = p.menu_value(v)
+    if car_format is not None and ctx.family is not None and FORMAT_FAMILY[car_format] != ctx.family:
+        car_format = None  # never another car class's ranges (an F1 format for an F2 car, or the reverse)
     fmt = car_format or ctx.car_format
     eng = suggest(
         st.symptoms,
@@ -856,6 +859,8 @@ def setup_engineer(
         stored=stored,
         testing=testing,
         braking_assist=bool(st.assists.braking_assist),
+        # an F2 (or classic) car is never asked for a car format: say why its changes cannot be sized
+        format_unknown=FORMAT_UNKNOWN if ctx.asks_car_format else ctx.reasons.get("car_format", FORMAT_UNKNOWN),
     )
     if not st.available["balance"].ok:
         eng.note = st.available["balance"].reason
@@ -979,7 +984,8 @@ class TechniqueAnalyzer:
             sb = repo.get_session(c, b.meta["session_id"])
             if sa_ is None or sb is None:
                 raise TechniqueNotFound("lap not found")
-            model = repo.load_track_model(c, sa_["game"], sa_["track_id"]) if sa_.get("track_id") else None
+            fam = carclass.family_of_row(sb)  # the compared lap's car class family
+            model = repo.load_track_model(c, sa_["game"], sa_["track_id"], fam) if sa_.get("track_id") else None
         if model is not None and not lengths_compatible(model.length_m, sa_.get("track_length_m")):
             model = None  # the stored model is of another layout under the same track id (AC consoles)
         if model is None:

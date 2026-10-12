@@ -318,8 +318,9 @@ class CallPlanner:
         if ctx.sc_period in self._sc_stay:
             return None
         name = _SC_NAME[ctx.sc_status]
-        text = f"{name}. Tyres reach the finish: no stop needed."
-        simple = f"{name}: your tyres last to the finish, so no pit stop."
+        # the race's stop rules are not sent by the game: the tyres reaching the finish is all this call can say
+        text = f"{name}. Tyres reach the finish."
+        simple = f"{name}: your tyres last to the finish."
         # plan 3.1: the safety-car box-or-stay call is an alert, never squeezed out by the lap's talk budget
         data = {"status": ctx.sc_status}
         return self._make("sc_stay", ctx, "alert", "high", text, 30.0, bypass=True, data=data, simple=simple)

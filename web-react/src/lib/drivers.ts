@@ -14,6 +14,7 @@
 
 import type { SessionRow } from "./api";
 import { authFetch } from "./auth";
+import type { CarFamily } from "./carclass";
 import { Store } from "./store";
 
 export type SkillLevel = "beginner" | "intermediate" | "advanced";
@@ -30,6 +31,8 @@ export interface DriverPreferences {
   default_game?: string | null;
 }
 
+/** One best lap of a driver. F2 support: one per game, track and car family, so a track driven in an F1 and an F2
+ * car has two entries (each with its `car_family`); older servers send one per game and track, without the family. */
 export interface DriverBestLap {
   game: string;
   track_id: string;
@@ -40,6 +43,10 @@ export interface DriverBestLap {
   car_name: string | null;
   synthetic: boolean;
   set_unix: number;
+  /** F2 support: the family of the car the lap was set in; null = unknown (a session from before classes). */
+  car_family?: CarFamily | null;
+  /** F2 support: the car in words ("F2 · Art GP '24"); never a raw id; null when nothing readable. */
+  car_label?: string | null;
 }
 
 export interface DriverStats {

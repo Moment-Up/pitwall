@@ -29,7 +29,7 @@ from typing import Any, Literal
 
 from pitwall.analysis.strategy import tyre_estimate
 from pitwall.analysis.track_identity import corner_texts
-from pitwall.carsetup.catalog import CarFormat, Catalog, Parameter
+from pitwall.carsetup.catalog import FORMAT_FAMILY, CarFormat, Catalog, Parameter
 from pitwall.carsetup.compare import stored_values
 from pitwall.carsetup.context import session_context
 from pitwall.core.session_analysis import SessionAnalyzer
@@ -160,6 +160,9 @@ def propose(
         sess = _session(c, before_session_id)
         stored = _setup_menu_values(cat, repo.latest_setup(c, before_session_id))
     ctx = session_context(sess)
+    if car_format is not None and ctx.family is not None and FORMAT_FAMILY[car_format] != ctx.family:
+        # never F1 ranges for an F2 car, or the reverse (F2 support)
+        raise ExperimentError(f"car format {car_format!r} is not for the car of session {before_session_id}")
     fmt = car_format or ctx.car_format
     if fmt is None:
         raise ExperimentError(f"the car format of session {before_session_id} is unknown: {ctx.reasons['car_format']}")

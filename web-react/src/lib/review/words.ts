@@ -202,8 +202,15 @@ export function signedSeconds(s: number | null | undefined, digits = 2): string 
 
 // --------------------------------------------------------------------------------------------- sessions and days
 
-/** The session type as the game names it ("Race", "One-Shot Qualifying"); null when unknown. */
-export function sessionTypeLabel(row: { session_type_raw?: string | null; session_type?: string | null }): string | null {
+/** The session type in words: the server's session_label when it sends one (F2's "Sprint race" / "Feature race" for the
+ * game's "Race" / "Race 2"), else as the game names it ("Race", "One-Shot Qualifying"); null when unknown. */
+export function sessionTypeLabel(row: {
+  session_label?: string | null;
+  session_type_raw?: string | null;
+  session_type?: string | null;
+}): string | null {
+  const label = row.session_label?.trim();
+  if (label) return label;
   const raw = row.session_type_raw?.trim();
   if (raw) return raw;
   const t = row.session_type?.trim();
@@ -233,9 +240,10 @@ export function trackLabel(row: { track_name?: string | null }): string {
   return t && !RAW_ID.test(t) ? t : "Unknown track";
 }
 
-/** "Silverstone · Practice" (the type is left out when unknown). */
+/** "Silverstone · Practice", "Jeddah · Feature race" (the type is left out when unknown). */
 export function sessionTitle(row: {
   track_name?: string | null;
+  session_label?: string | null;
   session_type_raw?: string | null;
   session_type?: string | null;
 }): string {

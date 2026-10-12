@@ -21,6 +21,8 @@ from pitwall.adapters.f1.enums import track_name
 from pitwall.carsetup.catalog import (
     CAR_FORMATS,
     CONDITIONS,
+    F2_NONE_AT_TRACK,
+    FORMAT_FAMILY,
     SESSIONS,
     STYLES,
     CarFormat,
@@ -283,8 +285,11 @@ def _row(cat: Catalog, fmt: CarFormat, p: Parameter, v: RecValue | None) -> Setu
     )
 
 
-def available(cat: Catalog, car_format: CarFormat | None = None, track_id: int | None = None) -> list[dict[str, Any]]:
-    """Catalogue keys that have a recommendation (optionally for one car format / track)."""
+def available(
+    cat: Catalog, car_format: CarFormat | None = None, track_id: int | None = None, family: str | None = None
+) -> list[dict[str, Any]]:
+    """Catalogue keys that have a recommendation (optionally for one car format / track / ``carclass`` family: an F2
+    session is only ever offered F2 alternatives, and the reverse)."""
     return [
         {
             "car_format": r.car_format,
@@ -295,7 +300,9 @@ def available(cat: Catalog, car_format: CarFormat | None = None, track_id: int |
             "derived": r.selection == "derived",
         }
         for r in cat.recommendations.values()
-        if (car_format is None or r.car_format == car_format) and (track_id is None or r.track_id == track_id)
+        if (car_format is None or r.car_format == car_format)
+        and (track_id is None or r.track_id == track_id)
+        and (family is None or FORMAT_FAMILY[r.car_format] == family)
     ]
 
 
@@ -339,6 +346,8 @@ def recommend(cat: Catalog, req: SetupRequest) -> SetupResult:
     if info is None:
         raise RecommendationUnavailable(f"the catalogue has no {req.car_format} cars", available(cat))
     if req.track_id not in info.tracks:
+        if FORMAT_FAMILY[req.car_format] == "f2":  # F2 ``tracks`` are the tracks with cited setups, not "drivable"
+            raise RecommendationUnavailable(F2_NONE_AT_TRACK, [])
         raise RecommendationUnavailable(
             f"{track_name(req.track_id)} is not drivable with {info.label}", available(cat, req.car_format)
         )

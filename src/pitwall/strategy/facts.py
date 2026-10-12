@@ -25,6 +25,13 @@ COMPOUND_PLURAL = {
     "wet": "wets",
 }
 TIER_WORDS = {"measured": "measured", "game": "the game's estimate", "heuristic": "estimate"}
+# The tyres reach the finish, which is all Pitwall can say: the game sends no stop rules (pit.rules), so the words never
+# claim a stop is not needed.
+NO_TYRE_STOP_TEXT = (
+    "No tyre stop needed: the tyres reach the finish (stint projection and the game's laps-left figure). "
+    "The race's stop rules are not known."
+)
+NO_TYRE_STOP_SAY = "The tyres reach the finish."
 _SC_WORDS = {"full": "Safety car", "virtual": "Virtual safety car"}
 
 
@@ -96,11 +103,12 @@ def _strategy(fs: FactSheet, v: dict[str, Any]) -> None:
                 say += f": a stop costs about {_n(loss, 0)} s now, {_n(green, 0)} s under green"
             fs.add("strategy", text + ".", data, say=say + ".")
         else:
+            # the tyres reach the finish; the race's stop rules are not sent by the game, so never "no stop needed"
             fs.add(
                 "strategy",
-                f"{name} deployed: the tyres reach the finish, no stop needed (stay out).",
+                f"{name} deployed: the tyres reach the finish (stint projection). The race's stop rules are not known.",
                 data,
-                say=f"{name}. Tyres reach the finish: no stop needed.",
+                say=f"{name}. Tyres reach the finish.",
             )
     w = pit.get("window")
     if w:
@@ -131,9 +139,9 @@ def _strategy(fs: FactSheet, v: dict[str, Any]) -> None:
     elif pit.get("stop_needed") is False:
         fs.add(
             "strategy",
-            "No tyre stop needed: the tyres reach the finish (stint projection and the game's laps-left figure).",
+            NO_TYRE_STOP_TEXT,
             {"src": SRC, "kind": "no_stop"},
-            say="No stop needed: the tyres reach the finish.",
+            say=NO_TYRE_STOP_SAY,
         )
     else:
         fs.add(
@@ -268,7 +276,7 @@ def _gaps(fs: FactSheet, v: dict[str, Any]) -> None:
             text += f"; it has made {stops} stop(s)"
         tyre = c.get("tyre") or {}
         if tyre.get("compound"):
-            text += f" and runs {tyre['compound']} tyres" + (
+            text += f" and runs {_words(tyre['compound'])} tyres" + (
                 (" 1 lap old" if tyre["age_laps"] == 1 else f" {tyre['age_laps']} laps old")
                 if tyre.get("age_laps") is not None
                 else ""
@@ -358,7 +366,7 @@ def _tyres(fs: FactSheet, v: dict[str, Any]) -> None:
     plural = _compound_plural(comp)
     wear = t.get("wear_pct")
     laps_old = "new" if age == 0 else "1 lap old" if age == 1 else f"{age if age is not None else '?'} laps old"
-    head = f"Tyres: {comp or 'unknown compound'}, {laps_old}"
+    head = f"Tyres: {_words(comp) if comp else 'unknown compound'}, {laps_old}"
     if wear:
         head += f"; wear FL {_n(wear[0])}%, FR {_n(wear[1])}%, RL {_n(wear[2])}%, RR {_n(wear[3])}%"
     if plural is None:
@@ -416,7 +424,7 @@ def _tyres(fs: FactSheet, v: dict[str, Any]) -> None:
                 sparts.append(f"the game gives this set {left} more {'lap' if left == 1 else 'laps'}")
         if new:
             parts.append(
-                f"a new {new['compound']} set is {_n(new['gain_s'], 2)} s a lap faster now"
+                f"a new {_words(new['compound'])} set is {_n(new['gain_s'], 2)} s a lap faster now"
                 + (f", degrading {_n(new['deg_s_per_lap'], 3)} s a lap per lap" if new.get("deg_s_per_lap") else "")
             )
             gain = new.get("gain_s")

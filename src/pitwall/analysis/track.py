@@ -14,6 +14,12 @@ exactly the JSON shape written before the identity fields existed, so older code
 
 Models are versioned and keyed by (game, track_id); braking references are NOT stored here because they
 depend on the car - they come from reference laps.
+
+Car class families (``pitwall.carclass``): an F2 car takes corners at other speeds than an F1 car, so a model records
+the family of the laps it was built from (``car_family``: ``f1`` / ``f2`` / ``other``; None = a legacy model whose
+family is unknown) and is rebuilt from that family's laps only. ``superseded`` marks a model that must not be used
+any more (built from a lap that was later removed, or from laps of two families); both live in the stored JSON, so
+no schema change is needed and rows of older versions load as family-unknown, not superseded.
 """
 
 from __future__ import annotations
@@ -76,6 +82,8 @@ class TrackModel:
     centreline: list[tuple[float, float]] = field(default_factory=list)  # ground-plane (a, b) every 5 m
     ground_plane: tuple[str, str] = ("pos_x_m", "pos_z_m")
     source_lap_ids: list[int] = field(default_factory=list)
+    car_family: str | None = None  # carclass family of the source laps; None = unknown (a legacy model)
+    superseded: bool = False  # never used again (built from a removed lap, or from mixed families)
 
     def corner(self, name: str) -> Corner | None:
         return next((c for c in self.corners if c.name.lower() == name.lower()), None)
@@ -129,6 +137,7 @@ def build_track_model(
     ground_plane: tuple[str, str] = ("pos_x_m", "pos_z_m"),
     source_lap_ids: list[int] | None = None,
     version: int = 1,
+    car_family: str | None = None,
 ) -> TrackModel:
     if not clean_traces:
         raise ValueError("need at least one clean lap to build a track model")
@@ -198,4 +207,5 @@ def build_track_model(
         centreline=centre,
         ground_plane=ground_plane,
         source_lap_ids=source_lap_ids or [],
+        car_family=car_family,
     )

@@ -13,6 +13,7 @@ import {
   type ParameterInfo,
   type SessionOption,
 } from "../../../lib/endpoints/carsetup";
+import type { CarFamily } from "../../../lib/carclass";
 import { pathOf, router } from "../../../lib/router";
 import { latestSessionFor, sessionLabel, setupSessions, sortExperiments } from "../../../lib/setup/carsetup";
 import { ExperimentCard } from "./ExperimentCard";
@@ -25,6 +26,7 @@ export function YourSetupCard({
   loading,
   driverId,
   trackId,
+  family = null,
   className = "",
 }: {
   catalog: CarSetupCatalog;
@@ -33,11 +35,13 @@ export function YourSetupCard({
   driverId: number | null;
   /** The track on screen: its newest session is the default pick. */
   trackId: number;
+  /** F2 support: the car family on screen (an F2 request picks the newest F2 session first). */
+  family?: CarFamily | null;
   className?: string;
 }) {
   const list = setupSessions(sessions, catalog.game);
-  const latest = latestSessionFor(sessions, catalog.game, driverId);
-  const here = latestSessionFor(sessions, catalog.game, driverId, trackId);
+  const latest = latestSessionFor(sessions, catalog.game, driverId, null, family);
+  const here = latestSessionFor(sessions, catalog.game, driverId, trackId, family);
   const [picked, setPicked] = useState<string | null>(null);
   const pick = picked && list.some((s) => s.id === picked) ? picked : (here?.id ?? null);
   return (

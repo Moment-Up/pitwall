@@ -11,10 +11,27 @@ import re
 from collections.abc import Callable
 from typing import Any
 
-from pitwall.ai.facts import AI_LEVEL_PREFIX, AI_PACE_PREFIX, FLAGS_PREFIX, LAST_LAP_PREFIX, FactSheet, fmt_lap
+from pitwall.ai.facts import (
+    AI_LEVEL_PREFIX,
+    AI_PACE_PREFIX,
+    DRS_PREFIX,
+    ERS_CLASS_PREFIX,
+    FLAGS_PREFIX,
+    LAST_LAP_PREFIX,
+    RULES_PREFIX,
+    FactSheet,
+    fmt_lap,
+)
 
 WHEEL_NAMES = ("front left", "front right", "rear left", "rear right")
-COMPOUND_PLURAL = {"soft": "Softs", "medium": "Mediums", "hard": "Hards", "inter": "Inters", "wet": "Wets"}
+COMPOUND_PLURAL = {
+    "super_soft": "Super softs",  # F2 cars
+    "soft": "Softs",
+    "medium": "Mediums",
+    "hard": "Hards",
+    "inter": "Inters",
+    "wet": "Wets",
+}
 
 
 def _fact(sheet: FactSheet, topic: str, key: str) -> dict[str, Any] | None:
@@ -110,6 +127,32 @@ def flags_now(sheet: FactSheet) -> str | None:
     return None if f is None else f.plain
 
 
+def class_ers(sheet: FactSheet) -> str | None:
+    """A car class without ERS (F2): the sheet's class fact, already one short sentence."""
+    f = next((f for f in sheet.facts if f.topic == "ers" and f.text.startswith(ERS_CLASS_PREFIX)), None)
+    return None if f is None else f.plain
+
+
+def drs_now(sheet: FactSheet) -> str | None:
+    """DRS now (allowed, or in how many metres), then the car ahead when it is in DRS range."""
+    now = next((f for f in sheet.facts if f.topic == "drs" and f.text.startswith(DRS_PREFIX)), None)
+    ahead = next((f for f in sheet.facts if f.topic == "gaps" and "DRS range" in f.text), None)
+    parts = [f.plain for f in (now, ahead) if f is not None]
+    return " ".join(parts) if parts else None
+
+
+def stop_rules(sheet: FactSheet) -> str | None:
+    """The race's stop rules over the radio: not known (the game doesn't send them), then the tyre statement. Never
+    "no" (the F2 note stays for Review)."""
+    from pitwall.ai.engineer import tyre_statement  # the engineer imports this module: keep it lazy
+
+    rules = next((f for f in sheet.facts if f.topic == "rules" and f.text.startswith(RULES_PREFIX)), None)
+    if rules is None:
+        return None
+    tyre = tyre_statement(sheet.facts)
+    return rules.plain if tyre is None else f"{rules.plain} {tyre.plain}"
+
+
 def _either(*fns: Callable[[FactSheet], str | None]) -> Callable[[FactSheet], str | None]:
     """The first phrasing that has something to say."""
 
@@ -197,7 +240,10 @@ PHRASERS: dict[str, Callable[[FactSheet], str | None]] = {
     "last_lap": last_lap,
     "ai_pace": ai_pace,
     "ai_level": ai_level,
-    **{g: capability(g) for g in ("damage", "ers", "sectors")},
+    "ers": _either(class_ers, capability("ers")),
+    "drs": _either(drs_now, capability("drs")),
+    "stop_rules": stop_rules,
+    **{g: capability(g) for g in ("damage", "sectors")},
 }
 
 

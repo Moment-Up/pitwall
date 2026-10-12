@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from starlette.middleware.gzip import GZipMiddleware
 from starlette.types import Scope
 
-from pitwall import __version__
+from pitwall import __version__, carclass
 from pitwall.ai.engineer import RaceEngineer
 from pitwall.ai.facts import build_fact_sheet
 from pitwall.ai.provider_registry import SwitchableProvider, config_from_settings
@@ -329,13 +329,12 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     # ------------------------------------------------------------------ sessions & laps
     @app.get("/api/sessions")
     async def sessions(request: Request, limit: int = 50, driver_id: int | None = None) -> list[dict[str, Any]]:
-        from pitwall.games import entry_for_session
+        from pitwall.games import session_row_fields
 
         with rt(request).db.read() as c:
             rows = repo.list_sessions(c, limit, driver_id=driver_id)
-        for row in rows:  # the catalogue entry of the session's game (Review chips, sector columns)
-            e = entry_for_session(row)
-            row["game_entry_id"] = e.id if e is not None else None
+        for row in rows:  # game_entry_id (Review chips, sector columns) + car_class, car_label, session_label
+            row.update(session_row_fields(row))
         return rows
 
     @app.get("/api/sessions/{sid}")
@@ -349,10 +348,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             s["ai_pace"] = repo.get_session_ai_pace(c, sid)  # SessionAiPace; null = not applicable / not recorded
         sk = skeleton_from_session_row(s)  # game-native sectors/zones; flags are never restored from storage
         s["skeleton"] = sk.to_dict() if sk else None
-        from pitwall.games import entry_for_session
+        from pitwall.games import session_row_fields
 
-        e = entry_for_session(s)
-        s["game_entry_id"] = e.id if e is not None else None
+        s.update(session_row_fields(s))  # game_entry_id + car_class, car_label, session_label
         return s
 
     @app.get("/api/sessions/{sid}/events")
@@ -374,7 +372,8 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             "session_id": sid,
             "ref_lap_id": sa.ref_lap_id,
             "ref_lap": sa.ref_lap,
-            "track_model": track_model_payload(sa.model) if sa.model else None,  # identified by the analyzer
+            # identified by the analyzer; car_family_match against the session's car class family
+            "track_model": track_model_payload(sa.model, carclass.family_of_row(sa.session)) if sa.model else None,
             "corner_summary": [asdict(c) for c in sa.corner_summary],
             "observations": {str(k): v for k, v in sa.observations.items()},
             "comparisons": {
@@ -454,7 +453,8 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
                 sa = repo.get_session(c, a.meta["session_id"])
                 sb = repo.get_session(c, b.meta["session_id"])
                 assert sa is not None and sb is not None
-                model = repo.load_track_model(c, sa["game"], sa["track_id"]) if sa.get("track_id") else None
+                fam = carclass.family_of_row(sb)  # the compared lap's car class family
+                model = repo.load_track_model(c, sa["game"], sa["track_id"], fam) if sa.get("track_id") else None
             if model is None:
                 raise HTTPException(409, "no track model yet for this track (complete a clean lap first)")
             a.meta.update(session_ctx(sa))
@@ -467,7 +467,7 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             return {
                 "comparison": comp.to_dict(),
                 "observations": [o.to_dict() for o in obs],
-                "track_model": track_model_payload(model),
+                "track_model": track_model_payload(model, fam),
             }
 
         return await asyncio.to_thread(work)
@@ -482,12 +482,16 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         return {"reference_id": rid, "lap_id": body.lap_id}
 
     @app.get("/api/track-model")
-    async def track_model(request: Request, game: str, track_id: str) -> dict[str, Any]:
+    async def track_model(request: Request, game: str, track_id: str, car_family: str | None = None) -> dict[str, Any]:
+        """The track model to use; with ``car_family`` (f1 | f2 | other) that family's own model, else one of another
+        family standing in (``car_family_match`` False); without it the newest model of any family."""
+        if car_family is not None and car_family not in carclass.FAMILIES:
+            raise HTTPException(422, f"car_family must be one of {list(carclass.FAMILIES)}")
         with rt(request).db.read() as c:
-            m = repo.load_track_model(c, game, track_id)
+            m = repo.load_track_model(c, game, track_id, car_family)
         if m is None:
             raise HTTPException(404, "no model")
-        return track_model_payload(identify(m)[0])
+        return track_model_payload(identify(m)[0], car_family)
 
     # ------------------------------------------------------------------ captures / replay / simulation
     @app.get("/api/captures")

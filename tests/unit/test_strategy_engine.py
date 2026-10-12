@@ -125,6 +125,7 @@ def test_race_view_contract_and_records() -> None:
         "pit",
         "safety_car",
         "weather",
+        "drs_enabled",  # F2 support (additive): the game's DRS enabled / disabled events
         "calls",
     }
     assert v["version"] == 1 and v["mode"] == "race" and v["lap"] == 7 and v["position"] == 2 and v["cars"] == 3
@@ -183,6 +184,13 @@ def test_race_view_contract_and_records() -> None:
         "undercut_threat",
         "neighbour_stop",
         "note",
+        "rules",  # F2 support: the race's stop rules (never known)
+    }
+    assert v["pit"]["rules"] == {
+        "race": None,
+        "known": False,
+        "text": "The game doesn't send this race's tyre or pit-stop rules.",
+        "class_note": None,
     }
     assert set(v["safety_car"]) == {"status", "since_lap", "box"}
     assert set(v["weather"]) == {"now", "rain_pct", "track_temp_c", "accuracy", "forecast", "next_change", "crossover"}

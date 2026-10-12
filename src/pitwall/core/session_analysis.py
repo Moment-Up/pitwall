@@ -25,6 +25,7 @@ from typing import Any
 
 import numpy as np
 
+from pitwall import carclass
 from pitwall.analysis.ai_level import AiLevelKey, suggest_for_key
 from pitwall.analysis.coaching import is_incident, observations_for_comparison
 from pitwall.analysis.compare import (
@@ -141,7 +142,8 @@ class SessionAnalyzer:
             with self._lock:
                 if key in self._cache:
                     return self._cache[key]
-            model = repo.load_track_model(c, sess["game"], sess["track_id"]) if sess.get("track_id") else None
+            family = carclass.family_of_row(sess)  # the car class family's own model (else one standing in)
+            model = repo.load_track_model(c, sess["game"], sess["track_id"], family) if sess.get("track_id") else None
             if model is not None and not lengths_compatible(model.length_m, sess.get("track_length_m")):
                 model = None  # the stored model is of another layout under the same track id (AC consoles)
             # official corner numbers and names; the session's game-native zones gate the sheet (sector check)

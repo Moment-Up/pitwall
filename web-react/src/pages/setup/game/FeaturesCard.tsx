@@ -7,7 +7,8 @@
 // green: "Built from community docs" is never shown as working (P8), and "Not sent" is a fact about the game, not a
 // fault, so it is never red. A game with nothing available (ACC on a console, Another game) says so in one sentence
 // with the 23 rows behind a disclosure. A "Telemetry fields" disclosure lists the adapter's fields
-// (GET /api/games/{id}) for the curious.
+// (GET /api/games/{id}) for the curious. F2 support: "Car classes" lists the game's classes (F1, F1 (2026), F2, ...)
+// with the server's status for each ("Tested on a recording" for F2, never "Tested live" without the live check).
 
 import { ChevronRight } from "@gravity-ui/icons";
 import { Button, Card, Chip, Disclosure } from "@heroui/react";
@@ -15,7 +16,16 @@ import { Sheet } from "@heroui-pro/react";
 import { useEffect, useState } from "react";
 import { useApi } from "../../../hooks/useApi";
 import { GAME_KEYS, gameApi, type GameEntry, type GameFeature, type GamesResponse } from "../../../lib/endpoints/game";
-import { evidenceWords, featureChip, featureCounts, featureGroups, SUPPORT_WORDS, supportTone } from "../../../lib/game";
+import {
+  carClassRows,
+  evidenceWords,
+  featureChip,
+  featureCounts,
+  featureGroups,
+  SUPPORT_WORDS,
+  supportTone,
+  type CarClassRowView,
+} from "../../../lib/game";
 
 const FIELD_STATUS: Record<string, string> = { sent: "Sent", partial: "Partial", not_sent: "Not sent", unknown: "Unknown" };
 
@@ -147,6 +157,47 @@ function FeatureRows({ groups, onOpen }: { groups: ReturnType<typeof featureGrou
 
 const DISCLOSURE_TRIGGER = "flex min-h-12 w-full items-center justify-between gap-3 text-left text-sm font-semibold";
 
+/** F2 support: the game's car classes, each with how far it is tested; the server's notes (technical: sessions,
+ * versions, fixtures) behind "How the car classes were tested", like the game's own note above. */
+function CarClasses({ rows }: { rows: CarClassRowView[] }) {
+  if (!rows.length) return null;
+  const noted = rows.filter((c) => c.notes.length > 0);
+  return (
+    <section aria-label="Car classes" className="grid gap-1 border-t border-separator pt-3" data-car-classes="">
+      <h3 className="m-0 text-sm font-semibold text-muted">Car classes</h3>
+      <ul className="m-0 grid list-none gap-0 p-0">
+        {rows.map((c) => (
+          <li key={c.id} className="flex min-h-11 flex-wrap items-center gap-2 border-b border-separator py-1.5 last:border-b-0" data-car-class={c.id}>
+            <span className="flex-1 text-[15px] font-medium">{c.label}</span>
+            <Chip size="sm" variant="soft" color={c.chip.tone}>
+              <Chip.Label>{c.chip.label}</Chip.Label>
+            </Chip>
+          </li>
+        ))}
+      </ul>
+      {noted.length > 0 && (
+        <Disclosure>
+          <Disclosure.Heading>
+            <Disclosure.Trigger className={DISCLOSURE_TRIGGER}>
+              How the car classes were tested
+              <Disclosure.Indicator />
+            </Disclosure.Trigger>
+          </Disclosure.Heading>
+          <Disclosure.Content>
+            <Disclosure.Body className="grid gap-2 pb-1">
+              {noted.map((c) => (
+                <p key={c.id} className="m-0 text-sm break-words text-muted">
+                  <span className="font-semibold text-foreground">{c.label}:</span> {c.notes.join(" ")}
+                </p>
+              ))}
+            </Disclosure.Body>
+          </Disclosure.Content>
+        </Disclosure>
+      )}
+    </section>
+  );
+}
+
 export function FeaturesCard({ entry, catalogue, wide }: { entry: GameEntry; catalogue: GamesResponse; wide: boolean }) {
   const [open, setOpen] = useState<GameFeature | null>(null);
   const [fieldsOpen, setFieldsOpen] = useState(false);
@@ -194,6 +245,7 @@ export function FeaturesCard({ entry, catalogue, wide }: { entry: GameEntry; cat
           </Disclosure.Content>
         </Disclosure>
       )}
+      <CarClasses rows={carClassRows(entry, catalogue)} />
       {nothing ? (
         <Disclosure className="border-t border-separator">
           <Disclosure.Heading>

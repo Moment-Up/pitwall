@@ -10,7 +10,8 @@ Rules:
   brake pressure are never suggested then, nor anything that needs the symptom to happen under braking.
 * Each suggestion changes **one** parameter by a trial step in menu units (wings 2 clicks, differentials 10 %,
   anti-roll bars 2, suspension 3, brake bias 1 %, brake pressure 3 %), from the session's latest stored setup,
-  snapped to the car format's range. It feeds the existing experiments flow (``carsetup.experiments.propose``).
+  snapped to the car format's range (an F2 car: the F2 ranges, never the F1 car's). It feeds the existing
+  experiments flow (``carsetup.experiments.propose``).
 * Never suggested: tyre pressures (they change as a pair, which breaks the one-parameter rule), camber, toe and
   ride heights. If two symptoms want one parameter moved in opposite directions, it is dropped from both.
 * Every result carries ``carsetup.recommend.CAVEAT``: a setup is never a guaranteed fix.
@@ -330,10 +331,12 @@ def suggest(
     stored: Mapping[str, float] | None,
     testing: frozenset[str] = frozenset(),
     braking_assist: bool = False,
+    format_unknown: str = FORMAT_UNKNOWN,
 ) -> SetupEngineer:
     """Suggestions for the qualifying symptoms. ``stored``: menu values of the session's latest setup (None =
     unknown). ``testing``: parameters with an experiment already proposed or running from this session.
-    ``braking_assist``: the game's braking assist was on (no brake bias or pressure changes)."""
+    ``braking_assist``: the game's braking assist was on (no brake bias or pressure changes). ``format_unknown``:
+    why a change cannot be sized without a car format (an F2 car with no setups is never asked to choose one)."""
     wanted: list[tuple[str, str, list[Candidate]]] = []  # (symptom id, simple text, candidates)
     brake_dropped = False
     for s in symptoms:
@@ -373,7 +376,7 @@ def suggest(
             if p is None:
                 continue
             rank += 1
-            out.append(_suggestion(sid, simple, rank, c, cat, car_format, stored, testing))
+            out.append(_suggestion(sid, simple, rank, c, cat, car_format, stored, testing, format_unknown))
     if not wanted:
         notes.append(
             "No handling symptom qualifies for a setup change: a symptom must recur and also show on your best lap "
@@ -398,6 +401,7 @@ def _suggestion(
     car_format: CarFormat | None,
     stored: Mapping[str, float] | None,
     testing: frozenset[str],
+    format_unknown: str = FORMAT_UNKNOWN,
 ) -> SetupSuggestion:
     p = cat.param(c.key)
     assert p is not None
@@ -409,7 +413,7 @@ def _suggestion(
     blocked: str | None = None
     steps = step / rng.step if rng is not None and rng.step > 0 else step
     if car_format is None:
-        blocked = FORMAT_UNKNOWN
+        blocked = format_unknown
     elif rng is None:
         blocked = f"{p.label} has no known range for this car format."
     elif from_v is None:
