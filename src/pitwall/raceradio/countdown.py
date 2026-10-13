@@ -17,9 +17,10 @@
 * **Finish** - F1: the final ``LapCompletion``; GT7: the completion of lap ``total_laps``: the position and the change
   from the grid; with time penalties still to add (F1 LapData), the position "on the road" and the seconds instead of
   the change. Then the session is ``finished`` (only urgent calls after it).
-* **Allowance** - the grid brief, lights out, the countdown and the finish are outside the per-lap race allowance
-  (``allowance=False``): said standing still, at the line or after the flag, they must not starve a lap's position
-  news or warnings (a 3-lap race heard 7 of 14 calls with them counted [M]).
+* **Allowance** - the grid brief, lights out, the countdown and the finish are never held by the radio's per-lap
+  budget (``allowance=False``; they still spend it): said standing still, at the line (inside the lap summary) or
+  after the flag, they must not wait behind a lap's position news or warnings (a 3-lap race heard 7 of 14 calls with
+  them held [M]).
 * **Evidence** - "Flag's out. Last lap." and the lapped last lap came from no real capture: tagged synthetic whatever
   the call's name. The formation-lap brief is recorded (Imola, 2026-10-11: "P3 of 20, 32 laps." in the formation-lap
   session; the race session after it skipped its own).

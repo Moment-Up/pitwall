@@ -802,6 +802,14 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         hub = request.app.state.hub
         return {"enabled": False} if hub is None else {"enabled": True, **hub.status()}
 
+    @app.get("/api/radio/policy")
+    async def radio_policy() -> dict[str, Any]:
+        """The radio's one policy table (``voice.scheduler.POLICY``) with its live constants: Settings › Radio & voice
+        prints it, so it can never drift from the code. Static and deterministic; no LLM."""
+        from pitwall.voice.scheduler import policy_constants, policy_table
+
+        return {"families": policy_table(), "constants": policy_constants()}
+
     @app.post("/api/voice/say")
     async def voice_say(request: Request, body: SayRequest) -> dict[str, Any]:
         """Speak arbitrary text on connected radios (radio check / testing)."""

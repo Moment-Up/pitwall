@@ -79,9 +79,7 @@ class CallSpec:
     addressable: bool = False
     defer_to_strategy_detail: bool = False
     audience: str | None = None  # "experienced": not given to a driver with simple wording (as strategy calls)
-    allowance: bool = (
-        True  # counts toward (and waits for) the per-lap race allowance; False: the finish, after the flag
-    )
+    allowance: bool = True  # waits for the radio's per-lap budget; False: never held by it (the finish, after the flag)
     data: dict[str, Any] = field(default_factory=dict)
     tier: str | None = None  # None: from the call (RECORDED_CALLS)
 

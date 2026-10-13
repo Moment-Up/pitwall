@@ -154,9 +154,9 @@ def test_kinds_per_intensity() -> None:
     assert ALLOWED_KINDS["normal"] == normal
     assert ALLOWED_KINDS["detailed"] == normal | {MessageKind.INFO}
     assert set(KIND_RANK) == set(MessageKind)  # every kind has its place in the order
-    budgeted = {MessageKind.LAP_SUMMARY, MessageKind.GOAL, MessageKind.STRATEGY, MessageKind.COACHING}
-    assert budgeted | {MessageKind.INFO} == BUDGETED
-    assert TALK_PER_LAP == {"quiet": 0, "normal": 2, "detailed": 4}
+    budgeted = {MessageKind.LAP_SUMMARY, MessageKind.RACE, MessageKind.GOAL, MessageKind.STRATEGY, MessageKind.COACHING}
+    assert budgeted | {MessageKind.INFO} == BUDGETED  # v0.3.0: one allowance for every producer, race calls too
+    assert TALK_PER_LAP == {"quiet": 0, "normal": 3, "detailed": 5}
 
 
 def test_race_lap_order_off_track_is_summary_strategy_goal_coaching() -> None:
@@ -201,7 +201,7 @@ def test_the_goal_line_no_longer_holds_its_laps_coaching_back() -> None:
 
 
 # ================================================================ the per-lap talk budget
-@pytest.mark.parametrize(("intensity", "said"), [("normal", 2), ("detailed", 4)])
+@pytest.mark.parametrize(("intensity", "said"), [("normal", 3), ("detailed", 5)])
 def test_budget_per_intensity_on_track(intensity: str, said: int) -> None:
     sched = RadioScheduler(intensity)
     for i in range(6):
@@ -223,21 +223,21 @@ def test_off_track_messages_do_not_spend_the_laps_allowance() -> None:
     sched = RadioScheduler("normal")
     sched.enqueue(msg("garage", MessageKind.STRATEGY))
     assert [m.id for m in drain(sched, OFF_TRACK)] == ["garage"]
-    for i in range(3):
+    for i in range(4):
         sched.enqueue(msg(f"s{i}", MessageKind.STRATEGY, created=2000.0, meta={"topic": f"strategy:t{i}"}))
-    assert len(drain(sched, ON_TRACK, start=2000.0)) == 2
+    assert len(drain(sched, ON_TRACK, start=2000.0)) == 3
 
 
 def test_race_lap_on_track_gives_up_its_coaching_point() -> None:
-    """At normal intensity a lap with a summary and a strategy call has no room left for the goal or the coaching."""
+    """At normal intensity a lap with a summary, a strategy call and a goal line has no room left for the coaching."""
     sched = RadioScheduler("normal")
     race_lap(sched)
-    said = drain(sched, ON_TRACK, polls=3)
-    assert [m.kind for m in said] == [MessageKind.LAP_SUMMARY, MessageKind.STRATEGY]
-    assert {m.kind for m in sched.pending()} == {MessageKind.GOAL, MessageKind.COACHING}
+    said = drain(sched, ON_TRACK, polls=4)
+    assert [m.kind for m in said] == [MessageKind.LAP_SUMMARY, MessageKind.STRATEGY, MessageKind.GOAL]
+    assert {m.kind for m in sched.pending()} == {MessageKind.COACHING}
 
 
-def test_detailed_race_lap_fits_in_four() -> None:
+def test_detailed_race_lap_fits_in_five() -> None:
     sched = RadioScheduler("detailed")
     race_lap(sched)
     assert len(drain(sched, ON_TRACK)) == 4
@@ -246,12 +246,16 @@ def test_detailed_race_lap_fits_in_four() -> None:
 def test_a_leftover_is_said_from_the_next_laps_allowance() -> None:
     sched = RadioScheduler("normal")
     race_lap(sched)
-    assert len(drain(sched, ON_TRACK, polls=3)) == 2
+    assert len(drain(sched, ON_TRACK, polls=4)) == 3
     next_lap = replace(ON_TRACK, lap_number=9)
-    m = sched.next_message(next_lap, 40.0, speaking=False)  # the goal line is still alive (45 s)
-    assert m is not None and m.kind is MessageKind.GOAL
-    assert sched.next_message(next_lap, 300.0, speaking=False) is None  # the coaching point expired meanwhile
+    m = sched.next_message(next_lap, 40.0, speaking=False)  # the coaching point is still alive (45 s)
+    assert m is not None and m.kind is MessageKind.COACHING
     assert sched.pending() == []
+    late = RadioScheduler("normal")
+    race_lap(late)
+    assert len(drain(late, ON_TRACK, polls=4)) == 3
+    assert late.next_message(next_lap, 300.0, speaking=False) is None  # expired meanwhile
+    assert late.pending() == []
 
 
 @pytest.mark.parametrize(
@@ -265,12 +269,13 @@ def test_a_leftover_is_said_from_the_next_laps_allowance() -> None:
         (MessageKind.CONTROL, Priority.HIGH),
     ],
 )
-def test_outside_the_budget(kind_priority: tuple[MessageKind, Priority]) -> None:
+def test_never_held_by_the_budget(kind_priority: tuple[MessageKind, Priority]) -> None:
     kind, priority = kind_priority
     sched = RadioScheduler("normal")
-    for i in range(2):
+    n = TALK_PER_LAP["normal"]
+    for i in range(n):
         sched.enqueue(msg(f"s{i}", MessageKind.STRATEGY, meta={"topic": f"strategy:t{i}"}))
-    assert len(drain(sched, ON_TRACK, polls=3)) == 2  # the lap's allowance is used up
+    assert len(drain(sched, ON_TRACK, polls=n + 1)) == n  # the lap's allowance is used up
     sched.enqueue(msg("x", kind, priority, created=2000.0))
     sched.enqueue(msg("over", MessageKind.STRATEGY, created=2000.0))
     assert [m.id for m in drain(sched, ON_TRACK, start=2000.0)] == ["x"]
@@ -294,10 +299,10 @@ def test_a_new_session_or_a_lap_restart_is_a_new_allowance() -> None:
 def test_unknown_lap_number_falls_back_to_the_messages_lap() -> None:
     sched = RadioScheduler("normal")
     nowhere = replace(ON_TRACK, lap_number=None)
-    for i in range(3):
+    for i in range(4):
         sched.enqueue(msg(f"a{i}", MessageKind.STRATEGY, lap=4, meta={"topic": f"strategy:a{i}"}))
     sched.enqueue(msg("b", MessageKind.STRATEGY, lap=5))
-    assert sorted(m.id for m in drain(sched, nowhere)) == ["a0", "a1", "b"]
+    assert sorted(m.id for m in drain(sched, nowhere)) == ["a0", "a1", "a2", "b"]
 
 
 def test_the_coaching_cap_still_applies_on_top() -> None:
@@ -368,7 +373,8 @@ def test_safety_car_box_call_bypasses_quiet_mode_and_the_budget() -> None:
     )
     said = drain(sched, ON_TRACK, start=2000.0)
     assert said[0].kind is MessageKind.ALERT and said[0].text.startswith("Fuel critical")
-    assert len([m for m in said if m.kind is MessageKind.STRATEGY]) == 2  # the alert spent none of the allowance
+    # the two alerts were never held by the allowance but spent it: one routine call is left on this lap
+    assert len([m for m in said if m.kind is MessageKind.STRATEGY]) == 1
 
 
 def test_safety_car_stay_out_call_is_never_squeezed_out_by_the_budget() -> None:
@@ -386,8 +392,9 @@ def test_safety_car_stay_out_call_is_never_squeezed_out_by_the_budget() -> None:
     sched = RadioScheduler("normal")
     sched.enqueue(msg("sum", MessageKind.LAP_SUMMARY, lap=10))
     sched.enqueue(msg("pt", MessageKind.COACHING, lap=10))
+    sched.enqueue(msg("st", MessageKind.STRATEGY, lap=10))
     said = drain(sched, ON_TRACK)
-    assert [m.id for m in said] == ["sum", "pt"]  # this lap's allowance is spent
+    assert [m.id for m in said] == ["sum", "st", "pt"]  # this lap's allowance is spent
     sched.set_quiet(indefinite=True)
     sc = strategy_message(stay.to_dict(), 20.0)
     assert sc.kind is MessageKind.ALERT and sc.priority is Priority.HIGH and sc.bypass_quiet

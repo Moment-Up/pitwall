@@ -16,6 +16,7 @@ import type { HandsFreeServerState } from "../../../lib/handsfree";
 import type { RadioState, RadioStore } from "../../../lib/radio";
 import { CellGroup, CellRow, SegmentRow, SwitchRow } from "../cells";
 import { ButtonSetupDialog } from "./ButtonSetupDialog";
+import type { DrivingHandsFreeView } from "./race-calls";
 import { HandsFreeConsent } from "./HandsFreeConsent";
 
 export type TalkSectionState = Pick<
@@ -31,9 +32,12 @@ export interface TalkSectionProps {
   statusHandsFree: HandsFreeServerState | null;
   noun: string;
   actions: TalkActions;
+  /** v0.3.0: the seated driver's "Hands-free while driving" (moved here from the driver sheet); null = no row. */
+  driving?: DrivingHandsFreeView | null;
+  onDriving?: (on: boolean) => void;
 }
 
-export function TalkSection({ r, statusHandsFree, noun, actions }: TalkSectionProps) {
+export function TalkSection({ r, statusHandsFree, noun, actions, driving = null, onDriving }: TalkSectionProps) {
   const [consent, setConsent] = useState(false);
   const [setup, setSetup] = useState(false);
   const on = handsFreeOn(r);
@@ -64,6 +68,15 @@ export function TalkSection({ r, statusHandsFree, noun, actions }: TalkSectionPr
             else actions.setHandsFree(v);
           }}
         />
+        {driving && (
+          <SwitchRow
+            title={driving.title}
+            hint={driving.hint}
+            isSelected={driving.on}
+            isDisabled={driving.disabled || !onDriving}
+            onChange={(v) => onDriving?.(v)}
+          />
+        )}
         <SegmentRow
           title="Wake word"
           hint={wake?.hint}

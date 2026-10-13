@@ -103,8 +103,8 @@ saved or logged. The screen shows when it is listening ("Listening for "Pitwall"
   is thrown away like any other talk.
 - **Only while the car is stopped** (on the grid, in the pits, in the garage and menus, after the flag; also when no
   game data arrives at all, e.g. a game Pitwall does not read) unless the driver in the seat turns on **Hands-free
-  while driving**: in their profile (Settings › Drivers), or with **Also while driving** under the hands-free switch on
-  Drive › Radio while they are seated. On track it shows "Hands-free paused · driving" and a sentence you started
+  while driving**: in Settings › Radio & voice, under this device's hands-free switch, or with **Also while driving**
+  under the hands-free switch on Drive › Radio while they are seated. On track it shows "Hands-free paused · driving" and a sentence you started
   just before moving off is dropped; if you try to talk, the engineer tells you once a session, at a stop of at least
   8 seconds, that hands-free only listens when you stop. A short stop (a spin, a flashback, the grid just before
   lights out) does not count. On the owner's real races the car is still for only 0-28 % of a race.
@@ -207,27 +207,31 @@ facts.
 ## What the radio says at each intensity
 
 The coaching intensity is set per driver (Settings › Drivers) and changed on the radio ("stop talking for two laps",
-"you can talk again"). On track the radio says at most two messages a lap of its own at normal intensity and four at
-detailed, in a calm part of the lap; braking cues, alerts and your answers do not count towards that.
+"you can talk again"). On track the radio says at most three messages a lap of its own at normal intensity and five
+at detailed, in a calm part of the lap, whoever makes them (the lap time, race calls, strategy, car health, goal
+lines, coaching); alerts never wait but use the lap's room; braking cues, the spotter and your answers are outside it.
+Only the spotter, a red flag and a puncture ever cut in.
 
 | | quiet | normal | detailed | "quiet for N laps" | voice off |
 |---|---|---|---|---|---|
 | Answers, acknowledgements | yes | yes | yes | yes | on screen |
-| Urgent alerts; safety car box or stay out; critical fuel | yes | yes | yes | yes | on screen |
-| Lap summary, goal line, coaching point, drill point | - | 2 a lap | 4 a lap | held | - |
-| Strategy calls | - | within the 2 | within the 4, plus detailed notes | held | - |
+| Spotter (switched on), red flag, puncture | yes | yes | yes | yes | - |
+| Safety car, critical fuel, serious penalties and damage | yes | yes | yes | yes | on screen |
+| Other alerts (yellow, blue, time penalties, major damage) | yes | yes | yes | held | - |
+| Lap time, race calls, strategy and car health calls, goal line, coaching point, drill point | - | 3 a lap together | 5 a lap together, plus detail | held | - |
 | Validation prompts (during a run you started) | yes | yes | yes | held | - |
 
-In a race the order is the lap time, then the strategy call, then the goal line, then the coaching point; a message
+In a race the order is the lap time (with the line's race news inside it: "That lap, 1:25.4. P3 after lap one, up
+2."), then race calls, then the strategy or car health call, then the goal line, then the coaching point; a message
 that does not fit waits for the next lap or expires. When another driver sits down, the previous driver's unsaid lap
-messages are dropped. At quiet intensity drill points show on the screen only. Full table:
-[features.md](features.md#what-the-radio-says).
+messages are dropped. At quiet intensity drill points show on the screen only. Settings › Radio & voice shows the
+whole policy ("What the radio says"); full table: [voice-protocol.md](voice-protocol.md#radio-policy-one-engineer).
 
 **Race radio.** In a race the engineer also calls flags, the start and laps to go, positions, gaps, penalties and
-damage ([features.md](features.md#race-radio)), with an allowance of its own (two race calls a lap at normal, three
-at detailed) so they never push out the lap summary or the coaching point. Each driver chooses the groups they hear
-in Settings › Drivers › Race radio (flags, start, position, rivals, penalties, damage, "say my name sometimes"; the
-red flag is always on) and the radio's words (Automatic: simple words for beginners; Simple; Standard). Ask "who's
+damage ([features.md](features.md#race-radio)), at most two race calls a lap at normal, three at detailed, inside the
+lap's three (five). The groups the seated driver hears are switched in Settings › Radio & voice › Radio calls (flags,
+start, position, rivals, penalties, damage, "say my name sometimes"; the red flag and a puncture are always on); the
+radio's words (Automatic: simple words for beginners; Simple; Standard) are in Settings › Drivers. Ask "who's
 ahead?", "do I have a penalty?", "what's my damage?" or "how was sector 2?" at any time.
 
 ## Troubleshooting

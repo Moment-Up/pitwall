@@ -4,9 +4,9 @@
 (normal priority, speak window, never bypassing quiet), so the radio's one policy (``voice.scheduler``) applies:
 normal and detailed intensity say it, quiet intensity and a spoken "quiet for N laps" hold it until it expires,
 voice off drops it. It follows the lap's summary and a strategy call and comes before the coaching point (the
-scheduler's ``KIND_RANK``), and it counts toward the per-lap talk budget on track. It carries no lap identity
-(``meta["lap_id"]``), so it never holds the lap's coaching back and a later lap's summary does not supersede it;
-``meta["topic"] = "goal:<session>"`` makes a newer goal line replace an unsaid one. A seat change drops it unsaid.
+scheduler's ``KIND_RANK``), and it waits for and spends the radio's one per-lap budget on track. It carries no lap
+identity (``meta["lap_id"]``), so it never holds the lap's coaching back and a later lap's summary does not supersede
+it; ``meta["topic"] = "goal:<session>"`` makes a newer goal line replace an unsaid one. A seat change drops it unsaid.
 
 Lap goals expire after ``LAP_MESSAGE_TTL_S`` like the lap's other messages; race goals (judged at the flag, off
 track) after two minutes. ``GoalLineGate`` (owned by the hub, event loop only) allows at most

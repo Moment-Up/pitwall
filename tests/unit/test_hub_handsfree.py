@@ -576,7 +576,9 @@ async def test_the_hint_waits_for_a_quiet_radio_and_is_rechecked_after_synthesis
     await r.hub.stop()
 
 
-async def test_a_braking_call_cuts_the_hint_and_it_is_not_said_again() -> None:
+async def test_a_braking_call_never_cuts_the_hint() -> None:
+    """v0.3.0 radio policy: only the urgent path interrupts. The hint is said only at a settled stop, where no braking
+    call fires; one that did would be dropped, never cut the hint."""
     from pitwall.voice.hub import compose_cue_clip
     from tests.unit.test_cues import make_event
 
@@ -590,8 +592,8 @@ async def test_a_braking_call_cuts_the_hint_and_it_is_not_said_again() -> None:
     assert r.says() == [hf_mod.HINT_TEXT] and r.hub.speaking_id is not None
     ev = make_event()
     r.hub._cue_phrases[ev.cue.parts] = compose_cue_clip([AudioClip(tone(0.3), SR) for _ in ev.cue.parts], 1)
-    assert r.hub.deliver_cue(ev, time.monotonic()) is None  # not dropped as "answer on air"
-    assert r.hub._held is None  # the hint is not said again later
+    assert r.hub.deliver_cue(ev, time.monotonic()) == "radio busy"
+    assert r.hub._held is None  # nothing was cut, nothing is said again
     await r.hub.stop()
 
 

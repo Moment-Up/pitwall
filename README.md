@@ -176,9 +176,10 @@ generated data; nothing below has been run live on the rig yet):
   another driver's lap) and one-corner drills. Recorded through a development script.
 - **Rig validation kit**: Setup › Validation and `pitwall validate`. Nothing passes until it is run live, by design.
 - **One-line install and `pitwall update`**. End to end on macOS; Windows and Linux through CI only.
-- **A calmer radio and a glanceable Drive**: at most two messages a lap of the radio's own at normal intensity, in
-  a calm part of the lap; instant answers while moving; on track Drive shows only what helps at speed. Recorded over
-  loopback and in a desktop browser.
+- **A calmer radio and a glanceable Drive**: one engineer, at most three messages a lap of the radio's own at normal
+  intensity from every source together, in a calm part of the lap; only the spotter, a red flag and a puncture cut
+  in; instant answers while moving; on track Drive shows only what helps at speed. Recorded over loopback and in a
+  desktop browser.
 
 The screenshots show the new dashboard, which comes prebuilt in every release. Built from source without a HeroUI Pro
 licence, you get the classic dashboard instead (see [The two dashboards](#the-two-dashboards-and-heroui-pro)): it has

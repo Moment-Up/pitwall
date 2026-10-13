@@ -140,11 +140,11 @@ export const SKILL_LEVELS: { value: SkillLevel; label: string; radio: string; en
  * quiet: alerts only - flags, penalties, damage - and answers). */
 export const INTENSITIES: { value: CoachingIntensity; label: string; hint: string }[] = [
   { value: "quiet", label: "Quiet", hint: "Alerts and answers only: flags, penalties, damage." },
-  { value: "normal", label: "Normal", hint: "Lap summary, the top point and up to 2 race calls a lap." },
+  { value: "normal", label: "Normal", hint: "Up to 3 messages a lap: the lap time, race calls, strategy, the top point." },
   {
     value: "detailed",
     label: "Detailed",
-    hint: "More points per lap (beginners still get one), 3 race calls a lap and rivals' fastest laps.",
+    hint: "Up to 5 a lap: more points (beginners still get one), up to 3 race calls and rivals' fastest laps.",
   },
 ];
 
@@ -163,7 +163,7 @@ export const RADIO_CALL_GROUPS: readonly { value: RadioCallGroup; label: string;
   { value: "position", label: "Position", hint: "Places gained and lost, good overtakes." },
   { value: "rivals", label: "Rivals & gaps", hint: "Gaps every few laps, cars pitting, retirements. F1 only." },
   { value: "penalties", label: "Penalties & warnings", hint: "Time penalties, warnings, track limits. F1 only." },
-  { value: "damage", label: "Damage", hint: "Wing, floor, punctures. F1 only." },
+  { value: "damage", label: "Damage", hint: "Wing, floor and other damage. Punctures are always on. F1 only." },
   { value: "name", label: "Say my name sometimes", hint: "At most once a minute." },
 ];
 

@@ -1,8 +1,9 @@
 // Add or edit a driver (spec 8): a Pro Sheet (right on iPad and Mac, bottom on phones, spec 3.4) with name, initials,
 // colour, skill level (with what it changes), the game they usually play, coaching on the radio and the engineer's
 // voice. The radio settings only appear while the radio follows the seated driver (they would change nothing on track
-// otherwise); "Usually plays" only while the server supports it (GameState.driver_defaults). Race radio (the call
-// toggles and the radio words, RaceRadioSettings) shows with the radio settings when the server knows race radio.
+// otherwise); "Usually plays" only while the server supports it (GameState.driver_defaults). Race radio (the radio
+// words, RaceRadioSettings) shows with the radio settings when the server knows race radio; v0.3.0: the race call
+// toggles and "Hands-free while driving" are on Settings › Radio & voice for the seated driver (one place each).
 // Delete lives in the footer and asks through an AlertDialog (DeleteDriverDialog).
 
 import {
@@ -23,14 +24,12 @@ import {
   NAME_MAX,
   NO_USUAL_GAME,
   formBody,
-  handsFreeDrivingHint,
   previewInitials,
   skillEffects,
   swatchesFor,
   usualGameValue,
   withInitials,
   withName,
-  withRadioCall,
   type DriverForm,
 } from "./model";
 import { RaceRadioSettings } from "./RaceRadioSettings"; // race radio (pitwall.raceradio)
@@ -45,8 +44,6 @@ export interface DriverSheetProps {
   canDelete: boolean;
   /** "Usually plays" options (model.usualGameOptions); null hides the control (a server without driver defaults). */
   usualGames: { id: string; label: string }[] | null;
-  /** Offer "Hands-free while driving" (lane handsfree: the server reports the preference; model.handsFreeSupported). */
-  handsFree?: boolean;
   onSave: (f: DriverForm) => Promise<void>;
   onDelete: () => void;
   onClose: () => void;
@@ -65,7 +62,6 @@ export function DriverSheet({
   wide,
   canDelete,
   usualGames,
-  handsFree = false,
   onSave,
   onDelete,
   onClose,
@@ -294,33 +290,14 @@ export function DriverSheet({
                         </CellSwitch.Trigger>
                       </CellSwitch>
 
-                      {/* --- race radio (pitwall.raceradio): only from a server that knows it --- */}
-                      {f.radio_calls && f.radio_wording && (
+                      {/* --- race radio (pitwall.raceradio): only from a server that knows it. v0.3.0: the race call
+                          toggles and hands-free while driving are on Settings › Radio & voice (one place) --- */}
+                      {f.radio_wording && (
                         <RaceRadioSettings
-                          calls={f.radio_calls}
                           wording={f.radio_wording}
                           skill={f.skill_level}
-                          onCall={(g, on) => setF(withRadioCall(f, g, on))}
                           onWording={(w) => setF({ ...f, radio_wording: w })}
                         />
-                      )}
-
-                      {/* --- hands-free (lane handsfree): the seated driver's profile sets where hands-free listens */}
-                      {handsFree && (
-                        <CellSwitch
-                          isSelected={f.handsfree_while_driving === true}
-                          onChange={(v) => setF({ ...f, handsfree_while_driving: v })}
-                        >
-                          <CellSwitch.Trigger className="h-auto min-h-14 py-2">
-                            <span className="grid min-w-0 flex-1">
-                              <CellSwitch.Label>Hands-free while driving</CellSwitch.Label>
-                              <span className="text-xs text-muted">
-                                {handsFreeDrivingHint(f.handsfree_while_driving === true)}
-                              </span>
-                            </span>
-                            <CellSwitch.Control />
-                          </CellSwitch.Trigger>
-                        </CellSwitch>
                       )}
                     </>
                   ) : (

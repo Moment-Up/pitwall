@@ -499,7 +499,7 @@ def speak_windows_verdict(proactive: Sequence[ProactiveRecord], now: float) -> A
             "tight", "Messages ending under 0.5 s before braking", tight <= SPEAK_MAX_TIGHT, str(tight), "<= 1", True
         ),
     ]
-    reasons = [f"{n_of(cut, 'message')} cut by a braking call or an urgent call (by design)"] if cut else []
+    reasons = [f"{n_of(cut, 'message')} cut by an urgent or spotter call (by design)"] if cut else []
     if not proactive:
         return state("no_evidence", ["No lap summaries or coaching messages yet"], [], metrics, now)
     if len(overlap) >= 2 or heavy:

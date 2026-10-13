@@ -13,9 +13,11 @@
    source (``P 5``, so the lexicon spells the number) or of the text;
 5. kind (alert -> ALERT, race -> RACE, info -> INFO), priority, speak window, ``bypass_quiet``, TTL and topic from the
    call (docs/voice-protocol.md); ``meta``: ``topic, group, call, urgent, tier, synthetic, addressable, race_call``
-   (and ``race_allowance: false`` for calls outside the per-lap race allowance: the grid brief, lights out, the
-   countdown, the finish, a move into the lead; ``repeat_ok: true`` for flags, penalties and damage, whose rules
-   have their own cooldowns; ``merge_into_summary: true`` for a countdown call made at the line).
+   (and ``race_allowance: false`` for the milestones the per-lap budget never holds: the grid brief, lights out,
+   the countdown, the finish, a move into the lead; ``repeat_ok: true`` for flags, penalties and damage, whose rules
+   have their own cooldowns; ``merge_into_summary: true`` for news made at the line - the countdown, the lap-one
+   position, a position change, the fastest lap, the finish; ``announces: "sc"`` for the safety car's
+   deployment, which race strategy's box-or-stay call announces too: the radio says it once).
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from pitwall.voice.scheduler import RACE_ALLOWANCE_KEY, REPEAT_OK_KEY, SUMMARY_MERGE_KEY, TOPIC_KEY
+from pitwall.voice.scheduler import ANNOUNCE_KEY, RACE_ALLOWANCE_KEY, REPEAT_OK_KEY, SUMMARY_MERGE_KEY, TOPIC_KEY
 from pitwall.voice.speech import to_speech
 from pitwall.voice.types import MessageKind, Priority, RadioMessage
 
@@ -32,6 +34,9 @@ PRIORITIES = {"urgent": Priority.URGENT, "high": Priority.HIGH, "normal": Priori
 DEFAULT_TTL_S = 20.0
 ALWAYS_ON = frozenset({"red_flag"})
 REPEATABLE_GROUPS = frozenset({"flags", "penalties", "damage"})  # their rules have cooldowns of their own
+# news another producer may announce too (voice.scheduler ANNOUNCE_KEY): race strategy's box-or-stay call opens with
+# "Safety car.", so the radio says the safety car once
+ANNOUNCES = {"sc_deployed": "sc", "vsc_deployed": "sc"}
 
 
 def group_enabled(prefs: object | None, group: str) -> bool:
@@ -83,11 +88,13 @@ def race_message(
         "race_call": payload.get("id"),
     }
     if payload.get("allowance") is False:
-        meta[RACE_ALLOWANCE_KEY] = False  # outside the per-lap race allowance (start, countdown, finish, the lead)
+        meta[RACE_ALLOWANCE_KEY] = False  # never held by the per-lap budget (start, countdown, finish, the lead)
     if group in REPEATABLE_GROUPS:
         meta[REPEAT_OK_KEY] = True  # a second blue flag or penalty within a minute is news, not a repeat
     if data.get("at_line") is True:
-        meta[SUMMARY_MERGE_KEY] = True  # a countdown call at the line: said inside the lap summary
+        meta[SUMMARY_MERGE_KEY] = True  # news made at the line: said inside the lap summary
+    if call in ANNOUNCES:
+        meta[ANNOUNCE_KEY] = ANNOUNCES[call]
     topic = payload.get("topic")
     if isinstance(topic, str) and topic:
         meta[TOPIC_KEY] = topic

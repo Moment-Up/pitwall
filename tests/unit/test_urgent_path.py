@@ -1,7 +1,7 @@
 """The v0.3.0 urgent path: ONE interrupt rule (``voice.scheduler.may_interrupt``) for the race radio's red flag and
-the spotter. Spotter calls and the red flag may interrupt anything except another urgent call (so neither cuts the
-other); a braking cue cuts a spotter clear or "still there" and is never cut by a clear; everything else (race calls,
-car health, lap summaries) never interrupts and waits for the budget and a speak window. The hub's urgent slot and cue
+the spotter. Spotter calls, the red flag and a puncture may interrupt anything except another urgent call (so neither
+cuts the other); a spotter clear never cuts a braking cue; nothing else interrupts (a braking cue plays on a free radio
+only; race calls, car health, lap summaries wait for the budget and a speak window). The hub's urgent slot and cue
 gate, the scheduler's queue and ``voice.spotter_radio`` all decide with it."""
 
 from __future__ import annotations
@@ -46,9 +46,9 @@ def test_the_red_flag_and_spotter_calls_cut_anything_but_each_other() -> None:
 
 def test_the_braking_point_exception_and_everything_else_never_interrupts() -> None:
     assert not may_interrupt(CLEAR, CUE)  # a clear waits for the braking cue
-    assert may_interrupt(CUE, CLEAR) and may_interrupt(CUE, STILL)  # a cue cuts a clear or a still there
-    assert not may_interrupt(CUE, ONSET) and not may_interrupt(CUE, RED)  # never a car arriving or the red flag
-    for quiet in (SUMMARY, RACE, HEALTH, STILL):
+    for on_air in (CLEAR, STILL, ONSET, RED, SUMMARY, RACE, HEALTH, ANSWER, CUE):
+        assert not may_interrupt(CUE, on_air), on_air.meta  # a cue cuts nothing: only the urgent path interrupts
+    for quiet in (SUMMARY, RACE, HEALTH, STILL, CUE):
         for on_air in (None, SUMMARY, RACE, HEALTH, ANSWER, CUE):
             assert not may_interrupt(quiet, on_air), (quiet.kind, on_air)
 
@@ -87,7 +87,13 @@ def _on_air(hub: RadioHub, msg: RadioMessage) -> None:
 
 async def test_the_hubs_cue_gate_asks_the_same_rule() -> None:
     hub, _client, _sent = await make()
-    for msg, reason in ((CLEAR, None), (STILL, None), (ONSET, "spotter call on air"), (SUMMARY, None)):
+    for msg, reason in (
+        (CLEAR, "spotter call on air"),
+        (STILL, "spotter call on air"),
+        (ONSET, "spotter call on air"),
+        (SUMMARY, "radio busy"),
+        (RACE, "radio busy"),
+    ):
         _on_air(hub, msg)
         assert hub._cue_block_reason(_cue(), time.monotonic()) == reason, msg.meta
     _on_air(hub, RED)

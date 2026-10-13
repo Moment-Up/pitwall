@@ -26,7 +26,8 @@ Safety and politeness:
   ("Go ahead.", "Say again?") every ``ACK_WINDOW_S``, and error frames at most once a minute.
 * **Calm moments only.** On track, "Go ahead." and "Say again?" wait for a speak window (``speak_window_ok``); the
   once-per-session "paused while driving" hint waits for a settled stop (``HINT_SETTLE_S``), a quiet radio and no
-  held message, is re-checked after synthesis, never bypasses quiet mode and is a message a braking call may cut.
+  held message, is re-checked after synthesis, never bypasses quiet mode and is an ``info`` message, not a control
+  (a braking call is not blocked by it the way it is by an answer; at a settled stop none fires).
 * **No LLM in the time-critical path.** An addressed question goes through the hub's normal ``_answer``: deterministic
   while the car moves, the LLM only when it is stationary.
 
@@ -995,7 +996,7 @@ class HandsFreeController:
             text = HINT_TEXT + (
                 HINT_WHEEL if "wheel" in self._ptt_sources else HINT_REMOTE if "remote" in self._ptt_sources else ""
             )
-        # a proactive-style message: not urgent, not a control (a braking call may cut it), never bypasses quiet mode
+        # a proactive-style message: not urgent, not a control, never bypasses quiet mode (said at a settled stop only)
         msg = hub._msg(MessageKind.INFO, Priority.LOW, text)
         msg.meta = {
             "intent": "handsfree",
@@ -1016,7 +1017,7 @@ class HandsFreeController:
             if self._hint_said or self._hint_word is None or not self._hint_ready(now):
                 return
             self._hint_said, self._hint_word = True, None
-            msg.expires_mono = now  # cut by a braking call: not said again (hub._rehold)
+            msg.expires_mono = now  # cut by an urgent or spotter call: not said again (hub._rehold)
             self.hub._deliver(msg, clip, None, None)
         finally:
             self._hint_task = None

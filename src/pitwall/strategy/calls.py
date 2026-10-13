@@ -321,7 +321,7 @@ class CallPlanner:
         # the race's stop rules are not sent by the game: the tyres reaching the finish is all this call can say
         text = f"{name}. Tyres reach the finish."
         simple = f"{name}: your tyres last to the finish."
-        # plan 3.1: the safety-car box-or-stay call is an alert, never squeezed out by the lap's talk budget
+        # plan 3.1: the safety-car box-or-stay call is an alert, never held by the radio's per-lap budget
         data = {"status": ctx.sc_status}
         return self._make("sc_stay", ctx, "alert", "high", text, 30.0, bypass=True, data=data, simple=simple)
 

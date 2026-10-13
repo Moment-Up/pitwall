@@ -17,12 +17,11 @@ the radio is idle                                      played at once
 ====================================================  ===============================================================
 
 Which call may cut what on air is the scheduler's one rule, the urgent path shared with the race radio's red flag
-(``scheduler.may_interrupt``: urgent calls cut anything but another urgent call, urgent > cue > the rest, equal ranks
-never cut each other), including its clear-before-cue exception (``YIELDS_TO_CUE_KEY``, set on clears and "still
-there"). ``still_there`` is HIGH, not URGENT: it never cuts anything and waits in the mailbox while the radio is
-busy; a car arriving ("Car left.", "Three wide.") cuts a still there on air, and no other spotter call cuts another.
-The other way round, a braking cue cuts a clear or a ``still_there`` on air (the mark; the hub's cue gate asks the
-same rule); it never cuts an onset or ``hold_your_line``.
+and puncture (``scheduler.may_interrupt``: only urgent calls interrupt, never another urgent call), including its
+clear-before-cue exception (``YIELDS_TO_CUE_KEY``, set on clears and "still there": they never cut a braking cue).
+``still_there`` is HIGH, not URGENT: it never cuts anything and waits in the mailbox while the radio is busy; a car
+arriving ("Car left.", "Three wide.") cuts a still there on air, and no other spotter call cuts another. A braking cue
+never cuts a spotter call (the hub's cue gate asks the same rule: a cue plays only on a free radio).
 
 **Mailbox**: one slot. A newer call replaces the held one unless it matters less (``still_there`` < a clear < an
 onset, three wide or ``hold_your_line``): an onset waiting for the radio is never pushed out by a clear or a
@@ -118,7 +117,7 @@ RECENT = 20
 SIDE_INDEX = {"left": LEFT, "right": RIGHT}
 # what a held call is worth in the mailbox: a newer call that matters less never replaces it
 _MAIL_RANK = {STILL_THERE: 0, CLEAR_LEFT: 1, CLEAR_RIGHT: 1, CLEAR_ALL_ROUND: 1}  # onsets, three wide, hold: 2
-# phrases a braking cue may cut (marked ``YIELDS_TO_CUE_KEY``): information, never a car arriving or closing in
+# phrases that never cut a braking cue (marked ``YIELDS_TO_CUE_KEY``): information, never a car arriving or closing in
 _STILL = frozenset({"still_there_left", "still_there_right"})
 _CUE_FIRST = frozenset({CLEAR_LEFT, CLEAR_RIGHT, CLEAR_ALL_ROUND}) | _STILL
 _NEW_CAR = frozenset({CAR_LEFT, CAR_RIGHT, THREE_WIDE})  # may cut a still there on air
@@ -541,7 +540,7 @@ class SpotterRadio:
         now = time.monotonic()
         meta: dict[str, object] = {"spotter": call.kind, "side": call.side, "seq": call.seq, "phrase": pid}
         if pid in _CUE_FIRST:
-            meta[YIELDS_TO_CUE_KEY] = True  # the urgent path's exception: a braking cue may cut it, it never cuts one
+            meta[YIELDS_TO_CUE_KEY] = True  # the urgent path's exception: it never cuts a braking cue
         if call.test:
             meta["test"] = True
         msg = RadioMessage(

@@ -34,6 +34,65 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
 | `{"type":"pong","t":12345.6,"server_ms":int}` | Echo for round-trip measurement. |
 | `{"type":"error","message":"..."}` | Non-fatal error to show. On Windows without server speech recognition (`stt` `none`: sherpa-onnx not installed, or switched off), a push-to-talk utterance is answered with an error naming `stt_reason` and a spoken "No voice questions on this server. Type your question instead." instead of a transcript and "Say again?" (macOS keeps the transcript + "Say again?"). |
 
+## Radio policy (one engineer)
+
+Every message the radio says, whoever makes it, follows one table: `POLICY` in `voice/scheduler.py`, printed here by
+`policy_markdown()` (the test `tests/unit/test_radio_policy.py` fails if this copy and the code differ) and served as
+JSON by `GET /api/radio/policy` (Settings › Radio & voice shows it). Order 0 is decided at once, outside the queue;
+the queue says the rest by priority, then this order, then first in first out.
+
+| Order | Family | Who says it | Kind | Priority | Interrupts | Intensity | Quiet mode | Speak window | Per-lap budget | Switched off by |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 0 | Spotter | `pitwall.spotter + voice.spotter_radio` | `spotter` | urgent (still there: high) | yes | quiet, normal, detailed | said | no | outside it | Spotter |
+| 0 | Red flag and punctures | `raceradio via voice.urgent` | `alert` | urgent | yes | quiet, normal, detailed | said | no | outside it | always on |
+| 0 | Answers | `voice.hub, voice.handsfree` | `answer`, `control` | high | no | quiet, normal, detailed | said | no | outside it | always on |
+| 0 | Braking calls | `coach.cues` | `cue` | high | no | normal, detailed | held | no | outside it | Braking calls |
+| 1 | Flags, penalties, damage, safety car, fuel critical | `raceradio, strategy.radio, carhealth.radio` | `alert` | high / normal | no | quiet, normal, detailed | safety calls said, the rest held | yes | never held, spends it | Race calls (flags, penalties, damage); Car health (fuel) |
+| 2 | Lap time | `voice.proactive` | `lap_summary` | normal | no | normal, detailed | held | yes | waits for it, spends it | Coaching amount |
+| 3 | Race calls | `raceradio` | `race` | normal / high | no | normal, detailed | held | yes | waits for it, spends it | Race calls |
+| 4 | Strategy | `strategy.radio` | `strategy` | from the call | no | normal, detailed | held | yes | waits for it, spends it | Coaching amount |
+| 4 | Car health | `carhealth.radio` | `strategy` | from the call | no | normal, detailed | held | yes | waits for it, spends it | Car health |
+| 5 | Goal reached | `motivation.radio` | `goal` | normal | no | normal, detailed | held | yes | waits for it, spends it | Coaching amount |
+| 6 | Coaching point | `voice.proactive (coach.selection)` | `coaching` | normal (praise: low) | no | normal, detailed | held | yes | waits for it, spends it | Coaching amount |
+| 7 | Detail | `strategy.radio, raceradio, carhealth.radio` | `info` | low | no | detailed | held | yes | waits for it, spends it | Coaching amount: Detailed |
+| 8 | Validation prompts | `validate.kit` | `validation` | low | no | quiet, normal, detailed | held | yes | outside it | Setup › Validation run |
+
+- **Who may interrupt:** only the urgent path - spotter calls, the red flag and a puncture (`Priority.URGENT`). An
+  urgent call cuts anything but another urgent call (a red flag waits for a "Car left." on air and the other way
+  round), and a spotter clear never cuts a braking cue. Nothing else cuts anything: a braking cue plays only on a free
+  radio (dropped as `radio busy`, never late, when something is on air; proactive messages end before the next cue
+  point), and a lap time, race call, strategy or car health call, goal line or coaching point waits for a free radio,
+  the 2 s gap, a speak window and the lap's budget. The driver's own answer replaces a proactive message on air (the
+  driver asked) but waits for a cue or an urgent call. A message an urgent call cut is said again once, in full.
+- **Race order:** alerts, then the lap time (carrying the line's race news), race calls, strategy and car health calls,
+  the goal line, the coaching point, detail; validation prompts last. A higher priority goes first (cold tyres at the
+  pit exit before the lap time).
+- **One per-lap budget** (`TALK_PER_LAP`): quiet 0, normal 3, detailed 5 messages a lap while the car is on track
+  and moving (10 km/h or more: the grid and the pit box are outside it), shared by every producer's routine messages
+  (`lap_summary`, `race`, `strategy` and car health, `goal`, `coaching`, `info`). Alerts and the race milestones (`meta.race_allowance` false: the grid brief, lights out, the countdown, the
+  finish, a move into P1) are never held by it but spend it, so a busy lap (a safety car, blue flags) leaves less room
+  for routine talk. Inside it, race calls take at most 2 (3 detailed) and coaching 1 per analysed lap at normal; the
+  producers keep their own limits (strategy and car health: one normal call a lap; goal lines: two a session). A
+  message that does not fit waits for the next lap until it expires. Off track there is no budget.
+- **One message per piece of news:**
+  - *The line:* race news about the lap just finished (the lap-one position, a position change or clean pass within
+    5 s of the line, the countdown, the race's fastest lap, the finish; `meta.merge_into_summary`)
+    waits up to 6 s for that lap's `lap_summary` and is said inside it ("That lap, 1:25.4, personal best. Fastest lap
+    of the race."): one message, one budget slot, `meta.merged_race_calls` the call ids (carrying the countdown, the
+    finish or a move into P1 it is never held by the budget either). A summary holds at most 20 spoken words (the
+    chequered flag always rides in the final lap's); news that does not fit goes on its own at once.
+  - *The safety car:* the race radio's deployment call and race strategy's box-or-stay call both announce it
+    (`meta.announces` `sc`; the strategy call's first words are `meta.announce_head`). Queued together they are one
+    message ("Safety car, safety car. No overtaking. Pitting this lap is an option: ..."); the strategy call said
+    within 60 s after the deployment call drops its head ("Pitting this lap is an option: ..."); a deployment call
+    after the strategy call is dropped.
+  - *Shared topics:* fuel (race strategy in F1 races, car health's tank fuel in Forza) and the gap (race strategy's gap
+    calls, the race radio's gap report) are one topic each: a newer message replaces an unsaid one.
+  - *Answers hold their topic:* for 30 s after the driver asked about the fuel, the gaps, the laps left or the weather,
+    a proactive message on that topic below `high` priority is not said.
+  - *Identical sentences* are not repeated within 60 s (flags, penalties and damage excepted: their rules space them).
+  - *After the flag:* once the race radio's finish call is queued no coaching point is said (no next lap can use it).
+
 ## Behaviour
 
 - **Push-to-talk** sources: on-screen button, or a wheel button mapped in F1 25 to a *UDP Action*, received through
@@ -47,27 +106,25 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   engineer never answers itself. PTT down during playback = barge-in: server sends `cancel` and listens.
 - **Mic stays open** for the whole session on the device (opening/closing it per PTT breaks AirPods routing
   on iOS); gating happens on the server.
-- **Proactive messages** (lap summary, coaching, goal lines, strategy calls, alerts, validation prompts) go through one
-  policy (`voice/scheduler.py`). They are queued by priority, then kind, and only spoken in a *speak window* (not
-  braking, not cornering, enough time before the next braking zone); they respect quiet mode ("stop talking for 3
-  laps") and coaching intensity, and expire when no longer actionable.
-  - **Intensity:** `quiet` says answers, acknowledgements, alerts, cues and validation prompts; `normal` adds the lap
-    summary, goal lines, coaching, `strategy` calls and `race` calls; `detailed` adds `info`.
-  - **Order within a priority:** in a race lap the lap time, then the strategy call, then the goal line, then the
-    coaching point; validation prompts last.
-  - **Talk budget:** while the car is on track, at most 2 (`normal`) or 4 (`detailed`) messages of the kinds
-    `lap_summary`, `goal`, `strategy`, `coaching` and `info` per lap. One that does not fit waits for the next lap
-    (until it expires). Off track there is no budget. Alerts, urgent calls, cues, answers, acknowledgements and
-    validation prompts never count; the safety-car box-or-stay call and critical fuel also bypass quiet mode.
+- **Proactive messages** (lap summary, coaching, goal lines, strategy, race and car health calls, alerts, validation
+  prompts) go through one policy (`voice/scheduler.py`, "Radio policy" above). They are queued by priority, then
+  kind, and only spoken in a *speak window* (not braking, not cornering, no car alongside, enough time before the next
+  braking zone or braking call; before the track's model is learned, the zones of the track knowledge and of the
+  driver's own last three laps out of the pit lane); they respect quiet mode ("stop talking for 3 laps") and coaching intensity, the one
+  per-lap budget, and expire when no longer actionable.
+  - **Intensity:** `quiet` says answers, acknowledgements, alerts, spotter and urgent calls and validation prompts;
+    `normal` adds the lap summary, `race` calls, `strategy` and car health calls, goal lines and coaching; `detailed`
+    adds `info`.
   - **Seat change:** when another driver takes the seat, unsaid `lap_summary`, `goal` and `coaching` messages about
-    the previous driver's laps are dropped; alerts and strategy calls (about the car) stay.
+    the previous driver's laps are dropped; alerts, race, strategy and car health calls (about the car) stay.
 - **Race radio** (kind **`race`** and `alert`, `pitwall/raceradio`): race situation calls (position, the start and
-  countdown, lap one, gaps, warnings, minor damage) are kind `race`: normal and detailed intensity, with an allowance
-  of their own while on track (2 a lap at `normal`, 3 at `detailed`; never the lap summary's or coaching's budget).
-  Calls marked `meta.race_allowance` false are said whatever the allowance: the grid brief and lights out (standing
-  still), the countdown (at the line), the finish (after the flag) and a move into P1. A countdown call made at the
-  line (`meta.merge_into_summary`) waits up to 6 s for that lap's `lap_summary` and is said inside it ("Lap 8,
-  1:29.4. Two laps to go."): one message, kind `lap_summary`, `meta.merged_race_call` the call id. Flags, penalties
+  countdown, lap one, gaps, warnings, minor damage) are kind `race`: normal and detailed intensity, from the one
+  per-lap budget (at most 2 of it a lap at `normal`, 3 at `detailed`). Calls marked `meta.race_allowance` false are
+  said whatever the budget (and spend it): the grid brief and lights out (standing still), the countdown (at the
+  line), the finish (after the flag) and a move into P1. News made at the line (`meta.merge_into_summary`) is said
+  inside that lap's `lap_summary` ("That lap, 1:29.4. Two laps to go."): one message, kind `lap_summary`,
+  `meta.merged_race_call` the first call id and `meta.merged_race_calls` all of them. A puncture is safety-critical:
+  it goes as an urgent call (below). Flags, penalties
   and damage (`meta.repeat_ok`) are exempt from the 60 s identical-sentence filter: their own rules space them (a
   second blue flag 30 s after the first is said). After a flashback the server drops the unsaid `position` and
   `damage` calls (queued or held: the rewind undid them). Flags, penalties and damage that matter
@@ -79,11 +136,11 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   `yellow_ahead`, ...), `urgent` (false), `tier` (`recorded`, `synthetic` or `community`: the evidence behind the
   call's rule), `synthetic` (the session is synthetic), `addressable` and `race_call` (the call id). A driver who asks
   for simple words hears each call's plain words. Text and speech never contain a player's online ID.
-- **Urgent calls** (kind `alert`, `meta.urgent` true; the red flag): said at once, past quiet mode, intensity, the
-  speak window and the 2 s gap; they cut a cue or a proactive message (which is said again once), wait only for the
-  driver's own transmission and never cut another urgent call - a spotter call included: urgent calls and spotter
-  calls share one rule (`voice/scheduler.py` `may_interrupt`), so a red flag waits for a "Car left." on air and the
-  other way round. With the voice off they are not said (the screen shows
+- **Urgent calls** (kind `alert`, `meta.urgent` true; the red flag and a puncture, safety-critical): said at once,
+  past quiet mode, intensity, the driver's race call toggles, the speak window and the 2 s gap; they cut a cue or a
+  proactive message (which is said again once), wait only for the driver's own transmission and never cut another
+  urgent call - a spotter call included: urgent calls and spotter calls share one rule (`voice/scheduler.py`
+  `may_interrupt`), so a red flag waits for a "Car left." on air and the other way round. With the voice off they are not said (the screen shows
   the red flag). Any server component posts one with `live.notify("radio_urgent", ...)` (`voice/urgent.py`); the
   latency from that notify to the first audio byte is a `latency` record of kind `urgent` in `/api/voice/status`.
 - **Name addressing** (`voice/addressing.py`): now and then the radio says the seated driver's first name ("Up to P5,
@@ -133,7 +190,7 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
     the pits - until over 8 km/h; Drive's rule) unless the seated driver's profile has `handsfree_while_driving`. A
     capture still running when the car moves off is dropped (`rejected` / `paused_moving`). A `start` refused as
     `paused_moving` makes the radio say, once a session, at the next stop of at least 8 s with the radio quiet for 3 s
-    and nothing held (re-checked after synthesis; never in quiet mode; an `info` message a braking call may cut),
+    and nothing held (re-checked after synthesis; never in quiet mode; an `info` message, not a control),
     "Hands-free only listens when you stop. Your driver profile can turn it on for driving." (plus "On track, use
     your wheel button." / "...your talk button." when one was used this session; simple wording: "I can't hear you
     while you drive. Ask me when you stop.").
@@ -151,11 +208,12 @@ One WebSocket carries both JSON text frames and binary audio frames. Order is si
   `phrase` is what was said: `car_left` for a `still_there` or `hold_your_line` whose onset the driver never heard,
   `still_there_left` for a still there on the left). The audio is synthesised in advance and sent as PCM to **every**
   client, device-voice clients included (`n_bytes` > 0 and no `device_tts` flag: clients play PCM whenever there is
-  some); without a clip, device-voice clients get the text as usual. Spotter calls are on the urgent path (the one rule, `voice/scheduler.py`
-  `may_interrupt`, shared with the red flag): a spotter call cuts a cue, a proactive message, an answer or a hands-free
-  capture (proactive messages and answers are said again once; the cue is dropped), never another spotter call or an
-  urgent call (a red flag on air, or the other way round); it waits while the driver transmits. A clear never cuts a cue: it waits for the cue to end; a cue cuts a clear or a
-  still there on air, and is not sent while any other spotter call is on air. `still_there` is sent at `HIGH`
+  some); without a clip, device-voice clients get the text as usual. Spotter calls are on the urgent path (the one
+  rule, `voice/scheduler.py` `may_interrupt`, shared with the red flag): a spotter call cuts a cue, a proactive
+  message, an answer or a hands-free capture (proactive messages and answers are said again once; the cue is
+  dropped), never another spotter call or an urgent call (a red flag on air, or the other way round); it waits while
+  the driver transmits. A clear never cuts a cue: it waits for the cue to end; a cue is not sent while any spotter
+  call is on air (a cue cuts nothing). `still_there` is sent at `HIGH`
   priority and never cuts anything. A call lost while the radio was busy is made up when it is free (the driver hears
   the side as it is then). Every intensity and
   quiet mode include it; `voice_enabled` false mutes it. Older clients label the kind `INFO` and still play it. The

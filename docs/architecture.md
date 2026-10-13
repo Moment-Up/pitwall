@@ -283,23 +283,33 @@ Technique facts (topics `line`, `technique`, `balance`) come from `technique/fac
 deterministically and are radio fast intents (feat/technique).
 
 ## Radio policy (`voice/scheduler.py`)
-One scheduler decides what is said and when. Message kinds (`voice/types.py`): `answer` and `control` (the driver's
-own questions and commands), `cue` (braking calls), `alert`, `lap_summary`, `strategy`, `goal`, `coaching` (also a
-drill point), `race` (race radio calls: their own per-lap allowance `RACE_PER_LAP` 0 / 2 / 3, outside the talk
-budget; the finish is outside it too), `info` (detailed strategy notes) and `validation` (the kit's prompts).
-`ALLOWED_KINDS` per intensity: quiet = answers, control, alerts, cues and validation; normal adds lap summaries,
-goals, coaching, strategy and race calls;
-detailed adds info. Pending messages are dispatched by (priority, `KIND_RANK`, arrival): cues, answers and control
-first, then alerts, lap summary, strategy, goal, coaching, info, validation. On track, `TALK_PER_LAP` (0 / 2 / 4)
-caps the budgeted kinds (lap summary, goal, strategy, coaching, info) per driving lap; alerts, cues, answers and
-validation are outside it. Every proactive message waits for a speak window (off the brake, steering nearly straight,
-time before the next braking zone); the 2 s gap, the 60 s repeat filter and topic replacement (newest wins) still
-apply. The gap also holds for a message the hub synthesised and held while something else was on air: it is released
-2 s after the radio went quiet, never at once (`RadioHub._gap_ok`). A message cut by a braking cue is said again once
-(`MAX_RESENDS`). `RadioHub.apply_driver` calls `drop_driver_messages()` when another driver sits down (unsaid lap
-summaries, goals and coaching go; strategy and alerts stay), and a new live session id calls `reset_session()` (the
-queue, budgets, repeat filter and a lap-bounded quiet period belong to the old session). The safety-car box and stay
-calls and critical fuel are alerts outside the budget. The final lap gets its summary but no coaching point.
+One scheduler decides what is said and when, and one table says it: `POLICY` (a `CallFamily` row per call family:
+spotter, red flag and punctures, answers, braking calls, alerts, lap time, race calls, strategy, car health, goal,
+coaching, detail, validation), printed in docs/voice-protocol.md ("Radio policy") by `policy_markdown()`, served by
+`GET /api/radio/policy` to Settings › Radio & voice, and pinned against the live rules by
+`tests/unit/test_radio_policy.py`. Message kinds (`voice/types.py`): `answer` and `control` (the driver's own questions
+and commands), `cue` (braking calls), `alert`, `lap_summary`, `race`, `strategy` (car health's normal calls too),
+`goal`, `coaching` (also a drill point), `info` (detail) and `validation` (the kit's prompts); `family_of(msg)` maps a
+message to its row. `ALLOWED_KINDS` per intensity: quiet = answers, control, alerts, spotter, cues (muted by the hub)
+and validation; normal adds lap summaries, race calls, strategy and car health calls, goals and coaching; detailed adds
+info. Pending messages are dispatched by (priority, `KIND_RANK`, arrival), the race order: alerts, lap summary, race
+calls, strategy and car health, goal, coaching, info, validation. On track ONE per-lap budget, `TALK_PER_LAP` (0 / 3
+/ 5), is shared by every producer's routine messages (`BUDGETED`: lap summary, race, strategy, goal, coaching, info);
+alerts and the race milestones (`race_allowance` false) are never held by it but spend it; inside it race calls take at
+most `RACE_PER_LAP` (2 / 3) and coaching `COACHING_PER_LAP` per analysed lap. Every proactive message waits for a
+speak window (off the brake, steering nearly straight, no car alongside, time before the next braking zone or cue;
+before a track model is learned the zones come from the track knowledge, `voice/field_zones.py`, and from where the
+driver braked on their last three laps out of the pit lane, `voice/lap_brakes.py`);
+the 2 s gap, the 60 s repeat filter and topic replacement (newest wins) still apply. One message per piece of news:
+race news made at the line rides inside the lap summary (`SUMMARY_MERGE_KEY`, at most `MERGE_MAX_WORDS`), the safety
+car is announced once across the race radio and race strategy (`ANNOUNCE_KEY`), fuel and the gap are topics shared
+across producers (`SHARED_TOPICS`), and an answer holds its topic for 30 s (`ANSWER_TOPICS`; the hub reports answers
+with `note_spoken`). The gap also holds for a message the hub synthesised and held while something else was on air: it
+is released 2 s after the radio went quiet, never at once (`RadioHub._gap_ok`). Only an urgent call cuts a proactive
+message, which is then said again once (`MAX_RESENDS`). `RadioHub.apply_driver` calls `drop_driver_messages()` when
+another driver sits down (unsaid lap summaries, goals and coaching go; strategy, race calls and alerts stay), and a new
+live session id calls `reset_session()` (the queue, budgets, repeat filter, announcement and answer memories and a
+lap-bounded quiet period belong to the old session). The final lap gets its summary but no coaching point.
 The red flag is the first producer of `Priority.URGENT` (`voice/urgent.py`: any thread posts `radio_urgent`; the hub
 queues it past quiet mode, intensity, the speak window and the gap). `voice/addressing.py` works the seated driver's
 first name into an addressable message after the scheduler hands it out (at most once a minute), before synthesis.
@@ -329,7 +339,7 @@ JSON: no schema change). While `holds_radio` (a capture, a segment in the speech
 for its question, "Say again?" waiting), the tick and `_after_synthesis` treat the radio as busy (only urgent calls go
 out); anything delivered ends the capture ("Say again?" when an addressed one is cut). Its own replies ("Go ahead.",
 "Say again?") wait for a free radio and, on track, a speak window; the once-a-session "paused while driving" hint waits
-for a settled stop and is an `info` message a braking call may cut. The browser side (`web-react/src/lib/handsfree.ts`: the energy VAD,
+for a settled stop and is an `info` message (not a control message). The browser side (`web-react/src/lib/handsfree.ts`: the energy VAD,
 the learned Bluetooth key or gamepad button) is the dashboard's.
 Speech engines (`voice/stt.py` `build_stt`): Parakeet through parakeet-mlx on Apple silicon; elsewhere
 `stt_engine=parakeet` resolves to `SherpaParakeetStt` when sherpa-onnx imports (the `voice` extra installs it on
@@ -368,16 +378,16 @@ the block going stale when Motion stops (a pause) reaches the iPad at once.
 Offline: `spotter/score.py` (geometric ground truth) behind `scripts/spotter_check.py` and the recorded tests.
 
 Radio priority contract: the one urgent path (`voice/scheduler.py` `may_interrupt`, asked by the scheduler, the hub's
-urgent slot and cue gate, and `voice/spotter_radio.py`): urgent calls (Priority.URGENT: the red flag and other
-race-control urgent alerts from `voice/urgent.py`, and spotter calls) may interrupt anything except another urgent
-call; urgent > cue > everything else; equal ranks never cut each other (a red flag waits for a spotter call on air,
-and a spotter call for the red flag). Its one exception is the clear-before-cue mark (`YIELDS_TO_CUE_KEY`): a spotter
-clear or "still there" is cut by a braking cue and never cuts one. Everything else follows the per-lap allowances and
-speak windows. Spotter messages (`MessageKind.SPOTTER`) never go through the scheduler queue (its 100 ms tick is too
+urgent slot, cue gate and answers, and `voice/spotter_radio.py`): only urgent calls interrupt (Priority.URGENT:
+spotter calls, the red flag and a puncture from `voice/urgent.py`), never another urgent call (a red flag waits for a
+spotter call on air, and a spotter call for the red flag); a spotter clear or "still there" (`YIELDS_TO_CUE_KEY`) never
+cuts a braking cue. A braking cue cuts nothing: it plays on a free radio only (dropped, never late, as `radio busy`),
+and an answer waits for a cue or urgent call on air. Everything else follows the per-lap budget and speak windows.
+Spotter messages (`MessageKind.SPOTTER`) never go through the scheduler queue (its 100 ms tick is too
 slow), are exempt from the budget, gap, repeat filter and speak window, and are allowed at every intensity. While a
 car is alongside (`DrivingState.traffic_alongside`) no speak window opens, so a lap summary never starts wheel to
 wheel. The spotter's own refinements, in `voice/spotter_radio.py`: its clears and still theres carry the clear-before-cue
-mark, the mailbox never lets a clear or a still there push out a held onset, and a resync says what the driver missed (heard vs the worker's announced state) whenever the radio is free.
+mark (they never cut a cue), the mailbox never lets a clear or a still there push out a held onset, and a resync says what the driver missed (heard vs the worker's announced state) whenever the radio is free.
 Delivery, the one-slot mailbox, heard pairing, the resync and the latency stamps are in `voice/spotter_radio.py`; the
 phrase audio (both wordings, per engine and voice, STT-checked when the model is loaded) in
 `voice/spotter_audio.py`. Settings: `SettingsStore` section `"spotter"` (`spotter/settings.py`), applied by attribute

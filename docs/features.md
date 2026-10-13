@@ -181,7 +181,8 @@ Desktop Mode. AirPods stem presses and headphone play buttons cannot reach a web
 The iPad detects speech, the computer turns it into text, and anything that does not start with the wake word is
 thrown away at once, never shown, saved or logged. It listens only while the car is stopped (grid, pits, garage,
 menus, after the flag, or when no game data arrives: 0-28 % of a real race) unless the driver in the seat allows
-"Hands-free while driving" in their profile (or with "Also while driving" on Drive › Radio); on track it shows "paused
+"Hands-free while driving" (Settings › Radio & voice, beside this device's hands-free switch, or "Also while driving"
+on Drive › Radio); on track it shows "paused
 · driving", and if you try anyway the engineer tells you once, at a stop of a few seconds, that hands-free only listens
 when you stop. The radio's own words coming back through the microphone are ignored, and the engineer's messages wait
 while you talk (urgent calls and braking calls still cut in: a question a braking call cut gets "Say again?"). Evidence: synthetic (the wake word through the real
@@ -260,16 +261,19 @@ In a race the radio also calls the race itself, like a real engineer and spotter
 - **Your name** now and then: "Up to P5, Sam." or "Sam, P8 after lap one, up 3." (at most once a minute; and once
   after a seat change, to confirm who is in the seat; never with a voice that cannot say it).
 
-Each driver can switch these groups off in Settings › Drivers (flags, start, position, rivals, penalties, damage, your
-name; flags, rivals, penalties and damage are F1 only); the red flag is always on. Beginners hear simple words
+Each driver can switch these groups off in Settings › Radio & voice, "Radio calls", while they are in the seat (flags,
+start, position, rivals, penalties, damage, your name; flags, rivals, penalties and damage are F1 only); the red flag
+and a puncture are always on. Beginners hear simple words
 ("You're up to 5th.", "Puncture on the rear left tyre. Come into the pits.") and never a count of places lost, and
-every driver can pick Automatic, Simple or Standard words there. Calls name other cars only
+every driver can pick Automatic, Simple or Standard words in Settings › Drivers. Calls name other cars only
 by the official AI driver names (Norris), a team (the Williams) or a race number (car 23), never a player's online ID:
 in F1 World races the AI cars carry real players' online IDs, so those cars are named by team or number too.
 
-Race calls have their own allowance (two a lap at normal intensity, three at detailed; none at quiet), so they never
-take the lap summary's or the coaching point's place; the grid brief, lights out, the countdown, the finish and a move
-into the lead are said whatever the allowance. Flags, penalties and damage that matter are alerts. Ask "who's
+Race calls share the radio's one per-lap budget (at most two of its three messages a lap at normal intensity, three of
+five at detailed; none at quiet); the grid brief, lights out, the countdown, the finish and a move into the lead are
+said whatever the budget. News at the line (the lap-one position, a position change, the countdown, the race's fastest
+lap, the finish) is said inside the lap time: "That lap, 1:25.4, personal best. Fastest lap of the race."
+Flags, penalties and damage that matter are alerts; a puncture is safety-critical and cuts in at once. Ask "who's
 ahead?", "who's leading?", "do I have a penalty?", "what's my damage?", "how was sector 2?", "how many laps left?" or
 "what position am I?" (any game; GT7's position is not yet checked against the game's screen, which Drive shows) for
 an instant answer.
@@ -315,7 +319,7 @@ is free: the driver hears the side as it is then, never a stale "car left" or a 
 - **On the radio**: the calls are recorded in advance for the voice in use, so they play the moment they are
   decided. They interrupt a lap summary, a coaching point or an answer (which is said again afterwards), and a car
   arriving or closing in interrupts a braking call (which is dropped); a "clear" waits for the braking call to end,
-  and a braking call cuts a "clear" or a "still there". Spotter calls never interrupt another spotter call or an
+  and a braking call never cuts a spotter call (it is dropped). Spotter calls never interrupt another spotter call or an
   urgent call: the newest call waits in a one-call slot (a car arriving is never pushed out by a "clear"), and what
   could not be said is made up when the radio is free. "Still left." never interrupts anything. While a car is alongside, the engineer's unprompted messages wait. Quiet mode and the
   quiet intensity do not silence the spotter (it has its own switch); the radio's voice switch does.
@@ -683,45 +687,46 @@ running Pitwall. Drive never shows any of this.
 
 ## What the radio says
 
-One policy decides what the radio says on its own and when (`voice/scheduler.py`). Everything waits for a calm part
-of the lap except braking cues, alerts and your own answers.
+One policy decides what the radio says on its own and when (`voice/scheduler.py`, the table in
+[voice-protocol.md](voice-protocol.md) "Radio policy"; Settings › Radio & voice shows it as "What the radio says").
+Everything waits for a calm part of the lap except the spotter, urgent calls, braking cues and your own answers, and
+only the spotter, a red flag and a puncture ever cut in.
 
-| Message | Counts towards the lap's allowance | Notes |
+| Message | The lap's messages | Notes |
 |---|---|---|
-| Answers to your questions, "Copy" acknowledgements | no | at once, even at quiet intensity |
-| Braking cues | no | timed to your braking point; by the braking calls mode |
-| Red flag and other urgent alerts | no | at once, past quiet mode, intensity and the calm-moment wait |
-| Race control, penalties, damage that matter (race radio alerts) | no | yellow, blue, safety car, penalties, major damage |
-| Race calls (position, countdown, lap one, gaps, warnings, minor damage) | their own: 2 a lap (3 detailed) | the finish whatever the allowance |
-| Strategy alerts (safety car box or stay out, critical fuel) | no | also at quiet intensity |
-| Car health alert (Forza fuel for about one lap) | no | also at quiet intensity |
-| Car health call (cold tyres after a stop - in the pit lane -, tyres warm again, wear outside F1 races, Forza fuel low) | yes | as a strategy call |
-| Car health notes (lock-ups, wheelspin) | yes | detailed intensity only (also normal if you choose so) |
-| Lap summary | yes | a newer lap's summary replaces an unsaid one |
-| Strategy call | yes | in a race, after the lap summary |
-| Goal line ("Goal reached: ...") | yes | after the summary and any strategy call; at most two a session |
-| Coaching point or drill result | yes | after its lap's summary; one a lap at normal intensity |
-| Detailed strategy notes | yes | detailed intensity only |
-| Validation prompt (during a validation run) | no | last, low priority, at least 30 s apart, also at quiet intensity |
-| Spotter calls (F1 25, when switched on) | no | at once; interrupt summaries, coaching and braking calls; also at quiet intensity |
+| Answers to your questions, "Copy" acknowledgements | outside | at once, even at quiet intensity |
+| Spotter calls (F1 25, when switched on) | outside | at once; cut in over summaries, coaching and braking calls; also at quiet intensity |
+| Red flag, puncture | outside | at once, cut in, past quiet mode, intensity and the calm-moment wait |
+| Braking cues | outside | timed to your braking point, on a free radio only (never cut in, never late) |
+| Race control, penalties, damage that matter (race radio alerts) | count, never wait | yellow, blue, safety car, penalties, major damage |
+| Strategy alerts (safety car box or stay out, critical fuel) | count, never wait | also at quiet intensity; the safety car is announced once |
+| Car health alert (Forza fuel for about one lap) | count, never wait | also at quiet intensity |
+| Lap summary | wait and count | carries the line's race news; a newer lap's summary replaces an unsaid one |
+| Race calls (position, countdown, lap one, gaps, warnings, minor damage) | wait and count | at most 2 a lap (3 detailed); the start, countdown, finish and P1 never wait |
+| Strategy call | wait and count | in a race, after the lap summary and race calls |
+| Car health call (cold tyres after a stop - in the pit lane -, tyres warm again, wear outside F1 races, Forza fuel low) | wait and count | as a strategy call |
+| Goal line ("Goal reached: ...") | wait and count | at most two a session |
+| Coaching point or drill result | wait and count | after its lap's summary; one a lap at normal intensity; none after the chequered flag |
+| Detail (strategy notes, rivals' fastest laps, lock-up and wheelspin notes) | wait and count | detailed intensity only |
+| Validation prompt (during a validation run) | outside | last, low priority, at least 30 s apart, also at quiet intensity |
 
-On track the radio says at most **two** messages a lap that count at normal intensity and **four** at detailed (none
-at quiet), in the order above: in a race, the lap time, then the strategy call, then the goal line, then the coaching
-point. A message that does not fit waits for the next lap or expires. Off track (garage, menus) the allowance does not
-apply. When another driver takes the seat, the previous driver's unsaid lap summaries, goal lines and coaching
-points are dropped; strategy and car alerts stay.
+On track the radio says at most **three** messages a lap at normal intensity and **five** at detailed (none at
+quiet), from every source together, in the race order: alerts, the lap time, race calls, strategy and car health, the
+goal line, the coaching point, detail. Alerts never wait but use the lap's room, so on a busy lap (a safety car, blue
+flags) the routine messages wait for the next lap or expire. Off track (garage, menus) the budget does not apply.
+When another driver takes the seat, the previous driver's unsaid lap summaries, goal lines and coaching points are
+dropped; race, strategy and car alerts stay. Fuel (race strategy in F1 races, car health in Forza) and the gap are one
+topic each across sources, and for 30 s after you ask about the fuel, the gaps, the laps left or the weather the radio
+does not volunteer the same thing.
 
 | | quiet | normal | detailed | "quiet for N laps" | voice off |
 |---|---|---|---|---|---|
 | Answers, acknowledgements | yes | yes | yes | yes | on screen |
-| Urgent alerts, strategy alerts | yes | yes | yes | yes | on screen |
-| Lap summary, goal, coaching, drill point | - | 2 a lap | 4 a lap | held | - |
-| Strategy normal / detailed | - | 2 a lap / - | 4 a lap | held | - |
-| Race radio alerts: yellow, blue, time penalties, major damage, safety car ending, green | yes | yes | yes | held | - |
-| Safety car / VSC out, drive-through, stop-go, DSQ, black flag, puncture, severe damage | yes | yes | yes | yes | - |
-| Race calls: position, countdown, lap one, gaps, warnings, minor damage | - | 2 a lap | 3 a lap | held | - |
+| Spotter (switched on, F1 25), red flag, puncture | yes | yes | yes | yes | - |
+| Strategy alerts, race radio alerts | yes | yes | yes | safety ones only | - |
+| Lap summary, race calls, strategy and car health calls, goal, coaching, drill point | - | 3 a lap together | 5 a lap together | held | - |
+| Detail | - | - | in the 5 | held | - |
 | Validation prompt (run active) | yes | yes | yes | held | - |
-| Spotter (switched on, F1 25) | yes | yes | yes | yes | - |
 
 At quiet intensity a drill's points show on the screen only. This policy is tested on unit tests and on recordings
 played over loopback; it has not yet been heard in a live session.

@@ -47,10 +47,18 @@ The release workflow copies a release's bullet points into its GitHub release no
   recordings; GT7 positions not yet checked against its screen.
 - Race radio: penalties and warnings with the reason, car damage and punctures (F1 25). Tested on recordings;
   punctures, stop-go and disqualification on synthetic data only.
-- Race calls have their own allowance (two a lap at normal), so they never push out the lap summary. Not yet heard
-  live.
-- Settings › Drivers: switch race radio groups off and choose Automatic, Simple or Standard words. Other cars are
-  named by AI driver, team or number, never an online ID.
+- The radio speaks as one engineer: at most 3 messages a lap at normal and 5 at detailed, from every source together;
+  alerts never wait. Measured on recorded races, not yet heard live.
+- Only the spotter, a red flag and a puncture cut in. A braking call no longer cuts the lap time, which was then said
+  twice. Measured on recorded races, not yet heard live.
+- On a track Pitwall has not learned yet, the radio also keeps clear of where you braked on your last laps.
+  Measured on recorded races, not yet heard live.
+- News at the line rides in the lap time ("That lap, 1:25.4, personal best. Fastest lap of the race.") and the
+  safety car is announced once. Tested on recordings and synthetic data.
+- Settings › Radio & voice: every call family in one place (race calls, car health, spotter, hands-free) and "What
+  the radio says", the radio's rules as the code has them.
+- Race radio words: Automatic, Simple or Standard per driver in Settings › Drivers. Other cars are named by AI
+  driver, team or number, never an online ID.
 - Ask "who's ahead?", "do I have a penalty?", "what's my damage?" or "how was sector 2?"; "what position am I?" now
   works in GT7 too.
 - The radio sometimes uses your first name ("Up to P5, Sam."), at most once a minute.

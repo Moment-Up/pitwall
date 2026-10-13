@@ -9,6 +9,7 @@ behaves like this (safety car, rain and the player's own stop have no real captu
 from __future__ import annotations
 
 from collections.abc import Iterator
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -140,7 +141,9 @@ def test_radio_normal_hears_the_calls_quiet_only_alerts(run: Run) -> None:
         out: list[str] = []
         for k, c in enumerate(run.calls):
             s.enqueue(strategy_message(c, float(10 * k)))
-            m = s.next_message(CALM, float(10 * k) + 1.0, speaking=False)
+            # on the call's own lap: the radio's one per-lap budget (alerts spend it too) is per driving lap
+            lap = c["lap"] if isinstance(c.get("lap"), int) else CALM.lap_number
+            m = s.next_message(replace(CALM, lap_number=lap), float(10 * k) + 1.0, speaking=False)
             if m is not None:
                 out.append(str(m.meta["topic"]))
                 assert m.kind in (MessageKind.ALERT, MessageKind.STRATEGY, MessageKind.INFO)

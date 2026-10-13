@@ -16,6 +16,10 @@ the finish are made on the grid and at the flag; a disqualification or black fla
 
 Flashback: ``take_retractions`` hands out the groups whose unsaid calls a flashback made stale (position, damage): the
 worker tells the radio hub to drop them (``race_retract``, docs/voice-protocol.md).
+
+The line: news about the lap just finished (``LINE_CALLS``: the lap-one position, a position change or clean pass
+settled within ``LINE_WINDOW_S`` of the line, the race's fastest lap, the finish) carries
+``data["at_line"]`` and the radio says it inside that lap's summary (``voice.scheduler``, one transmission).
 """
 
 from __future__ import annotations
@@ -60,6 +64,15 @@ FORZA_GAMES = (Game.FORZA_MOTORSPORT, Game.FORZA_HORIZON)
 GRID_MAX_KPH = 5.0
 NOT_DRIVING = FrameQuality.PAUSED | FrameQuality.REPLAY_OR_SPECTATING | FrameQuality.NOT_RACING
 RACING_EXEMPT = frozenset({"grid_brief", "finish", "lights_out"})  # made on the grid / at the flag
+# Race news about the lap just finished: made within LINE_WINDOW_S of the line it rides inside that lap's summary
+# (``data["at_line"]``; voice.scheduler SUMMARY_MERGE_KEY: one transmission). The countdown marks itself.
+# (not the gap report: news of its own, and riding inside the lap time it made the message too long to fit a calm
+# stretch at Jeddah [M])
+LINE_CALLS = frozenset({"lap1_summary", "position_change", "clean_pass", "own_fastest_lap", "finish"})
+LINE_WINDOW_S = 5.0  # [H] a position settles 3 s after a pass, so a pass just before the line is still line news
+# always made at the line: the flag, and the race's fastest lap (EA sends FTLP as the lap ends, before the LapData
+# that shows the new lap [M: Imola, the same receive time])
+AT_LINE = frozenset({"finish", "own_fastest_lap"})
 STALE_AFTER_FLASHBACK = ("position", "damage")  # groups whose unsaid calls a flashback makes stale
 NOTES = {
     Game.GT7: "From GT7's race position; not yet checked against the game's screen.",
@@ -282,6 +295,12 @@ class RaceRadioEngine:
                 return
         self._seq += 1
         lap = st.lap
+        if (
+            spec.call in LINE_CALLS
+            and not spec.urgent
+            and (spec.call in AT_LINE or st.t - st.crossing_t <= LINE_WINDOW_S)
+        ):
+            spec.data["at_line"] = True  # the flag, or the line just crossed: said inside the lap's summary
         if st.synthetic:
             tier = "synthetic"
         elif st.game in (Game.FORZA_MOTORSPORT, Game.FORZA_HORIZON):

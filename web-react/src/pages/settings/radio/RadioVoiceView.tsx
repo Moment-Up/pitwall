@@ -1,7 +1,10 @@
 // Settings › Radio & voice, the rendering (spec 8; mockup settingsPage "radio"): left, how the engineer sounds
-// (voice on/off, this device or the Mac, device voice, speaking speed, the Mac's voice, Test voice); right, what the
-// radio says (braking calls, coaching, race radio's "say online players' names") and diagnostics. One banner on top while the radio link is down, because the
-// Mac's voice and the braking calls change only over the link.
+// (voice on/off, this device or the Mac, device voice, speaking speed, the Mac's voice, Test voice); right, talking to
+// the engineer (hold to talk, the Bluetooth button, hands-free on this device and while the seated driver drives), what
+// the radio says (coaching amount, braking calls) and, v0.3.0, every call family in one place - "Radio calls": the
+// seated driver's race calls with "say online players' names", car health, the spotter - then "What the radio says",
+// the radio's one policy as the code has it. Each setting appears once. One banner on top while the radio link is
+// down, because the Mac's voice and the braking calls change only over the link.
 //
 // Pure: everything comes in as props (the radio state, the Mac's HTTP status, the store's actions), so the render
 // tests drive it with plain objects. RadioVoicePage wires it to the stores.
@@ -14,6 +17,8 @@ import type { RadioState, RadioStore, VoiceSource } from "../../../lib/radio";
 import { CellGroup, CellRow, SegmentRow, SelectRow, SliderRow, SwitchRow, type SelectOption } from "../cells";
 import { DiagnosticsRow } from "./Diagnostics";
 import { parseHandsFreeState } from "../../../lib/handsfree"; // --- hands-free (lane handsfree)
+import { RADIO_CALL_GROUPS, type RadioCallGroup } from "../../../lib/drivers";
+import { RACE_CALLS_TITLE, type DrivingHandsFreeView, type RaceCallsView } from "./race-calls";
 import { TalkSection, type TalkActions } from "./TalkSection";
 import {
   COACHING,
@@ -29,7 +34,6 @@ import {
   macVoiceLabel,
   macVoiceView,
   ONLINE_NAMES_TITLE,
-  RACE_CALLS_NOTE,
   sourceHint,
   speedText,
   testVoiceView,
@@ -106,8 +110,16 @@ export interface RadioVoiceViewProps {
   /** race radio (P2): "Say online players' names" (model.onlineNamesView); absent or not shown = no row. */
   onlineNames?: OnlineNamesView | null;
   onOnlineNames?: (on: boolean) => void;
-  /** (health lane) Shown under "On the radio": the "Car health calls" card (RadioVoicePage passes it). */
+  /** v0.3.0: the seated driver's race calls (race-calls.ts); absent or not shown = no toggles. */
+  raceCalls?: RaceCallsView | null;
+  onRaceCall?: (group: RadioCallGroup, on: boolean) => void;
+  /** v0.3.0: "Hands-free while <driver> drives", beside this device's hands-free switch. */
+  drivingHandsFree?: DrivingHandsFreeView | null;
+  onDrivingHandsFree?: (on: boolean) => void;
+  /** (health lane) Under "Radio calls": the "Car health calls" card (RadioVoicePage passes it). */
   carHealth?: ReactNode;
+  /** v0.3.0: "What the radio says" (RadioPolicyCard), last. */
+  policy?: ReactNode;
   /* --- spotter --- */
   /** The F1 spotter's card (pages/settings/radio/SpotterSettings.tsx), under "On the radio"; absent = none. */
   spotter?: ReactNode;
@@ -127,8 +139,13 @@ export function RadioVoiceView({
   ptt,
   onlineNames = null,
   onOnlineNames,
+  raceCalls = null,
+  onRaceCall,
+  drivingHandsFree = null,
+  onDrivingHandsFree,
   carHealth = null,
   spotter,
+  policy = null,
 }: RadioVoiceViewProps) {
   const link = linkState(r);
   const linkUp = link === "open";
@@ -266,7 +283,14 @@ export function RadioVoiceView({
 
         <div className="grid min-w-0 grid-cols-1 gap-3">
           {/* --- hands-free (lane handsfree) */}
-          <TalkSection r={r} statusHandsFree={parseHandsFreeState(status?.handsfree)} noun={noun} actions={actions} />
+          <TalkSection
+            r={r}
+            statusHandsFree={parseHandsFreeState(status?.handsfree)}
+            noun={noun}
+            actions={actions}
+            driving={drivingHandsFree?.shown ? drivingHandsFree : null}
+            onDriving={onDrivingHandsFree}
+          />
           <CellGroup label="On the radio">
             <SegmentRow
               title="Braking calls"
@@ -290,16 +314,6 @@ export function RadioVoiceView({
                 </Link>
               </CellRow>
             ) : null}
-            {/* --- race radio (P2): household setting, read and stored on the Mac --- */}
-            {onlineNames?.shown && (
-              <SwitchRow
-                title={ONLINE_NAMES_TITLE}
-                hint={onlineNames.warn ? <span className="text-warning">{onlineNames.hint}</span> : onlineNames.hint}
-                isSelected={onlineNames.value === true}
-                isDisabled={onlineNames.disabled || !onOnlineNames}
-                onChange={(v) => onOnlineNames?.(v)}
-              />
-            )}
             <DiagnosticsRow
               mac={mac}
               summary={diagnosticsSummary({ source, deviceTtsCapable: deviceTts, noun, mac, link, micLabel: micChipView(r).label })}
@@ -309,10 +323,40 @@ export function RadioVoiceView({
           <p className="m-0 px-1 text-sm text-muted">
             Braking calls and coaching are also on Drive › Radio, to change between runs.
           </p>
-          {/* --- race radio: the per-driver race calls live on the driver sheet --- */}
-          {onlineNames?.shown && <p className="m-0 px-1 text-sm text-muted">{RACE_CALLS_NOTE}</p>}
+          {/* --- v0.3.0: every call family in one place --- */}
+          <h3 className="m-0 mt-2 px-1 text-base font-semibold">Radio calls</h3>
+          {(raceCalls?.shown || onlineNames?.shown) && (
+            <section className="grid min-w-0 gap-2" aria-label={RACE_CALLS_TITLE}>
+              <h3 className="m-0 px-1 text-sm font-semibold text-muted">{raceCalls?.shown ? raceCalls.title : RACE_CALLS_TITLE}</h3>
+              <CellGroup label={RACE_CALLS_TITLE}>
+                {raceCalls?.shown &&
+                  RADIO_CALL_GROUPS.map((g) => (
+                    <SwitchRow
+                      key={g.value}
+                      title={g.label}
+                      hint={g.hint ?? undefined}
+                      isSelected={raceCalls.calls[g.value]}
+                      isDisabled={!raceCalls.editable || !onRaceCall}
+                      onChange={(on) => onRaceCall?.(g.value, on)}
+                    />
+                  ))}
+                {/* --- race radio (P2): household setting, read and stored on the Mac --- */}
+                {onlineNames?.shown && (
+                  <SwitchRow
+                    title={ONLINE_NAMES_TITLE}
+                    hint={onlineNames.warn ? <span className="text-warning">{onlineNames.hint}</span> : onlineNames.hint}
+                    isSelected={onlineNames.value === true}
+                    isDisabled={onlineNames.disabled || !onOnlineNames}
+                    onChange={(v) => onOnlineNames?.(v)}
+                  />
+                )}
+              </CellGroup>
+              {raceCalls?.shown && raceCalls.hint && <p className="m-0 px-1 text-sm text-muted">{raceCalls.hint}</p>}
+            </section>
+          )}
           {carHealth /* health lane: the "Car health calls" card */}
           {spotter /* --- spotter --- */}
+          {policy /* v0.3.0: the radio's one policy */}
         </div>
       </div>
     </div>

@@ -1307,34 +1307,34 @@ async def test_hub_fires_cue_from_the_ingest_hook_with_ready_audio() -> None:
     await hub.stop()
 
 
-async def test_cue_cuts_a_lap_summary_which_is_said_again_later() -> None:
+async def test_a_cue_never_cuts_a_lap_summary_on_air() -> None:
+    """v0.3.0 radio policy: only the urgent path interrupts. A cue is dropped (never said late) while a lap summary
+    plays; the summary is not cut and so never said twice."""
     hub, _client, sent, _ = await make_hub("all")
     ready_audio(hub)
     summary = RadioMessage("p1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 4, 1:05.7.", "Lap 4", time.monotonic())
     hub._deliver(summary, AUDIO, None, None)
     assert hub.speaking_id == "p1"
-    assert hub.deliver_cue(make_event(), time.monotonic()) is None
+    assert hub.deliver_cue(make_event(), time.monotonic()) == "radio busy"
     await settle(3)
-    assert any(isinstance(m, dict) and m.get("type") == "cancel" and m["id"] == "p1" for m in sent)
-    assert says(sent, "cue") and hub.speaking_id == says(sent, "cue")[0]["id"]
-    assert hub._held is not None
-    held, clip, synth = hub._held
-    assert held.text == summary.text and held.id != "p1" and clip is AUDIO and synth is None
+    assert not any(isinstance(m, dict) and m.get("type") == "cancel" for m in sent)
+    assert says(sent, "cue") == [] and hub.speaking_id == "p1" and hub._held is None
+    assert hub.cues.snapshot()["stats"]["dropped"] == 1
     await hub.stop()
 
 
 async def test_a_message_cut_twice_is_not_said_a_third_time() -> None:
-    """UX review: at 6x a lap summary cut by braking calls was re-said four times in 15 s. It is said again once."""
+    """UX review: at 6x a lap summary cut by braking calls was re-said four times in 15 s. Only an urgent call cuts
+    one now, and it is said again once."""
     hub, _client, _sent, _ = await make_hub("all")
     ready_audio(hub)
     summary = RadioMessage("p1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 4, 1:05.7.", "Lap 4", time.monotonic())
     hub._deliver(summary, AUDIO, None, None)
-    assert hub.deliver_cue(make_event(1), time.monotonic()) is None
-    await settle(3)
+    hub._send_ready((red_flag(), AUDIO, None), time.monotonic())
     again = hub._held
     assert again is not None and again[0].meta.get("resent") == 1
     hub._held = None
-    hub._deliver(again[0], AUDIO, None, None)  # said again, and cut again by the next corner's call
+    hub._deliver(again[0], AUDIO, None, None)  # said again, and cut again by the next urgent call
     hub.speaking_id = again[0].id
     hub._on_air = (again[0], AUDIO)
     hub._rehold((again[0], AUDIO), time.monotonic())
@@ -1373,6 +1373,9 @@ async def test_a_new_session_drops_the_old_sessions_unsaid_messages() -> None:
         (MessageKind.CONTROL, Priority.HIGH, "answer on air"),
         (MessageKind.ALERT, Priority.URGENT, "urgent message on air"),
         (MessageKind.CUE, Priority.HIGH, "previous cue still playing"),
+        (MessageKind.LAP_SUMMARY, Priority.NORMAL, "radio busy"),
+        (MessageKind.RACE, Priority.HIGH, "radio busy"),
+        (MessageKind.SPOTTER, Priority.HIGH, "spotter call on air"),
     ],
 )
 async def test_cue_never_cuts_answers_urgent_calls_or_another_cue(
@@ -1439,16 +1442,18 @@ async def test_device_voice_clients_get_text_and_estimated_offsets() -> None:
 
 
 async def test_pcm_cue_without_ready_audio_is_dropped_and_never_cuts_what_is_on_air() -> None:
-    """Audio still being prepared (or synthesis failed): text alone would cut a lap summary for silence."""
+    """Audio still being prepared (or synthesis failed): text alone would be silence on a PCM radio."""
     hub, _client, sent, _ = await make_hub("all")
-    summary = RadioMessage("p1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 4, 1:05.7.", "Lap 4", time.monotonic())
-    hub._deliver(summary, AUDIO, None, None)
     assert hub.deliver_cue(make_event(), time.monotonic()) == "audio not ready"
     await settle(3)
-    assert says(sent, "cue") == [] and hub.speaking_id == "p1" and hub._held is None
+    assert says(sent, "cue") == [] and hub.speaking_id is None and hub._held is None
+    summary = RadioMessage("p1", MessageKind.LAP_SUMMARY, Priority.NORMAL, "Lap 4, 1:05.7.", "Lap 4", time.monotonic())
+    hub._deliver(summary, AUDIO, None, None)
+    assert hub.deliver_cue(make_event(2), time.monotonic()) == "radio busy"  # and never over what is on air
+    await settle(3)
+    assert says(sent, "cue") == [] and hub.speaking_id == "p1"
     assert not [m for m in sent if isinstance(m, dict) and m.get("type") == "cancel"]
-    last = hub.cues.snapshot()
-    assert last["stats"]["dropped"] == 1
+    assert hub.cues.snapshot()["stats"]["dropped"] == 2
     await hub.stop()
 
 

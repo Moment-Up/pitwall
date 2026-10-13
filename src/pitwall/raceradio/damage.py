@@ -11,8 +11,9 @@
 * **When** - a part's grade rises above the grade last said for it: one message, the puncture first, then up to two
   parts by grade. A non-severe call waits ``COOLDOWN_S`` [H] after the last damage call; severe damage waits until
   ``SEVERE_MERGE_S`` [H] after it, so parts that break one after the other in one incident are said together, not one
-  call per part; a puncture always goes at once. Puncture and severe: ALERT HIGH past quiet mode; major: ALERT HIGH;
-  minor: RACE NORMAL.
+  call per part; a puncture always goes at once. Puncture: safety-critical, the urgent path (``voice.urgent``: no
+  speak window, may cut a proactive message, said whatever the driver's damage toggle); severe: ALERT HIGH past quiet
+  mode; major: ALERT HIGH; minor: RACE NORMAL.
 * **Re-baseline, silently** - after a flashback (the game restores the pre-crash values [M]) the next settled values
   become the said grades; a value going down (a pit-stop repair: the wing reads 0 again [M]) lowers its grade; the
   first values of a session (joined with damage already on the car) are the baseline. ``retired`` silences it all.
@@ -212,7 +213,8 @@ class DamageWatcher:
             text, simple = f"{f_text} {text}".strip(), f"{f_simple} {simple}".strip()
         top = max([*up.values(), SEVERE if punctures else NONE])
         kind: CallKind = "race" if top == MINOR else "alert"
-        priority: CallPriority = "normal" if top == MINOR else "high"
+        # a puncture is safety-critical: the urgent path (voice.urgent), said at once and past every filter
+        priority: CallPriority = "urgent" if punctures else "normal" if top == MINOR else "high"
         data = {
             "parts": [{"part": p, "grade": W.GRADES[g]} for p, g in parts],
             "puncture": punctures,
@@ -221,6 +223,7 @@ class DamageWatcher:
         }
         spec = self._spec("damage", kind, priority, text, simple, data)
         spec.bypass_quiet = top == SEVERE
+        spec.needs_window = not punctures
         if engine_failure or punctures or any(p not in RECORDED_PARTS for p, _g in parts):
             spec.tier = "synthetic"  # no real capture made this call (see RECORDED_PARTS)
         out.append(spec)

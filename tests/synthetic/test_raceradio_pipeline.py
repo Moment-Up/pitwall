@@ -22,7 +22,7 @@ from pitwall.raceradio.radio import race_message
 from pitwall.raceradio.worker import RACE_CALL_NOTE, RaceRadioWorker
 from pitwall.sim.raceradio_stream import BRAKE_FROM_M, BRAKE_TO_M, race_radio_demo
 from pitwall.storage.db import DbWriter
-from pitwall.voice.scheduler import CALM_BRAKE, CALM_STEERING, RadioScheduler
+from pitwall.voice.scheduler import CALM_BRAKE, CALM_STEERING, SUMMARY_MERGE_HOLD_S, RadioScheduler
 from pitwall.voice.types import DrivingState, Priority
 from pitwall.voice.urgent import URGENT_NOTE, urgent_message
 
@@ -90,6 +90,16 @@ def replay(intensity: str = "normal", quiet: bool = False) -> tuple[list[dict[st
                             "kind": m.kind.value,
                         }
                     )
+    # after the stream: news made at the line (the finish) waits up to SUMMARY_MERGE_HOLD_S for a lap summary that this
+    # harness never builds, then goes on its own
+    end = t
+    while t < end + SUMMARY_MERGE_HOLD_S + 1.0:
+        t += 0.1
+        m = sched.next_message(DrivingState(False, None, None, None, None, None, None), t, t < busy_until)
+        if m is not None:
+            busy_until = t + 3.0
+            dispatched.append({"t": t, "call": m.meta.get("call"), "urgent": m.priority >= Priority.URGENT,
+                               "brake": None, "steer": None, "d": None, "kind": m.kind.value})  # fmt: skip
     return seen, dispatched
 
 

@@ -1,8 +1,8 @@
 # Status
 
-_Last updated: 2026-10-12 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
+_Last updated: 2026-10-13 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
 yet unless the Live column says so. After it: Gran Turismo 7 on the PS5, from the owner's races of 2026-10-11; F2
-cars in F1 25, recorded)._
+cars in F1 25, recorded; v0.3.0's one radio engineer, recorded)._
 
 What works, how far each part has been tested, and what is still unverified. Every claim is tied to one evidence
 tier:
@@ -35,7 +35,7 @@ One row per feature. "Next check" names the validation kit item that would give 
 | F1 spotter (cars alongside) | yes (16 scenarios, at 60, 20 and 10 Hz, formats 2025 and 2026: a corner, a spin and a gate closing included) | yes (26 owner PS5 race sessions, 169 min: every overlap of 1 s or more called (121/121), 0 wrong clears, no call while the player slides more than 30 degrees; ground truth from the same positions. The radio simulated at measured clip lengths on the same races: what the driver would hear) | no | heard on track; audio latency to the ear; format 2026; online lobbies beyond one race; the car box against the game's collision shapes; the clear said as a gate closes (synthetic only: it never happened in these races) | a live F1 race with the spotter on (manual) |
 | Radio: push-to-talk, speech recognition, voices | yes | yes | partly (a radio check over an iPad and one AirPod was heard; the F1 25 wheel button is read live) | a driver asking by push-to-talk; the new dashboard's Go live on an iPad; Kokoro and Windows voices on a radio | `radio_ptt`, `radio_kokoro` |
 | Radio: hands-free talking (wake word "Pitwall" / "Radio", stationary unless the driver allows it while driving; Bluetooth button) | yes (the wake word through the real speech engines on 119 macOS `say` clips: "Pitwall" 44/49 clean, 45/49 with an engine drone, "Radio" 26/28, 0 false accepts; the browser VAD rules on the same clips; the hub's rules unit-tested; end to end on an isolated server: `say` clips over `/ws/radio` while a recorded F1 25 race streamed over UDP, docs/research/handsfree.md 3.5) | yes (the stationary gate on 11 owner captures as the hub sees them, incident gaps of 2-4 s no longer counted as stops and the hint only at stops of 8 s or more (review round 2); real F1 25 button presses through the hub with hands-free armed: 38 of 38 UDP Action 1 presses keyed push-to-talk and cut the capture); no recorded voice | no | a real voice and AirPod on the rig (A9 recordings owed); the Bluetooth key and game controller on an iPad; hands-free while driving | `radio_handsfree` *(new)* |
-| Radio policy: speak windows, two (four) messages a lap, order, seat change; one urgent path (v0.3.0: the red flag and spotter calls cut anything but each other, a braking cue cuts a spotter clear, everything else waits for its allowance and a speak window) | yes (the urgent path: unit tests on the shared rule and the hub, `tests/unit/test_urgent_path.py`) | yes (the v0.2.0 acceptance run, owner captures over loopback: at most 2 a lap at normal, every message in a calm stretch, the seat change; the 2 s gap after a held message failed there and is fixed since, unit-tested) | no | heard live on track | `radio_speak_windows`, `radio_budget` *(new)* |
+| Radio policy (v0.3.0, one engineer: `voice/scheduler.py` `POLICY`, docs/voice-protocol.md "Radio policy"): one per-lap budget for every producer (3 normal, 5 detailed; alerts never wait but count), the race order, only spotter calls, the red flag and a puncture interrupt, the line's race news inside the lap time, the safety car announced once, shared fuel and gap topics, answers hold their topic, no coaching after the flag, speak windows from the driver's last laps on a new track; seat change | yes (`tests/unit/test_radio_policy.py`: every producer's message maps to a row and the row is what the scheduler does; the urgent path, `tests/unit/test_urgent_path.py`) | yes (8 owner races - 6 F1 25, 1 GT7 race, 1 AC probe - streamed at real time into an isolated server with a text-only radio, before and after, at quiet, normal and detailed: [below](#one-radio-engineer-v030-unreleased)) | no | heard live on track | `radio_speak_windows`, `radio_budget` *(new)* |
 | Engineer intents and instant answers while moving | yes (204-question fixture, every answer grounded and short enough for the radio) | yes (the acceptance run: every typed question on track got its intent, no "Copy, checking."; the long answers it found are shortened since, unit-tested) | no | asked by voice on track | `radio_ptt` |
 | Lap naming on the radio and Drive ("That lap", "Out-lap", "Final lap") | yes | yes (Melbourne and Imola excerpts; 18 owner captures) | no | heard live; an out lap from the garage in practice; a pit-lane race start | `radio_speak_windows` |
 | Drive at speed: moving or stopped, one status line, at most two chips, the cards | yes | yes (recorded snapshots; the Ready and Session complete cards measured with every slot filled, the reference control, goal row and drill blocks included, at 1180 x 820 and 1133 x 744 in a desktop browser) | no | on an iPad during a session | `ipad_glance` |
@@ -213,6 +213,50 @@ captures where noted, else on hand-made data):
   position and damage calls; severe damage within 10 s of a damage call is said with what else broke.
 - The finish says "on the road" with time penalties still to add, and never "Down N"; simple words never count
   places lost; the name goes first when the first sentence has a comma ("Sam, that lap, 1:15.5.").
+
+## One radio engineer (v0.3.0, unreleased)
+
+Every radio producer (lap summaries and coaching, goal lines, race strategy, the race radio, car health, the spotter,
+hands-free answers, drills, validation prompts) now follows one table, `POLICY` in `voice/scheduler.py`, printed in
+[voice-protocol.md](voice-protocol.md#radio-policy-one-engineer) and on Settings › Radio & voice ("What the radio
+says"). **Recorded, not live**: 8 of the owner's captures (Suzuka, Bahrain and Jeddah 5-lap races, the Imola 32-lap
+race, the Austria 71-lap race joined late, a Melbourne 3-lap race, a GT7 4-lap race, a 4-minute AC probe at
+Silverstone) were streamed at real time (`POST /api/replay`, speed 1.0, the live path) into an isolated server with a
+fresh database, the LLM off and a text-only radio (a device-voice client that reports playback at 2.9 words a second);
+every message was recorded with its time, lap and lap distance, and the driver's brake during it. The same runs before
+(HEAD 1960838) and after:
+
+| Intensity | Laps | Engineer messages a lap (mean, max) | Laps over 3 / over 5 | Said while braking (from lap 3) | Cut by a braking call | Cut by the spotter | Same sentence again within 60 s |
+|---|---|---|---|---|---|---|---|
+| quiet, before / after | 18 | 0.39, 2 / 0.39, 2 | 0 / 0 | 2 of 7 (1 of 2) / 4 of 7 (2 of 2) | 0 / 0 | 0 / 0 | 0 / 0 |
+| normal, before / after | 68 | 2.24, 5 / 2.21, 4 | 7, 0 / 8, 0 | 11 of 153 (6 of 121) / 8 of 151 (6 of 126) | 2 / 0 | 3 / 2 | 3 / 1 |
+| detailed, before / after | 18 | 2.67, 6 / 2.33, 5 | 3, 1 / 2, 0 | 7 of 48 (2 of 27) / 6 of 42 (3 of 24) | 1 / 0 | 1 / 0 | 1 / 0 |
+
+- Engineer messages exclude spotter calls (up to 36 on Suzuka's lap 1) and braking calls; a lap is the car's lap
+  number when a message was sent, so a lap time said at the line can count on the lap before (Imola's "laps over 3"
+  are mostly that).
+- The line: race news at the line now rides in the lap time ("Opening lap, 1:26.788. P1 after lap one, up 2.";
+  "That lap, 1:46.072, personal best. Fastest lap of the race. Two laps to go."): race calls heard went from 121 to
+  142 of 228 made, 39 of them inside a lap time, with fewer transmissions (line splits 9 to 7 at normal, 3 to 1 at
+  detailed). A lap time is said on every lap (Jeddah: 4 of 5 before, 5 of 5 after); no coaching point after the flag
+  (Melbourne, GT7 and Suzuka at detailed said one before).
+- A braking call no longer cuts a lap time or a coaching point (Austria before: a lap time cut by the spotter, said
+  again and cut by a braking call); only the spotter cut anything after (Austria, said again once).
+- Said while braking: most are a fresh database's first laps, before any braking zone is known; from lap 3 the driver's
+  own last laps give the zones (`voice/lap_brakes.py`). The quiet runs are 7 short yellow-flag alerts.
+- After that run the chequered flag was made to always ride in the final lap's time (5 of 6 F1 races and the GT7 race
+  still said "Chequered flag." and the final lap's time apart, over the word cap); re-run on Suzuka, Melbourne, Jeddah
+  and the GT7 race at normal: the flag inside the final lap's time in all four, 1.94 engineer messages a lap, at most
+  3, no lap over 3, nothing cut.
+- AC: the probe has no timed lap, so the radio said nothing before and after. GT7: the lap-one position rides in the
+  opening lap's time.
+- Settings › Radio & voice groups every call family once: the seated driver's race calls (moved from the driver
+  sheet, which keeps the radio words) with "say online players' names", car health, the spotter, hands-free with
+  "Hands-free while <driver> drives" (also moved), and "What the radio says". Checked in a desktop browser at 800 and
+  375 px wide; not yet on an iPad.
+- Spec changes for the owner to confirm: a braking call never cuts anything (the spotter lane's "a cue cuts a clear"
+  is reversed: a cue on a busy radio is dropped as `radio busy`); a puncture is on the urgent path (it cuts in, past
+  the damage toggle); alerts spend the lap's budget.
 
 ## Known gaps
 

@@ -81,9 +81,10 @@ describe("choices", () => {
   it("coaching: the driver profile's three levels", () => {
     expect(COACHING.map((c) => c.label)).toEqual(["Quiet", "Normal", "Detailed"]);
     expect(COACHING[0]?.hint).toBe("Alerts and answers only: flags, penalties, damage.");
-    // the amount also sets the race calls a lap (voice/scheduler.py RACE_PER_LAP): the hints say so
-    expect(COACHING[1]?.hint).toMatch(/2 race calls a lap/);
-    expect(COACHING[2]?.hint).toMatch(/3 race calls a lap/);
+    // the amount sets the radio's one per-lap budget (voice/scheduler.py TALK_PER_LAP, RACE_PER_LAP): the hints say so
+    expect(COACHING[1]?.hint).toMatch(/Up to 3 messages a lap/);
+    expect(COACHING[2]?.hint).toMatch(/Up to 5 a lap/);
+    expect(COACHING[2]?.hint).toMatch(/up to 3 race calls/);
   });
 });
 

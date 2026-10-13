@@ -16,7 +16,7 @@ import {
   type Driver,
 } from "../../../lib/drivers";
 import { formBody, formFromDriver, newDriverForm, radioWordingHint, withRadioCall } from "./model";
-import { RaceRadioSettings } from "./RaceRadioSettings";
+import { RADIO_CALLS_ELSEWHERE, RaceRadioSettings } from "./RaceRadioSettings";
 
 const LIMITS: CoachingLimits = {
   skill_level: "beginner",
@@ -149,27 +149,16 @@ describe("the driver form", () => {
 });
 
 describe("RaceRadioSettings (static markup)", () => {
-  const render = (calls = { ...ALL_RADIO_CALLS }, wording: "auto" | "simple" | "standard" = "auto") =>
-    renderToStaticMarkup(
-      createElement(RaceRadioSettings, { calls, wording, skill: "beginner", onCall: vi.fn(), onWording: vi.fn() }),
-    );
+  const render = (wording: "auto" | "simple" | "standard" = "auto") =>
+    renderToStaticMarkup(createElement(RaceRadioSettings, { wording, skill: "beginner", onWording: vi.fn() }));
 
-  it("lists the seven toggles with their hints, and the words with Automatic's hint", () => {
+  it("the words with Automatic's hint, and where the race calls are now (one place: Settings › Radio & voice)", () => {
     const html = render();
-    for (const g of RADIO_CALL_GROUPS) {
-      expect(html).toContain(g.label.replace("&", "&amp;"));
-      if (g.hint) expect(html).toContain(g.hint);
-    }
     for (const w of RADIO_WORDINGS) expect(html).toContain(`>${w.label}<`);
     expect(html).toContain("This driver is a beginner, so simple words");
-    expect(html).toContain('aria-label="Race radio"');
-  });
-
-  it("shows what is switched off", () => {
-    const html = render({ ...ALL_RADIO_CALLS, rivals: false });
-    // React Aria marks a selected switch's input as checked: six of seven
-    expect((html.match(/checked=""/g) ?? []).length).toBe(6);
-    expect((render().match(/checked=""/g) ?? []).length).toBe(7);
+    expect(html).toContain(RADIO_CALLS_ELSEWHERE.replace("&", "&amp;"));
+    for (const g of RADIO_CALL_GROUPS) expect(html).not.toContain(g.label.replace("&", "&amp;")); // no toggles here
+    expect(html).not.toContain('checked=""');
   });
 
   it("never prints raw unknowns", () => {

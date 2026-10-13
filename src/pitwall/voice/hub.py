@@ -50,21 +50,20 @@ Live braking cues (``coach.cues``) bypass the scheduler queue because they are t
   with the last moment delivery can start (``CueEvent.deadline_mono``); a cue the loop hands over after that
   (e.g. stalled by a slow request) is dropped. A cue with nothing audible to play (server audio not ready and no
   device voice) is dropped too: it must not cut what is on air for silence.
-* **Priority** (as ``voice.scheduler``: urgent > cue > everything else). A cue never plays while the driver
-  transmits or while an answer, acknowledgement, urgent call or another cue is on air (answers to the driver's
-  own question win); it cuts a proactive message, which is held and said again in the next speak window. An
-  answer or acknowledgement that becomes ready while a cue (or an urgent call) is on air waits for it to finish
-  instead of cutting the key word. Quiet mode, quiet intensity ("alerts and answers only"), voice off and no
-  connected radio mute cues; a muted, late or blocked cue is dropped, never said late. Proactive messages treat
-  the next cue like a braking zone: the speak window must close before it fires, and a message whose synthesis
-  finished while a cue was playing is held, never cut over it.
+* **Priority** (``voice.scheduler``'s one rule: only the urgent path interrupts). A cue plays only on a free radio:
+  never while the driver transmits, nor over anything on air (an answer, an urgent or spotter call, another cue, a
+  proactive message); a muted, late or blocked cue is dropped, never said late. Proactive messages treat the next cue
+  like a braking zone (the speak window must close before it fires) and a message whose synthesis finished while a
+  cue was playing is held, so a proactive message is rarely on air at a cue point. An answer or acknowledgement that
+  becomes ready while a cue (or an urgent call) is on air waits for it to finish instead of cutting the key word.
+  Quiet mode, quiet intensity ("alerts and answers only"), voice off and no connected radio mute cues.
 * **Spotter calls** (``voice.spotter_radio``, F1 25 only): pre-synthesised, URGENT, delivered on the next loop turn
   like cues; they cut a cue (dropped), a proactive message or an answer (said again once), wait in a one-slot mailbox
   behind another spotter call, an urgent call or the driver's transmission, and reach device-voice iPads as PCM too.
-  A clear never cuts a cue (it waits for it), and a cue cuts a clear or a "still there" on air. While a car is
-  alongside no speak window opens (``DrivingState.traffic_alongside``).
-* **Urgent calls** (the urgent path: the red flag and race-control urgent alerts from ``voice.urgent``, and spotter
-  calls) follow ONE rule, ``scheduler.may_interrupt``, wherever the hub decides (its urgent slot, the cue gate,
+  A clear never cuts a cue (it waits for it); a cue never cuts a spotter call. While a car is alongside no speak
+  window opens (``DrivingState.traffic_alongside``).
+* **Urgent calls** (the urgent path: the red flag and a puncture from ``voice.urgent``, and spotter calls) follow ONE
+  rule, ``scheduler.may_interrupt``, wherever the hub decides (its urgent slot, the cue gate,
   ``_yield_to_on_air``) and in ``voice.spotter_radio``: they may interrupt anything except another urgent call, skip
   the speak window, and are never stuck behind anything but the driver's own transmission and another urgent call
   (a red flag waits for a spotter call on air, and a spotter call for the red flag). While the radio talks, holds a
@@ -112,6 +111,7 @@ from pitwall.voice.handsfree import (  # --- hands-free (lane handsfree) ---
     HandsFreeController,
     no_session_sheet,
 )
+from pitwall.voice.lap_brakes import LapBrakeZones, merged  # v0.3.0: and the driver's own last laps
 from pitwall.voice.scheduler import (
     DRIVER_INITIATED,
     DRIVER_LAP_KINDS,
@@ -463,6 +463,7 @@ class RadioHub:
         self._held_urgent: _Ready | None = None
         self._air_free_mono = -math.inf  # monotonic time the radio last went silent (the 2 s gap counts from it)
         self._radio_sid: str | None = None  # the live session the scheduler's queue and budgets belong to
+        self._lap_brakes = LapBrakeZones()  # the car's own braking zones of its last laps (speak-window fallback)
         self._dispatched: dict[str, float] = {}  # proactive message id -> dispatch time (latency feedback)
         self._tasks: set[asyncio.Task[Any]] = set()  # strong refs: un-referenced tasks can be GC'd mid-flight
         self._on_air: tuple[RadioMessage, AudioClip | None] | None = None  # last delivered (valid while speaking)
@@ -1322,6 +1323,10 @@ class RadioHub:
             self.handsfree.on_spoken(msg, time.monotonic(), self._speech_duration(msg, clip))
         self.speaking_id = msg.id if spoken else None
         self._on_air = (msg, clip) if spoken else None
+        if msg.kind in DRIVER_INITIATED:  # said past the queue: the scheduler remembers it (repeats, answered topics)
+            note = getattr(self.scheduler, "note_spoken", None)
+            if callable(note):
+                note(msg, time.monotonic())
         grace = PLAYBACK_REPORT_GRACE_S if n_bytes else DEVICE_TTS_GRACE_S  # device voices: unknown speaking rate
         self._speaking_deadline = time.monotonic() + self._speech_duration(msg, clip) + grace
         header: dict[str, Any] = {
@@ -1632,12 +1637,16 @@ class RadioHub:
         on_track = f is not None and conn == "live" and not (int(f.quality) & 0b1100)
         ttb = None
         model = self.live.track_model
+        session = getattr(self.live, "session", None)
+        self._lap_brakes.observe(f, getattr(session, "track_length_m", None))
         # --- race radio --- no learned model yet (a new track, a joined race): the AI field's and the physics prior's
-        # braking zones, so "unknown" is never taken for calm (voice.field_zones)
+        # braking zones, so "unknown" is never taken for calm (voice.field_zones); v0.3.0: with where the driver braked
+        # on their last laps (voice.lap_brakes), which covers the corners the knowledge does not
         if not model:
-            session = getattr(self.live, "session", None)
             track = getattr(session, "track_id", None)
-            model = knowledge_model(getattr(self.live, "track_knowledge", None), track)
+            model = merged(
+                knowledge_model(getattr(self.live, "track_knowledge", None), track), self._lap_brakes.model()
+            )
         # --- end race radio ---
         if f is not None and model and f.lap_distance_m is not None and f.speed_kph and f.speed_kph > 30:
             ttb = time_to_next_braking(model, f.lap_distance_m, f.speed_kph)
@@ -1774,6 +1783,7 @@ class RadioHub:
         if sid is None or sid == self._radio_sid:
             return
         previous, self._radio_sid = self._radio_sid, sid
+        self._lap_brakes.reset()  # another session's braking zones are not this one's
         self.handsfree.new_session()  # --- hands-free (lane handsfree) ---
         if previous is None:
             return  # the first session this radio sees: nothing of an older one is queued
@@ -1924,10 +1934,7 @@ class RadioHub:
                 "seq": ev.seq,
             },
         )
-        interrupted = self._on_air_message()
-        self._deliver(msg, clip, None, None)
-        if interrupted is not None:
-            self._rehold(interrupted, now)
+        self._deliver(msg, clip, None, None)  # the radio is free (``_cue_block_reason``): nothing is cut
         if self.speaking_id == msg.id:
             for mid in [m for m, e in self._cue_inflight.items() if now - e.fired_mono > CUE_INFLIGHT_TTL_S]:
                 del self._cue_inflight[mid]
@@ -1946,16 +1953,16 @@ class RadioHub:
         if self.ptt_down:
             return "driver transmitting"
         on_air = self._on_air_message()
-        if on_air is not None:
+        if on_air is not None and not may_interrupt(_CUE_PROBE, on_air[0]):
+            # the one interrupt rule: only the urgent path interrupts, so a cue plays on a free radio only
             m = on_air[0]
             if m.kind is MessageKind.CUE:
                 return "previous cue still playing"
             if m.kind in (MessageKind.ANSWER, MessageKind.CONTROL):
                 return "answer on air"
-            # the one interrupt rule: a cue never cuts an urgent call (a spotter onset, the red flag), but does cut a
-            # spotter clear or "still there" (YIELDS_TO_CUE_KEY) and anything proactive
-            if not may_interrupt(_CUE_PROBE, m):
-                return "spotter call on air" if m.kind is MessageKind.SPOTTER else "urgent message on air"
+            if m.kind is MessageKind.SPOTTER:
+                return "spotter call on air"
+            return "urgent message on air" if _urgent(m) else "radio busy"
         return None
 
     def _cue_mute_reason(self) -> str | None:
@@ -1983,8 +1990,9 @@ class RadioHub:
         return on_air
 
     def _rehold(self, interrupted: tuple[RadioMessage, AudioClip | None], now: float) -> None:
-        """A proactive message cut by a cue is said again (in full, under a new id) in the next speak window, once:
-        a message cut a second time is dropped (``MAX_RESENDS``), so a busy stretch never repeats it lap after lap."""
+        """A proactive message cut by an urgent call (the only thing that cuts one) is said again (in full, under a new
+        id) in the next speak window, once: a message cut a second time is dropped (``MAX_RESENDS``), so a busy
+        stretch never repeats it lap after lap."""
         msg, clip = interrupted
         if msg.kind in (MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.CUE, MessageKind.SPOTTER) or msg.expired(
             now
