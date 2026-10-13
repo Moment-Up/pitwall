@@ -305,7 +305,10 @@ def _milestone(msg: RadioMessage) -> bool:
 
 
 def _budget_holds(msg: RadioMessage) -> bool:
-    """Waits for the lap's allowance: a routine message (urgent calls and milestones never wait)."""
+    """Waits for the lap's allowance: a routine message (urgent calls, milestones and the cold-tyre warning after a
+    stop never wait; the cold tyres still spend the allowance, review #3)."""
+    if msg.meta.get(TOPIC_KEY) == "health:tyres_cold":
+        return False
     return msg.kind in BUDGETED and not _urgent(msg) and not _milestone(msg)
 
 
@@ -896,8 +899,10 @@ class RadioScheduler:
                 if self._answered_recently(msg, topic, now):
                     return False  # the driver just asked about it: the answer said it
                 # before the repeat check on purpose: if the newest information was just said, the older
-                # queued version must not be said after it
-                self._pending = [e for e in self._pending if _topic(e[1]) != topic]
+                # queued version must not be said after it. Only a message this intensity says replaces one: a
+                # detailed-only call never silences a normal one it cannot replace (review #2)
+                if msg.kind in ALLOWED_KINDS[self._intensity]:
+                    self._pending = [e for e in self._pending if _topic(e[1]) != topic]
             if msg.kind not in DRIVER_INITIATED:
                 key = _text_key(msg.text)
                 if _repeat_filtered(msg):
@@ -1146,6 +1151,8 @@ class RadioScheduler:
         ann = _announces(msg)
         if ann is not None:
             self._announced[ann] = now
+        if msg.meta.get("call") == "green":  # the period is over: the next deployment is new news (review #5)
+            self._announced.pop("sc", None)
         intent = msg.meta.get(INTENT_KEY)
         if msg.kind is MessageKind.ANSWER and isinstance(intent, str):
             for topic in ANSWER_TOPICS.get(intent, ()):

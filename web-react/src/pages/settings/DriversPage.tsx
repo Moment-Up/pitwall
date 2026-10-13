@@ -86,7 +86,10 @@ export function DriversPage(_props: PageProps) {
       const d = await driverStore.create(r.body);
       setNotice(`${d.name} added. Put them in the seat before they drive.`);
     } else {
-      await driverStore.update(f.id, r.body);
+      // race-call groups and hands-free are edited on Settings › Radio & voice and Drive › Radio now: an update from
+      // this sheet never sends the values it opened with (they could undo a change made there meanwhile)
+      const { radio_calls: _calls, handsfree_while_driving: _hf, ...update } = r.body;
+      await driverStore.update(f.id, update);
       setNotice(`${r.body.name} saved.`);
       invalidateDriverData();
     }

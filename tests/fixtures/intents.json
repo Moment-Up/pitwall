@@ -301,6 +301,7 @@
     {"question": "are my brakes ok?", "intent": "car_health", "corner": null, "from": "health-fix"},
     {"question": "where can I pass?", "intent": "attack", "corner": null, "from": "health-fix"},
     {"question": "how do I get past him?", "intent": "attack", "corner": null, "from": "health-fix"},
-    {"question": "how do I get by the car in front?", "intent": "attack", "corner": null, "from": "health-fix"}
+    {"question": "how do I get by the car in front?", "intent": "attack", "corner": null, "from": "health-fix"},
+    {"question": "Do I have a puncture?", "intent": "damage", "corner": null, "from": "v0.3.0 review"}
   ]
 }

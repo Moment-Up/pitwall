@@ -9,6 +9,8 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
+## v0.3.0 - 2026-10-13
+
 - Setup › Controls: which button does what, for any wheel and any game. Not yet tested on the rig: research only.
 - Wheels: 23 researched wheels, rims and button boxes (Fanatec, Logitech, Thrustmaster, MOZA, Simagic, Simucube,
   Cammus), or build your own. Research only.
@@ -51,7 +53,7 @@ The release workflow copies a release's bullet points into its GitHub release no
   alerts never wait. Measured on recorded races, not yet heard live.
 - Only the spotter, a red flag and a puncture cut in. A braking call no longer cuts the lap time, which was then said
   twice. Measured on recorded races, not yet heard live.
-- On a track Pitwall has not learned yet, the radio also keeps clear of where you braked on your last laps.
+- Before a track is learned (your first clean lap), the radio also keeps clear of where you braked on your last laps.
   Measured on recorded races, not yet heard live.
 - News at the line rides in the lap time ("That lap, 1:25.4, personal best. Fastest lap of the race.") and the
   safety car is announced once. Tested on recordings and synthetic data.

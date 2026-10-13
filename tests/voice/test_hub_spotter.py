@@ -432,7 +432,7 @@ async def test_a_braking_cue_never_cuts_a_car_call_but_cuts_a_clear() -> None:
     that has gone yields to the braking point); the cut clear is not said again."""
     from tests.unit.test_hub_validation_hooks import cue_event
 
-    hub, (sent,), _w = await _hub(device_tts=True)
+    hub, (_sent,), _w = await _hub(device_tts=True)
     client = next(iter(hub.clients))
     o = Origin(_state(left=True, seq=(1, 0)))
     hub.spotter.deliver(_call("car_left", "left", 1, o))

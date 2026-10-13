@@ -214,7 +214,8 @@ class DamageWatcher:
         top = max([*up.values(), SEVERE if punctures else NONE])
         kind: CallKind = "race" if top == MINOR else "alert"
         # a puncture is safety-critical: the urgent path (voice.urgent), said at once and past every filter
-        priority: CallPriority = "urgent" if punctures else "normal" if top == MINOR else "high"
+        # after the flag (finished) a puncture no longer needs the urgent path: it would cut the finish call
+        priority: CallPriority = "urgent" if punctures and not st.finished else "high" if top != MINOR else "normal"
         data = {
             "parts": [{"part": p, "grade": W.GRADES[g]} for p, g in parts],
             "puncture": punctures,

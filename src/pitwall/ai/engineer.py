@@ -269,7 +269,10 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ("safety_car", re.compile(r"\b(safety car|vsc|virtual safety car)\b", re.I)),
     # data some games never send (games.INTENT_FEATURES), before setup ("front wing broken": "wing" alone stays a
     # setup question) and before gaps ("damaged after the contact with the car ahead")
-    ("damage", re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage)\b", re.I)),
+    (
+        "damage",
+        re.compile(r"\b(damage|damaged|broken|repair|wing damage|floor damage|punctures?|punctured|flat tyre)\b", re.I),
+    ),
     # --- race radio --- "who's ahead?", "who is behind me": the neighbours by name (official AI names only)
     (
         "who_ahead",
