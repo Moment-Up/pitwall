@@ -625,13 +625,14 @@ def test_urgent_alert_interrupts_a_lap_summary() -> None:
     assert m is not None and m.id == "red"
 
 
-def test_a_cue_never_interrupts_coaching() -> None:
-    """v0.3.0 radio policy: only the urgent path interrupts (the hub delivers cues on a free radio only)."""
+def test_a_cue_cuts_coaching() -> None:
+    """The radio policy: a braking call is timed to the braking point, so it may cut routine talk such as coaching."""
     s = RadioScheduler()
     s.enqueue(mk("c4", MessageKind.COACHING, lap=4, text=SHORT_COACHING))
     assert s.next_message(CALM, 0.0, speaking=False) is not None
     s.enqueue(mk("cue", MessageKind.CUE, Priority.HIGH, text="Brake.", window=False, created=1.0))
-    assert s.next_message(BRAKING, 1.0, speaking=True) is None
+    got = s.next_message(BRAKING, 1.0, speaking=True)
+    assert got is not None and got.id == "cue"
 
 
 def test_nothing_else_interrupts() -> None:

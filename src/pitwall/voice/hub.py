@@ -50,9 +50,10 @@ Live braking cues (``coach.cues``) bypass the scheduler queue because they are t
   with the last moment delivery can start (``CueEvent.deadline_mono``); a cue the loop hands over after that
   (e.g. stalled by a slow request) is dropped. A cue with nothing audible to play (server audio not ready and no
   device voice) is dropped too: it must not cut what is on air for silence.
-* **Priority** (``voice.scheduler``'s one rule: only the urgent path interrupts). A cue plays only on a free radio:
-  never while the driver transmits, nor over anything on air (an answer, an urgent or spotter call, another cue, a
-  proactive message); a muted, late or blocked cue is dropped, never said late. Proactive messages treat the next cue
+* **Priority** (``voice.scheduler``'s one rule, ``may_interrupt``: the urgent path and braking cues interrupt). A cue
+  never plays while the driver transmits, nor over an answer, an alert, an urgent or spotter car call or another cue;
+  it cuts routine talk (a lap summary, a coaching point, a race, health or strategy call), which is said again once in
+  the next speak window. A muted, late or blocked cue is dropped, never said late. Proactive messages treat the next cue
   like a braking zone (the speak window must close before it fires) and a message whose synthesis finished while a
   cue was playing is held, so a proactive message is rarely on air at a cue point. An answer or acknowledgement that
   becomes ready while a cue (or an urgent call) is on air waits for it to finish instead of cutting the key word.
@@ -1805,15 +1806,15 @@ class RadioHub:
             if slot is None or slot[0].expired(time.monotonic()):
                 self._held_urgent = ready
             else:
-                log.warning("urgent call %r dropped: another urgent call is already waiting", msg.text)
+                log.warning("urgent call %s dropped: another urgent call is already waiting", msg.id)
             return
         current = self._held
         if current is None or msg.priority >= current[0].priority:
             if current is not None:
-                log.info("held message %r replaced by %r", current[0].text, msg.text)
+                log.info("held message %s replaced by %s", current[0].id, msg.id)
             self._held = ready
         else:
-            log.info("message %r dropped: %r is already held", msg.text, current[0].text)
+            log.info("message %s dropped: %s is already held", msg.id, current[0].id)
 
     def _urgent_may_cut(self, msg: RadioMessage) -> bool:
         """An urgent call may go out now: the one interrupt rule (``scheduler.may_interrupt``) lets it cut what is on
@@ -1829,13 +1830,14 @@ class RadioHub:
         if synth_s is not None:
             # latency feedback means synthesis + delivery: the time spent held is not speech latency
             self._dispatched[msg.id] = now - synth_s
+        shown = ONLINE_NAME_REDACTED if msg.meta.get("personal") is True else msg.text  # an online name is never kept
         self._observe(  # validation kit hook
             "proactive",
             lambda: {
                 "msg_id": msg.id,
                 "kind": msg.kind.value,
                 "priority": int(msg.priority),
-                "text": msg.text,
+                "text": shown,
                 "lap_number": msg.lap_number,
                 "meta": {"lap_id": msg.meta.get("lap_id"), "observation_id": msg.meta.get("observation_id")},
                 "needs_speak_window": msg.needs_speak_window,
@@ -1844,7 +1846,7 @@ class RadioHub:
             },
         )
         kind = "urgent" if msg.meta.get("urgent") is True else "proactive"  # race radio: notify -> first audio
-        self._deliver(msg, clip, LatencyRecord(kind=kind, text=msg.text), msg.created_mono)
+        self._deliver(msg, clip, LatencyRecord(kind=kind, text=shown), msg.created_mono)
         if interrupted is not None and interrupted[0].id != msg.id:
             self._rehold(interrupted, now)
 
@@ -1934,7 +1936,10 @@ class RadioHub:
                 "seq": ev.seq,
             },
         )
-        self._deliver(msg, clip, None, None)  # the radio is free (``_cue_block_reason``): nothing is cut
+        interrupted = self._on_air_message()  # routine talk a cue may cut (``_cue_block_reason``): said again later
+        self._deliver(msg, clip, None, None)
+        if interrupted is not None:
+            self._rehold(interrupted, now)
         if self.speaking_id == msg.id:
             for mid in [m for m, e in self._cue_inflight.items() if now - e.fired_mono > CUE_INFLIGHT_TTL_S]:
                 del self._cue_inflight[mid]
@@ -1954,7 +1959,8 @@ class RadioHub:
             return "driver transmitting"
         on_air = self._on_air_message()
         if on_air is not None and not may_interrupt(_CUE_PROBE, on_air[0]):
-            # the one interrupt rule: only the urgent path interrupts, so a cue plays on a free radio only
+            # the one interrupt rule: a cue cuts routine talk and a spotter clear, never an urgent call, a cue, an
+            # answer or a spotter car call
             m = on_air[0]
             if m.kind is MessageKind.CUE:
                 return "previous cue still playing"
@@ -1990,18 +1996,20 @@ class RadioHub:
         return on_air
 
     def _rehold(self, interrupted: tuple[RadioMessage, AudioClip | None], now: float) -> None:
-        """A proactive message cut by an urgent call (the only thing that cuts one) is said again (in full, under a new
-        id) in the next speak window, once: a message cut a second time is dropped (``MAX_RESENDS``), so a busy
+        """A proactive message cut by an urgent call or a braking cue is said again (in full, under a new id) in the
+        next speak window, once: a message cut a second time is dropped (``MAX_RESENDS``), so a busy
         stretch never repeats it lap after lap."""
         msg, clip = interrupted
-        if msg.kind in (MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.CUE, MessageKind.SPOTTER) or msg.expired(
-            now
+        if (
+            msg.kind in (MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.CUE, MessageKind.SPOTTER)
+            or msg.expired(now)
+            or msg.meta.get("personal") is True  # an online name is never held and said again
         ):  # --- spotter --- a cut spotter call is never said later
             return
         resent = msg.meta.get(RESENT_KEY, 0)
         count = resent if isinstance(resent, int) and not isinstance(resent, bool) else 0
         if count >= MAX_RESENDS:
-            log.info("message %r cut again: not said a third time", msg.text)
+            log.info("message %s cut again: not said a third time", msg.id)
             return
         if self._held is None:
             again = dataclasses.replace(msg, id=f"m{next(self._ids)}", meta={**msg.meta, RESENT_KEY: count + 1})

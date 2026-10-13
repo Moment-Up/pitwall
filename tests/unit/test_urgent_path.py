@@ -44,11 +44,13 @@ def test_the_red_flag_and_spotter_calls_cut_anything_but_each_other() -> None:
     assert may_interrupt(RED, CUE) and may_interrupt(ONSET, CUE)
 
 
-def test_the_braking_point_exception_and_everything_else_never_interrupts() -> None:
+def test_the_braking_point_rules_and_everything_else_never_interrupts() -> None:
     assert not may_interrupt(CLEAR, CUE)  # a clear waits for the braking cue
-    for on_air in (CLEAR, STILL, ONSET, RED, SUMMARY, RACE, HEALTH, ANSWER, CUE):
-        assert not may_interrupt(CUE, on_air), on_air.meta  # a cue cuts nothing: only the urgent path interrupts
-    for quiet in (SUMMARY, RACE, HEALTH, STILL, CUE):
+    for on_air in (CLEAR, STILL, SUMMARY, RACE, HEALTH):
+        assert may_interrupt(CUE, on_air), on_air.meta  # a cue cuts routine talk and a spotter clear / still there
+    for on_air in (ONSET, RED, ANSWER, CUE):
+        assert not may_interrupt(CUE, on_air), on_air.meta  # never a car call, an urgent call, an answer or a cue
+    for quiet in (SUMMARY, RACE, HEALTH, STILL):
         for on_air in (None, SUMMARY, RACE, HEALTH, ANSWER, CUE):
             assert not may_interrupt(quiet, on_air), (quiet.kind, on_air)
 
@@ -88,11 +90,12 @@ def _on_air(hub: RadioHub, msg: RadioMessage) -> None:
 async def test_the_hubs_cue_gate_asks_the_same_rule() -> None:
     hub, _client, _sent = await make()
     for msg, reason in (
-        (CLEAR, "spotter call on air"),
-        (STILL, "spotter call on air"),
+        (CLEAR, None),  # a braking call cuts a clear or a "still there"
+        (STILL, None),
         (ONSET, "spotter call on air"),
-        (SUMMARY, "radio busy"),
-        (RACE, "radio busy"),
+        (SUMMARY, None),  # and routine talk
+        (RACE, None),
+        (ANSWER, "answer on air"),
     ):
         _on_air(hub, msg)
         assert hub._cue_block_reason(_cue(), time.monotonic()) == reason, msg.meta

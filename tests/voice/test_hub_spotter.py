@@ -427,9 +427,9 @@ async def test_a_clear_waits_for_a_braking_cue_an_onset_cuts_it() -> None:
     await hub.stop()
 
 
-async def test_a_braking_cue_never_cuts_a_spotter_call() -> None:
-    """v0.3.0 radio policy: only the urgent path interrupts. A cue is dropped while any spotter call is on air (a car
-    arriving or a clear); the clear plays to its end."""
+async def test_a_braking_cue_never_cuts_a_car_call_but_cuts_a_clear() -> None:
+    """The radio policy: a cue is dropped while a car arriving is on air, and cuts a clear (information about a car
+    that has gone yields to the braking point); the cut clear is not said again."""
     from tests.unit.test_hub_validation_hooks import cue_event
 
     hub, (sent,), _w = await _hub(device_tts=True)
@@ -443,10 +443,9 @@ async def test_a_braking_cue_never_cuts_a_spotter_call() -> None:
     assert hub.spotter.deliver(_call("clear_left", "left", 2, o)) is None
     clear_id = hub.speaking_id
     ev = cue_event(2)
-    assert hub.deliver_cue(ev, ev.fired_mono) == "spotter call on air"  # the clear is not cut either
+    assert hub.deliver_cue(ev, ev.fired_mono) is None  # the cue cuts the clear
     await settle(3)
-    assert not any(isinstance(m, dict) and m.get("type") == "cancel" and m.get("id") == clear_id for m in sent)
-    assert hub.speaking_id == clear_id and hub._held is None
+    assert hub.speaking_id != clear_id and hub._held is None  # a cut spotter call is never said later
     await hub.stop()
 
 

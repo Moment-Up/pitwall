@@ -35,7 +35,7 @@ def test_interrupt_rank_and_may_interrupt() -> None:
     assert may_interrupt(spot, cue) and may_interrupt(spot, summary) and may_interrupt(alert, cue)
     assert not may_interrupt(spot, alert) and not may_interrupt(alert, spot) and not may_interrupt(spot, spot)
     assert not may_interrupt(still, summary)  # still_there never cuts anything
-    assert not may_interrupt(cue, summary) and not may_interrupt(cue, cue)  # only the urgent path interrupts
+    assert may_interrupt(cue, summary) and not may_interrupt(cue, cue)  # a braking call cuts routine talk only
 
 
 def test_spotter_kind_policy() -> None:

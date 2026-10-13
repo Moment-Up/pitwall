@@ -420,9 +420,22 @@ def interrupt_rank(msg: RadioMessage) -> int:
 
 
 def may_interrupt(new: RadioMessage, on_air: RadioMessage | None) -> bool:
-    """May ``new`` cut ``on_air`` (None: nothing on air)? Only an urgent call may, and never another urgent call (two
-    spotter calls, a red flag and a spotter call never cut each other); a message marked ``YIELDS_TO_CUE_KEY`` (a
-    spotter clear) never cuts a braking cue. A braking cue, an alert, a race call or anything else never interrupts."""
+    """May ``new`` cut ``on_air`` (None: nothing on air)? An urgent call may, never another urgent call (two spotter
+    calls, a red flag and a spotter call never cut each other); a message marked ``YIELDS_TO_CUE_KEY`` (a spotter
+    clear) never cuts a braking cue. A braking cue may cut routine talk and a spotter clear (see below). An alert, a
+    race call or anything else never interrupts."""
+    if new.kind is MessageKind.CUE:
+        # a braking cue is time-critical (its key word must land on the braking point): it may cut routine talk (a
+        # lap summary, a coaching point, a race, health or strategy call, which is held and said again) and a spotter
+        # clear, never an urgent call, an alert, another cue, an answer the driver asked for or a spotter car call
+        if on_air is None:
+            return True
+        if on_air.kind is MessageKind.SPOTTER:  # a clear or "still there" yields to the braking point; a car call never
+            return on_air.meta.get(YIELDS_TO_CUE_KEY) is True
+        return not (
+            _urgent(on_air)
+            or on_air.kind in (MessageKind.CUE, MessageKind.ANSWER, MessageKind.CONTROL, MessageKind.ALERT)
+        )
     if not _urgent(new):
         return False
     if on_air is None:
@@ -517,13 +530,14 @@ POLICY: tuple[CallFamily, ...] = (
         (MessageKind.CUE,),
         "high",
         0,
-        False,
+        True,
         _NORMAL_UP,
         "held",
         False,
         "free",
         "Braking calls",
-        "Timed to the braking point; only on a free radio, dropped (never late) when something is on air.",
+        "Timed to the braking point: cuts routine talk (said again later), never an alert, an answer, an urgent call"
+        " or a spotter car call; dropped (never late) when one is on air.",
     ),
     CallFamily(
         "alert",

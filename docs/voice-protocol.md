@@ -46,7 +46,7 @@ the queue says the rest by priority, then this order, then first in first out.
 | 0 | Spotter | `pitwall.spotter + voice.spotter_radio` | `spotter` | urgent (still there: high) | yes | quiet, normal, detailed | said | no | outside it | Spotter |
 | 0 | Red flag and punctures | `raceradio via voice.urgent` | `alert` | urgent | yes | quiet, normal, detailed | said | no | outside it | always on |
 | 0 | Answers | `voice.hub, voice.handsfree` | `answer`, `control` | high | no | quiet, normal, detailed | said | no | outside it | always on |
-| 0 | Braking calls | `coach.cues` | `cue` | high | no | normal, detailed | held | no | outside it | Braking calls |
+| 0 | Braking calls | `coach.cues` | `cue` | high | yes | normal, detailed | held | no | outside it | Braking calls |
 | 1 | Flags, penalties, damage, safety car, fuel critical | `raceradio, strategy.radio, carhealth.radio` | `alert` | high / normal | no | quiet, normal, detailed | safety calls said, the rest held | yes | never held, spends it | Race calls (flags, penalties, damage); Car health (fuel) |
 | 2 | Lap time | `voice.proactive` | `lap_summary` | normal | no | normal, detailed | held | yes | waits for it, spends it | Coaching amount |
 | 3 | Race calls | `raceradio` | `race` | normal / high | no | normal, detailed | held | yes | waits for it, spends it | Race calls |

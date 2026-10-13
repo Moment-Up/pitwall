@@ -244,7 +244,7 @@ def test_race_calls_share_of_the_allowance() -> None:
 
 
 # ------------------------------------------------------------------ who may interrupt
-def test_only_spotter_red_flag_and_puncture_interrupt() -> None:
+def test_only_spotter_red_flag_puncture_and_braking_calls_interrupt() -> None:
     m = every_producer()
     puncture = urgent_message({"id": "rc-p", "source": "raceradio", "text": "Puncture, rear left. Box this lap."}, 0.0)
     interrupting = {"spotter", "urgent"}
@@ -252,6 +252,16 @@ def test_only_spotter_red_flag_and_puncture_interrupt() -> None:
         if family_of(on_air) in interrupting:
             continue
         for fam, new in m.items():
+            if fam == "cue":  # a braking call cuts routine talk, never an alert, an answer, a cue or a spotter call
+                cut = on_air.kind not in (
+                    MessageKind.CUE,
+                    MessageKind.ANSWER,
+                    MessageKind.CONTROL,
+                    MessageKind.ALERT,
+                    MessageKind.SPOTTER,
+                )
+                assert may_interrupt(new, on_air) is cut, (fam, family_of(on_air))
+                continue
             assert may_interrupt(new, on_air) is (fam in interrupting), (fam, family_of(on_air))
         assert may_interrupt(puncture, on_air)
     clear = replace(m["spotter"], meta={YIELDS_TO_CUE_KEY: True})

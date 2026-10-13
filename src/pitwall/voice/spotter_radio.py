@@ -599,14 +599,14 @@ class SpotterRadio:
         when the hold slot is free); a cue is dropped (its moment has passed)."""
         hub = self.hub
         msg, clip = interrupted
-        if msg.kind in (MessageKind.CUE, MessageKind.SPOTTER) or msg.expired(now):
-            return
+        if msg.kind in (MessageKind.CUE, MessageKind.SPOTTER) or msg.expired(now) or msg.meta.get("personal") is True:
+            return  # an answer carrying an online name is never held, said again or logged
         from pitwall.voice.hub import MAX_RESENDS, RESENT_KEY
 
         resent = msg.meta.get(RESENT_KEY, 0)
         count = resent if isinstance(resent, int) and not isinstance(resent, bool) else 0
         if count >= MAX_RESENDS:
-            log.info("message %r cut again by the spotter: not said a third time", msg.text)
+            log.info("message %s cut again by the spotter: not said a third time", msg.id)
             return
         if hub._held is None:
             again = dataclasses.replace(msg, id=f"m{next(hub._ids)}", meta={**msg.meta, RESENT_KEY: count + 1})
