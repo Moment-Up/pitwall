@@ -59,7 +59,15 @@ install() {
 EOF
   plutil -lint "$PLIST" >/dev/null
   for _ in $(seq 1 20); do pgrep -f "pitwall serve" >/dev/null || break; sleep 0.5; done
-  launchctl bootstrap "$DOMAIN" "$PLIST"
+  # bootout returns before launchd has fully removed the old job: bootstrap can fail with "5: Input/output error"
+  # until it has (seen on the v0.3.0 release, which left the service down). Wait for it, then retry a few times.
+  for _ in 1 2 3 4 5 6 7 8 9 10; do launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1 || break; sleep 0.5; done
+  local ok=0
+  for _ in 1 2 3 4 5; do
+    if launchctl bootstrap "$DOMAIN" "$PLIST" 2>/dev/null; then ok=1; break; fi
+    sleep 1
+  done
+  [[ $ok == 1 ]] || { echo "launchctl bootstrap failed 5 times: start it with: launchctl bootstrap $DOMAIN $PLIST" >&2; exit 5; }
   echo "installed $LABEL ($PLIST); logs: $LOG_DIR/server.log"
   wait_healthy
 }
