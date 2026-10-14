@@ -1,5 +1,6 @@
 """Today's 3 things (pure): each step of each order of choices, verbatim observation text, beginner wording and kinds,
-special sessions, history as at the session, and never "brake later"."""
+special sessions, history as at the session, habits not one-offs (habits spec 6: a habit still there to work on, a
+fixed habit that went well), and never "brake later"."""
 
 from __future__ import annotations
 
@@ -29,6 +30,8 @@ def obs(
     priority: float | None = None,
     text: str | None = None,
     simple: str | None = None,
+    value: float | None = None,
+    unit: str | None = None,
 ) -> dict[str, Any]:
     return {
         "id": f"{corner}-{kind}-{lap_number}",
@@ -42,6 +45,8 @@ def obs(
         "positive": positive,
         "text": text or f"{corner}: {kind} text",
         "text_simple": simple,
+        "value": value,
+        "unit": unit,
     }
 
 
@@ -56,6 +61,7 @@ def inp(
     goals: Sequence[GoalRow] = (),
     counts: bool = True,
     why: str | None = None,
+    corner_laps: R.CornerLaps | None = None,
 ) -> R.RecapInput:
     return R.RecapInput(
         session=s,
@@ -67,6 +73,7 @@ def inp(
         history=h.until(s.id) if h is not None else None,
         goals=goals,
         why_progress=why,
+        corner_laps=corner_laps,
     )
 
 
@@ -112,16 +119,21 @@ def test_observation_text_is_verbatim_and_simple_for_beginners() -> None:
     s = sess("a")
     ls = laps("a", [71_000, 70_900])
     text = (
-        "Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h), losing 0.23 s through the corner."
+        "Turn 6: minimum speed is 9 km/h lower than your reference (164 vs 173 km/h), losing 0.33 s through the corner."
     )
     simple = "Turn 6: you were 9 km/h slower at the slowest point of the corner."
-    o = {ls[1].id: [obs(2, "low_min_speed", "Turn 6", text=text, simple=simple)]}
+    # one lap: a one-off is the one to work on only when it is a big one (the radio's rule, 0.30 s+)
+    o = {ls[1].id: [obs(2, "low_min_speed", "Turn 6", impact=0.33, text=text, simple=simple)]}
     rec = build(inp(s, ls, history((s, ls)), observations=o, compared=1))
     assert rec.work_on is not None and rec.work_on.text == text and rec.work_on.text_simple == simple
     assert rec.work_on.evidence == "Seen on 1 of 1 lap compared with your reference"
     assert rec.work_on.observation_key == "Turn 6:low_min_speed" and rec.work_on.lap_id == ls[1].id
     # a verbatim observation may describe braking; it is the coach's own text (which never says "brake later")
-    late = {ls[1].id: [obs(2, "brake_late_overdrive", "Turn 1", text="Turn 1: braking 9 m later but slower out.")]}
+    late = {
+        ls[1].id: [
+            obs(2, "brake_late_overdrive", "Turn 1", impact=0.4, text="Turn 1: braking 9 m later but slower out.")
+        ]
+    }
     rec2 = R.build_recap(inp(s, ls, history((s, ls)), observations=late, compared=1, skill="advanced"))
     assert rec2.work_on is not None and rec2.work_on.source == "observation"
 
@@ -187,7 +199,7 @@ def test_went_well_order() -> None:
 def test_work_on_order() -> None:
     s = sess("a")
     ls = laps("a", [71_000, 70_900])
-    neg = {ls[1].id: [obs(2, "low_min_speed", "Turn 6")]}
+    neg = {ls[1].id: [obs(2, "low_min_speed", "Turn 6", impact=0.35)]}  # a big one-off
     assert build(inp(s, ls, None, observations=neg, compared=1, counts=False)).work_on.source == "observation"  # type: ignore[union-attr]
     bad = [
         lap(1, 71_000, sid="b"),
@@ -219,6 +231,166 @@ def test_work_on_order() -> None:
     assert "two or more" not in w4.text_simple
     rec = build(inp(sess("e"), laps("e", [71_000, 71_100]), None, counts=False))
     assert rec.work_on is None and rec.why["work_on"] == R.WHY_NOTHING_WORK
+
+
+# ---------------------------------------------------------------------------------------------- habits (spec 6)
+def _times(ls: list[LapRow], corner_times: dict[str, list[float | None]]) -> R.CornerLaps:
+    """Corner -> {lap id: time} for laps 2.. (lap 1 is the reference: never compared with itself)."""
+    return {c: {lap.id: t for lap, t in zip(ls[1:], times, strict=True)} for c, times in corner_times.items()}
+
+
+def test_work_on_is_a_habit_still_there_not_a_bigger_one_off() -> None:
+    s, ls = sess("h"), laps("h", [71_000] * 7)  # laps 2-7 compared with lap 1
+    o: dict[int, list[dict[str, Any]]] = {lap.id: [] for lap in ls[1:]}
+    for k in (1, 2, 4, 5):  # laps 2, 3, 5, 6: Turn 6 on 4 of 6 laps, and on lap 6 (one of the last 3)
+        o[ls[k].id].append(obs(k + 1, "low_min_speed", "Turn 6", impact=0.15, value=-9.0))
+    o[ls[3].id].append(obs(4, "brake_early", "Turn 4", impact=0.9, value=-25.0))  # one big lap
+    times = _times(ls, {"Turn 6": [0.15, 0.15, 0.0, 0.15, 0.15, 0.01], "Turn 4": [0.0, 0.0, 0.9, 0.0, 0.0, 0.0]})
+    i = inp(s, ls, None, observations=o, compared=6, counts=False, corner_laps=times)
+    # the ranking alone would pick the one-off (0.81 / 6 beats 4 x 0.135 / 6)
+    assert R.rank_points(o, 6, False, i.limits)[0].corner == "Turn 4"
+    w = build(i).work_on
+    assert w is not None and w.observation_key == "Turn 6:low_min_speed" and w.lap_id == ls[5].id
+    assert w.evidence == "Seen on 4 of 6 laps compared with your reference"
+
+
+def test_work_on_falls_back_to_the_top_big_one_off_only() -> None:
+    s, ls = sess("o"), laps("o", [71_000, 71_100, 71_200])
+    small = obs(2, "low_min_speed", "Turn 2", impact=0.29, confidence=1.0)  # ranks first, but under 0.30 s
+    big = obs(3, "brake_early", "Turn 3", impact=0.32, confidence=0.8)  # the radio's big one-off
+    unsure = obs(3, "coasting", "Turn 5", impact=0.5, confidence=0.7)  # big, but not measured clearly enough
+    o = {ls[1].id: [small], ls[2].id: [big, unsure]}
+    i = inp(s, ls, None, observations=o, compared=2, counts=False)
+    assert [p.corner for p in R.rank_points(o, 2, False, i.limits)][:2] == ["Turn 5", "Turn 2"]
+    w = build(i).work_on
+    assert w is not None and w.source == "observation" and w.observation_key == "Turn 3:brake_early"
+    # no big one-off: no point to work on (the laps say nothing either: two clean laps)
+    rec = build(inp(s, ls, None, observations={ls[1].id: [small], ls[2].id: [unsure]}, compared=2, counts=False))
+    assert rec.work_on is None and rec.why["work_on"] == R.WHY_NOTHING_WORK
+    # ...and the laps' own Work on still applies without one
+    bad = [lap(1, 71_000, sid="p"), lap(2, 70_000, sid="p", flags=["invalid"]), lap(3, 71_000, sid="p")]
+    w2 = build(inp(sess("p"), bad, None, observations={bad[2].id: [small]}, compared=1, counts=False)).work_on
+    assert w2 is not None and w2.source == "lap_hygiene"
+
+
+def _fixed_case(
+    t1: list[float | None] | None = None, extra: dict[int, list[dict[str, Any]]] | None = None
+) -> tuple[R.RecapInput, list[LapRow]]:
+    """Turn 1: braking early on laps 2 and 3 (0.20 / 0.25 s lost), then laps 4-6 at Turn 1 (times ``t1``)."""
+    s, ls = sess("f"), laps("f", [71_000] * 6)
+    simple = "Turn 1: you braked about 15 m earlier than on your reference lap."
+    o: dict[int, list[dict[str, Any]]] = {lap.id: [] for lap in ls[1:]}
+    o[ls[1].id].append(obs(2, "brake_early", "T1", impact=0.20, value=-14.0, unit="m", simple=simple))
+    o[ls[2].id].append(obs(3, "brake_early", "T1", impact=0.25, value=-16.2, unit="m", simple=simple))
+    for k, v in (extra or {}).items():
+        o[ls[k].id].extend(v)
+    times = _times(ls, {"T1": [0.20, 0.25, *(t1 or [0.0, -0.05, 0.01])]})
+    return inp(s, ls, None, observations=o, compared=5, counts=False, corner_laps=times), ls
+
+
+def test_a_fixed_habit_went_well_and_is_not_the_one_to_work_on() -> None:
+    i, ls = _fixed_case()
+    rec = build(i)
+    w = rec.went_well
+    assert w is not None and w.source == "fixed" and w.kind == "went_well"
+    assert w.text == "T1: sorted - clean on your last 3 laps (was braking about 15 m early)."
+    assert w.text_simple == "Turn 1: sorted - clean on your last 3 laps."
+    assert w.evidence == "Seen on 2 of 5 laps compared with your reference, not on your last 3 at this corner"
+    assert (w.observation_key, w.lap_id, w.lap_number) == ("T1:brake_early", ls[5].id, 6)
+    assert w.values == {"seen": 2, "compared": 5, "clean_laps": 3, "value": -15.1, "unit": "m"}
+    assert not BRAKE_LATER.search(w.text) and not BRAKE_LATER.search(w.text_simple)
+    # it ranks first but is sorted: not the one to work on (and no other point: nothing)
+    assert rec.work_on is None
+    # a fixed habit or the top praise, whichever ranks higher (the same score as Work on's)
+    plus = _fixed_case(extra={4: [obs(5, "exit_gain", "T7", positive=True)]})[0]
+    assert build(plus).went_well.source == "fixed"  # type: ignore[union-attr]
+    strong = {k: [obs(k + 1, "exit_gain", "T7", positive=True, priority=0.5)] for k in (2, 3, 4)}
+    praise = build(_fixed_case(extra=strong)[0]).went_well
+    assert praise is not None and praise.source == "observation" and praise.observation_key == "T7:exit_gain"
+    # ...and after a personal best (a best always comes first)
+    a, b = laps("a", [71_745]), laps("b", [71_000] * 6)
+    sa, sb = sess("a", T0), sess("b", T0 + 60)
+    pb = R.RecapInput(**{**vars_of(i), "session": sb, "laps": b, "counts": True, "history": history((sa, a), (sb, b))})
+    assert build(pb).went_well.source == "pb"  # type: ignore[union-attr]
+
+
+def test_fixed_needs_three_clean_faster_laps_at_the_corner() -> None:
+    # still braking early on the latest lap: not fixed, still there
+    i, _ = _fixed_case([0.0, -0.05, 0.2], extra={4: [obs(6, "brake_early", "T1", impact=0.2, value=-14.0)]})
+    rec = build(i)
+    assert rec.went_well is not None and rec.went_well.source == "clean_streak"
+    assert rec.work_on is not None and rec.work_on.observation_key == "T1:brake_early"
+    # two laps after it are not enough
+    s, short = sess("g"), laps("g", [71_000] * 5)
+    two = {
+        short[1].id: [obs(2, "brake_early", "T1", value=-14.0)],
+        short[2].id: [obs(3, "brake_early", "T1", value=-16.0)],
+    }
+    t = _times(short, {"T1": [0.2, 0.2, 0.0, 0.0]})
+    assert R.fixed_habit(inp(s, short, None, observations=two, compared=4, counts=False, corner_laps=t)) is None
+    # another fault at the corner on one of the last 3 laps: not clean
+    other = _fixed_case(extra={4: [obs(6, "coasting", "T1", impact=0.03)]})[0]
+    assert R.fixed_habit(other) is None
+    # braking early fixed = braking later: praised only when the corner was faster on each of the 3 laps than on any
+    # lap it was seen on (0.20 s lost at best), and every time known
+    assert R.fixed_habit(_fixed_case([0.0, 0.19, 0.0])[0]) is not None
+    assert R.fixed_habit(_fixed_case([0.0, 0.20, 0.0])[0]) is None
+    assert R.fixed_habit(_fixed_case([0.0, None, 0.0])[0]) is None
+
+
+def test_fixed_without_comparisons_uses_what_the_observations_prove() -> None:
+    s, ls = sess("k"), laps("k", [71_000] * 6)
+    o = {
+        ls[1].id: [obs(2, "low_min_speed", "T6", value=-12.0)],
+        ls[2].id: [obs(3, "low_min_speed", "T6", value=-10.0)],
+        ls[3].id: [obs(4, "exit_gain", "T6", positive=True)],
+        ls[4].id: [obs(5, "exit_gain", "T6", positive=True)],
+        ls[5].id: [],
+    }
+    # the corner shows on laps 4 and 5 only: two laps after it, not three
+    assert R.fixed_habit(inp(s, ls, None, observations=o, compared=5, counts=False)) is None
+    o[ls[5].id] = [obs(6, "exit_gain", "T6", positive=True)]
+    w = R.fixed_habit(inp(s, ls, None, observations=o, compared=5, counts=False))
+    assert w is not None and w.text == "T6: sorted - clean on your last 3 laps (was about 11 km/h slower at the apex)."
+    # an incident there is no evidence of anything
+    o[ls[5].id] = [obs(6, "incident", "T6", impact=3.0)]
+    assert R.fixed_habit(inp(s, ls, None, observations=o, compared=5, counts=False)) is None
+
+
+def test_compared_corner_laps_from_the_comparisons() -> None:
+    from pitwall.analysis.compare import Compatibility, CornerDelta, CornerMetrics, LapComparison
+
+    m = CornerMetrics(corner="T1", segment_time_s=10.0, min_speed_kph=100.0)
+    crawl = CornerMetrics(corner="T1", segment_time_s=14.0, min_speed_kph=20.0)
+
+    def cd(corner: str, t: float | None, cmp: CornerMetrics = m) -> CornerDelta:
+        return CornerDelta(corner, t, None, None, None, None, None, None, None, None, None, None, m, cmp)
+
+    def comp(*corners: CornerDelta, ok: bool = True) -> LapComparison:
+        return LapComparison(1, 2, 0.1, [], [], list(corners), Compatibility(ok=ok))
+
+    out = R.compared_corner_laps(
+        {
+            12: comp(cd("T1", 0.1), cd("T2", None)),
+            11: comp(cd("T1", -0.05)),
+            13: comp(cd("T1", 0.3), ok=False),  # not usable: no evidence either way
+            14: comp(cd("T1", 4.0, crawl), cd("T2", 0.02)),  # an incident at T1
+        }
+    )
+    assert out == {"T1": {11: -0.05, 12: 0.1}, "T2": {12: None, 14: 0.02}}
+    assert list(out["T1"]) == [11, 12]
+    # observations add the laps they prove, and fill an unknown time with their impact
+    both = R.corner_laps({12: [obs(3, "low_min_speed", "T2", impact=0.07)], 15: [obs(4, "incident", "T1")]}, out)
+    assert both == {"T1": {11: -0.05, 12: 0.1}, "T2": {12: 0.07, 14: 0.02}}
+
+
+def test_was_words_describe_and_never_say_brake_later() -> None:
+    kinds = ("brake_early", "brake_late_overdrive", "low_min_speed", "overspeed_apex", "late_throttle", "coasting")
+    for k in kinds:
+        w = R.was_words(k, -12.4)
+        assert w and not BRAKE_LATER.search(w), (k, w)
+    assert R.was_words("brake_early", -14.6) == "braking about 15 m early"
+    assert R.was_words("exit_gain", 5.0) is None and R.was_words("coasting", None) is None
 
 
 # ---------------------------------------------------------------------------------------------- progress

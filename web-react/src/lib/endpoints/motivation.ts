@@ -169,6 +169,8 @@ export type ThingKind = "went_well" | "work_on" | "progress";
 export type ThingSource =
   | "pb"
   | "observation"
+  /** Went well: a habit sorted, clean on its corner's last 3 compared laps (motivation/recap.py fixed_thing). */
+  | "fixed"
   | "clean_streak"
   | "in_session_gain"
   | "all_clean"
