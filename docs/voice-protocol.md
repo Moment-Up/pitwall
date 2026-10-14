@@ -123,6 +123,12 @@ the queue says the rest by priority, then this order, then first in first out.
     adds `info`.
   - **Seat change:** when another driver takes the seat, unsaid `lap_summary`, `goal` and `coaching` messages about
     the previous driver's laps are dropped; alerts, race, strategy and car health calls (about the car) stay.
+  - **Coaching** (kind `coaching`): the lap's coach block `picked` points (`coach.selection`, the same points the Drive
+    screen shows): the habit tracker's events first (`meta.habit_event` `fixed`, `improving`, `announce` or `still`;
+    "Turn 6, losing 0.31 s: minimum speed 12 km/h down. 3 of the last 4 laps."), then a single lap's big fault (0.3 s
+    or more, clearly measured; `meta.habit_event` null), then praise. A habit being worked on is not said again in full
+    every lap (its corner reminder, above, does that), small one-offs are screen-only, and the same big fault two laps
+    running is said once.
 - **Race radio** (kind **`race`** and `alert`, `pitwall/raceradio`): race situation calls (position, the start and
   countdown, lap one, gaps, warnings, minor damage) are kind `race`: normal and detailed intensity, from the one
   per-lap budget (at most 2 of it a lap at `normal`, 3 at `detailed`). Calls marked `meta.race_allowance` false are

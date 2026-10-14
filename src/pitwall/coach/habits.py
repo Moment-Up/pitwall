@@ -40,7 +40,7 @@ laps in a row is forgotten without a word (its slot frees).
 
 Radio events, at most these per compared lap and in this order (``EVENT_ORDER``):
 
-1. ``fixed``     - a focus habit stopped; its slot frees.
+1. ``fixed``     - a focus habit stopped and is proven sorted; its slot frees.
 2. ``improving`` - once per focus habit: it still fires, but at most ``IMPROVED_FRACTION`` of its size when announced.
 3. ``announce``  - a habit seen on this lap takes a free slot (highest mean impact first; the radio's limits decide
    which ones may: ``eligible``).
