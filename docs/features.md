@@ -88,7 +88,8 @@ browser at 1180 x 820 and 1133 x 744 against a mock live socket; not yet seen in
 gap to the family record, or "Laps compared" when this session set it), one line of pace against the AI in an F1 race,
 [Today's 3 things](#todays-3-things) and at most two new badges. Each fact shows once: a personal best named in Went
 well is not repeated by the tile tag, Progress or a badge. When a drill ran in the session, its result takes the
-Work on slot. Without telemetry Drive shows what to check plus a button to try the synthetic demo.
+Work on slot. Without telemetry Drive shows what to check plus a button to try the synthetic demo (ten laps of the
+radio coaching habits: [what to look for](install.md#try-the-demo-no-game-needed)).
 
 **Goals on Drive.** While you drive, a reached goal shows only as a 6-second `GOAL REACHED` chip (a penalty or contact
 of your own wins over it; it wins over a flashback, a pit message and a fastest lap); nothing else moves on track. No
@@ -833,6 +834,10 @@ now coaches habits, with fixed rules (`analysis/coaching.py`, `coach/habits.py`)
   session, and a habit that cannot be measured for 5 laps is dropped without a word.
 - **A single lap's slip** is said only when it is a big one-off, and the same big fault two laps running is said
   once: the habit is announced when it is one.
+- **See it in the demo.** The synthetic demo (Drive's *Try a demo replay*, Settings › System, `pitwall simulate`) is
+  ten laps of exactly this: a braking habit announced, called and sorted, the habit that waited becoming the focus
+  with its corner reminder, a big one-off said once and a small one left on the screen
+  ([what to look for](install.md#try-the-demo-no-game-needed)).
 
 Evidence: unit tests, synthetic sessions and replays of recorded F1 25 races (synthetic and recorded tiers); **not
 yet heard in a live session**.

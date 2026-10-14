@@ -543,15 +543,22 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     @app.post("/api/simulate")
     async def simulate(body: SimulateRequest) -> dict[str, Any]:
         from pitwall.sim.f1_stream import F1Scenario
-        from pitwall.sim.scenarios import SCENARIOS, write_synthetic_capture
+        from pitwall.sim.scenarios import SCENARIOS, STORIES, write_synthetic_capture
 
         if body.scenario not in SCENARIOS:
             raise HTTPException(404, f"unknown scenario; options: {sorted(SCENARIOS)}")
         sc: F1Scenario = SCENARIOS[body.scenario]()
         sc.packet_format = body.packet_format
         path = settings.capture_dir / f"synthetic-{body.scenario}-{body.packet_format}.pwcap"
+        # always written anew, so a demo replay is the current scenario, never a capture from an older version
         truth = await asyncio.to_thread(write_synthetic_capture, path, sc, body.scenario)
-        return {"path": str(path), "synthetic": True, "lap_times_ms": truth.lap_times_ms}
+        story = STORIES.get(body.scenario)  # what to look for in its replay (also in the capture's meta.extra)
+        return {
+            "path": str(path),
+            "synthetic": True,
+            "lap_times_ms": truth.lap_times_ms,
+            "story": story.to_dict() if story is not None else None,
+        }
 
     # ------------------------------------------------------------------ AI engineer
     @app.post("/api/engineer/ask")

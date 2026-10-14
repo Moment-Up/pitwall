@@ -25,6 +25,8 @@ The release workflow copies a release's bullet points into its GitHub release no
   says what the radio is working on. Checked in a desktop browser, not yet on an iPad.
 - Today's 3 things: One to work on is a habit that is still there (else a big one-off), and a habit you sorted counts
   as went well. Tested on synthetic and recorded sessions.
+- The demo (Try a demo replay) now shows the habits story in 10 laps: a habit announced, called and sorted, then a
+  reminder for the next one. Settings › System lists what to look for. Synthetic.
 - A habit the radio announces gets its corner reminder on the lap you hear it, not one lap later. Tested on synthetic
   laps; not live.
 

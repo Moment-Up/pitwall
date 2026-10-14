@@ -1,10 +1,10 @@
 """coachref through the whole live pipeline on SYNTHETIC laps (``LapProcessor`` + ``LiveState`` + ``CueEngine`` +
 ``CoachRef`` + ``voice.proactive.lap_messages``).
 
-Sam drives the synthetic clean session, Ann the coaching demo with its injected mistakes (lap 3 brakes 15 m early
-into design-T3, learned "T2"). Both are stored as ordinary non-synthetic sessions *on purpose*: the test exercises
-cross-driver resolution, the wording, the braking clamp and drills against known ground truth. It is never a
-compatibility claim: synthetic != recorded != live.
+Sam drives the synthetic clean session, Ann the one-offs session (the coaching demo before habits: lap 3 brakes
+15 m early into design-T3, learned "T2"). Both are stored as ordinary non-synthetic sessions *on purpose*: the
+test exercises cross-driver resolution, the wording, the braking clamp and drills against known ground truth. It is
+never a compatibility claim: synthetic != recorded != live.
 """
 
 from __future__ import annotations
@@ -16,11 +16,10 @@ from typing import Any
 import pytest
 
 from pitwall.core.coachref import LEGACY_REASON, ChoiceRequest, DrillRequest
-from pitwall.sim.scenarios import coaching_demo
 from pitwall.voice.proactive import lap_messages
 from pitwall.voice.types import MessageKind
 from tests.coachref_support import Env, drive, make_env, new_session
-from tests.conftest import DecodedSession
+from tests.conftest import DecodedSession, one_offs_scenario
 
 pytestmark = pytest.mark.synthetic
 
@@ -33,24 +32,24 @@ def env(tmp_path: Path) -> Iterator[Env]:
 
 
 def test_ann_against_sams_lap_and_a_drill(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
     sam = env.drivers.create("Sam").id
     ann = env.drivers.default_id
     ss = new_session(env.writer, sam, clean_session.info, "s-sam")
     drive(env.proc, ss, clean_session.info, [(clean_session.laps[i], 60_000 + i, i + 1) for i in range(3)])
-    sa = new_session(env.writer, ann, demo_session.info, "s-ann")
+    sa = new_session(env.writer, ann, one_offs_session.info, "s-ann")
     env.live.reset_session(sa, "udp:20777", False)
-    env.live.on_session(demo_session.info)
+    env.live.on_session(one_offs_session.info)
     env.live.cues.set_mode("all")
     env.svc.set_choice(ChoiceRequest(kind="driver_best", target_driver_id=sam))
     notes: list[dict[str, Any]] = []
     env.live.subscribe(lambda kind, payload: notes.append(payload) if kind == "lap" else None)
-    laps, info = demo_session.laps, demo_session.info
+    laps, info = one_offs_session.laps, one_offs_session.info
     res = drive(env.proc, sa, info, [(laps[0], 69_000, 1), (laps[1], 69_500, 2), (laps[2], 70_500, 3)])
     # Ann's observations name Sam; the injected early braking is seen against Sam's lap
     early = [o for o in res[2]["observations"] if o["kind"] == "brake_early"]
-    injected = coaching_demo().driver_by_lap[3].deviations["T3"].brake_early_m
+    injected = one_offs_scenario().driver_by_lap[3].deviations["T3"].brake_early_m
     assert early and early[0]["corner"] == "T2" and "than Sam" in early[0]["text"]
     assert abs(abs(early[0]["value"]) - injected) <= 3.0
     # every braking call is at or before Ann's own point
@@ -78,18 +77,21 @@ def test_ann_against_sams_lap_and_a_drill(
 
 
 def test_a_synthetic_live_session_ignores_the_choice(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
     sam = env.drivers.create("Sam").id
     ann = env.drivers.default_id
     ss = new_session(env.writer, sam, clean_session.info, "s-sam")
     drive(env.proc, ss, clean_session.info, [(clean_session.laps[i], 60_000 + i, i + 1) for i in range(3)])
     env.svc.set_choice(ChoiceRequest(kind="driver_best", target_driver_id=sam))
-    syn = new_session(env.writer, ann, demo_session.info, "s-syn", synthetic=True)
+    syn = new_session(env.writer, ann, one_offs_session.info, "s-syn", synthetic=True)
     env.live.reset_session(syn, "udp:20777", True)
-    env.live.on_session(demo_session.info)
+    env.live.on_session(one_offs_session.info)
     res = drive(
-        env.proc, syn, demo_session.info, [(demo_session.laps[0], 69_000, 1), (demo_session.laps[2], 70_500, 2)]
+        env.proc,
+        syn,
+        one_offs_session.info,
+        [(one_offs_session.laps[0], 69_000, 1), (one_offs_session.laps[2], 70_500, 2)],
     )
     ref = env.live.reference
     assert ref is not None and ref["own"] is True and ref["session_id"] == syn  # never Sam's lap

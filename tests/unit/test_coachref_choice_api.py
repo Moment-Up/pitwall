@@ -55,7 +55,7 @@ def moving(rt: Runtime, speed: float | None) -> None:
 
 @pytest.fixture
 def family(
-    api: tuple[TestClient, Runtime], clean_session: DecodedSession, demo_session: DecodedSession
+    api: tuple[TestClient, Runtime], clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> dict[str, Any]:
     _, rt = api
     ann = rt.drivers.default_id
@@ -69,10 +69,10 @@ def family(
     )
     jo_info = session_info(clean_session.info, assists={"braking": 2})
     feed(rt, new_session(rt.writer, jo, jo_info, "s-jo"), jo_info, [(clean_session.laps[0], 59_000, 1)])
-    sa = new_session(rt.writer, ann, demo_session.info, "s-ann")
-    go_live(rt, sa, demo_session.info)
-    feed(rt, sa, demo_session.info, [(demo_session.laps[0], 69_000, 1), (demo_session.laps[2], 70_500, 2)])
-    return {"ann": ann, "sam": sam, "jo": jo, "sid": sa, "info": demo_session.info}
+    sa = new_session(rt.writer, ann, one_offs_session.info, "s-ann")
+    go_live(rt, sa, one_offs_session.info)
+    feed(rt, sa, one_offs_session.info, [(one_offs_session.laps[0], 69_000, 1), (one_offs_session.laps[2], 70_500, 2)])
+    return {"ann": ann, "sam": sam, "jo": jo, "sid": sa, "info": one_offs_session.info}
 
 
 def test_options_without_a_live_session(api: tuple[TestClient, Runtime]) -> None:

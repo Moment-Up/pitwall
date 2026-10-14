@@ -143,8 +143,9 @@ def test_session_uid_zero_does_not_reset(demo_session: DecodedSession) -> None:
 
 
 def test_invalid_lap_is_reported_invalid(demo_session: DecodedSession) -> None:
-    lap7 = next(lap for lap in demo_session.laps if lap.lap_number == 7)
-    assert lap7.valid is False and "invalid" in lap7.flags and not lap7.clean
+    lap10 = next(lap for lap in demo_session.laps if lap.lap_number == 10)  # the demo's last lap: track limits
+    assert lap10.valid is False and "invalid" in lap10.flags and not lap10.clean
+    assert [lap.lap_number for lap in demo_session.laps if lap.valid is False] == [10]
 
 
 def test_all_demo_packets_decode_without_errors(
@@ -154,7 +155,7 @@ def test_all_demo_packets_decode_without_errors(
         st = s.adapter.stats
         assert st.rejected == 0 and st.errors == 0 and st.decoded == st.packets
         completions = [lap for lap in s.laps if lap.lap_time_ms is not None]
-        assert len(completions) == 7
+        assert len(completions) == 10  # the demo's ten laps
 
 
 def test_lap_completion_object() -> None:

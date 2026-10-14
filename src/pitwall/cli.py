@@ -92,7 +92,7 @@ def simulate(
     out: Path | None = None,
 ) -> None:
     """Write a SYNTHETIC F1 capture with known injected driving errors (for development without a game)."""
-    from pitwall.sim.scenarios import SCENARIOS, write_synthetic_capture
+    from pitwall.sim.scenarios import SCENARIOS, STORIES, write_synthetic_capture
 
     s = get_settings()
     sc = SCENARIOS[scenario]()
@@ -102,6 +102,13 @@ def simulate(
     truth = write_synthetic_capture(path, sc, scenario)
     typer.echo(f"wrote {path} ({path.stat().st_size // 1024} KB, {time.perf_counter() - t0:.1f}s) - SYNTHETIC data")
     typer.echo("ground-truth lap times (ms): " + json.dumps(truth.lap_times_ms))
+    story = STORIES.get(scenario)
+    if story is not None:  # what to look for when it is replayed (also in the capture's meta.extra["story"])
+        typer.echo("what to look for: " + story.intro)
+        for b in story.beats:
+            laps = ("lap " if len(b.laps) == 1 else "laps ") + ", ".join(str(n) for n in b.laps)
+            said = f'"{b.radio}"' if b.radio is not None else f"[{b.screen}]"
+            typer.echo(f"  {laps}, {b.when}: {said} - {b.shows}")
 
 
 @app.command()

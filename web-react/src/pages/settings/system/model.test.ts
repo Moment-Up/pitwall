@@ -8,6 +8,7 @@ import {
   contextText,
   fieldLevels,
   fileName,
+  lapsText,
   llmHealthView,
   modelName,
   replayRunning,
@@ -15,6 +16,7 @@ import {
   simulateNote,
   sizeText,
   sortCaptures,
+  storyRows,
   supportOf,
   telemetryText,
   udpText,
@@ -133,6 +135,30 @@ describe("captures", () => {
 
   it("the demo note always says SYNTHETIC", () => {
     expect(simulateNote("/d/synthetic-coaching-demo-2026.pwcap")).toMatch(/^Wrote synthetic-coaching-demo-2026\.pwcap\. It is SYNTHETIC/);
+  });
+
+  it("story laps in words: ranges for runs of three or more", () => {
+    expect(lapsText([4])).toBe("Lap 4");
+    expect(lapsText([5, 6, 7])).toBe("Laps 5-7");
+    expect(lapsText([9, 10])).toBe("Laps 9 and 10");
+    expect(lapsText([10, 5])).toBe("Laps 5 and 10");
+    expect(lapsText([2, 3, 4, 6, 9])).toBe("Laps 2-4, 6 and 9");
+    expect(lapsText([])).toBe("-");
+  });
+
+  it("what to look for: the demo's story beats, radio lines apart from screen notes", () => {
+    // POST /api/simulate's story for the coaching demo (sim/scenarios.py COACHING_DEMO_STORY), two of its beats
+    const rows = storyRows({
+      intro: "SYNTHETIC: 10 generated laps at Pitwall Park",
+      beats: [
+        { laps: [5, 6, 7], when: "before T5", radio: "T5 brake", screen: null, shows: "Braking calls" },
+        { laps: [6], when: "on the screen", radio: null, screen: "T1: 7 km/h slower mid-corner", shows: "A small one-off" },
+      ],
+    });
+    expect(rows.map((r) => [r.when, r.line, r.radio])).toEqual([
+      ["Laps 5-7 · before T5", "T5 brake", true],
+      ["Lap 6 · on the screen", "T1: 7 km/h slower mid-corner", false],
+    ]);
   });
 });
 

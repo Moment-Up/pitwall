@@ -117,7 +117,9 @@ uv run pitwall report                                                    # print
 uv run pitwall send data/captures/synthetic-coaching-demo-2025.pwcap --speed 8   # with pitwall serve running: watch it live
 ```
 
-The demo is generated data and is labelled SYNTHETIC everywhere. Then point your game's UDP telemetry at the
+The demo is ten generated laps in which the radio finds a braking habit, calls it until it is sorted, then reminds you
+of the next one; `pitwall simulate` prints what to look for ([Try the demo](docs/install.md#try-the-demo-no-game-needed)).
+It is labelled SYNTHETIC everywhere. Then point your game's UDP telemetry at the
 computer's IP address, port 20777 (`pitwall serve` prints both), and drive:
 [Connect your game](docs/install.md#connect-your-game). Without a language model, switch the AI engineer off in
 Settings › AI engineer, or set `PITWALL_LLM_ENABLED=false` in `.env`. `uv run pitwall doctor` checks an install at

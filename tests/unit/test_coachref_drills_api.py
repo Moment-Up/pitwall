@@ -44,7 +44,7 @@ def view_keys(v: dict[str, Any]) -> None:
         keys("DrillAttempt", a)
 
 
-def test_preconditions(api: tuple[TestClient, Runtime], demo_session: DecodedSession) -> None:
+def test_preconditions(api: tuple[TestClient, Runtime], one_offs_session: DecodedSession) -> None:
     client, rt = api
     body = {"corner_ref": "T2", "kind": "brake_point"}
     r = client.post("/api/coachref/drills", json=body)
@@ -54,14 +54,14 @@ def test_preconditions(api: tuple[TestClient, Runtime], demo_session: DecodedSes
     assert (
         opts["available"] is False and opts["reason"] == "Drills run on your own live driving." and opts["kinds"] == []
     )
-    sid = new_session(rt.writer, rt.drivers.default_id, demo_session.info, "s-ann")
-    go_live(rt, sid, demo_session.info)
+    sid = new_session(rt.writer, rt.drivers.default_id, one_offs_session.info, "s-ann")
+    go_live(rt, sid, one_offs_session.info)
     r = client.post("/api/coachref/drills", json=body)
     assert (r.status_code, r.json()["detail"]) == (
         409,
         "Pitwall is still learning this track: drive 3 clean laps first.",
     )
-    syn = new_session(rt.writer, rt.drivers.default_id, demo_session.info, "s-syn", synthetic=True)
+    syn = new_session(rt.writer, rt.drivers.default_id, one_offs_session.info, "s-syn", synthetic=True)
     rt.live.reset_session(syn, "udp:20777", True)
     assert client.post("/api/coachref/drills", json=body).json()["detail"] == "Drills run on your own live driving."
     # validation
@@ -76,14 +76,14 @@ def test_preconditions(api: tuple[TestClient, Runtime], demo_session: DecodedSes
 
 
 @pytest.fixture
-def live_ann(api: tuple[TestClient, Runtime], demo_session: DecodedSession) -> dict[str, Any]:
+def live_ann(api: tuple[TestClient, Runtime], one_offs_session: DecodedSession) -> dict[str, Any]:
     _, rt = api
     ann = rt.drivers.default_id
-    sid = new_session(rt.writer, ann, demo_session.info, "s-ann")
-    go_live(rt, sid, demo_session.info)
-    laps = demo_session.laps
-    feed(rt, sid, demo_session.info, [(laps[0], 69_000, 1), (laps[1], 69_500, 2), (laps[0], 69_200, 3)])
-    return {"ann": ann, "sid": sid, "info": demo_session.info, "laps": laps}
+    sid = new_session(rt.writer, ann, one_offs_session.info, "s-ann")
+    go_live(rt, sid, one_offs_session.info)
+    laps = one_offs_session.laps
+    feed(rt, sid, one_offs_session.info, [(laps[0], 69_000, 1), (laps[1], 69_500, 2), (laps[0], 69_200, 3)])
+    return {"ann": ann, "sid": sid, "info": one_offs_session.info, "laps": laps}
 
 
 def test_lifecycle_start_attempts_completed(api: tuple[TestClient, Runtime], live_ann: dict[str, Any]) -> None:

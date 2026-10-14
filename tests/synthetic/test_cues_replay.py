@@ -9,10 +9,11 @@ them). Where the car really was at that moment is read back from the replayed fr
 independently computed intended point: the car's position ``anticipation_s`` before it reached
 ``target - MARGIN_M`` (anticipation is 0 for brake calls, 2 s for markers, a reminder's length plus 1 s).
 
-Two sessions: the coaching demo (one-off mistakes: focus mode calls none of them) and ``habit_session`` (the same two
-mistakes on every lap from lap 3: a braking habit and a minimum-speed habit, worked on at Detailed intensity), where a
-corner reminder's phrase - spoken by a simulated voice slower than the planner's estimate, whose length the "hub"
-reports - must END at least ``REMINDER_END_MARGIN_S`` before the braking point.
+Two sessions: the coaching demo (the habits story, ``sim.scenarios.COACHING_DEMO_STORY``: focus mode calls its braking
+habit and reminds its other habit, never a one-off; ten laps of braking zones for the all and markers modes) and
+``habit_session`` (the same two mistakes on every lap from lap 3: a braking habit and a minimum-speed habit, worked on at
+Detailed intensity), where a corner reminder's phrase - spoken by a simulated voice slower than the planner's estimate,
+whose length the "hub" reports - must END at least ``REMINDER_END_MARGIN_S`` before the braking point.
 
 Errors are checked two ways: a two-sided tolerance (the timing model is accurate) and a one-sided bound, error <=
 ``MARGIN_M``: with simulated latency jitter the key word may use the margin but never lands past the reference
@@ -36,7 +37,6 @@ import pytest
 
 from pitwall.coach.cues import (
     MARGIN_M,
-    NO_HABITS,
     REMINDER_END_MARGIN_S,
     CueEngine,
     CueEvent,
@@ -237,13 +237,18 @@ def _heard(rp: Replay, seed: int = 7) -> tuple[list[Heard], int]:
 
 
 def test_focus_mode_calls_habits_not_one_offs(replays: dict[tuple[str, int], Replay]) -> None:
-    """Focus mode calls the session's habits (coach.habits): the coaching demo's mistakes happen on one lap each, so
-    they stay on the screen and no braking call follows them. (Before habits, lap 3's single early braking was called
-    on laps 4-6: one lap of evidence made a focus corner.)"""
+    """Focus mode calls the session's habits (coach.habits), never a one-off. The coaching demo's braking habit at T5
+    (laps 3-5) is called on laps 5-7, once it is a habit (never after its first lap alone) and until it is sorted; the
+    T4 habit gets its reminder once it is the focus (laps 9-10); the one-offs (T1 on lap 6, T2 on lap 9) are measured
+    and stay on the screen. (Before habits, one lap of early braking made a focus corner, called on the next laps.)"""
     rp = replays["focus", 60]
-    assert [o["corner"] for o in rp.lap_observations[3] if o["kind"] == "brake_early"]  # the one-off is measured
-    assert rp.events == []
-    assert rp.live.cues.plan.cues == () and rp.live.cues.plan.reason == NO_HABITS
+    assert [o["corner"] for o in rp.lap_observations[3] if o["kind"] == "brake_early"] == ["T5"]  # measured on lap 3
+    calls = [(ev.lap, ev.cue.corner, ev.cue.kind) for ev in rp.events]
+    brake, remind = CueKind.BRAKE, CueKind.REMINDER
+    assert calls == [(5, "T5", brake), (6, "T5", brake), (7, "T5", brake), (9, "T4", remind), (10, "T4", remind)]
+    assert ("T1", "low_min_speed") in {(o["corner"], o["kind"]) for o in rp.lap_observations[6]}
+    assert ("T2", "late_throttle") in {(o["corner"], o["kind"]) for o in rp.lap_observations[9]}
+    assert [(c.corner, c.kind) for c in rp.live.cues.plan.cues] == [("T4", remind)]  # T5 sorted: no call any more
 
 
 @pytest.mark.parametrize("hz", [60, 20])
@@ -335,10 +340,10 @@ def test_every_braking_zone_cue_lands_within_tolerance(
     per_lap: dict[tuple[int, str], int] = {}
     for ev in rp.events:
         per_lap[(ev.lap, ev.cue.corner)] = per_lap.get((ev.lap, ev.cue.corner), 0) + 1
-    assert set(per_lap.values()) == {1}  # one call per corner per lap, flashback lap 6 included
-    assert {lap for lap, _ in per_lap} == {3, 4, 5, 6, 7}  # plan from lap 2's analysis on
+    assert set(per_lap.values()) == {1}  # one call per corner per lap, flashback lap 5 included
+    assert {lap for lap, _ in per_lap} == set(range(3, 11))  # plan from lap 2's analysis on
     heard, unmeasurable = _heard(rp)
-    assert unmeasurable <= 1  # at most a cue whose word fell after lap 6's flashback
+    assert unmeasurable <= 1  # at most a cue whose word fell after lap 5's flashback
     errors = [round(h.error_m, 2) for h in heard]
     assert len(errors) >= 4 * len(plan.cues)
     assert max(map(abs, errors)) <= TOLERANCE_M, errors

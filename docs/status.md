@@ -278,20 +278,34 @@ simulated audio latency of 0.45 s (a reminder's length: the planner's word estim
 lines that are not praise; a silent lap is a compared lap without one; "same point next lap" is a line about the
 corner and fault of a line on the previous compared lap.
 
-Synthetic scenarios (`pitwall simulate`'s coaching demo and the review's four), before / after:
+Synthetic scenarios (`pitwall simulate`'s coaching demo as it was then, and the review's four), before / after:
 
 | Scenario | Compared laps | Corrective lines | Silent laps | Same point next lap | Braking calls | First lap coached | After: announced, better, still, sorted |
 |---|---|---|---|---|---|---|---|
-| coaching demo (one-offs only) | 6 | 4 / 3 | 2 / 3 | 0 / 0 | 3 / 0 | 3 / 3 | 0, 0, 0, 0 |
+| coaching demo of v0.3.0 (one-offs only; now `one_offs_scenario` in the tests) | 6 | 4 / 3 | 2 / 3 | 0 / 0 | 3 / 0 | 3 / 3 | 0, 0, 0, 0 |
 | habit (design corner 3 brakes 15 m early, laps 3-10) | 9 | 8 / 4 | 1 / 5 | 4 / 1 | 7 / 6 | 3 / 3 | 1, 0, 1, 0 |
 | pattern (four corners brake 12 m early, laps 3-9) | 8 | 7 / 5 | 1 / 3 | 1 / 0 | 12 / 10 | 3 / 3 | 1, 0, 1, 0 |
 | improving (a new best every lap) | 7 | 0 / 0 | 7 / 7 | 0 / 0 | 0 / 0 | - / - | 0, 0, 0, 0 |
 | pb_reset (a braking habit while another corner improves) | 9 | 5 / 2 | 4 / 7 | 4 / 0 | 5 / 6 | 2 / 2 | 1, 0, 0, 0 |
 
 At detailed intensity the habit scenario went from 12 to 4 corrective lines and the pattern scenario from 14 to 7
-(two habits announced, two "still"). The coaching demo has no habit, so in focus mode it no longer makes a braking
-call (before: "T2 brake" on laps 4-6 after one lap braking early); its radio lines lost the 0.08 s one-off on lap 4.
-"improving" stays silent: each lap is a new best, so nothing loses time against the reference.
+(two habits announced, two "still"). The v0.3.0 coaching demo has no habit, so in focus mode it no longer makes a
+braking call (before: "T2 brake" on laps 4-6 after one lap braking early); its radio lines lost the 0.08 s one-off on
+lap 4. "improving" stays silent: each lap is a new best, so nothing loses time against the reference.
+
+**The coaching demo tells the habits story (2026-10-14).** With only one-offs the demo showed no habit, no reminder,
+no "sorted" and no braking call in focus mode, so `pitwall simulate` (and Drive's *Try a demo replay*, Settings ›
+System) now writes ten laps that do (`sim/scenarios.py` `coaching_demo`; flashback on lap 5, invalid lap 10). Its
+radio at Normal with nobody seated, in the corner names it learns: after lap 4 "T5, losing 0.23 s: braking 14 m
+earlier. 2 of the last 3 laps."; "T5 brake" on laps 5-7; after lap 7 "T5 sorted: clean on 2 of the last 3 laps."; after
+lap 8 "T4, losing 0.09 s: minimum speed 9 km/h down. 5 of the last 5 laps."; "T4: apex speed, 9 down" before T4 on laps
+9 and 10; after lap 9 the big one-off "T2, losing 0.67 s: full throttle 31 m later than your reference."; lap 6's
+small one-off (T1, 7 km/h) stays on the screen. The capture carries this list (`meta.extra["story"]`), `pitwall
+simulate` prints it and Settings › System shows it after generating the demo. Pinned line for line by
+`tests/synthetic/test_demo_story.py` in both packet formats, with the habit lines committed at the pick and on air.
+**Synthetic only**; the Settings list and the Drive button have not been seen in a browser. A habit announced after
+the line now gets its reminder on the lap the radio says it (`LiveState.habit_line_said` replans the cues): before,
+with the radio hub running, it started a lap later.
 
 30 of the owner's captures (F1 25 and GT7 on the PS5, 2026-10-10 to 13; every capture of 1 MB or more except the
 synthetic demo and the AC probes), 28 sessions with a compared lap, before / after:
@@ -396,7 +410,7 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   report's "One to work on" can be empty for it. A habit is not counted against a reference it was never measured
   against (another driver's lap, a best from an earlier session) until a lap shows it there, so switching references
   mid-stint can let a habit be forgotten. With the radio hub running, a habit line counts as said when it goes on air;
-  a line said in the instant between the next lap's analysis and its messages could be said twice (not seen in tests). The synthetic coaching demo has only one-offs, so it shows no braking call in focus mode. In the
+  a line said in the instant between the next lap's analysis and its messages could be said twice (not seen in tests). The coaching demo needs the radio on to make a habit the focus: without it Drive shows the notes but no reminder. In the
   replays a reminder's length is the planner's estimate; the hub's measured audio length is unit-tested only. Markers
   and braking calls still assume a driver slower than the reference stays slower to the corner (reminders do not).
 - **Race radio:** nothing heard live; F1 25's `gridPosition` is 0-based at a race start on the PS5 (pole = 0), so the

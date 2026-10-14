@@ -48,13 +48,22 @@ def test_bests_of_a_replayed_synthetic_session_hold_no_records(replayed: Runtime
 
 
 def test_coach_block_is_the_latest_compared_lap_with_all_wordings(replayed: Runtime) -> None:
+    """The habits demo ends on lap 10 (invalid: compared and shown, never a habit lap). Nothing is said after it (its
+    T4 reminder was said before the corner); the card shows the T4 habit being worked on, with every wording and
+    its reminder, and the T5 braking habit sorted."""
     coach = replayed.live.snapshot()["coach"]
-    assert coach is not None and coach["lap_number"] == 7 and coach["skill_level"] == "advanced"
-    (point,) = coach["picked"]
-    assert point["kind"] == "brake_early" and point["corner"] == "T1" and point["picked"]
-    assert point["short"] == "T1: braked 20 m earlier"
-    assert point["text_simple"] == "T1: you braked about 20 m earlier than on your reference lap."
-    assert coach["by_corner"]["T1"]["id"] == point["id"]
+    assert coach is not None and coach["lap_number"] == 10 and coach["skill_level"] == "advanced"
+    assert coach["picked"] == []
+    point = coach["by_corner"]["T4"]
+    assert point["kind"] == "low_min_speed" and not point["picked"] and point["habit"]["status"] == "focus"
+    assert point["short"] == "T4: 9 km/h slower mid-corner"
+    assert point["text_simple"] == "T4: you were 9 km/h slower at the slowest point of the corner."
+    (focus,) = coach["focus"]
+    assert focus["corner"] == "T4" and focus["reminder"]["text"] == "T4: apex speed, 9 down"
+    assert {(h["corner"], h["kind"], h["status"]) for h in coach["habits"]} == {
+        ("T4", "low_min_speed", "focus"),
+        ("T5", "brake_early", "fixed"),
+    }
 
 
 def test_game_block_follows_the_replayed_data_and_never_reports_a_mismatch(replayed: Runtime) -> None:
