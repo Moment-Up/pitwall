@@ -24,8 +24,10 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   After ``session_ended`` F1 stops sending at once, so ``connection`` turns ``stale`` two seconds later while
   ``session_state`` stays ``ended`` until the next session starts.
 * ``coach`` (D6): the coaching points the radio picks for a lap under the seated driver's limits
-  (``coach.selection``), and per corner the point the coach card shows. The same selection travels with the
-  ``lap`` notification (``coach``) so the radio speaks exactly what the screen shows.
+  (``coach.selection``), and per corner the point the coach card shows; the session's habits and the ones being
+  worked on (``habits`` / ``focus``, ``coach.habits``). The same selection travels with the ``lap`` notification
+  (``coach``) so the radio speaks exactly what the screen shows, and its ``focus`` / ``habits`` go to the cue
+  engine with the lap (``CueEngine.on_lap_result``).
 * ``bests`` (D2, every snapshot): session / driver / household bests for this game + track + car, published by
   the lap processor after each lap and when the session's context changes (``set_bests_requester``). A few hundred
   bytes, so it rides every snapshot: a lap that sets a record is coloured as set on the next frame, not up to
@@ -262,6 +264,15 @@ def _with_lap(totals: dict[str, Any] | None, lap: dict[str, Any]) -> dict[str, A
     return t
 
 
+def _compared_corners(comparison: dict[str, Any] | None) -> list[str] | None:
+    """The corners a lap's comparison had (``LapComparison.corners``): the habit tracker counts them as driven.
+    None when the comparison does not list them (unknown: only corners with an observation count)."""
+    corners = (comparison or {}).get("corners")
+    if not isinstance(corners, list):
+        return None
+    return [str(cd["corner"]) for cd in corners if isinstance(cd, dict) and cd.get("corner")]
+
+
 class LiveState:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -480,7 +491,10 @@ class LiveState:
         # once per lap: the radio speaks this pick. --- coachref --- while a drill runs (``drill``, from
         # CoachRef.after_lap) the lap's one point is the drill's: shown on the coach card when the lap was an attempt,
         # the previous card kept when it was not (an out lap)
-        coach = self.coach.select(lap, observations, compared and drill is None)
+        corners = _compared_corners(comparison) if compared else None
+        ref_id = (comparison or {}).get("ref_lap_id")
+        ref_lap_id = ref_id if isinstance(ref_id, int) and not isinstance(ref_id, bool) else None
+        coach = self.coach.select(lap, observations, compared and drill is None, corners=corners, ref_lap_id=ref_lap_id)
         if drill is not None:
             point = drill.get("point")
             coach = with_drill(coach, point if isinstance(point, dict) else None, str(drill.get("corner") or ""))
@@ -493,7 +507,9 @@ class LiveState:
             self.observations = observations
             self.last_comparison = comparison
         # replan before notifying, so the radio's speak window already knows the next lap's cues
-        self.cues.on_lap_result(observations, comparison, self._track_length_m())
+        self.cues.on_lap_result(
+            observations, comparison, self._track_length_m(), focus=coach.get("focus"), habits=coach.get("habits")
+        )
         self.notify("lap", {"lap": lap, "observations": observations[:5], "coach": coach})
 
     def set_reference(self, summary: dict[str, Any] | None, trace: DistanceTrace | None) -> None:

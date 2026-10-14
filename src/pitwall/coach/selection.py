@@ -4,11 +4,23 @@ The radio (``voice.proactive.lap_messages``) and the Drive screen (``snapshot.co
 their coaching points from this module, so the point the radio says about a corner is the point the coach card
 shows for it (docs/ui/design-spec.md P7, section 13 D6). Deterministic, no LLM, no I/O.
 
-* **Picked** - the points spoken for a lap, in speaking order: ``drivers.apply_coaching_limits`` over the lap's
-  non-incident observations with the seated driver's limits (confidence and impact floors, allowed rule kinds,
-  per-lap budget, a beginner's lap of grace before the same corner again). Incidents are never coaching points:
-  the driver knows they spun. Without a seated driver the limits are ``coaching_limits("advanced", intensity)``,
-  which ``drivers`` documents as identical to the radio before profiles existed.
+* **Picked** - the points spoken for a lap, in speaking order: the habit tracker's events (``coach.habits``: a habit
+  sorted, improving, announced as the new focus, still there) then the lap's big one-offs
+  (``analysis.coaching.is_big_one_off``, by priority) as corrective points, then praise, all under the seated
+  driver's limits (``drivers.apply_coaching_limits``: confidence and impact floors, allowed rule kinds, per-lap
+  budget, a beginner's lap of grace before the same corner again). Small one-offs and habits that are not the
+  focus are screen-only, and a focus habit is not repeated in full every lap (its corner reminder does that; the
+  radio says when it improves, is still there after ``habits.STILL_AFTER`` laps, or is sorted). A big fault that
+  also happened on the corner's previous lap is no one-off either (``HabitTracker.repeated``): the radio does not
+  say the same sentence two laps running, and announces the habit once it is one. Incidents are never
+  coaching points: the driver knows they spun. Without a seated driver the limits are
+  ``coaching_limits("advanced", intensity)``, which ``drivers`` documents as identical to the radio before profiles
+  existed. Without a tracker (``pick_points`` from older callers) a habit is said like a big one-off.
+* **Habits** - ``CoachSelection`` owns the session's ``habits.HabitTracker``: updated once per compared lap (not on
+  uncompared or drill laps), reset with the session and on a driver change, never on a reference change. Its focus
+  slots follow the radio (``habits.focus_slots``: none when quiet, one for a beginner and at normal, two at
+  detailed). The block carries its ``habits`` and ``focus`` lists, and every point says whether it is a habit
+  (``habit``: status and counts) or a one-off (``one_off``).
 * **By corner** - for each corner, the point the coach card shows when that corner is next: the picked point
   when the corner was picked (so screen and radio agree), else the corner's best point that passes the same
   filters (the per-lap budget and the repeat grace limit what is *said*, not what may be *shown*). Corrective
@@ -24,20 +36,36 @@ shows for it (docs/ui/design-spec.md P7, section 13 D6). Deterministic, no LLM, 
 Observation dicts are ``analysis.coaching.Observation.to_dict()`` shapes. Blocks carry slim copies (``slim``:
 ``COACH_FIELDS`` and the scalar evidence) because the snapshot is sent many times a second; they hold everything
 ``voice.proactive.coaching_text`` reads, and the full observation stays in ``observations[]``.
+
+Block contract (JSON; ``coach_block``)::
+
+    {lap_number, lap_id, ref_lap_number, skill_level, simple_wording, radio_quiet,
+     picked: [point],                 # radio order; tracker events have "habit_event" and their own "text"
+     by_corner: {corner: point},      # the coach card's point per corner
+     habits: [habit],                 # every habit of the session: focus, then seen, then fixed
+     focus: [habit + {reminder}]}     # the habits being worked on, with their corner reminder (or None)
+
+    point = slim observation + {picked, habit: {status, laps_seen, laps} | None, one_off: bool}
+            (+ for a tracker event: habit_event "announce"|"improving"|"fixed"|"still", was_value, clean_laps,
+            clean_of)
+    habit = {corner, corner_label, corner_voice, kind, status: "focus"|"seen"|"fixed", laps_seen, laps,
+             value (median of the laps it fired), unit, impact_s (mean), since_lap, short}
+    reminder = {parts: [spoken corner, phrase], text: "T6: apex speed, 12 down"} | None
 """
 
 from __future__ import annotations
 
 import dataclasses
 import threading
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from dataclasses import replace
 from typing import Any
 
+from pitwall.analysis.coaching import INCIDENT_KIND, is_big_one_off, is_corrective, is_habit
+from pitwall.coach.habits import HabitTracker, focus_slots
 from pitwall.drivers import COACHING_INTENSITIES, CoachingLimits, apply_coaching_limits, coaching_limits
 
 DEFAULT_SKILL = "advanced"  # no seated driver: the pre-profile radio (drivers.coaching_limits)
-INCIDENT_KIND = "incident"
 _UNBOUNDED = 1_000_000
 # What the coach card, the Ready card and the Session complete card read (types.ts ``ObservationNext``).
 COACH_FIELDS = (
@@ -61,6 +89,11 @@ COACH_FIELDS = (
     "short",
     "corner_voice",
     "ref_name",  # --- coachref --- the other driver a point is measured against (None = the driver's own lap)
+    # --- habits (coach.habits) --- a tracker event and its numbers (None on an ordinary observation)
+    "habit_event",
+    "was_value",
+    "clean_laps",
+    "clean_of",
 )
 
 
@@ -82,6 +115,31 @@ def _is_point(o: Mapping[str, Any]) -> bool:
     return o.get("kind") != INCIDENT_KIND
 
 
+def _unbounded(lim: CoachingLimits) -> CoachingLimits:
+    """``lim``'s filters (floors, kinds, repeat grace) with no per-lap budget."""
+    return dataclasses.replace(
+        lim, max_per_lap=_UNBOUNDED, max_corrective_per_lap=_UNBOUNDED, max_positive_per_lap=_UNBOUNDED
+    )
+
+
+def passes_limits(
+    o: Mapping[str, Any],
+    limits: CoachingLimits,
+    lap_number: int | None = None,
+    last_coached: Mapping[str, int] | None = None,
+) -> bool:
+    """Whether one point passes ``limits``' filters (floors, allowed kinds, a beginner's repeat grace), whatever the
+    per-lap budget. The habit tracker asks it before an announcement takes a focus slot."""
+    if limits.max_per_lap <= 0:
+        return False
+    return bool(apply_coaching_limits([o], _unbounded(limits), lap_number, last_coached))
+
+
+def _priority(o: Mapping[str, Any]) -> float:
+    p = o.get("priority")
+    return float(p) if isinstance(p, int | float) and not isinstance(p, bool) else 0.0
+
+
 def pick_points(
     observations: Sequence[Mapping[str, Any]],
     limits: CoachingLimits | None,
@@ -89,11 +147,32 @@ def pick_points(
     last_coached: Mapping[str, int] | None = None,
     *,
     intensity: str = "normal",
+    events: Sequence[Mapping[str, Any]] | None = None,
+    skip: Callable[[Mapping[str, Any]], bool] | None = None,
 ) -> list[Mapping[str, Any]]:
-    """The points the radio says for a lap, in speaking order (corrective first, then praise). Pure: the caller
-    records them with ``record_coached`` once they are chosen. ``intensity`` only matters without ``limits``."""
-    points = [o for o in observations if _is_point(o)]
-    return list(apply_coaching_limits(points, radio_limits(limits, intensity), lap_number, last_coached))
+    """The points the radio says for a lap, in speaking order: corrective points first - the habit tracker's
+    ``events`` in their order, then the big one-offs by priority - then praise, under ``limits`` (floors, kinds,
+    repeat grace, per-lap budget). Pure: the caller records them with ``record_coached`` once they are chosen.
+    ``intensity`` only matters without ``limits``. ``events`` None = no tracker (older callers): habits are said like
+    big one-offs. ``skip``: observations never said as a one-off (a habit already in focus)."""
+    lim = radio_limits(limits, intensity)
+    if lim.max_per_lap <= 0:
+        return []
+    points = [o for o in observations if _is_point(o) and (skip is None or not skip(o))]
+    if events is None:
+        loose = [o for o in points if is_habit(o) or is_big_one_off(o)]
+    else:
+        loose = [o for o in points if is_big_one_off(o)]
+    filters = _unbounded(lim)
+
+    def allowed(items: Sequence[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
+        keep = {id(o) for o in apply_coaching_limits(items, filters, lap_number, last_coached)}
+        return [o for o in items if id(o) in keep]
+
+    loose = sorted(allowed(loose), key=lambda o: (-_priority(o), str(o.get("id") or "")))
+    corrective = [*allowed(list(events or ())), *loose][: lim.max_corrective_per_lap]
+    praise = apply_coaching_limits([o for o in points if o.get("positive")], lim, lap_number, last_coached)
+    return [*corrective, *praise][: lim.max_per_lap]
 
 
 def record_coached(
@@ -153,6 +232,16 @@ def _int(v: object) -> int | None:
     return v if isinstance(v, int) and not isinstance(v, bool) else None
 
 
+def _tag(d: dict[str, Any], tracker: HabitTracker | None) -> dict[str, Any]:
+    """A block point's ``habit`` (``{status, laps_seen, laps}`` when it is a habit now; a "sorted" line keeps its
+    ``fixed`` status; None without a tracker) and ``one_off`` (corrective and no habit)."""
+    event = d.get("habit_event")
+    corner, kind = d.get("corner"), d.get("kind")
+    d["habit"] = None if tracker is None else tracker.habit_info(corner, kind, fixed=event is not None)
+    d["one_off"] = event is None and is_corrective(d) and d["habit"] is None and not is_habit(d)
+    return d
+
+
 def coach_block(
     lap: Mapping[str, Any],
     observations: Sequence[Mapping[str, Any]],
@@ -160,23 +249,40 @@ def coach_block(
     last_coached: MutableMapping[str, int] | None = None,
     *,
     intensity: str = "normal",
+    tracker: HabitTracker | None = None,
+    events: Sequence[Mapping[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    """D6 ``coach`` block for one lap. Screen and radio share it, so call it exactly once per lap: it records the
-    picked corners in ``last_coached`` (the caller's per-session state) unless the radio is quiet.
+    """D6 ``coach`` block for one lap (contract in the module docstring). Screen and radio share it, so call it
+    exactly once per lap: unless the radio is quiet it records the picked corners in ``last_coached`` (the caller's
+    per-session state) and commits the picked tracker events to ``tracker`` (``HabitTracker.commit``).
 
     ``intensity`` is the radio's coaching intensity: the budget when ``limits`` is None (no seated driver, as on
-    the radio), and a quiet radio with a seated driver says nothing either.
+    the radio), and a quiet radio with a seated driver says nothing either. ``tracker`` / ``events``: the session's
+    habit tracker and this lap's events (``HabitTracker.update``, already run); without a tracker the pick is the
+    stateless one (``pick_points`` with ``events`` None) and ``habits`` / ``focus`` are empty.
 
-    ``{lap_number, lap_id, ref_lap_number, skill_level, simple_wording, radio_quiet, picked: [...],
-    by_corner: {corner: ...}}``. ``radio_quiet``: the coaching intensity is quiet, so the radio says none of
-    ``picked`` (the screen still shows them)."""
+    ``radio_quiet``: the coaching intensity is quiet, so the radio says none of ``picked`` (the screen still shows
+    them)."""
     lap_number = _int(lap.get("lap_number"))
     radio = radio_limits(limits, intensity)
     quiet = radio.max_per_lap <= 0 or intensity == "quiet"
     lim = screen_limits(radio)
-    picked = pick_points(observations, lim, lap_number, last_coached)
-    if last_coached is not None and not quiet:
-        record_coached(picked, lap_number, last_coached)
+    if tracker is None:
+        picked = pick_points(observations, lim, lap_number, last_coached)
+    else:
+
+        def not_one_off(o: Mapping[str, Any]) -> bool:
+            # a focus habit (its reminder says it), or the same fault as on the corner's previous lap (a pattern in
+            # the making: the habit is announced when it is one, never the same sentence two laps running)
+            corner, kind = o.get("corner"), o.get("kind")
+            return tracker.in_focus(corner, kind) or tracker.repeated(corner, kind)
+
+        picked = pick_points(observations, lim, lap_number, last_coached, events=list(events or ()), skip=not_one_off)
+    if not quiet:
+        if last_coached is not None:
+            record_coached(picked, lap_number, last_coached)
+        if tracker is not None:
+            tracker.commit(picked)
     picked_ids = {id(o) for o in picked}
     by_corner = corner_points(observations, radio, lap_number, picked)
     refs = [_int(o.get("ref_lap_number")) for o in observations]
@@ -187,8 +293,10 @@ def coach_block(
         "skill_level": lim.skill_level,
         "simple_wording": lim.simple_wording,
         "radio_quiet": quiet,
-        "picked": [slim(o, True) for o in picked],
-        "by_corner": {c: slim(o, id(o) in picked_ids) for c, o in by_corner.items()},
+        "picked": [_tag(slim(o, True), tracker) for o in picked],
+        "by_corner": {c: _tag(slim(o, id(o) in picked_ids), tracker) for c, o in by_corner.items()},
+        "habits": tracker.habits() if tracker is not None else [],
+        "focus": tracker.focus() if tracker is not None else [],
     }
 
 
@@ -198,7 +306,8 @@ class CoachSelection:
     ``set_limits`` follows the seated driver, ``set_radio_intensity`` the radio hub's coaching intensity; ``reset``
     starts a session. ``select`` is called once per completed lap (analysis thread) and returns that lap's block;
     ``current`` is the latest block whose lap had a usable comparison, which the screen keeps showing (with its lap
-    number) through laps that could not be compared (out laps, flashbacks, a missing reference)."""
+    number) through laps that could not be compared (out laps, flashbacks, a missing reference). The session's
+    habit tracker (``coach.habits``) lives here: reset with the session and when another driver takes the seat."""
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -208,6 +317,7 @@ class CoachSelection:
         self._last_coached: dict[str, int] = {}
         self._current: dict[str, Any] | None = None
         self._intensity = "normal"  # the radio's coaching intensity (set_radio_intensity)
+        self._habits = HabitTracker()
 
     @property
     def limits(self) -> CoachingLimits | None:
@@ -227,6 +337,7 @@ class CoachSelection:
         with self._lock:
             if self._driver_known and driver_id != self._driver_id:
                 self._current = None
+                self._habits.reset()  # the previous driver's habits are not this driver's
             self._driver_known = True
             self._driver_id = driver_id
             self._limits = limits
@@ -244,6 +355,7 @@ class CoachSelection:
         with self._lock:
             self._last_coached.clear()
             self._current = None
+            self._habits.reset()
 
     # --- coachref ---
     def set_current(self, block: dict[str, Any]) -> None:
@@ -254,12 +366,45 @@ class CoachSelection:
     # --- coachref ---
 
     def select(
-        self, lap: Mapping[str, Any], observations: Sequence[Mapping[str, Any]], compared: bool
+        self,
+        lap: Mapping[str, Any],
+        observations: Sequence[Mapping[str, Any]],
+        compared: bool,
+        *,
+        corners: Sequence[str] | None = None,
+        ref_lap_id: int | None = None,
     ) -> dict[str, Any]:
-        """This lap's block. ``compared``: the lap had a usable comparison (only then does it replace
-        ``current``; a lap without one has no points, and the screen keeps the last lap that had)."""
+        """This lap's block. ``compared``: the lap had a usable comparison and is no drill lap (only then does it
+        update the habit tracker and replace ``current``; a lap without one has no points, and the screen keeps the
+        last lap that had). ``corners``: the corners the comparison had (``LapComparison.corners``), so the tracker
+        sees which corners were driven clean; None = only the corners with an observation. ``ref_lap_id``: the lap
+        it was compared with (a reference with the same fault proves no fix, ``HabitTracker.update``)."""
         with self._lock:
-            block = coach_block(lap, observations, self._limits, self._last_coached, intensity=self._intensity)
+            lap_number = _int(lap.get("lap_number"))
+            radio = radio_limits(self._limits, self._intensity)
+            quiet = radio.max_per_lap <= 0 or self._intensity == "quiet"
+            events: list[dict[str, Any]] = []
+            if compared:
+                lim = screen_limits(radio)
+                last = dict(self._last_coached)
+                events = self._habits.update(
+                    lap_number,
+                    observations,
+                    corners,
+                    slots=focus_slots(radio, quiet),
+                    eligible=lambda e: passes_limits(e, lim, lap_number, last),
+                    lap_id=_int(lap.get("lap_id")),
+                    ref_lap_id=ref_lap_id,
+                )
+            block = coach_block(
+                lap,
+                observations,
+                self._limits,
+                self._last_coached,
+                intensity=self._intensity,
+                tracker=self._habits,
+                events=events,
+            )
             if compared:
                 self._current = block
             return block

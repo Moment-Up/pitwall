@@ -10,6 +10,14 @@ primary-key lookup on this background thread), so re-assigning a session takes e
 any cross-thread invalidation; the per-session coaching history is reset when the owner changes. Track models
 are shared by all drivers: they are built from the fastest clean laps at the track whoever drove them.
 
+Habit memory (``analysis.coaching`` consistency): each corner keeps its last ``HISTORY_LAPS`` compared laps with the
+lap they came from (``_HistoryEntry``). A new reference (a new personal best, a chosen reference) does not erase it:
+every kept lap is re-based on the new reference (``corner_delta(new reference metrics, the lap's own metrics)``)
+before the next lap's observations are derived, so a habit keeps its consistency through a new best instead of being
+unknown for two laps. The new reference lap itself leaves the history (a lap never deviates from itself), as do
+corners the new reference lacks and laps measured on another track model version (other corner definitions). A
+different driver in the seat still clears everything; incidents never enter it.
+
 Live publishing: results reach ``LiveState`` (dashboard, radio, delta bar, cue engine) only while the job's
 session is still the live one. A driver change ends a session and starts the next one at once, so the previous
 driver's flushed partial lap - or a complete lap still being analysed - would otherwise land in the new driver's
@@ -58,6 +66,7 @@ from pitwall.analysis.compare import (
     check_compatibility,
     compare,
     compat_meta,
+    corner_delta,
     lengths_compatible,
 )
 from pitwall.analysis.distance import to_distance_domain
@@ -89,8 +98,19 @@ class LapJob:
 
 
 @dataclass(slots=True)
+class _HistoryEntry:
+    """One compared lap of a corner in the habit memory: the lap it came from (``lap_id``; None = unknown), the
+    track model version its metrics were measured on, and its delta against the history's reference."""
+
+    lap_id: int | None
+    model_version: int | None
+    delta: CornerDelta
+
+
+@dataclass(slots=True)
 class _SessionCache:
-    history: dict[str, list[CornerDelta]] = field(default_factory=dict)
+    history: dict[str, list[_HistoryEntry]] = field(default_factory=dict)
+    history_ref: int | None = None  # the reference lap the history's deltas are measured against
     ref_lap_id: int | None = None
     driver_id: int | None = None
     # --- coachref ---
@@ -179,13 +199,13 @@ class LapProcessor:
         sc = self._sessions.setdefault(job.session_id, _SessionCache(driver_id=driver_id))
         if driver_id != sc.driver_id:
             sc.history.clear()  # the session changed hands: the previous owner's habits are not this driver's
+            sc.history_ref = None
             sc.recent.clear()  # --- coachref ---
             sc.driver_id = driver_id
         sc.last_ctx = {**lap.meta, **ctx}  # --- coachref ---
         ref_changed = ref_id != sc.ref_lap_id
         if ref_changed:
-            sc.history.clear()  # deltas against a different reference are not comparable
-            sc.ref_lap_id = ref_id
+            sc.ref_lap_id = ref_id  # the history is re-based on the new reference below (_rebase_history)
         # --- coachref --- a new descriptor for the same lap (another kind or label, frozen for a drill) is
         # republished too, without clearing the history (the deltas are still against the same lap)
         desc_changed = desc is not None and (sc.ref_desc is None or sc.ref_desc.to_dict() != desc.to_dict())
@@ -201,12 +221,14 @@ class LapProcessor:
         if ref is None:
             self._publish(sid, summary, [], None, self._after_lap(job, lap_id, model, None, None))
             return result
+        _rebase_history(sc, ref_id, ref, model.version)  # before this lap's observations (a new best keeps habits)
         cur = analyse_lap(lap, model)
         ref_ctx = {**ref.lap.meta}
         compat = check_compatibility(compat_meta(ref_ctx), compat_meta({**lap.meta, **ctx}), ref.lap.clean)
         comp = compare(ref, cur, compat)
         texts = corner_texts(model)  # official numbers/names (track sheets); join keys stay the learned names
-        obs = observations_for_comparison(comp, history=sc.history, resolution_m=_resolution_m(lap), corner_text=texts)
+        history = {k: [e.delta for e in v] for k, v in sc.history.items()}
+        obs = observations_for_comparison(comp, history=history, resolution_m=_resolution_m(lap), corner_text=texts)
         # --- coachref --- another driver's lap: their name in the texts, and their braking points clamped
         clamp: dict[str, float] | None = None
         if desc is not None and not desc.own:
@@ -219,7 +241,7 @@ class LapProcessor:
             if is_incident(cd):
                 continue  # a spin or contact says nothing about the driver's habits at this corner
             h = sc.history.setdefault(cd.corner, [])
-            h.append(cd)
+            h.append(_HistoryEntry(lap_id, model.version, cd))
             del h[:-HISTORY_LAPS]
             if not (lap.flags & _NOT_RECENT) and not under_sc:  # --- coachref --- drill baselines: recent laps
                 r = sc.recent.setdefault(cd.corner, [])
@@ -277,9 +299,9 @@ class LapProcessor:
     def refresh_reference(self, session_id: str, *, load_model: bool = False) -> None:
         """Re-resolve ``session_id``'s reference now (a choice changed while the car was stopped, or the session's
         context is complete before its first lap): when the reference lap or its descriptor changed, the history is
-        cleared and the new reference published. Without a lap of this session yet, the live session's context is
-        used. ``load_model``: use the stored track model when none is in memory (a layout of another length never).
-        Analysis thread only."""
+        re-based on the new reference (habits survive it) and the new reference published. Without a lap of this
+        session yet, the live session's context is used. ``load_model``: use the stored track model when none is in
+        memory (a layout of another length never). Analysis thread only."""
         sc = self._sessions.get(session_id)
         ctx = dict(sc.last_ctx) if sc is not None and sc.last_ctx else self._live_ctx(session_id)
         if ctx is None:
@@ -307,7 +329,6 @@ class LapProcessor:
             sc.ref_desc is None and desc is None
         )
         if changed:
-            sc.history.clear()
             sc.ref_lap_id = ref_id
         sc.ref_desc = desc
         if not changed and same_desc:
@@ -316,7 +337,9 @@ class LapProcessor:
             if self.live is not None and self._is_live(session_id):
                 self.live.set_reference(None, None)
             return
-        self._reference_analysis(ref_id, model, session_id, True, desc)
+        ref = self._reference_analysis(ref_id, model, session_id, True, desc)
+        if ref is not None:
+            _rebase_history(sc, ref_id, ref, model.version)
 
     def _stored_model(self, key: tuple[str, str, str | None], length: float) -> TrackModel | None:
         """The stored track model for ``key`` (game, track, car class family) and this layout length, identified and
@@ -722,6 +745,30 @@ class LapProcessor:
         if desc is not None:  # --- coachref --- the descriptor (kind, holder, labels, clamp, frozen)
             summary = {**desc.to_dict(), **summary}
         self.live.set_reference(summary, an.dtrace)
+
+
+def _rebase_history(sc: _SessionCache, ref_id: int, ref: LapAnalysis, model_version: int | None) -> None:
+    """Re-base the session's habit memory on reference ``ref_id`` (analysed as ``ref``) when it was measured against
+    another one: each kept lap's own corner metrics against the new reference's (``corner_delta``). The reference
+    lap itself, corners the new reference lacks and laps measured on another track model version are dropped."""
+    if sc.history_ref == ref_id:
+        return
+    for corner in list(sc.history):
+        rm = ref.corners.get(corner)
+        kept = (
+            []
+            if rm is None
+            else [
+                _HistoryEntry(e.lap_id, e.model_version, corner_delta(corner, rm, e.delta.cmp))
+                for e in sc.history[corner]
+                if e.lap_id != ref_id and e.model_version == model_version
+            ]
+        )
+        if kept:
+            sc.history[corner] = kept
+        else:
+            del sc.history[corner]
+    sc.history_ref = ref_id
 
 
 def ctx_family(ctx: dict[str, Any] | None) -> str | None:

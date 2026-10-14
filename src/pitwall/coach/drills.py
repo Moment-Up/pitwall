@@ -653,7 +653,8 @@ def stop_text(state: DrillState) -> str:
 # ============================================================================================== coaching block
 def drill_point(state: DrillState, attempt: DrillAttempt) -> dict[str, Any]:
     """The lap's D6 coaching point for a drill attempt: every ``coach.selection.COACH_FIELDS`` key (plus the slim
-    copy's ``evidence`` / ``picked``) and ``drill`` (id, attempt, of, hits, outcome, done)."""
+    copy's ``evidence`` / ``picked`` and the block point's ``habit`` / ``one_off``) and ``drill`` (id, attempt, of,
+    hits, outcome, done)."""
     spec = state.spec
     s = state.summary
     ref_no = spec.ref_desc.get("lap_number") if spec.ref_desc else None
@@ -688,6 +689,12 @@ def drill_point(state: DrillState, attempt: DrillAttempt) -> dict[str, Any]:
         "short": attempt.short,
         "corner_voice": spec.corner_voice,
         "ref_name": spec.ref_name,
+        "habit_event": None,  # habits (coach.habits): a drill attempt is no habit event and no one-off
+        "was_value": None,
+        "clean_laps": None,
+        "clean_of": None,
+        "habit": None,
+        "one_off": False,
         "evidence": evidence,
         "picked": True,
         "drill": {

@@ -10,9 +10,11 @@ said; this module decides what is worth saying:
   Without it (older callers) the same shared function picks from the observations given.
 * **Confidence** - only observations with ``confidence >= MIN_COACHING_CONFIDENCE`` reach the radio (the
   dashboard still shows the rest).
-* **Performance impact** - observations are ranked by the analysis ``priority`` (time impact x confidence,
-  boosted for consistent habits). Normal intensity speaks the lap summary and the top corrective point, and
-  detailed adds a second corrective point and the best positive one. Quiet intensity is minimal radio (alerts
+* **Habits, not every corner** - the corrective points are the habit tracker's events (``coach.habits``: a new
+  habit announced with how often it happened, "better" when it halves, "still" after a few laps without progress,
+  "sorted" when it stops) and the lap's big one-offs (``analysis.coaching.is_big_one_off``), never a small one-off
+  or a habit already in focus (its corner reminder says that one). Normal intensity speaks the lap summary and one
+  corrective point, and detailed up to two and the best positive one. Quiet intensity is minimal radio (alerts
   and answers only, as its acknowledgement says), so it builds no lap messages at all.
 * **Only validated facts** - an observation's ``impact_s`` is the time lost (or gained) through the *whole
   corner*, shared by every observation there. So the radio states it as the corner's loss ("T4, losing 0.08 s:
@@ -50,6 +52,8 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
+from pitwall.analysis.coaching import HABIT_RATIO as HABIT_RATIO  # the one definition of a habit (re-exported)
+from pitwall.coach.habits import EVENT_ANNOUNCE, EVENT_FIXED, EVENT_IMPROVING, EVENT_STILL, progress_amount
 from pitwall.coach.selection import pick_points, record_coached
 from pitwall.voice.scheduler import LAP_ID_KEY, Intensity, parse_intensity
 from pitwall.voice.speech import to_speech
@@ -63,7 +67,6 @@ CONTROL_TTL_S = 10.0  # an acknowledgement that arrives late is just confusing
 MIN_COACHING_CONFIDENCE = 0.6
 CORRECTIVE_PER_LAP: dict[Intensity, int] = {"quiet": 0, "normal": 1, "detailed": 2}
 POSITIVE_PER_LAP: dict[Intensity, int] = {"quiet": 0, "normal": 0, "detailed": 1}
-HABIT_RATIO = 0.6  # detailed mode mentions consistency when the deviation shows up this often
 
 _ids = itertools.count(1)
 
@@ -200,55 +203,120 @@ def _reference_delta_ms(lap: Mapping[str, Any], ms: int, reference: Mapping[str,
 
 
 # ---------------------------------------------------------------------------------------------- coaching
-def coaching_text(obs: Mapping[str, Any], detailed: bool = False, with_impact: bool = True) -> str:
-    """Radio-length version of an ``Observation.to_dict()``; falls back to its own text for unknown kinds.
+def _core(
+    kind: object, v: float | None, exit_kph: float | None, ref_name: str | None, brief: bool = False
+) -> str | None:
+    """The point itself in a few words ("minimum speed 8 km/h down"), or None for an unknown kind or value. ``brief``
+    leaves out "than your reference" (a habit line is long enough; another driver is always named)."""
+    if v is None:
+        return None
+    ref = f" than {ref_name}" if ref_name else ("" if brief else " than your reference")
+    if kind == "brake_early":
+        return f"braking {abs(v):.0f} m earlier{ref}"
+    if kind == "brake_late_overdrive":
+        slower = f" but exiting {abs(exit_kph):.0f} km/h slower" if exit_kph is not None else ", no faster out"
+        return f"braking {abs(v):.0f} m later{slower}"
+    if kind == "low_min_speed":
+        if ref_name:
+            return f"{ref_name} was {abs(v):.0f} km/h faster in the middle of the corner"
+        return f"minimum speed {abs(v):.0f} km/h down"
+    if kind == "overspeed_apex":
+        hurt = f", exit {abs(exit_kph):.0f} km/h down" if exit_kph is not None else ", hurting the exit"
+        return f"{abs(v):.0f} km/h too much into the apex{hurt}"
+    if kind == "late_throttle":
+        return f"full throttle {abs(v):.0f} m later{ref}"
+    if kind == "coasting":
+        return f"{abs(v):.0f} m more coasting{ref}"
+    if kind == "exit_gain":
+        return f"good exit, {abs(v):.0f} km/h up"
+    return None
+
+
+_MOST_LAPS = "Most laps."  # a habit announced without statistics (simple wording, or a profile without them)
+
+
+def _count(v: object) -> int | None:
+    return v if isinstance(v, int) and not isinstance(v, bool) and v >= 0 else None
+
+
+def _habit_counts(obs: Mapping[str, Any]) -> tuple[int, int] | None:
+    """(laps seen, laps) of a tracker event (its ``habit``), or None."""
+    h = obs.get("habit")
+    if not isinstance(h, Mapping):
+        return None
+    seen, laps = _count(h.get("laps_seen")), _count(h.get("laps"))
+    return (seen, laps) if seen is not None and laps else None
+
+
+def _simple_body(obs: Mapping[str, Any]) -> str | None:
+    """The observation's plain-words sentence without its corner name ("you were 12 km/h slower ...")."""
+    t = obs.get("text_simple")
+    if not isinstance(t, str) or ": " not in t:
+        return None
+    body = t.split(": ", 1)[1].strip()
+    return body or None
+
+
+def coaching_text(
+    obs: Mapping[str, Any], with_impact: bool = True, *, simple: bool = False, counts: bool = True
+) -> str:
+    """Radio-length version of an ``Observation.to_dict()`` or a habit tracker event (``habit_event``, coach block
+    shape); falls back to its own text for unknown kinds.
 
     ``with_impact`` states the corner's time loss/gain; pass False for a second point on an already costed corner.
+    ``simple``: plain words for simple-wording profiles (no habit statistics). ``counts``: an announcement says how
+    often the habit happened ("3 of the last 4 laps"; else "Most laps."), as profiles that mention consistency do.
+
+    Tracker events (``coach.habits``; at most about 20 spoken words, so a habit line leaves out "than your
+    reference")::
+
+        announce   "Turn 6, losing 0.31 s: minimum speed 12 km/h down. 3 of the last 4 laps."
+                   simple: "Turn 6: <the plain-words sentence> Most laps."
+        improving  "Turn 6 better: 6 km/h down now, was 14."
+        still      "Turn 6 still: minimum speed 12 km/h down, 5 of the last 5 laps."
+        fixed      "Turn 6 sorted: clean on 2 of the last 3 laps."
+
+    An ordinary point (a big one-off) is today's sentence, with no habit suffix.
     """
     corner = str(obs.get("corner_voice") or obs.get("corner") or "That corner")
     kind = obs.get("kind")
+    event = obs.get("habit_event")
     v = _num(obs.get("value"))
     impact = _num(obs.get("impact_s"))
     evidence = obs.get("evidence")
     ev: Mapping[str, Any] = evidence if isinstance(evidence, Mapping) else {}
     exit_kph = _num(ev.get("exit_speed_delta_kph"))
-    positive = bool(obs.get("positive"))
     raw_name = obs.get("ref_name")  # --- coachref --- another driver's lap: name them
     ref_name = raw_name if isinstance(raw_name, str) and raw_name else None
-    ref = ref_name or "your reference"
+    habit = _habit_counts(obs)
 
-    core: str | None = None
-    if v is not None:
-        if kind == "brake_early":
-            core = f"braking {abs(v):.0f} m earlier than {ref}"
-        elif kind == "brake_late_overdrive":
-            slower = f" but exiting {abs(exit_kph):.0f} km/h slower" if exit_kph is not None else ", no faster out"
-            core = f"braking {abs(v):.0f} m later{slower}"
-        elif kind == "low_min_speed":
-            if ref_name:
-                core = f"{ref_name} was {abs(v):.0f} km/h faster in the middle of the corner"
-            else:
-                core = f"minimum speed {abs(v):.0f} km/h down"
-        elif kind == "overspeed_apex":
-            hurt = f", exit {abs(exit_kph):.0f} km/h down" if exit_kph is not None else ", hurting the exit"
-            core = f"{abs(v):.0f} km/h too much into the apex{hurt}"
-        elif kind == "late_throttle":
-            core = f"full throttle {abs(v):.0f} m later than {ref}"
-        elif kind == "coasting":
-            core = f"{abs(v):.0f} m more coasting than {ref}"
-        elif kind == "exit_gain":
-            core = f"good exit, {abs(v):.0f} km/h up"
+    if event == EVENT_FIXED:
+        clean, of = _count(obs.get("clean_laps")), _count(obs.get("clean_of"))
+        if simple or clean is None or not of:
+            return f"{corner} sorted."
+        return f"{corner} sorted: clean on {clean} of the last {of} laps."
+    if event == EVENT_IMPROVING:
+        now = progress_amount(str(kind), v)
+        if now is not None:
+            was = _num(obs.get("was_value"))
+            tail = "" if simple or was is None else f", was {abs(was):.0f}"
+            return f"{corner} better: {now} now{tail}."
+
+    core = _core(kind, v, exit_kph, ref_name, brief=event in (EVENT_ANNOUNCE, EVENT_STILL))
     if core is None:
         return str(obs.get("text") or "").strip()
-
+    if event == EVENT_STILL:
+        tail = f", {habit[0]} of the last {habit[1]} laps" if habit and counts and not simple else ""
+        return f"{corner} still: {core}{tail}."
+    if event == EVENT_ANNOUNCE and simple:
+        body = _simple_body(obs) or f"{core}."
+        return f"{corner}: {body}" if body.endswith(_MOST_LAPS) else f"{corner}: {body} {_MOST_LAPS}"
     head = corner
     if with_impact and impact is not None and round(abs(impact), 2) > 0:
         head += f", {'gaining' if impact < 0 else 'losing'} {abs(impact):.2f} s"
     line = f"{head}: {core}."
-    ratio = _num(obs.get("consistency_ratio"))
-    habit = obs.get("consistency")
-    if detailed and not positive and habit and ratio is not None and ratio >= HABIT_RATIO:
-        line += f" Same on {habit}."
+    if event == EVENT_ANNOUNCE:
+        line += f" {habit[0]} of the last {habit[1]} laps." if habit and counts else f" {_MOST_LAPS}"
     return line
 
 
@@ -337,13 +405,13 @@ def lap_messages(
         chosen = pick_points(observations, limits, lap_number, last_coached, intensity=level)
     if last_coached is not None:
         record_coached(chosen, lap_number, last_coached)
-    detailed = level == "detailed" and (limits is None or limits.mention_consistency)
+    counts = limits is None or limits.mention_consistency
     simple = limits is not None and limits.simple_wording
     for obs in chosen:
         raw_corner = obs.get("corner")
         corner = str(raw_corner) if raw_corner else None
         with_impact = not simple and (corner is None or corner not in costed)
-        text = coaching_text(obs, detailed=detailed and not simple, with_impact=with_impact)
+        text = coaching_text(obs, with_impact, simple=simple, counts=counts)
         if not text:
             continue
         if corner is not None:
@@ -363,6 +431,7 @@ def lap_messages(
                     LAP_ID_KEY: lap_id,
                     "observation_id": obs.get("id"),
                     "observation_kind": obs.get("kind"),
+                    "habit_event": obs.get("habit_event"),  # habits: announce / improving / still / fixed
                     "impact_s": obs.get("impact_s"),
                     "confidence": obs.get("confidence"),
                     "positive": positive,

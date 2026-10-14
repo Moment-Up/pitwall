@@ -170,7 +170,11 @@ def ob(
     prio: float,
     positive: bool = False,
     lap: int = 5,
+    habit: bool = True,
 ) -> dict[str, Any]:
+    """A coaching point. Corrective points are habits by default (seen on 4 of the last 5 laps): the radio says
+    habits (as tracker events, or as they are without a tracker) and big one-offs, never small one-offs."""
+    habitual = habit and not positive and kind != "incident"
     return {
         "id": oid,
         "kind": kind,
@@ -189,6 +193,8 @@ def ob(
         "text_simple": f"{corner}: {kind} simple.",
         "short": f"{corner}: {kind}",
         "evidence": {"time_delta_s": impact, "exit_speed_delta_kph": -4.0, "ref": {"x": 1}, "lap": {"x": 2}},
+        "consistency": "4 of the last 5 laps" if habitual else None,
+        "consistency_ratio": 0.8 if habitual else None,
     }
 
 
@@ -206,6 +212,11 @@ LAP = {"lap_id": 105, "lap_number": 5}
 
 def ids(points: list[Any]) -> list[str]:
     return [str(p["id"]) for p in points]
+
+
+def lap_of(n: int, obs: list[dict[str, Any]] = OBS) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Lap ``n`` with the same points (the habit tracker needs three compared laps before it announces a habit)."""
+    return {"lap_id": 100 + n, "lap_number": n}, [{**o, "lap_number": n} for o in obs]
 
 
 def test_pick_follows_the_drivers_limits_and_by_corner_shows_every_eligible_corner() -> None:
@@ -233,8 +244,11 @@ def test_pick_follows_the_drivers_limits_and_by_corner_shows_every_eligible_corn
 def test_block_copies_are_slim() -> None:
     block = coach_block(LAP, OBS, coaching_limits("advanced"))
     (p,) = block["picked"]
-    assert set(p) == {*COACH_FIELDS, "evidence", "picked"}
+    # habits (spec section 3): every point also says whether it is a habit and whether it is a one-off
+    assert set(p) == {*COACH_FIELDS, "evidence", "picked", "habit", "one_off"}
     assert p["evidence"] == {"time_delta_s": 0.25, "exit_speed_delta_kph": -4.0}  # per-lap metric dicts dropped
+    assert p["habit"] is None and p["one_off"] is False  # no tracker here; a habit is never a one-off
+    assert block["habits"] == [] and block["focus"] == []
 
 
 def test_quiet_drivers_still_see_their_points_but_the_radio_says_none() -> None:
@@ -247,13 +261,17 @@ def test_quiet_drivers_still_see_their_points_but_the_radio_says_none() -> None:
 
 
 def test_repeat_grace_limits_the_radio_not_the_screen() -> None:
+    # big one-offs: the radio says them as they are (a habit would be a tracker event)
+    big_a = ob("a", "brake_early", "T1", 0.9, 0.40, 0.36, habit=False)
+    big_d = ob("d", "late_throttle", "T4", 0.9, 0.32, 0.29, habit=False)
     sel = CoachSelection()
     sel.set_limits(2, coaching_limits("beginner"))
-    first = sel.select({"lap_id": 104, "lap_number": 4}, [{**OBS[0], "lap_number": 4}], compared=True)
+    first = sel.select({"lap_id": 104, "lap_number": 4}, [{**big_a, "lap_number": 4}], compared=True)
     assert ids(first["picked"]) == ["a"]
-    second = sel.select(LAP, [OBS[0], OBS[3]], compared=True)
+    second = sel.select(LAP, [big_a, big_d], compared=True)
     assert ids(second["picked"]) == ["d"]  # T1 was coached last lap: a lap's grace on the radio
     assert second["by_corner"]["T1"]["id"] == "a" and not second["by_corner"]["T1"]["picked"]
+    assert second["by_corner"]["T1"]["one_off"] and second["by_corner"]["T1"]["habit"] is None
 
 
 def test_selection_keeps_the_last_compared_lap_and_resets() -> None:
@@ -286,10 +304,18 @@ def test_live_state_sends_the_pick_with_the_lap_and_shows_it() -> None:
     live.reset_session("s1", "test", False)
     assert live.snapshot()["coach"] is None
     comp = {"compatibility": {"ok": True, "blocking": [], "warnings": []}}
+    for n in (3, 4):  # the same habits on the two laps before
+        lap, obs = lap_of(n)
+        live.on_lap_result(lap | {"lap_time_ms": 65_000}, obs, comp)
     live.on_lap_result({"lap_id": 105, "lap_number": 5, "lap_time_ms": 65_000}, OBS, comp)
-    ((kind, payload),) = notes
-    assert kind == "lap" and payload["coach"] == live.snapshot()["coach"]
-    assert ids(payload["coach"]["picked"]) == ["a"]
+    assert [k for k, _ in notes] == ["lap"] * 3
+    payload = notes[-1][1]
+    assert payload["coach"] == live.snapshot()["coach"]
+    # the beginner's one eligible habit is announced as their focus (spec section 3: tracker events on the radio)
+    (point,) = payload["coach"]["picked"]
+    assert (point["corner"], point["kind"], point["habit_event"]) == ("T1", "brake_early", "announce")
+    assert point["habit"] == {"status": "focus", "laps_seen": 3, "laps": 3}
+    assert [(f["corner"], f["kind"]) for f in payload["coach"]["focus"]] == [("T1", "brake_early")]
     # an uncompared lap (no reference, flashback) sends an empty pick and leaves the card alone
     live.on_lap_result({"lap_id": 106, "lap_number": 6, "lap_time_ms": 66_000}, [], None)
     assert notes[-1][1]["coach"]["picked"] == [] and live.snapshot()["coach"]["lap_number"] == 5
@@ -360,34 +386,47 @@ def test_radio_and_screen_agree_on_the_synthetic_demo(demo_session: DecodedSessi
 
 
 # ---------------------------------------------------------------------------------------------- the radio's intensity
+def events(block: dict[str, Any]) -> list[tuple[str, str | None]]:
+    return [(str(p["corner"]), p.get("habit_event")) for p in block["picked"]]
+
+
 def test_with_nobody_seated_the_radio_intensity_sets_the_budget() -> None:
     """The radio speaks ``coaching_limits("advanced", intensity)`` when nobody is in the seat, so the shared pick
-    must use the radio's intensity too: Detailed is two corrective points and a positive one, on screen as on air."""
+    must use the radio's intensity too: Detailed is two corrective points and a positive one, on screen as on air.
+    With habits (spec section 3) the intensity also sets the focus slots: one at normal, two at detailed, none at
+    quiet (the screen still shows the habits)."""
     sel = CoachSelection()
     sel.set_limits(None, None)
-    assert sel.radio_intensity == "normal" and ids(sel.select(LAP, OBS, compared=True)["picked"]) == ["c"]
+    assert sel.radio_intensity == "normal"
+    assert [events(sel.select(*lap_of(n), compared=True)) for n in (3, 4)] == [[], []]  # small one-offs so far
+    assert events(sel.select(*lap_of(5), compared=True)) == [("T2", "announce")]  # the biggest habit, one slot
     sel.set_radio_intensity("detailed")
-    block = sel.select(LAP, OBS, compared=True)
-    assert ids(block["picked"]) == ["c", "b", "e"] and not block["radio_quiet"]
+    block = sel.select(*lap_of(6), compared=True)
+    assert events(block) == [("T3", "announce"), ("T5", None)] and not block["radio_quiet"]  # a 2nd slot + praise
+    assert [f["corner"] for f in block["focus"]] == ["T2", "T3"]
     assert sel.current is block  # the card and the radio change together
     sel.set_radio_intensity("quiet")
-    block = sel.select(LAP, OBS, compared=True)
-    assert block["radio_quiet"] and ids(block["picked"]) == ["c"]  # the screen still shows the point
+    block = sel.select(*lap_of(7), compared=True)
+    assert block["radio_quiet"] and events(block) == []  # no new focus while quiet
+    assert [f["corner"] for f in block["focus"]] == ["T2", "T3"]  # the screen still shows what is worked on
     sel.set_radio_intensity("loud")  # not an intensity: ignored
     assert sel.radio_intensity == "quiet"
     # a seated driver's profile sets the budget (as on the radio); a quiet radio still says none of it
-    sel.set_limits(2, coaching_limits("beginner", "normal"))
+    sel.set_limits(2, coaching_limits("beginner", "normal"))  # another driver: their own habits, from scratch
     sel.set_radio_intensity("detailed")
-    assert ids(sel.select(LAP, OBS, compared=True)["picked"]) == ["a"]
+    assert sel.select(*lap_of(8), compared=True)["focus"] == []
+    sel.select(*lap_of(9), compared=True)
+    block = sel.select(*lap_of(10), compared=True)
+    assert events(block) == [("T1", "announce")] and [f["corner"] for f in block["focus"]] == ["T1"]
     sel.set_radio_intensity("quiet")
-    block = sel.select(LAP, OBS, compared=True)
-    assert block["radio_quiet"] and ids(block["picked"]) == ["a"]
+    block = sel.select(*lap_of(11), compared=True)
+    assert block["radio_quiet"] and events(block) == [("T5", None)]  # the screen still shows the praise
 
 
 # A beginner's only eligible point is the lap's sixth observation: the lap notification's ``observations`` are the
 # top five (for the dashboard), so a radio picking from them would say nothing while the card shows the sixth.
 SIXTH = [ob(f"x{i}", "coasting", f"T{i}", 0.95, 0.30, 0.50 - i / 100) for i in range(1, 6)] + [
-    ob("y", "brake_early", "T9", 0.9, 0.20, 0.10)
+    ob("y", "brake_early", "T9", 0.9, 0.35, 0.10, habit=False)  # a big one-off
 ]
 
 
@@ -441,9 +480,14 @@ async def test_the_hubs_intensity_reaches_the_shared_pick() -> None:
     assert hub.intensity == "detailed" == live.coach.radio_intensity
     live.reset_session("s1", "test", False)
     comp = {"compatibility": {"ok": True, "blocking": [], "warnings": []}}
+    for n in (3, 4):  # the same habits on the two laps before
+        lap, obs = lap_of(n)
+        live.on_lap_result(lap | {"lap_time_ms": 65_000}, obs, comp)
     live.on_lap_result(LAP | {"lap_time_ms": 65_000}, OBS, comp)
     hub._enqueue_lap(notes[-1])
-    assert _coaching(queue) == ["c", "b", "e"] == ids(live.snapshot()["coach"]["picked"])
+    # detailed: two focus slots, so the two biggest habits are announced, then the praise
+    announced = ["L5:T2:coasting:announce", "L5:T3:low_min_speed:announce", "e"]
+    assert _coaching(queue) == announced == ids(live.snapshot()["coach"]["picked"])
     # a seated driver's own intensity reaches the selection too
     from pitwall.drivers import Driver, DriverPreferences
 

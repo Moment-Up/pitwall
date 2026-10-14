@@ -212,6 +212,27 @@ def check_compatibility(ref_meta: dict[str, Any], cmp_meta: dict[str, Any], ref_
     return Compatibility(ok=not blocking, blocking=blocking, warnings=warnings)
 
 
+def corner_delta(name: str, ref: CornerMetrics, cmp: CornerMetrics) -> CornerDelta:
+    """``cmp - ref`` for one corner's metrics. Pure: the lap processor also uses it to re-base a corner's recent laps
+    on a new reference lap (their own metrics stay as measured; only the reference they are compared with moves)."""
+    return CornerDelta(
+        corner=name,
+        time_delta_s=_diff(cmp.segment_time_s, ref.segment_time_s),
+        brake_point_delta_m=_diff(cmp.brake_start_m, ref.brake_start_m),
+        brake_release_delta_m=_diff(cmp.brake_end_m, ref.brake_end_m),
+        min_speed_delta_kph=_diff(cmp.min_speed_kph, ref.min_speed_kph),
+        min_speed_pos_delta_m=_diff(cmp.min_speed_m, ref.min_speed_m),
+        entry_speed_delta_kph=_diff(cmp.entry_speed_kph, ref.entry_speed_kph),
+        exit_speed_delta_kph=_diff(cmp.exit_speed_kph, ref.exit_speed_kph),
+        throttle_pickup_delta_m=_diff(cmp.throttle_pickup_m, ref.throttle_pickup_m),
+        throttle_full_delta_m=_diff(cmp.throttle_full_m, ref.throttle_full_m),
+        coast_delta_m=_diff(cmp.coast_m, ref.coast_m),
+        release_time_delta_s=_diff(cmp.release_s, ref.release_s),
+        ref=ref,
+        cmp=cmp,
+    )
+
+
 def compare(ref: LapAnalysis, cmp: LapAnalysis, compat: Compatibility, downsample_m: float = 10.0) -> LapComparison:
     d = ref.dtrace.d
     delta = cmp.dtrace.t_s - ref.dtrace.t_s
@@ -221,29 +242,7 @@ def compare(ref: LapAnalysis, cmp: LapAnalysis, compat: Compatibility, downsampl
     total = None
     if ref.lap.lap_time_ms is not None and cmp.lap.lap_time_ms is not None:
         total = (cmp.lap.lap_time_ms - ref.lap.lap_time_ms) / 1000.0
-    corners: list[CornerDelta] = []
-    for name, r in ref.corners.items():
-        c = cmp.corners.get(name)
-        if c is None:
-            continue
-        corners.append(
-            CornerDelta(
-                corner=name,
-                time_delta_s=_diff(c.segment_time_s, r.segment_time_s),
-                brake_point_delta_m=_diff(c.brake_start_m, r.brake_start_m),
-                brake_release_delta_m=_diff(c.brake_end_m, r.brake_end_m),
-                min_speed_delta_kph=_diff(c.min_speed_kph, r.min_speed_kph),
-                min_speed_pos_delta_m=_diff(c.min_speed_m, r.min_speed_m),
-                entry_speed_delta_kph=_diff(c.entry_speed_kph, r.entry_speed_kph),
-                exit_speed_delta_kph=_diff(c.exit_speed_kph, r.exit_speed_kph),
-                throttle_pickup_delta_m=_diff(c.throttle_pickup_m, r.throttle_pickup_m),
-                throttle_full_delta_m=_diff(c.throttle_full_m, r.throttle_full_m),
-                coast_delta_m=_diff(c.coast_m, r.coast_m),
-                release_time_delta_s=_diff(c.release_s, r.release_s),
-                ref=r,
-                cmp=c,
-            )
-        )
+    corners = [corner_delta(name, r, c) for name, r in ref.corners.items() if (c := cmp.corners.get(name)) is not None]
     return LapComparison(
         ref_lap_number=ref.lap.lap_number,
         cmp_lap_number=cmp.lap.lap_number,

@@ -850,6 +850,9 @@ class CueEngine:
         self._comparison: Mapping[str, Any] | None = None
         self._history: deque[list[Mapping[str, Any]]] = deque(maxlen=FOCUS_HISTORY_LAPS)
         self._history_ref: int | None = None
+        # the coach block's habits (coach.habits, via on_lap_result): None = a caller that predates them
+        self._focus: tuple[Mapping[str, Any], ...] | None = None
+        self._habits: tuple[Mapping[str, Any], ...] | None = None
         self._reference: Mapping[str, Any] | None = None
         self._trace: DistanceTrace | None = None
         # reference lap id -> (summary, trace): LapProcessor caches reference analyses across sessions and only
@@ -1016,6 +1019,8 @@ class CueEngine:
         self._comparison = None
         self._history.clear()
         self._history_ref = None
+        self._focus = None
+        self._habits = None
         self._empty_reason = reason
         self._plan = self._with_fallback(CuePlan.empty(self._mode, "cues off" if self._mode == "off" else reason))
 
@@ -1039,15 +1044,22 @@ class CueEngine:
         observations: Sequence[Mapping[str, Any]],
         comparison: Mapping[str, Any] | None,
         length_m: float | None = None,
+        *,
+        focus: Sequence[Mapping[str, Any]] | None = None,
+        habits: Sequence[Mapping[str, Any]] | None = None,
     ) -> None:
         """A processed lap (``LiveState.on_lap_result``). A lap without a comparison (incomplete, no reference)
         keeps the current plan, which after a cleared reference is the empty one. Never raises into the analysis
-        thread."""
+        thread. ``focus`` / ``habits``: the lap's coach block lists (``coach.selection`` contract: the habits being
+        worked on with their corner reminder, and every habit of the session), kept for the planner with the
+        comparison; None = a caller that predates habits."""
         with self._plan_lock:
             if length_m is not None:
                 self._length_m = _num(length_m)
             if comparison is None:
                 return
+            self._focus = None if focus is None else tuple(focus)
+            self._habits = None if habits is None else tuple(habits)
             ref_id = comparison.get("ref_lap_id")
             ref_key = ref_id if isinstance(ref_id, int) and not isinstance(ref_id, bool) else None
             if ref_key != self._history_ref:

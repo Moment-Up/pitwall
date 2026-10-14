@@ -932,23 +932,75 @@ def test_coaching_text_without_impact() -> None:
     )
 
 
-def test_coaching_text_mentions_habit_in_detailed_mode_only() -> None:
-    o = obs("low_min_speed", -7.6, 0.081, consistency=(0.8, "4 of the last 5 laps"))
+HABIT = (0.8, "4 of the last 5 laps")
+
+
+def test_an_ordinary_point_has_no_habit_suffix() -> None:
+    """Habits spec section 5: the detailed-only "Same on 4 of the last 5 laps." suffix is gone. A habit's count is
+    said once, when the habit tracker announces it (``coach.habits``), not after every point."""
+    o = obs("low_min_speed", -7.6, 0.081, consistency=HABIT)
     assert coaching_text(o) == "T4, losing 0.08 s: minimum speed 8 km/h down."
-    assert coaching_text(o, detailed=True) == (
-        "T4, losing 0.08 s: minimum speed 8 km/h down. Same on 4 of the last 5 laps."
+    assert coaching_text(o, simple=True) == coaching_text(o) and coaching_text(o, counts=False) == coaching_text(o)
+
+
+def habit_event(event: str, value: float, *, seen: int = 3, laps: int = 4, **extra: Any) -> dict[str, Any]:
+    """A coach block's tracker event (``coach.habits.HabitTracker.event``, slim copy) at "Turn 6"."""
+    d = obs("low_min_speed", value, 0.31, corner="T6", consistency=(seen / laps, f"{seen} of the last {laps} laps"))
+    d.update(
+        corner_voice="Turn 6",
+        habit_event=event,
+        habit={"status": "focus", "laps_seen": seen, "laps": laps},
+        text_simple="Turn 6: you were 12 km/h slower at the slowest point of the corner. Most laps.",
+        **extra,
     )
-    one_off = obs("low_min_speed", -7.6, 0.081, consistency=(0.33, "1 of the last 3 laps"))
-    assert "Same on" not in coaching_text(one_off, detailed=True)
+    return d
 
 
-OBSERVATIONS = [
-    obs("late_throttle", 30.0, 0.30, confidence=0.55, corner="T2"),  # biggest but not confident enough
-    obs("low_min_speed", -7.6, 0.081, corner="T4"),
-    obs("brake_early", -10.0, 0.05, corner="T1"),
+def test_habit_events_on_the_radio() -> None:
+    """Habits spec sections 3 and 5: the four tracker events, worded from their structured fields."""
+    announce = habit_event("announce", -12.0)
+    assert coaching_text(announce) == "Turn 6, losing 0.31 s: minimum speed 12 km/h down. 3 of the last 4 laps."
+    assert coaching_text(announce, simple=True) == (
+        "Turn 6: you were 12 km/h slower at the slowest point of the corner. Most laps."
+    )
+    assert coaching_text(announce, counts=False).endswith("12 km/h down. Most laps.")  # a profile without stats
+    better = habit_event("improving", -6.0, was_value=-14.0)
+    assert coaching_text(better) == "Turn 6 better: 6 km/h down now, was 14."
+    assert coaching_text(better, simple=True) == "Turn 6 better: 6 km/h down now."
+    still = habit_event("still", -12.0, seen=5, laps=5)
+    assert coaching_text(still) == "Turn 6 still: minimum speed 12 km/h down, 5 of the last 5 laps."
+    assert coaching_text(still, simple=True) == "Turn 6 still: minimum speed 12 km/h down."
+    fixed = habit_event("fixed", -12.0, clean_laps=2, clean_of=3)
+    assert coaching_text(fixed) == "Turn 6 sorted: clean on 2 of the last 3 laps."
+    assert coaching_text(fixed, simple=True) == "Turn 6 sorted."
+    # a braking habit leaves out "than your reference" (short lines), never another driver's name
+    early = {**announce, "kind": "brake_early", "value": -13.0}
+    assert coaching_text(early) == "Turn 6, losing 0.31 s: braking 13 m earlier. 3 of the last 4 laps."
+    assert "than Sam" in coaching_text({**early, "ref_name": "Sam"})
+    later = {**better, "kind": "brake_late_overdrive", "value": 6.0}
+    assert coaching_text(later) == "Turn 6 better: braking 6 m later now, was 14."  # describes, never advises
+    for e in (announce, better, still, fixed, early, later):
+        for simple in (False, True):
+            words = spoken_word_count(to_speech(coaching_text(e, simple=simple)))
+            assert words <= 21, coaching_text(e, simple=simple)  # "<= ~20 spoken words"
+
+
+OBSERVATIONS = [  # habits (the radio says habits and big one-offs, never a small one-off)
+    obs("late_throttle", 30.0, 0.30, confidence=0.55, corner="T2", consistency=HABIT),  # biggest, not sure enough
+    obs("low_min_speed", -7.6, 0.081, corner="T4", consistency=HABIT),
+    obs("brake_early", -10.0, 0.05, corner="T1", consistency=HABIT),
     obs("exit_gain", 5.0, -0.06, corner="T3", positive=True),
-    obs("coasting", 20.0, 0.02, corner="T5", lap_number=3),  # another lap: ignored
+    obs("coasting", 20.0, 0.02, corner="T5", lap_number=3, consistency=HABIT),  # another lap: ignored
 ]
+
+
+def test_small_one_offs_are_screen_only() -> None:
+    """Habits spec section 3: without habits, a one-off is said only when it is big (``is_big_one_off``)."""
+    small = [obs("low_min_speed", -7.6, 0.081, corner="T4"), obs("brake_early", -10.0, 0.29, corner="T1")]
+    assert [m.kind for m in lap_messages(lap(), small, None, REF, "detailed", 0.0)] == [MessageKind.LAP_SUMMARY]
+    big = [*small, obs("late_throttle", 41.0, 0.53, confidence=1.0, corner="T5")]
+    msgs = lap_messages(lap(), big, None, REF, "detailed", 0.0)
+    assert [m.text for m in msgs[1:]] == ["T5, losing 0.53 s: full throttle 41 m later than your reference."]
 
 
 def test_lap_messages_normal_summary_plus_top_confident_point() -> None:
@@ -988,7 +1040,10 @@ def test_lap_messages_detailed_adds_second_point_and_positive() -> None:
 
 def test_lap_messages_detailed_states_a_corner_loss_once() -> None:
     """impact_s is the whole corner's loss: two points at T4 must not add up to twice the validated loss."""
-    same_corner = [obs("low_min_speed", -7.6, 0.081), obs("brake_early", -12.2, 0.081, confidence=0.8)]
+    same_corner = [
+        obs("low_min_speed", -7.6, 0.081, consistency=HABIT),
+        obs("brake_early", -12.2, 0.081, confidence=0.8, consistency=HABIT),
+    ]
     msgs = lap_messages(lap(), same_corner, None, None, "detailed", 0.0)
     assert [m.text for m in msgs[1:]] == [
         "T4, losing 0.08 s: minimum speed 8 km/h down.",

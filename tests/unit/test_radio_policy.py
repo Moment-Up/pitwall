@@ -74,6 +74,9 @@ OBS = [
         "priority": 0.07,
         "positive": False,
         "text": "T4: minimum speed 8 km/h lower.",
+        # a habit: the radio says habits and big one-offs, never a small one-off (habits spec section 3)
+        "consistency": "4 of the last 5 laps",
+        "consistency_ratio": 0.8,
     }
 ]
 
