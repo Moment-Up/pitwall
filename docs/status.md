@@ -308,69 +308,52 @@ the line now gets its reminder on the lap the radio says it (`LiveState.habit_li
 with the radio hub running, it started a lap later.
 
 30 of the owner's captures (F1 25 and GT7 on the PS5, 2026-10-10 to 13; every capture of 1 MB or more except the
-synthetic demo and the AC probes), 28 sessions with a compared lap, before / after:
+synthetic demo and the AC probes), 28 sessions with a compared lap, before (integration ddd7188) / after (feat/habits
+with the review fixes below; nobody seated, normal intensity, braking calls in Focus, harness replay with simulated
+0.45 s audio latency):
 
 | Session | Compared laps | Corrective lines | Silent laps | Same point next lap | After: announced, better, still, sorted | One-off lines | Braking calls | After: reminders (end before the braking point, min s) |
 |---|---|---|---|---|---|---|---|---|
-| Austria, 20261010-221749, 1 | 9 | 8 / 5 | 1 / 4 | 2 / 1 | 1, 1, 0, 0 | 8 / 3 | 13 / 1 | 5 (1.06) |
-| Austria, 20261010-221749, 2 | 10 | 9 / 6 | 1 / 4 | 1 / 0 | 2, 0, 0, 0 | 9 / 4 | 9 / 0 | 1 (1.03) |
-| Imola race, 20261011-195612 | 30 | 29 / 17 | 1 / 13 | 4 / 0 | 5, 0, 0, 3 | 29 / 9 | 37 / 14 | 9 (1.06) |
-| Bahrain / Jeddah, 20261011-224147, 3 | 5 | 4 / 3 | 1 / 2 | 0 / 0 | 1, 0, 0, 0 | 4 / 2 | 7 / 0 | 0 |
-| Melbourne, 20261012-231555, 3 | 9 | 8 / 5 | 1 / 4 | 0 / 0 | 1, 0, 0, 0 | 8 / 4 | 6 / 0 | 1 (4.26) |
-| Melbourne race, 20261012-231555, 4 | 15 | 15 / 11 | 0 / 4 | 0 / 0 | 2, 0, 1, 0 | 15 / 8 | 27 / 9 | 1 (1.18) |
-| Melbourne race, 20261013-225521 | 18 | 18 / 10 | 0 / 8 | 2 / 0 | 1, 0, 2, 0 | 18 / 7 | 16 / 7 | 0 |
+| Austria, 20261010-221749, 1 | 9 | 8 / 5 | 1 / 4 | 2 / 1 | 1, 1, 0, 0 | 8 / 3 | 13 / 0 | 5 (1.06) |
+| Austria, 20261010-221749, 2 | 10 | 9 / 6 | 1 / 4 | 1 / 0 | 2, 0, 0, 0 | 9 / 4 | 9 / 0 | 0 |
+| Imola race, 20261011-195612 | 30 | 29 / 17 | 1 / 13 | 4 / 0 | 5, 0, 0, 2 | 29 / 10 | 37 / 5 | 7 (1.08) |
+| Bahrain / Jeddah, 20261011-224147, 3 | 5 | 4 / 2 | 1 / 3 | 0 / 0 | 0, 0, 0, 0 | 4 / 2 | 7 / 0 | 0 |
+| Melbourne, 20261012-231555, 3 | 9 | 8 / 5 | 1 / 4 | 0 / 0 | 0, 0, 0, 0 | 8 / 5 | 6 / 0 | 0 |
+| Melbourne race, 20261012-231555, 4 | 15 | 15 / 11 | 0 / 4 | 0 / 0 | 2, 0, 0, 0 | 15 / 9 | 27 / 2 | 0 |
+| Melbourne race, 20261013-225521 | 18 | 18 / 10 | 0 / 8 | 2 / 1 | 2, 1, 0, 0 | 18 / 7 | 16 / 7 | 0 |
 | 21 short sessions (1-4 compared laps) | 31 | 25 / 17 | 6 / 14 | 0 / 0 | 0, 0, 0, 0 | 25 / 17 | 7 / 0 | 0 |
-| **All** | 127 | 116 / 74 | 11 / 53 | 9 / 1 | 13, 1, 3, 3 | 116 / 54 | 122 / 31 | 17 |
+| **All** | 127 | 116 / 73 | 11 / 54 | 9 / 2 | 12, 2, 0, 2 | 116 / 57 | 122 / 14 | 12 |
 
-- Corrective lines per compared lap: 0.91 before, 0.58 after. No identical sentence was repeated in a session before
-  or after; the same corner and fault on consecutive laps went from 9 to 1 (an announcement followed by its "better").
-- The 17 reminders ended 1.03 to 4.26 s before the reference braking point (median 1.12 s); the cue engine dropped
-  none late (0 missed, 0 errors, before and after).
-- The first lap with coaching is unchanged in 20 sessions, one lap later in 2 and gone in 6 short sessions whose only
-  lines were small one-offs, now screen-only.
+- Corrective lines per compared lap: 0.91 before, 0.57 after. No identical sentence was repeated in a session before
+  or after; the same corner and fault on consecutive laps went from 9 to 2 (an announcement followed by its "better").
+- Braking calls in Focus went from 122 to 14: they now follow braking habits that cost at least 0.05 s a lap and pass
+  the profile's confidence floor, never one-offs. The "All" mode still calls every measured braking zone.
+- The 12 reminders ended at least 1.06 s before the reference braking point; the cue engine dropped none late (0
+  missed, 0 errors, before and after).
+- The first lap with coaching is unchanged in 17 sessions, one lap later in 2 and gone in 6 short sessions whose only
+  lines were small one-offs, now screen-only (3 sessions had none before or after).
 - Today's 3 things changed in 7 of 28 sessions: three "Went well" became a sorted habit ("T6: sorted - clean on your
-  last 3 laps (was braking about 12 m early)."), and four "One to work on" moved to a repeated point still there. In
-  one session (231555, 2) a lap compared with a reference from an earlier session fell through to "No clean lap this
-  time, so there is nothing to compare yet", which was not true: since the review fixes below, a session whose laps
-  were compared but showed nothing to work on says nothing there ("Nothing clear to work on this time"). In one
-  session (224147, 5) a point repeated at 0.06 s replaced a single lap's 0.53 s: the spec's rule (a habit before a
-  one-off).
+  last 3 laps (was braking about 12 m early)."), three "One to work on" moved to a repeated point still there (in
+  224147, 5 a point repeated at 0.06 s replaced a single lap's 0.53 s: a habit before a one-off), and one session
+  whose laps showed nothing repeated has no "One to work on".
 
 Not verified: anything heard live, a reminder's real audio length and when a driver hears it, a "sorted" after a real
-fix (the three above come from recorded laps, not from a driver working on it), simple-wording and beginner wordings on
+fix (the ones above come from recorded laps, not from a driver working on it), simple-wording and beginner wordings on
 the radio beyond unit tests, and the coach card and Ready card on an iPad.
 
-**Review fixes (2026-10-14, after the tables above were measured).** A verified review of feat/habits found these, now
-fixed, each with a unit, synthetic or pipeline test that failed before: "better" praised braking later on a lap where
-the corner got slower, and compared numbers measured against two different reference laps; laps measured against a
+**Review fixes (2026-10-14, included in the table above).** A verified review of feat/habits found these, now fixed,
+each with a unit, synthetic or pipeline test that failed before: "better" praised braking later on a lap where the
+corner got slower, and compared numbers measured against two different reference laps; laps measured against a
 reference that could not show the habit (it lost time at that corner some other way, it had the habit and left the
 window, or it was another driver's lap or an older best) counted as clean, so "sorted" could follow a reference change;
 "sorted" could come one recorded lap after the announcement; pit, out, safety-car, flashback, standing-start and
-invalid laps counted as habit laps (the Bahrain 224147 "T7, losing 0.02 s" announcement counted a standing-start and
-an out lap; Melbourne's reminder went from "25 down" to "39 down" under the safety car); braking calls on habits had no
-confidence floor; habits costing 0.02-0.08 s were announced and held the only slot; a reminder ranked like a braking
-call on air (it cut spotter clears and could start wheel to wheel); the radio's number and the reminder's differed;
-blind habits kept their braking call; a beginner got two in-lap calls; an announcement the radio never said still
-made the habit the focus; the coach card's "Once" and its counts disagreed with the evidence line; "braking N m later"
-followed "better" for a habit of braking too late. The tables above are from before these fixes: with them, fewer
-habits are announced on the recorded sessions (no announcement under 0.05 s, none from pit or safety-car laps) and
-some "better" and "sorted" lines wait for a like-for-like measure. Re-measured after the fixes with the same harness
-(nobody seated, normal and detailed) on the five synthetic scenarios and the five Austria captures kept in the
-evaluation's scratch folder; the other recorded sessions were not re-run:
-
-- Synthetic: the same radio lines as the table above in every scenario at both intensities; pb_reset's braking calls
-  went from 6 to 3, because from lap 7 the reference (lap 6, a new best) had the habit, so no call is aimed at its
-  early braking point (the habit stays the focus, unmeasured, and is dropped after 5 laps).
-- Austria 221749, session 1: the same 5 corrective lines, the same announcement and "better" at T6; its lap 65 (a
-  flashback) no longer counts as a habit lap, so the announcement says "2 of the last 3 laps" (before: "3 of the last
-  4"). The 5 reminders now say the radio's numbers ("apex speed, 44 down" on the lap after the announcement, then "22
-  down" after the "better"; before: the window's median, 39, 30, 24, 24 and 22 down), ending 1.06 to 1.96 s before the
-  braking point. One braking call less: the T9 braking habit reached its third counted lap a lap later.
-- Austria 221749, session 2: 6 corrective lines (unchanged); the second announcement moves from T3 (6 km/h down, lap
-  70) to T6 (9 km/h down, 0.22 s, lap 71) because the earlier focus habit, which could not be measured, held its slot
-  one lap longer (the flashback lap no longer counts towards forgetting it), so its reminder (1 before) has no lap
-  left. The other three Austria sessions: no change.
-- Cue engine: 0 missed, 0 errors; every reminder still ends at least 1.06 s before the reference braking point.
+invalid laps counted as habit laps; braking calls on habits had no confidence floor; habits costing 0.02-0.08 s were
+announced and held the only slot (now a 0.05 s floor); a reminder ranked like a braking call on air (it now plays only
+on a free radio, cuts nothing and never plays with a car alongside); the radio's number and the reminder's differed;
+blind habits kept their braking call; a beginner got two in-lap calls; an announcement the radio never said still made
+the habit the focus (with no radio connected the screen-only coach records it when it picks it); the coach card's
+"Once" and its counts disagreed with the evidence line; "braking N m later" followed "better" for a habit of braking
+too late.
 
 ## Known gaps
 
