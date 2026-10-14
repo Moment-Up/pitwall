@@ -1001,6 +1001,35 @@ async def test_a_habit_line_said_on_air_moves_the_cue_plan_at_once() -> None:
     await hub.stop()
 
 
+async def test_with_no_radio_connected_the_screen_coach_commits_at_the_pick() -> None:
+    """Screen only (no radio connected, or its voice off): nothing goes on air, so the tracker records a habit line
+    when it is picked and the screen's focus still moves on. A radio connecting switches to on-air commits; the same
+    mode set again keeps the lines waiting to be said."""
+    from tests.unit.test_cues import make_hub
+
+    hub, client, _sent, _ = await make_hub("focus", device=True)
+    sel = hub.live.coach
+    assert sel.commits_on_delivery is True
+    for n in (1, 2):
+        sel.select(*lap_points(n, pt("T6", "low_min_speed", 0, ratio=None)), compared=True, corners=CORNERS)
+    block = sel.select(*lap_points(3, pt("T6", "low_min_speed", 0)), compared=True, corners=CORNERS)
+    (ann,) = block["picked"]
+    sel.commit_on_delivery(True)  # e.g. a settings change while the radio is connected
+    assert sel.confirm_said(ann["id"]) is True  # still waiting: kept
+    sel.reset()
+    hub.voice_enabled = False
+    hub._sync_cue_gate()
+    assert sel.commits_on_delivery is False
+    hub.voice_enabled = True
+    await hub.disconnect(client)
+    assert sel.commits_on_delivery is False
+    for n in (1, 2):
+        sel.select(*lap_points(n, pt("T6", "low_min_speed", 0, ratio=None)), compared=True, corners=CORNERS)
+    sel.select(*lap_points(3, pt("T6", "low_min_speed", 0)), compared=True, corners=CORNERS)
+    assert [f["corner"] for f in sel.current["focus"]] == ["T6"]  # type: ignore[index]
+    await hub.stop()
+
+
 def test_a_big_fault_on_a_lap_that_is_no_evidence_still_counts_as_said_twice() -> None:
     """A lap that is no habit evidence (here a flashback lap) is not in the tracker's window, but the same big fault as
     on the corner's previous counted lap is still not said as a one-off: never the same sentence two laps running."""

@@ -78,8 +78,8 @@ the queue says the rest by priority, then this order, then first in first out.
   latest lap could measure.
 - **Habit lines** (coaching points with `meta.habit_event`: an announcement, "better", "still", "sorted"): the coach's
   habit tracker records a line when the radio puts it on air, not when the coach picks it, so a line held until it
-  expired (quiet mode, the lap's budget, no radio connected) never makes a habit the one being worked on: it is
-  announced again on a later lap. Once it is on air the braking calls and corner reminders follow at once: a habit
+  expired (quiet mode, the lap's budget) never makes a habit the one being worked on: it is announced again on a later
+  lap. With no radio connected or its voice off the coach is screen-only and records a line when it picks it. Once it is on air the braking calls and corner reminders follow at once: a habit
   announced after the line gets its reminder on that same lap.
 - **Race order:** alerts, then the lap time (carrying the line's race news), race calls, strategy and car health calls,
   the goal line, the coaching point, detail; validation prompts last. A higher priority goes first (cold tyres at the

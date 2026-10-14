@@ -24,9 +24,9 @@ shows for it (docs/ui/design-spec.md P7, section 13 D6). Deterministic, no LLM, 
   is a habit (``habit``: status and counts; its ``consistency`` is then the tracker's count, so the card's chip and
   evidence line agree) or a one-off (``one_off``: a fault seen on one lap only).
 * **What the radio said** - the tracker records the habit lines the radio said (``HabitTracker.commit``). Without a
-  radio that is the pick; with one (``commit_on_delivery``, set by the radio hub) it is the moment the line goes on
-  air (``confirm_said``), so a line held until it expired (quiet mode, the lap's budget, no radio connected) never
-  makes a habit the focus: it is proposed again.
+  radio that can speak (none connected, or its voice off: the screen-only coach) that is the pick; with one
+  (``commit_on_delivery``, set by the radio hub) it is the moment the line goes on air (``confirm_said``), so a line
+  held until it expired (quiet mode, the lap's budget) never makes a habit the focus: it is proposed again.
 * **By corner** - for each corner, the point the coach card shows when that corner is next: the picked point
   when the corner was picked (so screen and radio agree), else the corner's best point that passes the same
   filters (the per-lap budget and the repeat grace limit what is *said*, not what may be *shown*). Corrective
@@ -400,10 +400,12 @@ class CoachSelection:
     def commit_on_delivery(self, on: bool) -> None:
         """A radio says the habit lines (the radio hub, at start): the tracker records a line when it goes on air
         (``confirm_said``), not when it is picked, so a line the radio never said (held in quiet mode or by the lap's
-        budget until it expired, no radio connected) never makes a habit the focus. Off (no radio): at the pick."""
+        budget until it expired) never makes a habit the focus. Off (no radio connected, or its voice off): at the
+        pick. Setting the same mode again keeps the lines waiting to be said."""
         with self._lock:
-            self._on_delivery = on
-            self._unsaid.clear()
+            if on != self._on_delivery:
+                self._on_delivery = on
+                self._unsaid.clear()
 
     def confirm_said(self, point_id: object) -> bool:
         """The radio put the habit line ``point_id`` (a picked point's ``id``) on air: record it in the tracker

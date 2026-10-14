@@ -816,8 +816,9 @@ now coaches habits, with fixed rules (`analysis/coaching.py`, `coach/habits.py`)
   about it only when it gets better ("Turn 6 better: 6 km/h down now, was 14."), when it is still there five laps
   later ("Turn 6 still: ...") and when it is sorted ("Turn 6 sorted: clean on 2 of the last 3 laps."). In between, a
   braking call (braking habits) or a corner reminder (the others) does the reminding, before the corner, with the
-  number the radio last said. A habit counts as announced only once the radio has said it: an announcement held until
-  it expired (quiet mode, a full lap, no radio connected) is made again on a later lap.
+  number the radio last said. With a radio connected, a habit counts as announced only once the radio has said it: an
+  announcement held until it expired (quiet mode, a full lap) is made again on a later lap. With no radio connected
+  (screen only) it counts when the coach picks it, so the screen's "Working on" still moves on.
 - **Better is measured like for like.** "Better" compares laps measured against the same reference lap (after a new
   reference the radio waits for a new measure). For braking early it also needs the corner to be faster than on every
   earlier lap with the habit: later braking is praised only when it made the corner faster. Braking too late that

@@ -627,15 +627,14 @@ class RadioHub:
         self.live.subscribe_buttons(self._on_button_threadsafe)
         self.cues.set_plan_listener(self._on_cue_plan_threadsafe)
         self.cues.set_sink(self._on_cue_threadsafe)
-        self._coach_on_delivery(True)  # habits: the tracker keeps the habit lines this radio says (_deliver)
-        self._cue_clients_changed()
+        self._cue_clients_changed()  # also tells the coach whether habit lines count when said (_sync_cue_gate)
         self._tick_task = asyncio.create_task(self._tick_loop(), name="radio-tick")
         if callable(getattr(self.tts, "start", None)):
             self._tts_start = self._loop.call_later(TTS_START_DELAY_S, self._start_tts)
 
     def _coach_on_delivery(self, on: bool) -> None:
-        """Habits (``coach.selection``): while this radio runs, a habit line counts as said when it goes on air
-        (``_deliver``), not when the coach picks it."""
+        """Habits (``coach.selection``): while a radio can say them (``_sync_cue_gate``), a habit line counts as said
+        when it goes on air (``_deliver``), not when the coach picks it."""
         coach = getattr(self.live, "coach", None)
         set_mode = getattr(coach, "commit_on_delivery", None)
         if callable(set_mode):
@@ -2024,6 +2023,9 @@ class RadioHub:
 
     def _sync_cue_gate(self) -> None:
         self.cues.set_muted(self._cue_mute_reason())
+        # habits: only a radio that can speak says habit lines; with none connected or the voice off the coach is
+        # screen-only and records a line when it picks it, so the screen's focus still moves on
+        self._coach_on_delivery(self.voice_enabled and bool(self.clients))
 
     def _on_air_message(self) -> tuple[RadioMessage, AudioClip | None] | None:
         on_air = self._on_air

@@ -409,8 +409,9 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   no braking call or reminder while it cannot be measured (up to 5 laps, then it is forgotten without a word), and the
   report's "One to work on" can be empty for it. A habit is not counted against a reference it was never measured
   against (another driver's lap, a best from an earlier session) until a lap shows it there, so switching references
-  mid-stint can let a habit be forgotten. With the radio hub running, a habit line counts as said when it goes on air;
-  a line said in the instant between the next lap's analysis and its messages could be said twice (not seen in tests). The coaching demo needs the radio on to make a habit the focus: without it Drive shows the notes but no reminder. In the
+  mid-stint can let a habit be forgotten. With a radio connected, a habit line counts as said when it goes on air (with
+  none, when the coach picks it); a line said in the instant between the next lap's analysis and its messages could be
+  said twice (not seen in tests). Reminders need a radio connected; without one Drive shows the notes and "Working on". In the
   replays a reminder's length is the planner's estimate; the hub's measured audio length is unit-tested only. Markers
   and braking calls still assume a driver slower than the reference stays slower to the corner (reminders do not).
 - **Race radio:** nothing heard live; F1 25's `gridPosition` is 0-based at a race start on the PS5 (pole = 0), so the
