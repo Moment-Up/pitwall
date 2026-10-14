@@ -22,7 +22,9 @@ then gets an error frame naming the reason plus a short spoken ``NO_STT_REPLY`` 
 its behaviour (the utterance goes to ``NullStt``, which hears nothing: "Say again?"). Typed questions, cues and
 proactive messages work as usual.
 
-Live braking cues (``coach.cues``) bypass the scheduler queue because they are time-critical:
+Live braking cues and corner reminders (``coach.cues``) bypass the scheduler queue because they are time-critical
+(a reminder - "Turn 6, apex speed, 12 down" for a habit being worked on - must END a second before the braking point,
+so its phrase's measured length is pushed to the engine with the latency: ``CueTiming.durations_s``):
 
 * **Precise delivery.** The cue engine decides on the ingest thread; the hub delivers on the very next loop turn
   with audio synthesised in advance (``say`` takes ~0.4 s, 33 m at 300 km/h; Kokoro ~0.1-0.2 s). Each phrase is
@@ -98,6 +100,7 @@ from pitwall.coach.cues import (
     DEFAULT_CUE_MODE,
     MAX_LATENCY_S,
     CueEvent,
+    CueKind,
     CuePlan,
     CueTiming,
     cue_timing_error_m,
@@ -2046,15 +2049,33 @@ class RadioHub:
         words = sum(spoken_word_count(self.to_speech(p)) for p in parts[:key_index])
         return words / WORDS_PER_S + CUE_DEVICE_PAUSE_S * key_index
 
+    def _cue_phrase_s(self, parts: Sequence[str], path: str) -> float:
+        """How long a cue phrase takes to say (a corner reminder is timed by when it ends): the pre-synthesised
+        audio's length on the server-audio path once it is ready, else the device-voice estimate from spoken words
+        (and a pause at every comma of the spoken text); with device voices among the radios too, the longer of the
+        two (each radio must finish in time)."""
+        words = sum(spoken_word_count(self.to_speech(p)) for p in parts)
+        device = words / WORDS_PER_S + CUE_DEVICE_PAUSE_S * self._cue_speech(parts).count(",")
+        ready = self._cue_phrases.get(tuple(parts)) if path == "pcm" else None
+        if ready is None:
+            return device
+        audio = ready[0].duration_s
+        return max(audio, device) if any(c.device_tts for c in self.clients) else audio
+
     def _push_cue_timing(self) -> None:
         path = self._cue_path()
         offsets: dict[tuple[str, ...], float] = {}
+        durations: dict[tuple[str, ...], float] = {}
         for c in self.cues.plan.cues:
+            if c.kind is CueKind.REMINDER:
+                durations[c.parts] = self._cue_phrase_s(c.parts, path)
             if c.key_index <= 0:
                 continue
             ready = self._cue_phrases.get(c.parts) if path == "pcm" else None
             offsets[c.parts] = ready[1] if ready is not None else self._device_word_offset(c.parts, c.key_index)
-        self.cues.set_timing(CueTiming(latency_s=self._cue_latency_s(path), path=path, offsets_s=offsets))
+        self.cues.set_timing(
+            CueTiming(latency_s=self._cue_latency_s(path), path=path, offsets_s=offsets, durations_s=durations)
+        )
 
     def _cue_clients_changed(self) -> None:
         """Radios, their voice source or settings changed: re-gate, retime and make sure the audio exists."""

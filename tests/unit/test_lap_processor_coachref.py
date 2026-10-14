@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from pitwall.coach.cues import CueEngine
+from pitwall.coach.cues import NO_HABITS, CueEngine
 from pitwall.core.coachref import ChoiceRequest, DrillRequest
 from pitwall.core.lap_processor import AnalysisWorker, LapProcessor
 from pitwall.core.live import LiveState
@@ -99,6 +99,10 @@ def test_cross_driver_reference_descriptor_wording_and_clamp(
     with env.db.read() as c:
         stored = [o["text"] for o in repo.list_observations(c, sa) if o["kind"] == "brake_early"]
     assert stored and all("than Sam" in t for t in stored)  # persisted reworded
+    # focus mode calls habits: lap 3's early braking is a one-off (screen only), so the clamp is checked on every
+    # braking zone the reference has (mode "all")
+    assert env.live.cues.plan.cues == () and env.live.cues.plan.reason == NO_HABITS
+    env.live.cues.set_mode("all")
     plan = env.live.cues.plan
     assert plan.cues, plan.reason
     for cue in plan.cues:

@@ -528,7 +528,7 @@ POLICY: tuple[CallFamily, ...] = (
     ),
     CallFamily(
         "cue",
-        "Braking calls",
+        "Braking calls and corner reminders",
         "coach.cues",
         (MessageKind.CUE,),
         "high",
@@ -539,8 +539,9 @@ POLICY: tuple[CallFamily, ...] = (
         False,
         "free",
         "Braking calls",
-        "Timed to the braking point: cuts routine talk (said again later), never an alert, an answer, an urgent call"
-        " or a spotter car call; dropped (never late) when one is on air.",
+        "Timed to the braking point (a corner reminder for a habit being worked on ends 1 s before it): cuts routine"
+        " talk (said again later), never an alert, an answer, an urgent call or a spotter car call; dropped (never"
+        " late) when one is on air. Speak windows close before a call starts.",
     ),
     CallFamily(
         "alert",
