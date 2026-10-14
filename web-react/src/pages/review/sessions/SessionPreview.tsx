@@ -10,7 +10,7 @@ import { EvidenceChips, TimingTag, TimingValue } from "../../../components/ui";
 import { useDrivers } from "../../../hooks/stores";
 import type { SessionListRow } from "../../../lib/endpoints/review";
 import { router } from "../../../lib/router";
-import { coachingCounts, workOnItems } from "../../../lib/review/coaching";
+import { coachingCounts, oneToWorkOn } from "../../../lib/review/coaching";
 import { densityFor } from "../../../lib/review/density";
 import { lapsText } from "../../../lib/review/kpis";
 import { sessionPath } from "../../../lib/review/links";
@@ -50,7 +50,8 @@ export function SessionPreview({ row }: { row: SessionListRow }) {
   const { data: session, error } = useSession(row.id);
   const { data: analysis } = useAnalysis(row.id);
   const density = densityFor(row.driver_id, list);
-  const first = useMemo(() => workOnItems(analysis)[0] ?? null, [analysis]);
+  // the session's one thing to work on (the report's rule: a habit still there, else a big one-off)
+  const first = useMemo(() => oneToWorkOn(analysis), [analysis]);
 
   return (
     <div className="grid grid-cols-1 content-start gap-4">

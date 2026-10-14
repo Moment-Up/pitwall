@@ -244,6 +244,9 @@ describe("Review › Coaching: the session's own work-on card shows the Summary'
       meanPriority: 0.3,
       score: 1,
       repeated: true,
+      lapIds: [30, 31],
+      recent: true,
+      fixed: false,
     };
     const w = { item, label: "T1", name: null, spoken: "Turn 1", apexM: null, trend: null };
     const base = { w, sessionId: "s1", refLapId: 2, atM: null, simple: false, textPx: 17 };

@@ -9,17 +9,32 @@
 // Length rule (4.5): while moving, up to 60 characters at 30 px, longer at 26 px (never smaller: 22 px is under
 // ISO 15008's 16' at 70 cm), clamped to 3 lines past 130 characters (the verbatim prefix and an ellipsis; D6's
 // `short` makes that rare). Stationary (pit, garage, after the session) the card shows the full text at 22 px.
+//
+// Habits (habits spec 7; coach/habits.py): the note's one chip says what kind of note it is - "Habit · 3 of 4 laps" (a
+// habit the radio is not working on), "Focus" (the habit the radio announced and is working on), "Once" (a one-off),
+// "Sorted" (a habit that stopped) - with the lap it is from, as before ("Once · last lap"). One chip, not two: the
+// card is a glance at speed. A focus corner whose last lap had no note shows the habit's reminder (the words the radio
+// says before the corner, verbatim). Between runs the Ready card says what the radio is working on (`workingOn`).
 
 import { cornerLabelOf } from "./corner";
 import { hasCleanLap } from "./delta";
-import type { ObservationNext, SnapshotNext } from "./types";
+import type { FocusEntry, ObservationNext, SnapshotNext } from "./types";
 import { confidenceWord, finite } from "./text";
 
 export type CoachTextSize = 30 | 26 | 22;
 
+/** What kind of note it is (habits): its chip's words without the lap ("Habit · 3 of 4 laps", "Focus", "Once",
+ * "Sorted"). */
+export interface HabitChip {
+  kind: "habit" | "focus" | "once" | "sorted";
+  text: string;
+}
+
 export interface CoachPoint {
   /** "drill": a practice drill's attempt (coachref, lib/drive/drill.ts). */
   tag: "work_on" | "good" | "drill" | null;
+  /** Habits: what kind of note it is (null: unknown, an older server, praise or a drill). */
+  habit?: HabitChip | null;
   /** The game's number of the lap the point is from. */
   lap: number | null;
   /** "Work on · last lap" / "Good · last lap" for a point from the lap just finished; "Work on · L6" for older laps. */
@@ -104,6 +119,55 @@ export function lapSuffix(lap: number | null, last: number | null): string {
   return lap === last ? " · last lap" : ` · L${lap}`;
 }
 
+/** "3 of 4 laps" ("1 of 1 lap"). */
+export function lapCount(seen: number, laps: number): string {
+  return `${seen} of ${laps} ${laps === 1 ? "lap" : "laps"}`;
+}
+
+/** A "sorted" line: the habit tracker's fixed event (its point keeps habit status "fixed"). Progress, not a fault. */
+export function isSorted(o: Pick<ObservationNext, "habit_event" | "habit">): boolean {
+  return o.habit_event === "fixed" || o.habit?.status === "fixed";
+}
+
+/**
+ * The note's kind (coach block `habit` / `one_off`): "Sorted" for a habit that stopped, "Focus" for the habit being
+ * worked on, "Habit · 3 of 4 laps" for a habit not on the radio, "Once" for a one-off; null for praise, a drill and
+ * points without the fields (older servers, observations before D6): unknown, never guessed.
+ */
+export function habitChip(o: ObservationNext): HabitChip | null {
+  if (o.kind === "drill") return null;
+  if (isSorted(o)) return { kind: "sorted", text: "Sorted" };
+  if (o.positive) return null;
+  const h = o.habit;
+  if (h?.status === "focus") return { kind: "focus", text: "Focus" };
+  if (h?.status === "seen" && finite(h.laps_seen) && finite(h.laps) && h.laps > 0) {
+    return { kind: "habit", text: `Habit · ${lapCount(h.laps_seen, h.laps)}` };
+  }
+  return o.one_off === true ? { kind: "once", text: "Once" } : null;
+}
+
+export type ChipTone = "warning" | "success" | "accent";
+
+/** The coach card chip's colour: praise and "Sorted" green, a focus habit and a drill accent (as the FOCUS and DRILL
+ * chips), every other note to work on amber; the pit lane's "Next run" heading amber. */
+export function chipTone(p: Pick<CoachPoint, "tag" | "habit">, heading: string | null = null): ChipTone {
+  if (heading) return "warning";
+  if (p.tag === "good") return "success";
+  return p.tag === "drill" || p.habit?.kind === "focus" ? "accent" : "warning";
+}
+
+/** The Ready card's "Last lap:" chip (its label already says the lap): the note's kind, else Good / Work on. */
+export function pointChip(p: Pick<CoachPoint, "tag" | "habit">): { text: string; tone: ChipTone } | null {
+  if (p.tag !== "good" && p.tag !== "work_on") return null;
+  return { text: p.habit?.text ?? (p.tag === "good" ? "Good" : "Work on"), tone: chipTone(p) };
+}
+
+/** The chip's words: a habit says its counts; every other note says its kind and the lap it is from. */
+function chipWords(tag: "good" | "work_on", habit: HabitChip | null, lap: number | null, last: number | null): string {
+  if (habit?.kind === "habit") return habit.text;
+  return `${habit?.text ?? (tag === "good" ? "Good" : "Work on")}${lapSuffix(lap, last)}`;
+}
+
 function view(
   o: ObservationNext,
   source: "d6" | "observation",
@@ -112,12 +176,14 @@ function view(
   last: number | null,
 ): CoachPoint {
   const text = pointText(o, simple, moving);
-  const tag = o.positive ? "good" : "work_on";
+  const tag = o.positive || isSorted(o) ? "good" : "work_on";
   const lap = finite(o.lap_number) ? o.lap_number : null;
+  const habit = habitChip(o);
   return {
     tag,
+    habit,
     lap,
-    tagText: `${tag === "good" ? "Good" : "Work on"}${lapSuffix(lap, last)}`,
+    tagText: chipWords(tag, habit, lap, last),
     text,
     size: textSize(text, moving),
     clamp: needsClamp(text, moving),
@@ -131,6 +197,7 @@ function view(
 function emptyPoint(empty: string): CoachPoint {
   return {
     tag: null,
+    habit: null,
     lap: null,
     tagText: null,
     text: null,
@@ -160,6 +227,9 @@ export function coachPoint(s: SnapshotNext, corner: string | null, simple: boole
   if (s.coach) {
     const o = s.coach.by_corner[corner];
     if (o) return view(o, "d6", simpleWording(s, simple), moving, last);
+    const f = focusAt(s, corner);
+    const fp = f ? focusPoint(f, moving) : null;
+    if (fp) return fp;
   } else {
     const o = rankedObservations(s).find((x) => x.corner === corner);
     if (o) return view(o, "observation", simple, moving, last);
@@ -187,25 +257,101 @@ export function lapPicks(s: SnapshotNext): { picks: ObservationNext[]; source: "
   return { picks: rankedObservations(s), source: "observation" };
 }
 
-/** The last lap's top point, full text (the pit lane's "Next run", the Ready card's "Last lap: …" between runs). */
+/** The last lap's top point, full text (the pit lane's "Next run", the Ready card's "Last lap: …" between runs). A
+ * "sorted" line is progress, not something to work on: a fault comes first. */
 export function topPoint(s: SnapshotNext, simple: boolean): CoachPoint | null {
   const { picks, source } = lapPicks(s);
-  const o = picks.find((x) => !x.positive) ?? picks[0];
+  const o = picks.find((x) => !x.positive && !isSorted(x)) ?? picks[0];
   return o ? view(o, source, simpleWording(s, simple), false, lastLapNumber(s)) : null;
 }
 
-/** One Work on and one Went well (Session complete card). */
+/** One Work on and one Went well (Session complete card). A "sorted" line went well. */
 export function workOnWentWell(s: SnapshotNext, simple: boolean): { workOn: CoachPoint | null; wentWell: CoachPoint | null } {
   const { picks: all, source } = lapPicks(s);
   // coachref: a drill attempt's point is a drill result, not a Work on (the drill's own card and Review › Coaching
   // show it).
   const picks = all.filter((o) => o.kind !== "drill");
   const sw = simpleWording(s, simple);
-  const w = picks.find((x) => !x.positive);
-  const g = picks.find((x) => x.positive);
+  const w = picks.find((x) => !x.positive && !isSorted(x));
+  const g = picks.find((x) => x.positive || isSorted(x));
   const last = lastLapNumber(s);
   return {
     workOn: w ? view(w, source, sw, false, last) : null,
     wentWell: g ? view(g, source, sw, false, last) : null,
   };
+}
+
+// ------------------------------------------------------------------------------------------------- habits (spec 7)
+
+/** coach/habits.py focus_slots at its largest (detailed intensity): the Ready card shows at most this many. */
+export const FOCUS_SLOTS_MAX = 2;
+
+/** The habits being worked on (coach block `focus`, status "focus"), at most FOCUS_SLOTS_MAX; [] without them. */
+export function focusHabits(s: SnapshotNext | null | undefined): FocusEntry[] {
+  return (s?.coach?.focus ?? []).filter((f) => f?.status === "focus" && !!f.corner).slice(0, FOCUS_SLOTS_MAX);
+}
+
+function focusAt(s: SnapshotNext, corner: string): FocusEntry | null {
+  return focusHabits(s).find((f) => f.corner === corner) ?? null;
+}
+
+/** "Seen on 3 of the last 4 laps" for a habit's counts; null when unknown. */
+function habitEvidence(f: Pick<FocusEntry, "laps_seen" | "laps">): string | null {
+  if (!finite(f.laps_seen) || !finite(f.laps) || f.laps <= 0) return null;
+  return `Seen on ${f.laps_seen} of the last ${f.laps} ${f.laps === 1 ? "lap" : "laps"}`;
+}
+
+/** A focus corner whose last lap had no note of its own: the habit's reminder, verbatim (the words the radio says
+ * before the corner: "T6: apex speed, 12 down"), else its last glance text; not a lap's note, so no lap. */
+function focusPoint(f: FocusEntry, moving: boolean): CoachPoint | null {
+  const text = f.reminder?.text || f.short || null;
+  if (!text) return null;
+  return {
+    tag: "work_on",
+    habit: { kind: "focus", text: "Focus" },
+    lap: null,
+    tagText: "Focus",
+    text,
+    size: textSize(text, moving),
+    clamp: needsClamp(text, moving),
+    empty: null,
+    evidence: habitEvidence(f),
+    source: "d6",
+    corner: f.corner,
+  };
+}
+
+/** A habit's topic in plain words for the Ready card ("apex speed"): what the habit is about, never advice. */
+const HABIT_TOPIC: Readonly<Record<string, string>> = {
+  brake_early: "braking point",
+  brake_late_overdrive: "corner entry",
+  low_min_speed: "apex speed",
+  overspeed_apex: "entry speed",
+  late_throttle: "throttle on exit",
+  coasting: "coasting",
+};
+
+export interface WorkingOnRow {
+  /** Learned corner name. */
+  corner: string;
+  /** "T6". */
+  label: string;
+  /** The reminder's phrase ("apex speed, 12 down", verbatim from the backend), else the topic ("braking point"). */
+  what: string;
+  /** "3 of 4 laps"; null when unknown. */
+  counts: string | null;
+  /** "T6 apex speed, 12 down · 3 of 4 laps". */
+  text: string;
+}
+
+/** The Ready card's "Working on" rows between runs: the habits the radio is working on, at most FOCUS_SLOTS_MAX. */
+export function workingOn(s: SnapshotNext | null | undefined): WorkingOnRow[] {
+  if (!s) return [];
+  return focusHabits(s).map((f) => {
+    const label = f.corner_label || cornerLabelOf(s.track_model, f.corner);
+    const phrase = f.reminder?.parts?.[1];
+    const what = phrase || HABIT_TOPIC[f.kind] || f.kind.replace(/_/g, " ");
+    const counts = finite(f.laps_seen) && finite(f.laps) && f.laps > 0 ? lapCount(f.laps_seen, f.laps) : null;
+    return { corner: f.corner, label, what, counts, text: [`${label} ${what}`, counts].filter(Boolean).join(" · ") };
+  });
 }
