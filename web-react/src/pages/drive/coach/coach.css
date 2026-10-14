@@ -383,7 +383,8 @@
   border-radius: 18px;
   background: color-mix(in oklab, var(--pw-brake) 11%, var(--surface-secondary));
 }
-.pwc-cue[data-kind="marker"] { background: var(--surface-secondary); }
+.pwc-cue[data-kind="marker"],
+.pwc-cue[data-kind="reminder"] { background: var(--surface-secondary); }
 .pwc-cue__kind {
   flex: none;
   padding: 10px 14px;
@@ -393,7 +394,8 @@
   font: 800 24px/1 var(--pw-font-sans);
   letter-spacing: 0.08em;
 }
-.pwc-cue[data-kind="marker"] .pwc-cue__kind {
+.pwc-cue[data-kind="marker"] .pwc-cue__kind,
+.pwc-cue[data-kind="reminder"] .pwc-cue__kind {
   background: var(--surface-tertiary);
   color: var(--foreground);
 }
@@ -769,6 +771,9 @@
   line-clamp: 4;
 }
 .pwc-ready__lbl { font-weight: 700; }
+/* "Working on:" then a line per habit ("T6 apex speed, 12 down · 3 of 4 laps"): the counts muted, as an evidence
+ * line, and never split across lines. */
+.pwc-ready__count { color: var(--muted); white-space: nowrap; }
 .pwc-ready__ev {
   display: -webkit-box;
   overflow: hidden;

@@ -368,6 +368,25 @@ export interface SimulateResult {
   path: string;
   synthetic: true;
   lap_times_ms: number[];
+  /** What to look for in its replay (sim/scenarios.py STORIES; also the capture's meta.extra.story). null or absent
+   * (an older server, a scenario without one) = nothing promised. */
+  story?: DemoStory | null;
+}
+
+/** One thing to look for in a SYNTHETIC demo's replay (sim/scenarios.py StoryBeat): on which laps, when ("after the
+ * line", "before T5", "on the screen", "with the lap time"), the exact radio line or the screen's note, and what it
+ * shows. Corner names are the ones the demo learns and shows. */
+export interface DemoStoryBeat {
+  laps: number[];
+  when: string;
+  radio: string | null;
+  screen: string | null;
+  shows: string;
+}
+
+export interface DemoStory {
+  intro: string;
+  beats: DemoStoryBeat[];
 }
 
 /** GET /api/voice/status: `{enabled: false}` when the voice hub is off, else the hub's state. Only the fields the
@@ -440,15 +459,14 @@ export const demoCaptureName = (format = 2025, scenario = "coaching-demo"): stri
 
 /**
  * "Try a demo replay" (spec 4.9, the Drive no-telemetry card; Settings › System): replay the SYNTHETIC coaching demo
- * at real time, generating it first when it is not in the captures yet. Resolves with the capture's path; the caller
- * says that it is synthetic (the live snapshot is flagged synthetic too).
+ * at real time. The capture is written anew every time (POST /api/simulate overwrites demoCaptureName), so the replay
+ * is always this server's demo and never a capture an older version left in the folder. Resolves with the capture's
+ * path and what to look for (its story); the caller says that it is synthetic (the live snapshot is flagged too).
  */
-export async function startDemoReplay(format = 2025): Promise<{ path: string; generated: boolean }> {
-  const name = demoCaptureName(format);
-  const existing = (await systemApi.captures()).find((c) => c.synthetic && c.name === name);
-  const path = existing?.path ?? (await systemApi.simulate("coaching-demo", format)).path;
-  await systemApi.replay(path, 1);
-  return { path, generated: existing === undefined };
+export async function startDemoReplay(format = 2025): Promise<{ path: string; story: DemoStory | null }> {
+  const r = await systemApi.simulate("coaching-demo", format);
+  await systemApi.replay(r.path, 1);
+  return { path: r.path, story: r.story ?? null };
 }
 
 // ---------------------------------------------------------------------------------------------- client-side mirrors

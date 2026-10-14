@@ -186,32 +186,21 @@ describe("calls", () => {
     expect(f.mock.calls.map((c) => c[0])).toEqual(["/api/llm/providers", "/api/llm/providers?health=true"]);
   });
 
-  it("demo replay: reuses the synthetic demo capture when present, else generates it, then replays at 1x", async () => {
-    const captures = [
-      { path: "/d/live.pwcap", name: "synthetic-coaching-demo-2025.pwcap", synthetic: false, size_bytes: 1, description: "", created_unix: 1 },
-      { path: "/d/synthetic-coaching-demo-2025.pwcap", name: "synthetic-coaching-demo-2025.pwcap", synthetic: true, size_bytes: 1, description: "", created_unix: 1 },
-    ];
-    const calls: [string, string][] = [];
+  it("demo replay: always writes the synthetic demo anew (never a stale capture), then replays it at 1x", async () => {
+    const story = { intro: "SYNTHETIC: 10 generated laps", beats: [{ laps: [4], when: "after the line", radio: "T5 brake", screen: null, shows: "x" }] };
+    const calls: [string, string, unknown][] = [];
     vi.stubGlobal(
       "fetch",
       vi.fn(async (path: string, init?: RequestInit) => {
-        calls.push([init?.method ?? "GET", path]);
-        if (path === "/api/captures") return json(captures);
-        if (path === "/api/simulate") return json({ path: "/d/synthetic-coaching-demo-2026.pwcap", synthetic: true, lap_times_ms: [] });
+        calls.push([init?.method ?? "GET", path, init?.body ? JSON.parse(String(init.body)) : null]);
+        if (path === "/api/simulate") return json({ path: "/d/synthetic-coaching-demo-2026.pwcap", synthetic: true, lap_times_ms: [], story });
         return json({ replaying: "x", speed: 1 });
       }),
     );
-    expect(await startDemoReplay()).toEqual({ path: "/d/synthetic-coaching-demo-2025.pwcap", generated: false });
+    expect(await startDemoReplay(2026)).toEqual({ path: "/d/synthetic-coaching-demo-2026.pwcap", story });
     expect(calls).toEqual([
-      ["GET", "/api/captures"],
-      ["POST", "/api/replay"],
-    ]);
-    calls.length = 0;
-    expect(await startDemoReplay(2026)).toEqual({ path: "/d/synthetic-coaching-demo-2026.pwcap", generated: true });
-    expect(calls).toEqual([
-      ["GET", "/api/captures"],
-      ["POST", "/api/simulate"],
-      ["POST", "/api/replay"],
+      ["POST", "/api/simulate", { scenario: "coaching-demo", packet_format: 2026 }],
+      ["POST", "/api/replay", { path: "/d/synthetic-coaching-demo-2026.pwcap", speed: 1, loop: false }],
     ]);
   });
 });

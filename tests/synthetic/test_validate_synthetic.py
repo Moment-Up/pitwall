@@ -4,8 +4,9 @@ F1: the coaching demo replays through the real pipeline (adapter -> SessionManag
 lap processor running synchronously (as in test_cues_replay.py). A fake radio hub turns each fired call into the
 hub's observer events (delivered at a seeded latency) and plays proactive messages at chosen points: one on a
 straight and one just after a braking point on several laps. The kit then reads the stored laps: the calls on the
-laps with injected early braking match onsets about 15 m and 20 m before the point, the messages played inside a
-braking zone are the only overlaps, and nothing passes: every record is tier ``synthetic``.
+laps with injected early braking (the demo's braking habit, laps 3-5) match onsets about 15 m before the point, the
+laps that brake on it (6-8) match it, the messages played inside a braking zone are the only overlaps, and nothing
+passes: every record is tier ``synthetic``.
 
 GT7 and AC: synthetic captures replayed by a real Runtime feed the game rules (lap counts, variant, tier).
 
@@ -191,8 +192,10 @@ async def test_f1_cues_and_speak_windows_known_answers(tmp_path: Path) -> None:
     live.cues.set_plan_listener(timing_for)
     record = live.on_frame
     started: dict[str, float] = {}
+    # laps 3, 4 and 6: lap 5 has the demo's flashback, and a message over a rewound interval has no class (evidence)
+    msg_laps = (3, 4, 6)
     planned = {
-        (lap, at, kind): f"p{lap}{kind}" for lap in (3, 4, 5) for at, kind in ((calm_at, "calm"), (braking_at, "brake"))
+        (lap, at, kind): f"p{lap}{kind}" for lap in msg_laps for at, kind in ((calm_at, "calm"), (braking_at, "brake"))
     }
 
     def brief(f: CarFrame) -> dict[str, Any]:
@@ -294,7 +297,7 @@ async def test_f1_cues_and_speak_windows_known_answers(tmp_path: Path) -> None:
             await asyncio.sleep(0)  # the kit's lap notifications and lap jobs run on this loop
     router.finish()
     writer.flush()
-    await _drain(kit, len(run.evidence.laps) or 7)
+    await _drain(kit, len(run.evidence.laps) or 10)
     kit.recompute()
     ev = run.evidence
     assert ev.cues and all(c.tier == "synthetic" for c in ev.cues)
@@ -303,14 +306,14 @@ async def test_f1_cues_and_speak_windows_known_answers(tmp_path: Path) -> None:
     for c in ev.cues:
         if c.onset_vs_point_m is not None:
             by_lap.setdefault(c.lap, []).append(c.onset_vs_point_m)
-    assert min(by_lap[3]) == pytest.approx(-15.0, abs=3.0)  # lap 3: brakes 15 m early into design-T3
-    assert min(by_lap[7]) == pytest.approx(-20.0, abs=3.0)  # lap 7: brakes 20 m early into design-T1
-    clean = [x for lap in (4, 5) for x in by_lap.get(lap, [])]
-    assert clean and max(map(abs, clean)) <= 5.0  # elsewhere on the reference point (lap 4 T7 apex loss: -3.4 m)
+    for lap in (3, 4):  # the demo's braking habit: 15 m early into design-T8 (learned T5)
+        assert min(by_lap[lap]) == pytest.approx(-15.0, abs=3.0), lap
+    clean = [x for lap in (6, 7, 8) for x in by_lap.get(lap, [])]  # T5 on the point again (design-T7 apex loss: -3 m)
+    assert clean and max(map(abs, clean)) <= 5.0
     assert all(c.cls == "on_time" for c in ev.cues if c.error_m is not None)
     pro = {p.id: p for p in ev.proactive}
-    assert {pid for pid, p in pro.items() if p.cls == "overlap"} == {f"p{lap}brake" for lap in (3, 4, 5)}
-    assert all(pro[f"p{lap}calm"].cls == "clean" for lap in (3, 4, 5))
+    assert {pid for pid, p in pro.items() if p.cls == "overlap"} == {f"p{lap}brake" for lap in msg_laps}
+    assert all(pro[f"p{lap}calm"].cls == "clean" for lap in msg_laps)
     assert all(p.tier == "synthetic" and p.engine == "kokoro" for p in pro.values())
     items = {it.id: it for it in run.items}
     assert items["cues_timing"].auto.verdict == "not_live" and items["cues_timing"].auto.tier == "synthetic"

@@ -1,7 +1,8 @@
 """coachref in the lap pipeline (``LapProcessor`` + ``LiveState`` + ``CueEngine`` + ``CoachRef``).
 
-Sam's laps are the synthetic clean session (fast lap times assigned), Ann's the coaching demo with its injected
-mistakes. Stored as ordinary non-synthetic rows on purpose (cross-driver resolution); not a compatibility claim.
+Sam's laps are the synthetic clean session (fast lap times assigned), Ann's the one-offs session with its injected
+mistakes (``tests.conftest.one_offs_scenario``). Stored as ordinary non-synthetic rows on purpose (cross-driver
+resolution); not a compatibility claim.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from typing import Any
 
 import pytest
 
-from pitwall.coach.cues import CueEngine
+from pitwall.coach.cues import NO_HABITS, CueEngine
 from pitwall.core.coachref import ChoiceRequest, DrillRequest
 from pitwall.core.lap_processor import AnalysisWorker, LapProcessor
 from pitwall.core.live import LiveState
@@ -68,12 +69,12 @@ def set_moving(live: LiveState, speed: float | None, *, pit: int = 0, lap: int =
 
 
 def test_cross_driver_reference_descriptor_wording_and_clamp(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
-    _ann, sam, sa = setup_family(env, clean_session, demo_session)
+    _ann, sam, sa = setup_family(env, clean_session, one_offs_session)
     env.svc.set_choice(ChoiceRequest(kind="driver_best", target_driver_id=sam))
-    laps = demo_session.laps
-    (first,) = drive(env.proc, sa, demo_session.info, [(laps[0], 70_000, 1)])
+    laps = one_offs_session.laps
+    (first,) = drive(env.proc, sa, one_offs_session.info, [(laps[0], 70_000, 1)])
     ref = env.live.reference
     assert ref is not None and set(ref) == DESCRIPTOR_KEYS
     assert (ref["lap_id"], ref["own"], ref["label"], ref["label_to"], ref["ref_name"], ref["brake_clamped"]) == (
@@ -88,7 +89,7 @@ def test_cross_driver_reference_descriptor_wording_and_clamp(
     assert comp["reference"] == ref and comp["brake_clamp_m"] == {}  # Ann has no lap of her own yet
     assert env.live.cues.plan.cues == () and env.live.cues.plan.reason == "no braking points of your own yet"
     assert env.live.coachref is not None and env.live.coachref["used_kind"] == "driver_best"
-    res = drive(env.proc, sa, demo_session.info, [(laps[1], 69_500, 2), (laps[2], 70_500, 3)])
+    res = drive(env.proc, sa, one_offs_session.info, [(laps[1], 69_500, 2), (laps[2], 70_500, 3)])
     third = res[1]
     clamp = third["comparison"]["brake_clamp_m"]
     assert clamp and all(isinstance(v, float) for v in clamp.values())
@@ -99,6 +100,10 @@ def test_cross_driver_reference_descriptor_wording_and_clamp(
     with env.db.read() as c:
         stored = [o["text"] for o in repo.list_observations(c, sa) if o["kind"] == "brake_early"]
     assert stored and all("than Sam" in t for t in stored)  # persisted reworded
+    # focus mode calls habits: lap 3's early braking is a one-off (screen only), so the clamp is checked on every
+    # braking zone the reference has (mode "all")
+    assert env.live.cues.plan.cues == () and env.live.cues.plan.reason == NO_HABITS
+    env.live.cues.set_mode("all")
     plan = env.live.cues.plan
     assert plan.cues, plan.reason
     for cue in plan.cues:
@@ -132,10 +137,10 @@ def test_without_a_service_the_payload_is_unchanged(tmp_path: Path, clean_sessio
 
 
 def test_drill_filters_live_observations_and_freezes_the_reference(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
-    _ann, sam, sa = setup_family(env, clean_session, demo_session)
-    laps, info = demo_session.laps, demo_session.info
+    _ann, sam, sa = setup_family(env, clean_session, one_offs_session)
+    laps, info = one_offs_session.laps, one_offs_session.info
     drive(env.proc, sa, info, [(laps[0], 69_000, 1), (laps[1], 69_500, 2)])
     own_ref = env.live.reference
     assert own_ref is not None and own_ref["own"] and own_ref["kind"] == "own_best"
@@ -173,10 +178,15 @@ def test_drill_filters_live_observations_and_freezes_the_reference(
 
 
 def test_reference_change_applies_now_only_when_stopped(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
-    _ann, sam, sa = setup_family(env, clean_session, demo_session)
-    drive(env.proc, sa, demo_session.info, [(demo_session.laps[0], 69_000, 1), (demo_session.laps[1], 69_500, 2)])
+    _ann, sam, sa = setup_family(env, clean_session, one_offs_session)
+    drive(
+        env.proc,
+        sa,
+        one_offs_session.info,
+        [(one_offs_session.laps[0], 69_000, 1), (one_offs_session.laps[1], 69_500, 2)],
+    )
     before = env.live.reference
     assert before is not None and before["own"]
     set_moving(env.live, 210.0)
@@ -214,7 +224,7 @@ def test_submit_task_runs_on_the_worker_thread_and_propagates_errors(env: Env) -
 
 
 def test_coachref_never_touches_the_ingest_thread_hooks(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession, monkeypatch: pytest.MonkeyPatch
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     calls: list[Any] = []
 
@@ -224,23 +234,23 @@ def test_coachref_never_touches_the_ingest_thread_hooks(
 
     monkeypatch.setattr(LiveState, "on_frame", forbidden)
     monkeypatch.setattr(CueEngine, "on_frame", forbidden)
-    _ann, sam, sa = setup_family(env, clean_session, demo_session)
+    _ann, sam, sa = setup_family(env, clean_session, one_offs_session)
     env.svc.set_choice(ChoiceRequest(kind="driver_best", target_driver_id=sam))
-    drive(env.proc, sa, demo_session.info, [(demo_session.laps[i], 69_000 + i, i + 1) for i in range(3)])
+    drive(env.proc, sa, one_offs_session.info, [(one_offs_session.laps[i], 69_000 + i, i + 1) for i in range(3)])
     env.svc.start_drill(DrillRequest(corner_ref="T2", laps=3))
-    drive(env.proc, sa, demo_session.info, [(demo_session.laps[0], 69_000, 4)])
+    drive(env.proc, sa, one_offs_session.info, [(one_offs_session.laps[0], 69_000, 4)])
     env.svc.stop_drill()
     assert calls == []
 
 
 def test_drill_after_the_first_own_lap_uses_that_lap_as_the_own_point(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
     """Found on a recorded replay: the last comparison's clamp excludes the lap just driven, so right after Ann's
     first lap it is empty. A drill started then must use the clamp the next lap will use (that lap included)."""
-    _ann, sam, sa = setup_family(env, clean_session, demo_session)
+    _ann, sam, sa = setup_family(env, clean_session, one_offs_session)
     env.svc.set_choice(ChoiceRequest(kind="driver_best", target_driver_id=sam))
-    (first,) = drive(env.proc, sa, demo_session.info, [(demo_session.laps[0], 69_000, 1)])
+    (first,) = drive(env.proc, sa, one_offs_session.info, [(one_offs_session.laps[0], 69_000, 1)])
     assert first["comparison"]["brake_clamp_m"] == {}
     view = env.svc.start_drill(DrillRequest(corner="T2", kind="brake_point", laps=3))
     own_t2 = first["comparison"]["corners"]

@@ -10,7 +10,8 @@ from pitwall.adapters.f1.adapter import F1Adapter
 from pitwall.analysis.laps import LapAssembler, LapTrace
 from pitwall.ingest.capture import CapturedPacket
 from pitwall.model.telemetry import CarFrame, LapCompletion, SessionInfo
-from pitwall.sim.f1_stream import F1Scenario, GroundTruth, generate_f1_session
+from pitwall.sim.driver import CornerDeviation, DriverProfile
+from pitwall.sim.f1_stream import F1Scenario, FlashbackSpec, GroundTruth, generate_f1_session
 from pitwall.sim.scenarios import coaching_demo
 
 
@@ -44,8 +45,44 @@ def decode_session(packets: list[CapturedPacket]) -> tuple[list[LapTrace], list[
     return laps, frames, info, adapter
 
 
+def one_offs_scenario() -> F1Scenario:
+    """Seven laps at 'Pitwall Park' with four one-off mistakes: the coaching demo before habits (v0.3.0), kept as the
+    known-answer session of the tests written against it (``one_offs_session``). Design corner names, the learned
+    ones in brackets:
+
+    lap 1-2: clean, near-optimal (lap 1 is the reference)
+    lap 3:   brakes 15 m early into design-T3 (T2)
+    lap 4:   8 km/h low apex speed at design-T7 (T4)
+    lap 5:   40 m late to full throttle out of design-T8 (T5)
+    lap 6:   flashback mid-lap (lap must be excluded from references)
+    lap 7:   invalidated by the game (track limits) + braking 20 m early at design-T1 (T1)
+
+    The product demo (``pitwall.sim.scenarios.coaching_demo``, the ``demo_session`` fixture) tells the habits story
+    instead. SYNTHETIC, like every generated stream."""
+    return F1Scenario(
+        laps=7,
+        driver_by_lap={
+            3: DriverProfile(deviations={"T3": CornerDeviation(brake_early_m=15)}),
+            4: DriverProfile(deviations={"T7": CornerDeviation(apex_speed_loss_kph=8)}),
+            5: DriverProfile(deviations={"T8": CornerDeviation(throttle_delay_m=40)}),
+            7: DriverProfile(deviations={"T1": CornerDeviation(brake_early_m=20)}),
+        },
+        invalid_laps=frozenset({7}),
+        flashback=FlashbackSpec(lap=6, at_fraction=0.45),
+    )
+
+
+@pytest.fixture(scope="session")
+def one_offs_session() -> DecodedSession:
+    """``one_offs_scenario`` decoded: one-off mistakes with known answers, a flashback lap 6 and an invalid lap 7."""
+    packets, truth = generate_f1_session(one_offs_scenario())
+    laps, frames, info, adapter = decode_session(packets)
+    return DecodedSession(packets, truth, laps, frames, info, adapter)
+
+
 @pytest.fixture(scope="session")
 def demo_session() -> DecodedSession:
+    """The product's coaching demo (``pitwall simulate``) decoded: the habits story of ``COACHING_DEMO_STORY``."""
     packets, truth = generate_f1_session(coaching_demo())
     laps, frames, info, adapter = decode_session(packets)
     return DecodedSession(packets, truth, laps, frames, info, adapter)

@@ -1,7 +1,8 @@
 """D5: ``GET /api/drivers/{id}/progress`` - per-session progress and PB history for Review > Progress / Coaching.
 
-The laps are the synthetic coaching demo's traces (known injected mistakes) with chosen lap times, so lap
-statistics are exact and corner trends come from the real session analysis.
+The laps are the synthetic one-offs session's traces (``tests.conftest.one_offs_scenario``: known injected
+mistakes, flashback lap 6, invalid lap 7) with chosen lap times, so lap statistics are exact and corner trends come
+from the real session analysis.
 """
 
 from __future__ import annotations
@@ -63,18 +64,18 @@ def drive(proc: LapProcessor, sid: str, s: DecodedSession, laps: list[tuple[int,
 
 
 @pytest.fixture
-def history(api: tuple[TestClient, SimpleNamespace], demo_session: DecodedSession) -> dict[str, int]:
+def history(api: tuple[TestClient, SimpleNamespace], one_offs_session: DecodedSession) -> dict[str, int]:
     _client, rt = api
     proc = LapProcessor(rt.db, rt.writer)
     james = rt.drivers.default_id
     jo = rt.drivers.create("Jo").id
-    info = demo_session.info
-    drive(proc, session(rt, "a", james, info), demo_session, [(0, 70_000), (1, 69_000)])
-    drive(proc, session(rt, "b", james, info), demo_session, [(2, 69_500), (3, 68_000), (4, 68_900)])
-    drive(proc, session(rt, "c", james, info), demo_session, [(5, 60_000), (6, 61_000)])  # flashback, invalid
-    drive(proc, session(rt, "rep", james, info, source="replay:x.pwcap"), demo_session, [(0, 50_000)])
-    drive(proc, session(rt, "syn", james, info, synthetic=True), demo_session, [(1, 67_000)])
-    drive(proc, session(rt, "jo", jo, info), demo_session, [(0, 66_000)])
+    info = one_offs_session.info
+    drive(proc, session(rt, "a", james, info), one_offs_session, [(0, 70_000), (1, 69_000)])
+    drive(proc, session(rt, "b", james, info), one_offs_session, [(2, 69_500), (3, 68_000), (4, 68_900)])
+    drive(proc, session(rt, "c", james, info), one_offs_session, [(5, 60_000), (6, 61_000)])  # flashback, invalid
+    drive(proc, session(rt, "rep", james, info, source="replay:x.pwcap"), one_offs_session, [(0, 50_000)])
+    drive(proc, session(rt, "syn", james, info, synthetic=True), one_offs_session, [(1, 67_000)])
+    drive(proc, session(rt, "jo", jo, info), one_offs_session, [(0, 66_000)])
     return {"james": james, "jo": jo}
 
 

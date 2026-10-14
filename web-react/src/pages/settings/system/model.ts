@@ -2,7 +2,15 @@
 // in web/src/views/StatusView.svelte. Capability statuses come from src/pitwall/capabilities.py and are shown with
 // the server's own vocabulary: the page never upgrades a claim (CLAUDE.md "Capability claims").
 
-import type { Capability, Capture, LlmHealth, ReplayStatus, ServerHealth, SupportLevel } from "../../../lib/endpoints/settings";
+import type {
+  Capability,
+  Capture,
+  DemoStory,
+  LlmHealth,
+  ReplayStatus,
+  ServerHealth,
+  SupportLevel,
+} from "../../../lib/endpoints/settings";
 import { grouped } from "../../../lib/format";
 
 export type ChipTone = "success" | "warning" | "danger" | "default";
@@ -177,6 +185,44 @@ export function contextText(n: number | null | undefined): string {
 /** The synthetic demo's result, always labelled SYNTHETIC. */
 export function simulateNote(path: string): string {
   return `Wrote ${fileName(path)}. It is SYNTHETIC: generated data with known mistakes, not from a game.`;
+}
+
+/** A story beat's laps in words: "Lap 4", "Laps 5-7", "Laps 5 and 10", "Laps 2-4, 6 and 9" (runs of consecutive
+ * laps as a range). */
+export function lapsText(laps: readonly number[]): string {
+  const sorted = [...new Set(laps)].sort((a, b) => a - b);
+  const runs: number[][] = [];
+  for (const n of sorted) {
+    const run = runs[runs.length - 1];
+    if (run && run[run.length - 1] === n - 1) run.push(n);
+    else runs.push([n]);
+  }
+  const items = runs.flatMap((r) => (r.length >= 3 ? [`${r[0]}-${r[r.length - 1]}`] : r.map(String)));
+  const last = items.pop();
+  if (last === undefined) return "-";
+  return `${sorted.length === 1 ? "Lap" : "Laps"} ${items.length ? `${items.join(", ")} and ${last}` : last}`;
+}
+
+export interface StoryRow {
+  key: string;
+  /** "Lap 4 · after the line", "Laps 5-7 · before T5". */
+  when: string;
+  /** The exact radio line, else the screen's note. */
+  line: string;
+  /** True: said on the radio (shown quoted); false: on the screen or with the lap time. */
+  radio: boolean;
+  shows: string;
+}
+
+/** "What to look for" in a SYNTHETIC demo's replay (Settings › System after generating it), in the server's order. */
+export function storyRows(story: DemoStory): StoryRow[] {
+  return story.beats.map((b, i) => ({
+    key: `${i}:${b.when}`,
+    when: `${lapsText(b.laps)} · ${b.when}`,
+    line: b.radio ?? b.screen ?? "",
+    radio: b.radio != null,
+    shows: b.shows,
+  }));
 }
 
 export function replayNote(path: string, speed: number | null): string {

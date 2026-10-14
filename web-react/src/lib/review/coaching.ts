@@ -10,11 +10,31 @@
 //
 // The card text is the coach's, verbatim: the newest lap's occurrence (it carries the longest consistency
 // history), `text_simple` (D6) for simple-wording profiles when the backend sends it.
+//
+// Habits, not one-offs (habits spec 6; mirrors motivation/recap.py, the report's "One to work on"): the one to work on
+// is a point seen on MIN_REPEAT or more laps that is still there (on one of the last RECENT_LAPS compared laps of its
+// corner), else the top big one-off (the radio's rule: analysis/coaching.py is_big_one_off), else none. A point seen
+// on MIN_REPEAT or more laps and then on none of its corner's last RECENT_LAPS compared laps - those laps clean at
+// the corner, and for a braking-early habit the corner faster on each of them than on any lap it was seen on (later
+// braking is praised only when the corner got faster) - is fixed: it went well, and it leaves the Work on list. A
+// corner counts as compared on a lap when that lap's comparison was usable and had the corner, not lost to an
+// incident there (an incident observation); a lap with an observation at the corner counts too.
 
 import type { ReviewObservation, SessionAnalysis } from "../endpoints/review";
 import { evidenceLine, finite } from "./words";
 
 export const INCIDENT_KIND = "incident";
+/** [H] recap.py MIN_REPEAT: a point on 2 or more laps is a repeat, not a one-off. */
+export const MIN_REPEAT = 2;
+/** [H] recap.py RECENT_LAPS: the corner's last 3 compared laps say whether a point is still there or fixed. */
+export const RECENT_LAPS = 3;
+/** [H] analysis/coaching.py BIG_ONE_OFF_S / BIG_ONE_OFF_CONFIDENCE / HABIT_RATIO (the radio's big one-off). */
+export const BIG_ONE_OFF_S = 0.3;
+export const BIG_ONE_OFF_CONFIDENCE = 0.8;
+export const HABIT_RATIO = 0.6;
+/** analysis/coaching.py LATER_BRAKING_FIXES: a fixed braking-early habit is later braking, praised only when the corner
+ * got faster. tests/unit/test_motivation_recap.py pins these copies to the Python constants. */
+const LATER_BRAKING_FIXES: ReadonlySet<string> = new Set(["brake_early"]);
 
 export interface CoachingItem {
   /** `${corner}:${kind}`. */
@@ -40,7 +60,17 @@ export interface CoachingItem {
   score: number;
   /** Seen on two or more laps. */
   repeated: boolean;
+  /** Lap ids it was seen on, ascending. */
+  lapIds: number[];
+  /** Seen on one of the last RECENT_LAPS compared laps of its corner. */
+  recent: boolean;
+  /** Corrections only: seen on MIN_REPEAT or more laps, then clean on its corner's last RECENT_LAPS compared laps. */
+  fixed: boolean;
 }
+
+/** Corner -> lap id -> the corner's time against the reference that lap (s, + = lost; null = unknown), lap ids
+ * ascending: the laps the corner was compared on. */
+export type CornerLaps = Map<string, Map<number, number | null>>;
 
 function mean(values: readonly number[]): number | null {
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
@@ -62,13 +92,85 @@ export function flatObservations(
   return out;
 }
 
+/**
+ * The laps each corner was compared on, with its time (recap.py compared_corner_laps + corner_laps): a usable
+ * comparison that had the corner, unless an incident observation says the corner was lost to an incident there (no
+ * technique evidence); plus every lap with an observation at the corner, whose `impact_s` is the corner's time.
+ */
+export function cornerLaps(analysis: Pick<SessionAnalysis, "observations" | "comparisons"> | null | undefined): CornerLaps {
+  const incidents = new Set<string>();
+  for (const [lapKey, list] of Object.entries(analysis?.observations ?? {})) {
+    for (const o of list ?? []) if (o.kind === INCIDENT_KIND) incidents.add(`${Number(lapKey)}|${o.corner}`);
+  }
+  const out: CornerLaps = new Map();
+  const at = (corner: string) => {
+    let m = out.get(corner);
+    if (!m) out.set(corner, (m = new Map()));
+    return m;
+  };
+  for (const [lapKey, c] of Object.entries(analysis?.comparisons ?? {})) {
+    const lapId = Number(lapKey);
+    if (!Number.isFinite(lapId) || !c?.compatibility?.ok) continue;
+    for (const cd of c.corners ?? []) {
+      if (!cd.corner || incidents.has(`${lapId}|${cd.corner}`)) continue;
+      at(cd.corner).set(lapId, finite(cd.time_delta_s) ? cd.time_delta_s : null);
+    }
+  }
+  for (const { lapId, o } of flatObservations(analysis)) {
+    if (lapId == null || !o.corner) continue;
+    const m = at(o.corner);
+    if (m.get(lapId) == null) m.set(lapId, finite(o.impact_s) ? o.impact_s : null);
+  }
+  for (const [corner, m] of out) out.set(corner, new Map([...m].sort((a, b) => a[0] - b[0])));
+  return out;
+}
+
+function corrective(o: ReviewObservation): boolean {
+  return !o.positive && o.kind !== INCIDENT_KIND;
+}
+
+/** recap.py _is_fixed: MIN_REPEAT laps or more, then its corner's last RECENT_LAPS compared laps all after it, clean
+ * at the corner (no correction of any kind there) and, for a braking-early habit, each faster than any lap it was
+ * seen on (every time known). */
+function isFixed(
+  corner: string,
+  kind: string,
+  seen: number,
+  items: readonly { lapId: number | null; o: ReviewObservation }[],
+  laps: CornerLaps,
+  byLap: Map<number, ReviewObservation[]>,
+): boolean {
+  const ids = items.map((e) => e.lapId).filter((i): i is number => i != null);
+  if (seen < MIN_REPEAT || !ids.length) return false;
+  const lastSeen = Math.max(...ids);
+  const times = laps.get(corner) ?? new Map<number, number | null>();
+  const last = [...times.keys()].filter((i) => i > lastSeen).slice(-RECENT_LAPS);
+  if (last.length < RECENT_LAPS) return false;
+  if (last.some((i) => (byLap.get(i) ?? []).some((o) => o.corner === corner && corrective(o)))) return false;
+  if (!LATER_BRAKING_FIXES.has(kind)) return true;
+  const lost = items.map((e) => e.o.impact_s).filter(finite);
+  if (!lost.length) return false;
+  const least = Math.min(...lost);
+  return last.every((i) => {
+    const t = times.get(i);
+    return finite(t) && t < least;
+  });
+}
+
 /** Group observations by corner + kind (positives and corrections apart). */
 export function groupObservations(
   analysis: Pick<SessionAnalysis, "observations" | "comparisons"> | null | undefined,
 ): CoachingItem[] {
   const compared = Object.keys(analysis?.comparisons ?? {}).length;
+  const laps = cornerLaps(analysis);
+  const byLap = new Map<number, ReviewObservation[]>();
   const groups = new Map<string, { lapId: number | null; o: ReviewObservation }[]>();
   for (const e of flatObservations(analysis)) {
+    if (e.lapId != null) {
+      const on = byLap.get(e.lapId);
+      if (on) on.push(e.o);
+      else byLap.set(e.lapId, [e.o]);
+    }
     const key = `${e.o.positive ? "+" : "-"}${e.o.corner}:${e.o.kind}`;
     const g = groups.get(key);
     if (g) g.push(e);
@@ -83,6 +185,8 @@ export function groupObservations(
     const impacts = sorted.map((e) => e.o.impact_s).filter(finite);
     const confidences = sorted.map((e) => e.o.confidence).filter(finite);
     const priorities = sorted.map((e) => e.o.priority).filter(finite);
+    const lapIds = [...new Set(sorted.map((e) => e.lapId).filter((i): i is number => i != null))].sort((x, y) => x - y);
+    const recentIds = new Set([...(laps.get(last.o.corner)?.keys() ?? [])].slice(-RECENT_LAPS));
     items.push({
       key: `${last.o.corner}:${last.o.kind}`,
       corner: last.o.corner,
@@ -98,6 +202,9 @@ export function groupObservations(
       meanPriority: mean(priorities) ?? 0,
       score: priorities.reduce((a, b) => a + b, 0) / Math.max(compared, lapNumbers.length, 1),
       repeated: lapNumbers.length >= 2,
+      lapIds,
+      recent: lapIds.some((i) => recentIds.has(i)),
+      fixed: !last.o.positive && isFixed(last.o.corner, last.o.kind, lapNumbers.length, sorted, laps, byLap),
     });
   }
   return items;
@@ -126,14 +233,40 @@ function onePerCorner(items: readonly CoachingItem[]): CoachingItem[] {
   return out;
 }
 
-/** "Work on": corrections, ranked, one per corner. `exclude` (lane motivation): the `corner:kind` key a card above
+/** "Work on": corrections, ranked, one per corner; a fixed point is not one (it went well: `fixedItems`), so another
+ * point at its corner may stand for the corner. `exclude` (lane motivation): the `corner:kind` key a card above
  * already shows ("Today's 3 things"), left out of the list; its corner is not refilled by another point. */
 export function workOnItems(
   analysis: Pick<SessionAnalysis, "observations" | "comparisons"> | null | undefined,
   exclude?: string | null,
 ): CoachingItem[] {
-  const items = onePerCorner(rankItems(groupObservations(analysis).filter((i) => !i.positive)));
+  const items = onePerCorner(rankItems(groupObservations(analysis).filter((i) => !i.positive && !i.fixed)));
   return exclude ? items.filter((i) => i.key !== exclude) : items;
+}
+
+/** analysis/coaching.py is_big_one_off on an item's occurrence: a correction that is no habit by the coach's own
+ * consistency, cost BIG_ONE_OFF_S or more, measured with BIG_ONE_OFF_CONFIDENCE or more. */
+export function isBigOneOff(o: ReviewObservation): boolean {
+  const habit = finite(o.consistency_ratio) && o.consistency_ratio >= HABIT_RATIO;
+  const big = finite(o.impact_s) && o.impact_s >= BIG_ONE_OFF_S;
+  return corrective(o) && !habit && big && finite(o.confidence) && o.confidence >= BIG_ONE_OFF_CONFIDENCE;
+}
+
+/** The session's one thing to work on (recap.py work_on, before the driver's limits): the top point seen on
+ * MIN_REPEAT or more laps that is still there, else the top big one-off, else null (a small one-off, or a corner
+ * already fixed, is never the session's lesson). */
+export function oneToWorkOn(analysis: Pick<SessionAnalysis, "observations" | "comparisons"> | null | undefined): CoachingItem | null {
+  const ranked = rankItems(groupObservations(analysis).filter((i) => !i.positive));
+  return (
+    ranked.find((i) => i.seen >= MIN_REPEAT && i.recent) ??
+    ranked.find((i) => i.seen < MIN_REPEAT && isBigOneOff(i.latest)) ??
+    null
+  );
+}
+
+/** Corrections that are fixed (recap.py's "sorted" Went well), ranked. */
+export function fixedItems(analysis: Pick<SessionAnalysis, "observations" | "comparisons"> | null | undefined): CoachingItem[] {
+  return rankItems(groupObservations(analysis).filter((i) => !i.positive && i.fixed));
 }
 
 /** "Went well": positive observations, ranked, one per corner, at most `max` (3). */

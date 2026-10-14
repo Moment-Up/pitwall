@@ -1,8 +1,9 @@
 # Status
 
-_Last updated: 2026-10-13 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
+_Last updated: 2026-10-14 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
 yet unless the Live column says so. After it: Gran Turismo 7 on the PS5, from the owner's races of 2026-10-11; F2
-cars in F1 25, recorded; v0.3.0's one radio engineer, recorded)._
+cars in F1 25, recorded; v0.3.0's one radio engineer, recorded; habits and corner reminders, synthetic and
+recorded)._
 
 What works, how far each part has been tested, and what is still unverified. Every claim is tied to one evidence
 tier:
@@ -32,6 +33,7 @@ One row per feature. "Next check" names the validation kit item that would give 
 | F2 cars in F1 25 (PS5) | yes | yes (12 F2 sessions of 2026-10-11 replayed; 3 committed excerpts) | no | a live run; mandatory stops at longer race lengths; 2026 F2 cars | `f2_ps5` |
 | Coaching from your own reference lap (deterministic) | yes | yes | **yes** (coaching produced in the live races) | the radio and the card saying the same point, live | `ipad_one_message` |
 | Live braking cues | yes | yes | no | timing on track | `cues_timing` |
+| Habits on the radio and Drive, corner reminders, the report's habit rules (unreleased) | yes (unit tests; 5 synthetic scenarios before / after) | yes (30 owner captures replayed before / after: [below](#habits-and-corner-reminders-unreleased)) | no | heard live; a reminder's real audio length and the driver's reaction to it; "sorted" said after a real fix | `cues_timing`, `ipad_one_message` |
 | F1 spotter (cars alongside) | yes (16 scenarios, at 60, 20 and 10 Hz, formats 2025 and 2026: a corner, a spin and a gate closing included) | yes (26 owner PS5 race sessions, 169 min: every overlap of 1 s or more called (121/121), 0 wrong clears, no call while the player slides more than 30 degrees; ground truth from the same positions. The radio simulated at measured clip lengths on the same races: what the driver would hear) | no | heard on track; audio latency to the ear; format 2026; online lobbies beyond one race; the car box against the game's collision shapes; the clear said as a gate closes (synthetic only: it never happened in these races) | a live F1 race with the spotter on (manual) |
 | Radio: push-to-talk, speech recognition, voices | yes | yes | partly (a radio check over an iPad and one AirPod was heard; the F1 25 wheel button is read live) | a driver asking by push-to-talk; the new dashboard's Go live on an iPad; Kokoro and Windows voices on a radio | `radio_ptt`, `radio_kokoro` |
 | Radio: hands-free talking (wake word "Pitwall" / "Radio", stationary unless the driver allows it while driving; Bluetooth button) | yes (the wake word through the real speech engines on 119 macOS `say` clips: "Pitwall" 44/49 clean, 45/49 with an engine drone, "Radio" 26/28, 0 false accepts; the browser VAD rules on the same clips; the hub's rules unit-tested; end to end on an isolated server: `say` clips over `/ws/radio` while a recorded F1 25 race streamed over UDP, docs/research/handsfree.md 3.5) | yes (the stationary gate on 11 owner captures as the hub sees them, incident gaps of 2-4 s no longer counted as stops and the hint only at stops of 8 s or more (review round 2); real F1 25 button presses through the hub with hands-free armed: 38 of 38 UDP Action 1 presses keyed push-to-talk and cut the capture); no recorded voice | no | a real voice and AirPod on the rig (A9 recordings owed); the Bluetooth key and game controller on an iPad; hands-free while driving | `radio_handsfree` *(new)* |
@@ -262,6 +264,97 @@ every message was recorded with its time, lap and lap distance, and the driver's
   call, a spotter car call or another cue. A puncture is on the urgent path (it cuts in, past the damage toggle; not
   after the flag); alerts spend the lap's budget.
 
+## Habits and corner reminders (unreleased)
+
+The radio coaches habits instead of every corner (docs/features.md "Habits: what the radio works on"): one definition
+of a habit (`analysis/coaching.py`), habit memory kept through a new best (`core/lap_processor.py`), a habit tracker
+(`coach/habits.py`) behind the radio's coaching pick and the coach card, braking calls and corner reminders from the
+habits (`coach/cues.py`), and the report's habit rules (`motivation/recap.py`). **Synthetic and recorded, not live.**
+
+How it was measured (2026-10-14): integration ddd7188 (before) and feat/habits (after) replayed the same captures,
+read-only, through the real pipeline (packets, session manager, lap processor run synchronously, live state, coach
+block, the radio's lap messages at normal intensity with nobody seated) with the braking calls in focus mode and a
+simulated audio latency of 0.45 s (a reminder's length: the planner's word estimate). Corrective lines are the coaching
+lines that are not praise; a silent lap is a compared lap without one; "same point next lap" is a line about the
+corner and fault of a line on the previous compared lap.
+
+Synthetic scenarios (`pitwall simulate`'s coaching demo as it was then, and the review's four), before / after:
+
+| Scenario | Compared laps | Corrective lines | Silent laps | Same point next lap | Braking calls | First lap coached | After: announced, better, still, sorted |
+|---|---|---|---|---|---|---|---|
+| coaching demo of v0.3.0 (one-offs only; now `one_offs_scenario` in the tests) | 6 | 4 / 3 | 2 / 3 | 0 / 0 | 3 / 0 | 3 / 3 | 0, 0, 0, 0 |
+| habit (design corner 3 brakes 15 m early, laps 3-10) | 9 | 8 / 4 | 1 / 5 | 4 / 1 | 7 / 6 | 3 / 3 | 1, 0, 1, 0 |
+| pattern (four corners brake 12 m early, laps 3-9) | 8 | 7 / 5 | 1 / 3 | 1 / 0 | 12 / 10 | 3 / 3 | 1, 0, 1, 0 |
+| improving (a new best every lap) | 7 | 0 / 0 | 7 / 7 | 0 / 0 | 0 / 0 | - / - | 0, 0, 0, 0 |
+| pb_reset (a braking habit while another corner improves) | 9 | 5 / 2 | 4 / 7 | 4 / 0 | 5 / 6 | 2 / 2 | 1, 0, 0, 0 |
+
+At detailed intensity the habit scenario went from 12 to 4 corrective lines and the pattern scenario from 14 to 7
+(two habits announced, two "still"). The v0.3.0 coaching demo has no habit, so in focus mode it no longer makes a
+braking call (before: "T2 brake" on laps 4-6 after one lap braking early); its radio lines lost the 0.08 s one-off on
+lap 4. "improving" stays silent: each lap is a new best, so nothing loses time against the reference.
+
+**The coaching demo tells the habits story (2026-10-14).** With only one-offs the demo showed no habit, no reminder,
+no "sorted" and no braking call in focus mode, so `pitwall simulate` (and Drive's *Try a demo replay*, Settings ›
+System) now writes ten laps that do (`sim/scenarios.py` `coaching_demo`; flashback on lap 5, invalid lap 10). Its
+radio at Normal with nobody seated, in the corner names it learns: after lap 4 "T5, losing 0.23 s: braking 14 m
+earlier. 2 of the last 3 laps."; "T5 brake" on laps 5-7; after lap 7 "T5 sorted: clean on 2 of the last 3 laps."; after
+lap 8 "T4, losing 0.09 s: minimum speed 9 km/h down. 5 of the last 5 laps."; "T4: apex speed, 9 down" before T4 on laps
+9 and 10; after lap 9 the big one-off "T2, losing 0.67 s: full throttle 31 m later than your reference."; lap 6's
+small one-off (T1, 7 km/h) stays on the screen. The capture carries this list (`meta.extra["story"]`), `pitwall
+simulate` prints it and Settings › System shows it after generating the demo. Pinned line for line by
+`tests/synthetic/test_demo_story.py` in both packet formats, with the habit lines committed at the pick and on air.
+**Synthetic only**; the Settings list and the Drive button have not been seen in a browser. A habit announced after
+the line now gets its reminder on the lap the radio says it (`LiveState.habit_line_said` replans the cues): before,
+with the radio hub running, it started a lap later.
+
+30 of the owner's captures (F1 25 and GT7 on the PS5, 2026-10-10 to 13; every capture of 1 MB or more except the
+synthetic demo and the AC probes), 28 sessions with a compared lap, before (integration ddd7188) / after (feat/habits
+with the review fixes below; nobody seated, normal intensity, braking calls in Focus, harness replay with simulated
+0.45 s audio latency):
+
+| Session | Compared laps | Corrective lines | Silent laps | Same point next lap | After: announced, better, still, sorted | One-off lines | Braking calls | After: reminders (end before the braking point, min s) |
+|---|---|---|---|---|---|---|---|---|
+| Austria, 20261010-221749, 1 | 9 | 8 / 5 | 1 / 4 | 2 / 1 | 1, 1, 0, 0 | 8 / 3 | 13 / 0 | 5 (1.06) |
+| Austria, 20261010-221749, 2 | 10 | 9 / 6 | 1 / 4 | 1 / 0 | 2, 0, 0, 0 | 9 / 4 | 9 / 0 | 0 |
+| Imola race, 20261011-195612 | 30 | 29 / 17 | 1 / 13 | 4 / 0 | 5, 0, 0, 2 | 29 / 10 | 37 / 5 | 7 (1.08) |
+| Bahrain / Jeddah, 20261011-224147, 3 | 5 | 4 / 2 | 1 / 3 | 0 / 0 | 0, 0, 0, 0 | 4 / 2 | 7 / 0 | 0 |
+| Melbourne, 20261012-231555, 3 | 9 | 8 / 5 | 1 / 4 | 0 / 0 | 0, 0, 0, 0 | 8 / 5 | 6 / 0 | 0 |
+| Melbourne race, 20261012-231555, 4 | 15 | 15 / 11 | 0 / 4 | 0 / 0 | 2, 0, 0, 0 | 15 / 9 | 27 / 2 | 0 |
+| Melbourne race, 20261013-225521 | 18 | 18 / 10 | 0 / 8 | 2 / 1 | 2, 1, 0, 0 | 18 / 7 | 16 / 7 | 0 |
+| 21 short sessions (1-4 compared laps) | 31 | 25 / 17 | 6 / 14 | 0 / 0 | 0, 0, 0, 0 | 25 / 17 | 7 / 0 | 0 |
+| **All** | 127 | 116 / 73 | 11 / 54 | 9 / 2 | 12, 2, 0, 2 | 116 / 57 | 122 / 14 | 12 |
+
+- Corrective lines per compared lap: 0.91 before, 0.57 after. No identical sentence was repeated in a session before
+  or after; the same corner and fault on consecutive laps went from 9 to 2 (an announcement followed by its "better").
+- Braking calls in Focus went from 122 to 14: they now follow braking habits that cost at least 0.05 s a lap and pass
+  the profile's confidence floor, never one-offs. The "All" mode still calls every measured braking zone.
+- The 12 reminders ended at least 1.06 s before the reference braking point; the cue engine dropped none late (0
+  missed, 0 errors, before and after).
+- The first lap with coaching is unchanged in 17 sessions, one lap later in 2 and gone in 6 short sessions whose only
+  lines were small one-offs, now screen-only (3 sessions had none before or after).
+- Today's 3 things changed in 7 of 28 sessions: three "Went well" became a sorted habit ("T6: sorted - clean on your
+  last 3 laps (was braking about 12 m early)."), three "One to work on" moved to a repeated point still there (in
+  224147, 5 a point repeated at 0.06 s replaced a single lap's 0.53 s: a habit before a one-off), and one session
+  whose laps showed nothing repeated has no "One to work on".
+
+Not verified: anything heard live, a reminder's real audio length and when a driver hears it, a "sorted" after a real
+fix (the ones above come from recorded laps, not from a driver working on it), simple-wording and beginner wordings on
+the radio beyond unit tests, and the coach card and Ready card on an iPad.
+
+**Review fixes (2026-10-14, included in the table above).** A verified review of feat/habits found these, now fixed,
+each with a unit, synthetic or pipeline test that failed before: "better" praised braking later on a lap where the
+corner got slower, and compared numbers measured against two different reference laps; laps measured against a
+reference that could not show the habit (it lost time at that corner some other way, it had the habit and left the
+window, or it was another driver's lap or an older best) counted as clean, so "sorted" could follow a reference change;
+"sorted" could come one recorded lap after the announcement; pit, out, safety-car, flashback, standing-start and
+invalid laps counted as habit laps; braking calls on habits had no confidence floor; habits costing 0.02-0.08 s were
+announced and held the only slot (now a 0.05 s floor); a reminder ranked like a braking call on air (it now plays only
+on a free radio, cuts nothing and never plays with a car alongside); the radio's number and the reminder's differed;
+blind habits kept their braking call; a beginner got two in-lap calls; an announcement the radio never said still made
+the habit the focus (with no radio connected the screen-only coach records it when it picks it); the coach card's
+"Once" and its counts disagreed with the evidence line; "braking N m later" followed "better" for a habit of braking
+too late.
+
 ## Known gaps
 
 Kept open for after v0.2.0 (none of them changes what Pitwall claims):
@@ -294,6 +387,16 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   development script until an excerpt with a complete lap is committed. "Choose a corner…" on the Ready card shows
   between runs with a suggested drill only (the plan's slot limits); drills can always be started by radio.
 - **Radio:** 3.4's goal-and-summary merge and answer topics are left for 0.2.1.
+- **Habits:** faults are measured against the reference lap, so a habit the reference lap itself has is invisible: a
+  driver setting a new best every lap gets no coaching (the "improving" scenario), a habit whose new best has it gets
+  no braking call or reminder while it cannot be measured (up to 5 laps, then it is forgotten without a word), and the
+  report's "One to work on" can be empty for it. A habit is not counted against a reference it was never measured
+  against (another driver's lap, a best from an earlier session) until a lap shows it there, so switching references
+  mid-stint can let a habit be forgotten. With a radio connected, a habit line counts as said when it goes on air (with
+  none, when the coach picks it); a line said in the instant between the next lap's analysis and its messages could be
+  said twice (not seen in tests). Reminders need a radio connected; without one Drive shows the notes and "Working on". In the
+  replays a reminder's length is the planner's estimate; the hub's measured audio length is unit-tested only. Markers
+  and braking calls still assume a driver slower than the reference stays slower to the corner (reminders do not).
 - **Race radio:** nothing heard live; F1 25's `gridPosition` is 0-based at a race start on the PS5 (pole = 0), so the
   race radio takes the grid slot from the position before lights out (the strategy engine's grid position is
   one off; not changed here). Online names in "who's ahead?" are opt-in (off) and use the `say` voice.

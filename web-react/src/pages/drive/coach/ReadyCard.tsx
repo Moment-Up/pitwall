@@ -12,7 +12,9 @@
 //
 // Between runs, column 2's first row is "Last run" (the best lap as set, clean laps, gained) in place of "Your best
 // here", and column 3 is "Last lap: <point>" (the last lap's top point, full text: plan 5.1), the Radio calls block
-// with one FOCUS row, and no Radio line (the radio strip below says it). Go live stays in the radio strip (one copy
+// with one FOCUS row, and no Radio line (the radio strip below says it). With habits the radio is working on (the
+// coach block's focus), "Working on: T6 apex speed, 12 down · 3 of 4 laps" (a row per habit, at most 2) takes the
+// "Last lap" point's place, and its corners leave the FOCUS rows. Go live stays in the radio strip (one copy
 // on Drive). Unknown values are "-". The columns never hide what does not fit (no overflow: hidden): the slots are
 // capped instead, the fit is measured in a browser at both iPad sizes, and a column scrolls rather than clips.
 //
@@ -31,6 +33,7 @@ import { useDriverNames, useGameCatalog, useSnapshotGame } from "../../../hooks/
 import { seatGameLine } from "../../../lib/game";
 import { inkOn } from "../../../lib/drivers";
 import { prefs } from "../../../lib/prefs";
+import { pointChip } from "../../../lib/drive/coach";
 import type { DriveDrillView, ReadyCard as ReadyCardView } from "../../../lib/drive/model";
 import type { RefControlView } from "../../../lib/drive/reference";
 import { DrillBlock } from "./DrillResult";
@@ -227,8 +230,9 @@ function TodayColumn({
   drill: DriveDrillView | null;
   beginner: boolean;
 }) {
-  const { today, lastLap } = ready;
+  const { today, lastLap, workingOn } = ready;
   const p = lastLap?.point;
+  const chip = p ? pointChip(p) : null;
   const d = todayDrill(ready.phase, drill);
   const rows = d.focusRows ?? today.focusRows;
   return (
@@ -237,13 +241,26 @@ function TodayColumn({
       {d.block && d.drilling && drill && (
         <DrillBlock block={d.block} corners={drill.corners} track={drill.track} lapsLeft={drill.lapsLeft} beginner={beginner} />
       )}
+      {!d.drilling && workingOn && (
+        <div className="pwc-ready__last" data-working-on>
+          <p className="pwc-ready__next">
+            <b className="pwc-ready__lbl">Working on:</b>
+          </p>
+          {workingOn.map((w) => (
+            <p key={w.corner} className="pwc-ready__next">
+              <b>{w.label}</b> {w.what}
+              {w.counts && <span className="pwc-ready__count"> · {w.counts}</span>}
+            </p>
+          ))}
+        </div>
+      )}
       {!d.drilling && lastLap && p?.text && (
         <div className="pwc-ready__last" data-last-lap>
           <p className="pwc-ready__next">
             <b className="pwc-ready__lbl">{lastLap.label}:</b>{" "}
-            {p.tag && (
-              <Chip size="md" variant="soft" color={p.tag === "good" ? "success" : "warning"} className="mr-1.5 align-[0.15em]">
-                <Chip.Label>{p.tag === "good" ? "Good" : "Work on"}</Chip.Label>
+            {chip && (
+              <Chip size="md" variant="soft" color={chip.tone} className="mr-1.5 align-[0.15em]">
+                <Chip.Label>{chip.text}</Chip.Label>
               </Chip>
             )}
             {p.text}

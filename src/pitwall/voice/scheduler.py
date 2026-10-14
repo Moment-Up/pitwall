@@ -14,10 +14,12 @@ docs/voice-protocol.md "Radio policy" prints it and ``GET /api/radio/policy`` se
   urgent path (``Priority.URGENT``): spotter calls (a car arriving, three wide, hold your line, and the clears), the
   red flag and the race's safety-critical call (a puncture), both through ``voice.urgent``. An urgent call cuts
   anything but another urgent call (a red flag waits for a "Car left." on air and the other way round), and a spotter
-  clear (``YIELDS_TO_CUE_KEY``) never cuts a braking cue. Nothing else ever cuts anything: a braking cue only plays on
-  a free radio (it is dropped, never said late, when something is on air; proactive messages end before the next cue
-  point, see the speak window), and lap summaries, race calls, strategy, car health, goals, coaching and validation
-  prompts wait for a free radio. The driver's own answer replaces a proactive message on air (the driver asked; a
+  clear (``YIELDS_TO_CUE_KEY``) never cuts a braking cue. A braking cue may cut routine talk (it is dropped, never said
+  late, when anything else is on air; proactive messages end before the next cue point, see the speak window). A
+  corner reminder (a CUE with ``meta["cue"] == "reminder"``) is descriptive coaching: it starts only on a free radio
+  and cuts nothing, and any spotter call ("still there" included) or braking call cuts it. Nothing else ever cuts
+  anything: lap summaries, race calls, strategy, car health, goals, coaching and validation prompts wait for a free
+  radio. The driver's own answer replaces a proactive message on air (the driver asked; a
   push-to-talk press already cut it) but waits for a cue or an urgent call to end. A proactive message an urgent call
   cut is said again once, in full.
 * **Race order** - the queue is ordered by ``Priority``, then by ``KIND_RANK``, then first in first out: alerts, then
@@ -406,6 +408,7 @@ def _announced_with(bare: RadioMessage, carrier: RadioMessage) -> RadioMessage:
 # urgent slot, cue gate and answers, and the spotter's delivery (voice.spotter_radio) all ask it ---
 # meta True: never cuts a braking cue (a spotter clear or "still there": information, never a car arriving)
 YIELDS_TO_CUE_KEY = "yields_to_cue"
+REMINDER_CUE = "reminder"  # a CUE's meta["cue"] for a corner reminder (coach.cues.CueKind.REMINDER.value)
 
 
 def is_urgent(msg: RadioMessage) -> bool:
@@ -414,19 +417,31 @@ def is_urgent(msg: RadioMessage) -> bool:
     return _urgent(msg)
 
 
+def is_reminder(msg: RadioMessage) -> bool:
+    """A corner reminder (``coach.cues.CueKind.REMINDER``, sent as a CUE with ``meta["cue"] == "reminder"``):
+    descriptive coaching timed before a corner, not a braking call."""
+    return msg.kind is MessageKind.CUE and msg.meta.get("cue") == REMINDER_CUE
+
+
 def interrupt_rank(msg: RadioMessage) -> int:
     """How protected ``msg`` is on air: 2 = urgent (nothing cuts it), 1 = a braking cue (only an urgent call cuts it;
-    an answer waits for it), 0 = everything else (an urgent call cuts it; the driver's own answer replaces it)."""
+    an answer waits for it), 0 = everything else, a corner reminder included (an urgent call, a spotter call or a
+    braking call cuts it; the driver's own answer replaces it)."""
     if _urgent(msg):
         return 2
-    return 1 if msg.kind is MessageKind.CUE else 0
+    return 1 if msg.kind is MessageKind.CUE and not is_reminder(msg) else 0
 
 
 def may_interrupt(new: RadioMessage, on_air: RadioMessage | None) -> bool:
     """May ``new`` cut ``on_air`` (None: nothing on air)? An urgent call may, never another urgent call (two spotter
     calls, a red flag and a spotter call never cut each other); a message marked ``YIELDS_TO_CUE_KEY`` (a spotter
-    clear) never cuts a braking cue. A braking cue may cut routine talk and a spotter clear (see below). An alert, a
-    race call or anything else never interrupts."""
+    clear) never cuts a braking cue. A braking cue may cut routine talk and a spotter clear (see below). A corner
+    reminder starts only on a free radio and cuts nothing; any spotter call ("still there" included) or braking call
+    may cut it. An alert, a race call or anything else never interrupts."""
+    if is_reminder(new):
+        return on_air is None  # descriptive coaching: a free radio only, never cuts anything
+    if on_air is not None and is_reminder(on_air) and (new.kind is MessageKind.SPOTTER or new.kind is MessageKind.CUE):
+        return True  # a spotter call (a clear, "still there") or a braking call is worth more than a reminder
     if new.kind is MessageKind.CUE:
         # a braking cue is time-critical (its key word must land on the braking point): it may cut routine talk (a
         # lap summary, a coaching point, a race, health or strategy call, which is held and said again) and a spotter
@@ -528,7 +543,7 @@ POLICY: tuple[CallFamily, ...] = (
     ),
     CallFamily(
         "cue",
-        "Braking calls",
+        "Braking calls and corner reminders",
         "coach.cues",
         (MessageKind.CUE,),
         "high",
@@ -539,8 +554,11 @@ POLICY: tuple[CallFamily, ...] = (
         False,
         "free",
         "Braking calls",
-        "Timed to the braking point: cuts routine talk (said again later), never an alert, an answer, an urgent call"
-        " or a spotter car call; dropped (never late) when one is on air.",
+        "A braking call is timed to the braking point: cuts routine talk (said again later) and a corner reminder,"
+        " never an alert, an answer, an urgent call or a spotter car call; dropped (never late) when one is on air. A"
+        " corner reminder for a habit being worked on ends 1 s before it, starts only on a free radio and never with a"
+        " car alongside, cuts nothing, and any spotter call or braking call cuts it. Speak windows close before a"
+        " call starts.",
     ),
     CallFamily(
         "alert",

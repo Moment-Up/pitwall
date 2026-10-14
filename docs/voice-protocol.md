@@ -46,7 +46,7 @@ the queue says the rest by priority, then this order, then first in first out.
 | 0 | Spotter | `pitwall.spotter + voice.spotter_radio` | `spotter` | urgent (still there: high) | yes | quiet, normal, detailed | said | no | outside it | Spotter |
 | 0 | Red flag and punctures | `raceradio via voice.urgent` | `alert` | urgent | yes | quiet, normal, detailed | said | no | outside it | always on |
 | 0 | Answers | `voice.hub, voice.handsfree` | `answer`, `control` | high | no | quiet, normal, detailed | said | no | outside it | always on |
-| 0 | Braking calls | `coach.cues` | `cue` | high | yes | normal, detailed | held | no | outside it | Braking calls |
+| 0 | Braking calls and corner reminders | `coach.cues` | `cue` | high | yes | normal, detailed | held | no | outside it | Braking calls |
 | 1 | Flags, penalties, damage, safety car, fuel critical | `raceradio, strategy.radio, carhealth.radio` | `alert` | high / normal | no | quiet, normal, detailed | safety calls said, the rest held | yes | never held, spends it | Race calls (flags, penalties, damage); Car health (fuel) |
 | 2 | Lap time | `voice.proactive` | `lap_summary` | normal | no | normal, detailed | held | yes | waits for it, spends it | Coaching amount |
 | 3 | Race calls | `raceradio` | `race` | normal / high | no | normal, detailed | held | yes | waits for it, spends it | Race calls |
@@ -61,9 +61,26 @@ the queue says the rest by priority, then this order, then first in first out.
   urgent call cuts anything but another urgent call (a red flag waits for a "Car left." on air and the other way
   round), and a spotter clear never cuts a braking cue. Nothing else cuts anything: a braking cue plays only on a free
   radio (dropped as `radio busy`, never late, when something is on air; proactive messages end before the next cue
-  point), and a lap time, race call, strategy or car health call, goal line or coaching point waits for a free radio,
+  starts), and a lap time, race call, strategy or car health call, goal line or coaching point waits for a free radio,
   the 2 s gap, a speak window and the lap's budget. The driver's own answer replaces a proactive message on air (the
-  driver asked) but waits for a cue or an urgent call. A message an urgent call cut is said again once, in full.
+  driver asked) but waits for a braking call or an urgent call. A message an urgent call cut is said again once, in
+  full.
+- **Corner reminders** (kind `cue`, `meta.cue` `"reminder"`; braking-call mode `focus`): for a habit being worked on
+  that is not a braking fault, a short phrase before its corner ("Turn 6, apex speed, 12 down"), pre-synthesised like a
+  braking call and timed to END at least 1 s before the reference braking point. It starts its own length earlier, and
+  speak windows close before that start. Only where the reference lap was off the brakes for the whole phrase; one call
+  per corner a lap (a reminder wins over a braking call there); dropped, never late. Muted like braking calls (quiet
+  intensity, quiet mode, voice off); none on pit or out laps, under a safety car or VSC, or on a standing-start lap 1.
+  It is descriptive coaching, not a braking call: it starts only on a free radio (dropped otherwise) and never with a
+  car alongside (`car alongside`), it cuts nothing (a spotter clear included), and any spotter call (a clear or "still
+  there" included) or a braking call cuts it; it is never said again. Reminders and braking calls together are at most
+  the profile's focus corners a lap (a beginner: one), for habits costing at least 0.05 s a lap on average that the
+  latest lap could measure.
+- **Habit lines** (coaching points with `meta.habit_event`: an announcement, "better", "still", "sorted"): the coach's
+  habit tracker records a line when the radio puts it on air, not when the coach picks it, so a line held until it
+  expired (quiet mode, the lap's budget) never makes a habit the one being worked on: it is announced again on a later
+  lap. With no radio connected or its voice off the coach is screen-only and records a line when it picks it. Once it is on air the braking calls and corner reminders follow at once: a habit
+  announced after the line gets its reminder on that same lap.
 - **Race order:** alerts, then the lap time (carrying the line's race news), race calls, strategy and car health calls,
   the goal line, the coaching point, detail; validation prompts last. A higher priority goes first (cold tyres at the
   pit exit before the lap time).
@@ -117,6 +134,12 @@ the queue says the rest by priority, then this order, then first in first out.
     adds `info`.
   - **Seat change:** when another driver takes the seat, unsaid `lap_summary`, `goal` and `coaching` messages about
     the previous driver's laps are dropped; alerts, race, strategy and car health calls (about the car) stay.
+  - **Coaching** (kind `coaching`): the lap's coach block `picked` points (`coach.selection`, the same points the Drive
+    screen shows): the habit tracker's events first (`meta.habit_event` `fixed`, `improving`, `announce` or `still`;
+    "Turn 6, losing 0.31 s: minimum speed 12 km/h down. 3 of the last 4 laps."), then a single lap's big fault (0.3 s
+    or more, clearly measured; `meta.habit_event` null), then praise. A habit being worked on is not said again in full
+    every lap (its corner reminder, above, does that), small one-offs are screen-only, and the same big fault two laps
+    running is said once.
 - **Race radio** (kind **`race`** and `alert`, `pitwall/raceradio`): race situation calls (position, the start and
   countdown, lap one, gaps, warnings, minor damage) are kind `race`: normal and detailed intensity, from the one
   per-lap budget (at most 2 of it a lap at `normal`, 3 at `detailed`). Calls marked `meta.race_allowance` false are

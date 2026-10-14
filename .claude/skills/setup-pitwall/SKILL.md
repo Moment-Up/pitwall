@@ -175,7 +175,8 @@ its `fix` is an `icacls` command - offer it, run it only with a yes.
 1. Demo data (headless, a few seconds; every session it creates is flagged SYNTHETIC and uses `synthetic:` track
    ids, so it never mixes with real laps): `uv run pitwall simulate` - it prints the capture it wrote
    (`<data_dir>/captures/synthetic-coaching-demo-2025.pwcap`) - then `uv run pitwall replay <that path>`, then
-   `uv run pitwall report` (show the user two or three coaching lines from it).
+   `uv run pitwall report` (show the user two or three coaching lines from it, and the "what to look for" list that
+   `pitwall simulate` printed: what the radio says in the live demo).
 2. Windows, before the first start: tell the user that Windows may ask whether Python may communicate on networks:
    tick **Private networks** only and click *Allow access*. Cancel creates block rules that stop telemetry
    (windows.md); ticking Public opens Python on public Wi-Fi.
@@ -185,7 +186,7 @@ its `fix` is an `icacls` command - offer it, run it only with a yes.
    Wait until `uv run pitwall doctor --json` shows `server.running: true` (or
    `curl -s http://127.0.0.1:<http_port>/api/health` answers). Read the log only through `grep -v "token="`.
 4. Live demo: run `uv run pitwall send <data_dir>/captures/synthetic-coaching-demo-2025.pwcap --port
-   <server.udp_port>` in the background (about 8 minutes in real time; add `--speed 4` to hurry) and ask the user to
+   <server.udp_port>` in the background (about 11 minutes in real time; add `--speed 4` to hurry) and ask the user to
    open `urls.local` (http://127.0.0.1:8770/ by default): Drive (classic: the Live tab) shows the SYNTHETIC car
    live. Stop the sender when they have seen it (or let it finish). doctor's `telemetry` stays `info` for the demo:
    only a game makes it `ok`.

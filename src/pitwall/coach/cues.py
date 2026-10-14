@@ -1,15 +1,33 @@
-"""Live predictive braking cues (phase 6, first slice): deterministic, evidence-based, no LLM.
+"""Live predictive braking cues and corner reminders (phase 6): deterministic, evidence-based, no LLM.
 
 The radio calls a braking zone so that the key word lands where the driver braked on their own reference lap.
 Modes (radio setting, default ``focus``):
 
 * ``off``     - nothing.
-* ``focus``   - "<corner> brake" only for the 1-3 corners whose recent *braking* observations (``brake_early``,
-  ``brake_late_overdrive``, ``overspeed_apex``) carry the most priority. "brake" lands on the reference braking
-  point. Which observations qualify follows the seated driver's coaching profile (``FocusLimits``): a beginner
-  gets fewer, surer calls than an advanced driver.
+* ``focus``   - the session's habits (``coach.habits``, passed in by ``on_lap_result`` from the lap's coach block):
+
+  - "<corner> brake" for the corners of *braking* habits (``brake_early``, ``brake_late_overdrive``,
+    ``overspeed_apex``) being worked on or seen, focus first. "brake" lands on the reference braking point.
+  - a corner REMINDER for each other habit being worked on ("Turn 6, apex speed, 12 down", from
+    ``coach.habits.reminder_phrase``): a short phrase that ENDS at least ``REMINDER_END_MARGIN_S`` before the
+    corner's reference braking point, only where the reference lap was off the brakes for the whole phrase
+    (``calm_s``), so it never talks through the previous braking zone. One call per corner: a reminder wins over a
+    braking call there.
+
+  Reminders and braking calls together are at most the profile's ``FocusLimits.max_corners`` (a beginner gets one
+  in-lap call: one coaching point a lap), reminders first. A habit gets either only when it costs at least
+  ``analysis.coaching.HABIT_MIN_IMPACT_S`` on average (the radio announces no smaller one) and while its latest lap
+  could show it (``blind``: compared with a lap that had it, so the reference's braking point is the habit's own);
+  a braking call also needs the habit's confidence to clear the profile's floor (``MIN_FOCUS_CONFIDENCE`` at least).
+
+  A one-off is no habit and gets no call (it stays on the screen). A caller without habits (``focus`` and ``habits``
+  both None, older callers) gets the earlier rule: the 1-3 corners whose recent braking observations carry the
+  most priority (``select_focus_corners``). Which habits or observations qualify follows the seated driver's
+  coaching profile (``FocusLimits``): a beginner gets fewer, surer calls than an advanced driver.
 * ``markers`` - the corner name ``MARKER_LEAD_S`` before every reference braking zone (a rhythm aid).
 * ``all``     - "brake" at every reference braking zone.
+
+Markers and all have no reminders.
 
 Evidence and safety (CLAUDE.md)
 -------------------------------
@@ -17,13 +35,15 @@ Targets are the reference lap's *measured* braking onsets (``CornerMetrics.brake
 ``analysis.compare``, the lap ``LapProcessor`` compared against). Nothing is modelled or invented: a corner
 without a measured, substantial reference braking event (peak pedal >= ``MIN_REF_BRAKE_PEAK``) gets no cue. The
 reference is the driver's own fastest compatible clean lap; when the latest comparison is not compatible there
-are no cues, and a focus corner needs an observation of at least ``MIN_FOCUS_CONFIDENCE`` that the analysis only
-emits when the corner lost time against that reference.
+are no cues, and a focus corner needs a habit: the same fault on most of the corner's recent laps, each an
+observation the analysis only emits when the corner lost time against the reference (older callers: one
+observation of at least ``MIN_FOCUS_CONFIDENCE``).
 
 Coaching never recommends braking later on its own, so every uncertainty resolves towards calling *early*:
-``MARGIN_M`` before the point, word offsets estimated long, the earlier of two time-to-go estimates, and no cue
-when the car approaches faster than the reference did (DRS / tow: the reference point would be too late for that
-speed). The hard line is the reference point itself: a cue whose key word is predicted to land after it (a late
+``MARGIN_M`` before the point, word offsets and phrase lengths estimated long, the earlier of two time-to-go
+estimates, and no braking call when the car approaches faster than the reference did (DRS / tow: the reference point
+would be too late for that speed; a reminder says nothing about where to brake and is descriptive: "apex speed, 12
+down"). The hard line is the reference point itself: a cue whose key word is predicted to land after it (a late
 frame, a distance jump, a plan that arrived mid-approach) is dropped instead of said late, and the event carries
 a ``deadline_mono`` past which the radio must drop it too (a stalled hand-off would push it past the point).
 
@@ -46,8 +66,11 @@ braking point is never called. During a practice drill (``set_drill_corner``) th
 (in focus mode it is the focus corner, whatever the observation history says) and the field's heads-ups are off.
 
 Cues belong to one driver's reference. Clearing the reference (``on_reference(None, None)``: the session's owner
-has no reference lap) or a different driver in the seat (``set_driver``) drops the comparison, the focus history
-and the plan, so one driver is never called to another driver's braking points.
+has no reference lap) or a different driver in the seat (``set_driver``) drops the comparison, the focus history,
+the habits and the plan, so one driver is never called to another driver's braking points. The habits are not
+dropped on a new reference: the analysis keeps them through a new best (``core.lap_processor`` re-bases its habit
+memory), and the next lap's coach block brings the current list. The fallback's own observation history still
+restarts with each reference (observations against another reference are not comparable).
 
 Timing
 ------
@@ -61,6 +84,17 @@ changes during the approach are accounted for. ``ttg`` is the smaller of ``k / v
 acceleration still to come on the straight). The half frame centres quantisation error at +-half a frame
 spacing instead of 0..1 frame late. ``latency_s`` (fire -> audio audible) and the key word's offset inside the
 pre-synthesised audio are pushed by the radio hub as an immutable ``CueTiming``.
+
+A cue STARTS (fires) ``anticipation_s`` before its key word's aim point: 0 for a braking call, ``MARKER_LEAD_S``
+for a marker, and for a reminder its spoken length plus ``REMINDER_END_MARGIN_S`` (key part 0: the phrase starts
+that long before the point, so it ends the margin before it). The spoken length is the longer of the planner's word
+estimate (``estimate_phrase_s``, deliberately slow) and the length the hub measured on the pre-synthesised audio
+(``CueTiming.durations_s``). Its time-to-go assumes a car slower than the reference where it fires reaches the
+reference's pace (``_time_to_go(catch_up=True)``): over a lead of seconds, the slower pace of the moment (out of
+the previous corner) would make it end late. The late rule above makes a reminder that could no longer end the
+margin before the point drop instead of run into the braking zone. ``seconds_to_next_cue`` (the radio's speak
+window) uses the same time-to-go and lead as the trigger, so routine talk ends before a cue *starts*, a reminder's
+early start included.
 
 Threads
 -------
@@ -101,8 +135,10 @@ from typing import Any, Literal, Protocol
 
 import numpy as np
 
+from pitwall.analysis.coaching import HABIT_MIN_IMPACT_S
 from pitwall.analysis.distance import DistanceTrace
 from pitwall.analysis.track_identity import turn_words
+from pitwall.coach.habits import STATUS_FOCUS, STATUS_SEEN, reminder_phrase
 from pitwall.model.telemetry import CarFrame, FrameQuality
 
 __all__ = [
@@ -124,11 +160,13 @@ __all__ = [
     "build_cue_plan",
     "cue_labels",
     "cue_timing_error_m",
+    "estimate_phrase_s",
     "estimate_word_offset",
     "parse_cue_mode",
     "reference_braking_zones",
     "reference_onset_ok",
     "select_focus_corners",
+    "select_habit_corners",
 ]
 
 log = logging.getLogger(__name__)
@@ -153,7 +191,19 @@ REAPPLY_WINDOW_M = 150
 REAPPLY_SPEED_RATIO = 0.9  # speed at the point below 90% of the approach's peak speed = already slowing
 TRACE_CACHE = 4  # reference traces kept by lap id (a cached reference survives session resets)
 BEGINNER_FOCUS_CORNERS = 1  # a beginner's profile allows one coaching point a lap (drivers.coaching_limits)
+BRAKE_HABIT_STATUSES = frozenset({STATUS_FOCUS, STATUS_SEEN})  # braking habits that get a call (not "fixed")
+# [H] A corner reminder ends at least this long before the reference braking point: the driver hears the whole phrase
+# with a second to spare before the braking zone (the radio's speak windows end the same margin before one,
+# voice.scheduler.SPEAK_WINDOW_MARGIN_S).
+REMINDER_END_MARGIN_S = 1.0
+# [H] Off the brakes on the reference lap: below this pedal (0..1) = calm (voice.scheduler.CALM_BRAKE, same value).
+REMINDER_CALM_BRAKE = 0.05
+# [H] A reminder is planned only where the reference was off the brakes this much longer than the phrase needs (its
+# anticipation): room for a radio voice slower than the estimate and a driver slower out of the previous corner.
+REMINDER_CALM_SLACK_S = 0.5
+CALM_SKIP_M = 3  # the first metres before a braking onset: the pedal is already rising at the onset itself
 NO_REFERENCE = "no reference lap yet"
+NO_HABITS = "no habits to call yet"  # focus mode with habits given: nothing qualifies (one-offs stay on screen)
 NO_DRIVER_REFERENCE = "no reference lap for this driver"
 NEW_DRIVER = "new driver: waiting for a lap against their reference"
 NO_OWN_POINTS = "no braking points of your own yet"  # --- coachref --- another driver's lap, none of the driver's
@@ -204,6 +254,7 @@ def _num(v: object) -> float | None:
 class CueKind(StrEnum):
     BRAKE = "brake"  # the key word lands on the reference braking point
     MARKER = "marker"  # the corner name starts ``anticipation_s`` before it
+    REMINDER = "reminder"  # a focus habit's phrase that ENDS ``REMINDER_END_MARGIN_S`` before it
 
 
 @dataclass(slots=True, frozen=True)
@@ -221,6 +272,8 @@ class CueSpec:
     focus: bool = False
     reason: str = ""  # evidence behind the cue (display / logs)
     ref_speed_kph: float | None = None  # reference speed at its braking point (overspeed guard)
+    # reminders: seconds the reference lap was off the brakes before the target (the phrase must start inside them)
+    calm_s: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -283,18 +336,32 @@ class CuePlan:
 @dataclass(slots=True, frozen=True)
 class CueTiming:
     """Delivery timing pushed by the radio hub. ``offsets_s``: measured start of the key part inside the audio
-    for a phrase (``CueSpec.parts``); phrases without one fall back to ``estimate_word_offset``."""
+    for a phrase (``CueSpec.parts``); phrases without one fall back to ``estimate_word_offset``. ``durations_s``:
+    how long a whole phrase takes to say (the pre-synthesised audio, or the device voice's estimate): a reminder is
+    timed by when it ends."""
 
     latency_s: float = DEFAULT_LATENCY_S  # fire -> first audio in the driver's ear
     path: str = "pcm"  # "pcm" (server audio) | "device" (device speaks the text)
     offsets_s: Mapping[tuple[str, ...], float] = field(default_factory=dict)
     word_s: float = DEFAULT_WORD_S
+    durations_s: Mapping[tuple[str, ...], float] = field(default_factory=dict)
 
     def word_offset(self, cue: CueSpec) -> float:
         if cue.key_index <= 0:
             return 0.0
         off = self.offsets_s.get(cue.parts)
         return off if off is not None else estimate_word_offset(cue.parts, cue.key_index, self.word_s)
+
+    def anticipation(self, cue: CueSpec) -> float:
+        """How long before its aim point the cue's first word starts. A reminder ends ``REMINDER_END_MARGIN_S``
+        before the point: its planned anticipation (the word estimate), longer when the radio's phrase is longer.
+        Never shorter than planned: an underestimate would run the phrase into the braking zone."""
+        if cue.kind is not CueKind.REMINDER:
+            return cue.anticipation_s
+        said = _num(self.durations_s.get(cue.parts))
+        if said is None or said <= 0.0:
+            return cue.anticipation_s
+        return max(cue.anticipation_s, said + REMINDER_END_MARGIN_S)
 
 
 @dataclass(slots=True, frozen=True)
@@ -315,6 +382,11 @@ class CueEvent:
     path: str
     aim_m: float  # where the key word should start, in ``lap``'s distance (negative = before the line)
     ref_lap_id: int | None
+    anticipation_s: float | None = None  # what the trigger used (``CueTiming.anticipation``); None = the cue's own
+
+    @property
+    def lead_anticipation_s(self) -> float:
+        return self.cue.anticipation_s if self.anticipation_s is None else self.anticipation_s
 
     @property
     def deadline_mono(self) -> float:
@@ -322,9 +394,9 @@ class CueEvent:
 
         At the decision the key word was predicted to land ``ttg_s - lead`` before the reference point (lead =
         latency + key-word offset + anticipation; ``slack`` below). Every second the hand-off to the radio takes
-        beyond that moves the word past the point, which coaching must never do, so a later delivery is dropped.
-        Conservative: the measured latency already contains a typical hand-off."""
-        lead = self.latency_s + self.word_offset_s + self.cue.anticipation_s
+        beyond that moves the word past the point (a reminder's end into its margin), which coaching must never do,
+        so a later delivery is dropped. Conservative: the measured latency already contains a typical hand-off."""
+        lead = self.latency_s + self.word_offset_s + self.lead_anticipation_s
         return self.fired_mono + max(0.0, self.ttg_s - lead)
 
     def to_dict(self) -> dict[str, Any]:
@@ -385,6 +457,10 @@ class FocusLimits:
     *raise* the confidence bar (``MIN_FOCUS_CONFIDENCE`` is the floor for a time-critical call), and with an
     impact floor an observation of unknown impact is not spoken (unknown is not small, as in
     ``drivers.apply_coaching_limits``). ``allowed_kinds`` narrows ``BRAKE_CUE_OBSERVATIONS``; it never widens it.
+    With the coach block's habits (``select_habit_corners``, ``_reminder_corners``) the allowed kinds, the impact
+    floor (on a habit's mean impact, never under ``HABIT_MIN_IMPACT_S``) and ``max_corners`` (reminders and braking
+    calls together) apply, and a braking call needs the habit's confidence (the median over the laps it fired; unknown
+    does not pass) to clear the confidence bar.
     """
 
     min_confidence: float = MIN_FOCUS_CONFIDENCE
@@ -432,6 +508,34 @@ def estimate_word_offset(parts: Sequence[str], key_index: int, word_s: float = D
         for tok in p.split():
             words += 2 if _CORNER_ID.fullmatch(tok) else 1
     return words * word_s + PART_PAUSE_S * max(0, key_index)
+
+
+def _spoken_words(token: str) -> int:
+    """Words a voice says for one display token, erring long: "T9" is "turn 9" (two), a number as said ("12" one,
+    "21" "twenty-one" two, "105" "one hundred and five" four), anything else one."""
+    tok = token.strip(",.;:")
+    if _CORNER_ID.fullmatch(tok):
+        return 2
+    if not tok.isdigit():
+        return 1
+    n = int(tok)
+    if n >= 1000:
+        return 2 * len(tok)  # rare in a phrase; generously long
+    words = 0
+    if n >= 100:
+        words, n = 2 + (1 if n % 100 else 0), n % 100  # "one hundred (and)"
+    if n:
+        words += 1 if n <= 20 or n % 10 == 0 else 2
+    return max(1, words)
+
+
+def estimate_phrase_s(parts: Sequence[str], word_s: float = DEFAULT_WORD_S) -> float:
+    """Spoken length of a whole phrase: its words (``_spoken_words``) at ``word_s`` plus a pause between parts and at
+    every comma inside one ("apex speed, 12 down"). Errs long, like ``estimate_word_offset``: a reminder timed by its
+    end then starts early, never ends late."""
+    words = sum(_spoken_words(tok) for p in parts for tok in p.split())
+    pauses = max(0, len(parts) - 1) + sum(p.count(",") for p in parts)
+    return words * word_s + PART_PAUSE_S * pauses
 
 
 def reference_braking_zones(comparison: Mapping[str, Any], length_m: float) -> list[BrakingZone]:
@@ -518,6 +622,97 @@ def select_focus_corners(
     return [(c, f"{first_kind[c]} on {laps_with[c]} of the last {total} lap(s)") for c, _ in ranked]
 
 
+def _habit_worth_a_call(h: Mapping[str, Any], limits: FocusLimits) -> bool:
+    """A habit entry the cue plan may speak about: it costs at least ``HABIT_MIN_IMPACT_S`` on average (and the
+    profile's impact floor; unknown is not small) and its latest lap could show it (not ``blind``)."""
+    impact = _num(h.get("impact_s"))
+    floor = max(HABIT_MIN_IMPACT_S, limits.min_impact_s)
+    return impact is not None and impact >= floor and h.get("blind") is not True
+
+
+def select_habit_corners(
+    habits: Sequence[Mapping[str, Any]],
+    zones: Collection[str],
+    max_corners: int = MAX_FOCUS_CORNERS,
+    limits: FocusLimits = DEFAULT_FOCUS_LIMITS,
+    skip: Collection[str] = (),
+) -> list[tuple[str, str]]:
+    """``(corner, reason)`` for focus mode's braking calls from the session's habits (the coach block's ``habits``:
+    ``coach.habits.HabitTracker.habits`` entries), best first.
+
+    The corners of braking habits (``BRAKE_CUE_OBSERVATIONS``) being worked on or seen (``BRAKE_HABIT_STATUSES``;
+    a sorted one is done), focus first, then in the given order (the block's: bigger mean impact first), one call
+    per corner, at most ``max_corners`` and the profile's cap (0 = none). Only corners with a measured reference
+    braking zone (``zones``) and not in ``skip`` (a corner with a reminder: one call per corner). The profile's
+    allowed kinds apply; the habit must cost at least ``HABIT_MIN_IMPACT_S`` on average (and the profile's floor; an
+    unknown impact does not pass), its latest lap must have shown it (not ``blind``: a call would aim at the braking
+    point of a reference that had the habit) and its confidence (the median over the laps it fired; unknown does not
+    pass) must clear the profile's confidence bar: a braking call is time-critical."""
+    allowed = set(zones) - set(skip)
+    kinds = BRAKE_CUE_OBSERVATIONS if limits.allowed_kinds is None else BRAKE_CUE_OBSERVATIONS & limits.allowed_kinds
+    min_conf = max(MIN_FOCUS_CONFIDENCE, limits.min_confidence)
+    order = sorted(range(len(habits)), key=lambda i: (habits[i].get("status") != STATUS_FOCUS, i))
+    n = min(MAX_FOCUS_CORNERS, max_corners, limits.max_corners)
+    out: list[tuple[str, str]] = []
+    called: set[str] = set()
+    for i in order:
+        if len(out) >= n:
+            break
+        h = habits[i]
+        corner, kind, status = h.get("corner"), h.get("kind"), h.get("status")
+        if not isinstance(corner, str) or corner not in allowed or corner in called:
+            continue
+        if kind not in kinds or status not in BRAKE_HABIT_STATUSES or not _habit_worth_a_call(h, limits):
+            continue
+        conf = _num(h.get("confidence"))
+        if conf is None or conf < min_conf:
+            continue  # unknown is not sure enough for a time-critical call
+        called.add(corner)
+        out.append((corner, f"{kind} habit ({status}), {h.get('laps_seen')} of the last {h.get('laps')} laps"))
+    return out
+
+
+def _reminder_corners(
+    focus: Sequence[Mapping[str, Any]],
+    zones: Mapping[str, BrakingZone],
+    tables: Mapping[str, CueApproach],
+    trace: DistanceTrace,
+    length_m: float,
+    limits: FocusLimits,
+    label: Callable[[str], CueLabel],
+    cap: int = MAX_FOCUS_CORNERS,
+) -> dict[str, tuple[str, str, float]]:
+    """``{corner: (phrase, reason, calm_s)}`` for focus mode's corner reminders, in the block's focus order: one per
+    focus habit whose kind has a phrase (``coach.habits.reminder_phrase``; braking habits get a braking call
+    instead) at a corner with a measured reference braking zone, one per corner, at most ``cap`` (the plan's focus
+    corners: ``build_cue_plan``). The habit must cost at least ``HABIT_MIN_IMPACT_S`` on average (and the profile's
+    floor) and its latest lap must have shown it (not ``blind``). Only where the reference lap was off the brakes for
+    the whole phrase plus ``REMINDER_CALM_SLACK_S`` (``_calm_s``, timed with the longer of the corner's spoken names):
+    a reminder must never talk through the previous corner's braking zone or run into a braking call there. No phrase,
+    no evidence or no room: nothing said (the habit stays on the screen)."""
+    out: dict[str, tuple[str, str, float]] = {}
+    for e in focus:
+        if len(out) >= cap:
+            break
+        corner, kind = e.get("corner"), e.get("kind")
+        if not isinstance(corner, str) or corner not in zones or corner in out or e.get("status") != STATUS_FOCUS:
+            continue
+        if not isinstance(kind, str) or (limits.allowed_kinds is not None and kind not in limits.allowed_kinds):
+            continue
+        if not _habit_worth_a_call(e, limits):
+            continue
+        phrase = reminder_phrase(kind, _num(e.get("value")))
+        if phrase is None:
+            continue
+        lab = label(corner)
+        longest = max(estimate_phrase_s((name, phrase)) for name in (lab.spoken, lab.voice) if name)
+        calm = _calm_s(trace, zones[corner].brake_m, length_m, tables[corner])
+        if calm is None or calm < longest + REMINDER_END_MARGIN_S + REMINDER_CALM_SLACK_S:
+            continue  # no calm stretch long enough before the corner on the reference lap
+        out[corner] = (phrase, f"{kind} habit (focus), {e.get('laps_seen')} of the last {e.get('laps')} laps", calm)
+    return out
+
+
 def _approach_table(trace: DistanceTrace, target: float, length_m: float, lap_s: float | None) -> CueApproach | None:
     speed = trace.ch.get("speed_kph")
     d = trace.d
@@ -548,6 +743,28 @@ def _already_slowing(app: CueApproach) -> bool:
         return True  # unknown speed at the point: cannot show it is a braking onset
     window = [v for v in app.v_mps[: REAPPLY_WINDOW_M + 1] if v == v]
     return v0 < REAPPLY_SPEED_RATIO * max(window, default=v0)
+
+
+def _calm_s(trace: DistanceTrace, target: float, length_m: float, app: CueApproach) -> float | None:
+    """Seconds the reference lap was off the brakes (pedal below ``REMINDER_CALM_BRAKE``) right before ``target``,
+    within the approach table: how early a reminder for this braking point may start. The first ``CALM_SKIP_M``
+    metres are the onset itself. None without a brake channel or a known time there (unknown is not calm: NaN pedal
+    ends the stretch)."""
+    brake = trace.ch.get("brake")
+    if brake is None or len(trace.d) < 2:
+        return None
+    n = len(app.ttg_s)
+    pos = target - np.arange(0.0, float(n))
+    pos_w = np.where(pos < 0.0, pos + length_m, pos)  # the approach starts on the previous lap
+    pedal = np.interp(pos_w, trace.d, brake, left=np.nan, right=np.nan)
+    with np.errstate(invalid="ignore"):
+        calm = pedal < REMINDER_CALM_BRAKE
+    calm[:CALM_SKIP_M] = True
+    off = np.flatnonzero(~calm)
+    end = int(off[0]) if off.size else n
+    ttg = np.asarray(app.ttg_s, dtype=float)[:end]
+    ttg = ttg[np.isfinite(ttg)]
+    return float(ttg.max()) if ttg.size else None
 
 
 # --- coachref ---
@@ -609,6 +826,8 @@ def build_cue_plan(
     focus_limits: FocusLimits = DEFAULT_FOCUS_LIMITS,
     labels: Mapping[str, CueLabel] | None = None,
     only_corner: str | None = None,
+    focus: Sequence[Mapping[str, Any]] | None = None,
+    habits: Sequence[Mapping[str, Any]] | None = None,
 ) -> CuePlan:
     """Plan the cues for the current reference.
 
@@ -616,11 +835,14 @@ def build_cue_plan(
     publishes it): it carries the compatibility verdict and the reference's measured braking points.
     ``reference``/``trace`` are the reference lap's summary and distance trace (``LiveState.set_reference``); the
     trace is required. It times the approach (time-to-go tables) and proves each point is a braking *onset*: a
-    point the reference reached while already slowing is a re-application and gets no cue. ``history`` is the
-    recent laps' observations for focus mode, filtered by the driver's ``focus_limits``. ``labels``
-    (``cue_labels``) name the corners as the track view does; without one a corner keeps its learned name. Never
-    raises on malformed input: an empty plan's ``reason`` says why there are no cues. ``only_corner`` (a practice
-    drill, coachref) keeps that corner alone: in focus mode it is the focus corner whatever the history says.
+    point the reference reached while already slowing is a re-application and gets no cue. ``focus`` / ``habits``
+    are the coach block's lists (``coach.selection``): in focus mode the braking habits get braking calls
+    (``select_habit_corners``) and the focus habits with a phrase get corner reminders (``_reminder_corners``).
+    Without either (both None: an older caller) ``history``, the recent laps' observations, picks the focus
+    corners (``select_focus_corners``). Both follow the driver's ``focus_limits``. ``labels`` (``cue_labels``) name
+    the corners as the track view does; without one a corner keeps its learned name. Never raises on malformed
+    input: an empty plan's ``reason`` says why there are no cues. ``only_corner`` (a practice drill, coachref) keeps
+    that corner alone: in focus mode it is the focus corner (a braking call) whatever the history or habits say.
     """
     m = parse_cue_mode(mode)
     if m == "off":
@@ -677,15 +899,16 @@ def build_cue_plan(
     def label(corner: str) -> CueLabel:
         return names.get(corner) or CueLabel(corner, corner, corner)
 
-    def spoken_names(corners: Sequence[str], fallback_voice: bool) -> dict[str, str | None]:
+    def spoken_names(corners: Sequence[str], voice_for: Collection[str]) -> dict[str, str | None]:
         """The radio's corner part for each cue, in lap order. Two parts of one turn ("T1" and "T1 (2)") share the
         short spoken name ("Turn 1"): the later one says its full voice form ("Turn 1, second part"), so two
-        different braking points never sound the same."""
+        different braking points never sound the same. A corner without a speakable short name says its voice
+        form when its call must name it (``voice_for``: markers, reminders), else nothing (a plain "brake")."""
         out: dict[str, str | None] = {}
         used: set[str] = set()
         for corner in sorted(corners, key=lambda c: by_corner[c].brake_m):
             lab = label(corner)
-            said = lab.spoken or (lab.voice if fallback_voice else None)
+            said = lab.spoken or (lab.voice if corner in voice_for else None)
             if said is not None and said in used and lab.voice not in used:
                 said = lab.voice
             out[corner] = said
@@ -694,22 +917,37 @@ def build_cue_plan(
         return out
 
     specs: list[CueSpec] = []
-    focus: tuple[str, ...] = ()
+    focus_corners: tuple[str, ...] = ()
     if m == "focus":
+        reminders: dict[str, tuple[str, str, float]] = {}
+        with_habits = focus is not None or habits is not None
         if only_corner is not None:  # --- coachref --- a drill: its corner is the focus, evidence or not
             picked = [(only_corner, "drill")]
-        else:
+        elif with_habits:  # the session's habits: braking calls, and a reminder per other focus habit
+            # reminders and braking calls share the profile's cap (a beginner: one in-lap call), reminders first
+            cap = min(MAX_FOCUS_CORNERS, max_focus, focus_limits.max_corners)
+            reminders = _reminder_corners(focus or (), by_corner, tables, trace, length, focus_limits, label, cap)
+            pool = habits if habits is not None else focus or ()
+            left = cap - len(reminders)
+            picked = select_habit_corners(pool, by_corner, left, focus_limits, skip=reminders) if left > 0 else []
+        else:  # a caller that predates habits: the recent laps' observations
             picked = select_focus_corners(history, by_corner, max_focus, focus_limits)
-        focus = tuple(c for c, _ in picked)
-        said = spoken_names(focus, fallback_voice=False)
+        focus_corners = (*reminders, *(c for c, _ in picked))
+        said = spoken_names(focus_corners, voice_for=reminders)
+        for corner, (phrase, why, calm) in reminders.items():
+            z, lab = by_corner[corner], label(corner)
+            said_parts: tuple[str, ...] = (said[corner] or lab.voice, phrase)
+            ahead = estimate_phrase_s(said_parts) + REMINDER_END_MARGIN_S  # starts this early: ends the margin before
+            spec = _spec(z, CueKind.REMINDER, f"{lab.text}: {phrase}", said_parts, 0, ahead, True, why)
+            specs.append(replace(spec, calm_s=calm))
         for corner, why in picked:
             z, lab, name = by_corner[corner], label(corner), said[corner]
             parts, key = ((name, "brake"), 1) if name else (("brake",), 0)
             specs.append(_spec(z, CueKind.BRAKE, f"{lab.text} brake", parts, key, 0.0, True, why))
         if not specs:
-            return empty("no braking corrections to focus on")
+            return empty(NO_HABITS if with_habits else "no braking corrections to focus on")
     elif m == "markers":
-        said = spoken_names([z.corner for z in zones], fallback_voice=True)
+        said = spoken_names([z.corner for z in zones], voice_for=by_corner)
         for z in zones:
             lab = label(z.corner)
             parts = (said[z.corner] or lab.voice,)
@@ -727,7 +965,7 @@ def build_cue_plan(
         length_m=length,
         ref_lap_id=ref_lap_id,
         ref_lap_number=ref_lap_number,
-        focus=focus,
+        focus=focus_corners,
     )
 
 
@@ -761,39 +999,48 @@ def _wrap_hide_m(plan: CuePlan) -> float:
     return min(plan.window_m, 0.5 * plan.length_m)
 
 
-def _time_to_go(app: CueApproach | None, k: float, v: float) -> tuple[float, float | None]:
+def _time_to_go(app: CueApproach | None, k: float, v: float, *, catch_up: bool = False) -> tuple[float, float | None]:
     """(seconds to cover the ``k`` metres to the target at speed ``v``, reference speed there or None).
 
     The earlier of constant speed and the reference lap's own time scaled by ``v_ref / v``: on a straight the car
     is still accelerating, which the reference captures; when the shapes disagree the smaller estimate fires
-    earlier, the safe side. O(1): one table lookup."""
+    earlier, the safe side. ``catch_up`` (a reminder, timed seconds ahead): a car slower than the reference here
+    is assumed to reach the reference's pace, never to stay slower all the way. Real laps (driver slower out of the
+    previous corner, then as fast at the end of the straight) made the scaled time 0.6 s too long over a reminder's
+    4 s lead; a braking call's lead of about a second keeps the scaled time. O(1): one table lookup."""
     ttg = k / v
     if app is not None:
         idx = int(k + 0.5)
         if 0 <= idx < len(app.ttg_s):
             t_ref, v_ref = app.ttg_s[idx], app.v_mps[idx]
             if t_ref == t_ref and v_ref == v_ref:  # not NaN
-                return min(ttg, t_ref * v_ref / v), v_ref
+                scale = min(1.0, v_ref / v) if catch_up else v_ref / v
+                return min(ttg, t_ref * scale), v_ref
     return ttg, None
 
 
-def _aim_m(app: CueApproach | None, cue: CueSpec, v: float, margin_m: float, k_now: float) -> float:
+def _aim_m(
+    app: CueApproach | None, cue: CueSpec, v: float, margin_m: float, k_now: float, anticipation_s: float
+) -> float:
     """Where the key word should start (lap distance): ``margin_m`` before the target, plus ``anticipation_s`` of
-    *time* for markers. The car keeps accelerating over a 2 s anticipation, so ``anticipation_s * v`` metres would
-    misplace it by tens of metres: the point is found on the reference lap's remaining time, scaled by the
-    driver's pace relative to the reference where the car is now (``k_now`` metres to go). Binary search over the
-    approach table: called once per fired cue, never per frame."""
-    if cue.anticipation_s <= 0.0 or app is None:
-        return cue.target_m - margin_m - cue.anticipation_s * v
+    *time* for markers and reminders (``CueTiming.anticipation``). The car keeps accelerating over a 2 s
+    anticipation, so ``anticipation_s * v`` metres would misplace it by tens of metres: the point is found on the
+    reference lap's remaining time, scaled by the driver's pace relative to the reference where the car is now
+    (``k_now`` metres to go; a reminder assumes the car reaches the reference's pace, as its trigger does:
+    ``_time_to_go``). Binary search over the approach table: called once per fired cue, never per frame."""
+    if anticipation_s <= 0.0 or app is None:
+        return cue.target_m - margin_m - anticipation_s * v
     ttg, v_ref_now = app.ttg_s, app.v_mps
     i_now = int(k_now + 0.5)
     ratio = 1.0
     if 0 <= i_now < len(v_ref_now) and v_ref_now[i_now] == v_ref_now[i_now]:
         ratio = v_ref_now[i_now] / v
-    want = cue.anticipation_s + margin_m / v
+        if cue.kind is CueKind.REMINDER:
+            ratio = min(1.0, ratio)
+    want = anticipation_s + margin_m / v
     lo, hi = 0, min(len(ttg) - 1, max(0, i_now))
     if not (ttg[hi] == ttg[hi] and ttg[hi] * ratio >= want):
-        return cue.target_m - margin_m - cue.anticipation_s * v
+        return cue.target_m - margin_m - anticipation_s * v
     while lo < hi:  # remaining time grows with distance to go (NaN entries count as "not far enough")
         mid = (lo + hi) // 2
         t = ttg[mid]
@@ -850,6 +1097,9 @@ class CueEngine:
         self._comparison: Mapping[str, Any] | None = None
         self._history: deque[list[Mapping[str, Any]]] = deque(maxlen=FOCUS_HISTORY_LAPS)
         self._history_ref: int | None = None
+        # the coach block's habits (coach.habits, via on_lap_result): None = a caller that predates them
+        self._focus: tuple[Mapping[str, Any], ...] | None = None
+        self._habits: tuple[Mapping[str, Any], ...] | None = None
         self._reference: Mapping[str, Any] | None = None
         self._trace: DistanceTrace | None = None
         # reference lap id -> (summary, trace): LapProcessor caches reference analyses across sessions and only
@@ -879,6 +1129,7 @@ class CueEngine:
         self._timing_used: CueTiming | None = None
         self._leads: list[float] = []
         self._offsets: list[float] = []
+        self._ahead: list[float] = []  # per cue: anticipation (CueTiming.anticipation) under the current timing
         self._ptr = 0
         self._lap: int | None = None
         self._lap_shift = 0  # -1 / +1 while lap number and lap distance disagree about the line
@@ -1016,6 +1267,8 @@ class CueEngine:
         self._comparison = None
         self._history.clear()
         self._history_ref = None
+        self._focus = None
+        self._habits = None
         self._empty_reason = reason
         self._plan = self._with_fallback(CuePlan.empty(self._mode, "cues off" if self._mode == "off" else reason))
 
@@ -1039,15 +1292,23 @@ class CueEngine:
         observations: Sequence[Mapping[str, Any]],
         comparison: Mapping[str, Any] | None,
         length_m: float | None = None,
+        *,
+        focus: Sequence[Mapping[str, Any]] | None = None,
+        habits: Sequence[Mapping[str, Any]] | None = None,
     ) -> None:
         """A processed lap (``LiveState.on_lap_result``). A lap without a comparison (incomplete, no reference)
         keeps the current plan, which after a cleared reference is the empty one. Never raises into the analysis
-        thread."""
+        thread. ``focus`` / ``habits``: the lap's coach block lists (``coach.selection`` contract: the habits being
+        worked on with their corner reminder, and every habit of the session), kept for the planner with the
+        comparison: focus mode calls the habits (``build_cue_plan``). Both None = a caller that predates habits:
+        focus mode then picks from the recent laps' ``observations`` (kept per reference)."""
         with self._plan_lock:
             if length_m is not None:
                 self._length_m = _num(length_m)
             if comparison is None:
                 return
+            self._focus = None if focus is None else tuple(focus)
+            self._habits = None if habits is None else tuple(habits)
             ref_id = comparison.get("ref_lap_id")
             ref_key = ref_id if isinstance(ref_id, int) and not isinstance(ref_id, bool) else None
             if ref_key != self._history_ref:
@@ -1056,6 +1317,18 @@ class CueEngine:
             self._history.append(list(observations))
             self._comparison = comparison
         self._replan()
+
+    def set_habits(self, focus: Sequence[Mapping[str, Any]], habits: Sequence[Mapping[str, Any]]) -> None:
+        """The session's habits changed between two laps (``LiveState.habit_line_said``: the radio said a habit line,
+        so the habit it announced is now worked on): replan from the latest comparison with these lists (the coach
+        block's ``focus`` / ``habits`` shapes), so its corner reminder or braking call starts on the lap the driver
+        hears it. Without a comparison there is nothing to plan (the next lap result brings one and its lists)."""
+        with self._plan_lock:
+            self._focus = tuple(focus)
+            self._habits = tuple(habits)
+            ready = self._comparison is not None
+        if ready:
+            self._replan()
 
     def set_fallback_plan(self, plan: CuePlan | None) -> None:
         """Heads-ups from the AI field (``core.track_knowledge.heads_up_cue_plan``: "heavy braking ahead" MARKER
@@ -1158,6 +1431,7 @@ class CueEngine:
             gen = self._generation
             mode, comparison, length = self._mode, self._comparison, self._length_m
             history, reference, trace = list(self._history), self._reference, self._trace
+            focus, habits = self._focus, self._habits  # the latest coach block's (None = a caller without habits)
             limits, empty_reason, labels = self._focus_limits, self._empty_reason, self._labels
             drill_corner = self._drill_corner  # --- coachref ---
             ref_id = comparison.get("ref_lap_id") if comparison is not None else None
@@ -1178,6 +1452,8 @@ class CueEngine:
                     focus_limits=limits,
                     labels=labels,
                     only_corner=drill_corner,  # --- coachref ---
+                    focus=focus,
+                    habits=habits,
                 )
         except Exception:
             self.errors += 1
@@ -1267,7 +1543,8 @@ class CueEngine:
         plan = self._active
         cues = plan.cues if plan is not None else ()
         self._offsets = [timing.word_offset(c) for c in cues]
-        self._leads = [timing.latency_s + off + c.anticipation_s for c, off in zip(cues, self._offsets, strict=True)]
+        self._ahead = [timing.anticipation(c) for c in cues]
+        self._leads = [timing.latency_s + off + a for off, a in zip(self._offsets, self._ahead, strict=True)]
         self._timing_used = timing
 
     def _seek(self, d: float) -> None:
@@ -1351,7 +1628,7 @@ class CueEngine:
     ) -> CueEvent | None:
         c = plan.cues[j]
         app = plan.approaches[j]
-        ttg, v_ref = _time_to_go(app, k, v)
+        ttg, v_ref = _time_to_go(app, k, v, catch_up=c.kind is CueKind.REMINDER)
         lead = self._leads[j]
         slack = lead + self.margin_m / v + 0.5 * self._frame_dt
         if ttg > slack:
@@ -1359,11 +1636,17 @@ class CueEngine:
         done.add(c.corner)  # decided: one call per corner per lap, whatever happens next
         if ttg < lead:
             # The key word would land after the reference point (markers: less than their anticipation before
-            # it): a distance jump, lost frames or a plan that arrived mid-approach. The margin may absorb a late
-            # frame, the point itself never is: silence beats late. A regular approach keeps
-            # ttg >= lead + margin/v - frame/2, so only frame spacings above 2 * margin / v (< 10 Hz at
-            # 300 km/h) drop on-time calls.
+            # it; reminders: the phrase would end less than REMINDER_END_MARGIN_S before it): a distance jump, lost
+            # frames or a plan that arrived mid-approach. The margin may absorb a late frame, the point itself never
+            # is: silence beats late. A regular approach keeps ttg >= lead + margin/v - frame/2, so only frame
+            # spacings above 2 * margin / v (< 10 Hz at 300 km/h) drop on-time calls.
             self.missed += 1
+            return None
+        ahead = self._ahead[j]
+        if c.calm_s is not None and ahead > c.calm_s:
+            # a reminder the radio's audio made longer than the reference's calm stretch before the corner: it
+            # would start inside the previous braking zone (and could block that corner's call)
+            self.suppressed += 1
             return None
         if c.kind is CueKind.BRAKE:
             if v_ref is None and c.ref_speed_kph is not None:
@@ -1389,8 +1672,9 @@ class CueEngine:
             latency_s=self._timing_used.latency_s if self._timing_used is not None else DEFAULT_LATENCY_S,
             word_offset_s=off,
             path=self._timing_used.path if self._timing_used is not None else "pcm",
-            aim_m=_aim_m(app, c, v, self.margin_m, k),
+            aim_m=_aim_m(app, c, v, self.margin_m, k, ahead),
             ref_lap_id=plan.ref_lap_id,
+            anticipation_s=ahead,
         )
         self.fired += 1
         last = {**ev.to_dict(), "status": "pending", "reason": None, "error_m": None, "latency_measured_ms": None}
@@ -1430,47 +1714,71 @@ class CueEngine:
     def sample(self) -> FrameSample | None:
         return self._sample
 
-    def _next_cue(self, *, for_display: bool = False) -> tuple[CueSpec, float, int] | None:
-        """(cue, metres to its target, plan index) for the next unresolved cue ahead of the car (mirrors
-        ``_evaluate``: a blocked lap has none of its own, the final race lap no next lap).
+    def _upcoming(
+        self, plan: CuePlan | None, s: FrameSample | None, limit: int, *, for_display: bool = False
+    ) -> list[tuple[CueSpec, float, int]]:
+        """Up to ``limit`` ``(cue, metres to its target, plan index)`` for the unresolved cues ahead of the car, in lap
+        order (mirrors ``_evaluate``: a blocked lap has none of its own, the final race lap no next lap).
 
         ``for_display`` (the dashboard's "next call"): a next-lap cue whose target the car has only just passed on
-        this lap - or not even reached yet, once its call is done - is left out. Its distance would wrap to almost
+        this lap - or not even reached yet, once its call is done - ends the list. Its distance would wrap to almost
         a lap length ("T3 brake in 4311 m" while the car is in T3), which reads as the corner the car is in. It
-        shows again once the car is ``_wrap_hide_m`` past that point. The speak window
-        (``seconds_to_next_cue``) keeps the full lookahead: it times audio, it is not read by the driver."""
-        plan, s, race_laps = self._active, self._sample, self._race_laps
-        if plan is None or s is None or not plan.cues:
-            return None
+        shows again once the car is ``_wrap_hide_m`` past that point. The speak window (``seconds_to_next_cue``)
+        keeps the full lookahead: it times audio, it is not read by the driver."""
+        race_laps = self._race_laps
+        out: list[tuple[CueSpec, float, int]] = []
+        if plan is None or s is None or not plan.cues or limit <= 0:
+            return out
         if race_laps is not None and s.lap > race_laps:
-            return None
+            return out
         cues = plan.cues
         if s.lap not in self._blocked:
             done = self._done.get(s.lap, set())
             for j in range(min(self._ptr, len(cues)), len(cues)):
                 if cues[j].corner not in done and cues[j].target_m >= s.d_m:
-                    return cues[j], cues[j].target_m - s.d_m, j
+                    out.append((cues[j], cues[j].target_m - s.d_m, j))
+                    if len(out) >= limit:
+                        return out
         if (race_laps is not None and s.lap >= race_laps) or s.lap + 1 in self._blocked:
-            return None  # final lap: no next lap
+            return out  # final lap: no next lap
         done_next = self._done.get(s.lap + 1, set())
         for j, c in enumerate(cues):
-            if c.corner not in done_next:
-                if for_display and s.d_m - c.target_m < _wrap_hide_m(plan):
-                    return None  # the nearest next-lap cue is this lap's point just behind the car (or done ahead)
-                return c, c.target_m + plan.length_m - s.d_m, j
-        return None
+            if c.corner in done_next:
+                continue
+            if for_display and s.d_m - c.target_m < _wrap_hide_m(plan):
+                return out  # the nearest next-lap cue is this lap's point just behind the car (or done ahead)
+            out.append((c, c.target_m + plan.length_m - s.d_m, j))
+            if len(out) >= limit:
+                break
+        return out
+
+    def _next_cue(self, *, for_display: bool = False) -> tuple[CueSpec, float, int] | None:
+        """(cue, metres to its target, plan index) for the next unresolved cue ahead of the car (``_upcoming``)."""
+        nxt = self._upcoming(self._active, self._sample, 1, for_display=for_display)
+        return nxt[0] if nxt else None
 
     def seconds_to_next_cue(self) -> float | None:
         """Seconds until the next cue is due to fire at the current speed (0 = due now), for the radio's speak
-        window: a proactive message must not be cut off by (or talk over) a cue. ``None`` = no cue coming."""
+        window: a proactive message must not be cut off by (or talk over) a cue. ``None`` = no cue coming.
+
+        A cue fires at its *start*: ``anticipation`` before its aim point (a marker's name, a reminder's whole
+        phrase), so the window closes before that start, not before the braking point. Same time-to-go and lead as
+        the trigger (``_check``): the reference lap's time over the metres to go when it is the earlier estimate (a
+        car still accelerating on the straight reaches a reminder's start sooner than its speed now says). The
+        earliest of the next ``LOOKAHEAD`` cues: a long reminder may start before a closer braking call's point."""
         if self._mode == "off" or self._muted is not None or self._safety_car or self._sink is None:
             return None
-        nxt, s = self._next_cue(), self._sample
-        if nxt is None or s is None or s.v_mps <= 1.0:
+        plan, s = self._active, self._sample
+        if s is None or s.v_mps <= 1.0:
             return None
-        _cue, k, j = nxt
-        lead = self._leads[j] if j < len(self._leads) else DEFAULT_LATENCY_S
-        return max(0.0, k / s.v_mps - lead - self.margin_m / s.v_mps)
+        leads, best = self._leads, None
+        for cue, k, j in self._upcoming(plan, s, LOOKAHEAD):
+            app = plan.approaches[j] if plan is not None and j < len(plan.approaches) else None
+            ttg, _v_ref = _time_to_go(app, k, s.v_mps, catch_up=cue.kind is CueKind.REMINDER)
+            lead = leads[j] if j < len(leads) else DEFAULT_LATENCY_S
+            due = max(0.0, ttg - lead - self.margin_m / s.v_mps)
+            best = due if best is None else min(best, due)
+        return best
 
     def snapshot(self) -> dict[str, Any]:
         """Small JSON-able state for the dashboard (next cue, last cue, timing)."""

@@ -11,14 +11,28 @@ more laps, then the larger mean impact, then corner and kind names. The latest o
 owner's coaching limits (confidence, impact, allowed kinds; no owner = advanced). Observation text is the coach's,
 verbatim. No generated sentence here ever tells the driver to brake later.
 
+Habits, not one-offs (a tester: "need to identify trends"): the one to work on is a point seen on ``MIN_REPEAT`` or
+more laps that is still there - on at least one of the last ``RECENT_LAPS`` compared laps of its corner - so a single
+lap's slip or a corner the driver already sorted is never the session's lesson. Only when no repeated point is still
+there does a one-off stand in, and only a big one (``analysis.coaching.is_big_one_off``: the radio's own rule). A
+point seen on ``MIN_REPEAT`` or more laps earlier and on none of its corner's last ``RECENT_LAPS`` compared laps is
+fixed: it went well ("T1: sorted - clean on your last 3 laps"), when those laps were clean (no corrective point at
+the corner) and, for a braking-early habit, the corner was faster on each of them than on any lap it was seen on:
+later braking is praised only when the corner got faster. A corner counts as compared on a lap when that lap's
+comparison with the reference was usable and had the corner, not lost to an incident there
+(``compared_corner_laps``, with the corner's time against the reference); a lap with an observation at the corner
+counts too, its ``impact_s`` being the corner's time (callers without the comparisons still see what the
+observations prove).
+
 Order of choices: went well - personal best, or the first clean laps here in this car (real, owned sessions: a best
-always comes first), the top positive point, a run of 3+ clean laps, the gain from the first clean lap to the best
-(0.1 s+, race lap 1 left out), every lap clean; for a beginner, else the laps driven. Work on - the top corrective
-point, laps that did not count, no clean lap, a single clean lap. Progress (real, owned sessions only) - the goals
-reached, a PB streak of 2+, a goal this session moved closer, the gap to the best here, first clean laps at a track
-(unless Went well already says so), the count of sessions with a timed lap this week. A session with no timed lap
-has no things at all (it is not one of the week's sessions either). Personal bests are per game + track + car, and
-their sentences name the car (``model.in_car``: never a raw id).
+always comes first), a habit fixed or the top positive point (whichever ranks higher), a run of 3+ clean laps, the
+gain from the first clean lap to the best (0.1 s+, race lap 1 left out), every lap clean; for a beginner, else the
+laps driven. Work on - the top repeated point still there, else the top big one-off, laps that did not count, no
+clean lap, a single clean lap. Progress (real, owned sessions only) - the goals reached, a PB streak of 2+, a goal
+this session moved closer, the gap to the best here, first clean laps at a track (unless Went well already says so),
+the count of sessions with a timed lap this week. A session with no timed lap has no things at all (it is not one of
+the week's sessions either). Personal bests are per game + track + car, and their sentences name the car
+(``model.in_car``: never a raw id).
 
 ``fact_key`` names the fact a thing reports, as the badges do (``pb:<lap id>``, ``first_clean:<game>:<track>:<car>``,
 ``pb_streak:<game>:<track>:<car>:<n>``, ``goal:<id>``): the Session complete card shows each fact once.
@@ -26,10 +40,18 @@ their sentences name the car (``model.in_car``: never a raw id).
 
 from __future__ import annotations
 
+import statistics
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from pitwall.analysis.coaching import (
+    INCIDENT_KIND,
+    LATER_BRAKING_FIXES,
+    is_big_one_off,
+    is_corrective,
+    is_incident,
+)
 from pitwall.drivers import CoachingLimits
 from pitwall.motivation import goals as G
 from pitwall.motivation import rules
@@ -48,8 +70,17 @@ from pitwall.motivation.model import (
     short_date,
 )
 
-INCIDENT_KIND = "incident"
+if TYPE_CHECKING:
+    from pitwall.analysis.compare import LapComparison
+
 MIN_RUN = 3
+# [H] A point seen on 2 or more laps of the session is a repeat (a habit in the making), not a one-off: the same
+# corner fault twice is the smallest pattern, and the habit tracker's "same fault as on the previous lap" rule.
+MIN_REPEAT = 2
+# [H] The corner's last 3 compared laps say whether a fault is still there (Work on: on at least one of them) or sorted
+# (Went well: on none of them): the habit tracker's window for "sorted" (coach/habits.py FIXED_OF). The radio calls
+# it sorted mid-run from 2 clean laps of 3; the report, the session's verdict, wants all 3 clean.
+RECENT_LAPS = 3
 MIN_GAIN_MS = 100
 WITHIN_PB_MS = 100
 
@@ -108,12 +139,50 @@ class RankedPoint:
     compared: int
     score: float
     mean_impact_s: float | None
+    lap_ids: tuple[int, ...] = ()  # the laps it was seen on (ids ascending)
 
 
 def _num(v: object) -> float | None:
     if isinstance(v, bool) or not isinstance(v, int | float):
         return None
     return float(v)
+
+
+CornerLaps = Mapping[str, Mapping[int, float | None]]  # corner -> {lap id: the corner's time vs the reference, s}
+
+
+def compared_corner_laps(comparisons: Mapping[int, LapComparison]) -> dict[str, dict[int, float | None]]:
+    """Corner -> {lap id: the corner's time against the reference (s, + = lost; None = unknown)} for the laps (ids
+    ascending) on which it was compared: the lap's comparison was usable (an unusable one has no observations, so
+    it shows nothing either way) and had the corner, not lost to an incident there (``analysis.coaching.is_incident``:
+    no technique evidence). ``RecapInput.corner_laps``."""
+    out: dict[str, dict[int, float | None]] = {}
+    for lap_id in sorted(comparisons):
+        comp = comparisons[lap_id]
+        if not comp.compatibility.ok:
+            continue
+        for cd in comp.corners:
+            if not is_incident(cd):
+                out.setdefault(cd.corner, {})[lap_id] = cd.time_delta_s
+    return out
+
+
+def corner_laps(
+    observations: Mapping[int, Sequence[Mapping[str, Any]]], compared: CornerLaps | None = None
+) -> dict[str, dict[int, float | None]]:
+    """Corner -> its compared laps (ids ascending) with the corner's time: ``compared`` (``compared_corner_laps``;
+    None = not known) plus every lap with an observation at the corner (an observation proves the corner was compared
+    on that lap, and its ``impact_s`` is the corner's time there; an incident is no technique evidence and does not
+    count)."""
+    out: dict[str, dict[int, float | None]] = {c: dict(laps) for c, laps in (compared or {}).items()}
+    for lap_id, obs in observations.items():
+        for o in obs:
+            if o.get("kind") == INCIDENT_KIND or not o.get("corner"):
+                continue
+            laps = out.setdefault(str(o["corner"]), {})
+            if laps.get(lap_id) is None:
+                laps[lap_id] = _num(o.get("impact_s"))
+    return {c: dict(sorted(laps.items())) for c, laps in out.items()}
 
 
 def rank_points(
@@ -140,6 +209,7 @@ def rank_points(
         if limits.allowed_kinds is not None and kind not in limits.allowed_kinds:
             continue
         laps = {int(o.get("lap_number") or 0) for _, o in items}
+        ids = tuple(sorted({k for k, _ in items if k is not None}))
         denom = max(compared, len(laps), 1)
         priorities = [p for _, o in items if (p := _num(o.get("priority"))) is not None]
         impacts = [i for _, o in items if (i := _num(o.get("impact_s"))) is not None]
@@ -153,6 +223,7 @@ def rank_points(
                 compared=max(compared, len(laps)),
                 score=sum(priorities) / denom,
                 mean_impact_s=sum(impacts) / len(impacts) if impacts else None,
+                lap_ids=ids,
             )
         )
     out.sort(key=lambda p: (-p.score, -p.seen, -abs(p.mean_impact_s or 0.0), p.corner, p.kind))
@@ -198,6 +269,9 @@ class RecapInput:
     why_progress: str | None = None  # why progress is empty when ``counts`` is False
     # when the recap is read: an older session's week is "the week of Mon 5 Oct", not "this week" (None: its own week)
     now_unix: float | None = None
+    # corner -> {lap id: the corner's time} for the laps it was compared on (``compared_corner_laps``); None = not
+    # known: only the laps with an observation at the corner count (``corner_laps``)
+    corner_laps: CornerLaps | None = None
 
 
 def _track(s: SessionRow) -> str:
@@ -215,6 +289,117 @@ def _scope_bests(history: History, s: SessionRow) -> list[rules.SessionBest]:
         return []
     group = [x for x in history.sessions if x.pb_key == key]
     return rules.session_bests(group, history.laps)
+
+
+# ---------------------------------------------------------------------------------------------- habits
+def _still_there(p: RankedPoint, laps: CornerLaps) -> bool:
+    """Seen on at least one of the last ``RECENT_LAPS`` compared laps of its corner."""
+    recent = set(list(laps.get(p.corner, {}))[-RECENT_LAPS:])
+    return any(i in recent for i in p.lap_ids)
+
+
+def _is_fixed(inp: RecapInput, p: RankedPoint, laps: CornerLaps) -> bool:
+    """Seen on ``MIN_REPEAT`` or more laps, then on none of its corner's last ``RECENT_LAPS`` compared laps (all after
+    the last lap it was seen on: fewer clean laps prove nothing yet), and those laps clean at the corner (no
+    corrective point of any kind there: "clean" is true). A braking-early habit also needs the corner faster on each
+    of those laps than on every lap it was seen on (a known time on each: later braking is praised only when the
+    corner got faster; unknown stays unknown)."""
+    if p.seen < MIN_REPEAT or not p.lap_ids:
+        return False
+    times = laps.get(p.corner, {})
+    last = [i for i in times if i > p.lap_ids[-1]][-RECENT_LAPS:]
+    if len(last) < RECENT_LAPS:
+        return False
+    if any(str(o.get("corner")) == p.corner and is_corrective(o) for i in last for o in inp.observations.get(i, ())):
+        return False
+    if p.kind in LATER_BRAKING_FIXES:
+        lost = [v for _, o in _occurrences(inp, p) if (v := _num(o.get("impact_s"))) is not None]
+        now = [times[i] for i in last]
+        return bool(lost) and all(t is not None and t < min(lost) for t in now)
+    return True
+
+
+def was_words(kind: str, value: float | None) -> str | None:
+    """A fixed habit as it was, in a few descriptive words ("braking about 15 m early"); None for an unknown kind or
+    value. Describes what happened; never tells the driver to brake later (an overdriven entry is "going in too
+    deep")."""
+    if value is None:
+        return None
+    a = round(abs(value))
+    words = {
+        "brake_early": f"braking about {a} m early",
+        "brake_late_overdrive": "going in too deep and coming out slower",
+        "low_min_speed": f"about {a} km/h slower at the apex",
+        "overspeed_apex": f"carrying about {a} km/h too much into the apex",
+        "late_throttle": f"about {a} m late to full throttle",
+        "coasting": f"coasting about {a} m more",
+    }
+    return words.get(kind)
+
+
+def _long_name(o: Mapping[str, Any], label: str) -> str:
+    """The corner's long name as the observation's simple wording starts with it ("Turn 10 (Remus)"), else ``label``."""
+    simple = o.get("text_simple")
+    if isinstance(simple, str) and ": " in simple:
+        return simple.split(": ", 1)[0]
+    return label
+
+
+def _occurrences(inp: RecapInput, p: RankedPoint) -> list[tuple[int, Mapping[str, Any]]]:
+    """The point's observations, with their lap ids, on the laps it was seen on."""
+    return [
+        (i, o)
+        for i in p.lap_ids
+        for o in inp.observations.get(i, ())
+        if o.get("kind") == p.kind and str(o.get("corner")) == p.corner
+    ]
+
+
+def fixed_point(inp: RecapInput) -> RankedPoint | None:
+    """The top-ranked corrective point that is fixed (``_is_fixed``), or None."""
+    laps = corner_laps(inp.observations, inp.corner_laps)
+    return next(
+        (p for p in rank_points(inp.observations, inp.compared, False, inp.limits) if _is_fixed(inp, p, laps)), None
+    )
+
+
+def fixed_thing(inp: RecapInput, p: RankedPoint, lap_numbers: Mapping[int, int] | None = None) -> Thing:
+    """A fixed point as a Went well: "T1: sorted - clean on your last 3 laps (was braking about 15 m early)." The
+    amount is the median over the laps it was seen on. ``lap_numbers``: lap id -> the game's lap number (the thing
+    points at the corner's last clean lap)."""
+    o = p.latest
+    label = str(o.get("corner_label") or p.corner)
+    values = [v for _, x in _occurrences(inp, p) if (v := _num(x.get("value"))) is not None]
+    typical = statistics.median(values) if values else None
+    was = was_words(p.kind, typical)
+    last = list(corner_laps(inp.observations, inp.corner_laps)[p.corner])[-1]
+    seen = f"Seen on {p.seen} of {p.compared} laps compared with your reference"
+    return Thing(
+        "went_well",
+        "fixed",
+        f"{label}: sorted - clean on your last {RECENT_LAPS} laps" + (f" (was {was})." if was else "."),
+        f"{_long_name(o, label)}: sorted - clean on your last {RECENT_LAPS} laps.",
+        evidence=f"{seen}, not on your last {RECENT_LAPS} at this corner",
+        corner=p.corner,
+        corner_label=o.get("corner_label") if isinstance(o.get("corner_label"), str) else None,
+        lap_id=last,
+        lap_number=(lap_numbers or {}).get(last),
+        observation_kind=p.kind,
+        observation_key=f"{p.corner}:{p.kind}",
+        values={
+            "seen": p.seen,
+            "compared": p.compared,
+            "clean_laps": RECENT_LAPS,
+            "value": None if typical is None else round(typical, 3),
+            "unit": o.get("unit") if isinstance(o.get("unit"), str) else None,
+        },
+    )
+
+
+def fixed_habit(inp: RecapInput, lap_numbers: Mapping[int, int] | None = None) -> Thing | None:
+    """The top fixed point as a Went well (``fixed_thing``), or None."""
+    p = fixed_point(inp)
+    return None if p is None else fixed_thing(inp, p, lap_numbers)
 
 
 # ---------------------------------------------------------------------------------------------- went well
@@ -253,7 +438,11 @@ def went_well(inp: RecapInput, bests: Sequence[rules.SessionBest]) -> Thing | No
             values={"lap_ms": mine.best_ms, "clean_laps": n_clean},
             fact_key=first_clean_key(s),
         )
+    # a habit fixed, or the top positive point: whichever ranks higher (the same score; a tie goes to the fix)
+    fixed = fixed_point(inp)
     top = rank_points(inp.observations, inp.compared, True, inp.limits)
+    if fixed is not None and (not top or fixed.score >= top[0].score):
+        return fixed_thing(inp, fixed, {lap.id: lap.lap_number for lap in laps})
     if top:
         return _point_thing("went_well", top[0])
     run = rules.best_run(laps)
@@ -342,12 +531,25 @@ def _hygiene(laps: Sequence[LapRow]) -> Thing | None:
 
 
 def work_on(inp: RecapInput) -> Thing | None:
-    top = rank_points(inp.observations, inp.compared, False, inp.limits)
-    if top:
-        return _point_thing("work_on", top[0])
+    """The top repeated point that is still there (``MIN_REPEAT`` laps or more, on one of its corner's last
+    ``RECENT_LAPS`` compared laps), else the top big one-off (``is_big_one_off``: the one-offs the radio says), else
+    what the laps say (laps that did not count; and, when no lap was compared at all, no clean lap or a single clean
+    lap). A fixed point is never the one to work on (it went well), and a small one-off never is either. When laps
+    were compared but nothing qualifies, "no clean lap, nothing to compare" or "drive two so they can be compared"
+    would be false (a lap can be compared with a reference from another session): nothing is said (None)."""
+    ranked = rank_points(inp.observations, inp.compared, False, inp.limits)
+    laps = corner_laps(inp.observations, inp.corner_laps)
+    habit = next((p for p in ranked if p.seen >= MIN_REPEAT and _still_there(p, laps)), None)
+    if habit is not None:
+        return _point_thing("work_on", habit)
+    one_off = next((p for p in ranked if p.seen < MIN_REPEAT and is_big_one_off(p.latest)), None)
+    if one_off is not None:
+        return _point_thing("work_on", one_off)
     hygiene = _hygiene(inp.laps)
     if hygiene is not None:
         return hygiene
+    if inp.compared > 0 or ranked:
+        return None  # laps were compared: "nothing to compare" is not true (build_recap: nothing clear to work on)
     clean = [lap for lap in inp.laps if lap.clean and lap.lap_time_ms is not None]
     if not clean:
         return Thing(

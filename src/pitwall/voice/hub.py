@@ -22,7 +22,9 @@ then gets an error frame naming the reason plus a short spoken ``NO_STT_REPLY`` 
 its behaviour (the utterance goes to ``NullStt``, which hears nothing: "Say again?"). Typed questions, cues and
 proactive messages work as usual.
 
-Live braking cues (``coach.cues``) bypass the scheduler queue because they are time-critical:
+Live braking cues and corner reminders (``coach.cues``) bypass the scheduler queue because they are time-critical
+(a reminder - "Turn 6, apex speed, 12 down" for a habit being worked on - must END a second before the braking point,
+so its phrase's measured length is pushed to the engine with the latency: ``CueTiming.durations_s``):
 
 * **Precise delivery.** The cue engine decides on the ingest thread; the hub delivers on the very next loop turn
   with audio synthesised in advance (``say`` takes ~0.4 s, 33 m at 300 km/h; Kokoro ~0.1-0.2 s). Each phrase is
@@ -52,10 +54,12 @@ Live braking cues (``coach.cues``) bypass the scheduler queue because they are t
   device voice) is dropped too: it must not cut what is on air for silence.
 * **Priority** (``voice.scheduler``'s one rule, ``may_interrupt``: the urgent path and braking cues interrupt). A cue
   never plays while the driver transmits, nor over an answer, an alert, an urgent or spotter car call or another cue;
-  it cuts routine talk (a lap summary, a coaching point, a race, health or strategy call), which is said again once in
-  the next speak window. A muted, late or blocked cue is dropped, never said late. Proactive messages treat the next cue
-  like a braking zone (the speak window must close before it fires) and a message whose synthesis finished while a
-  cue was playing is held, so a proactive message is rarely on air at a cue point. An answer or acknowledgement that
+  a braking call cuts routine talk (a lap summary, a coaching point, a race, health or strategy call), which is said
+  again once in the next speak window, and a corner reminder (never said again). A corner reminder is coaching: it
+  plays only on a free radio and never with a car alongside, and any spotter call or braking call cuts it. A muted,
+  late or blocked cue is dropped, never said late. Proactive messages treat the next cue like a braking zone (the
+  speak window must close before it fires) and a message whose synthesis finished while a cue was playing is held, so
+  a proactive message is rarely on air at a cue point. An answer or acknowledgement that
   becomes ready while a cue (or an urgent call) is on air waits for it to finish instead of cutting the key word.
   Quiet mode, quiet intensity ("alerts and answers only"), voice off and no connected radio mute cues.
 * **Spotter calls** (``voice.spotter_radio``, F1 25 only): pre-synthesised, URGENT, delivered on the next loop turn
@@ -98,6 +102,7 @@ from pitwall.coach.cues import (
     DEFAULT_CUE_MODE,
     MAX_LATENCY_S,
     CueEvent,
+    CueKind,
     CuePlan,
     CueTiming,
     cue_timing_error_m,
@@ -117,6 +122,7 @@ from pitwall.voice.scheduler import (
     DRIVER_INITIATED,
     DRIVER_LAP_KINDS,
     MIN_GAP_S,
+    REMINDER_CUE,
     SPEECH_LATENCY_S,
     interrupt_rank,
     is_urgent,
@@ -306,8 +312,9 @@ type RadioObserver = Callable[[str, dict[str, Any]], None]
 
 
 _urgent = is_urgent  # the urgent path is the scheduler's (voice.scheduler.may_interrupt): one definition
-# a braking cue as the interrupt rule sees it (kind CUE; cues are never urgent)
+# a braking cue as the interrupt rule sees it (kind CUE; cues are never urgent), and a corner reminder
 _CUE_PROBE = RadioMessage(id="", kind=MessageKind.CUE, priority=Priority.HIGH, text="", speech="", created_mono=0.0)
+_REMINDER_PROBE = dataclasses.replace(_CUE_PROBE, meta={"cue": REMINDER_CUE})
 
 
 @dataclass(slots=True)
@@ -620,10 +627,18 @@ class RadioHub:
         self.live.subscribe_buttons(self._on_button_threadsafe)
         self.cues.set_plan_listener(self._on_cue_plan_threadsafe)
         self.cues.set_sink(self._on_cue_threadsafe)
-        self._cue_clients_changed()
+        self._cue_clients_changed()  # also tells the coach whether habit lines count when said (_sync_cue_gate)
         self._tick_task = asyncio.create_task(self._tick_loop(), name="radio-tick")
         if callable(getattr(self.tts, "start", None)):
             self._tts_start = self._loop.call_later(TTS_START_DELAY_S, self._start_tts)
+
+    def _coach_on_delivery(self, on: bool) -> None:
+        """Habits (``coach.selection``): while a radio can say them (``_sync_cue_gate``), a habit line counts as said
+        when it goes on air (``_deliver``), not when the coach picks it."""
+        coach = getattr(self.live, "coach", None)
+        set_mode = getattr(coach, "commit_on_delivery", None)
+        if callable(set_mode):
+            set_mode(on)
 
     def _start_tts(self) -> None:
         """Launch an engine that runs in the background (``WorkerTts``: the Kokoro worker). Idempotent."""
@@ -645,6 +660,7 @@ class RadioHub:
         self.spotter.detach()  # --- spotter ---
         self.live.unsubscribe(self._on_live_note)
         self.live.unsubscribe_buttons(self._on_button_threadsafe)
+        self._coach_on_delivery(False)
         self.cues.set_sink(None)
         self.cues.set_plan_listener(None)
         if self._cue_prep_task is not None:
@@ -1324,6 +1340,8 @@ class RadioHub:
             self.handsfree.on_spoken(msg, time.monotonic(), self._speech_duration(msg, clip))
         self.speaking_id = msg.id if spoken else None
         self._on_air = (msg, clip) if spoken else None
+        if spoken and msg.kind is MessageKind.COACHING and msg.meta.get("habit_event"):
+            self._habit_line_said(msg)
         if msg.kind in DRIVER_INITIATED:  # said past the queue: the scheduler remembers it (repeats, answered topics)
             note = getattr(self.scheduler, "note_spoken", None)
             if callable(note):
@@ -1366,6 +1384,20 @@ class RadioHub:
                 "cancelled_id": cancelled_id,
             },
         )
+
+    def _habit_line_said(self, msg: RadioMessage) -> None:
+        """A habit line (``coach.habits``: an announcement, "better", "still", "sorted") went on air: the coach's
+        habit tracker records it now (``CoachSelection.confirm_said``). One the radio never says is never recorded,
+        so a habit is not worked on (reminders, "Working on") before the driver heard it announced. Through
+        ``LiveState.habit_line_said`` the cue plan follows at once: the reminder starts on the lap the line is heard."""
+        said = getattr(self.live, "habit_line_said", None)
+        coach = getattr(self.live, "coach", None)
+        confirm = said if callable(said) else getattr(coach, "confirm_said", None)
+        if callable(confirm):
+            try:
+                confirm(msg.meta.get("observation_id"))
+            except Exception:
+                log.exception("habit line %s not recorded", msg.id)
 
     def _on_playback(
         self, msg_id: str, state: str, client: RadioClient | None = None, output_s: float | None = None
@@ -1957,10 +1989,13 @@ class RadioHub:
             return mute
         if self.ptt_down:
             return "driver transmitting"
+        reminder = ev.cue.kind is CueKind.REMINDER
+        if reminder and self.spotter.traffic():
+            return "car alongside"  # a corner reminder is coaching: never started wheel to wheel (as routine talk)
         on_air = self._on_air_message()
-        if on_air is not None and not may_interrupt(_CUE_PROBE, on_air[0]):
-            # the one interrupt rule: a cue cuts routine talk and a spotter clear, never an urgent call, a cue, an
-            # answer or a spotter car call
+        if on_air is not None and not may_interrupt(_REMINDER_PROBE if reminder else _CUE_PROBE, on_air[0]):
+            # the one interrupt rule: a braking call cuts routine talk, a corner reminder and a spotter clear, never
+            # an urgent call, a braking call, an answer or a spotter car call; a corner reminder cuts nothing
             m = on_air[0]
             if m.kind is MessageKind.CUE:
                 return "previous cue still playing"
@@ -1988,6 +2023,9 @@ class RadioHub:
 
     def _sync_cue_gate(self) -> None:
         self.cues.set_muted(self._cue_mute_reason())
+        # habits: only a radio that can speak says habit lines; with none connected or the voice off the coach is
+        # screen-only and records a line when it picks it, so the screen's focus still moves on
+        self._coach_on_delivery(self.voice_enabled and bool(self.clients))
 
     def _on_air_message(self) -> tuple[RadioMessage, AudioClip | None] | None:
         on_air = self._on_air
@@ -2046,15 +2084,33 @@ class RadioHub:
         words = sum(spoken_word_count(self.to_speech(p)) for p in parts[:key_index])
         return words / WORDS_PER_S + CUE_DEVICE_PAUSE_S * key_index
 
+    def _cue_phrase_s(self, parts: Sequence[str], path: str) -> float:
+        """How long a cue phrase takes to say (a corner reminder is timed by when it ends): the pre-synthesised
+        audio's length on the server-audio path once it is ready, else the device-voice estimate from spoken words
+        (and a pause at every comma of the spoken text); with device voices among the radios too, the longer of the
+        two (each radio must finish in time)."""
+        words = sum(spoken_word_count(self.to_speech(p)) for p in parts)
+        device = words / WORDS_PER_S + CUE_DEVICE_PAUSE_S * self._cue_speech(parts).count(",")
+        ready = self._cue_phrases.get(tuple(parts)) if path == "pcm" else None
+        if ready is None:
+            return device
+        audio = ready[0].duration_s
+        return max(audio, device) if any(c.device_tts for c in self.clients) else audio
+
     def _push_cue_timing(self) -> None:
         path = self._cue_path()
         offsets: dict[tuple[str, ...], float] = {}
+        durations: dict[tuple[str, ...], float] = {}
         for c in self.cues.plan.cues:
+            if c.kind is CueKind.REMINDER:
+                durations[c.parts] = self._cue_phrase_s(c.parts, path)
             if c.key_index <= 0:
                 continue
             ready = self._cue_phrases.get(c.parts) if path == "pcm" else None
             offsets[c.parts] = ready[1] if ready is not None else self._device_word_offset(c.parts, c.key_index)
-        self.cues.set_timing(CueTiming(latency_s=self._cue_latency_s(path), path=path, offsets_s=offsets))
+        self.cues.set_timing(
+            CueTiming(latency_s=self._cue_latency_s(path), path=path, offsets_s=offsets, durations_s=durations)
+        )
 
     def _cue_clients_changed(self) -> None:
         """Radios, their voice source or settings changed: re-gate, retime and make sure the audio exists."""

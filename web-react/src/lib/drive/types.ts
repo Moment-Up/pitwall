@@ -30,11 +30,15 @@ export interface Bests {
   session_id?: string | null;
 }
 
+/** coach/cues.py CueKind: a braking call, a corner marker, or a corner reminder (a focus habit's short phrase that ends
+ * a second before the braking point: "T6: apex speed, 12 down"). */
+export type CueKind = "brake" | "marker" | "reminder";
+
 /** One planned cue (coach/cues.py CueSpec.to_dict). `target_m` is in game lap metres (the cue engine fires on
  * frame.lap_distance_m). */
 export interface CuePlanEntry {
   corner: string;
-  kind: "brake" | "marker";
+  kind: CueKind;
   target_m: number;
   text: string;
   focus: boolean;
@@ -58,10 +62,11 @@ export interface CueSnapshot {
    * learned, "F2" field corner, "zone@1234"), never the driver's focus (cues.ts driverFocus). */
   focus: string[];
   cues: CuePlanEntry[];
-  next: { corner: string; text: string; kind: "brake" | "marker"; in_m: number } | null;
+  next: { corner: string; text: string; kind: CueKind; in_m: number } | null;
   last: {
     corner: string;
     text: string;
+    kind?: CueKind;
     status?: "pending" | "sent" | "dropped";
     reason?: string | null;
     /** Where the key word was heard vs the aim point (m, + = late). */
@@ -117,7 +122,65 @@ export type ObservationNext = Observation & {
   ref_name?: string | null;
   /** coachref: a drill attempt's point (kind "drill"). */
   drill?: { id: number; attempt: number; of: number; hits: number; outcome: string; done: boolean } | null;
+  // --- habits (coach/habits.py, coach/selection.py): every coach block point; absent on older servers ---
+  /** The point is about a habit now: its status and counts ("3 of the last 4 laps"); null = no habit. A "sorted"
+   * line keeps status "fixed". */
+  habit?: HabitInfo | null;
+  /** A correction that is no habit (seen once, or not yet a pattern). */
+  one_off?: boolean;
+  /** A habit tracker line (null on an ordinary observation): announced as the focus, better, still there, sorted. */
+  habit_event?: HabitEvent | null;
+  /** "improving": the habit's size when it was announced. */
+  was_value?: number | null;
+  /** "fixed": clean on `clean_laps` of the last `clean_of` laps. */
+  clean_laps?: number | null;
+  clean_of?: number | null;
 };
+
+/** coach/habits.py STATUS_*: a habit not on the radio, the one being worked on (announced), or sorted. */
+export type HabitStatus = "seen" | "focus" | "fixed";
+/** coach/habits.py EVENT_*: the radio's habit lines. */
+export type HabitEvent = "announce" | "improving" | "fixed" | "still";
+
+/** A coach block point's habit (coach/habits.py HabitTracker.habit_info). */
+export interface HabitInfo {
+  status: HabitStatus;
+  /** The fault was there on `laps_seen` of the corner's last `laps` compared laps. */
+  laps_seen: number;
+  laps: number;
+}
+
+/** One habit of the session (coach block `habits`; coach/habits.py HabitTracker._entry). */
+export interface HabitEntry {
+  /** Learned corner name (the key cues and observations use). */
+  corner: string;
+  corner_label: string | null;
+  corner_voice: string | null;
+  kind: string;
+  status: HabitStatus;
+  laps_seen: number;
+  laps: number;
+  /** A focus habit: the number the radio last said about it (so the reminder and the Ready card say the same);
+   * else the median over the laps it was there. Same sign as the observation's value; null = unknown. */
+  value: number | null;
+  unit: string | null;
+  /** Mean time lost over the laps it was there (s). */
+  impact_s: number | null;
+  /** Median measurement confidence (0-1) over the laps it was there; null = unknown. Absent on older servers. */
+  confidence?: number | null;
+  /** The latest compared lap could not show it (compared with a lap that had it): no reminder, no "Working on" row.
+   * Absent on older servers (= measurable). */
+  blind?: boolean;
+  /** The lap the current status began on. */
+  since_lap: number | null;
+  short: string | null;
+}
+
+/** A habit being worked on (coach block `focus`) with its corner reminder: the words the radio says before the corner
+ * ("Turn 6", "apex speed, 12 down"); null for kinds without one (braking habits get a braking call instead). */
+export interface FocusEntry extends HabitEntry {
+  reminder: { parts: string[]; text: string } | null;
+}
 
 /** One game event as /ws/live sends it. `player` is a proposed addition (INTEGRATION NEEDED): whether the event
  * concerns the player's car; absent = unknown. */
@@ -165,6 +228,10 @@ export interface CoachBlock {
   by_corner: Record<string, ObservationNext>;
   /** coachref: a drill is running: the radio and the coach card talk about the drill corner only. */
   drill_only?: boolean;
+  /** Habits: every habit of the session (focus, then seen, then fixed); absent on older servers. */
+  habits?: HabitEntry[];
+  /** Habits: the ones being worked on (at most the radio's focus slots: 2 at detailed). */
+  focus?: FocusEntry[];
 }
 
 /** D2 (storage/repo.py lap_bests): this game + track + car + layout; driver / household are null in synthetic

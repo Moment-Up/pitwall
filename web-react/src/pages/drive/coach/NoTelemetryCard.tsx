@@ -13,8 +13,10 @@
 // send anything until its console IP is entered (Assetto Corsa; GT7 with its input off) leads with that:
 //   Assetto Corsa needs the console's IP address              [ Enter console IP ]  -> Setup › Game
 //
-// The demo writes the synthetic coaching demo (POST /api/simulate, as Settings › System does) and replays it at
-// real time (POST /api/replay); it is SYNTHETIC everywhere and never pollutes real track models.
+// The demo writes the synthetic coaching demo anew (POST /api/simulate, as Settings › System does: always this
+// version's ten-lap habits story, never a capture an older version left) and replays it at real time (POST
+// /api/replay); it is SYNTHETIC everywhere and never pollutes real track models. What to look for: Settings › System
+// after Synthetic demo, `pitwall simulate`, docs/install.md.
 
 import { EmptyState, Stepper } from "@heroui-pro/react";
 import { Button, Card } from "@heroui/react";

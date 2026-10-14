@@ -31,6 +31,7 @@ from pitwall.voice.scheduler import (
     YIELDS_TO_CUE_KEY,
     RadioScheduler,
     family_of,
+    interrupt_rank,
     may_interrupt,
     policy_markdown,
     policy_table,
@@ -74,6 +75,9 @@ OBS = [
         "priority": 0.07,
         "positive": False,
         "text": "T4: minimum speed 8 km/h lower.",
+        # a habit: the radio says habits and big one-offs, never a small one-off (habits spec section 3)
+        "consistency": "4 of the last 5 laps",
+        "consistency_ratio": 0.8,
     }
 ]
 
@@ -477,3 +481,21 @@ def test_the_flag_always_rides_in_the_final_laps_summary() -> None:
     s.enqueue(final)
     (said,) = drain(s)
     assert said.text.endswith("Chequered flag. P16. Up 2 from the grid.") and said.kind is MessageKind.LAP_SUMMARY
+
+
+def test_a_corner_reminder_cuts_nothing_and_yields_to_spotter_and_braking_calls() -> None:
+    """A corner reminder (a CUE with ``meta["cue"] == "reminder"``) is descriptive coaching, not a braking call: it
+    starts only on a free radio, cuts nothing (a spotter clear included), and any spotter call (a clear, "still there")
+    or braking call may cut it."""
+    m = every_producer()
+    reminder = replace(m["cue"], meta={"cue": "reminder"})
+    brake = replace(m["cue"], meta={"cue": "brake"})
+    clear = replace(m["spotter"], meta={YIELDS_TO_CUE_KEY: True})
+    still = replace(m["spotter"], priority=Priority.HIGH, meta={YIELDS_TO_CUE_KEY: True})
+    assert interrupt_rank(reminder) == 0 and interrupt_rank(brake) == interrupt_rank(m["cue"]) == 1
+    assert may_interrupt(reminder, None)
+    for on_air in (m["lap_summary"], m["coaching"], clear, still, brake, m["answer"]):
+        assert not may_interrupt(reminder, on_air), family_of(on_air)
+    for new in (clear, still, m["spotter"], m["urgent"], brake):
+        assert may_interrupt(new, reminder), new.meta
+    assert not may_interrupt(clear, brake)  # a clear still never cuts a braking call

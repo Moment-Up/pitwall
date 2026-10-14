@@ -1,6 +1,7 @@
 // Settings › System (spec 8; port of web/src/views/StatusView.svelte): server and worker health, the local LLM,
-// captures with Replay, the synthetic demo (always labelled SYNTHETIC), the capability matrix with its evidence
-// tiers, and the build version. Health polls every 10 s (every 2 s while a replay runs, to show its progress).
+// captures with Replay, the synthetic demo (always labelled SYNTHETIC, with what to look for in its replay), the
+// capability matrix with its evidence tiers, and the build version. Health polls every 10 s (every 2 s while a replay
+// runs, to show its progress).
 //
 // Replay and the demo change what the live pipeline is fed, so they are explicit buttons with their result shown.
 
@@ -11,11 +12,12 @@ import { useMemo, useState, type Key, type ReactNode } from "react";
 import { CopyField, EvidenceChips, Unknown } from "../../components/ui";
 import { useApi } from "../../hooks/useApi";
 import { cache } from "../../lib/cache";
-import { SETTINGS_KEYS, messageOf, systemApi } from "../../lib/endpoints/settings";
+import { SETTINGS_KEYS, messageOf, systemApi, type DemoStory } from "../../lib/endpoints/settings";
 import { grouped } from "../../lib/format";
 import { router } from "../../lib/router";
 import type { PageProps } from "../../routes";
 import { CapabilitySheet } from "./system/CapabilitySheet";
+import { DemoStoryList } from "./system/DemoStoryList";
 import { UpdateCard, UpdateChip, VersionText } from "./system/UpdateCard"; // lane install: update status
 import {
   capabilityRows,
@@ -99,7 +101,9 @@ export function SystemPage(_props: PageProps) {
 
   const [showAll, setShowAll] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [note, setNote] = useState<{ text: string; synthetic?: boolean; path?: string } | null>(null);
+  const [note, setNote] = useState<{ text: string; synthetic?: boolean; path?: string; story?: DemoStory | null } | null>(
+    null,
+  );
   const [actionError, setActionError] = useState<string | null>(null);
   const [capRow, setCapRow] = useState<CapabilityRow | null>(null);
 
@@ -147,7 +151,7 @@ export function SystemPage(_props: PageProps) {
     setNote({ text: "Generating a synthetic session…", synthetic: true });
     try {
       const r = await systemApi.simulate("coaching-demo", format);
-      setNote({ text: simulateNote(r.path), synthetic: true, path: r.path });
+      setNote({ text: simulateNote(r.path), synthetic: true, path: r.path, story: r.story ?? null });
       cache.invalidate(SETTINGS_KEYS.captures);
     } catch (e) {
       setNote(null);
@@ -288,6 +292,7 @@ export function SystemPage(_props: PageProps) {
                 )}
               </div>
             )}
+            {note?.story && <DemoStoryList story={note.story} />}
             {replayLine && (
               <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-surface-secondary px-4 py-3 text-sm">
                 <EvidenceChips replay synthetic={h?.replay?.synthetic} />

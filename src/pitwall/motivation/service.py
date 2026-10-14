@@ -504,6 +504,7 @@ class MotivationService:
             goals=goals if counts else [],
             why_progress=why,
             now_unix=time.time(),
+            corner_laps=R.compared_corner_laps(sa.comparisons) if sa is not None else None,
         )
         rec = R.build_recap(inp, lap_nums)
         full = history if history is not None else History([s], {s.id: laps}, {})

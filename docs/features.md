@@ -71,14 +71,25 @@ shows, and SYNTHETIC or REPLAY become icons (their words stay in the accessible 
 **Ready card** (before a session and between runs, stopped only): who is in the seat; *Target*: your best here (or
 the last run between runs: best lap, clean laps, time gained), the family record and its holder, the delta reference
 and one goal in scope; *Today*: the radio's calls for this run ("Radio calls: T6, T9, T1"), up to two FOCUS corners
-and the braking calls mode, or, between runs, "Last lap:" with the last lap's point. While a drill runs, or its result
-waits for Done, that column is the drill.
+and the braking calls mode, or, between runs, "Working on:" with the habits the radio is working on (at most two, one
+a line: "T9 apex speed, 12 down · 3 of 4 laps"; their corners leave the FOCUS rows), else "Last lap:" with the last
+lap's point. While a drill runs, or its result waits for Done, that column is the drill.
+
+**Habits on the coach card.** The coach card's chip says what kind of note it is: "Habit · 3 of 4 laps" (the same
+fault on most of the corner's recent laps; the card's "Seen on ..." line counts the same laps), "Focus · last lap"
+(the habit the radio is working on), "Once · last lap" (a fault seen on one lap only: two laps running, or two of the
+last four, are no longer "Once") or "Sorted · last lap" (green: a habit that stopped). When the next corner is a focus corner
+with no note on the last lap, the card shows the habit's corner reminder, word for word as the radio says it ("T11:
+apex speed, 12 down"). In the cue band a corner reminder shows as FOCUS, in neutral colours: it is not a braking call.
+A "Sorted" line counts as went well on the Ready and Session complete cards. Tested with unit tests and a desktop
+browser at 1180 x 820 and 1133 x 744 against a mock live socket; not yet seen in a live session.
 
 **Session complete** (stopped only): four tiles (best lap with its REC or PB tag, clean laps, gained today, and the
 gap to the family record, or "Laps compared" when this session set it), one line of pace against the AI in an F1 race,
 [Today's 3 things](#todays-3-things) and at most two new badges. Each fact shows once: a personal best named in Went
 well is not repeated by the tile tag, Progress or a badge. When a drill ran in the session, its result takes the
-Work on slot. Without telemetry Drive shows what to check plus a button to try the synthetic demo.
+Work on slot. Without telemetry Drive shows what to check plus a button to try the synthetic demo (ten laps of the
+radio coaching habits: [what to look for](install.md#try-the-demo-no-game-needed)).
 
 **Goals on Drive.** While you drive, a reached goal shows only as a 6-second `GOAL REACHED` chip (a penalty or contact
 of your own wins over it; it wins over a flashback, a pit message and a fastest lap); nothing else moves on track. No
@@ -191,11 +202,15 @@ presses through the radio with hands-free on); not yet tried on the rig with a r
 and the Bluetooth button not yet on an iPad.
 
 The engineer speaks on its own too: a summary after each lap and a coaching point, but only in a calm part of the
-lap (off the brake, steering nearly straight, with time to finish before the next braking zone). "Stop talking for
-two laps" and "You can talk again" work as you would expect. "Start a drill on turn 3", "How's my drill going?" and
-"Stop the drill" are answered at once, without the language model; during a drill the radio says only the drill
-line each lap, with no lap summary. This timing is tested on replayed sessions; it has
-not yet been heard in a live session.
+lap (off the brake, steering nearly straight, with time to finish before the next braking zone). Coaching is about
+habits, not every corner: the radio picks one habit to work on (two at the detailed setting), says it once with how
+often it happens, then only when it gets better, when it is still there five laps later, and when it is sorted; a
+single lap's slip is said only when it cost 0.3 s or more and was clearly measured (see
+[Habits](#habits-what-the-radio-works-on)). "Stop
+talking for two laps" and "You can talk again" work as you would expect. "Start a drill on turn 3", "How's my drill
+going?" and "Stop the drill" are answered at once, without the language model; during a drill the radio says only the
+drill line each lap, with no lap summary. This timing is tested on replayed sessions; it has not yet been heard in a
+live session.
 
 The engineer knows what your game sends. Ask about data the game does not send, or that Pitwall does not read yet,
 and the answer comes at once from that fact, never from the language model and never as an estimate: in Assetto
@@ -211,10 +226,18 @@ most two goal lines per session; a race goal is said after the flag. "How am I d
 this week?" and "What badges have I got?" are answered from the facts, with or without a language model; questions
 about a braking target, the target lap or a best lap "this week" keep their usual answers.
 
-**Braking calls** have four modes. *Focus* (the default) calls "brake" only for the one to three corners where you
-lose the most time under braking. *Markers* says the corner name before every braking zone. *All* calls every
-braking zone. *Off* is silent. Braking calls are tested on synthetic and recorded data and **not yet validated
-live on track**.
+**Braking calls** have four modes. *Focus* (the default) follows your habits: "brake" at the corners where you keep
+braking early, braking too late or arriving too fast, and a short **corner reminder** before a corner whose habit the
+radio is working on ("Turn 6, apex speed, 12 down"; "Turn 2, throttle, 40 metres late"), timed to end at least a
+second before your reference braking point and only where your reference lap was off the brakes for the whole phrase.
+Calls and reminders together are one to three corners a lap (one for a beginner, reminders first), for habits that
+cost at least 0.05 s a lap on average; a braking call also needs the habit to be clearly measured (the profile's
+confidence), and a habit the last lap could not measure (its reference lap had it) gets neither until it is measured
+again. A corner reminder never starts with a car alongside and never cuts anything; a spotter call or a braking call
+cuts it. A single lap's fault gets no call (it stays on the screen). *Markers* says the
+corner name before every braking zone. *All* calls every braking zone. *Off* is silent. Braking calls are tested on
+synthetic and recorded data and **not yet validated live on track**; corner reminders on synthetic laps and replays
+of recorded F1 25 races only.
 
 In a race the engineer also makes **strategy calls**: the safety car or VSC opportunity to pit, critical or tight
 fuel, the pit window opening and its last laps, the car behind pitting (cover the undercut), a rain forecast, and,
@@ -427,12 +450,18 @@ Coaching and Progress are the newest pages and have not been used after a live s
 Every session's Summary (and Drive's Session complete card) starts with three short points: **one thing that went
 well**, **one to work on** and **one piece of progress**. They are picked by fixed rules, never by a language model:
 
-- *Went well*: a new personal best (or your first clean laps ever at a track, in that car), else the strongest
-  positive coaching point, a run of 3 or more clean laps, getting
+- *Went well*: a new personal best (or your first clean laps ever at a track, in that car), else a habit you sorted
+  ("T1: sorted - clean on your last 3 laps (was braking about 15 m early).": seen on 2 or more laps, then not on the
+  corner's last 3 compared laps, those laps clean at the corner and, for braking early, the corner faster on each of
+  them) or the strongest positive coaching point, whichever ranks higher, a run of 3 or more clean laps, getting
   0.1 s or more faster from your first clean lap to your best (race lap 1, from the grid, is left out), or every lap
   clean; for a beginner, otherwise, how many laps they drove.
-- *One to work on*: the coaching point that cost the most over the session (the coach's own words, simpler for
-  beginners), else laps that did not count, no clean lap, or a single clean lap.
+- *One to work on*: the coaching point that cost the most over the session among those seen on 2 or more laps and
+  still there on one of the corner's last 3 compared laps (the coach's own words, simpler for beginners), else a
+  single lap's fault that cost 0.3 s or more and was clearly measured (confidence 0.8 or more), else laps that did not
+  count, and, only when no lap could be compared at all, no clean lap or a single clean lap. When laps were compared
+  but none of that applies, nothing is said ("Nothing clear to work on this time"). A small one-off or a habit you
+  already sorted is never the one to work on.
 - *Progress*: the goals reached (the celebration comes first), new bests in two or more sessions in a row, a goal you
   moved closer to, the gap to your best here, your first clean laps at a track, or how many sessions you have driven
   this week.
@@ -697,7 +726,7 @@ only the spotter, a red flag and a puncture ever cut in.
 | Answers to your questions, "Copy" acknowledgements | outside | at once, even at quiet intensity |
 | Spotter calls (F1 25, when switched on) | outside | at once; cut in over summaries, coaching and braking calls; also at quiet intensity |
 | Red flag, puncture | outside | at once, cut in, past quiet mode, intensity and the calm-moment wait |
-| Braking cues | outside | timed to your braking point, on a free radio only (never cut in, never late) |
+| Braking cues and corner reminders | outside | timed to your braking point (a reminder ends a second before it), on a free radio only (never cut in, never late) |
 | Race control, penalties, damage that matter (race radio alerts) | count, never wait | yellow, blue, safety car, penalties, major damage |
 | Strategy alerts (safety car box or stay out, critical fuel) | count, never wait | also at quiet intensity; the safety car is announced once |
 | Car health alert (Forza fuel for about one lap) | count, never wait | also at quiet intensity |
@@ -706,7 +735,7 @@ only the spotter, a red flag and a puncture ever cut in.
 | Strategy call | wait and count | in a race, after the lap summary and race calls |
 | Car health call (cold tyres after a stop - in the pit lane -, tyres warm again, wear outside F1 races, Forza fuel low) | wait and count | as a strategy call |
 | Goal line ("Goal reached: ...") | wait and count | at most two a session |
-| Coaching point or drill result | wait and count | after its lap's summary; one a lap at normal intensity; none after the chequered flag |
+| Coaching point or drill result | wait and count | after its lap's summary; one a lap at normal intensity; a habit's news (new, better, still there, sorted) or a big one-off; none after the chequered flag |
 | Detail (strategy notes, rivals' fastest laps, lock-up and wheelspin notes) | wait and count | detailed intensity only |
 | Validation prompt (during a validation run) | outside | last, low priority, at least 30 s apart, also at quiet intensity |
 
@@ -766,6 +795,53 @@ Everything here is fixed rules applied to your telemetry. No language model is i
    many points a lap: quiet gives none (the screen still shows them), normal one, detailed up to three.
 9. **One message, two channels.** The point the radio says about a corner is the point the Coach screen shows for
    it. This is tested on synthetic and recorded data; it has not yet been seen in a live session.
+
+### Habits: what the radio works on
+
+A tester's verdict on the earlier radio: "feedback every corner isn't helpful - need to identify trends". The radio
+now coaches habits, with fixed rules (`analysis/coaching.py`, `coach/habits.py`):
+
+- **A habit** is the same fault at the same corner on at least 60 % of that corner's recent laps (3 laps or more:
+  the analysis looks at up to the last 6, and the counts shown on screen and said on the radio cover the last 5).
+  **A big one-off** is a single lap's fault that cost 0.3 s or more and was clearly measured (confidence 0.8 or
+  more). Everything else is a small one-off: on the screen only.
+- **Only laps that say something count.** Pit-in and out laps, laps with a flashback, a standing start or a reset,
+  laps the game invalidated and laps under a safety car or VSC are compared and shown, but never count towards a habit
+  (a safety-car lap is slow at every apex, an out lap brakes early).
+- **One habit at a time.** The radio works on one habit at normal intensity (two at detailed, one for a beginner,
+  none at quiet: the screen still shows them), the one that costs the most first, and only one that costs at least
+  0.05 s a lap on average (a smaller one stays on the screen). A habit that costs at least twice as much (and at least
+  0.3 s) takes the place of a small one. It is announced once, with how often it happens: "Turn 6, losing 0.31 s:
+  minimum speed 12 km/h down. 3 of the last 4 laps." (simple wording: "...Most laps."). After that the radio speaks
+  about it only when it gets better ("Turn 6 better: 6 km/h down now, was 14."), when it is still there five laps
+  later ("Turn 6 still: ...") and when it is sorted ("Turn 6 sorted: clean on 2 of the last 3 laps."). In between, a
+  braking call (braking habits) or a corner reminder (the others) does the reminding, before the corner, with the
+  number the radio last said. With a radio connected, a habit counts as announced only once the radio has said it: an
+  announcement held until it expired (quiet mode, a full lap) is made again on a later lap. With no radio connected
+  (screen only) it counts when the coach picks it, so the screen's "Working on" still moves on.
+- **Better is measured like for like.** "Better" compares laps measured against the same reference lap (after a new
+  reference the radio waits for a new measure). For braking early it also needs the corner to be faster than on every
+  earlier lap with the habit: later braking is praised only when it made the corner faster. Braking too late that
+  gets better is "going in 6 m too deep now, was 14", never "braking later".
+- **Sorted is earned.** It needs 2 of the corner's last 3 laps, the latest included, clean at that corner (no other
+  fault there either), after the announcement. For braking early the corner must also have been faster on those laps
+  than on every lap with the habit: later braking is praised only when it made the corner faster. A habit that stops
+  without that proof leaves the radio's focus without a word after 3 laps.
+- **A new best keeps the memory.** Earlier laps are re-measured against the new reference instead of being
+  forgotten, so a habit keeps its count through a personal best. When the reference lap cannot show the habit - it
+  had the habit, it lost time at that corner some other way, or the habit was never measured against it (another
+  driver's lap, a best from an earlier session) - laps without the habit prove nothing and are not counted, so a
+  habit is never called sorted because the reference changed. A reference that had the habit stays so for the
+  session, and a habit that cannot be measured for 5 laps is dropped without a word.
+- **A single lap's slip** is said only when it is a big one-off, and the same big fault two laps running is said
+  once: the habit is announced when it is one.
+- **See it in the demo.** The synthetic demo (Drive's *Try a demo replay*, Settings › System, `pitwall simulate`) is
+  ten laps of exactly this: a braking habit announced, called and sorted, the habit that waited becoming the focus
+  with its corner reminder, a big one-off said once and a small one left on the screen
+  ([what to look for](install.md#try-the-demo-no-game-needed)).
+
+Evidence: unit tests, synthetic sessions and replays of recorded F1 25 races (synthetic and recorded tiers); **not
+yet heard in a live session**.
 
 ## Pace against the AI
 

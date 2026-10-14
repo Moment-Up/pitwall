@@ -343,6 +343,25 @@ Open `http://127.0.0.1:8770/` on the same computer. Useful options: `--port` (HT
 The demo is a generated session at a made-up circuit, "Pitwall Park", with known mistakes built in. It is labelled
 SYNTHETIC on every screen and never mixes with real track data.
 
+It is ten laps (about 11 minutes at real time) that show how the radio coaches habits. With the defaults (Normal
+coaching, nobody in the seat, braking calls in Focus) and the radio on (Drive › Radio, Go live), look for these, in
+the corner names Pitwall learns for the circuit:
+
+| Lap | When | You hear or see | What it shows |
+|---|---|---|---|
+| 4 | after the line | "T5, losing 0.23 s: braking 14 m earlier. 2 of the last 3 laps." | a braking habit, announced once with its count |
+| 5-7 | before T5 | "T5 brake" | braking calls where you braked on your reference lap (lap 1) |
+| 6 | Drive screen | T1: 7 km/h slower mid-corner | a small one-off: on the screen only |
+| 7 | after the line | "T5 sorted: clean on 2 of the last 3 laps." | sorted: braking on the point, and T5 got faster |
+| 8 | after the line | "T4, losing 0.09 s: minimum speed 9 km/h down. 5 of the last 5 laps." | the habit that waited becomes the focus |
+| 9, 10 | before T4 | "T4: apex speed, 9 down" | a corner reminder, ending a second before the braking point |
+| 9 | after the line | "T2, losing 0.67 s: full throttle 31 m later than your reference." | a big one-off (0.3 s or more), said once |
+
+Lap 5 has a flashback and the game invalidates lap 10: both are shown, never counted as habit laps or used as the
+reference. At Detailed both habits are announced after lap 4. Without the radio on, nothing becomes the habit being
+worked on: Drive still shows every lap's notes. `pitwall simulate` prints this list and Settings › System shows it
+after **Synthetic demo**.
+
 - In the new dashboard: **Drive › Coach** shows *Try a demo replay (synthetic)* while no telemetry arrives, and
   **Settings › System** has the same demo and replays of your captures. (The new dashboard's demo button has not
   been tested end to end yet; the commands below have.)

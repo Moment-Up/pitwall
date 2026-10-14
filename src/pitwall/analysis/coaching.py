@@ -10,7 +10,17 @@ Design notes:
   also faster, and is flagged as over-driving when it costs exit speed.
 * ``confidence`` is *measurement* confidence (how clearly the delta exceeds threshold and sample resolution).
   ``consistency_ratio`` is separate: the fraction of recent laps showing the same deviation (habit vs one-off).
-  Priority = time impact x confidence, boosted for consistent habits.
+  Priority = time impact x confidence, boosted for consistent habits. A corrective point ranks by the time it
+  *lost* (a corner that gained time can never rank as a big fix); praise by the time it gained, at half weight.
+* One definition of a habit, used by every consumer (the radio, the coach card, the habit tracker
+  ``coach.habits``, the cue planner): ``is_corrective`` / ``is_habit`` / ``is_big_one_off`` on
+  ``Observation.to_dict()`` shapes. A habit is a corrective point seen on at least ``HABIT_RATIO`` of the last
+  laps (``HABIT_MIN_LAPS`` values or more, this lap included); a big one-off is a corrective point that is not a
+  habit but cost at least ``BIG_ONE_OFF_S`` with ``BIG_ONE_OFF_CONFIDENCE``. Every other corrective point is a
+  small one-off: shown on screen, not said on the radio. A habit is said (and called before its corner) only when
+  its mean cost is at least ``HABIT_MIN_IMPACT_S``.
+* Structural guard (``keeps_point``): a corrective observation is only ever kept when it lost at least
+  ``MIN_TIME_LOSS_S`` at its corner, whatever rule produced it.
 * Every observation is written three ways from the same facts (D6, docs/ui/design-spec.md): ``text`` (full, with
   the numbers), ``text_simple`` (one idea in plain words for simple-wording profiles: the main number only, no
   secondary numbers, no reference lap number, no habit statistics) and ``short`` (at most ``SHORT_MAX_CHARS``
@@ -20,6 +30,7 @@ Design notes:
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -41,6 +52,26 @@ INCIDENT_LOSS_S = 2.0
 INCIDENT_SPEED_FRAC = 0.5
 INCIDENT_MIN_REF_KPH = 60.0  # below this the reference itself is a hairpin crawl; ratios are meaningless
 SHORT_MAX_CHARS = 48  # ``Observation.short``: readable in a glance on the Drive screen
+INCIDENT_KIND = "incident"
+
+# --- habits: one definition for the radio, the coach card, the habit tracker (coach.habits) and the cue planner
+HABIT_RATIO = 0.6  # a deviation on at least this share of the recent laps (this one included) is a habit
+HABIT_MIN_LAPS = 3  # values in the consistency window (this lap included) before habit vs one-off is known
+# [H] A single lap's corner loss worth a radio call on its own: about a tenth of the gap between a tidy and a
+# messy lap at most circuits, well above the run-to-run noise of one corner (a few hundredths), so a one-off the
+# driver can act on next lap; anything smaller is a screen note until it repeats (then it is a habit).
+BIG_ONE_OFF_S = 0.30
+# [H] ...and measured clearly: the delta clears its rule threshold and twice the sample resolution by a margin
+# (``_mag_conf`` 0.8 = 60 % past the floor), so a single lap's call is never a measurement artefact.
+BIG_ONE_OFF_CONFIDENCE = 0.8
+# [H] A habit is worth the radio's words (an announcement, its "still", a braking call or a corner reminder) only when
+# it costs at least this much on average over the laps it happened: five hundredths a lap is about a second over a
+# stint, above one corner's run-to-run noise; below it the habit stays on the screen. One floor, so the radio, the
+# braking calls, the reminders and the screen agree on what is worth saying.
+HABIT_MIN_IMPACT_S = 0.05
+# Faults whose fix is braking later: "sorted" praises later braking, so it is said (radio, report) only when the corner
+# also got faster (the rule above: later braking is praised only when the corner segment was faster).
+LATER_BRAKING_FIXES = frozenset({"brake_early"})
 
 
 @dataclass(slots=True)
@@ -69,7 +100,10 @@ class Observation:
 
     @property
     def priority(self) -> float:
-        base = abs(self.impact_s or 0.0) * self.confidence
+        """Time impact x confidence: the loss for a corrective point (a corner that gained time ranks 0, never as
+        a big fix), the gain at half weight for praise; boosted for a consistent deviation."""
+        impact = self.impact_s or 0.0
+        base = (abs(impact) if self.positive else max(0.0, impact)) * self.confidence
         if self.consistency_ratio is not None:
             base *= 0.6 + 0.4 * self.consistency_ratio
         return base * (0.5 if self.positive else 1.0)
@@ -95,7 +129,7 @@ def _consistency(
 ) -> tuple[float, str] | None:
     """Fraction of recent laps (including this one) showing the same deviation."""
     vals = [getattr(h, attr) for h in history if getattr(h, attr) is not None] + [current]
-    if len(vals) < 3:
+    if len(vals) < HABIT_MIN_LAPS:
         return None
     hits = sum(1 for v in vals if v * sign >= threshold)
     return hits / len(vals), f"{hits} of the last {len(vals)} laps"
@@ -138,6 +172,49 @@ def is_incident(cd: CornerDelta) -> bool:
         and cmp_min < INCIDENT_SPEED_FRAC * ref_min
     )
     return loss >= INCIDENT_LOSS_S or crawled
+
+
+def _finite(v: object) -> float | None:
+    if isinstance(v, bool) or not isinstance(v, int | float):
+        return None
+    f = float(v)
+    return f if math.isfinite(f) else None
+
+
+def is_corrective(o: Mapping[str, Any]) -> bool:
+    """A point about something to fix (``Observation.to_dict()`` shape): not praise and not an incident."""
+    return not o.get("positive") and o.get("kind") != INCIDENT_KIND
+
+
+def is_habit(o: Mapping[str, Any]) -> bool:
+    """A corrective point seen on at least ``HABIT_RATIO`` of the recent laps (``consistency_ratio``, known from
+    ``HABIT_MIN_LAPS`` laps)."""
+    ratio = _finite(o.get("consistency_ratio"))
+    return is_corrective(o) and ratio is not None and ratio >= HABIT_RATIO
+
+
+def is_big_one_off(o: Mapping[str, Any]) -> bool:
+    """A corrective point that is not a habit but cost at least ``BIG_ONE_OFF_S`` at its corner, measured with at
+    least ``BIG_ONE_OFF_CONFIDENCE``: the one kind of one-off the radio says. Unknown impact or confidence is not
+    big."""
+    impact, conf = _finite(o.get("impact_s")), _finite(o.get("confidence"))
+    return (
+        is_corrective(o)
+        and not is_habit(o)
+        and impact is not None
+        and impact >= BIG_ONE_OFF_S
+        and conf is not None
+        and conf >= BIG_ONE_OFF_CONFIDENCE
+    )
+
+
+def keeps_point(o: Observation) -> bool:
+    """The structural guard of ``observations_for_comparison``: a corrective observation is kept only when it lost
+    at least ``MIN_TIME_LOSS_S`` at its corner (unknown loss = not kept). Every rule checks this itself; the guard
+    makes it impossible for a future rule to skip it. Praise and incidents pass."""
+    if o.positive or o.kind == INCIDENT_KIND:
+        return True
+    return o.impact_s is not None and o.impact_s >= MIN_TIME_LOSS_S
 
 
 def observations_for_comparison(
@@ -210,7 +287,7 @@ def observations_for_comparison(
 
         if is_incident(cd) and loss is not None:
             add(
-                "incident",
+                INCIDENT_KIND,
                 "time_delta_s",
                 loss,
                 "s",
@@ -325,6 +402,7 @@ def observations_for_comparison(
                 f"good exit, {_r(ex):.0f} km/h faster",
                 positive=True,
             )
+    out = [o for o in out if keeps_point(o)]
     out.sort(key=lambda o: o.priority, reverse=True)
     return out
 

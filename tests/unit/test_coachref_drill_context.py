@@ -3,8 +3,8 @@ frozen reference is never used in other conditions; grid starts, resets, stale d
 attempts and no baseline; a timed-out request never takes effect later; the last result waits for its driver until
 Done; the chosen reference is published before the session's first lap.
 
-Ann's laps are the synthetic coaching demo, Sam's the clean synthetic session, stored as ordinary non-synthetic rows
-on purpose (cross-driver rules). Not a game-compatibility claim.
+Ann's laps are the synthetic one-offs session (``tests.conftest.one_offs_scenario``), Sam's the clean synthetic
+session, stored as ordinary non-synthetic rows on purpose (cross-driver rules). Not a game-compatibility claim.
 """
 
 from __future__ import annotations
@@ -60,11 +60,11 @@ def other_braking(info: SessionInfo) -> SessionInfo:
 # ---------------------------------------------------------------------------------------------- conditions
 @pytest.mark.parametrize("change", ["wet", "braking_assist"])
 def test_a_lap_in_other_conditions_stops_the_drill(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession, change: str
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession, change: str
 ) -> None:
     """Adversarial review S2: a heavy-rain lap (or another braking assist) was scored against the dry target."""
-    _ann, _sam, sa = setup_family(env, clean_session, demo_session)
-    laps, info = demo_session.laps, demo_session.info
+    _ann, _sam, sa = setup_family(env, clean_session, one_offs_session)
+    laps, info = one_offs_session.laps, one_offs_session.info
     view = start_t2_drill(env, sa, info, laps)
     other = session_info(info, condition="heavy_rain") if change == "wet" else other_braking(info)
     drive(env.proc, sa, other, [(laps[2], 70_500, 3)])
@@ -77,10 +77,10 @@ def test_a_lap_in_other_conditions_stops_the_drill(
 
 
 def test_a_drill_with_attempts_stopped_by_the_conditions_keeps_its_result(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
-    _ann, _sam, sa = setup_family(env, clean_session, demo_session)
-    laps, info = demo_session.laps, demo_session.info
+    _ann, _sam, sa = setup_family(env, clean_session, one_offs_session)
+    laps, info = one_offs_session.laps, one_offs_session.info
     view = start_t2_drill(env, sa, info, laps)
     drive(env.proc, sa, info, [(laps[0], 69_000, 3)])  # attempt 1 in the same conditions
     drive(env.proc, sa, session_info(info, condition="heavy_rain"), [(laps[1], 69_500, 4)])
@@ -91,10 +91,10 @@ def test_a_drill_with_attempts_stopped_by_the_conditions_keeps_its_result(
 
 
 def test_the_frozen_reference_is_only_for_the_drills_conditions(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
-    ann, _sam, sa = setup_family(env, clean_session, demo_session)
-    laps, info = demo_session.laps, demo_session.info
+    ann, _sam, sa = setup_family(env, clean_session, one_offs_session)
+    laps, info = one_offs_session.laps, one_offs_session.info
     start_t2_drill(env, sa, info, laps)
     ctx = {**lap_ctx(info), "formula": info.formula}
     assert env.svc.frozen_for(ann, ctx) is not None
@@ -105,10 +105,10 @@ def test_the_frozen_reference_is_only_for_the_drills_conditions(
 
 
 def test_the_drill_records_its_start_conditions(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
-    _ann, _sam, sa = setup_family(env, clean_session, demo_session)
-    laps, info = demo_session.laps, demo_session.info
+    _ann, _sam, sa = setup_family(env, clean_session, one_offs_session)
+    laps, info = one_offs_session.laps, one_offs_session.info
     view = start_t2_drill(env, sa, info, laps)
     st = env.svc._drills[env.drivers.default_id]
     assert st.spec.context is not None
@@ -124,11 +124,11 @@ def test_the_drill_records_its_start_conditions(
 # ---------------------------------------------------------------------------------------------- unrepresentative laps
 @pytest.mark.parametrize("flag", ["standing_start", "distance_jump", "stale_data"])
 def test_unrepresentative_laps_are_no_attempts_and_no_baseline(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession, flag: str
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession, flag: str
 ) -> None:
     """Adversarial review S3: race lap 1 from the grid and a reset lap counted as attempts and baselines."""
-    _ann, _sam, sa = setup_family(env, clean_session, demo_session)
-    laps, info = demo_session.laps, demo_session.info
+    _ann, _sam, sa = setup_family(env, clean_session, one_offs_session)
+    laps, info = one_offs_session.laps, one_offs_session.info
     start_t2_drill(env, sa, info, laps)
     before = {k: len(v) for k, v in env.proc._sessions[sa].recent.items()}
     lap = copy_lap(laps[2], 70_500, 3)
@@ -143,10 +143,10 @@ def test_unrepresentative_laps_are_no_attempts_and_no_baseline(
 
 
 def test_safety_car_laps_are_no_attempts_and_no_baseline(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
-    _ann, _sam, sa = setup_family(env, clean_session, demo_session)
-    laps, info = demo_session.laps, demo_session.info
+    _ann, _sam, sa = setup_family(env, clean_session, one_offs_session)
+    laps, info = one_offs_session.laps, one_offs_session.info
     start_t2_drill(env, sa, info, laps)
     before = {k: len(v) for k, v in env.proc._sessions[sa].recent.items()}
     env.live.on_session(dataclasses.replace(info, safety_car_status="full"))
@@ -208,11 +208,11 @@ def test_a_request_already_running_is_answered(env: Env, monkeypatch: pytest.Mon
 
 # ---------------------------------------------------------------------------------------------- results until Done
 def test_the_last_result_waits_for_its_driver_until_done(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
     """UX review M4: Sam's drill stopped when Alex sat in, and Sam never saw its result."""
-    ann, sam, sa = setup_family(env, clean_session, demo_session)
-    laps, info = demo_session.laps, demo_session.info
+    ann, sam, sa = setup_family(env, clean_session, one_offs_session)
+    laps, info = one_offs_session.laps, one_offs_session.info
     view = start_t2_drill(env, sa, info, laps, n=5)
     drive(env.proc, sa, info, [(laps[0], 69_000, 3)])
     env.drivers.set_active(sam)  # another driver sits in: Ann's drill stops with one attempt
@@ -242,10 +242,10 @@ def cr_intent(name: str) -> _Intent:
 
 # ---------------------------------------------------------------------------------------------- early reference
 def test_the_chosen_reference_is_published_before_the_first_lap(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
     """UX review M1: with a choice saved earlier, the whole first lap had no delta."""
-    ann, sam, sa = setup_family(env, clean_session, demo_session)
+    ann, sam, sa = setup_family(env, clean_session, one_offs_session)
     env.writer.call(lambda c: repo.set_reference_choice(c, ann, "driver_best", target_driver_id=sam))
     env.proc._models.clear()  # a fresh start: the track model is only in the database
     assert env.live.reference is None
@@ -255,23 +255,23 @@ def test_the_chosen_reference_is_published_before_the_first_lap(
     ref = env.live.reference
     assert ref is not None and ref["label"] == "Sam's best" and ref["own"] is False
     assert env.live.cues.plan.cues == ()  # braking calls still wait for a lap's comparison
-    (first,) = drive(env.proc, sa, demo_session.info, [(demo_session.laps[0], 70_000, 1)])
+    (first,) = drive(env.proc, sa, one_offs_session.info, [(one_offs_session.laps[0], 70_000, 1)])
     assert first["comparison"]["reference"]["lap_id"] == ref["lap_id"]
 
 
 def test_no_early_reference_without_a_known_car_or_for_replays(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
-    ann, sam, _sa = setup_family(env, clean_session, demo_session)
+    ann, sam, _sa = setup_family(env, clean_session, one_offs_session)
     env.writer.call(lambda c: repo.set_reference_choice(c, ann, "driver_best", target_driver_id=sam))
-    env.live.on_session(dataclasses.replace(demo_session.info, car_id=None))
+    env.live.on_session(dataclasses.replace(one_offs_session.info, car_id=None))
     req = env.live.bests_request()
     assert req is not None
     env.proc.refresh_bests(req)
     assert env.live.reference is None
-    rep = new_session(env.writer, ann, demo_session.info, "s-replay", source="replay:x.pwcap")
+    rep = new_session(env.writer, ann, one_offs_session.info, "s-replay", source="replay:x.pwcap")
     env.live.reset_session(rep, "replay:x.pwcap", False)
-    env.live.on_session(demo_session.info)
+    env.live.on_session(one_offs_session.info)
     req = env.live.bests_request()
     assert req is not None
     env.proc.refresh_bests(req)
@@ -279,13 +279,13 @@ def test_no_early_reference_without_a_known_car_or_for_replays(
 
 
 def test_the_early_reference_follows_the_real_assists(
-    env: Env, clean_session: DecodedSession, demo_session: DecodedSession
+    env: Env, clean_session: DecodedSession, one_offs_session: DecodedSession
 ) -> None:
     """F1 sends default assists (0) in a session's first packets and the real ones about a second later (seen on the
     owner's Las Vegas capture): the reference chosen before the first lap is resolved again when they change."""
-    ann, sam, _sa = setup_family(env, clean_session, demo_session)
+    ann, sam, _sa = setup_family(env, clean_session, one_offs_session)
     env.writer.call(lambda c: repo.set_reference_choice(c, ann, "driver_best", target_driver_id=sam))
-    real = demo_session.info
+    real = one_offs_session.info
     braking = int(real.assists.get("braking") or 0)
     defaults = session_info(real, assists={"braking": (braking + 1) % 3})  # what the first packets say
     requests: list[Any] = []

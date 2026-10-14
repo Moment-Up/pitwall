@@ -42,6 +42,7 @@ from pitwall.coach.cues import (
     reference_braking_zones,
     select_focus_corners,
 )
+from pitwall.coach.habits import reminder
 from pitwall.core.live import LiveState
 from pitwall.drivers import coaching_limits
 from pitwall.model.telemetry import CarFrame, FrameQuality, Game, SessionInfo
@@ -114,6 +115,45 @@ def obs(
         "impact_s": 0.2,
         "positive": positive,
     }
+
+
+def habit_obs(corner: str, kind: str = "brake_early", value: float = -15.0) -> dict[str, Any]:
+    """A corrective observation that is a habit by ``analysis.coaching.is_habit`` (fired on most recent laps)."""
+    return {**obs(corner, kind), "value": value, "consistency": "3 of the last 3 laps", "consistency_ratio": 1.0}
+
+
+def habit(
+    corner: str,
+    kind: str = "brake_early",
+    status: str = "seen",
+    value: float = -15.0,
+    impact: float | None = 0.2,
+    seen: int = 3,
+    laps: int = 4,
+    confidence: float | None = 0.9,
+) -> dict[str, Any]:
+    """A habit entry as the coach block lists it (``coach.habits.HabitTracker.habits``)."""
+    return {
+        "corner": corner,
+        "corner_label": None,
+        "corner_voice": None,
+        "kind": kind,
+        "status": status,
+        "laps_seen": seen,
+        "laps": laps,
+        "value": value,
+        "unit": "km/h" if kind in ("low_min_speed", "overspeed_apex") else "m",
+        "impact_s": impact,
+        "confidence": confidence,
+        "blind": False,
+        "since_lap": 4,
+        "short": None,
+    }
+
+
+def focus_of(habits: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The coach block's ``focus``: the focus habits with their corner reminder."""
+    return [{**h, "reminder": reminder(h)} for h in habits if h["status"] == "focus"]
 
 
 def engine_with(
@@ -839,7 +879,8 @@ def test_cleared_reference_never_leaves_the_previous_drivers_cues() -> None:
     live.set_track_model({"length_m": LENGTH, "corners": []})
     live.cues.set_mode("focus")
     live.set_reference(reference(), flat_trace())
-    live.on_lap_result({"lap_id": 5}, [obs("T2")], comparison())
+    for n in (3, 4, 5):  # a braking habit at T2 (the coach selection's tracker): focus mode calls it
+        live.on_lap_result({"lap_id": n, "lap_number": n}, [habit_obs("T2")], comparison())
     assert [c.text for c in live.cues.plan.cues] == ["T2 brake"]
     fired: list[CueEvent] = []
     live.cues.set_sink(fired.append)
@@ -1114,7 +1155,7 @@ def test_live_state_feeds_the_engine() -> None:
     live.set_track_model({"length_m": LENGTH, "corners": []})
     live.set_reference(reference(), flat_trace())
     live.on_lap_result({"lap_id": 1}, [], comparison())
-    assert live.cues.mode == "focus" and live.cues.plan.reason == "no braking corrections to focus on"
+    assert live.cues.mode == "focus" and live.cues.plan.reason == cues_mod.NO_HABITS  # the block's habits: none
     live.cues.set_mode("all")
     fired: list[CueEvent] = []
     live.cues.set_sink(fired.append)
@@ -1236,9 +1277,12 @@ async def make_hub(
     return hub, client, sent, engine_tts
 
 
-def install_plan(hub: RadioHub, observations: list[dict[str, Any]] | None = None) -> None:
+def install_plan(hub: RadioHub, habits: list[dict[str, Any]] | None = None) -> None:
+    """A reference and a compared lap; ``habits`` stand in for the lap's coach block (what ``LiveState`` passes)."""
     hub.live.set_reference(reference(), flat_trace())
-    hub.live.on_lap_result({"lap_id": 2}, observations or [], comparison())
+    hub.live.on_lap_result({"lap_id": 2}, [], comparison())
+    if habits is not None:
+        hub.cues.on_lap_result([], comparison(), LENGTH, focus=focus_of(habits), habits=habits)
 
 
 async def settle(n: int = 40) -> None:
@@ -1270,7 +1314,7 @@ def make_event(seq: int = 1, fired: float | None = None, corner: str = "T1", foc
 
 async def test_hub_presynthesises_each_part_once_and_pushes_exact_offsets() -> None:
     hub, _client, _sent, tts = await make_hub("focus")
-    install_plan(hub, [obs("T1"), obs("T2", prio=0.1)])
+    install_plan(hub, [habit("T1"), habit("T2", impact=0.1)])
     await settle()
     assert sorted(tts.calls) == ["brake", "turn 1", "turn 2"]  # "brake" shared by both phrases
     _clip, offset = hub._cue_phrases[("T1", "brake")]
@@ -1279,12 +1323,12 @@ async def test_hub_presynthesises_each_part_once_and_pushes_exact_offsets() -> N
     assert timing.path == "pcm" and timing.offsets_s[("T1", "brake")] == offset
     # seeded: scheduler latency minus measured synthesis (floor 0.2 s), plus the output path to the ear
     assert CUE_OUTPUT_ALLOWANCE_S < timing.latency_s <= 0.6 + CUE_OUTPUT_ALLOWANCE_S
-    install_plan(hub, [obs("T1")])  # next lap: same focus corners (T2 is still in the window), all cached
+    install_plan(hub, [habit("T1"), habit("T2", impact=0.1)])  # next lap: same habits, all cached
     await settle()
     assert len(tts.calls) == 3 and hub.cues.plan.focus == ("T1", "T2")
     new_tts = CountingTts()
     hub.tts = new_tts  # a new engine (voice change): cache rebuilt for it
-    install_plan(hub, [obs("T1")])
+    install_plan(hub, [habit("T1"), habit("T2", impact=0.1)])
     await settle()
     assert sorted(new_tts.calls) == ["brake", "turn 1", "turn 2"]
     await hub.stop()
@@ -1423,7 +1467,7 @@ async def test_cue_gates() -> None:
 async def test_device_voice_clients_get_text_and_estimated_offsets() -> None:
     tts = CountingTts()
     hub, _client, sent, _ = await make_hub("focus", device=True, tts=tts)
-    install_plan(hub, [obs("T1")])
+    install_plan(hub, [habit("T1")])
     await settle()
     assert tts.calls == []  # every radio speaks for itself: no server synthesis at all
     timing = hub.cues.timing

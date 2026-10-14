@@ -68,12 +68,12 @@ def test_identical_laps_have_zero_delta(clean_session: DecodedSession) -> None:
     assert observations_for_comparison(comp) == []
 
 
-def test_injected_errors_recovered_against_ground_truth(demo_session: DecodedSession) -> None:
+def test_injected_errors_recovered_against_ground_truth(one_offs_session: DecodedSession) -> None:
     """Every injected mistake is found, at the right corner, with the magnitude the generator produced."""
-    m = _model(demo_session)
-    ref = analyse_lap(demo_session.laps[0], m)
-    laps = {lap.lap_number: lap for lap in demo_session.laps}
-    truth = demo_session.truth.profiles
+    m = _model(one_offs_session)
+    ref = analyse_lap(one_offs_session.laps[0], m)
+    laps = {lap.lap_number: lap for lap in one_offs_session.laps}
+    truth = one_offs_session.truth.profiles
 
     def true_brake_onset(lap: int, near: float) -> float:
         p = truth[lap]
@@ -102,10 +102,10 @@ def test_injected_errors_recovered_against_ground_truth(demo_session: DecodedSes
     assert sum(c.time_delta_s or 0 for c in comp3.corners) == pytest.approx(comp3.total_delta_s, abs=0.01)
 
 
-def test_time_delta_matches_lap_time_difference(demo_session: DecodedSession) -> None:
-    m = _model(demo_session)
-    ref = analyse_lap(demo_session.laps[0], m)
-    for lap in demo_session.laps[1:]:
+def test_time_delta_matches_lap_time_difference(one_offs_session: DecodedSession) -> None:
+    m = _model(one_offs_session)
+    ref = analyse_lap(one_offs_session.laps[0], m)
+    for lap in one_offs_session.laps[1:]:
         comp = compare(ref, analyse_lap(lap, m), Compatibility(ok=True))
         assert comp.delta_s[-1] == pytest.approx(comp.total_delta_s, abs=0.02)
 
@@ -125,10 +125,10 @@ def test_compatibility_rules() -> None:
     assert setup.ok and setup.warnings
 
 
-def test_incompatible_comparison_yields_no_coaching(demo_session: DecodedSession) -> None:
-    m = _model(demo_session)
-    ref = analyse_lap(demo_session.laps[0], m)
-    comp = compare(ref, analyse_lap(demo_session.laps[2], m), Compatibility(ok=False, blocking=["x"]))
+def test_incompatible_comparison_yields_no_coaching(one_offs_session: DecodedSession) -> None:
+    m = _model(one_offs_session)
+    ref = analyse_lap(one_offs_session.laps[0], m)
+    comp = compare(ref, analyse_lap(one_offs_session.laps[2], m), Compatibility(ok=False, blocking=["x"]))
     assert observations_for_comparison(comp) == []
 
 

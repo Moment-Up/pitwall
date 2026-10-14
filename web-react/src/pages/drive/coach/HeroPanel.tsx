@@ -5,6 +5,7 @@
 //   T15   Stowe                                    320 m      label 112 px, name 44 px, distance 44 px
 //   ▓▓▓▓▓▓▓▓▓▓░░░░░░░░ (approach, last 400 m)
 //   [BRAKE]  T15 brake                         in 250 m      cue band 80 px, 40 px text
+//   [FOCUS]  T6: apex speed, 12 down           in 250 m      a corner reminder: neutral, never braking red
 //
 // Long corner rule: labels over 4 characters / names over 14 put the name on its own 32 px line (data-layout two).
 // Pit lane: PIT + speed / limit km/h. No track model yet: "Corners appear after your first clean lap".
@@ -12,7 +13,7 @@
 
 import { Chip, Card, ProgressBar } from "@heroui/react";
 import { memo } from "react";
-import type { CueBandView } from "../../../lib/drive/cues";
+import { cueWord, type CueBandView } from "../../../lib/drive/cues";
 import type { HeroView } from "../../../lib/drive/model";
 import { Metres, TurnIcon } from "./parts";
 import { sameProps } from "./view";
@@ -123,7 +124,7 @@ export const CueBand = memo(function CueBand({ cue }: { cue: CueBandView }) {
   const n = cue.next;
   if (n) {
     return (
-      <div className="pwc-cue" data-kind={n.kind} role="group" aria-label={`${n.chip === "BRAKE" ? "Brake" : "Marker"}: ${n.text}, in ${n.inText}`}>
+      <div className="pwc-cue" data-kind={n.kind} role="group" aria-label={`${cueWord(n.kind)}: ${n.text}, in ${n.inText}`}>
         <span className="pwc-cue__kind" aria-hidden="true">
           {n.chip}
         </span>
