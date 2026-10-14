@@ -533,6 +533,17 @@ class LiveState:
         )
         self.notify("lap", {"lap": lap, "observations": observations[:5], "coach": coach})
 
+    def habit_line_said(self, point_id: object) -> bool:
+        """The radio put a habit line on air (``voice.hub``, its asyncio loop): the coach's habit tracker records it
+        (``CoachSelection.confirm_said``) and the cue plan follows at once (``CueEngine.set_habits``), so a habit
+        announced after the line gets its corner reminder on the lap the driver hears it, not a lap later. False when
+        ``point_id`` is no habit line waiting to be said (nothing changes)."""
+        if not self.coach.confirm_said(point_id):
+            return False
+        focus, habits = self.coach.habit_lists()
+        self.cues.set_habits(focus, habits)
+        return True
+
     def set_reference(self, summary: dict[str, Any] | None, trace: DistanceTrace | None) -> None:
         with self._lock:
             self.reference = summary

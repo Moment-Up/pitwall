@@ -257,7 +257,9 @@ rules (deterministic, no LLM; docs/features.md "Habits: what the radio works on"
    limits, and adds `habits` and `focus` (with each focus habit's corner reminder) to the coach block.
    `voice/proactive.coaching_text` words the events; Drive reads the same block (`snapshot.coach`). With a radio hub
    running (`CoachSelection.commit_on_delivery`) a habit line is recorded when the hub puts it on air
-   (`RadioHub._deliver` -> `CoachSelection.confirm_said`), so a line that expired unsaid never makes a focus habit.
+   (`RadioHub._deliver` -> `LiveState.habit_line_said` -> `CoachSelection.confirm_said`), so a line that expired
+   unsaid never makes a focus habit; the cue plan follows at once (`CueEngine.set_habits`), so the habit's reminder
+   starts on the lap the driver hears it.
 3. **Braking calls and corner reminders** (`coach/cues.py`): `LiveState` passes the block's `focus` and `habits` to
    `CueEngine.on_lap_result`; in focus mode `build_cue_plan` plans braking calls for braking habits
    (`select_habit_corners`: confidence floor, impact floor) and a `REMINDER` cue for each other focus habit, only at a

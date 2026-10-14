@@ -970,6 +970,37 @@ async def test_the_radio_hub_commits_the_habit_lines_it_says() -> None:
     await hub.stop()
 
 
+async def test_a_habit_line_said_on_air_moves_the_cue_plan_at_once() -> None:
+    """The radio says an announcement after the line, during the next lap: the cue plan follows at once
+    (``LiveState.habit_line_said`` -> ``CueEngine.set_habits``), so the habit's corner reminder is called on the lap
+    the driver hears it. Before, the plan only moved with the next lap result: a habit announced after lap 8 of the
+    10-lap demo got its first reminder on lap 10."""
+    from tests.unit.test_cues import comparison, flat_trace, make_hub, reference, settle
+
+    hub, _client, _sent, _ = await make_hub("focus", device=True)
+    live = hub.live
+    live.set_reference(reference(), flat_trace())
+    comp = comparison({"T1": 1000.0, "T2": 2000.0})
+    slow = pt("T2", "low_min_speed", 0, value=-9.0)
+    for n in (1, 2):
+        live.on_lap_result(*lap_points(n, {**slow, "consistency_ratio": None}), comp)
+    lap, obs = lap_points(3, slow)
+    live.on_lap_result(lap, obs, comp)
+    (msg,) = [
+        m
+        for m in lap_messages(lap, obs, None, None, "normal", 0.0, coach=live.coach.current)
+        if m.kind is MessageKind.COACHING
+    ]
+    assert msg.meta["habit_event"] == "announce" and hub.cues.plan.cues == ()  # picked, not said: nothing to call
+    hub._deliver(msg, None, None, None)
+    await settle(2)
+    assert [(c.corner, c.kind.value, c.text) for c in hub.cues.plan.cues] == [
+        ("T2", "reminder", "T2: apex speed, 9 down")
+    ]
+    assert live.habit_line_said(msg.meta["observation_id"]) is False  # said once: nothing moves again
+    await hub.stop()
+
+
 def test_a_big_fault_on_a_lap_that_is_no_evidence_still_counts_as_said_twice() -> None:
     """A lap that is no habit evidence (here a flashback lap) is not in the tracker's window, but the same big fault as
     on the corner's previous counted lap is still not said as a one-off: never the same sentence two laps running."""

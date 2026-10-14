@@ -419,6 +419,12 @@ class CoachSelection:
                 self._current = {**cur, "habits": self._habits.habits(), "focus": self._habits.focus()}
             return True
 
+    def habit_lists(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+        """The tracker's ``focus`` and ``habits`` lists now (the coach block's shapes), for a replan between laps
+        (``core.live.LiveState.habit_line_said``)."""
+        with self._lock:
+            return self._habits.focus(), self._habits.habits()
+
     # --- coachref ---
     def set_current(self, block: dict[str, Any]) -> None:
         """Show ``block`` as the current coaching (a practice drill's point, ``coach.drills.with_drill``)."""

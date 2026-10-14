@@ -1389,9 +1389,11 @@ class RadioHub:
     def _habit_line_said(self, msg: RadioMessage) -> None:
         """A habit line (``coach.habits``: an announcement, "better", "still", "sorted") went on air: the coach's
         habit tracker records it now (``CoachSelection.confirm_said``). One the radio never says is never recorded,
-        so a habit is not worked on (reminders, "Working on") before the driver heard it announced."""
+        so a habit is not worked on (reminders, "Working on") before the driver heard it announced. Through
+        ``LiveState.habit_line_said`` the cue plan follows at once: the reminder starts on the lap the line is heard."""
+        said = getattr(self.live, "habit_line_said", None)
         coach = getattr(self.live, "coach", None)
-        confirm = getattr(coach, "confirm_said", None)
+        confirm = said if callable(said) else getattr(coach, "confirm_said", None)
         if callable(confirm):
             try:
                 confirm(msg.meta.get("observation_id"))

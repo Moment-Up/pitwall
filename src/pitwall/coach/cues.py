@@ -1318,6 +1318,18 @@ class CueEngine:
             self._comparison = comparison
         self._replan()
 
+    def set_habits(self, focus: Sequence[Mapping[str, Any]], habits: Sequence[Mapping[str, Any]]) -> None:
+        """The session's habits changed between two laps (``LiveState.habit_line_said``: the radio said a habit line,
+        so the habit it announced is now worked on): replan from the latest comparison with these lists (the coach
+        block's ``focus`` / ``habits`` shapes), so its corner reminder or braking call starts on the lap the driver
+        hears it. Without a comparison there is nothing to plan (the next lap result brings one and its lists)."""
+        with self._plan_lock:
+            self._focus = tuple(focus)
+            self._habits = tuple(habits)
+            ready = self._comparison is not None
+        if ready:
+            self._replan()
+
     def set_fallback_plan(self, plan: CuePlan | None) -> None:
         """Heads-ups from the AI field (``core.track_knowledge.heads_up_cue_plan``: "heavy braking ahead" MARKER
         cues placed early before the field's onsets). They stand in only while the engine has nothing of the
