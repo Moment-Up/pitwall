@@ -63,13 +63,23 @@ the queue says the rest by priority, then this order, then first in first out.
   radio (dropped as `radio busy`, never late, when something is on air; proactive messages end before the next cue
   starts), and a lap time, race call, strategy or car health call, goal line or coaching point waits for a free radio,
   the 2 s gap, a speak window and the lap's budget. The driver's own answer replaces a proactive message on air (the
-  driver asked) but waits for a cue or an urgent call. A message an urgent call cut is said again once, in full.
+  driver asked) but waits for a braking call or an urgent call. A message an urgent call cut is said again once, in
+  full.
 - **Corner reminders** (kind `cue`, `meta.cue` `"reminder"`; braking-call mode `focus`): for a habit being worked on
   that is not a braking fault, a short phrase before its corner ("Turn 6, apex speed, 12 down"), pre-synthesised like a
   braking call and timed to END at least 1 s before the reference braking point. It starts its own length earlier, and
   speak windows close before that start. Only where the reference lap was off the brakes for the whole phrase; one call
   per corner a lap (a reminder wins over a braking call there); dropped, never late. Muted like braking calls (quiet
   intensity, quiet mode, voice off); none on pit or out laps, under a safety car or VSC, or on a standing-start lap 1.
+  It is descriptive coaching, not a braking call: it starts only on a free radio (dropped otherwise) and never with a
+  car alongside (`car alongside`), it cuts nothing (a spotter clear included), and any spotter call (a clear or "still
+  there" included) or a braking call cuts it; it is never said again. Reminders and braking calls together are at most
+  the profile's focus corners a lap (a beginner: one), for habits costing at least 0.05 s a lap on average that the
+  latest lap could measure.
+- **Habit lines** (coaching points with `meta.habit_event`: an announcement, "better", "still", "sorted"): the coach's
+  habit tracker records a line when the radio puts it on air, not when the coach picks it, so a line held until it
+  expired (quiet mode, the lap's budget, no radio connected) never makes a habit the one being worked on: it is
+  announced again on a later lap.
 - **Race order:** alerts, then the lap time (carrying the line's race news), race calls, strategy and car health calls,
   the goal line, the coaching point, detail; validation prompts last. A higher priority goes first (cold tyres at the
   pit exit before the lap time).

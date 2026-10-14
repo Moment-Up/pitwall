@@ -245,23 +245,32 @@ rules (deterministic, no LLM; docs/features.md "Habits: what the radio works on"
    clearing them; only another driver in the seat clears them. `observations_for_comparison` sets each point's
    `consistency_ratio` from that memory; `analysis.coaching.is_habit` / `is_big_one_off` classify the point.
 2. **Habit tracker** (`coach/habits.py`, pure, owned by `coach/selection.CoachSelection` under its lock): updated
-   once per compared lap from `LiveState.on_lap_result` (with the comparison's corners, the lap's own corner times
-   and the track model version). Per (corner, kind) over the corner's last 5 compared laps: `seen`, `focus` (on the
-   radio; 1 slot at normal, 2 at detailed, 0 when quiet) and `fixed` (proven: clean corner, and for braking early a
-   faster corner). It emits `fixed`, `improving`, `announce` and `still` events; `coach_block` makes the radio's
-   `picked` from them plus the lap's big one-offs under the driver's limits, and adds `habits` and `focus` (with each
-   focus habit's corner reminder) to the coach block. `voice/proactive.coaching_text` words the events; Drive reads
-   the same block (`snapshot.coach`).
+   once per compared lap from `LiveState.on_lap_result` (with the comparison's corners, the reference lap id, the
+   lap's own corner times and the track model version) when the lap is habit evidence (the comparison's
+   `habit_evidence`, set by the lap processor: no pit-in, out, flashback, standing-start, invalid or safety-car lap).
+   Per (corner, kind) over the corner's last 5 counted laps: `seen`, `focus` (on the radio; 1 slot at normal, 2 at
+   detailed, 0 when quiet; a habit costing at least `HABIT_MIN_IMPACT_S` on average, and one costing twice as much
+   takes a small one's slot) and `fixed` (proven: clean corner, and for braking early a faster corner). A lap without
+   the fault counts only against a reference known to show it (the session's `good_refs` / `blind_refs` per habit),
+   and "better" compares values measured against the same reference. It emits `fixed`, `improving`, `announce` and
+   `still` events; `coach_block` makes the radio's `picked` from them plus the lap's big one-offs under the driver's
+   limits, and adds `habits` and `focus` (with each focus habit's corner reminder) to the coach block.
+   `voice/proactive.coaching_text` words the events; Drive reads the same block (`snapshot.coach`). With a radio hub
+   running (`CoachSelection.commit_on_delivery`) a habit line is recorded when the hub puts it on air
+   (`RadioHub._deliver` -> `CoachSelection.confirm_said`), so a line that expired unsaid never makes a focus habit.
 3. **Braking calls and corner reminders** (`coach/cues.py`): `LiveState` passes the block's `focus` and `habits` to
    `CueEngine.on_lap_result`; in focus mode `build_cue_plan` plans braking calls for braking habits
-   (`select_habit_corners`) and a `REMINDER` cue for each other focus habit, only at a measured reference braking
-   zone with a calm (off-brake) stretch long enough for the phrase. A reminder fires its spoken length plus 1 s before
-   the braking point; the hub (`voice/hub.py`) pushes the pre-synthesised length (`CueTiming.durations_s`) and the
-   scheduler's speak windows close before a cue's start (`seconds_to_next_cue`). `on_frame` stays O(1) and lock-free.
+   (`select_habit_corners`: confidence floor, impact floor) and a `REMINDER` cue for each other focus habit, only at a
+   measured reference braking zone with a calm (off-brake) stretch long enough for the phrase, together at most the
+   profile's focus corners, never for a habit the latest lap could not show (`blind`). A reminder fires its spoken
+   length plus 1 s before the braking point; the hub (`voice/hub.py`) pushes the pre-synthesised length
+   (`CueTiming.durations_s`) and the scheduler's speak windows close before a cue's start (`seconds_to_next_cue`).
+   A reminder ranks below a braking call on air (`scheduler.interrupt_rank` 0): it plays only on a free radio, never
+   with a car alongside, and spotter and braking calls cut it. `on_frame` stays O(1) and lock-free.
 4. **Report** (`motivation/recap.py`, mirrored by `web-react/src/lib/review/coaching.ts`): "One to work on" is a
-   point repeated and still there, else a big one-off; a habit that stopped on the corner's last 3 compared laps
-   (clean, and faster for braking early) "went well". The TypeScript copies of the constants are pinned by
-   `tests/unit/test_motivation_recap.py`.
+   point repeated and still there, else a big one-off (else nothing when laps were compared); a habit that stopped on
+   the corner's last 3 compared laps (clean, and faster for braking early) "went well". The TypeScript copies of the
+   constants are pinned by `tests/unit/test_motivation_recap.py`.
 
 ### Reference choice and practice drills (coachref)
 `core/coachref.py` (`CoachRef`, created by the runtime and attached to the `LapProcessor`) plugs into the lap

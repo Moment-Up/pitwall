@@ -9,14 +9,18 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
-- The radio coaches habits, not every corner: one at a time, said once with how often it happens, then when it gets
-  better, is still there 5 laps on, or is sorted. Synthetic and recorded laps; not live.
+- The radio coaches habits, not every corner: one at a time (two at Detailed), said once, then when it gets better,
+  is still there 5 laps on, or is sorted. Synthetic and recorded laps; not live.
+- A habit is said only when it costs 0.05 s a lap or more; pit, out, safety-car, flashback and invalid laps never
+  count as habits. Synthetic and recorded laps; not live.
 - A single lap's slip is said on the radio only when it cost 0.3 s or more; smaller ones stay on the Drive screen.
   Synthetic and recorded laps; not yet live.
+- "Better" compares laps against the same reference, and for braking early needs a faster corner. Tested on
+  synthetic laps.
 - "Sorted" needs 2 of the corner's last 3 laps clean, and for braking early a faster corner. A new personal best no
   longer wipes the radio's memory of your habits. Tested on synthetic laps.
-- Braking calls (Focus) follow your habits, with a short corner reminder ("Turn 6, apex speed, 12 down") that ends a
-  second before the braking point. Synthetic laps and recorded races; not yet live.
+- Braking calls (Focus) follow your habits, with a corner reminder ("Turn 6, apex speed, 12 down") ending a second
+  before braking; it never cuts the spotter. Synthetic and recorded laps; not live.
 - Drive: the coach card says what a note is (Habit · 3 of 4 laps, Focus, Once, Sorted); between runs the Ready card
   says what the radio is working on. Checked in a desktop browser, not yet on an iPad.
 - Today's 3 things: One to work on is a habit that is still there (else a big one-off), and a habit you sorted counts
