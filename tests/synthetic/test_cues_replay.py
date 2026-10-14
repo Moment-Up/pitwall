@@ -260,6 +260,9 @@ def test_braking_habit_call_lands_on_the_reference_braking_point(habit_replays: 
     errors = [h.error_m for h in heard]
     assert max(map(abs, errors)) <= TOLERANCE_M, errors
     assert max(errors) <= MARGIN_M, errors  # never past the reference point
+    # in this clean synthetic replay the model is far tighter than the tolerance (measured: 2.8 m at 60 Hz, 3.7 m at
+    # 20 Hz): the bound the focus call had before habits, kept for the habit's call
+    assert max(map(abs, errors)) <= 4.0, errors
 
 
 @pytest.mark.parametrize("hz", [60, 20])
