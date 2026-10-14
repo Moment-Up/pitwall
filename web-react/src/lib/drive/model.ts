@@ -16,7 +16,16 @@ import { dedupeComplete, recapFacts, type CompleteThings } from "./complete";
 import { motionOf, type Motion } from "./motion";
 import { aiEndLine } from "../review/aipace";
 import { ONE_SHOT_SUB, isOneShot } from "../review/kpis";
-import { coachPoint, lastLapNumber, simpleWording, topPoint, workOnWentWell, type CoachPoint } from "./coach";
+import {
+  coachPoint,
+  lastLapNumber,
+  simpleWording,
+  topPoint,
+  workingOn,
+  workOnWentWell,
+  type CoachPoint,
+  type WorkingOnRow,
+} from "./coach";
 import { cornerAhead, cornerLabelOf, cornerLayout, focusReasonOf, isFocus, officialNameOf, type CornerView } from "./corner";
 import { callsModeText, cueView, lastCueOutcome, type CueBandView, type CuePause, type LastCueOutcome } from "./cues";
 import { deltaView, referenceLabel, type DeltaView } from "./delta";
@@ -212,6 +221,10 @@ export interface ReadyCard {
   /** Between runs: "Last lap: <point>" (topPoint of the last lap, D6 pick or top observation, full text). `label` is
    * "Last lap", or "Lap 8" when the point comes from an older lap than the last one (the last lap had none). */
   lastLap: { label: string; point: CoachPoint } | null;
+  /** Habits, between runs: "Working on: T6 apex speed, 12 down · 3 of 4 laps", one row per habit the radio is working
+   * on (coach block `focus`, at most 2). It takes the "Last lap" point's place in column 3, and its corners leave the
+   * FOCUS rows (one row per corner). Null before the first lap and without focus habits (then today's content). */
+  workingOn: WorkingOnRow[] | null;
   footer: string | null;
   /** Lane motivation: one goal (reached this session, else in this scope), or null. */
   goal: ReadyGoalView | null;
@@ -536,7 +549,9 @@ function readyCard(
     reason: focusReasonOf(s.cues, name),
   }));
   const calls = s.cues && s.cues.mode !== "off" && focus.length ? `Radio calls: ${focus.map((f) => f.label).join(", ")}` : null;
-  const top = between ? topPoint(s, simple) : null;
+  const working = between ? workingOn(s) : [];
+  const top = between && !working.length ? topPoint(s, simple) : null;
+  const busy = new Set(working.map((w) => w.corner));
   return {
     seat: {
       name: driver?.name ?? null,
@@ -573,13 +588,14 @@ function readyCard(
         }
       : null,
     today: {
-      focus,
+      focus: busy.size ? focus.filter((f) => !busy.has(f.name)) : focus,
       focusRows: between ? 1 : 2,
       radioCalls: calls,
       callsMode: between ? null : callsModeText(s.cues),
       radio: !between,
     },
     lastLap: top ? { label: lastLapLabel(s, top), point: top } : null,
+    workingOn: working.length ? working : null,
     footer: footerOf(s),
     goal: readyGoal(motivation, s.session_id, driver?.id ?? null),
   };
@@ -692,6 +708,7 @@ function refDates(driver: Driver | null): Map<number, number> {
 
 const EMPTY_COACH: CoachView = {
   tag: null,
+  habit: null,
   lap: null,
   tagText: null,
   text: null,

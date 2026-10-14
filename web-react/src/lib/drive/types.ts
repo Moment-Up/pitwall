@@ -117,7 +117,59 @@ export type ObservationNext = Observation & {
   ref_name?: string | null;
   /** coachref: a drill attempt's point (kind "drill"). */
   drill?: { id: number; attempt: number; of: number; hits: number; outcome: string; done: boolean } | null;
+  // --- habits (coach/habits.py, coach/selection.py): every coach block point; absent on older servers ---
+  /** The point is about a habit now: its status and counts ("3 of the last 4 laps"); null = no habit. A "sorted"
+   * line keeps status "fixed". */
+  habit?: HabitInfo | null;
+  /** A correction that is no habit (seen once, or not yet a pattern). */
+  one_off?: boolean;
+  /** A habit tracker line (null on an ordinary observation): announced as the focus, better, still there, sorted. */
+  habit_event?: HabitEvent | null;
+  /** "improving": the habit's size when it was announced. */
+  was_value?: number | null;
+  /** "fixed": clean on `clean_laps` of the last `clean_of` laps. */
+  clean_laps?: number | null;
+  clean_of?: number | null;
 };
+
+/** coach/habits.py STATUS_*: a habit not on the radio, the one being worked on (announced), or sorted. */
+export type HabitStatus = "seen" | "focus" | "fixed";
+/** coach/habits.py EVENT_*: the radio's habit lines. */
+export type HabitEvent = "announce" | "improving" | "fixed" | "still";
+
+/** A coach block point's habit (coach/habits.py HabitTracker.habit_info). */
+export interface HabitInfo {
+  status: HabitStatus;
+  /** The fault was there on `laps_seen` of the corner's last `laps` compared laps. */
+  laps_seen: number;
+  laps: number;
+}
+
+/** One habit of the session (coach block `habits`; coach/habits.py HabitTracker._entry). */
+export interface HabitEntry {
+  /** Learned corner name (the key cues and observations use). */
+  corner: string;
+  corner_label: string | null;
+  corner_voice: string | null;
+  kind: string;
+  status: HabitStatus;
+  laps_seen: number;
+  laps: number;
+  /** Median over the laps it was there, same sign as the observation's value; null = unknown. */
+  value: number | null;
+  unit: string | null;
+  /** Mean time lost over the laps it was there (s). */
+  impact_s: number | null;
+  /** The lap the current status began on. */
+  since_lap: number | null;
+  short: string | null;
+}
+
+/** A habit being worked on (coach block `focus`) with its corner reminder: the words the radio says before the corner
+ * ("Turn 6", "apex speed, 12 down"); null for kinds without one (braking habits get a braking call instead). */
+export interface FocusEntry extends HabitEntry {
+  reminder: { parts: string[]; text: string } | null;
+}
 
 /** One game event as /ws/live sends it. `player` is a proposed addition (INTEGRATION NEEDED): whether the event
  * concerns the player's car; absent = unknown. */
@@ -165,6 +217,10 @@ export interface CoachBlock {
   by_corner: Record<string, ObservationNext>;
   /** coachref: a drill is running: the radio and the coach card talk about the drill corner only. */
   drill_only?: boolean;
+  /** Habits: every habit of the session (focus, then seen, then fixed); absent on older servers. */
+  habits?: HabitEntry[];
+  /** Habits: the ones being worked on (at most the radio's focus slots: 2 at detailed). */
+  focus?: FocusEntry[];
 }
 
 /** D2 (storage/repo.py lap_bests): this game + track + car + layout; driver / household are null in synthetic

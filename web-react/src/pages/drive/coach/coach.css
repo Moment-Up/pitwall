@@ -769,6 +769,9 @@
   line-clamp: 4;
 }
 .pwc-ready__lbl { font-weight: 700; }
+/* "Working on:" then a line per habit ("T6 apex speed, 12 down · 3 of 4 laps"): the counts muted, as an evidence
+ * line, and never split across lines. */
+.pwc-ready__count { color: var(--muted); white-space: nowrap; }
 .pwc-ready__ev {
   display: -webkit-box;
   overflow: hidden;
