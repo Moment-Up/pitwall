@@ -204,6 +204,14 @@ describe("Working on (Ready card, between runs)", () => {
     expect(workingOn(null)).toEqual([]);
   });
 
+  it("leaves out a habit the latest lap could not show (blind), as the radio leaves out its reminder", () => {
+    const s = withCoach(
+      block([], { focus: [focusEntry({ blind: true }), focusEntry({ corner: "T12", corner_label: "T12", blind: false })] }),
+    );
+    expect(focusHabits(s).map((f) => f.corner)).toEqual(["T12"]);
+    expect(workingOn(s).map((w) => w.corner)).toEqual(["T12"]);
+  });
+
   function garage(focus: FocusEntry[], laps = true, points: ObservationNext[] = []): SnapshotNext {
     const s = fixture("edited-garage-between-runs");
     s.coach = block(points, { lap_number: 4, focus });

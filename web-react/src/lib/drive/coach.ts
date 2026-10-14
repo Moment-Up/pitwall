@@ -286,9 +286,13 @@ export function workOnWentWell(s: SnapshotNext, simple: boolean): { workOn: Coac
 /** coach/habits.py focus_slots at its largest (detailed intensity): the Ready card shows at most this many. */
 export const FOCUS_SLOTS_MAX = 2;
 
-/** The habits being worked on (coach block `focus`, status "focus"), at most FOCUS_SLOTS_MAX; [] without them. */
+/** The habits being worked on (coach block `focus`, status "focus"), at most FOCUS_SLOTS_MAX; [] without them. A habit
+ * the latest lap could not show (`blind`: compared with a lap that had it) is left out until it is measured again, as
+ * the radio leaves out its reminder. */
 export function focusHabits(s: SnapshotNext | null | undefined): FocusEntry[] {
-  return (s?.coach?.focus ?? []).filter((f) => f?.status === "focus" && !!f.corner).slice(0, FOCUS_SLOTS_MAX);
+  return (s?.coach?.focus ?? [])
+    .filter((f) => f?.status === "focus" && !!f.corner && f.blind !== true)
+    .slice(0, FOCUS_SLOTS_MAX);
 }
 
 function focusAt(s: SnapshotNext, corner: string): FocusEntry | null {

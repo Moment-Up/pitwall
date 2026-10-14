@@ -160,11 +160,17 @@ export interface HabitEntry {
   status: HabitStatus;
   laps_seen: number;
   laps: number;
-  /** Median over the laps it was there, same sign as the observation's value; null = unknown. */
+  /** A focus habit: the number the radio last said about it (so the reminder and the Ready card say the same);
+   * else the median over the laps it was there. Same sign as the observation's value; null = unknown. */
   value: number | null;
   unit: string | null;
   /** Mean time lost over the laps it was there (s). */
   impact_s: number | null;
+  /** Median measurement confidence (0-1) over the laps it was there; null = unknown. Absent on older servers. */
+  confidence?: number | null;
+  /** The latest compared lap could not show it (compared with a lap that had it): no reminder, no "Working on" row.
+   * Absent on older servers (= measurable). */
+  blind?: boolean;
   /** The lap the current status began on. */
   since_lap: number | null;
   short: string | null;
