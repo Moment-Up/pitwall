@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CALLS_AFTER_FIRST_LAP, CUE_LAST_SHOWN_S, JUST_PASSED_M, callsModeText, cueText, cueView, isRadioOff, justPassedM, lastCueOutcome, wrappedCall } from "./cues";
+import { CALLS_AFTER_FIRST_LAP, CUE_LAST_SHOWN_S, JUST_PASSED_M, callsModeText, cueChip, cueText, cueView, cueWord, isRadioOff, justPassedM, lastCueOutcome, wrappedCall } from "./cues";
 import { AI_REFERENCE, driverFocus, isFieldPlan } from "./plan";
 import { fixture } from "./testkit";
 import { MINUS } from "./text";
@@ -32,6 +32,22 @@ describe("cue band", () => {
     });
     const marker = cueView(cues({ next: { corner: "T15", text: "T15", kind: "marker", in_m: 80 } }), "T15");
     expect(marker.next).toMatchObject({ chip: "MARKER", text: "T15" });
+  });
+
+  it("shows a corner reminder as FOCUS, never as a braking call", () => {
+    const reminder = { corner: "T6", text: "T6: apex speed, 12 down", kind: "reminder" as const, in_m: 410 };
+    expect(cueView(cues({ focus: ["T6"], next: reminder }), "T6").next).toEqual({
+      kind: "reminder",
+      chip: "FOCUS",
+      ai: false,
+      text: "T6: apex speed, 12 down",
+      inM: 410,
+      inText: "410 m",
+      corner: "T6",
+    });
+    expect(cueView(cues({ next: reminder }), "T2").note).toBe("Next call: T6: apex speed, 12 down · 410 m");
+    expect([cueChip("brake"), cueChip("marker"), cueChip("reminder")]).toEqual(["BRAKE", "MARKER", "FOCUS"]);
+    expect([cueWord("brake"), cueWord("marker"), cueWord("reminder")]).toEqual(["Brake", "Marker", "Reminder"]);
   });
 
   it("names the next call as a secondary line when it is for another corner", () => {

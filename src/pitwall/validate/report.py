@@ -78,6 +78,7 @@ def evidence_tables(run: Run, item_id: str, redact: bool = False) -> list[Table]
         own = [c for c in ev.cues if c.kind == "brake" and not c.heads_up]
         heads = [c for c in ev.cues if c.heads_up]
         markers = [c for c in ev.cues if c.kind == "marker" and not c.heads_up]
+        reminders = [c for c in ev.cues if c.kind == "reminder" and not c.heads_up]
         out = [
             _table(
                 "Calls",
@@ -110,6 +111,23 @@ def evidence_tables(run: Run, item_id: str, redact: bool = False) -> list[Table]
                     "Corner markers",
                     ["Lap", "Corner", "Target (m)", "Word vs aim (m)", "Outcome"],
                     [[c.lap, c.corner, round(c.target_m, 1), c.error_m, CLS_WORDS.get(c.cls, c.cls)] for c in markers],
+                )
+            )
+        if reminders:  # timed to END a second before the braking point: its start is aimed that far ahead
+            out.append(
+                _table(
+                    "Corner reminders",
+                    ["Lap", "Corner", "Target (m)", "Start vs aim (m)", "Outcome"],
+                    [
+                        [
+                            c.lap,
+                            c.corner,
+                            round(c.target_m, 1),
+                            c.error_m,
+                            c.drop_reason if c.cls == "dropped" else CLS_WORDS.get(c.cls, c.cls),
+                        ]
+                        for c in reminders
+                    ],
                 )
             )
         if heads:

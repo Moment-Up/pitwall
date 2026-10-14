@@ -63,6 +63,9 @@ BIG_ONE_OFF_S = 0.30
 # [H] ...and measured clearly: the delta clears its rule threshold and twice the sample resolution by a margin
 # (``_mag_conf`` 0.8 = 60 % past the floor), so a single lap's call is never a measurement artefact.
 BIG_ONE_OFF_CONFIDENCE = 0.8
+# Faults whose fix is braking later: "sorted" praises later braking, so it is said (radio, report) only when the corner
+# also got faster (the rule above: later braking is praised only when the corner segment was faster).
+LATER_BRAKING_FIXES = frozenset({"brake_early"})
 
 
 @dataclass(slots=True)

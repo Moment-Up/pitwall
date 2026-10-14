@@ -30,11 +30,15 @@ export interface Bests {
   session_id?: string | null;
 }
 
+/** coach/cues.py CueKind: a braking call, a corner marker, or a corner reminder (a focus habit's short phrase that ends
+ * a second before the braking point: "T6: apex speed, 12 down"). */
+export type CueKind = "brake" | "marker" | "reminder";
+
 /** One planned cue (coach/cues.py CueSpec.to_dict). `target_m` is in game lap metres (the cue engine fires on
  * frame.lap_distance_m). */
 export interface CuePlanEntry {
   corner: string;
-  kind: "brake" | "marker";
+  kind: CueKind;
   target_m: number;
   text: string;
   focus: boolean;
@@ -58,10 +62,11 @@ export interface CueSnapshot {
    * learned, "F2" field corner, "zone@1234"), never the driver's focus (cues.ts driverFocus). */
   focus: string[];
   cues: CuePlanEntry[];
-  next: { corner: string; text: string; kind: "brake" | "marker"; in_m: number } | null;
+  next: { corner: string; text: string; kind: CueKind; in_m: number } | null;
   last: {
     corner: string;
     text: string;
+    kind?: CueKind;
     status?: "pending" | "sent" | "dropped";
     reason?: string | null;
     /** Where the key word was heard vs the aim point (m, + = late). */

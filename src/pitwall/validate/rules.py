@@ -218,6 +218,7 @@ def cues_verdict(cues: Sequence[CueRecord], baseline: Sequence[float], now: floa
     own = [c for c in cues if c.kind == "brake" and not c.heads_up]
     heads_up = [c for c in cues if c.heads_up]
     markers = [c for c in cues if c.kind == "marker" and not c.heads_up]
+    reminders = [c for c in cues if c.kind == "reminder" and not c.heads_up]  # no braking call: listed, not judged
     fired = len(own)
     sent = sum(1 for c in own if c.outcome == "sent")
     dropped_delivery = sum(1 for c in own if c.outcome == "dropped" and c.drop_reason in DELIVERY_DROPS)
@@ -247,6 +248,7 @@ def cues_verdict(cues: Sequence[CueRecord], baseline: Sequence[float], now: floa
         "baseline_median_onset_vs_point_m": _r(_median(baseline)),
         "heads_up_fired": len(heads_up),
         "markers_fired": len(markers),
+        "reminders_fired": len(reminders),
     }
     drop_share = dropped_delivery / fired if fired else 0.0
     checks = [
@@ -305,7 +307,9 @@ def cues_verdict(cues: Sequence[CueRecord], baseline: Sequence[float], now: floa
     if not cues:
         return state("no_evidence", ["No braking calls yet"], [], metrics, now)
     if fired == 0:
-        what = n_of(len(heads_up), "AI-field heads-up") if heads_up else n_of(len(markers), "corner marker")
+        others = [n_of(len(markers), "corner marker")] if markers or not reminders else []
+        others += [n_of(len(reminders), "corner reminder")] if reminders else []
+        what = n_of(len(heads_up), "AI-field heads-up") if heads_up else " and ".join(others)
         return state(
             "inconclusive",
             [f"Only {what} so far: no calls from your own reference lap", *reasons],

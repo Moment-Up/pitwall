@@ -130,7 +130,7 @@ class CueRecord:
     msg_id: str | None
     lap: int
     corner: str
-    kind: str  # "brake" | "marker"
+    kind: str  # "brake" | "marker" | "reminder" (a focus habit's corner reminder: no braking call, not in the verdict)
     heads_up: bool
     focus: bool
     target_m: float

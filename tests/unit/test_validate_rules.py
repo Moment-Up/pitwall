@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import itertools
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -15,12 +16,14 @@ from pitwall.validate.model import (
     ClientSample,
     CueRecord,
     DriverMark,
+    Evidence,
     GameTransition,
     InputPhaseRecord,
     ProactiveRecord,
     PttRecord,
     SwitchRecord,
 )
+from pitwall.validate.report import evidence_tables
 
 NOW = 1_800_000_000.0
 
@@ -176,6 +179,22 @@ def test_cues_heads_up_and_markers_are_counted_apart() -> None:
     st = R.cues_verdict([*_zones(8), *[cue(0.0, kind="marker") for _ in range(5)]], [], NOW)
     assert st.verdict == "pass" and st.metrics["markers_fired"] == 5
     assert R.cues_verdict([], [], NOW).verdict == "no_evidence"
+
+
+def test_corner_reminders_are_listed_never_judged_as_braking_calls() -> None:
+    """A corner reminder (a focus habit's phrase that ends before the braking point) is no braking call: counted apart,
+    never in the calls' verdict, and named as what it is when it is all there is."""
+    st = R.cues_verdict([*_zones(8), *[cue(30.0, kind="reminder") for _ in range(3)]], [], NOW)
+    assert st.verdict == "pass" and st.metrics["reminders_fired"] == 3 and st.metrics["late"] == 0
+    only = R.cues_verdict([cue(0.0, kind="reminder") for _ in range(2)], [], NOW)
+    assert only.verdict == "inconclusive" and only.reasons[0].startswith("Only 2 corner reminders so far")
+    both = R.cues_verdict([cue(0.0, kind="marker"), cue(0.0, kind="reminder")], [], NOW)
+    assert both.reasons[0].startswith("Only 1 corner marker and 1 corner reminder so far")
+    run = SimpleNamespace(evidence=Evidence(cues=[cue(0.0), cue(-3.0, kind="reminder")]))
+    tables = {t["title"]: t for t in evidence_tables(run, "cues_timing")}  # type: ignore[arg-type]
+    assert len(tables["Calls"]["rows"]) == 1 and tables["Corner reminders"]["rows"] == [
+        [5, "T1", 1000.0, -3.0, "on time"]
+    ]
 
 
 def test_cues_delay_flag_forces_review() -> None:

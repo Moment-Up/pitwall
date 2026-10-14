@@ -254,6 +254,7 @@ class LapProcessor:
         comp_dict = comp.to_dict()
         comp_dict["ref_lap_id"] = ref_id
         comp_dict["cmp_lap_id"] = lap_id
+        comp_dict["model_version"] = model.version  # the corners' definitions (habits compare corner times across laps)
         comp_dict["corner_text"] = {k: {"short": t.short, "long": t.long, "voice": t.voice} for k, t in texts.items()}
         # --- coachref ---
         if desc is not None:

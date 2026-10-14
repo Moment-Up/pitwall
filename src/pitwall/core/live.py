@@ -273,6 +273,18 @@ def _compared_corners(comparison: dict[str, Any] | None) -> list[str] | None:
     return [str(cd["corner"]) for cd in corners if isinstance(cd, dict) and cd.get("corner")]
 
 
+def _corner_times(comparison: dict[str, Any] | None) -> dict[str, float | None]:
+    """The lap's own time through each compared corner (``CornerDelta.cmp.segment_time_s``; None = unknown): the
+    habit tracker calls a braking-early habit sorted only when its corner got faster."""
+    out: dict[str, float | None] = {}
+    for cd in (comparison or {}).get("corners") or ():
+        if isinstance(cd, dict) and cd.get("corner"):
+            cmp = cd.get("cmp")
+            t = cmp.get("segment_time_s") if isinstance(cmp, dict) else None
+            out[str(cd["corner"])] = float(t) if isinstance(t, int | float) and not isinstance(t, bool) else None
+    return out
+
+
 class LiveState:
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -492,9 +504,16 @@ class LiveState:
         # CoachRef.after_lap) the lap's one point is the drill's: shown on the coach card when the lap was an attempt,
         # the previous card kept when it was not (an out lap)
         corners = _compared_corners(comparison) if compared else None
-        ref_id = (comparison or {}).get("ref_lap_id")
-        ref_lap_id = ref_id if isinstance(ref_id, int) and not isinstance(ref_id, bool) else None
-        coach = self.coach.select(lap, observations, compared and drill is None, corners=corners, ref_lap_id=ref_lap_id)
+        ref_id, version = (comparison or {}).get("ref_lap_id"), (comparison or {}).get("model_version")
+        coach = self.coach.select(
+            lap,
+            observations,
+            compared and drill is None,
+            corners=corners,
+            ref_lap_id=ref_id if isinstance(ref_id, int) and not isinstance(ref_id, bool) else None,
+            corner_times=_corner_times(comparison) if compared else None,
+            model_version=version if isinstance(version, int) and not isinstance(version, bool) else None,
+        )
         if drill is not None:
             point = drill.get("point")
             coach = with_drill(coach, point if isinstance(point, dict) else None, str(drill.get("corner") or ""))

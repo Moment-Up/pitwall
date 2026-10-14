@@ -20,11 +20,17 @@ it ("3 of the last 4 laps") is true of the laps counted here. Status:
 
 * ``seen``  - a habit, not on the radio (no free focus slot, or the radio's limits do not let it through).
 * ``focus`` - announced on the radio and being worked on: at most ``focus_slots`` of them, one per corner.
-* ``fixed`` - it stopped: absent on ``FIXED_CLEAN`` of the last ``FIXED_OF`` compared laps of its corner, the
-  latest included, and at least ``FIXED_CLEAN`` compared laps after its status began (so the clean laps are laps
-  after the announcement, never the gaps that were already inside "3 of the last 4"). A fixed entry (and any entry
-  that is no habit) leaves the tracker once its window holds no lap where it fired; it becomes ``seen`` again when
-  it is a habit again.
+* ``fixed`` - it stopped (``stopped``: absent on ``FIXED_CLEAN`` of the last ``FIXED_OF`` compared laps of its
+  corner, the latest included, and at least ``FIXED_CLEAN`` compared laps after its status began, so the clean laps
+  are laps after the announcement, never the gaps that were already inside "3 of the last 4") and those laps prove it
+  sorted (``sorted_proof``): ``FIXED_CLEAN`` of them, the latest included, clean at the corner - no corrective point
+  of any kind there, so "clean" is true - and, for a fault whose fix is braking later
+  (``analysis.coaching.LATER_BRAKING_FIXES``), the corner faster on each of them than on every lap it fired on (the
+  lap's own time through the corner, ``update``'s ``corner_times``: later braking is praised only when the corner got
+  faster). A habit that stopped without that proof keeps its status (no "still": it did not fire) while the next laps
+  may still prove it; after ``PROOF_WAIT`` such laps it is no habit any more and nothing is claimed: it leaves the
+  focus without a word. A fixed entry (and any entry that is no habit) leaves the tracker once its window holds no lap
+  where it fired; it becomes ``seen`` again when it is a habit again.
 
 Reference-relative evidence: a fault is measured against the reference lap, so when the reference becomes a lap that
 had the same fault (a new best set with the habit), a lap without it proves nothing: such laps are not counted for
@@ -66,6 +72,7 @@ from pitwall.analysis.coaching import (
     HABIT_MIN_LAPS,
     HABIT_RATIO,
     INCIDENT_KIND,
+    LATER_BRAKING_FIXES,
     is_corrective,
     is_habit,
     short_text,
@@ -84,6 +91,7 @@ __all__ = [
     "FIXED_OF",
     "HABIT_WINDOW",
     "IMPROVED_FRACTION",
+    "PROOF_WAIT",
     "STATUS_FIXED",
     "STATUS_FOCUS",
     "STATUS_SEEN",
@@ -102,6 +110,10 @@ HABIT_WINDOW: Final = 5
 # in three is a change; and the habit is not called fixed while it is still there on the latest lap.
 FIXED_CLEAN: Final = 2
 FIXED_OF: Final = 3
+# [H] A habit that stopped but whose laps do not prove it sorted yet (another fault at the corner, or braking later on
+# a first lap that is no faster while the driver adapts) waits this many compared laps for the proof, then leaves the
+# focus without a word: one FIXED_OF window, so the proof can come from laps after the unproven ones.
+PROOF_WAIT: Final = 3
 # [H] "Improving" = at most half of its size when announced: well past the lap-to-lap scatter of one corner's metric
 # (a few km/h, a few metres), so it is real progress, said once.
 IMPROVED_FRACTION: Final = 0.5
@@ -192,12 +204,17 @@ def progress_amount(kind: str, value: float | None) -> str | None:
 
 @dataclass(slots=True)
 class _Lap:
-    """One compared lap of a corner, for one kind: did it fire, and its value and impact when it did; the lap's id."""
+    """One compared lap of a corner, for one kind: did it fire, and its value and impact when it did; the lap's id;
+    whether the corner was clean (no corrective point of any kind there; unknown = not clean); the lap's own time
+    through the corner and the track model version that time was measured with (None = unknown / unversioned)."""
 
     fired: bool
     value: float | None = None
     impact_s: float | None = None
     lap_id: int | None = None
+    clean: bool = False
+    time_s: float | None = None
+    model: int | None = None
 
 
 @dataclass(slots=True)
@@ -219,6 +236,7 @@ class _Habit:
     # laps that could not show it (compared with a lap that had it), and how many in a row (``HabitTracker.update``)
     blind_ids: deque[int] = field(default_factory=lambda: deque(maxlen=2 * HABIT_WINDOW))
     blind_run: int = 0
+    unproven: int = 0  # compared laps in a row it has stopped without proof of a fix (``PROOF_WAIT``)
 
     def counts(self) -> tuple[int, int]:
         return sum(1 for lap in self.laps if lap.fired), len(self.laps)
@@ -247,6 +265,33 @@ class _Habit:
         clean = sum(1 for lap in last if not lap.fired)
         settled = corner_laps - self.status_at >= FIXED_CLEAN
         return bool(last) and not last[-1].fired and clean >= FIXED_CLEAN and settled
+
+    def sorted_proof(self) -> int | None:
+        """How many of the last ``FIXED_OF`` compared laps show the habit sorted (``proves``), or None when they do
+        not prove it: at least ``FIXED_CLEAN`` of them, the latest included."""
+        last = list(self.laps)[-FIXED_OF:]
+        good = [lap for lap in last if self.proves(lap)]
+        if not last or not self.proves(last[-1]) or len(good) < FIXED_CLEAN:
+            return None
+        return len(good)
+
+    def proves(self, lap: _Lap) -> bool:
+        """One lap shows the habit sorted: it did not fire and the corner was clean (no corrective point of any kind:
+        "clean on 2 of the last 3 laps" is true of the corner, not only of this kind). For a fault whose fix is later
+        braking (``LATER_BRAKING_FIXES``) the corner was also faster than on every lap in the window the fault fired
+        on, all times known and measured with the same corner definitions (track model version): later braking is
+        praised only when the corner got faster; unknown stays unknown."""
+        if lap.fired or not lap.clean:
+            return False
+        if self.kind not in LATER_BRAKING_FIXES:
+            return True
+        lost = [x for x in self.laps if x.fired]
+        t = lap.time_s
+        return (
+            t is not None
+            and bool(lost)
+            and all(x.time_s is not None and x.model == lap.model and t < x.time_s for x in lost)
+        )
 
     def blind(self, ref_lap_id: int | None) -> bool:
         """The reference lap ``ref_lap_id`` is a lap where this fault fired (in the window), or a lap that could not
@@ -285,6 +330,8 @@ class HabitTracker:
         eligible: Callable[[Mapping[str, Any]], bool] | None = None,
         lap_id: int | None = None,
         ref_lap_id: int | None = None,
+        corner_times: Mapping[str, float | None] | None = None,
+        model_version: int | None = None,
     ) -> list[dict[str, Any]]:
         """Record one compared lap and return its radio events (``EVENT_ORDER``).
 
@@ -293,6 +340,10 @@ class HabitTracker:
         ``lap_id`` / ``ref_lap_id``: this lap and the reference it was compared with. A lap without a fault proves
         nothing when the reference lap itself had that fault (a new best set with the habit, ``_blind``): such a
         lap is not counted for that habit, so it is never called sorted because the reference moved.
+        ``corner_times``: this lap's own time through each compared corner (``CornerMetrics.segment_time_s``: it does
+        not depend on the reference, which moves with every new best) and ``model_version`` the track model those
+        corners come from; a braking-early habit is only called sorted when the corner got faster
+        (``_Habit.sorted_proof``), so without times it stops without a word.
         ``slots`` is ``focus_slots`` of the radio's limits. ``eligible`` says whether an announcement could pass the
         radio's limits (floors, allowed kinds, a beginner's repeat grace); an ineligible habit stays ``seen`` and
         does not block another from the free slot."""
@@ -308,6 +359,8 @@ class HabitTracker:
                 points.setdefault((str(corner), str(kind)), o)
         names = [str(c) for c in corners] if corners is not None else [c for c, _ in points]
         compared = {c for c in names if c not in incidents}
+        dirty = {c for c, _ in points}  # corners with a corrective point of any kind on this lap
+        times = corner_times or {}
         for c in compared:
             self._corner_laps[c] = self._corner_laps.get(c, 0) + 1
         for h in self._habits.values():
@@ -333,22 +386,31 @@ class HabitTracker:
             h.blind_run = 0
             recorded.add(key)
             h.fired_now = fired is not None
+            t = _num(times.get(h.corner))
             if fired is None:
-                h.laps.append(_Lap(False, lap_id=lap_id))
+                h.laps.append(_Lap(False, lap_id=lap_id, clean=h.corner not in dirty, time_s=t, model=model_version))
             else:
-                h.laps.append(_Lap(True, _num(fired.get("value")), _num(fired.get("impact_s")), lap_id))
+                v, impact = _num(fired.get("value")), _num(fired.get("impact_s"))
+                h.laps.append(_Lap(True, v, impact, lap_id, time_s=t, model=model_version))
                 h.obs = fired
 
         events: list[dict[str, Any]] = []
         ordered = sorted(self._habits.values(), key=lambda h: (h.corner, h.kind))
-        # 1. fixed: a habit that stopped (only a focus habit's is said; its slot frees)
+        # 1. fixed: a habit that stopped and is proven sorted (only a focus habit's is said; its slot frees). One that
+        # stopped without the proof waits PROOF_WAIT laps for it, then is no habit: nothing claimed, the slot frees.
         for h in ordered:
             if (h.corner, h.kind) not in recorded or h.status not in (STATUS_FOCUS, STATUS_SEEN):
                 continue
-            if h.stopped(self._corner_laps.get(h.corner, 0)):
+            if not h.stopped(self._corner_laps.get(h.corner, 0)):
+                h.unproven = 0
+            elif h.sorted_proof() is not None:
                 if h.status == STATUS_FOCUS:
                     events.append(self.event(h, EVENT_FIXED, lap_number))
                 self._set_status(h, STATUS_FIXED, lap_number)
+            else:
+                h.unproven += 1
+                if h.unproven >= PROOF_WAIT:
+                    self._set_status(h, None, lap_number)
         # habits on this lap (one definition: analysis.coaching.is_habit)
         for key, o in points.items():
             again = self._habits.get(key)
@@ -421,10 +483,11 @@ class HabitTracker:
             elif ev == EVENT_STILL and h.status == STATUS_FOCUS:
                 h.still_at = self._corner_laps.get(h.corner, 0)
 
-    def _set_status(self, h: _Habit, status: str, lap_number: int | None) -> None:
+    def _set_status(self, h: _Habit, status: str | None, lap_number: int | None) -> None:
         h.status = status
         h.since_lap = lap_number
         h.status_at = self._corner_laps.get(h.corner, 0)
+        h.unproven = 0
         if status != STATUS_FOCUS:
             h.announced_value = h.announced_impact = h.announced_confidence = None
             h.improving_said = False
@@ -523,7 +586,7 @@ class HabitTracker:
         }
         if event == EVENT_FIXED:
             last = list(h.laps)[-FIXED_OF:]
-            clean = sum(1 for lap in last if not lap.fired)
+            clean = h.sorted_proof() or sum(1 for lap in last if h.proves(lap))
             d.update(clean_laps=clean, clean_of=len(last))
             d["text"] = f"{label}: sorted - clean on {clean} of the last {len(last)} laps."
             d["text_simple"] = f"{long_name}: sorted - clean on your last laps."

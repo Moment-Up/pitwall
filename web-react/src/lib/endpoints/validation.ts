@@ -216,7 +216,7 @@ export interface CueRecord extends RecordBase {
   msg_id: string | null;
   lap: number;
   corner: string;
-  kind: "brake" | "marker";
+  kind: "brake" | "marker" | "reminder";
   heads_up: boolean;
   focus: boolean;
   target_m: number;

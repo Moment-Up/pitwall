@@ -32,7 +32,8 @@ export const RECENT_LAPS = 3;
 export const BIG_ONE_OFF_S = 0.3;
 export const BIG_ONE_OFF_CONFIDENCE = 0.8;
 export const HABIT_RATIO = 0.6;
-/** recap.py LATER_BRAKING_FIXES: a fixed braking-early habit is later braking, praised only when the corner got faster. */
+/** analysis/coaching.py LATER_BRAKING_FIXES: a fixed braking-early habit is later braking, praised only when the corner
+ * got faster. tests/unit/test_motivation_recap.py pins these copies to the Python constants. */
 const LATER_BRAKING_FIXES: ReadonlySet<string> = new Set(["brake_early"]);
 
 export interface CoachingItem {

@@ -373,12 +373,16 @@ class CoachSelection:
         *,
         corners: Sequence[str] | None = None,
         ref_lap_id: int | None = None,
+        corner_times: Mapping[str, float | None] | None = None,
+        model_version: int | None = None,
     ) -> dict[str, Any]:
         """This lap's block. ``compared``: the lap had a usable comparison and is no drill lap (only then does it
         update the habit tracker and replace ``current``; a lap without one has no points, and the screen keeps the
         last lap that had). ``corners``: the corners the comparison had (``LapComparison.corners``), so the tracker
         sees which corners were driven clean; None = only the corners with an observation. ``ref_lap_id``: the lap
-        it was compared with (a reference with the same fault proves no fix, ``HabitTracker.update``)."""
+        it was compared with (a reference with the same fault proves no fix, ``HabitTracker.update``).
+        ``corner_times`` / ``model_version``: the lap's own time through each corner and the track model version (a
+        braking-early habit is called sorted only when its corner got faster)."""
         with self._lock:
             lap_number = _int(lap.get("lap_number"))
             radio = radio_limits(self._limits, self._intensity)
@@ -395,6 +399,8 @@ class CoachSelection:
                     eligible=lambda e: passes_limits(e, lim, lap_number, last),
                     lap_id=_int(lap.get("lap_id")),
                     ref_lap_id=ref_lap_id,
+                    corner_times=corner_times,
+                    model_version=model_version,
                 )
             block = coach_block(
                 lap,

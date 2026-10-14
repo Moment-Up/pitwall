@@ -42,6 +42,7 @@ from pitwall.coach.cues import CueEngine
 from pitwall.coach.habits import (
     EVENT_ORDER,
     HABIT_WINDOW,
+    PROOF_WAIT,
     STILL_AFTER,
     HabitTracker,
     focus_slots,
@@ -216,11 +217,25 @@ def pt(
 CORNERS = ["T1", "T2", "T3", "T4", "T5", "T6"]
 
 
+def lap_times(points: Any) -> dict[str, float | None]:
+    """Each corner's own time on a lap: 10 s, 0.3 s more where the lap has a corrective point (a fault costs time)."""
+    slow = {p["corner"] for p in points if is_corrective(p)}
+    return {c: 10.3 if c in slow else 10.0 for c in CORNERS}
+
+
 def drive(
-    tr: HabitTracker, lap: int, *points: dict[str, Any], slots: int = 1, commit: bool = True
+    tr: HabitTracker,
+    lap: int,
+    *points: dict[str, Any],
+    slots: int = 1,
+    commit: bool = True,
+    times: dict[str, float | None] | None = None,
 ) -> list[dict[str, Any]]:
-    """One compared lap of every corner; the radio picks (commits) every event."""
-    events = tr.update(lap, list(points), CORNERS, slots=slots)
+    """One compared lap of every corner (each corner's time: ``times``, else ``lap_times``); the radio picks
+    (commits) every event."""
+    events = tr.update(
+        lap, list(points), CORNERS, slots=slots, corner_times=lap_times(points) if times is None else times
+    )
     if commit:
         tr.commit(events)
     return events
@@ -363,7 +378,9 @@ def test_a_new_best_with_the_same_fault_never_makes_it_sorted() -> None:
     tr = HabitTracker()
 
     def lap(n: int, ref: int, *points: dict[str, Any]) -> list[dict[str, Any]]:
-        events = tr.update(n, list(points), CORNERS, lap_id=100 + n, ref_lap_id=100 + ref)
+        events = tr.update(
+            n, list(points), CORNERS, lap_id=100 + n, ref_lap_id=100 + ref, corner_times=lap_times(points)
+        )
         tr.commit(events)
         return events
 
@@ -381,6 +398,68 @@ def test_a_new_best_with_the_same_fault_never_makes_it_sorted() -> None:
         lap(n, 1, pt("T2", "brake_early", n, ratio=None))
     lap(4, 1, pt("T2", "brake_early", 4))
     assert lap(5, 1) == [] and kinds(lap(6, 1)) == [("T2", "fixed")]
+
+
+def _braking_early_habit(tr: HabitTracker, model: int | None = None) -> None:
+    """T3 brakes early on laps 1-3 (10.3 s through the corner) and the habit is announced on lap 3."""
+    for lap in (1, 2, 3):
+        pt3 = pt("T3", "brake_early", lap, value=-14.0, ratio=None if lap < 3 else 1.0)
+        events = tr.update(lap, [pt3], CORNERS, corner_times=lap_times([pt3]), model_version=model)
+        tr.commit(events)
+    assert tr.focus()[0]["kind"] == "brake_early"
+
+
+def test_braking_early_is_sorted_only_when_the_corner_got_faster() -> None:
+    """Sorted praises the later braking: said only when the corner was faster on the clean laps than on every lap the
+    habit fired on (CLAUDE.md). A stopped habit waits PROOF_WAIT laps for that proof, then leaves without a word."""
+    tr = HabitTracker()
+    _braking_early_habit(tr)
+    slower = {**lap_times([]), "T3": 10.4}  # braking later, but the corner is no faster
+    assert [drive(tr, lap, times=slower) for lap in (4, 5, 6)] == [[], [], []]
+    assert tr.focus()[0]["corner"] == "T3"  # stopped on lap 5: waiting for the proof
+    assert drive(tr, 3 + 1 + PROOF_WAIT, times=slower) == []
+    assert tr.focus() == [] and tr.habits() == []  # no habit now, and never called "fixed"
+    tr = HabitTracker()
+    _braking_early_habit(tr)
+    assert drive(tr, 4) == [] and kinds(drive(tr, 5)) == [("T3", "fixed")]  # 10.0 s: faster on both
+    for first in (slower, {**lap_times([]), "T3": None}):  # a first lap no faster (or unknown), then faster ones
+        tr = HabitTracker()
+        _braking_early_habit(tr)
+        assert drive(tr, 4, times=first) == [] and drive(tr, 5) == []
+        (fixed,) = drive(tr, 6)
+        assert fixed["habit_event"] == "fixed" and (fixed["clean_laps"], fixed["clean_of"]) == (2, 3)
+
+
+def test_corner_times_from_another_track_model_prove_nothing() -> None:
+    tr = HabitTracker()
+    _braking_early_habit(tr, model=1)
+    said = [tr.update(lap, [], CORNERS, corner_times=lap_times([]), model_version=2) for lap in range(4, 8)]
+    assert said == [[], [], [], []] and tr.focus() == []
+    tr = HabitTracker()
+    _braking_early_habit(tr, model=1)
+    said = [tr.update(lap, [], CORNERS, corner_times=lap_times([]), model_version=1) for lap in (4, 5)]
+    assert kinds(said[1]) == [("T3", "fixed")]
+
+
+def test_sorted_means_the_corner_was_clean() -> None:
+    """ "Clean on 2 of the last 3 laps" is true of the corner: a lap with another fault there proves no fix."""
+    other = pt("T6", "late_throttle", 0, value=30.0, impact=0.1, ratio=None)
+
+    def habit() -> HabitTracker:
+        tr = HabitTracker()
+        for lap in (1, 2):
+            drive(tr, lap, pt("T6", "low_min_speed", lap, ratio=None))
+        assert kinds(drive(tr, 3, pt("T6", "low_min_speed", 3))) == [("T6", "announce")]
+        return tr
+
+    tr = habit()
+    assert [drive(tr, lap, {**other, "lap_number": lap}) for lap in range(4, 8)] == [[], [], [], []]
+    assert tr.focus() == [] and "low_min_speed" not in [h["kind"] for h in tr.habits()]  # stopped, never sorted
+    tr = habit()
+    drive(tr, 4, {**other, "lap_number": 4})  # one lap with another fault there, then two clean laps: sorted
+    assert drive(tr, 5) == [] and kinds(drive(tr, 6)) == [("T6", "fixed")]
+    (fixed,) = [h for h in tr.habits() if h["kind"] == "low_min_speed"]
+    assert fixed["status"] == "fixed"
 
 
 def test_repeated_is_a_pattern_in_the_making() -> None:
@@ -549,6 +628,30 @@ def test_live_state_passes_corners_focus_and_habits_on() -> None:
     for lap in (4, 5):
         live.on_lap_result(*lap_points(lap), comp)
     assert live.snapshot()["coach"]["habits"][0]["status"] == "fixed"
+
+
+def test_live_state_passes_the_corner_times_and_model_version() -> None:
+    """A braking-early habit is sorted on the live path only when the comparison shows its corner faster (the lap's own
+    ``cmp.segment_time_s``) with the same track model version."""
+
+    def comp(t3: float | None, version: int | None = 4) -> dict[str, Any]:
+        corners = [{"corner": c, "cmp": {"segment_time_s": t3 if c == "T3" else 10.0}} for c in CORNERS]
+        return {**COMP, "corners": corners, "ref_lap_id": 1, "model_version": version}
+
+    def run(clean: dict[str, Any]) -> list[Any]:
+        live = LiveState()
+        live.reset_session("s1", "test", False)
+        for lap in (1, 2, 3):
+            point = pt("T3", "brake_early", 0, value=-14.0, ratio=None if lap < 3 else 1.0)
+            live.on_lap_result(*lap_points(lap, point), comp(10.3))
+        blocks = []
+        for lap in (4, 5):
+            live.on_lap_result(*lap_points(lap), clean)
+            blocks.append(live.snapshot()["coach"])
+        return [p.get("habit_event") for b in blocks for p in b["picked"]]
+
+    assert run(comp(10.0)) == ["fixed"]
+    assert run(comp(10.4)) == [] and run(comp(None)) == [] and run(comp(10.0, version=5)) == []
 
 
 def test_the_cue_engine_keeps_focus_and_habits_with_the_comparison() -> None:

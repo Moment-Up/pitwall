@@ -68,11 +68,14 @@ const KIND_WORDS: Record<string, string> = {
   incident: "incident",
 };
 
-/** A cue plan reason in words: "brake_early on 3 of the last 5 lap(s)" -> "braking early · 3 of the last 5 laps".
- * Unknown shapes are returned verbatim. */
+/** A cue plan reason in words: "brake_early on 3 of the last 5 lap(s)" -> "braking early · 3 of the last 5 laps"; a
+ * habit's (coach/cues.py select_habit_corners and corner reminders) "low_min_speed habit (focus), 3 of the last 4
+ * laps" -> "slow minimum speed · 3 of the last 4 laps". Unknown shapes are returned verbatim. */
 export function reasonWords(reason: string | null | undefined): string | null {
   if (!reason) return null;
-  const m = /^([a-z_]+) on (\d+) of the last (\d+) lap\(s\)$/.exec(reason.trim());
+  const m =
+    /^([a-z_]+) on (\d+) of the last (\d+) lap\(s\)$/.exec(reason.trim()) ??
+    /^([a-z_]+) habit \([a-z]+\), (\d+) of the last (\d+) laps?$/.exec(reason.trim());
   if (!m) return reason;
   const words = KIND_WORDS[m[1]!] ?? m[1]!.replace(/_/g, " ");
   const total = Number(m[3]);

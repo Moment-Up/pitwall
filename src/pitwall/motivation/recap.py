@@ -45,7 +45,13 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from pitwall.analysis.coaching import INCIDENT_KIND, is_big_one_off, is_corrective, is_incident
+from pitwall.analysis.coaching import (
+    INCIDENT_KIND,
+    LATER_BRAKING_FIXES,
+    is_big_one_off,
+    is_corrective,
+    is_incident,
+)
 from pitwall.drivers import CoachingLimits
 from pitwall.motivation import goals as G
 from pitwall.motivation import rules
@@ -75,8 +81,6 @@ MIN_REPEAT = 2
 # (Went well: on none of them): the habit tracker's window for "sorted" (coach/habits.py FIXED_OF). The radio calls
 # it sorted mid-run from 2 clean laps of 3; the report, the session's verdict, wants all 3 clean.
 RECENT_LAPS = 3
-# A fixed braking-early habit means later braking: it is praised only when the corner got faster (CLAUDE.md).
-LATER_BRAKING_FIXES = frozenset({"brake_early"})
 MIN_GAIN_MS = 100
 WITHIN_PB_MS = 100
 

@@ -17,13 +17,14 @@
 
 import { cornerLabelOf } from "./corner";
 import { AI_REFERENCE, fieldPlanWhy, isFieldPlan } from "./plan";
-import type { CueSnapshot, TrackModelNext } from "./types";
+import type { CueKind, CueSnapshot, TrackModelNext } from "./types";
 import { MINUS, UNKNOWN, distanceShort, finite, metres, sentence } from "./text";
 
 export interface CueLine {
-  kind: "brake" | "marker";
-  /** Chip word: BRAKE (solid behind-red), MARKER (neutral), or AI REF (neutral) for an AI field heads-up. */
-  chip: "BRAKE" | "MARKER" | "AI REF";
+  kind: CueKind;
+  /** Chip word: BRAKE (solid behind-red), MARKER (neutral), FOCUS (neutral, a focus habit's corner reminder: never
+   * braking red, it says nothing about where to brake), or AI REF (neutral) for an AI field heads-up. */
+  chip: "BRAKE" | "MARKER" | "FOCUS" | "AI REF";
   /** The call is the AI field's heads-up (an AI reference), not one from the driver's reference lap. */
   ai: boolean;
   text: string;
@@ -45,6 +46,16 @@ export interface CueBandView {
   radioOff: boolean;
   /** The calls are the AI field's heads-ups (AI reference): an AI REF chip / "AI reference" words, never FOCUS. */
   ai: boolean;
+}
+
+/** The chip word for a call of the driver's own plan (cueView: an AI field heads-up is "AI REF" instead). */
+export function cueChip(kind: CueKind): "BRAKE" | "MARKER" | "FOCUS" {
+  return kind === "brake" ? "BRAKE" : kind === "reminder" ? "FOCUS" : "MARKER";
+}
+
+/** What a call is, for a screen reader: "Brake", "Reminder" or "Marker". */
+export function cueWord(kind: CueKind): string {
+  return kind === "brake" ? "Brake" : kind === "reminder" ? "Reminder" : "Marker";
 }
 
 /** Mute reasons that mean "no radio is listening", not "the calls are paused". */
@@ -148,7 +159,7 @@ export function cueView(
     return {
       next: {
         kind: n.kind,
-        chip: ai ? "AI REF" : n.kind === "brake" ? "BRAKE" : "MARKER",
+        chip: ai ? "AI REF" : cueChip(n.kind),
         ai,
         text: ai ? n.text : cueText(n.text, n.corner, model),
         inM,

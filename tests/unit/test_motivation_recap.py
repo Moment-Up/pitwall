@@ -6,10 +6,12 @@ from __future__ import annotations
 
 import re
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Any
 
 import pytest
 
+from pitwall.analysis import coaching
 from pitwall.drivers import coaching_limits
 from pitwall.motivation import recap as R
 from pitwall.motivation import rules
@@ -568,3 +570,22 @@ def test_an_older_session_names_its_own_week_not_this_week() -> None:
 
 def vars_of(i: R.RecapInput) -> dict[str, Any]:
     return {f: getattr(i, f) for f in R.RecapInput.__dataclass_fields__}
+
+
+def test_the_dashboard_mirror_keeps_the_same_constants() -> None:
+    """web-react/src/lib/review/coaching.ts repeats the report's and the radio's habit rules for the dashboard: its
+    copies of the constants must be these (a change here without the mirror would make screen and report disagree)."""
+    ts = (Path(__file__).resolve().parents[2] / "web-react" / "src" / "lib" / "review" / "coaching.ts").read_text()
+
+    def const(name: str) -> float:
+        m = re.search(rf"export const {name} = ([0-9.]+);", ts)
+        assert m is not None, name
+        return float(m.group(1))
+
+    assert (const("MIN_REPEAT"), const("RECENT_LAPS")) == (R.MIN_REPEAT, R.RECENT_LAPS)
+    assert const("BIG_ONE_OFF_S") == coaching.BIG_ONE_OFF_S
+    assert const("BIG_ONE_OFF_CONFIDENCE") == coaching.BIG_ONE_OFF_CONFIDENCE
+    assert const("HABIT_RATIO") == coaching.HABIT_RATIO
+    later = re.search(r"LATER_BRAKING_FIXES[^=]*= new Set\(\[([^\]]*)\]\)", ts)
+    assert later is not None and set(re.findall(r'"(\w+)"', later.group(1))) == set(coaching.LATER_BRAKING_FIXES)
+    assert R.LATER_BRAKING_FIXES is coaching.LATER_BRAKING_FIXES  # one definition

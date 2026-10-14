@@ -147,6 +147,9 @@ describe("reason words", () => {
     expect(reasonWords("late_throttle on 2 of the last 4 lap(s)")).toBe("late to full throttle · 2 of the last 4 laps");
     expect(reasonWords("new_kind on 1 of the last 1 lap(s)")).toBe("new kind · 1 of the last 1 lap");
     expect(reasonWords("braking zone")).toBe("braking zone");
+    // habits (coach/cues.py select_habit_corners, corner reminders)
+    expect(reasonWords("brake_early habit (seen), 3 of the last 4 laps")).toBe("braking early · 3 of the last 4 laps");
+    expect(reasonWords("low_min_speed habit (focus), 4 of the last 5 laps")).toBe("slow minimum speed · 4 of the last 5 laps");
     expect(reasonWords(null)).toBeNull();
     expect(focusReasonOf(CUES(), "T1")).toBeNull();
   });
