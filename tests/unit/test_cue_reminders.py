@@ -271,7 +271,7 @@ def test_braking_calls_follow_braking_habits_up_to_the_profile_cap() -> None:
     assert [c for c, _ in select_habit_corners(habits, zones, limits=floor)] == ["T3", "T1"]
     unknown = [habit("T1", impact=None)]
     assert select_habit_corners(unknown, zones, limits=floor) == []  # unknown is not small
-    assert [c for c, _ in select_habit_corners(unknown, zones)] == ["T1"]
+    assert select_habit_corners(unknown, zones) == []  # nor worth a call without a floor (HABIT_MIN_IMPACT_S)
     narrowed = FocusLimits(allowed_kinds=frozenset({"overspeed_apex", "low_min_speed"}))
     assert [c for c, _ in select_habit_corners(habits, zones, limits=narrowed)] == ["T2"]
     assert [c for c, _ in select_habit_corners(habits, zones, max_corners=1)] == ["T2"]
@@ -706,3 +706,73 @@ def test_policy_row_names_braking_calls_and_corner_reminders() -> None:
     assert row.label == "Braking calls and corner reminders" and row.setting == "Braking calls"
     assert "corner reminder" in row.note and "ends 1 s before" in row.note
     assert f"{REMINDER_END_MARGIN_S:.0f} s" in row.note
+
+
+# ============================================================================================== review fixes
+def test_braking_calls_need_the_confidence_floor() -> None:
+    """A braking call is time-critical: the habit's confidence (the median over the laps it fired) must clear the
+    engine's floor (0.6) and the profile's (a beginner's 0.75); unknown does not."""
+    zones = {"T6": 1000.0}
+    h = {**habit("T6", "brake_early", "seen"), "confidence": 0.62}
+    beginner = FocusLimits.from_profile(coaching_limits("beginner"))
+    assert select_habit_corners([h], zones, limits=beginner) == []
+    assert [c for c, _ in select_habit_corners([h], zones)] == ["T6"]
+    assert select_habit_corners([{**h, "confidence": 0.51}], zones) == []
+    assert select_habit_corners([{**h, "confidence": None}], zones) == []
+    assert [c for c, _ in select_habit_corners([{**h, "confidence": 0.8}], zones, limits=beginner)] == ["T6"]
+
+
+def test_calls_and_reminders_follow_the_habit_impact_floor() -> None:
+    """Gap 1: a habit costing under HABIT_MIN_IMPACT_S (0.05 s) on average gets no braking call and no reminder (the
+    radio does not announce it either); at the floor it does."""
+    zones = {"T1": 1000.0, "T2": 2000.0}
+    tiny = [low("T1", impact=0.04), habit("T2", "brake_early", "seen", impact=0.04)]
+    plan = plan_for(tiny, zones=zones)
+    assert plan.cues == () and plan.reason == NO_HABITS
+    assert plan_for([low("T1", impact=None)], zones=zones).cues == ()  # unknown is not worth a word
+    ok = [low("T1", impact=0.05), habit("T2", "brake_early", "seen", impact=0.05)]
+    assert [c.kind for c in plan_for(ok, zones=zones).cues] == [CueKind.REMINDER, CueKind.BRAKE]
+
+
+def test_no_call_or_reminder_for_a_habit_that_cannot_be_measured() -> None:
+    """A habit the latest lap could not show (compared with a lap that had it: ``blind``) gets no call aimed at that
+    reference's braking point and no reminder until it is measured again."""
+    zones = {"T1": 1000.0, "T2": 2000.0}
+    blind = [{**low("T1"), "blind": True}, {**habit("T2", "brake_early", "focus"), "blind": True}]
+    assert plan_for(blind, zones=zones).cues == ()
+    seen = [{**low("T1"), "blind": False}, {**habit("T2", "brake_early", "focus"), "blind": False}]
+    assert len(plan_for(seen, zones=zones).cues) == 2
+
+
+def test_a_beginner_gets_one_call_a_lap_reminders_included() -> None:
+    """A beginner's profile allows one coaching point a lap: a reminder and a braking call share that one."""
+    zones = {"T1": 1000.0, "T2": 2000.0}
+    habits = [low("T1"), habit("T2", "brake_early", "seen")]
+    beginner = FocusLimits.from_profile(coaching_limits("beginner"))
+    plan = plan_for(habits, zones=zones, limits=beginner)
+    assert [(c.corner, c.kind) for c in plan.cues] == [("T1", CueKind.REMINDER)]  # the focus habit first
+    assert len(plan_for(habits, zones=zones).cues) == 2
+    # two reminders and a braking call: capped at the profile's corners together
+    two = [low("T1"), {**low("T2"), "kind": "late_throttle", "value": 40.0}, habit("T3", "brake_early", "seen")]
+    capped = plan_for(two, zones={**zones, "T3": 2600.0}, limits=FocusLimits(max_corners=2))
+    assert [c.kind for c in capped.cues] == [CueKind.REMINDER, CueKind.REMINDER]
+
+
+async def test_a_reminder_is_not_said_wheel_to_wheel() -> None:
+    """A corner reminder is coaching: never started with a car alongside (routine talk is not either); a braking call
+    still is (time-critical)."""
+    hub, _client, _sent, _ = await make_hub("focus")
+    install_plan(hub, [low("T1"), habit("T2", "brake_early", "seen")])
+    await settle()
+    hub.spotter.traffic = lambda: True  # type: ignore[method-assign]
+    now = time.monotonic()
+    by_kind = {c.kind: c for c in hub.cues.plan.cues}
+
+    def event(spec: CueSpec) -> CueEvent:
+        return CueEvent(1, spec, 3, 3, now, None, 600.0, V, spec.anticipation_s, 0.3, 0.0, "pcm", 0.0, REF_ID)
+
+    assert hub._cue_block_reason(event(by_kind[CueKind.REMINDER]), now) == "car alongside"
+    assert hub._cue_block_reason(event(by_kind[CueKind.BRAKE]), now) is None
+    hub.spotter.traffic = lambda: None  # type: ignore[method-assign]
+    assert hub._cue_block_reason(event(by_kind[CueKind.REMINDER]), now) is None
+    await hub.stop()

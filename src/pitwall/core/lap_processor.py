@@ -137,6 +137,15 @@ _NOT_RECENT = frozenset(
 )
 
 
+def habit_evidence(lap: LapTrace, under_sc: bool) -> bool:
+    """Whether a compared lap says something about the driver's habits (``coach.habits``): not a pit-in, out,
+    flashback, standing-start, rolling-start, reset or stale lap (``_NOT_RECENT``), not invalidated by the game and
+    not under a safety car or VSC. Such laps are still compared and shown; a safety-car lap is 50 km/h down at every
+    apex and an out lap brakes early on cold tyres, which is no habit."""
+    invalid = LapFlag.INVALID in lap.flags or lap.valid is False
+    return not (lap.flags & _NOT_RECENT) and not invalid and not under_sc
+
+
 @dataclass(slots=True)
 class CoachrefContext:
     """What the coachref service's tasks need about a session (``LapProcessor.coachref_context``): the context of
@@ -255,6 +264,7 @@ class LapProcessor:
         comp_dict["ref_lap_id"] = ref_id
         comp_dict["cmp_lap_id"] = lap_id
         comp_dict["model_version"] = model.version  # the corners' definitions (habits compare corner times across laps)
+        comp_dict["habit_evidence"] = habit_evidence(lap, under_sc)  # coach.habits counts representative laps only
         comp_dict["corner_text"] = {k: {"short": t.short, "long": t.long, "voice": t.voice} for k, t in texts.items()}
         # --- coachref ---
         if desc is not None:

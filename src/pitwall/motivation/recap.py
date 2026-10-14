@@ -533,8 +533,10 @@ def _hygiene(laps: Sequence[LapRow]) -> Thing | None:
 def work_on(inp: RecapInput) -> Thing | None:
     """The top repeated point that is still there (``MIN_REPEAT`` laps or more, on one of its corner's last
     ``RECENT_LAPS`` compared laps), else the top big one-off (``is_big_one_off``: the one-offs the radio says), else
-    what the laps say (laps that did not count, no clean lap, a single clean lap). A fixed point is never the one to
-    work on (it went well), and a small one-off never is either."""
+    what the laps say (laps that did not count; and, when no lap was compared at all, no clean lap or a single clean
+    lap). A fixed point is never the one to work on (it went well), and a small one-off never is either. When laps
+    were compared but nothing qualifies, "no clean lap, nothing to compare" or "drive two so they can be compared"
+    would be false (a lap can be compared with a reference from another session): nothing is said (None)."""
     ranked = rank_points(inp.observations, inp.compared, False, inp.limits)
     laps = corner_laps(inp.observations, inp.corner_laps)
     habit = next((p for p in ranked if p.seen >= MIN_REPEAT and _still_there(p, laps)), None)
@@ -546,6 +548,8 @@ def work_on(inp: RecapInput) -> Thing | None:
     hygiene = _hygiene(inp.laps)
     if hygiene is not None:
         return hygiene
+    if inp.compared > 0 or ranked:
+        return None  # laps were compared: "nothing to compare" is not true (build_recap: nothing clear to work on)
     clean = [lap for lap in inp.laps if lap.clean and lap.lap_time_ms is not None]
     if not clean:
         return Thing(

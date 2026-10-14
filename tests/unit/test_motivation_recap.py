@@ -589,3 +589,26 @@ def test_the_dashboard_mirror_keeps_the_same_constants() -> None:
     later = re.search(r"LATER_BRAKING_FIXES[^=]*= new Set\(\[([^\]]*)\]\)", ts)
     assert later is not None and set(re.findall(r'"(\w+)"', later.group(1))) == set(coaching.LATER_BRAKING_FIXES)
     assert R.LATER_BRAKING_FIXES is coaching.LATER_BRAKING_FIXES  # one definition
+
+
+def test_compared_laps_with_nothing_to_work_on_say_nothing() -> None:
+    """Gap 2: laps were compared (here with a reference from another session) but no habit or big one-off qualifies.
+    "No clean lap this time, so there is nothing to compare yet" and "drive two or more so they can be compared"
+    would be false: Work on says nothing (why: nothing clear to work on). Without a comparison they still apply."""
+    small = obs(1, "low_min_speed", "Turn 2", impact=0.11)
+    good = obs(1, "exit_gain", "Turn 2", positive=True, impact=0.83)
+    dirty = [lap(1, 71_000, sid="n", clean=False), lap(2, None, sid="n", flags=["incomplete"])]
+    rec = build(inp(sess("n"), dirty, None, observations={dirty[0].id: [small, good]}, compared=1, counts=False))
+    assert rec.work_on is None and rec.why["work_on"] == R.WHY_NOTHING_WORK
+    assert rec.went_well is not None and rec.went_well.observation_key == "Turn 2:exit_gain"
+    one = [lap(1, 71_000, sid="m")]
+    rec = build(inp(sess("m"), one, None, observations={one[0].id: [small]}, compared=1, counts=False))
+    assert rec.work_on is None and rec.why["work_on"] == R.WHY_NOTHING_WORK
+    # compared, nothing at all to say about the corners: still not "nothing to compare"
+    rec = build(inp(sess("k"), [lap(1, 71_000, sid="k", clean=False)], None, compared=1, counts=False))
+    assert rec.work_on is None
+    # not compared: the laps' own lines are true and stay
+    w = build(inp(sess("q"), [lap(1, 71_000, sid="q", clean=False)], None, counts=False)).work_on
+    assert w is not None and w.source == "no_clean_lap"
+    w = build(inp(sess("r"), [lap(1, 71_000, sid="r")], None, counts=False)).work_on
+    assert w is not None and w.source == "single_clean_lap"

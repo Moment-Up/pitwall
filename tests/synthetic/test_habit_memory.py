@@ -148,3 +148,38 @@ def test_a_reference_chosen_between_laps_re_bases_the_memory(
     assert set(after) == settled - {ids[4]}  # and laps measured on other corner definitions
     assert after[ids[3]] == pytest.approx(0.0, abs=2.0) and after[ids[5]] == pytest.approx(0.0, abs=2.0)
     assert after[ids[2]] > 10.0  # a clean lap brakes later than the new (early) reference
+
+
+def test_pit_safety_car_flashback_and_invalid_laps_are_no_habit_evidence(
+    session: DecodedSession, run: tuple[LapProcessor, LiveState, DbWriter, list[Any]], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The comparison says whether a lap is evidence of the driver's habits (``habit_evidence``): pit-in, out,
+    flashback, standing-start and invalid laps and laps under a safety car are compared and shown, but the habit
+    tracker does not count them (a safety-car lap is 50 km/h down everywhere, an out lap brakes early). Here the T3
+    habit's laps 4-6 are an out lap, a flashback lap and a safety-car lap, and lap 3 is invalid: the habit is only
+    announced once laps 8-10 show it (before, it was announced on lap 6)."""
+    from dataclasses import replace
+
+    from pitwall.analysis.laps import LapFlag
+
+    proc, _live, _writer, notes = run
+    driving = {"lap": 0}
+    monkeypatch.setattr(proc, "_under_safety_car", lambda sid: driving["lap"] == 6)  # a safety car on lap 6
+    marked = {4: {LapFlag.PIT_OUT}, 5: {LapFlag.FLASHBACK}}
+    results = {}
+    for lap in session.laps:
+        driving["lap"] = lap.lap_number
+        flags = marked.get(lap.lap_number)
+        job_lap = replace(lap, flags=set(lap.flags) | flags) if flags else lap
+        if lap.lap_number == 3:
+            job_lap = replace(lap, valid=False)
+        results[lap.lap_number] = proc.process(LapJob("h", job_lap, lap_ctx(session.info)))
+    evidence = {n: r["comparison"]["habit_evidence"] for n, r in results.items() if r["comparison"]}
+    assert evidence == {2: True, 3: False, 4: False, 5: False, 6: False, 7: True, 8: True, 9: True, 10: True}
+    corner = next(o["corner"] for o in results[8]["observations"] if o["kind"] == "brake_early")
+    coach = {p["lap"]["lap_number"]: p["coach"] for p in notes}
+    events = {n: [(x["corner"], x.get("habit_event")) for x in c["picked"]] for n, c in coach.items()}
+    assert all((corner, "announce") not in events[n] for n in range(1, 10)), events
+    assert events[10] == [(corner, "announce")]
+    (h,) = coach[10]["habits"]
+    assert (h["corner"], h["laps_seen"], h["laps"]) == (corner, 3, 5)  # laps 2, 7 (clean), 8, 9, 10

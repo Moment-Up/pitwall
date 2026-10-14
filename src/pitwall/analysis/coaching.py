@@ -17,7 +17,8 @@ Design notes:
   ``Observation.to_dict()`` shapes. A habit is a corrective point seen on at least ``HABIT_RATIO`` of the last
   laps (``HABIT_MIN_LAPS`` values or more, this lap included); a big one-off is a corrective point that is not a
   habit but cost at least ``BIG_ONE_OFF_S`` with ``BIG_ONE_OFF_CONFIDENCE``. Every other corrective point is a
-  small one-off: shown on screen, not said on the radio.
+  small one-off: shown on screen, not said on the radio. A habit is said (and called before its corner) only when
+  its mean cost is at least ``HABIT_MIN_IMPACT_S``.
 * Structural guard (``keeps_point``): a corrective observation is only ever kept when it lost at least
   ``MIN_TIME_LOSS_S`` at its corner, whatever rule produced it.
 * Every observation is written three ways from the same facts (D6, docs/ui/design-spec.md): ``text`` (full, with
@@ -63,6 +64,11 @@ BIG_ONE_OFF_S = 0.30
 # [H] ...and measured clearly: the delta clears its rule threshold and twice the sample resolution by a margin
 # (``_mag_conf`` 0.8 = 60 % past the floor), so a single lap's call is never a measurement artefact.
 BIG_ONE_OFF_CONFIDENCE = 0.8
+# [H] A habit is worth the radio's words (an announcement, its "still", a braking call or a corner reminder) only when
+# it costs at least this much on average over the laps it happened: five hundredths a lap is about a second over a
+# stint, above one corner's run-to-run noise; below it the habit stays on the screen. One floor, so the radio, the
+# braking calls, the reminders and the screen agree on what is worth saying.
+HABIT_MIN_IMPACT_S = 0.05
 # Faults whose fix is braking later: "sorted" praises later braking, so it is said (radio, report) only when the corner
 # also got faster (the rule above: later braking is praised only when the corner segment was faster).
 LATER_BRAKING_FIXES = frozenset({"brake_early"})

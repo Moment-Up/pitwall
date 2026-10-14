@@ -130,6 +130,7 @@ def habit(
     impact: float | None = 0.2,
     seen: int = 3,
     laps: int = 4,
+    confidence: float | None = 0.9,
 ) -> dict[str, Any]:
     """A habit entry as the coach block lists it (``coach.habits.HabitTracker.habits``)."""
     return {
@@ -143,6 +144,8 @@ def habit(
         "value": value,
         "unit": "km/h" if kind in ("low_min_speed", "overspeed_apex") else "m",
         "impact_s": impact,
+        "confidence": confidence,
+        "blind": False,
         "since_lap": 4,
         "short": None,
     }

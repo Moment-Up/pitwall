@@ -513,6 +513,8 @@ class LiveState:
             ref_lap_id=ref_id if isinstance(ref_id, int) and not isinstance(ref_id, bool) else None,
             corner_times=_corner_times(comparison) if compared else None,
             model_version=version if isinstance(version, int) and not isinstance(version, bool) else None,
+            # pit, out, flashback, standing-start, invalid and safety-car laps are shown, not counted as habits
+            habit_evidence=(comparison or {}).get("habit_evidence") is not False,
         )
         if drill is not None:
             point = drill.get("point")

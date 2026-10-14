@@ -978,7 +978,8 @@ def test_habit_events_on_the_radio() -> None:
     assert coaching_text(early) == "Turn 6, losing 0.31 s: braking 13 m earlier. 3 of the last 4 laps."
     assert "than Sam" in coaching_text({**early, "ref_name": "Sam"})
     later = {**better, "kind": "brake_late_overdrive", "value": 6.0}
-    assert coaching_text(later) == "Turn 6 better: braking 6 m later now, was 14."  # describes, never advises
+    # describes, never advises: progress on braking too late is braking earlier, so never "better ... braking later"
+    assert coaching_text(later) == "Turn 6 better: going in 6 m too deep now, was 14."
     for e in (announce, better, still, fixed, early, later):
         for simple in (False, True):
             words = spoken_word_count(to_speech(coaching_text(e, simple=simple)))

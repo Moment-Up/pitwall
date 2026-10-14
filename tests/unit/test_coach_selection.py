@@ -271,7 +271,9 @@ def test_repeat_grace_limits_the_radio_not_the_screen() -> None:
     second = sel.select(LAP, [big_a, big_d], compared=True)
     assert ids(second["picked"]) == ["d"]  # T1 was coached last lap: a lap's grace on the radio
     assert second["by_corner"]["T1"]["id"] == "a" and not second["by_corner"]["T1"]["picked"]
-    assert second["by_corner"]["T1"]["one_off"] and second["by_corner"]["T1"]["habit"] is None
+    # the same fault on the corner's last two laps: not a habit yet, and no longer "Once" either (one_off = one lap)
+    assert not second["by_corner"]["T1"]["one_off"] and second["by_corner"]["T1"]["habit"] is None
+    assert second["by_corner"]["T4"]["one_off"]  # T4's first lap with it
 
 
 def test_selection_keeps_the_last_compared_lap_and_resets() -> None:

@@ -16,11 +16,17 @@ shows for it (docs/ui/design-spec.md P7, section 13 D6). Deterministic, no LLM, 
   coaching points: the driver knows they spun. Without a seated driver the limits are
   ``coaching_limits("advanced", intensity)``, which ``drivers`` documents as identical to the radio before profiles
   existed. Without a tracker (``pick_points`` from older callers) a habit is said like a big one-off.
-* **Habits** - ``CoachSelection`` owns the session's ``habits.HabitTracker``: updated once per compared lap (not on
-  uncompared or drill laps), reset with the session and on a driver change, never on a reference change. Its focus
-  slots follow the radio (``habits.focus_slots``: none when quiet, one for a beginner and at normal, two at
-  detailed). The block carries its ``habits`` and ``focus`` lists, and every point says whether it is a habit
-  (``habit``: status and counts) or a one-off (``one_off``).
+* **Habits** - ``CoachSelection`` owns the session's ``habits.HabitTracker``: updated once per compared lap that is
+  evidence of the driver's habits (not on uncompared or drill laps, nor on pit-in, out, flashback, standing-start,
+  invalid and safety-car laps: ``habit_evidence``), reset with the session and on a driver change, never on a
+  reference change. Its focus slots follow the radio (``habits.focus_slots``: none when quiet, one for a beginner and
+  at normal, two at detailed). The block carries its ``habits`` and ``focus`` lists, and every point says whether it
+  is a habit (``habit``: status and counts; its ``consistency`` is then the tracker's count, so the card's chip and
+  evidence line agree) or a one-off (``one_off``: a fault seen on one lap only).
+* **What the radio said** - the tracker records the habit lines the radio said (``HabitTracker.commit``). Without a
+  radio that is the pick; with one (``commit_on_delivery``, set by the radio hub) it is the moment the line goes on
+  air (``confirm_said``), so a line held until it expired (quiet mode, the lap's budget, no radio connected) never
+  makes a habit the focus: it is proposed again.
 * **By corner** - for each corner, the point the coach card shows when that corner is next: the picked point
   when the corner was picked (so screen and radio agree), else the corner's best point that passes the same
   filters (the per-lap budget and the repeat grace limit what is *said*, not what may be *shown*). Corrective
@@ -46,16 +52,19 @@ Block contract (JSON; ``coach_block``)::
      focus: [habit + {reminder}]}     # the habits being worked on, with their corner reminder (or None)
 
     point = slim observation + {picked, habit: {status, laps_seen, laps} | None, one_off: bool}
+            (a habit's point carries the tracker's count in consistency / consistency_ratio)
             (+ for a tracker event: habit_event "announce"|"improving"|"fixed"|"still", was_value, clean_laps,
             clean_of)
     habit = {corner, corner_label, corner_voice, kind, status: "focus"|"seen"|"fixed", laps_seen, laps,
-             value (median of the laps it fired), unit, impact_s (mean), since_lap, short}
+             value (a focus habit: the number the radio said; else the median of the laps it fired), unit,
+             impact_s (mean), confidence (median), blind (the latest lap could not show it), since_lap, short}
     reminder = {parts: [spoken corner, phrase], text: "T6: apex speed, 12 down"} | None
 """
 
 from __future__ import annotations
 
 import dataclasses
+import re
 import threading
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from dataclasses import replace
@@ -67,6 +76,9 @@ from pitwall.drivers import COACHING_INTENSITIES, CoachingLimits, apply_coaching
 
 DEFAULT_SKILL = "advanced"  # no seated driver: the pre-profile radio (drivers.coaching_limits)
 _UNBOUNDED = 1_000_000
+# Picked habit lines kept for the radio's confirmation (``CoachSelection.confirm_said``): a few laps' worth; a line
+# unsaid by then has expired on the radio (``voice.proactive.LAP_MESSAGE_TTL_S``) or was superseded by a newer lap's.
+_UNSAID_KEPT = 8
 # What the coach card, the Ready card and the Session complete card read (types.ts ``ObservationNext``).
 COACH_FIELDS = (
     "id",
@@ -232,13 +244,29 @@ def _int(v: object) -> int | None:
     return v if isinstance(v, int) and not isinstance(v, bool) else None
 
 
+_HITS = re.compile(r"^\s*(\d+) of the last \d+ laps?\b")
+
+
+def _hits(consistency: object) -> int | None:
+    """Laps the analysis saw the fault on ("2 of the last 4 laps" -> 2), or None."""
+    m = _HITS.match(consistency) if isinstance(consistency, str) else None
+    return int(m.group(1)) if m else None
+
+
 def _tag(d: dict[str, Any], tracker: HabitTracker | None) -> dict[str, Any]:
     """A block point's ``habit`` (``{status, laps_seen, laps}`` when it is a habit now; a "sorted" line keeps its
-    ``fixed`` status; None without a tracker) and ``one_off`` (corrective and no habit)."""
+    ``fixed`` status; None without a tracker) and ``one_off``: a corrective point seen on one lap only (not a habit,
+    and neither the tracker's window nor the analysis's count saw it on another lap). A habit's point says the
+    tracker's count (``consistency``), as its chip does: one count per card."""
     event = d.get("habit_event")
     corner, kind = d.get("corner"), d.get("kind")
     d["habit"] = None if tracker is None else tracker.habit_info(corner, kind, fixed=event is not None)
-    d["one_off"] = event is None and is_corrective(d) and d["habit"] is None and not is_habit(d)
+    h = d["habit"]
+    if event is None and h is not None and h["laps"] > 0:
+        d["consistency"] = f"{h['laps_seen']} of the last {h['laps']} laps"
+        d["consistency_ratio"] = round(h["laps_seen"] / h["laps"], 2)
+    once = (tracker is None or tracker.fired_count(corner, kind) <= 1) and (_hits(d.get("consistency")) or 0) <= 1
+    d["one_off"] = event is None and is_corrective(d) and h is None and not is_habit(d) and once
     return d
 
 
@@ -251,10 +279,14 @@ def coach_block(
     intensity: str = "normal",
     tracker: HabitTracker | None = None,
     events: Sequence[Mapping[str, Any]] | None = None,
+    commit: bool = True,
+    counted: bool = True,
 ) -> dict[str, Any]:
     """D6 ``coach`` block for one lap (contract in the module docstring). Screen and radio share it, so call it
     exactly once per lap: unless the radio is quiet it records the picked corners in ``last_coached`` (the caller's
-    per-session state) and commits the picked tracker events to ``tracker`` (``HabitTracker.commit``).
+    per-session state) and, with ``commit``, commits the picked tracker events to ``tracker``
+    (``HabitTracker.commit``; without it the caller commits them when the radio says them). ``counted``: the
+    tracker counted this lap (False: a lap that is no habit evidence, ``CoachSelection.select``).
 
     ``intensity`` is the radio's coaching intensity: the budget when ``limits`` is None (no seated driver, as on
     the radio), and a quiet radio with a seated driver says nothing either. ``tracker`` / ``events``: the session's
@@ -275,13 +307,13 @@ def coach_block(
             # a focus habit (its reminder says it), or the same fault as on the corner's previous lap (a pattern in
             # the making: the habit is announced when it is one, never the same sentence two laps running)
             corner, kind = o.get("corner"), o.get("kind")
-            return tracker.in_focus(corner, kind) or tracker.repeated(corner, kind)
+            return tracker.in_focus(corner, kind) or tracker.repeated(corner, kind, counted=counted)
 
         picked = pick_points(observations, lim, lap_number, last_coached, events=list(events or ()), skip=not_one_off)
     if not quiet:
         if last_coached is not None:
             record_coached(picked, lap_number, last_coached)
-        if tracker is not None:
+        if tracker is not None and commit:
             tracker.commit(picked)
     picked_ids = {id(o) for o in picked}
     by_corner = corner_points(observations, radio, lap_number, picked)
@@ -318,6 +350,8 @@ class CoachSelection:
         self._current: dict[str, Any] | None = None
         self._intensity = "normal"  # the radio's coaching intensity (set_radio_intensity)
         self._habits = HabitTracker()
+        self._on_delivery = False  # commit_on_delivery: a radio says the habit lines (confirm_said)
+        self._unsaid: dict[str, dict[str, Any]] = {}  # picked habit lines not said yet, by id (newest last)
 
     @property
     def limits(self) -> CoachingLimits | None:
@@ -338,6 +372,7 @@ class CoachSelection:
             if self._driver_known and driver_id != self._driver_id:
                 self._current = None
                 self._habits.reset()  # the previous driver's habits are not this driver's
+                self._unsaid.clear()
             self._driver_known = True
             self._driver_id = driver_id
             self._limits = limits
@@ -356,6 +391,33 @@ class CoachSelection:
             self._last_coached.clear()
             self._current = None
             self._habits.reset()
+            self._unsaid.clear()
+
+    @property
+    def commits_on_delivery(self) -> bool:
+        return self._on_delivery
+
+    def commit_on_delivery(self, on: bool) -> None:
+        """A radio says the habit lines (the radio hub, at start): the tracker records a line when it goes on air
+        (``confirm_said``), not when it is picked, so a line the radio never said (held in quiet mode or by the lap's
+        budget until it expired, no radio connected) never makes a habit the focus. Off (no radio): at the pick."""
+        with self._lock:
+            self._on_delivery = on
+            self._unsaid.clear()
+
+    def confirm_said(self, point_id: object) -> bool:
+        """The radio put the habit line ``point_id`` (a picked point's ``id``) on air: record it in the tracker
+        (``HabitTracker.commit``) and refresh the current block's ``habits`` / ``focus``. False when it is no picked
+        habit line waiting to be said (already said, from an earlier session or seat, or not a habit line)."""
+        with self._lock:
+            ev = self._unsaid.pop(str(point_id), None) if isinstance(point_id, str) else None
+            if ev is None:
+                return False
+            self._habits.commit([ev])
+            cur = self._current
+            if cur is not None:
+                self._current = {**cur, "habits": self._habits.habits(), "focus": self._habits.focus()}
+            return True
 
     # --- coachref ---
     def set_current(self, block: dict[str, Any]) -> None:
@@ -375,10 +437,13 @@ class CoachSelection:
         ref_lap_id: int | None = None,
         corner_times: Mapping[str, float | None] | None = None,
         model_version: int | None = None,
+        habit_evidence: bool = True,
     ) -> dict[str, Any]:
         """This lap's block. ``compared``: the lap had a usable comparison and is no drill lap (only then does it
-        update the habit tracker and replace ``current``; a lap without one has no points, and the screen keeps the
-        last lap that had). ``corners``: the corners the comparison had (``LapComparison.corners``), so the tracker
+        replace ``current``; a lap without one has no points, and the screen keeps the last lap that had).
+        ``habit_evidence``: the lap says something about the driver's habits (``core.lap_processor``: not a pit-in,
+        out, flashback, standing-start or invalid lap, nor under a safety car); only a compared lap that is updates
+        the habit tracker. ``corners``: the corners the comparison had (``LapComparison.corners``), so the tracker
         sees which corners were driven clean; None = only the corners with an observation. ``ref_lap_id``: the lap
         it was compared with (a reference with the same fault proves no fix, ``HabitTracker.update``).
         ``corner_times`` / ``model_version``: the lap's own time through each corner and the track model version (a
@@ -388,7 +453,7 @@ class CoachSelection:
             radio = radio_limits(self._limits, self._intensity)
             quiet = radio.max_per_lap <= 0 or self._intensity == "quiet"
             events: list[dict[str, Any]] = []
-            if compared:
+            if compared and habit_evidence:
                 lim = screen_limits(radio)
                 last = dict(self._last_coached)
                 events = self._habits.update(
@@ -410,7 +475,17 @@ class CoachSelection:
                 intensity=self._intensity,
                 tracker=self._habits,
                 events=events,
+                commit=not self._on_delivery,
+                counted=compared and habit_evidence,
             )
+            if self._on_delivery and not block["radio_quiet"]:
+                by_id = {str(e.get("id")): e for e in events}
+                for p in block["picked"]:
+                    ev = by_id.get(str(p.get("id"))) if p.get("habit_event") else None
+                    if ev is not None:
+                        self._unsaid[str(p["id"])] = ev
+                while len(self._unsaid) > _UNSAID_KEPT:
+                    del self._unsaid[next(iter(self._unsaid))]
             if compared:
                 self._current = block
             return block

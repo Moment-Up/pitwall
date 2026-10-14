@@ -7,13 +7,18 @@ Modes (radio setting, default ``focus``):
 * ``focus``   - the session's habits (``coach.habits``, passed in by ``on_lap_result`` from the lap's coach block):
 
   - "<corner> brake" for the corners of *braking* habits (``brake_early``, ``brake_late_overdrive``,
-    ``overspeed_apex``) being worked on or seen, focus first, up to the profile's ``FocusLimits.max_corners`` (a
-    beginner gets one). "brake" lands on the reference braking point.
+    ``overspeed_apex``) being worked on or seen, focus first. "brake" lands on the reference braking point.
   - a corner REMINDER for each other habit being worked on ("Turn 6, apex speed, 12 down", from
     ``coach.habits.reminder_phrase``): a short phrase that ENDS at least ``REMINDER_END_MARGIN_S`` before the
     corner's reference braking point, only where the reference lap was off the brakes for the whole phrase
     (``calm_s``), so it never talks through the previous braking zone. One call per corner: a reminder wins over a
     braking call there.
+
+  Reminders and braking calls together are at most the profile's ``FocusLimits.max_corners`` (a beginner gets one
+  in-lap call: one coaching point a lap), reminders first. A habit gets either only when it costs at least
+  ``analysis.coaching.HABIT_MIN_IMPACT_S`` on average (the radio announces no smaller one) and while its latest lap
+  could show it (``blind``: compared with a lap that had it, so the reference's braking point is the habit's own);
+  a braking call also needs the habit's confidence to clear the profile's floor (``MIN_FOCUS_CONFIDENCE`` at least).
 
   A one-off is no habit and gets no call (it stays on the screen). A caller without habits (``focus`` and ``habits``
   both None, older callers) gets the earlier rule: the 1-3 corners whose recent braking observations carry the
@@ -130,6 +135,7 @@ from typing import Any, Literal, Protocol
 
 import numpy as np
 
+from pitwall.analysis.coaching import HABIT_MIN_IMPACT_S
 from pitwall.analysis.distance import DistanceTrace
 from pitwall.analysis.track_identity import turn_words
 from pitwall.coach.habits import STATUS_FOCUS, STATUS_SEEN, reminder_phrase
@@ -452,8 +458,9 @@ class FocusLimits:
     impact floor an observation of unknown impact is not spoken (unknown is not small, as in
     ``drivers.apply_coaching_limits``). ``allowed_kinds`` narrows ``BRAKE_CUE_OBSERVATIONS``; it never widens it.
     With the coach block's habits (``select_habit_corners``, ``_reminder_corners``) the allowed kinds, the impact
-    floor (on a habit's mean impact) and ``max_corners`` (braking calls) apply; a habit is repeated evidence and has
-    no single lap's confidence to check.
+    floor (on a habit's mean impact, never under ``HABIT_MIN_IMPACT_S``) and ``max_corners`` (reminders and braking
+    calls together) apply, and a braking call needs the habit's confidence (the median over the laps it fired; unknown
+    does not pass) to clear the confidence bar.
     """
 
     min_confidence: float = MIN_FOCUS_CONFIDENCE
@@ -615,6 +622,14 @@ def select_focus_corners(
     return [(c, f"{first_kind[c]} on {laps_with[c]} of the last {total} lap(s)") for c, _ in ranked]
 
 
+def _habit_worth_a_call(h: Mapping[str, Any], limits: FocusLimits) -> bool:
+    """A habit entry the cue plan may speak about: it costs at least ``HABIT_MIN_IMPACT_S`` on average (and the
+    profile's impact floor; unknown is not small) and its latest lap could show it (not ``blind``)."""
+    impact = _num(h.get("impact_s"))
+    floor = max(HABIT_MIN_IMPACT_S, limits.min_impact_s)
+    return impact is not None and impact >= floor and h.get("blind") is not True
+
+
 def select_habit_corners(
     habits: Sequence[Mapping[str, Any]],
     zones: Collection[str],
@@ -627,31 +642,33 @@ def select_habit_corners(
 
     The corners of braking habits (``BRAKE_CUE_OBSERVATIONS``) being worked on or seen (``BRAKE_HABIT_STATUSES``;
     a sorted one is done), focus first, then in the given order (the block's: bigger mean impact first), one call
-    per corner, at most the profile's cap. Only corners with a measured reference braking zone (``zones``) and not
-    in ``skip`` (a corner with a reminder: one call per corner). The profile's allowed kinds and impact floor apply
-    (an unknown impact does not pass a floor); a habit carries no single lap's confidence and needs none: it is the
-    same fault on most of the corner's recent laps, which is the evidence a call needs."""
+    per corner, at most ``max_corners`` and the profile's cap (0 = none). Only corners with a measured reference
+    braking zone (``zones``) and not in ``skip`` (a corner with a reminder: one call per corner). The profile's
+    allowed kinds apply; the habit must cost at least ``HABIT_MIN_IMPACT_S`` on average (and the profile's floor; an
+    unknown impact does not pass), its latest lap must have shown it (not ``blind``: a call would aim at the braking
+    point of a reference that had the habit) and its confidence (the median over the laps it fired; unknown does not
+    pass) must clear the profile's confidence bar: a braking call is time-critical."""
     allowed = set(zones) - set(skip)
     kinds = BRAKE_CUE_OBSERVATIONS if limits.allowed_kinds is None else BRAKE_CUE_OBSERVATIONS & limits.allowed_kinds
+    min_conf = max(MIN_FOCUS_CONFIDENCE, limits.min_confidence)
     order = sorted(range(len(habits)), key=lambda i: (habits[i].get("status") != STATUS_FOCUS, i))
-    n = max(1, min(MAX_FOCUS_CORNERS, max_corners, limits.max_corners))
+    n = min(MAX_FOCUS_CORNERS, max_corners, limits.max_corners)
     out: list[tuple[str, str]] = []
     called: set[str] = set()
     for i in order:
+        if len(out) >= n:
+            break
         h = habits[i]
         corner, kind, status = h.get("corner"), h.get("kind"), h.get("status")
         if not isinstance(corner, str) or corner not in allowed or corner in called:
             continue
-        if kind not in kinds or status not in BRAKE_HABIT_STATUSES:
+        if kind not in kinds or status not in BRAKE_HABIT_STATUSES or not _habit_worth_a_call(h, limits):
             continue
-        if limits.min_impact_s > 0.0:
-            impact = _num(h.get("impact_s"))
-            if impact is None or impact < limits.min_impact_s:
-                continue  # unknown impact is not small: not worth a call on this profile
+        conf = _num(h.get("confidence"))
+        if conf is None or conf < min_conf:
+            continue  # unknown is not sure enough for a time-critical call
         called.add(corner)
         out.append((corner, f"{kind} habit ({status}), {h.get('laps_seen')} of the last {h.get('laps')} laps"))
-        if len(out) >= n:
-            break
     return out
 
 
@@ -663,19 +680,26 @@ def _reminder_corners(
     length_m: float,
     limits: FocusLimits,
     label: Callable[[str], CueLabel],
+    cap: int = MAX_FOCUS_CORNERS,
 ) -> dict[str, tuple[str, str, float]]:
     """``{corner: (phrase, reason, calm_s)}`` for focus mode's corner reminders, in the block's focus order: one per
     focus habit whose kind has a phrase (``coach.habits.reminder_phrase``; braking habits get a braking call
-    instead) at a corner with a measured reference braking zone, one per corner. Only where the reference lap was
-    off the brakes for the whole phrase plus ``REMINDER_CALM_SLACK_S`` (``_calm_s``, timed with the longer of the
-    corner's spoken names): a reminder must never talk through the previous corner's braking zone or run into a
-    braking call there. No phrase, no evidence or no room: nothing said (the habit stays on the screen)."""
+    instead) at a corner with a measured reference braking zone, one per corner, at most ``cap`` (the plan's focus
+    corners: ``build_cue_plan``). The habit must cost at least ``HABIT_MIN_IMPACT_S`` on average (and the profile's
+    floor) and its latest lap must have shown it (not ``blind``). Only where the reference lap was off the brakes for
+    the whole phrase plus ``REMINDER_CALM_SLACK_S`` (``_calm_s``, timed with the longer of the corner's spoken names):
+    a reminder must never talk through the previous corner's braking zone or run into a braking call there. No phrase,
+    no evidence or no room: nothing said (the habit stays on the screen)."""
     out: dict[str, tuple[str, str, float]] = {}
     for e in focus:
+        if len(out) >= cap:
+            break
         corner, kind = e.get("corner"), e.get("kind")
         if not isinstance(corner, str) or corner not in zones or corner in out or e.get("status") != STATUS_FOCUS:
             continue
         if not isinstance(kind, str) or (limits.allowed_kinds is not None and kind not in limits.allowed_kinds):
+            continue
+        if not _habit_worth_a_call(e, limits):
             continue
         phrase = reminder_phrase(kind, _num(e.get("value")))
         if phrase is None:
@@ -900,9 +924,12 @@ def build_cue_plan(
         if only_corner is not None:  # --- coachref --- a drill: its corner is the focus, evidence or not
             picked = [(only_corner, "drill")]
         elif with_habits:  # the session's habits: braking calls, and a reminder per other focus habit
-            reminders = _reminder_corners(focus or (), by_corner, tables, trace, length, focus_limits, label)
+            # reminders and braking calls share the profile's cap (a beginner: one in-lap call), reminders first
+            cap = min(MAX_FOCUS_CORNERS, max_focus, focus_limits.max_corners)
+            reminders = _reminder_corners(focus or (), by_corner, tables, trace, length, focus_limits, label, cap)
             pool = habits if habits is not None else focus or ()
-            picked = select_habit_corners(pool, by_corner, max_focus, focus_limits, skip=reminders)
+            left = cap - len(reminders)
+            picked = select_habit_corners(pool, by_corner, left, focus_limits, skip=reminders) if left > 0 else []
         else:  # a caller that predates habits: the recent laps' observations
             picked = select_focus_corners(history, by_corner, max_focus, focus_limits)
         focus_corners = (*reminders, *(c for c, _ in picked))

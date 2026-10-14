@@ -508,9 +508,11 @@ def test_habit_and_focus_entries() -> None:
         "status": "focus",
         "laps_seen": 3,
         "laps": 3,
-        "value": -12.0,  # median of the laps it fired
+        "value": -12.0,  # a focus habit: the number the radio said (the announcement's; also the median here)
         "unit": "km/h",
         "impact_s": 0.233,  # mean
+        "confidence": 0.9,  # median
+        "blind": False,  # the latest lap could show it
         "since_lap": 3,
         "short": "T6: 12 km/h slower mid-corner",
     }
@@ -685,3 +687,297 @@ def test_the_radio_says_the_tracker_events_from_the_block() -> None:
     )
     (s,) = [m for m in simple if m.kind is MessageKind.COACHING]
     assert s.text == "Turn 6: you were 12 km/h slower at the slowest point of the corner. Most laps."
+
+
+# ---------------------------------------------------------------------------------------------- review fixes
+def ref_lap(
+    tr: HabitTracker,
+    n: int,
+    ref: int,
+    *points: dict[str, Any],
+    times: dict[str, float | None] | None = None,
+    slots: int = 1,
+    commit: bool = True,
+) -> list[dict[str, Any]]:
+    """Lap ``n`` (id 100 + n) compared with lap id ``ref``; the radio picks every event."""
+    events = tr.update(
+        n,
+        [{**p, "lap_number": n} for p in points],
+        CORNERS,
+        slots=slots,
+        lap_id=100 + n,
+        ref_lap_id=ref,
+        corner_times=lap_times(points) if times is None else times,
+    )
+    if commit:
+        tr.commit(events)
+    return events
+
+
+def _braking_early_20(tr: HabitTracker) -> None:
+    """T1 brakes 20 m early on laps 1-3 (10.3 s through it, 0.30 s lost), announced on lap 3, against lap id 100."""
+    for n in (1, 2, 3):
+        p = pt("T1", "brake_early", n, value=-20.0, impact=0.30, ratio=None if n < 3 else 1.0)
+        ref_lap(tr, n, 100, p)
+    assert tr.focus()[0]["kind"] == "brake_early"
+
+
+def test_better_for_braking_early_needs_the_corner_to_get_faster() -> None:
+    """CLAUDE.md: later braking is praised only when the corner got faster. Braking 9 m early instead of 20 on a lap
+    where the corner was slower (10.45 s, 0.45 s lost) is no "better"; on a lap where it was faster it is."""
+    tr = HabitTracker()
+    _braking_early_20(tr)
+    slower = {**lap_times([]), "T1": 10.45}
+    assert ref_lap(tr, 4, 100, pt("T1", "brake_early", 4, value=-9.0, impact=0.45), times=slower) == []
+    faster = {**lap_times([]), "T1": 10.1}
+    (better,) = ref_lap(tr, 5, 100, pt("T1", "brake_early", 5, value=-9.0, impact=0.1), times=faster)
+    assert better["habit_event"] == "improving" and better["value"] == -9.0 and better["was_value"] == -20.0
+    tr = HabitTracker()  # an unknown corner time proves nothing either
+    _braking_early_20(tr)
+    unknown = {**lap_times([]), "T1": None}
+    assert ref_lap(tr, 4, 100, pt("T1", "brake_early", 4, value=-9.0, impact=0.1), times=unknown) == []
+
+
+def test_better_compares_values_measured_against_the_same_reference() -> None:
+    """A new best that had the habit (lap 3) becomes the reference: 6 km/h down against it is worse than 12 down
+    against the old one, so it is no "better"; against the reference it was announced on, it is."""
+    tr = HabitTracker()
+    for n in (1, 2, 3):
+        ref_lap(tr, n, 100, pt("T3", "low_min_speed", n, value=-12.0, ratio=None if n < 3 else 1.0))
+    assert tr.focus()[0]["corner"] == "T3"
+    assert ref_lap(tr, 4, 103, pt("T3", "low_min_speed", 4, value=-6.0)) == []
+    tr = HabitTracker()
+    for n in (1, 2, 3):
+        ref_lap(tr, n, 100, pt("T3", "low_min_speed", n, value=-12.0, ratio=None if n < 3 else 1.0))
+    assert kinds(ref_lap(tr, 4, 100, pt("T3", "low_min_speed", 4, value=-6.0))) == [("T3", "improving")]
+
+
+def test_another_drivers_reference_proves_no_progress() -> None:
+    """The driver switches to a reference the habit was never measured against (another driver's lap, a best from
+    an earlier session): a smaller number against it is no "better", and laps without the fault against it are not
+    counted (unknown stays unknown): never "sorted" because the reference changed, forgotten after a window."""
+    tr = HabitTracker()
+    for n in (1, 2, 3):
+        ref_lap(tr, n, 1, pt("T6", "low_min_speed", n, value=-15.0, ratio=None if n < 3 else 1.0))
+    assert ref_lap(tr, 4, 50, pt("T6", "low_min_speed", 4, value=-6.0)) == []  # the first lap against it
+    tr = HabitTracker()
+    for n in (1, 2, 3):
+        ref_lap(tr, n, 1, pt("T6", "low_min_speed", n, value=-15.0, ratio=None if n < 3 else 1.0))
+    said = [ref_lap(tr, n, 50) for n in range(4, 4 + HABIT_WINDOW)]
+    assert said == [[]] * HABIT_WINDOW and tr.habits() == []
+
+
+def test_a_reference_dirty_at_the_corner_proves_nothing() -> None:
+    """The new best (lap 4) lost time at T3 through late throttle, not through the habit: compared with it, laps no
+    slower at T3 have no point there although the apex is still slow. They prove nothing, never "sorted"."""
+    tr = HabitTracker()
+    for n in (1, 2, 3):
+        ref_lap(tr, n, 100, pt("T3", "low_min_speed", n, ratio=None if n < 3 else 1.0))
+    other = pt("T3", "late_throttle", 4, value=30.0, impact=0.25, ratio=None)
+    assert ref_lap(tr, 4, 100, other) == []
+    assert [ref_lap(tr, n, 104) for n in (5, 6)] == [[], []]
+    (h,) = [h for h in tr.habits() if h["kind"] == "low_min_speed"]
+    assert h["status"] == "focus" and h["laps"] == 4  # laps 1-4: 5 and 6 not counted
+
+
+def test_a_reference_with_the_habit_stays_blind_after_it_leaves_the_window() -> None:
+    """Lap 3 (with the habit) is the reference; laps 4-8 still have it, so lap 3 leaves the 5-lap window. Laps 9 and
+    10 back at lap 3's level are still the habit: never "sorted"."""
+    tr = HabitTracker()
+    for n in (1, 2, 3):
+        ref_lap(tr, n, 100, pt("T3", "low_min_speed", n, ratio=None if n < 3 else 1.0))
+    for n in range(4, 9):
+        ref_lap(tr, n, 103, pt("T3", "low_min_speed", n, value=-6.0))
+    assert [ref_lap(tr, n, 103) for n in (9, 10)] == [[], []]
+    assert tr.focus()[0]["corner"] == "T3"
+
+
+def test_sorted_needs_two_recorded_laps_after_the_announcement() -> None:
+    """F C F(announce); laps 4-5 cannot show it (compared with lap 3, which had it); lap 6, against lap 2 (clean), is
+    one clean lap since the announcement: not "sorted" yet (lap 2 is from before it); lap 7 makes two."""
+    tr = HabitTracker()
+    ref_lap(tr, 1, 100, pt("T3", "low_min_speed", 1, ratio=None))
+    ref_lap(tr, 2, 100)
+    assert kinds(ref_lap(tr, 3, 100, pt("T3", "low_min_speed", 3, ratio=0.67))) == [("T3", "announce")]
+    assert [ref_lap(tr, n, 103) for n in (4, 5)] == [[], []]
+    assert ref_lap(tr, 6, 102) == []
+    assert kinds(ref_lap(tr, 7, 102)) == [("T3", "fixed")]
+
+
+def test_a_habit_costing_under_the_floor_is_not_announced() -> None:
+    """Gap 1: a habit is said only when its mean cost is at least HABIT_MIN_IMPACT_S (0.05 s): the screen still shows
+    it (seen); a slightly bigger one is announced."""
+    tr = HabitTracker()
+    small = pt("T5", "late_throttle", 3, value=20.0, impact=0.03)
+    assert _three_laps(tr, small) == [] and [h["status"] for h in tr.habits()] == ["seen"]
+    assert kinds(_three_laps(HabitTracker(), {**small, "impact_s": 0.05})) == [("T5", "announce")]
+
+
+def test_a_much_bigger_habit_takes_the_slot_of_a_small_focus() -> None:
+    """A focus habit costing 0.08 s keeps the only slot; a habit costing 0.76 s (over twice as much and at least a
+    big one-off's 0.30 s) takes it: announced, and the small one goes back to the screen when the radio says it."""
+    tr = HabitTracker()
+    small = pt("T6", "low_min_speed", 3, impact=0.08)
+    assert kinds(_three_laps(tr, small)) == [("T6", "announce")]
+    big = pt("T3", "brake_early", 0, value=-25.0, impact=0.76, ratio=None)
+    for n in (4, 5):
+        drive(tr, n, {**small, "lap_number": n}, {**big, "lap_number": n})
+    events = drive(tr, 6, {**small, "lap_number": 6}, {**big, "lap_number": 6, "consistency_ratio": 1.0})
+    assert kinds(events) == [("T3", "announce")]
+    assert [(h["corner"], h["status"]) for h in tr.habits()] == [("T3", "focus"), ("T6", "seen")]
+    # not much bigger: no change
+    tr = HabitTracker()
+    _three_laps(tr, small)
+    medium = {**big, "impact_s": 0.12}
+    for n in (4, 5):
+        drive(tr, n, {**small, "lap_number": n}, {**medium, "lap_number": n})
+    assert drive(tr, 6, {**small, "lap_number": 6}, {**medium, "lap_number": 6, "consistency_ratio": 1.0}) == []
+
+
+def test_the_reminder_says_the_number_the_radio_said() -> None:
+    """One number per habit: the announcement says this lap's 12 km/h, so the reminder, the focus entry and the Ready
+    card say 12 too (not the window's median, 20); a "better" line updates it."""
+    tr = HabitTracker()
+    for n in (1, 2):
+        drive(tr, n, pt("T6", "low_min_speed", n, value=-20.0, ratio=None))
+    (ann,) = drive(tr, 3, pt("T6", "low_min_speed", 3, value=-12.0))
+    assert ann["value"] == -12.0
+    (focus,) = tr.focus()
+    assert focus["value"] == -12.0 and focus["reminder"]["text"] == "T6: apex speed, 12 down"
+    assert [h["value"] for h in tr.habits()] == [-12.0]
+    drive(tr, 4, pt("T6", "low_min_speed", 4, value=-5.0))  # better: 5 now, was 12
+    assert tr.focus()[0]["reminder"]["text"] == "T6: apex speed, 5 down"
+
+
+def test_entries_carry_the_confidence_and_whether_the_habit_is_measurable() -> None:
+    tr = HabitTracker()
+    for n, c in ((1, 0.6), (2, 0.9), (3, 0.7)):
+        ref_lap(tr, n, 100, pt("T6", "low_min_speed", n, conf=c, ratio=None if n < 3 else 1.0))
+    (e,) = tr.habits()
+    assert e["confidence"] == 0.7 and e["blind"] is False  # the median over the laps it fired
+    ref_lap(tr, 4, 103)  # compared with lap 3, which had it: cannot show it
+    (e,) = tr.habits()
+    assert e["blind"] is True and tr.focus()[0]["blind"] is True
+    ref_lap(tr, 5, 100, pt("T6", "low_min_speed", 5))
+    assert tr.habits()[0]["blind"] is False
+
+
+def test_fired_count_counts_the_laps_it_fired_in_the_window() -> None:
+    tr = HabitTracker()
+    drive(tr, 1, pt("T2", "coasting", 1, ratio=None))
+    assert tr.fired_count("T2", "coasting") == 1 and tr.fired_count("T9", "x") == 0
+    drive(tr, 2)
+    drive(tr, 3, pt("T2", "coasting", 3, ratio=None))
+    assert tr.fired_count("T2", "coasting") == 2
+
+
+def test_braking_too_late_is_never_better_braking_later() -> None:
+    """Going in 9 m too deep instead of 20 is progress made by braking EARLIER: the words never say "braking later"."""
+    assert progress_amount("brake_late_overdrive", 9.0) == "going in 9 m too deep"
+    tr = HabitTracker()
+    for n in (1, 2, 3):
+        drive(tr, n, pt("T6", "brake_late_overdrive", n, value=20.0, ratio=None if n < 3 else 1.0))
+    (better,) = drive(tr, 4, pt("T6", "brake_late_overdrive", 4, value=9.0))
+    assert "later" not in better["text"] and "later" not in better["short"]
+    assert better["text"] == "T6: better - going in 9 m too deep now, was 20."
+
+
+def test_a_fault_on_two_laps_is_not_once() -> None:
+    """``one_off`` (the card's "Once") means a fault seen on one lap: two laps running (the analysis cannot tell a
+    habit yet, consistency None) or two of the last four is no one-off."""
+    sel = CoachSelection()
+    small = pt("T4", "low_min_speed", 0, impact=0.1, ratio=None)
+    first = sel.select(*lap_points(1, small), compared=True, corners=CORNERS)
+    assert first["by_corner"]["T4"]["one_off"] is True
+    second = sel.select(*lap_points(2, small), compared=True, corners=CORNERS)
+    assert second["by_corner"]["T4"]["one_off"] is False and second["by_corner"]["T4"]["habit"] is None
+    sel = CoachSelection()
+    for n in (1, 3, 4):
+        sel.select(*lap_points(n, *([small] if n == 1 else [])), compared=True, corners=CORNERS)
+    two_of_four = {**small, "consistency": "2 of the last 4 laps", "consistency_ratio": 0.5}
+    block = sel.select(*lap_points(5, two_of_four), compared=True, corners=CORNERS)
+    assert block["by_corner"]["T4"]["one_off"] is False
+
+
+def test_a_habit_point_says_the_trackers_counts() -> None:
+    """The chip ("Habit · 4 of 5 laps") and the evidence line ("Seen on ...") of one card come from one count: a
+    habit's point carries the tracker's counts (the analysis can count 6 laps, the tracker keeps 5)."""
+    sel = CoachSelection()
+    sel.set_radio_intensity("quiet")  # nothing is announced: the habit stays "seen", its point a plain observation
+    for n in range(1, 7):
+        points = [] if n == 4 else [pt("T4", "low_min_speed", 0, ratio=None if n < 3 else 0.67)]
+        block = sel.select(*lap_points(n, *points), compared=True, corners=CORNERS)
+    analysis = {**pt("T4", "low_min_speed", 0), "consistency": "6 of the last 7 laps", "consistency_ratio": 0.86}
+    block = sel.select(*lap_points(7, analysis), compared=True, corners=CORNERS)
+    p = block["by_corner"]["T4"]
+    assert p["habit"] == {"status": "seen", "laps_seen": 4, "laps": 5}
+    assert p["consistency"] == "4 of the last 5 laps" and p["consistency_ratio"] == 0.8
+
+
+def test_laps_that_are_no_habit_evidence_do_not_update_the_tracker() -> None:
+    """Pit, out, safety-car, flashback, standing-start and invalid laps (the lap processor's ``habit_evidence``) are
+    compared and shown, but are no evidence of a habit: the tracker skips them."""
+    live = LiveState()
+    live.reset_session("s1", "test", False)
+    comp = {**COMP, "corners": [{"corner": c} for c in CORNERS], "ref_lap_id": 1}
+    for n in (1, 2, 3):
+        live.on_lap_result(*lap_points(n, pt("T6", "low_min_speed", 0, ratio=None)), {**comp, "habit_evidence": False})
+    coach = live.snapshot()["coach"]
+    assert coach["habits"] == [] and coach["by_corner"]["T6"]["kind"] == "low_min_speed"  # shown, not counted
+    for n in (4, 5):
+        live.on_lap_result(*lap_points(n, pt("T6", "low_min_speed", 0, ratio=None)), comp)
+    live.on_lap_result(*lap_points(6, pt("T6", "low_min_speed", 0)), comp)
+    assert live.snapshot()["coach"]["habits"][0]["laps"] == 3  # laps 4-6 only
+
+
+def test_with_a_radio_the_tracker_commits_what_the_radio_said() -> None:
+    """A radio attached (``commit_on_delivery``): an announcement becomes the focus when it is said, not when it is
+    picked; one the radio never said (quiet mode, no radio, expired) leaves the habit seen, announced again."""
+    sel = CoachSelection()
+    sel.commit_on_delivery(True)
+    for n in (1, 2):
+        sel.select(*lap_points(n, pt("T6", "low_min_speed", 0, ratio=None)), compared=True, corners=CORNERS)
+    block = sel.select(*lap_points(3, pt("T6", "low_min_speed", 0)), compared=True, corners=CORNERS)
+    (ann,) = block["picked"]
+    assert ann["habit_event"] == "announce" and block["focus"] == []  # picked, not said yet
+    block = sel.select(*lap_points(4, pt("T6", "low_min_speed", 0)), compared=True, corners=CORNERS)
+    assert [p["habit_event"] for p in block["picked"]] == ["announce"]  # never said: proposed again
+    assert sel.confirm_said(block["picked"][0]["id"]) is True
+    assert [f["corner"] for f in sel.current["focus"]] == ["T6"]  # type: ignore[index]
+    assert sel.confirm_said(block["picked"][0]["id"]) is False  # said once
+    assert sel.confirm_said("L9:T9:x:announce") is False
+
+
+async def test_the_radio_hub_commits_the_habit_lines_it_says() -> None:
+    """With the radio attached the tracker keeps what the radio said: the hub confirms a habit line when it goes on
+    air (``CoachSelection.confirm_said``), so a line held until it expired (quiet mode, the lap's budget, no radio)
+    never makes a habit the focus."""
+    from tests.unit.test_cues import make_hub, settle
+
+    hub, _client, _sent, _ = await make_hub("focus", device=True)
+    sel = hub.live.coach
+    for n in (1, 2):
+        sel.select(*lap_points(n, pt("T6", "low_min_speed", 0, ratio=None)), compared=True, corners=CORNERS)
+    lap, obs = lap_points(3, pt("T6", "low_min_speed", 0))
+    block = sel.select(lap, obs, compared=True, corners=CORNERS)
+    (msg,) = [
+        m for m in lap_messages(lap, obs, None, None, "normal", 0.0, coach=block) if m.kind is MessageKind.COACHING
+    ]
+    assert sel.current is not None and sel.current["focus"] == []
+    hub._deliver(msg, None, None, None)
+    await settle(2)
+    assert [f["corner"] for f in sel.current["focus"]] == ["T6"]
+    await hub.stop()
+
+
+def test_a_big_fault_on_a_lap_that_is_no_evidence_still_counts_as_said_twice() -> None:
+    """A lap that is no habit evidence (here a flashback lap) is not in the tracker's window, but the same big fault as
+    on the corner's previous counted lap is still not said as a one-off: never the same sentence two laps running."""
+    sel = CoachSelection()
+    big = pt("T2", "brake_early", 0, value=-13.0, impact=0.34, conf=0.85, ratio=None)
+    first = sel.select(*lap_points(1, big), compared=True, corners=CORNERS)
+    assert [p["kind"] for p in first["picked"]] == ["brake_early"]
+    second = sel.select(*lap_points(2, big), compared=True, corners=CORNERS, habit_evidence=False)
+    assert second["picked"] == []
+    other = sel.select(*lap_points(3, {**big, "corner": "T5"}), compared=True, corners=CORNERS, habit_evidence=False)
+    assert [p["corner"] for p in other["picked"]] == ["T5"]  # a first big fault is said on any compared lap
