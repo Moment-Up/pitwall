@@ -12,7 +12,9 @@ import {
   contextChips,
   contextNote,
   cornersView,
+  baseRateText,
   creditLine,
+  faultCauseLines,
   faultGroups,
   fitOf,
   faultFitLabel,
@@ -200,7 +202,32 @@ describe("faults Pitwall checks", () => {
 
   it("causes Pitwall tells apart, measurements in plain numbers, and faults that are not for this car", () => {
     const f = faultGroups(g, OWNER_F1);
-    expect(f.coached.find((x) => x.id === "low_min_speed")!.causes.map((c) => c.name)).toEqual(["Over-braking", "Slowest point came sooner", "Less grip"]);
+    const lms = f.coached.find((x) => x.id === "low_min_speed")!;
+    expect(lms.causes.map((c) => c.name)).toEqual(["Over-braking", "Slowest point came sooner", "Less grip"]);
+    // none of the three holds clearly more often with a low minimum speed than without (the base-rate check)
+    expect(faultCauseLines(lms)).toEqual(["Also measured, not shown to tell it apart: Over-braking · Slowest point came sooner · Less grip"]);
+    const coasting = f.coached.find((x) => x.id === "coasting")!;
+    expect(faultCauseLines(coasting)).toEqual([
+      "Causes Pitwall can tell apart: Early brake release",
+      "Also measured, not shown to tell it apart: Waiting for the car to rotate",
+    ]);
+    expect(coasting.measured).toContain(
+      "Early brake release: on 43% of these points, 20% of other corner-laps (26 of 60, 161 of 812; 2026-10-15)",
+    );
+    expect(lms.measured).toContain("Less grip: on 23% of these points, 14% of other corner-laps (126 of 550, 84 of 599; 2026-10-15)");
+    expect(faultCauseLines(f.coached.find((x) => x.id === "brake_early")!)).toEqual([]);
+    expect(baseRateText("X", { fault: "f", fault_laps: 0, fault_held: 0, other_laps: 10, other_held: 1, date: "2026-10", source: "s", note: null })).toBe(
+      "X: not checked yet (2026-10)",
+    );
+    // an older server sends neither the flag nor the checks: every cause is only also measured, no base-rate line
+    const old = structuredClone(g);
+    for (const c of old.causes) {
+      delete c.discriminates;
+      delete c.measured;
+    }
+    const oldCoasting = faultGroups(old, OWNER_F1).coached.find((x) => x.id === "coasting")!;
+    expect(faultCauseLines(oldCoasting)).toEqual(["Also measured, not shown to tell it apart: Early brake release · Waiting for the car to rotate"]);
+    expect(oldCoasting.measured.some((m) => m.includes("other corner-laps"))).toBe(false);
     const overlap = f.notCoached.find((x) => x.id === "pedal_overlap")!;
     expect(overlap.measured[0]).toBe("Fires on corner-laps (Ed's detector): 66.8% (2026-10-14)");
     expect(f.notCoached.find((x) => x.id === "missed_blip")!.fit).toMatchObject({ fit: "other", reason: "For: H-pattern gearbox." });

@@ -71,7 +71,11 @@ describe("How corners work", () => {
     expect(t).toMatch(/Not coached yet \(\d+\)/);
     expect(t).toContain("Measured by:");
     expect(t).toContain("(not measured yet)");
-    expect(t).toContain("Causes Pitwall can tell apart: Over-braking · Slowest point came sooner · Less grip");
+    // causes: the one shown on recorded laps to tell its fault apart, apart from the ones only also measured
+    expect(t).toContain("Also measured, not shown to tell it apart: Over-braking · Slowest point came sooner · Less grip");
+    expect(t).toContain("Causes Pitwall can tell apart: Early brake release");
+    expect(t).not.toContain("Causes Pitwall can tell apart: Over-braking");
+    expect(t).toContain("Early brake release: on 43% of these points, 20% of other corner-laps (26 of 60, 161 of 812; 2026-10-15)");
     expect(t).toContain("Fires on corner-laps (Ed's detector): 66.8% (2026-10-14)");
     expect(t).not.toContain("Show the detail");
   });

@@ -6,7 +6,8 @@
 //     (it depends on something Pitwall does not know about the driver or car), with a one-line reason.
 //   - Alternatives (trail braking and straight-line braking are each other's), the signals that measure a technique.
 //   - The faults Pitwall checks: coached now (status live) apart from the ones not coached yet (experimental, planned,
-//     background), with whether each applies to this driver and car, and the causes Pitwall can tell apart.
+//     background), with whether each applies to this driver and car, and its causes: the ones Pitwall can tell apart
+//     (their base-rate check passed) apart from the ones it only also measures (never the reason).
 //   - Where the knowledge comes from, Ed (Pitwall tester) credited first, by evidence tier.
 //
 // Fit: the session variant's per-node `applies` / `why_not` decide when the server sends them. Otherwise the
@@ -24,6 +25,7 @@ import type { SkillLevel } from "../drivers";
 import type {
   ContextKey,
   FaultStatus,
+  KnowledgeBaseRate,
   KnowledgeChannel,
   KnowledgeCondition,
   KnowledgeContext,
@@ -444,11 +446,39 @@ export interface FaultItem {
   /** Praise, not a fault (exit_gain). */
   positive: boolean;
   fit: FitVerdict;
-  /** The causes Pitwall can tell apart from measured signals - for the session's driver and game when the page has
-   * the session variant (a cause whose `applies` is false is left out). */
-  causes: NamedRef[];
-  /** Pitwall's own measurements, one line each ("Fires on corner-laps (Ed's detector): 66.8% (2026-10-14)"). */
+  /** The causes Pitwall can name from measured signals - for the session's driver and game when the page has the
+   * session variant (a cause whose `applies` is false is left out); `discriminates`: its base-rate check showed it
+   * tells this fault apart (otherwise it is only also measured, never the reason). */
+  causes: (NamedRef & { discriminates: boolean })[];
+  /** Pitwall's own measurements, one line each ("Fires on corner-laps (Ed's detector): 66.8% (2026-10-14)"), then each
+   * cause's base-rate check against this fault. */
   measured: string[];
+}
+
+/** "Causes Pitwall can tell apart: ..." (shown on recorded laps to tell the fault apart) and "Also measured, not shown
+ * to tell it apart: ..." (never the reason): the lines under a coached fault, empty ones left out. */
+export function faultCauseLines(f: Pick<FaultItem, "causes">): string[] {
+  const names = (want: boolean) => f.causes.filter((c) => c.discriminates === want).map((c) => c.name);
+  const apart = names(true);
+  const also = names(false);
+  return [
+    ...(apart.length ? [`Causes Pitwall can tell apart: ${apart.join(" · ")}`] : []),
+    ...(also.length ? [`Also measured, not shown to tell it apart: ${also.join(" · ")}`] : []),
+  ];
+}
+
+function percent(held: number, laps: number): string {
+  return `${Math.round((100 * held) / laps)}%`;
+}
+
+/** A cause's base-rate check in words: "Less grip: on 23% of these points, 14% of other corner-laps (126 of 550, 84
+ * of 599; 2026-10-15)". */
+export function baseRateText(cause: string, r: KnowledgeBaseRate): string {
+  if (!r.fault_laps || !r.other_laps) return `${cause}: not checked yet (${r.date})`;
+  return (
+    `${cause}: on ${percent(r.fault_held, r.fault_laps)} of these points, ${percent(r.other_held, r.other_laps)} of ` +
+    `other corner-laps (${r.fault_held} of ${r.fault_laps}, ${r.other_held} of ${r.other_laps}; ${r.date})`
+  );
 }
 
 export interface FaultGroups {
@@ -485,11 +515,18 @@ export function faultGroups(g: TechniqueKnowledge, ctx: KnowledgeContext): Fault
     positive: f.positive,
     fit: fitOf(f, ctx, conds),
     // the session variant says which causes can be named for this driver and game (conditions, channels): one that
-    // cannot (GT7 sends no lateral g; "no grip loss" needs traction control off) is not one Pitwall can tell apart here
+    // cannot (GT7 sends no lateral g; "no grip loss" needs traction control off) is not one Pitwall can name here
     causes: f.causes
       .filter((id) => causes.get(id)?.applies !== false)
-      .map((id) => ({ id, name: causes.get(id)?.name ?? id })),
-    measured: f.measured.map(measurementText),
+      .map((id) => ({ id, name: causes.get(id)?.name ?? id, discriminates: causes.get(id)?.discriminates === true })),
+    measured: [
+      ...f.measured.map(measurementText),
+      ...f.causes.flatMap((id) => {
+        const c = causes.get(id);
+        const r = c?.measured?.find((m) => m.fault === f.id);
+        return c && r && c.applies !== false ? [baseRateText(c.name, r)] : [];
+      }),
+    ],
   });
   const rank = (s: FaultStatus) => {
     const i = STATUS_ORDER.indexOf(s);
@@ -543,8 +580,12 @@ function citations(g: TechniqueKnowledge): Map<string, number> {
     ...g.constraints,
   ];
   for (const node of nodes) for (const s of new Set(node.sources)) n.set(s, (n.get(s) ?? 0) + 1);
-  // a measurement cites its source too (a fault's firing rates, a technique's real-world numbers)
-  const measured = [...g.faults.map((f) => f.measured), ...g.techniques.map((t) => t.measured ?? [])];
+  // a measurement cites its source too (a fault's firing rates, a technique's real-world numbers, a cause's base rate)
+  const measured: readonly (readonly { source: string }[])[] = [
+    ...g.faults.map((f) => f.measured),
+    ...g.techniques.map((t) => t.measured ?? []),
+    ...g.causes.map((c) => c.measured ?? []),
+  ];
   for (const list of measured) for (const s of new Set(list.map((m) => m.source))) n.set(s, (n.get(s) ?? 0) + 1);
   return n;
 }

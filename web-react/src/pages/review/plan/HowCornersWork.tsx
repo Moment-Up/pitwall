@@ -5,7 +5,8 @@
 //     drivers" / "Not known yet" for the viewed driver and a one-line reason; alternatives (trail braking against
 //     straight-line braking), how each works and the signals that measure it by density;
 //   - "What Pitwall checks": the faults coached on their laps today apart from the ones not coached yet (experimental,
-//     planned, background), with the causes Pitwall can tell apart and its own measurements by density;
+//     planned, background), with the causes Pitwall can tell apart, the ones it only also measures (never the
+//     reason) and its own measurements (each cause's base-rate check among them) by density;
 //   - "Where this comes from": Ed (Pitwall tester) credited first, then published coaching and Pitwall's own sources.
 // With the session variant the context line also says how the braking style was read (its clean laps and braking
 // corners) and what the game does not send (so the checks that need it do not apply).
@@ -26,6 +27,7 @@ import {
   contextNote,
   cornersView,
   creditLine,
+  faultCauseLines,
   faultFitLabel,
   fitLabel,
   knowledgeDensity,
@@ -198,11 +200,12 @@ function FaultList({ items, label, s }: { items: readonly FaultItem[]; label: st
               {!(f.fit.universal && f.fit.fit === "fits") && (
                 <ListView.Description className="whitespace-normal">{f.fit.reason}</ListView.Description>
               )}
-              {kd.causes && f.causes.length > 0 && (
-                <ListView.Description className="whitespace-normal">
-                  Causes Pitwall can tell apart: {f.causes.map((c) => c.name).join(" · ")}
-                </ListView.Description>
-              )}
+              {kd.causes &&
+                faultCauseLines(f).map((line) => (
+                  <ListView.Description key={line} className="whitespace-normal">
+                    {line}
+                  </ListView.Description>
+                ))}
               {kd.measured &&
                 f.measured.map((m) => (
                   <ListView.Description key={m} className="whitespace-normal text-xs">

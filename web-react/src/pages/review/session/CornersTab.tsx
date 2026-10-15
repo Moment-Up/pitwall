@@ -3,15 +3,16 @@
 // and spread, slowest speed), a FOCUS chip when the corner is in the live cue focus at this track, and every lap where
 // the coach spoke there (its text verbatim, with an evidence line). Filter: a Pro Segment Work on · Went well · All.
 // Incident observations are greyed, "not used for technique advice"; so is a point the technique graph says does not
-// fit the driver, with its reason. A coached point lists the causes its measured signals named ("Why: ..." with the
-// evidence) and the graph's explanation for the driver's skill or braking style. "See it on the lap" opens Compare at
-// the corner.
+// fit the driver, with its reason. A coached point lists the causes its measured signals named, with the evidence:
+// "Why: ..." only for a cause shown to tell its fault apart, "Also measured on this lap: ..." for the others
+// (lib/knowledge/annotation.ts causeHeading), and the graph's explanation for the driver's skill or braking style.
+// "See it on the lap" opens Compare at the corner.
 
 import { Button, Card, Chip, Disclosure } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import { useMemo, useState, type Key } from "react";
 import { CornerTag } from "../../../components/ui";
-import { evidenceSentence } from "../../../lib/knowledge/annotation";
+import { causeHeading, evidenceSentence } from "../../../lib/knowledge/annotation";
 import { useLive } from "../../../hooks/stores";
 import type { SessionAnalysis, SessionDetail } from "../../../lib/endpoints/review";
 import { router } from "../../../lib/router";
@@ -62,7 +63,7 @@ function ObservationRow({ o }: { o: CornerCardObservation }) {
       {o.explain && <span className="text-sm leading-relaxed text-muted">{o.explain}</span>}
       {o.causes.map((c) => (
         <span key={c.id} className="text-xs text-muted">
-          <b className="font-medium text-foreground">Why: {c.line}.</b>
+          <b className={c.reason ? "font-medium text-foreground" : "font-medium"}>{causeHeading(c)}</b>
           {c.evidence.length > 0 && ` ${evidenceSentence(c.evidence)}`}
         </span>
       ))}

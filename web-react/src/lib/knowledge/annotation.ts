@@ -2,13 +2,18 @@
 // src/pitwall/knowledge/annotate.py): whether the point fits the driver, the causes its measured signals named (each
 // with the evidence that named it) and the graph's advice at the driver's skill and braking style. Pure.
 //
+// A cause is the reason only when its base-rate check showed it tells its fault apart (`discriminates`, graph
+// causes.toml): only such a cause leads the coach card's line (cardCause) and reads "Why: ..." in Review. Any other
+// measured cause is what was also measured on that lap ("Also measured on this lap: ..."), never "why" or "because".
+// The server's coach block and snapshot copies carry only the reasons; the full annotation (Review) carries all.
+//
 // Three shapes reach the dashboard, one type here (fields only some of them have are optional):
 //   - the full annotation (`knowledge` on GET /api/sessions/{id}/analysis, /api/compare and /api/coachref/compare
 //     observations, and the lap notification): Review reads it;
 //   - the coach block's slim copy (`knowledge` on every coach point): the annotation's shape, each cause's evidence as
 //     its measured values without the plain-words test;
-//   - the card's copy on every /ws/live snapshot observation: `fault`, `applies` and the first measured cause's id,
-//     name and screen line - all the coach card reads (fitsDriver, cardCause).
+//   - the card's copy on every /ws/live snapshot observation: `fault`, `applies` and the first measured cause that
+//     tells its fault apart (id, name, screen line) - all the coach card reads (fitsDriver, cardCause).
 // Absent or null on an older server, without the graph, or for a kind the graph has no fault for: the point is then
 // coached exactly as before the graph (applies), and nothing below adds a word.
 //
@@ -43,6 +48,9 @@ export interface PointCause {
   id: string;
   name: string;
   tier?: string;
+  /** The cause's base-rate check showed it tells its fault apart (graph `discriminates`): it may be said as the reason.
+   * False or absent (an older server): it was only also measured on that lap. */
+  discriminates?: boolean;
   /** Absent on a snapshot observation's copy. */
   evidence?: KnowledgeEvidence[];
   /** Slim copies: the cause advice's screen line. */
@@ -92,10 +100,23 @@ export function causeScreen(c: PointCause): string {
   return c.screen?.trim() || c.advice?.screen?.trim() || c.name;
 }
 
-/** The coach card's cause line (stationary evidence line, Ready card, Review cards): the first measured cause's
- * screen line; null without one. */
+/** Whether a measured cause may be said as the reason: its base-rate check showed it tells its fault apart. Absent
+ * (an older server) is not shown, so never the reason. */
+export function isReason(c: PointCause): boolean {
+  return c.discriminates === true;
+}
+
+/** The label of a cause that tells its fault apart (Review). */
+export const WHY_LABEL = "Why";
+/** The label of a cause that was only also measured (Review): never "why" or "because". */
+export const ALSO_MEASURED_LABEL = "Also measured on this lap";
+
+/** The coach card's cause line (stationary evidence line, Ready card, Review's Work on cards): the screen line of the
+ * first measured cause that tells its fault apart; null without one - a cause that was only also measured is never
+ * the card's reason. */
 export function cardCause(o: Annotated | null | undefined): string | null {
-  const c = o?.knowledge?.applies === false ? undefined : o?.knowledge?.causes?.[0];
+  const k = o?.knowledge;
+  const c = k?.applies === false ? undefined : k?.causes?.find(isReason);
   return c ? causeScreen(c) : null;
 }
 
@@ -138,18 +159,36 @@ export interface CauseLine {
   line: string;
   /** The evidence that named it, in words. */
   evidence: string[];
+  /** It tells its fault apart: said as the reason ("Why"); otherwise only also measured on that lap. */
+  reason: boolean;
+  /** WHY_LABEL or ALSO_MEASURED_LABEL. */
+  label: string;
 }
 
-/** Every measured cause of a point, with its evidence in words (Review). */
+/** Every measured cause of a point, with its evidence in words (Review): the causes that tell the fault apart first
+ * ("Why"), then the ones that were only also measured, each group in the server's order. */
 export function causeLines(o: Annotated | null | undefined): CauseLine[] {
   const k = o?.knowledge;
   if (!k || k.applies === false) return [];
-  return (k.causes ?? []).map((c) => ({
-    id: c.id,
-    name: c.name,
-    line: causeScreen(c),
-    evidence: (c.evidence ?? []).map(evidenceWords).filter((x) => x.length > 0),
-  }));
+  const lines = (k.causes ?? []).map((c) => {
+    const reason = isReason(c);
+    return {
+      id: c.id,
+      name: c.name,
+      line: causeScreen(c),
+      evidence: (c.evidence ?? []).map(evidenceWords).filter((x) => x.length > 0),
+      reason,
+      label: reason ? WHY_LABEL : ALSO_MEASURED_LABEL,
+    };
+  });
+  return [...lines.filter((l) => l.reason), ...lines.filter((l) => !l.reason)];
+}
+
+/** A cause line's heading: "Why: Braking ended sooner, longer roll after." or "Also measured on this lap: Braked
+ * earlier, reached the corner slower." */
+export function causeHeading(c: Pick<CauseLine, "label" | "line">): string {
+  const line = c.line.trim().replace(/[.!?]+$/, "");
+  return `${c.label}: ${line}.`;
 }
 
 /** The graph's explanation written for this driver's skill or braking style (beginner advice, the trail-braking

@@ -9,7 +9,8 @@
 // Incident observations (spin, contact, a slow-down) are never coaching (6.6) and are left out, and so is a point the
 // technique graph says does not fit the driver (recap.py rank_points, analysis/coaching.py `applies`; the Corners tab
 // shows it greyed with the reason) - though it still makes its corner unclean on its lap, as the habit tracker counts.
-// The evidence line leads with the cause the newest occurrence's measured signals named (lib/knowledge/annotation.ts).
+// The evidence line leads with the cause the newest occurrence's measured signals named, when that cause is shown to
+// tell its fault apart (lib/knowledge/annotation.ts cardCause); a cause only also measured is left to the Corners tab.
 //
 // The card text is the coach's, verbatim: the newest lap's occurrence (it carries the longest consistency
 // history), `text_simple` (D6) for simple-wording profiles when the backend sends it.
@@ -292,8 +293,8 @@ export function itemText(item: Pick<CoachingItem, "latest">, simple: boolean): s
  * The card's evidence line from the shown observation's own fields (spec 9.6: `consistency`, `impact_s`,
  * `confidence`), so its amount matches the coach's text above it: "Seen on 3 of your last 5 laps · about 0.11 s a
  * lap · confidence high". Without the coach's consistency it says how many of this session's laps showed it. When the
- * technique graph named a cause on that lap, its screen line leads ("Slowed more than your reference on the way in ·
- * Seen on ...").
+ * technique graph named a cause on that lap that tells its fault apart, its screen line leads ("Braking ended sooner,
+ * longer roll after · Seen on ...").
  */
 export function itemEvidence(item: CoachingItem): string {
   const line = evidenceLine({

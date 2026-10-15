@@ -7,9 +7,11 @@
 // (voice/proactive.py skips them: "the driver knows they spun"), nor is a point the technique graph says does not fit
 // the driver (analysis/coaching.py `applies`; D6's blocks already leave those out).
 //
-// Technique knowledge (lib/knowledge/annotation.ts): when the point's measured signals named a cause, its screen line
-// leads the evidence line ("Slowed more than your reference on the way in · Seen on 3 of the last 5 laps · ..."),
-// which shows only when the car is stationary (pit lane, Ready, Session complete): at speed the card stays one line.
+// Technique knowledge (lib/knowledge/annotation.ts): when the point's measured signals named a cause shown to tell its
+// fault apart (its base-rate check, `discriminates`), its screen line leads the evidence line ("Braking ended sooner,
+// longer roll after · Seen on 3 of the last 5 laps · ..."), which shows only when the car is stationary (pit lane,
+// Ready, Session complete): at speed the card stays one line. A cause that was only also measured is never the card's
+// reason (Review shows it as also measured).
 //
 // Length rule (4.5): while moving, up to 60 characters at 30 px, longer at 26 px (never smaller: 22 px is under
 // ISO 15008's 16' at 70 cm), clamped to 3 lines past 130 characters (the verbatim prefix and an ellipsis; D6's
@@ -52,7 +54,8 @@ export interface CoachPoint {
   /** Muted line when there is no point to show. */
   empty: string | null;
   /** "Seen on 3 of the last 5 laps · about 0.12 s · confidence high", led by the measured cause's screen line when the
-   * technique graph named one ("Slowed more than your reference on the way in · Seen on ..."), or null. */
+   * technique graph named one that tells its fault apart ("Braking ended sooner, longer roll after · Seen on ..."), or
+   * null. */
   evidence: string | null;
   source: "d6" | "observation" | null;
   /** The learned corner the point is about. */

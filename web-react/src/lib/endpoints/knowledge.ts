@@ -134,11 +134,30 @@ export interface KnowledgeDiscriminator {
   note: string | null;
 }
 
+/** A cause's base-rate check against one fault it explains (`[[cause.measured]]`): of the corner-laps where its evidence
+ * could be measured, `fault_laps` had the fault (the evidence held on `fault_held`), `other_laps` did not (`other_held`). */
+export interface KnowledgeBaseRate {
+  fault: string;
+  fault_laps: number;
+  fault_held: number;
+  other_laps: number;
+  other_held: number;
+  date: string;
+  /** Source id (a recorded source). */
+  source: string;
+  note: string | null;
+}
+
 export interface KnowledgeCause extends KnowledgeNode {
   type: "cause";
   explains: string[];
   advice: string[];
   discriminators: KnowledgeDiscriminator[];
+  /** The base-rate check showed it tells its fault apart: only then is it said as the reason. Absent on an older
+   * server: not shown. */
+  discriminates?: boolean;
+  /** Its base-rate checks, one per live fault it explains. Absent on an older server. */
+  measured?: KnowledgeBaseRate[];
 }
 
 export interface KnowledgeAdvice extends KnowledgeNode {

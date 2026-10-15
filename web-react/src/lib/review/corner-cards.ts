@@ -5,7 +5,8 @@
 // for technique advice" (they are never coaching). Technique knowledge (lib/knowledge/annotation.ts): a point the
 // technique graph says does not fit the driver is greyed the same way with the graph's reason ("not coached for you:
 // Only for: H-pattern gearbox") and counts for neither filter; a coached point lists the causes its measured signals
-// named, each with the evidence in words, and the graph's explanation written for the driver's skill or braking style.
+// named, each with the evidence in words ("Why" only for a cause shown to tell its fault apart, "Also measured on this
+// lap" for the others), and the graph's explanation written for the driver's skill or braking style.
 // Pure; tested in node.
 
 import type { CornerSummaryRow, ReviewObservation, ReviewTrackModel, SessionAnalysis } from "../endpoints/review";
@@ -35,7 +36,7 @@ export interface CornerCardObservation {
   evidence: string;
   /** The technique graph says this point does not fit the driver: its reason (never coaching; shown greyed). */
   notForYou: string | null;
-  /** The causes the lap's measured signals named, with their evidence in words. */
+  /** The causes the lap's measured signals named, with their evidence in words: the reasons first. */
   causes: CauseLine[];
   /** The graph's explanation written for the driver's skill or braking style; null when only the general wording
    * exists (the coach's text says it). */

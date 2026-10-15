@@ -17,14 +17,18 @@ import { workOnItems, itemEvidence } from "../review/coaching";
 import { cornerObservations } from "../review/compare";
 import { cornerCards, filterCounts, lapsSpokenText } from "../review/corner-cards";
 import {
+  ALSO_MEASURED_LABEL,
   cardCause,
+  causeHeading,
   causeLines,
   evidenceSentence,
   evidenceWords,
   fitsDriver,
+  isReason,
   joinLine,
   notForYou,
   tailoredExplanation,
+  WHY_LABEL,
   type PointKnowledge,
 } from "./annotation";
 import { channelsLine, styleLine } from "./view";
@@ -68,6 +72,12 @@ describe("the backend fixture", () => {
     const slimEvidence = FILE.response.coach_point.knowledge!.causes[0]!.evidence!;
     expect(slimEvidence.length).toBeGreaterThan(0);
     expect(slimEvidence.every((e) => !("test" in e) && typeof e.signal === "string")).toBe(true);
+    // every cause says whether its base-rate check showed it tells its fault apart: on these laps only the early
+    // brake release does, and the coach block's copy carries only such causes
+    const causes = Object.values(FILE.response.review).flatMap((o) => o.knowledge?.causes ?? []);
+    expect(causes.every((c) => typeof c.discriminates === "boolean")).toBe(true);
+    expect([...new Set(causes.filter((c) => c.discriminates).map((c) => c.id))]).toEqual(["early_brake_release"]);
+    expect(FILE.response.coach_point.knowledge!.causes.every((c) => c.discriminates === true)).toBe(true);
   });
 });
 
@@ -82,18 +92,29 @@ describe("annotation helpers", () => {
     expect(notForYou(review("over_braking"))).toBeNull();
   });
 
-  it("the card's cause line is the first measured cause's screen line, verbatim", () => {
-    expect(cardCause(review("over_braking"))).toBe("Braked earlier, reached the corner slower");
-    expect(cardCause(review("low_grip"))).toBe("More sliding here than on your reference");
+  it("the card's cause line is the screen line of the first cause that tells its fault apart, verbatim", () => {
+    expect(cardCause(review("early_brake_release"))).toBe("Braking ended sooner, longer roll after");
     expect(cardCause(FILE.response.coach_point)).toBe(FILE.response.coach_point.knowledge!.causes[0]!.screen);
+    // measured, but about as common without the fault (its base rate): never the card's reason
+    expect(cardCause(review("over_braking"))).toBeNull();
+    expect(cardCause(review("low_grip"))).toBeNull();
+    expect(cardCause(review("traction_limited"))).toBeNull();
     expect(cardCause(review("none"))).toBeNull();
-    expect(cardCause({ knowledge: { ...NOT_FOR_YOU, causes: review("over_braking").knowledge!.causes } })).toBeNull();
+    expect(cardCause({ knowledge: { ...NOT_FOR_YOU, causes: review("early_brake_release").knowledge!.causes } })).toBeNull();
+    // edited (the server's shape): a reason after a cause only also measured is still the card's line
+    const both = review("over_braking");
+    both.knowledge!.causes = [...both.knowledge!.causes, ...review("early_brake_release").knowledge!.causes];
+    expect(cardCause(both)).toBe("Braking ended sooner, longer roll after");
+    // edited: an older server's slim copy without the flag is not shown as the reason
+    const old = { ...FILE.response.coach_point.knowledge!, causes: [{ id: "x", name: "X", screen: "Old" }] };
+    expect(cardCause({ knowledge: old })).toBeNull();
+    expect(isReason({ id: "x", name: "X" })).toBe(false);
   });
 
   it("evidence in words: the test and the signed value measured on the lap; a yes/no test is its words", () => {
     const [brake, entry] = review("over_braking").knowledge!.causes[0]!.evidence!;
-    expect(evidenceWords(brake!)).toBe("braked at least 8 m earlier than on the reference lap (measured −8.6 m)");
-    expect(evidenceWords(entry!)).toBe("at least 4 km/h slower at the corner entry than on the reference lap (measured −10 km/h)");
+    expect(evidenceWords(brake!)).toBe("braked at least 8 m earlier than on the reference lap (measured −9.6 m)");
+    expect(evidenceWords(entry!)).toBe("at least 4 km/h slower at the corner entry than on the reference lap (measured −18 km/h)");
     const grip = review("low_grip").knowledge!.causes[0]!.evidence![0]!;
     expect(evidenceWords(grip)).toBe(grip.test);
     expect(evidenceWords({ test: "a wheel locked in the braking zone", value: 2, unit: "count" })).toBe(
@@ -112,13 +133,33 @@ describe("annotation helpers", () => {
     );
   });
 
-  it("cause lines carry every measured cause with its evidence", () => {
+  it("cause lines carry every measured cause with its evidence: 'Why' only for one that tells its fault apart", () => {
     const lines = causeLines(review("traction_limited"));
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toMatchObject({ id: "traction_limited", line: "More wheelspin or sliding than your reference" });
-    expect(lines[0]!.evidence[0]).toBe("a rear wheel spun under throttle on the way out, and not on the reference lap");
+    expect(lines[0]).toMatchObject({
+      id: "traction_limited",
+      line: "More wheelspin or sliding than your reference",
+      reason: false,
+      label: ALSO_MEASURED_LABEL,
+    });
+    expect(lines[0]!.evidence[0]).toBe("the back of the car slid or needed a counter-steer on the way out, and not on the reference lap");
+    expect(causeHeading(lines[0]!)).toBe("Also measured on this lap: More wheelspin or sliding than your reference.");
+    const [why] = causeLines(review("early_brake_release"));
+    expect(why).toMatchObject({ id: "early_brake_release", reason: true, label: WHY_LABEL });
+    expect(causeHeading(why!)).toBe("Why: Braking ended sooner, longer roll after.");
+    // edited (the server's shape): the reasons come first, then what was also measured, each in the server's order
+    const both = review("over_braking");
+    both.knowledge!.causes = [...both.knowledge!.causes, ...review("early_brake_release").knowledge!.causes];
+    expect(causeLines(both).map((c) => [c.id, c.label])).toEqual([
+      ["early_brake_release", "Why"],
+      ["over_braking", "Also measured on this lap"],
+    ]);
     expect(causeLines(review("none"))).toEqual([]);
     expect(causeLines({ knowledge: NOT_FOR_YOU })).toEqual([]);
+    // the words never say "why" or "because" about a cause only also measured
+    for (const key of ["over_braking", "low_grip", "early_turn_in", "waiting_for_rotation", "traction_limited"]) {
+      for (const c of causeLines(review(key))) expect(causeHeading(c)).not.toMatch(/\bwhy\b|\bbecause\b/i);
+    }
   });
 
   it("an explanation shows only when written for the driver's skill or style", () => {
@@ -133,7 +174,7 @@ describe("annotation helpers", () => {
   it("makes a cause's evidence one sentence", () => {
     const [line] = causeLines(review("over_braking"));
     expect(evidenceSentence(line!.evidence)).toBe(
-      "Braked at least 8 m earlier than on the reference lap (measured −8.6 m); at least 4 km/h slower at the corner entry than on the reference lap (measured −10 km/h).",
+      "Braked at least 8 m earlier than on the reference lap (measured −9.6 m); at least 4 km/h slower at the corner entry than on the reference lap (measured −18 km/h).",
     );
     expect(evidenceSentence([])).toBe("");
   });
@@ -145,14 +186,19 @@ describe("annotation helpers", () => {
 });
 
 describe("the coach card", () => {
-  it("leads the evidence line with the measured cause (shown when stationary)", () => {
+  it("leads the evidence line with a cause that tells its fault apart (shown when stationary)", () => {
     const s = fixture("recorded-d246-suzuka-on-track-brake-ahead");
     const before = coachPoint(s, "T7", false, false).evidence;
     // edited: the recorded D6 block's T7 point given the backend fixture's slim annotation
     s.coach!.by_corner.T7 = { ...s.coach!.by_corner.T7!, knowledge: FILE.response.coach_point.knowledge };
     const p = coachPoint(s, "T7", false, false);
     expect(p.evidence).toBe(joinLine(FILE.response.coach_point.knowledge!.causes[0]!.screen, before));
+    expect(p.evidence).toMatch(/^Braking ended sooner, longer roll after · /);
     expect(p.text).toBe(s.coach!.by_corner.T7!.text); // the coach's own text is unchanged
+    // edited: a cause that was only also measured (an older server's slim copy sent every cause) never leads it
+    const measured = review("over_braking").knowledge!;
+    s.coach!.by_corner.T7 = { ...s.coach!.by_corner.T7!, knowledge: measured };
+    expect(coachPoint(s, "T7", false, false).evidence).toBe(before);
   });
 
   it("before D6, a point the graph says is for another driver is never the card's point", () => {
@@ -174,16 +220,24 @@ describe("Review", () => {
   });
 
   it("Corners: a point for another driver is greyed with its reason and counts for neither filter", () => {
-    const analysis = { corner_summary: [], observations: { "201": [notMine(1)], "202": [review("over_braking")] } };
+    const ob = review("over_braking");
+    const other = notMine(1);
+    expect(other.corner).not.toBe(ob.corner);
+    const analysis = { corner_summary: [], observations: { "201": [other], "202": [ob] } };
     const cards = cornerCards(analysis, null);
-    const t6 = cards.find((c) => c.key === "T6")!;
-    expect(t6.workOn).toBe(false);
-    expect(t6.observations[0]).toMatchObject({ notForYou: NOT_FOR_YOU.why_not, causes: [], explain: null });
-    expect(lapsSpokenText(t6)).toBeNull();
-    const t4 = cards.find((c) => c.key === "T4")!;
-    expect(t4.workOn).toBe(true);
-    expect(t4.observations[0]!.causes[0]).toMatchObject({ id: "over_braking", line: "Braked earlier, reached the corner slower" });
-    expect(t4.observations[0]!.causes[0]!.evidence[0]).toMatch(/\(measured −8\.6 m\)$/);
+    const greyed = cards.find((c) => c.key === other.corner)!;
+    expect(greyed.workOn).toBe(false);
+    expect(greyed.observations[0]).toMatchObject({ notForYou: NOT_FOR_YOU.why_not, causes: [], explain: null });
+    expect(lapsSpokenText(greyed)).toBeNull();
+    const coached = cards.find((c) => c.key === ob.corner)!;
+    expect(coached.workOn).toBe(true);
+    expect(coached.observations[0]!.causes[0]).toMatchObject({
+      id: "over_braking",
+      line: "Braked earlier, reached the corner slower",
+      reason: false,
+      label: "Also measured on this lap",
+    });
+    expect(coached.observations[0]!.causes[0]!.evidence[0]).toMatch(/\(measured −9\.6 m\)$/);
     expect(filterCounts(cards)).toMatchObject({ work: 1 });
   });
 
@@ -201,12 +255,15 @@ describe("Review", () => {
     expect(cards[0]!.observations[0]!.explain).toMatch(/^You usually keep some brake on into the turn/);
   });
 
-  it("Work on: a point for another driver is no item, and its evidence line leads with the cause", () => {
+  it("Work on: a point for another driver is no item; the evidence line leads only with a cause that tells it apart", () => {
     const ob = review("over_braking");
     const analysis = { observations: { "201": [notMine(1)], "202": [ob] }, comparisons: {} };
     const items = workOnItems(analysis);
     expect(items.map((i) => i.kind)).toEqual(["low_min_speed"]);
-    expect(itemEvidence(items[0]!)).toMatch(/^Braked earlier, reached the corner slower · /);
+    expect(itemEvidence(items[0]!)).not.toMatch(/Braked earlier, reached the corner slower/); // only also measured
+    const ebr = review("early_brake_release");
+    const coasting = workOnItems({ observations: { "203": [ebr] }, comparisons: {} });
+    expect(itemEvidence(coasting[0]!)).toMatch(/^Braking ended sooner, longer roll after · /);
   });
 });
 
