@@ -531,6 +531,12 @@ family record here?" or "Who's fastest in the family?"; when a lap takes the rec
 ([leaderboard.md](leaderboard.md); API `/api/leaderboard`, `/api/records`). Tested on unit tests and a read-only copy
 of the owner's database; the Records screen comes with Review › Progress.
 
+Two more rows can sit on a board. In an F1 car on a real circuit, **Real F1**: that season's real pole (2025 cars
+against the 2025 pole, 2026 Season Pack cars against 2026), from F1DB (CC BY 4.0), always with the reminder that F1 25
+is not the real car; if the game cannot tell a 2025 from a 2026 car, the board asks which it was. In F1 25 Time Trial,
+**EA rival**: the rival you picked from EA's leaderboard, read from the game's Time Trial data (from EA's spec; not yet
+seen in a recording). Each driver gets a gold (within 3 %), silver (5 %) or bronze (10 %) band against them.
+
 ### Weekly digest
 
 One page per driver per week: sessions with a timed lap, laps and clean laps against the week before, **Improvements**

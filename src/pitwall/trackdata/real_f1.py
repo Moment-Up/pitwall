@@ -558,3 +558,10 @@ def source() -> RealF1Source | None:
     """The F1DB version and credit of the packaged file (None when it is broken)."""
     data = _packaged_or_none()
     return data.source if data is not None else None
+
+
+def caveat() -> str | None:
+    """The caveat to show next to every real time (a real car's lap: F1 25 is not the real car and the real
+    conditions differ); None when the packaged file is broken."""
+    data = _packaged_or_none()
+    return data.caveat if data is not None else None

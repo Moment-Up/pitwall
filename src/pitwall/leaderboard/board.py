@@ -9,9 +9,11 @@ latest lap); ``progression`` runs the record again over the merged record laps, 
 A board row: the driver's best lap with its gap to the fastest (seconds, percent, words), date, session, clean laps
 counted, assist chips (the board's own: every row of a board has the same assists), best sectors and their sum
 (theoretical best). Times are neutral; the fastest row says ``Fastest``. Two optional rows plug into a board
-(``with_benchmarks``): the F1 25 Time Trial rival from EA's leaderboard (``ea_rival``) and a real-F1 time
-(``real_f1``); each driver row then carries its gap and GT7-style band to them [H]: gold within 3 %, silver within
-5 %, bronze within 10 %.
+(``with_benchmarks``; ``service`` finds them): the F1 25 Time Trial rival from EA's leaderboard (``ea_rival``) and a
+real-F1 pole (``real_f1``); each driver row, and the record of an index row, then carries its gap and GT7-style band
+to them [H]: gold within 3 % (or faster), silver within 5 %, bronze within 10 % (``trackdata.real_f1.band_for``: one
+rule for both rows). A benchmark that cannot fairly band (a real pole slower than that race's fastest lap: probably
+wet) still gives gaps, with no band.
 
 Record takes (``record_takes``, the family-record badge): a board is contested from the first lap of its second
 driver. The driver holding the record at that moment takes it, and so does every driver who sets a new record
@@ -27,8 +29,10 @@ from typing import Any
 from pitwall import carclass
 from pitwall.leaderboard import keys as K
 from pitwall.motivation.model import display_car, game_label, gap_s, lap_time, short_date
+from pitwall.trackdata import real_f1 as R
 
-BANDS = (("gold", 0.03), ("silver", 0.05), ("bronze", 0.10))  # [H] GT7 Sport Mode time trials: within 3 / 5 / 10 %
+# [H] GT7 Sport Mode time trials: within 3 / 5 / 10 % (as fractions; the rule itself is ``real_f1.band_for``)
+BANDS = tuple((name, pct / 100) for name, pct in R.BANDS)
 FASTEST = "Fastest"
 TRACK_LIMITS_NOTE = "This game does not say when a lap breaks track limits: a lap with a cut still counts here."
 
@@ -333,45 +337,78 @@ def evidence(key: K.BoardKey) -> dict[str, Any]:
 @dataclass(slots=True, frozen=True)
 class Benchmark:
     """An optional row on a board that is not a household driver: ``ea_rival`` (the F1 25 Time Trial rival from EA's
-    leaderboard, packet 14) or ``real_f1`` (a real car's time from F1DB). ``detail`` carries the source's own fields
-    (sectors, year, driver, source and licence, assists, evidence tier) unchanged."""
+    leaderboard, packet 14) or ``real_f1`` (a real car's pole from F1DB). ``detail`` carries the source's own fields
+    (sectors, year, driver, source and licence, assists, evidence tier) unchanged. ``banded`` False: gaps only, no
+    band (a real pole slower than that race's fastest lap)."""
 
     kind: str  # "ea_rival" | "real_f1"
     lap_ms: int
     label: str
     caveat: str | None = None
     detail: Mapping[str, Any] = field(default_factory=dict)
+    banded: bool = True
 
     def to_dict(self) -> dict[str, Any]:
-        return {**self.detail, "kind": self.kind, "lap_ms": self.lap_ms, "label": self.label, "caveat": self.caveat}
+        return {
+            **self.detail,
+            "kind": self.kind,
+            "lap_ms": self.lap_ms,
+            "label": self.label,
+            "caveat": self.caveat,
+            "banded": self.banded,
+        }
 
 
 def band(lap_ms: int, benchmark_ms: int) -> str | None:
-    """``gold`` within 3 % of the benchmark (or faster), ``silver`` within 5 %, ``bronze`` within 10 %, else None."""
-    if benchmark_ms <= 0:
-        return None
-    pct = (lap_ms - benchmark_ms) / benchmark_ms
-    return next((name for name, limit in BANDS if pct <= limit + 1e-12), None)
+    """``gold`` within 3 % of the benchmark (or faster), ``silver`` within 5 %, ``bronze`` within 10 %, else None
+    (``trackdata.real_f1.band_for``)."""
+    return R.band_for(lap_ms, benchmark_ms)
+
+
+def versus_text(gap_ms: int) -> str:
+    """A gap to a benchmark in words: ``6.578 s slower``, ``0.549 s faster``, ``Same time``."""
+    if gap_ms == 0:
+        return "Same time"
+    return f"{gap_s(gap_ms)} s {'slower' if gap_ms > 0 else 'faster'}"
 
 
 def versus(lap_ms: int, b: Benchmark) -> dict[str, Any]:
+    """A lap against a benchmark: ``gap_ms`` (positive = slower), ``gap_pct``, ``gap_text`` and ``band`` (None when
+    the benchmark is not ``banded``)."""
     gap = lap_ms - b.lap_ms
-    return {"gap_ms": gap, "gap_pct": round(gap / b.lap_ms * 100, 2), "band": band(lap_ms, b.lap_ms)}
+    return {
+        "gap_ms": gap,
+        "gap_pct": round(gap / b.lap_ms * 100, 2),
+        "gap_text": versus_text(gap),
+        "band": band(lap_ms, b.lap_ms) if b.banded else None,
+    }
 
 
 def with_benchmarks(
-    view: dict[str, Any], ea_rival: Benchmark | None = None, real_f1: Benchmark | None = None
+    view: dict[str, Any],
+    ea_rival: Benchmark | None = None,
+    real_f1: Benchmark | None = None,
+    real_f1_note: str | None = None,
 ) -> dict[str, Any]:
-    """Put the optional rows on a board (``board_view``) and each driver row's gap and band to them (``vs``)."""
+    """Put the optional rows on a board (``board_view``), each driver row's gap and band to them (``vs``), and the
+    words for a missing real-F1 row (``real_f1_note``)."""
     view["ea_rival"] = None if ea_rival is None else ea_rival.to_dict()
     view["real_f1"] = None if real_f1 is None else real_f1.to_dict()
+    view["real_f1_note"] = None if real_f1 is not None else real_f1_note
     for row in view.get("rows", []):
-        vs: dict[str, Any] = {}
-        for b in (ea_rival, real_f1):
-            if b is not None:
-                vs[b.kind] = versus(int(row["lap_ms"]), b)
-        row["vs"] = vs
+        row["vs"] = versus_all(int(row["lap_ms"]), ea_rival, real_f1)
     return view
+
+
+def versus_all(lap_ms: int, *benchmarks: Benchmark | None) -> dict[str, Any]:
+    """``{kind: versus(...)}`` for each benchmark present."""
+    return {b.kind: versus(lap_ms, b) for b in benchmarks if b is not None}
+
+
+def index_versus(entry: Mapping[str, Any], *benchmarks: Benchmark | None) -> dict[str, Any]:
+    """An index row's record against the benchmarks: ``{kind: {lap_ms, label, gap_ms, gap_pct, gap_text, band}}``."""
+    ms = int(entry["record"]["lap_ms"])
+    return {b.kind: {"lap_ms": b.lap_ms, "label": b.label, **versus(ms, b)} for b in benchmarks if b is not None}
 
 
 # ---------------------------------------------------------------------------------------------- views
@@ -439,6 +476,8 @@ def board_view(
         "evidence": evidence(key),
         "ea_rival": None,
         "real_f1": None,
+        "real_f1_note": None,
+        "real_f1_asks_generation": False,
     }
 
 
@@ -463,6 +502,7 @@ def index_entry(key: K.BoardKey, board: Mapping[int, Entry]) -> dict[str, Any]:
         "clean_laps": sum(e.clean_laps for e in order),
         "last_unix": max(e.last_unix for e in order),
         "track_limits_checked": track_limits_checked(key.game),
+        "vs": {},
     }
 
 

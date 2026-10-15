@@ -55,7 +55,8 @@ def test_board_by_key_and_by_fields(api: tuple[TestClient, dict[str, Any]]) -> N
     assert by_key.status_code == 200
     b = by_key.json()
     assert b["key"] == AUSTRIA_KEY and [r["driver_name"] for r in b["rows"]] == ["Sam", "Jo"]
-    assert b["rows"][1]["gap_text"] == "3.067 s behind" and b["ea_rival"] is None and b["real_f1"] is None
+    assert b["rows"][1]["gap_text"] == "3.067 s behind" and b["ea_rival"] is None
+    assert b["real_f1"]["label"] == "Real F1 pole 2025 · Lando Norris" and b["real_f1_note"] is None
     by_fields = client.get(
         "/api/leaderboard",
         params={
@@ -105,6 +106,7 @@ def test_records_index(api: tuple[TestClient, dict[str, Any]]) -> None:
     (row,) = idx["boards"]
     assert row["key"] == AUSTRIA_KEY and row["record"]["driver_name"] == "Sam" and row["record"]["lap_ms"] == 70_549
     assert row["drivers"] == 2 and row["labels"]["title"] == "Austria · Haas · Race · Dry"
+    assert row["vs"]["real_f1"]["band"] is None and row["vs"]["real_f1"]["gap_pct"] == 10.28  # +10.28 % off the pole
     assert client.get("/api/records", params={"game": "gt7"}).json() == {"boards": [], "count": 0}
     assert client.get("/api/records", params={"driver_id": 99}).json()["count"] == 0
 

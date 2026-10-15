@@ -9,6 +9,9 @@ Endpoints
     GET /api/records?game&track_id&driver_id           RecordsIndex: every board with its record holder and time
     GET /api/leaderboard/lapcard/{lap_id}?capture_hash=false   LapCard (format ``pitwall.lapcard`` v1)
 
+Both board endpoints take ``car_generation=f1_2025|f1_2026``: the driver's answer when the game cannot tell a 2025
+from a 2026 car (``real_f1_asks_generation``), used only for the real-F1 row of such boards.
+
 Handlers are plain ``def`` (FastAPI's thread pool): reads only, one short-lived read connection each. Errors: 404
 unknown lap, 409 a lap card for a lap with no time, 422 a key or field that does not parse. Pydantic models live only
 here (the query); the responses are the plain dicts ``leaderboard.service`` builds.
@@ -27,10 +30,12 @@ from pitwall.leaderboard import service as S
 router = APIRouter(tags=["leaderboard"])
 
 _Id = Annotated[str, Field(min_length=1, max_length=128)]
+CarGeneration = Literal["f1_2025", "f1_2026"]
 
 
 class BoardQuery(BaseModel):
-    """Either ``key`` alone, or ``game`` + ``track_id`` with optional key fields (string parts of a key)."""
+    """Either ``key`` alone, or ``game`` + ``track_id`` with optional key fields (string parts of a key); with either,
+    the optional ``car_generation``."""
 
     key: str | None = Field(default=None, min_length=1, max_length=600)
     game: _Id | None = None
@@ -42,6 +47,7 @@ class BoardQuery(BaseModel):
     category: Literal["time_trial", "qualifying", "race", "practice", "unknown"] | None = None
     conditions: Literal["dry", "wet", "unknown"] | None = None
     assists: str | None = Field(default=None, min_length=1, max_length=64)  # an assist code: b2.a1.t2.g3.l2 / a1.t0 / -
+    car_generation: CarGeneration | None = None  # not a key field: the driver's choice for the real-F1 row
 
     @model_validator(mode="after")
     def _key_or_track(self) -> BoardQuery:
@@ -66,7 +72,7 @@ def leaderboard(request: Request, q: Annotated[BoardQuery, Query()]) -> dict[str
         if q.key is not None:
             key = K.decode(q.key)
             with _db(request).read() as c:
-                return S.board_by_key(c, key)
+                return S.board_by_key(c, key, car_generation=q.car_generation)
         assert q.game is not None and q.track_id is not None
         if q.assists is not None:
             K.parse_assists(q.game, q.assists)  # 422 for a code that does not fit the game
@@ -84,7 +90,7 @@ def leaderboard(request: Request, q: Annotated[BoardQuery, Query()]) -> dict[str
     except K.BadKey as e:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(e)) from e
     with _db(request).read() as c:
-        return S.board_by_filter(c, f)
+        return S.board_by_filter(c, f, car_generation=q.car_generation)
 
 
 @router.get("/api/records")
@@ -93,9 +99,10 @@ def records(
     game: Annotated[str | None, Query(min_length=1, max_length=64)] = None,
     track_id: Annotated[str | None, Query(min_length=1, max_length=128)] = None,
     driver_id: int | None = None,
+    car_generation: CarGeneration | None = None,
 ) -> dict[str, Any]:
     with _db(request).read() as c:
-        return S.records_index(c, game, track_id, driver_id)
+        return S.records_index(c, game, track_id, driver_id, car_generation=car_generation)
 
 
 @router.get("/api/leaderboard/lapcard/{lap_id}")

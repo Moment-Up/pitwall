@@ -101,6 +101,7 @@ def test_source_carries_version_licence_and_attribution(shipped: real_f1.RealF1B
     assert len(src.inputs) == 7 and all(len(sha) == 64 for _, sha in src.inputs)
     assert "F1 25 is not the real car" in shipped.caveat
     assert real_f1.source() == src
+    assert real_f1.caveat() == shipped.caveat
 
 
 def test_known_historical_times(shipped: real_f1.RealF1Benchmarks) -> None:
@@ -327,6 +328,7 @@ def test_a_broken_packaged_file_means_unknown_not_a_crash(
         assert mapping_for("f1:7") is None
         assert real_f1.coverage() == ()
         assert real_f1.source() is None
+        assert real_f1.caveat() is None
     assert sum("real F1 benchmarks unavailable" in r.message for r in caplog.records) == 1  # logged once
     with pytest.raises(BenchmarkError):
         real_f1.load_benchmarks()

@@ -61,7 +61,9 @@ own boards.
 Either `key=<string form>`, or `game` + `track_id` with any of `length_m` (matched within 3 %), `car_id`,
 `car_class` (`f1|f2|other|?|-`), `equal_performance` (`0|1|?|-`), `category`, `conditions`, `assists` (an assist
 code). An unset field means any; `?` asks for the unknown bucket (`car_id=?` is the unknown-car board, never "any
-car"). When several boards match, the one driven most recently is shown. 422: a key or field that does not parse.
+car"). When several boards match, the one driven most recently is shown. With either form, `car_generation`
+(`f1_2025|f1_2026`) is the driver's answer when the game cannot tell a 2025 from a 2026 car (below); it never
+changes which board is shown. 422: a key or field that does not parse.
 
 ```jsonc
 {
@@ -80,7 +82,8 @@ car"). When several boards match, the one driven most recently is shown. 422: a 
     "leader": true, "gap_ms": null, "gap_pct": null, "gap_text": "Fastest",      // others: 3067, 4.35, "3.067 s behind"
     "clean_laps": 18, "assists": [...chips...], "best_sectors_ms": [16662, 31149, 22151],
     "theoretical_best_ms": 69962, "theoretical_gain_ms": 587, "game_version": "1.26",
-    "vs": {}                                                   // gaps and bands to the optional rows, when present
+    "vs": {"real_f1": {"gap_ms": 6578, "gap_pct": 10.28, "gap_text": "6.578 s slower", "band": null}}
+                                         // one entry per optional row present ("ea_rival", "real_f1"); else {}
   }],
   "no_time": [{"driver_id": 3, "driver_name": "Kim"}],        // household drivers with no lap on this board
   "record": {"driver_id": 1, "driver_name": "Sam", "lap_ms": 70549, "lap_id": 52, "session_id": "...",
@@ -89,8 +92,10 @@ car"). When several boards match, the one driven most recently is shown. 422: a 
                "previous_driver_name": null, "gain_ms": null, "changed_hands": false, "date_text": "Sat 10 Oct",
                "text": "Sam set the first record: 1:16.577", ...}],   // oldest first; "Jo took the record from Sam: ..."
   "evidence": {"track_limits_checked": true, "note": null, "counts": "Clean, valid laps of real driving only: ..."},
-  "ea_rival": null,                                            // optional row (below)
-  "real_f1": null,                                             // optional row (below)
+  "ea_rival": null,                                            // optional row (below): Time Trial boards only
+  "real_f1": {"kind": "real_f1", "lap_ms": 63971, "label": "Real F1 pole 2025 · Lando Norris", ...},  // (below)
+  "real_f1_note": null,            // an F1-car board with no real_f1 row: why, in plain words; else null
+  "real_f1_asks_generation": false, // true: the game cannot tell a 2025 from a 2026 car here (ask, car_generation)
   "boards_here": [ /* /api/records rows of every board at this track: the pickers' choices */ ],
   "matched": 1
 }
@@ -101,9 +106,12 @@ are each sector's best on its own across the driver's laps on the board; the the
 
 ### `GET /api/records`
 
-Optional `game`, `track_id`, `driver_id` (boards where that driver has a lap).
-`{"boards": [{key, fields, labels, record, drivers, clean_laps, last_unix, track_limits_checked}], "count": n}`,
-sorted by game, track, layout, car, category, conditions, assists.
+Optional `game`, `track_id`, `driver_id` (boards where that driver has a lap), `car_generation` (as above, for every
+board whose car generation the game could not tell).
+`{"boards": [{key, fields, labels, record, drivers, clean_laps, last_unix, track_limits_checked, vs}], "count": n}`,
+sorted by game, track, layout, car, category, conditions, assists. `vs` is the record's gap and band to the board's
+optional rows: `{"real_f1": {"lap_ms", "label", "gap_ms", "gap_pct", "gap_text", "band"}, "ea_rival": {...}}`, only
+the rows present (`{}` for most boards).
 
 ### `GET /api/leaderboard/lapcard/{lap_id}?capture_hash=false`
 
@@ -112,24 +120,67 @@ board still gets a card, with `evidence.counts` false and the reasons.
 
 ## Optional rows: EA rival and real F1
 
-Two rows that are not household drivers plug into every board through `leaderboard/service.py`:
+Two rows that are not household drivers, found by `leaderboard/service.py` for every board. Each is
+`{...detail, "kind", "lap_ms", "label", "caveat", "banded"}` (`board.Benchmark.to_dict`), and every driver row gets
+`vs[kind] = {gap_ms, gap_pct, gap_text, band}`: `gap_ms` positive = slower than the row, `gap_text` "6.578 s slower" /
+"0.549 s faster" / "Same time", and GT7-style bands [H]: `gold` within 3 % (or faster), `silver` within 5 %, `bronze`
+within 10 %, else null (`trackdata.real_f1.band_for`, one rule for both rows; `banded` false: gaps only, no band).
 
-- `ea_rival_for(conn, key) -> Benchmark | None`: the F1 25 Time Trial rival from EA's leaderboard (UDP packet 14,
-  stored per session by the packet-14 work). Only for F1 Time Trial boards: the latest stored rival dataset at
-  `key.track_id` whose team is `key.car_id`. `Benchmark("ea_rival", lap_ms, "EA rival", caveat, detail)` with
-  `detail` = `sectors_ms`, `assists` (TC, gearbox, ABS on / off as packet 14 sends them), `equal_performance`,
-  `custom_setup`, `valid`, `seen_unix`, `session_id`, `evidence: "spec-decoded"` until a recorded Time Trial capture
-  exists.
-- `real_f1_for(key) -> Benchmark | None`: the real-F1 benchmark of an F1 track from
-  `src/pitwall/trackdata/real_f1_benchmarks.json` (F1DB, CC BY 4.0). Only for F1 boards of a track whose current
-  layout is matched. `Benchmark("real_f1", pole_ms, "Real F1 pole 2025 · <driver>", caveat, detail)`; the caveat is
-  always set (a real car's time: F1 25 is not the real car and conditions differ); `detail` carries the year, driver,
-  what the time is, the F1DB version and attribution, and the race fastest lap and lap record.
+**EA rival** (`ea_rival_for`): the rival the driver picked from EA's Time Trial leaderboard, from UDP packet 14
+(`session_time_trial`, schema v7; `repo.latest_tt_rival`). Only on F1 Time Trial boards with a known car: the latest
+valid, timed rival lap stored at the board's track and layout (3 %), in the board's exact car (the rival's team), with
+the board's "equal car performance" setting (unknown matches only unknown), from real sessions only (never synthetic,
+never a replay). The rival's TC, ABS and gearbox flags are on / off and do not line up with the board's assist
+classes, so they are shown, never matched. **Spec-decoded**: no recorded Time Trial capture yet (docs/status.md).
 
-Both return None until their data lands. With a row present, `board.with_benchmarks` adds it to the board
-(`Benchmark.to_dict()`: `{...detail, kind, lap_ms, label, caveat}`) and gives every driver row
-`vs[kind] = {gap_ms, gap_pct, band}`: GT7-style bands [H], `gold` within 3 % (or faster), `silver` within 5 %,
-`bronze` within 10 %, else null.
+```jsonc
+"ea_rival": {
+  "kind": "ea_rival", "lap_ms": 64500, "label": "EA rival", "banded": true,
+  "caveat": "The rival you picked from EA's Time Trial leaderboard, as the game sends it. Its assists and setup may
+             differ from yours. Read from EA's spec: not yet seen in a recording.",
+  "sectors_ms": [16000, 28000, 20500],                       // null for a sector the game sent as 0
+  "assists": {"traction_control": false, "anti_lock_brakes": true, "gearbox_assist": false},   // null = unknown
+  "assists_text": "Traction control off, ABS on, Gearbox assist off",
+  "equal_performance": false, "custom_setup": false, "valid": true, "car_name": "McLaren",
+  "seen_unix": 1791656220.0, "date_text": "Sat 10 Oct",      // when Pitwall stored it (the game gives no date)
+  "session_id": "a1b2c3d4e5f6",
+  "evidence": "spec-decoded", "evidence_level": "spec_implemented"   // capabilities: F1_25_INFO.fields["time_trial"]
+}
+```
+
+**Real F1** (`real_f1_row`): a real car's pole from `src/pitwall/trackdata/real_f1_benchmarks.json` (F1DB v2026.17.0,
+CC BY 4.0). Only on F1-car boards (never F2, classic F1 or an unknown class) of a track whose current real layout
+matched the game's lap within 3 %, and only when the board's own layout is that length. The pole is the one of the
+season the car models: a 2025 car (the base game's teams) gets the 2025 pole, a 2026 Season Pack car the 2026 pole
+(real 2026 cars lap a few percent slower). The generic car in UDP format 2025 (F1 World, or a 2026 car) cannot be told
+apart: no row, `real_f1_note` says why and `real_f1_asks_generation` is true; the screen may ask the driver and pass
+`car_generation`, which fills in only a generation the game did not tell (`generation_chosen` true). A pole slower
+than that race's fastest lap (Las Vegas 2025: probably a wet qualifying; F1DB has no weather) is shown with
+`banded: false` and a `band_note`. The caveat is always set, and `source` carries the credit CC BY 4.0 asks for: any
+screen showing a real time shows the caveat and a short linked credit ("Real F1 times: F1DB, CC BY 4.0").
+
+```jsonc
+"real_f1": {
+  "kind": "real_f1", "lap_ms": 63971, "label": "Real F1 pole 2025 · Lando Norris", "banded": true,
+  "caveat": "Real Formula 1 times, set by real cars in real sessions. F1 25 is not the real car, ...",
+  "what": "pole", "what_text": "Pole lap: qualifying P1's deciding lap", "time_text": "1:03.971",
+  "year": 2025, "date": "2025-06-28", "driver": "Lando Norris", "grand_prix": "Austrian Grand Prix",
+  "season": 2025, "generation": "f1_2025", "generation_chosen": false, "band_note": null,
+  "race_fastest_lap": {"time_ms": 67924, "time_text": "1:07.924", "year": 2025, "date": "2025-06-29",
+                       "driver": "Oscar Piastri", "grand_prix": "Austrian Grand Prix", "session": "race", "lap": 59},
+  "lap_record": {..., "label": "Fastest race lap on this layout (F1DB)"},   // not "the official lap record"
+  "layout": {"f1db_layout_id": "spielberg-3", "layout_length_m": 4326, "game_length_m": 4323},
+  "source": {"name": "F1DB", "version": "v2026.17.0", "released": "2026-10-11", "url": "...", "release_url": "...",
+             "licence": "CC BY 4.0", "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+             "attribution": "Real Formula 1 times and circuit layouts: F1DB v2026.17.0 by ..."}
+}
+```
+
+`real_f1_note` (null when the row is there or the board is not an F1-car board): "Real Formula 1 has no time on this
+layout." (reverse and short layouts, Hanoi), "The game's lap here is not the real circuit's length, so a real time
+would not compare." (Monaco, Mexico at F1DB v2026.17.0, or a session of another length), "The game does not say
+whether this is a 2025 or a 2026 car, so there is no real season to compare with.", "Real Formula 1 has no pole time
+here for 2025." (Madrid).
 
 ## Badge, engineer and radio
 
@@ -200,4 +251,11 @@ A read-only copy of the owner's database (`.backup` of a copy; the original was 
   1:13.616 (+3.067 s, 4.35 %). The owner holds every record and earns one family-record badge.
 - 11 boards have ABS unknown (laps stored before the per-lap assists), 8 ABS on, 1 ABS off (Sakhir, F2): the
   owner's Sakhir F2 laps split into two boards by ABS, as designed.
-- The whole record index takes about 60 ms on this database (both window-function queries about 11 ms).
+- The whole record index takes about 60 ms on this database (both window-function queries about 11 ms); with the
+  optional rows wired in, about 10-13 ms on a later run of the merged branch (a different load on the machine).
+- Optional rows (merged branch, 2026-10-15): no EA rival (no Time Trial session is recorded). A real-F1 row on 5 of
+  the 20 F1 boards, the ones in a 2025 team's car: Imola · McLaren · Race +8.32 % (bronze), Austria · Haas · Race
+  +10.28 %, Melbourne · McLaren · Race +11.55 % and · Practice +11.37 %, Shanghai · McLaren · Practice +20.96 % (no
+  band). 7 boards in the generic car (UDP format 2025) ask for the car generation instead (with "2025": Miami and
+  Montreal bronze; with "2026": Montreal silver, Miami, Monza and Suzuka bronze); the two reverse layouts have no real
+  layout; the 5 F2 boards and the unknown-car board get no row.

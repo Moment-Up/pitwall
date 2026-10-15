@@ -40,6 +40,8 @@ The release workflow copies a release's bullet points into its GitHub release no
   and keeps the rival per track and car. From EA's spec; not yet seen from the real game.
 - `pitwall tt-check <capture>` says whether a Time Trial recording carries the rival ghost's inputs. Tested on
   generated laps only.
+- Family boards show the real F1 pole for your car's season (F1DB) and, in Time Trial, your EA rival, with gold,
+  silver and bronze bands. Unit tests and real laps; the rival from EA's spec only.
 
 ## v0.3.0 - 2026-10-13
 

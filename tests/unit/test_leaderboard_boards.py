@@ -94,7 +94,8 @@ def test_each_driver_s_best_clean_valid_lap_on_the_exact_key(
     assert b["no_time"] == [{"driver_id": family["kim"], "driver_name": "Kim"}]
     assert b["labels"]["title"] == "Austria · Haas · Race · Dry"
     assert b["evidence"]["track_limits_checked"] is True
-    assert b["ea_rival"] is None and b["real_f1"] is None and sam["vs"] == {}
+    # a race board: no EA rival; a Haas (a 2025 car) at Austria: the real 2025 pole (test_leaderboard_benchmarks.py)
+    assert b["ea_rival"] is None and b["real_f1"]["lap_ms"] == 63_971 and set(sam["vs"]) == {"real_f1"}
     assert b["matched"] == 1 and [x["key"] for x in b["boards_here"]] == [AUSTRIA_KEY]
 
 
@@ -313,20 +314,50 @@ def test_bands_and_benchmarks() -> None:
     assert B.band(70_000, 0) is None
     view = {"rows": [{"lap_ms": 70_549}, {"lap_ms": 73_616}]}
     pole = B.Benchmark("real_f1", 63_971, "Real F1 pole 2025", "Real car: F1 25 is not the real car.", {"year": 2025})
-    out = B.with_benchmarks(view, real_f1=pole)
+    out = B.with_benchmarks(view, real_f1=pole, real_f1_note="ignored: the row is there")
     assert out["real_f1"] == {
         "year": 2025,
         "kind": "real_f1",
         "lap_ms": 63_971,
         "label": "Real F1 pole 2025",
         "caveat": "Real car: F1 25 is not the real car.",
+        "banded": True,
     }
-    assert out["ea_rival"] is None
-    assert out["rows"][0]["vs"] == {"real_f1": {"gap_ms": 6578, "gap_pct": 10.28, "band": None}}
+    assert out["ea_rival"] is None and out["real_f1_note"] is None
+    assert out["rows"][0]["vs"] == {
+        "real_f1": {"gap_ms": 6578, "gap_pct": 10.28, "gap_text": "6.578 s slower", "band": None}
+    }
     rival = B.Benchmark("ea_rival", 70_000, "EA rival")
     out = B.with_benchmarks(view, ea_rival=rival, real_f1=pole)
-    assert out["rows"][0]["vs"]["ea_rival"] == {"gap_ms": 549, "gap_pct": 0.78, "band": "gold"}
+    assert out["rows"][0]["vs"]["ea_rival"] == {
+        "gap_ms": 549,
+        "gap_pct": 0.78,
+        "gap_text": "0.549 s slower",
+        "band": "gold",
+    }
     assert set(out["rows"][1]["vs"]) == {"ea_rival", "real_f1"}
+    # faster than the benchmark: a negative gap, still gold; an unbanded benchmark gives gaps and no band
+    fast = B.with_benchmarks({"rows": [{"lap_ms": 69_000}]}, ea_rival=rival)["rows"][0]["vs"]["ea_rival"]
+    assert (fast["gap_ms"], fast["gap_text"], fast["band"]) == (-1000, "1.000 s faster", "gold")
+    wet = B.Benchmark("real_f1", 70_549, "Real F1 pole 2025", banded=False)
+    same = B.with_benchmarks({"rows": [{"lap_ms": 70_549}]}, real_f1=wet)
+    assert same["rows"][0]["vs"]["real_f1"] == {"gap_ms": 0, "gap_pct": 0.0, "gap_text": "Same time", "band": None}
+    assert same["real_f1"]["banded"] is False
+    # no row: the note says why
+    assert B.with_benchmarks({"rows": []}, real_f1_note="Why not.")["real_f1_note"] == "Why not."
+    # the index row's record against the benchmarks
+    entry = {"record": {"lap_ms": 70_549}}
+    assert B.index_versus(entry, rival, None) == {
+        "ea_rival": {
+            "lap_ms": 70_000,
+            "label": "EA rival",
+            "gap_ms": 549,
+            "gap_pct": 0.78,
+            "gap_text": "0.549 s slower",
+            "band": "gold",
+        }
+    }
+    assert B.BANDS == (("gold", 0.03), ("silver", 0.05), ("bronze", 0.10))
 
 
 def test_board_reads_never_touch_the_trace(store: tuple[Database, DbWriter], family: dict[str, Any]) -> None:

@@ -460,12 +460,14 @@ the motivation badges and worker, and `facts.py` (the engineer's topic `records`
 use window functions over raw key columns (`board_bests`: each driver's best per partition with the clean-lap count,
 best sectors, first and latest lap; `board_record_laps`: laps faster than every earlier lap of their partition);
 Python merges the partitions of one key (lengths within 3 %, "clear" and "overcast" both dry) and runs the record
-again over the merged rows. Nothing is stored: no schema change. After each live lap the motivation worker asks
+again over the merged rows. The boards store nothing of their own. After each live lap the motivation worker asks
 whether the lap took its board's record from another driver and publishes `live.notify("family_record", note)`; the
 radio hub turns it into one `GOAL` line (`motivation.radio.record_message`, the goal lines' gate and topic rules).
-Two optional rows plug in through `service.ea_rival_for` (F1 25 Time Trial packet 14) and `service.real_f1_for`
-(F1DB benchmarks); `board.with_benchmarks` adds them and each driver's gap and band. `lapcard.py` builds the
-versioned lap card locally; nothing goes online.
+Two optional rows: `service.ea_rival_for` (the F1 25 Time Trial rival, `repo.latest_tt_rival` over
+`session_time_trial`, schema v7) and `service.real_f1_row` (the real pole from `trackdata.real_f1`, F1DB, of the season
+`board_generation` reads from the board's car via `carclass`, or the driver's `car_generation` answer);
+`board.with_benchmarks` adds them, each driver's gap and band (`real_f1.band_for`), and `board.index_versus` the
+record's to each index row. `lapcard.py` builds the versioned lap card locally; nothing goes online.
 
 ## Dashboard (`web-react/`)
 React 19 + TypeScript (strict) + Vite + Tailwind v4 + HeroUI v3 / HeroUI Pro, built to `docs/ui/design-spec.md` (v2,

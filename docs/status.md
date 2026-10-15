@@ -367,8 +367,14 @@ On the copy (2026-10-15): 22 boards (20 F1 25, 2 GT7 unidentified circuits); all
 a board; one contested board (Austria · Haas · Race · Dry: the owner 1:10.549, the second profile +3.067 s, 4.35 %);
 11 boards have ABS and TC unknown (laps stored before the per-lap assists), and the owner's F2 Sakhir laps split by ABS
 (on / off), as designed. The record index takes about 60 ms there. Not yet verified: the radio line heard on track
-(no household record has changed hands in a live session yet); the Records screen (Review › Progress) and the EA rival
-and real-F1 rows, which plug into these boards.
+(no household record has changed hands in a live session yet); the Records screen (Review › Progress).
+
+The optional rows are wired into `/api/leaderboard` and `/api/records`: the **real-F1 pole** (F1DB v2026.17.0, CC BY
+4.0, with its caveat and credit) of the season the car models, on F1-car boards of matched tracks, and the **EA rival**
+on F1 Time Trial boards (**spec-decoded**: no Time Trial recording yet), each with the drivers' gaps and gold / silver /
+bronze bands [H]. **Unit tests; the real-F1 row also on the copy**: 5 of its 20 F1 boards get a real pole (Imola ·
+McLaren +8.32 %, bronze; the others +10.3 to +21 %, no band), 7 generic-car boards ask the driver which car generation
+it was (UDP format 2025 cannot tell), and the EA rival row has not been seen with real data.
 
 ## Known gaps
 
@@ -403,6 +409,11 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   (CarStatus): a stop whose change is not seen is judged on track after the exit, as before.
 - **Pace against the AI:** the active-car count and assist guards; the safety-car exclusion is synthetic only; time
   trial and the 2026 format are unverified; the "measured" suggestion has only been shown with made-up data.
+- **Leaderboard optional rows:** the generic car (team 41) is one board key whether the game reported it as a 2025-format
+  generic car or a 2026 car (formula F1 26), so such a board can mix generations and then shows no real-F1 row. The
+  EA rival must match the board's "equal car performance" setting exactly (an assumption: EA's Time Trial leaderboards
+  may already be split by it); its TC / ABS / gearbox flags are shown, not matched. Real-F1 bands are the [H] GT7
+  thresholds and may feel harsh: the owner's bests are 6-22 % off real poles.
 - **F1 25 Time Trial (packet 14):** spec-decoded only until a recorded Time Trial capture is checked with
   `pitwall tt-check`. In Time Trial the ghost cars' slots are driving cars to the adapter: if F1 25 flags them as AI in
   Participants, the field model (layer L0b) learns from the ghost's laps as if they were the AI's (not changed here).
