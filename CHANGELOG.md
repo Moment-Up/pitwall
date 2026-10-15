@@ -29,6 +29,20 @@ The release workflow copies a release's bullet points into its GitHub release no
   reminder for the next one. Settings › System lists what to look for. Synthetic.
 - A habit the radio announces gets its corner reminder on the lap you hear it, not one lap later. Tested on synthetic
   laps; not live.
+- Coaching fits who drives what: Ed's corner brief, his fault checklist and published coaching, each saying when it
+  applies (level, braking style, car, gearbox). Recorded laps; not live.
+- Your braking style and how often you coast are read from your own clean laps; unknown stays unknown. With the F1
+  braking assist on, Pitwall says some braking was the game's. Recorded laps.
+- When Pitwall measured why a point happened (braked earlier and arrived slower, more sliding than your reference...),
+  Review and the stopped coach card say so. Never on the radio. Recorded laps.
+- Review › Coaching: How corners work - a corner's six phases, which techniques fit you and why, what Pitwall checks,
+  and where it comes from, Ed credited. Unit tests; not yet seen in a browser.
+- Review › Compare: lateral and longitudinal g for both laps (hidden when the game sends none, as GT7) and markers
+  where each lap braked, released, was slowest and went flat. Unit tests.
+- The engineer explains technique from the knowledge graph for your session and rejects an answer naming a
+  technique it doesn't have. Tested with unit tests; LLM off.
+- On the owner's 30 recorded F1 25 and GT7 captures the radio and the coach card say exactly what they said before:
+  the eight coached points fit every driver and game.
 
 ## v0.3.0 - 2026-10-13
 

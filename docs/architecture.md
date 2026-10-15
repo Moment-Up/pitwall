@@ -31,7 +31,7 @@
                           |  learn TrackModel|    |  events, setups,       |
                           |  pick reference  |    |  track_models (vers.), |
                           |  compare (dist.) |    |  reference_laps,       |
-                          |  observations    |    |  observations, convos, |
+                          |  obs.+knowledge  |    |  observations, convos, |
                           |  drills          |    |  reference_choices,    |
                           +------------------+    |  drills, goals,        |
                                             ^     |  strategy_laps,        |
@@ -317,9 +317,50 @@ kinds by `analysis/coaching.py` `COACHING_KINDS`, plus planned detectors), cause
 apart, advice, constraints (forbidden phrasings: no "brake later", "brake less", "release the brake earlier" or "carry
 more speed" outside praise) and sources, every node with its evidence tier. `load_graph()` validates once per process
 (references, mirrored edges, code paths, thresholds, advice limits, tiers backed by sources, constraints on every
-text); a broken graph is logged and the app runs without it, while tests make it raise. Read-only API:
-`GET /api/technique/knowledge` (`api/routes_knowledge.py`). Nothing on the time-critical path; no LLM. Contributor
-guide and schema: [docs/knowledge.md](knowledge.md).
+text); a broken graph is logged and the app runs without it, while tests make it raise. Nothing on the
+time-critical path; no LLM. Contributor guide and schema: [docs/knowledge.md](knowledge.md).
+
+Using it, on the analysis worker after a lap's observations (step 6 above), never on the ingest thread:
+- **Context** (`knowledge/context.py`, frozen, every field None = unknown): skill from the seated driver's profile;
+  braking style and coasting detected (`knowledge/style.py`, below); game; car family (`carclass`); downforce high for
+  the F1 and F2 families; gearbox paddles with auto-blip for the F1 family, automatic when an F1 game reports
+  gearbox assist 3; ABS and traction control from F1 25's per-lap assists (all laps must agree) or Assetto Corsa's
+  session flags; fuel saving from the live strategy's lift and coast; wet from the weather. Per-game channel
+  availability comes from the adapters' declared fields: only an UNSUPPORTED field makes a channel `not_sent`; an
+  undeclared or UNVERIFIED one is `unknown` and never rules a node out.
+- **Style** (`knowledge/style.py`, [H] thresholds): over the driver's clean compared laps (the lap processor keeps the
+  last 5 per corner in `_SessionCache.style_laps`: no incidents, no safety car; a stored session uses every clean
+  analysed lap), the share of braking corner-laps with 10 m or more of trail braking (0.6 or more trail, 0.2 or less
+  straight-line, else mixed) and with 10 m or more of coasting (0.5 or more often, 0.2 or less rare, else unknown);
+  2 laps and 6 braking corner-laps at least. Under the F1 braking assist the style is kept and flagged
+  (`braking_assist`): the screens and the AI engineer say some of the braking was the game's.
+- **Annotation** (`knowledge/annotate.py` `DriverKnowledge`): every published observation dict gets an additive
+  `knowledge` key: `{fault, name, status, tier, applies, why_not, causes, advice, digest}`. `applies` is False when the
+  fault's conditions fail for the Context or the game does not send a channel one of its signals needs. Causes are
+  named only from measured values (`graph.Discriminator.holds`; an unmeasured value holds nothing), each with its
+  evidence; a corner's inputs and balance (`technique.session.lap_corner`) are computed only when a cause needs them,
+  and the reference lap's balance only for the causes compared with it (`low_grip`). Advice per form (radio, screen,
+  review): a style match first, then the driver's skill, then `any`; `tailored` marks advice written for the driver.
+  Observations are stored as before, without it; the comparison carries `knowledge: {digest, context, style}`. Any
+  error leaves the lap's observations unannotated (coached as before the graph).
+- **Applies** (`analysis.coaching.applies`): a point that does not fit the driver is never picked for the radio, never
+  on the coach card and never a habit (`coach.selection`, `coach.habits`, `motivation.recap.rank_points`), but still
+  makes its corner unclean for the habit tracker and the recap's "sorted" check. None of the eight live kinds has a
+  condition and every adapter sends their channels, so coaching on them is unchanged on every game (recorded A/B in
+  docs/status.md).
+- **Where it goes:** the coach block's points carry a slim copy (`annotate.slim`: applies, why_not, causes with their
+  evidence and screen line, advice), and so do the `/ws/live` snapshot's observations (`core/live.py`; the full
+  annotation stays in the lap notification and the session's analysis, so twenty snapshots a second stay small).
+  Stored sessions are annotated inside `SessionAnalyzer.analyse` (`knowledge/session.py`, cached with the analysis);
+  `GET /api/compare` annotates the lap pair for the compared lap's driver.
+- **API:** `GET /api/technique/knowledge` (the whole validated graph with typed edges) and `?session=<id>` (plus the
+  session's `context`, `style`, `channels` and `applies` / `why_not` on every condition, signal, technique, fault,
+  cause and advice node; 404 for an unknown session), `api/routes_knowledge.py`, orjson.
+- **Screens** (`web-react`): Review › Coaching's "How corners work" (`pages/review/plan/HowCornersWork.tsx`, rules in
+  `lib/knowledge/view.ts`) from the session variant; the coach card's stationary evidence line, Review's Work on
+  cards, Corners notes and Compare's explainer show the measured cause and, for a point that does not fit, its reason
+  (`lib/knowledge/annotation.ts`); Compare adds Ed's g-force charts (hidden when no lap has g) and the corner's phase
+  markers from `CornerMetrics` (`lib/review/phase-markers.ts`).
 
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw
@@ -332,7 +373,13 @@ intent and corner, and a grounded deterministic answer for each). The radio neve
 for a question only about data the game never sends (`games.capability_only`), or for any question while the car is
 moving (on track at 8 km/h or more, or speed unknown): `deterministic_answer` covers every intent.
 Technique facts (topics `line`, `technique`, `balance`) come from `technique/facts.py`; their intents are answered
-deterministically and are radio fast intents (feat/technique).
+deterministically and are radio fast intents (feat/technique). Technique knowledge facts (topic `knowledge`,
+`knowledge/facts.py`, last on the sheet; seen by the technique, focus, braking and losing-time intents): the driver's
+Context and detected style, and per fault seen this session its graph node, the measured causes, the techniques for
+that phase that fit and those for other drivers, and its sources with their tier in words. Their `data["nodes"]`
+names the graph nodes a fact is about, and `ai/grounding.py` rejects an answer that names a technique
+(`knowledge/terms.py`, kept in step with the graph by a test) no considered fact is about (`ungrounded_techniques`):
+the engineer explains the graph's techniques and never invents one.
 
 ## Radio policy (`voice/scheduler.py`)
 One scheduler decides what is said and when, and one table says it: `POLICY` (a `CallFamily` row per call family:
@@ -493,6 +540,10 @@ Svelte dashboard in `web/` is frozen to fixes only and served only when `web-rea
   (`last_comparison` always; `track_model`, `skeleton` and `track_knowledge` only when they changed). A new session's
   first snapshot and one a minute carry everything. Absent means keep the last value within the session, `null`
   none (`lib/live.ts` `STATIC_KEYS`).
+- **Technique knowledge on points** (`lib/knowledge/annotation.ts`): a point's `knowledge` (the slim copy on Drive,
+  the full annotation in Review) is read, never recomposed: the measured cause's screen line leads the evidence line;
+  a point the graph says does not fit the driver is never the card's point (`fitsDriver`, as the radio) and Review
+  shows it greyed with the graph's reason.
 - **Two car class encodings** until the 0.2.1 single source: goals and badges store `car_class` as
   `"<game>:formula:<name>"`, pace against the AI as the game's class name (`"F1 World"`); they are never joined.
 

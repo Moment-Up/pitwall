@@ -452,11 +452,22 @@ DOCS = Path(__file__).resolve().parents[2] / "docs" / "knowledge.md"
 _TAGGED = re.compile(r"`([a-z][a-z0-9_]*)` \(([a-z_]+)\)")
 
 
-def _coverage_rows(table: str) -> list[str]:
+STATUS_DOC = DOCS.parent / "status.md"
+
+
+def _coverage_rows(table: str, doc: Path = DOCS) -> list[str]:
     """The rows of a coverage table in docs/knowledge.md (between ``<!-- coverage:<table> -->`` markers)."""
-    text = DOCS.read_text(encoding="utf-8")
+    text = doc.read_text(encoding="utf-8")
     body = text.split(f"<!-- coverage:{table} -->", 1)[1].split(f"<!-- /coverage:{table} -->", 1)[0]
     return [ln for ln in body.splitlines() if ln.startswith("|")][2:]  # past the header and its separator
+
+
+def test_the_status_coverage_table_follows_the_guide() -> None:
+    """docs/status.md repeats the brief and checklist coverage as the evaluation's table: the same nodes and statuses,
+    row for row, as the checked tables in docs/knowledge.md."""
+    guide = [_TAGGED.findall(r) for t in ("brief", "checklist") for r in _coverage_rows(t)]
+    status = [_TAGGED.findall(r) for r in _coverage_rows("ed", STATUS_DOC)]
+    assert status == guide
 
 
 @pytest.mark.parametrize(("table", "rows"), [("brief", 13), ("checklist", 22), ("patches", 17)])

@@ -5,8 +5,8 @@ Pitwall's driving-technique knowledge lives in plain TOML files in
 phase, the faults Pitwall can see in telemetry, their causes, what to say about them, and where every piece comes
 from. You can read and extend it without touching code; Pitwall checks every file when it loads.
 
-This guide is for contributors (Ed included): how the graph is built, the exact schema, the canonical ids, how to add
-a source, and how to check your change.
+This guide is for contributors (Ed included): how the graph is built and used, the exact schema, how to add a node and
+a source, how validation works, the canonical ids, how Ed's material maps onto it, and how to check your change.
 
 ## Why a graph
 
@@ -33,8 +33,40 @@ The rules that never bend (from [CLAUDE.md](../CLAUDE.md)):
 
 `pitwall.knowledge.graph.load_graph()` reads every `*.toml` in the folder once per process, validates it and returns
 a frozen `TechniqueGraph`. If anything is wrong, the app logs every problem and runs without technique knowledge
-(coaching works exactly as before); the tests fail instead. `GET /api/technique/knowledge` returns the whole graph as
-JSON. Annotating observations, the driver's Context, the Review screens and the AI engineer's facts build on it.
+(coaching works exactly as before); the tests fail instead. Everything below runs after a lap is analysed, never on the
+path that reads the game's telemetry, and none of it uses a language model.
+
+1. **The driver's Context** (`knowledge/context.py`): what Pitwall knows about who drives what (the keys are in the
+   [condition table](#condition)). Anything not known is None and satisfies no condition.
+2. **The detected style** (`knowledge/style.py`): from the driver's clean compared laps at the track (the last 5 per
+   corner live; every clean lap of a stored session), the share of braking corners braked with the wheel turned for
+   10 m or more (0.6 or more is `trail`, 0.2 or less `straight_line`, in between `mixed`) and coasted for 10 m or more
+   (0.5 or more `often`, 0.2 or less `rare`, in between unknown). It needs 2 laps and 6 braking corners. With the F1
+   braking assist on, the style is kept but flagged: the screens and the AI engineer say some of the braking was the
+   game's. These thresholds are Pitwall's judgement ([H] in the code).
+3. **What the game sends** (`context.channel_status`): from each adapter's declared fields, a channel is `sent`,
+   `not_sent` (the adapter declares it unsupported) or `unknown`. A signal with a `not_sent` channel is unavailable;
+   an unknown channel never rules anything out.
+4. **Fit** (`knowledge/annotate.py` `DriverKnowledge.fit`): a technique fits when its conditions hold; a fault applies
+   when its conditions hold and every one of its signals is available; a cause can be named when its signals are
+   available; advice fits its fault or cause, the driver's skill (or `any`) and braking style (when it has one). Each
+   "no" comes with a reason in words (`why_not`: "Only for: H-pattern gearbox (gearbox not known)", "GT7 does not send
+   lateral g").
+5. **Every coaching point is annotated**: its `knowledge` says the fault, whether it applies (and why not), the causes
+   its lap's measurements named (each with the evidence: the discriminator's `test` and the value measured) and the
+   advice for this driver. A point that does not apply is never said on the radio, never on the coach card and never
+   a habit, but Review shows it with the reason. The eight live faults have no conditions and every game sends their
+   channels, so they apply to everyone: coaching on them is unchanged.
+6. **Advice is picked per form** (radio, screen, review): advice written for the driver's braking style first, then
+   for their skill, then the `any` advice. The live faults' `any` advice is today's wording, so the radio reads as
+   before; a cause's advice has no radio form, so causes show on screen only (the stopped coach card, Review).
+7. **The API**: `GET /api/technique/knowledge` returns the whole graph with typed edges; `?session=<id>` adds that
+   session's Context, style, channels and, on every condition, signal, technique, fault, cause and advice node,
+   `applies` and `why_not`. Review › Coaching's "How corners work" is built from it.
+8. **The AI engineer** (`knowledge/facts.py`, topic `knowledge`) gets the Context, the style and, for each fault seen
+   in the session, its node, measured causes, the techniques for that phase and their sources with the tier in words.
+   An answer that names a technique none of its facts is about is rejected (`ai/grounding.py`, with the technique
+   words in `knowledge/terms.py`): the engineer explains the graph and never invents a technique.
 
 What is in it: every point of Ed's corner brief and its self-check, every row of his technique-fault checklist and
 every detector in his patches (the tables in [Ed's knowledge in the graph](#eds-knowledge-in-the-graph)), the eight
@@ -103,9 +135,9 @@ Context keys and values (`CONTEXT_VALUES` in `graph.py`):
 | `game` | f1, gt7, forza, ac, acc | the session |
 | `car_family` | f1, f2, other | the car class |
 | `downforce` | high, medium, low | high for the F1 and F2 families, otherwise unknown |
-| `abs`, `traction_control` | true / false | the game's assists, when it reports them (F1 25 does) |
-| `gearbox` | paddle_autoblip, h_pattern, auto | paddles with auto-blip for the F1 family, otherwise unknown |
-| `fuel_saving` | true / false | the race strategy asks for lift and coast |
+| `abs`, `traction_control` | true / false | the game's assists when it reports them: F1 25 per lap (every lap must agree), Assetto Corsa's session flags |
+| `gearbox` | paddle_autoblip, h_pattern, auto | paddles with auto-blip for the F1 family; automatic when an F1 game reports gearbox assist 3; otherwise unknown |
+| `fuel_saving` | true / false | the live race strategy asks for lift and coast (unknown for a stored session) |
 | `wet` | true / false | the session's weather |
 
 **Unknown never satisfies a condition**, not even `ne` or `false`: "gearbox is not h_pattern" does not hold when the
@@ -144,8 +176,11 @@ Neither `applies_when` nor `applies_any` means the technique applies to everyone
 computed somewhere else needs its class added to `SIGNAL_CLASSES` in `graph.py`. Several signals may share one code
 when the field holds a value per phase or per point (`PhaseBalance.slip_diff_deg` for the entry, mid-corner and exit
 balance; `SlipEvents.events` for lock-ups and wheelspin; `LapCornerTechnique.line` for the track-out offset): the
-signal's id and notes say which one, so code that reads signals looks them up by id. A game that does not send one of the channels cannot measure the signal (GT7 sends
-no lateral g; AC's steering is not mapped).
+signal's id and notes say which one, so code that reads signals looks them up by id (`knowledge/annotate.py`
+`TECHNIQUE_READERS`; a test keeps each reader's code equal to its signal's). A few signals compare this lap with the
+reference lap at the same corner although their field is one lap's (`mid_understeer_vs_ref`, `mid_slide_vs_ref`): the
+reader computes the reference's value too, so a symptom the reference lap shared names no cause. A game that does not
+send one of the channels cannot measure the signal (GT7 sends no lateral g; AC's steering is not mapped).
 
 ### `[[fault]]`
 
@@ -200,7 +235,9 @@ one of those holds**. A signal that was not measured holds nothing: a cause is n
 
 Advice describes what happened and what the driver's own faster laps did. There are no placeholders: the numbers stay
 in the observation's own text ("T6, losing 0.31 s"). A cause's advice gets onto the radio only when it has a radio form
-and the cause was measured.
+and the cause was measured (none has one today). For each form Pitwall picks advice written for the driver's braking
+style first, then for their skill, then `any`; the annotation marks which forms came from advice written for the
+driver (`tailored`), and Review shows that review text under the coach's own words.
 
 ### `[[constraint]]`
 
@@ -265,6 +302,89 @@ note says what the graph takes from that page, and a node cites a page only for 
 measurement (a firing rate, a spread) cites the `recorded` source that measured it, in the node's `sources` as well as
 in the measurement's `source`.
 
+## Adding knowledge
+
+Any change is a small edit to one or two TOML files, then the check below. A few common cases:
+
+**A technique** (in `techniques.toml`): give it a new id, a `name`, a one-sentence `summary` a beginner can follow, a
+`detail` paragraph, its `phase`, and who it is for: `applies_when` (all must hold) and `applies_any` (one must hold),
+from `conditions.toml`; nothing means everyone. If it does the same job as another technique another way, list each
+in the other's `alternatives`. List the signals that show it in `measured_by`. Set `tier` and `sources` honestly: a
+technique from a coaching book is `expert` with that book as its source.
+
+```toml
+[[technique]]
+id = "rev_match_downshift"
+name = "Rev-matched downshifts"
+phase = "braking"
+summary = """With a manual gearbox, blip the throttle on each downshift while braking, so the revs match and the rear
+stays settled."""
+detail = """On a downshift the engine has to spin faster to match the wheels in the lower gear. ... Only for an H-pattern
+gearbox with a clutch: paddle-shift cars blip by themselves, so their throttle trace never shows it."""
+applies_when = ["gearbox_h_pattern"]
+measured_by = ["missed_blips"]
+tier = "expert"
+sources = ["ed_corner_brief", "wikipedia_heel_and_toe", "pitwall_patch_review"]
+```
+
+(shortened from the graph). Its notes say why the condition is there: on real F1 25 laps 69 % of downshifts have no
+driver throttle near them, because the game blips on paddle downshifts, so the check means nothing with paddles, and
+an unknown gearbox does not count as an H-pattern one.
+
+**A condition** (in `conditions.toml`): only when the existing ones cannot say it. An "and" inside an "or" is a
+compound condition (`all_of` / `any_of` naming other conditions), as `no_abs_low_downforce` does. A new Context key
+or value is a code change (`CONTEXT_VALUES` in `graph.py` and where `knowledge/context.py` reads it).
+
+**A fault** (in `faults.toml`): a new detector Pitwall does not compute yet is `status = "planned"`; one it computes
+but does not coach is `experimental`. Name the techniques it breaks (`violates`), its signals (add any missing ones
+to `signals.toml`, without `code` until Pitwall computes them), its conditions, and any firing rates measured on
+recorded laps (`[[fault.measured]]`, citing the `recorded` source that measured them). Only code makes a fault `live`:
+a coaching rule in `analysis/coaching.py`, its kind in `COACHING_KINDS`, and the fault's id equal to that kind.
+
+**A cause** (in `causes.toml`): list the faults it explains in `explains` and add the cause to each fault's
+`causes`. Give it discriminators that read computed signals only, each with its plain-words `test`: the cause is
+named on a lap only when they hold on that lap's measurements. Prefer evidence relative to the reference lap: a
+symptom both laps had does not explain why this lap was slower.
+
+**Advice** (in `advice.toml`): `for` names the fault or cause, which lists the advice back in its `advice`. Write the
+`review` (at most 320 characters) and, if it belongs on a screen or the radio, `screen` (48 characters) and `radio`
+(8 words). Describe what happened against the driver's own reference lap; never instruct a later or lighter brake, an
+earlier release or more speed (the constraints reject it). Add a `skill = "beginner"` variant in plain words, and a
+`style` variant when the explanation differs for a braking style.
+
+**A source**: see [Sources and tiers](#sources-and-tiers). Read the source first, paraphrase what you take, and cite
+it only on nodes it supports.
+
+## How validation works
+
+`load_graph()` checks the whole graph when Pitwall starts and reports **every** problem at once, each with its file,
+node and field; the tests run the same checks, so a broken graph never reaches a release:
+
+- **Shape:** ids are snake_case and unique across the graph; required fields are present; unknown fields and tables
+  are errors; texts and lists have the right types; TOML syntax errors name the file and line.
+- **References:** every id a node lists exists and is of the right type (a technique's `phase` is a phase, a fault's
+  `causes` are causes ...); there are exactly the six phases, in order.
+- **Two-way links agree:** a fault's `causes` and each cause's `explains`; a node's `advice` and each advice's `for`;
+  `alternatives` both ways (never itself).
+- **Conditions:** keys and values come from the Context vocabulary (`CONTEXT_VALUES`); `true` / `false` keys take no
+  value; compound conditions have no cycle.
+- **Signals and code:** a signal's `code` names a real field or property of one of `SIGNAL_CLASSES`; its channels and
+  unit are known; a live fault's signals are all computed; `thresholds` name real numeric constants (the API shows
+  their values).
+- **Faults:** `kind` is set exactly when `status` is live, is a real coaching kind and equals the id; `positive`
+  matches the praise kinds; the canonical ids have the right types (`missing_canonical()`).
+- **Advice limits:** radio at most 8 words, screen at most 48 characters, review at most 320.
+- **Tiers:** a node's tier is the tier of at least one of its sources (`design` only on conditions, constraints and
+  sources), so no claim is stronger than its evidence.
+- **Constraints:** every user-facing text of the node types in a constraint's `scope` passes every forbidden pattern
+  (praise exempt where `except_praise` says so).
+
+At runtime a graph that fails is logged with its problems and Pitwall runs without technique knowledge: coaching,
+the radio and the dashboard work as they did before the graph, and `GET /api/technique/knowledge` answers 503 with the
+list. The tests make it strict instead (`set_strict(True)` in `tests/conftest.py`), and further tests check the
+content: the coverage tables below against the graph, the sample drivers' fits, every advice string against the
+constraints with examples each way, and the signal readers against the real dataclasses.
+
 ## Canonical ids
 
 The graph's content is written against these ids (`CANONICAL_*` in `graph.py`). A node with one of them must have the
@@ -313,6 +433,10 @@ driver. The rest fit only when the driver's Context says so, and an unknown trai
 | A beginner in GT7, nothing else known | `straight_line_braking`, `release_with_speed_to_spare`, `coast_to_apex` | none |
 | A classic car: H-pattern gearbox, no ABS, low downforce | `rev_match_downshift`, `straight_line_braking`, `release_with_speed_to_spare`, `coast_to_apex` | `missed_blip`, `gear_change_while_cornering`, `brake_lockup` |
 | An F1 race saving fuel, mixed braking style | `fuel_save_lift_and_coast`, `trail_braking`, `left_foot_braking` | `aero_crossover` (background) |
+
+On the owner's recorded sessions the gearbox actually reads automatic (they drive with F1 25's gearbox assist 3) and
+the braking assist is on: the fits are the same (both gearboxes are two-pedal), and the detected style carries the
+braking-assist note ([status.md](status.md#technique-knowledge-graph-unreleased) has every session's Context and style).
 
 Trail braking and the straight-line style (`straight_line_braking`, `release_with_speed_to_spare`, `coast_to_apex`)
 are each other's alternatives; `flat_to_brake_marker` and `fuel_save_lift_and_coast` too. The same drivers are checked
@@ -462,10 +586,16 @@ id = "over_braking_explain"
 for = "over_braking"
 skill = "any"
 kind = "explain"
+screen = "Braked earlier, reached the corner slower"
 review = "On this lap you braked more than on your reference on the way in and reached the corner slower, so its slowest point was lower too."
 tier = "brief"
 sources = ["ed_corner_brief"]
 ```
+
+On a lap where the driver braked 8.6 m earlier and reached the corner 10 km/h slower than on the reference lap, the
+low minimum speed point carries the cause `over_braking` with both tests as its evidence; the stopped coach card's
+evidence line leads with "Braked earlier, reached the corner slower", Review lists the evidence, and the radio says
+the point exactly as before.
 
 Ed's self-check ("an on-off-on throttle means you over-braked") is the same kind of review-only explanation: the cause
 `released_too_early_for_apex` (with `over_braking`) on the planned fault `stepped_throttle`, whose advice has no radio
