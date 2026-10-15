@@ -361,13 +361,35 @@ too late.
 Driving-technique knowledge is a graph in which every piece says when it fits the driver and car
 ([knowledge.md](knowledge.md); docs/features.md "Coaching for every kind of driver"): every point of Ed's corner brief
 and its self-check, every row of his technique-fault checklist and every detector in his patches, published coaching
-knowledge, the eight kinds the coach says today and the causes Pitwall can tell apart from what it measures. 212
-nodes and 244 edges: 16 techniques, 30 faults (8 live, 8 experimental, 13 planned, 1 background), 9 causes, 36
-advice, 52 signals (35 computed by Pitwall), 32 conditions, 27 sources. **The knowledge itself is mostly not
-validated by Pitwall**: by tier, 48 nodes are published coaching (`expert`) and 57 Ed's material (`brief`); 36 carry
-Pitwall's own measurements on the owner's recorded laps (`recorded`); 34 are the live coaching rules and their signals
-and advice (`live`); 37 are Pitwall's own definitions (`design`). The screens and the AI engineer say which is which.
-**Recorded, not live.**
+knowledge, the eight kinds the coach says today and the causes Pitwall can tell apart from what it measures. 218
+nodes and 246 edges: 16 techniques, 30 faults (8 live, 8 experimental, 13 planned, 1 background), 9 causes, 36
+advice, 55 signals (38 computed by Pitwall), 32 conditions, 5 constraints, 29 sources. **The knowledge itself is mostly
+not validated by Pitwall**: by tier, 47 nodes are published coaching (`expert`) and 58 Ed's material (`brief`); 39
+carry Pitwall's own measurements on the owner's recorded laps (`recorded`); 34 are the live coaching rules and their
+signals and advice (`live`); 38 are Pitwall's own definitions (`design`); 2 sources are real-world or third-party data
+measured by Pitwall's scripts (`external`, below). The screens and the AI engineer say which is which. **Recorded, not
+live.**
+
+**Real-world and third-party evidence** (tier `external`, 2026-10-15; ten measurements on five techniques, aggregates
+only, no raw data or participant names in the repository; **neither is evidence about a game or validated by
+Pitwall**):
+
+- *Real F1 cars* (OpenF1, CC BY-NC-SA 4.0, credited; derived numbers only): the fastest qualifying lap of each of the
+  top four at the 2025 Austrian and Japanese GPs, 58 braking zones. None clearly braked in a straight line; 42 trail
+  braked (72 %; 23 of 24 slow corners); a median 53 % of a corner's entry rotation with the brake on; braking and
+  turning overlap about 44 m (0.9 s); the brake comes off about 0.6 s before the slowest point; in some fast corners
+  drivers only lift. Limits: the brake is an on/off flag at about 4 Hz with no steering, and positions follow one
+  shared line, so this shows braking overlapping the turn, not how the pressure is released. It matches the owner's
+  F1 25 laps (trail braking into 40 of 41 braking corners) as context, not as proof about the game.
+- *Other people's sim laps* (AssettoCorsaGym, CC BY 4.0, arXiv 2407.16680): 11 human drivers from a professional to
+  beginners, Dallara F317 and GT3 at the Red Bull Ring and Monza (the Miata had too few laps), through Pitwall's own
+  braking analysis, grouped into thirds by lap time. Time to peak brake is the most consistent skill marker (fastest
+  third 0.10-0.20 s in three of the four groups, slowest third 0.37-0.46 s; 13 of 13 F317 and 11 of 13 GT3 corners);
+  fast GT3 drivers release over about 1.2 s against 0.5-0.9 s (a two-driver effect); the fastest third of GT3 drivers
+  trail-brake into about 72 % of braking corners against about 25 % (leaning on the two fastest, who also had better
+  pedals; weak and reversing in the F317); slower drivers coast more; **within one driver, laps with more trail braking
+  were not faster**, so trail braking marks long-term skill, not a lap-to-lap lever: a constraint
+  (`never_trail_brake_more`) keeps "trail brake more" out of every text and AI answer.
 
 What a driver sees: every coaching point carries whether it fits them (a point that does not is never said or put on
 the coach card and never becomes a habit; Review shows it with the reason), the causes its lap's measurements named
@@ -376,11 +398,13 @@ Coaching gains "How corners work"; Compare gains Ed's g-force charts and the cor
 covered by unit tests (on a backend fixture of real annotations and the real graph); **none has been seen in a
 browser yet**.
 
-How it was measured (2026-10-15): integration 922b281 (before: an archive of that commit run with the main checkout's
-environment) and feat/knowledge (after) replayed the same 30 owner captures as the habits evaluation (F1 25 and GT7
-on the PS5, 2026-10-10 to 13; 28 sessions with a compared lap), once with nobody seated and once with a beginner
-profile seated; normal intensity, braking calls in Focus, LLM off, scratch databases. Per lap: the radio's coaching
-lines, the coach card's points (picked and per corner), habits, focus and the cue plan; per session, the recap.
+How it was measured (2026-10-15, re-run after the review fixes): integration 922b281 (before: an archive of that
+commit run with the main checkout's environment) and feat/knowledge (after) replayed the same 30 owner captures as the
+habits evaluation (F1 25 and GT7 on the PS5, 2026-10-10 to 13; 28 sessions with a compared lap), once with nobody
+seated and once with a beginner profile seated; normal intensity, braking calls in Focus, LLM off, scratch databases.
+Per lap: the radio's coaching lines, the coach card's points (picked and per corner), habits, focus and the cue plan;
+per session, the recap. The review fixes changed no coaching against the first run either: only which causes are
+named (below), and the detected styles are identical (every one of these sessions sends steering).
 
 | Run | Compared laps | Radio coaching lines, before / after | Coach card points (per corner, all laps), before / after | Differences |
 |---|---|---|---|---|
@@ -432,7 +456,8 @@ lines, the coach card's points (picked and per corner), habits, focus and the cu
 | Melbourne, 20261013-225521 | F1 25, F1 | 18 | trail (105/116) | rare (22/116) | 15 | 1 | trail (36/38) |
 
   Trail braking on 21 of the 28 sessions (75 % to 100 % of braking corners), mixed on one GT7 session, unknown on 6
-  (fewer than 2 clean laps or 6 braking corners). Coasting rare on 16, often on 1 (Melbourne 20261013-214947, two
+  (fewer than 2 clean laps or 6 braking corners). A game that sends no steering (Assetto Corsa; GT7 variant A) would
+  leave the braking style unknown, never straight-line (none of these sessions; unit-tested on an AC-shaped lap). Coasting rare on 16, often on 1 (Melbourne 20261013-214947, two
   laps), unknown on 11 (a share between 0.2 and 0.5, or too few laps). The live reading needs 2 clean compared laps in
   its window and 6 braking corners: unknown on 17 sessions, all but one of them with 1 or 2 compared laps. **The F1 braking assist was on (level 1 to 3) in 21 of the 26 F1 25
   sessions**: the screens and the AI engineer then say some of the braking was the game's (the style is kept, not
@@ -442,8 +467,8 @@ lines, the coach card's points (picked and per corner), habits, focus and the cu
 
 | Kind | Points (live) | Fit the driver | Causes named (live) | No cause | Review (stored analysis): points, causes |
 |---|---|---|---|---|---|
-| `low_min_speed` | 374 | 374 | `low_grip` 93 (25%), `over_braking` 41 (11%), `early_turn_in` 20 (5%) | 220 | 558: `low_grip` 126, `over_braking` 69, `early_turn_in` 17 |
-| `late_throttle` | 157 | 157 | `ready_earlier` 105 (67%), `traction_limited` 18 (11%) | 34 | 247: `ready_earlier` 181, `traction_limited` 23 |
+| `low_min_speed` | 374 | 374 | `low_grip` 93 (25%), `over_braking` 41 (11%), `early_turn_in` 16 (4%) | 235 | 558: `low_grip` 126, `over_braking` 69, `early_turn_in` 16 |
+| `late_throttle` | 157 | 157 | `traction_limited` 14 (9%); `ready_earlier` 0 (traction control on) | 143 | 247: `traction_limited` 21 |
 | `coasting` | 31 | 31 | `early_brake_release` 15 (48%), `waiting_for_rotation` 11 (35%) | 5 | 60: `early_brake_release` 26, `waiting_for_rotation` 24 |
 | `overspeed_apex` | 18 | 18 | `carried_too_much_speed` 6 (33%) | 12 | 18: `carried_too_much_speed` 9 |
 | `brake_early` | 105 | 105 | - | 105 | 162: - |
@@ -454,10 +479,32 @@ lines, the coach card's points (picked and per corner), habits, focus and the cu
   `low_grip` now compares the mid-corner slide and understeer with the reference lap at the same corner: read from
   this lap alone it was named on about half of the low minimum speed points (186 of 378 on the six sessions pickled
   for the knowledge work), relative to the reference on about a quarter (94 of 393 on the same captures replayed: the
-  replay finds 15 more points). `ready_earlier` (no wheelspin, slide or understeer on the way out, yet full throttle
-  later) is named on two thirds of late-throttle points; with traction control on in every session "no wheelspin" is
-  weak evidence, so its words say only what was measured. `early_turn_in` reads the slowest point's position, which
-  can jump within a long corner (one Melbourne lap: 106 m sooner); its 20 m margin keeps it to 5 % of points.
+  replay finds 15 more points). `ready_earlier` (no wheelspin, slide, understeer or oversteer on the way out, yet full
+  throttle later) is named only with traction control off, because with it on "no wheelspin" proves little: traction
+  control was on in every one of these sessions, so it is never named now (before the review fixes: 105 live points,
+  181 in Review). `traction_limited` now judges wheelspin, a slide or exit oversteer against the reference lap at the
+  corner (18 -> 14 live points). `early_turn_in`, shown as "Slowest point came sooner" (Pitwall measures no turn-in),
+  reads the slowest point's position, which can jump within a long corner; it now also needs an entry within 4 km/h
+  of the reference either way (20 -> 16 live points).
+
+  **Base rates** (the 2026-10-15 review's check, on the six real F1 25 sessions pickled for the knowledge work, every
+  non-incident corner-lap against the session's reference): how often each cause's evidence holds on the corner-laps
+  where its fault fired, against every other corner-lap. A cause whose evidence holds about as often elsewhere
+  describes what was measured, not why the fault happened:
+
+| Cause | Evidence on the fault's corner-laps | On the other corner-laps | Named |
+|---|---|---|---|
+| `low_grip` | 91 / 378 (24%) | 51 / 346 (15%) | 91 |
+| `over_braking` | 48 / 378 (13%) | 37 / 346 (11%) | 48 |
+| `early_turn_in` | 6 / 378 (2%) | 17 / 346 (5%) | 6 |
+| `traction_limited` | 17 / 181 (9%) | 48 / 543 (9%) | 17 |
+| `ready_earlier` | 124 / 181 (69%) | 359 / 543 (66%) | 0 (traction control on) |
+| `early_brake_release` | 12 / 33 (36%) | 100 / 691 (14%) | 12 |
+| `waiting_for_rotation` | 16 / 33 (48%) | 173 / 691 (25%) | 16 |
+| `carried_too_much_speed` | 4 / 8 (50%) | 205 / 716 (29%) | 4 |
+
+  The coasting causes and `low_grip` tell their fault apart; `over_braking`, `traction_limited` and `early_turn_in`
+  barely do (see Known gaps).
 
 **Coverage of Ed's material** (every point of the brief and every checklist row; the patches' detectors are in
 [knowledge.md](knowledge.md#the-patches-read-as-data-not-applied); `tests/unit/test_knowledge_graph.py` keeps this
@@ -546,11 +593,18 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   replays a reminder's length is the planner's estimate; the hub's measured audio length is unit-tested only. Markers
   and braking calls still assume a driver slower than the reference stays slower to the corner (reminders do not).
 - **Technique knowledge:** the published (`expert`) and Ed's (`brief`) knowledge is cited, not checked by Pitwall on
-  laps, except where a node's notes say so. Style detection is kept, not muted, under the F1 braking assist (some of
-  the braking is the game's; how much is not known). The Context cannot say "left-foot braker" or "not saving fuel"
-  (an unknown never satisfies `ne` / `false`), so `pedal_overlap` and `lift_before_braking` can never apply yet.
-  `ready_earlier` lacks the unwound-steering and combined-g evidence the spec names (not computed). No cause has a radio
-  form, so the habit announcement never adds one. The screens have not been seen in a browser or on an iPad.
+  laps, except where a node's notes say so; the `external` measurements are real cars and another simulator, not a
+  game Pitwall reads. Style detection is kept, not muted, under the F1 braking assist (some of the braking is the
+  game's; how much is not known): advice chosen for the style says so. `pedal_overlap` and `lift_before_braking` have
+  no conditions, so they fit every driver: the Context has no left-foot-braking key, and fuel saving is known only from
+  a live strategy (an unknown never satisfies `false`), so they cannot be scoped out for left-foot brakers or
+  fuel-saving stints; they stay planned until they can. `ready_earlier` lacks the unwound-steering and combined-g
+  evidence the spec names (not computed) and is never named with traction control on, which every owner session had.
+  `traction_limited` (judged against the reference lap), `over_braking` and `early_turn_in` hold about as often on
+  corner-laps without their fault (base rates above): they say what was measured, not proof of the cause. No cause has
+  a radio form, so the habit announcement never adds one. The AI engineer rejects an answer that breaks a coaching rule
+  (a few descriptive phrasings may be rejected too; the engineer then gives its deterministic answer). The screens have
+  not been seen in a browser or on an iPad.
 - **Race radio:** nothing heard live; F1 25's `gridPosition` is 0-based at a race start on the PS5 (pole = 0), so the
   race radio takes the grid slot from the position before lights out (the strategy engine's grid position is
   one off; not changed here). Online names in "who's ahead?" are opt-in (off) and use the `say` voice.

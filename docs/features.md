@@ -892,22 +892,29 @@ published coaching knowledge, in a **technique knowledge graph** in which every 
   downforce, the gearbox, ABS and traction control when the game reports them, a fuel-saving strategy and the weather
   from the session. Anything it does not know stays unknown and fits nothing: braking in a straight line fits a
   beginner, a straight-line braker or a car with no ABS and little downforce; trail braking fits a trail-braker or a
-  high-downforce car; rev-matching blips fit only an H-pattern gearbox (with paddles the game blips for you).
+  high-downforce car; rev-matching blips fit only an H-pattern gearbox (with paddles the game blips for you). A game
+  that sends no steering (Assetto Corsa, GT7 variant A) cannot show braking with the wheel turned, so your braking
+  style stays unknown there rather than being read as straight-line.
 - **What the game sends.** A check that needs an input the game does not send does not apply there (GT7 sends no
   lateral g); an input Pitwall is not sure about is never assumed missing.
 - **Why it happened.** For four of the eight points it coaches, Pitwall can name a cause when the lap's own
-  measurements show it, and only then: a slow apex from braking earlier and arriving slower, from turning in early, or
-  from more sliding than on your reference lap (F1 25: tyre slip); a late throttle from wheelspin or a slide on the way
-  out, or with neither measured and the throttle still late; coasting from braking ending early, or from waiting for the
-  car to rotate; too much speed into the apex from arriving faster or braking later. The cause shows on the screen
-  (the card when stopped, Review), never on the radio, which stays as short as before.
+  measurements show it, and only then: a slow apex from braking earlier and arriving slower, from the slowest point
+  coming much sooner (as an early turn-in can; Pitwall does not measure the turn-in itself), or from more sliding than
+  on your reference lap (F1 25: tyre slip); a late throttle from wheelspin, a slide or oversteer on the way out that
+  your reference lap did not have, or - with traction control off only, where "no wheelspin" means something - with
+  no grip loss measured and the throttle still late; coasting from braking ending early, or from waiting for the car to
+  rotate; too much speed into the apex from arriving faster or braking later. The cause shows on the screen (the card
+  when stopped, Review and Compare), never on the radio, which stays as short as before.
 - **Words for you.** Beginners read plain explanations; a trail-braker who coasts more than usual reads why that is
-  unusual for them. Nothing ever tells you to brake later, brake less, come off the brake earlier or carry more speed:
-  every text in the graph is checked for it when Pitwall starts.
+  unusual for them (and, with the game's braking assist on, that some of that braking was the game's). Nothing tells
+  you to brake later, brake less, come off the brake earlier, carry more speed or trail-brake more: every text the
+  graph shows you is checked for it when Pitwall starts, and so is every answer of the AI engineer.
 - **Honest about evidence.** Each piece carries where it comes from: published coaching knowledge and Ed's brief are
-  shown as not validated by Pitwall; Pitwall's own measurements on recorded laps say so; only the eight coached points
-  are live rules. The AI engineer can explain the graph's techniques and causes for your session, and an answer that
-  names a technique the graph does not have is rejected.
+  shown as not validated by Pitwall; Pitwall's own measurements on recorded laps say so; real-world data (real 2025 F1
+  qualifying laps from OpenF1, other people's laps from the AssettoCorsaGym dataset) is shown as how real drivers
+  drive, never as proof about a game; only the eight coached points are live rules. The AI engineer can explain the
+  graph's techniques and causes for your session; an answer that names a technique the graph does not have, or one it
+  says is not for you (heel-and-toe with paddles), is rejected.
 
 Evidence: unit tests and replays of the owner's recorded F1 25 and GT7 sessions: coaching identical to before on all
 of them, styles and causes in [docs/status.md](status.md#technique-knowledge-graph-unreleased). Not yet used live.

@@ -314,10 +314,12 @@ these conditions" whenever it is not the family record (the REC lap in any condi
 standard-library `tomllib`): the six phases of a corner, techniques, conditions over the driver's Context, signals
 (each naming the dataclass field that computes it, e.g. `CornerDelta.min_speed_delta_kph`), faults (the live coaching
 kinds by `analysis/coaching.py` `COACHING_KINDS`, plus planned detectors), causes with the evidence that tells them
-apart, advice, constraints (forbidden phrasings: no "brake later", "brake less", "release the brake earlier" or "carry
-more speed" outside praise) and sources, every node with its evidence tier. `load_graph()` validates once per process
-(references, mirrored edges, code paths, thresholds, advice limits, tiers backed by sources, constraints on every
-text); a broken graph is logged and the app runs without it, while tests make it raise. Nothing on the
+apart, advice, constraints (forbidden phrasings: no "brake later", "brake less", "release the brake earlier", "carry
+more speed" or "trail brake more"; praise may describe later braking, never ask for it) and sources, every node with
+its evidence tier (`external` for real-world or third-party data measured by Pitwall's scripts, kept as measurements
+on techniques). `load_graph()` validates once per process (references, mirrored edges, code paths, thresholds, advice
+limits, tiers backed by sources, constraints on every scanned text); the app's lifespan loads it at startup in a
+worker thread, a broken graph is logged and the app runs without it, while tests make it raise. Nothing on the
 time-critical path; no LLM. Contributor guide and schema: [docs/knowledge.md](knowledge.md).
 
 Using it, on the analysis worker after a lap's observations (step 6 above), never on the ingest thread:
@@ -332,14 +334,17 @@ Using it, on the analysis worker after a lap's observations (step 6 above), neve
   last 5 per corner in `_SessionCache.style_laps`: no incidents, no safety car; a stored session uses every clean
   analysed lap), the share of braking corner-laps with 10 m or more of trail braking (0.6 or more trail, 0.2 or less
   straight-line, else mixed) and with 10 m or more of coasting (0.5 or more often, 0.2 or less rare, else unknown);
-  2 laps and 6 braking corner-laps at least. Under the F1 braking assist the style is kept and flagged
-  (`braking_assist`): the screens and the AI engineer say some of the braking was the game's.
+  2 laps and 6 braking corner-laps at least, counting only corner-laps where the value was measured: trail braking
+  needs the steering (`analysis.braking` leaves `trail_brake_m` None without it), so a game that sends none keeps the
+  braking style unknown. Under the F1 braking assist the style is kept and flagged (`braking_assist`): the screens,
+  the AI engineer and advice chosen for the style say some of the braking was the game's.
 - **Annotation** (`knowledge/annotate.py` `DriverKnowledge`): every published observation dict gets an additive
   `knowledge` key: `{fault, name, status, tier, applies, why_not, causes, advice, digest}`. `applies` is False when the
   fault's conditions fail for the Context or the game does not send a channel one of its signals needs. Causes are
-  named only from measured values (`graph.Discriminator.holds`; an unmeasured value holds nothing), each with its
-  evidence; a corner's inputs and balance (`technique.session.lap_corner`) are computed only when a cause needs them,
-  and the reference lap's balance only for the causes compared with it (`low_grip`). Advice per form (radio, screen,
+  named only when the cause's conditions hold (`ready_earlier`: traction control off) and from measured values
+  (`graph.Discriminator.holds`; an unmeasured value holds nothing), each with its evidence; a corner's inputs and
+  balance (`technique.session.lap_corner`) are computed only when a cause needs them, and the reference lap's only for
+  the causes compared with it (`low_grip`, `traction_limited`). Advice per form (radio, screen,
   review): a style match first, then the driver's skill, then `any`; `tailored` marks advice written for the driver.
   Observations are stored as before, without it; the comparison carries `knowledge: {digest, context, style}`. Any
   error leaves the lap's observations unannotated (coached as before the graph).
@@ -349,10 +354,11 @@ Using it, on the analysis worker after a lap's observations (step 6 above), neve
   condition and every adapter sends their channels, so coaching on them is unchanged on every game (recorded A/B in
   docs/status.md).
 - **Where it goes:** the coach block's points carry a slim copy (`annotate.slim`: applies, why_not, causes with their
-  evidence and screen line, advice), and so do the `/ws/live` snapshot's observations (`core/live.py`; the full
-  annotation stays in the lap notification and the session's analysis, so twenty snapshots a second stay small).
-  Stored sessions are annotated inside `SessionAnalyzer.analyse` (`knowledge/session.py`, cached with the analysis);
-  `GET /api/compare` annotates the lap pair for the compared lap's driver.
+  measured values and screen line, advice), and the `/ws/live` snapshot's observations only what the card reads from
+  one (`annotate.card_slim`: applies and the first cause's screen line; `core/live.py`); the full annotation stays in
+  the lap notification and the session's analysis, so twenty snapshots a second stay small. Stored sessions are
+  annotated inside `SessionAnalyzer.analyse` (`knowledge/session.py`, cached with the analysis); `GET /api/compare`
+  and `GET /api/coachref/compare` (Review › Compare) annotate the lap pair for the compared lap's driver.
 - **API:** `GET /api/technique/knowledge` (the whole validated graph with typed edges) and `?session=<id>` (plus the
   session's `context`, `style`, `channels` and `applies` / `why_not` on every condition, signal, technique, fault,
   cause and advice node; 404 for an unknown session), `api/routes_knowledge.py`, orjson.
@@ -376,10 +382,12 @@ Technique facts (topics `line`, `technique`, `balance`) come from `technique/fac
 deterministically and are radio fast intents (feat/technique). Technique knowledge facts (topic `knowledge`,
 `knowledge/facts.py`, last on the sheet; seen by the technique, focus, braking and losing-time intents): the driver's
 Context and detected style, and per fault seen this session its graph node, the measured causes, the techniques for
-that phase that fit and those for other drivers, and its sources with their tier in words. Their `data["nodes"]`
-names the graph nodes a fact is about, and `ai/grounding.py` rejects an answer that names a technique
-(`knowledge/terms.py`, kept in step with the graph by a test) no considered fact is about (`ungrounded_techniques`):
-the engineer explains the graph's techniques and never invents one.
+that phase that fit (named; summaries on the most-seen fault only) and its sources with their tier in words. Their
+`data["nodes"]` names the graph nodes a fact is about and `data["not_for_driver"]` the techniques that do not fit, and
+`ai/grounding.py` rejects an answer that names a technique (`knowledge/terms.py`, kept in step with the graph by a
+test) no considered fact is about or one a fact says is not for this driver (`ungrounded_techniques`), and an answer
+that breaks one of the graph's constraints (`constraint_breaches`): the engineer explains the graph's techniques and
+never invents one.
 
 ## Radio policy (`voice/scheduler.py`)
 One scheduler decides what is said and when, and one table says it: `POLICY` (a `CallFamily` row per call family:

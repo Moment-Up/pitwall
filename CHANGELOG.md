@@ -43,6 +43,16 @@ The release workflow copies a release's bullet points into its GitHub release no
   technique it doesn't have. Tested with unit tests; LLM off.
 - On the owner's 30 recorded F1 25 and GT7 captures the radio and the coach card say exactly what they said before:
   the eight coached points fit every driver and game.
+- A game that sends no steering (Assetto Corsa) no longer makes you a "straight-line braker": your braking style
+  stays unknown there. Unit tests.
+- "No grip loss on the exit" is named only with traction control off; a traction-limited exit only where your
+  reference lap did not spin or slide. Recorded laps.
+- "Slowest point came sooner" replaces "Early turn-in": Pitwall does not measure the turn-in. Recorded laps.
+- The engineer never suggests a technique that does not fit you (heel-and-toe with paddles) or tells you to brake
+  later, brake less or trail-brake more. Unit tests; LLM off.
+- How corners work shows how real drivers brake (2025 F1 qualifying laps from OpenF1, AssettoCorsaGym sim laps), as
+  real-world data, not proof about a game. Unit tests.
+- Review › Compare's corner explainer now shows the causes Pitwall measured. Unit tests.
 
 ## v0.3.0 - 2026-10-13
 
