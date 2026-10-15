@@ -316,3 +316,37 @@ tier = "expert"
 note = """Understeer: the car turns less than the steering asks and runs wide at the limit; oversteer: it turns more and
 tends to spin. Braking that puts too much load on the front tyres can make them slide, and enough power at the rear
 wheels can start oversteer. Cited by Ed for his checklist; read 2026-10-15."""
+
+# --- Real-world and third-party data, measured by Pitwall's scripts (tier external) ----------------------------------
+# Not Pitwall's own recorded laps and not evidence about a game: how real or other sim drivers drive, measured with
+# Pitwall's scripts and kept as aggregate numbers (no raw data in the repository, no participant named).
+
+[[source]]
+id = "openf1_2025_qualifying"
+title = "Car data of real 2025 Formula 1 qualifying laps (OpenF1)"
+author = "OpenF1 (openf1.org), measured by Pitwall's scripts"
+url = "https://openf1.org"
+date = "2026-10-15"
+tier = "external"
+note = """Real cars, not a game: the fastest qualifying lap of each of the top four at the 2025 Austrian and Japanese
+Grands Prix (Spielberg and Suzuka), 58 braking zones, read from OpenF1's public historical data on 2026-10-15 and
+measured with Pitwall's scripts. OpenF1 is unofficial and licensed CC BY-NC-SA 4.0 (F1 trademarks belong to Formula
+One Licensing B.V.): Pitwall keeps none of its raw data, only the derived numbers on the techniques, credited here.
+Limits: the brake is a pressed or not-pressed flag sampled about four times a second, there is no steering, and the
+positions follow one shared line, so turning means the heading of that line: it shows braking that overlaps the turn,
+not how the pressure comes off or each driver's own line. Aggregates only."""
+
+[[source]]
+id = "acgym_human_laps"
+title = "AssettoCorsaGym: human laps in Assetto Corsa at the Red Bull Ring and Monza"
+author = "Remonda et al. (AssettoCorsaGym dataset, CC BY 4.0), measured by Pitwall's scripts"
+url = "https://huggingface.co/datasets/dasgringuen/assettoCorsaGym"
+date = "2026-10-15"
+tier = "external"
+note = """Another simulator's human laps, not Pitwall's recordings: the open dataset of the paper "A Simulation Benchmark
+for Autonomous Racing with Large-Scale Human Data" (NeurIPS 2024, arXiv 2407.16680), whose drivers range from a
+professional sim racer to first-time beginners. Pitwall's scripts read 11 drivers' laps in the Dallara F317 and a GT3
+car (142 representative laps; the Miata had too few) through Pitwall's own braking and corner analysis, with the
+drivers grouped into thirds by lap time (the paper does not say who is which level). Aggregates only: no participant
+is named. Limits: few drivers per group; the GT3 results lean on the two fastest drivers, who also had high-resolution
+pedals (one ran ABS and traction control); the steering scale differs from F1 25's."""

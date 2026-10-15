@@ -29,10 +29,14 @@ Node types (``NODE_TYPES``; the TOML table is the type's name):
 * ``source``     where knowledge came from: a book, a web page, Ed's brief, a Pitwall measurement.
 
 Evidence tiers (``TIERS``, ``TIER_MEANING``): ``expert`` (published coaching knowledge), ``brief`` (Ed's brief and
-checklist), ``synthetic``, ``recorded`` (measured by Pitwall on recorded laps), ``live`` (running in Pitwall and seen
-working with a real game) and ``design`` (Pitwall's own rules and definitions: conditions, constraints). A node's
-tier must be one of its sources' tiers, so expert or brief content is never presented as validated by Pitwall. An
-edge carries the tier and sources of the node that makes its claim (``Edge``).
+checklist), ``external`` (real-world or third-party data - real F1 cars, other people's sim laps - measured by
+Pitwall's scripts, not Pitwall's own recorded laps), ``synthetic``, ``recorded`` (measured by Pitwall on recorded
+laps), ``live`` (running in Pitwall and seen working with a real game) and ``design`` (Pitwall's own rules and
+definitions: conditions, constraints). A node's tier must be one of its sources' tiers, so expert or brief content is
+never presented as validated by Pitwall. An edge carries the tier and sources of the node that makes its claim
+(``Edge``). Measurements (``Measurement``: a fault's firing rates, a signal's noise, a technique's ``measured``) carry
+their own source, and so its tier: a technique's external measurements say how real drivers drive it, never that a
+game or Pitwall validated it.
 
 Validation (``parse_graph``), all problems reported at once: snake_case ids unique across the graph; known fields
 only, with the right types; every reference resolves to a node of the right type and mirrored edges agree (a fault's
@@ -67,7 +71,7 @@ from typing import Any, ClassVar, Literal, TypeVar, cast, get_args
 
 log = logging.getLogger(__name__)
 
-Tier = Literal["expert", "brief", "synthetic", "recorded", "live", "design"]
+Tier = Literal["expert", "brief", "external", "synthetic", "recorded", "live", "design"]
 NodeType = Literal["phase", "condition", "technique", "signal", "fault", "cause", "advice", "constraint", "source"]
 FaultStatus = Literal["live", "experimental", "planned", "context_only"]
 Relative = Literal["reference", "absolute"]
@@ -122,6 +126,8 @@ CHANNELS: tuple[Channel, ...] = get_args(Channel)
 TIER_MEANING: Mapping[Tier, str] = {
     "expert": "published coaching knowledge, cited; not validated by Pitwall",
     "brief": "from Ed's brief, checklist or patches (Pitwall tester); not validated by Pitwall",
+    "external": "real-world or third-party data (real cars, other people's sim laps) measured by Pitwall's scripts; "
+    "not Pitwall's recorded laps and not evidence about a game",
     "synthetic": "checked on generated telemetry only; never proof on a real game",
     "recorded": "measured by Pitwall on recorded real laps; the measurement is cited",
     "live": "running in Pitwall and seen working live with a real game",
@@ -293,7 +299,8 @@ class GraphError(ValueError):
 # ---------------------------------------------------------------------------------------------- nodes
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Measurement:
-    """A number Pitwall measured (a firing rate, a spread), when and from which source."""
+    """A number Pitwall measured (a firing rate, a spread, how often real drivers trail-brake), when and from which
+    source (its tier says what kind of evidence it is)."""
 
     metric: str
     value: float
@@ -405,6 +412,9 @@ class Condition(Node):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Technique(Node):
+    """``measured``: numbers measured about the technique (how often real or other sim drivers use it, how it goes
+    with lap time), each with its source and so its tier."""
+
     node_type: ClassVar[NodeType] = "technique"
     phase: str
     detail: str
@@ -412,6 +422,7 @@ class Technique(Node):
     applies_any: tuple[str, ...] = ()
     alternatives: tuple[str, ...] = ()
     measured_by: tuple[str, ...] = ()
+    measured: tuple[Measurement, ...] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -942,7 +953,8 @@ def _technique(t: _Table) -> Technique | None:
         "alternatives": t.strings("alternatives"),
         "measured_by": t.strings("measured_by"),
     }
-    return Technique(**kw, **tech) if t.finish() else None
+    measured, subs = _measurements(t, "measured")
+    return Technique(**kw, **tech, measured=measured) if t.finish(subs) else None
 
 
 def _signal(t: _Table) -> Signal | None:
@@ -1197,6 +1209,8 @@ def _validate(nodes: Sequence[Node]) -> list[str]:
             ref(n, "measured_by", n.measured_by, Signal)
             if n.id in n.alternatives:
                 errors.append(f"{n.where}: alternatives: a technique is not its own alternative")
+            for m in n.measured:
+                ref(n, "measured source", [m.source], Source)
             mirrored(n, "alternatives", n.alternatives, Technique, "alternatives", "does not list it as an alternative")
         elif isinstance(n, Signal):
             for m in n.noise:

@@ -19,7 +19,7 @@
 import { ApiError } from "../api";
 import { authFetch } from "../auth";
 
-export type KnowledgeTier = "expert" | "brief" | "synthetic" | "recorded" | "live" | "design";
+export type KnowledgeTier = "expert" | "brief" | "external" | "synthetic" | "recorded" | "live" | "design";
 export type FaultStatus = "live" | "experimental" | "planned" | "context_only";
 export type ContextKey =
   | "skill"
@@ -80,6 +80,9 @@ export interface KnowledgeTechnique extends KnowledgeNode {
   alternatives: string[];
   /** Signal ids. */
   measured_by: string[];
+  /** Numbers measured about it (how real or other sim drivers use it), each with its source: tier external for real
+   * cars and other people's laps. Absent on an older server. */
+  measured?: KnowledgeMeasurement[];
 }
 
 export interface KnowledgeMeasurement {

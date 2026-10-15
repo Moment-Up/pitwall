@@ -95,3 +95,22 @@ forbidden = [
 ]
 tier = "design"
 sources = ["pitwall_rules"]
+
+[[constraint]]
+id = "never_trail_brake_more"
+name = "Never ask for more trail braking"
+summary = """No text tells a driver to trail-brake more: within one driver, laps with more trail braking were not faster,
+so it marks long-term skill and is no lever for the next lap."""
+text = "never tell a driver to trail-brake more (a skill marker, not a lap-to-lap lever)"
+scope = ["phase", "condition", "technique", "signal", "fault", "cause", "advice"]
+forbidden = [
+    '\btrail[- ]?brak(?:e|ing)\s+(?:(?:a\s+)?(?:bit|little|touch|tad|lot)\s+)?(?:more|deeper|longer|further|harder)\b',
+    '\b(?:more|deeper|longer)\s+trail[- ]?brak\w*',
+    '\bkeep\s+(?:the\s+|some\s+)?brake\s+on\s+(?:(?:a\s+)?(?:bit|little|touch)\s+)?(?:longer|deeper|further)\b',
+]
+tier = "design"
+sources = ["acgym_human_laps"]
+notes = """AssettoCorsaGym (acgym_human_laps): across drivers the fastest GT3 drivers trail-braked more, but within one
+driver the laps with more trail braking were not faster (median rank correlation 0.00 GT3, -0.05 F317). James,
+2026-10-15: never coach "trail brake more" on the radio. Describing it ("you were trail braking deeper into T1") stays
+allowed in the AI engineer's answers (ai.grounding)."""

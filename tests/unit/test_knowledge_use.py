@@ -404,6 +404,9 @@ def test_answers_that_break_the_coaching_rules_are_not_grounded() -> None:
     ):
         g = check_grounding(answer, [obs])
         assert g.ok and g.constraint_breaches == [], answer
+    own = Fact("F2", "technique", "T3: trail braking 0.4 s longer than your reference lap.")
+    described = check_grounding("At T3 you were trail braking longer than on your reference lap [F2].", [own])
+    assert described.ok and described.constraint_breaches == []
     for answer, breach in (
         ("Brake later into T3 [F1].", "never_brake_later: Brake later"),
         ("Try braking a bit later at T3 [F1].", "never_brake_later: braking a bit later"),
@@ -411,6 +414,7 @@ def test_answers_that_break_the_coaching_rules_are_not_grounded() -> None:
         ("Carry more speed into T3 [F1].", "never_carry_more_speed: Carry more"),
         ("Be lighter on the brakes at T3 [F1].", "never_brake_less: lighter on the brakes"),
         ("Brake 9 m later at T3 [F1].", "never_brake_later: Brake 9 m later"),
+        ("Trail brake more into T3 [F1].", "never_trail_brake_more: Trail brake more"),
         (
             "At T3, come off the brake with a little more speed to spare [F1].",
             "never_carry_more_speed: more speed to spare",

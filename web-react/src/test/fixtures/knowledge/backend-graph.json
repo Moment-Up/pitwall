@@ -1,14 +1,14 @@
 {
  "_fixture": {
-  "source": "backend fixture: pitwall.knowledge.graph.load_graph().to_payload() called directly in Python on feat/knowledge (the review fixes: causes with conditions, reference-relative exit evidence, citations and tiers). The body GET /api/technique/knowledge returns; the route only wraps it. Not an HTTP answer; regenerate by calling it again.",
+  "source": "backend fixture: pitwall.knowledge.graph.load_graph().to_payload() called directly in Python on feat/knowledge (the review fixes and the external evidence tier: causes with conditions, reference-relative exit evidence, citations and tiers, real-world measurements on techniques). The body GET /api/technique/knowledge returns; the route only wraps it. Not an HTTP answer; regenerate by calling it again.",
   "recorded": "2026-10-15",
   "tier": "backend",
-  "what": "The whole technique graph as the server validates and sends it: 6 phases, 32 conditions, 16 techniques, 55 signals, 30 faults, 9 causes, 36 advice, 4 constraints, 27 sources, 246 edges. No session Context: the plain graph (spec section 1). Knowledge content, not telemetry: never evidence that a game works."
+  "what": "The whole technique graph as the server validates and sends it: 6 phases, 32 conditions, 16 techniques, 55 signals, 30 faults, 9 causes, 36 advice, 5 constraints, 29 sources, 246 edges. No session Context: the plain graph (spec section 1). Knowledge content, not telemetry: never evidence that a game works."
  },
  "response": {
   "valid": true,
   "errors": [],
-  "digest": "f08525f9917584ac",
+  "digest": "1e74118d674ee027",
   "files": [
    "advice.toml",
    "causes.toml",
@@ -23,6 +23,7 @@
   "tiers": {
    "expert": "published coaching knowledge, cited; not validated by Pitwall",
    "brief": "from Ed's brief, checklist or patches (Pitwall tester); not validated by Pitwall",
+   "external": "real-world or third-party data (real cars, other people's sim laps) measured by Pitwall's scripts; not Pitwall's recorded laps and not evidence about a game",
    "synthetic": "checked on generated telemetry only; never proof on a real game",
    "recorded": "measured by Pitwall on recorded real laps; the measurement is cited",
    "live": "running in Pitwall and seen working live with a real game",
@@ -36,8 +37,8 @@
    "faults": 30,
    "causes": 9,
    "advice": 36,
-   "constraints": 4,
-   "sources": 27
+   "constraints": 5,
+   "sources": 29
   },
   "phases": [
    {
@@ -639,7 +640,8 @@
     ],
     "measured_by": [
      "pre_brake_coast_m"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -664,7 +666,8 @@
     ],
     "measured_by": [
      "pre_brake_coast_m"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -687,6 +690,24 @@
     "alternatives": [],
     "measured_by": [
      "time_to_peak_s"
+    ],
+    "measured": [
+     {
+      "metric": "time to peak brake, fastest third of drivers (median of the group)",
+      "value": 0.15,
+      "unit": "s",
+      "date": "2026-10-15",
+      "source": "acgym_human_laps",
+      "note": "0.10-0.20 s in three of the four car and track groups (0.36 s in the GT3 at Monza), against 0.37-0.46 s for the slowest third."
+     },
+     {
+      "metric": "F317 corners where a quicker brake attack went with a faster driver",
+      "value": 13.0,
+      "unit": "of 13 corners",
+      "date": "2026-10-15",
+      "source": "acgym_human_laps",
+      "note": "11 of 13 in the GT3: the most consistent difference between faster and slower drivers in this data. Across drivers, not from one lap to the next."
+     }
     ]
    },
    {
@@ -710,6 +731,16 @@
     "alternatives": [],
     "measured_by": [
      "release_s"
+    ],
+    "measured": [
+     {
+      "metric": "brake release time, fastest third of GT3 drivers (median of the group)",
+      "value": 1.2,
+      "unit": "s",
+      "date": "2026-10-15",
+      "source": "acgym_human_laps",
+      "note": "About 0.5-0.9 s for the other GT3 groups; not seen in the F317. A two-driver effect: the third fast driver released no more slowly than the rest."
+     }
     ]
    },
    {
@@ -734,7 +765,8 @@
     "alternatives": [],
     "measured_by": [
      "missed_blips"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -765,6 +797,16 @@
      "trail_brake_m",
      "brake_at_turn_in",
      "trail_overlap_s"
+    ],
+    "measured": [
+     {
+      "metric": "real F1 qualifying braking zones clearly braked in a straight line",
+      "value": 0.0,
+      "unit": "%",
+      "date": "2026-10-15",
+      "source": "openf1_2025_qualifying",
+      "note": "0 of 58 (4 could not rule out a release at turn-in). Real cars, not this game; with a pressed-or-not brake flag and no steering, it shows braking that overlaps the turn, not how hard the brake was pressed."
+     }
     ]
    },
    {
@@ -787,7 +829,8 @@
     "alternatives": [],
     "measured_by": [
      "brake_point_std_m"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -812,7 +855,8 @@
     "alternatives": [],
     "measured_by": [
      "pedal_overlap_m"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -846,6 +890,40 @@
      "trail_brake_m",
      "brake_at_turn_in",
      "trail_overlap_s"
+    ],
+    "measured": [
+     {
+      "metric": "real F1 qualifying braking zones trail-braked",
+      "value": 72.0,
+      "unit": "%",
+      "date": "2026-10-15",
+      "source": "openf1_2025_qualifying",
+      "note": "42 of 58: at least 10 degrees of the line's turn, and a fifth of the corner's entry rotation, with the brake on; 23 of 24 in slow corners (under 160 km/h), 19 of 34 in fast ones. Real cars, not this game."
+     },
+     {
+      "metric": "share of a corner's entry rotation done with the brake on, real F1 qualifying (median)",
+      "value": 53.0,
+      "unit": "%",
+      "date": "2026-10-15",
+      "source": "openf1_2025_qualifying",
+      "note": "Middle half 40-67%. Braking and turning overlapped over a median 44 m (about 0.9 s; 36-49 m with the turn-in put at 3-10 degrees), and the brake came off a median 0.64 s (about 30 m) before the slowest point. In some fast corners drivers only lifted the throttle: two of the four at Suzuka's esses."
+     },
+     {
+      "metric": "GT3 braking corners trail-braked, fastest third of drivers",
+      "value": 72.0,
+      "unit": "%",
+      "date": "2026-10-15",
+      "source": "acgym_human_laps",
+      "note": "About 25% for the other two thirds. It leans on the two fastest drivers, who also had high-resolution pedals (one ran ABS and traction control); in the F317 single-seater the link is weak and reverses at Monza (fastest third 34%, slowest third 46%)."
+     },
+     {
+      "metric": "within one driver, rank correlation of trail-braking distance with corner time, lap to lap (GT3, median)",
+      "value": 0.0,
+      "unit": "rho",
+      "date": "2026-10-15",
+      "source": "acgym_human_laps",
+      "note": "0.00 over 61 driver-corner pairs in the GT3, -0.05 over 53 in the F317: a driver's laps with more trail braking were not faster. Trail braking marks long-term skill, not a lever to pull from one lap to the next, so Pitwall never coaches 'trail brake more' (constraints.toml, never_trail_brake_more)."
+     }
     ]
    },
    {
@@ -872,7 +950,8 @@
     ],
     "measured_by": [
      "coast_m"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -896,7 +975,8 @@
     "alternatives": [],
     "measured_by": [
      "steering_reversals"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -924,6 +1004,24 @@
     ],
     "measured_by": [
      "coast_m"
+    ],
+    "measured": [
+     {
+      "metric": "braking corners with 10 m or more of coasting, slowest third of drivers (lowest of the four groups)",
+      "value": 77.0,
+      "unit": "%",
+      "date": "2026-10-15",
+      "source": "acgym_human_laps",
+      "note": "77-93% across the four car and track groups. Across drivers, more coasting went with a slower corner in 11 of 13 GT3 corners and 10 of 13 F317 corners (not significant), but not in step with skill: the middle third of GT3 drivers coasted least (28-44%)."
+     },
+     {
+      "metric": "real F1 slow corners with 0.4 s or more off the brake flag and under 10% throttle before the slowest point",
+      "value": 54.0,
+      "unit": "%",
+      "date": "2026-10-15",
+      "source": "openf1_2025_qualifying",
+      "note": "13 of 24 slow corners, 7 of 34 fast ones. That is about two samples at OpenF1's rate, and the flag misses light braking, so real coasting was at most this."
+     }
     ]
    },
    {
@@ -947,7 +1045,8 @@
     "measured_by": [
      "pickup_vs_apex_m",
      "throttle_ramp_s"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -971,7 +1070,8 @@
     "measured_by": [
      "throttle_lifts",
      "throttle_dip_after_pickup"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -995,7 +1095,8 @@
     "measured_by": [
      "throttle_full_m",
      "throttle_acceptance"
-    ]
+    ],
+    "measured": []
    },
    {
     "type": "technique",
@@ -1014,7 +1115,8 @@
     "applies_when": [],
     "applies_any": [],
     "alternatives": [],
-    "measured_by": []
+    "measured_by": [],
+    "measured": []
    }
   ],
   "signals": [
@@ -4957,6 +5059,34 @@
      "advice"
     ],
     "except_praise": false
+   },
+   {
+    "type": "constraint",
+    "id": "never_trail_brake_more",
+    "name": "Never ask for more trail braking",
+    "summary": "No text tells a driver to trail-brake more: within one driver, laps with more trail braking were not faster, so it marks long-term skill and is no lever for the next lap.",
+    "tier": "design",
+    "sources": [
+     "acgym_human_laps"
+    ],
+    "notes": "AssettoCorsaGym (acgym_human_laps): across drivers the fastest GT3 drivers trail-braked more, but within one driver the laps with more trail braking were not faster (median rank correlation 0.00 GT3, -0.05 F317). James, 2026-10-15: never coach \"trail brake more\" on the radio. Describing it (\"you were trail braking deeper into T1\") stays allowed in the AI engineer's answers (ai.grounding).",
+    "file": "constraints.toml",
+    "text": "never tell a driver to trail-brake more (a skill marker, not a lap-to-lap lever)",
+    "forbidden": [
+     "\\btrail[- ]?brak(?:e|ing)\\s+(?:(?:a\\s+)?(?:bit|little|touch|tad|lot)\\s+)?(?:more|deeper|longer|further|harder)\\b",
+     "\\b(?:more|deeper|longer)\\s+trail[- ]?brak\\w*",
+     "\\bkeep\\s+(?:the\\s+|some\\s+)?brake\\s+on\\s+(?:(?:a\\s+)?(?:bit|little|touch)\\s+)?(?:longer|deeper|further)\\b"
+    ],
+    "scope": [
+     "phase",
+     "condition",
+     "technique",
+     "signal",
+     "fault",
+     "cause",
+     "advice"
+    ],
+    "except_praise": false
    }
   ],
   "sources": [
@@ -5364,6 +5494,36 @@
     "note": "Understeer: the car turns less than the steering asks and runs wide at the limit; oversteer: it turns more and tends to spin. Braking that puts too much load on the front tyres can make them slide, and enough power at the rear wheels can start oversteer. Cited by Ed for his checklist; read 2026-10-15.",
     "url": "https://en.wikipedia.org/wiki/Understeer_and_oversteer",
     "date": null
+   },
+   {
+    "type": "source",
+    "id": "openf1_2025_qualifying",
+    "name": "Car data of real 2025 Formula 1 qualifying laps (OpenF1)",
+    "summary": "Real cars, not a game: the fastest qualifying lap of each of the top four at the 2025 Austrian and Japanese Grands Prix (Spielberg and Suzuka), 58 braking zones, read from OpenF1's public historical data on 2026-10-15 and measured with Pitwall's scripts. OpenF1 is unofficial and licensed CC BY-NC-SA 4.0 (F1 trademarks belong to Formula One Licensing B.V.): Pitwall keeps none of its raw data, only the derived numbers on the techniques, credited here. Limits: the brake is a pressed or not-pressed flag sampled about four times a second, there is no steering, and the positions follow one shared line, so turning means the heading of that line: it shows braking that overlaps the turn, not how the pressure comes off or each driver's own line. Aggregates only.",
+    "tier": "external",
+    "sources": [],
+    "notes": null,
+    "file": "sources.toml",
+    "title": "Car data of real 2025 Formula 1 qualifying laps (OpenF1)",
+    "author": "OpenF1 (openf1.org), measured by Pitwall's scripts",
+    "note": "Real cars, not a game: the fastest qualifying lap of each of the top four at the 2025 Austrian and Japanese Grands Prix (Spielberg and Suzuka), 58 braking zones, read from OpenF1's public historical data on 2026-10-15 and measured with Pitwall's scripts. OpenF1 is unofficial and licensed CC BY-NC-SA 4.0 (F1 trademarks belong to Formula One Licensing B.V.): Pitwall keeps none of its raw data, only the derived numbers on the techniques, credited here. Limits: the brake is a pressed or not-pressed flag sampled about four times a second, there is no steering, and the positions follow one shared line, so turning means the heading of that line: it shows braking that overlaps the turn, not how the pressure comes off or each driver's own line. Aggregates only.",
+    "url": "https://openf1.org",
+    "date": "2026-10-15"
+   },
+   {
+    "type": "source",
+    "id": "acgym_human_laps",
+    "name": "AssettoCorsaGym: human laps in Assetto Corsa at the Red Bull Ring and Monza",
+    "summary": "Another simulator's human laps, not Pitwall's recordings: the open dataset of the paper \"A Simulation Benchmark for Autonomous Racing with Large-Scale Human Data\" (NeurIPS 2024, arXiv 2407.16680), whose drivers range from a professional sim racer to first-time beginners. Pitwall's scripts read 11 drivers' laps in the Dallara F317 and a GT3 car (142 representative laps; the Miata had too few) through Pitwall's own braking and corner analysis, with the drivers grouped into thirds by lap time (the paper does not say who is which level). Aggregates only: no participant is named. Limits: few drivers per group; the GT3 results lean on the two fastest drivers, who also had high-resolution pedals (one ran ABS and traction control); the steering scale differs from F1 25's.",
+    "tier": "external",
+    "sources": [],
+    "notes": null,
+    "file": "sources.toml",
+    "title": "AssettoCorsaGym: human laps in Assetto Corsa at the Red Bull Ring and Monza",
+    "author": "Remonda et al. (AssettoCorsaGym dataset, CC BY 4.0), measured by Pitwall's scripts",
+    "note": "Another simulator's human laps, not Pitwall's recordings: the open dataset of the paper \"A Simulation Benchmark for Autonomous Racing with Large-Scale Human Data\" (NeurIPS 2024, arXiv 2407.16680), whose drivers range from a professional sim racer to first-time beginners. Pitwall's scripts read 11 drivers' laps in the Dallara F317 and a GT3 car (142 representative laps; the Miata had too few) through Pitwall's own braking and corner analysis, with the drivers grouped into thirds by lap time (the paper does not say who is which level). Aggregates only: no participant is named. Limits: few drivers per group; the GT3 results lean on the two fastest drivers, who also had high-resolution pedals (one ran ABS and traction control); the steering scale differs from F1 25's.",
+    "url": "https://huggingface.co/datasets/dasgringuen/assettoCorsaGym",
+    "date": "2026-10-15"
    }
   ],
   "edges": [

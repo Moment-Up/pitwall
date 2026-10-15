@@ -122,6 +122,12 @@ function TechniqueRow({ t, s }: { t: TechniqueItem; s: Shared }) {
           Measured by: {t.signals.map((x) => (x.measured ? x.name : `${x.name} (not measured yet)`)).join(" · ")}
         </p>
       )}
+      {kd.measured &&
+        t.measured.map((m) => (
+          <p key={m} className="m-0 text-xs text-muted">
+            {m}
+          </p>
+        ))}
     </li>
   );
 }
@@ -271,7 +277,7 @@ function SourceList({ items, label, s }: { items: readonly SourceItem[]; label: 
 function SourcesCard({ view, s }: { view: ReturnType<typeof cornersView>; s: Shared }) {
   const g = view.sources;
   const credit = creditLine(g);
-  const all = g.ed.length + g.published.length + g.pitwall.length;
+  const all = g.ed.length + g.published.length + g.external.length + g.pitwall.length;
   const lists = (
     <>
       {g.ed.length > 0 && <SourceList items={g.ed} label="Ed's material" s={s} />}
@@ -279,6 +285,12 @@ function SourcesCard({ view, s }: { view: ReturnType<typeof cornersView>; s: Sha
         <>
           <span className="text-sm font-semibold text-muted">Published coaching</span>
           <SourceList items={g.published} label="Published coaching" s={s} />
+        </>
+      )}
+      {g.external.length > 0 && (
+        <>
+          <span className="text-sm font-semibold text-muted">Real-world data, measured by Pitwall</span>
+          <SourceList items={g.external} label="Real-world data, measured by Pitwall" s={s} />
         </>
       )}
       {g.pitwall.length > 0 && (
@@ -296,8 +308,9 @@ function SourcesCard({ view, s }: { view: ReturnType<typeof cornersView>; s: Sha
       </Card.Header>
       {credit && <p className="m-0 text-[15px] leading-snug">{credit}</p>}
       <p className="m-0 text-sm text-muted">
-        {credit ? "The rest is" : "It is"} published coaching ({g.published.length} sources) and Pitwall's own rules and
-        measurements on recorded laps. Published coaching and Ed's brief are not validated by Pitwall.
+        {credit ? "The rest is" : "It is"} published coaching ({g.published.length} sources), Pitwall's own rules and
+        measurements on recorded laps{g.external.length > 0 ? ", and how real drivers drive: real-car and other sim data that Pitwall's scripts measured" : ""}.
+        Published coaching and Ed's brief are not validated by Pitwall, and real-world data is not proof about a game.
       </p>
       {s.kd.sourcesOpen ? <div className="grid gap-3">{lists}</div> : <Fold title={`All ${all} sources`}>{lists}</Fold>}
     </Card>

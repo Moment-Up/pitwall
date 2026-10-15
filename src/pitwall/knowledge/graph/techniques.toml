@@ -59,6 +59,24 @@ sources = ["ed_corner_brief", "hpa_braking_technique", "mysimrig_telemetry_begin
 notes = """Ed's brief, point 2; his checklist row on a slow ramp-up. Recorded (pitwall_patch_review): on real F1 25
 laps the time-to-peak delta against the reference spans p10 -0.16 s to p90 +0.23 s, so a few hundredths are noise."""
 
+[[technique.measured]]
+metric = "time to peak brake, fastest third of drivers (median of the group)"
+value = 0.15
+unit = "s"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """0.10-0.20 s in three of the four car and track groups (0.36 s in the GT3 at Monza), against 0.37-0.46 s for
+the slowest third."""
+
+[[technique.measured]]
+metric = "F317 corners where a quicker brake attack went with a faster driver"
+value = 13
+unit = "of 13 corners"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """11 of 13 in the GT3: the most consistent difference between faster and slower drivers in this data. Across
+drivers, not from one lap to the next."""
+
 [[technique]]
 id = "progressive_brake_release"
 name = "Progressive brake release"
@@ -74,6 +92,15 @@ sources = ["ed_corner_brief", "hpa_braking_technique", "mysimrig_telemetry_begin
 notes = """Ed's brief, point 3; his checklist rows on an abrupt or stepped release and on a double hump. Recorded
 (pitwall_patch_review): the release-time delta against the reference spans p10 -0.48 s to p90 +0.43 s on real F1 25
 laps, so the release shape varies a lot from lap to lap."""
+
+[[technique.measured]]
+metric = "brake release time, fastest third of GT3 drivers (median of the group)"
+value = 1.2
+unit = "s"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """About 0.5-0.9 s for the other GT3 groups; not seen in the F317. A two-driver effect: the third fast driver
+released no more slowly than the rest."""
 
 [[technique]]
 id = "rev_match_downshift"
@@ -113,6 +140,15 @@ notes = """Ed's brief, point 5. Recorded (pitwall_style_review, 2026-10-15): the
 into 40 of 41 braking corners (median 33 m of braking with the wheel turned), and within a corner more trail braking
 went with a faster corner in 28 of 45 corners (median r -0.13): a weak effect, against this technique for that driver
 and car - which is why it applies only when one of its conditions holds."""
+
+[[technique.measured]]
+metric = "real F1 qualifying braking zones clearly braked in a straight line"
+value = 0
+unit = "%"
+date = "2026-10-15"
+source = "openf1_2025_qualifying"
+note = """0 of 58 (4 could not rule out a release at turn-in). Real cars, not this game; with a pressed-or-not brake
+flag and no steering, it shows braking that overlaps the turn, not how hard the brake was pressed."""
 
 [[technique]]
 id = "consistent_brake_marker"
@@ -178,6 +214,45 @@ owner's fastest F1 25 laps trail-brake into 40 of 41 braking corners (median 33 
 and within a corner across clean laps more trail braking went with a faster corner in 28 of 45 corners (median
 r -0.13): a weak effect, in favour of this technique for that driver and car."""
 
+[[technique.measured]]
+metric = "real F1 qualifying braking zones trail-braked"
+value = 72
+unit = "%"
+date = "2026-10-15"
+source = "openf1_2025_qualifying"
+note = """42 of 58: at least 10 degrees of the line's turn, and a fifth of the corner's entry rotation, with the brake
+on; 23 of 24 in slow corners (under 160 km/h), 19 of 34 in fast ones. Real cars, not this game."""
+
+[[technique.measured]]
+metric = "share of a corner's entry rotation done with the brake on, real F1 qualifying (median)"
+value = 53
+unit = "%"
+date = "2026-10-15"
+source = "openf1_2025_qualifying"
+note = """Middle half 40-67%. Braking and turning overlapped over a median 44 m (about 0.9 s; 36-49 m with the turn-in
+put at 3-10 degrees), and the brake came off a median 0.64 s (about 30 m) before the slowest point. In some fast corners
+drivers only lifted the throttle: two of the four at Suzuka's esses."""
+
+[[technique.measured]]
+metric = "GT3 braking corners trail-braked, fastest third of drivers"
+value = 72
+unit = "%"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """About 25% for the other two thirds. It leans on the two fastest drivers, who also had high-resolution pedals
+(one ran ABS and traction control); in the F317 single-seater the link is weak and reverses at Monza (fastest third 34%,
+slowest third 46%)."""
+
+[[technique.measured]]
+metric = "within one driver, rank correlation of trail-braking distance with corner time, lap to lap (GT3, median)"
+value = 0.0
+unit = "rho"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """0.00 over 61 driver-corner pairs in the GT3, -0.05 over 53 in the F317: a driver's laps with more trail
+braking were not faster. Trail braking marks long-term skill, not a lever to pull from one lap to the next, so Pitwall
+never coaches 'trail brake more' (constraints.toml, never_trail_brake_more)."""
+
 [[technique]]
 id = "release_with_speed_to_spare"
 name = "Off the brake with speed to spare"
@@ -192,11 +267,11 @@ alternatives = ["trail_braking"]
 measured_by = ["coast_m"]
 tier = "brief"
 sources = ["ed_corner_brief"]
-notes = """Ed's brief, point 6. Tier brief, not expert (2026-10-15 review): no published source in the graph backs a full
-release before turn-in. NASA's release article (nasa_brake_release) supports one part - with the pedal off the car is
-still slowing and the steering scrubs speed - but argues for releasing while turning in (trail braking), not before;
-it is context, not a source for this technique, as for coast_to_apex. Not an instruction to release the brake at
-another point than the driver does: Pitwall never tells a driver to release earlier or carry more speed in
+notes = """Ed's brief, point 6. Tier brief, not expert (2026-10-15 review): no published source in the graph backs a
+full release before turn-in. NASA's release article (nasa_brake_release) supports one part - with the pedal off the
+car is still slowing and the steering scrubs speed - but argues for releasing while turning in (trail braking), not
+before; it is context, not a source for this technique, as for coast_to_apex. Not an instruction to release the brake
+at another point than the driver does: Pitwall never tells a driver to release earlier or carry more speed in
 (constraints.toml); this describes the straight-line technique."""
 
 [[technique]]
@@ -243,6 +318,25 @@ that finished too soon (mysimrig_telemetry_beginners, hpa_braking_technique); NA
 the car keeps slowing with the brake off. Recorded (pitwall_style_review, 2026-10-15): on the owner's fastest F1 25
 laps the car coasts 10 m or more at 15% of corners (median 0 m), and within a corner more coasting went with a slower
 corner in 22 of 35 corners (median r +0.12): weak, against this technique for that driver and car."""
+
+[[technique.measured]]
+metric = "braking corners with 10 m or more of coasting, slowest third of drivers (lowest of the four groups)"
+value = 77
+unit = "%"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """77-93% across the four car and track groups. Across drivers, more coasting went with a slower corner in 11 of
+13 GT3 corners and 10 of 13 F317 corners (not significant), but not in step with skill: the middle third of GT3 drivers
+coasted least (28-44%)."""
+
+[[technique.measured]]
+metric = "real F1 slow corners with 0.4 s or more off the brake flag and under 10% throttle before the slowest point"
+value = 54
+unit = "%"
+date = "2026-10-15"
+source = "openf1_2025_qualifying"
+note = """13 of 24 slow corners, 7 of 34 fast ones. That is about two samples at OpenF1's rate, and the flag misses
+light braking, so real coasting was at most this."""
 
 # --- apex ----------------------------------------------------------------------------------------------------------
 

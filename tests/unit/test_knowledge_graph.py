@@ -41,6 +41,7 @@ from pitwall.knowledge.graph import (
     RADIO_MAX_WORDS,
     SCREEN_MAX_CHARS,
     SIGNAL_CLASSES,
+    TIERS,
     Advice,
     Cause,
     Condition,
@@ -357,6 +358,10 @@ CAUGHT = [
     ("never_carry_more_speed", "take more speed into the corner"),
     ("never_carry_more_speed", "turn in faster"),
     ("never_carry_more_speed", "you need more entry speed"),
+    ("never_trail_brake_more", "Trail brake more into T1."),
+    ("never_trail_brake_more", "try trail-braking a bit deeper"),
+    ("never_trail_brake_more", "Use more trail braking at the hairpin."),
+    ("never_trail_brake_more", "keep the brake on longer into the turn"),
     # phrasings the 2026-10-15 review found the first patterns missed
     ("never_brake_later", "Brake 10 m later."),
     ("never_brake_later", "Brake 5m later"),
@@ -394,6 +399,8 @@ ALLOWED = [
     "Release the brake while the car is still faster than the apex needs.",
     "Braking started clearly later than on the reference lap, but the car came out of the corner slower.",
     "Ease the brake pressure off smoothly as the car slows, rather than letting it go all at once.",
+    "Keep some brake on as you start to turn, and ease it off as the steering goes in.",
+    "Trail braking marks long-term skill, not a lever to pull from one lap to the next.",
 ]
 
 
@@ -631,6 +638,44 @@ def test_eds_detectors_carry_their_measured_firing_rates(fault: str, rate: float
     assert "pitwall_patch_review" in f.sources
 
 
+def test_external_evidence_is_its_own_tier_and_never_validation() -> None:
+    """Real-world and third-party data measured by Pitwall's scripts (real F1 qualifying laps from OpenF1, other
+    people's Assetto Corsa laps) is tier external: kept as measurements on the techniques it is about, never a node's
+    own tier, never presented as Pitwall's recorded laps or as evidence about a game."""
+    g = load_graph_dir()
+    assert "external" in TIERS and "not evidence about a game" in kg.TIER_MEANING["external"]
+    external = {s.id for s in g.sources if s.tier == "external"}
+    assert external == {"openf1_2025_qualifying", "acgym_human_laps"}
+    for sid in external:
+        s = g.get(sid, kg.Source)
+        assert s is not None and s.url and "measured by Pitwall's scripts" in s.author
+        assert "Aggregates only" in s.note
+    measured = {t.id: [m.source for m in t.measured] for t in g.techniques if t.measured}
+    assert set(measured) == {
+        "trail_braking",
+        "straight_line_braking",
+        "fast_brake_attack",
+        "progressive_brake_release",
+        "coast_to_apex",
+    }
+    assert {s for ms in measured.values() for s in ms} == external
+    assert all(n.tier != "external" for n in g.nodes() if not isinstance(n, kg.Source))
+    tb = g.get("trail_braking", Technique)
+    assert tb is not None and tb.tier == "expert"  # the technique's own claims keep their tier
+    lever = next(m for m in tb.measured if m.metric.startswith("within one driver"))
+    assert lever.value == 0.0 and "never_trail_brake_more" in (lever.note or "")
+    assert any(c.id == "never_trail_brake_more" for c in g.constraints)
+
+
+def test_a_technique_measurement_needs_a_real_source(tmp_path: Path) -> None:
+    text = swap(
+        'tier = "expert"\nsources = ["book"]\n\n[[fault]]',
+        'tier = "expert"\nsources = ["book"]\n\n[[technique.measured]]\nmetric = "share trail-braked"\nvalue = 72\n'
+        'unit = "%"\ndate = "2026-10-15"\nsource = "nowhere"\n\n[[fault]]',
+    )
+    assert_problem(tmp_path, text, "technique 'tb'", "measured source", "unknown id 'nowhere'")
+
+
 def test_causes_are_told_apart_by_computed_signals_only() -> None:
     """A cause is named only from what Pitwall measures: every discriminator reads a signal with a code."""
     g = load_graph_dir()
@@ -648,6 +693,7 @@ def test_every_signal_and_source_is_used() -> None:
     assert {s.id for s in g.signals} == used
     cited = {s for n in g.nodes() for s in n.sources}
     cited |= {m.source for f in g.faults for m in f.measured} | {m.source for s in g.signals for m in s.noise}
+    cited |= {m.source for t in g.techniques for m in t.measured}
     assert {s.id for s in g.sources} == cited
 
 

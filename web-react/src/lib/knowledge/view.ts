@@ -73,6 +73,7 @@ export const CONTEXT_KEY_WORDS: Readonly<Record<ContextKey, string>> = {
 export const TIER_LABEL: Readonly<Record<KnowledgeTier, string>> = {
   expert: "Published coaching",
   brief: "Ed's brief",
+  external: "Real-world data, measured by Pitwall",
   synthetic: "Synthetic only",
   recorded: "Measured by Pitwall",
   live: "Live in Pitwall",
@@ -367,6 +368,9 @@ export interface TechniqueItem {
   alternatives: (NamedRef & { fit: Fit })[];
   /** The signals that measure it; `measured` false = Pitwall does not compute it yet. */
   signals: (NamedRef & { measured: boolean })[];
+  /** Numbers measured about it, one line each with where they come from ("Real F1 qualifying braking zones
+   * trail-braked: 72% (2026-10-15) - Car data of real 2025 Formula 1 qualifying laps (OpenF1)"). */
+  measured: string[];
 }
 
 export interface PhaseView {
@@ -388,6 +392,7 @@ export function phaseViews(g: TechniqueKnowledge, ctx: KnowledgeContext): PhaseV
   const signals = new Map(g.signals.map((s) => [s.id, s]));
   const techniques = new Map(g.techniques.map((t) => [t.id, t]));
   const fits = new Map(g.techniques.map((t) => [t.id, fitOf(t, ctx, conds)]));
+  const sources = new Map(g.sources.map((s) => [s.id, s]));
   const item = (t: KnowledgeTechnique): TechniqueItem => ({
     id: t.id,
     name: t.name,
@@ -402,6 +407,10 @@ export function phaseViews(g: TechniqueKnowledge, ctx: KnowledgeContext): PhaseV
     signals: t.measured_by.map((id) => {
       const s = signals.get(id);
       return { id, name: s?.name ?? id, measured: !!s?.code };
+    }),
+    measured: (t.measured ?? []).map((m) => {
+      const src = sources.get(m.source);
+      return src ? `${measurementText(m)} - ${src.title}` : measurementText(m);
     }),
   });
   return [...g.phases]
@@ -513,6 +522,8 @@ export interface SourceGroups {
   ed: SourceItem[];
   /** Published coaching (tier expert). */
   published: SourceItem[];
+  /** Real-world and third-party data measured by Pitwall's scripts (tier external): real cars, other people's laps. */
+  external: SourceItem[];
   /** Pitwall's own rules and measurements (design, recorded, live, synthetic). */
   pitwall: SourceItem[];
   /** "Ed (Pitwall tester)", from the brief sources' author, or null when there are none. */
@@ -532,6 +543,9 @@ function citations(g: TechniqueKnowledge): Map<string, number> {
     ...g.constraints,
   ];
   for (const node of nodes) for (const s of new Set(node.sources)) n.set(s, (n.get(s) ?? 0) + 1);
+  // a measurement cites its source too (a fault's firing rates, a technique's real-world numbers)
+  const measured = [...g.faults.map((f) => f.measured), ...g.techniques.map((t) => t.measured ?? [])];
+  for (const list of measured) for (const s of new Set(list.map((m) => m.source))) n.set(s, (n.get(s) ?? 0) + 1);
   return n;
 }
 
@@ -553,7 +567,11 @@ export function sourceGroups(g: TechniqueKnowledge): SourceGroups {
   return {
     ed,
     published: g.sources.filter((s) => s.tier === "expert").map(item).sort(byCited),
-    pitwall: g.sources.filter((s) => s.tier !== "brief" && s.tier !== "expert").map(item).sort(byCited),
+    external: g.sources.filter((s) => s.tier === "external").map(item).sort(byCited),
+    pitwall: g.sources
+      .filter((s) => s.tier !== "brief" && s.tier !== "expert" && s.tier !== "external")
+      .map(item)
+      .sort(byCited),
     edAuthor: ed[0]?.author ?? null,
   };
 }

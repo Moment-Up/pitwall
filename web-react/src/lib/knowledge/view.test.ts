@@ -209,6 +209,20 @@ describe("faults Pitwall checks", () => {
   });
 });
 
+describe("real-world measurements on techniques", () => {
+  it("each line says what was measured and where it comes from", () => {
+    const tb = phaseViews(g, OWNER_F1).flatMap((p) => [...p.shown, ...p.others]).find((t) => t.id === "trail_braking")!;
+    expect(tb.measured[0]).toBe(
+      "Real F1 qualifying braking zones trail-braked: 72% (2026-10-15) - Car data of real 2025 Formula 1 qualifying laps (OpenF1)",
+    );
+    expect(tb.measured.some((m) => m.startsWith("Within one driver") && m.includes("AssettoCorsaGym"))).toBe(true);
+    // an older server sends no measurements: none shown
+    const old = structuredClone(g);
+    for (const t of old.techniques) delete t.measured;
+    expect(phaseViews(old, OWNER_F1).flatMap((p) => [...p.shown, ...p.others]).every((t) => t.measured.length === 0)).toBe(true);
+  });
+});
+
 describe("faults Pitwall checks, for one session", () => {
   it("a session variant leaves out the causes that cannot be named for its driver and game", () => {
     // edited: the plain graph with a GT7 session's per-cause verdicts (pitwall.knowledge.session.session_payload)
@@ -230,9 +244,12 @@ describe("sources", () => {
     expect(s.ed.every((x) => x.tierLabel === "Ed's brief")).toBe(true);
     expect(s.published.length).toBeGreaterThanOrEqual(7);
     expect(s.published.every((x) => x.tier === "expert")).toBe(true);
-    for (const x of [...s.ed, ...s.published, ...s.pitwall]) if (x.url) expect(x.url).toMatch(/^https?:\/\//);
-    expect(s.pitwall.every((x) => !["brief", "expert"].includes(x.tier))).toBe(true);
-    expect(s.ed.length + s.published.length + s.pitwall.length).toBe(g.sources.length);
+    for (const x of [...s.ed, ...s.published, ...s.external, ...s.pitwall]) if (x.url) expect(x.url).toMatch(/^https?:\/\//);
+    expect(s.pitwall.every((x) => !["brief", "expert", "external"].includes(x.tier))).toBe(true);
+    expect(s.ed.length + s.published.length + s.external.length + s.pitwall.length).toBe(g.sources.length);
+    // real-world data measured by Pitwall's scripts is its own group, cited by the techniques' measurements
+    expect(s.external.map((x) => x.id).sort()).toEqual(["acgym_human_laps", "openf1_2025_qualifying"]);
+    expect(s.external.every((x) => x.tierLabel === "Real-world data, measured by Pitwall" && x.cited > 0)).toBe(true);
     // Ed's brief is cited by the techniques it shaped.
     expect(s.ed.find((x) => x.id === "ed_corner_brief")!.cited).toBeGreaterThan(10);
     expect(creditLine(s)).toMatch(/^From Ed \(Pitwall tester\): .*Idealised corner brief and self-check.*Technique-fault checklist/);
