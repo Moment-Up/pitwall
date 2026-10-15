@@ -29,6 +29,10 @@ The release workflow copies a release's bullet points into its GitHub release no
   reminder for the next one. Settings › System lists what to look for. Synthetic.
 - A habit the radio announces gets its corner reminder on the lap you hear it, not one lap later. Tested on synthetic
   laps; not live.
+- F1 25 Time Trial: Pitwall reads your session best, personal best and the rival you picked from EA's leaderboard,
+  and keeps the rival per track and car. From EA's spec; not yet seen from the real game.
+- `pitwall tt-check <capture>` says whether a Time Trial recording carries the rival ghost's inputs. Tested on
+  generated laps only.
 
 ## v0.3.0 - 2026-10-13
 
