@@ -182,6 +182,31 @@ would not compare." (Monaco, Mexico at F1DB v2026.17.0, or a session of another 
 whether this is a 2025 or a 2026 car, so there is no real season to compare with.", "Real Formula 1 has no pole time
 here for 2025." (Madrid).
 
+## On screen: Review › Progress, Records
+
+The React dashboard's Records section (`web-react/src/pages/review/progress/{FamilyBoardCard,TimesToBeatCard,
+RecordHistoryCard,useRecords}`, pure logic in `web-react/src/lib/review/records.ts`, client in
+`web-react/src/lib/endpoints/leaderboard.ts`) follows the page's driver, track and car:
+
+- **Which board**: `GET /api/records?game&track_id&driver_id=<viewed driver>` lists the boards here where that driver
+  has a lap; the section opens the newest of them in the page's car (any car: the newest of all), by key. A driver
+  with no board here gets the server's pick by fields (`game`, `track_id`, `car_id`). The family board is always one
+  exact key: the old any-car fallback (each driver's best at the track in any car) is gone.
+- **Pickers**: one per key part that differs between the boards here (car, session type, weather, car performance,
+  layout, assists), from `boards_here`; assists are named by the settings that differ ("ABS on" / "ABS off"). Picking
+  a value opens the board that keeps the most of the other parts, newest first on a tie. With the page's car set, the
+  pickers stay in that car unless it has no board here (then every board here, and a note says the car differs).
+- **Rows**: the server's gap words ("3.067 s behind"), the percentage, date and clean laps beyond the beginner's view,
+  best sectors and their sum for advanced drivers; household drivers with no lap there say so. A column per optional
+  row gives each driver's `vs` gap and the band chip (gold / silver / bronze, none when `band` is null) with the band
+  rule under the board.
+- **Times to beat**: each optional row with its caveat, always; the real pole with the linked F1DB credit ("Real F1
+  times: F1DB, CC BY 4.0"); the EA rival labelled spec-decoded; `real_f1_note` in muted text; a 2025 car / 2026 car
+  choice when `real_f1_asks_generation` (sent back as `car_generation`, kept while the page is open).
+- **Record history**: newest first; beginners see the latest change, intermediate 4, advanced 8, then Show all.
+- The requests live under the dashboard cache's `driver-sessions:` prefix, so every completed lap, driver switch or
+  session moved to another driver refreshes the board.
+
 ## Badge, engineer and radio
 
 - **Badge** `family_record:<key>` ("Family record at Austria", `motivation/badges.py`): a board is contested from the

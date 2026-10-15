@@ -467,7 +467,10 @@ Two optional rows: `service.ea_rival_for` (the F1 25 Time Trial rival, `repo.lat
 `session_time_trial`, schema v7) and `service.real_f1_row` (the real pole from `trackdata.real_f1`, F1DB, of the season
 `board_generation` reads from the board's car via `carclass`, or the driver's `car_generation` answer);
 `board.with_benchmarks` adds them, each driver's gap and band (`real_f1.band_for`), and `board.index_versus` the
-record's to each index row. `lapcard.py` builds the versioned lap card locally; nothing goes online.
+record's to each index row. `lapcard.py` builds the versioned lap card locally; nothing goes online. On screen, Review ›
+Progress's Records section (`web-react`: `lib/endpoints/leaderboard.ts`, pure `lib/review/records.ts`,
+`pages/review/progress/useRecords.ts`) reads `/api/records?driver_id` to open the viewed driver's newest board here,
+then `/api/leaderboard?key`; its pickers are built from `boards_here`.
 
 ## Dashboard (`web-react/`)
 React 19 + TypeScript (strict) + Vite + Tailwind v4 + HeroUI v3 / HeroUI Pro, built to `docs/ui/design-spec.md` (v2,

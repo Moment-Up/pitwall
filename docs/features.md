@@ -443,6 +443,15 @@ Progress at one track and car (the scope bar at the top applies to every card): 
 laps, pace against the AI, **What the coach flagged** and how the time lost at each corner changed from session to
 session. Goals, the week and badges have their own page, [Goals](#goals).
 
+**Records** (on the same page, under the track and car picked at the top): the family board of one exact board, the
+newest one where the driver shown has a lap (see [Family records](#family-records)). Each driver's best with the gap
+to the fastest in words ("3.067 s behind"), and the household drivers with no lap there yet; when the track has more
+than one board, pick the session type, weather, assists or car (only the choices that exist are offered). Under it,
+**Times to beat** (the EA rival in Time Trial, a real F1 pole) with each one's caveat and the F1DB credit, and the
+**Record history**, newest first. Each driver's gap to a time to beat gets a gold, silver or bronze band when it is
+close enough. Beginners see the times, the gaps in words and the bands; intermediate drivers add percentages, dates
+and assists; advanced drivers add best sectors, their sum and the game version.
+
 Coaching and Progress are the newest pages and have not been used after a live session yet.
 
 ### Today's 3 things
@@ -529,7 +538,8 @@ driver drives the board, or taking it later, earns the badge "Family record at <
 family record here?" or "Who's fastest in the family?"; when a lap takes the record from someone else the radio says
 "New family record at Austria: you took it from Sam." (no lap time). Everything stays on this computer
 ([leaderboard.md](leaderboard.md); API `/api/leaderboard`, `/api/records`). Tested on unit tests and a read-only copy
-of the owner's database; the Records screen comes with Review › Progress.
+of the owner's database. On screen: Review › Progress, **Records** ([Progress](#progress)); checked in a desktop browser
+at iPad sizes with that copy, not yet on an iPad.
 
 Two more rows can sit on a board. In an F1 car on a real circuit, **Real F1**: that season's real pole (2025 cars
 against the 2025 pole, 2026 Season Pack cars against 2026), from F1DB (CC BY 4.0), always with the reminder that F1 25

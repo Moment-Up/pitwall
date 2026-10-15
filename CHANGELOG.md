@@ -42,6 +42,8 @@ The release workflow copies a release's bullet points into its GitHub release no
   generated laps only.
 - Family boards show the real F1 pole for your car's season (F1DB) and, in Time Trial, your EA rival, with gold,
   silver and bronze bands. Unit tests and real laps; the rival from EA's spec only.
+- Review › Progress, Records: one exact family board with pickers, the record history and the times to beat, with
+  their bands. Unit tests and real laps; not yet on an iPad.
 
 ## v0.3.0 - 2026-10-13
 

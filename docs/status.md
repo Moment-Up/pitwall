@@ -367,7 +367,15 @@ On the copy (2026-10-15): 22 boards (20 F1 25, 2 GT7 unidentified circuits); all
 a board; one contested board (Austria · Haas · Race · Dry: the owner 1:10.549, the second profile +3.067 s, 4.35 %);
 11 boards have ABS and TC unknown (laps stored before the per-lap assists), and the owner's F2 Sakhir laps split by ABS
 (on / off), as designed. The record index takes about 60 ms there. Not yet verified: the radio line heard on track
-(no household record has changed hands in a live session yet); the Records screen (Review › Progress).
+(no household record has changed hands in a live session yet).
+
+The **Records screen** (Review › Progress, the React dashboard): the family board of one exact board key (the any-car
+fallback of the old family board is gone), opened on the newest board where the viewed driver has a lap, pickers for
+the other boards at the track, the times to beat (caveats always, the F1DB credit linked, the EA rival labelled
+spec-decoded, the 2025 / 2026 question for the generic car) and the record history, by density. **vitest on the
+service's real answers over the read-only copy and a generated Time Trial scenario; checked in a desktop browser at
+iPad landscape, iPad portrait and phone widths against a scratch mock serving those answers; not on an iPad, not
+live.** On iPad portrait an advanced driver's board (best sectors, two times to beat) scrolls sideways.
 
 The optional rows are wired into `/api/leaderboard` and `/api/records`: the **real-F1 pole** (F1DB v2026.17.0, CC BY
 4.0, with its caveat and credit) of the season the car models, on F1-car boards of matched tracks, and the **EA rival**
