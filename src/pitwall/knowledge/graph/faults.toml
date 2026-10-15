@@ -374,13 +374,7 @@ relative = "absolute"
 signals = ["brake_point_std_m", "min_speed_std_kph"]
 violates = ["consistent_brake_marker"]
 tier = "brief"
-sources = [
-    "ed_fault_checklist",
-    "mysimrig_telemetry_beginners",
-    "designjudges_driver_data",
-    "pitwall_patch_review",
-    "blayze_consistency",
-]
+sources = ["ed_fault_checklist", "mysimrig_telemetry_beginners", "pitwall_patch_review", "blayze_consistency"]
 notes = """Ed's checklist row and one of his suggested next steps. The review: the spread per corner exists after the
 session (report, AI engineer facts, corner cards), not live; the live consistency_ratio is the share of laps past a
 rule's threshold, not a spread. No threshold yet."""
@@ -576,6 +570,7 @@ sources = [
     "ed_patches",
     "mysimrig_telemetry_beginners",
     "designjudges_driver_data",
+    "srt_racing_lines",
     "pitwall_patch_review",
 ]
 notes = """Ed's brief point 7 and checklist row "sawing mid-corner (multiple sign changes)". His counter finds 3 to 5
@@ -620,13 +615,14 @@ tier = "brief"
 sources = [
     "ed_fault_checklist",
     "ed_patches",
-    "srt_racing_lines",
     "speedwaymedia_vector_analysis",
     "pitwall_patch_review",
     "wikipedia_racing_line",
 ]
 notes = """Ed's checklist row "early apex (steering peak before the geometric apex, second correction)"; he marked it
-partly covered (the line thresholds measure offset, not apex timing). His detector takes the argmax of the steering,
+partly covered (the line thresholds measure offset, not apex timing). His checklist also lists the Sim Racing
+Telemetry racing-lines page here; it does not discuss early apexes, so it is cited for steering corrections
+(steering_sawing) instead. His detector takes the argmax of the steering,
 which jumps between peaks (values like -289 m). The slowest point's position (min_speed_pos_delta_m) is computed but
 noisy; the cause early_turn_in uses it with a wide margin."""
 
@@ -699,9 +695,10 @@ relative = "absolute"
 signals = ["steering_at_full_throttle_frac", "steering_unwind_s", "exit_balance_deg"]
 violates = ["unwind_with_throttle"]
 tier = "brief"
-sources = ["ed_corner_brief", "ed_fault_checklist", "coilovers_data_acquisition", "blayze_throttle_exit"]
+sources = ["ed_corner_brief", "ed_fault_checklist", "blayze_throttle_exit"]
 notes = """Ed's brief point 11 and checklist rows "early throttle before steering unwinds (power understeer)" and
-"mid-corner unwind rate". Nothing reads the steering at pick-up or full throttle yet (the review); the confirming
+"mid-corner unwind rate". Ed's checklist also lists the coilovers data-acquisition guide here; it covers entry
+understeer and exit snap oversteer, not power understeer, so it is not cited for this. Nothing reads the steering at pick-up or full throttle yet (the review); the confirming
 signal exists on F1 25: exit understeer (technique/balance.py)."""
 
 [[fault]]

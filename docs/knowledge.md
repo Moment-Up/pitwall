@@ -317,8 +317,8 @@ technique from a coaching book is `expert` with that book as its source.
 id = "rev_match_downshift"
 name = "Rev-matched downshifts"
 phase = "braking"
-summary = """With a manual gearbox, blip the throttle on each downshift while braking, so the revs match and the rear
-stays settled."""
+summary = """With a manual gearbox and a clutch, give the throttle a quick stab with each downshift under braking: the
+engine speed then matches the lower gear and the driven wheels are not jolted."""
 detail = """On a downshift the engine has to spin faster to match the wheels in the lower gear. ... Only for an H-pattern
 gearbox with a clutch: paddle-shift cars blip by themselves, so their throttle trace never shows it."""
 applies_when = ["gearbox_h_pattern"]

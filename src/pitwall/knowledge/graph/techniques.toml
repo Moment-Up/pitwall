@@ -13,7 +13,7 @@
 id = "flat_to_brake_marker"
 name = "Flat out to the brake marker"
 phase = "approach"
-summary = "Stay flat out in a straight line right up to your braking point; don't lift before it."
+summary = "Keep the throttle wide open until the moment you brake, with no lift in the last metres before it."
 detail = """Any distance off the throttle before the brake goes on is spent neither accelerating nor braking hard, so
 the throttle comes off and the brake goes on in one quick movement. When the race strategy asks for fuel saving, lift
 and coast replaces this on purpose."""
@@ -79,8 +79,8 @@ laps, so the release shape varies a lot from lap to lap."""
 id = "rev_match_downshift"
 name = "Rev-matched downshifts"
 phase = "braking"
-summary = """With a manual gearbox, blip the throttle on each downshift while braking, so the revs match and the rear
-stays settled."""
+summary = """With a manual gearbox and a clutch, give the throttle a quick stab with each downshift under braking: the
+engine speed then matches the lower gear and the driven wheels are not jolted."""
 detail = """On a downshift the engine has to spin faster to match the wheels in the lower gear. A blip of the throttle
 does that - heel and toe: the right foot on the brake and the throttle at once. Without it the engine briefly drags on
 the driven wheels, which can lock them or unsettle the rear in the braking zone. The downshifts are done while braking,
@@ -190,11 +190,14 @@ does the same job with the brake still easing off during turn-in."""
 applies_any = ["skill_beginner", "braking_style_straight_line", "no_abs_low_downforce"]
 alternatives = ["trail_braking"]
 measured_by = ["coast_m"]
-tier = "expert"
-sources = ["ed_corner_brief", "nasa_brake_release"]
-notes = """Ed's brief, point 6. Not an instruction to release the brake at another point than the driver does: Pitwall
-never tells a driver to release earlier or carry more speed in (constraints.toml); this describes the straight-line
-technique."""
+tier = "brief"
+sources = ["ed_corner_brief"]
+notes = """Ed's brief, point 6. Tier brief, not expert (2026-10-15 review): no published source in the graph backs a full
+release before turn-in. NASA's release article (nasa_brake_release) supports one part - with the pedal off the car is
+still slowing and the steering scrubs speed - but argues for releasing while turning in (trail braking), not before;
+it is context, not a source for this technique, as for coast_to_apex. Not an instruction to release the brake at
+another point than the driver does: Pitwall never tells a driver to release earlier or carry more speed in
+(constraints.toml); this describes the straight-line technique."""
 
 [[technique]]
 id = "single_smooth_turn_in"
@@ -224,8 +227,8 @@ per corner even on clean laps, so small corrections are normal and the threshold
 id = "coast_to_apex"
 name = "Coast to the apex"
 phase = "mid_corner"
-summary = """Between the brake and the throttle, stay off both pedals and let the cornering load scrub off the last of
-the speed to the apex."""
+summary = """With the brake already released, roll through the turn on neither pedal: the tyres' cornering force takes
+away the speed that is left until the apex."""
 detail = """With the brake fully off before turn-in, the car is still slowing as it turns: the tyres' cornering load
 takes off the remaining speed with no pedal to unsettle it, and the driver can feel the balance before picking up the
 throttle. It belongs with straight-line braking. Telemetry guides usually read a long gap off both pedals as time
@@ -247,8 +250,8 @@ corner in 22 of 35 corners (median r +0.12): weak, against this technique for th
 id = "throttle_at_rotation"
 name = "Throttle once the car has rotated"
 phase = "apex"
-summary = """At the apex, once the car is pointing where you want it, squeeze the throttle on in one smooth, progressive
-application."""
+summary = """Wait until the car faces the exit at the apex, then bring the throttle in with a single steady,
+building squeeze."""
 detail = """At the apex the tyres are giving all their grip to cornering, with little or no pedal. Once the car has
 turned enough, the throttle comes in progressively, and the tyres take more drive as the steering unwinds. Picking it
 up before the car has rotated tends to make it push wide and keeps the steering on longer, which delays full
@@ -281,7 +284,7 @@ of real F1 25 corner-laps."""
 id = "unwind_with_throttle"
 name = "Unwind as the throttle goes on"
 phase = "exit"
-summary = "Open the steering as you add throttle, so the wheel is straight by the time you are flat out."
+summary = "Take steering off in step with the throttle going on: by full throttle the front wheels point straight."
 detail = """The tyres' grip is shared between cornering and drive: as the steering comes off, the grip it frees goes to
 acceleration. Full throttle with a lot of steering still on asks more than the tyres have - the car pushes wide or the
 rear steps out - while a wheel straightened long before full throttle leaves exit speed unused."""

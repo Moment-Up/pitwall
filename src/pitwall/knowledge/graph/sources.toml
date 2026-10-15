@@ -265,7 +265,8 @@ date = "2025-01-11"
 tier = "expert"
 note = """Splits a line into entry, apex and exit; frequent large steering corrections suggest the line needs work; an
 overlay and a delta chart against a reference lap show where time goes, and comparing laps shows how consistent the
-line is. Little on early apexes or track width. Cited by Ed for his checklist; read 2026-10-15 (date: last edit)."""
+line is. It does not discuss early apexes or track width. Cited by Ed for his checklist; read 2026-10-15 (date: last
+edit)."""
 
 [[source]]
 id = "designjudges_driver_data"
@@ -273,11 +274,13 @@ title = "Analyzing driver data"
 author = "Skitter Yaeger (Design Judges)"
 url = "https://www.designjudges.com/articles/analyzing-driver-data"
 tier = "expert"
-note = """Driver data analysis: plot laps against distance and find the loss against a reference lap; compare brake
-points, pressure and how deep the trail braking goes; get to full throttle on exit and watch for brake and throttle
-overlap; jerky or stair-stepped steering, especially under braking, unsettles the car; on a g-g plot, braking g
-falling away before cornering g builds shows braking and turning not blended; scatter across laps shows
-inconsistency. Cited by Ed for his checklist; read 2026-10-15."""
+note = """Driver data analysis, comparing drivers and cars: channels plotted over distance and against each other
+(lateral and longitudinal g, steering or body slip against speed or longitudinal g). Combined g over distance dips
+where braking does not carry into cornering - a confident driver's stays up from the brake into the turn, the
+trailing brake. A jerky steering rate made the car slide, and more steering went with more understeer. A map of the
+driver's combined pedal and steering work finds unintended brake and throttle overlap, and inputs that all drop to
+zero after braking. It shows no g-g plot and does not compare one driver's laps for consistency. Cited by Ed for his
+checklist; read 2026-10-15."""
 
 [[source]]
 id = "vrs_traction_circle"
