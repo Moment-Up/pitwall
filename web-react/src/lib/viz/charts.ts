@@ -148,6 +148,20 @@ export type TraceChannel = "speed_kph" | "throttle" | "brake" | "steering" | "ge
 
 type TraceLike = Pick<LapTrace, "d"> & Partial<Record<TraceChannel, (number | null)[]>>;
 
+/** A vertical line on a distance chart (components/viz/TraceChart `markers`; Compare's corner phase markers). */
+export interface TraceMarker {
+  /** Stable React key. */
+  id: string;
+  /** Game lap metres. */
+  d: number;
+  /** A token: var(--pw-ref) / var(--pw-cmp). */
+  colour: string;
+  /** SVG dash array ("4 3"); solid when absent. */
+  dash?: string;
+  /** Words for the line ("Brake on, your lap"). */
+  label: string;
+}
+
 /** Index of the row whose `d` is nearest to `d` in an ascending array, or -1. */
 export function nearestIndex(ds: readonly number[], d: number): number {
   if (!ds.length || !finite(d)) return -1;

@@ -8,9 +8,12 @@
 // The route is the state: picking a lap or moving the cursor rewrites the hash without a history entry
 // (router.replace; the cursor after it rests for 400 ms). Data: /api/laps/{id}/trace?step=5 and /api/compare.
 // Behaviour reference: web/src/views/SessionView.svelte.
+// The corner in focus (at the cursor, else the biggest loss) also gets its phase markers on the charts (technique
+// knowledge spec section 4, lib/review/phase-markers.ts); the phase key's points move the cursor and keep that corner
+// in focus while it rests there.
 
 import { Alert, Card, Chip, Skeleton } from "@heroui/react";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EvidenceChips } from "../../../components/ui";
 import { useDrivers } from "../../../hooks/stores";
 import type { SessionAnalysis, SessionDetail } from "../../../lib/endpoints/review";
@@ -31,6 +34,7 @@ import {
 } from "../../../lib/review/compare";
 import type { Density } from "../../../lib/review/density";
 import { lapsRows } from "../../../lib/review/laps";
+import { comparisonCorner, phaseMarkerRows, type PhaseMarkerRow, type PhasePin } from "../../../lib/review/phase-markers";
 import { comparePath } from "../../../lib/review/links";
 import { sessionSkeleton, sectorBands } from "../../../lib/review/skeleton";
 import { createCursorSync } from "../../../lib/viz/cursor";
@@ -94,7 +98,8 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
   const model = cmp.data?.track_model ?? analysis?.track_model ?? null;
   const corners = useMemo(() => compareCorners(cmp.data?.comparison.corners, model, lengthM), [cmp.data, model, lengthM]);
   const fallback = useMemo(() => biggestLoss(corners), [corners]);
-  const focus = useCursorCorner(sync, corners, fallback);
+  const [pin, setPin] = useState<PhasePin | null>(null);
+  const focus = useCursorCorner(sync, corners, fallback, pin);
   const bands = useMemo(() => sectorBands(skeleton), [skeleton]);
   const ribbon = useMemo(() => ribbonFromTrack({ skeleton, model, lengthM }), [skeleton, model, lengthM]);
   const segDelta = useMemo(() => segmentDeltas(corners), [corners]);
@@ -102,6 +107,19 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
   const refDesc = cmp.data?.reference ?? null;
   const otherRef = refDesc && refDesc.own === false ? refDesc : null;
   const words = refWordsFor(density.level, otherRef);
+  const focusKey = focus?.key ?? null;
+  const phase = useMemo(() => {
+    const rows = phaseMarkerRows(comparisonCorner(cmp.data?.comparison.corners, focusKey), words.sentence);
+    return focus && rows.length ? { corner: focus, rows } : null;
+  }, [cmp.data, focusKey, focus, words.sentence]);
+  const showPhase = useCallback(
+    (r: PhaseMarkerRow) => {
+      if (r.at == null || focusKey == null) return;
+      setPin({ key: focusKey, at: r.at });
+      sync.set(r.at);
+    },
+    [focusKey, sync],
+  );
   const aOptions = useMemo(
     () =>
       refOptions({
@@ -237,6 +255,8 @@ export function CompareTab({ session, analysis, density, query }: CompareTabProp
         refWord={words.sentence}
         refLabel={words.picker}
         phone={phone}
+        phase={phase}
+        onShowPhase={showPhase}
       />
     );
     const explainer = (

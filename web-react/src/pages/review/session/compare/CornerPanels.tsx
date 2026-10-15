@@ -15,7 +15,6 @@ import type { TrackSkeleton } from "../../../../lib/skeleton";
 import {
   brakedText,
   CORNER_COLUMN_LABEL,
-  cornerAt,
   cornerColumns,
   cornerObservations,
   cornerSentence,
@@ -29,11 +28,18 @@ import {
   type CornerColumn,
 } from "../../../../lib/review/compare";
 import type { Density } from "../../../../lib/review/density";
+import { focusKeyAt, type PhasePin } from "../../../../lib/review/phase-markers";
 import type { CursorSync } from "../../../../lib/viz/cursor";
 
-/** The corner at the cursor (re-renders only when it changes), else `fallback`. */
-export function useCursorCorner(sync: CursorSync, corners: readonly CompareCorner[], fallback: CompareCorner | null): CompareCorner | null {
-  const get = useCallback(() => cornerAt(corners, sync.get())?.key ?? null, [sync, corners]);
+/** The corner at the cursor (re-renders only when it changes), else `fallback`. `pin`: the corner whose phase point
+ * the phase key moved the cursor to stays in focus while the cursor rests there (lib/review/phase-markers.ts). */
+export function useCursorCorner(
+  sync: CursorSync,
+  corners: readonly CompareCorner[],
+  fallback: CompareCorner | null,
+  pin?: PhasePin | null,
+): CompareCorner | null {
+  const get = useCallback(() => focusKeyAt(corners, sync.get(), pin), [sync, corners, pin]);
   const key = useSyncExternalStore(sync.subscribe, get, get);
   return (key != null ? corners.find((c) => c.key === key) : null) ?? fallback;
 }
