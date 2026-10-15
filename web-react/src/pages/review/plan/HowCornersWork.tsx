@@ -292,8 +292,8 @@ function SourcesCard({ view, s }: { view: ReturnType<typeof cornersView>; s: Sha
       </Card.Header>
       {credit && <p className="m-0 text-[15px] leading-snug">{credit}</p>}
       <p className="m-0 text-sm text-muted">
-        The rest is published coaching ({g.published.length} sources) and Pitwall's own rules and measurements on
-        recorded laps. Published coaching and Ed's brief are not validated by Pitwall.
+        {credit ? "The rest is" : "It is"} published coaching ({g.published.length} sources) and Pitwall's own rules and
+        measurements on recorded laps. Published coaching and Ed's brief are not validated by Pitwall.
       </p>
       {s.kd.sourcesOpen ? <div className="grid gap-3">{lists}</div> : <Fold title={`All ${all} sources`}>{lists}</Fold>}
     </Card>
