@@ -174,7 +174,9 @@ the queue says the rest by priority, then this order, then first in first out.
   "Say my name" toggle switches it off, and so does a Kokoro voice whose G2P would drop the name (asked once per
   driver through the worker's `g2p` request; nothing is logged).
 - **Goal lines** (kind **`goal`**, `pitwall/motivation`): one short line when the driver reaches a goal, at most two a
-  session, never with a lap time. `meta.topic` is `goal:<session id>`.
+  session, never with a lap time. `meta.topic` is `goal:<session id>`. A lap that takes a family board's record from
+  another driver (`pitwall/leaderboard`, live note `family_record`) gets one line of the same kind under the same
+  two-a-session cap ("New family record at Austria: you took it from Sam."), `meta.topic` `record:<session id>`.
 - **Validation prompts** (kind **`validation`**, rig validation kit): spoken only while the driver runs a validation
   with radio prompts on, at every intensity, at least 30 s apart and never within 2 s of another message.
   `meta.topic` is `validation`.

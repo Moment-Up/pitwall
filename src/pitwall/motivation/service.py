@@ -23,6 +23,7 @@ from datetime import date
 from typing import TYPE_CHECKING, Any
 
 from pitwall.drivers import Driver, coaching_limits
+from pitwall.leaderboard import service as leaderboard
 from pitwall.motivation import badges as B
 from pitwall.motivation import digest as D
 from pitwall.motivation import goals as G
@@ -435,11 +436,12 @@ class MotivationService:
         with self.db.read() as c:
             history = load_history(c, driver_id, include_synthetic=include_synthetic)
             goals = self._goals(c, driver_id)
+            records = leaderboard.record_takes_for(c, driver_id)
         return {
             "driver_id": driver_id,
             "simple": driver.coaching.simple_wording,
             "include_synthetic": include_synthetic,
-            "badges": [b.to_dict() for b in B.badges(history, goals)],
+            "badges": [b.to_dict() for b in B.badges(history, goals, records)],
             "streaks": B.streaks(history, now),
         }
 
@@ -455,6 +457,7 @@ class MotivationService:
             history = load_history(c, driver_id, include_synthetic=include_synthetic)
             goals = self._goals(c, driver_id)
             fn = self._goal_json_fn(c, driver_id, goals)
+            records = leaderboard.record_takes_for(c, driver_id)
         return D.build_digest(
             {"id": driver.id, "name": driver.name, "skill_level": driver.preferences.skill_level},
             history,
@@ -463,6 +466,7 @@ class MotivationService:
             now,
             include_synthetic=include_synthetic,
             goal_json=fn,
+            records=records,
         )
 
     # ------------------------------------------------------------------ recap
@@ -482,6 +486,7 @@ class MotivationService:
             goals = self._goals(c, driver.id) if driver is not None else []
             fn = self._goal_json_fn(c, driver.id, goals) if driver is not None else None
             lap_nums = repo.lap_numbers(c, [g.achieved_lap_id for g in goals if g.achieved_lap_id is not None])
+            records = leaderboard.record_takes_for(c, driver.id) if driver is not None and counts else []
         why = None
         if s.synthetic:
             why = R.WHY_SYNTHETIC
@@ -511,7 +516,9 @@ class MotivationService:
         achieved = [g for g in goals if g.achieved_session_id == session_id] if counts else []
         in_scope = [g for g in goals if g.status == "active" and rules.scope_matches(g.scope, s)] if counts else []
         in_scope.sort(key=lambda g: (g.kind != "lap_time", -g.created_unix, g.id))
-        earned = [b for b in B.badges(history, goals) if b.session_id == session_id] if history is not None else []
+        earned = (
+            [b for b in B.badges(history, goals, records) if b.session_id == session_id] if history is not None else []
+        )
         live = self.live
         st = live.session_state if live is not None and live.session_id == session_id else None
         return {
@@ -646,6 +653,17 @@ class MotivationService:
                 if first is not None:
                     self._set_baseline(g, first)
         return self._note(s, hits, lap) if hits else None
+
+    def family_record_note(self, session_id: str, lap_id: int | None) -> dict[str, Any] | None:
+        """After a live lap was stored: the ``family_record`` note when that lap took its board's family record from
+        another driver (``leaderboard.service.record_note``), else None. Real driving of a driver only."""
+        if lap_id is None:
+            return None
+        with self.db.read() as c:
+            s = self._counting_session(c, session_id)
+            if s is None or s.synthetic:
+                return None
+            return leaderboard.record_note(c, lap_id, now=self.clock())
 
     def on_session_end(self, session_id: str) -> dict[str, Any] | None:
         """At (or after) the end of a live session: clean-race goals. Idempotent."""

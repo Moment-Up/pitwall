@@ -513,8 +513,23 @@ always named, never shown as a raw id; older badges that break these rules are s
 your first clean lap at a track, your first time under a whole second at a track and car (between sessions, never within one), 3, 5, 10
 and 20 clean laps in a row, 10 clean laps in one session, new bests in 2, 3 and 5 sessions in a row, 2, 4, 8 and 12
 weeks in a row with a session with a timed lap (Monday to Sunday), 3 and 5 sessions with a timed lap in one week, a race with no penalties or without
-contact, and 1, 3 and 10 goals reached. Streaks show weeks in a row, sessions this week, your best run of clean
-laps and your new-best streaks.
+contact, 1, 3 and 10 goals reached, and holding a family record (below). Streaks show weeks in a row, sessions this
+week, your best run of clean laps and your new-best streaks.
+
+### Family records
+
+Each driver's best lap on a family board: the same game, track and layout, the same car, the same kind of session
+(time trial, qualifying, race, practice), dry or wet, and the same assists (F1 25: braking assist, ABS, traction
+control, gears, racing line; Assetto Corsa: ABS and TC). Anything the game did not send is its own board, never mixed
+in: laps stored before Pitwall kept ABS and TC per lap are on "ABS unknown" boards. Only clean, valid laps of real
+driving count, never synthetic sessions or replays; GT7, Assetto Corsa and Forza cannot say when a lap cut a corner,
+and their boards say so. Each row shows the gap to the fastest in seconds and percent, the date, clean laps, best
+sectors and the theoretical best; the board shows when the record changed hands. Holding the record when a second
+driver drives the board, or taking it later, earns the badge "Family record at <track>". Ask the engineer "What's the
+family record here?" or "Who's fastest in the family?"; when a lap takes the record from someone else the radio says
+"New family record at Austria: you took it from Sam." (no lap time). Everything stays on this computer
+([leaderboard.md](leaderboard.md); API `/api/leaderboard`, `/api/records`). Tested on unit tests and a read-only copy
+of the owner's database; the Records screen comes with Review › Progress.
 
 ### Weekly digest
 
@@ -734,7 +749,7 @@ only the spotter, a red flag and a puncture ever cut in.
 | Race calls (position, countdown, lap one, gaps, warnings, minor damage) | wait and count | at most 2 a lap (3 detailed); the start, countdown, finish and P1 never wait |
 | Strategy call | wait and count | in a race, after the lap summary and race calls |
 | Car health call (cold tyres after a stop - in the pit lane -, tyres warm again, wear outside F1 races, Forza fuel low) | wait and count | as a strategy call |
-| Goal line ("Goal reached: ...") | wait and count | at most two a session |
+| Goal line ("Goal reached: ...") or a family record taken ("New family record at Austria: you took it from Sam.") | wait and count | at most two a session together |
 | Coaching point or drill result | wait and count | after its lap's summary; one a lap at normal intensity; a habit's news (new, better, still there, sorted) or a big one-off; none after the chequered flag |
 | Detail (strategy notes, rivals' fastest laps, lock-up and wheelspin notes) | wait and count | detailed intensity only |
 | Validation prompt (during a validation run) | outside | last, low priority, at least 30 s apart, also at quiet intensity |

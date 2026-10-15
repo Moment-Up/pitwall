@@ -9,6 +9,10 @@ once (``repo.mark_goal_achieved``) and only that flip publishes ``live.notify("m
 
 Race goals are judged when the session ends (``session_ended``). The race's last lap may still be in the analysis
 queue at that moment, so an ended session is remembered and judged again on any later lap note of it.
+
+After each live lap it also checks the family leaderboard (``MotivationService.family_record_note``): a lap that took
+its board's family record from another driver publishes ``live.notify("family_record", note)``, which the radio hub
+says as one short line through the goal-line path (``motivation.radio.record_message``).
 """
 
 from __future__ import annotations
@@ -20,6 +24,7 @@ from collections import OrderedDict
 from typing import Any
 
 from pitwall.core.live import LiveState
+from pitwall.leaderboard.service import FAMILY_RECORD_NOTE
 from pitwall.motivation.service import MotivationService
 from pitwall.storage.db import Database, DbWriter
 
@@ -50,6 +55,7 @@ class MotivationWorker:
         self.dropped = 0
         self.errors = 0
         self.notes = 0
+        self.records = 0  # family_record notes published
         self._ended: OrderedDict[str, None] = OrderedDict()  # worker thread only
         self._thread = threading.Thread(target=self._run, name="motivation", daemon=True)
         self._thread.start()
@@ -98,6 +104,7 @@ class MotivationWorker:
             if note is not None:
                 notes.append(note)
         else:
+            self._family_record(sid, lap_id)
             note = self.service.on_lap(sid, lap_id)
             if note is not None:
                 notes.append(note)
@@ -109,6 +116,19 @@ class MotivationWorker:
             self.notes += 1
             log.info("goals reached in session %s: %s", sid, ", ".join(g["title"] for g in n["goals"]))
             self.live.notify(MOTIVATION_NOTE, n)
+
+    def _family_record(self, sid: str, lap_id: int | None) -> None:
+        """The family leaderboard's record note for this lap (its own errors never stop the goals)."""
+        try:
+            rec = self.service.family_record_note(sid, lap_id)
+        except Exception:
+            self.errors += 1
+            log.exception("family record check failed")
+            return
+        if rec is not None:
+            self.records += 1
+            log.info("family record taken in session %s (lap %s)", sid, rec.get("lap_number"))
+            self.live.notify(FAMILY_RECORD_NOTE, rec)
 
     def join(self) -> None:
         """Wait until every queued item was evaluated (tests, replays)."""

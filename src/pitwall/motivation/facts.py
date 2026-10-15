@@ -2,9 +2,11 @@
 
 ``add_motivation_facts`` appends to a fact sheet built by ``ai.facts.build_fact_sheet`` (which is not edited): the
 API's ask/facts endpoints, the radio's fact sheet and ``pitwall ask`` call it right after building the sheet. It
-opens its own read connection, never breaks an answer (every error is logged and swallowed) and adds nothing for a
-session without a driver. ``text`` uses ``ai.facts.fmt_lap``; ``say`` (what the radio speaks) says a lap-time target
-as ``1:10`` / ``1:10.3`` and a gap to a tenth, and never the achieving lap time: the radio rounds lap times to tenths
+opens its own read connection, never breaks an answer (every error is logged and swallowed) and adds no goal or
+progress fact for a session without a driver. It also adds the family record of the session's board (topic
+``records``, ``leaderboard.facts``), for any session with a track. ``text`` uses ``ai.facts.fmt_lap``; ``say`` (what
+the radio speaks) says a lap-time target as ``1:10`` / ``1:10.3`` and a gap to a tenth, and never the achieving lap
+time: the radio rounds lap times to tenths
 ("1:39.981" is spoken "one forty point zero"), which would contradict "under 1:40". Every number in ``say`` is a
 rounding of one in ``text``, so a deterministic answer built from it passes ``check_grounding``.
 """
@@ -16,6 +18,8 @@ import time
 from typing import TYPE_CHECKING
 
 from pitwall.ai.facts import FactSheet, fmt_lap
+from pitwall.leaderboard import service as leaderboard
+from pitwall.leaderboard.facts import add_record_facts
 from pitwall.motivation import badges as B
 from pitwall.motivation import goals as G
 from pitwall.motivation import rules
@@ -133,6 +137,7 @@ def add_motivation_facts(sheet: FactSheet, db: Database, sa: SessionAnalysis, no
         _add(sheet, db, sa, time.time() if now is None else now)
     except Exception:
         log.exception("motivation facts failed (answer continues without them)")
+    add_record_facts(sheet, db, sa)  # the family record of this session's board (its own error handling)
 
 
 def _add(sheet: FactSheet, db: Database, sa: SessionAnalysis, now: float) -> None:
@@ -147,6 +152,7 @@ def _add(sheet: FactSheet, db: Database, sa: SessionAnalysis, now: float) -> Non
         goals = [G.labelled(GoalRow.from_row(r), history) for r in repo.list_goals(c, driver_id)]
         row = repo.motivation_session(c, sid) if sid else None
         laps_by_id = repo.lap_numbers(c, [g.achieved_lap_id for g in goals if g.achieved_lap_id is not None])
+        records = leaderboard.record_takes_for(c, driver_id)
     session = SessionRow.from_row(row) if row is not None else None
     reached = sorted(  # the first one reached first, as the recap and the radio say them
         (g for g in goals if g.achieved_session_id == sid and g.achieved_unix is not None),
@@ -182,7 +188,7 @@ def _add(sheet: FactSheet, db: Database, sa: SessionAnalysis, now: float) -> Non
         {"sessions_this_week": n_s, "laps_this_week": n_l, "clean_laps_this_week": clean},
         say=week_say,
     )
-    earned = B.badges(history.before(now + 0.001), goals)
+    earned = B.badges(history.before(now + 0.001), goals, records)
     if earned:
         newest = earned[0]
         badge_text = f"Badges: {len(earned)} earned; the newest is {newest.title} ({short_date(newest.earned_unix)})."

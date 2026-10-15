@@ -29,6 +29,13 @@ The release workflow copies a release's bullet points into its GitHub release no
   reminder for the next one. Settings › System lists what to look for. Synthetic.
 - A habit the radio announces gets its corner reminder on the lap you hear it, not one lap later. Tested on synthetic
   laps; not live.
+- Family records: everyone's best lap per track, car, session type, weather and assists, with the gaps and who held
+  the record when. Stays on this computer. Unit tests and real laps; not live.
+- The badge "Family record at <track>" for holding the family record when someone else drives there too. Tested on
+  unit tests.
+- Ask the engineer "What's the family record here?"; when a lap takes the record from another driver the radio says
+  so in one short line. Tested on unit tests; not heard live.
+- Lap cards: a lap in a small, versioned format for a possible online board later; built locally, never sent.
 
 ## v0.3.0 - 2026-10-13
 

@@ -25,6 +25,11 @@ Badges (key, earned when):
 * ``busy_week:{n}`` (3, 5) - the first week with ``n`` timed sessions.
 * ``clean_race:{rule}`` - the first evaluable F1 race with no penalties / without contact.
 * ``goals_reached:{n}`` (1, 3, 10) - goals reached (stored ``achieved_unix``).
+* ``family_record:{board key}`` - the driver held the family record of a contested family board
+  (``leaderboard.board.record_takes``: held when a second driver first drove there, or set later): one per board,
+  dated by the session of the record lap. The caller passes the driver's takes (``leaderboard.service
+  .record_takes_for``); like the track badges they need an identified track and a lap of at least 30 s, and only
+  takes in sessions of the given history count (so ``History.until`` / ``before`` apply to them too).
 """
 
 from __future__ import annotations
@@ -32,7 +37,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pitwall.motivation import rules
 from pitwall.motivation.model import (
@@ -47,6 +52,9 @@ from pitwall.motivation.model import (
     local_date,
     track_identified,
 )
+
+if TYPE_CHECKING:
+    from pitwall.leaderboard.board import RecordTake
 
 CLEAN_STREAK_LEVELS = (3, 5, 10, 20)
 PB_STREAK_LEVELS = (2, 3, 5)
@@ -140,8 +148,50 @@ def _timed_sessions(history: History) -> list[SessionRow]:
     return [s for s in history.sessions if rules.is_timed_session(history.laps_of(s.id))]
 
 
-def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Badge]:
-    """Every badge the history has earned, newest first (ties by key)."""
+def family_record_badges(history: History, takes: Sequence[RecordTake]) -> list[Badge]:
+    """``family_record`` badges of the takes in the history's sessions (module docstring)."""
+    by_id = {s.id: s for s in history.sessions}
+    out: list[Badge] = []
+    for t in takes:
+        s = by_id.get(t.record.session_id)
+        lab = t.labels
+        track = str(lab.get("track") or "")
+        if s is None or not track_badges_allowed(s) or t.record.lap_ms < MIN_TRACK_BADGE_LAP_MS:
+            continue
+        key = t.key.encode()
+        detail = f"{lap_time(t.record.lap_ms)} · {lab.get('car')} · {lab.get('category')} · {lab.get('conditions')}"
+        if t.record.changed_hands:
+            detail += f", from {t.record.previous_driver_name}"
+        scope = Scope(
+            game=t.key.game,
+            track_id=t.key.track_id,
+            track_name=track,
+            track_length_m=None if t.key.layout_m is None else float(t.key.layout_m),
+            car_id=t.key.car_id,
+            car_name=str(lab.get("car") or "") or None,
+        )
+        out.append(
+            Badge(
+                f"family_record:{key}",
+                "family_record",
+                None,
+                f"Family record at {track}",
+                f"You set the family record at {track}",
+                detail,
+                s.started_unix,
+                s.id,
+                t.record.lap_id,
+                scope,
+                s.synthetic,
+                f"family_record:{key}",
+            )
+        )
+    return out
+
+
+def badges(history: History, achieved_goals: Sequence[GoalRow] = (), records: Sequence[RecordTake] = ()) -> list[Badge]:
+    """Every badge the history has earned, newest first (ties by key). ``records``: the driver's family-record
+    takes (``leaderboard.service.record_takes_for``; none by default)."""
     out: list[Badge] = []
     seen: set[str] = set()
 
@@ -295,6 +345,8 @@ def badges(history: History, achieved_goals: Sequence[GoalRow] = ()) -> list[Bad
             ):
                 if outcome.meets(rule):
                     add(_badge("clean_race", f"clean_race:{rule}", rule, title, simple, s, last, detail=track))
+    for b in family_record_badges(history, records):
+        add(b)
     reached = sorted((g for g in achieved_goals if g.achieved_unix is not None), key=lambda g: (g.achieved_unix, g.id))
     for level in GOALS_LEVELS:
         if len(reached) >= level:

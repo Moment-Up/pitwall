@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pitwall.motivation import badges as B
 from pitwall.motivation import goals as G
@@ -31,6 +31,9 @@ from pitwall.motivation.model import (
     short_date,
     week_range_text,
 )
+
+if TYPE_CHECKING:
+    from pitwall.leaderboard.board import RecordTake
 
 MAX_GAINS = 3
 MAX_NEW_TRACKS = 3
@@ -218,8 +221,10 @@ def build_digest(
     *,
     include_synthetic: bool,
     goal_json: Callable[[GoalRow, History], dict[str, Any]],
+    records: Sequence[RecordTake] = (),
 ) -> dict[str, Any]:
-    """The ``WeeklyDigest`` object (``history`` = the driver's driving, ``goal_json`` = the API goal shape)."""
+    """The ``WeeklyDigest`` object (``history`` = the driver's driving, ``goal_json`` = the API goal shape,
+    ``records`` = the driver's family-record takes for the badges)."""
     start, end = week_bounds(week_start)
     as_of = min(end - 0.001, now_unix)
     sessions = _in(history, start, end)
@@ -263,7 +268,7 @@ def build_digest(
         frm = G.progress(g, history.before(start)).fraction
         to = G.progress(g, upto).fraction
         active.append({"goal": goal_json(g, history), "from_fraction": frm, "to_fraction": to})
-    earned = [b for b in B.badges(upto, goals) if start <= b.earned_unix < end]
+    earned = [b for b in B.badges(upto, goals, records) if start <= b.earned_unix < end]
     streaks = B.streaks(history, as_of)
     out: dict[str, Any] = {
         "driver": {"id": driver["id"], "name": driver["name"], "skill_level": driver.get("skill_level")},
