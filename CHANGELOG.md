@@ -9,6 +9,9 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
+## v0.4.0 - 2026-10-15
+
+- A new logo: the pit wall stand, on the app icon, the browser tab, the dashboard and the README.
 - The radio coaches habits, not every corner: one at a time (two at Detailed), said once, then when it gets better,
   is still there 5 laps on, or is sorted. Synthetic and recorded laps; not live.
 - A habit is said only when it costs 0.05 s a lap or more; pit, out, safety-car, flashback and invalid laps never

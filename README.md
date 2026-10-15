@@ -1,3 +1,5 @@
+<img src="docs/brand/pitwall-mark.svg" width="72" height="72" alt="Pitwall logo: a pit wall stand with its canopy and two screens">
+
 # Pitwall
 
 A local-first sim racing coach and race engineer for the iPad next to your wheel.
