@@ -59,8 +59,15 @@ describe("the backend fixture", () => {
     expect(FILE._fixture.tier).toBe("backend");
     expect(FILE._fixture.source).toMatch(/recorded F1 25 laps/);
     expect(Object.keys(FILE.response.review)).toEqual(
-      expect.arrayContaining(["over_braking", "low_grip", "ready_earlier", "none", "tailored"]),
+      expect.arrayContaining(["over_braking", "low_grip", "traction_limited", "none", "tailored"]),
     );
+    // traction control was on in these laps: "no grip loss on the exit" is never named then
+    expect(Object.keys(FILE.response.review)).not.toContain("ready_earlier");
+    expect(FILE.response.context!.context.traction_control).toBe(true);
+    // the snapshot-sized coach block copy: evidence as measured values, without the plain-words test
+    const slimEvidence = FILE.response.coach_point.knowledge!.causes[0]!.evidence!;
+    expect(slimEvidence.length).toBeGreaterThan(0);
+    expect(slimEvidence.every((e) => !("test" in e) && typeof e.signal === "string")).toBe(true);
   });
 });
 
@@ -106,10 +113,10 @@ describe("annotation helpers", () => {
   });
 
   it("cause lines carry every measured cause with its evidence", () => {
-    const lines = causeLines(review("ready_earlier"));
+    const lines = causeLines(review("traction_limited"));
     expect(lines).toHaveLength(1);
-    expect(lines[0]).toMatchObject({ id: "ready_earlier", line: "No wheelspin or slide, full throttle later" });
-    expect(lines[0]!.evidence).toHaveLength(3);
+    expect(lines[0]).toMatchObject({ id: "traction_limited", line: "More wheelspin or sliding than your reference" });
+    expect(lines[0]!.evidence[0]).toBe("a rear wheel spun under throttle on the way out, and not on the reference lap");
     expect(causeLines(review("none"))).toEqual([]);
     expect(causeLines({ knowledge: NOT_FOR_YOU })).toEqual([]);
   });
@@ -117,6 +124,8 @@ describe("annotation helpers", () => {
   it("an explanation shows only when written for the driver's skill or style", () => {
     // the trail-braking driver's coasting explanation (the owner's detected style on these laps)
     expect(tailoredExplanation(review("tailored"))).toMatch(/^You usually keep some brake on into the turn/);
+    // the braking assist was on in these laps: the style's explanation says some of the braking was the game's
+    expect(tailoredExplanation(review("tailored"))).toMatch(/The game's braking assist was on, so some of that braking was the game's\.$/);
     // the general wording: the coach's own text already says it
     expect(tailoredExplanation(review("over_braking"))).toBeNull();
   });

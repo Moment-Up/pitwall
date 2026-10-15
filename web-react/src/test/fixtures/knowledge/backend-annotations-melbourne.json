@@ -1,6 +1,6 @@
 {
  "_fixture": {
-  "source": "backend fixture: pitwall.core.session_analysis.SessionAnalyzer.analyse (full annotations, as GET /api/sessions/{id}/analysis sends them) and the live LapProcessor's coach block (slim copy) called directly in Python on feat/knowledge b5579b5 plus this commit's working tree, over the owner's recorded F1 25 laps of capture 20261012-231555 (Melbourne) replayed into a scratch database. Not an HTTP answer; regenerate by running them again.",
+  "source": "backend fixture: pitwall.core.session_analysis.SessionAnalyzer.analyse (full annotations, as GET /api/sessions/{id}/analysis sends them) and the live LapProcessor's coach block (slim copy) called directly in Python on feat/knowledge 120e766, over the owner's recorded F1 25 laps of capture 20261012-231555 (Melbourne) replayed into a scratch database. Not an HTTP answer; regenerate by running them again.",
   "recorded": "2026-10-15",
   "tier": "backend",
   "what": "Observations with their technique-knowledge annotation, one per cause named on that session (keys: the cause id; 'none': a point with no cause; 'tailored': a point whose review advice is written for the driver's style), and one coach block point with the slim copy. Recorded laps: evidence of the wiring on real data, not of driving advice quality."
@@ -129,7 +129,7 @@
        "review": false
       }
      },
-     "digest": "7820f3001fa55baf"
+     "digest": "1e74118d674ee027"
     }
    },
    "low_grip": {
@@ -245,260 +245,7 @@
        "review": false
       }
      },
-     "digest": "7820f3001fa55baf"
-    }
-   },
-   "ready_earlier": {
-    "id": "L1:T5:late_throttle",
-    "kind": "late_throttle",
-    "corner": "T5",
-    "lap_number": 1,
-    "ref_lap_number": 3,
-    "metric": "throttle_full_delta_m",
-    "value": 40.88,
-    "unit": "m",
-    "impact_s": 0.324,
-    "confidence": 1.0,
-    "text": "T5: you're reaching full throttle 41 m later than your reference, losing 0.32 s through the corner.",
-    "evidence": {
-     "time_delta_s": 0.324,
-     "brake_point_delta_m": 5.96,
-     "min_speed_delta_kph": -11.0,
-     "exit_speed_delta_kph": -10.0,
-     "entry_speed_delta_kph": -11.682,
-     "throttle_full_delta_m": 40.88,
-     "coast_delta_m": 0.0,
-     "ref": {
-      "corner": "T5",
-      "segment_time_s": 9.66,
-      "brake_start_m": 3211.89,
-      "brake_end_m": 3286.35,
-      "brake_peak": 1.0,
-      "time_to_peak_s": 0.3,
-      "release_s": 0.25,
-      "trail_brake_m": 18.45,
-      "coast_m": 0.0,
-      "entry_speed_kph": 215.37,
-      "min_speed_kph": 210.0,
-      "min_speed_m": 3339.0,
-      "exit_speed_kph": 210.0,
-      "throttle_pickup_m": 3286.44,
-      "throttle_full_m": 3299.47
-     },
-     "lap": {
-      "corner": "T5",
-      "segment_time_s": 9.98,
-      "brake_start_m": 3217.85,
-      "brake_end_m": 3292.14,
-      "brake_peak": 1.0,
-      "time_to_peak_s": 0.28,
-      "release_s": 0.27,
-      "trail_brake_m": 18.22,
-      "coast_m": 0.0,
-      "entry_speed_kph": 203.69,
-      "min_speed_kph": 199.0,
-      "min_speed_m": 3339.0,
-      "exit_speed_kph": 200.0,
-      "throttle_pickup_m": 3337.62,
-      "throttle_full_m": 3340.35
-     }
-    },
-    "consistency": null,
-    "consistency_ratio": null,
-    "positive": false,
-    "corner_label": "T5",
-    "corner_voice": "T5",
-    "text_simple": "T5: you got back to full throttle about 41 m later than on your reference lap.",
-    "short": "T5: full throttle 41 m later",
-    "ref_name": null,
-    "priority": 0.324,
-    "knowledge": {
-     "fault": "late_throttle",
-     "name": "Late to full throttle",
-     "status": "live",
-     "tier": "live",
-     "applies": true,
-     "why_not": null,
-     "causes": [
-      {
-       "id": "ready_earlier",
-       "name": "No grip loss on the exit",
-       "tier": "brief",
-       "evidence": [
-        {
-         "signal": "exit_wheelspin_events",
-         "test": "no wheelspin on the way out",
-         "value": 0,
-         "unit": "count"
-        },
-        {
-         "signal": "exit_slide",
-         "test": "no slide or counter-steer on the way out",
-         "value": false,
-         "unit": "bool"
-        },
-        {
-         "signal": "exit_balance_deg",
-         "test": "no clear understeer on the way out",
-         "value": 1.33,
-         "unit": "deg"
-        }
-       ],
-       "advice": {
-        "radio": null,
-        "screen": "No wheelspin or slide, full throttle later",
-        "review": "On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on your reference lap: nothing Pitwall measured held the throttle back.",
-        "ids": {
-         "radio": null,
-         "screen": "ready_earlier_explain",
-         "review": "ready_earlier_explain"
-        },
-        "tailored": {
-         "radio": false,
-         "screen": false,
-         "review": false
-        }
-       }
-      }
-     ],
-     "advice": {
-      "radio": "Full throttle later than your reference",
-      "screen": "Full throttle later",
-      "review": "You reached full throttle later than on your reference lap on the way out of this corner, and lost time there.",
-      "ids": {
-       "radio": "late_throttle_describe",
-       "screen": "late_throttle_describe",
-       "review": "late_throttle_describe"
-      },
-      "tailored": {
-       "radio": false,
-       "screen": false,
-       "review": false
-      }
-     },
-     "digest": "7820f3001fa55baf"
-    }
-   },
-   "early_turn_in": {
-    "id": "L9:T3:low_min_speed",
-    "kind": "low_min_speed",
-    "corner": "T3",
-    "lap_number": 9,
-    "ref_lap_number": 3,
-    "metric": "min_speed_delta_kph",
-    "value": -23.748,
-    "unit": "km/h",
-    "impact_s": 0.213,
-    "confidence": 1.0,
-    "text": "T3: minimum speed is 24 km/h lower than your reference (100 vs 124 km/h), losing 0.21 s through the corner.",
-    "evidence": {
-     "time_delta_s": 0.213,
-     "min_speed_delta_kph": -23.748,
-     "exit_speed_delta_kph": -9.0,
-     "entry_speed_delta_kph": 32.0,
-     "ref": {
-      "corner": "T3",
-      "segment_time_s": 7.76,
-      "brake_start_m": null,
-      "brake_end_m": null,
-      "brake_peak": null,
-      "time_to_peak_s": null,
-      "release_s": null,
-      "trail_brake_m": null,
-      "coast_m": null,
-      "entry_speed_kph": 108.0,
-      "min_speed_kph": 124.0,
-      "min_speed_m": 1303.0,
-      "exit_speed_kph": 130.0,
-      "throttle_pickup_m": null,
-      "throttle_full_m": null
-     },
-     "lap": {
-      "corner": "T3",
-      "segment_time_s": 7.98,
-      "brake_start_m": null,
-      "brake_end_m": null,
-      "brake_peak": null,
-      "time_to_peak_s": null,
-      "release_s": null,
-      "trail_brake_m": null,
-      "coast_m": null,
-      "entry_speed_kph": 140.0,
-      "min_speed_kph": 100.25,
-      "min_speed_m": 1197.0,
-      "exit_speed_kph": 121.0,
-      "throttle_pickup_m": null,
-      "throttle_full_m": null
-     }
-    },
-    "consistency": "1 of the last 6 laps",
-    "consistency_ratio": 0.17,
-    "positive": false,
-    "corner_label": "T3",
-    "corner_voice": "T3",
-    "text_simple": "T3: you were 24 km/h slower at the slowest point of the corner.",
-    "short": "T3: 24 km/h slower mid-corner",
-    "ref_name": null,
-    "priority": 0.1423,
-    "knowledge": {
-     "fault": "low_min_speed",
-     "name": "Low minimum speed",
-     "status": "live",
-     "tier": "live",
-     "applies": true,
-     "why_not": null,
-     "causes": [
-      {
-       "id": "early_turn_in",
-       "name": "Early turn-in",
-       "tier": "brief",
-       "evidence": [
-        {
-         "signal": "min_speed_pos_delta_m",
-         "test": "the slowest point came at least 20 m sooner than on the reference lap",
-         "value": -106.0,
-         "unit": "m"
-        },
-        {
-         "signal": "entry_speed_delta_kph",
-         "test": "reached the corner entry no more than 4 km/h slower than on the reference lap",
-         "value": 32.0,
-         "unit": "km/h"
-        }
-       ],
-       "advice": {
-        "radio": null,
-        "screen": "Slowest point sooner than your reference",
-        "review": "The slowest point of the corner came well before where it was on your reference lap: the car was turned towards the apex sooner, which tightens the rest of the corner and lowers the speed through the middle.",
-        "ids": {
-         "radio": null,
-         "screen": "early_turn_in_explain",
-         "review": "early_turn_in_explain"
-        },
-        "tailored": {
-         "radio": false,
-         "screen": false,
-         "review": false
-        }
-       }
-      }
-     ],
-     "advice": {
-      "radio": "Minimum speed down on your reference",
-      "screen": "Slower at the slowest point",
-      "review": "The slowest point of this corner was lower than on your reference lap, and the corner was slower for it.",
-      "ids": {
-       "radio": "low_min_speed_describe",
-       "screen": "low_min_speed_describe",
-       "review": "low_min_speed_describe"
-      },
-      "tailored": {
-       "radio": false,
-       "screen": false,
-       "review": false
-      }
-     },
-     "digest": "7820f3001fa55baf"
+     "digest": "1e74118d674ee027"
     }
    },
    "waiting_for_rotation": {
@@ -611,7 +358,7 @@
      "advice": {
       "radio": "More coasting than your reference",
       "screen": "More coasting than your reference",
-      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower.",
+      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower. The game's braking assist was on, so some of that braking was the game's.",
       "ids": {
        "radio": "coasting_describe",
        "screen": "coasting_describe",
@@ -623,7 +370,7 @@
        "review": true
       }
      },
-     "digest": "7820f3001fa55baf"
+     "digest": "1e74118d674ee027"
     }
    },
    "early_brake_release": {
@@ -730,7 +477,7 @@
      "advice": {
       "radio": "More coasting than your reference",
       "screen": "More coasting than your reference",
-      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower.",
+      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower. The game's braking assist was on, so some of that braking was the game's.",
       "ids": {
        "radio": "coasting_describe",
        "screen": "coasting_describe",
@@ -742,7 +489,7 @@
        "review": true
       }
      },
-     "digest": "7820f3001fa55baf"
+     "digest": "1e74118d674ee027"
     }
    },
    "carried_too_much_speed": {
@@ -861,7 +608,7 @@
        "review": false
       }
      },
-     "digest": "7820f3001fa55baf"
+     "digest": "1e74118d674ee027"
     }
    },
    "traction_limited": {
@@ -942,22 +689,22 @@
        "tier": "expert",
        "evidence": [
         {
-         "signal": "exit_wheelspin_events",
-         "test": "a rear wheel spun under throttle on the way out",
-         "value": 1,
-         "unit": "count"
+         "signal": "exit_wheelspin_vs_ref",
+         "test": "a rear wheel spun under throttle on the way out, and not on the reference lap",
+         "value": true,
+         "unit": "bool"
         },
         {
-         "signal": "exit_slide",
-         "test": "the back of the car slid or needed a counter-steer on the way out",
+         "signal": "exit_slide_vs_ref",
+         "test": "the back of the car slid or needed a counter-steer on the way out, and not on the reference lap",
          "value": true,
          "unit": "bool"
         }
        ],
        "advice": {
         "radio": null,
-        "screen": "Wheelspin or a slide on the exit",
-        "review": "The rear tyres spun or the car slid on the way out of this corner, which held full throttle back compared with your reference lap.",
+        "screen": "More wheelspin or sliding than your reference",
+        "review": "The rear tyres spun, or the car slid or oversteered, on the way out of this corner where it did not on your reference lap, which held full throttle back compared with that lap.",
         "ids": {
          "radio": null,
          "screen": "traction_limited_explain",
@@ -986,7 +733,7 @@
        "review": false
       }
      },
-     "digest": "7820f3001fa55baf"
+     "digest": "1e74118d674ee027"
     }
    },
    "none": {
@@ -1073,7 +820,7 @@
        "review": false
       }
      },
-     "digest": "7820f3001fa55baf"
+     "digest": "1e74118d674ee027"
     }
    },
    "tailored": {
@@ -1186,7 +933,7 @@
      "advice": {
       "radio": "More coasting than your reference",
       "screen": "More coasting than your reference",
-      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower.",
+      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower. The game's braking assist was on, so some of that braking was the game's.",
       "ids": {
        "radio": "coasting_describe",
        "screen": "coasting_describe",
@@ -1198,7 +945,7 @@
        "review": true
       }
      },
-     "digest": "7820f3001fa55baf"
+     "digest": "1e74118d674ee027"
     }
    }
   },
@@ -1237,7 +984,7 @@
       "name": "Less grip",
       "evidence": [
        {
-        "test": "the back of the car slid or needed a counter-steer around the slowest point, and not on the reference lap",
+        "signal": "mid_slide_vs_ref",
         "value": true,
         "unit": "bool"
        }
@@ -1286,6 +1033,8 @@
     "trail_corners": 57,
     "coast_corners": 7,
     "coast_measured": 62,
+    "unsteered_corners": 0,
+    "no_steering": false,
     "trail_share": 0.919,
     "coast_share": 0.113,
     "enough": true,
