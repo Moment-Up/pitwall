@@ -1,0 +1,30 @@
+# Causes: why a fault happens, and the evidence that tells this cause apart from the others (discriminators). A cause
+# is named only when its discriminating signals were measured: every need = "all" discriminator holds and, when it has
+# need = "any" ones, at least one of those. op = lt | le | gt | ge (with value) or true | false; a signal that was not
+# measured holds nothing. test says the same in plain words (shown as evidence).
+
+[[cause]]
+id = "over_braking"
+name = "Over-braking"
+summary = "More braking than on the reference lap on the way in, so the car reached the corner slower than on that lap."
+explains = ["low_min_speed"]
+advice = ["over_braking_explain"]
+tier = "brief"
+sources = ["ed_corner_brief"]
+notes = """Ed's brief: a lift after the throttle has started means the car arrived too slow, from too much braking or an
+early turn-in; his self-check reads an on-off-on throttle the same way. Thresholds are the coaching rules' own floors."""
+
+[[cause.discriminators]]
+signal = "brake_point_delta_m"
+test = "braked at least 8 m earlier than on the reference lap"
+op = "le"
+value = -8.0
+need = "any"
+note = "8 m is analysis.coaching.BRAKE_POINT_M, the brake_early rule's floor."
+
+[[cause.discriminators]]
+signal = "entry_speed_delta_kph"
+test = "at least 4 km/h slower at the corner entry than on the reference lap"
+op = "le"
+value = -4.0
+note = "4 km/h is analysis.coaching.MIN_SPEED_KPH, the low_min_speed rule's floor."

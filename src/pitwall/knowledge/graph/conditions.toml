@@ -1,0 +1,287 @@
+# Conditions: named predicates over the driver's Context (skill, braking style, car, gearbox ...). Techniques, faults
+# and advice say when they apply with them: applies_when = [all of these], applies_any = [at least one of these].
+# Unknown never satisfies a condition, not even an "ne" or "false" one: when Pitwall does not know the gearbox,
+# a gearbox-specific node does not apply. Keys and values: pitwall.knowledge.graph.CONTEXT_VALUES.
+# Atomic: key + op (eq | ne | in for named values, true | false for yes/no keys) + value. Compound: all_of or any_of.
+
+# --- the seated driver's profile ---------------------------------------------------------------------------------
+
+[[condition]]
+id = "skill_beginner"
+name = "Beginner"
+summary = "The seated driver's profile says beginner."
+key = "skill"
+op = "eq"
+value = "beginner"
+tier = "design"
+
+[[condition]]
+id = "skill_intermediate"
+name = "Intermediate"
+summary = "The seated driver's profile says intermediate."
+key = "skill"
+op = "eq"
+value = "intermediate"
+tier = "design"
+
+[[condition]]
+id = "skill_advanced"
+name = "Advanced"
+summary = "The seated driver's profile says advanced."
+key = "skill"
+op = "eq"
+value = "advanced"
+tier = "design"
+
+[[condition]]
+id = "skill_not_beginner"
+name = "Past the basics"
+summary = "The seated driver's profile says intermediate or advanced."
+key = "skill"
+op = "in"
+value = ["intermediate", "advanced"]
+tier = "design"
+
+# --- detected from the driver's own clean laps at this track -----------------------------------------------------
+
+[[condition]]
+id = "braking_style_trail"
+name = "Trail-braking driver"
+summary = "Most of this driver's braking corners have the brake on while turning in."
+key = "braking_style"
+op = "eq"
+value = "trail"
+tier = "design"
+
+[[condition]]
+id = "braking_style_straight_line"
+name = "Straight-line braking driver"
+summary = "This driver mostly finishes braking before turning in."
+key = "braking_style"
+op = "eq"
+value = "straight_line"
+tier = "design"
+
+[[condition]]
+id = "braking_style_mixed"
+name = "Mixed braking style"
+summary = "This driver trail-brakes into some corners and not others."
+key = "braking_style"
+op = "eq"
+value = "mixed"
+tier = "design"
+
+[[condition]]
+id = "coasting_rare"
+name = "Rarely coasts"
+summary = "This driver is rarely off both pedals between brake and throttle."
+key = "coasting"
+op = "eq"
+value = "rare"
+tier = "design"
+
+[[condition]]
+id = "coasting_often"
+name = "Often coasts"
+summary = "This driver is often off both pedals between brake and throttle."
+key = "coasting"
+op = "eq"
+value = "often"
+tier = "design"
+
+# --- the game ----------------------------------------------------------------------------------------------------
+
+[[condition]]
+id = "game_f1"
+name = "F1 game"
+summary = "The session comes from an EA F1 game."
+key = "game"
+op = "eq"
+value = "f1"
+tier = "design"
+
+[[condition]]
+id = "game_gt7"
+name = "Gran Turismo 7"
+summary = "The session comes from Gran Turismo 7."
+key = "game"
+op = "eq"
+value = "gt7"
+tier = "design"
+
+[[condition]]
+id = "game_forza"
+name = "Forza"
+summary = "The session comes from a Forza game."
+key = "game"
+op = "eq"
+value = "forza"
+tier = "design"
+
+[[condition]]
+id = "game_ac"
+name = "Assetto Corsa"
+summary = "The session comes from Assetto Corsa."
+key = "game"
+op = "eq"
+value = "ac"
+tier = "design"
+
+[[condition]]
+id = "game_acc"
+name = "Assetto Corsa Competizione"
+summary = "The session comes from Assetto Corsa Competizione."
+key = "game"
+op = "eq"
+value = "acc"
+tier = "design"
+
+# --- the car -----------------------------------------------------------------------------------------------------
+
+[[condition]]
+id = "car_family_f1"
+name = "F1 car"
+summary = "The car is a Formula 1 car."
+key = "car_family"
+op = "eq"
+value = "f1"
+tier = "design"
+
+[[condition]]
+id = "car_family_f2"
+name = "F2 car"
+summary = "The car is a Formula 2 car."
+key = "car_family"
+op = "eq"
+value = "f2"
+tier = "design"
+
+[[condition]]
+id = "car_family_other"
+name = "Other car"
+summary = "The car is known and is not a Formula 1 or Formula 2 car."
+key = "car_family"
+op = "eq"
+value = "other"
+tier = "design"
+
+[[condition]]
+id = "downforce_high"
+name = "High downforce"
+summary = "The car makes a lot of aerodynamic grip at speed."
+key = "downforce"
+op = "eq"
+value = "high"
+tier = "design"
+
+[[condition]]
+id = "downforce_medium"
+name = "Medium downforce"
+summary = "The car makes some aerodynamic grip at speed."
+key = "downforce"
+op = "eq"
+value = "medium"
+tier = "design"
+
+[[condition]]
+id = "downforce_low"
+name = "Low downforce"
+summary = "The car gets nearly all its grip from the tyres, not the air."
+key = "downforce"
+op = "eq"
+value = "low"
+tier = "design"
+
+[[condition]]
+id = "abs_on"
+name = "ABS on"
+summary = "The game reports anti-lock brakes on."
+key = "abs"
+op = "true"
+tier = "design"
+
+[[condition]]
+id = "abs_off"
+name = "No ABS"
+summary = "The game reports anti-lock brakes off."
+key = "abs"
+op = "false"
+tier = "design"
+
+[[condition]]
+id = "traction_control_on"
+name = "Traction control on"
+summary = "The game reports traction control on, at any level."
+key = "traction_control"
+op = "true"
+tier = "design"
+
+[[condition]]
+id = "traction_control_off"
+name = "No traction control"
+summary = "The game reports traction control off."
+key = "traction_control"
+op = "false"
+tier = "design"
+
+[[condition]]
+id = "gearbox_paddle_autoblip"
+name = "Paddles with auto-blip"
+summary = "Paddle shifts, and the car blips the throttle on downshifts by itself."
+key = "gearbox"
+op = "eq"
+value = "paddle_autoblip"
+tier = "design"
+
+[[condition]]
+id = "gearbox_h_pattern"
+name = "H-pattern gearbox"
+summary = "A manual H-pattern gearbox with a clutch: the driver matches the revs on downshifts."
+key = "gearbox"
+op = "eq"
+value = "h_pattern"
+tier = "design"
+
+[[condition]]
+id = "gearbox_auto"
+name = "Automatic gears"
+summary = "The game changes gear for the driver."
+key = "gearbox"
+op = "eq"
+value = "auto"
+tier = "design"
+
+# --- the session -------------------------------------------------------------------------------------------------
+
+[[condition]]
+id = "fuel_saving"
+name = "Saving fuel"
+summary = "The race strategy asks the driver to save fuel."
+key = "fuel_saving"
+op = "true"
+tier = "design"
+
+[[condition]]
+id = "wet"
+name = "Wet track"
+summary = "The track is wet."
+key = "wet"
+op = "true"
+tier = "design"
+
+[[condition]]
+id = "dry"
+name = "Dry track"
+summary = "The track is dry."
+key = "wet"
+op = "false"
+tier = "design"
+
+# --- compound ----------------------------------------------------------------------------------------------------
+
+[[condition]]
+id = "no_abs_low_downforce"
+name = "No ABS, low downforce"
+summary = "Anti-lock brakes off, and a car that gets nearly all its grip from the tyres."
+all_of = ["abs_off", "downforce_low"]
+tier = "design"

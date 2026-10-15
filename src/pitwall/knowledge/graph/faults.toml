@@ -1,0 +1,23 @@
+# Faults: what goes wrong, and whether Pitwall coaches it. status live = a coaching rule says it today: kind is the
+# rule's kind (analysis.coaching.COACHING_KINDS) and the id equals it. experimental = computed, not coached;
+# planned = not computed yet; context_only = shown as background, never as a fault of the driver. relative = reference
+# (measured against the driver's own reference lap) or absolute. thresholds name the code constants the rule uses.
+# causes and advice are mirrored: each cause lists the fault in explains, each advice names it in for.
+
+[[fault]]
+id = "low_min_speed"
+kind = "low_min_speed"
+status = "live"
+name = "Low minimum speed"
+summary = "The slowest point of the corner was clearly slower than on the reference lap, and the corner cost time."
+phase = "apex"
+relative = "reference"
+signals = ["min_speed_delta_kph"]
+thresholds = ["pitwall.analysis.coaching.MIN_SPEED_KPH", "pitwall.analysis.coaching.MIN_TIME_LOSS_S"]
+causes = ["over_braking"]
+advice = ["low_min_speed_describe"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Rule (observations_for_comparison): minimum speed at least MIN_SPEED_KPH below the reference and at least
+MIN_TIME_LOSS_S lost through the corner. Today's texts: "minimum speed is N km/h lower than your reference", simple
+"you were N km/h slower at the slowest point of the corner", short "N km/h slower mid-corner"."""

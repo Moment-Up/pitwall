@@ -861,6 +861,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_technique import router as technique_router  # feat/technique
 
     app.include_router(technique_router)  # feat/technique
+    from pitwall.api.routes_knowledge import router as knowledge_router  # technique knowledge graph
+
+    app.include_router(knowledge_router)
 
     from pitwall.api.routes_motivation import router as motivation_router  # lane motivation
 

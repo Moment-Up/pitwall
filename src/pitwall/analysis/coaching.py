@@ -53,6 +53,20 @@ INCIDENT_SPEED_FRAC = 0.5
 INCIDENT_MIN_REF_KPH = 60.0  # below this the reference itself is a hairpin crawl; ratios are meaningless
 SHORT_MAX_CHARS = 48  # ``Observation.short``: readable in a glance on the Drive screen
 INCIDENT_KIND = "incident"
+# Every ``Observation.kind`` the rules below produce, and the ones that are praise (``positive``). The technique graph
+# (``pitwall.knowledge.graph``) names its live faults after these; tests/unit/test_knowledge_graph.py checks this list
+# against the rules in ``observations_for_comparison``.
+COACHING_KINDS: tuple[str, ...] = (
+    "brake_early",
+    "brake_late_overdrive",
+    "low_min_speed",
+    "overspeed_apex",
+    "late_throttle",
+    "coasting",
+    "exit_gain",
+    INCIDENT_KIND,
+)
+POSITIVE_KINDS = frozenset({"exit_gain"})
 
 # --- habits: one definition for the radio, the coach card, the habit tracker (coach.habits) and the cue planner
 HABIT_RATIO = 0.6  # a deviation on at least this share of the recent laps (this one included) is a habit

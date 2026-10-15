@@ -1,0 +1,27 @@
+# Advice: what to say about a fault or a cause. for = the fault or cause id (which lists this advice back).
+# skill = beginner | intermediate | advanced | any; style = trail | straight_line | mixed (optional: only for drivers
+# with that braking style). radio: at most 8 words; screen: at most 48 characters; review: one or two plain sentences.
+# Leave radio (and screen) out for a review-only explanation. No placeholders: the numbers stay in the observation's
+# own text. Advice describes what happened and what the driver's own faster laps did; it never tells a driver to brake
+# later, brake less, release the brake earlier or carry more speed in (constraints.toml checks every string).
+
+[[advice]]
+id = "low_min_speed_describe"
+for = "low_min_speed"
+skill = "any"
+kind = "describe"
+radio = "Minimum speed down on your reference"
+screen = "Slower at the slowest point"
+review = "The slowest point of this corner was lower than on your reference lap, and the corner was slower for it."
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "over_braking_explain"
+for = "over_braking"
+skill = "any"
+kind = "explain"
+review = """On this lap you braked more than on your reference on the way in and reached the corner slower, so its
+slowest point was lower too."""
+tier = "brief"
+sources = ["ed_corner_brief"]

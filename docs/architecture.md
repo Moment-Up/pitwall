@@ -309,6 +309,18 @@ driven in the session) for focus and summary questions. A drill attempt's radio 
 validation kit can tell the lap's one drill point. The family's best lap in these conditions is labelled "Best in
 these conditions" whenever it is not the family record (the REC lap in any conditions).
 
+### Technique knowledge graph (`knowledge/`)
+`knowledge/graph.py` loads the driving-technique knowledge from TOML files in `knowledge/graph/` (packaged data,
+standard-library `tomllib`): the six phases of a corner, techniques, conditions over the driver's Context, signals
+(each naming the dataclass field that computes it, e.g. `CornerDelta.min_speed_delta_kph`), faults (the live coaching
+kinds by `analysis/coaching.py` `COACHING_KINDS`, plus planned detectors), causes with the evidence that tells them
+apart, advice, constraints (forbidden phrasings: no "brake later", "brake less", "release the brake earlier" or "carry
+more speed" outside praise) and sources, every node with its evidence tier. `load_graph()` validates once per process
+(references, mirrored edges, code paths, thresholds, advice limits, tiers backed by sources, constraints on every
+text); a broken graph is logged and the app runs without it, while tests make it raise. Read-only API:
+`GET /api/technique/knowledge` (`api/routes_knowledge.py`). Nothing on the time-critical path; no LLM. Contributor
+guide and schema: [docs/knowledge.md](knowledge.md).
+
 ## AI engineer
 `ai/facts.py` builds an ID-tagged fact sheet from the stored session analysis (the model never sees raw
 telemetry). `ai/engineer.py`: rule-based intent (works offline; control commands never reach the LLM) ->

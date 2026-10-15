@@ -1,0 +1,18 @@
+# Techniques: how to drive a phase of a corner, and when that fits the driver and car. applies_when = all of these
+# conditions hold; applies_any = at least one holds; neither = applies to everyone. alternatives = techniques that do
+# the same job another way (list each other both ways). measured_by = signals that show it in telemetry.
+
+[[technique]]
+id = "trail_braking"
+name = "Trail braking"
+phase = "turn_in"
+summary = "Keep some brake on as you start to turn, and ease it off as the steering goes in."
+detail = """The brake pressure left on past turn-in keeps load on the front tyres so the car turns and rotates, and
+the release is blended with the steering so the tyres stay near their grip limit the whole way. It suits
+high-downforce cars and drivers who already brake this way; it asks for a fine feel for the release."""
+applies_any = ["braking_style_trail", "downforce_high"]
+measured_by = ["trail_brake_m"]
+tier = "expert"
+sources = ["bentley_speed_secrets"]
+notes = """Owner's F1 25 laps (pitwall_style_review): the fastest laps trail-brake into 40 of 41 braking corners;
+more trail braking went with a faster corner in 28 of 45 corners (a weak effect)."""

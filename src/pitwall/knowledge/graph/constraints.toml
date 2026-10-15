@@ -1,0 +1,79 @@
+# Constraints: rules every user-facing text in the graph obeys, checked on every load (a breach fails the tests and
+# keeps the graph out of the app). forbidden = regular expressions, matched case-insensitively anywhere in the text
+# (write them as 'literal strings' so backslashes stay); scope = the node types whose texts are scanned (advice: radio,
+# screen, review; technique: name, summary, detail; fault, cause, phase, signal, condition: name, summary; a cause's
+# discriminator tests and notes); except_praise = praise (advice for a positive fault such as exit_gain, or the
+# positive fault itself) is exempt. Contributor notes are not scanned.
+# The patterns catch instructions and their common variants; describing what happened ("you braked 12 m earlier than
+# on your reference lap", "braked later, slower out") stays allowed. tests/unit/test_knowledge_graph.py lists examples
+# each way: add one there when you change a pattern.
+
+[[constraint]]
+id = "never_brake_later"
+name = "Never ask for later braking"
+summary = "No text tells a driver to brake later; later braking is praised only when the corner got faster."
+text = "never tell a driver to brake later (praise only when the corner got faster)"
+scope = ["phase", "condition", "technique", "signal", "fault", "cause", "advice"]
+except_praise = true
+forbidden = [
+    '\bbrak(?:e|ing)\s+(?:(?:a\s+)?(?:bit|little|touch|fraction|tad)\s+|much\s+|even\s+|slightly\s+|some\s+)?later\b',
+    '\blater\s+(?:on\s+the\s+)?brak(?:e|es|ing)\b',
+    '\bbrak(?:e|ing)\s+(?:(?:a\s+)?(?:bit|little|touch)\s+)?deeper\b',
+    '\bbrak(?:e|ing)\s+(?:point|marker)s?\s+(?:(?:a\s+)?(?:bit|little|touch)\s+)?(?:later|deeper)\b',
+    '\b(?:move|push|shift|take)\s+(?:your\s+|the\s+)?brak(?:e|ing)\s+(?:point|marker|zone)s?\s+(?:back|later|deeper|further)\b',
+    '\b(?:don(?:\x27|\u2019)?t|do\s+not|never|stop|avoid)\s+brak(?:e|ing)\s+(?:so\s+|as\s+|too\s+)?(?:early|soon)\b',
+    '\bwait\s+(?:a\s+(?:bit|little|touch|moment)\s+)?(?:longer\s+)?(?:before|to)\s+brak(?:e|ing)\b',
+    '\bstay\s+(?:flat|on\s+the\s+(?:throttle|power|gas))\s+(?:out\s+)?(?:(?:a\s+)?(?:bit|little|touch)\s+)?longer\b',
+]
+tier = "design"
+sources = ["pitwall_rules"]
+
+[[constraint]]
+id = "never_brake_less"
+name = "Never ask for less braking"
+summary = "No text tells a driver to brake less, lighter or softer."
+text = "never tell a driver to brake less"
+# Not techniques: a progressive release legitimately describes the pressure coming off as the car slows.
+scope = ["fault", "cause", "advice"]
+forbidden = [
+    '\bbrak(?:e|ing)\s+(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:less|lighter|softer|more\s+(?:gently|lightly|softly))\b',
+    '\bless\s+(?:brake|braking)\b',
+    '\buse\s+less\s+(?:brake|braking|pressure)\b',
+    '\b(?:lighter|softer|gentler|easier)\s+on\s+the\s+brakes?\b',
+    '\b(?:lighter|softer|gentler|shorter)\s+brak(?:e|es|ing)\b',
+    '\b(?:don(?:\x27|\u2019)?t|do\s+not|never|stop)\s+brak(?:e|ing)\s+(?:so|as|too)\s+(?:hard|much|heavily)\b',
+    '\b(?:don(?:\x27|\u2019)?t|do\s+not|never|stop|avoid)\s+over-?brak(?:e|ing)\b',
+]
+tier = "design"
+sources = ["pitwall_rules"]
+
+[[constraint]]
+id = "never_release_earlier"
+name = "Never ask for an earlier release"
+summary = "No text tells a driver to release the brake earlier."
+text = "never tell a driver to release the brake earlier"
+scope = ["phase", "condition", "technique", "signal", "fault", "cause", "advice"]
+forbidden = [
+    '\b(?:release|let\s+off|let\s+go\s+of|come\s+off|get\s+off|ease\s+off|back\s+off)\s+(?:of\s+)?(?:the\s+|your\s+)?(?:brakes?|brake\s+pedal|brake\s+pressure|pressure)\s+(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:earlier|sooner)\b',
+    '\brelease\s+(?:it\s+)?(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:earlier|sooner)\b',
+    '\bearlier\s+(?:brake\s+)?release\b',
+    '\b(?:off|out\s+of)\s+the\s+brakes?\s+(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:earlier|sooner)\b',
+]
+tier = "design"
+sources = ["pitwall_rules"]
+
+[[constraint]]
+id = "never_carry_more_speed"
+name = "Never ask for more entry speed"
+summary = "No text tells a driver to carry more speed into a corner."
+text = "never tell a driver to carry more speed in"
+scope = ["phase", "condition", "technique", "signal", "fault", "cause", "advice"]
+forbidden = [
+    '\bcarry\s+(?:(?:a\s+)?(?:bit|little|touch|tad|lot)\s+)?(?:more|extra|higher)\b',
+    '\bcarry\s+(?:the\s+|your\s+|some\s+)?(?:speed|momentum)\b',
+    '\b(?:take|bring|keep|hold)\s+(?:(?:a\s+)?(?:bit|little|touch)\s+)?more\s+(?:speed|momentum)\s+(?:in|into|to|through)\b',
+    '\b(?:enter|go\s+in(?:to)?|turn\s+in|arrive|approach)\s+(?:the\s+corner\s+)?(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?faster\b',
+    '\bmore\s+(?:entry|turn-in|corner)\s+speed\b',
+]
+tier = "design"
+sources = ["pitwall_rules"]

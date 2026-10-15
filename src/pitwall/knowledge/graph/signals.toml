@@ -1,0 +1,46 @@
+# Signals: values Pitwall measures per corner, and where each is computed. code = "ClassName.field" on one of
+# pitwall.knowledge.graph.SIGNAL_CLASSES (checked on load); leave code out for a signal Pitwall does not compute yet
+# (only planned or experimental faults may use one). channels = the CarFrame inputs it needs: a game that does not send
+# one of them cannot measure the signal (pitwall.knowledge.graph.CHANNEL_FIELDS).
+# Deltas (CornerDelta.*) are this lap minus the reference lap at the same corner.
+
+[[signal]]
+id = "min_speed_delta_kph"
+name = "Minimum speed vs reference"
+summary = "The corner's slowest speed on this lap minus the reference lap's; below zero is slower."
+code = "CornerDelta.min_speed_delta_kph"
+unit = "km/h"
+channels = ["speed", "lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[signal]]
+id = "brake_point_delta_m"
+name = "Braking point vs reference"
+summary = "Where braking started on this lap minus the reference lap; below zero is earlier."
+code = "CornerDelta.brake_point_delta_m"
+unit = "m"
+channels = ["brake", "lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[signal]]
+id = "entry_speed_delta_kph"
+name = "Corner entry speed vs reference"
+summary = "Speed at the corner's entry point on this lap minus the reference lap's; below zero is slower."
+code = "CornerDelta.entry_speed_delta_kph"
+unit = "km/h"
+channels = ["speed", "lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[signal]]
+id = "trail_brake_m"
+name = "Trail-braking distance"
+summary = "How far the car travels on the brake with the wheel turned, in one braking zone."
+code = "CornerMetrics.trail_brake_m"
+unit = "m"
+channels = ["brake", "steering", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_style_review"]
+notes = "Braking with |steering| above analysis.braking.TRAIL_STEER (0.08). Median 33 m on the owner's fastest F1 25 laps."

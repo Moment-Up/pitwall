@@ -1,0 +1,150 @@
+# Sources: where each piece of knowledge comes from. Every other node cites at least one of these by id, and its
+# tier must be one of its sources' tiers (docs/knowledge.md, "Sources and tiers").
+# Notes say what we took, in our own words. Never copy text from a source.
+
+# --- Pitwall's own rules and evidence --------------------------------------------------------------------------------
+
+[[source]]
+id = "pitwall_rules"
+title = "Pitwall's non-negotiable coaching rules (CLAUDE.md)"
+author = "Pitwall project"
+tier = "design"
+note = """Coaching is deterministic and never recommends braking later on its own: later braking is praised only when
+the corner got faster. For the technique graph this means no text tells a driver to brake later, brake less, release
+the brake earlier or carry more speed in, and unknown driver or car traits satisfy no condition."""
+
+[[source]]
+id = "pitwall_coaching"
+title = "Pitwall's coaching rules (src/pitwall/analysis/coaching.py)"
+author = "Pitwall project"
+tier = "live"
+note = """The eight coaching kinds Pitwall says today, each a deterministic rule over the lap's corner deltas against
+the driver's reference lap, with its thresholds and wording. Coaching from the driver's own reference lap was seen
+working in the owner's live races (docs/status.md)."""
+
+[[source]]
+id = "pitwall_style_review"
+title = "Braking and coasting style on the owner's recorded F1 25 laps"
+author = "Pitwall project"
+date = "2026-10-15"
+tier = "recorded"
+note = """Measured on six real F1 25 sessions: the fastest laps trail-brake into 40 of 41 braking corners (median
+33 m of braking with the wheel turned) and coast 10 m or more at 15% of corners. Within a corner across clean laps,
+more coasting went with a slower corner in 22 of 35 corners and more trail braking with a faster one in 28 of 45:
+weak effects, against straight-line braking and coasting to the apex for this driver and car."""
+
+[[source]]
+id = "pitwall_patch_review"
+title = "Review of Ed's detector patches on the owner's recorded F1 25 laps"
+author = "Pitwall project"
+date = "2026-10"
+tier = "recorded"
+note = """Ed's draft detectors run over 667 to 681 real F1 25 corner-laps: how often each fires and why some fire on
+almost every corner (F1 25 reports a little throttle under braking; the game blips on paddle downshifts; an apex
+search that jumps; a lift-before-braking scan that overruns). Firing rates and spreads are kept on each fault."""
+
+# --- Ed (Pitwall tester) ---------------------------------------------------------------------------------------------
+
+[[source]]
+id = "ed_corner_brief"
+title = "Idealised corner brief and self-check"
+author = "Ed (Pitwall tester)"
+date = "2026-10-14"
+tier = "brief"
+note = """Twelve points on driving one corner the textbook way, phase by phase: flat to the brake marker, a fast brake
+attack, a progressive release, blipped downshifts, braking with the wheel straight, coming off the brake with speed to
+spare, one smooth turn-in, coasting to the apex, one smooth throttle application from the apex, no lift once on the
+throttle, unwinding the wheel as the throttle goes on, and using the whole track on exit. Plus a self-check that reads
+an on-off-on throttle trace as a sign of over-braking. Illustrated with a synthetic telemetry chart."""
+
+[[source]]
+id = "ed_fault_checklist"
+title = "Technique-fault checklist"
+author = "Ed (Pitwall tester)"
+date = "2026-10-13"
+tier = "brief"
+note = """Telemetry signatures of common technique faults in the brake, throttle and steering traces, the combined
+(G-G) view and lap-to-lap consistency, with which ones Pitwall already detected and his researched sources."""
+
+[[source]]
+id = "ed_patches"
+title = "Detector patches: technique faults, body slip and cadence, root cause and overlay, ACC adapter"
+author = "Ed (Pitwall tester)"
+date = "2026-10"
+tier = "brief"
+note = """Draft detectors (double hump, pedal overlap, lift before braking, throttle dips, throttle acceptance,
+steering reversals, early apex, gear change while turning, exit grip use, slow brake attack, abrupt release, missed
+blips), an aero crossover fit and g-force charts for Compare. Thresholds marked not validated by Ed. Read as data;
+not applied as written."""
+
+# --- Published coaching knowledge ------------------------------------------------------------------------------------
+
+[[source]]
+id = "bentley_speed_secrets"
+title = "Speed Secrets: Professional Race Driving Techniques"
+author = "Ross Bentley"
+date = "1998"
+tier = "expert"
+note = """General race-driving technique: a corner taken in phases (braking, turn-in, apex, exit), the tyres' limited
+grip shared between braking and cornering, and trail braking - keeping some brake on into the turn and easing it off
+as the steering goes in, so the front tyres keep their load."""
+
+# The sources Ed cited for his checklist. Not yet reviewed by Pitwall: cite one only for what a checklist row took from
+# it, and update its note when you have read it.
+
+[[source]]
+id = "speedwaymedia_vector_analysis"
+title = "Driver telemetry: data-driven vector analysis, the hidden language of race car engineering"
+author = "Speedway Media"
+url = "https://speedwaymedia.com/2026/06/14/driver-telemetry-data-driven-vector-analysis-the-hidden-language-of-race-car-engineering/"
+date = "2026-06-14"
+tier = "expert"
+note = "Cited by Ed for his technique-fault checklist; not yet reviewed by Pitwall."
+
+[[source]]
+id = "mysimrig_telemetry_beginners"
+title = "Sim racing telemetry for beginners"
+author = "MySimRig"
+url = "https://mysimrig.nl/en/blog/simracing/sim-racing-telemetry-for-beginners/"
+tier = "expert"
+note = "Cited by Ed for his technique-fault checklist; not yet reviewed by Pitwall."
+
+[[source]]
+id = "srt_racing_lines"
+title = "How to analyze racing lines"
+author = "Sim Racing Telemetry (knowledge base)"
+url = "https://docs.simracingtelemetry.com/kb/how-to-analyze-racing-lines"
+tier = "expert"
+note = "Cited by Ed for his technique-fault checklist; not yet reviewed by Pitwall."
+
+[[source]]
+id = "designjudges_driver_data"
+title = "Analyzing driver data"
+author = "Design Judges"
+url = "https://www.designjudges.com/articles/analyzing-driver-data"
+tier = "expert"
+note = "Cited by Ed for his technique-fault checklist; not yet reviewed by Pitwall."
+
+[[source]]
+id = "vrs_traction_circle"
+title = "The traction circle (iRacing career guide, second season)"
+author = "Virtual Racing School"
+url = "https://virtualracingschool.com/academy/iracing-career-guide/second-season/the-traction-circle/"
+tier = "expert"
+note = "Cited by Ed for his technique-fault checklist; not yet reviewed by Pitwall."
+
+[[source]]
+id = "coilovers_data_acquisition"
+title = "Race data acquisition, telemetry analysis and suspension tuning"
+author = "Coilovers.ca (guides)"
+url = "https://coilovers.ca/blogs/guides/race-data-acquisition-telemetry-analysis-suspension-tuning"
+tier = "expert"
+note = "Cited by Ed for his technique-fault checklist; not yet reviewed by Pitwall."
+
+[[source]]
+id = "wikipedia_understeer_oversteer"
+title = "Understeer and oversteer"
+author = "Wikipedia contributors"
+url = "https://en.wikipedia.org/wiki/Understeer_and_oversteer"
+tier = "expert"
+note = "Cited by Ed for his technique-fault checklist; not yet reviewed by Pitwall."
