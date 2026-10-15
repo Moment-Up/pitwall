@@ -251,7 +251,7 @@ def knowledge_facts(sa: SessionAnalysis, graph: TechniqueGraph | None = None) ->
     if not g.valid:
         return []
     sk = sa.knowledge if sa.knowledge is not None else session_knowledge(sa)
-    dk = DriverKnowledge(g, sk.context, sk.game)
+    dk = DriverKnowledge(g, sk.context, sk.game, sk.style.braking_assist)
     styled = [t for t in g.techniques if t.applies_when or t.applies_any]
     fits = [t.id for t in styled if dk.fit(t).applies]
     others = [t.id for t in styled if not dk.fit(t).applies]

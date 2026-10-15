@@ -543,7 +543,7 @@ class LapProcessor:
                 style=style,
                 fuel_saving=fuel_saving_of(strategy),
             )
-            dk = DriverKnowledge(graph, context, ctx.get("game"))
+            dk = DriverKnowledge(graph, context, ctx.get("game"), style.braking_assist)
             corners = {c.name: c for c in model.corners}
             dk.annotate_all(obs, LapSignals({cd.corner: cd for cd in comp.corners}, cur, ref, corners))
             return {"digest": graph.digest, "context": context.to_dict(), "style": style.to_dict()}

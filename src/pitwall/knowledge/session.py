@@ -85,7 +85,7 @@ def annotate_session(sa: SessionAnalysis, graph: TechniqueGraph | None = None) -
         return None
     try:
         sk = session_knowledge(sa)
-        dk = DriverKnowledge(g, sk.context, sk.game)
+        dk = DriverKnowledge(g, sk.context, sk.game, sk.style.braking_assist)
         ref = sa.analyses.get(sa.ref_lap_id) if sa.ref_lap_id is not None else None
         corners = {c.name: c for c in sa.model.corners} if sa.model is not None else {}
         for lap_id, observations in sa.observations.items():
@@ -116,7 +116,11 @@ def annotate_pair(
     if not g.valid:
         return
     try:
-        dk = DriverKnowledge(g, sk.context if sk is not None else Context(), sk.game if sk is not None else None)
+        dk = (
+            DriverKnowledge(g, sk.context, sk.game, sk.style.braking_assist)
+            if sk is not None
+            else DriverKnowledge(g, Context())
+        )
         corners = {c.name: c for c in model.corners}
         dk.annotate_all(observations, LapSignals({cd.corner: cd for cd in comp.corners}, lap, ref, corners))
     except Exception:
@@ -134,7 +138,7 @@ def session_payload(
     g = graph if graph is not None else load_graph()
     sk = sa.knowledge if sa.knowledge is not None else session_knowledge(sa)
     ctx = sk.context if fuel_saving is None else replace(sk.context, fuel_saving=fuel_saving)
-    dk = DriverKnowledge(g, ctx, sk.game)
+    dk = DriverKnowledge(g, ctx, sk.game, sk.style.braking_assist)
     fits = dk.node_fits()
     out = g.to_payload()
     for key in FIT_LISTS:

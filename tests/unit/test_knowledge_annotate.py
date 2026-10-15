@@ -15,6 +15,7 @@ import pytest
 from pitwall.analysis import coaching
 from pitwall.analysis.compare import CornerDelta, CornerMetrics, corner_delta
 from pitwall.knowledge.annotate import (
+    ASSIST_CAVEAT,
     DELTA_CLASS,
     METRICS_CLASS,
     TECHNIQUE_READERS,
@@ -163,6 +164,20 @@ def test_advice_by_skill_and_style(g: TechniqueGraph) -> None:
     rel = dk(g, Context()).advice("released_too_early_for_apex")
     assert rel is not None and rel["radio"] is None and rel["screen"] is None and rel["review"]
     assert dk(g, Context()).advice("not_a_node") is None
+
+
+def test_style_advice_says_when_the_braking_assist_braked_too(g: TechniqueGraph) -> None:
+    """The style is detected partly from the game's braking when its braking assist is on: advice chosen for that style
+    says so, never presenting the habit as all the driver's (the general wording carries no caveat)."""
+    trail = Context(braking_style="trail")
+    plain = DriverKnowledge(g, trail).advice("coasting")
+    assisted = DriverKnowledge(g, trail, None, 2).advice("coasting")
+    assert plain is not None and assisted is not None
+    assert plain["ids"]["review"] == assisted["ids"]["review"] == "coasting_explain_trail"
+    assert ASSIST_CAVEAT not in plain["review"] and assisted["review"] == f"{plain['review']} {ASSIST_CAVEAT}"
+    assert assisted["radio"] == plain["radio"]  # the radio keeps the describe line
+    general = DriverKnowledge(g, Context(), None, 2).advice("coasting")
+    assert general is not None and ASSIST_CAVEAT not in general["review"]
 
 
 # ---------------------------------------------------------------------------------------------- causes

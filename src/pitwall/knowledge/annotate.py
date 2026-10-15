@@ -18,7 +18,9 @@ why the others do not, which causes the measured signals name, what to say at th
 * **Advice** (``advice``): per form (radio, screen, review), the first advice for the node that has that form, ranked
   a style match first, then the driver's skill, then ``any`` (file order breaks ties). The live faults' ``any``
   advice is today's wording without the numbers, so the radio and the card read as before; numbers stay in the
-  observation's own text.
+  observation's own text. With the game's braking assist on (``braking_assist``, ``knowledge.style``), advice chosen
+  for the detected braking style says that some of that braking was the game's (``ASSIST_CAVEAT``), as How corners
+  work and the AI engineer do: a habit read partly from the game's braking is never presented as all the driver's.
 
 The annotation (``annotate``, an additive ``knowledge`` key on ``Observation.to_dict()`` shapes; never stored):
 ``{fault, name, status, tier, applies, why_not, causes: [{id, name, tier, evidence: [{signal, test, value, unit}],
@@ -72,6 +74,9 @@ if TYPE_CHECKING:
     from pitwall.technique.samples import Native
 
 FORMS = ("radio", "screen", "review")
+# Said after advice written for the driver's detected braking style when the game's braking assist was on (the same
+# words as the AI engineer's context fact and How corners work).
+ASSIST_CAVEAT = "The game's braking assist was on, so some of that braking was the game's."
 # A Context key and its values in words, for ``why_not``.
 KEY_WORDS: Mapping[str, str] = {
     "skill": "skill",
@@ -386,11 +391,14 @@ def _context_value(context: object, key: str) -> object:
 @dataclass(slots=True)
 class DriverKnowledge:
     """The technique graph seen for one driver (``context``) on one game (``game``: a ``model.telemetry.Game`` value;
-    None = unknown, no channel known absent). Fits are cached per node."""
+    None = unknown, no channel known absent). ``braking_assist``: the F1 braking assist level the style was detected
+    with (``knowledge.style.Style.braking_assist``; 1 and above: style advice carries ``ASSIST_CAVEAT``). Fits are
+    cached per node."""
 
     graph: TechniqueGraph
     context: Context
     game: str | None = None
+    braking_assist: int | None = None
     channels: Mapping[Channel, ChannelStatus] = field(init=False)
     _fits: dict[str, Fit] = field(init=False, default_factory=dict)
 
@@ -513,9 +521,13 @@ class DriverKnowledge:
         out: dict[str, Any] = {}
         ids: dict[str, str | None] = {}
         tailored: dict[str, bool] = {}
+        assisted = self.braking_assist is not None and self.braking_assist >= 1
         for form in FORMS:
             a = next((x for x in ranked if getattr(x, form) is not None), None)
-            out[form] = getattr(a, form) if a is not None else None
+            text = getattr(a, form) if a is not None else None
+            if form == "review" and a is not None and a.style is not None and assisted and text:
+                text = f"{text} {ASSIST_CAVEAT}"  # the style was read partly from the game's braking
+            out[form] = text
             ids[form] = a.id if a is not None else None
             tailored[form] = a is not None and (a.skill != "any" or a.style is not None)
         out["ids"] = ids
