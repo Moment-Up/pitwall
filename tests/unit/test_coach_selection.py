@@ -244,9 +244,11 @@ def test_pick_follows_the_drivers_limits_and_by_corner_shows_every_eligible_corn
 def test_block_copies_are_slim() -> None:
     block = coach_block(LAP, OBS, coaching_limits("advanced"))
     (p,) = block["picked"]
-    # habits (spec section 3): every point also says whether it is a habit and whether it is a one-off
-    assert set(p) == {*COACH_FIELDS, "evidence", "picked", "habit", "one_off"}
+    # habits (spec section 3): every point also says whether it is a habit and whether it is a one-off; technique
+    # knowledge (knowledge spec section 3): its slim annotation, None for an observation without one
+    assert set(p) == {*COACH_FIELDS, "evidence", "picked", "habit", "one_off", "knowledge"}
     assert p["evidence"] == {"time_delta_s": 0.25, "exit_speed_delta_kph": -4.0}  # per-lap metric dicts dropped
+    assert p["knowledge"] is None
     assert p["habit"] is None and p["one_off"] is False  # no tracker here; a habit is never a one-off
     assert block["habits"] == [] and block["focus"] == []
 

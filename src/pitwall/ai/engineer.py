@@ -447,12 +447,13 @@ _TOPICS: dict[str, set[str]] = {
     "sectors": {"session", "game", "laps"},
     "flags": {"session", "game", "flags", "laps", "corners", "observations", "reference", "fuel", "tyres"},
     "setup": {"session", "game", "corners", "observations", "compare", "setup", "balance"},  # balance: feat/technique
-    "focus": {"session", "game", "observations", "corners", "reference", "drill"},  # drill: coachref
+    # drill: coachref; knowledge: the technique graph's facts (pitwall.knowledge.facts)
+    "focus": {"session", "game", "observations", "corners", "reference", "drill", "knowledge"},
     "goals": {"session", "game", "goals", "progress"},  # lane motivation (goals, week, badges)
     "week": {"session", "game", "progress"},
     "badges": {"session", "game", "progress"},
     "compare": {"session", "game", "compare", "reference", "laps"},
-    "braking": {"session", "game", "corners", "observations", "reference"},
+    "braking": {"session", "game", "corners", "observations", "reference", "knowledge"},
     "lap_times": {"session", "game", "laps", "reference"},
     "last_lap": {"session", "game", "laps", "reference", "compare"},
     "summary": {
@@ -471,12 +472,12 @@ _TOPICS: dict[str, set[str]] = {
     },
     "ai_pace": {"session", "game", "ai"},  # pace vs AI difficulty
     "ai_level": {"session", "game", "ai"},
-    "losing_time": {"session", "game", "corners", "compare", "observations", "reference"},
+    "losing_time": {"session", "game", "corners", "compare", "observations", "reference", "knowledge"},
     "corner": {"session", "game", "reference"},
     "reference": {"session", "game", "reference", "laps"},  # coachref: "who am I compared with?"
     # --- feat/technique ---
     "line": {"session", "game", "line", "reference"},
-    "technique": {"session", "game", "technique", "reference", "observations"},
+    "technique": {"session", "game", "technique", "reference", "observations", "knowledge"},
     "balance": {"session", "game", "balance", "setup"},
     # --- end feat/technique ---
     "general": {
@@ -655,9 +656,9 @@ class RaceEngineer:
             messages.append(
                 {
                     "role": "user",
-                    "content": "That answer used numbers or citations not present in the FACTS ("
+                    "content": "That answer used numbers, citations or techniques not present in the FACTS ("
                     + _describe(g)
-                    + "). Answer again using only numbers that appear in the cited facts.",
+                    + "). Answer again using only numbers and techniques that appear in the cited facts.",
                 }
             )
         return self._finish(det, intent, facts, None, True, model, t0, attempts, issues)
@@ -774,6 +775,8 @@ def _describe(g: GroundingResult) -> str:
         parts.append("unsupported numbers: " + ", ".join(g.ungrounded_numbers))
     if g.unknown_citations:
         parts.append("unknown citations: " + ", ".join(g.unknown_citations))
+    if g.ungrounded_techniques:  # knowledge: a technique none of the cited facts is about
+        parts.append("techniques not in the cited facts: " + ", ".join(g.ungrounded_techniques))
     return "; ".join(parts) or "ok"
 
 

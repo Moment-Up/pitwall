@@ -37,6 +37,10 @@ it ("3 of the last 4 laps") is true of the laps counted here. Status:
   leaves the focus without a word. A fixed entry (and any entry that is no habit) leaves the tracker once its window
   holds no lap where it fired; it becomes ``seen`` again when it is a habit again.
 
+Technique knowledge: a corrective point whose fault the technique graph says does not fit the driver
+(``analysis.coaching.applies`` False: its conditions fail for their Context, or the game does not send a channel it
+needs) is never tracked as a habit, but its corner still lost time on that lap, so the lap is not clean there.
+
 Reference-relative evidence: a fault is measured against the reference lap, so a lap without it proves something
 only when the reference could show it (``update``'s ``ref_lap_id``). A reference can show a habit when a lap fired it
 against that reference, or when it is itself a lap recorded clean at the corner against such a reference. It cannot
@@ -92,6 +96,7 @@ from pitwall.analysis.coaching import (
     HABIT_RATIO,
     INCIDENT_KIND,
     LATER_BRAKING_FIXES,
+    applies,
     is_corrective,
     is_habit,
     short_text,
@@ -411,6 +416,7 @@ class HabitTracker:
         does not block another from the free slot."""
         points: dict[tuple[str, str], Mapping[str, Any]] = {}
         incidents: set[str] = set()
+        lost: set[str] = set()  # corners with a corrective point the technique graph says does not fit the driver
         for o in observations:
             corner, kind = o.get("corner"), o.get("kind")
             if not corner or not kind:
@@ -418,10 +424,13 @@ class HabitTracker:
             if kind == INCIDENT_KIND:
                 incidents.add(str(corner))
             elif is_corrective(o):
-                points.setdefault((str(corner), str(kind)), o)
+                if applies(o):
+                    points.setdefault((str(corner), str(kind)), o)
+                else:  # never a habit, but the corner lost time there: not a clean lap at it
+                    lost.add(str(corner))
         names = [str(c) for c in corners] if corners is not None else [c for c, _ in points]
         compared = {c for c in names if c not in incidents}
-        dirty = {c for c, _ in points}  # corners with a corrective point of any kind on this lap
+        dirty = {c for c, _ in points} | lost  # corners with a corrective point of any kind on this lap
         times = corner_times or {}
         for c in compared:
             self._corner_laps[c] = self._corner_laps.get(c, 0) + 1
@@ -715,6 +724,8 @@ class HabitTracker:
             "consistency_ratio": round(seen / laps, 2) if laps else None,
             "ref_name": o.get("ref_name"),
             "evidence": dict(o.get("evidence") or {}) if now else {},
+            # this lap's technique knowledge (measured causes, advice) when the event is about this lap's point
+            "knowledge": o.get("knowledge") if now else None,
             "habit_event": event,
             "habit": {"status": h.status, "laps_seen": seen, "laps": laps},
             "was_value": None,
