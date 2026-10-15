@@ -522,3 +522,16 @@ def test_knowledge_facts_stay_small(sheet: list[Fact]) -> None:
     summaries = {t.summary for t in load_graph().techniques}
     with_summaries = [f for f in faults if any(x in f.text for x in summaries)]
     assert with_summaries in ([], faults[:DETAILED_FAULTS])
+
+
+def test_the_review_compare_route_is_annotated_too(client: tuple[TestClient, str, list[int]]) -> None:
+    """Review > Session > Compare loads the pair through /api/coachref/compare (the reference-aware route), not
+    /api/compare: its observations carry the same annotation, so the explainer's causes and "not coached for you"
+    show."""
+    c, _, lap_ids = client
+    r = c.get(f"/api/coachref/compare?ref={lap_ids[0]}&lap={lap_ids[3]}")
+    assert r.status_code == 200, r.text
+    observations = r.json()["observations"]
+    assert observations and all(o["knowledge"]["fault"] == o["kind"] for o in observations)
+    plain = c.get(f"/api/compare?ref={lap_ids[0]}&lap={lap_ids[3]}").json()["observations"]
+    assert [o["knowledge"] for o in observations] == [o["knowledge"] for o in plain]
