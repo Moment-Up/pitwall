@@ -1,14 +1,14 @@
 {
  "_fixture": {
-  "source": "backend fixture: pitwall.knowledge.graph.load_graph().to_payload() called directly in Python on feat/knowledge (the review fixes and the external evidence tier: causes with conditions, reference-relative exit evidence, citations and tiers, real-world measurements on techniques). The body GET /api/technique/knowledge returns; the route only wraps it. Not an HTTP answer; regenerate by calling it again.",
+  "source": "backend fixture: pitwall.knowledge.graph.load_graph().to_payload() called directly in Python on feat/knowledge (7f6d5ce). The body GET /api/technique/knowledge returns; the route only wraps it. Not an HTTP answer; regenerate by calling it again.",
   "recorded": "2026-10-15",
   "tier": "backend",
-  "what": "The whole technique graph as the server validates and sends it: 6 phases, 32 conditions, 16 techniques, 55 signals, 30 faults, 9 causes, 36 advice, 5 constraints, 29 sources, 246 edges. No session Context: the plain graph (spec section 1). Knowledge content, not telemetry: never evidence that a game works."
+  "what": "The whole technique graph as the server validates and sends it: 6 phases, 32 conditions, 16 techniques, 55 signals, 30 faults, 9 causes, 36 advice, 5 constraints, 30 sources, 246 edges. No session Context: the plain graph (spec section 1). Knowledge content, not telemetry: never evidence that a game works."
  },
  "response": {
   "valid": true,
   "errors": [],
-  "digest": "1e74118d674ee027",
+  "digest": "4c8a1cb00d509eca",
   "files": [
    "advice.toml",
    "causes.toml",
@@ -38,7 +38,7 @@
    "causes": 9,
    "advice": 36,
    "constraints": 5,
-   "sources": 29
+   "sources": 30
   },
   "phases": [
    {
@@ -3869,7 +3869,20 @@
      "over_braking_explain_beginner"
     ],
     "applies_when": [],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": false,
+    "measured": [
+     {
+      "fault": "low_min_speed",
+      "fault_laps": 387,
+      "fault_held": 69,
+      "other_laps": 485,
+      "other_held": 71,
+      "date": "2026-10-15",
+      "source": "pitwall_cause_base_rate",
+      "note": "18% against 15%: 1.22 times the base rate (one-sided Fisher exact p 0.12). Braking earlier and reaching the corner slower is about as common on corner-laps without a low minimum speed, so it is what was also measured, not why."
+     }
+    ]
    },
    {
     "type": "cause",
@@ -3920,7 +3933,20 @@
      "early_turn_in_explain_beginner"
     ],
     "applies_when": [],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": false,
+    "measured": [
+     {
+      "fault": "low_min_speed",
+      "fault_laps": 558,
+      "fault_held": 16,
+      "other_laps": 615,
+      "other_held": 35,
+      "date": "2026-10-15",
+      "source": "pitwall_cause_base_rate",
+      "note": "3% against 6%: half the base rate. The slowest point came sooner more often on corner-laps without the fault, so it tells nothing about why the slowest point was lower."
+     }
+    ]
    },
    {
     "type": "cause",
@@ -3969,7 +3995,20 @@
      "low_grip_explain_beginner"
     ],
     "applies_when": [],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": false,
+    "measured": [
+     {
+      "fault": "low_min_speed",
+      "fault_laps": 550,
+      "fault_held": 126,
+      "other_laps": 599,
+      "other_held": 84,
+      "date": "2026-10-15",
+      "source": "pitwall_cause_base_rate",
+      "note": "23% against 14%: 1.63 times the base rate (one-sided Fisher exact p 0.0001). More sliding than on the reference lap does go with a lower minimum speed, but below twice the base rate it is not shown to be why. F1 25 only (tyre slip): GT7 corner-laps are unmeasured."
+     }
+    ]
    },
    {
     "type": "cause",
@@ -4019,7 +4058,20 @@
      "traction_limited_explain_beginner"
     ],
     "applies_when": [],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": false,
+    "measured": [
+     {
+      "fault": "late_throttle",
+      "fault_laps": 241,
+      "fault_held": 21,
+      "other_laps": 908,
+      "other_held": 67,
+      "date": "2026-10-15",
+      "source": "pitwall_cause_base_rate",
+      "note": "9% against 7%: 1.18 times the base rate (one-sided Fisher exact p 0.28), with traction control on in every session. Wheelspin, a slide or exit oversteer the reference lap did not have is about as common without a late throttle."
+     }
+    ]
    },
    {
     "type": "cause",
@@ -4031,7 +4083,7 @@
      "ed_fault_checklist",
      "vrs_traction_circle"
     ],
-    "notes": "Ed's checklist row \"over-cautious exit (full throttle late with no grip loss)\". The spec also names the steering already unwound and less combined g than the reference: those signals are not computed yet (steering_at_full_throttle_frac, exit_grip_utilization_frac, throttle_acceptance_delta); add them here as discriminators when they are. Named only with traction control off and every discriminator measured (James, 2026-10-15): with traction control on or unknown the game holds wheelspin back, so \"no wheelspin\" proves little, and the cause is the absence of measured grip loss - which held on 75% of the owner's late_throttle corner-laps and 70% of the others, its base rate. F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing. On the owner's 30 captures (traction control on in every one) it is never named now; it was named on 105 of 157 late_throttle points (2026-10-15).",
+    "notes": "Ed's checklist row \"over-cautious exit (full throttle late with no grip loss)\". The spec also names the steering already unwound and less combined g than the reference: those signals are not computed yet (steering_at_full_throttle_frac, exit_grip_utilization_frac, throttle_acceptance_delta); add them here as discriminators when they are. Named only with traction control off and every discriminator measured (James, 2026-10-15): with traction control on or unknown the game holds wheelspin back, so \"no wheelspin\" proves little, and the cause is the absence of measured grip loss - which holds as often on the owner's corner-laps without a late throttle (the base-rate check below). F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing. On the owner's 30 captures (traction control on in every one) it is never named now; it was named on 105 of 157 late_throttle points (2026-10-15).",
     "file": "causes.toml",
     "explains": [
      "late_throttle"
@@ -4077,7 +4129,20 @@
     "applies_when": [
      "traction_control_off"
     ],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": false,
+    "measured": [
+     {
+      "fault": "late_throttle",
+      "fault_laps": 213,
+      "fault_held": 171,
+      "other_laps": 764,
+      "other_held": 618,
+      "date": "2026-10-15",
+      "source": "pitwall_cause_base_rate",
+      "note": "80% against 81%: the base rate. Measured with traction control on (or not reported) in every session, where the cause is never named: no grip loss is the usual exit then. Check it again on laps with traction control off before it can be anything but also measured."
+     }
+    ]
    },
    {
     "type": "cause",
@@ -4110,7 +4175,20 @@
      "early_brake_release_explain_beginner"
     ],
     "applies_when": [],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": true,
+    "measured": [
+     {
+      "fault": "coasting",
+      "fault_laps": 60,
+      "fault_held": 26,
+      "other_laps": 812,
+      "other_held": 161,
+      "date": "2026-10-15",
+      "source": "pitwall_cause_base_rate",
+      "note": "43% against 20%: 2.19 times the base rate (one-sided Fisher exact p below 0.001), on 19 sessions. Close to the line: on the six sessions of the first check alone it was 12 of 33 against 100 of 504 (1.83 times); check it again as laps are recorded."
+     }
+    ]
    },
    {
     "type": "cause",
@@ -4150,7 +4228,20 @@
      "waiting_for_rotation_explain_beginner"
     ],
     "applies_when": [],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": false,
+    "measured": [
+     {
+      "fault": "coasting",
+      "fault_laps": 55,
+      "fault_held": 24,
+      "other_laps": 801,
+      "other_held": 246,
+      "date": "2026-10-15",
+      "source": "pitwall_cause_base_rate",
+      "note": "44% against 31%: 1.42 times the base rate (one-sided Fisher exact p 0.035). The throttle coming back later with the brake end where it was is common on corner-laps without extra coasting too."
+     }
+    ]
    },
    {
     "type": "cause",
@@ -4190,7 +4281,20 @@
      "carried_too_much_speed_explain_beginner"
     ],
     "applies_when": [],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": false,
+    "measured": [
+     {
+      "fault": "overspeed_apex",
+      "fault_laps": 18,
+      "fault_held": 9,
+      "other_laps": 1155,
+      "other_held": 367,
+      "date": "2026-10-15",
+      "source": "pitwall_cause_base_rate",
+      "note": "50% against 32%: 1.57 times the base rate on only 9 corner-laps with the fault (one-sided Fisher exact p 0.085): a faster entry or later braking is common without the fault, and too few points to say more."
+     }
+    ]
    },
    {
     "type": "cause",
@@ -4202,7 +4306,7 @@
      "ed_fault_checklist",
      "ed_corner_brief"
     ],
-    "notes": "Ed's checklist row \"released too early for the apex: a large coast, an apex undershoot and a stepped throttle recovery\". His brief's self-check reads the same on-off-on throttle as over-braking (over_braking explains it too); the fix he paired with it is an instruction the constraints reject. Here it is a review-only explanation: no radio form, tied to the driver's own faster laps.",
+    "notes": "Ed's checklist row \"released too early for the apex: a large coast, an apex undershoot and a stepped throttle recovery\". His brief's self-check reads the same on-off-on throttle as over-braking (over_braking explains it too); the fix he paired with it is an instruction the constraints reject. Here it is a review-only explanation: no radio form, tied to the driver's own faster laps. No base-rate check yet: stepped_throttle is planned, so it never fires and there is nothing to check against; until then it is never shown as the reason.",
     "file": "causes.toml",
     "explains": [
      "stepped_throttle"
@@ -4230,7 +4334,9 @@
      "released_too_early_for_apex_explain_beginner"
     ],
     "applies_when": [],
-    "applies_any": []
+    "applies_any": [],
+    "discriminates": false,
+    "measured": []
    }
   ],
   "advice": [
@@ -5162,6 +5268,21 @@
     "title": "Live coaching kinds and corner deltas on the owner's recorded F1 25 laps",
     "author": "Pitwall project",
     "note": "Six real F1 25 sessions (Austria three times, Imola, Melbourne twice; 681 corner-laps, 667 without an incident), every lap compared with the fastest earlier clean lap as the live processor does: how often each of the eight coaching rules fires per corner-lap, the spread (10th to 90th percentile) of each corner delta on clean laps, and how often each cause that needs only those deltas would be named. The spread is lap-to-reference variation across corners, not sensor noise.",
+    "url": null,
+    "date": "2026-10-15"
+   },
+   {
+    "type": "source",
+    "id": "pitwall_cause_base_rate",
+    "name": "Each cause against its base rate on the owner's recorded laps",
+    "summary": "scripts/cause_base_rates.py over all 30 of the owner's real captures (F1 25 and GT7 on the PS5, 2026-10-10 to 13), replayed into a scratch database and analysed as Review does (every lap against its session's reference): 30 sessions with a usable comparison (28 F1 25, 2 GT7), 148 compared laps, 1,173 non-incident corner-laps. For each cause and each live fault it explains: on how many of the fault's corner-laps its evidence held, against the corner-laps without the fault, counting only corner-laps where the evidence could be measured. Traction control was on (or not reported) in every session; ABS was on except in two F2 races.",
+    "tier": "recorded",
+    "sources": [],
+    "notes": null,
+    "file": "sources.toml",
+    "title": "Each cause against its base rate on the owner's recorded laps",
+    "author": "Pitwall project",
+    "note": "scripts/cause_base_rates.py over all 30 of the owner's real captures (F1 25 and GT7 on the PS5, 2026-10-10 to 13), replayed into a scratch database and analysed as Review does (every lap against its session's reference): 30 sessions with a usable comparison (28 F1 25, 2 GT7), 148 compared laps, 1,173 non-incident corner-laps. For each cause and each live fault it explains: on how many of the fault's corner-laps its evidence held, against the corner-laps without the fault, counting only corner-laps where the evidence could be measured. Traction control was on (or not reported) in every session; ABS was on except in two F2 races.",
     "url": null,
     "date": "2026-10-15"
    },
