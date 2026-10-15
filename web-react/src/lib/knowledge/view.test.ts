@@ -200,12 +200,25 @@ describe("faults Pitwall checks", () => {
 
   it("causes Pitwall tells apart, measurements in plain numbers, and faults that are not for this car", () => {
     const f = faultGroups(g, OWNER_F1);
-    expect(f.coached.find((x) => x.id === "low_min_speed")!.causes.map((c) => c.name)).toEqual(["Over-braking", "Early turn-in", "Less grip"]);
+    expect(f.coached.find((x) => x.id === "low_min_speed")!.causes.map((c) => c.name)).toEqual(["Over-braking", "Slowest point came sooner", "Less grip"]);
     const overlap = f.notCoached.find((x) => x.id === "pedal_overlap")!;
     expect(overlap.measured[0]).toBe("Fires on corner-laps (Ed's detector): 66.8% (2026-10-14)");
     expect(f.notCoached.find((x) => x.id === "missed_blip")!.fit).toMatchObject({ fit: "other", reason: "For: H-pattern gearbox." });
     expect(faultGroups(g, BEGINNER_GT7).notCoached.find((x) => x.id === "missed_blip")!.fit.fit).toBe("unknown");
     expect(measurementText({ metric: "", value: 0.05, unit: "s", date: "2026-10", source: "x", note: null })).toBe("Measured: 0.05 s (2026-10)");
+  });
+});
+
+describe("faults Pitwall checks, for one session", () => {
+  it("a session variant leaves out the causes that cannot be named for its driver and game", () => {
+    // edited: the plain graph with a GT7 session's per-cause verdicts (pitwall.knowledge.session.session_payload)
+    const gt7 = structuredClone(g);
+    for (const c of gt7.causes) {
+      Object.assign(c, c.id === "ready_earlier" ? { applies: false, why_not: "GT7 does not send lateral g" } : { applies: true, why_not: null });
+    }
+    const late = (k: typeof g) => faultGroups(k, BEGINNER_GT7).coached.find((x) => x.id === "late_throttle")!.causes.map((c) => c.id);
+    expect(late(gt7)).toEqual(["traction_limited"]);
+    expect(late(g)).toEqual(["traction_limited", "ready_earlier"]); // the plain graph: every cause
   });
 });
 

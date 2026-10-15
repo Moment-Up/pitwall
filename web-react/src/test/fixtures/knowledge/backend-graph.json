@@ -1,14 +1,14 @@
 {
  "_fixture": {
-  "source": "backend fixture: pitwall.knowledge.graph.load_graph().to_payload() called directly in Python on feat/knowledge after the merge of its Python and screens work (b5579b5 plus the commit that adds this file: relative low_grip evidence, descriptive ready_earlier words, an over_braking screen line). The body GET /api/technique/knowledge returns; the route only wraps it. Not an HTTP answer; regenerate by calling it again.",
+  "source": "backend fixture: pitwall.knowledge.graph.load_graph().to_payload() called directly in Python on feat/knowledge (the review fixes: causes with conditions, reference-relative exit evidence, citations and tiers). The body GET /api/technique/knowledge returns; the route only wraps it. Not an HTTP answer; regenerate by calling it again.",
   "recorded": "2026-10-15",
   "tier": "backend",
-  "what": "The whole technique graph as the server validates and sends it: 6 phases, 32 conditions, 16 techniques, 52 signals, 30 faults, 9 causes, 36 advice, 4 constraints, 27 sources, 244 edges. No session Context: the plain graph (spec section 1). Knowledge content, not telemetry: never evidence that a game works."
+  "what": "The whole technique graph as the server validates and sends it: 6 phases, 32 conditions, 16 techniques, 55 signals, 30 faults, 9 causes, 36 advice, 4 constraints, 27 sources, 246 edges. No session Context: the plain graph (spec section 1). Knowledge content, not telemetry: never evidence that a game works."
  },
  "response": {
   "valid": true,
   "errors": [],
-  "digest": "7820f3001fa55baf",
+  "digest": "f08525f9917584ac",
   "files": [
    "advice.toml",
    "causes.toml",
@@ -32,7 +32,7 @@
    "phases": 6,
    "conditions": 32,
    "techniques": 16,
-   "signals": 52,
+   "signals": 55,
    "faults": 30,
    "causes": 9,
    "advice": 36,
@@ -621,7 +621,7 @@
     "type": "technique",
     "id": "flat_to_brake_marker",
     "name": "Flat out to the brake marker",
-    "summary": "Stay flat out in a straight line right up to your braking point; don't lift before it.",
+    "summary": "Keep the throttle wide open until the moment you brake, with no lift in the last metres before it.",
     "tier": "expert",
     "sources": [
      "ed_corner_brief",
@@ -716,7 +716,7 @@
     "type": "technique",
     "id": "rev_match_downshift",
     "name": "Rev-matched downshifts",
-    "summary": "With a manual gearbox, blip the throttle on each downshift while braking, so the revs match and the rear stays settled.",
+    "summary": "With a manual gearbox and a clutch, give the throttle a quick stab with each downshift under braking: the engine speed then matches the lower gear and the driven wheels are not jolted.",
     "tier": "expert",
     "sources": [
      "ed_corner_brief",
@@ -853,12 +853,11 @@
     "id": "release_with_speed_to_spare",
     "name": "Off the brake with speed to spare",
     "summary": "Come off the brake with a little speed to spare and let the cornering load slow the car to the apex.",
-    "tier": "expert",
+    "tier": "brief",
     "sources": [
-     "ed_corner_brief",
-     "nasa_brake_release"
+     "ed_corner_brief"
     ],
-    "notes": "Ed's brief, point 6. Not an instruction to release the brake at another point than the driver does: Pitwall never tells a driver to release earlier or carry more speed in (constraints.toml); this describes the straight-line technique.",
+    "notes": "Ed's brief, point 6. Tier brief, not expert (2026-10-15 review): no published source in the graph backs a full release before turn-in. NASA's release article (nasa_brake_release) supports one part - with the pedal off the car is still slowing and the steering scrubs speed - but argues for releasing while turning in (trail braking), not before; it is context, not a source for this technique, as for coast_to_apex. Not an instruction to release the brake at another point than the driver does: Pitwall never tells a driver to release earlier or carry more speed in (constraints.toml); this describes the straight-line technique.",
     "file": "techniques.toml",
     "phase": "turn_in",
     "detail": "In the straight-line style the brake is fully released just before turn-in, deliberately while the car is still a little faster than the apex needs; as the wheel goes in, the tyres' cornering load scrubs off the rest. The opposite is reaching the apex already too slow, with nothing left for the corner to take off. A trail-braking driver does the same job with the brake still easing off during turn-in.",
@@ -903,7 +902,7 @@
     "type": "technique",
     "id": "coast_to_apex",
     "name": "Coast to the apex",
-    "summary": "Between the brake and the throttle, stay off both pedals and let the cornering load scrub off the last of the speed to the apex.",
+    "summary": "With the brake already released, roll through the turn on neither pedal: the tyres' cornering force takes away the speed that is left until the apex.",
     "tier": "brief",
     "sources": [
      "ed_corner_brief",
@@ -931,7 +930,7 @@
     "type": "technique",
     "id": "throttle_at_rotation",
     "name": "Throttle once the car has rotated",
-    "summary": "At the apex, once the car is pointing where you want it, squeeze the throttle on in one smooth, progressive application.",
+    "summary": "Wait until the car faces the exit at the apex, then bring the throttle in with a single steady, building squeeze.",
     "tier": "expert",
     "sources": [
      "ed_corner_brief",
@@ -978,7 +977,7 @@
     "type": "technique",
     "id": "unwind_with_throttle",
     "name": "Unwind as the throttle goes on",
-    "summary": "Open the steering as you add throttle, so the wheel is straight by the time you are flat out.",
+    "summary": "Take steering off in step with the throttle going on: by full throttle the front wheels point straight.",
     "tier": "expert",
     "sources": [
      "ed_corner_brief",
@@ -1844,6 +1843,68 @@
      "steering",
      "wheel_slip",
      "g_lat"
+    ],
+    "noise": []
+   },
+   {
+    "type": "signal",
+    "id": "exit_wheelspin_vs_ref",
+    "name": "Exit wheelspin the reference did not have",
+    "summary": "Whether a rear wheel spun under throttle on the way out on this lap but not on the reference lap at the same corner.",
+    "tier": "recorded",
+    "sources": [
+     "pitwall_technique_review"
+    ],
+    "notes": "knowledge.annotate: one wheelspin event or more on this lap's exit (CornerInputs.wheelspin) and none on the reference lap's; unknown when either lap's wheelspin was not measured. Relative so that spin the reference lap shared (the car, or its traction control, at that corner) names no cause.",
+    "file": "signals.toml",
+    "code": "SlipEvents.events",
+    "unit": "bool",
+    "channels": [
+     "wheel_slip",
+     "throttle"
+    ],
+    "noise": []
+   },
+   {
+    "type": "signal",
+    "id": "exit_slide_vs_ref",
+    "name": "Exit slide the reference did not have",
+    "summary": "Whether the back of the car slid or needed a counter-steer on the way out on this lap but not on the reference lap at the same corner.",
+    "tier": "recorded",
+    "sources": [
+     "pitwall_technique_review"
+    ],
+    "notes": "knowledge.annotate: exit-phase slide on this lap and none on the reference lap; unknown when either lap's balance was not measured.",
+    "file": "signals.toml",
+    "code": "PhaseBalance.slide",
+    "unit": "bool",
+    "channels": [
+     "body_slip",
+     "yaw_rate",
+     "steering",
+     "wheel_slip",
+     "g_lat"
+    ],
+    "noise": []
+   },
+   {
+    "type": "signal",
+    "id": "exit_oversteer_vs_ref",
+    "name": "Exit oversteer the reference did not have",
+    "summary": "Whether the car oversteered on the way out on this lap (rear tyres sliding clearly more than the fronts) but not on the reference lap at the same corner.",
+    "tier": "recorded",
+    "sources": [
+     "pitwall_technique_review"
+    ],
+    "notes": "knowledge.annotate: this lap's exit-phase slip difference at or below technique.thresholds.OS_DIFF_DEG (how technique.balance classes oversteer) and the reference lap's above it; unknown when either lap's exit balance was not measured.",
+    "file": "signals.toml",
+    "code": "PhaseBalance.slip_diff_deg",
+    "unit": "bool",
+    "channels": [
+     "wheel_slip",
+     "g_lat",
+     "speed",
+     "lap_distance"
     ],
     "noise": []
    },
@@ -2901,7 +2962,6 @@
     "sources": [
      "ed_fault_checklist",
      "mysimrig_telemetry_beginners",
-     "designjudges_driver_data",
      "pitwall_patch_review",
      "blayze_consistency"
     ],
@@ -3239,6 +3299,7 @@
      "ed_patches",
      "mysimrig_telemetry_beginners",
      "designjudges_driver_data",
+     "srt_racing_lines",
      "pitwall_patch_review"
     ],
     "notes": "Ed's brief point 7 and checklist row \"sawing mid-corner (multiple sign changes)\". His counter finds 3 to 5 reversals per corner on clean laps; the rig check's filtered, gap-based counter (per lap) is the better base. AC's steering is not mapped; GT7's is approximate.",
@@ -3311,12 +3372,11 @@
     "sources": [
      "ed_fault_checklist",
      "ed_patches",
-     "srt_racing_lines",
      "speedwaymedia_vector_analysis",
      "pitwall_patch_review",
      "wikipedia_racing_line"
     ],
-    "notes": "Ed's checklist row \"early apex (steering peak before the geometric apex, second correction)\"; he marked it partly covered (the line thresholds measure offset, not apex timing). His detector takes the argmax of the steering, which jumps between peaks (values like -289 m). The slowest point's position (min_speed_pos_delta_m) is computed but noisy; the cause early_turn_in uses it with a wide margin.",
+    "notes": "Ed's checklist row \"early apex (steering peak before the geometric apex, second correction)\"; he marked it partly covered (the line thresholds measure offset, not apex timing). His checklist also lists the Sim Racing Telemetry racing-lines page here; it does not discuss early apexes, so it is cited for steering corrections (steering_sawing) instead. His detector takes the argmax of the steering, which jumps between peaks (values like -289 m). The slowest point's position (min_speed_pos_delta_m) is computed but noisy; the cause early_turn_in uses it with a wide margin.",
     "file": "faults.toml",
     "phase": "apex",
     "status": "planned",
@@ -3448,10 +3508,9 @@
     "sources": [
      "ed_corner_brief",
      "ed_fault_checklist",
-     "coilovers_data_acquisition",
      "blayze_throttle_exit"
     ],
-    "notes": "Ed's brief point 11 and checklist rows \"early throttle before steering unwinds (power understeer)\" and \"mid-corner unwind rate\". Nothing reads the steering at pick-up or full throttle yet (the review); the confirming signal exists on F1 25: exit understeer (technique/balance.py).",
+    "notes": "Ed's brief point 11 and checklist rows \"early throttle before steering unwinds (power understeer)\" and \"mid-corner unwind rate\". Ed's checklist also lists the coilovers data-acquisition guide here; it covers entry understeer and exit snap oversteer, not power understeer, so it is not cited for this. Nothing reads the steering at pick-up or full throttle yet (the review); the confirming signal exists on F1 25: exit understeer (technique/balance.py).",
     "file": "faults.toml",
     "phase": "exit",
     "status": "planned",
@@ -3706,20 +3765,22 @@
     "advice": [
      "over_braking_explain",
      "over_braking_explain_beginner"
-    ]
+    ],
+    "applies_when": [],
+    "applies_any": []
    },
    {
     "type": "cause",
     "id": "early_turn_in",
-    "name": "Early turn-in",
-    "summary": "The car was turned towards the apex sooner than on the reference lap, so the tightest part of the corner came sooner and the car had to slow more for it.",
+    "name": "Slowest point came sooner",
+    "summary": "The slowest point of the corner came well before where it was on the reference lap, with a similar entry speed, and the corner was slower through the middle. An earlier turn-in can do this; Pitwall does not measure the turn-in itself.",
     "tier": "brief",
     "sources": [
      "ed_corner_brief",
      "ed_patches",
      "speedwaymedia_vector_analysis"
     ],
-    "notes": "Ed's brief point 10 (a lift once on the throttle comes from over-braking or turning in too early) and his root-cause patch, which tells the two apart with peak steering 10 m sooner than usual (EARLY_APEX_M; its argmax jumps). Pitwall uses the slowest point's position instead, which is computed but noisy (clean-lap quartiles -14 and +17 m), so the margin is wide and the entry must not have been slower (that is over_braking). Named on 16 of 278 low_min_speed points (6%); a 10 m margin would name it on 71 (26%), mostly noise.",
+    "notes": "Ed's brief point 10 (a lift once on the throttle comes from over-braking or turning in too early) and his root-cause patch, which tells the two apart with peak steering 10 m sooner than usual (EARLY_APEX_M; its argmax jumps). Pitwall measures no turn-in point, so the cause is named for what was measured: the slowest point's position, which is computed but noisy (clean-lap quartiles -14 and +17 m; it is searched within 80 m either side of the apex, analysis.compare.BRAKE_MATCH_APEX_TOL_M), so the margin is wide and the entry must have been within 4 km/h of the reference either way: slower is over_braking, and a much faster entry (a Melbourne lap with the slowest point 106 m sooner and a 32 km/h faster entry, 2026-10-15 review) is a different line or a jump of the slowest point. The id keeps Ed's name for the idea. Named on 16 of 278 low_min_speed points (6%) before the entry cap; a 10 m margin would name it on 71 (26%), mostly noise.",
     "file": "causes.toml",
     "explains": [
      "low_min_speed",
@@ -3742,12 +3803,22 @@
       "value": -4.0,
       "need": "all",
       "note": "Keeps it apart from over_braking, which needs a slower entry (analysis.coaching.MIN_SPEED_KPH)."
+     },
+     {
+      "signal": "entry_speed_delta_kph",
+      "test": "reached the corner entry no more than 4 km/h faster than on the reference lap",
+      "op": "le",
+      "value": 4.0,
+      "need": "all",
+      "note": "A much faster entry moves the slowest point for other reasons (another line, or a jump of the slowest point inside a long corner): analysis.coaching.MIN_SPEED_KPH again."
      }
     ],
     "advice": [
      "early_turn_in_explain",
      "early_turn_in_explain_beginner"
-    ]
+    ],
+    "applies_when": [],
+    "applies_any": []
    },
    {
     "type": "cause",
@@ -3794,13 +3865,15 @@
     "advice": [
      "low_grip_explain",
      "low_grip_explain_beginner"
-    ]
+    ],
+    "applies_when": [],
+    "applies_any": []
    },
    {
     "type": "cause",
     "id": "traction_limited",
     "name": "Traction-limited exit",
-    "summary": "The rear tyres spun or the car slid on the way out, so full throttle could not come as soon as on the reference lap.",
+    "summary": "The rear tyres spun, the car slid or it oversteered on the way out where it did not on the reference lap, so full throttle could not come as soon as on that lap.",
     "tier": "expert",
     "sources": [
      "wikipedia_understeer_oversteer",
@@ -3808,45 +3881,55 @@
      "designjudges_driver_data",
      "ed_fault_checklist"
     ],
-    "notes": "Ed's checklist: late_throttle alone cannot tell an exit short of grip from grip left unused. Too much throttle for the grip spins the driven wheels and can start oversteer; the driver then waits or lifts. Tyre slip and body slip: F1 25 only. With traction control full some wheelspin is normal (car health keeps those off the radio).",
+    "notes": "Ed's checklist: late_throttle alone cannot tell an exit short of grip from grip left unused. Too much throttle for the grip spins the driven wheels and can start oversteer; the driver then waits or lifts. The spec names wheelspin or exit oversteer. Each piece of evidence is judged against the reference lap at the same corner (the *_vs_ref signals, knowledge.annotate), as low_grip is: read from this lap alone it held on 8.3% of late_throttle corner-laps against 7.9% of the others (the 2026-10-15 review), the car at that corner rather than what held this lap's throttle back. Tyre slip and body slip: F1 25 only. With traction control full some wheelspin is normal (car health keeps those off the radio).",
     "file": "causes.toml",
     "explains": [
      "late_throttle"
     ],
     "discriminators": [
      {
-      "signal": "exit_wheelspin_events",
-      "test": "a rear wheel spun under throttle on the way out",
-      "op": "ge",
-      "value": 1.0,
-      "need": "any",
-      "note": null
-     },
-     {
-      "signal": "exit_slide",
-      "test": "the back of the car slid or needed a counter-steer on the way out",
+      "signal": "exit_wheelspin_vs_ref",
+      "test": "a rear wheel spun under throttle on the way out, and not on the reference lap",
       "op": "true",
       "value": null,
       "need": "any",
       "note": null
+     },
+     {
+      "signal": "exit_slide_vs_ref",
+      "test": "the back of the car slid or needed a counter-steer on the way out, and not on the reference lap",
+      "op": "true",
+      "value": null,
+      "need": "any",
+      "note": null
+     },
+     {
+      "signal": "exit_oversteer_vs_ref",
+      "test": "the rear tyres slid clearly more than the fronts on the way out (oversteer), and not on the reference lap",
+      "op": "true",
+      "value": null,
+      "need": "any",
+      "note": "Oversteer as technique.balance classes it: front-minus-rear slip at or below technique.thresholds.OS_DIFF_DEG."
      }
     ],
     "advice": [
      "traction_limited_explain",
      "traction_limited_explain_beginner"
-    ]
+    ],
+    "applies_when": [],
+    "applies_any": []
    },
    {
     "type": "cause",
     "id": "ready_earlier",
     "name": "No grip loss on the exit",
-    "summary": "On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on the reference lap: nothing measured held the throttle back.",
+    "summary": "With traction control off, the car showed no wheelspin, slide, understeer or oversteer on the way out, yet full throttle came later than on the reference lap: nothing measured held the throttle back.",
     "tier": "brief",
     "sources": [
      "ed_fault_checklist",
      "vrs_traction_circle"
     ],
-    "notes": "Ed's checklist row \"over-cautious exit (full throttle late with no grip loss)\". The spec also names the steering already unwound and less combined g than the reference: those signals are not computed yet (steering_at_full_throttle_frac, exit_grip_utilization_frac, throttle_acceptance_delta); add them here as discriminators when they are. F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing. With traction control on, \"no wheelspin\" is weaker evidence (the game holds wheelspin back), so the advice says only what was measured, not that the grip was there. Named on 105 of 157 late_throttle points on the owner's 30 captures (traction control on in every one; 2026-10-15).",
+    "notes": "Ed's checklist row \"over-cautious exit (full throttle late with no grip loss)\". The spec also names the steering already unwound and less combined g than the reference: those signals are not computed yet (steering_at_full_throttle_frac, exit_grip_utilization_frac, throttle_acceptance_delta); add them here as discriminators when they are. Named only with traction control off and every discriminator measured (James, 2026-10-15): with traction control on or unknown the game holds wheelspin back, so \"no wheelspin\" proves little, and the cause is the absence of measured grip loss - which held on 75% of the owner's late_throttle corner-laps and 70% of the others, its base rate. F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing. On the owner's 30 captures (traction control on in every one) it is never named now; it was named on 105 of 157 late_throttle points (2026-10-15).",
     "file": "causes.toml",
     "explains": [
      "late_throttle"
@@ -3875,12 +3958,24 @@
       "value": 3.0,
       "need": "all",
       "note": "3 degrees is technique.thresholds.US_DIFF_DEG."
+     },
+     {
+      "signal": "exit_balance_deg",
+      "test": "no clear oversteer on the way out",
+      "op": "gt",
+      "value": -1.0,
+      "need": "all",
+      "note": "-1 degree is technique.thresholds.OS_DIFF_DEG: at or below it technique.balance classes the exit oversteer."
      }
     ],
     "advice": [
      "ready_earlier_explain",
      "ready_earlier_explain_beginner"
-    ]
+    ],
+    "applies_when": [
+     "traction_control_off"
+    ],
+    "applies_any": []
    },
    {
     "type": "cause",
@@ -3911,7 +4006,9 @@
     "advice": [
      "early_brake_release_explain",
      "early_brake_release_explain_beginner"
-    ]
+    ],
+    "applies_when": [],
+    "applies_any": []
    },
    {
     "type": "cause",
@@ -3949,7 +4046,9 @@
     "advice": [
      "waiting_for_rotation_explain",
      "waiting_for_rotation_explain_beginner"
-    ]
+    ],
+    "applies_when": [],
+    "applies_any": []
    },
    {
     "type": "cause",
@@ -3987,7 +4086,9 @@
     "advice": [
      "carried_too_much_speed_explain",
      "carried_too_much_speed_explain_beginner"
-    ]
+    ],
+    "applies_when": [],
+    "applies_any": []
    },
    {
     "type": "cause",
@@ -4025,7 +4126,9 @@
     "advice": [
      "released_too_early_for_apex_explain",
      "released_too_early_for_apex_explain_beginner"
-    ]
+    ],
+    "applies_when": [],
+    "applies_any": []
    }
   ],
   "advice": [
@@ -4414,7 +4517,7 @@
     "type": "advice",
     "id": "early_turn_in_explain",
     "name": "early_turn_in: explain (any)",
-    "summary": "The slowest point of the corner came well before where it was on your reference lap: the car was turned towards the apex sooner, which tightens the rest of the corner and lowers the speed through the middle.",
+    "summary": "The slowest point of the corner came well before where it was on your reference lap, with a similar entry speed, and the speed through the middle was lower. An earlier turn-in can do this.",
     "tier": "brief",
     "sources": [
      "ed_corner_brief",
@@ -4425,7 +4528,7 @@
     "for": "early_turn_in",
     "skill": "any",
     "kind": "explain",
-    "review": "The slowest point of the corner came well before where it was on your reference lap: the car was turned towards the apex sooner, which tightens the rest of the corner and lowers the speed through the middle.",
+    "review": "The slowest point of the corner came well before where it was on your reference lap, with a similar entry speed, and the speed through the middle was lower. An earlier turn-in can do this.",
     "style": null,
     "radio": null,
     "screen": "Slowest point sooner than your reference"
@@ -4434,7 +4537,7 @@
     "type": "advice",
     "id": "early_turn_in_explain_beginner",
     "name": "early_turn_in: explain (beginner)",
-    "summary": "You reached the tightest part of the corner sooner than on your reference lap, so the car had to slow more to make the turn.",
+    "summary": "The slowest point of the corner came sooner than on your reference lap, and you were slower through the middle of it.",
     "tier": "brief",
     "sources": [
      "ed_corner_brief"
@@ -4444,10 +4547,10 @@
     "for": "early_turn_in",
     "skill": "beginner",
     "kind": "explain",
-    "review": "You reached the tightest part of the corner sooner than on your reference lap, so the car had to slow more to make the turn.",
+    "review": "The slowest point of the corner came sooner than on your reference lap, and you were slower through the middle of it.",
     "style": null,
     "radio": null,
-    "screen": "Tightest part came sooner than usual"
+    "screen": "Slowest point came sooner than usual"
    },
    {
     "type": "advice",
@@ -4493,7 +4596,7 @@
     "type": "advice",
     "id": "traction_limited_explain",
     "name": "traction_limited: explain (any)",
-    "summary": "The rear tyres spun or the car slid on the way out of this corner, which held full throttle back compared with your reference lap.",
+    "summary": "The rear tyres spun, or the car slid or oversteered, on the way out of this corner where it did not on your reference lap, which held full throttle back compared with that lap.",
     "tier": "expert",
     "sources": [
      "wikipedia_understeer_oversteer",
@@ -4504,16 +4607,16 @@
     "for": "traction_limited",
     "skill": "any",
     "kind": "explain",
-    "review": "The rear tyres spun or the car slid on the way out of this corner, which held full throttle back compared with your reference lap.",
+    "review": "The rear tyres spun, or the car slid or oversteered, on the way out of this corner where it did not on your reference lap, which held full throttle back compared with that lap.",
     "style": null,
     "radio": null,
-    "screen": "Wheelspin or a slide on the exit"
+    "screen": "More wheelspin or sliding than your reference"
    },
    {
     "type": "advice",
     "id": "traction_limited_explain_beginner",
     "name": "traction_limited: explain (beginner)",
-    "summary": "The rear wheels spun or the back of the car stepped out as you accelerated, and that held back full throttle.",
+    "summary": "The rear wheels spun or the back of the car stepped out as you accelerated, which it did not do on your reference lap, and that held back full throttle.",
     "tier": "expert",
     "sources": [
      "wikipedia_understeer_oversteer",
@@ -4524,16 +4627,16 @@
     "for": "traction_limited",
     "skill": "beginner",
     "kind": "explain",
-    "review": "The rear wheels spun or the back of the car stepped out as you accelerated, and that held back full throttle.",
+    "review": "The rear wheels spun or the back of the car stepped out as you accelerated, which it did not do on your reference lap, and that held back full throttle.",
     "style": null,
     "radio": null,
-    "screen": "Rear wheels spinning on the exit"
+    "screen": "Rear wheels spun more than on your reference"
    },
    {
     "type": "advice",
     "id": "ready_earlier_explain",
     "name": "ready_earlier: explain (any)",
-    "summary": "On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on your reference lap: nothing Pitwall measured held the throttle back.",
+    "summary": "With traction control off, the car showed no wheelspin, slide, understeer or oversteer on the way out, yet full throttle came later than on your reference lap: nothing Pitwall measured held the throttle back.",
     "tier": "brief",
     "sources": [
      "ed_fault_checklist"
@@ -4543,7 +4646,7 @@
     "for": "ready_earlier",
     "skill": "any",
     "kind": "explain",
-    "review": "On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on your reference lap: nothing Pitwall measured held the throttle back.",
+    "review": "With traction control off, the car showed no wheelspin, slide, understeer or oversteer on the way out, yet full throttle came later than on your reference lap: nothing Pitwall measured held the throttle back.",
     "style": null,
     "radio": null,
     "screen": "No wheelspin or slide, full throttle later"
@@ -4736,14 +4839,18 @@
     "file": "constraints.toml",
     "text": "never tell a driver to brake later (praise only when the corner got faster)",
     "forbidden": [
-     "\\bbrak(?:e|ing)\\s+(?:(?:a\\s+)?(?:bit|little|touch|fraction|tad)\\s+|much\\s+|even\\s+|slightly\\s+|some\\s+)?later\\b",
+     "\\bbrake\\s+(?:[\\w.-]+\\s+){0,3}?later\\b",
+     "\\bbraking\\s+(?:(?:a\\s+)?(?:bit|little|touch|fraction|tad|few|lot)\\s+|much\\s+|even\\s+|slightly\\s+|some\\s+|[\\d.]+\\s*m?\\s+|(?:metres?|meters?|feet|yards)\\s+)*later\\b",
      "\\blater\\s+(?:on\\s+the\\s+)?brak(?:e|es|ing)\\b",
+     "\\bdelay\\w*\\s+(?:your\\s+|the\\s+)?brak(?:e|es|ing)\\b",
+     "\\bbrak(?:e|ing)\\s+closer\\s+to\\s+the\\s+(?:corner|apex|turn)\\b",
+     "\\bbrak(?:e|ing)\\s+(?:further|farther)\\s+(?:down|along|into)\\b",
      "\\bbrak(?:e|ing)\\s+(?:(?:a\\s+)?(?:bit|little|touch)\\s+)?deeper\\b",
      "\\bbrak(?:e|ing)\\s+(?:point|marker)s?\\s+(?:(?:a\\s+)?(?:bit|little|touch)\\s+)?(?:later|deeper)\\b",
      "\\b(?:move|push|shift|take)\\s+(?:your\\s+|the\\s+)?brak(?:e|ing)\\s+(?:point|marker|zone)s?\\s+(?:back|later|deeper|further)\\b",
      "\\b(?:don(?:\\x27|\\u2019)?t|do\\s+not|never|stop|avoid)\\s+brak(?:e|ing)\\s+(?:so\\s+|as\\s+|too\\s+)?(?:early|soon)\\b",
      "\\bwait\\s+(?:a\\s+(?:bit|little|touch|moment)\\s+)?(?:longer\\s+)?(?:before|to)\\s+brak(?:e|ing)\\b",
-     "\\bstay\\s+(?:flat|on\\s+the\\s+(?:throttle|power|gas))\\s+(?:out\\s+)?(?:(?:a\\s+)?(?:bit|little|touch)\\s+)?longer\\b"
+     "\\bstay\\s+(?:flat|on\\s+the\\s+(?:throttle|power|gas))\\s+(?:out\\s+)?(?:for\\s+)?(?:(?:a\\s+)?(?:bit|little|touch)\\s+)?longer\\b"
     ],
     "scope": [
      "phase",
@@ -4775,9 +4882,13 @@
      "\\b(?:lighter|softer|gentler|easier)\\s+on\\s+the\\s+brakes?\\b",
      "\\b(?:lighter|softer|gentler|shorter)\\s+brak(?:e|es|ing)\\b",
      "\\b(?:don(?:\\x27|\\u2019)?t|do\\s+not|never|stop)\\s+brak(?:e|ing)\\s+(?:so|as|too)\\s+(?:hard|much|heavily)\\b",
-     "\\b(?:don(?:\\x27|\\u2019)?t|do\\s+not|never|stop|avoid)\\s+over-?brak(?:e|ing)\\b"
+     "\\b(?:don(?:\\x27|\\u2019)?t|do\\s+not|never|stop|avoid)\\s+over-?brak(?:e|ing)\\b",
+     "\\bbrak(?:e|ing)\\s+with\\s+less\\s+(?:force|pressure)\\b",
+     "\\bwith\\s+less\\s+brak(?:e|ing)\\s+(?:force|pressure)\\b",
+     "\\bease\\s+up\\s+on\\s+the\\s+brakes?\\b"
     ],
     "scope": [
+     "technique",
      "fault",
      "cause",
      "advice"
@@ -4797,7 +4908,8 @@
     "file": "constraints.toml",
     "text": "never tell a driver to release the brake earlier",
     "forbidden": [
-     "\\b(?:release|let\\s+off|let\\s+go\\s+of|come\\s+off|get\\s+off|ease\\s+off|back\\s+off)\\s+(?:of\\s+)?(?:the\\s+|your\\s+)?(?:brakes?|brake\\s+pedal|brake\\s+pressure|pressure)\\s+(?:(?:a\\s+)?(?:bit|little|touch|tad)\\s+)?(?:earlier|sooner)\\b",
+     "\\b(?:release|let\\s+off|let\\s+go\\s+of|come\\s+off|get\\s+off|ease\\s+off|back\\s+off)\\s+(?:of\\s+)?(?:the\\s+|your\\s+)?(?:brakes?|brake\\s+pedal|brake\\s+pressure|pressure|pedal)\\s+(?:(?:a\\s+)?(?:bit|little|touch|tad)\\s+)?(?:earlier|sooner)\\b",
+     "\\blet\\s+(?:the\\s+|your\\s+)?(?:brakes?|pedal)\\s+go\\s+(?:(?:a\\s+)?(?:bit|little|touch|tad)\\s+)?(?:earlier|sooner)\\b",
      "\\brelease\\s+(?:it\\s+)?(?:(?:a\\s+)?(?:bit|little|touch|tad)\\s+)?(?:earlier|sooner)\\b",
      "\\bearlier\\s+(?:brake\\s+)?release\\b",
      "\\b(?:off|out\\s+of)\\s+the\\s+brakes?\\s+(?:(?:a\\s+)?(?:bit|little|touch|tad)\\s+)?(?:earlier|sooner)\\b"
@@ -4830,7 +4942,10 @@
      "\\bcarry\\s+(?:the\\s+|your\\s+|some\\s+)?(?:speed|momentum)\\b",
      "\\b(?:take|bring|keep|hold)\\s+(?:(?:a\\s+)?(?:bit|little|touch)\\s+)?more\\s+(?:speed|momentum)\\s+(?:in|into|to|through)\\b",
      "\\b(?:enter|go\\s+in(?:to)?|turn\\s+in|arrive|approach)\\s+(?:the\\s+corner\\s+)?(?:(?:a\\s+)?(?:bit|little|touch|tad)\\s+)?faster\\b",
-     "\\bmore\\s+(?:entry|turn-in|corner)\\s+speed\\b"
+     "\\bmore\\s+(?:entry|turn-in|corner)\\s+speed\\b",
+     "\\bcarrying\\s+(?:(?:a\\s+)?(?:bit|little|touch|tad|lot)\\s+)?(?:more|extra)\\s+(?:speed|momentum)\\b",
+     "\\bmore\\s+speed\\s+(?:in|into|through|to\\s+spare)\\b",
+     "\\b(?:turn\\s+in|arrive|enter|go\\s+in)\\s+(?:[\\w-]+\\s+){0,3}?with\\s+more\\s+speed\\b"
     ],
     "scope": [
      "phase",
@@ -5179,14 +5294,14 @@
     "type": "source",
     "id": "srt_racing_lines",
     "name": "Analyzing racing lines in telemetry data",
-    "summary": "Splits a line into entry, apex and exit; frequent large steering corrections suggest the line needs work; an overlay and a delta chart against a reference lap show where time goes, and comparing laps shows how consistent the line is. Little on early apexes or track width. Cited by Ed for his checklist; read 2026-10-15 (date: last edit).",
+    "summary": "Splits a line into entry, apex and exit; frequent large steering corrections suggest the line needs work; an overlay and a delta chart against a reference lap show where time goes, and comparing laps shows how consistent the line is. It does not discuss early apexes or track width. Cited by Ed for his checklist; read 2026-10-15 (date: last edit).",
     "tier": "expert",
     "sources": [],
     "notes": null,
     "file": "sources.toml",
     "title": "Analyzing racing lines in telemetry data",
     "author": "Sim Racing Telemetry (knowledge base)",
-    "note": "Splits a line into entry, apex and exit; frequent large steering corrections suggest the line needs work; an overlay and a delta chart against a reference lap show where time goes, and comparing laps shows how consistent the line is. Little on early apexes or track width. Cited by Ed for his checklist; read 2026-10-15 (date: last edit).",
+    "note": "Splits a line into entry, apex and exit; frequent large steering corrections suggest the line needs work; an overlay and a delta chart against a reference lap show where time goes, and comparing laps shows how consistent the line is. It does not discuss early apexes or track width. Cited by Ed for his checklist; read 2026-10-15 (date: last edit).",
     "url": "https://docs.simracingtelemetry.com/kb/how-to-analyze-racing-lines",
     "date": "2025-01-11"
    },
@@ -5194,14 +5309,14 @@
     "type": "source",
     "id": "designjudges_driver_data",
     "name": "Analyzing driver data",
-    "summary": "Driver data analysis: plot laps against distance and find the loss against a reference lap; compare brake points, pressure and how deep the trail braking goes; get to full throttle on exit and watch for brake and throttle overlap; jerky or stair-stepped steering, especially under braking, unsettles the car; on a g-g plot, braking g falling away before cornering g builds shows braking and turning not blended; scatter across laps shows inconsistency. Cited by Ed for his checklist; read 2026-10-15.",
+    "summary": "Driver data analysis, comparing drivers and cars: channels plotted over distance and against each other (lateral and longitudinal g, steering or body slip against speed or longitudinal g). Combined g over distance dips where braking does not carry into cornering - a confident driver's stays up from the brake into the turn, the trailing brake. A jerky steering rate made the car slide, and more steering went with more understeer. A map of the driver's combined pedal and steering work finds unintended brake and throttle overlap, and inputs that all drop to zero after braking. It shows no g-g plot and does not compare one driver's laps for consistency. Cited by Ed for his checklist; read 2026-10-15.",
     "tier": "expert",
     "sources": [],
     "notes": null,
     "file": "sources.toml",
     "title": "Analyzing driver data",
     "author": "Skitter Yaeger (Design Judges)",
-    "note": "Driver data analysis: plot laps against distance and find the loss against a reference lap; compare brake points, pressure and how deep the trail braking goes; get to full throttle on exit and watch for brake and throttle overlap; jerky or stair-stepped steering, especially under braking, unsettles the car; on a g-g plot, braking g falling away before cornering g builds shows braking and turning not blended; scatter across laps shows inconsistency. Cited by Ed for his checklist; read 2026-10-15.",
+    "note": "Driver data analysis, comparing drivers and cars: channels plotted over distance and against each other (lateral and longitudinal g, steering or body slip against speed or longitudinal g). Combined g over distance dips where braking does not carry into cornering - a confident driver's stays up from the brake into the turn, the trailing brake. A jerky steering rate made the car slide, and more steering went with more understeer. A map of the driver's combined pedal and steering work finds unintended brake and throttle overlap, and inputs that all drop to zero after braking. It shows no g-g plot and does not compare one driver's laps for consistency. Cited by Ed for his checklist; read 2026-10-15.",
     "url": "https://www.designjudges.com/articles/analyzing-driver-data",
     "date": null
    },
@@ -5704,60 +5819,54 @@
     "from": "release_with_speed_to_spare",
     "to": "turn_in",
     "rel": "in_phase",
-    "tier": "expert",
+    "tier": "brief",
     "sources": [
-     "ed_corner_brief",
-     "nasa_brake_release"
+     "ed_corner_brief"
     ]
    },
    {
     "from": "release_with_speed_to_spare",
     "to": "skill_beginner",
     "rel": "applies_any",
-    "tier": "expert",
+    "tier": "brief",
     "sources": [
-     "ed_corner_brief",
-     "nasa_brake_release"
+     "ed_corner_brief"
     ]
    },
    {
     "from": "release_with_speed_to_spare",
     "to": "braking_style_straight_line",
     "rel": "applies_any",
-    "tier": "expert",
+    "tier": "brief",
     "sources": [
-     "ed_corner_brief",
-     "nasa_brake_release"
+     "ed_corner_brief"
     ]
    },
    {
     "from": "release_with_speed_to_spare",
     "to": "no_abs_low_downforce",
     "rel": "applies_any",
-    "tier": "expert",
+    "tier": "brief",
     "sources": [
-     "ed_corner_brief",
-     "nasa_brake_release"
+     "ed_corner_brief"
     ]
    },
    {
     "from": "release_with_speed_to_spare",
     "to": "trail_braking",
     "rel": "alternative",
-    "tier": "expert",
+    "tier": "brief",
     "sources": [
-     "ed_corner_brief",
-     "nasa_brake_release"
+     "ed_corner_brief"
     ]
    },
    {
     "from": "release_with_speed_to_spare",
     "to": "coast_m",
     "rel": "measured_by",
-    "tier": "expert",
+    "tier": "brief",
     "sources": [
-     "ed_corner_brief",
-     "nasa_brake_release"
+     "ed_corner_brief"
     ]
    },
    {
@@ -6630,7 +6739,6 @@
     "sources": [
      "ed_fault_checklist",
      "mysimrig_telemetry_beginners",
-     "designjudges_driver_data",
      "pitwall_patch_review",
      "blayze_consistency"
     ]
@@ -6643,7 +6751,6 @@
     "sources": [
      "ed_fault_checklist",
      "mysimrig_telemetry_beginners",
-     "designjudges_driver_data",
      "pitwall_patch_review",
      "blayze_consistency"
     ]
@@ -6656,7 +6763,6 @@
     "sources": [
      "ed_fault_checklist",
      "mysimrig_telemetry_beginners",
-     "designjudges_driver_data",
      "pitwall_patch_review",
      "blayze_consistency"
     ]
@@ -6669,7 +6775,6 @@
     "sources": [
      "ed_fault_checklist",
      "mysimrig_telemetry_beginners",
-     "designjudges_driver_data",
      "pitwall_patch_review",
      "blayze_consistency"
     ]
@@ -6984,6 +7089,7 @@
      "ed_patches",
      "mysimrig_telemetry_beginners",
      "designjudges_driver_data",
+     "srt_racing_lines",
      "pitwall_patch_review"
     ]
    },
@@ -6998,6 +7104,7 @@
      "ed_patches",
      "mysimrig_telemetry_beginners",
      "designjudges_driver_data",
+     "srt_racing_lines",
      "pitwall_patch_review"
     ]
    },
@@ -7012,6 +7119,7 @@
      "ed_patches",
      "mysimrig_telemetry_beginners",
      "designjudges_driver_data",
+     "srt_racing_lines",
      "pitwall_patch_review"
     ]
    },
@@ -7059,7 +7167,6 @@
     "sources": [
      "ed_fault_checklist",
      "ed_patches",
-     "srt_racing_lines",
      "speedwaymedia_vector_analysis",
      "pitwall_patch_review",
      "wikipedia_racing_line"
@@ -7073,7 +7180,6 @@
     "sources": [
      "ed_fault_checklist",
      "ed_patches",
-     "srt_racing_lines",
      "speedwaymedia_vector_analysis",
      "pitwall_patch_review",
      "wikipedia_racing_line"
@@ -7087,7 +7193,6 @@
     "sources": [
      "ed_fault_checklist",
      "ed_patches",
-     "srt_racing_lines",
      "speedwaymedia_vector_analysis",
      "pitwall_patch_review",
      "wikipedia_racing_line"
@@ -7101,7 +7206,6 @@
     "sources": [
      "ed_fault_checklist",
      "ed_patches",
-     "srt_racing_lines",
      "speedwaymedia_vector_analysis",
      "pitwall_patch_review",
      "wikipedia_racing_line"
@@ -7115,7 +7219,6 @@
     "sources": [
      "ed_fault_checklist",
      "ed_patches",
-     "srt_racing_lines",
      "speedwaymedia_vector_analysis",
      "pitwall_patch_review",
      "wikipedia_racing_line"
@@ -7282,7 +7385,6 @@
     "sources": [
      "ed_corner_brief",
      "ed_fault_checklist",
-     "coilovers_data_acquisition",
      "blayze_throttle_exit"
     ]
    },
@@ -7294,7 +7396,6 @@
     "sources": [
      "ed_corner_brief",
      "ed_fault_checklist",
-     "coilovers_data_acquisition",
      "blayze_throttle_exit"
     ]
    },
@@ -7306,7 +7407,6 @@
     "sources": [
      "ed_corner_brief",
      "ed_fault_checklist",
-     "coilovers_data_acquisition",
      "blayze_throttle_exit"
     ]
    },
@@ -7318,7 +7418,6 @@
     "sources": [
      "ed_corner_brief",
      "ed_fault_checklist",
-     "coilovers_data_acquisition",
      "blayze_throttle_exit"
     ]
    },
@@ -7330,7 +7429,6 @@
     "sources": [
      "ed_corner_brief",
      "ed_fault_checklist",
-     "coilovers_data_acquisition",
      "blayze_throttle_exit"
     ]
    },
@@ -7728,7 +7826,7 @@
    },
    {
     "from": "traction_limited",
-    "to": "exit_wheelspin_events",
+    "to": "exit_wheelspin_vs_ref",
     "rel": "discriminated_by",
     "tier": "expert",
     "sources": [
@@ -7740,7 +7838,19 @@
    },
    {
     "from": "traction_limited",
-    "to": "exit_slide",
+    "to": "exit_slide_vs_ref",
+    "rel": "discriminated_by",
+    "tier": "expert",
+    "sources": [
+     "wikipedia_understeer_oversteer",
+     "vrs_traction_circle",
+     "designjudges_driver_data",
+     "ed_fault_checklist"
+    ]
+   },
+   {
+    "from": "traction_limited",
+    "to": "exit_oversteer_vs_ref",
     "rel": "discriminated_by",
     "tier": "expert",
     "sources": [
@@ -7767,6 +7877,16 @@
     "tier": "expert",
     "sources": [
      "wikipedia_understeer_oversteer",
+     "vrs_traction_circle"
+    ]
+   },
+   {
+    "from": "ready_earlier",
+    "to": "traction_control_off",
+    "rel": "applies_when",
+    "tier": "brief",
+    "sources": [
+     "ed_fault_checklist",
      "vrs_traction_circle"
     ]
    },

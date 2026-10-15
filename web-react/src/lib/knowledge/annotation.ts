@@ -100,23 +100,35 @@ export function cardCause(o: Annotated | null | undefined): string | null {
 }
 
 const SIGNED_UNITS = new Set(["m", "km/h", "deg", "s"]);
+/** Units said in words ("deg" is jargon). */
+const UNIT_WORDS: Record<string, string> = { deg: "degrees" };
 
-function amount(v: number, unit: string | null): string {
+/** A delta signal (this lap minus the reference: brake_point_delta_m, entry_speed_delta_kph ...): its value is signed
+ * "+" or "−" against the reference. Any other value (this lap's exit balance, a count) is the value itself. */
+function isDelta(signal: string | null | undefined): boolean {
+  return typeof signal === "string" && signal.includes("_delta");
+}
+
+function amount(v: number, unit: string | null, delta: boolean): string {
   const a = Math.abs(v);
   const digits = unit === "s" ? 2 : a >= 10 || Number.isInteger(v) ? 0 : 1;
   const n = a.toFixed(digits);
-  const sign = unit && SIGNED_UNITS.has(unit) && Math.round(a * 10 ** digits) !== 0 ? (v < 0 ? "−" : "+") : "";
+  const nonzero = Math.round(a * 10 ** digits) !== 0;
+  const sign = !nonzero ? "" : delta && unit && SIGNED_UNITS.has(unit) ? (v < 0 ? "−" : "+") : v < 0 ? "−" : "";
   if (unit === "count") return `${n} ${a === 1 ? "time" : "times"}`;
-  return unit && unit !== "bool" && unit !== "ratio" && unit !== "fraction" ? `${sign}${n} ${unit}` : `${sign}${n}`;
+  const words = unit ? (UNIT_WORDS[unit] ?? unit) : null;
+  return words && unit !== "bool" && unit !== "ratio" && unit !== "fraction" ? `${sign}${n} ${words}` : `${sign}${n}`;
 }
 
-/** One piece of evidence in words: the test, and the value measured on the lap (signed, as the delta was: lap minus
- * reference) - "braked at least 8 m earlier than on the reference lap (measured −12 m)"; a yes/no test is its words. */
+/** One piece of evidence in words: the test, and the value measured on the lap - a delta signed as it was (lap minus
+ * reference: "braked at least 8 m earlier than on the reference lap (measured −12 m)"), any other value as it is ("no
+ * clear understeer on the way out (measured 1.3 degrees)", this lap's own balance, not a difference); a yes/no test
+ * is its words. */
 export function evidenceWords(e: KnowledgeEvidence): string {
   const test = e.test?.trim() || e.signal || "";
   const v = e.value;
   if (typeof v !== "number" || !Number.isFinite(v)) return test;
-  return `${test} (measured ${amount(v, e.unit)})`;
+  return `${test} (measured ${amount(v, e.unit, isDelta(e.signal))})`;
 }
 
 export interface CauseLine {

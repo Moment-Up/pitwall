@@ -435,7 +435,8 @@ export interface FaultItem {
   /** Praise, not a fault (exit_gain). */
   positive: boolean;
   fit: FitVerdict;
-  /** The causes Pitwall can tell apart from measured signals. */
+  /** The causes Pitwall can tell apart from measured signals - for the session's driver and game when the page has
+   * the session variant (a cause whose `applies` is false is left out). */
   causes: NamedRef[];
   /** Pitwall's own measurements, one line each ("Fires on corner-laps (Ed's detector): 66.8% (2026-10-14)"). */
   measured: string[];
@@ -474,7 +475,11 @@ export function faultGroups(g: TechniqueKnowledge, ctx: KnowledgeContext): Fault
     tier: f.tier,
     positive: f.positive,
     fit: fitOf(f, ctx, conds),
-    causes: f.causes.map((id) => ({ id, name: causes.get(id)?.name ?? id })),
+    // the session variant says which causes can be named for this driver and game (conditions, channels): one that
+    // cannot (GT7 sends no lateral g; "no grip loss" needs traction control off) is not one Pitwall can tell apart here
+    causes: f.causes
+      .filter((id) => causes.get(id)?.applies !== false)
+      .map((id) => ({ id, name: causes.get(id)?.name ?? id })),
     measured: f.measured.map(measurementText),
   });
   const rank = (s: FaultStatus) => {

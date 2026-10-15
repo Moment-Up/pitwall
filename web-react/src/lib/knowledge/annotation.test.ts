@@ -95,6 +95,14 @@ describe("annotation helpers", () => {
     expect(evidenceWords({ test: "no wheelspin on the way out", value: 0, unit: "count" })).toBe(
       "no wheelspin on the way out (measured 0 times)",
     );
+    // edited (the server's shape): this lap's exit balance is a value, not a lap-minus-reference delta - no "+",
+    // the sign only where the value is negative, and degrees in words
+    const balance = { signal: "exit_balance_deg", test: "no clear understeer on the way out", unit: "deg" };
+    expect(evidenceWords({ ...balance, value: 1.33 })).toBe("no clear understeer on the way out (measured 1.3 degrees)");
+    expect(evidenceWords({ ...balance, value: -2 })).toBe("no clear understeer on the way out (measured −2 degrees)");
+    expect(evidenceWords({ signal: "brake_point_delta_m", test: "braked earlier", value: 12, unit: "m" })).toBe(
+      "braked earlier (measured +12 m)",
+    );
   });
 
   it("cause lines carry every measured cause with its evidence", () => {
