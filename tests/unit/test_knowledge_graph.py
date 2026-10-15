@@ -2,8 +2,10 @@
 validator catches broken references, mirrored edges that disagree, unknown fields, bad condition keys and values,
 signal code paths that name no dataclass field, live faults without a real coaching kind, missing threshold constants,
 advice over its length limits and tiers no source backs; every user-facing text passes the forbidden-advice
-constraints (no "brake later", "brake less", "release the brake earlier" or "carry more speed" outside praise); and
-the runtime loader logs a broken graph and runs without it.
+constraints (no "brake later", "brake less", "release the brake earlier" or "carry more speed" outside praise); the
+runtime loader logs a broken graph and runs without it; and the content holds: every point of Ed's brief, checklist row
+and patch detector maps to real nodes (the coverage tables in docs/knowledge.md), style-specific nodes fit only the
+drivers they are for, the live faults stay as the coaching rules are, and causes are named from measured signals only.
 
 Pure: the packaged TOML files and small graphs written to a temporary folder; no game, LLM or database.
 """
@@ -15,6 +17,7 @@ import importlib
 import inspect
 import logging
 import math
+import re
 import textwrap
 from collections.abc import Iterator
 from dataclasses import fields, is_dataclass
@@ -222,7 +225,7 @@ def test_the_packaged_graph_loads_and_validates() -> None:
     assert g.valid and g.errors == ()
     assert [p.id for p in g.phases] == list(PHASE_IDS)
     assert {"phases.toml", "techniques.toml", "faults.toml", "constraints.toml", "sources.toml"} <= set(g.files)
-    # the seed: one node of every type, end to end
+    # one node of every type, end to end
     lms = g.fault_for_kind("low_min_speed")
     assert lms is not None and lms.status == "live" and lms.signals == ("min_speed_delta_kph",)
     assert [t.name for t in lms.thresholds] == [
@@ -231,11 +234,20 @@ def test_the_packaged_graph_loads_and_validates() -> None:
     ]
     assert lms.thresholds[0].value == coaching.MIN_SPEED_KPH
     ob = g.get("over_braking", Cause)
-    assert ob is not None and ob.explains == ("low_min_speed",) and lms.causes == ("over_braking",)
+    assert ob is not None and ob.explains == ("low_min_speed", "stepped_throttle")
+    assert lms.causes == ("over_braking", "early_turn_in", "low_grip")
     assert [d.signal for d in ob.discriminators] == ["brake_point_delta_m", "entry_speed_delta_kph"]
-    assert [a.id for a in g.advice_for("low_min_speed")] == ["low_min_speed_describe"]
+    assert [a.id for a in g.advice_for("low_min_speed")] == [
+        "low_min_speed_describe",
+        "low_min_speed_describe_beginner",
+    ]
     tb = g.get("trail_braking", Technique)
-    assert tb is not None and tb.phase == "turn_in" and g.techniques_for("turn_in") == (tb,)
+    assert tb is not None and tb.phase == "turn_in"
+    assert [t.id for t in g.techniques_for("turn_in")] == [
+        "trail_braking",
+        "release_with_speed_to_spare",
+        "single_smooth_turn_in",
+    ]
     assert {c.id for c in g.constraints} >= {"never_brake_later", "never_brake_less", "never_release_earlier"}
     ed = [s for s in g.sources if s.author == "Ed (Pitwall tester)"]
     assert {s.id for s in ed} == {"ed_corner_brief", "ed_fault_checklist", "ed_patches"}
@@ -430,11 +442,182 @@ def test_canonical_ids_present_have_their_type() -> None:
         assert i not in g.by_id or (f is not None and f.status != "live" and f.kind is None)
 
 
-@pytest.mark.xfail(
-    strict=True, reason="the content slices write these nodes: remove this marker once missing_canonical() is empty"
-)
 def test_every_canonical_id_has_a_node() -> None:
     assert missing_canonical(load_graph_dir()) == {}
+
+
+# ---------------------------------------------------------------------------------------------- the content
+# Ed's brief, checklist and patches, the eight coaching kinds and published knowledge, each with when it fits.
+DOCS = Path(__file__).resolve().parents[2] / "docs" / "knowledge.md"
+_TAGGED = re.compile(r"`([a-z][a-z0-9_]*)` \(([a-z_]+)\)")
+
+
+def _coverage_rows(table: str) -> list[str]:
+    """The rows of a coverage table in docs/knowledge.md (between ``<!-- coverage:<table> -->`` markers)."""
+    text = DOCS.read_text(encoding="utf-8")
+    body = text.split(f"<!-- coverage:{table} -->", 1)[1].split(f"<!-- /coverage:{table} -->", 1)[0]
+    return [ln for ln in body.splitlines() if ln.startswith("|")][2:]  # past the header and its separator
+
+
+@pytest.mark.parametrize(("table", "rows"), [("brief", 13), ("checklist", 22), ("patches", 17)])
+def test_the_coverage_tables_name_real_nodes(table: str, rows: int) -> None:
+    """docs/knowledge.md maps every point of Ed's brief (12 and the self-check), every checklist row and every patch
+    detector to graph nodes, each tagged with its type or, for a fault, its status."""
+    g = load_graph_dir()
+    found = _coverage_rows(table)
+    assert len(found) == rows
+    for row in found:
+        tagged = _TAGGED.findall(row)
+        assert tagged or (table == "patches" and "none:" in row), row
+        for node_id, tag in tagged:
+            node = g.node(node_id)
+            assert node is not None, (row, node_id)
+            assert (node.status if isinstance(node, Fault) else node.node_type) == tag, (node_id, tag)
+
+
+def test_every_technique_and_uncoached_fault_is_in_the_coverage_tables() -> None:
+    g = load_graph_dir()
+    covered = {i for t in ("brief", "checklist") for row in _coverage_rows(t) for i, _ in _TAGGED.findall(row)}
+    assert {f.id for f in g.faults if f.status != "live"} <= covered
+    assert {t.id for t in g.techniques} <= covered
+
+
+UNIVERSAL = {
+    "flat_to_brake_marker",
+    "fast_brake_attack",
+    "progressive_brake_release",
+    "consistent_brake_marker",
+    "single_smooth_turn_in",
+    "throttle_at_rotation",
+    "commit_throttle_no_lift",
+    "unwind_with_throttle",
+    "use_track_width_exit",
+}
+STRAIGHT_LINE_STYLE = {"straight_line_braking", "release_with_speed_to_spare", "coast_to_apex"}
+F1_CAR = {"game": "f1", "car_family": "f1", "downforce": "high", "gearbox": "paddle_autoblip"}
+
+
+def _fits(g: TechniqueGraph, node: Technique | Fault, ctx: dict[str, object]) -> bool:
+    return all(g.holds(c, ctx) for c in node.applies_when) and (
+        not node.applies_any or any(g.holds(c, ctx) for c in node.applies_any)
+    )
+
+
+@pytest.mark.parametrize(
+    ("ctx", "techniques", "faults"),
+    [
+        ({}, set(), set()),  # nothing known: universal nodes only
+        ({**F1_CAR, "braking_style": "trail"}, {"trail_braking", "left_foot_braking"}, {"aero_crossover"}),
+        (
+            {**F1_CAR, "braking_style": "trail", "abs": False},
+            {"trail_braking", "left_foot_braking"},
+            {"aero_crossover", "brake_lockup"},
+        ),
+        ({"skill": "beginner", "game": "gt7"}, STRAIGHT_LINE_STYLE, set()),
+        (
+            {"gearbox": "h_pattern", "abs": False, "downforce": "low"},
+            {"rev_match_downshift"} | STRAIGHT_LINE_STYLE,
+            {"missed_blip", "gear_change_while_cornering", "brake_lockup"},
+        ),
+        (
+            {**F1_CAR, "braking_style": "mixed", "fuel_saving": True},
+            {"fuel_save_lift_and_coast", "trail_braking", "left_foot_braking"},
+            {"aero_crossover"},
+        ),
+    ],
+)
+def test_the_graph_fits_each_driver(ctx: dict[str, object], techniques: set[str], faults: set[str]) -> None:
+    """The drivers in docs/knowledge.md "How it fits each driver": a style-specific node applies only when the driver's
+    Context says so, and an unknown trait fits nothing."""
+    g = load_graph_dir()
+    assert {t.id for t in g.techniques if not t.applies_when and not t.applies_any} == UNIVERSAL
+    assert {t.id for t in g.techniques if t.id not in UNIVERSAL and _fits(g, t, ctx)} == techniques
+    assert {f.id for f in g.faults if (f.applies_when or f.applies_any) and _fits(g, f, ctx)} == faults
+
+
+def test_trail_braking_and_the_straight_line_style_are_alternatives() -> None:
+    g = load_graph_dir()
+    tb = g.get("trail_braking", Technique)
+    assert tb is not None and set(tb.alternatives) == STRAIGHT_LINE_STYLE
+    assert set(tb.applies_any) == {"braking_style_trail", "downforce_high"} and tb.applies_when == ()
+    for tid in STRAIGHT_LINE_STYLE:
+        t = g.get(tid, Technique)
+        assert t is not None and t.alternatives == ("trail_braking",), tid
+        assert t.applies_any == ("skill_beginner", "braking_style_straight_line", "no_abs_low_downforce"), tid
+    rev, blip = g.get("rev_match_downshift", Technique), g.get("missed_blip", Fault)
+    assert rev is not None and blip is not None
+    assert rev.applies_when == blip.applies_when == ("gearbox_h_pattern",)  # paddles: the game blips
+
+
+def test_live_faults_fit_every_driver_and_mirror_the_coaching_rules() -> None:
+    """The eight coaching kinds keep working as today: no conditions, measured against the driver's own reference
+    lap, thresholds from analysis.coaching, advice for any driver and for a beginner; incidents never on the radio."""
+    g = load_graph_dir()
+    live = [f for f in g.faults if f.status == "live"]
+    assert sorted(f.id for f in live) == sorted(coaching.COACHING_KINDS)
+    for f in live:
+        assert f.applies_when == () and f.applies_any == () and f.relative == "reference", f.id
+        assert f.thresholds and all(t.name.startswith("pitwall.analysis.coaching.") for t in f.thresholds), f.id
+        assert {"any", "beginner"} <= {a.skill for a in g.advice_for(f.id) if a.style is None}, f.id
+    assert all(a.radio is None for a in g.advice_for("incident"))
+    assert all(f.tier != "live" for f in g.faults if f.status != "live")
+
+
+def test_eds_self_check_is_a_review_only_explanation() -> None:
+    """An on-off-on throttle after a slow apex is explained after the session, tied to the driver's own reference lap;
+    never an instruction, never on the radio. No cause's advice goes on the radio."""
+    g = load_graph_dir()
+    st = g.get("stepped_throttle", Fault)
+    assert st is not None and st.status == "planned"
+    assert {"over_braking", "released_too_early_for_apex"} <= set(st.causes)
+    explained = g.advice_for("released_too_early_for_apex")
+    assert explained and all(a.radio is None and a.screen is None and a.kind == "explain" for a in explained)
+    assert all("reference lap" in a.review for a in explained)
+    assert all(a.radio is None for c in g.causes for a in g.advice_for(c.id))
+
+
+@pytest.mark.parametrize(
+    ("fault", "rate"),
+    [
+        ("pedal_overlap", 66.8),
+        ("early_apex", 32.6),
+        ("lift_before_braking", 23.2),
+        ("steering_sawing", 22.6),
+        ("slow_brake_attack", 19.0),
+        ("abrupt_brake_release", 17.0),
+        ("double_hump", 11.7),
+        ("unused_grip_exit", 9.5),
+        ("low_throttle_acceptance", 6.0),
+        ("stepped_throttle", 5.1),
+        ("missed_blip", 69.0),
+    ],
+)
+def test_eds_detectors_carry_their_measured_firing_rates(fault: str, rate: float) -> None:
+    g = load_graph_dir()
+    f = g.get(fault, Fault)
+    assert f is not None and f.status in ("planned", "experimental") and f.tier == "brief"
+    assert any(m.value == rate and m.source == "pitwall_patch_review" for m in f.measured), f.measured
+    assert "pitwall_patch_review" in f.sources
+
+
+def test_causes_are_told_apart_by_computed_signals_only() -> None:
+    """A cause is named only from what Pitwall measures: every discriminator reads a signal with a code."""
+    g = load_graph_dir()
+    for c in g.causes:
+        assert c.discriminators, c.id
+        for d in c.discriminators:
+            s = g.get(d.signal, Signal)
+            assert s is not None and s.code is not None, (c.id, d.signal)
+
+
+def test_every_signal_and_source_is_used() -> None:
+    g = load_graph_dir()
+    used = {s for t in g.techniques for s in t.measured_by} | {s for f in g.faults for s in f.signals}
+    used |= {d.signal for c in g.causes for d in c.discriminators}
+    assert {s.id for s in g.signals} == used
+    cited = {s for n in g.nodes() for s in n.sources}
+    cited |= {m.source for f in g.faults for m in f.measured} | {m.source for s in g.signals for m in s.noise}
+    assert {s.id for s in g.sources} == cited
 
 
 # ---------------------------------------------------------------------------------------------- semantics

@@ -179,6 +179,7 @@ SIGNAL_CLASSES: Mapping[str, str] = {
     "CornerInputs": "pitwall.technique.inputs",
     "SlipEvents": "pitwall.technique.inputs",
     "PhaseBalance": "pitwall.technique.balance",
+    "LapCornerTechnique": "pitwall.technique.session",
     "CarFrame": "pitwall.model.telemetry",
 }
 SIGNAL_UNITS: tuple[str, ...] = ("m", "s", "km/h", "m/s", "g", "deg", "rpm", "fraction", "ratio", "count", "bool")
@@ -254,6 +255,10 @@ CANONICAL_PLANNED_FAULTS: tuple[str, ...] = (
     "lap_scatter",
     "entry_understeer_from_release",
     "aero_crossover",
+    "brake_lockup",
+    "exit_wheelspin",
+    "balance_symptom",
+    "unused_track_exit",
 )
 CANONICAL_CAUSES: tuple[str, ...] = (
     "over_braking",

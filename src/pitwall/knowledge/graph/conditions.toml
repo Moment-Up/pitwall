@@ -251,6 +251,15 @@ op = "eq"
 value = "auto"
 tier = "design"
 
+[[condition]]
+id = "gearbox_two_pedal"
+name = "No clutch pedal"
+summary = "Paddle shifts or automatic gears: no clutch to work, so the left foot is free for the brake."
+key = "gearbox"
+op = "in"
+value = ["paddle_autoblip", "auto"]
+tier = "design"
+
 # --- the session -------------------------------------------------------------------------------------------------
 
 [[condition]]

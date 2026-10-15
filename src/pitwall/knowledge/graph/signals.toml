@@ -3,6 +3,10 @@
 # (only planned or experimental faults may use one). channels = the CarFrame inputs it needs: a game that does not send
 # one of them cannot measure the signal (pitwall.knowledge.graph.CHANNEL_FIELDS).
 # Deltas (CornerDelta.*) are this lap minus the reference lap at the same corner.
+# noise = the measured spread of a value. For a delta it is the lap-to-reference spread across all corners of clean
+# laps (pitwall_signal_spread): a delta inside it is common, so a rule or a cause needs more than one such delta.
+
+# --- corner deltas against the reference lap (analysis/compare.py, CornerDelta): what the live coaching rules read ----
 
 [[signal]]
 id = "min_speed_delta_kph"
@@ -14,6 +18,21 @@ channels = ["speed", "lap_distance"]
 tier = "live"
 sources = ["pitwall_coaching"]
 
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -20.0
+unit = "km/h"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "550 corner-laps of clean real F1 25 laps against the fastest earlier clean lap; median -2 km/h."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 17.0
+unit = "km/h"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
 [[signal]]
 id = "brake_point_delta_m"
 name = "Braking point vs reference"
@@ -23,6 +42,21 @@ unit = "m"
 channels = ["brake", "lap_distance"]
 tier = "live"
 sources = ["pitwall_coaching"]
+
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -20.3
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "445 braking corner-laps of clean real F1 25 laps; median +0.4 m, quartiles -6.6 and +8.0 m."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 20.5
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
 
 [[signal]]
 id = "entry_speed_delta_kph"
@@ -34,6 +68,262 @@ channels = ["speed", "lap_distance"]
 tier = "live"
 sources = ["pitwall_coaching"]
 
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -21.9
+unit = "km/h"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "550 corner-laps of clean real F1 25 laps; median -1.6 km/h."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 14.7
+unit = "km/h"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "exit_speed_delta_kph"
+name = "Corner exit speed vs reference"
+summary = "Speed at the corner's exit point on this lap minus the reference lap's; below zero is slower."
+code = "CornerDelta.exit_speed_delta_kph"
+unit = "km/h"
+channels = ["speed", "lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -21.0
+unit = "km/h"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "550 corner-laps of clean real F1 25 laps; median -3 km/h."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 16.0
+unit = "km/h"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "corner_time_delta_s"
+name = "Corner time vs reference"
+summary = "Time through the corner's segment on this lap minus the reference lap's; above zero lost time."
+code = "CornerDelta.time_delta_s"
+unit = "s"
+channels = ["lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Every corrective rule needs at least analysis.coaching.MIN_TIME_LOSS_S here (the "losing" gate); praise needs
+a gain of that size. The incident rule reads it too (INCIDENT_LOSS_S)."""
+
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -0.35
+unit = "s"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "548 corner-laps of clean real F1 25 laps; median +0.14 s."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 0.63
+unit = "s"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "throttle_full_delta_m"
+name = "Full throttle point vs reference"
+summary = "Where full throttle came after the slowest point on this lap minus the reference lap; above zero is later."
+code = "CornerDelta.throttle_full_delta_m"
+unit = "m"
+channels = ["throttle", "brake", "lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Full throttle = above analysis.braking.THROTTLE_FULL (0.95), searched after the braking event's slowest
+point, so it needs a matched braking event (the brake channel). GT7 variants A and B send the throttle after traction
+control (docs/status.md): there it is the car's throttle, not the pedal."""
+
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -25.3
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "410 corner-laps of clean real F1 25 laps; median +3.2 m. Skewed late: the 90th percentile is far out."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 57.2
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "throttle_pickup_delta_m"
+name = "Throttle pick-up point vs reference"
+summary = """Where the throttle first came back after the slowest point on this lap minus the reference lap; above zero
+is later."""
+code = "CornerDelta.throttle_pickup_delta_m"
+unit = "m"
+channels = ["throttle", "brake", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_signal_spread"]
+notes = """Pick-up = throttle above analysis.braking.THROTTLE_PICKUP (0.20). Computed with every comparison; no rule
+reads it yet."""
+
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -29.7
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "441 corner-laps of clean real F1 25 laps; median +0.7 m."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 35.8
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "coast_delta_m"
+name = "Coasting vs reference"
+summary = "Distance off both pedals between the end of braking and the throttle, this lap minus the reference lap."
+code = "CornerDelta.coast_delta_m"
+unit = "m"
+channels = ["brake", "throttle", "lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -2.1
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "445 corner-laps of clean real F1 25 laps; median and lower quartile 0 m (this driver rarely coasts)."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 12.3
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "brake_release_delta_m"
+name = "End of braking vs reference"
+summary = "Where braking ended on this lap minus the reference lap; below zero means braking ended sooner."
+code = "CornerDelta.brake_release_delta_m"
+unit = "m"
+channels = ["brake", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_signal_spread", "pitwall_patch_review"]
+notes = """End of braking = the brake below analysis.braking.BRAKE_OFF (0.05). Computed with every comparison; no
+coaching rule reads it (the patch review found it unused)."""
+
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -23.6
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "445 braking corner-laps of clean real F1 25 laps; median -0.5 m, quartiles -8.6 and +5.5 m."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 14.6
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "min_speed_pos_delta_m"
+name = "Slowest point position vs reference"
+summary = "Where the corner's slowest point was on this lap minus the reference lap; below zero is sooner."
+code = "CornerDelta.min_speed_pos_delta_m"
+unit = "m"
+channels = ["speed", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_signal_spread", "pitwall_patch_review"]
+notes = """The lowest speed within analysis.compare.BRAKE_MATCH_APEX_TOL_M (80 m) of the learned apex. On a corner with
+a long flat bottom to the speed trace the lowest sample can sit anywhere along it, so the spread is wide: use it only
+with a large margin and another signal."""
+
+[[signal.noise]]
+metric = "clean-lap spread, 10th percentile"
+value = -36.0
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "550 corner-laps of clean real F1 25 laps; median +1 m, quartiles -14 and +17 m."
+
+[[signal.noise]]
+metric = "clean-lap spread, 90th percentile"
+value = 44.1
+unit = "m"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "release_time_delta_s"
+name = "Brake release time vs reference"
+summary = """How long the brake took to come off from near its peak, this lap minus the reference lap; below zero is
+quicker."""
+code = "CornerDelta.release_time_delta_s"
+unit = "s"
+channels = ["brake"]
+tier = "recorded"
+sources = ["pitwall_patch_review"]
+notes = """BrakingEvent.release_s: the last moment at 90% of peak pressure to the brake below BRAKE_OFF. Computed with
+every comparison; shown as a technique note (technique.inputs, "release"), not coached."""
+
+[[signal.noise]]
+metric = "all-lap spread, 10th percentile"
+value = -0.48
+unit = "s"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+note = "667 corner-laps of real F1 25 laps; 77% of them differ from the reference by 0.05 s or more."
+
+[[signal.noise]]
+metric = "all-lap spread, 90th percentile"
+value = 0.43
+unit = "s"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+
+# --- one lap's corner, absolute (CornerMetrics, analysis/compare.py) -------------------------------------------------
+
+[[signal]]
+id = "min_speed_kph"
+name = "Minimum speed"
+summary = "The corner's slowest speed on this lap."
+code = "CornerMetrics.min_speed_kph"
+unit = "km/h"
+channels = ["speed", "lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """The incident rule compares it with the reference lap's: below INCIDENT_SPEED_FRAC of a reference of at least
+INCIDENT_MIN_REF_KPH is a crawl, not a technique difference."""
+
+[[signal]]
+id = "throttle_full_m"
+name = "Full throttle point"
+summary = "Where full throttle came after the corner's slowest point on this lap."
+code = "CornerMetrics.throttle_full_m"
+unit = "m"
+channels = ["throttle", "brake", "lap_distance"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = "BrakingEvent.throttle_full_m (analysis.braking.THROTTLE_FULL); the late_throttle rule reads its delta."
+
 [[signal]]
 id = "trail_brake_m"
 name = "Trail-braking distance"
@@ -43,4 +333,464 @@ unit = "m"
 channels = ["brake", "steering", "lap_distance"]
 tier = "recorded"
 sources = ["pitwall_style_review"]
-notes = "Braking with |steering| above analysis.braking.TRAIL_STEER (0.08). Median 33 m on the owner's fastest F1 25 laps."
+notes = """Braking with |steering| above analysis.braking.TRAIL_STEER (0.08). Median 33 m on the owner's fastest F1 25
+laps."""
+
+[[signal]]
+id = "coast_m"
+name = "Coasting distance"
+summary = "How far the car rolls with neither brake nor throttle between the end of braking and the throttle."
+code = "CornerMetrics.coast_m"
+unit = "m"
+channels = ["brake", "throttle", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_style_review"]
+notes = "Both pedals below analysis.braking.BRAKE_OFF. Style detection reads it (10 m or more counts as coasting)."
+
+[[signal.noise]]
+metric = "share of corners with 10 m or more, fastest laps"
+value = 15.0
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_style_review"
+note = "The owner's fastest F1 25 laps of six sessions; the median corner has no coasting at all."
+
+[[signal]]
+id = "time_to_peak_s"
+name = "Brake attack time"
+summary = "Time from first pressing the brake to reaching nine tenths of that stop's peak pressure."
+code = "CornerMetrics.time_to_peak_s"
+unit = "s"
+channels = ["brake"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """BrakingEvent.time_to_peak_s (90% = technique.thresholds.PEAK_FRAC). Compared with the reference in the
+technique notes ("time_to_peak"), not coached; CornerDelta has no delta for it yet (time_to_peak_delta_s)."""
+
+[[signal]]
+id = "release_s"
+name = "Brake release time"
+summary = "Time from the last moment near the stop's peak brake pressure to the brake being fully off."
+code = "CornerMetrics.release_s"
+unit = "s"
+channels = ["brake"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """BrakingEvent.release_s (90% of peak to below BRAKE_OFF). Its shape (in one go, steadily, dropped then
+trailed, held then dropped late) is CornerInputs.release_shape, a word rather than a number."""
+
+# --- a corner's inputs on one lap (technique/inputs.py, CornerInputs and its SlipEvents) -----------------------------
+
+[[signal]]
+id = "brake_at_turn_in"
+name = "Brake at turn-in"
+summary = "How much brake was still on when the steering started to go in."
+code = "CornerInputs.brake_at_turn_in"
+unit = "fraction"
+channels = ["brake", "steering", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """Turn-in = the reference lap's steering point (technique.line, TURN_IN_STEER_FRAC of the corner's peak
+steering)."""
+
+[[signal]]
+id = "trail_overlap_s"
+name = "Braking while turning"
+summary = "Time with the brake on while the steering is past a quarter of the corner's peak, up to the slowest point."
+code = "CornerInputs.trail_overlap_s"
+unit = "s"
+channels = ["brake", "steering", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+
+[[signal]]
+id = "pickup_vs_apex_m"
+name = "Throttle pick-up after the slowest point"
+summary = "How far after the corner's slowest point the throttle first came back."
+code = "CornerInputs.pickup_vs_apex_m"
+unit = "m"
+channels = ["throttle", "speed", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+
+[[signal]]
+id = "throttle_ramp_s"
+name = "Throttle ramp time"
+summary = "Time from the throttle first coming back to full throttle."
+code = "CornerInputs.throttle_ramp_s"
+unit = "s"
+channels = ["throttle", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+
+[[signal]]
+id = "throttle_lifts"
+name = "Throttle lifts on the exit"
+summary = "How many times the throttle dropped back by a clear amount between pick-up and full throttle."
+code = "CornerInputs.throttle_lifts"
+unit = "count"
+channels = ["throttle", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review", "pitwall_patch_review"]
+notes = """A drop of technique.thresholds.LIFT_DROP (0.15) below the highest throttle so far. Counted up to the first
+full throttle only. Shown as a technique note and a habit ("lifted off the throttle on the exit more"), not coached."""
+
+[[signal]]
+id = "lockup_events"
+name = "Lock-ups in the braking zone"
+summary = "How many times a wheel locked under braking at this corner."
+code = "SlipEvents.events"
+unit = "count"
+channels = ["wheel_slip", "brake"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """CornerInputs.lockup.events: a wheel's slip ratio at or below technique.thresholds.LOCKUP_SLIP for
+LOCKUP_MIN_S with the brake on. Status abs_on when ABS is on (not counted). Wheel slip: F1 25 only."""
+
+[[signal]]
+id = "exit_wheelspin_events"
+name = "Wheelspin on the exit"
+summary = "How many times a rear wheel spun under throttle on the way out of this corner."
+code = "SlipEvents.events"
+unit = "count"
+channels = ["wheel_slip", "throttle"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """CornerInputs.wheelspin.events: a rear wheel's slip ratio at or above technique.thresholds.SPIN_SLIP for
+SPIN_MIN_S with the throttle on, from the slowest point to SPIN_AFTER_TRACK_OUT_M past the track-out. Wheel slip:
+F1 25 only."""
+
+# --- handling balance per corner phase (technique/balance.py, PhaseBalance; F1 25 only) ------------------------------
+# The balance needs the wheel slip angles that come with the wheel slip ratio (F1 MotionEx): there is no separate slip
+# angle channel, so these list wheel_slip.
+
+[[signal]]
+id = "entry_balance_deg"
+name = "Entry balance"
+summary = "Front minus rear tyre slip angle at the limit on the way into the corner: clearly above zero is understeer."
+code = "PhaseBalance.slip_diff_deg"
+unit = "deg"
+channels = ["wheel_slip", "g_lat", "speed", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """The entry phase of technique.balance.lap_balance. Understeer at or above US_DIFF_DEG (3.0), oversteer at or
+below OS_DIFF_DEG."""
+
+[[signal]]
+id = "mid_balance_deg"
+name = "Mid-corner balance"
+summary = "Front minus rear tyre slip angle at the limit around the slowest point: clearly above zero is understeer."
+code = "PhaseBalance.slip_diff_deg"
+unit = "deg"
+channels = ["wheel_slip", "g_lat", "speed", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = "The mid phase of technique.balance.lap_balance. Neutral real corners read about +0.4 to +2.9 degrees."
+
+[[signal]]
+id = "exit_balance_deg"
+name = "Exit balance"
+summary = "Front minus rear tyre slip angle at the limit on the way out: clearly above zero is understeer."
+code = "PhaseBalance.slip_diff_deg"
+unit = "deg"
+channels = ["wheel_slip", "g_lat", "speed", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = "The exit phase of technique.balance.lap_balance."
+
+[[signal]]
+id = "mid_slide"
+name = "Slide mid-corner"
+summary = "Whether the back of the car slid or needed a counter-steer around the corner's slowest point."
+code = "PhaseBalance.slide"
+unit = "bool"
+channels = ["body_slip", "yaw_rate", "steering", "wheel_slip", "g_lat"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """Body slip of SLIDE_BODY_SLIP_DEG towards oversteer for SLIDE_MIN_S, or a counter-steer run
+(technique.thresholds)."""
+
+[[signal]]
+id = "exit_slide"
+name = "Slide on the exit"
+summary = "Whether the back of the car slid or needed a counter-steer on the way out of the corner."
+code = "PhaseBalance.slide"
+unit = "bool"
+channels = ["body_slip", "yaw_rate", "steering", "wheel_slip", "g_lat"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = "The exit phase of technique.balance.lap_balance."
+
+[[signal]]
+id = "entry_brake_share"
+name = "Braking share of the entry"
+summary = "The share of the entry's at-the-limit moments with the brake still pressed."
+code = "PhaseBalance.brake_share"
+unit = "fraction"
+channels = ["brake", "wheel_slip", "g_lat", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """Brake at or above WITH_BRAKING_PEDAL (0.2); entry understeer with a share of WITH_BRAKING_FRAC or more is
+'with braking'."""
+
+# --- across a session (core/session_analysis.py, CornerSummary) ------------------------------------------------------
+
+[[signal]]
+id = "brake_point_std_m"
+name = "Braking point scatter"
+summary = "How much the braking point moved from lap to lap at this corner (standard deviation)."
+code = "CornerSummary.brake_point_std_m"
+unit = "m"
+channels = ["brake", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_patch_review"]
+notes = "In the session report, the AI engineer's facts and the corner cards; not used live."
+
+[[signal]]
+id = "min_speed_std_kph"
+name = "Minimum speed scatter"
+summary = "How much the corner's slowest speed moved from lap to lap (standard deviation)."
+code = "CornerSummary.min_speed_std_kph"
+unit = "km/h"
+channels = ["speed", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_patch_review"]
+
+# --- not computed by Pitwall yet (no code): the field names of Ed's patches, or new ----------------------------------
+
+[[signal]]
+id = "time_to_peak_delta_s"
+name = "Brake attack time vs reference"
+summary = "Brake attack time on this lap minus the reference lap's; above zero is a slower squeeze up to the peak."
+unit = "s"
+channels = ["brake"]
+tier = "recorded"
+sources = ["ed_patches", "pitwall_patch_review"]
+notes = """Ed's CornerDelta.time_to_peak_delta_s (root-cause patch), not in Pitwall's CornerDelta yet; the patch review
+computed it from CornerMetrics.time_to_peak_s of both laps."""
+
+[[signal.noise]]
+metric = "all-lap spread, 10th percentile"
+value = -0.16
+unit = "s"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+note = "667 corner-laps of real F1 25 laps; 68% of them differ from the reference by 0.05 s or more."
+
+[[signal.noise]]
+metric = "all-lap spread, 90th percentile"
+value = 0.23
+unit = "s"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+
+[[signal]]
+id = "brake_reapplied"
+name = "Brake pressed twice"
+summary = "Whether one stop's brake pressure dipped and then rose to a second peak instead of one clean release."
+unit = "bool"
+channels = ["brake"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = """Ed's BrakingEvent.double_hump: a dip of HUMP_DIP_FRAC (0.25) of peak between two peaks, the second at least
+HUMP_MIN_FRAC (0.5) of the first. analysis.braking.MERGE_GAP_S (0.25 s) already merges a quick stab into one event.
+The rig check counts brake re-applications per lap (rig.rig_check._reapplied), not per corner."""
+
+[[signal]]
+id = "pedal_overlap_m"
+name = "Brake and throttle together"
+summary = "Distance with both the brake and the throttle pressed at once."
+unit = "m"
+channels = ["brake", "throttle", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = """Ed's CornerMetrics.pedal_overlap_m: both pedals at OVERLAP_PEDAL (0.10) or more. F1 25 reports a steady 0.10
+throttle under braking (rig/rig_check.py), which this floor counts as overlap."""
+
+[[signal]]
+id = "pre_brake_coast_m"
+name = "Lift before braking"
+summary = "Distance between lifting off the throttle and starting to brake for the corner."
+unit = "m"
+channels = ["throttle", "brake", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = """Ed's BrakingEvent / CornerMetrics.pre_brake_coast_m: from a genuine lift (throttle was at
+PRE_BRAKE_ACCEL_PEDAL 0.5 or more) to the brake onset. The patch review found its scan running back over hundreds of
+metres."""
+
+[[signal]]
+id = "throttle_dip_after_pickup"
+name = "Throttle dip after pick-up"
+summary = "The largest drop in throttle after it first came back, as a share of full throttle."
+unit = "fraction"
+channels = ["throttle", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = "Ed's CornerMetrics.throttle_dip_after_pickup_frac (his throttle_modulation rule: THROTTLE_DIP_FRAC 0.15)."
+
+[[signal]]
+id = "throttle_acceptance"
+name = "Throttle acceptance"
+summary = "Lateral g when full throttle arrives, as a share of the corner's peak lateral g."
+unit = "ratio"
+channels = ["throttle", "g_lat", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches", "ed_fault_checklist"]
+notes = """Ed's CornerMetrics.throttle_acceptance. High = full throttle while still cornering hard; low = full throttle
+only once the car was nearly straight. Read from one sample in his patch. GT7 sends no lateral g."""
+
+[[signal]]
+id = "throttle_acceptance_delta"
+name = "Throttle acceptance vs reference"
+summary = """Throttle acceptance on this lap minus the reference lap's; below zero means full throttle came with the car
+straighter."""
+unit = "ratio"
+channels = ["throttle", "g_lat", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = "Ed's CornerDelta.throttle_acceptance_delta (his rule: LOW_ACCEPTANCE_FRAC 0.15 below the reference)."
+
+[[signal]]
+id = "steering_reversals"
+name = "Steering corrections"
+summary = "How many times the steering changed direction within the corner."
+unit = "count"
+channels = ["steering", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches", "pitwall_patch_review"]
+notes = """Ed's CornerMetrics.steering_reversals (REVERSAL_MIN_RAD 0.03), compared with the reference
+(steering_reversals_delta). The rig check already counts reversals per lap on filtered steering with a gap method
+(rig.rig_check.count_reversals): reuse that per corner. AC's steering is not mapped; GT7's is approximate."""
+
+[[signal.noise]]
+metric = "reversals per corner on clean laps, typical low"
+value = 3.0
+unit = "count"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "Ed's counter on real F1 25 clean laps: 3 to 5 per corner, so a count alone is not a fault."
+
+[[signal.noise]]
+metric = "reversals per corner on clean laps, typical high"
+value = 5.0
+unit = "count"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+
+[[signal]]
+id = "steering_peak_offset_delta_m"
+name = "Peak steering position vs reference"
+summary = "Where the steering peaked relative to the apex on this lap, minus the reference lap's; below zero is sooner."
+unit = "m"
+channels = ["steering", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches", "pitwall_patch_review"]
+notes = "Ed's CornerDelta.steering_peak_offset_delta_m from an argmax of |steering|, which jumps between peaks."
+
+[[signal.noise]]
+metric = "largest jump seen"
+value = -289.0
+unit = "m"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "Real F1 25 laps: the argmax moved to another steering peak of the segment, far from the apex."
+
+[[signal]]
+id = "turn_in_steer_time_s"
+name = "Turn-in time"
+summary = "Time from the start of turn-in to nine tenths of the corner's peak steering."
+unit = "s"
+channels = ["steering", "lap_distance"]
+tier = "brief"
+sources = ["ed_fault_checklist"]
+notes = """New: Ed's checklist asks for the steering rate at turn-in; a time to near-peak steering is the same idea in a
+unit the graph has. Nothing computes a steering rate yet (rig check: straight-line oscillation only)."""
+
+[[signal]]
+id = "steering_unwind_s"
+name = "Unwind time"
+summary = "Time from the corner's peak steering back to a straight wheel on the way out."
+unit = "s"
+channels = ["steering", "lap_distance"]
+tier = "brief"
+sources = ["ed_fault_checklist"]
+notes = "New: Ed's checklist row on the mid-corner unwind rate. Not computed yet."
+
+[[signal]]
+id = "steering_at_full_throttle_frac"
+name = "Steering left at full throttle"
+summary = "How much of the corner's peak steering was still on when full throttle arrived."
+unit = "fraction"
+channels = ["steering", "throttle", "lap_distance"]
+tier = "brief"
+sources = ["ed_fault_checklist"]
+notes = """New: Ed's checklist row on throttle before the steering unwinds. Pitwall places the pick-up only against the
+slowest point today (CornerInputs.pickup_vs_apex_m); nothing reads the steering at that moment."""
+
+[[signal]]
+id = "exit_grip_utilization_frac"
+name = "Grip used from apex to full throttle"
+summary = """The lowest combined g between the slowest point and full throttle, as a share of the corner's peak lateral
+g."""
+unit = "fraction"
+channels = ["g_lat", "g_lon", "throttle", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = "Ed's CornerMetrics.exit_grip_utilization_frac (LOW_GRIP_UTILIZATION_FRAC 0.5). GT7 sends no lateral g."
+
+[[signal]]
+id = "downshifts"
+name = "Downshifts while braking"
+summary = "How many gear changes down were made during the braking zone."
+unit = "count"
+channels = ["gear", "brake"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = "Ed's BrakingEvent / CornerMetrics.downshifts (forward gears only)."
+
+[[signal]]
+id = "missed_blips"
+name = "Downshifts without a blip"
+summary = "Downshifts with no throttle blip from the driver around the gear change."
+unit = "count"
+channels = ["gear", "throttle", "brake"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = """Ed's BrakingEvent / CornerMetrics.missed_blips: no throttle at BLIP_PEDAL (0.15) within BLIP_WINDOW_S (0.25
+s) of the change. With paddles and auto-blip the game blips for the driver, so the pedal never shows it."""
+
+[[signal]]
+id = "gear_change_while_turning"
+name = "Gear change while turning"
+summary = "Whether a gear change was made while the steering was past half of the corner's peak."
+unit = "bool"
+channels = ["gear", "steering", "lap_distance"]
+tier = "brief"
+sources = ["ed_patches"]
+notes = "Ed's CornerMetrics.gear_change_while_turning (GEAR_CHANGE_STEER_FRAC 0.5)."
+
+[[signal]]
+id = "aero_crossover_kph"
+name = "Aero crossover speed"
+summary = "The speed above which the car's sustainable lateral g starts to rise with speed, as aerodynamic load builds."
+unit = "km/h"
+channels = ["g_lat", "speed"]
+tier = "brief"
+sources = ["ed_patches", "ed_fault_checklist"]
+notes = """Ed's technique/aero_crossover.py (AeroCrossover.crossover_kph): a flat floor of lateral g below the crossover
+and a rise with the square of the speed above it, fitted on 10 km/h bins of a high percentile. Not wired."""
+
+[[signal]]
+id = "exit_line_offset_m"
+name = "Line at track-out vs reference"
+summary = "How far the car was from the reference lap's line at the reference's track-out point."
+code = "LapCornerTechnique.line"
+unit = "m"
+channels = ["position", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """The "track_out" entry of LapCornerTechnique.line (technique/session.py, POINT_KEYS: turn_in, apex,
+track_out), from technique/line.py's lateral offsets against the reference lap's line: above zero is tighter (towards
+the inside of the corner) when the inside is known, else the distance without a side; laps wider or tighter beyond
+LINE_NOTABLE_M are counted. After the session only; needs the adapter's ground plane (position)."""

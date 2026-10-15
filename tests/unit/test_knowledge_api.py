@@ -48,7 +48,7 @@ def test_knowledge_returns_the_validated_graph(client: TestClient) -> None:
             assert n["tier"] in TIERS and n["file"].endswith(".toml")
     lms = next(f for f in body["faults"] if f["id"] == "low_min_speed")
     assert lms["kind"] == "low_min_speed" and lms["status"] == "live" and lms["relative"] == "reference"
-    assert lms["signals"] == ["min_speed_delta_kph"] and lms["causes"] == ["over_braking"]
+    assert lms["signals"] == ["min_speed_delta_kph"] and lms["causes"] == ["over_braking", "early_turn_in", "low_grip"]
     assert {"name": "pitwall.analysis.coaching.MIN_SPEED_KPH", "value": 4.0} in lms["thresholds"]
     advice = {a["id"]: a for a in body["advice"]}
     assert advice["low_min_speed_describe"]["for"] == "low_min_speed"

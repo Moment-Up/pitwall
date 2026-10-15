@@ -36,6 +36,11 @@ a frozen `TechniqueGraph`. If anything is wrong, the app logs every problem and 
 (coaching works exactly as before); the tests fail instead. `GET /api/technique/knowledge` returns the whole graph as
 JSON. Annotating observations, the driver's Context, the Review screens and the AI engineer's facts build on it.
 
+What is in it: every point of Ed's corner brief and its self-check, every row of his technique-fault checklist and
+every detector in his patches (the tables in [Ed's knowledge in the graph](#eds-knowledge-in-the-graph)), the eight
+coaching kinds Pitwall says today, the causes Pitwall can already tell apart from what it measures, and published
+coaching knowledge, each with when it fits ([How it fits each driver](#how-it-fits-each-driver)).
+
 ## Files
 
 One file per node type, by convention (any file may hold any node tables, and every `*.toml` is loaded):
@@ -106,7 +111,8 @@ Context keys and values (`CONTEXT_VALUES` in `graph.py`):
 **Unknown never satisfies a condition**, not even `ne` or `false`: "gearbox is not h_pattern" does not hold when the
 gearbox is unknown. Compound conditions may not form a cycle. `conditions.toml` already defines one condition per
 value (`skill_beginner`, `braking_style_trail`, `abs_off`, `gearbox_h_pattern`, `wet`, `dry` ...), plus
-`skill_not_beginner` and `no_abs_low_downforce`: reuse them, and add a compound one when you need an "and" inside an
+`skill_not_beginner`, `no_abs_low_downforce` and `gearbox_two_pedal` (paddles or automatic: no clutch pedal): reuse
+them, and add a compound one when you need an "and" inside an
 "or".
 
 ### `[[technique]]`
@@ -134,8 +140,11 @@ Neither `applies_when` nor `applies_any` means the technique applies to everyone
 `code` must name a real field (or property) of one of these dataclasses: `CornerMetrics`, `CornerDelta`
 (`analysis/compare.py`; deltas are this lap minus the reference), `BrakingEvent` (`analysis/braking.py`),
 `CornerSummary` (`core/session_analysis.py`), `CornerInputs`, `SlipEvents` (`technique/inputs.py`), `PhaseBalance`
-(`technique/balance.py`), `CarFrame` (`model/telemetry.py`). A signal computed somewhere else needs its class added
-to `SIGNAL_CLASSES` in `graph.py`. A game that does not send one of the channels cannot measure the signal (GT7 sends
+(`technique/balance.py`), `LapCornerTechnique` (`technique/session.py`), `CarFrame` (`model/telemetry.py`). A signal
+computed somewhere else needs its class added to `SIGNAL_CLASSES` in `graph.py`. Several signals may share one code
+when the field holds a value per phase or per point (`PhaseBalance.slip_diff_deg` for the entry, mid-corner and exit
+balance; `SlipEvents.events` for lock-ups and wheelspin; `LapCornerTechnique.line` for the track-out offset): the
+signal's id and notes say which one, so code that reads signals looks them up by id. A game that does not send one of the channels cannot measure the signal (GT7 sends
 no lateral g; AC's steering is not mapped).
 
 ### `[[fault]]`
@@ -251,8 +260,10 @@ live fault explained by a brief cause shows that link as brief.
 
 **Adding a source:** add a `[[source]]` to `sources.toml` with a new id, the title, the author, the date if known, the
 URL if any, the tier and a note saying what we took, paraphrased. Never paste text from the source. Then cite it in
-`sources = [...]` on the nodes that use it. The sources Ed cited for his checklist are already there, marked "not yet
-reviewed": when you have read one, rewrite its note to say what the graph takes from it.
+`sources = [...]` on the nodes that use it. The seven pages Ed cited for his checklist were read on 2026-10-15; each
+note says what the graph takes from that page, and a node cites a page only for what the page says. A Pitwall
+measurement (a firing rate, a spread) cites the `recorded` source that measured it, in the node's `sources` as well as
+in the measurement's `source`.
 
 ## Canonical ids
 
@@ -270,19 +281,135 @@ listed type; `missing_canonical()` lists those still to write.
 **Faults, planned or experimental** (not live): `double_hump`, `slow_brake_attack`, `abrupt_brake_release`,
 `pedal_overlap`, `lift_before_braking`, `steering_sawing`, `snatched_turn_in`, `early_apex`, `throttle_sawtooth`,
 `stepped_throttle`, `low_throttle_acceptance`, `throttle_before_unwind`, `unused_grip_exit`, `missed_blip`,
-`gear_change_while_cornering`, `lap_scatter`, `entry_understeer_from_release`, `aero_crossover`.
+`gear_change_while_cornering`, `lap_scatter`, `entry_understeer_from_release`, `aero_crossover`, and four that give
+a checklist row or brief point a node of its own: `brake_lockup`, `exit_wheelspin`, `balance_symptom`,
+`unused_track_exit`.
 
 **Causes:** `over_braking`, `early_turn_in`, `low_grip`, `traction_limited`, `ready_earlier`, `early_brake_release`,
 `waiting_for_rotation`, `carried_too_much_speed`, `released_too_early_for_apex`.
 
 **Phases:** `approach`, `braking`, `turn_in`, `mid_corner`, `apex`, `exit`. **Conditions:** see `conditions.toml`.
 **Sources:** see `sources.toml` (Pitwall's own: `pitwall_rules`, `pitwall_coaching`, `pitwall_style_review`,
-`pitwall_patch_review`; Ed's: `ed_corner_brief`, `ed_fault_checklist`, `ed_patches`; published: `bentley_speed_secrets`
-and the seven Ed cited).
+`pitwall_patch_review`, `pitwall_signal_spread`, `pitwall_technique_review`; Ed's: `ed_corner_brief`,
+`ed_fault_checklist`, `ed_patches`; the seven pages Ed cited: `speedwaymedia_vector_analysis`,
+`mysimrig_telemetry_beginners`, `srt_racing_lines`, `designjudges_driver_data`, `vrs_traction_circle`,
+`coilovers_data_acquisition`, `wikipedia_understeer_oversteer`; other published coaching knowledge:
+`bentley_speed_secrets`, `beckman_physics_of_racing_17`, `hpa_braking_technique`, `nasa_brake_release`,
+`wikipedia_trail_braking`, `wikipedia_heel_and_toe`, `wikipedia_left_foot_braking`, `wikipedia_racing_line`,
+`blayze_throttle_exit`, `blayze_consistency`, `racefans_lift_and_coast`).
+
+## How it fits each driver
+
+Nine techniques have no conditions and fit everyone, judged against the driver's own reference lap:
+`flat_to_brake_marker`, `fast_brake_attack`, `progressive_brake_release`, `consistent_brake_marker`,
+`single_smooth_turn_in`, `throttle_at_rotation`, `commit_throttle_no_lift`, `unwind_with_throttle` and
+`use_track_width_exit`. The eight live faults have no conditions either, so coaching on them is the same for every
+driver. The rest fit only when the driver's Context says so, and an unknown trait fits nothing:
+
+| Driver (what Pitwall knows) | Style-specific techniques that fit | Conditional faults that apply |
+| --- | --- | --- |
+| Nothing known yet | none | none |
+| The owner: F1 25, detected trail-braking, F1 car (high downforce, paddles with auto-blip) | `trail_braking`, `left_foot_braking` | `aero_crossover` (background); `brake_lockup` too when the game reports ABS off |
+| A beginner in GT7, nothing else known | `straight_line_braking`, `release_with_speed_to_spare`, `coast_to_apex` | none |
+| A classic car: H-pattern gearbox, no ABS, low downforce | `rev_match_downshift`, `straight_line_braking`, `release_with_speed_to_spare`, `coast_to_apex` | `missed_blip`, `gear_change_while_cornering`, `brake_lockup` |
+| An F1 race saving fuel, mixed braking style | `fuel_save_lift_and_coast`, `trail_braking`, `left_foot_braking` | `aero_crossover` (background) |
+
+Trail braking and the straight-line style (`straight_line_braking`, `release_with_speed_to_spare`, `coast_to_apex`)
+are each other's alternatives; `flat_to_brake_marker` and `fuel_save_lift_and_coast` too. The same drivers are checked
+in `tests/unit/test_knowledge_graph.py`.
+
+## Ed's knowledge in the graph
+
+Every point of Ed's corner brief, every row of his checklist and every detector in his patches has at least one node.
+Each id below is tagged with its type, or for a fault with its status (`live`: coached today; `experimental`:
+computed, not coached; `planned`: not computed yet; `context_only`: background). Firing rates are from Pitwall's
+reviews of the owner's real F1 25 laps (667 to 681 corner-laps). `tests/unit/test_knowledge_graph.py` checks every
+id, type and status in these three tables against the graph, so they cannot drift.
+
+### The corner brief (2026-10-14)
+
+<!-- coverage:brief -->
+| # | Ed's point (paraphrased) | Graph nodes | Fits |
+| --- | --- | --- | --- |
+| 1 | Flat out to the braking point; no early lift | `flat_to_brake_marker` (technique), `fuel_save_lift_and_coast` (technique), `lift_before_braking` (planned), `brake_early` (live) | everyone; a lift is intended when the strategy saves fuel |
+| 2 | Peak brake pressure almost at once | `fast_brake_attack` (technique), `slow_brake_attack` (experimental) | everyone |
+| 3 | Bleed the pressure off as the car slows | `progressive_brake_release` (technique), `abrupt_brake_release` (experimental), `double_hump` (planned), `brake_lockup` (experimental), `entry_understeer_from_release` (planned) | everyone; lock-ups with ABS off |
+| 4 | Blip the throttle on each downshift under braking | `rev_match_downshift` (technique), `missed_blip` (planned), `gear_change_while_cornering` (planned), `missed_blips` (signal) | H-pattern gearbox only: with paddles the game blips |
+| 5 | Wheel straight while braking; off the brake before turning | `straight_line_braking` (technique), `trail_braking` (technique), `trail_brake_m` (signal), `brake_at_turn_in` (signal) | beginners, straight-line brakers, no ABS with low downforce; trail braking for trail brakers and high downforce |
+| 6 | Off the brake with speed to spare, on purpose | `release_with_speed_to_spare` (technique), `low_min_speed` (live), `over_braking` (cause) | as point 5 |
+| 7 | One smooth turn-in, then hold it; no sawing | `single_smooth_turn_in` (technique), `snatched_turn_in` (planned), `steering_sawing` (planned) | everyone |
+| 8 | Off both pedals to the apex; cornering scrubs the speed | `coast_to_apex` (technique), `coasting` (live), `early_brake_release` (cause) | as point 5 (tier brief: the owner's laps go against it) |
+| 9 | Throttle once the car has rotated, one smooth squeeze | `throttle_at_rotation` (technique), `late_throttle` (live), `waiting_for_rotation` (cause), `exit_wheelspin` (experimental) | everyone |
+| 10 | No lift once on the throttle; a lift points to over-braking or an early turn-in | `commit_throttle_no_lift` (technique), `stepped_throttle` (planned), `throttle_sawtooth` (experimental), `over_braking` (cause), `early_turn_in` (cause) | everyone |
+| 11 | Unwind the steering as the throttle goes on | `unwind_with_throttle` (technique), `throttle_before_unwind` (planned), `low_throttle_acceptance` (planned) | everyone |
+| 12 | Change up as normal; use all the track on exit | `use_track_width_exit` (technique), `unused_track_exit` (experimental), `early_apex` (planned) | everyone |
+| Self-check | An on-off-on throttle means over-braking | `stepped_throttle` (planned), `released_too_early_for_apex` (cause), `over_braking` (cause) | review only, never on the radio; tied to the driver's own reference lap |
+<!-- /coverage:brief -->
+
+The owner's measurements against points 5 and 8 (trail braking into 40 of 41 braking corners; more coasting slower in
+22 of 35 corners) are on `trail_braking`, `straight_line_braking` and `coast_to_apex` (source
+`pitwall_style_review`).
+
+### The technique-fault checklist (2026-10-13)
+
+<!-- coverage:checklist -->
+| Trace | Row (paraphrased) | Graph nodes | Pitwall today (Ed's status, then the review) |
+| --- | --- | --- | --- |
+| Brake | Double hump: pressure dips, then a second peak | `double_hump` (planned), `brake_reapplied` (signal) | Ed: not covered; half right (close stabs merge into one event). Ed's detector 11.7% |
+| Brake | Slow ramp-up to peak | `slow_brake_attack` (experimental), `time_to_peak_s` (signal) | Ed: not covered; the attack time is measured after the session. His rule 19%; 68% of corner-laps are 0.05 s or more off the reference |
+| Brake | Abrupt or stepped release | `abrupt_brake_release` (experimental), `release_time_delta_s` (signal) | built, descriptive, after the session. His rule 17%; 77% of corner-laps 0.05 s or more off |
+| Brake | Brake and throttle together by accident | `pedal_overlap` (planned), `left_foot_braking` (technique) | partly (lock-up gating only). Ed's detector 66.8%: F1 25 reports 0.10 throttle under braking |
+| Brake | Released too early for the apex | `released_too_early_for_apex` (cause), `stepped_throttle` (planned) | his throttle modulation; review-only explanation |
+| Throttle | Sawtooth: on, off, on | `throttle_sawtooth` (experimental), `throttle_lifts` (signal) | Ed: not covered; counted after the session (a technique note and a habit) |
+| Throttle | Throttle acceptance: lateral g at full throttle over the corner's peak | `low_throttle_acceptance` (planned), `throttle_acceptance` (signal) | not covered. Ed's detector 6.0%, wording inverted |
+| Throttle | Throttle before the steering unwinds | `throttle_before_unwind` (planned) | not covered |
+| Throttle | Over-cautious exit: full throttle late with grip to spare | `late_throttle` (live), `ready_earlier` (cause), `traction_limited` (cause) | partly: the causes tell no grip from grip left unused (F1 25: tyre slip) |
+| Steering | Sawing mid-corner | `steering_sawing` (planned), `steering_reversals` (signal) | not covered. Ed's detector 22.6%, 3 to 5 reversals per corner on clean laps |
+| Steering | Snatched turn-in | `snatched_turn_in` (planned), `turn_in_steer_time_s` (signal) | not covered |
+| Steering | Early apex, then a second correction | `early_apex` (planned), `early_turn_in` (cause) | partly (the line measures offset, not apex timing). Ed's detector 32.6%, argmax jumps |
+| Steering | Mid-corner unwind rate | `steering_unwind_s` (signal), `throttle_before_unwind` (planned) | not covered |
+| Combined | Unused grip on the G-G diagram | `unused_grip_exit` (planned), `exit_grip_utilization_frac` (signal) | no G-G diagram. Ed's detector 9.5% |
+| Combined | Driver or car: understeer and oversteer | `balance_symptom` (experimental), `low_grip` (cause) | built (F1 25 only), shown on the Technique page |
+| Combined | Entry understeer from the release shape | `entry_understeer_from_release` (planned) | partly: the with-braking flag only |
+| Consistency | Lap-to-lap scatter at one corner | `lap_scatter` (experimental), `consistent_brake_marker` (technique) | after the session, not live |
+| Consistency | Coasting | `coasting` (live), `coast_to_apex` (technique), `trail_braking` (technique) | built and coached; explained by braking style |
+| Consistency | Lift and coast before the braking zone | `lift_before_braking` (planned), `fuel_save_lift_and_coast` (technique) | not covered. Ed's detector 23.2%, inflated by a scan bug |
+| Consistency | Lock-ups and wheelspin | `brake_lockup` (experimental), `exit_wheelspin` (experimental) | built (F1 25 only): per corner, and per lap by car health |
+| Consistency | Gear change while cornering | `gear_change_while_cornering` (planned) | not covered; his patch's check fires on nearly every corner. H-pattern only (Pitwall's judgement) |
+| Car | Aero crossover: lateral g against speed | `aero_crossover` (context_only), `aero_crossover_kph` (signal) | his fit, not wired; describes the car, not the driver |
+<!-- /coverage:checklist -->
+
+His suggested next steps: a G-G diagram (`unused_grip_exit`; Compare gains his g-force charts), sawtooth detection
+(`throttle_sawtooth`) and lap-to-lap scatter as a signal of its own (`brake_point_std_m`, `min_speed_std_kph`).
+
+### The patches (read as data, not applied)
+
+<!-- coverage:patches -->
+| Patch | Detector | Graph nodes |
+| --- | --- | --- |
+| technique faults | double hump | `double_hump` (planned), `brake_reapplied` (signal) |
+| technique faults | pedal overlap | `pedal_overlap` (planned), `pedal_overlap_m` (signal) |
+| technique faults | pre-brake coast (lift before braking) | `lift_before_braking` (planned), `pre_brake_coast_m` (signal) |
+| technique faults | throttle dip after pick-up (throttle modulation) | `stepped_throttle` (planned), `throttle_dip_after_pickup` (signal) |
+| technique faults | throttle acceptance | `low_throttle_acceptance` (planned), `throttle_acceptance_delta` (signal) |
+| technique faults | steering reversals | `steering_sawing` (planned), `steering_reversals` (signal) |
+| technique faults | steering peak offset (early apex) | `early_apex` (planned), `steering_peak_offset_delta_m` (signal) |
+| technique faults | gear change while turning | `gear_change_while_cornering` (planned), `gear_change_while_turning` (signal) |
+| technique faults | exit grip utilisation | `unused_grip_exit` (planned), `exit_grip_utilization_frac` (signal) |
+| technique faults | aero crossover fit | `aero_crossover` (context_only), `aero_crossover_kph` (signal) |
+| root cause and overlay | slow brake attack | `slow_brake_attack` (experimental), `time_to_peak_delta_s` (signal) |
+| root cause and overlay | abrupt brake release | `abrupt_brake_release` (experimental), `release_time_delta_s` (signal) |
+| root cause and overlay | throttle modulation root cause | `over_braking` (cause), `early_turn_in` (cause) |
+| root cause and overlay | downshifts and missed blips | `missed_blip` (planned), `downshifts` (signal), `missed_blips` (signal) |
+| root cause and overlay | Compare g-force charts | none: a screen (Review › Session › Compare), not knowledge |
+| body slip and cadence | ACC fixes; a trend gate | none: adapter work, and the habit tracker replaces the trend gate |
+| ACC adapter | ACC shared memory | none: a game adapter, separate work |
+<!-- /coverage:patches -->
 
 ## An example
 
-A fault, its cause and the cause's review-only explanation, as in the seed graph:
+A live fault, one of its causes and the cause's review-only explanation, shortened from the graph (notes and the
+other causes' nodes left out):
 
 ```toml
 [[fault]]
@@ -295,17 +422,25 @@ phase = "apex"
 relative = "reference"
 signals = ["min_speed_delta_kph"]
 thresholds = ["pitwall.analysis.coaching.MIN_SPEED_KPH", "pitwall.analysis.coaching.MIN_TIME_LOSS_S"]
-causes = ["over_braking"]
-advice = ["low_min_speed_describe"]
+violates = ["release_with_speed_to_spare"]
+causes = ["over_braking", "early_turn_in", "low_grip"]
+advice = ["low_min_speed_describe", "low_min_speed_describe_beginner"]
 tier = "live"
 sources = ["pitwall_coaching"]
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 41.7
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
 
 [[cause]]
 id = "over_braking"
 name = "Over-braking"
 summary = "More braking than on the reference lap on the way in, so the car reached the corner slower than on that lap."
-explains = ["low_min_speed"]
-advice = ["over_braking_explain"]
+explains = ["low_min_speed", "stepped_throttle"]
+advice = ["over_braking_explain", "over_braking_explain_beginner"]
 tier = "brief"
 sources = ["ed_corner_brief"]
 
@@ -315,6 +450,12 @@ test = "braked at least 8 m earlier than on the reference lap"
 op = "le"
 value = -8.0
 need = "any"
+
+[[cause.discriminators]]
+signal = "entry_speed_delta_kph"
+test = "at least 4 km/h slower at the corner entry than on the reference lap"
+op = "le"
+value = -4.0
 
 [[advice]]
 id = "over_braking_explain"
@@ -326,9 +467,10 @@ tier = "brief"
 sources = ["ed_corner_brief"]
 ```
 
-Ed's self-check ("an on-off-on throttle means you over-braked") becomes exactly this kind of review-only explanation,
-tied to the driver's own faster laps. His suggested fix ("release the brake earlier and carry more speed") cannot be
-written: the constraints reject it.
+Ed's self-check ("an on-off-on throttle means you over-braked") is the same kind of review-only explanation: the cause
+`released_too_early_for_apex` (with `over_braking`) on the planned fault `stepped_throttle`, whose advice has no radio
+or screen form and says only what was measured against the driver's own reference lap. His suggested fix ("release
+the brake earlier and carry more speed") cannot be written: the constraints reject it.
 
 ## Checking a change
 

@@ -4,6 +4,83 @@
 # Leave radio (and screen) out for a review-only explanation. No placeholders: the numbers stay in the observation's
 # own text. Advice describes what happened and what the driver's own faster laps did; it never tells a driver to brake
 # later, brake less, release the brake earlier or carry more speed in (constraints.toml checks every string).
+#
+# Live faults: the "any" advice mirrors today's radio core and short text without the numbers (voice/proactive.py _core,
+# analysis/coaching.py), so nothing changes on air by default; the "beginner" advice mirrors the plain-words text
+# (text_simple). Causes: review and screen only (the card's evidence line and Review); no radio form, so the radio
+# stays as it is. The style variants explain a fault for drivers whose detected braking style is known.
+
+# --- live faults -----------------------------------------------------------------------------------------------------
+
+[[advice]]
+id = "brake_early_describe"
+for = "brake_early"
+skill = "any"
+kind = "describe"
+radio = "Braking earlier than your reference"
+screen = "Braked earlier than your reference"
+review = "You started braking clearly earlier than on your reference lap here, and the corner was slower for it."
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "brake_early_describe_beginner"
+for = "brake_early"
+skill = "beginner"
+kind = "describe"
+radio = "You braked earlier than on your reference"
+screen = "Braked earlier than on your reference lap"
+review = "You started braking earlier here than on your reference lap, and the corner took longer."
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "brake_late_overdrive_describe"
+for = "brake_late_overdrive"
+skill = "any"
+kind = "describe"
+radio = "Braked later, but exited slower"
+screen = "Braked later, slower out"
+review = """You braked later than on your reference lap but came out of the corner slower: the time gained on the way
+in was lost on the way out."""
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "brake_late_overdrive_describe_beginner"
+for = "brake_late_overdrive"
+skill = "beginner"
+kind = "describe"
+radio = "Braked later, slower out of the corner"
+screen = "Braked later, slower out of the corner"
+review = """You braked later than on your reference lap, but the car came out of the corner slower, so the corner took
+longer overall."""
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "overspeed_apex_describe"
+for = "overspeed_apex"
+skill = "any"
+kind = "describe"
+radio = "Too much speed into the apex"
+screen = "Faster in, slower out"
+review = """You reached the apex faster than on your reference lap but came out of the corner slower, and the corner
+took longer."""
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "overspeed_apex_describe_beginner"
+for = "overspeed_apex"
+skill = "beginner"
+kind = "describe"
+radio = "Faster in, slower out"
+screen = "Faster in, slower out of the corner"
+review = """You were faster in the middle of the corner than on your reference lap, but slower coming out of it, so the
+corner took longer overall."""
+tier = "live"
+sources = ["pitwall_coaching"]
 
 [[advice]]
 id = "low_min_speed_describe"
@@ -17,6 +94,141 @@ tier = "live"
 sources = ["pitwall_coaching"]
 
 [[advice]]
+id = "low_min_speed_describe_beginner"
+for = "low_min_speed"
+skill = "beginner"
+kind = "describe"
+radio = "Slower in the middle of the corner"
+screen = "Slower in the middle of the corner"
+review = "You were slower at the slowest point of the corner than on your reference lap, and lost time there."
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "late_throttle_describe"
+for = "late_throttle"
+skill = "any"
+kind = "describe"
+radio = "Full throttle later than your reference"
+screen = "Full throttle later"
+review = """You reached full throttle later than on your reference lap on the way out of this corner, and lost time
+there."""
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "late_throttle_describe_beginner"
+for = "late_throttle"
+skill = "beginner"
+kind = "describe"
+radio = "Back to full throttle later"
+screen = "Back to full throttle later"
+review = "You got back to full throttle later than on your reference lap, so the car was slower onto the next straight."
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "coasting_describe"
+for = "coasting"
+skill = "any"
+kind = "describe"
+radio = "More coasting than your reference"
+screen = "More coasting than your reference"
+review = """You spent longer off both pedals between the brake and the throttle than on your reference lap, and the
+corner was slower."""
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "coasting_describe_beginner"
+for = "coasting"
+skill = "beginner"
+kind = "describe"
+radio = "Longer off both pedals than your reference"
+screen = "Longer off both pedals"
+review = """You spent longer with neither the brake nor the throttle pressed than on your reference lap. On that lap the
+gap between the two was shorter and the corner was quicker."""
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "coasting_explain_trail"
+name = "coasting: explain (trail-braking drivers)"
+for = "coasting"
+skill = "any"
+style = "trail"
+kind = "explain"
+review = """You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap
+the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was
+slower."""
+tier = "recorded"
+sources = ["pitwall_style_review", "wikipedia_trail_braking"]
+notes = """For drivers detected as trail-braking. The owner's laps: more coasting went with a slower corner in 22 of 35
+corners (a weak effect). Review only: the radio keeps the describe line. It says only what was measured (the detected
+style, and this lap against the reference), not what the reference lap's brake did at this corner."""
+
+[[advice]]
+id = "coasting_explain_straight_line"
+name = "coasting: explain (straight-line braking drivers)"
+for = "coasting"
+skill = "any"
+style = "straight_line"
+kind = "explain"
+review = """Rolling a short way to the apex off both pedals is part of braking in a straight line, but this lap's roll
+was clearly longer than on your reference lap, and the corner was slower."""
+tier = "brief"
+sources = ["ed_corner_brief"]
+notes = "Ed's brief point 8 (coast to the apex) for drivers who brake in a straight line. Review only."
+
+[[advice]]
+id = "exit_gain_describe"
+for = "exit_gain"
+skill = "any"
+kind = "describe"
+radio = "Good exit, up on your reference"
+screen = "Good exit"
+review = "Good exit: you came out of this corner faster than on your reference lap and gained time there."
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "exit_gain_describe_beginner"
+for = "exit_gain"
+skill = "beginner"
+kind = "describe"
+radio = "Good exit, faster than your reference"
+screen = "Good exit, faster out"
+review = """Good exit: you came out of the corner faster than on your reference lap, and that speed lasts all the way
+down the next straight."""
+tier = "live"
+sources = ["pitwall_coaching"]
+
+[[advice]]
+id = "incident_describe"
+for = "incident"
+skill = "any"
+kind = "describe"
+screen = "Incident, no advice this lap"
+review = """This corner lost far more time than a technique difference would (a spin, contact, a trip off the track or a
+slow-down), so there is no advice from it on this lap."""
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = "No radio form: incidents are never said on the radio."
+
+[[advice]]
+id = "incident_describe_beginner"
+for = "incident"
+skill = "beginner"
+kind = "describe"
+screen = "Incident, no advice this lap"
+review = """Something happened at this corner (a spin, a touch, a trip off the track or a slow-down), so Pitwall gives
+no advice from it on this lap."""
+tier = "live"
+sources = ["pitwall_coaching"]
+
+# --- causes: review and screen only --------------------------------------------------------------------------------
+
+[[advice]]
 id = "over_braking_explain"
 for = "over_braking"
 skill = "any"
@@ -25,3 +237,192 @@ review = """On this lap you braked more than on your reference on the way in and
 slowest point was lower too."""
 tier = "brief"
 sources = ["ed_corner_brief"]
+
+[[advice]]
+id = "over_braking_explain_beginner"
+for = "over_braking"
+skill = "beginner"
+kind = "explain"
+screen = "Slowed more than your reference on the way in"
+review = """You slowed the car more than on your reference lap before the corner, so you reached it slower and the
+slowest point was lower too."""
+tier = "brief"
+sources = ["ed_corner_brief"]
+
+[[advice]]
+id = "early_turn_in_explain"
+for = "early_turn_in"
+skill = "any"
+kind = "explain"
+screen = "Slowest point sooner than your reference"
+review = """The slowest point of the corner came well before where it was on your reference lap: the car was turned
+towards the apex sooner, which tightens the rest of the corner and lowers the speed through the middle."""
+tier = "brief"
+sources = ["ed_corner_brief", "ed_patches"]
+
+[[advice]]
+id = "early_turn_in_explain_beginner"
+for = "early_turn_in"
+skill = "beginner"
+kind = "explain"
+screen = "Tightest part came sooner than usual"
+review = """You reached the tightest part of the corner sooner than on your reference lap, so the car had to slow more
+to make the turn."""
+tier = "brief"
+sources = ["ed_corner_brief"]
+
+[[advice]]
+id = "low_grip_explain"
+for = "low_grip"
+skill = "any"
+kind = "explain"
+screen = "The car slid or locked a wheel here"
+review = """The tyres were past their grip at this corner on this lap (a slide, understeer or a locked wheel), so the
+car could not hold the speed of your reference lap through the middle."""
+tier = "expert"
+sources = ["vrs_traction_circle", "wikipedia_understeer_oversteer"]
+
+[[advice]]
+id = "low_grip_explain_beginner"
+for = "low_grip"
+skill = "beginner"
+kind = "explain"
+screen = "The tyres were sliding here"
+review = """The tyres were sliding at this corner on this lap, so the car could not go round it as fast as on your
+reference lap."""
+tier = "expert"
+sources = ["vrs_traction_circle", "wikipedia_understeer_oversteer"]
+
+[[advice]]
+id = "traction_limited_explain"
+for = "traction_limited"
+skill = "any"
+kind = "explain"
+screen = "Wheelspin or a slide on the exit"
+review = """The rear tyres spun or the car slid on the way out of this corner, which held full throttle back compared
+with your reference lap."""
+tier = "expert"
+sources = ["wikipedia_understeer_oversteer", "vrs_traction_circle"]
+
+[[advice]]
+id = "traction_limited_explain_beginner"
+for = "traction_limited"
+skill = "beginner"
+kind = "explain"
+screen = "Rear wheels spinning on the exit"
+review = """The rear wheels spun or the back of the car stepped out as you accelerated, and that held back full
+throttle."""
+tier = "expert"
+sources = ["wikipedia_understeer_oversteer", "vrs_traction_circle"]
+
+[[advice]]
+id = "ready_earlier_explain"
+for = "ready_earlier"
+skill = "any"
+kind = "explain"
+screen = "Grip was there, full throttle came later"
+review = """On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on your
+reference lap: the grip was there before the throttle."""
+tier = "brief"
+sources = ["ed_fault_checklist"]
+
+[[advice]]
+id = "ready_earlier_explain_beginner"
+for = "ready_earlier"
+skill = "beginner"
+kind = "explain"
+screen = "The car was ready before the throttle"
+review = """The car was gripping well on the way out of this corner, but full throttle came later than on your reference
+lap."""
+tier = "brief"
+sources = ["ed_fault_checklist"]
+
+[[advice]]
+id = "early_brake_release_explain"
+for = "early_brake_release"
+skill = "any"
+kind = "explain"
+screen = "Braking ended sooner, longer roll after"
+review = """Braking ended sooner than on your reference lap, which left a longer gap with neither brake nor throttle
+before the apex."""
+tier = "brief"
+sources = ["ed_fault_checklist", "designjudges_driver_data"]
+
+[[advice]]
+id = "early_brake_release_explain_beginner"
+for = "early_brake_release"
+skill = "beginner"
+kind = "explain"
+screen = "Finished braking sooner, then rolled"
+review = """You finished braking sooner than on your reference lap, so the car rolled further with no pedal pressed
+before the corner."""
+tier = "brief"
+sources = ["ed_fault_checklist"]
+
+[[advice]]
+id = "waiting_for_rotation_explain"
+for = "waiting_for_rotation"
+skill = "any"
+kind = "explain"
+screen = "Throttle back later while the car turned"
+review = """Braking ended about where it did on your reference lap, but the throttle came back later: the gap opened
+while waiting for the car to turn towards the exit."""
+tier = "brief"
+sources = ["ed_corner_brief"]
+
+[[advice]]
+id = "waiting_for_rotation_explain_beginner"
+for = "waiting_for_rotation"
+skill = "beginner"
+kind = "explain"
+screen = "Throttle back later than your reference"
+review = """The throttle came back later than on your reference lap, while the car was still turning towards the
+exit."""
+tier = "brief"
+sources = ["ed_corner_brief"]
+
+[[advice]]
+id = "carried_too_much_speed_explain"
+for = "carried_too_much_speed"
+skill = "any"
+kind = "explain"
+screen = "Reached the corner faster than your reference"
+review = """You reached the corner faster than on your reference lap (quicker at the entry, or braking began further
+on), and the speed at the apex cost speed on the exit."""
+tier = "expert"
+sources = ["beckman_physics_of_racing_17"]
+
+[[advice]]
+id = "carried_too_much_speed_explain_beginner"
+for = "carried_too_much_speed"
+skill = "beginner"
+kind = "explain"
+screen = "Faster in, slower out"
+review = """You came into the corner faster than on your reference lap, and the car was slower coming out of it, where
+speed counts for the whole straight after."""
+tier = "expert"
+sources = ["beckman_physics_of_racing_17"]
+
+[[advice]]
+id = "released_too_early_for_apex_explain"
+for = "released_too_early_for_apex"
+skill = "any"
+kind = "explain"
+review = """After a long coast and a slow apex the throttle went on, off and on again, a pattern that usually follows
+too much braking on the way in. On your reference lap the apex here was quicker."""
+tier = "brief"
+sources = ["ed_corner_brief", "ed_fault_checklist"]
+notes = """Ed's self-check, review only (never a radio instruction): no radio and no screen form. It states only what
+the cause's discriminators measured (more coasting and a slower apex than the reference lap); the fix Ed paired with
+it is an instruction the constraints reject."""
+
+[[advice]]
+id = "released_too_early_for_apex_explain_beginner"
+for = "released_too_early_for_apex"
+skill = "beginner"
+kind = "explain"
+review = """After a slow middle of the corner the throttle went on, off and on again. On your reference lap the middle
+of this corner was quicker."""
+tier = "brief"
+sources = ["ed_corner_brief"]
+notes = "Ed's self-check in plain words, review only."
