@@ -23,6 +23,7 @@ from pitwall.knowledge.context import (
     fuel_saving_of,
     session_row_context,
 )
+from pitwall.knowledge.facts import _context_fact
 from pitwall.knowledge.graph import CHANNELS, CONTEXT_KEYS, CONTEXT_VALUES, load_graph
 from pitwall.knowledge.style import (
     COAST_M,
@@ -30,6 +31,7 @@ from pitwall.knowledge.style import (
     MIN_LAPS,
     TRAIL_BRAKE_M,
     Style,
+    braking_assist_of,
     detect_style,
 )
 from pitwall.model.telemetry import Game
@@ -183,6 +185,27 @@ def test_style_needs_enough_laps_and_braking_corners() -> None:
     enough = detect_style(_laps([(30.0, 0.0)] * 3 + [(None, None)] * 6, 2))  # 6: corners with no braking ignored
     assert enough.braking_corners == 6 and enough.braking_style == "trail" and enough.enough
     assert detect_style({}) == Style()
+
+
+def test_the_braking_assist_flags_the_style_without_changing_it() -> None:
+    """The F1 braking assist brakes for the driver: the style is kept and flagged (the screens and the AI engineer say
+    some of the braking was the game's), never presented as all the driver's."""
+    laps = _laps([(30.0, 0.0)] * 6, 2)
+    plain, assisted = detect_style(laps), detect_style(laps, braking_assist=2)
+    assert assisted.braking_style == plain.braking_style == "trail" and assisted.assisted and not plain.assisted
+    assert assisted.to_dict()["braking_assist"] == 2 and plain.to_dict()["braking_assist"] is None
+    assert braking_assist_of({"braking": 1, "gearbox": 3}) == 1
+    assert braking_assist_of({"braking": 0}) is None  # off
+    assert braking_assist_of({"braking": True}) is None and braking_assist_of(None) is None
+    g = load_graph()
+    _, text, _, say = _context_fact(g, build_context(game="f1_25", style=assisted), assisted, [])
+    assert (
+        "braking assist was on" in text
+        and say is not None
+        and say.endswith("some of that braking was the game's, not yours.")
+    )
+    _, text, _, say = _context_fact(g, build_context(game="f1_25", style=plain), plain, [])
+    assert "assist" not in text and say is not None and "assist" not in say
 
 
 def test_a_detected_style_satisfies_the_graphs_style_conditions() -> None:

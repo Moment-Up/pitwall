@@ -65,8 +65,8 @@ note = "Keeps it apart from over_braking, which needs a slower entry (analysis.c
 [[cause]]
 id = "low_grip"
 name = "Less grip"
-summary = """The tyres were sliding at this corner on this lap (a slide, understeer or a locked wheel), so the car could
-not hold the speed of the reference lap."""
+summary = """The tyres were sliding at this corner on this lap more than on the reference lap (a slide, understeer or a
+locked wheel), so the car could not hold the speed of the reference lap."""
 explains = ["low_min_speed"]
 advice = ["low_grip_explain", "low_grip_explain_beginner"]
 tier = "expert"
@@ -74,22 +74,24 @@ sources = ["vrs_traction_circle", "wikipedia_understeer_oversteer", "ed_fault_ch
 notes = """Past the edge of the tyres' grip in any direction the car slides: a locked wheel under braking, the front
 pushing wide (understeer) or the rear stepping out (oversteer). Evidence from tyre slip, so F1 25 only; on other games
 these are unmeasured and the cause is never named. Wheelspin is left out: it comes after the slowest point, so it is
-evidence for traction_limited (late_throttle) instead. These are this lap's values, not a difference from the reference
-lap."""
+evidence for traction_limited (late_throttle) instead. The slide and the understeer are compared with the reference
+lap at the same corner (mid_slide_vs_ref, mid_understeer_vs_ref): read from this lap alone, understeer the reference
+lap shared (the car at that corner) named this cause on about half of the owner's low_min_speed points. A lock-up is
+this lap's own (counted only with ABS off)."""
 
 [[cause.discriminators]]
-signal = "mid_slide"
-test = "the back of the car slid or needed a counter-steer around the slowest point"
+signal = "mid_slide_vs_ref"
+test = "the back of the car slid or needed a counter-steer around the slowest point, and not on the reference lap"
 op = "true"
 need = "any"
 
 [[cause.discriminators]]
-signal = "mid_balance_deg"
-test = "the front tyres were sliding clearly more than the rears around the slowest point (understeer)"
-op = "ge"
-value = 3.0
+signal = "mid_understeer_vs_ref"
+test = """the front tyres slid clearly more than the rears around the slowest point (understeer), at least 3 degrees
+more than on the reference lap"""
+op = "true"
 need = "any"
-note = "3 degrees is technique.thresholds.US_DIFF_DEG."
+note = "3 degrees is technique.thresholds.US_DIFF_DEG, also the margin over the reference (knowledge.annotate)."
 
 [[cause.discriminators]]
 signal = "lockup_events"
@@ -127,9 +129,9 @@ need = "any"
 
 [[cause]]
 id = "ready_earlier"
-name = "Car ready before the throttle"
+name = "No grip loss on the exit"
 summary = """On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on the
-reference lap: the grip was there before the throttle."""
+reference lap: nothing measured held the throttle back."""
 explains = ["late_throttle"]
 advice = ["ready_earlier_explain", "ready_earlier_explain_beginner"]
 tier = "brief"
@@ -137,7 +139,10 @@ sources = ["ed_fault_checklist", "vrs_traction_circle"]
 notes = """Ed's checklist row "over-cautious exit (full throttle late with no grip loss)". The spec also names the
 steering already unwound and less combined g than the reference: those signals are not computed yet
 (steering_at_full_throttle_frac, exit_grip_utilization_frac, throttle_acceptance_delta); add them here as discriminators
-when they are. F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing."""
+when they are. F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing.
+With traction control on, "no wheelspin" is weaker evidence (the game holds wheelspin back), so the advice says only
+what was measured, not that the grip was there. Named on 105 of 157 late_throttle points on the owner's 30 captures
+(traction control on in every one; 2026-10-15)."""
 
 [[cause.discriminators]]
 signal = "exit_wheelspin_events"

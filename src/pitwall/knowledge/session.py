@@ -28,7 +28,7 @@ from pitwall.analysis.compare import CornerMetrics
 from pitwall.knowledge.annotate import DriverKnowledge, LapSignals
 from pitwall.knowledge.context import Context, channels_payload, session_row_context
 from pitwall.knowledge.graph import TechniqueGraph, load_graph
-from pitwall.knowledge.style import Style, detect_style
+from pitwall.knowledge.style import Style, braking_assist_of, detect_style
 
 if TYPE_CHECKING:
     from pitwall.analysis.compare import LapAnalysis, LapComparison
@@ -70,7 +70,7 @@ def clean_corner_metrics(sa: SessionAnalysis) -> dict[str, list[CornerMetrics]]:
 
 
 def session_knowledge(sa: SessionAnalysis, *, fuel_saving: bool | None = None) -> SessionKnowledge:
-    style = detect_style(clean_corner_metrics(sa))
+    style = detect_style(clean_corner_metrics(sa), braking_assist_of(sa.session.get("assists")))
     skill = (sa.driver or {}).get("skill_level")
     ctx = session_row_context(sa.session, sa.laps, skill=skill, style=style, fuel_saving=fuel_saving)
     game = sa.session.get("game")

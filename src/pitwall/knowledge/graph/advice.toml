@@ -233,6 +233,7 @@ id = "over_braking_explain"
 for = "over_braking"
 skill = "any"
 kind = "explain"
+screen = "Braked earlier, reached the corner slower"
 review = """On this lap you braked more than on your reference on the way in and reached the corner slower, so its
 slowest point was lower too."""
 tier = "brief"
@@ -276,9 +277,9 @@ id = "low_grip_explain"
 for = "low_grip"
 skill = "any"
 kind = "explain"
-screen = "The car slid or locked a wheel here"
-review = """The tyres were past their grip at this corner on this lap (a slide, understeer or a locked wheel), so the
-car could not hold the speed of your reference lap through the middle."""
+screen = "More sliding here than on your reference"
+review = """The tyres were past their grip at this corner on this lap, more than on your reference lap (a slide,
+understeer or a locked wheel), so the car could not hold the speed of your reference lap through the middle."""
 tier = "expert"
 sources = ["vrs_traction_circle", "wikipedia_understeer_oversteer"]
 
@@ -287,9 +288,9 @@ id = "low_grip_explain_beginner"
 for = "low_grip"
 skill = "beginner"
 kind = "explain"
-screen = "The tyres were sliding here"
-review = """The tyres were sliding at this corner on this lap, so the car could not go round it as fast as on your
-reference lap."""
+screen = "The tyres slid more than on your reference"
+review = """The tyres were sliding at this corner on this lap, more than on your reference lap, so the car could not go
+round it as fast."""
 tier = "expert"
 sources = ["vrs_traction_circle", "wikipedia_understeer_oversteer"]
 
@@ -320,9 +321,9 @@ id = "ready_earlier_explain"
 for = "ready_earlier"
 skill = "any"
 kind = "explain"
-screen = "Grip was there, full throttle came later"
+screen = "No wheelspin or slide, full throttle later"
 review = """On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on your
-reference lap: the grip was there before the throttle."""
+reference lap: nothing Pitwall measured held the throttle back."""
 tier = "brief"
 sources = ["ed_fault_checklist"]
 
@@ -331,8 +332,8 @@ id = "ready_earlier_explain_beginner"
 for = "ready_earlier"
 skill = "beginner"
 kind = "explain"
-screen = "The car was ready before the throttle"
-review = """The car was gripping well on the way out of this corner, but full throttle came later than on your reference
+screen = "No sliding, but full throttle came later"
+review = """The car was not sliding on the way out of this corner, but full throttle came later than on your reference
 lap."""
 tier = "brief"
 sources = ["ed_fault_checklist"]

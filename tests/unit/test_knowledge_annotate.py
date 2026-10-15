@@ -141,6 +141,10 @@ def test_advice_by_skill_and_style(g: TechniqueGraph) -> None:
     sl = dk(g, Context(skill="beginner", braking_style="straight_line")).advice("coasting")
     assert sl is not None and sl["ids"]["review"] == "coasting_explain_straight_line"
     assert sl["ids"]["radio"] == sl["ids"]["screen"] == "coasting_describe_beginner"
+    # tailored: written for the driver's skill or style, not the "any" wording (Review shows it as an explanation)
+    assert any_["tailored"] == dict.fromkeys(("radio", "screen", "review"), False)
+    assert beginner["tailored"] == dict.fromkeys(("radio", "screen", "review"), True)
+    assert trail["tailored"] == {"radio": False, "screen": False, "review": True}
     # incidents never go on the radio; a review-only explanation has no radio or screen
     inc = dk(g, Context()).advice("incident")
     assert inc is not None and inc["radio"] is None and inc["screen"] == "Incident, no advice this lap"
@@ -200,17 +204,20 @@ def _tech(
     exit_: PhaseBalance | None = None,
     lockup: SlipEvents | None = None,
     spin: SlipEvents | None = None,
+    ref_mid: PhaseBalance | None = None,
+    ref_known: bool = True,
 ) -> CornerTechnique:
     inputs = CornerInputs(
         braked=True, lockup=lockup or SlipEvents("measured", 0), wheelspin=spin or SlipEvents("measured", 0)
     )
-    return CornerTechnique(inputs, {"entry": _pb(), "mid": mid or _pb(), "exit": exit_ or _pb()})
+    ref = {"entry": _pb(), "mid": ref_mid or _pb(), "exit": _pb()} if ref_known else None
+    return CornerTechnique(inputs, {"entry": _pb(), "mid": mid or _pb(), "exit": exit_ or _pb()}, lambda: ref)
 
 
 def test_slip_and_balance_causes_read_this_laps_technique(g: TechniqueGraph) -> None:
     slow = delta(min_speed_kph=92.0)
     assert causes(g, "low_min_speed", slow, _tech(mid=_pb(slide=True))) == ["low_grip"]
-    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(3.5))) == ["low_grip"]  # mid-corner understeer
+    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(4.5))) == ["low_grip"]  # understeer, 3.5 deg past the ref
     assert causes(g, "low_min_speed", slow, _tech(lockup=SlipEvents("measured", 1))) == ["low_grip"]
     assert causes(g, "low_min_speed", slow, _tech()) == []
     late = delta(throttle_full_m=680.0)
@@ -218,6 +225,21 @@ def test_slip_and_balance_causes_read_this_laps_technique(g: TechniqueGraph) -> 
     assert causes(g, "late_throttle", late, _tech(exit_=_pb(slide=True))) == ["traction_limited"]
     assert causes(g, "late_throttle", late, _tech()) == ["ready_earlier"]  # grip was there: no spin, slide, push
     assert causes(g, "late_throttle", late, _tech(exit_=_pb(3.0))) == []  # exit understeer: neither
+
+
+def test_less_grip_is_judged_against_the_reference_lap(g: TechniqueGraph) -> None:
+    """A slide or understeer the reference lap shared at the corner is the car there, not grip this lap lacked: it
+    names no cause, and neither does a symptom whose reference balance was not measured."""
+    slow = delta(min_speed_kph=92.0)
+    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(slide=True), ref_mid=_pb(slide=True))) == []
+    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(4.5), ref_mid=_pb(3.5))) == []  # the reference pushed too
+    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(3.5), ref_mid=_pb(1.0))) == []  # 2.5 deg: within the spread
+    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(5.0), ref_mid=_pb(2.0))) == ["low_grip"]
+    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(5.0), ref_known=False)) == []  # unknown holds nothing
+    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(slide=True), ref_known=False)) == []
+    assert causes(g, "low_min_speed", slow, _tech(mid=_pb(5.0), ref_mid=_pb(None))) == []
+    no_ref = CornerTechnique(CornerInputs(braked=True), {"mid": _pb(5.0)})  # no reference balance at all
+    assert causes(g, "low_min_speed", slow, no_ref) == []
 
 
 def test_unknown_slip_is_not_zero(g: TechniqueGraph) -> None:

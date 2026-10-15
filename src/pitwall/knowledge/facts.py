@@ -115,6 +115,9 @@ def _context_fact(g: TechniqueGraph, ctx: Context, style: Style, fits: Sequence[
             f"Your braking style here is {STYLE_WORDS.get(ctx.braking_style, ctx.braking_style)}: braking with the "
             f"wheel turned in {style.trail_corners} of {style.braking_corners} braking corners."
         )
+        if style.assisted:  # the game's braking assist braked too: say so, never present it as all the driver's
+            style_txt += "; the game's braking assist was on, so some of that braking was the game's"
+            say += " The game's braking assist was on, so some of that braking was the game's, not yours."
     else:
         style_txt = (
             f"braking style not detected yet (it needs {MIN_LAPS} clean laps with {MIN_BRAKING_CORNERS} braking "

@@ -522,6 +522,50 @@ sources = ["pitwall_technique_review"]
 notes = "The exit phase of technique.balance.lap_balance."
 
 [[signal]]
+id = "mid_understeer_vs_ref"
+name = "Mid-corner understeer beyond the reference"
+summary = """Whether the car understeered around the slowest point on this lap clearly more than on the reference lap
+at the same corner."""
+code = "PhaseBalance.slip_diff_deg"
+unit = "bool"
+channels = ["wheel_slip", "g_lat", "speed", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review", "pitwall_signal_spread"]
+notes = """knowledge.annotate: this lap's mid-phase slip difference at or above US_DIFF_DEG (understeer) and at least
+UNDERSTEER_MORE_DEG (3 degrees) above the reference lap's at that corner; unknown when either lap's balance was not
+measured. Relative so that understeer the reference lap shared (the car at that corner) names no cause: on the owner's
+low_min_speed points the reference also understeered at 52 of the 139 where this lap did."""
+
+[[signal.noise]]
+metric = "clean-lap spread of the mid-corner slip difference, median per corner"
+value = 1.8
+unit = "deg"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "Standard deviation per corner over clean laps, 43 corners of six real F1 25 sessions; 90th percentile 3.1."
+
+[[signal.noise]]
+metric = "clean-lap deviation from the corner's median, 90th percentile"
+value = 2.9
+unit = "deg"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+
+[[signal]]
+id = "mid_slide_vs_ref"
+name = "Mid-corner slide the reference did not have"
+summary = """Whether the back of the car slid or needed a counter-steer around the slowest point on this lap but not on
+the reference lap at the same corner."""
+code = "PhaseBalance.slide"
+unit = "bool"
+channels = ["body_slip", "yaw_rate", "steering", "wheel_slip", "g_lat"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """knowledge.annotate: mid-phase slide on this lap and none on the reference lap; unknown when either lap's
+balance was not measured. On the owner's low_min_speed points the reference also slid at 6 of the 49 where this lap
+did."""
+
+[[signal]]
 id = "entry_brake_share"
 name = "Braking share of the entry"
 summary = "The share of the entry's at-the-limit moments with the brake still pressed."

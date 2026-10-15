@@ -15,6 +15,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+import orjson
 import pytest
 from fastapi.testclient import TestClient
 
@@ -28,6 +29,7 @@ from pitwall.core.lap_processor import LapJob, LapProcessor
 from pitwall.core.live import LiveState
 from pitwall.core.session_analysis import SessionAnalyzer
 from pitwall.drivers import DriverService
+from pitwall.knowledge.annotate import slim
 from pitwall.knowledge.facts import CONTEXT_PREFIX, FAULT_PREFIX, TOPIC
 from pitwall.knowledge.graph import CONTEXT_KEYS, TechniqueGraph, load_graph
 from pitwall.storage.db import Database, DbWriter
@@ -128,6 +130,44 @@ def test_habit_lines_carry_this_laps_knowledge() -> None:
     block = select(sel, 3, third)
     (line,) = block["picked"]
     assert line["habit_event"] == "announce" and line["knowledge"]["fault"] == "low_min_speed"
+
+
+def test_live_snapshots_carry_the_slim_annotation() -> None:
+    """Twenty snapshots a second carry the coach card's slim copy; the radio and the lap notification keep the full
+    annotation (causes with their signals, advice ids)."""
+    full = {
+        "fault": "low_min_speed",
+        "name": "Low minimum speed",
+        "status": "live",
+        "tier": "live",
+        "applies": True,
+        "why_not": None,
+        "causes": [
+            {
+                "id": "over_braking",
+                "name": "Over-braking",
+                "tier": "brief",
+                "evidence": [{"signal": "brake_point_delta_m", "test": "braked earlier", "value": -12.0, "unit": "m"}],
+                "advice": {"radio": None, "screen": "Slowed more on the way in", "review": "...", "ids": {}},
+            }
+        ],
+        "advice": {"radio": "r", "screen": "s", "review": "v", "ids": {}, "tailored": {}},
+        "digest": "abc",
+    }
+    live = LiveState()
+    live.reset_session("s", "test", False)
+    notes: list[dict[str, Any]] = []
+    live.subscribe(lambda kind, p: notes.append(p) if kind == "lap" else None)
+    o = {**pt("T6", "low_min_speed", 2), "knowledge": full}
+    live.on_lap_result({"lap_id": 102, "lap_number": 2}, [o, pt("T2", "low_min_speed", 2)], None)
+    snap = live.snapshot()["observations"]
+    assert (
+        snap[0]["knowledge"] == slim(full)
+        and snap[0]["knowledge"]["causes"][0]["screen"] == "Slowed more on the way in"
+    )
+    assert "knowledge" not in snap[1]  # an observation without an annotation is sent as it is
+    assert live.observations[0]["knowledge"] is full and notes[0]["observations"][0]["knowledge"] is full
+    assert len(orjson.dumps(snap[0]["knowledge"])) < len(orjson.dumps(full))
 
 
 # ---------------------------------------------------------------------------------------------- the live path

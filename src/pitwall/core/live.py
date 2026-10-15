@@ -82,6 +82,7 @@ from pitwall.coach.drills import with_drill
 from pitwall.coach.selection import CoachSelection
 from pitwall.core.track_knowledge import TrackKnowledge, TrackKnowledgeResolver, heads_up_cue_plan
 from pitwall.drivers import CoachingLimits
+from pitwall.knowledge.annotate import slim as slim_knowledge
 from pitwall.model.telemetry import CarFrame, GameEvent, SessionInfo, Wheels
 
 SESSION_RUNNING = "running"
@@ -262,6 +263,14 @@ def _with_lap(totals: dict[str, Any] | None, lap: dict[str, Any]) -> dict[str, A
         if not flags and lap.get("valid") is not False:
             t["not_clean_other"] = True
     return t
+
+
+def _snapshot_observation(o: dict[str, Any]) -> dict[str, Any]:
+    """An observation as every ``/ws/live`` snapshot carries it: its ``knowledge`` annotation slimmed to what the coach
+    card reads (``knowledge.annotate.slim``), so twenty snapshots a second stay within the size budget."""
+    if "knowledge" not in o:
+        return o
+    return {**o, "knowledge": slim_knowledge(o["knowledge"])}
 
 
 def _compared_corners(comparison: dict[str, Any] | None) -> list[str] | None:
@@ -834,7 +843,9 @@ class LiveState:
                 "laps": list(self.laps)[:20],
                 # the session's counts over every lap (Session complete, the Ready card's last run): "laps" is capped
                 "lap_totals": self.lap_totals,
-                "observations": self.observations[:8],
+                # technique knowledge as the coach block's slim copy: the full annotation (causes with their
+                # evidence and advice ids, ~0.4-0.9 kB each) is in the lap notification and the session's analysis
+                "observations": [_snapshot_observation(o) for o in self.observations[:8]],
                 "events": list(self.events)[:10],
             }
             out["marshal_flags"] = self.marshal_flags

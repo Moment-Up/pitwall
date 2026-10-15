@@ -16,7 +16,11 @@ the shares count those:
   ``COASTING_RARE_SHARE`` ``rare``, in between unknown (neither condition holds).
 
 Both need at least ``MIN_LAPS`` laps and ``MIN_BRAKING_CORNERS`` braking corners, else they are unknown (None).
-Pure and deterministic; no LLM.
+
+The F1 games' braking assist (level 1 and above) brakes for the driver, so some of the brake trace these shares read
+is the game's. How much is not known, so the style is kept and flagged, not dropped (``Style.braking_assist``: the
+screens and the AI engineer say some of the braking was the game's), as ``technique.rig`` flags the brake figures
+under the same assist. Pure and deterministic; no LLM.
 """
 
 from __future__ import annotations
@@ -54,6 +58,14 @@ class Style:
     trail_corners: int = 0  # braking corners trail-braked (trail_brake_m >= TRAIL_BRAKE_M)
     coast_corners: int = 0  # braking corners with coasting (coast_m >= COAST_M)
     coast_measured: int = 0  # braking corners whose coasting was measured
+    # the F1 braking assist level the laps were driven with (1 and above: some of the braking was the game's); None =
+    # off or not reported
+    braking_assist: int | None = None
+
+    @property
+    def assisted(self) -> bool:
+        """The game's braking assist was on: the detected braking is partly the game's."""
+        return self.braking_assist is not None and self.braking_assist >= 1
 
     @property
     def trail_share(self) -> float | None:
@@ -80,6 +92,7 @@ class Style:
             "trail_share": None if ts is None else round(ts, 3),
             "coast_share": None if cs is None else round(cs, 3),
             "enough": self.enough,
+            "braking_assist": self.braking_assist,
         }
 
 
@@ -87,9 +100,16 @@ def _num(v: object) -> float | None:
     return float(v) if isinstance(v, int | float) and not isinstance(v, bool) and v == v else None
 
 
-def detect_style(recent: Mapping[str, Sequence[CornerMetrics]]) -> Style:
+def braking_assist_of(assists: object) -> int | None:
+    """The F1 braking assist level from a session's assists dict (``braking``); None when not reported or off."""
+    v = assists.get("braking") if isinstance(assists, Mapping) else None
+    return v if isinstance(v, int) and not isinstance(v, bool) and v >= 1 else None
+
+
+def detect_style(recent: Mapping[str, Sequence[CornerMetrics]], braking_assist: int | None = None) -> Style:
     """The style of ``{corner: [CornerMetrics of each recent clean lap]}`` (module docstring). Laps = the most laps any
-    corner has (a lap misses a corner only where it was an incident)."""
+    corner has (a lap misses a corner only where it was an incident). ``braking_assist``: the F1 braking assist level
+    the laps were driven with (flags the style; ``braking_assist_of``)."""
     laps = max((len(v) for v in recent.values()), default=0)
     braking = trail = coast = coast_measured = 0
     for metrics in recent.values():
@@ -109,6 +129,7 @@ def detect_style(recent: Mapping[str, Sequence[CornerMetrics]]) -> Style:
         trail_corners=trail,
         coast_corners=coast,
         coast_measured=coast_measured,
+        braking_assist=braking_assist,
     )
     if not out.enough:
         return out
@@ -126,4 +147,5 @@ def detect_style(recent: Mapping[str, Sequence[CornerMetrics]]) -> Style:
         trail_corners=trail,
         coast_corners=coast,
         coast_measured=coast_measured,
+        braking_assist=braking_assist,
     )

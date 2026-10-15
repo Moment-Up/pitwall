@@ -89,7 +89,7 @@ from pitwall.drivers import Driver
 from pitwall.knowledge.annotate import DriverKnowledge, LapSignals
 from pitwall.knowledge.context import build_context, fuel_saving_of
 from pitwall.knowledge.graph import load_graph
-from pitwall.knowledge.style import detect_style
+from pitwall.knowledge.style import braking_assist_of, detect_style
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter, dumps
 
@@ -528,7 +528,7 @@ class LapProcessor:
             graph = load_graph()
             if not graph.valid:
                 return None
-            style = detect_style(sc.style_laps)
+            style = detect_style(sc.style_laps, braking_assist_of(ctx.get("assists")))
             live = self.live
             strategy = live.strategy if live is not None and self._is_live(session_id) else None
             context = build_context(

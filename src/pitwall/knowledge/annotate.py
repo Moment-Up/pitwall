@@ -31,7 +31,9 @@ Signal values (``LapSignals``): a compared lap's per-corner values, read where e
 ``CornerDelta.*`` from the corner's delta, ``CornerMetrics.*`` from this lap's metrics, and the technique signals that
 share a field (``TECHNIQUE_READERS``: the entry / mid / exit phase of ``PhaseBalance``, lock-up or wheelspin
 ``SlipEvents``) from this lap's inputs and balance at that corner, computed only when a cause needs them
-(``technique.session.lap_corner``, as the Technique page computes them). Session-wide signals (``CornerSummary``,
+(``technique.session.lap_corner``, as the Technique page computes them); ``mid_understeer_vs_ref`` and
+``mid_slide_vs_ref`` also read the reference lap's balance at that corner (computed only then), so a symptom the
+reference lap shared names no cause. Session-wide signals (``CornerSummary``,
 ``LapCornerTechnique``) are not per-lap values and read as unmeasured here.
 
 Deterministic, no I/O, no LLM: the AI engineer may explain these annotations, never invent one.
@@ -59,6 +61,7 @@ from pitwall.knowledge.graph import (
     Technique,
     TechniqueGraph,
 )
+from pitwall.technique.thresholds import US_DIFF_DEG
 
 if TYPE_CHECKING:
     from pitwall.analysis.compare import CornerDelta, LapAnalysis
@@ -121,17 +124,61 @@ FITS = Fit(True)
 
 
 # ---------------------------------------------------------------------------------------------- signal values
+type Balance = Mapping[Phase, PhaseBalance | None]  # a corner's balance per phase (technique.balance.lap_balance)
+
+
 @dataclass(slots=True)
 class CornerTechnique:
-    """One lap's inputs and handling balance at one corner (``technique.session.lap_corner``)."""
+    """One lap's inputs and handling balance at one corner (``technique.session.lap_corner``). ``ref_balance``: the
+    reference lap's balance at that corner, computed on first use (None = not known)."""
 
     inputs: CornerInputs | None
-    balance: Mapping[Phase, PhaseBalance | None] | None
+    balance: Balance | None
+    ref_balance: Callable[[], Balance | None] | None = None
 
 
 def _phase(t: CornerTechnique, phase: Phase, attr: str) -> object:
     pb = t.balance.get(phase) if t.balance is not None else None
     return getattr(pb, attr, None) if pb is not None else None
+
+
+def _ref_phase(t: CornerTechnique, phase: Phase) -> PhaseBalance | None:
+    rb = t.ref_balance() if t.ref_balance is not None else None
+    return rb.get(phase) if rb is not None else None
+
+
+# [H] Understeer that cost this lap grip the reference lap had: the front tyres at least US_DIFF_DEG (3 degrees) past
+# the rears around the slowest point (understeer, technique.thresholds) and at least that much more than on the
+# reference lap at the corner. A corner's mid-corner slip difference moves about 1.8 degrees between clean laps (the
+# median per-corner spread; 90 % of clean laps within +2.9 degrees of the corner's median, six real F1 25 sessions,
+# pitwall_signal_spread), so 3 degrees more is outside a clean lap's normal spread. Understeer the reference lap shared
+# is the car at that corner, not grip this lap lacked.
+UNDERSTEER_MORE_DEG = US_DIFF_DEG
+
+
+def _understeer_vs_ref(t: CornerTechnique) -> bool | None:
+    """Mid-corner understeer on this lap and ``UNDERSTEER_MORE_DEG`` more than on the reference lap; False when this
+    lap did not understeer, None when either lap's balance was not measured."""
+    this = _phase(t, "mid", "slip_diff_deg")
+    if not isinstance(this, float | int):
+        return None
+    if this < US_DIFF_DEG:
+        return False
+    ref = _ref_phase(t, "mid")
+    r = ref.slip_diff_deg if ref is not None else None
+    return None if r is None else this - r >= UNDERSTEER_MORE_DEG
+
+
+def _slide_vs_ref(t: CornerTechnique) -> bool | None:
+    """A slide around the slowest point on this lap and none on the reference lap; False when this lap did not slide,
+    None when either lap's balance was not measured."""
+    pb = t.balance.get("mid") if t.balance is not None else None
+    if pb is None:
+        return None
+    if not pb.slide:
+        return False
+    ref = _ref_phase(t, "mid")
+    return None if ref is None else not ref.slide
 
 
 def _events(slip: SlipEvents | None) -> int | None:
@@ -151,6 +198,8 @@ TECHNIQUE_READERS: Mapping[str, tuple[str, Callable[[CornerTechnique], object]]]
     "exit_balance_deg": ("PhaseBalance.slip_diff_deg", lambda t: _phase(t, "exit", "slip_diff_deg")),
     "mid_slide": ("PhaseBalance.slide", lambda t: _phase(t, "mid", "slide")),
     "exit_slide": ("PhaseBalance.slide", lambda t: _phase(t, "exit", "slide")),
+    "mid_understeer_vs_ref": ("PhaseBalance.slip_diff_deg", _understeer_vs_ref),
+    "mid_slide_vs_ref": ("PhaseBalance.slide", _slide_vs_ref),
     "entry_brake_share": ("PhaseBalance.brake_share", lambda t: _phase(t, "entry", "brake_share")),
     "lockup_events": ("SlipEvents.events", lambda t: _events(t.inputs.lockup if t.inputs is not None else None)),
     "exit_wheelspin_events": (
@@ -205,7 +254,9 @@ class LapSignals:
         self.ref = ref
         self.corners = corners or {}
         self._native: Native | None = None
+        self._ref_native: Native | None = None
         self._technique: dict[str, CornerTechnique | None] = {}
+        self._ref_balance: dict[str, Balance | None] = {}
 
     def technique(self, corner: str) -> CornerTechnique | None:
         if corner in self._technique:
@@ -220,8 +271,24 @@ class LapSignals:
             if self._native is None:
                 self._native = native(self.lap.lap)
             inputs, balance = lap_corner(self.lap, self._native, c, corner_anchors(self.ref, c))
-            out = CornerTechnique(inputs, balance)
+            out = CornerTechnique(inputs, balance, lambda: self.ref_balance(corner))
         self._technique[corner] = out
+        return out
+
+    def ref_balance(self, corner: str) -> Balance | None:
+        """The reference lap's handling balance at ``corner`` (computed once, when a cause compares with it)."""
+        if corner in self._ref_balance:
+            return self._ref_balance[corner]
+        out: Balance | None = None
+        c = self.corners.get(corner)
+        if self.ref is not None and c is not None:
+            from pitwall.technique.samples import native
+            from pitwall.technique.session import corner_anchors, lap_corner
+
+            if self._ref_native is None:
+                self._ref_native = native(self.ref.lap)
+            out = lap_corner(self.ref, self._ref_native, c, corner_anchors(self.ref, c))[1]
+        self._ref_balance[corner] = out
         return out
 
     def reader(self, corner: object) -> Reader:
@@ -391,18 +458,23 @@ class DriverKnowledge:
         return sorted(fitting, key=lambda a: (a.style is None, a.skill == "any"))
 
     def advice(self, node_id: str) -> dict[str, Any] | None:
-        """``{radio, screen, review, ids: {form: advice id}}`` for a fault or cause, each form from the best advice that
-        has it; None when no advice fits."""
+        """``{radio, screen, review, ids: {form: advice id}, tailored: {form: bool}}`` for a fault or cause, each form
+        from the best advice that has it; None when no advice fits. ``tailored``: the form's advice is written for the
+        driver's skill or braking style (not the ``any`` wording), which Review shows as an explanation under the
+        coach's own text."""
         ranked = self._advice_for(node_id)
         if not ranked:
             return None
         out: dict[str, Any] = {}
         ids: dict[str, str | None] = {}
+        tailored: dict[str, bool] = {}
         for form in FORMS:
             a = next((x for x in ranked if getattr(x, form) is not None), None)
             out[form] = getattr(a, form) if a is not None else None
             ids[form] = a.id if a is not None else None
+            tailored[form] = a is not None and (a.skill != "any" or a.style is not None)
         out["ids"] = ids
+        out["tailored"] = tailored
         return out
 
     # ------------------------------------------------------------------ causes
