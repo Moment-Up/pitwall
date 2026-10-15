@@ -16,6 +16,9 @@ does), ``safety_car_periods`` (Session.safetyCarStatus "full" in those session-t
 ``skip_results_after_player_finish`` (when the player finishes, every AI car is marked finished where it is in the next
 LapData frame and its lap in progress is filled in at once, as F1 25 does when the driver skips to the results:
 ``GroundTruth.ai_simulated_laps``).
+
+Optional Time Trial (``F1Scenario.time_trial``, leaderboard; off by default, the stream is then unchanged): packet 14
+once a second and LapData's PB / rival car indexes, encoded from EA's spec only (never evidence of what F1 25 sends).
 """
 
 from __future__ import annotations
@@ -74,6 +77,66 @@ class FlashbackSpec:
     rewind_s: float = 4.0
 
 
+# --- leaderboard: Time Trial (SYNTHETIC) ------------------------------------------------------------------------------
+SESSION_TYPE_TIME_TRIAL = 18  # Session.sessionType (EA spec 8.5)
+TIME_TRIAL_PERIOD_S = 1.0  # packet 14 "1 per second" (EA spec 5.14)
+TT_INDEX_NONE = 255
+
+
+@dataclass(slots=True, frozen=True)
+class TimeTrialSetSpec:
+    """One ``TimeTrialDataSet`` the stream sends as given (SYNTHETIC). Flags are the wire's 0 / 1."""
+
+    lap_ms: int
+    sectors_ms: tuple[int, int, int]
+    team_id: int = 8
+    car_index: int = TT_INDEX_NONE
+    traction_control: int = 0
+    gearbox_assist: int = 0
+    anti_lock_brakes: int = 0
+    equal_car_performance: int = 0
+    custom_setup: int = 0
+    valid: int = 1
+
+    def values(self) -> dict[str, object]:
+        s1, s2, s3 = self.sectors_ms
+        return {
+            "carIdx": self.car_index,
+            "teamId": self.team_id,
+            "lapTimeInMS": self.lap_ms,
+            "sector1TimeInMS": s1,
+            "sector2TimeInMS": s2,
+            "sector3TimeInMS": s3,
+            "tractionControl": self.traction_control,
+            "gearboxAssist": self.gearbox_assist,
+            "antiLockBrakes": self.anti_lock_brakes,
+            "equalCarPerformance": self.equal_car_performance,
+            "customSetup": self.custom_setup,
+            "valid": self.valid,
+        }
+
+
+@dataclass(slots=True)
+class TimeTrialSpec:
+    """Time Trial mode (SYNTHETIC: packet 14 encoded from EA's spec, never evidence of what F1 25 sends).
+
+    Once a second a Time Trial packet carries the player's session best (their fastest valid lap completed so far,
+    sectors from the driven profile; a zero-filled set before the first one), ``personal_best`` and ``rival`` (None: a
+    zero-filled set, no lap). LapData's tail names ``rival_index`` / ``pb_index`` (None: 255). The rival ghost is the
+    AI car in that slot (``F1Scenario.ai_cars``); ``rival_inputs=False`` streams its CarTelemetry slot zero-filled (a
+    ghost whose position and lap distance move but whose speed and pedal inputs are never sent). Use it with
+    ``F1Scenario.session_type = SESSION_TYPE_TIME_TRIAL`` (``pitwall.sim.scenarios.time_trial_demo``)."""
+
+    rival: TimeTrialSetSpec | None = None
+    personal_best: TimeTrialSetSpec | None = None
+    rival_index: int | None = None
+    pb_index: int | None = None
+    rival_inputs: bool = True
+
+
+# --- end leaderboard ---
+
+
 @dataclass(slots=True)
 class F1Scenario:
     laps: int = 5
@@ -106,6 +169,7 @@ class F1Scenario:
     # for F2 cars on a real PS5 (2026-10-11): F2 tyre compounds (actual 12 soft / visual 20 soft), 0 in every ERS
     # field and a 60 km/h pit speed limit. Still SYNTHETIC (SYNTHETIC_SESSION_UID): never evidence for the game.
     formula: int = 0
+    time_trial: TimeTrialSpec | None = None  # leaderboard: packet 14 + LapData's car indexes (see TimeTrialSpec)
 
     @property
     def layout(self) -> P.F1Layout:
@@ -488,6 +552,43 @@ def _event_packet(sc: F1Scenario, code: str, details: bytes, st: float, frame: i
     return _hdr(P.PacketId.EVENT, sc, st, frame, overall) + code.encode() + details
 
 
+# --- leaderboard: Time Trial (SYNTHETIC) ------------------------------------------------------------------------------
+def time_trial_session_best(
+    sc: F1Scenario, truth: GroundTruth, starts: npt.NDArray[np.float64], t: float
+) -> TimeTrialSetSpec | None:
+    """The player's fastest valid lap completed by session time ``t`` as a Time Trial set, its sectors split like the
+    stream's LapData (sector 1 to a third of the track, sector 2 to two thirds); None before the first one."""
+    best: tuple[int, int] | None = None
+    for n, ms in truth.lap_times_ms.items():
+        if float(starts[n]) <= t + 1e-9 and n not in sc.invalid_laps and (best is None or ms < best[1]):
+            best = (n, ms)
+    if best is None or truth.track is None:
+        return None
+    n, ms = best
+    prof, length = truth.profiles[n], truth.track.length_m
+    s1 = round(float(np.interp(length / 3, prof.s, prof.t)) * 1000)
+    s2 = round(float(np.interp(2 * length / 3, prof.s, prof.t)) * 1000) - s1
+    return TimeTrialSetSpec(lap_ms=ms, sectors_ms=(s1, s2, ms - s1 - s2), team_id=sc.team_id, car_index=PLAYER)
+
+
+def _time_trial_packet(
+    sc: F1Scenario,
+    tt: TimeTrialSpec,
+    st: float,
+    frame: int,
+    overall: int,
+    truth: GroundTruth,
+    starts: npt.NDArray[np.float64],
+) -> bytes:
+    """Packet 14: the player's session best, ``tt.personal_best`` and ``tt.rival`` (a zero-filled set for None)."""
+    sets = (time_trial_session_best(sc, truth, starts, st), tt.personal_best, tt.rival)
+    body = b"".join(sc.layout.time_trial.pack({} if x is None else x.values()) for x in sets)
+    return _hdr(P.PacketId.TIME_TRIAL, sc, st, frame, overall) + body
+
+
+# --- end leaderboard ---
+
+
 # --- feat/technique: MotionEx with injected technique deviations (SYNTHETIC) ------------------------------------
 TECH_LINE_FULL_M = 40.0  # line offset is full within apex +/- 40 m ...
 TECH_LINE_FADE_M = 120.0  # ... and fades out (raised cosine) by apex +/- 120 m
@@ -745,6 +846,14 @@ def _stream(
     hist_i = 0
     session_packets = 1  # the first Session packet below
     unfilled = 2  # real F1 25: the first 2-3 Session packets of a session carry an unfilled tail
+    tt = sc.time_trial  # leaderboard: Time Trial packets and LapData's car indexes (None: 255, as before)
+    last_tt = -10.0
+    lap_tail = P.LAP_DATA_TAIL.pack(
+        {
+            "timeTrialPBCarIdx": TT_INDEX_NONE if tt is None or tt.pb_index is None else tt.pb_index,
+            "timeTrialRivalCarIdx": TT_INDEX_NONE if tt is None or tt.rival_index is None else tt.rival_index,
+        }
+    )
 
     def pkt(data: bytes, offset_us: float = 0.0) -> CapturedPacket:
         return CapturedPacket(int(wall + offset_us * 1000), 20777, data)
@@ -821,6 +930,8 @@ def _stream(
         ai_tel: dict[int, Mapping[str, object]] = {}
         for car in ai:
             ai_motion[car.spec.index], ai_lap[car.spec.index], ai_tel[car.spec.index] = _ai_values(car, t, track, L)
+        if tt is not None and not tt.rival_inputs and tt.rival_index is not None:
+            ai_tel.pop(tt.rival_index, None)  # a ghost whose CarTelemetry slot stays zero-filled
 
         def gq(g: float, quantise: bool = quantise) -> float | int:
             return round(g * 1000) if quantise else g  # format 2026 sends int16 thousandths of g
@@ -863,7 +974,8 @@ def _stream(
             },
             L.max_cars,
             ai_lap,
-        ) + P.LAP_DATA_TAIL.pack({"timeTrialPBCarIdx": 255, "timeTrialRivalCarIdx": 255})
+        )
+        lapdata += lap_tail  # leaderboard: the time trial car indexes (255, 255 outside Time Trial)
         telem = _cars(
             L.car_telemetry,
             {
@@ -934,6 +1046,9 @@ def _stream(
         if t - last_part >= 5.0 or t < last_part:
             last_part = t
             yield pkt(_participants_packet(sc, t, frame, overall), 280)
+        if tt is not None and (t - last_tt >= TIME_TRIAL_PERIOD_S - 1e-9 or t < last_tt):
+            last_tt = t
+            yield pkt(_time_trial_packet(sc, tt, t, frame, overall, truth, starts), 300)
 
         frame += 1
         overall += 1
@@ -954,7 +1069,6 @@ def _stream(
         "driverStatus": 1,
         "resultStatus": 2,
     }
-    lap_tail = P.LAP_DATA_TAIL.pack({"timeTrialPBCarIdx": 255, "timeTrialRivalCarIdx": 255})
     lapdata = _cars(P.LAP_DATA, player_final, sc.layout.max_cars, ai_final) + lap_tail
     yield pkt(_hdr(P.PacketId.LAP_DATA, sc, t, frame, overall) + lapdata)
     if skip and ai_final is not None:

@@ -93,8 +93,10 @@ game reports it, F1 Session History; emitted only when it changed). Units in fie
 `CarSetup`, `LapCompletion`; F1 only: `FieldSample` (the other cars, field model), `RaceTiming` (every car's position,
 gaps and pit state at <= 2 Hz, plus one at each pit-status change) and `TyreSetsInfo` (the player's tyre sets on
 change), both for the race strategy engine, and `Participants` (who drives which car, on change; to the race radio
-only: never persisted, never in live state, names never logged). `CarFrame` carries the player's F1 `fia_flag`,
-`damage` (`CarDamage`) and `penalties` (`CarPenalties`), the objects rebuilt only when the game's values change. Units in field names; `None` = unknown; `Wheels` always FL, FR, RL, RR; per-game
+only: never persisted, never in live state, names never logged) and `TimeTrialInfo` (Time Trial, packet 14, once a
+second: session best, personal best and the EA rival's lap, with LapData's PB / rival car indexes; spec-decoded, no
+recording yet; `snapshot.time_trial` and the latest per session in `session_time_trial`). `CarFrame` carries the
+player's F1 `fia_flag`, `damage` (`CarDamage`) and `penalties` (`CarPenalties`), the objects rebuilt only when the game's values change. Units in field names; `None` = unknown; `Wheels` always FL, FR, RL, RR; per-game
 ground plane declared by the adapter (`AdapterInfo.ground_plane`). Field provenance per game in
 `AdapterInfo.fields` -> `/api/capabilities`.
 
@@ -535,9 +537,9 @@ answered by `RadioHub.command_handler` before the engineer; the LLM never sees v
 <!-- end validation kit -->
 
 ## Storage
-SQLite WAL (`data/pitwall.sqlite3`), schema v6 (`storage/db.py`). Every migration is additive and idempotent, run in
+SQLite WAL (`data/pitwall.sqlite3`), schema v7 (`storage/db.py`). Every migration is additive and idempotent, run in
 one `BEGIN IMMEDIATE` transaction on open; `_migrate` checks columns, not version numbers, so any older database
-converges (tests: `tests/unit/test_db_migrations.py`, v2 to v5 fixtures; nothing reads `meta.schema_version`).
+converges (tests: `tests/unit/test_db_migrations.py`, v2 to v6 fixtures; nothing reads `meta.schema_version`).
 
 | Version | Lane | Changes |
 |---|---|---|
@@ -547,6 +549,7 @@ converges (tests: `tests/unit/test_db_migrations.py`, v2 to v5 fixtures; nothing
 | v4 | pace vs AI | `sessions.ai_difficulty` (added last, by `ALTER TABLE`), `session_ai_pace` |
 | v5 | race strategy | `strategy_laps`, `pit_stops`, `ix_pit_stops_session` (new tables only) |
 | v6 | coachref | `reference_choices`, `drills`, `ix_drills_driver` (new tables only) |
+| v7 | leaderboard | `session_time_trial`: the latest F1 25 Time Trial data per session, the EA rival in columns (`repo.latest_tt_rival`) (new table only) |
 
 Lap traces stored as compressed float32 npz blobs (~19 channels); a `no_trace` lap has none (`n_samples` 0), and
 `repo.load_lap_trace` returns None for it. Empty sessions (ended, with no timed lap, no lap trace beyond a stub and

@@ -9,6 +9,7 @@ Three representations with different update rates:
   field (F1); input of the field model (track knowledge layer L0b).
 * ``RaceTiming`` / ``TyreSetsInfo`` - race strategy inputs (F1): every car's position, gaps and pit state at
   <= 2 Hz, and the player's tyre sets on change; consumed by ``pitwall.strategy`` off the ingest thread.
+* ``TimeTrialInfo`` - F1 25 Time Trial (packet 14, 1 Hz): session best, personal best and the EA rival's lap.
 
 Conventions (every adapter MUST normalise to these):
 
@@ -676,6 +677,92 @@ class FieldMotion:
 # --- end spotter ---
 
 
+# --- leaderboard: F1 25 Time Trial (packet 14) ---------------------------------------------------------------------
+@dataclass(slots=True, frozen=True, kw_only=True)
+class TimeTrialDataSet:
+    """One F1 ``TimeTrialDataSet`` (packet 14, docs/research/f1-udp-spec.md section 5.14) as the game sends it.
+
+    A set whose ``m_lapTimeInMS`` is 0 holds no lap and is never built (the adapter reports ``None`` for it). The flags
+    are the game's 0 / 1; any other value is ``None`` (unknown, never guessed). No name: packet 14 carries none."""
+
+    car_index: int | None  # m_carIdx; 255 or past the car array -> None
+    team_id: int | None  # m_teamId (uint8 in format 2025, uint16 in 2026); 255 / 65535 -> None
+    car_id: str | None  # "f1:team:<teamId>", the same id as ``SessionInfo.car_id``; None without a team
+    car_name: str | None  # the spec appendix's team name (adapter enums)
+    lap_time_ms: int
+    sector_times_ms: tuple[int | None, int | None, int | None]  # m_sector1..3TimeInMS; 0 -> None
+    traction_control: bool | None  # m_tractionControl: 0 off, 1 on (an on/off flag here, not CarStatus's 0-2)
+    gearbox_assist: bool | None  # m_gearboxAssist: 0 off, 1 on (not Session.gearboxAssist's 1-3)
+    anti_lock_brakes: bool | None  # m_antiLockBrakes: 0 off, 1 on
+    equal_car_performance: bool | None  # m_equalCarPerformance: 0 realistic, 1 equal
+    custom_setup: bool | None  # m_customSetup: 0 no, 1 yes
+    valid: bool | None  # m_valid: 0 invalid, 1 valid
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "car_index": self.car_index,
+            "team_id": self.team_id,
+            "car_id": self.car_id,
+            "car_name": self.car_name,
+            "lap_time_ms": self.lap_time_ms,
+            "sector_times_ms": list(self.sector_times_ms),
+            "traction_control": self.traction_control,
+            "gearbox_assist": self.gearbox_assist,
+            "anti_lock_brakes": self.anti_lock_brakes,
+            "equal_car_performance": self.equal_car_performance,
+            "custom_setup": self.custom_setup,
+            "valid": self.valid,
+        }
+
+
+@dataclass(slots=True, frozen=True, kw_only=True)
+class TimeTrialInfo:
+    """F1 25 Time Trial data (packet 14, sent once a second in Time Trial mode only), with LapData's
+    ``m_timeTrialPBCarIdx`` / ``m_timeTrialRivalCarIdx``: the player's best lap of this session, their personal best
+    and the rival (the ghost the player picked from EA's leaderboard). Decoded from EA's spec only: not yet seen in a
+    recording (docs/status.md). Emitted on every packet; the session manager keeps it in live state and stores the
+    latest per session (``repo.upsert_session_time_trial``) when it changed. Never starts or splits a session."""
+
+    game: Game
+    t_recv_ns: int
+    session_time_s: float
+    session_uid: str | None  # the game session (header sessionUID; 0 -> the adapter's current one)
+    packet_format: int
+    player_session_best: TimeTrialDataSet | None  # m_playerSessionBestDataSet; None = no lap yet
+    personal_best: TimeTrialDataSet | None  # m_personalBestDataSet
+    rival: TimeTrialDataSet | None  # m_rivalDataSet; None = no rival lap
+    pb_car_index: int | None  # LapData m_timeTrialPBCarIdx; 255 -> None, None too before the session's first LapData
+    rival_car_index: int | None  # LapData m_timeTrialRivalCarIdx; same rules
+
+    def key(self) -> tuple[Any, ...]:
+        """What the game reported, without the receive time: equal keys = nothing new to store or show."""
+        return (
+            self.session_uid,
+            self.packet_format,
+            self.player_session_best,
+            self.personal_best,
+            self.rival,
+            self.pb_car_index,
+            self.rival_car_index,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        def ds(d: TimeTrialDataSet | None) -> dict[str, Any] | None:
+            return None if d is None else d.to_dict()
+
+        return {
+            "packet_format": self.packet_format,
+            "session_best": ds(self.player_session_best),
+            "personal_best": ds(self.personal_best),
+            "rival": ds(self.rival),
+            "pb_car_index": self.pb_car_index,
+            "rival_car_index": self.rival_car_index,
+        }
+
+
+# --- end leaderboard ---
+
+
 # Union of everything an adapter can emit after decoding one packet.
 type Emitted = (
     CarFrame
@@ -689,4 +776,5 @@ type Emitted = (
     | TyreSetsInfo
     | Participants  # race radio (pitwall.raceradio): F1 only, on change
     | FieldMotion  # spotter
+    | TimeTrialInfo  # leaderboard: F1 25 Time Trial (packet 14)
 )

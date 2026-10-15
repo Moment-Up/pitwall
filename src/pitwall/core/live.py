@@ -56,6 +56,9 @@ Snapshot additions for the dashboard (docs/ui/design-spec.md section 13, all add
   lap (``used_kind``, ``reason`` when the choice could not be honoured), whether a change waits for the next lap
   (``pending``) and the practice drill (``drill``: running, or the result of the one that just ended). Published by
   ``core.coachref.CoachRef`` with one attribute swap. ``reference`` gains the descriptor of how it was chosen.
+* ``time_trial`` (leaderboard, every snapshot; ``None`` outside F1 25 Time Trial, about 0.7 kB in it): the game's Time
+  Trial data (``model.telemetry.TimeTrialInfo.to_dict``: session best, personal best, the EA rival and LapData's PB /
+  rival car indexes), set by the session manager when it changed (packet 14 comes once a second). Spec-decoded only.
 * ``car_health`` / ``racecraft`` (health lane; ``/ws/live`` sends them when they changed, ``api.live_feed``): the car
   health worker's ``CarHealthView`` (tyre temperatures against the driver's own warm laps, brakes, engine, lock-ups
   and wheelspin, tank-level fuel; ~1.5 kB) and ``RacecraftView`` (attack / defend corners, F1 races; ~0.6 kB), at most
@@ -350,6 +353,8 @@ class LiveState:
         # --- spotter --- the SpotterWorker swaps in its block (spec 8.3) on every Motion item; None = no F1 Motion
         self.spotter: dict[str, Any] | None = None
         # --- end spotter ---
+        # --- leaderboard: F1 25 Time Trial (TimeTrialInfo.to_dict), set by the session manager on a change ---
+        self.time_trial: dict[str, Any] | None = None
         self.version = 0
         self._listeners: list[Callable[[str, dict[str, Any]], None]] = []
         self._button_listeners: list[Callable[[int], None]] = []
@@ -607,6 +612,15 @@ class LiveState:
 
     # --- end health lane ---
 
+    # --- leaderboard ---
+    def set_time_trial(self, session_id: str, block: dict[str, Any] | None) -> None:
+        """F1 25 Time Trial data of ``session_id`` (ingest thread, on a change only); dropped for another session."""
+        with self._lock:
+            if session_id == self.session_id:
+                self.time_trial = block
+
+    # --- end leaderboard ---
+
     def set_cue_plan(self, plan: CuePlan | None) -> None:
         """Install a cue plan built outside the engine (normally the engine plans from ``on_lap_result``)."""
         self.cues.set_plan(plan)
@@ -723,6 +737,7 @@ class LiveState:
             self.car_health = None  # --- health lane ---
             self.racecraft = None
             self.spotter = None  # --- spotter ---
+            self.time_trial = None  # --- leaderboard ---
             self._bests_requested = None  # the next session packet asks for the new session's bests
             self._heads_up_key = None  # the cue engine drops its heads-ups on reset; the next knowledge re-installs
         self.coach.reset()
@@ -852,6 +867,7 @@ class LiveState:
             out["car_health"] = self.car_health  # --- health lane --- (/ws/live: when it changed)
             out["racecraft"] = self.racecraft
             out["spotter"] = self.spotter  # --- spotter --- ~220 bytes, every snapshot (the bars must be instant)
+            out["time_trial"] = self.time_trial  # --- leaderboard --- None outside F1 Time Trial; ~0.7 kB in it
             if include_static:
                 out["track_model"] = self.track_model
                 out["last_comparison"] = self.last_comparison

@@ -864,6 +864,38 @@ def ai_pace_backfill(
         typer.echo("no matching sessions in these captures")
 
 
+# --- leaderboard ---
+@app.command("tt-check")
+def tt_check(
+    capture: Annotated[Path, typer.Argument(help="A .pwcap capture of an F1 25 Time Trial session")],
+    as_json: Annotated[bool, typer.Option("--json", help="Machine-readable output")] = False,
+) -> None:
+    """F1 25 Time Trial check of one capture: is packet 14 there, the rival's lap, sectors and assists, and does the
+    rival car's slot carry moving telemetry (does the game send the ghost's inputs?). Reads the capture only: no
+    database, no server, nothing sent anywhere."""
+    import zstandard
+
+    from pitwall.adapters.f1.tt_check import check_time_trial, report_lines
+    from pitwall.ingest.capture import CaptureReader
+
+    try:
+        reader = CaptureReader(capture)
+    except (OSError, ValueError, zstandard.ZstdError) as e:
+        typer.echo(f"cannot read {capture}: {e}", err=True)
+        raise typer.Exit(1) from e
+    rep = check_time_trial((p.data for p in reader), synthetic=reader.meta.synthetic)
+    if as_json:
+        typer.echo(json.dumps({"capture": str(capture), "truncated": reader.truncated, **rep.to_dict()}, indent=2))
+        return
+    for line in report_lines(rep, str(capture)):
+        typer.echo(line)
+    if reader.truncated:
+        typer.echo("(the capture is truncated: checked up to its last complete packet)")
+
+
+# --- end leaderboard ---
+
+
 @app.callback()
 def _main() -> None:
     _windows_safe_output()

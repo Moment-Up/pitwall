@@ -36,6 +36,10 @@ The release workflow copies a release's bullet points into its GitHub release no
 - Ask the engineer "What's the family record here?"; when a lap takes the record from another driver the radio says
   so in one short line. Tested on unit tests; not heard live.
 - Lap cards: a lap in a small, versioned format for a possible online board later; built locally, never sent.
+- F1 25 Time Trial: Pitwall reads your session best, personal best and the rival you picked from EA's leaderboard,
+  and keeps the rival per track and car. From EA's spec; not yet seen from the real game.
+- `pitwall tt-check <capture>` says whether a Time Trial recording carries the rival ghost's inputs. Tested on
+  generated laps only.
 
 ## v0.3.0 - 2026-10-13
 
