@@ -607,6 +607,30 @@
   }
 }
 
+/* Leaderboard bands (Review › Progress, Records): a neutral chip with the word, and a medal in the band's colour. */
+@layer components {
+  .pw-band {
+    --chip-bg: var(--default);
+    --chip-fg: var(--foreground);
+    gap: 4px;
+    font-weight: 600;
+  }
+  .pw-band__medal {
+    width: 14px;
+    height: 14px;
+    flex: none;
+  }
+  .pw-band[data-band="gold"] .pw-band__medal {
+    color: var(--pw-band-gold);
+  }
+  .pw-band[data-band="silver"] .pw-band__medal {
+    color: var(--pw-band-silver);
+  }
+  .pw-band[data-band="bronze"] .pw-band__medal {
+    color: var(--pw-band-bronze);
+  }
+}
+
 /* ======================================================================================== utilities */
 @layer utilities {
   /* Live numbers: condensed tabular numerals (the old monospaced .timing, kept for existing call sites). */

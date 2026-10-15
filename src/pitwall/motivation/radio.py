@@ -15,6 +15,11 @@ Several goals on one lap become one line.
 
 The line never states the achieving lap time: the radio rounds lap times to tenths ("1:09.981" is spoken "one ten
 point zero"), which would contradict "under 1:10". Targets are said as ``1:10`` (whole seconds) or ``1:10.3``.
+
+A new family record (``record_message``, from the ``family_record`` note of ``motivation.worker``: a lap took its
+family board's record from another driver, ``leaderboard.service.record_note``) goes the same way: kind ``GOAL``, the
+same speak windows, budget and per-session cap (one ``GoalLineGate``), its own topic ``record:<session>`` so it never
+replaces an unsaid goal line, and no lap time: "New family record at Austria: you took it from Sam."
 """
 
 from __future__ import annotations
@@ -24,6 +29,7 @@ from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
+from pitwall.leaderboard.service import FAMILY_RECORD_NOTE
 from pitwall.motivation.model import LONG_TRACK_NAME, lap_time_radio, seconds
 from pitwall.voice.proactive import LAP_MESSAGE_TTL_S
 from pitwall.voice.scheduler import TOPIC_KEY
@@ -140,4 +146,54 @@ def goal_message(
         bypass_quiet=False,
         needs_speak_window=True,
         meta={TOPIC_KEY: f"goal:{sid}", "goal_ids": [g.get("id") for g in goals]},
+    )
+
+
+# ---------------------------------------------------------------------------------------------- family record
+def record_line(note: Mapping[str, Any], simple: bool) -> str | None:
+    """``New family record at Austria: you took it from Sam.`` (a beginner: ``You did it: the family record at Austria
+    is yours, faster than Sam.``); None without the previous holder."""
+    prev = note.get("previous_driver_name")
+    if not isinstance(prev, str) or not prev:
+        return None
+    track = note.get("track_name")
+    at = f" at {track}" if isinstance(track, str) and track and len(track) <= LONG_TRACK_NAME else ""
+    if simple:
+        return f"You did it: the family record{at} is yours, faster than {prev}."
+    return f"New family record{at}: you took it from {prev}."
+
+
+def record_message(
+    note: Mapping[str, Any],
+    gate: GoalLineGate,
+    live_session_id: str | None,
+    *,
+    simple: bool,
+    to_speech: Callable[[str], str],
+    voice_enabled: bool = True,
+    now_mono: float | None = None,
+) -> RadioMessage | None:
+    """The radio message for a ``family_record`` note, or None (voice off, not the live session, cap reached)."""
+    if not voice_enabled or note.get("kind") != FAMILY_RECORD_NOTE:
+        return None
+    text = record_line(note, simple)
+    if text is None:
+        return None
+    sid = note.get("session_id")
+    if not gate.allow(sid, live_session_id):
+        return None
+    now = time.monotonic() if now_mono is None else now_mono
+    lap_number = note.get("lap_number")
+    return RadioMessage(
+        id=f"record-{sid}-{note.get('lap_id')}",
+        kind=MessageKind.GOAL,
+        priority=Priority.NORMAL,
+        text=text,
+        speech=to_speech(text),
+        created_mono=now,
+        expires_mono=now + LAP_MESSAGE_TTL_S,
+        lap_number=lap_number if isinstance(lap_number, int) and not isinstance(lap_number, bool) else None,
+        bypass_quiet=False,
+        needs_speak_window=True,
+        meta={TOPIC_KEY: f"record:{sid}", "record_lap_id": note.get("lap_id")},
     )

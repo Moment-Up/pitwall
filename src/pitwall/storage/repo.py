@@ -31,7 +31,7 @@ from pitwall import carclass
 from pitwall.analysis.coaching import Observation
 from pitwall.analysis.laps import LapTrace
 from pitwall.analysis.track import TrackModel
-from pitwall.model.telemetry import CarSetup, GameEvent, SessionInfo
+from pitwall.model.telemetry import CarSetup, GameEvent, SessionInfo, TimeTrialInfo
 from pitwall.storage.db import dumps
 
 ACTIVE_DRIVER_KEY = "active_driver_id"  # meta key: who is in the seat (survives restarts)
@@ -2214,3 +2214,274 @@ def stop_active_drills(conn: sqlite3.Connection, reason: str, now: float) -> int
         (reason, now),
     )
     return int(cur.rowcount)
+
+
+# ---------------------------------------------------------------- family leaderboard (pitwall.leaderboard)
+# A board lap: a clean, valid (or not reported invalid), timed lap of real driving (never synthetic, never a replay,
+# never unowned) at an identified track. Its board key (``leaderboard.keys``) is worked out in Python from the raw
+# columns below, so one normalisation serves these rows, a live session and a lap card. The window functions
+# partition by the raw values (finer than a board key: weather "clear" and "overcast" are both dry, lengths within
+# 3 % are one layout); ``leaderboard.board`` merges the partitions of one key. Never reads the trace.
+_BOARD_KEY_COLS = (
+    "driver_id",
+    "game",
+    "track_id",
+    "track_length_m",
+    "car_id",
+    "family",
+    "session_type",
+    "weather_condition",
+    "a_braking",
+    "a_gearbox",
+    "a_line",
+    "a_ecp",
+    "a_abs",
+    "a_tc",
+    "lap_abs",
+    "lap_tc",
+)
+_BOARD_SCOPE_COLS = tuple(c for c in _BOARD_KEY_COLS if c != "driver_id")
+_BOARD_COLUMNS = f"""l.id AS lap_id, l.lap_number, l.lap_time_ms, l.s1_ms, l.s2_ms, l.s3_ms, l.valid, l.session_id,
+    COALESCE(l.created_unix, s.started_unix) AS set_unix, s.started_unix, s.driver_id, d.name AS driver_name, s.game,
+    s.platform, s.track_id, s.track_name, s.track_length_m, s.car_id, s.car_name, s.session_type, s.session_type_raw,
+    {_FAMILY} AS family, json_extract(s.weather, '$.condition') AS weather_condition,
+    json_extract(s.assists, '$.braking') AS a_braking, json_extract(s.assists, '$.gearbox') AS a_gearbox,
+    json_extract(s.assists, '$.dynamic_racing_line') AS a_line,
+    json_extract(s.assists, '$.equal_car_performance') AS a_ecp, json_extract(s.assists, '$.abs') AS a_abs,
+    json_extract(s.assists, '$.tc') AS a_tc, json_extract(l.meta, '$.abs_active') AS lap_abs,
+    json_extract(l.meta, '$.traction_control') AS lap_tc, json_extract(s.info, '$.formula') AS formula,
+    json_extract(s.info, '$.packet_format') AS packet_format, json_extract(s.info, '$.game_version') AS game_version"""
+
+
+def _board_laps_cte(game: str | None, track_id: str | None, driver_id: int | None = None) -> tuple[str, list[Any]]:
+    """``WITH k AS (...)``: every board lap (optionally one game / track, or only the tracks ``driver_id`` has driven:
+    everyone's laps there) with its raw key columns."""
+    where = [
+        "l.clean=1",
+        "COALESCE(l.valid, 1)=1",
+        "l.lap_time_ms IS NOT NULL",
+        "l.lap_time_ms > 0",
+        "s.synthetic=0",
+        _DRIVEN,
+        "s.track_id IS NOT NULL",
+        "s.track_id NOT LIKE 'unknown%'",
+        "s.track_id NOT LIKE '%:-1'",
+        "s.track_id NOT LIKE 'synthetic:%'",
+        "s.game NOT IN ('synthetic', 'unknown')",
+    ]
+    args: list[Any] = []
+    for col, value in (("game", game), ("track_id", track_id)):
+        if value is not None:
+            where.append(f"s.{col}=?")
+            args.append(value)
+    if driver_id is not None:
+        where.append(
+            "EXISTS (SELECT 1 FROM sessions o WHERE o.driver_id=? AND o.game=s.game AND o.track_id=s.track_id)"
+        )
+        args.append(driver_id)
+    cte = f"""WITH k AS (
+        SELECT {_BOARD_COLUMNS}
+        FROM laps l JOIN sessions s ON s.id = l.session_id JOIN drivers d ON d.id = s.driver_id
+        WHERE {" AND ".join(where)})"""
+    return cte, args
+
+
+def board_bests(
+    conn: sqlite3.Connection, game: str | None = None, track_id: str | None = None, *, driver_id: int | None = None
+) -> list[dict[str, Any]]:
+    """Each driver's fastest board lap per raw key partition (``_BOARD_KEY_COLS``; ties: the lower lap id), with
+    the partition's ``clean_laps`` count, best sectors on their own (``best_s1_ms`` .. ``best_s3_ms``, None when
+    the game sent none), ``first_unix`` and ``last_unix`` (when the driver's first and latest laps there were
+    stored). Optionally one game / track, or the tracks ``driver_id`` has driven. Rows: the ``_BOARD_COLUMNS`` plus
+    those aggregates, fastest first."""
+    cte, args = _board_laps_cte(game, track_id, driver_id)
+    part = ", ".join(_BOARD_KEY_COLS)
+    rows = conn.execute(
+        f"""{cte}
+        SELECT * FROM (
+          SELECT k.*, ROW_NUMBER() OVER (p ORDER BY lap_time_ms ASC, lap_id ASC) AS rn,
+                 COUNT(*) OVER p AS clean_laps,
+                 MIN(CASE WHEN s1_ms > 0 THEN s1_ms END) OVER p AS best_s1_ms,
+                 MIN(CASE WHEN s2_ms > 0 THEN s2_ms END) OVER p AS best_s2_ms,
+                 MIN(CASE WHEN s3_ms > 0 THEN s3_ms END) OVER p AS best_s3_ms,
+                 MIN(set_unix) OVER p AS first_unix, MAX(set_unix) OVER p AS last_unix
+          FROM k WINDOW p AS (PARTITION BY {part}))
+        WHERE rn = 1 ORDER BY lap_time_ms ASC, lap_id ASC""",
+        args,
+    ).fetchall()
+    return [{k: v for k, v in dict(r).items() if k != "rn"} for r in rows]
+
+
+def board_record_laps(
+    conn: sqlite3.Connection, game: str | None = None, track_id: str | None = None, *, driver_id: int | None = None
+) -> list[dict[str, Any]]:
+    """Every board lap that was faster than all earlier board laps of its raw key partition, any driver
+    (``_BOARD_SCOPE_COLS``; earlier = stored before it, ties by lap id), in the order driven, with
+    ``previous_ms`` (the partition's best before it; None for the first lap there). A record of a merged board key
+    is always one of these (``leaderboard.board.progression`` runs the minimum again over the merged rows). Optionally
+    one game / track, or the tracks ``driver_id`` has driven."""
+    cte, args = _board_laps_cte(game, track_id, driver_id)
+    part = ", ".join(_BOARD_SCOPE_COLS)
+    rows = conn.execute(
+        f"""{cte}
+        SELECT * FROM (
+          SELECT k.*, MIN(lap_time_ms) OVER (PARTITION BY {part} ORDER BY set_unix, lap_id
+                                            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS previous_ms
+          FROM k)
+        WHERE previous_ms IS NULL OR lap_time_ms < previous_ms ORDER BY set_unix, lap_id""",
+        args,
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def board_lap(conn: sqlite3.Connection, lap_id: int) -> dict[str, Any] | None:
+    """One lap with the ``_BOARD_COLUMNS`` whether or not it counts on a board (``driver_name`` None when the session
+    has no owner), plus the evidence behind that: ``clean``, ``valid``, ``flags``, ``synthetic``, ``source``,
+    ``owned`` and the session's ``capture_path``. None for an unknown lap. Never reads the trace."""
+    r = conn.execute(
+        f"""SELECT {_BOARD_COLUMNS}, l.clean, l.flags, s.synthetic, s.source, s.capture_path,
+                  (d.id IS NOT NULL) AS owned
+           FROM laps l JOIN sessions s ON s.id = l.session_id LEFT JOIN drivers d ON d.id = s.driver_id
+           WHERE l.id=?""",
+        (lap_id,),
+    ).fetchone()
+    if r is None:
+        return None
+    d = dict(r)
+    d["clean"] = bool(d["clean"])
+    d["valid"] = None if d["valid"] is None else bool(d["valid"])
+    d["synthetic"] = bool(d["synthetic"])
+    d["owned"] = bool(d["owned"])
+    try:
+        flags = json.loads(d["flags"] or "[]")
+    except json.JSONDecodeError:
+        flags = []
+    d["flags"] = flags if isinstance(flags, list) else []
+    return d
+
+
+def household_drivers(conn: sqlite3.Connection) -> list[dict[str, Any]]:
+    """Every driver profile (id, name), by name: the board's "no lap yet" rows."""
+    return [dict(r) for r in conn.execute("SELECT id, name FROM drivers ORDER BY name COLLATE NOCASE, id").fetchall()]
+
+
+# ---------------------------------------------------------------- leaderboard: F1 25 Time Trial (packet 14)
+# The rival's flags (``TimeTrialDataSet`` field -> ``session_time_trial`` column): the keys ``latest_tt_rival`` filters
+# on and every rival row's ``assists``. 0/1 in the table, NULL = the game sent something else (unknown).
+TT_RIVAL_FLAGS: dict[str, str] = {
+    "traction_control": "rival_tc",
+    "gearbox_assist": "rival_gearbox",
+    "anti_lock_brakes": "rival_abs",
+    "equal_car_performance": "rival_equal_performance",
+    "custom_setup": "rival_custom_setup",
+}
+_TT_ROW_COLS = """t.session_id, t.packet_format, t.rival_car_id, t.rival_lap_ms, t.rival_s1_ms, t.rival_s2_ms,
+    t.rival_s3_ms, t.rival_tc, t.rival_gearbox, t.rival_abs, t.rival_equal_performance, t.rival_custom_setup,
+    t.rival_car_index, t.data, t.updated_unix, s.game, s.track_id, s.track_name, s.track_length_m, s.started_unix"""
+# Only a real, timed, valid rival lap: never from a synthetic session or a replay (like every board row)
+_TT_RIVAL_WHERE = (
+    f"t.rival_lap_ms > 0 AND t.rival_valid = 1 AND t.rival_car_id IS NOT NULL AND s.synthetic=0 AND {_DRIVEN}"
+)
+
+
+def _flag01(v: bool | None) -> int | None:
+    return None if v is None else int(v)
+
+
+def upsert_session_time_trial(conn: sqlite3.Connection, session_id: str, tt: TimeTrialInfo) -> None:
+    """Replace ``session_id``'s Time Trial row with ``tt``, the latest the game sent (writer thread; the session
+    manager calls it only when the data changed). The rival's lap, sectors and flags go in columns (the board's key and
+    row), all three datasets as JSON (``TimeTrialInfo.to_dict``). Nothing personal: packet 14 carries no name."""
+    r = tt.rival
+    s1, s2, s3 = r.sector_times_ms if r is not None else (None, None, None)
+    conn.execute(
+        """INSERT OR REPLACE INTO session_time_trial(session_id, packet_format, rival_car_id, rival_lap_ms, rival_s1_ms,
+               rival_s2_ms, rival_s3_ms, rival_tc, rival_gearbox, rival_abs, rival_equal_performance,
+               rival_custom_setup, rival_valid, rival_car_index, pb_car_index, data, updated_unix)
+           VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (
+            session_id,
+            tt.packet_format,
+            None if r is None else r.car_id,
+            None if r is None else r.lap_time_ms,
+            s1,
+            s2,
+            s3,
+            None if r is None else _flag01(r.traction_control),
+            None if r is None else _flag01(r.gearbox_assist),
+            None if r is None else _flag01(r.anti_lock_brakes),
+            None if r is None else _flag01(r.equal_car_performance),
+            None if r is None else _flag01(r.custom_setup),
+            None if r is None else _flag01(r.valid),
+            tt.rival_car_index,
+            tt.pb_car_index,
+            dumps(tt.to_dict()),
+            time.time(),
+        ),
+    )
+
+
+def get_session_time_trial(conn: sqlite3.Connection, session_id: str) -> dict[str, Any] | None:
+    """A session's stored Time Trial data (``TimeTrialInfo.to_dict`` plus ``updated_unix``), or None."""
+    r = conn.execute("SELECT data, updated_unix FROM session_time_trial WHERE session_id=?", (session_id,)).fetchone()
+    return None if r is None else {**json.loads(r["data"] or "{}"), "updated_unix": r["updated_unix"]}
+
+
+def _tt_rival_row(r: sqlite3.Row) -> dict[str, Any]:
+    rival = json.loads(r["data"] or "{}").get("rival") or {}
+    return {
+        "session_id": r["session_id"],
+        "game": r["game"],
+        "track_id": r["track_id"],
+        "track_name": r["track_name"],
+        "track_length_m": r["track_length_m"],
+        "car_id": r["rival_car_id"],
+        "car_name": rival.get("car_name"),
+        "lap_time_ms": int(r["rival_lap_ms"]),
+        "sector_times_ms": [r["rival_s1_ms"], r["rival_s2_ms"], r["rival_s3_ms"]],
+        "assists": {k: None if r[col] is None else bool(r[col]) for k, col in TT_RIVAL_FLAGS.items()},
+        "valid": True,
+        "car_index": r["rival_car_index"],  # the ghost's slot in that session's car arrays (None: not named)
+        "packet_format": r["packet_format"],
+        "seen_unix": r["updated_unix"],  # when Pitwall last stored it (the game does not say when the lap was set)
+        "session_started_unix": r["started_unix"],
+    }
+
+
+def latest_tt_rival(
+    conn: sqlite3.Connection,
+    game: str,
+    track_id: str,
+    car_id: str | None,
+    *,
+    track_length_m: float | None = None,
+    assists: dict[str, bool | None] | None = None,
+) -> dict[str, Any] | None:
+    """The EA rival a board shows for game + track + car (+ layout + assists): the most recently stored valid, timed
+    rival lap (F1 25 Time Trial, packet 14) whose own car is ``car_id``, from real sessions only (never synthetic,
+    never a replay). ``car_id=None`` (unknown car) -> None: a rival in another car is not this board's.
+    ``track_length_m``: the layout tolerance of the household bests (``BESTS_LENGTH_TOLERANCE``). ``assists``: the
+    rival's flags that must match (keys of ``TT_RIVAL_FLAGS``; True / False, or None for "the game's value was not
+    0/1" - unknown is its own bucket, never a wildcard); keys left out are not filtered, ``None`` filters nothing.
+    Row: ``session_id, game, track_id, track_name, track_length_m, car_id, car_name, lap_time_ms, sector_times_ms
+    [s1, s2, s3] (None = not sent), assists {traction_control, gearbox_assist, anti_lock_brakes,
+    equal_car_performance, custom_setup: bool | None}, valid, car_index, packet_format, seen_unix,
+    session_started_unix``. Spec-decoded: no recording has shown packet 14 yet (docs/status.md)."""
+    if car_id is None:
+        return None
+    where = [_TT_RIVAL_WHERE, "s.game=?", "s.track_id=?", "t.rival_car_id=?"]
+    args: list[Any] = [game, track_id, car_id]
+    for key, want in (assists or {}).items():
+        col = TT_RIVAL_FLAGS.get(key)
+        if col is None:
+            raise ValueError(f"unknown time trial flag {key!r} (known: {sorted(TT_RIVAL_FLAGS)})")
+        where.append(f"t.{col} IS ?")
+        args.append(_flag01(want))
+    layout, layout_args = _layout_sql(track_length_m)
+    r = conn.execute(
+        f"""SELECT {_TT_ROW_COLS} FROM session_time_trial t JOIN sessions s ON s.id = t.session_id
+            WHERE {" AND ".join(where)}{layout}
+            ORDER BY t.updated_unix DESC, s.started_unix DESC, s.rowid DESC LIMIT 1""",
+        [*args, *layout_args],
+    ).fetchone()
+    return None if r is None else _tt_rival_row(r)

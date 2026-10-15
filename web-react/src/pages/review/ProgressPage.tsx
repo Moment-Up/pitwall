@@ -1,25 +1,28 @@
 // Review › Progress (spec 6.9, `#/review/progress?driver=&track=&car=`): for one driver at one track (+ car), framed as
 // three questions, each with ONE computed sentence (never an LLM): Getting faster? Getting steadier? What changed?
-// Then milestones and the family board. Headline tiles on top, totals at the foot. Everything on the page obeys the
+// Then milestones and the Records section (the family board of one exact board key, its record history, the times to
+// beat). Headline tiles on top, totals at the foot. Everything on the page obeys the
 // scope bar: goals, the week, streaks and badges are the driver's everywhere, so they live on Review › Goals
 // (integration plan 1.3; the scope bar links there).
 //
 // Data: the driver's sessions (lap level, always) and D5's progress (`/api/drivers/{id}/progress`) when the server
 // has it; an older server answers 404 and the page falls back to lap level, saying what is missing. Synthetic tracks
 // are offered only on request and labelled; replays are never anyone's driving. Order by the VIEWED driver's skill
-// (6.10): corner trends first for advanced drivers; Getting faster?, milestones and the family board first otherwise.
+// (6.10): corner trends first for advanced drivers; Getting faster?, milestones and Records first otherwise.
 //
 // "Against the AI" (AI pace spec 8) follows Getting faster? in every order: the driver's sessions against the game's
 // AI at this track (`/api/drivers/{id}/ai-pace`), left out on a server without it and for games without AI
 // difficulty. The footer's counts are every session on record (the counting rule's wording, plan 5.7).
+//
+// Records (leaderboard spec 5, no page of its own): `useRecords` opens the newest board here where the viewed driver
+// has a lap (in the scope's car), and its pickers switch between the boards at this track. The chart's family line is
+// that board's record.
 
 import { Alert, Button, Skeleton } from "@heroui/react";
 import { EmptyState } from "@heroui-pro/react";
 import { ChartLine, Flag, Speedometer } from "@gravity-ui/icons";
 import { useMemo } from "react";
-import { useApi } from "../../hooks/useApi";
 import { sessionBadges, type BestBadge, type ScopeRow } from "../../lib/bests";
-import { reviewApi, reviewKeys, type DriverProgress } from "../../lib/endpoints/review";
 import { router } from "../../lib/router";
 import { showAiCard } from "../../lib/review/aipace";
 import { densityFor } from "../../lib/review/density";
@@ -35,10 +38,9 @@ import {
   habitTrends,
   milestones,
   progressTiles,
-  scopeLabel,
-  scopeQuery,
   steadierSentence,
 } from "../../lib/review/progress";
+import { familyLine, historyItems, showTimesToBeat } from "../../lib/review/records";
 import { plural } from "../../lib/review/words";
 import type { PageProps } from "../../routes";
 import { AiPaceCard } from "./progress/AiPaceCard";
@@ -46,11 +48,14 @@ import { ChangesCard } from "./progress/ChangesCard";
 import { FamilyBoardCard } from "./progress/FamilyBoardCard";
 import { FasterCard } from "./progress/FasterCard";
 import { MilestonesCard } from "./progress/MilestonesCard";
+import { RecordHistoryCard } from "./progress/RecordHistoryCard";
+import { TimesToBeatCard } from "./progress/TimesToBeatCard";
 import { ProgressTilesView } from "./progress/ProgressTilesView";
 import { ScopeBar } from "./progress/ScopeBar";
 import { SteadierCard } from "./progress/SteadierCard";
 import { TierNotice } from "./progress/TierNotice";
 import { useAiPace } from "./progress/useAiPace";
+import { useRecords } from "./progress/useRecords";
 import { useReviewScope } from "./progress/useReviewScope";
 import { useBestsWindow } from "./session/data";
 
@@ -59,19 +64,9 @@ export function ProgressPage({ route }: PageProps) {
   const { scope, viewed, drivers, points, tier } = s;
   const d5 = tier.kind === "d5" ? tier.data : null;
 
-  // Every family driver's D5 at this scope (corners off), for an exact family board. One driver: their own answer.
-  const ids = useMemo(() => drivers.map((d) => d.id), [drivers]);
-  const fq = scope ? scopeQuery(scope, { corners: false }) : null;
-  const familyReq = useApi(
-    d5 && fq && ids.length > 1 ? reviewKeys.familyProgress(ids, fq) : null,
-    () => reviewApi.familyProgress(ids, fq ?? {}),
-    { maxAgeMs: 60_000 },
-  );
   const viewedId = viewed?.id ?? null;
-  const family = useMemo<ReadonlyMap<number, DriverProgress> | null>(
-    () => (d5 && viewedId != null && ids.length <= 1 ? new Map([[viewedId, d5]]) : (familyReq.data ?? null)),
-    [d5, viewedId, ids.length, familyReq.data],
-  );
+  // Records: one exact board here (the viewed driver's newest, or the one picked in the section).
+  const records = useRecords(scope, viewedId);
 
   // Pace against the AI at this track (any car: the card groups by car class). Shared with the Coaching plan.
   const ai = useAiPace(viewedId, scope);
@@ -93,7 +88,7 @@ export function ProgressPage({ route }: PageProps) {
     const exactCar = scope.carId != null && !scope.track.synthetic;
     const pbColour = !!d5 && exactCar;
     const steps = bestSteps(points, d5 ? d5.pb_history : null);
-    const board = familyBoard(drivers, scope, viewed.id, family);
+    const board = familyBoard(drivers, records.board ?? null, viewed.id);
     const threshold = viewed.coaching?.min_impact_s ?? DEFAULT_THRESHOLD_S;
     const trends = cornerTrends(points, d5?.corner_text, scope.track.game, scope.track.trackId, threshold);
     const multiCar = scope.carId == null && carsOf(points) > 1;
@@ -111,7 +106,7 @@ export function ProgressPage({ route }: PageProps) {
       milestones: milestones(points, steps, { trackLabel: scope.track.label, multiCar: scope.carId == null }),
       multiCar,
     };
-  }, [scope, viewed, d5, points, drivers, family, s.who, badges]);
+  }, [scope, viewed, d5, points, drivers, records.board, s.who, badges]);
 
   if (!s.driversLoaded || (s.viewed && !s.rows && !s.rowsError)) return <PageSkeleton />;
   if (s.rowsError && !s.rows) {
@@ -161,7 +156,6 @@ export function ProgressPage({ route }: PageProps) {
   const density = densityFor(viewed.id, drivers);
   const caption = density.chartCaptions;
   const loading = tier.kind === "rows" && tier.why === "loading";
-  const label = scopeLabel(scope);
 
   const faster = (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
@@ -170,7 +164,7 @@ export function ProgressPage({ route }: PageProps) {
           points={points}
           sentence={view.faster}
           badges={badges}
-          board={view.board}
+          familyLine={familyLine(view.board, { anyCar: scope.carId == null })}
           showMedian={!!d5}
           caption={caption}
           multiCar={view.multiCar}
@@ -197,15 +191,51 @@ export function ProgressPage({ route }: PageProps) {
       glossary={density.glossary}
     />
   ) : null;
-  const familyCard = <FamilyBoardCard board={view.board} scopeLabel={label} seatedId={s.seatedId} />;
+  // Records: the family board across the page (its table needs the width), then the times to beat and the record
+  // history side by side from iPad landscape.
+  const shownBoard = records.board;
+  const hasBoard = !!shownBoard?.key && !scope.track.synthetic && !records.missing;
+  const beat = hasBoard && showTimesToBeat(shownBoard) && shownBoard;
+  const recordsSection = (
+    <section className="grid gap-3" aria-labelledby="records-heading" data-records>
+      <h2 id="records-heading" className="m-0 text-lg font-semibold">
+        Records
+      </h2>
+      <FamilyBoardCard
+        board={view.board}
+        records={records}
+        scope={scope}
+        seatedId={s.seatedId}
+        detail={density.records}
+        glossary={density.glossary}
+      />
+      {hasBoard && (
+        <div className={`grid grid-cols-1 gap-4 ${beat ? "lg:grid-cols-2" : ""}`}>
+          {beat && (
+            <div className="min-w-0">
+              <TimesToBeatCard
+                board={beat}
+                detail={density.records}
+                generation={records.generation}
+                onGeneration={records.setGeneration}
+              />
+            </div>
+          )}
+          <div className="min-w-0">
+            <RecordHistoryCard key={view.board.key ?? "none"} items={historyItems(shownBoard.history)} detail={density.records} />
+          </div>
+        </div>
+      )}
+    </section>
+  );
   const steadierCard = (
     <SteadierCard points={points} sentence={view.steadier} available={!!d5} caption={caption} glossary={density.glossary} />
   );
   const second = (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {density.progressCornersFirst ? steadierCard : familyCard}
-      {density.progressCornersFirst ? familyCard : steadierCard}
-    </div>
+    <>
+      {density.progressCornersFirst ? steadierCard : recordsSection}
+      {density.progressCornersFirst ? recordsSection : steadierCard}
+    </>
   );
   const changes = (
     <ChangesCard

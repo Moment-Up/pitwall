@@ -2,7 +2,7 @@
 // and D5 answers computed on a read-only copy of the live database). Small hand-made inputs only where the recorded
 // data has no such case (a second driver, a third session); they are test inputs, never shown as game evidence.
 import { describe, expect, it } from "vitest";
-import type { DriverProgress, SessionListRow } from "../endpoints/review";
+import type { SessionListRow } from "../endpoints/review";
 import { isMissingRoute, progressUrl, reviewKeys } from "../endpoints/review";
 import { ApiError } from "../api";
 import { RequestCache } from "../cache";
@@ -28,7 +28,7 @@ import {
   whoFor,
   type SessionPoint,
 } from "./progress";
-import { driver, fixtures } from "./testkit";
+import { boardFixtures, driver, fixtures } from "./testkit";
 import { sessionBadges } from "../bests";
 
 const rows = (): (SessionListRow & { car_id?: string | null })[] => fixtures.sessions();
@@ -120,12 +120,9 @@ describe("scope (track + car) from the driver's sessions", () => {
   it("progress keys live under driver-sessions: so laps and driver switches refresh them", () => {
     const cache = new RequestCache();
     const k = reviewKeys.progress(1, { game: "f1_25", track_id: AUSTRIA, car: HAAS });
-    const f = reviewKeys.familyProgress([1, 2], { game: "f1_25", track_id: AUSTRIA, car: HAAS, corners: false });
     cache.set(k, {});
-    cache.set(f, {});
     cache.invalidate("driver-sessions:");
     expect(cache.entry(k).stale).toBe(true);
-    expect(cache.entry(f).stale).toBe(true);
     expect(k).not.toBe(reviewKeys.progress(1, { game: "f1_25", track_id: AUSTRIA, car: null }));
   });
 
@@ -368,45 +365,41 @@ describe("What changed? (D5 corner trends and habits)", () => {
   });
 });
 
-describe("family board", () => {
+describe("family board (an exact board from the server)", () => {
   const james = () => fixtures.drivers().drivers[0]!;
-  const scope = () => resolveScope(scopeChoices(rows(), { includeSynthetic: false }), { track: AUSTRIA })!;
 
-  it("before D5: stats.best_laps (any car), neutral times, the leader in words, gaps", () => {
-    const alex = { ...driver(2, "Alex", "beginner"), stats: { ...james().stats, best_laps: [{ ...james().stats.best_laps[0]!, lap_time_ms: 80_910 }] } };
-    const jo = { ...driver(3, "Jo", "intermediate"), stats: { ...james().stats, best_laps: [] } };
-    const b = familyBoard([alex, james(), jo], scope(), 2, null);
-    expect(b.exact).toBe(false);
-    expect(b.fastest?.ms).toBe(70549);
-    expect(b.rows.map((r) => [r.driver.name, r.ms, r.gapMs, r.leader])).toEqual([
-      ["James", 70549, null, true],
-      ["Alex", 80910, 10361, false],
-      ["Jo", null, null, false],
+  it("each driver's best on one exact key: neutral times, the leader in words, the server's gap words", () => {
+    const alex = driver(2, "Alex", "beginner");
+    const b = familyBoard([james(), alex], boardFixtures.austriaHaas(), 2);
+    expect(b.key).toBe("f1_25~f1:17~4323~f1:team:7~f1~0~race~dry~b2.a?.t?.g3.l2");
+    expect(b.labels?.title).toBe("Austria · Haas · Race · Dry");
+    expect(b.rows.map((r) => [r.name, r.position, r.ms, r.gapMs, r.gapText, r.leader, r.viewed])).toEqual([
+      ["James", 1, 70549, null, "Fastest", true, false],
+      ["Alex", 2, 73616, 3067, "3.067 s behind", false, true],
     ]);
+    expect(b.rows[0]!.driver?.name).toBe("James");
+    expect(b.rows[1]).toMatchObject({ gapPct: 4.35, sessionId: expect.any(String), dateText: expect.any(String) });
+    expect(b.rows[0]!.vs.real_f1).toMatchObject({ gap_ms: 6578, band: null });
+    expect(b.record).toMatchObject({ ms: 70549, name: "James" });
   });
 
-  it("with D5 for every driver at an exact car: the car scope is exact, the leader is still 'Fastest' (no REC before D2)", () => {
-    const haas = fixtures.progressAustriaHaas();
-    const alexP: DriverProgress = {
-      ...haas,
-      driver_id: 2,
-      pb_history: [{ ...haas.pb_history[0]!, lap_ms: 74_000, session_id: "x" }],
-    };
-    const alex = driver(2, "Alex", "beginner");
-    const fam = new Map<number, DriverProgress>([
-      [1, haas],
-      [2, alexP],
+  it("household drivers with no time on the board come last, by name, with nothing made up", () => {
+    const b = familyBoard([], boardFixtures.timeTrial(), 1);
+    expect(b.rows.map((r) => [r.name, r.ms, r.gapText])).toEqual([
+      ["Jo", 65900, "Fastest"],
+      ["Sam", 66000, "0.100 s behind"],
+      ["Kim", null, null],
     ]);
-    const b = familyBoard([james(), alex], scope(), 2, fam);
-    expect(b.exact).toBe(true);
-    expect(b.fastest).toMatchObject({ ms: 70549, driver: { name: "James" } });
-    expect(b.rows.map((r) => [r.driver.name, r.leader, r.viewed, r.gapMs])).toEqual([
-      ["James", true, false, null],
-      ["Alex", false, true, 3451],
-    ]);
-    // any car, or a driver's D5 answer missing: not exact (the cars may differ)
-    const anyCar = { ...scope(), carId: null, carLabel: null };
-    expect(familyBoard([james(), alex], anyCar, 2, fam).exact).toBe(false);
-    expect(familyBoard([james(), alex], scope(), 2, new Map([[1, haas]])).exact).toBe(false);
+    // a profile this page does not know: the server's name, no avatar data
+    expect(b.rows.every((r) => r.driver === null)).toBe(true);
+    expect(b.rows[2]).toMatchObject({ position: null, vs: {}, sectorsMs: null, cleanLaps: null });
+  });
+
+  it("no board (loading, nothing matched, or an older server): no rows and no record, never another car's times", () => {
+    expect(familyBoard([james()], null, 1)).toEqual({ key: null, labels: null, rows: [], record: null });
+    const none = familyBoard([james()], boardFixtures.austriaNoMatch(), 1);
+    expect(none.key).toBeNull();
+    expect(none.record).toBeNull();
+    expect(none.rows.every((r) => r.ms == null)).toBe(true);
   });
 });

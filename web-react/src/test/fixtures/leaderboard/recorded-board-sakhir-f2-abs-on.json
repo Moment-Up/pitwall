@@ -1,0 +1,336 @@
+{
+ "_fixture": {
+  "source": "GET /api/leaderboard?key=f1_25~f1:3~5408~f1:team:158~f2~0~race~dry~b0.a1.t1.g3.l2: pitwall.leaderboard.service over a read-only .backup copy of the owner's database (2026-10-15)",
+  "recorded": "2026-10-15T13:33:49+01:00",
+  "what": "Sakhir, F2 Art GP '24, race, ABS on: an F2 board (no real-F1 row and no note); boards_here has the same car with ABS off (the assists picker).",
+  "tier": "recorded",
+  "edited": "the second household profile's name replaced by 'Alex' (household names stay on the owner's machine)"
+ },
+ "response": {
+  "key": "f1_25~f1:3~5408~f1:team:158~f2~0~race~dry~b0.a1.t1.g3.l2",
+  "fields": {
+   "game": "f1_25",
+   "track_id": "f1:3",
+   "layout_m": 5408,
+   "car_id": "f1:team:158",
+   "car_class": "f2",
+   "equal_performance": 0,
+   "category": "race",
+   "conditions": "dry",
+   "assists": {
+    "braking": 0,
+    "abs": 1,
+    "tc": 1,
+    "gearbox": 3,
+    "racing_line": 2
+   },
+   "assists_code": "b0.a1.t1.g3.l2"
+  },
+  "labels": {
+   "game": "F1 25",
+   "track": "Sakhir (Bahrain)",
+   "layout": "5.41 km",
+   "car": "F2 · Art GP '24",
+   "car_class": "F2 car",
+   "equal_performance": "Realistic car performance",
+   "category": "Race",
+   "conditions": "Dry",
+   "assists": [
+    {
+     "key": "braking",
+     "value": 0,
+     "known": true,
+     "label": "Braking assist off"
+    },
+    {
+     "key": "abs",
+     "value": 1,
+     "known": true,
+     "label": "ABS on"
+    },
+    {
+     "key": "tc",
+     "value": 1,
+     "known": true,
+     "label": "Traction control medium"
+    },
+    {
+     "key": "gearbox",
+     "value": 3,
+     "known": true,
+     "label": "Automatic gears"
+    },
+    {
+     "key": "racing_line",
+     "value": 2,
+     "known": true,
+     "label": "Racing line full"
+    }
+   ],
+   "assists_text": "Braking assist off, ABS on, Traction control medium, Automatic gears, Racing line full",
+   "title": "Sakhir (Bahrain) · F2 · Art GP '24 · Race · Dry"
+  },
+  "rows": [
+   {
+    "position": 1,
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 106540,
+    "lap_id": 147,
+    "lap_number": 2,
+    "session_id": "ebb12beafcde",
+    "set_unix": 1791757191.608518,
+    "date_text": "Sun 11 Oct",
+    "leader": true,
+    "gap_ms": null,
+    "gap_pct": null,
+    "gap_text": "Fastest",
+    "clean_laps": 2,
+    "assists": [
+     {
+      "key": "braking",
+      "value": 0,
+      "known": true,
+      "label": "Braking assist off"
+     },
+     {
+      "key": "abs",
+      "value": 1,
+      "known": true,
+      "label": "ABS on"
+     },
+     {
+      "key": "tc",
+      "value": 1,
+      "known": true,
+      "label": "Traction control medium"
+     },
+     {
+      "key": "gearbox",
+      "value": 3,
+      "known": true,
+      "label": "Automatic gears"
+     },
+     {
+      "key": "racing_line",
+      "value": 2,
+      "known": true,
+      "label": "Racing line full"
+     }
+    ],
+    "best_sectors_ms": [
+     33625,
+     45678,
+     26174
+    ],
+    "theoretical_best_ms": 105477,
+    "theoretical_gain_ms": 1063,
+    "game_version": "1.26",
+    "vs": {}
+   }
+  ],
+  "no_time": [
+   {
+    "driver_id": 2,
+    "driver_name": "Alex"
+   }
+  ],
+  "record": {
+   "driver_id": 1,
+   "driver_name": "James",
+   "lap_ms": 106540,
+   "lap_id": 147,
+   "session_id": "ebb12beafcde",
+   "set_unix": 1791757191.608518,
+   "date_text": "Sun 11 Oct"
+  },
+  "history": [
+   {
+    "lap_id": 147,
+    "lap_number": 2,
+    "session_id": "ebb12beafcde",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 106540,
+    "set_unix": 1791757191.608518,
+    "date_text": "Sun 11 Oct",
+    "previous_ms": null,
+    "previous_driver_id": null,
+    "previous_driver_name": null,
+    "gain_ms": null,
+    "changed_hands": false,
+    "text": "James set the first record: 1:46.540"
+   }
+  ],
+  "evidence": {
+   "track_limits_checked": true,
+   "note": null,
+   "counts": "Clean, valid laps of real driving only: never synthetic sessions, replays or laps with no driver."
+  },
+  "ea_rival": null,
+  "real_f1": null,
+  "real_f1_note": null,
+  "real_f1_asks_generation": false,
+  "boards_here": [
+   {
+    "key": "f1_25~f1:3~5408~f1:team:158~f2~0~race~dry~b0.a0.t1.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:3",
+     "layout_m": 5408,
+     "car_id": "f1:team:158",
+     "car_class": "f2",
+     "equal_performance": 0,
+     "category": "race",
+     "conditions": "dry",
+     "assists": {
+      "braking": 0,
+      "abs": 0,
+      "tc": 1,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b0.a0.t1.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Sakhir (Bahrain)",
+     "layout": "5.41 km",
+     "car": "F2 · Art GP '24",
+     "car_class": "F2 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Race",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 0,
+       "known": true,
+       "label": "Braking assist off"
+      },
+      {
+       "key": "abs",
+       "value": 0,
+       "known": true,
+       "label": "ABS off"
+      },
+      {
+       "key": "tc",
+       "value": 1,
+       "known": true,
+       "label": "Traction control medium"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist off, ABS off, Traction control medium, Automatic gears, Racing line full",
+     "title": "Sakhir (Bahrain) · F2 · Art GP '24 · Race · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 108897,
+     "lap_id": 141,
+     "session_id": "16b73e89c55b",
+     "set_unix": 1791756272.186742,
+     "date_text": "Sun 11 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 2,
+    "last_unix": 1791756272.186742,
+    "track_limits_checked": true,
+    "vs": {}
+   },
+   {
+    "key": "f1_25~f1:3~5408~f1:team:158~f2~0~race~dry~b0.a1.t1.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:3",
+     "layout_m": 5408,
+     "car_id": "f1:team:158",
+     "car_class": "f2",
+     "equal_performance": 0,
+     "category": "race",
+     "conditions": "dry",
+     "assists": {
+      "braking": 0,
+      "abs": 1,
+      "tc": 1,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b0.a1.t1.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Sakhir (Bahrain)",
+     "layout": "5.41 km",
+     "car": "F2 · Art GP '24",
+     "car_class": "F2 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Race",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 0,
+       "known": true,
+       "label": "Braking assist off"
+      },
+      {
+       "key": "abs",
+       "value": 1,
+       "known": true,
+       "label": "ABS on"
+      },
+      {
+       "key": "tc",
+       "value": 1,
+       "known": true,
+       "label": "Traction control medium"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist off, ABS on, Traction control medium, Automatic gears, Racing line full",
+     "title": "Sakhir (Bahrain) · F2 · Art GP '24 · Race · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 106540,
+     "lap_id": 147,
+     "session_id": "ebb12beafcde",
+     "set_unix": 1791757191.608518,
+     "date_text": "Sun 11 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 2,
+    "last_unix": 1791757557.373628,
+    "track_limits_checked": true,
+    "vs": {}
+   }
+  ],
+  "matched": 1
+ }
+}

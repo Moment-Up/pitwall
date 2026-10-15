@@ -30,6 +30,10 @@ collected per *game* session (O(1) per item). The collector is reset when the ga
 pitwall session ends (a driver split keeps the game session); after every lap of the player and when the session ends
 its snapshot goes to the analysis worker, which stores ``session_ai_pace``. ``sessions.ai_difficulty`` is written
 whenever the resolved level of the session changes.
+
+F1 25 Time Trial (leaderboard): the adapter's ``TimeTrialInfo`` (packet 14, once a second) never starts a session; when
+what it reports changed, ``LiveState.time_trial`` gets it and the session's ``session_time_trial`` row is replaced, so a
+board can show the EA rival of that track and car (``repo.latest_tt_rival``).
 """
 
 from __future__ import annotations
@@ -59,6 +63,7 @@ from pitwall.model.telemetry import (
     Participants,
     RaceTiming,
     SessionInfo,
+    TimeTrialInfo,
     TyreSetsInfo,
 )
 from pitwall.storage import repo
@@ -206,6 +211,7 @@ class SessionManager:
         self.sessions_resumed = 0
         self._ai = AiPaceCollector()  # pace vs AI inputs of the current game session (core.ai_pace)
         self._ai_written: tuple[str | None, int | None] = (None, None)  # (session id, ai_difficulty) last stored
+        self._tt_key: tuple[Any, ...] | None = None  # leaderboard: the Time Trial data last stored for this session
 
     def set_ground_plane(self, plane: tuple[str, str]) -> None:
         self._ground_plane = plane
@@ -224,6 +230,7 @@ class SessionManager:
         self._laps_in_session = 0
         self._last_frame_ns = None
         self._ai_written = (sid, None)  # a new row's ai_difficulty is NULL
+        self._tt_key = None  # leaderboard: the next Time Trial packet (1 Hz) is stored on the new session
         driver: int | None = None
         if self.drivers is not None:
             seat = self.drivers.seat
@@ -316,6 +323,9 @@ class SessionManager:
             if isinstance(e, RaceTiming) and self.health is not None and self.session_id is not None:
                 self.health.submit(self.session_id, e)
             # --- end health lane ---
+            return
+        if isinstance(e, TimeTrialInfo):
+            self._on_time_trial(e)  # leaderboard: never starts a session or counts as activity
             return
         if isinstance(e, Participants):
             # --- race radio --- who drives which car (names inside): only ever to the race radio worker. Never starts
@@ -491,6 +501,7 @@ class SessionManager:
         self.writer.submit(lambda c: repo.resume_session(c, old, new))
         self.live.reset_session(old, self.source, self.synthetic, self._game)
         self._ai_written = (old, None)  # never erase the resumed row's level with this run's early "unknown"
+        self._tt_key = None  # leaderboard: the dropped session's Time Trial row goes with it; store it again
         self._info_key = None  # re-store the session info on the resumed row
         log.info("session %s resumed after a restart (same game session %s); %s merged into it", old, uid, new)
 
@@ -559,6 +570,24 @@ class SessionManager:
         self._last_setup = setup
         self._setup_fp = setup.fingerprint()
         self.writer.submit(lambda c: repo.insert_setup(c, sid, setup))
+
+    # --- leaderboard ---
+    def _on_time_trial(self, e: TimeTrialInfo) -> None:
+        """F1 25 Time Trial (packet 14, once a second): when what the game reports changed, the live state gets it and
+        the session's ``session_time_trial`` row is replaced (writer). O(1): one tuple compare per packet. A packet of
+        another game session (the adapter changes session before this manager sees the new Session packet) is
+        dropped."""
+        sid = self.session_id
+        if sid is None or (e.session_uid and self._game_uid and e.session_uid != self._game_uid):
+            return
+        key = e.key()
+        if key == self._tt_key:
+            return
+        self._tt_key = key
+        self.live.set_time_trial(sid, e.to_dict())
+        self.writer.submit(lambda c: repo.upsert_session_time_trial(c, sid, e))
+
+    # --- end leaderboard ---
 
     def _store_ai_difficulty(self) -> None:
         """Write ``sessions.ai_difficulty`` when the resolved level of this pitwall session changed. Too few

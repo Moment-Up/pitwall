@@ -56,6 +56,21 @@ The release workflow copies a release's bullet points into its GitHub release no
 - How corners work shows how real drivers brake (2025 F1 qualifying laps from OpenF1, AssettoCorsaGym sim laps), as
   real-world data, not proof about a game. Unit tests.
 - Review › Compare's corner explainer now shows the causes Pitwall measured. Unit tests.
+- Family records: everyone's best lap per track, car, session type, weather and assists, with the gaps and who held
+  the record when. Stays on this computer. Unit tests and real laps; not live.
+- The badge "Family record at <track>" for holding the family record when someone else drives there too. Tested on
+  unit tests.
+- Ask the engineer "What's the family record here?"; when a lap takes the record from another driver the radio says
+  so in one short line. Tested on unit tests; not heard live.
+- Lap cards: a lap in a small, versioned format for a possible online board later; built locally, never sent.
+- F1 25 Time Trial: Pitwall reads your session best, personal best and the rival you picked from EA's leaderboard,
+  and keeps the rival per track and car. From EA's spec; not yet seen from the real game.
+- `pitwall tt-check <capture>` says whether a Time Trial recording carries the rival ghost's inputs. Tested on
+  generated laps only.
+- Family boards show the real F1 pole for your car's season (F1DB) and, in Time Trial, your EA rival, with gold,
+  silver and bronze bands. Unit tests and real laps; the rival from EA's spec only.
+- Review › Progress, Records: one exact family board with pickers, the record history and the times to beat, with
+  their bands. Unit tests and real laps; not yet on an iPad.
 
 ## v0.3.0 - 2026-10-13
 

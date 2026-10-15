@@ -479,6 +479,16 @@ Progress at one track and car (the scope bar at the top applies to every card): 
 laps, pace against the AI, **What the coach flagged** and how the time lost at each corner changed from session to
 session. Goals, the week and badges have their own page, [Goals](#goals).
 
+**Records** (on the same page, under the track and car picked at the top): the family board of one exact board, the
+newest one where the driver shown has a lap (see [Family records](#family-records)). Each driver's best with the gap
+to the fastest in words ("3.067 s behind"), and the household drivers with no lap there yet; when the track has more
+than one board, pick the session type, weather, assists or car (only the choices that exist are offered). Under it,
+**Times to beat** (the EA rival in Time Trial, a real F1 pole) with each one's caveat and the F1DB credit, and the
+**Record history**, newest first. Each driver's gap to a time to beat gets a gold, silver or bronze band when it is
+close enough. Beginners see the times, the gaps in words and the bands; intermediate drivers add percentages, dates
+and assists; advanced drivers add best sectors, their sum and the game version (a list under the board when the iPad
+is upright, so the board fits without sideways scrolling).
+
 Coaching and Progress are the newest pages and have not been used after a live session yet.
 
 ### Today's 3 things
@@ -549,8 +559,30 @@ always named, never shown as a raw id; older badges that break these rules are s
 your first clean lap at a track, your first time under a whole second at a track and car (between sessions, never within one), 3, 5, 10
 and 20 clean laps in a row, 10 clean laps in one session, new bests in 2, 3 and 5 sessions in a row, 2, 4, 8 and 12
 weeks in a row with a session with a timed lap (Monday to Sunday), 3 and 5 sessions with a timed lap in one week, a race with no penalties or without
-contact, and 1, 3 and 10 goals reached. Streaks show weeks in a row, sessions this week, your best run of clean
-laps and your new-best streaks.
+contact, 1, 3 and 10 goals reached, and holding a family record (below). Streaks show weeks in a row, sessions this
+week, your best run of clean laps and your new-best streaks.
+
+### Family records
+
+Each driver's best lap on a family board: the same game, track and layout, the same car, the same kind of session
+(time trial, qualifying, race, practice), dry or wet, and the same assists (F1 25: braking assist, ABS, traction
+control, gears, racing line; Assetto Corsa: ABS and TC). Anything the game did not send is its own board, never mixed
+in: laps stored before Pitwall kept ABS and TC per lap are on "ABS unknown" boards. Only clean, valid laps of real
+driving count, never synthetic sessions or replays; GT7, Assetto Corsa and Forza cannot say when a lap cut a corner,
+and their boards say so. Each row shows the gap to the fastest in seconds and percent, the date, clean laps, best
+sectors and the theoretical best; the board shows when the record changed hands. Holding the record when a second
+driver drives the board, or taking it later, earns the badge "Family record at <track>". Ask the engineer "What's the
+family record here?" or "Who's fastest in the family?"; when a lap takes the record from someone else the radio says
+"New family record at Austria: you took it from Sam." (no lap time). Everything stays on this computer
+([leaderboard.md](leaderboard.md); API `/api/leaderboard`, `/api/records`). Tested on unit tests and a read-only copy
+of the owner's database. On screen: Review › Progress, **Records** ([Progress](#progress)); checked in a desktop browser
+at iPad sizes with that copy, not yet on an iPad.
+
+Two more rows can sit on a board. In an F1 car on a real circuit, **Real F1**: that season's real pole (2025 cars
+against the 2025 pole, 2026 Season Pack cars against 2026), from F1DB (CC BY 4.0), always with the reminder that F1 25
+is not the real car; if the game cannot tell a 2025 from a 2026 car, the board asks which it was. In F1 25 Time Trial,
+**EA rival**: the rival you picked from EA's leaderboard, read from the game's Time Trial data (from EA's spec; not yet
+seen in a recording). Each driver gets a gold (within 3 %), silver (5 %) or bronze (10 %) band against them.
 
 ### Weekly digest
 
@@ -770,7 +802,7 @@ only the spotter, a red flag and a puncture ever cut in.
 | Race calls (position, countdown, lap one, gaps, warnings, minor damage) | wait and count | at most 2 a lap (3 detailed); the start, countdown, finish and P1 never wait |
 | Strategy call | wait and count | in a race, after the lap summary and race calls |
 | Car health call (cold tyres after a stop - in the pit lane -, tyres warm again, wear outside F1 races, Forza fuel low) | wait and count | as a strategy call |
-| Goal line ("Goal reached: ...") | wait and count | at most two a session |
+| Goal line ("Goal reached: ...") or a family record taken ("New family record at Austria: you took it from Sam.") | wait and count | at most two a session together |
 | Coaching point or drill result | wait and count | after its lap's summary; one a lap at normal intensity; a habit's news (new, better, still there, sorted) or a big one-off; none after the chequered flag |
 | Detail (strategy notes, rivals' fastest laps, lock-up and wheelspin notes) | wait and count | detailed intensity only |
 | Validation prompt (during a validation run) | outside | last, low priority, at least 30 s apart, also at quiet intensity |

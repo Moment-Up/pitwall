@@ -1,0 +1,496 @@
+{
+ "_fixture": {
+  "source": "GET /api/leaderboard?key=f1_25~f1:17~4323~f1:team:7~f1~0~race~dry~b2.a?.t?.g3.l2: pitwall.leaderboard.service over a read-only .backup copy of the owner's database (2026-10-15)",
+  "recorded": "2026-10-15T13:33:49+01:00",
+  "what": "Austria, Haas, race, dry: two drivers (James 1:10.549, Alex +3.067 s), the record history, a real-F1 row with no band (+10.28 %), and the two boards at Austria (boards_here).",
+  "tier": "recorded",
+  "edited": "the second household profile's name replaced by 'Alex' (household names stay on the owner's machine)"
+ },
+ "response": {
+  "key": "f1_25~f1:17~4323~f1:team:7~f1~0~race~dry~b2.a?.t?.g3.l2",
+  "fields": {
+   "game": "f1_25",
+   "track_id": "f1:17",
+   "layout_m": 4323,
+   "car_id": "f1:team:7",
+   "car_class": "f1",
+   "equal_performance": 0,
+   "category": "race",
+   "conditions": "dry",
+   "assists": {
+    "braking": 2,
+    "abs": null,
+    "tc": null,
+    "gearbox": 3,
+    "racing_line": 2
+   },
+   "assists_code": "b2.a?.t?.g3.l2"
+  },
+  "labels": {
+   "game": "F1 25",
+   "track": "Austria",
+   "layout": "4.32 km",
+   "car": "Haas",
+   "car_class": "F1 car",
+   "equal_performance": "Realistic car performance",
+   "category": "Race",
+   "conditions": "Dry",
+   "assists": [
+    {
+     "key": "braking",
+     "value": 2,
+     "known": true,
+     "label": "Braking assist medium"
+    },
+    {
+     "key": "abs",
+     "value": null,
+     "known": false,
+     "label": "ABS unknown"
+    },
+    {
+     "key": "tc",
+     "value": null,
+     "known": false,
+     "label": "Traction control unknown"
+    },
+    {
+     "key": "gearbox",
+     "value": 3,
+     "known": true,
+     "label": "Automatic gears"
+    },
+    {
+     "key": "racing_line",
+     "value": 2,
+     "known": true,
+     "label": "Racing line full"
+    }
+   ],
+   "assists_text": "Braking assist medium, ABS unknown, Traction control unknown, Automatic gears, Racing line full",
+   "title": "Austria · Haas · Race · Dry"
+  },
+  "rows": [
+   {
+    "position": 1,
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 70549,
+    "lap_id": 52,
+    "lap_number": 64,
+    "session_id": "332904dbe3de",
+    "set_unix": 1791668708.232791,
+    "date_text": "Sat 10 Oct",
+    "leader": true,
+    "gap_ms": null,
+    "gap_pct": null,
+    "gap_text": "Fastest",
+    "clean_laps": 18,
+    "assists": [
+     {
+      "key": "braking",
+      "value": 2,
+      "known": true,
+      "label": "Braking assist medium"
+     },
+     {
+      "key": "abs",
+      "value": null,
+      "known": false,
+      "label": "ABS unknown"
+     },
+     {
+      "key": "tc",
+      "value": null,
+      "known": false,
+      "label": "Traction control unknown"
+     },
+     {
+      "key": "gearbox",
+      "value": 3,
+      "known": true,
+      "label": "Automatic gears"
+     },
+     {
+      "key": "racing_line",
+      "value": 2,
+      "known": true,
+      "label": "Racing line full"
+     }
+    ],
+    "best_sectors_ms": [
+     16662,
+     31149,
+     22151
+    ],
+    "theoretical_best_ms": 69962,
+    "theoretical_gain_ms": 587,
+    "game_version": "1.26",
+    "vs": {
+     "real_f1": {
+      "gap_ms": 6578,
+      "gap_pct": 10.28,
+      "gap_text": "6.578 s slower",
+      "band": null
+     }
+    }
+   },
+   {
+    "position": 2,
+    "driver_id": 2,
+    "driver_name": "Alex",
+    "lap_ms": 73616,
+    "lap_id": 95,
+    "lap_number": 65,
+    "session_id": "e13484fdb59c",
+    "set_unix": 1791740399.8780632,
+    "date_text": "Sun 11 Oct",
+    "leader": false,
+    "gap_ms": 3067,
+    "gap_pct": 4.35,
+    "gap_text": "3.067 s behind",
+    "clean_laps": 5,
+    "assists": [
+     {
+      "key": "braking",
+      "value": 2,
+      "known": true,
+      "label": "Braking assist medium"
+     },
+     {
+      "key": "abs",
+      "value": null,
+      "known": false,
+      "label": "ABS unknown"
+     },
+     {
+      "key": "tc",
+      "value": null,
+      "known": false,
+      "label": "Traction control unknown"
+     },
+     {
+      "key": "gearbox",
+      "value": 3,
+      "known": true,
+      "label": "Automatic gears"
+     },
+     {
+      "key": "racing_line",
+      "value": 2,
+      "known": true,
+      "label": "Racing line full"
+     }
+    ],
+    "best_sectors_ms": [
+     17247,
+     31956,
+     23461
+    ],
+    "theoretical_best_ms": 72664,
+    "theoretical_gain_ms": 952,
+    "game_version": "1.26",
+    "vs": {
+     "real_f1": {
+      "gap_ms": 9645,
+      "gap_pct": 15.08,
+      "gap_text": "9.645 s slower",
+      "band": null
+     }
+    }
+   }
+  ],
+  "no_time": [],
+  "record": {
+   "driver_id": 1,
+   "driver_name": "James",
+   "lap_ms": 70549,
+   "lap_id": 52,
+   "session_id": "332904dbe3de",
+   "set_unix": 1791668708.232791,
+   "date_text": "Sat 10 Oct"
+  },
+  "history": [
+   {
+    "lap_id": 40,
+    "lap_number": 62,
+    "session_id": "a100cbc9b5bd",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 76577,
+    "set_unix": 1791667592.881734,
+    "date_text": "Sat 10 Oct",
+    "previous_ms": null,
+    "previous_driver_id": null,
+    "previous_driver_name": null,
+    "gain_ms": null,
+    "changed_hands": false,
+    "text": "James set the first record: 1:16.577"
+   },
+   {
+    "lap_id": 41,
+    "lap_number": 63,
+    "session_id": "a100cbc9b5bd",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 71745,
+    "set_unix": 1791667664.6911209,
+    "date_text": "Sat 10 Oct",
+    "previous_ms": 76577,
+    "previous_driver_id": 1,
+    "previous_driver_name": "James",
+    "gain_ms": 4832,
+    "changed_hands": false,
+    "text": "James improved the record: 1:11.745, 4.832 s faster"
+   },
+   {
+    "lap_id": 52,
+    "lap_number": 64,
+    "session_id": "332904dbe3de",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 70549,
+    "set_unix": 1791668708.232791,
+    "date_text": "Sat 10 Oct",
+    "previous_ms": 71745,
+    "previous_driver_id": 1,
+    "previous_driver_name": "James",
+    "gain_ms": 1196,
+    "changed_hands": false,
+    "text": "James improved the record: 1:10.549, 1.196 s faster"
+   }
+  ],
+  "evidence": {
+   "track_limits_checked": true,
+   "note": null,
+   "counts": "Clean, valid laps of real driving only: never synthetic sessions, replays or laps with no driver."
+  },
+  "ea_rival": null,
+  "real_f1": {
+   "what": "pole",
+   "what_text": "Pole lap: qualifying P1's deciding lap",
+   "time_text": "1:03.971",
+   "year": 2025,
+   "date": "2025-06-28",
+   "driver": "Lando Norris",
+   "grand_prix": "Austrian Grand Prix",
+   "season": 2025,
+   "generation": "f1_2025",
+   "generation_chosen": false,
+   "band_note": null,
+   "race_fastest_lap": {
+    "time_ms": 67924,
+    "time_text": "1:07.924",
+    "year": 2025,
+    "date": "2025-06-29",
+    "driver": "Oscar Piastri",
+    "grand_prix": "Austrian Grand Prix",
+    "session": "race",
+    "lap": 59
+   },
+   "lap_record": {
+    "time_ms": 65619,
+    "time_text": "1:05.619",
+    "year": 2020,
+    "date": "2020-07-12",
+    "driver": "Carlos Sainz Jr.",
+    "grand_prix": "Styrian Grand Prix",
+    "session": "race",
+    "lap": 68,
+    "label": "Fastest race lap on this layout (F1DB)"
+   },
+   "layout": {
+    "f1db_layout_id": "spielberg-3",
+    "layout_length_m": 4326,
+    "game_length_m": 4323
+   },
+   "source": {
+    "name": "F1DB",
+    "version": "v2026.17.0",
+    "released": "2026-10-11",
+    "url": "https://github.com/f1db/f1db",
+    "release_url": "https://github.com/f1db/f1db/releases/tag/v2026.17.0",
+    "licence": "CC BY 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Real Formula 1 times and circuit layouts: F1DB v2026.17.0 by Marcel Overdijk and contributors (https://github.com/f1db/f1db), licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Selected and converted by Pitwall; see changes."
+   },
+   "kind": "real_f1",
+   "lap_ms": 63971,
+   "label": "Real F1 pole 2025 · Lando Norris",
+   "caveat": "Real Formula 1 times, set by real cars in real sessions. F1 25 is not the real car, and the real sessions had their own weather, tyres, fuel and track grip, so a gap to these times is a rough guide, not a like-for-like comparison.",
+   "banded": true
+  },
+  "real_f1_note": null,
+  "real_f1_asks_generation": false,
+  "boards_here": [
+   {
+    "key": "f1_25~f1:17~4323~f1:team:41~f1~0~race~dry~b0.a?.t?.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "layout_m": 4323,
+     "car_id": "f1:team:41",
+     "car_class": "f1",
+     "equal_performance": 0,
+     "category": "race",
+     "conditions": "dry",
+     "assists": {
+      "braking": 0,
+      "abs": null,
+      "tc": null,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b0.a?.t?.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Austria",
+     "layout": "4.32 km",
+     "car": "F1 Generic",
+     "car_class": "F1 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Race",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 0,
+       "known": true,
+       "label": "Braking assist off"
+      },
+      {
+       "key": "abs",
+       "value": null,
+       "known": false,
+       "label": "ABS unknown"
+      },
+      {
+       "key": "tc",
+       "value": null,
+       "known": false,
+       "label": "Traction control unknown"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist off, ABS unknown, Traction control unknown, Automatic gears, Racing line full",
+     "title": "Austria · F1 Generic · Race · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 78351,
+     "lap_id": 16,
+     "session_id": "e2c05b9f70f3",
+     "set_unix": 1791656946.9817228,
+     "date_text": "Sat 10 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 1,
+    "last_unix": 1791656946.9817228,
+    "track_limits_checked": true,
+    "vs": {}
+   },
+   {
+    "key": "f1_25~f1:17~4323~f1:team:7~f1~0~race~dry~b2.a?.t?.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "layout_m": 4323,
+     "car_id": "f1:team:7",
+     "car_class": "f1",
+     "equal_performance": 0,
+     "category": "race",
+     "conditions": "dry",
+     "assists": {
+      "braking": 2,
+      "abs": null,
+      "tc": null,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b2.a?.t?.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Austria",
+     "layout": "4.32 km",
+     "car": "Haas",
+     "car_class": "F1 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Race",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 2,
+       "known": true,
+       "label": "Braking assist medium"
+      },
+      {
+       "key": "abs",
+       "value": null,
+       "known": false,
+       "label": "ABS unknown"
+      },
+      {
+       "key": "tc",
+       "value": null,
+       "known": false,
+       "label": "Traction control unknown"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist medium, ABS unknown, Traction control unknown, Automatic gears, Racing line full",
+     "title": "Austria · Haas · Race · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 70549,
+     "lap_id": 52,
+     "session_id": "332904dbe3de",
+     "set_unix": 1791668708.232791,
+     "date_text": "Sat 10 Oct"
+    },
+    "drivers": 2,
+    "clean_laps": 23,
+    "last_unix": 1791740552.973836,
+    "track_limits_checked": true,
+    "vs": {
+     "real_f1": {
+      "lap_ms": 63971,
+      "label": "Real F1 pole 2025 · Lando Norris",
+      "gap_ms": 6578,
+      "gap_pct": 10.28,
+      "gap_text": "6.578 s slower",
+      "band": null
+     }
+    }
+   }
+  ],
+  "matched": 1
+ }
+}

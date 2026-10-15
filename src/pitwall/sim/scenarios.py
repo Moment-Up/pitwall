@@ -8,7 +8,16 @@ from typing import Any
 
 from pitwall.ingest.capture import CaptureMeta, write_capture
 from pitwall.sim.driver import CornerDeviation, DriverProfile
-from pitwall.sim.f1_stream import F1Scenario, FlashbackSpec, GroundTruth, generate_f1_session
+from pitwall.sim.f1_stream import (
+    SESSION_TYPE_TIME_TRIAL,
+    AiCarSpec,
+    F1Scenario,
+    FlashbackSpec,
+    GroundTruth,
+    TimeTrialSetSpec,
+    TimeTrialSpec,
+    generate_f1_session,
+)
 
 # The coaching demo's injected mistakes (design corner names; ``coaching_demo``). Pitwall learns its own corner
 # numbers from the speed minima: design-T1 is learned as T1, design-T3 as T2, the design-T4/T5 chicane as T3,
@@ -188,7 +197,38 @@ def technique_demo() -> F1Scenario:
     )
 
 
-SCENARIOS = {"coaching-demo": coaching_demo, "technique-demo": technique_demo}
+# --- leaderboard: Time Trial (SYNTHETIC; packet 14 encoded from EA's spec, never evidence of what F1 25 sends) ---
+TT_DEMO_RIVAL_INDEX = 1  # the rival ghost's car slot (LapData m_timeTrialRivalCarIdx)
+TT_DEMO_RIVAL = TimeTrialSetSpec(
+    lap_ms=64_870, sectors_ms=(21_412, 22_105, 21_353), team_id=8, car_index=TT_DEMO_RIVAL_INDEX, anti_lock_brakes=1
+)
+TT_DEMO_PERSONAL_BEST = TimeTrialSetSpec(lap_ms=65_904, sectors_ms=(21_730, 22_402, 21_772), team_id=8, car_index=0)
+
+
+def time_trial_demo(*, rival_inputs: bool = True) -> F1Scenario:
+    """Three Time Trial laps at 'Pitwall Park' against a rival ghost (leaderboard; SYNTHETIC). The rival set says
+    1:04.870 (sectors 21.412 / 22.105 / 21.353, ABS on, everything else off) in the player's car; the ghost car in slot
+    ``TT_DEMO_RIVAL_INDEX`` drives its own laps of the track. ``rival_inputs=False``: its CarTelemetry slot stays
+    zero-filled (only its position and lap distance move). The personal best before the session: 1:05.904.
+    ``pitwall tt-check`` on its capture answers "yes, the ghost's inputs are sent" (or "no" without inputs) for this
+    generated stream only."""
+    return F1Scenario(
+        laps=3,
+        session_type=SESSION_TYPE_TIME_TRIAL,
+        ai_cars=(AiCarSpec(index=TT_DEMO_RIVAL_INDEX, ai_controlled=False, lap_index_seed=7),),
+        time_trial=TimeTrialSpec(
+            rival=TT_DEMO_RIVAL,
+            personal_best=TT_DEMO_PERSONAL_BEST,
+            rival_index=TT_DEMO_RIVAL_INDEX,
+            rival_inputs=rival_inputs,
+        ),
+    )
+
+
+# --- end leaderboard ---
+
+
+SCENARIOS = {"coaching-demo": coaching_demo, "technique-demo": technique_demo, "time-trial-demo": time_trial_demo}
 # What each named scenario's replay shows (meta.extra["story"] of its capture, the simulate API's "story").
 STORIES: dict[str, Story] = {"coaching-demo": COACHING_DEMO_STORY}
 

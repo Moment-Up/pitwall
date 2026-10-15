@@ -33,6 +33,10 @@ export interface DensityRules {
   cornerTable: "plain" | "some" | "all";
   /** Progress (phase 3): corner trends first for advanced. */
   progressCornersFirst: boolean;
+  /** Progress, Records (leaderboard spec 5): "plain" = time, gap in words and bands, the latest record change;
+   * "some" = + gap %, date and clean laps, assists in words, 4 record changes; "all" = + best sectors and their sum,
+   * game version, the real races' fastest laps, 8 record changes. */
+  records: "plain" | "some" | "all";
 }
 
 export const DENSITY: Readonly<Record<SkillLevel, DensityRules>> = {
@@ -48,6 +52,7 @@ export const DENSITY: Readonly<Record<SkillLevel, DensityRules>> = {
     compareCharts: ["delta", "speed"],
     cornerTable: "plain",
     progressCornersFirst: false,
+    records: "plain",
   },
   intermediate: {
     kpiTiles: 4,
@@ -61,6 +66,7 @@ export const DENSITY: Readonly<Record<SkillLevel, DensityRules>> = {
     compareCharts: ["delta", "speed", "pedals"],
     cornerTable: "some",
     progressCornersFirst: false,
+    records: "some",
   },
   advanced: {
     kpiTiles: 6,
@@ -74,6 +80,7 @@ export const DENSITY: Readonly<Record<SkillLevel, DensityRules>> = {
     compareCharts: ["delta", "speed", "pedals", "steering", "g_forces"],
     cornerTable: "all",
     progressCornersFirst: true,
+    records: "all",
   },
 };
 

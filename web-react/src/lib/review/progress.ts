@@ -12,12 +12,14 @@
 // carries REC when it is the family record, PB when it is the driver's best ever, in its own scope (game + track +
 // car + layout, real driving only), found in the session list (`sessionBadges`); the page passes those badges in.
 // Only REC and PB are drawn (every session's best is its own SB; a chart of green dots would say nothing). D5's PB
-// history (no layout filter) drives the milestones ("New PB …"), which are events, not badges. The family board
-// stays neutral and marks its leader with the word "Fastest".
+// history (no layout filter) drives the milestones ("New PB …"), which are events, not badges. The family board is
+// the server's board of one exact key (lib/review/records.ts picks it); it stays neutral and marks its leader with
+// the word "Fastest".
 
 import type { TimingStatus } from "../../components/ui/types";
 import type { BestBadge } from "../bests";
-import type { Driver, DriverBestLap } from "../drivers";
+import type { Driver } from "../drivers";
+import type { BoardLabels, BoardVsAll, LeaderboardBoard } from "../endpoints/leaderboard";
 import type {
   DriverProgress,
   PbHistoryEntry,
@@ -725,75 +727,110 @@ export function habitTrends(points: readonly SessionPoint[], window = 5): HabitT
 
 // --------------------------------------------------------------------------------------------------- family board
 
+/** A driver on the family board: their best clean lap on the board's exact key, or no time yet (`ms` null). */
 export interface FamilyRow {
-  driver: Driver;
+  driverId: number;
+  /** The profile (avatar, colour); null when this page's list does not have it. */
+  driver: Driver | null;
+  name: string;
+  /** 1 = fastest; null without a time. */
+  position: number | null;
   ms: number | null;
-  carName: string | null;
+  lapId: number | null;
+  lapNumber: number | null;
   sessionId: string | null;
   /** ms - the leader's ms; null for the leader and for drivers without a time. */
   gapMs: number | null;
-  /** Marked "Fastest" in words; its time stays neutral (the board has no layout scope; REC / PB badges are on the
-   * tiles and the chart, lib/bests.ts). */
+  gapPct: number | null;
+  /** The server's words: "3.067 s behind" ("Fastest" for the leader); null without a time. */
+  gapText: string | null;
+  /** Marked "Fastest" in words; its time stays neutral (REC / PB badges are on the tiles and the chart). */
   leader: boolean;
   viewed: boolean;
+  dateText: string | null;
+  cleanLaps: number | null;
+  sectorsMs: (number | null)[] | null;
+  theoreticalMs: number | null;
+  theoreticalGainMs: number | null;
+  gameVersion: string | null;
+  /** The gap and band to each optional row of the board (EA rival, real F1). */
+  vs: BoardVsAll;
 }
 
 export interface FamilyBoard {
+  /** The board's key (string form); null when there is no board to show. */
+  key: string | null;
+  labels: BoardLabels | null;
+  /** Drivers with a time, fastest first, then the household drivers with no time here, by name. */
   rows: FamilyRow[];
-  /** Every driver's best comes from D5 at one exact car (real data): the cars are the same. Times stay neutral. */
-  exact: boolean;
-  /** The fastest time on the board, for the chart's neutral line. */
-  fastest: { ms: number; driver: Driver } | null;
-}
-
-function bestOfHistory(p: DriverProgress | undefined): PbHistoryEntry | null {
-  let best: PbHistoryEntry | null = null;
-  for (const e of p?.pb_history ?? []) if (!best || e.lap_ms < best.lap_ms) best = e;
-  return best;
+  /** The board's record, for the chart's neutral line. */
+  record: { ms: number; name: string; driver: Driver | null } | null;
 }
 
 /**
- * The family board for a track + car (spec 6.9): each driver's best, the gap to the leader, the leader marked
- * "Fastest", every time neutral. Before D5 (or when any driver's D5 answer is missing) every driver's
- * `stats.best_laps` for this game + track is used: any car, so the board says the cars may differ. With D5 for every
- * driver at an exact car the car scope is exact (`exact`), but the leader is still not shown as the family record:
- * purple REC needs D2's household record (`repo.lap_bests`, layout-aware), which D5's history is not.
+ * The family board (spec 6.9, leaderboard spec 1 and 5) from the server's board of an EXACT key (`/api/leaderboard`:
+ * game, track, layout, car, session type, weather and assists; an unknown part is its own board, never "any car"):
+ * each driver's best clean, valid lap of real driving, the gap to the leader in words, the leader marked "Fastest",
+ * every time neutral; then the household drivers with no time on it. `board` null (loading, or a server without
+ * boards): no rows.
  */
 export function familyBoard(
   drivers: readonly Driver[],
-  scope: Scope,
+  board: Pick<LeaderboardBoard, "key" | "labels" | "rows" | "no_time" | "record"> | null,
   viewedId: number | null,
-  family: ReadonlyMap<number, DriverProgress> | null,
 ): FamilyBoard {
-  const t = scope.track;
-  const fromD5 = !!family && drivers.every((d) => family.has(d.id));
-  const exact = fromD5 && scope.carId != null && !t.synthetic;
-  const entries = drivers.map((d) => {
-    if (fromD5) {
-      const e = bestOfHistory(family!.get(d.id));
-      return { driver: d, ms: e?.lap_ms ?? null, carName: readableCar(e?.car_name), sessionId: e?.session_id ?? null };
-    }
-    const b: DriverBestLap | undefined = (d.stats?.best_laps ?? []).find(
-      (x) => x.game === t.game && x.track_id === t.trackId && x.synthetic === t.synthetic,
-    );
-    return { driver: d, ms: posMs(b?.lap_time_ms), carName: readableCar(b?.car_name), sessionId: b?.session_id ?? null };
-  });
-  const timed = entries.filter((e): e is typeof e & { ms: number } => e.ms != null).sort((a, b) => a.ms - b.ms);
-  const leader = timed[0] ?? null;
-  const rows: FamilyRow[] = [
-    ...timed,
-    ...entries.filter((e) => e.ms == null).sort((a, b) => a.driver.name.localeCompare(b.driver.name)),
-  ].map((e) => {
-    const isLeader = !!leader && e.driver.id === leader.driver.id;
-    return {
-      driver: e.driver,
-      ms: e.ms,
-      carName: e.carName,
-      sessionId: e.sessionId,
-      gapMs: leader && e.ms != null && !isLeader ? e.ms - leader.ms : null,
-      leader: isLeader,
-      viewed: e.driver.id === viewedId,
-    };
-  });
-  return { rows, exact, fastest: leader ? { ms: leader.ms, driver: leader.driver } : null };
+  const byId = new Map(drivers.map((d) => [d.id, d]));
+  const timed: FamilyRow[] = (board?.rows ?? []).map((r) => ({
+    driverId: r.driver_id,
+    driver: byId.get(r.driver_id) ?? null,
+    name: r.driver_name,
+    position: r.position,
+    ms: r.lap_ms,
+    lapId: r.lap_id,
+    lapNumber: r.lap_number,
+    sessionId: r.session_id,
+    gapMs: r.gap_ms,
+    gapPct: r.gap_pct,
+    gapText: r.gap_text,
+    leader: r.leader,
+    viewed: r.driver_id === viewedId,
+    dateText: r.date_text,
+    cleanLaps: r.clean_laps,
+    sectorsMs: r.best_sectors_ms,
+    theoreticalMs: r.theoretical_best_ms,
+    theoreticalGainMs: r.theoretical_gain_ms,
+    gameVersion: r.game_version,
+    vs: r.vs ?? {},
+  }));
+  const none: FamilyRow[] = (board?.no_time ?? [])
+    .map((n) => ({
+      driverId: n.driver_id,
+      driver: byId.get(n.driver_id) ?? null,
+      name: n.driver_name,
+      position: null,
+      ms: null,
+      lapId: null,
+      lapNumber: null,
+      sessionId: null,
+      gapMs: null,
+      gapPct: null,
+      gapText: null,
+      leader: false,
+      viewed: n.driver_id === viewedId,
+      dateText: null,
+      cleanLaps: null,
+      sectorsMs: null,
+      theoreticalMs: null,
+      theoreticalGainMs: null,
+      gameVersion: null,
+      vs: {},
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const rec = board?.record ?? null;
+  return {
+    key: board?.key ?? null,
+    labels: board?.labels ?? null,
+    rows: [...timed, ...none],
+    record: rec ? { ms: rec.lap_ms, name: rec.driver_name, driver: byId.get(rec.driver_id) ?? null } : null,
+  };
 }

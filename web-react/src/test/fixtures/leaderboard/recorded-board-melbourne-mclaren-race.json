@@ -1,0 +1,604 @@
+{
+ "_fixture": {
+  "source": "GET /api/leaderboard?key=f1_25~f1:0~5276~f1:team:8~f1~0~race~dry~b1.a1.t2.g3.l2: pitwall.leaderboard.service over a read-only .backup copy of the owner's database (2026-10-15)",
+  "recorded": "2026-10-15T13:33:49+01:00",
+  "what": "Melbourne, McLaren, race: one driver, a real-F1 row (+11.55 %); boards_here has the McLaren practice board and two F2 boards (pickers: car, session type, assists).",
+  "tier": "recorded",
+  "edited": "the second household profile's name replaced by 'Alex' (household names stay on the owner's machine)"
+ },
+ "response": {
+  "key": "f1_25~f1:0~5276~f1:team:8~f1~0~race~dry~b1.a1.t2.g3.l2",
+  "fields": {
+   "game": "f1_25",
+   "track_id": "f1:0",
+   "layout_m": 5276,
+   "car_id": "f1:team:8",
+   "car_class": "f1",
+   "equal_performance": 0,
+   "category": "race",
+   "conditions": "dry",
+   "assists": {
+    "braking": 1,
+    "abs": 1,
+    "tc": 2,
+    "gearbox": 3,
+    "racing_line": 2
+   },
+   "assists_code": "b1.a1.t2.g3.l2"
+  },
+  "labels": {
+   "game": "F1 25",
+   "track": "Melbourne",
+   "layout": "5.28 km",
+   "car": "McLaren",
+   "car_class": "F1 car",
+   "equal_performance": "Realistic car performance",
+   "category": "Race",
+   "conditions": "Dry",
+   "assists": [
+    {
+     "key": "braking",
+     "value": 1,
+     "known": true,
+     "label": "Braking assist low"
+    },
+    {
+     "key": "abs",
+     "value": 1,
+     "known": true,
+     "label": "ABS on"
+    },
+    {
+     "key": "tc",
+     "value": 2,
+     "known": true,
+     "label": "Traction control full"
+    },
+    {
+     "key": "gearbox",
+     "value": 3,
+     "known": true,
+     "label": "Automatic gears"
+    },
+    {
+     "key": "racing_line",
+     "value": 2,
+     "known": true,
+     "label": "Racing line full"
+    }
+   ],
+   "assists_text": "Braking assist low, ABS on, Traction control full, Automatic gears, Racing line full",
+   "title": "Melbourne · McLaren · Race · Dry"
+  },
+  "rows": [
+   {
+    "position": 1,
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 83772,
+    "lap_id": 220,
+    "lap_number": 5,
+    "session_id": "66f1006bb7a4",
+    "set_unix": 1791928984.519907,
+    "date_text": "Tue 13 Oct",
+    "leader": true,
+    "gap_ms": null,
+    "gap_pct": null,
+    "gap_text": "Fastest",
+    "clean_laps": 26,
+    "assists": [
+     {
+      "key": "braking",
+      "value": 1,
+      "known": true,
+      "label": "Braking assist low"
+     },
+     {
+      "key": "abs",
+      "value": 1,
+      "known": true,
+      "label": "ABS on"
+     },
+     {
+      "key": "tc",
+      "value": 2,
+      "known": true,
+      "label": "Traction control full"
+     },
+     {
+      "key": "gearbox",
+      "value": 3,
+      "known": true,
+      "label": "Automatic gears"
+     },
+     {
+      "key": "racing_line",
+      "value": 2,
+      "known": true,
+      "label": "Racing line full"
+     }
+    ],
+    "best_sectors_ms": [
+     28704,
+     18441,
+     35799
+    ],
+    "theoretical_best_ms": 82944,
+    "theoretical_gain_ms": 828,
+    "game_version": "1.26",
+    "vs": {
+     "real_f1": {
+      "gap_ms": 8676,
+      "gap_pct": 11.55,
+      "gap_text": "8.676 s slower",
+      "band": null
+     }
+    }
+   }
+  ],
+  "no_time": [
+   {
+    "driver_id": 2,
+    "driver_name": "Alex"
+   }
+  ],
+  "record": {
+   "driver_id": 1,
+   "driver_name": "James",
+   "lap_ms": 83772,
+   "lap_id": 220,
+   "session_id": "66f1006bb7a4",
+   "set_unix": 1791928984.519907,
+   "date_text": "Tue 13 Oct"
+  },
+  "history": [
+   {
+    "lap_id": 184,
+    "lap_number": 2,
+    "session_id": "a2bd086ad411",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 84319,
+    "set_unix": 1791845258.767334,
+    "date_text": "Mon 12 Oct",
+    "previous_ms": null,
+    "previous_driver_id": null,
+    "previous_driver_name": null,
+    "gain_ms": null,
+    "changed_hands": false,
+    "text": "James set the first record: 1:24.319"
+   },
+   {
+    "lap_id": 195,
+    "lap_number": 3,
+    "session_id": "874161729ca4",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 84185,
+    "set_unix": 1791846446.8678038,
+    "date_text": "Tue 13 Oct",
+    "previous_ms": 84319,
+    "previous_driver_id": 1,
+    "previous_driver_name": "James",
+    "gain_ms": 134,
+    "changed_hands": false,
+    "text": "James improved the record: 1:24.185, 0.134 s faster"
+   },
+   {
+    "lap_id": 220,
+    "lap_number": 5,
+    "session_id": "66f1006bb7a4",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 83772,
+    "set_unix": 1791928984.519907,
+    "date_text": "Tue 13 Oct",
+    "previous_ms": 84185,
+    "previous_driver_id": 1,
+    "previous_driver_name": "James",
+    "gain_ms": 413,
+    "changed_hands": false,
+    "text": "James improved the record: 1:23.772, 0.413 s faster"
+   }
+  ],
+  "evidence": {
+   "track_limits_checked": true,
+   "note": null,
+   "counts": "Clean, valid laps of real driving only: never synthetic sessions, replays or laps with no driver."
+  },
+  "ea_rival": null,
+  "real_f1": {
+   "what": "pole",
+   "what_text": "Pole lap: qualifying P1's deciding lap",
+   "time_text": "1:15.096",
+   "year": 2025,
+   "date": "2025-03-15",
+   "driver": "Lando Norris",
+   "grand_prix": "Australian Grand Prix",
+   "season": 2025,
+   "generation": "f1_2025",
+   "generation_chosen": false,
+   "band_note": null,
+   "race_fastest_lap": {
+    "time_ms": 82167,
+    "time_text": "1:22.167",
+    "year": 2025,
+    "date": "2025-03-16",
+    "driver": "Lando Norris",
+    "grand_prix": "Australian Grand Prix",
+    "session": "race",
+    "lap": 43
+   },
+   "lap_record": {
+    "time_ms": 79813,
+    "time_text": "1:19.813",
+    "year": 2024,
+    "date": "2024-03-24",
+    "driver": "Charles Leclerc",
+    "grand_prix": "Australian Grand Prix",
+    "session": "race",
+    "lap": 56,
+    "label": "Fastest race lap on this layout (F1DB)"
+   },
+   "layout": {
+    "f1db_layout_id": "melbourne-2",
+    "layout_length_m": 5278,
+    "game_length_m": 5276
+   },
+   "source": {
+    "name": "F1DB",
+    "version": "v2026.17.0",
+    "released": "2026-10-11",
+    "url": "https://github.com/f1db/f1db",
+    "release_url": "https://github.com/f1db/f1db/releases/tag/v2026.17.0",
+    "licence": "CC BY 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Real Formula 1 times and circuit layouts: F1DB v2026.17.0 by Marcel Overdijk and contributors (https://github.com/f1db/f1db), licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Selected and converted by Pitwall; see changes."
+   },
+   "kind": "real_f1",
+   "lap_ms": 75096,
+   "label": "Real F1 pole 2025 · Lando Norris",
+   "caveat": "Real Formula 1 times, set by real cars in real sessions. F1 25 is not the real car, and the real sessions had their own weather, tyres, fuel and track grip, so a gap to these times is a rough guide, not a like-for-like comparison.",
+   "banded": true
+  },
+  "real_f1_note": null,
+  "real_f1_asks_generation": false,
+  "boards_here": [
+   {
+    "key": "f1_25~f1:0~5276~f1:team:158~f2~0~qualifying~dry~b3.a1.t?.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:0",
+     "layout_m": 5276,
+     "car_id": "f1:team:158",
+     "car_class": "f2",
+     "equal_performance": 0,
+     "category": "qualifying",
+     "conditions": "dry",
+     "assists": {
+      "braking": 3,
+      "abs": 1,
+      "tc": null,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b3.a1.t?.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Melbourne",
+     "layout": "5.28 km",
+     "car": "F2 · Art GP '24",
+     "car_class": "F2 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Qualifying",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 3,
+       "known": true,
+       "label": "Braking assist high"
+      },
+      {
+       "key": "abs",
+       "value": 1,
+       "known": true,
+       "label": "ABS on"
+      },
+      {
+       "key": "tc",
+       "value": null,
+       "known": false,
+       "label": "Traction control unknown"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist high, ABS on, Traction control unknown, Automatic gears, Racing line full",
+     "title": "Melbourne · F2 · Art GP '24 · Qualifying · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 91525,
+     "lap_id": 163,
+     "session_id": "969ee7a1b400",
+     "set_unix": 1791759370.235666,
+     "date_text": "Sun 11 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 1,
+    "last_unix": 1791759370.235666,
+    "track_limits_checked": true,
+    "vs": {}
+   },
+   {
+    "key": "f1_25~f1:0~5276~f1:team:214~f2~0~race~dry~b2.a?.t?.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:0",
+     "layout_m": 5276,
+     "car_id": "f1:team:214",
+     "car_class": "f2",
+     "equal_performance": 0,
+     "category": "race",
+     "conditions": "dry",
+     "assists": {
+      "braking": 2,
+      "abs": null,
+      "tc": null,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b2.a?.t?.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Melbourne",
+     "layout": "5.28 km",
+     "car": "F2 · Hitech '25",
+     "car_class": "F2 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Race",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 2,
+       "known": true,
+       "label": "Braking assist medium"
+      },
+      {
+       "key": "abs",
+       "value": null,
+       "known": false,
+       "label": "ABS unknown"
+      },
+      {
+       "key": "tc",
+       "value": null,
+       "known": false,
+       "label": "Traction control unknown"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist medium, ABS unknown, Traction control unknown, Automatic gears, Racing line full",
+     "title": "Melbourne · F2 · Hitech '25 · Race · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 95588,
+     "lap_id": 72,
+     "session_id": "1e7271f70c5e",
+     "set_unix": 1791678137.801131,
+     "date_text": "Sun 11 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 3,
+    "last_unix": 1791678137.801131,
+    "track_limits_checked": true,
+    "vs": {}
+   },
+   {
+    "key": "f1_25~f1:0~5276~f1:team:8~f1~0~race~dry~b1.a1.t2.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:0",
+     "layout_m": 5276,
+     "car_id": "f1:team:8",
+     "car_class": "f1",
+     "equal_performance": 0,
+     "category": "race",
+     "conditions": "dry",
+     "assists": {
+      "braking": 1,
+      "abs": 1,
+      "tc": 2,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b1.a1.t2.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Melbourne",
+     "layout": "5.28 km",
+     "car": "McLaren",
+     "car_class": "F1 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Race",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 1,
+       "known": true,
+       "label": "Braking assist low"
+      },
+      {
+       "key": "abs",
+       "value": 1,
+       "known": true,
+       "label": "ABS on"
+      },
+      {
+       "key": "tc",
+       "value": 2,
+       "known": true,
+       "label": "Traction control full"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist low, ABS on, Traction control full, Automatic gears, Racing line full",
+     "title": "Melbourne · McLaren · Race · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 83772,
+     "lap_id": 220,
+     "session_id": "66f1006bb7a4",
+     "set_unix": 1791928984.519907,
+     "date_text": "Tue 13 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 26,
+    "last_unix": 1791930343.988412,
+    "track_limits_checked": true,
+    "vs": {
+     "real_f1": {
+      "lap_ms": 75096,
+      "label": "Real F1 pole 2025 · Lando Norris",
+      "gap_ms": 8676,
+      "gap_pct": 11.55,
+      "gap_text": "8.676 s slower",
+      "band": null
+     }
+    }
+   },
+   {
+    "key": "f1_25~f1:0~5276~f1:team:8~f1~0~practice~dry~b1.a1.t2.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:0",
+     "layout_m": 5276,
+     "car_id": "f1:team:8",
+     "car_class": "f1",
+     "equal_performance": 0,
+     "category": "practice",
+     "conditions": "dry",
+     "assists": {
+      "braking": 1,
+      "abs": 1,
+      "tc": 2,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b1.a1.t2.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Melbourne",
+     "layout": "5.28 km",
+     "car": "McLaren",
+     "car_class": "F1 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Practice",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 1,
+       "known": true,
+       "label": "Braking assist low"
+      },
+      {
+       "key": "abs",
+       "value": 1,
+       "known": true,
+       "label": "ABS on"
+      },
+      {
+       "key": "tc",
+       "value": 2,
+       "known": true,
+       "label": "Traction control full"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist low, ABS on, Traction control full, Automatic gears, Racing line full",
+     "title": "Melbourne · McLaren · Practice · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 83634,
+     "lap_id": 172,
+     "session_id": "2c806db2b30e",
+     "set_unix": 1791838988.270047,
+     "date_text": "Mon 12 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 4,
+    "last_unix": 1791843687.315142,
+    "track_limits_checked": true,
+    "vs": {
+     "real_f1": {
+      "lap_ms": 75096,
+      "label": "Real F1 pole 2025 · Lando Norris",
+      "gap_ms": 8538,
+      "gap_pct": 11.37,
+      "gap_text": "8.538 s slower",
+      "band": null
+     }
+    }
+   }
+  ],
+  "matched": 1
+ }
+}

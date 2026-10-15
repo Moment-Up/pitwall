@@ -135,7 +135,9 @@ export type BadgeKind =
   | "weekly_streak"
   | "busy_week"
   | "clean_race"
-  | "goals_reached";
+  | "goals_reached"
+  /** Holding the family record of a contested family board (`family_record:<board key>`, leaderboard). */
+  | "family_record";
 export interface Badge {
   key: string;
   kind: BadgeKind;

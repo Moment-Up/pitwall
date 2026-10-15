@@ -1,0 +1,273 @@
+{
+ "_fixture": {
+  "source": "GET /api/leaderboard?key=f1_25~f1:30~5410~f1:team:41~f1~0~race~dry~b2.a?.t?.g3.l2: pitwall.leaderboard.service over a read-only .backup copy of the owner's database (2026-10-15)",
+  "recorded": "2026-10-15T13:33:49+01:00",
+  "what": "Miami, F1 Generic car: the game cannot tell a 2025 from a 2026 car, so no real-F1 row, the note says why and real_f1_asks_generation is true.",
+  "tier": "recorded",
+  "edited": "the second household profile's name replaced by 'Alex' (household names stay on the owner's machine)"
+ },
+ "response": {
+  "key": "f1_25~f1:30~5410~f1:team:41~f1~0~race~dry~b2.a?.t?.g3.l2",
+  "fields": {
+   "game": "f1_25",
+   "track_id": "f1:30",
+   "layout_m": 5410,
+   "car_id": "f1:team:41",
+   "car_class": "f1",
+   "equal_performance": 0,
+   "category": "race",
+   "conditions": "dry",
+   "assists": {
+    "braking": 2,
+    "abs": null,
+    "tc": null,
+    "gearbox": 3,
+    "racing_line": 2
+   },
+   "assists_code": "b2.a?.t?.g3.l2"
+  },
+  "labels": {
+   "game": "F1 25",
+   "track": "Miami",
+   "layout": "5.41 km",
+   "car": "F1 Generic",
+   "car_class": "F1 car",
+   "equal_performance": "Realistic car performance",
+   "category": "Race",
+   "conditions": "Dry",
+   "assists": [
+    {
+     "key": "braking",
+     "value": 2,
+     "known": true,
+     "label": "Braking assist medium"
+    },
+    {
+     "key": "abs",
+     "value": null,
+     "known": false,
+     "label": "ABS unknown"
+    },
+    {
+     "key": "tc",
+     "value": null,
+     "known": false,
+     "label": "Traction control unknown"
+    },
+    {
+     "key": "gearbox",
+     "value": 3,
+     "known": true,
+     "label": "Automatic gears"
+    },
+    {
+     "key": "racing_line",
+     "value": 2,
+     "known": true,
+     "label": "Racing line full"
+    }
+   ],
+   "assists_text": "Braking assist medium, ABS unknown, Traction control unknown, Automatic gears, Racing line full",
+   "title": "Miami · F1 Generic · Race · Dry"
+  },
+  "rows": [
+   {
+    "position": 1,
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 93117,
+    "lap_id": 69,
+    "lap_number": 3,
+    "session_id": "9a58addb4b75",
+    "set_unix": 1791677518.057878,
+    "date_text": "Sun 11 Oct",
+    "leader": true,
+    "gap_ms": null,
+    "gap_pct": null,
+    "gap_text": "Fastest",
+    "clean_laps": 2,
+    "assists": [
+     {
+      "key": "braking",
+      "value": 2,
+      "known": true,
+      "label": "Braking assist medium"
+     },
+     {
+      "key": "abs",
+      "value": null,
+      "known": false,
+      "label": "ABS unknown"
+     },
+     {
+      "key": "tc",
+      "value": null,
+      "known": false,
+      "label": "Traction control unknown"
+     },
+     {
+      "key": "gearbox",
+      "value": 3,
+      "known": true,
+      "label": "Automatic gears"
+     },
+     {
+      "key": "racing_line",
+      "value": 2,
+      "known": true,
+      "label": "Racing line full"
+     }
+    ],
+    "best_sectors_ms": [
+     32983,
+     34689,
+     25445
+    ],
+    "theoretical_best_ms": 93117,
+    "theoretical_gain_ms": 0,
+    "game_version": "1.26",
+    "vs": {}
+   }
+  ],
+  "no_time": [
+   {
+    "driver_id": 2,
+    "driver_name": "Alex"
+   }
+  ],
+  "record": {
+   "driver_id": 1,
+   "driver_name": "James",
+   "lap_ms": 93117,
+   "lap_id": 69,
+   "session_id": "9a58addb4b75",
+   "set_unix": 1791677518.057878,
+   "date_text": "Sun 11 Oct"
+  },
+  "history": [
+   {
+    "lap_id": 68,
+    "lap_number": 2,
+    "session_id": "9a58addb4b75",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 97837,
+    "set_unix": 1791677424.8738592,
+    "date_text": "Sun 11 Oct",
+    "previous_ms": null,
+    "previous_driver_id": null,
+    "previous_driver_name": null,
+    "gain_ms": null,
+    "changed_hands": false,
+    "text": "James set the first record: 1:37.837"
+   },
+   {
+    "lap_id": 69,
+    "lap_number": 3,
+    "session_id": "9a58addb4b75",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 93117,
+    "set_unix": 1791677518.057878,
+    "date_text": "Sun 11 Oct",
+    "previous_ms": 97837,
+    "previous_driver_id": 1,
+    "previous_driver_name": "James",
+    "gain_ms": 4720,
+    "changed_hands": false,
+    "text": "James improved the record: 1:33.117, 4.720 s faster"
+   }
+  ],
+  "evidence": {
+   "track_limits_checked": true,
+   "note": null,
+   "counts": "Clean, valid laps of real driving only: never synthetic sessions, replays or laps with no driver."
+  },
+  "ea_rival": null,
+  "real_f1": null,
+  "real_f1_note": "The game does not say whether this is a 2025 or a 2026 car, so there is no real season to compare with.",
+  "real_f1_asks_generation": true,
+  "boards_here": [
+   {
+    "key": "f1_25~f1:30~5410~f1:team:41~f1~0~race~dry~b2.a?.t?.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:30",
+     "layout_m": 5410,
+     "car_id": "f1:team:41",
+     "car_class": "f1",
+     "equal_performance": 0,
+     "category": "race",
+     "conditions": "dry",
+     "assists": {
+      "braking": 2,
+      "abs": null,
+      "tc": null,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b2.a?.t?.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Miami",
+     "layout": "5.41 km",
+     "car": "F1 Generic",
+     "car_class": "F1 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Race",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 2,
+       "known": true,
+       "label": "Braking assist medium"
+      },
+      {
+       "key": "abs",
+       "value": null,
+       "known": false,
+       "label": "ABS unknown"
+      },
+      {
+       "key": "tc",
+       "value": null,
+       "known": false,
+       "label": "Traction control unknown"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist medium, ABS unknown, Traction control unknown, Automatic gears, Racing line full",
+     "title": "Miami · F1 Generic · Race · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 93117,
+     "lap_id": 69,
+     "session_id": "9a58addb4b75",
+     "set_unix": 1791677518.057878,
+     "date_text": "Sun 11 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 2,
+    "last_unix": 1791677518.057878,
+    "track_limits_checked": true,
+    "vs": {}
+   }
+  ],
+  "matched": 1
+ }
+}

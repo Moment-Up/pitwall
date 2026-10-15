@@ -24,6 +24,7 @@
  *   --pw-hatch-pct                             synthetic hatch stripe strength (24 % dark, 14 % light)
  *   --pw-motion-bar, --pw-motion-sector        80 ms bars / 600 ms sector fade, 0 under prefers-reduced-motion
  *   --pw-d-corner-long, --pw-d-pit             88 px long corner labels and 96 px "PIT" ([critic] 4.1, 4.5, 4.7)
+ *   --pw-band-{gold,silver,bronze}             the leaderboard bands' medal (decorative; the word says the band)
  *   night: --default, --overlay, --field-background, --separator, --segment follow the night surfaces; dimmer
  *   sector steps; --pw-line-strong #5a6472 (the spec's #444d5a fails the 3:1 control-boundary target)
  *   red-green safe: the aliases are set in every rg rule (so night's --success / --danger cannot win), plus
@@ -94,6 +95,12 @@
     --pw-tyre-cool: oklch(0.8276 0.1013 230.32); /* #7dd3fc */
     --pw-tyre-hot: oklch(0.8131 0.165 75.04); /* #ffb020 */
     --pw-tyre-over: oklch(0.6841 0.206 18.57); /* #ff5466 */
+
+    /* Leaderboard bands (Review › Progress, Records): the medal beside the word Gold / Silver / Bronze, the same in
+       every theme. Decorative (the word carries the meaning), so no text-contrast target. */
+    --pw-band-gold: oklch(0.78 0.14 85); /* #e0af3b */
+    --pw-band-silver: oklch(0.75 0.015 255); /* #a8afb8 */
+    --pw-band-bronze: oklch(0.62 0.11 55); /* #b97340 */
   }
 
   /* ---------------------------------------------------------------- light */

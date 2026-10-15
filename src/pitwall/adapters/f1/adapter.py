@@ -43,6 +43,8 @@ from pitwall.model.telemetry import (
     SessionInfo,
     SessionType,
     SetupParameter,
+    TimeTrialDataSet,
+    TimeTrialInfo,
     TrackZones,
     TyreSet,
     TyreSetsInfo,
@@ -194,6 +196,14 @@ F1_25_INFO = AdapterInfo(
             "format 2026 spec only",
         ),
         # --- end spotter ---
+        # --- leaderboard ---
+        "time_trial": FieldSupport(
+            _S,
+            "Time Trial (ID 14, 1 Hz, Time Trial mode only): player session best, personal best and rival datasets "
+            "(lap and sector times ms, TC / gearbox / ABS on-off, equal performance, custom setup, valid) + LapData "
+            "m_timeTrialPBCarIdx / m_timeTrialRivalCarIdx; spec-decoded, not yet seen in a recording",
+        ),
+        # --- end leaderboard ---
     },
     notes=(
         "Decodes UDP formats 2025 (F1 25) and 2026 (2026 Season Pack); format 2024 is rejected.",
@@ -460,6 +470,59 @@ def _track_zones(marshal: list[dict[str, Any]], tail: dict[str, Any], packet_for
     )
 
 
+# --- leaderboard: Time Trial (packet 14, spec section 5.14) -----------------------------------------------------------
+TT_FLAG: dict[int, bool] = {0: False, 1: True}  # TimeTrialDataSet assist / equal / setup / valid flags: 0 or 1
+TT_TEAM_NONE = frozenset({255, 65535})  # no team (format 2025 uint8 / 2026 uint16 sentinel, as LobbyInfo's teamId)
+TT_CAR_INDEX_NONE = 255  # LapData m_timeTrialPBCarIdx / m_timeTrialRivalCarIdx (and a set's m_carIdx): invalid
+TT_SETS = ("player_session_best", "personal_best", "rival")  # the packet's three datasets, in wire order
+# LapData's two time trial bytes follow the car array: absolute offsets per wire format (1283 / 1284 in 2025)
+LAP_DATA_TAIL_OFFSET: dict[int, int] = {
+    fmt: layout.sizes[P.PacketId.LAP_DATA] - P.LAP_DATA_TAIL.size for fmt, layout in P.LAYOUTS.items()
+}
+
+
+def tt_car_index(v: int, max_cars: int) -> int | None:
+    """A time trial car index: 255 (the spec's "invalid") or anything past the car array -> None."""
+    return v if v != TT_CAR_INDEX_NONE and v < max_cars else None
+
+
+def _tt_dataset(d: dict[str, Any], max_cars: int) -> TimeTrialDataSet | None:
+    """One ``TimeTrialDataSet`` -> model. A lap time of 0 is a set with no lap (the game zero-fills a set it has no
+    lap for, e.g. no rival picked: [H], not yet seen in a recording): None, so its other zeroes (team 0 = Mercedes, the
+    flags) are never reported as facts."""
+    lap = d["lapTimeInMS"]
+    if not lap:
+        return None
+    team = d["teamId"]
+    team_id = None if team in TT_TEAM_NONE else team
+    return TimeTrialDataSet(
+        car_index=tt_car_index(d["carIdx"], max_cars),
+        team_id=team_id,
+        car_id=None if team_id is None else f"f1:team:{team_id}",
+        car_name=None if team_id is None else enums.team_name(team_id),
+        lap_time_ms=lap,
+        sector_times_ms=(d["sector1TimeInMS"] or None, d["sector2TimeInMS"] or None, d["sector3TimeInMS"] or None),
+        traction_control=TT_FLAG.get(d["tractionControl"]),
+        gearbox_assist=TT_FLAG.get(d["gearboxAssist"]),
+        anti_lock_brakes=TT_FLAG.get(d["antiLockBrakes"]),
+        equal_car_performance=TT_FLAG.get(d["equalCarPerformance"]),
+        custom_setup=TT_FLAG.get(d["customSetup"]),
+        valid=TT_FLAG.get(d["valid"]),
+    )
+
+
+def decode_time_trial_sets(data: bytes, layout: P.F1Layout) -> tuple[TimeTrialDataSet | None, ...]:
+    """The three datasets of a whole Time Trial packet (header included), in wire order (``TT_SETS``). Pure: also
+    used by ``tt_check``."""
+    tt = layout.time_trial
+    return tuple(
+        _tt_dataset(tt.unpack_from(data, P.HEADER.size + k * tt.size), layout.max_cars) for k in range(len(TT_SETS))
+    )
+
+
+# --- end leaderboard ---
+
+
 class _CarHist:
     """Session History state of one car (ingest thread only)."""
 
@@ -577,6 +640,9 @@ class F1Adapter:
         self._pen_key: tuple[int, ...] | None = None
         self._pen_obj: CarPenalties | None = None
         self._participants_key: bytes | None = None
+        # leaderboard: LapData's time trial car indexes (two byte reads per LapData packet); None until the first one
+        self._tt_pb_idx: int | None = None
+        self._tt_rival_idx: int | None = None
 
     # ------------------------------------------------------------------ structural validation
     def can_decode(self, data: bytes) -> bool:
@@ -696,6 +762,11 @@ class F1Adapter:
         self._lap = lap
         self._lap_frame = h["frameIdentifier"]
         self._lap_raw = data
+        # leaderboard: the time trial PB / rival car indexes after the car array (255 outside Time Trial)
+        layout: P.F1Layout = h["layout"]
+        tail = LAP_DATA_TAIL_OFFSET[layout.packet_format]
+        self._tt_pb_idx = tt_car_index(data[tail], layout.max_cars)
+        self._tt_rival_idx = tt_car_index(data[tail + 1], layout.max_cars)
         lap_num = lap["currentLapNum"]
         prev = self._prev_lap_num
         last_raw = lap["lastLapTimeInMS"]
@@ -966,6 +1037,30 @@ class F1Adapter:
                 fitted_index=fitted if fitted < P.NUM_TYRE_SETS else None,
             )
         )
+
+    # --- leaderboard ---
+    def _on_time_trial(self, data: bytes, h: dict[str, Any], t: int, out: list[Emitted]) -> None:
+        """Time Trial (ID 14, once a second, Time Trial mode only): the three datasets and LapData's PB / rival car
+        indexes, emitted on every packet (three 24-25 byte unpacks a second); the session manager stores a change."""
+        layout: P.F1Layout = h["layout"]
+        best, pb, rival = decode_time_trial_sets(data, layout)
+        uid = h["sessionUID"] or self._session_uid
+        out.append(
+            TimeTrialInfo(
+                game=Game.F1_25,
+                t_recv_ns=t,
+                session_time_s=float(h["sessionTime"]),
+                session_uid=str(uid) if uid else None,
+                packet_format=layout.packet_format,
+                player_session_best=best,
+                personal_best=pb,
+                rival=rival,
+                pb_car_index=self._tt_pb_idx,
+                rival_car_index=self._tt_rival_idx,
+            )
+        )
+
+    # --- end leaderboard ---
 
     def _final_completion(
         self, lap: dict[str, Any], lap_num: int, last_ms: int, h: dict[str, Any], t: int, out: list[Emitted]
@@ -1553,7 +1648,8 @@ _HANDLERS = {
     P.PacketId.CAR_DAMAGE: F1Adapter._on_car_damage,
     P.PacketId.SESSION_HISTORY: F1Adapter._on_session_history,
     P.PacketId.TYRE_SETS: F1Adapter._on_tyre_sets,  # race strategy (pitwall.strategy)
+    P.PacketId.TIME_TRIAL: F1Adapter._on_time_trial,  # leaderboard: the EA rival
 }
-# Followers (AI pace's Session History, race strategy's TyreSets): decoded only within the current session (uid 0 = the
-# current one); they never start or reset a session (see ``decode``).
-_FOLLOWERS = frozenset({P.PacketId.SESSION_HISTORY, P.PacketId.TYRE_SETS})
+# Followers (AI pace's Session History, race strategy's TyreSets, the leaderboard's Time Trial): decoded only within the
+# current session (uid 0 = the current one); they never start or reset a session (see ``decode``).
+_FOLLOWERS = frozenset({P.PacketId.SESSION_HISTORY, P.PacketId.TYRE_SETS, P.PacketId.TIME_TRIAL})

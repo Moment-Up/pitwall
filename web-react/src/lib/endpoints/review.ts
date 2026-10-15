@@ -20,7 +20,6 @@
 //   reviewKeys.history(id)            GET /api/engineer/history?session_id=    (Ask)
 //   reviewKeys.progress(id, q)        GET /api/drivers/{id}/progress?…         (D5: Progress, Coaching plan; under
 //                                     "driver-sessions:" so laps and driver switches refresh it)
-//   reviewKeys.familyProgress(ids, q) the same for every family driver, corners=false (family board)
 //   reviewKeys.aiPace(id, q)          GET /api/drivers/{id}/ai-pace?…          (pace vs AI difficulty: Progress
 //                                     "Against the AI", Coaching "Suggested AI difficulty"; under "driver-sessions:")
 //
@@ -510,9 +509,6 @@ export const reviewKeys = {
   list: (driverId: number | "all") => (driverId === "all" ? "sessions:list" : `driver-sessions:${driverId}`),
   /** D5 for one driver and scope. Under "driver-sessions:" so a completed lap or a driver switch refreshes it. */
   progress: (driverId: number, q: ProgressQuery) => `driver-sessions:${driverId}:progress:${progressScopeKey(q)}`,
-  /** D5 for every family driver at one scope (the family board). Same prefix rule. */
-  familyProgress: (driverIds: readonly number[], q: ProgressQuery) =>
-    `driver-sessions:family:${driverIds.join(",")}:progress:${progressScopeKey(q)}`,
   /** A driver's pace against the AI and the suggested level (Progress, Coaching plan). Under "driver-sessions:" so a
    * completed lap or a driver switch refreshes it. */
   aiPace: (driverId: number, q: AiPaceQuery) => `driver-sessions:${driverId}:ai-pace:${aiPaceScopeKey(q)}`,
@@ -575,11 +571,6 @@ export const reviewApi = {
   /** D5: per-session progress at a track (+ car) and the PB history. A server without D5 answers 404 (see
    * `isMissingRoute`): Progress then falls back to lap-level data. */
   progress: (driverId: number, q: ProgressQuery = {}) => req<DriverProgress>(progressUrl(driverId, q)),
-  /** D5 for several drivers at one scope (the family board): every driver's answer, or the first error. */
-  familyProgress: (driverIds: readonly number[], q: ProgressQuery) =>
-    Promise.all(driverIds.map(async (id) => [id, await reviewApi.progress(id, q)] as const)).then(
-      (pairs) => new Map<number, DriverProgress>(pairs),
-    ),
   /** A driver's sessions against the AI and the suggested AI level per key. A server without AI pace answers 404
    * (`isMissingRoute`): the pages then leave the AI cards out. */
   driverAiPace: (driverId: number, q: AiPaceQuery = {}) => req<DriverAiPace>(aiPaceUrl(driverId, q)),

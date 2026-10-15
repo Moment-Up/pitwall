@@ -1,0 +1,2132 @@
+{
+ "schema_version": 1,
+ "generated_by": "scripts/build_f1db_benchmarks.py",
+ "source": {
+  "name": "F1DB",
+  "version": "v2026.17.0",
+  "released": "2026-10-11",
+  "url": "https://github.com/f1db/f1db",
+  "release_url": "https://github.com/f1db/f1db/releases/tag/v2026.17.0",
+  "licence": "CC BY 4.0",
+  "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "Real Formula 1 times and circuit layouts: F1DB v2026.17.0 by Marcel Overdijk and contributors (https://github.com/f1db/f1db), licensed CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Selected and converted by Pitwall; see changes.",
+  "changes": "Selected by Pitwall from F1DB's circuits, layouts, races, qualifying results, fastest laps, drivers and grands prix: for each F1 25 track, the circuit's current (effective) layout and its length (converted from km to metres), the latest pole (qualifying P1's deciding lap), the latest race fastest lap, the fastest race lap on that layout, and the pole and race fastest lap of the 2025 and 2026 seasons; a pole slower than the same race's fastest lap is flagged. Times and names are otherwise as F1DB gives them.",
+  "inputs": {
+   "f1db-circuits-layouts.csv": "d2d41fdfb5015488fc081b6999aca46e899a22980daa2558c1f129d3b5a92a19",
+   "f1db-circuits.csv": "34420e280cb7797aecb0a5fa9c50cd384586a1f4a1c183939d029976c747c01f",
+   "f1db-drivers.csv": "baaa394738e90a01dee99c1cdd277d663738a45488a699bd0c28483b49587448",
+   "f1db-grands-prix.csv": "2cab5934828c50aec5a9542cef14ba8a8f0153c110329fd80709ad3b8ced4d9f",
+   "f1db-races-fastest-laps.csv": "d3725be88dd28858198ebace68ad1e3835d09114c464a4a2ea26efae12334db3",
+   "f1db-races-qualifying-results.csv": "f845c04b245989a36694c9970234f44fa028c1141c127defeb54b13df50c8d03",
+   "f1db-races.csv": "3fdaa4d9933252f798d27daf366c4234dba1201da6fcaad4a358e41f58f423c6"
+  }
+ },
+ "caveat": "Real Formula 1 times, set by real cars in real sessions. F1 25 is not the real car, and the real sessions had their own weather, tyres, fuel and track grip, so a gap to these times is a rough guide, not a like-for-like comparison.",
+ "length_tolerance": 0.03,
+ "seasons": [
+  2025,
+  2026
+ ],
+ "tracks": {
+  "0": {
+   "game_track_id": 0,
+   "track_name": "Melbourne",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "melbourne",
+   "f1db_layout_id": "melbourne-2",
+   "layout_length_m": 5278,
+   "game_length_m": 5276,
+   "game_length_source": "track_sheets/f1/00_melbourne.toml",
+   "pole": {
+    "time_ms": 78518,
+    "time": "1:18.518",
+    "year": 2026,
+    "date": "2026-03-07",
+    "driver": "George Russell",
+    "grand_prix": "Australian Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1150,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 82091,
+    "time": "1:22.091",
+    "year": 2026,
+    "date": "2026-03-08",
+    "driver": "Max Verstappen",
+    "grand_prix": "Australian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1150,
+    "lap": 43
+   },
+   "lap_record": {
+    "time_ms": 79813,
+    "time": "1:19.813",
+    "year": 2024,
+    "date": "2024-03-24",
+    "driver": "Charles Leclerc",
+    "grand_prix": "Australian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1104,
+    "lap": 56
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 75096,
+      "time": "1:15.096",
+      "year": 2025,
+      "date": "2025-03-15",
+      "driver": "Lando Norris",
+      "grand_prix": "Australian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1126,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 82167,
+      "time": "1:22.167",
+      "year": 2025,
+      "date": "2025-03-16",
+      "driver": "Lando Norris",
+      "grand_prix": "Australian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1126,
+      "lap": 43
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 78518,
+      "time": "1:18.518",
+      "year": 2026,
+      "date": "2026-03-07",
+      "driver": "George Russell",
+      "grand_prix": "Australian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1150,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 82091,
+      "time": "1:22.091",
+      "year": 2026,
+      "date": "2026-03-08",
+      "driver": "Max Verstappen",
+      "grand_prix": "Australian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1150,
+      "lap": 43
+     }
+    }
+   }
+  },
+  "1": {
+   "game_track_id": 1,
+   "track_name": "Paul Ricard",
+   "matched": false,
+   "reason": "Not in F1 25 (no track sheet): no game lap length is known to check F1DB's layout paul-ricard-3 against.",
+   "f1db_circuit_id": "paul-ricard",
+   "f1db_layout_id": "paul-ricard-3",
+   "layout_length_m": 5842,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "2": {
+   "game_track_id": 2,
+   "track_name": "Shanghai",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "shanghai",
+   "f1db_layout_id": "shanghai-1",
+   "layout_length_m": 5451,
+   "game_length_m": 5441,
+   "game_length_source": "track_sheets/f1/02_shanghai.toml",
+   "pole": {
+    "time_ms": 92064,
+    "time": "1:32.064",
+    "year": 2026,
+    "date": "2026-03-14",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Chinese Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1151,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 95275,
+    "time": "1:35.275",
+    "year": 2026,
+    "date": "2026-03-15",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Chinese Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1151,
+    "lap": 52
+   },
+   "lap_record": {
+    "time_ms": 92238,
+    "time": "1:32.238",
+    "year": 2004,
+    "date": "2004-09-26",
+    "driver": "Michael Schumacher",
+    "grand_prix": "Chinese Grand Prix",
+    "session": "race",
+    "f1db_race_id": 729,
+    "lap": 55
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 90641,
+      "time": "1:30.641",
+      "year": 2025,
+      "date": "2025-03-22",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Chinese Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1127,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 95454,
+      "time": "1:35.454",
+      "year": 2025,
+      "date": "2025-03-23",
+      "driver": "Lando Norris",
+      "grand_prix": "Chinese Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1127,
+      "lap": 53
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 92064,
+      "time": "1:32.064",
+      "year": 2026,
+      "date": "2026-03-14",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Chinese Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1151,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 95275,
+      "time": "1:35.275",
+      "year": 2026,
+      "date": "2026-03-15",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Chinese Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1151,
+      "lap": 52
+     }
+    }
+   }
+  },
+  "3": {
+   "game_track_id": 3,
+   "track_name": "Sakhir (Bahrain)",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "bahrain",
+   "f1db_layout_id": "bahrain-1",
+   "layout_length_m": 5412,
+   "game_length_m": 5408,
+   "game_length_source": "track_sheets/f1/03_sakhir_bahrain.toml",
+   "pole": {
+    "time_ms": 89841,
+    "time": "1:29.841",
+    "year": 2025,
+    "date": "2025-04-12",
+    "driver": "Oscar Piastri",
+    "grand_prix": "Bahrain Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1129,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 95140,
+    "time": "1:35.140",
+    "year": 2025,
+    "date": "2025-04-13",
+    "driver": "Oscar Piastri",
+    "grand_prix": "Bahrain Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1129,
+    "lap": 36
+   },
+   "lap_record": {
+    "time_ms": 90252,
+    "time": "1:30.252",
+    "year": 2004,
+    "date": "2004-04-04",
+    "driver": "Michael Schumacher",
+    "grand_prix": "Bahrain Grand Prix",
+    "session": "race",
+    "f1db_race_id": 716,
+    "lap": 7
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 89841,
+      "time": "1:29.841",
+      "year": 2025,
+      "date": "2025-04-12",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Bahrain Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1129,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 95140,
+      "time": "1:35.140",
+      "year": 2025,
+      "date": "2025-04-13",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Bahrain Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1129,
+      "lap": 36
+     }
+    }
+   }
+  },
+  "4": {
+   "game_track_id": 4,
+   "track_name": "Catalunya",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "catalunya",
+   "f1db_layout_id": "catalunya-6",
+   "layout_length_m": 4657,
+   "game_length_m": 4664,
+   "game_length_source": "track_sheets/f1/04_catalunya.toml",
+   "pole": {
+    "time_ms": 74679,
+    "time": "1:14.679",
+    "year": 2026,
+    "date": "2026-06-13",
+    "driver": "George Russell",
+    "grand_prix": "Barcelona-Catalunya Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1156,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 80122,
+    "time": "1:20.122",
+    "year": 2026,
+    "date": "2026-06-14",
+    "driver": "Lewis Hamilton",
+    "grand_prix": "Barcelona-Catalunya Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1156,
+    "lap": 44
+   },
+   "lap_record": {
+    "time_ms": 75743,
+    "time": "1:15.743",
+    "year": 2025,
+    "date": "2025-06-01",
+    "driver": "Oscar Piastri",
+    "grand_prix": "Spanish Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1134,
+    "lap": 61
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 71546,
+      "time": "1:11.546",
+      "year": 2025,
+      "date": "2025-05-31",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Spanish Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1134,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 75743,
+      "time": "1:15.743",
+      "year": 2025,
+      "date": "2025-06-01",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Spanish Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1134,
+      "lap": 61
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 74679,
+      "time": "1:14.679",
+      "year": 2026,
+      "date": "2026-06-13",
+      "driver": "George Russell",
+      "grand_prix": "Barcelona-Catalunya Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1156,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 80122,
+      "time": "1:20.122",
+      "year": 2026,
+      "date": "2026-06-14",
+      "driver": "Lewis Hamilton",
+      "grand_prix": "Barcelona-Catalunya Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1156,
+      "lap": 44
+     }
+    }
+   }
+  },
+  "5": {
+   "game_track_id": 5,
+   "track_name": "Monaco",
+   "matched": false,
+   "reason": "The game's lap (3067 m, track sheet) and F1DB layout monaco-6 (3337 m) differ by 8.1 %, more than 3 %: not treated as the same layout. The track sheet's 3067 m is known to be truncated (research: the game's lap is probably about 3323 m); a recorded Monaco session will settle it.",
+   "f1db_circuit_id": "monaco",
+   "f1db_layout_id": "monaco-6",
+   "layout_length_m": 3337,
+   "game_length_m": 3067,
+   "game_length_source": "track_sheets/f1/05_monaco.toml"
+  },
+  "6": {
+   "game_track_id": 6,
+   "track_name": "Montreal",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "montreal",
+   "f1db_layout_id": "montreal-6",
+   "layout_length_m": 4361,
+   "game_length_m": 4371,
+   "game_length_source": "track_sheets/f1/06_montreal.toml",
+   "pole": {
+    "time_ms": 72578,
+    "time": "1:12.578",
+    "year": 2026,
+    "date": "2026-05-23",
+    "driver": "George Russell",
+    "grand_prix": "Canadian Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1154,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 74210,
+    "time": "1:14.210",
+    "year": 2026,
+    "date": "2026-05-24",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Canadian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1154,
+    "lap": 68
+   },
+   "lap_record": {
+    "time_ms": 73078,
+    "time": "1:13.078",
+    "year": 2019,
+    "date": "2019-06-09",
+    "driver": "Valtteri Bottas",
+    "grand_prix": "Canadian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1004,
+    "lap": 69
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 70899,
+      "time": "1:10.899",
+      "year": 2025,
+      "date": "2025-06-14",
+      "driver": "George Russell",
+      "grand_prix": "Canadian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1135,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 74119,
+      "time": "1:14.119",
+      "year": 2025,
+      "date": "2025-06-15",
+      "driver": "George Russell",
+      "grand_prix": "Canadian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1135,
+      "lap": 63
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 72578,
+      "time": "1:12.578",
+      "year": 2026,
+      "date": "2026-05-23",
+      "driver": "George Russell",
+      "grand_prix": "Canadian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1154,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 74210,
+      "time": "1:14.210",
+      "year": 2026,
+      "date": "2026-05-24",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Canadian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1154,
+      "lap": 68
+     }
+    }
+   }
+  },
+  "7": {
+   "game_track_id": 7,
+   "track_name": "Silverstone",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "silverstone",
+   "f1db_layout_id": "silverstone-8",
+   "layout_length_m": 5891,
+   "game_length_m": 5890,
+   "game_length_source": "track_sheets/f1/07_silverstone.toml",
+   "pole": {
+    "time_ms": 88111,
+    "time": "1:28.111",
+    "year": 2026,
+    "date": "2026-07-04",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "British Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1158,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 91777,
+    "time": "1:31.777",
+    "year": 2026,
+    "date": "2026-07-05",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "British Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1158,
+    "lap": 37
+   },
+   "lap_record": {
+    "time_ms": 87097,
+    "time": "1:27.097",
+    "year": 2020,
+    "date": "2020-08-02",
+    "driver": "Max Verstappen",
+    "grand_prix": "British Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1022,
+    "lap": 52
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 84892,
+      "time": "1:24.892",
+      "year": 2025,
+      "date": "2025-07-05",
+      "driver": "Max Verstappen",
+      "grand_prix": "British Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1137,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 89337,
+      "time": "1:29.337",
+      "year": 2025,
+      "date": "2025-07-06",
+      "driver": "Oscar Piastri",
+      "grand_prix": "British Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1137,
+      "lap": 51
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 88111,
+      "time": "1:28.111",
+      "year": 2026,
+      "date": "2026-07-04",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "British Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1158,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 91777,
+      "time": "1:31.777",
+      "year": 2026,
+      "date": "2026-07-05",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "British Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1158,
+      "lap": 37
+     }
+    }
+   }
+  },
+  "8": {
+   "game_track_id": 8,
+   "track_name": "Hockenheim",
+   "matched": false,
+   "reason": "Not in F1 25 (no track sheet): no game lap length is known to check F1DB's layout hockenheimring-4 against.",
+   "f1db_circuit_id": "hockenheimring",
+   "f1db_layout_id": "hockenheimring-4",
+   "layout_length_m": 4574,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "9": {
+   "game_track_id": 9,
+   "track_name": "Hungaroring",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "hungaroring",
+   "f1db_layout_id": "hungaroring-3",
+   "layout_length_m": 4381,
+   "game_length_m": 4378,
+   "game_length_source": "track_sheets/f1/09_hungaroring.toml",
+   "pole": {
+    "time_ms": 77207,
+    "time": "1:17.207",
+    "year": 2026,
+    "date": "2026-07-25",
+    "driver": "Lando Norris",
+    "grand_prix": "Hungarian Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1160,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 82000,
+    "time": "1:22.000",
+    "year": 2026,
+    "date": "2026-07-26",
+    "driver": "Charles Leclerc",
+    "grand_prix": "Hungarian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1160,
+    "lap": 58
+   },
+   "lap_record": {
+    "time_ms": 76627,
+    "time": "1:16.627",
+    "year": 2020,
+    "date": "2020-07-19",
+    "driver": "Lewis Hamilton",
+    "grand_prix": "Hungarian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1021,
+    "lap": 70
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 75372,
+      "time": "1:15.372",
+      "year": 2025,
+      "date": "2025-08-02",
+      "driver": "Charles Leclerc",
+      "grand_prix": "Hungarian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1139,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 79409,
+      "time": "1:19.409",
+      "year": 2025,
+      "date": "2025-08-03",
+      "driver": "George Russell",
+      "grand_prix": "Hungarian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1139,
+      "lap": 45
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 77207,
+      "time": "1:17.207",
+      "year": 2026,
+      "date": "2026-07-25",
+      "driver": "Lando Norris",
+      "grand_prix": "Hungarian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1160,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 82000,
+      "time": "1:22.000",
+      "year": 2026,
+      "date": "2026-07-26",
+      "driver": "Charles Leclerc",
+      "grand_prix": "Hungarian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1160,
+      "lap": 58
+     }
+    }
+   }
+  },
+  "10": {
+   "game_track_id": 10,
+   "track_name": "Spa",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "spa-francorchamps",
+   "f1db_layout_id": "spa-francorchamps-4",
+   "layout_length_m": 7004,
+   "game_length_m": 7007,
+   "game_length_source": "track_sheets/f1/10_spa.toml",
+   "pole": {
+    "time_ms": 104361,
+    "time": "1:44.361",
+    "year": 2026,
+    "date": "2026-07-18",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Belgian Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1159,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 108890,
+    "time": "1:48.890",
+    "year": 2026,
+    "date": "2026-07-19",
+    "driver": "Lando Norris",
+    "grand_prix": "Belgian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1159,
+    "lap": 44
+   },
+   "lap_record": {
+    "time_ms": 104701,
+    "time": "1:44.701",
+    "year": 2024,
+    "date": "2024-07-28",
+    "driver": "Sergio Pérez",
+    "grand_prix": "Belgian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1115,
+    "lap": 44
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 100562,
+      "time": "1:40.562",
+      "year": 2025,
+      "date": "2025-07-26",
+      "driver": "Lando Norris",
+      "grand_prix": "Belgian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1138,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 104861,
+      "time": "1:44.861",
+      "year": 2025,
+      "date": "2025-07-27",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Belgian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1138,
+      "lap": 32
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 104361,
+      "time": "1:44.361",
+      "year": 2026,
+      "date": "2026-07-18",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Belgian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1159,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 108890,
+      "time": "1:48.890",
+      "year": 2026,
+      "date": "2026-07-19",
+      "driver": "Lando Norris",
+      "grand_prix": "Belgian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1159,
+      "lap": 44
+     }
+    }
+   }
+  },
+  "11": {
+   "game_track_id": 11,
+   "track_name": "Monza",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "monza",
+   "f1db_layout_id": "monza-7",
+   "layout_length_m": 5793,
+   "game_length_m": 5798,
+   "game_length_source": "track_sheets/f1/11_monza.toml",
+   "pole": {
+    "time_ms": 81786,
+    "time": "1:21.786",
+    "year": 2026,
+    "date": "2026-09-05",
+    "driver": "Pierre Gasly",
+    "grand_prix": "Italian Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1162,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 83504,
+    "time": "1:23.504",
+    "year": 2026,
+    "date": "2026-09-06",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Italian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1162,
+    "lap": 53
+   },
+   "lap_record": {
+    "time_ms": 80901,
+    "time": "1:20.901",
+    "year": 2025,
+    "date": "2025-09-07",
+    "driver": "Lando Norris",
+    "grand_prix": "Italian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1141,
+    "lap": 53
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 78792,
+      "time": "1:18.792",
+      "year": 2025,
+      "date": "2025-09-06",
+      "driver": "Max Verstappen",
+      "grand_prix": "Italian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1141,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 80901,
+      "time": "1:20.901",
+      "year": 2025,
+      "date": "2025-09-07",
+      "driver": "Lando Norris",
+      "grand_prix": "Italian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1141,
+      "lap": 53
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 81786,
+      "time": "1:21.786",
+      "year": 2026,
+      "date": "2026-09-05",
+      "driver": "Pierre Gasly",
+      "grand_prix": "Italian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1162,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 83504,
+      "time": "1:23.504",
+      "year": 2026,
+      "date": "2026-09-06",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Italian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1162,
+      "lap": 53
+     }
+    }
+   }
+  },
+  "12": {
+   "game_track_id": 12,
+   "track_name": "Singapore",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "marina-bay",
+   "f1db_layout_id": "marina-bay-4",
+   "layout_length_m": 4927,
+   "game_length_m": 4928,
+   "game_length_source": "track_sheets/f1/12_singapore.toml",
+   "pole": {
+    "time_ms": 91373,
+    "time": "1:31.373",
+    "year": 2026,
+    "date": "2026-10-10",
+    "driver": "Max Verstappen",
+    "grand_prix": "Singapore Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1166,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 95202,
+    "time": "1:35.202",
+    "year": 2026,
+    "date": "2026-10-11",
+    "driver": "Charles Leclerc",
+    "grand_prix": "Singapore Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1166,
+    "lap": 41
+   },
+   "lap_record": {
+    "time_ms": 93808,
+    "time": "1:33.808",
+    "year": 2025,
+    "date": "2025-10-05",
+    "driver": "Lewis Hamilton",
+    "grand_prix": "Singapore Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1143,
+    "lap": 48
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 89158,
+      "time": "1:29.158",
+      "year": 2025,
+      "date": "2025-10-04",
+      "driver": "George Russell",
+      "grand_prix": "Singapore Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1143,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 93808,
+      "time": "1:33.808",
+      "year": 2025,
+      "date": "2025-10-05",
+      "driver": "Lewis Hamilton",
+      "grand_prix": "Singapore Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1143,
+      "lap": 48
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 91373,
+      "time": "1:31.373",
+      "year": 2026,
+      "date": "2026-10-10",
+      "driver": "Max Verstappen",
+      "grand_prix": "Singapore Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1166,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 95202,
+      "time": "1:35.202",
+      "year": 2026,
+      "date": "2026-10-11",
+      "driver": "Charles Leclerc",
+      "grand_prix": "Singapore Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1166,
+      "lap": 41
+     }
+    }
+   }
+  },
+  "13": {
+   "game_track_id": 13,
+   "track_name": "Suzuka",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "suzuka",
+   "f1db_layout_id": "suzuka-2",
+   "layout_length_m": 5807,
+   "game_length_m": 5809,
+   "game_length_source": "track_sheets/f1/13_suzuka.toml",
+   "pole": {
+    "time_ms": 88778,
+    "time": "1:28.778",
+    "year": 2026,
+    "date": "2026-03-28",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Japanese Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1152,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 92432,
+    "time": "1:32.432",
+    "year": 2026,
+    "date": "2026-03-29",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Japanese Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1152,
+    "lap": 49
+   },
+   "lap_record": {
+    "time_ms": 90965,
+    "time": "1:30.965",
+    "year": 2025,
+    "date": "2025-04-06",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Japanese Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1128,
+    "lap": 50
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 86983,
+      "time": "1:26.983",
+      "year": 2025,
+      "date": "2025-04-05",
+      "driver": "Max Verstappen",
+      "grand_prix": "Japanese Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1128,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 90965,
+      "time": "1:30.965",
+      "year": 2025,
+      "date": "2025-04-06",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Japanese Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1128,
+      "lap": 50
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 88778,
+      "time": "1:28.778",
+      "year": 2026,
+      "date": "2026-03-28",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Japanese Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1152,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 92432,
+      "time": "1:32.432",
+      "year": 2026,
+      "date": "2026-03-29",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Japanese Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1152,
+      "lap": 49
+     }
+    }
+   }
+  },
+  "14": {
+   "game_track_id": 14,
+   "track_name": "Abu Dhabi",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "yas-marina",
+   "f1db_layout_id": "yas-marina-2",
+   "layout_length_m": 5281,
+   "game_length_m": 5280,
+   "game_length_source": "track_sheets/f1/14_abu_dhabi.toml",
+   "pole": {
+    "time_ms": 82207,
+    "time": "1:22.207",
+    "year": 2025,
+    "date": "2025-12-06",
+    "driver": "Max Verstappen",
+    "grand_prix": "Abu Dhabi Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1149,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 86725,
+    "time": "1:26.725",
+    "year": 2025,
+    "date": "2025-12-07",
+    "driver": "Charles Leclerc",
+    "grand_prix": "Abu Dhabi Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1149,
+    "lap": 45
+   },
+   "lap_record": {
+    "time_ms": 85637,
+    "time": "1:25.637",
+    "year": 2024,
+    "date": "2024-12-08",
+    "driver": "Kevin Magnussen",
+    "grand_prix": "Abu Dhabi Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1125,
+    "lap": 57
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 82207,
+      "time": "1:22.207",
+      "year": 2025,
+      "date": "2025-12-06",
+      "driver": "Max Verstappen",
+      "grand_prix": "Abu Dhabi Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1149,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 86725,
+      "time": "1:26.725",
+      "year": 2025,
+      "date": "2025-12-07",
+      "driver": "Charles Leclerc",
+      "grand_prix": "Abu Dhabi Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1149,
+      "lap": 45
+     }
+    }
+   }
+  },
+  "15": {
+   "game_track_id": 15,
+   "track_name": "Texas",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "austin",
+   "f1db_layout_id": "austin-1",
+   "layout_length_m": 5513,
+   "game_length_m": 5514,
+   "game_length_source": "track_sheets/f1/15_texas.toml",
+   "pole": {
+    "time_ms": 92510,
+    "time": "1:32.510",
+    "year": 2025,
+    "date": "2025-10-18",
+    "driver": "Max Verstappen",
+    "grand_prix": "United States Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1144,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 97577,
+    "time": "1:37.577",
+    "year": 2025,
+    "date": "2025-10-19",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "United States Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1144,
+    "lap": 33
+   },
+   "lap_record": {
+    "time_ms": 96169,
+    "time": "1:36.169",
+    "year": 2019,
+    "date": "2019-11-03",
+    "driver": "Charles Leclerc",
+    "grand_prix": "United States Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1016,
+    "lap": 44
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 92510,
+      "time": "1:32.510",
+      "year": 2025,
+      "date": "2025-10-18",
+      "driver": "Max Verstappen",
+      "grand_prix": "United States Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1144,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 97577,
+      "time": "1:37.577",
+      "year": 2025,
+      "date": "2025-10-19",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "United States Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1144,
+      "lap": 33
+     }
+    }
+   }
+  },
+  "16": {
+   "game_track_id": 16,
+   "track_name": "Brazil",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "interlagos",
+   "f1db_layout_id": "interlagos-2",
+   "layout_length_m": 4309,
+   "game_length_m": 4294,
+   "game_length_source": "track_sheets/f1/16_brazil.toml",
+   "pole": {
+    "time_ms": 69511,
+    "time": "1:09.511",
+    "year": 2025,
+    "date": "2025-11-08",
+    "driver": "Lando Norris",
+    "grand_prix": "São Paulo Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1146,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 72400,
+    "time": "1:12.400",
+    "year": 2025,
+    "date": "2025-11-09",
+    "driver": "Alexander Albon",
+    "grand_prix": "São Paulo Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1146,
+    "lap": 59
+   },
+   "lap_record": {
+    "time_ms": 70540,
+    "time": "1:10.540",
+    "year": 2018,
+    "date": "2018-11-11",
+    "driver": "Valtteri Bottas",
+    "grand_prix": "Brazilian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 996,
+    "lap": 65
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 69511,
+      "time": "1:09.511",
+      "year": 2025,
+      "date": "2025-11-08",
+      "driver": "Lando Norris",
+      "grand_prix": "São Paulo Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1146,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 72400,
+      "time": "1:12.400",
+      "year": 2025,
+      "date": "2025-11-09",
+      "driver": "Alexander Albon",
+      "grand_prix": "São Paulo Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1146,
+      "lap": 59
+     }
+    }
+   }
+  },
+  "17": {
+   "game_track_id": 17,
+   "track_name": "Austria",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "spielberg",
+   "f1db_layout_id": "spielberg-3",
+   "layout_length_m": 4326,
+   "game_length_m": 4323,
+   "game_length_source": "track_sheets/f1/17_austria.toml",
+   "pole": {
+    "time_ms": 66113,
+    "time": "1:06.113",
+    "year": 2026,
+    "date": "2026-06-27",
+    "driver": "George Russell",
+    "grand_prix": "Austrian Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1157,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 70374,
+    "time": "1:10.374",
+    "year": 2026,
+    "date": "2026-06-28",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Austrian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1157,
+    "lap": 59
+   },
+   "lap_record": {
+    "time_ms": 65619,
+    "time": "1:05.619",
+    "year": 2020,
+    "date": "2020-07-12",
+    "driver": "Carlos Sainz Jr.",
+    "grand_prix": "Styrian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1020,
+    "lap": 68
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 63971,
+      "time": "1:03.971",
+      "year": 2025,
+      "date": "2025-06-28",
+      "driver": "Lando Norris",
+      "grand_prix": "Austrian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1136,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 67924,
+      "time": "1:07.924",
+      "year": 2025,
+      "date": "2025-06-29",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Austrian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1136,
+      "lap": 59
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 66113,
+      "time": "1:06.113",
+      "year": 2026,
+      "date": "2026-06-27",
+      "driver": "George Russell",
+      "grand_prix": "Austrian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1157,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 70374,
+      "time": "1:10.374",
+      "year": 2026,
+      "date": "2026-06-28",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Austrian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1157,
+      "lap": 59
+     }
+    }
+   }
+  },
+  "18": {
+   "game_track_id": 18,
+   "track_name": "Sochi",
+   "matched": false,
+   "reason": "Not in F1 25 (no track sheet): no game lap length is known to check F1DB's layout sirius-1 against.",
+   "f1db_circuit_id": "sirius",
+   "f1db_layout_id": "sirius-1",
+   "layout_length_m": 5848,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "19": {
+   "game_track_id": 19,
+   "track_name": "Mexico",
+   "matched": false,
+   "reason": "The game's lap (4525 m, track sheet) and F1DB layout mexico-city-3 (4304 m) differ by 4.9 %, more than 3 %: not treated as the same layout. F1 25's Mexico lap appears to be about 5 % longer than the real circuit (4525 m in two independent sources); not yet confirmed by a recording.",
+   "f1db_circuit_id": "mexico-city",
+   "f1db_layout_id": "mexico-city-3",
+   "layout_length_m": 4304,
+   "game_length_m": 4525,
+   "game_length_source": "track_sheets/f1/19_mexico.toml"
+  },
+  "20": {
+   "game_track_id": 20,
+   "track_name": "Baku (Azerbaijan)",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "baku",
+   "f1db_layout_id": "baku-1",
+   "layout_length_m": 6003,
+   "game_length_m": 5994,
+   "game_length_source": "track_sheets/f1/20_baku_azerbaijan.toml",
+   "pole": {
+    "time_ms": 102526,
+    "time": "1:42.526",
+    "year": 2026,
+    "date": "2026-09-25",
+    "driver": "George Russell",
+    "grand_prix": "Azerbaijan Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1164,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 104916,
+    "time": "1:44.916",
+    "year": 2026,
+    "date": "2026-09-26",
+    "driver": "George Russell",
+    "grand_prix": "Azerbaijan Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1164,
+    "lap": 49
+   },
+   "lap_record": {
+    "time_ms": 103009,
+    "time": "1:43.009",
+    "year": 2019,
+    "date": "2019-04-28",
+    "driver": "Charles Leclerc",
+    "grand_prix": "Azerbaijan Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1001,
+    "lap": 50
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 101117,
+      "time": "1:41.117",
+      "year": 2025,
+      "date": "2025-09-20",
+      "driver": "Max Verstappen",
+      "grand_prix": "Azerbaijan Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1142,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 103388,
+      "time": "1:43.388",
+      "year": 2025,
+      "date": "2025-09-21",
+      "driver": "Max Verstappen",
+      "grand_prix": "Azerbaijan Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1142,
+      "lap": 50
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 102526,
+      "time": "1:42.526",
+      "year": 2026,
+      "date": "2026-09-25",
+      "driver": "George Russell",
+      "grand_prix": "Azerbaijan Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1164,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 104916,
+      "time": "1:44.916",
+      "year": 2026,
+      "date": "2026-09-26",
+      "driver": "George Russell",
+      "grand_prix": "Azerbaijan Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1164,
+      "lap": 49
+     }
+    }
+   }
+  },
+  "21": {
+   "game_track_id": 21,
+   "track_name": "Sakhir Short",
+   "matched": false,
+   "reason": "Short layout from older F1 games (not in F1 25): no game lap length is known to check an F1DB layout against.",
+   "f1db_circuit_id": "bahrain",
+   "f1db_layout_id": null,
+   "layout_length_m": null,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "22": {
+   "game_track_id": 22,
+   "track_name": "Silverstone Short",
+   "matched": false,
+   "reason": "Short layout from older F1 games (not in F1 25): no game lap length is known to check an F1DB layout against.",
+   "f1db_circuit_id": "silverstone",
+   "f1db_layout_id": null,
+   "layout_length_m": null,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "23": {
+   "game_track_id": 23,
+   "track_name": "Texas Short",
+   "matched": false,
+   "reason": "Short layout from older F1 games (not in F1 25): no game lap length is known to check an F1DB layout against.",
+   "f1db_circuit_id": "austin",
+   "f1db_layout_id": null,
+   "layout_length_m": null,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "24": {
+   "game_track_id": 24,
+   "track_name": "Suzuka Short",
+   "matched": false,
+   "reason": "Short layout from older F1 games (not in F1 25): no game lap length is known to check an F1DB layout against.",
+   "f1db_circuit_id": "suzuka",
+   "f1db_layout_id": null,
+   "layout_length_m": null,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "25": {
+   "game_track_id": 25,
+   "track_name": "Hanoi",
+   "matched": false,
+   "reason": "F1DB has no circuit for this track: no Formula 1 championship race has been held there.",
+   "f1db_circuit_id": null,
+   "f1db_layout_id": null,
+   "layout_length_m": null,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "26": {
+   "game_track_id": 26,
+   "track_name": "Zandvoort",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "zandvoort",
+   "f1db_layout_id": "zandvoort-5",
+   "layout_length_m": 4259,
+   "game_length_m": 4258,
+   "game_length_source": "track_sheets/f1/26_zandvoort.toml",
+   "pole": {
+    "time_ms": 71163,
+    "time": "1:11.163",
+    "year": 2026,
+    "date": "2026-08-22",
+    "driver": "Lando Norris",
+    "grand_prix": "Dutch Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1161,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 74230,
+    "time": "1:14.230",
+    "year": 2026,
+    "date": "2026-08-23",
+    "driver": "Charles Leclerc",
+    "grand_prix": "Dutch Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1161,
+    "lap": 60
+   },
+   "lap_record": {
+    "time_ms": 71097,
+    "time": "1:11.097",
+    "year": 2021,
+    "date": "2021-09-05",
+    "driver": "Lewis Hamilton",
+    "grand_prix": "Dutch Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1048,
+    "lap": 72
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 68662,
+      "time": "1:08.662",
+      "year": 2025,
+      "date": "2025-08-30",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Dutch Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1140,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 72271,
+      "time": "1:12.271",
+      "year": 2025,
+      "date": "2025-08-31",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Dutch Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1140,
+      "lap": 60
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 71163,
+      "time": "1:11.163",
+      "year": 2026,
+      "date": "2026-08-22",
+      "driver": "Lando Norris",
+      "grand_prix": "Dutch Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1161,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 74230,
+      "time": "1:14.230",
+      "year": 2026,
+      "date": "2026-08-23",
+      "driver": "Charles Leclerc",
+      "grand_prix": "Dutch Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1161,
+      "lap": 60
+     }
+    }
+   }
+  },
+  "27": {
+   "game_track_id": 27,
+   "track_name": "Imola",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "imola",
+   "f1db_layout_id": "imola-3",
+   "layout_length_m": 4909,
+   "game_length_m": 4910,
+   "game_length_source": "track_sheets/f1/27_imola.toml",
+   "pole": {
+    "time_ms": 74670,
+    "time": "1:14.670",
+    "year": 2025,
+    "date": "2025-05-17",
+    "driver": "Oscar Piastri",
+    "grand_prix": "Emilia Romagna Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1132,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 77988,
+    "time": "1:17.988",
+    "year": 2025,
+    "date": "2025-05-18",
+    "driver": "Max Verstappen",
+    "grand_prix": "Emilia Romagna Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1132,
+    "lap": 58
+   },
+   "lap_record": {
+    "time_ms": 75484,
+    "time": "1:15.484",
+    "year": 2020,
+    "date": "2020-11-01",
+    "driver": "Lewis Hamilton",
+    "grand_prix": "Emilia Romagna Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1031,
+    "lap": 63
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 74670,
+      "time": "1:14.670",
+      "year": 2025,
+      "date": "2025-05-17",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Emilia Romagna Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1132,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 77988,
+      "time": "1:17.988",
+      "year": 2025,
+      "date": "2025-05-18",
+      "driver": "Max Verstappen",
+      "grand_prix": "Emilia Romagna Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1132,
+      "lap": 58
+     }
+    }
+   }
+  },
+  "28": {
+   "game_track_id": 28,
+   "track_name": "Portimão",
+   "matched": false,
+   "reason": "Not in F1 25 (no track sheet): no game lap length is known to check F1DB's layout portimao-1 against.",
+   "f1db_circuit_id": "portimao",
+   "f1db_layout_id": "portimao-1",
+   "layout_length_m": 4653,
+   "game_length_m": null,
+   "game_length_source": null
+  },
+  "29": {
+   "game_track_id": 29,
+   "track_name": "Jeddah",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "jeddah",
+   "f1db_layout_id": "jeddah-1",
+   "layout_length_m": 6174,
+   "game_length_m": 6175,
+   "game_length_source": "track_sheets/f1/29_jeddah.toml",
+   "pole": {
+    "time_ms": 87294,
+    "time": "1:27.294",
+    "year": 2025,
+    "date": "2025-04-19",
+    "driver": "Max Verstappen",
+    "grand_prix": "Saudi Arabian Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1130,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 91778,
+    "time": "1:31.778",
+    "year": 2025,
+    "date": "2025-04-20",
+    "driver": "Lando Norris",
+    "grand_prix": "Saudi Arabian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1130,
+    "lap": 41
+   },
+   "lap_record": {
+    "time_ms": 90734,
+    "time": "1:30.734",
+    "year": 2021,
+    "date": "2021-12-05",
+    "driver": "Lewis Hamilton",
+    "grand_prix": "Saudi Arabian Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1056,
+    "lap": 47
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 87294,
+      "time": "1:27.294",
+      "year": 2025,
+      "date": "2025-04-19",
+      "driver": "Max Verstappen",
+      "grand_prix": "Saudi Arabian Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1130,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 91778,
+      "time": "1:31.778",
+      "year": 2025,
+      "date": "2025-04-20",
+      "driver": "Lando Norris",
+      "grand_prix": "Saudi Arabian Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1130,
+      "lap": 41
+     }
+    }
+   }
+  },
+  "30": {
+   "game_track_id": 30,
+   "track_name": "Miami",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "miami",
+   "f1db_layout_id": "miami-1",
+   "layout_length_m": 5412,
+   "game_length_m": 5410,
+   "game_length_source": "track_sheets/f1/30_miami.toml",
+   "pole": {
+    "time_ms": 87798,
+    "time": "1:27.798",
+    "year": 2026,
+    "date": "2026-05-02",
+    "driver": "Kimi Antonelli",
+    "grand_prix": "Miami Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1153,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 91869,
+    "time": "1:31.869",
+    "year": 2026,
+    "date": "2026-05-03",
+    "driver": "Lando Norris",
+    "grand_prix": "Miami Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1153,
+    "lap": 35
+   },
+   "lap_record": {
+    "time_ms": 89708,
+    "time": "1:29.708",
+    "year": 2023,
+    "date": "2023-05-07",
+    "driver": "Max Verstappen",
+    "grand_prix": "Miami Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1084,
+    "lap": 56
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 86204,
+      "time": "1:26.204",
+      "year": 2025,
+      "date": "2025-05-03",
+      "driver": "Max Verstappen",
+      "grand_prix": "Miami Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1131,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 89746,
+      "time": "1:29.746",
+      "year": 2025,
+      "date": "2025-05-04",
+      "driver": "Lando Norris",
+      "grand_prix": "Miami Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1131,
+      "lap": 36
+     }
+    },
+    "2026": {
+     "pole": {
+      "time_ms": 87798,
+      "time": "1:27.798",
+      "year": 2026,
+      "date": "2026-05-02",
+      "driver": "Kimi Antonelli",
+      "grand_prix": "Miami Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1153,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 91869,
+      "time": "1:31.869",
+      "year": 2026,
+      "date": "2026-05-03",
+      "driver": "Lando Norris",
+      "grand_prix": "Miami Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1153,
+      "lap": 35
+     }
+    }
+   }
+  },
+  "31": {
+   "game_track_id": 31,
+   "track_name": "Las Vegas",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "las-vegas",
+   "f1db_layout_id": "las-vegas-1",
+   "layout_length_m": 6201,
+   "game_length_m": 6200,
+   "game_length_source": "track_sheets/f1/31_las_vegas.toml",
+   "pole": {
+    "time_ms": 107934,
+    "time": "1:47.934",
+    "year": 2025,
+    "date": "2025-11-22",
+    "driver": "Lando Norris",
+    "grand_prix": "Las Vegas Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1147,
+    "slower_than_race_fastest_lap": true
+   },
+   "race_fastest_lap": {
+    "time_ms": 93365,
+    "time": "1:33.365",
+    "year": 2025,
+    "date": "2025-11-23",
+    "driver": "Max Verstappen",
+    "grand_prix": "Las Vegas Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1147,
+    "lap": 50
+   },
+   "lap_record": {
+    "time_ms": 93365,
+    "time": "1:33.365",
+    "year": 2025,
+    "date": "2025-11-23",
+    "driver": "Max Verstappen",
+    "grand_prix": "Las Vegas Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1147,
+    "lap": 50
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 107934,
+      "time": "1:47.934",
+      "year": 2025,
+      "date": "2025-11-22",
+      "driver": "Lando Norris",
+      "grand_prix": "Las Vegas Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1147,
+      "slower_than_race_fastest_lap": true
+     },
+     "race_fastest_lap": {
+      "time_ms": 93365,
+      "time": "1:33.365",
+      "year": 2025,
+      "date": "2025-11-23",
+      "driver": "Max Verstappen",
+      "grand_prix": "Las Vegas Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1147,
+      "lap": 50
+     }
+    }
+   }
+  },
+  "32": {
+   "game_track_id": 32,
+   "track_name": "Losail",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "lusail",
+   "f1db_layout_id": "lusail-1",
+   "layout_length_m": 5419,
+   "game_length_m": 5417,
+   "game_length_source": "track_sheets/f1/32_losail.toml",
+   "pole": {
+    "time_ms": 79387,
+    "time": "1:19.387",
+    "year": 2025,
+    "date": "2025-11-29",
+    "driver": "Oscar Piastri",
+    "grand_prix": "Qatar Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1148,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 82996,
+    "time": "1:22.996",
+    "year": 2025,
+    "date": "2025-11-30",
+    "driver": "Oscar Piastri",
+    "grand_prix": "Qatar Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1148,
+    "lap": 44
+   },
+   "lap_record": {
+    "time_ms": 82384,
+    "time": "1:22.384",
+    "year": 2024,
+    "date": "2024-12-01",
+    "driver": "Lando Norris",
+    "grand_prix": "Qatar Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1124,
+    "lap": 56
+   },
+   "seasons": {
+    "2025": {
+     "pole": {
+      "time_ms": 79387,
+      "time": "1:19.387",
+      "year": 2025,
+      "date": "2025-11-29",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Qatar Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1148,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 82996,
+      "time": "1:22.996",
+      "year": 2025,
+      "date": "2025-11-30",
+      "driver": "Oscar Piastri",
+      "grand_prix": "Qatar Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1148,
+      "lap": 44
+     }
+    }
+   }
+  },
+  "39": {
+   "game_track_id": 39,
+   "track_name": "Silverstone (Reverse)",
+   "matched": false,
+   "reason": "Reverse layout: real Formula 1 has never raced this circuit backwards, so F1DB has no layout for it.",
+   "f1db_circuit_id": "silverstone",
+   "f1db_layout_id": null,
+   "layout_length_m": null,
+   "game_length_m": 5890,
+   "game_length_source": "track_sheets/f1/39_silverstone_reverse.toml"
+  },
+  "40": {
+   "game_track_id": 40,
+   "track_name": "Austria (Reverse)",
+   "matched": false,
+   "reason": "Reverse layout: real Formula 1 has never raced this circuit backwards, so F1DB has no layout for it.",
+   "f1db_circuit_id": "spielberg",
+   "f1db_layout_id": null,
+   "layout_length_m": null,
+   "game_length_m": 4323,
+   "game_length_source": "track_sheets/f1/40_austria_reverse.toml"
+  },
+  "41": {
+   "game_track_id": 41,
+   "track_name": "Zandvoort (Reverse)",
+   "matched": false,
+   "reason": "Reverse layout: real Formula 1 has never raced this circuit backwards, so F1DB has no layout for it.",
+   "f1db_circuit_id": "zandvoort",
+   "f1db_layout_id": null,
+   "layout_length_m": null,
+   "game_length_m": 4258,
+   "game_length_source": "track_sheets/f1/41_zandvoort_reverse.toml"
+  },
+  "42": {
+   "game_track_id": 42,
+   "track_name": "Madrid",
+   "matched": true,
+   "reason": null,
+   "f1db_circuit_id": "madring",
+   "f1db_layout_id": "madring-1",
+   "layout_length_m": 5416,
+   "game_length_m": 5411,
+   "game_length_source": "track_sheets/f1/42_madrid.toml",
+   "pole": {
+    "time_ms": 91824,
+    "time": "1:31.824",
+    "year": 2026,
+    "date": "2026-09-12",
+    "driver": "Lando Norris",
+    "grand_prix": "Spanish Grand Prix",
+    "session": "qualifying",
+    "f1db_race_id": 1163,
+    "slower_than_race_fastest_lap": false
+   },
+   "race_fastest_lap": {
+    "time_ms": 95587,
+    "time": "1:35.587",
+    "year": 2026,
+    "date": "2026-09-13",
+    "driver": "George Russell",
+    "grand_prix": "Spanish Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1163,
+    "lap": 49
+   },
+   "lap_record": {
+    "time_ms": 95587,
+    "time": "1:35.587",
+    "year": 2026,
+    "date": "2026-09-13",
+    "driver": "George Russell",
+    "grand_prix": "Spanish Grand Prix",
+    "session": "race",
+    "f1db_race_id": 1163,
+    "lap": 49
+   },
+   "seasons": {
+    "2026": {
+     "pole": {
+      "time_ms": 91824,
+      "time": "1:31.824",
+      "year": 2026,
+      "date": "2026-09-12",
+      "driver": "Lando Norris",
+      "grand_prix": "Spanish Grand Prix",
+      "session": "qualifying",
+      "f1db_race_id": 1163,
+      "slower_than_race_fastest_lap": false
+     },
+     "race_fastest_lap": {
+      "time_ms": 95587,
+      "time": "1:35.587",
+      "year": 2026,
+      "date": "2026-09-13",
+      "driver": "George Russell",
+      "grand_prix": "Spanish Grand Prix",
+      "session": "race",
+      "f1db_race_id": 1163,
+      "lap": 49
+     }
+    }
+   }
+  }
+ }
+}
