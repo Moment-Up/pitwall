@@ -85,8 +85,10 @@ A "Sorted" line counts as went well on the Ready and Session complete cards. Tes
 browser at 1180 x 820 and 1133 x 744 against a mock live socket; not yet seen in a live session.
 
 **Why, on the card.** When the car is stopped (pit lane, Ready, Session complete), the card's evidence line leads with
-the cause Pitwall measured for the point, if it could tell one: "Braked earlier, reached the corner slower · Seen on 3
-of the last 5 laps · about 0.12 s". At speed the card stays one line, as before. A point that does not fit you or your
+the cause Pitwall measured for the point, but only a cause shown on recorded laps to tell that point apart (today the
+early brake release on coasting points): "Braking ended sooner, longer roll after · Seen on 3 of the last 5 laps ·
+about 0.12 s". A cause that holds about as often without the point is left to Review. At speed the card stays one
+line, as before. A point that does not fit you or your
 car (see [Coaching for every kind of driver](#coaching-for-every-kind-of-driver)) is never the card's point. Unit
 tests on recorded annotations; not yet seen in a browser.
 
@@ -432,8 +434,9 @@ track edges, so the maps show where each lap went.
   on every chart where each lap started braking, came off the brake, reached its slowest point and reached full
   throttle (your lap solid, lap A dashed; no turn-in marker: it is not measured). The key under the lap ribbon says
   each point in words against lap A and moves the cursor to it.
-- The explainer beside the map shows the coach's point for the corner with the causes Pitwall measured ("Why: ..."
-  with the evidence), and apart, greyed, any point that does not fit you, with the reason.
+- The explainer beside the map shows the coach's point for the corner with the causes Pitwall measured and their
+  evidence ("Why: ..." for a cause shown to tell the point apart, "Also measured on this lap: ..." for the others),
+  and apart, greyed, any point that does not fit you, with the reason.
 
 Evidence: racing line and brake/throttle are tested on recorded F1 (PS5) laps, and the line on a GT7 capture;
 balance and wheelspin on recorded F1 tyre slip data; lock-ups on synthetic data only (every real capture had ABS
@@ -453,7 +456,8 @@ skill, hits, best attempt, trend and the reference it was measured against.
 braking, turn-in, mid-corner, apex, exit), each with its techniques tagged "Fits you", "For other drivers" or "Not
 known yet" and a one-line reason ("For: H-pattern gearbox."), the alternatives side by side (trail braking against
 braking in a straight line), what Pitwall checks (the eight points it coaches today, with the causes it can tell
-apart, and the checks it does not coach yet, with Pitwall's own measurements of them), and where it all comes from,
+apart and, apart, the ones it only also measures, and the checks it does not coach yet, with Pitwall's own
+measurements of them), and where it all comes from,
 Ed (Pitwall tester) credited first. It is matched to the driver and car of your last session here: how your braking
 style was read ("From 8 clean laps: the brake still on into the turn at 57 of 62 braking corners ..."; with the F1
 braking assist on it says some of that braking was the game's) and what the game does not send. Beginners read the
@@ -462,8 +466,9 @@ anyone. Published coaching and Ed's brief are marked as not validated by Pitwall
 seen in a browser.
 
 The session's **Corners** tab shows the same knowledge per note: the causes Pitwall measured, each with its evidence
-("Why: Braked earlier, reached the corner slower. Braked at least 8 m earlier than on the reference lap (measured
-−8.6 m); ..."), the explanation written for your level or braking style when there is one, and, greyed with the reason, a
+("Also measured on this lap: Braked earlier, reached the corner slower. Braked at least 8 m earlier than on the
+reference lap (measured −9.6 m); ..."; "Why: ..." only for a cause shown to tell the point apart), the explanation
+written for your level or braking style when there is one, and, greyed with the reason, a
 note that does not fit you ("not coached for you").
 
 ### Progress
@@ -903,8 +908,12 @@ published coaching knowledge, in a **technique knowledge graph** in which every 
   on your reference lap (F1 25: tyre slip); a late throttle from wheelspin, a slide or oversteer on the way out that
   your reference lap did not have, or - with traction control off only, where "no wheelspin" means something - with
   no grip loss measured and the throttle still late; coasting from braking ending early, or from waiting for the car to
-  rotate; too much speed into the apex from arriving faster or braking later. The cause shows on the screen (the card
-  when stopped, Review and Compare), never on the radio, which stays as short as before.
+  rotate; too much speed into the apex from arriving faster or braking later. A cause is said as **why** only when it
+  was shown to tell its point apart: on the owner's 30 recorded captures its evidence had to hold at least twice as
+  often on that point's corner-laps as elsewhere, and only the early brake release did (43% against 20%). The others
+  hold about as often without the point, so Review shows them as "also measured on this lap", the card leaves them
+  out and the AI engineer may not call them the reason. Causes are never on the radio, which stays as short as
+  before.
 - **Words for you.** Beginners read plain explanations; a trail-braker who coasts more than usual reads why that is
   unusual for them (and, with the game's braking assist on, that some of that braking was the game's). Nothing tells
   you to brake later, brake less, come off the brake earlier, carry more speed or trail-brake more: every text the

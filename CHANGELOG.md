@@ -33,8 +33,11 @@ The release workflow copies a release's bullet points into its GitHub release no
   applies (level, braking style, car, gearbox). Recorded laps; not live.
 - Your braking style and how often you coast are read from your own clean laps; unknown stays unknown. With the F1
   braking assist on, Pitwall says some braking was the game's. Recorded laps.
-- When Pitwall measured why a point happened (braked earlier and arrived slower, more sliding than your reference...),
-  Review and the stopped coach card say so. Never on the radio. Recorded laps.
+- A measured cause is said as why only when it tells its point apart on recorded laps: today just an early brake
+  release when coasting, on the stopped coach card and in Review. Not on the radio.
+- Review shows the other measured causes as "Also measured on this lap", never as why; How corners work lists them
+  apart. Unit tests; not yet seen in a browser.
+- The engineer never says a point happened because of a cause that was only also measured. Unit tests; LLM off.
 - Review › Coaching: How corners work - a corner's six phases, which techniques fit you and why, what Pitwall checks,
   and where it comes from, Ed credited. Unit tests; not yet seen in a browser.
 - Review › Compare: lateral and longitudinal g for both laps (hidden when the game sends none, as GT7) and markers

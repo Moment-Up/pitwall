@@ -30,6 +30,10 @@ The rules that never bend (from [CLAUDE.md](../CLAUDE.md)):
   still do.
 - **Evidence tiers are honest.** Published or brief knowledge is never presented as validated by Pitwall, and
   real-world data (real F1 laps, other people's sim laps) is never presented as proof about a game.
+- **A cause is the reason only when it was shown to be.** A cause's evidence may hold just as often on corner-laps
+  without its fault. Only a cause whose base-rate check showed otherwise (`discriminates = true`,
+  [Checking a cause against its base rate](#checking-a-cause-against-its-base-rate)) is said as why: on the Drive
+  coach card, in any radio form and by the AI engineer. The others are what was also measured on that lap.
 - **Paraphrase, cite, never copy.** Every source note is in our own words.
 
 ## How it is used
@@ -58,28 +62,38 @@ after a lap is analysed, never on the path that reads the game's telemetry, and 
    the driver's skill (or `any`) and braking style (when it has one). Each "no" comes with a reason in words
    (`why_not`: "Only for: H-pattern gearbox (gearbox not known)", "GT7 does not send lateral g").
 5. **Every coaching point is annotated**: its `knowledge` says the fault, whether it applies (and why not), the causes
-   its lap's measurements named (each with the evidence: the discriminator's `test` and the value measured) and the
-   advice for this driver. A point that does not apply is never said on the radio, never on the coach card and never
+   its lap's measurements named (each with the evidence: the discriminator's `test` and the value measured, and
+   `discriminates`: whether the cause's base-rate check showed it tells its fault apart) and the advice for this
+   driver. A point that does not apply is never said on the radio, never on the coach card and never
    a habit, but Review shows it with the reason. The eight live faults have no conditions and every game sends their
    channels, so they apply to everyone: coaching on them is unchanged.
 6. **Advice is picked per form** (radio, screen, review): advice written for the driver's braking style first, then
    for their skill, then the `any` advice. The live faults' `any` advice is today's wording, so the radio reads as
-   before; a cause's advice has no radio form, so causes show on screen only (the stopped coach card, Review).
+   before; a cause's advice has no radio form, so causes show on screen only. **Only a cause that tells its fault
+   apart is said as the reason**: it leads the stopped coach card's evidence line and Review's Work on line, and
+   reads "Why: ..." in Review › Corners and the Compare explainer. Every other measured cause is shown in Review only,
+   as "Also measured on this lap: ..." (never "why" or "because"), and How corners work lists it apart ("Also measured,
+   not shown to tell it apart"). The live snapshot and the coach block carry only the causes that tell their fault
+   apart.
 7. **The API**: `GET /api/technique/knowledge` returns the whole graph with typed edges; `?session=<id>` adds that
    session's Context, style, channels and, on every condition, signal, technique, fault, cause and advice node,
    `applies` and `why_not`. Review › Coaching's "How corners work" is built from it. The live snapshot (`/ws/live`,
    up to 20 a second) carries only what the coach card reads: the coach block's copy without the evidence sentences,
-   and on each observation whether it fits and its first cause's screen line.
+   and on each observation whether it fits and the screen line of its first cause that tells its fault apart.
 8. **The AI engineer** (`knowledge/facts.py`, topic `knowledge`) gets the Context, the style and, for each fault seen
-   in the session, its node, measured causes, the techniques for that phase that fit the driver (named; summaries
-   only on the most-seen fault, to keep the prompt small) and their sources with the tier in words. An answer that
-   names a technique none of its facts is about, or one the facts list as not for this driver (heel-and-toe for a
-   paddle-shift car), is rejected, and so is an answer that breaks a constraint (`ai/grounding.py`, with the
-   technique words in `knowledge/terms.py`): the engineer explains the graph and never invents a technique.
+   in the session, its node, measured causes (those that tell the fault apart as causes, the others as "also measured
+   on these laps, not shown to tell this fault apart, so not the reason"), the techniques for that phase that fit the
+   driver (named; summaries only on the most-seen fault, to keep the prompt small) and their sources with the tier in
+   words; its driver-facing sentence names only a cause that tells the fault apart. An answer that names a technique
+   none of its facts is about, or one the facts list as not for this driver (heel-and-toe for a paddle-shift car), is
+   rejected, and so is an answer that breaks a constraint or presents a cause the facts list as not the reason as why
+   the fault happened ("because of less grip"; `ai/grounding.py`, with the technique and cause words in
+   `knowledge/terms.py`): the engineer explains the graph and never invents a technique or a reason.
 
 What is in it: every point of Ed's corner brief and its self-check, every row of his technique-fault checklist and
 every detector in his patches (the tables in [Ed's knowledge in the graph](#eds-knowledge-in-the-graph)), the eight
-coaching kinds Pitwall says today, the causes Pitwall can already tell apart from what it measures, and published
+coaching kinds Pitwall says today, the causes Pitwall can name from what it measures (with the base-rate check that
+says which of them tell their fault apart), and published
 coaching knowledge, each with when it fits ([How it fits each driver](#how-it-fits-each-driver)).
 
 ## Files
@@ -218,6 +232,21 @@ send one of the channels cannot measure the signal (GT7 sends no lateral g; AC's
 | `discriminators` | [table] | | the evidence that tells this cause apart, below |
 | `advice` | [advice] | | each advice names this cause in its `for` |
 | `applies_when`, `applies_any` | [condition] | | as for techniques: when the cause can be named at all (`ready_earlier`: traction control off, where "no wheelspin" means something) |
+| `discriminates` | bool | | default `false`. `true` only when the base-rate check (`measured`) for every live fault it explains passes the rule below: only then is the cause said as the reason |
+| `measured` | [table] | | its base-rate checks, one per fault it explains (below) |
+
+A base-rate check (`[[cause.measured]]`; [how to record one](#checking-a-cause-against-its-base-rate)):
+
+| Field | Type | | Notes |
+| --- | --- | --- | --- |
+| `fault` | fault id | R | one of the faults the cause `explains`; one check per fault |
+| `fault_laps` | int | R | corner-laps where the fault fired and the cause's evidence could be measured |
+| `fault_held` | int | R | of those, the ones where the evidence held (at most `fault_laps`) |
+| `other_laps` | int | R | corner-laps without the fault where the evidence could be measured |
+| `other_held` | int | R | of those, the ones where the evidence held: the base rate is `other_held / other_laps` |
+| `date` | str | R | YYYY-MM-DD or YYYY-MM |
+| `source` | source id | R | a `recorded` source that says which laps (the sample) |
+| `note` | str | | the shares, the ratio and caveats about the sample |
 
 A discriminator (`[[cause.discriminators]]`):
 
@@ -234,7 +263,7 @@ A cause is named only when **its conditions hold, every `need = "all"` discrimin
 `need = "any"` ones, at least one of those holds**. A signal that was not measured holds nothing: a cause is never named
 on missing evidence. Name a cause for what was measured ("Slowest point came sooner", not "Early turn-in", since
 Pitwall measures no turn-in), and check it against the base rate: evidence that holds about as often on the fault's
-points as on every other corner-lap does not tell a cause apart.
+points as on every other corner-lap does not tell a cause apart, and the cause stays `discriminates = false`.
 
 ### `[[advice]]`
 
@@ -250,7 +279,8 @@ points as on every other corner-lap does not tell a cause apart.
 
 Advice describes what happened and what the driver's own faster laps did. There are no placeholders: the numbers stay
 in the observation's own text ("T6, losing 0.31 s"). A cause's advice gets onto the radio only when it has a radio form
-and the cause was measured (none has one today). For each form Pitwall picks advice written for the driver's braking
+and the cause was measured, and only a cause with `discriminates = true` may have a radio form (the radio says a
+cause only as the reason); none has one today. For each form Pitwall picks advice written for the driver's braking
 style first, then for their skill, then `any`; the annotation marks which forms came from advice written for the
 driver (`tailored`), and Review shows that review text under the coach's own words.
 
@@ -295,6 +325,8 @@ is Pitwall's own description. Change a pattern only with an example each way in 
 | `date` | str | R | YYYY-MM-DD or YYYY-MM |
 | `source` | source id | R | the measurement's source: `recorded` for Pitwall's own laps, `external` for real-world or third-party data |
 | `note` | str | | the sample and caveats, e.g. "667 corner-laps of real F1 25; F1 25 reports throttle 0.10 under braking" |
+
+A cause's measurements are its base-rate checks, with their own fields (above, under `[[cause]]`).
 
 ## Sources and tiers
 
@@ -373,7 +405,9 @@ a coaching rule in `analysis/coaching.py`, its kind in `COACHING_KINDS`, and the
 **A cause** (in `causes.toml`): list the faults it explains in `explains` and add the cause to each fault's
 `causes`. Give it discriminators that read computed signals only, each with its plain-words `test`: the cause is
 named on a lap only when they hold on that lap's measurements. Prefer evidence relative to the reference lap: a
-symptom both laps had does not explain why this lap was slower.
+symptom both laps had does not explain why this lap was slower. Then run its base-rate check
+([Checking a cause against its base rate](#checking-a-cause-against-its-base-rate)): until it passes, `discriminates`
+stays false (the default), and the cause is shown only as also measured, never as why.
 
 **Advice** (in `advice.toml`): `for` names the fault or cause, which lists the advice back in its `advice`. Write the
 `review` (at most 320 characters) and, if it belongs on a screen or the radio, `screen` (48 characters) and `radio`
@@ -383,6 +417,40 @@ earlier release or more speed (the constraints reject it). Add a `skill = "begin
 
 **A source**: see [Sources and tiers](#sources-and-tiers). Read the source first, paraphrase what you take, and cite
 it only on nodes it supports.
+
+### Checking a cause against its base rate
+
+A cause's evidence can hold just as often on corner-laps without its fault: then it describes what was measured,
+not why the fault happened. Check every cause before it may be said as the reason, and again when its
+discriminators, a coaching threshold or the fault's rule change:
+
+1. Run the check over recorded captures (real laps only; it refuses a synthetic capture):
+
+   ```bash
+   uv run python scripts/cause_base_rates.py data/captures/*.pwcap --date 2026-10-15
+   ```
+
+   Each capture is replayed into a scratch database in a temporary folder and analysed as Review does (every lap
+   against its session's reference). For every cause and every live fault it explains, on the non-incident corner-laps
+   of usable comparisons where the cause's evidence could be measured (every `need = "all"` signal measured and, with
+   `need = "any"` ones, one of those), it counts the corner-laps where the fault fired and where the evidence held
+   there, and the same for the corner-laps without the fault (the base rate). A corner-lap where the evidence could
+   not be measured counts for neither. It prints a table (with how often the cause was named and whether the check
+   passes the rule below) and the `[[cause.measured]]` blocks.
+2. Paste each block under its cause in `causes.toml`, cite a `recorded` source that says which captures (add one to
+   `sources.toml` for a new sample), and write the shares and caveats in `note`. Keep one check per fault: replace
+   the old one (git keeps the history).
+3. Set `discriminates = true` only when the check passes for every live fault the cause explains. **The rule** (`[H]`,
+   `graph.DISCRIMINATES_RATIO` and the minimum counts): the evidence held on at least **twice** as large a share of
+   the fault's corner-laps as of the other corner-laps, on at least **10** of the fault's corner-laps, with at least
+   **30** other corner-laps measured. Below about twice the base rate the evidence changes the odds that it explains
+   the point only a little. The validator rejects `discriminates = true` without a passing check, and a cause advice
+   with a radio form on a cause that does not discriminate.
+
+A cause whose faults are not coached yet (`released_too_early_for_apex`: `stepped_throttle` is planned) has nothing to
+check against and never discriminates. A cause with conditions that never held in the sample (`ready_earlier` needs
+traction control off) can be checked for its evidence, but say so in the note and check it again on laps where it
+can be named.
 
 ## How validation works
 
@@ -405,6 +473,10 @@ release:
   matches the praise kinds and only a praise kind is positive; the canonical ids have the right types
   (`missing_canonical()`).
 - **Advice limits:** radio at most 8 words, screen at most 48 characters, review at most 320.
+- **Base-rate checks:** each names a fault the cause explains, once; counts are whole numbers with the held counts no
+  larger than their corner-laps; the source is a `recorded` one; `discriminates = true` needs a passing check for
+  every live fault the cause explains (and at least one live fault); a cause advice with a radio form needs
+  `discriminates = true`.
 - **Tiers:** a node's tier is the tier of at least one of its sources (`design` only on conditions, constraints and
   sources), so no claim is stronger than its evidence.
 - **Constraints:** every user-facing text of the node types in a constraint's `scope` passes every forbidden pattern
@@ -441,7 +513,7 @@ a checklist row or brief point a node of its own: `brake_lockup`, `exit_wheelspi
 
 **Phases:** `approach`, `braking`, `turn_in`, `mid_corner`, `apex`, `exit`. **Conditions:** see `conditions.toml`.
 **Sources:** see `sources.toml` (Pitwall's own: `pitwall_rules`, `pitwall_coaching`, `pitwall_style_review`,
-`pitwall_patch_review`, `pitwall_signal_spread`, `pitwall_technique_review`; Ed's: `ed_corner_brief`,
+`pitwall_patch_review`, `pitwall_signal_spread`, `pitwall_cause_base_rate`, `pitwall_technique_review`; Ed's: `ed_corner_brief`,
 `ed_fault_checklist`, `ed_patches`; the seven pages Ed cited: `speedwaymedia_vector_analysis`,
 `mysimrig_telemetry_beginners`, `srt_racing_lines`, `designjudges_driver_data`, `vrs_traction_circle`,
 `coilovers_data_acquisition`, `wikipedia_understeer_oversteer`; other published coaching knowledge:
@@ -602,6 +674,7 @@ explains = ["low_min_speed", "stepped_throttle"]
 advice = ["over_braking_explain", "over_braking_explain_beginner"]
 tier = "brief"
 sources = ["ed_corner_brief"]
+discriminates = false
 
 [[cause.discriminators]]
 signal = "brake_point_delta_m"
@@ -616,6 +689,15 @@ test = "at least 4 km/h slower at the corner entry than on the reference lap"
 op = "le"
 value = -4.0
 
+[[cause.measured]]
+fault = "low_min_speed"
+fault_laps = 387
+fault_held = 69
+other_laps = 485
+other_held = 71
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+
 [[advice]]
 id = "over_braking_explain"
 for = "over_braking"
@@ -627,10 +709,14 @@ tier = "brief"
 sources = ["ed_corner_brief"]
 ```
 
-On a lap where the driver braked 8.6 m earlier and reached the corner 10 km/h slower than on the reference lap, the
-low minimum speed point carries the cause `over_braking` with both tests as its evidence; the stopped coach card's
-evidence line leads with "Braked earlier, reached the corner slower", Review lists the evidence, and the radio says
-the point exactly as before.
+On a lap where the driver braked 9.6 m earlier and reached the corner 18 km/h slower than on the reference lap, the
+low minimum speed point carries the cause `over_braking` with both tests as its evidence. Its base-rate check found
+that evidence on 18% of the owner's low minimum speed corner-laps and on 15% of the others (1.22 times the base rate,
+below the rule's twice): it does not tell the fault apart, so the stopped coach card adds no cause line, Review reads
+"Also measured on this lap: Braked earlier, reached the corner slower." with the evidence, the AI engineer lists it
+as also measured and may not say the point happened because of it, and the radio says the point exactly as before.
+The coasting cause `early_brake_release` passed its check (43% against 20%, 2.19 times): on its points the card's
+evidence line leads with "Braking ended sooner, longer roll after" and Review reads "Why: ...".
 
 Ed's self-check ("an on-off-on throttle means you over-braked") is the same kind of review-only explanation: the cause
 `released_too_early_for_apex` (with `over_braking`) on the planned fault `stepped_throttle`, whose advice has no radio

@@ -34,7 +34,7 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Coaching from your own reference lap (deterministic) | yes | yes | **yes** (coaching produced in the live races) | the radio and the card saying the same point, live | `ipad_one_message` |
 | Live braking cues | yes | yes | no | timing on track | `cues_timing` |
 | Habits on the radio and Drive, corner reminders, the report's habit rules (unreleased) | yes (unit tests; 5 synthetic scenarios before / after) | yes (30 owner captures replayed before / after: [below](#habits-and-corner-reminders-unreleased)) | no | heard live; a reminder's real audio length and the driver's reaction to it; "sorted" said after a real fix | `cues_timing`, `ipad_one_message` |
-| Technique knowledge graph: coaching fitted to the driver and car, measured causes on screen, How corners work, Compare g-force and phase markers (unreleased) | yes (unit tests; the synthetic demo with and without the graph) | yes (30 owner captures replayed before / after: coaching unchanged, styles and causes [below](#technique-knowledge-graph-unreleased)) | no | the screens in a browser and on an iPad; a driver other than the owner (a beginner, a manual gearbox); the knowledge itself (published and brief tiers are not validated by Pitwall) | - |
+| Technique knowledge graph: coaching fitted to the driver and car, measured causes on screen (a cause as the reason only when its base-rate check passed), How corners work, Compare g-force and phase markers (unreleased) | yes (unit tests; the synthetic demo with and without the graph) | yes (30 owner captures replayed before / after: coaching unchanged, styles and causes [below](#technique-knowledge-graph-unreleased)) | no | the screens in a browser and on an iPad; a driver other than the owner (a beginner, a manual gearbox); the knowledge itself (published and brief tiers are not validated by Pitwall) | - |
 | F1 spotter (cars alongside) | yes (16 scenarios, at 60, 20 and 10 Hz, formats 2025 and 2026: a corner, a spin and a gate closing included) | yes (26 owner PS5 race sessions, 169 min: every overlap of 1 s or more called (121/121), 0 wrong clears, no call while the player slides more than 30 degrees; ground truth from the same positions. The radio simulated at measured clip lengths on the same races: what the driver would hear) | no | heard on track; audio latency to the ear; format 2026; online lobbies beyond one race; the car box against the game's collision shapes; the clear said as a gate closes (synthetic only: it never happened in these races) | a live F1 race with the spotter on (manual) |
 | Radio: push-to-talk, speech recognition, voices | yes | yes | partly (a radio check over an iPad and one AirPod was heard; the F1 25 wheel button is read live) | a driver asking by push-to-talk; the new dashboard's Go live on an iPad; Kokoro and Windows voices on a radio | `radio_ptt`, `radio_kokoro` |
 | Radio: hands-free talking (wake word "Pitwall" / "Radio", stationary unless the driver allows it while driving; Bluetooth button) | yes (the wake word through the real speech engines on 119 macOS `say` clips: "Pitwall" 44/49 clean, 45/49 with an engine drone, "Radio" 26/28, 0 false accepts; the browser VAD rules on the same clips; the hub's rules unit-tested; end to end on an isolated server: `say` clips over `/ws/radio` while a recorded F1 25 race streamed over UDP, docs/research/handsfree.md 3.5) | yes (the stationary gate on 11 owner captures as the hub sees them, incident gaps of 2-4 s no longer counted as stops and the hint only at stops of 8 s or more (review round 2); real F1 25 button presses through the hub with hands-free armed: 38 of 38 UDP Action 1 presses keyed push-to-talk and cut the capture); no recorded voice | no | a real voice and AirPod on the rig (A9 recordings owed); the Bluetooth key and game controller on an iPad; hands-free while driving | `radio_handsfree` *(new)* |
@@ -361,10 +361,10 @@ too late.
 Driving-technique knowledge is a graph in which every piece says when it fits the driver and car
 ([knowledge.md](knowledge.md); docs/features.md "Coaching for every kind of driver"): every point of Ed's corner brief
 and its self-check, every row of his technique-fault checklist and every detector in his patches, published coaching
-knowledge, the eight kinds the coach says today and the causes Pitwall can tell apart from what it measures. 218
+knowledge, the eight kinds the coach says today and the causes Pitwall can name from what it measures. 219
 nodes and 246 edges: 16 techniques, 30 faults (8 live, 8 experimental, 13 planned, 1 background), 9 causes, 36
-advice, 55 signals (38 computed by Pitwall), 32 conditions, 5 constraints, 29 sources. **The knowledge itself is mostly
-not validated by Pitwall**: by tier, 47 nodes are published coaching (`expert`) and 58 Ed's material (`brief`); 39
+advice, 55 signals (38 computed by Pitwall), 32 conditions, 5 constraints, 30 sources. **The knowledge itself is mostly
+not validated by Pitwall**: by tier, 47 nodes are published coaching (`expert`) and 58 Ed's material (`brief`); 40
 carry Pitwall's own measurements on the owner's recorded laps (`recorded`); 34 are the live coaching rules and their
 signals and advice (`live`); 38 are Pitwall's own definitions (`design`); 2 sources are real-world or third-party data
 measured by Pitwall's scripts (`external`, below). The screens and the AI engineer say which is which. **Recorded, not
@@ -392,9 +392,13 @@ Pitwall**):
   (`never_trail_brake_more`) keeps "trail brake more" out of every text and AI answer.
 
 What a driver sees: every coaching point carries whether it fits them (a point that does not is never said or put on
-the coach card and never becomes a habit; Review shows it with the reason), the causes its lap's measurements named
-(on the stopped coach card and in Review, never on the radio), and advice at their level and braking style; Review ›
-Coaching gains "How corners work"; Compare gains Ed's g-force charts and the corner's phase markers. The screens are
+the coach card and never becomes a habit; Review shows it with the reason), the causes its lap's measurements named,
+and advice at their level and braking style. A cause is said as the reason (the stopped coach card's evidence line,
+Review's Work on line, "Why: ..." in Review › Corners and the Compare explainer, the AI engineer) only when its
+base-rate check showed it tells its fault apart (below): today only the early brake release, on coasting points.
+Every other measured cause shows in Review as "Also measured on this lap: ...", never on the coach card or the radio,
+and the AI engineer may not present it as why. Review › Coaching gains "How corners work"; Compare gains Ed's g-force
+charts and the corner's phase markers. The screens are
 covered by unit tests (on a backend fixture of real annotations and the real graph); **none has been seen in a
 browser yet**.
 
@@ -487,24 +491,34 @@ named (below), and the detected styles are identical (every one of these session
   reads the slowest point's position, which can jump within a long corner; it now also needs an entry within 4 km/h
   of the reference either way (20 -> 16 live points).
 
-  **Base rates** (the 2026-10-15 review's check, on the six real F1 25 sessions pickled for the knowledge work, every
-  non-incident corner-lap against the session's reference): how often each cause's evidence holds on the corner-laps
-  where its fault fired, against every other corner-lap. A cause whose evidence holds about as often elsewhere
-  describes what was measured, not why the fault happened:
+  **Base rates: which causes tell their fault apart** (`scripts/cause_base_rates.py`, 2026-10-15; the owner's 30 real
+  captures replayed and analysed as Review does, every lap against its session's reference: 30 sessions with a usable
+  comparison, 28 F1 25 and 2 GT7, 148 compared laps, 1,173 non-incident corner-laps; traction control on or not
+  reported in every session). For every cause and every live fault it explains: on how many of the fault's
+  corner-laps its evidence held, against the corner-laps without the fault (the base rate), counting only corner-laps
+  where the evidence could be measured. The rule (`[H]`, `graph.DISCRIMINATES_RATIO`): at least twice the base rate,
+  on 10 or more of the fault's corner-laps and 30 or more others. Recorded in `causes.toml` (`[[cause.measured]]`,
+  `discriminates`):
 
-| Cause | Evidence on the fault's corner-laps | On the other corner-laps | Named |
-|---|---|---|---|
-| `low_grip` | 91 / 378 (24%) | 51 / 346 (15%) | 91 |
-| `over_braking` | 48 / 378 (13%) | 37 / 346 (11%) | 48 |
-| `early_turn_in` | 6 / 378 (2%) | 17 / 346 (5%) | 6 |
-| `traction_limited` | 17 / 181 (9%) | 48 / 543 (9%) | 17 |
-| `ready_earlier` | 124 / 181 (69%) | 359 / 543 (66%) | 0 (traction control on) |
-| `early_brake_release` | 12 / 33 (36%) | 100 / 691 (14%) | 12 |
-| `waiting_for_rotation` | 16 / 33 (48%) | 173 / 691 (25%) | 16 |
-| `carried_too_much_speed` | 4 / 8 (50%) | 205 / 716 (29%) | 4 |
+| Cause | Fault | Evidence on the fault's corner-laps | On the other corner-laps | Times the base rate | Named (Review) | Tells it apart |
+|---|---|---|---|---|---|---|
+| `over_braking` | `low_min_speed` | 69 / 387 (18%) | 71 / 485 (15%) | 1.22 | 69 | no |
+| `early_turn_in` | `low_min_speed` | 16 / 558 (3%) | 35 / 615 (6%) | 0.50 | 16 | no |
+| `low_grip` | `low_min_speed` | 126 / 550 (23%) | 84 / 599 (14%) | 1.63 | 126 | no |
+| `traction_limited` | `late_throttle` | 21 / 241 (9%) | 67 / 908 (7%) | 1.18 | 21 | no |
+| `ready_earlier` | `late_throttle` | 171 / 213 (80%) | 618 / 764 (81%) | 0.99 | 0 (traction control on) | no |
+| `early_brake_release` | `coasting` | 26 / 60 (43%) | 161 / 812 (20%) | 2.19 | 26 | **yes** |
+| `waiting_for_rotation` | `coasting` | 24 / 55 (44%) | 246 / 801 (31%) | 1.42 | 24 | no |
+| `carried_too_much_speed` | `overspeed_apex` | 9 / 18 (50%) | 367 / 1155 (32%) | 1.57 | 9 | no |
+| `released_too_early_for_apex` | `stepped_throttle` (planned) | - | - | - | 0 | no (nothing to check) |
 
-  The coasting causes and `low_grip` tell their fault apart; `over_braking`, `traction_limited` and `early_turn_in`
-  barely do (see Known gaps).
+  Only `early_brake_release` tells its fault apart, and it is close to the line: on the six sessions of the first
+  check alone it was 12 of 33 against 100 of 504 (1.83 times). `low_grip` and `waiting_for_rotation` hold more often
+  with their fault (one-sided Fisher exact p 0.0001 and 0.035) but below twice the base rate; `over_braking`,
+  `traction_limited` and `ready_earlier` hold about as often without it, and `early_turn_in` less often.
+  `released_too_early_for_apex` explains only a planned fault, which never fires. Counting only measurable corner-laps
+  changes the first check's shares (which counted every corner-lap): `early_brake_release`'s base rate was 14% there
+  (100 of 691), but 187 of those 691 corner-laps had no braking to end.
 
 **Coverage of Ed's material** (every point of the brief and every checklist row; the patches' detectors are in
 [knowledge.md](knowledge.md#the-patches-read-as-data-not-applied); `tests/unit/test_knowledge_graph.py` keeps this
@@ -599,10 +613,14 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   no conditions, so they fit every driver: the Context has no left-foot-braking key, and fuel saving is known only from
   a live strategy (an unknown never satisfies `false`), so they cannot be scoped out for left-foot brakers or
   fuel-saving stints; they stay planned until they can. `ready_earlier` lacks the unwound-steering and combined-g
-  evidence the spec names (not computed) and is never named with traction control on, which every owner session had.
-  `traction_limited` (judged against the reference lap), `over_braking` and `early_turn_in` hold about as often on
-  corner-laps without their fault (base rates above): they say what was measured, not proof of the cause. No cause has
-  a radio form, so the habit announcement never adds one. The AI engineer rejects an answer that breaks a coaching rule
+  evidence the spec names (not computed) and is never named with traction control on, which every owner session had;
+  its base-rate check was measured with traction control on and needs repeating on laps with it off. Seven of the nine
+  causes do not tell their fault apart on the owner's laps (base rates above), so they are shown only as also
+  measured; the one that does (`early_brake_release`) passed narrowly on 60 coasting corner-laps of one driver, and
+  every check is one driver's F1 25 and GT7 laps, not other drivers or games. The AI engineer's guard against an
+  answer that presents such a cause as the reason is a word match ("because", "why", "due to" ... with the cause's
+  words): it may reject a careful sentence ("Pitwall has not shown that less grip is the reason"), and the engineer
+  then gives its deterministic answer. No cause has a radio form, so the habit announcement never adds one. The AI engineer rejects an answer that breaks a coaching rule
   (a few descriptive phrasings may be rejected too; the engineer then gives its deterministic answer). The screens have
   not been seen in a browser or on an iPad.
 - **Race radio:** nothing heard live; F1 25's `gridPosition` is 0-based at a race start on the PS5 (pole = 0), so the
