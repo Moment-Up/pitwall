@@ -130,4 +130,16 @@ export const GLOSSARY: Readonly<Record<GlossaryTerm, GlossaryEntry>> = {
       "The game's AI level for the session, from 0 to 110, as the game reports it. A higher level makes the AI " +
       "cars faster. The same level can feel very different from one track or car class to another.",
   },
+  family_board: {
+    title: "Family board",
+    text:
+      "Each driver's fastest clean, valid lap in exactly the same car, session type, weather and assists on this " +
+      "track layout. A setting the game did not send makes its own board. Synthetic sessions and replays never count.",
+  },
+  bands: {
+    title: "Gold, silver and bronze",
+    text:
+      "How close a lap is to a time to beat, such as the EA rival or a real Formula 1 pole: gold within 3 % of it " +
+      "or faster, silver within 5 %, bronze within 10 %. A lap further off gets no band.",
+  },
 };

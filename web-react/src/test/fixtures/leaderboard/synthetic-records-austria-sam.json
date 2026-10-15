@@ -1,0 +1,205 @@
+{
+ "_fixture": {
+  "source": "GET /api/records?game=f1_25&track_id=f1:17&driver_id=1: pitwall.leaderboard.service over a generated database (tests/unit/leaderboard_data.py, fictional names)",
+  "recorded": "2026-10-15T13:33:49+01:00",
+  "what": "The boards at Austria where Sam (driver 1) has a lap: the two Time Trial boards.",
+  "tier": "synthetic"
+ },
+ "response": {
+  "boards": [
+   {
+    "key": "f1_25~f1:17~4318~f1:team:8~f1~0~time_trial~dry~b2.a0.t2.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "layout_m": 4318,
+     "car_id": "f1:team:8",
+     "car_class": "f1",
+     "equal_performance": 0,
+     "category": "time_trial",
+     "conditions": "dry",
+     "assists": {
+      "braking": 2,
+      "abs": 0,
+      "tc": 2,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b2.a0.t2.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Austria",
+     "layout": "4.32 km",
+     "car": "McLaren",
+     "car_class": "F1 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Time trial",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 2,
+       "known": true,
+       "label": "Braking assist medium"
+      },
+      {
+       "key": "abs",
+       "value": 0,
+       "known": true,
+       "label": "ABS off"
+      },
+      {
+       "key": "tc",
+       "value": 2,
+       "known": true,
+       "label": "Traction control full"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist medium, ABS off, Traction control full, Automatic gears, Racing line full",
+     "title": "Austria · McLaren · Time trial · Dry"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "Sam",
+     "lap_ms": 67200,
+     "lap_id": 4,
+     "session_id": "tt3",
+     "set_unix": 1791828960.0,
+     "date_text": "Mon 12 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 1,
+    "last_unix": 1791828960.0,
+    "track_limits_checked": true,
+    "vs": {
+     "ea_rival": {
+      "lap_ms": 64500,
+      "label": "EA rival",
+      "gap_ms": 2700,
+      "gap_pct": 4.19,
+      "gap_text": "2.700 s slower",
+      "band": "silver"
+     },
+     "real_f1": {
+      "lap_ms": 63971,
+      "label": "Real F1 pole 2025 · Lando Norris",
+      "gap_ms": 3229,
+      "gap_pct": 5.05,
+      "gap_text": "3.229 s slower",
+      "band": "bronze"
+     }
+    }
+   },
+   {
+    "key": "f1_25~f1:17~4318~f1:team:8~f1~0~time_trial~dry~b2.a1.t2.g3.l2",
+    "fields": {
+     "game": "f1_25",
+     "track_id": "f1:17",
+     "layout_m": 4318,
+     "car_id": "f1:team:8",
+     "car_class": "f1",
+     "equal_performance": 0,
+     "category": "time_trial",
+     "conditions": "dry",
+     "assists": {
+      "braking": 2,
+      "abs": 1,
+      "tc": 2,
+      "gearbox": 3,
+      "racing_line": 2
+     },
+     "assists_code": "b2.a1.t2.g3.l2"
+    },
+    "labels": {
+     "game": "F1 25",
+     "track": "Austria",
+     "layout": "4.32 km",
+     "car": "McLaren",
+     "car_class": "F1 car",
+     "equal_performance": "Realistic car performance",
+     "category": "Time trial",
+     "conditions": "Dry",
+     "assists": [
+      {
+       "key": "braking",
+       "value": 2,
+       "known": true,
+       "label": "Braking assist medium"
+      },
+      {
+       "key": "abs",
+       "value": 1,
+       "known": true,
+       "label": "ABS on"
+      },
+      {
+       "key": "tc",
+       "value": 2,
+       "known": true,
+       "label": "Traction control full"
+      },
+      {
+       "key": "gearbox",
+       "value": 3,
+       "known": true,
+       "label": "Automatic gears"
+      },
+      {
+       "key": "racing_line",
+       "value": 2,
+       "known": true,
+       "label": "Racing line full"
+      }
+     ],
+     "assists_text": "Braking assist medium, ABS on, Traction control full, Automatic gears, Racing line full",
+     "title": "Austria · McLaren · Time trial · Dry"
+    },
+    "record": {
+     "driver_id": 2,
+     "driver_name": "Jo",
+     "lap_ms": 65900,
+     "lap_id": 3,
+     "session_id": "tt2",
+     "set_unix": 1791742560.0,
+     "date_text": "Sun 11 Oct"
+    },
+    "drivers": 2,
+    "clean_laps": 3,
+    "last_unix": 1791742560.0,
+    "track_limits_checked": true,
+    "vs": {
+     "ea_rival": {
+      "lap_ms": 64500,
+      "label": "EA rival",
+      "gap_ms": 1400,
+      "gap_pct": 2.17,
+      "gap_text": "1.400 s slower",
+      "band": "gold"
+     },
+     "real_f1": {
+      "lap_ms": 63971,
+      "label": "Real F1 pole 2025 · Lando Norris",
+      "gap_ms": 1929,
+      "gap_pct": 3.02,
+      "gap_text": "1.929 s slower",
+      "band": "silver"
+     }
+    }
+   }
+  ],
+  "count": 2
+ }
+}

@@ -168,7 +168,9 @@ export type GlossaryTerm =
   | "synthetic"
   | "replay"
   | "typical_ai_car"
-  | "ai_difficulty";
+  | "ai_difficulty"
+  | "family_board"
+  | "bands";
 
 export interface GlossaryProps {
   term: GlossaryTerm;

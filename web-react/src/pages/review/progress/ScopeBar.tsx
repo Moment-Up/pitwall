@@ -14,7 +14,8 @@ import type { ReviewScope } from "./useReviewScope";
 
 const SKILL: Record<string, string> = { beginner: "beginner", intermediate: "intermediate", advanced: "advanced" };
 
-function Picker({
+/** A pill Select with a hidden label (the scope bar's track and car; the Records section's car and assists). */
+export function Picker({
   label,
   value,
   onChange,

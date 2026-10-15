@@ -1,17 +1,17 @@
 // "Getting faster?" (spec 6.9): one computed sentence (never an LLM), then the best clean lap per session with the
 // y axis reversed ("faster ↑"); D5 adds the typical (median) clean lap. A dot is purple REC or green PB when that
 // session's best lap holds the family record or the driver's best ever (the one rule, lib/bests.ts, the same badge it
-// has on Review and Drive); other dots are plain. The family's fastest time is a neutral grey line ("fastest in the
-// family", "car may differ" unless the car is exact).
+// has on Review and Drive); other dots are plain. The family's fastest time is a neutral grey line: the record of the
+// family board shown under Records, said with that board's session type and weather (lib/review/records.ts
+// familyLine), since the chart's sessions may include other boards'.
 
 import { Card } from "@heroui/react";
 import { useMemo } from "react";
 import { TimingTag } from "../../../components/ui";
 import type { BestBadge } from "../../../lib/bests";
-import { lapTime } from "../../../lib/format";
 import { router } from "../../../lib/router";
 import { sessionPath } from "../../../lib/review/links";
-import { recordBadge, sessionLabels, type FamilyBoard, type SessionPoint } from "../../../lib/review/progress";
+import { recordBadge, sessionLabels, type SessionPoint } from "../../../lib/review/progress";
 import { ProgressChart, type ProgressChartLine, type ProgressChartPoint } from "./ProgressChart";
 
 export interface FasterCardProps {
@@ -19,14 +19,15 @@ export interface FasterCardProps {
   sentence: string;
   /** Each session's badge (lib/bests.ts); null until known (every dot plain). */
   badges: ReadonlyMap<string, BestBadge> | null;
-  board: FamilyBoard | null;
+  /** The family board's record in words (`familyLine`); null without one. */
+  familyLine: { ms: number; label: string } | null;
   showMedian: boolean;
   caption: boolean;
   multiCar: boolean;
   family: number;
 }
 
-export function FasterCard({ points, sentence, badges, board, showMedian, caption, multiCar, family }: FasterCardProps) {
+export function FasterCard({ points, sentence, badges, familyLine, showMedian, caption, multiCar, family }: FasterCardProps) {
   const chartPoints = useMemo<ProgressChartPoint[]>(() => {
     const labels = sessionLabels(points, Date.now());
     return points.map((p, i) => ({
@@ -40,14 +41,7 @@ export function FasterCard({ points, sentence, badges, board, showMedian, captio
     }));
   }, [points, badges]);
   // The family's fastest time as a neutral line when there is a family to compare with.
-  const line: ProgressChartLine | null =
-    board?.fastest && family > 1
-      ? {
-          ms: board.fastest.ms,
-          label: `fastest in the family ${lapTime(board.fastest.ms)} · ${board.fastest.driver.name}${board.exact ? "" : " (car may differ)"}`,
-          tone: "neutral",
-        }
-      : null;
+  const line: ProgressChartLine | null = familyLine && family > 1 ? { ...familyLine, tone: "neutral" } : null;
   const shownTags = (["rec", "pb"] as const).filter((t) => chartPoints.some((p) => p.status === t));
   // A trend needs two sessions with a clean lap; one dot is not a chart (the sentence says so).
   const chart = points.filter((p) => p.bestMs != null).length >= 2;

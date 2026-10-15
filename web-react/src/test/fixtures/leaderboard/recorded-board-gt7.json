@@ -1,0 +1,189 @@
+{
+ "_fixture": {
+  "source": "GET /api/leaderboard?key=gt7~gt7:sf:380:120:15:3800:530~3799~gt7:car:3353~-~-~unknown~unknown~-: pitwall.leaderboard.service over a read-only .backup copy of the owner's database (2026-10-15)",
+  "recorded": "2026-10-15T13:33:49+01:00",
+  "what": "A GT7 board: no session type, weather or assists from the game, and the track-limits note.",
+  "tier": "recorded",
+  "edited": "the second household profile's name replaced by 'Alex' (household names stay on the owner's machine)"
+ },
+ "response": {
+  "key": "gt7~gt7:sf:380:120:15:3800:530~3799~gt7:car:3353~-~-~unknown~unknown~-",
+  "fields": {
+   "game": "gt7",
+   "track_id": "gt7:sf:380:120:15:3800:530",
+   "layout_m": 3799,
+   "car_id": "gt7:car:3353",
+   "car_class": null,
+   "equal_performance": null,
+   "category": "unknown",
+   "conditions": "unknown",
+   "assists": null,
+   "assists_code": "-"
+  },
+  "labels": {
+   "game": "Gran Turismo 7",
+   "track": "Unidentified GT7 circuit (3.80 km)",
+   "layout": "3.80 km",
+   "car": "Car 3353",
+   "car_class": null,
+   "equal_performance": null,
+   "category": "Session type unknown",
+   "conditions": "Weather unknown",
+   "assists": [
+    {
+     "key": "assists",
+     "value": null,
+     "known": false,
+     "label": "Assists not reported by this game"
+    }
+   ],
+   "assists_text": "Assists not reported by this game",
+   "title": "Unidentified GT7 circuit (3.80 km) · Car 3353 · Session type unknown · Weather unknown"
+  },
+  "rows": [
+   {
+    "position": 1,
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 103358,
+    "lap_id": 89,
+    "lap_number": 4,
+    "session_id": "8dbe33762458",
+    "set_unix": 1791720475.2269492,
+    "date_text": "Sun 11 Oct",
+    "leader": true,
+    "gap_ms": null,
+    "gap_pct": null,
+    "gap_text": "Fastest",
+    "clean_laps": 3,
+    "assists": [
+     {
+      "key": "assists",
+      "value": null,
+      "known": false,
+      "label": "Assists not reported by this game"
+     }
+    ],
+    "best_sectors_ms": [
+     null,
+     null,
+     null
+    ],
+    "theoretical_best_ms": null,
+    "theoretical_gain_ms": null,
+    "game_version": null,
+    "vs": {}
+   }
+  ],
+  "no_time": [
+   {
+    "driver_id": 2,
+    "driver_name": "Alex"
+   }
+  ],
+  "record": {
+   "driver_id": 1,
+   "driver_name": "James",
+   "lap_ms": 103358,
+   "lap_id": 89,
+   "session_id": "8dbe33762458",
+   "set_unix": 1791720475.2269492,
+   "date_text": "Sun 11 Oct"
+  },
+  "history": [
+   {
+    "lap_id": 87,
+    "lap_number": 2,
+    "session_id": "8dbe33762458",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 105151,
+    "set_unix": 1791720260.3775501,
+    "date_text": "Sun 11 Oct",
+    "previous_ms": null,
+    "previous_driver_id": null,
+    "previous_driver_name": null,
+    "gain_ms": null,
+    "changed_hands": false,
+    "text": "James set the first record: 1:45.151"
+   },
+   {
+    "lap_id": 89,
+    "lap_number": 4,
+    "session_id": "8dbe33762458",
+    "driver_id": 1,
+    "driver_name": "James",
+    "lap_ms": 103358,
+    "set_unix": 1791720475.2269492,
+    "date_text": "Sun 11 Oct",
+    "previous_ms": 105151,
+    "previous_driver_id": 1,
+    "previous_driver_name": "James",
+    "gain_ms": 1793,
+    "changed_hands": false,
+    "text": "James improved the record: 1:43.358, 1.793 s faster"
+   }
+  ],
+  "evidence": {
+   "track_limits_checked": false,
+   "note": "This game does not say when a lap breaks track limits: a lap with a cut still counts here.",
+   "counts": "Clean, valid laps of real driving only: never synthetic sessions, replays or laps with no driver."
+  },
+  "ea_rival": null,
+  "real_f1": null,
+  "real_f1_note": null,
+  "real_f1_asks_generation": false,
+  "boards_here": [
+   {
+    "key": "gt7~gt7:sf:380:120:15:3800:530~3799~gt7:car:3353~-~-~unknown~unknown~-",
+    "fields": {
+     "game": "gt7",
+     "track_id": "gt7:sf:380:120:15:3800:530",
+     "layout_m": 3799,
+     "car_id": "gt7:car:3353",
+     "car_class": null,
+     "equal_performance": null,
+     "category": "unknown",
+     "conditions": "unknown",
+     "assists": null,
+     "assists_code": "-"
+    },
+    "labels": {
+     "game": "Gran Turismo 7",
+     "track": "Unidentified GT7 circuit (3.80 km)",
+     "layout": "3.80 km",
+     "car": "Car 3353",
+     "car_class": null,
+     "equal_performance": null,
+     "category": "Session type unknown",
+     "conditions": "Weather unknown",
+     "assists": [
+      {
+       "key": "assists",
+       "value": null,
+       "known": false,
+       "label": "Assists not reported by this game"
+      }
+     ],
+     "assists_text": "Assists not reported by this game",
+     "title": "Unidentified GT7 circuit (3.80 km) · Car 3353 · Session type unknown · Weather unknown"
+    },
+    "record": {
+     "driver_id": 1,
+     "driver_name": "James",
+     "lap_ms": 103358,
+     "lap_id": 89,
+     "session_id": "8dbe33762458",
+     "set_unix": 1791720475.2269492,
+     "date_text": "Sun 11 Oct"
+    },
+    "drivers": 1,
+    "clean_laps": 3,
+    "last_unix": 1791720475.2269492,
+    "track_limits_checked": false,
+    "vs": {}
+   }
+  ],
+  "matched": 1
+ }
+}

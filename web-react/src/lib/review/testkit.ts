@@ -4,6 +4,7 @@
 
 import type { Driver } from "../drivers";
 import type { LapTrace } from "../api";
+import type { LeaderboardBoard, RecordsIndex } from "../endpoints/leaderboard";
 import type {
   CompareResponse,
   DriverAiPace,
@@ -97,6 +98,46 @@ export const aiFixtures = {
 /** Every AI pace fixture's provenance block. */
 export function aiFixtureBlocks(): { name: string; block: AiFixtureFile<unknown>["_fixture"] }[] {
   return Object.entries(AI).map(([p, f]) => ({ name: p.split("/").pop() ?? p, block: f._fixture }));
+}
+
+// Family leaderboard fixtures (src/test/fixtures/leaderboard): the leaderboard service's real answers over a
+// read-only backup copy of the owner's database ("recorded-", the second profile's name replaced by "Alex"), and
+// over a generated Time Trial scenario with fictional names ("synthetic-": never game evidence).
+const BOARDS = import.meta.glob<FixtureFile<unknown>>("../../test/fixtures/leaderboard/*.json", { eager: true, import: "default" });
+
+function loadBoard<T>(name: string): T {
+  const f = Object.entries(BOARDS).find(([p]) => p.endsWith(`/${name}.json`))?.[1];
+  if (!f) throw new Error(`no leaderboard fixture ${name}`);
+  return structuredClone(f.response) as T;
+}
+
+export const boardFixtures = {
+  /** Austria, Haas, race, dry: James 1:10.549 (the record), Alex +3.067 s; a real-F1 row with no band (+10.28 %). */
+  austriaHaas: () => loadBoard<LeaderboardBoard>("recorded-board-austria-haas-race"),
+  /** /api/records at Austria for James: the F1 Generic and the Haas race boards. */
+  recordsAustriaJames: () => loadBoard<RecordsIndex>("recorded-records-austria-james"),
+  /** Melbourne, McLaren, race: boards_here has the McLaren practice board and two F2 boards. */
+  melbourneMcLaren: () => loadBoard<LeaderboardBoard>("recorded-board-melbourne-mclaren-race"),
+  /** Sakhir, F2 Art GP '24, ABS on: boards_here has the same car with ABS off. */
+  sakhirF2: () => loadBoard<LeaderboardBoard>("recorded-board-sakhir-f2-abs-on"),
+  /** Miami, F1 Generic: the game cannot tell a 2025 from a 2026 car (asks the generation, no real-F1 row). */
+  miamiGeneric: () => loadBoard<LeaderboardBoard>("recorded-board-miami-generic"),
+  /** The same with car_generation=f1_2025: the 2025 pole, generation_chosen, a bronze band. */
+  miamiGeneric2025: () => loadBoard<LeaderboardBoard>("recorded-board-miami-generic-2025"),
+  /** Austria in a car nobody drove there: nothing matched (key null), boards_here still listed. */
+  austriaNoMatch: () => loadBoard<LeaderboardBoard>("recorded-board-austria-no-match"),
+  /** A GT7 board: nothing about session type, weather or assists, and the track-limits note. */
+  gt7: () => loadBoard<LeaderboardBoard>("recorded-board-gt7"),
+  /** SYNTHETIC Time Trial at Austria in the McLaren: Jo took the record from Sam, Kim has no lap, the EA rival (gold
+   * bands) and the real 2025 pole (silver bands). */
+  timeTrial: () => loadBoard<LeaderboardBoard>("synthetic-board-tt-austria-mclaren"),
+  /** SYNTHETIC /api/records at Austria for Sam: the two Time Trial boards (ABS on and off). */
+  recordsAustriaSam: () => loadBoard<RecordsIndex>("synthetic-records-austria-sam"),
+};
+
+/** Every leaderboard fixture's provenance block. */
+export function boardFixtureBlocks(): { name: string; block: FixtureFile<unknown>["_fixture"] }[] {
+  return Object.entries(BOARDS).map(([p, f]) => ({ name: p.split("/").pop() ?? p, block: f._fixture }));
 }
 
 /** Every fixture file's provenance block (tests check each says where it came from). */

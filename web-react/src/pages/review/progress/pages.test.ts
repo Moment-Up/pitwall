@@ -13,7 +13,7 @@ import { parseHash } from "../../../lib/route-parse";
 import { mfx } from "../../../lib/motivation/testkit";
 import { workOnItems } from "../../../lib/review/coaching";
 import { resolveScope, scopeChoices, scopeQuery } from "../../../lib/review/progress";
-import { driver, fixtures } from "../../../lib/review/testkit";
+import { boardFixtures, driver, fixtures } from "../../../lib/review/testkit";
 import { stubBrowser } from "../../../test/fakes";
 import type { PageProps } from "../../../routes";
 
@@ -33,6 +33,7 @@ let CoachingPage: ComponentType<PageProps>;
 let cache: typeof import("../../../lib/cache").cache;
 let keys: typeof import("../../../lib/endpoints/review").reviewKeys;
 let mkeys: typeof import("../../../lib/endpoints/motivation").motivationKeys;
+let lkeys: typeof import("../../../lib/endpoints/leaderboard").leaderboardKeys;
 let drivers: typeof import("../../../lib/drivers").drivers;
 let live: typeof import("../../../lib/live").live;
 
@@ -43,6 +44,7 @@ beforeAll(async () => {
   cache = (await import("../../../lib/cache")).cache;
   keys = (await import("../../../lib/endpoints/review")).reviewKeys;
   mkeys = (await import("../../../lib/endpoints/motivation")).motivationKeys;
+  lkeys = (await import("../../../lib/endpoints/leaderboard")).leaderboardKeys;
   drivers = (await import("../../../lib/drivers")).drivers;
   live = (await import("../../../lib/live")).live;
   vi.unstubAllGlobals();
@@ -83,8 +85,15 @@ function route(page: "progress" | "coaching", q = `driver=1&track=${encodeURICom
   return { route: parseHash(`#/review/${page}?${q}`) };
 }
 
-/** The keys the pages ask for, filled from fixtures. `d5`: the progress answer, or a 404 like an older server. */
-async function seed(opts: { d5: DriverProgress | "missing"; driverId?: number }): Promise<void> {
+const AUSTRIA_HAAS_BOARD = "f1_25~f1:17~4323~f1:team:7~f1~0~race~dry~b2.a?.t?.g3.l2";
+
+/** The keys the pages ask for, filled from fixtures. `d5`: the progress answer, or a 404 like an older server.
+ * `board`: the Records section's board (the recorded Austria · Haas · Race board unless given; null: not loaded). */
+async function seed(opts: {
+  d5: DriverProgress | "missing";
+  driverId?: number;
+  board?: ReturnType<typeof boardFixtures.austriaHaas> | null;
+}): Promise<void> {
   cache.clear();
   const id = opts.driverId ?? 1;
   const rows = fixtures.sessions().map((r) => ({ ...r, driver_id: id }));
@@ -95,6 +104,10 @@ async function seed(opts: { d5: DriverProgress | "missing"; driverId?: number })
   if (opts.d5 === "missing") await cache.load(k, () => Promise.reject(new ApiError(404, "Not Found"))).catch(() => {});
   else cache.set(k, opts.d5);
   cache.set(keys.analysis("332904dbe3de"), fixtures.austriaAnalysis());
+  // Records: the boards at Austria where this driver has a lap, then the board it opens on (the Haas race board)
+  cache.set(lkeys.records({ game: "f1_25", track_id: AUSTRIA, driver_id: id }), boardFixtures.recordsAustriaJames());
+  const board = opts.board === undefined ? boardFixtures.austriaHaas() : opts.board;
+  if (board) cache.set(lkeys.board({ key: AUSTRIA_HAAS_BOARD }), board);
 }
 
 beforeEach(() => setLive(null, false));
@@ -129,48 +142,86 @@ describe("Progress (6.9) with D5", () => {
     expect(text).toContain("All of James's driving, every track: 70 laps, 48 clean, at 12 tracks (23 sessions on record).");
     expect(text).not.toContain("Lap-level view");
     expect(text).toContain("Real sessions only");
+    // Records (leaderboard spec 5): the exact board, advanced density (percentages, dates, sectors, game version)
+    expect(text).toContain("Records Family board Austria · Haas · Race · Dry");
+    expect(text).toContain("4.32 km · Braking assist medium, ABS unknown, Traction control unknown, Automatic gears, Racing line full");
+    expect(text).toMatch(
+      /James in the seat Sat 10 Oct · 18 clean laps 1:10\.549 Fastest 6\.578 s slower 10\.28 % 16\.662 · 31\.149 · 22\.151 Added up: 1:09\.962, 0\.587 s to find/,
+    );
+    expect(text).toContain("Alex Sun 11 Oct · 5 clean laps 1:13.616 3.067 s behind 4.35 % 9.645 s slower 15.08 %");
+    expect(text).toContain("Game version 1.26");
+    // the real pole with its caveat and the linked F1DB credit; no band at +10.28 % (none is drawn)
+    expect(text).toContain("Times to beat Real F1 pole 2025 · Lando Norris 1:03.971 Austrian Grand Prix, 28 Jun 2025");
+    expect(text).toContain("F1 25 is not the real car");
+    expect(text).toContain("Real F1 times: F1DB , CC BY 4.0");
+    expect(html).toContain('href="https://github.com/f1db/f1db"');
+    expect(html).toContain('href="https://creativecommons.org/licenses/by/4.0/"');
+    expect(html).not.toContain("data-band=");
+    expect(text).not.toContain("Gold: within 3 %");
+    // the record history, newest first
+    expect(text).toContain("Record history 3 records since Sat 10 Oct");
+    expect(text.indexOf("James improved the record: 1:10.549, 1.196 s faster")).toBeLessThan(
+      text.indexOf("James set the first record: 1:16.577"),
+    );
+    // advanced: no glossary
+    expect(html).not.toContain("What is family board?");
   });
 
   it("a beginner's progress (density of the VIEWED driver): captions, Getting faster? first, glossary", async () => {
     await seed({ d5: fixtures.progressAustriaHaas() });
     const beginner = { ...driver(1, "James", "beginner"), stats: james().stats };
-    setDrivers([beginner, { ...driver(2, "Jo", "advanced"), stats: { ...james().stats, best_laps: [] } }], 2);
-    const text = visible(renderToStaticMarkup(createElement(ProgressPage, route("progress"))));
+    setDrivers([beginner, { ...driver(2, "Alex", "advanced"), stats: { ...james().stats, best_laps: [] } }], 2);
+    const html = renderToStaticMarkup(createElement(ProgressPage, route("progress")));
+    const text = visible(html);
     honest(text, "beginner");
     expect(text.indexOf("Getting faster?")).toBeLessThan(text.indexOf("What changed?"));
     expect(text).toContain("Each dot is the best clean lap of one session here");
-    // James is not in the seat (Jo is): his name, not "your"
+    // James is not in the seat (Alex is): his name, not "your"
     expect(text).toContain("James's best here dropped 1.2 s over 2 sessions");
-    // two drivers but no family answer cached yet: neutral board, any car
-    expect(text).toContain("Best lap at this track in any car, so the cars may differ.");
+    // Records, beginner density: the gap in words only (no percentages, dates or sectors), the latest record change
+    expect(text).toContain("James 1:10.549 Fastest 6.578 s slower");
+    expect(text).toContain("AL Alex in the seat 1:13.616 3.067 s behind 9.645 s slower");
+    expect(text).not.toContain("4.35 %");
+    expect(text).not.toContain("Game version");
+    expect(text).not.toContain("Pole lap: qualifying P1's deciding lap");
+    expect(text).toContain("James improved the record: 1:10.549, 1.196 s faster");
+    expect(text).not.toContain("James set the first record");
+    expect(text).toContain("Show all 3");
+    // the caveat and the credit are never left out
+    expect(text).toContain("F1 25 is not the real car");
+    expect(text).toContain("Real F1 times: F1DB , CC BY 4.0");
+    expect(html).toContain('aria-label="What is family board?"');
   });
 
-  it("family board with D5 for every driver at one car: exact car, neutral times, the leader 'Fastest'", async () => {
+  it("the family board is one exact board from the server, never any car (an intermediate's view)", async () => {
     await seed({ d5: fixtures.progressAustriaHaas() });
-    const haas = fixtures.progressAustriaHaas();
-    const jo = { ...driver(2, "Jo", "intermediate"), stats: { ...james().stats, best_laps: [] } };
-    setDrivers([james(), jo]);
-    const fam = new Map<number, DriverProgress>([
-      [1, haas],
-      [2, { ...haas, driver_id: 2, pb_history: [{ ...haas.pb_history[0]!, lap_ms: 70_100, session_id: "jo1" }] }],
-    ]);
-    const rows = fixtures.sessions();
-    const scope = resolveScope(scopeChoices(rows, { includeSynthetic: false }), { track: AUSTRIA, car: HAAS })!;
-    cache.set(keys.familyProgress([1, 2], scopeQuery(scope, { corners: false })), fam);
-    // Jo's faster session is in everyone's session list too (where the badges are found)
-    const james1 = rows.find((r) => r.id === "332904dbe3de")!;
-    cache.set(keys.sessions, [{ ...james1, id: "jo1", driver_id: 2, best_clean_ms: 70_100, started_unix: james1.started_unix + 3600 }, ...rows]);
+    const jamesMid = { ...driver(1, "James", "intermediate"), stats: james().stats };
+    const alex = { ...driver(2, "Alex", "beginner"), stats: { ...james().stats, best_laps: [] } };
+    setDrivers([jamesMid, alex], 2);
     const html = renderToStaticMarkup(createElement(ProgressPage, route("progress")));
     const text = visible(html);
-    // (the chart's fastest-in-the-family line is drawn by Recharts in the browser only; the board says it in words)
-    expect(text).toMatch(/Jo 1:10\.100 Fastest/);
-    expect(text).toMatch(/James in the seat 1:10\.549 0\.449 s slower/); // a gap to a best: as precise as the times
-    expect(text).toContain("Each driver's best clean lap here in this car.");
+    honest(text, "records");
+    expect(text).toMatch(/James Sat 10 Oct · 18 clean laps 1:10\.549 Fastest/);
+    expect(text).toMatch(/Alex in the seat Sun 11 Oct · 5 clean laps 1:13\.616 3\.067 s behind 4\.35 %/);
     expect(text).not.toContain("cars may differ");
-    // Jo holds the family record; James's best here is his PB (the one rule, lib/bests.ts), never REC on his page
-    expect(html).not.toContain('data-status="rec"');
-    expect(html).toContain('data-status="pb"');
+    expect(text).not.toContain("any car");
+    // intermediate: percentages and dates, not sectors
+    expect(text).not.toContain("16.662 · 31.149 · 22.151");
   });
+
+  it("Records while the board loads, and on a server without boards", async () => {
+    await seed({ d5: fixtures.progressAustriaHaas(), board: null });
+    setDrivers([james()]);
+    const loading = renderToStaticMarkup(createElement(ProgressPage, route("progress")));
+    expect(loading).toMatch(/data-records-board="" aria-busy="true"|aria-busy="true"[^>]*data-records-board/);
+    expect(visible(loading)).toContain("Records Family board");
+    // an older server: the boards' routes answer FastAPI's own 404
+    const notFound = () => Promise.reject(new ApiError(404, "Not Found"));
+    await cache.load(lkeys.board({ key: AUSTRIA_HAAS_BOARD }), notFound).catch(() => {});
+    const text = visible(renderToStaticMarkup(createElement(ProgressPage, route("progress"))));
+    expect(text).toContain("The family board needs a newer Pitwall server.");
+  });
+
 });
 
 describe("Progress (6.9) before D5", () => {
