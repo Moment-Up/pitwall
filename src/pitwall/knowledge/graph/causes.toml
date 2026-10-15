@@ -35,18 +35,23 @@ note = "4 km/h is analysis.coaching.MIN_SPEED_KPH, the low_min_speed rule's floo
 
 [[cause]]
 id = "early_turn_in"
-name = "Early turn-in"
-summary = """The car was turned towards the apex sooner than on the reference lap, so the tightest part of the corner
-came sooner and the car had to slow more for it."""
+name = "Slowest point came sooner"
+summary = """The slowest point of the corner came well before where it was on the reference lap, with a similar entry
+speed, and the corner was slower through the middle. An earlier turn-in can do this; Pitwall does not measure the
+turn-in itself."""
 explains = ["low_min_speed", "stepped_throttle", "early_apex"]
 advice = ["early_turn_in_explain", "early_turn_in_explain_beginner"]
 tier = "brief"
 sources = ["ed_corner_brief", "ed_patches", "speedwaymedia_vector_analysis"]
 notes = """Ed's brief point 10 (a lift once on the throttle comes from over-braking or turning in too early) and his
 root-cause patch, which tells the two apart with peak steering 10 m sooner than usual (EARLY_APEX_M; its argmax jumps).
-Pitwall uses the slowest point's position instead, which is computed but noisy (clean-lap quartiles -14 and +17 m), so
-the margin is wide and the entry must not have been slower (that is over_braking). Named on 16 of 278 low_min_speed
-points (6%); a 10 m margin would name it on 71 (26%), mostly noise."""
+Pitwall measures no turn-in point, so the cause is named for what was measured: the slowest point's position, which is
+computed but noisy (clean-lap quartiles -14 and +17 m; it is searched within 80 m either side of the apex,
+analysis.compare.BRAKE_MATCH_APEX_TOL_M), so the margin is wide and the entry must have been within 4 km/h of the
+reference either way: slower is over_braking, and a much faster entry (a Melbourne lap with the slowest point 106 m
+sooner and a 32 km/h faster entry, 2026-10-15 review) is a different line or a jump of the slowest point. The id keeps
+Ed's name for the idea. Named on 16 of 278 low_min_speed points (6%) before the entry cap; a 10 m margin would name
+it on 71 (26%), mostly noise."""
 
 [[cause.discriminators]]
 signal = "min_speed_pos_delta_m"
@@ -61,6 +66,14 @@ test = "reached the corner entry no more than 4 km/h slower than on the referenc
 op = "gt"
 value = -4.0
 note = "Keeps it apart from over_braking, which needs a slower entry (analysis.coaching.MIN_SPEED_KPH)."
+
+[[cause.discriminators]]
+signal = "entry_speed_delta_kph"
+test = "reached the corner entry no more than 4 km/h faster than on the reference lap"
+op = "le"
+value = 4.0
+note = """A much faster entry moves the slowest point for other reasons (another line, or a jump of the slowest point
+inside a long corner): analysis.coaching.MIN_SPEED_KPH again."""
 
 [[cause]]
 id = "low_grip"
@@ -104,45 +117,58 @@ note = "Counted only with ABS off."
 [[cause]]
 id = "traction_limited"
 name = "Traction-limited exit"
-summary = """The rear tyres spun or the car slid on the way out, so full throttle could not come as soon as on the
-reference lap."""
+summary = """The rear tyres spun, the car slid or it oversteered on the way out where it did not on the reference lap,
+so full throttle could not come as soon as on that lap."""
 explains = ["late_throttle"]
 advice = ["traction_limited_explain", "traction_limited_explain_beginner"]
 tier = "expert"
 sources = ["wikipedia_understeer_oversteer", "vrs_traction_circle", "designjudges_driver_data", "ed_fault_checklist"]
 notes = """Ed's checklist: late_throttle alone cannot tell an exit short of grip from grip left unused. Too much
-throttle for the grip spins the driven wheels and can start oversteer; the driver then waits or lifts. Tyre slip and
-body slip: F1 25 only. With traction control full some wheelspin is normal (car health keeps those off the radio)."""
+throttle for the grip spins the driven wheels and can start oversteer; the driver then waits or lifts. The spec names
+wheelspin or exit oversteer. Each piece of evidence is judged against the reference lap at the same corner (the
+*_vs_ref signals, knowledge.annotate), as low_grip is: read from this lap alone it held on 8.3% of late_throttle
+corner-laps against 7.9% of the others (the 2026-10-15 review), the car at that corner rather than what held this
+lap's throttle back. Tyre slip and body slip: F1 25 only. With traction control full some wheelspin is normal (car
+health keeps those off the radio)."""
 
 [[cause.discriminators]]
-signal = "exit_wheelspin_events"
-test = "a rear wheel spun under throttle on the way out"
-op = "ge"
-value = 1.0
-need = "any"
-
-[[cause.discriminators]]
-signal = "exit_slide"
-test = "the back of the car slid or needed a counter-steer on the way out"
+signal = "exit_wheelspin_vs_ref"
+test = "a rear wheel spun under throttle on the way out, and not on the reference lap"
 op = "true"
 need = "any"
+
+[[cause.discriminators]]
+signal = "exit_slide_vs_ref"
+test = "the back of the car slid or needed a counter-steer on the way out, and not on the reference lap"
+op = "true"
+need = "any"
+
+[[cause.discriminators]]
+signal = "exit_oversteer_vs_ref"
+test = "the rear tyres slid clearly more than the fronts on the way out (oversteer), and not on the reference lap"
+op = "true"
+need = "any"
+note = "Oversteer as technique.balance classes it: front-minus-rear slip at or below technique.thresholds.OS_DIFF_DEG."
 
 [[cause]]
 id = "ready_earlier"
 name = "No grip loss on the exit"
-summary = """On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on the
-reference lap: nothing measured held the throttle back."""
+summary = """With traction control off, the car showed no wheelspin, slide, understeer or oversteer on the way out, yet
+full throttle came later than on the reference lap: nothing measured held the throttle back."""
 explains = ["late_throttle"]
 advice = ["ready_earlier_explain", "ready_earlier_explain_beginner"]
+applies_when = ["traction_control_off"]
 tier = "brief"
 sources = ["ed_fault_checklist", "vrs_traction_circle"]
 notes = """Ed's checklist row "over-cautious exit (full throttle late with no grip loss)". The spec also names the
 steering already unwound and less combined g than the reference: those signals are not computed yet
 (steering_at_full_throttle_frac, exit_grip_utilization_frac, throttle_acceptance_delta); add them here as discriminators
-when they are. F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing.
-With traction control on, "no wheelspin" is weaker evidence (the game holds wheelspin back), so the advice says only
-what was measured, not that the grip was there. Named on 105 of 157 late_throttle points on the owner's 30 captures
-(traction control on in every one; 2026-10-15)."""
+when they are. Named only with traction control off and every discriminator measured (James, 2026-10-15): with
+traction control on or unknown the game holds wheelspin back, so "no wheelspin" proves little, and the cause is the
+absence of measured grip loss - which held on 75% of the owner's late_throttle corner-laps and 70% of the others, its
+base rate. F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing. On
+the owner's 30 captures (traction control on in every one) it is never named now; it was named on 105 of 157
+late_throttle points (2026-10-15)."""
 
 [[cause.discriminators]]
 signal = "exit_wheelspin_events"
@@ -161,6 +187,13 @@ test = "no clear understeer on the way out"
 op = "lt"
 value = 3.0
 note = "3 degrees is technique.thresholds.US_DIFF_DEG."
+
+[[cause.discriminators]]
+signal = "exit_balance_deg"
+test = "no clear oversteer on the way out"
+op = "gt"
+value = -1.0
+note = "-1 degree is technique.thresholds.OS_DIFF_DEG: at or below it technique.balance classes the exit oversteer."
 
 [[cause]]
 id = "early_brake_release"

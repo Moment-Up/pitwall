@@ -565,6 +565,51 @@ notes = """knowledge.annotate: mid-phase slide on this lap and none on the refer
 balance was not measured. On the owner's low_min_speed points the reference also slid at 6 of the 49 where this lap
 did."""
 
+
+[[signal]]
+id = "exit_wheelspin_vs_ref"
+name = "Exit wheelspin the reference did not have"
+summary = """Whether a rear wheel spun under throttle on the way out on this lap but not on the reference lap at the
+same corner."""
+code = "SlipEvents.events"
+unit = "bool"
+channels = ["wheel_slip", "throttle"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """knowledge.annotate: one wheelspin event or more on this lap's exit (CornerInputs.wheelspin) and none on the
+reference lap's; unknown when either lap's wheelspin was not measured. Relative so that spin the reference lap shared
+(the car, or its traction control, at that corner) names no cause."""
+
+
+[[signal]]
+id = "exit_slide_vs_ref"
+name = "Exit slide the reference did not have"
+summary = """Whether the back of the car slid or needed a counter-steer on the way out on this lap but not on the
+reference lap at the same corner."""
+code = "PhaseBalance.slide"
+unit = "bool"
+channels = ["body_slip", "yaw_rate", "steering", "wheel_slip", "g_lat"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """knowledge.annotate: exit-phase slide on this lap and none on the reference lap; unknown when either lap's
+balance was not measured."""
+
+
+[[signal]]
+id = "exit_oversteer_vs_ref"
+name = "Exit oversteer the reference did not have"
+summary = """Whether the car oversteered on the way out on this lap (rear tyres sliding clearly more than the fronts) but
+not on the reference lap at the same corner."""
+code = "PhaseBalance.slip_diff_deg"
+unit = "bool"
+channels = ["wheel_slip", "g_lat", "speed", "lap_distance"]
+tier = "recorded"
+sources = ["pitwall_technique_review"]
+notes = """knowledge.annotate: this lap's exit-phase slip difference at or below technique.thresholds.OS_DIFF_DEG (how
+technique.balance classes oversteer) and the reference lap's above it; unknown when either lap's exit balance was not
+measured."""
+
+
 [[signal]]
 id = "entry_brake_share"
 name = "Braking share of the entry"

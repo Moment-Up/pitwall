@@ -256,8 +256,8 @@ for = "early_turn_in"
 skill = "any"
 kind = "explain"
 screen = "Slowest point sooner than your reference"
-review = """The slowest point of the corner came well before where it was on your reference lap: the car was turned
-towards the apex sooner, which tightens the rest of the corner and lowers the speed through the middle."""
+review = """The slowest point of the corner came well before where it was on your reference lap, with a similar entry
+speed, and the speed through the middle was lower. An earlier turn-in can do this."""
 tier = "brief"
 sources = ["ed_corner_brief", "ed_patches"]
 
@@ -266,9 +266,9 @@ id = "early_turn_in_explain_beginner"
 for = "early_turn_in"
 skill = "beginner"
 kind = "explain"
-screen = "Tightest part came sooner than usual"
-review = """You reached the tightest part of the corner sooner than on your reference lap, so the car had to slow more
-to make the turn."""
+screen = "Slowest point came sooner than usual"
+review = """The slowest point of the corner came sooner than on your reference lap, and you were slower through the
+middle of it."""
 tier = "brief"
 sources = ["ed_corner_brief"]
 
@@ -299,9 +299,9 @@ id = "traction_limited_explain"
 for = "traction_limited"
 skill = "any"
 kind = "explain"
-screen = "Wheelspin or a slide on the exit"
-review = """The rear tyres spun or the car slid on the way out of this corner, which held full throttle back compared
-with your reference lap."""
+screen = "More wheelspin or sliding than your reference"
+review = """The rear tyres spun, or the car slid or oversteered, on the way out of this corner where it did not on your
+reference lap, which held full throttle back compared with that lap."""
 tier = "expert"
 sources = ["wikipedia_understeer_oversteer", "vrs_traction_circle"]
 
@@ -310,9 +310,9 @@ id = "traction_limited_explain_beginner"
 for = "traction_limited"
 skill = "beginner"
 kind = "explain"
-screen = "Rear wheels spinning on the exit"
-review = """The rear wheels spun or the back of the car stepped out as you accelerated, and that held back full
-throttle."""
+screen = "Rear wheels spun more than on your reference"
+review = """The rear wheels spun or the back of the car stepped out as you accelerated, which it did not do on your
+reference lap, and that held back full throttle."""
 tier = "expert"
 sources = ["wikipedia_understeer_oversteer", "vrs_traction_circle"]
 
@@ -322,8 +322,8 @@ for = "ready_earlier"
 skill = "any"
 kind = "explain"
 screen = "No wheelspin or slide, full throttle later"
-review = """On the way out the car showed no wheelspin, slide or understeer, yet full throttle came later than on your
-reference lap: nothing Pitwall measured held the throttle back."""
+review = """With traction control off, the car showed no wheelspin, slide, understeer or oversteer on the way out, yet
+full throttle came later than on your reference lap: nothing Pitwall measured held the throttle back."""
 tier = "brief"
 sources = ["ed_fault_checklist"]
 

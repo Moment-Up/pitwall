@@ -22,7 +22,8 @@ Node types (``NODE_TYPES``; the TOML table is the type's name):
 * ``signal``     a measured value: the dataclass field that holds it (``code``) and the channels it needs.
 * ``fault``      something that goes wrong. ``status`` live = a coaching rule says it today (``kind``, the
                  ``Observation.kind``, equal to the id); experimental / planned / context_only otherwise.
-* ``cause``      why a fault happens and the evidence that tells it apart (``discriminators``).
+* ``cause``      why a fault happens, when it can be named (``applies_when`` / ``applies_any``: e.g. only with
+                 traction control off) and the evidence that tells it apart (``discriminators``).
 * ``advice``     what to say about a fault or cause: radio, screen and review texts, by skill and braking style.
 * ``constraint`` a rule every text obeys: forbidden phrasings, e.g. no "brake later" outside praise.
 * ``source``     where knowledge came from: a book, a web page, Ed's brief, a Pitwall measurement.
@@ -444,10 +445,15 @@ class Fault(Node):
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Cause(Node):
+    """``applies_when`` / ``applies_any``: conditions the driver's Context must meet before the cause can be named at
+    all (an unknown trait meets none), e.g. traction control off for "no wheelspin" to mean anything."""
+
     node_type: ClassVar[NodeType] = "cause"
     explains: tuple[str, ...]
     discriminators: tuple[Discriminator, ...] = ()
     advice: tuple[str, ...] = ()
+    applies_when: tuple[str, ...] = ()
+    applies_any: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -626,6 +632,8 @@ class TechniqueGraph:
             claimed(f.id, "caused_by", f.causes)
             claimed(f.id, "advice", f.advice)
         for cause in self.causes:
+            link(cause, "applies_when", cause.applies_when)
+            link(cause, "applies_any", cause.applies_any)
             link(cause, "discriminated_by", dict.fromkeys(d.signal for d in cause.discriminators))
             claimed(cause.id, "advice", cause.advice)
         return tuple(out)
@@ -960,6 +968,7 @@ def _cause(t: _Table) -> Cause | None:
     kw = _base(t)
     explains = t.strings("explains", required=True)
     advice = t.strings("advice")
+    applies_when, applies_any = t.strings("applies_when"), t.strings("applies_any")
     subs = t.tables("discriminators")
     discs: list[Discriminator] = []
     for s in subs:
@@ -978,7 +987,14 @@ def _cause(t: _Table) -> Cause | None:
             )
     if not t.finish(subs):
         return None
-    return Cause(**kw, explains=explains, discriminators=tuple(discs), advice=advice)
+    return Cause(
+        **kw,
+        explains=explains,
+        discriminators=tuple(discs),
+        advice=advice,
+        applies_when=applies_when,
+        applies_any=applies_any,
+    )
 
 
 def _advice(t: _Table) -> Advice | None:
@@ -1185,6 +1201,8 @@ def _validate(nodes: Sequence[Node]) -> list[str]:
         elif isinstance(n, Cause):
             ref(n, "explains", n.explains, Fault)
             ref(n, "advice", n.advice, Advice)
+            ref(n, "applies_when", n.applies_when, Condition)
+            ref(n, "applies_any", n.applies_any, Condition)
             mirrored(n, "explains", n.explains, Fault, "causes", "does not list it in causes")
             mirrored(n, "advice", n.advice, Advice, "for_id", "is not for it")
             for i, d in enumerate(n.discriminators):

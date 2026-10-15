@@ -24,7 +24,7 @@ from pitwall.knowledge.annotate import (
     slim,
 )
 from pitwall.knowledge.context import Context, build_context
-from pitwall.knowledge.graph import Fault, Signal, TechniqueGraph, load_graph
+from pitwall.knowledge.graph import Cause, Fault, Signal, TechniqueGraph, load_graph
 from pitwall.technique.balance import PhaseBalance
 from pitwall.technique.inputs import CornerInputs, SlipEvents
 
@@ -103,11 +103,23 @@ def test_conditions_say_why_a_node_does_not_fit(g: TechniqueGraph) -> None:
 
 
 def test_a_cause_needs_its_signals_on_the_game(g: TechniqueGraph) -> None:
-    gt7 = dk(g, Context(game="gt7"), "gt7")
+    gt7 = dk(g, Context(game="gt7", traction_control=False), "gt7")
     fit = gt7.fit("ready_earlier")  # every discriminator is needed; the exit slide needs lateral g
     assert not fit.applies and fit.why_not == "GT7 does not send lateral g"
     assert gt7.fit("traction_limited").applies  # one of its any-of signals (wheelspin) may be measured
-    assert gt7.fit("over_braking").applies and dk(g, F1).fit("ready_earlier").applies
+    assert gt7.fit("over_braking").applies and dk(g, replace(F1, traction_control=False)).fit("ready_earlier").applies
+
+
+def test_no_grip_loss_is_named_only_with_traction_control_off(g: TechniqueGraph) -> None:
+    """With traction control on the game holds wheelspin back, so "no wheelspin" proves little: ready_earlier is a
+    cause only when the driver's Context says traction control is off (unknown is not off)."""
+    for tc, why in (
+        (True, "Only for: No traction control (traction control on)"),
+        (None, "Only for: No traction control (traction control not known)"),
+    ):
+        fit = dk(g, replace(F1, traction_control=tc)).fit("ready_earlier")
+        assert not fit.applies and fit.why_not == why, tc
+    assert dk(g, replace(F1, traction_control=False)).fit("ready_earlier").applies
 
 
 def test_advice_fits_by_skill_and_style(g: TechniqueGraph) -> None:
@@ -154,10 +166,15 @@ def test_advice_by_skill_and_style(g: TechniqueGraph) -> None:
 
 
 # ---------------------------------------------------------------------------------------------- causes
-def causes(g: TechniqueGraph, kind: str, cd: CornerDelta, tech: CornerTechnique | None = None) -> list[str]:
+TC_OFF = replace(F1, traction_control=False)
+
+
+def causes(
+    g: TechniqueGraph, kind: str, cd: CornerDelta, tech: CornerTechnique | None = None, ctx: Context = F1
+) -> list[str]:
     f = g.get(kind, Fault)
     assert f is not None
-    return [c["id"] for c in dk(g).causes(f, corner_reader(cd, (lambda: tech) if tech is not None else None))]
+    return [c["id"] for c in dk(g, ctx).causes(f, corner_reader(cd, (lambda: tech) if tech is not None else None))]
 
 
 def test_over_braking_and_early_turn_in_are_told_apart(g: TechniqueGraph) -> None:
@@ -167,6 +184,12 @@ def test_over_braking_and_early_turn_in_are_told_apart(g: TechniqueGraph) -> Non
     assert causes(g, "low_min_speed", early_brake) == ["over_braking"]
     early_apex = delta(min_speed_m=575.0, min_speed_kph=92.0)
     assert causes(g, "low_min_speed", early_apex) == ["early_turn_in"]
+    # named for what was measured (Pitwall measures no turn-in), and not after a much faster entry: another line, or
+    # a jump of the slowest point inside a long corner (a Melbourne lap: 106 m sooner, entry 32 km/h faster)
+    eti = g.get("early_turn_in", Cause)
+    assert eti is not None and eti.name == "Slowest point came sooner"
+    faster_in = delta(min_speed_m=494.0, min_speed_kph=92.0, entry_speed_kph=232.0)
+    assert causes(g, "low_min_speed", faster_in) == []
     assert causes(g, "low_min_speed", delta(min_speed_kph=92.0)) == []  # nothing tells it apart: no cause
     f = g.get("low_min_speed", Fault)
     assert f is not None
@@ -205,13 +228,21 @@ def _tech(
     lockup: SlipEvents | None = None,
     spin: SlipEvents | None = None,
     ref_mid: PhaseBalance | None = None,
+    ref_exit: PhaseBalance | None = None,
+    ref_spin: SlipEvents | None = None,
     ref_known: bool = True,
 ) -> CornerTechnique:
     inputs = CornerInputs(
         braked=True, lockup=lockup or SlipEvents("measured", 0), wheelspin=spin or SlipEvents("measured", 0)
     )
-    ref = {"entry": _pb(), "mid": ref_mid or _pb(), "exit": _pb()} if ref_known else None
-    return CornerTechnique(inputs, {"entry": _pb(), "mid": mid or _pb(), "exit": exit_ or _pb()}, lambda: ref)
+    ref = {"entry": _pb(), "mid": ref_mid or _pb(), "exit": ref_exit or _pb()} if ref_known else None
+    ref_inputs = CornerInputs(braked=True, wheelspin=ref_spin or SlipEvents("measured", 0)) if ref_known else None
+    return CornerTechnique(
+        inputs,
+        {"entry": _pb(), "mid": mid or _pb(), "exit": exit_ or _pb()},
+        lambda: ref,
+        lambda: ref_inputs,
+    )
 
 
 def test_slip_and_balance_causes_read_this_laps_technique(g: TechniqueGraph) -> None:
@@ -223,8 +254,25 @@ def test_slip_and_balance_causes_read_this_laps_technique(g: TechniqueGraph) -> 
     late = delta(throttle_full_m=680.0)
     assert causes(g, "late_throttle", late, _tech(spin=SlipEvents("measured", 2))) == ["traction_limited"]
     assert causes(g, "late_throttle", late, _tech(exit_=_pb(slide=True))) == ["traction_limited"]
-    assert causes(g, "late_throttle", late, _tech()) == ["ready_earlier"]  # grip was there: no spin, slide, push
-    assert causes(g, "late_throttle", late, _tech(exit_=_pb(3.0))) == []  # exit understeer: neither
+    assert causes(g, "late_throttle", late, _tech(exit_=_pb(-2.0))) == ["traction_limited"]  # exit oversteer
+    # no spin, slide, push or oversteer: named only with traction control off (on, or unknown, holds spin back)
+    assert causes(g, "late_throttle", late, _tech(), TC_OFF) == ["ready_earlier"]
+    assert causes(g, "late_throttle", late, _tech()) == []
+    assert causes(g, "late_throttle", late, _tech(exit_=_pb(3.0)), TC_OFF) == []  # exit understeer: neither
+
+
+def test_a_traction_limited_exit_is_judged_against_the_reference_lap(g: TechniqueGraph) -> None:
+    """Wheelspin, a slide or oversteer on the way out that the reference lap had too is the car at that corner (8.3 %
+    of the owner's late_throttle corner-laps against 7.9 % of the others, read from this lap alone): no cause."""
+    late = delta(throttle_full_m=680.0)
+    spin, ref_spin = SlipEvents("measured", 2), SlipEvents("measured", 1)
+    assert causes(g, "late_throttle", late, _tech(spin=spin, ref_spin=ref_spin)) == []
+    assert causes(g, "late_throttle", late, _tech(exit_=_pb(slide=True), ref_exit=_pb(slide=True))) == []
+    assert causes(g, "late_throttle", late, _tech(exit_=_pb(-2.0), ref_exit=_pb(-1.5))) == []
+    assert causes(g, "late_throttle", late, _tech(spin=spin, ref_known=False)) == []  # unknown holds nothing
+    # exit oversteer is grip loss, never "no grip loss": with the reference oversteering too, nothing is named
+    assert causes(g, "late_throttle", late, _tech(exit_=_pb(-2.0), ref_exit=_pb(-1.5)), TC_OFF) == []
+    assert causes(g, "late_throttle", late, _tech(exit_=_pb(-1.0)), TC_OFF) == ["traction_limited"]
 
 
 def test_less_grip_is_judged_against_the_reference_lap(g: TechniqueGraph) -> None:
@@ -247,10 +295,10 @@ def test_unknown_slip_is_not_zero(g: TechniqueGraph) -> None:
     late = delta(throttle_full_m=680.0)
     for status in ("abs_on", "no_data", "not_applicable"):
         spin = SlipEvents(status)  # type: ignore[arg-type]
-        assert causes(g, "late_throttle", late, _tech(spin=spin)) == [], status
-    assert causes(g, "late_throttle", late, _tech(exit_=_pb(None))) == []  # exit balance unmeasured
+        assert causes(g, "late_throttle", late, _tech(spin=spin), TC_OFF) == [], status
+    assert causes(g, "late_throttle", late, _tech(exit_=_pb(None)), TC_OFF) == []  # exit balance unmeasured
     no_balance = CornerTechnique(CornerInputs(braked=True, wheelspin=SlipEvents("measured", 0)), None)
-    assert causes(g, "late_throttle", late, no_balance) == []
+    assert causes(g, "late_throttle", late, no_balance, TC_OFF) == []
 
 
 def test_coasting_causes(g: TechniqueGraph) -> None:

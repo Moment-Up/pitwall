@@ -704,6 +704,11 @@ def test_minimal_graph_with_praise_is_valid(tmp_path: Path) -> None:
         ('applies_any = ["trail"]', 'applies_any = ["late"]', ("applies_any", "unknown id 'late'")),
         ('sources = ["book"]\n\n[[fault]]', 'sources = ["nobook"]\n\n[[fault]]', ("sources", "unknown id 'nobook'")),
         ('signal = "min_speed"', 'signal = "speed"', ("discriminators[0].signal", "unknown id 'speed'")),
+        (
+            'explains = ["low_min_speed"]',
+            'explains = ["low_min_speed"]\napplies_when = ["tc_off"]',
+            ("cause 'ob'", "applies_when", "unknown id 'tc_off'"),
+        ),
     ],
 )
 def test_broken_references_are_found(tmp_path: Path, old: str, new: str, needles: tuple[str, ...]) -> None:
