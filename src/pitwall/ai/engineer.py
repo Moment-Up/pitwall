@@ -137,6 +137,7 @@ _CONTROLS_WHERE = re.compile(
 
 # --- race radio --- laps_left outside a race, and in a race whose length the game does not send
 NO_RACE_LAPS = "No race laps to count in this session."
+NO_RECORD_BOARD = "There's no family board for this session: that needs a known track and real driving."
 NO_RACE_LENGTH = "The game doesn't say how long this race is."
 
 _RULES: list[tuple[str, re.Pattern[str]]] = [
@@ -369,6 +370,17 @@ _RULES: list[tuple[str, re.Pattern[str]]] = [
     ),
     # --- end feat/technique ---
     ("focus", re.compile(r"\b(one thing|work on|focus|improve|tip|advice|what should i)\b", re.I)),
+    # --- leaderboard --- the family record of this board ("what's the family record here?", "who holds the record?",
+    # "who's fastest in the family?"): before compare and lap_times ("fastest"); gaps already leaves "record" alone
+    (
+        "records",
+        re.compile(
+            r"\b(?:family|household|home) (?:lap )?records?\b|\brecord[- ]holders?\b"
+            r"|\bwho (?:holds|has|owns|set|took) the (?:family |lap )?record\b"
+            r"|\bwho(?:[\u2019']s| is) (?:the )?fastest (?:in the family|at home|of us)\b",
+            re.I,
+        ),
+    ),
     ("compare", re.compile(r"\b(compare|comparison|versus|vs|against my best|to my best|reference)\b", re.I)),
     # --- feat/technique: brake and throttle technique (after compare, before braking) ---
     (
@@ -453,7 +465,8 @@ _TOPICS: dict[str, set[str]] = {
     "badges": {"session", "game", "progress"},
     "compare": {"session", "game", "compare", "reference", "laps"},
     "braking": {"session", "game", "corners", "observations", "reference"},
-    "lap_times": {"session", "game", "laps", "reference"},
+    "lap_times": {"session", "game", "laps", "reference", "records"},  # records: the family board (leaderboard)
+    "records": {"session", "game", "records", "laps"},  # --- leaderboard ---
     "last_lap": {"session", "game", "laps", "reference", "compare"},
     "summary": {
         "session",
@@ -492,6 +505,7 @@ _TOPICS: dict[str, set[str]] = {
         "gaps",
         "goals",
         "race",  # race radio
+        "records",  # leaderboard: the family record of this board
     },
 }
 
@@ -946,6 +960,8 @@ def deterministic_answer(intent: Intent, facts: list[Fact], sheet: FactSheet, *,
         return say(first("progress", contains="This week"))
     if n == "badges":
         return say(first("progress", contains="Badges"), first("progress", contains="Clean laps in a row"))
+    if n == "records":  # --- leaderboard --- the family record of this session's board (leaderboard.facts)
+        return say(first("records")) if first("records") is not None else NO_RECORD_BOARD
     if n == "compare":
         return say(first("compare"), first("reference"))
     if n == "reference":  # --- coachref --- the live delta's reference (ai.facts "Live delta ..."), else the session's

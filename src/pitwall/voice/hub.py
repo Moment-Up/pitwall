@@ -109,7 +109,8 @@ from pitwall.coach.cues import (
 )
 from pitwall.compat import is_windows
 from pitwall.core.live import LiveState
-from pitwall.motivation.radio import GoalLineGate, goal_message  # lane motivation
+from pitwall.leaderboard.service import FAMILY_RECORD_NOTE  # leaderboard: a lap took the family record
+from pitwall.motivation.radio import GoalLineGate, goal_message, record_message  # lane motivation
 from pitwall.voice.addressing import NameCaller  # race radio
 from pitwall.voice.field_zones import knowledge_model  # race radio: speak windows before a learned model
 from pitwall.voice.handsfree import (  # --- hands-free (lane handsfree) ---
@@ -185,6 +186,7 @@ FAST_INTENTS = frozenset(
         "weather",
         "lap_times",
         "last_lap",
+        "records",  # leaderboard: the family record of this board (deterministic)
         "line",  # feat/technique: deterministic, corner-aware answers (no phraser)
         "technique",
         "balance",
@@ -1450,6 +1452,8 @@ class RadioHub:
             self._loop.call_soon_threadsafe(self._enqueue_lap, payload)
         elif kind == "motivation" and self._loop is not None:  # lane motivation: a goal was reached
             self._loop.call_soon_threadsafe(self._enqueue_motivation, payload)
+        elif kind == FAMILY_RECORD_NOTE and self._loop is not None:  # leaderboard: a lap took the family record
+            self._loop.call_soon_threadsafe(self._enqueue_family_record, payload)
         elif kind == "strategy_call" and self._loop is not None:  # race strategy (pitwall.strategy)
             self._loop.call_soon_threadsafe(self._enqueue_strategy, payload)
         # --- race radio ---
@@ -1468,6 +1472,20 @@ class RadioHub:
         sid = self.live.session_id
         msg = goal_message(
             payload, self._goal_lines, sid, simple=simple, to_speech=self.to_speech, voice_enabled=self.voice_enabled
+        )
+        if msg is not None:
+            self.scheduler.enqueue(msg)
+
+    def _enqueue_family_record(self, payload: dict[str, Any]) -> None:  # leaderboard (event loop only)
+        """The family-record line, through the goal-line path (same gate, speak windows and per-lap budget)."""
+        simple = self.coaching_limits is not None and self.coaching_limits.simple_wording
+        msg = record_message(
+            payload,
+            self._goal_lines,
+            self.live.session_id,
+            simple=simple,
+            to_speech=self.to_speech,
+            voice_enabled=self.voice_enabled,
         )
         if msg is not None:
             self.scheduler.enqueue(msg)
