@@ -476,10 +476,15 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             model = identify(model, zones=TrackZones.from_dict((sb.get("info") or {}).get("track_zones")))[0]
             ra, rb = analyse_lap(a, model), analyse_lap(b, model)
             comp = compare(ra, rb, compat)
-            obs = observations_for_comparison(comp, corner_text=corner_texts(model))
+            obs = [o.to_dict() for o in observations_for_comparison(comp, corner_text=corner_texts(model))]
+            # technique knowledge for the compared lap's driver (their session's Context and style, cached analysis)
+            from pitwall.knowledge.session import annotate_pair
+
+            sa_b = request.app.state.analyzer.analyse(sb["id"])
+            annotate_pair(obs, comp, rb, ra, model, sa_b.knowledge if sa_b is not None else None)
             return {
                 "comparison": comp.to_dict(),
-                "observations": [o.to_dict() for o in obs],
+                "observations": obs,
                 "track_model": track_model_payload(model, fam),
             }
 

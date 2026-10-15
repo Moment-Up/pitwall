@@ -13,7 +13,8 @@ shows for it (docs/ui/design-spec.md P7, section 13 D6). Deterministic, no LLM, 
   radio says when it improves, is still there after ``habits.STILL_AFTER`` laps, or is sorted). A big fault that
   also happened on the corner's previous lap is no one-off either (``HabitTracker.repeated``): the radio does not
   say the same sentence two laps running, and announces the habit once it is one. Incidents are never
-  coaching points: the driver knows they spun. Without a seated driver the limits are
+  coaching points: the driver knows they spun, nor is a point whose technique-graph annotation says it does not fit
+  the driver (``analysis.coaching.applies``: shown in Review only). Without a seated driver the limits are
   ``coaching_limits("advanced", intensity)``, which ``drivers`` documents as identical to the radio before profiles
   existed. Without a tracker (``pick_points`` from older callers) a habit is said like a big one-off.
 * **Habits** - ``CoachSelection`` owns the session's ``habits.HabitTracker``: updated once per compared lap that is
@@ -51,7 +52,8 @@ Block contract (JSON; ``coach_block``)::
      habits: [habit],                 # every habit of the session: focus, then seen, then fixed
      focus: [habit + {reminder}]}     # the habits being worked on, with their corner reminder (or None)
 
-    point = slim observation + {picked, habit: {status, laps_seen, laps} | None, one_off: bool}
+    point = slim observation + {picked, habit: {status, laps_seen, laps} | None, one_off: bool,
+             knowledge: {fault, applies, why_not, causes: [{id, name, evidence, screen}], advice} | None}
             (a habit's point carries the tracker's count in consistency / consistency_ratio)
             (+ for a tracker event: habit_event "announce"|"improving"|"fixed"|"still", was_value, clean_laps,
             clean_of)
@@ -70,9 +72,10 @@ from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from dataclasses import replace
 from typing import Any
 
-from pitwall.analysis.coaching import INCIDENT_KIND, is_big_one_off, is_corrective, is_habit
+from pitwall.analysis.coaching import INCIDENT_KIND, applies, is_big_one_off, is_corrective, is_habit
 from pitwall.coach.habits import HabitTracker, focus_slots
 from pitwall.drivers import COACHING_INTENSITIES, CoachingLimits, apply_coaching_limits, coaching_limits
+from pitwall.knowledge.annotate import slim as slim_knowledge
 
 DEFAULT_SKILL = "advanced"  # no seated driver: the pre-profile radio (drivers.coaching_limits)
 _UNBOUNDED = 1_000_000
@@ -124,7 +127,9 @@ def screen_limits(limits: CoachingLimits | None) -> CoachingLimits:
 
 
 def _is_point(o: Mapping[str, Any]) -> bool:
-    return o.get("kind") != INCIDENT_KIND
+    """A coaching point: not an incident, and its technique-graph annotation does not say it fits another driver
+    (``analysis.coaching.applies``: such a point is shown in Review only)."""
+    return o.get("kind") != INCIDENT_KIND and applies(o)
 
 
 def _unbounded(lim: CoachingLimits) -> CoachingLimits:
@@ -228,8 +233,11 @@ def corner_points(
 
 def slim(o: Mapping[str, Any], picked: bool) -> dict[str, Any]:
     """The coach card's copy of an observation: ``COACH_FIELDS``, the scalar evidence (the per-lap metric dicts
-    ``evidence.ref`` / ``evidence.lap`` stay in ``observations[]``) and whether the coach picked it."""
+    ``evidence.ref`` / ``evidence.lap`` stay in ``observations[]``), its technique knowledge (``knowledge.annotate
+    .slim``: applies, measured causes with their evidence, advice at the driver's skill and style; None without one)
+    and whether the coach picked it."""
     d = {k: o.get(k) for k in COACH_FIELDS}
+    d["knowledge"] = slim_knowledge(o.get("knowledge"))
     ev = o.get("evidence")
     d["evidence"] = (
         {k: v for k, v in ev.items() if isinstance(v, int | float) and not isinstance(v, bool)}

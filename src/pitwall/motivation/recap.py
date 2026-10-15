@@ -48,6 +48,7 @@ from typing import TYPE_CHECKING, Any
 from pitwall.analysis.coaching import (
     INCIDENT_KIND,
     LATER_BRAKING_FIXES,
+    applies,
     is_big_one_off,
     is_corrective,
     is_incident,
@@ -191,11 +192,12 @@ def rank_points(
     positive: bool,
     limits: CoachingLimits,
 ) -> list[RankedPoint]:
-    """Grouped and ranked points (the dashboard's ranking), each group judged by its latest occurrence."""
+    """Grouped and ranked points (the dashboard's ranking), each group judged by its latest occurrence. A point the
+    technique graph says does not fit the driver (``analysis.coaching.applies``) is no point to work on."""
     groups: dict[tuple[str, str], list[tuple[int | None, Mapping[str, Any]]]] = {}
     for key, obs in observations.items():
         for o in obs:
-            if o.get("kind") == INCIDENT_KIND or bool(o.get("positive")) != positive:
+            if o.get("kind") == INCIDENT_KIND or bool(o.get("positive")) != positive or not applies(o):
                 continue
             groups.setdefault((str(o.get("corner")), str(o.get("kind"))), []).append((key, o))
     out: list[RankedPoint] = []

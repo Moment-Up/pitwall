@@ -364,6 +364,42 @@ def _apex(an: LapAnalysis | None, c: Corner, fallback: float) -> float:
     return float(d[idx[k]])
 
 
+def corner_anchors(ref_an: LapAnalysis | None, c: Corner) -> tuple[float, float | None, float | None]:
+    """(slowest point, turn-in, track-out) of corner ``c`` from the reference lap (the model's entry and exit without
+    one): what every lap's inputs and balance at that corner are anchored to."""
+    apex = _apex(ref_an, c, c.apex_m)
+    turn_in: float | None = c.entry_m
+    track_out: float | None = c.exit_m
+    if ref_an is not None:
+        turn_in, track_out = _lap_points(ref_an, apex, (c.entry_m, c.exit_m))
+    return apex, turn_in, track_out
+
+
+def lap_corner(
+    an: LapAnalysis,
+    nat: Native,
+    c: Corner,
+    anchors: tuple[float, float | None, float | None],
+) -> tuple[CornerInputs, dict[Phase, PhaseBalance | None] | None]:
+    """One lap's inputs and handling balance at corner ``c`` (``nat`` = ``native(an.lap)``), on this lap's own slowest
+    point, turn-in and track-out near the reference's ``anchors`` (``corner_anchors``)."""
+    apex, turn_in, track_out = anchors
+    apex_lap = _apex(an, c, apex)
+    ti_lap, to_lap = _lap_points(an, apex_lap, (turn_in, track_out))
+    meta = an.lap.meta
+    inputs = corner_inputs(
+        nat,
+        _event_for(an, an.corners.get(c.name)),
+        apex_lap,
+        ti_lap,
+        to_lap,
+        _next_brake(an, apex_lap),
+        abs_on=meta.get("abs_active"),
+        tc_level=meta.get("traction_control"),
+    )
+    return inputs, lap_balance(nat, apex_lap, c.seg_start_m, c.seg_end_m)
+
+
 def _resolution_m(nat: Native, apex_m: float) -> float:
     w = np.abs(nat.d - apex_m) <= 50.0
     dd = np.diff(nat.d[w])
@@ -589,11 +625,7 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
     for c in model.corners:
         ct: CornerText | None = texts.get(c.name)
         ref_cm = ref_an.corners.get(c.name) if ref_an is not None else None
-        apex = _apex(ref_an, c, c.apex_m)
-        turn_in: float | None = c.entry_m
-        track_out: float | None = c.exit_m
-        if ref_an is not None:
-            turn_in, track_out = _lap_points(ref_an, apex, (c.entry_m, c.exit_m))
+        apex, turn_in, track_out = corner_anchors(ref_an, c)
         inside = inside_sign(ref_line, apex) if ref_line is not None and line_ok else 0
         ref_min = (
             ref_cm.min_speed_kph if ref_cm is not None and ref_cm.min_speed_kph is not None else c.ref_min_speed_kph
@@ -619,21 +651,7 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
             an = analyses[lid]
             nat = natives[lid]
             row = rows.get(lid, {})
-            cm = an.corners.get(c.name)
-            apex_lap = _apex(an, c, apex)
-            ti_lap, to_lap = _lap_points(an, apex_lap, (turn_in, track_out))
-            meta = an.lap.meta
-            inputs = corner_inputs(
-                nat,
-                _event_for(an, cm),
-                apex_lap,
-                ti_lap,
-                to_lap,
-                _next_brake(an, apex_lap),
-                abs_on=meta.get("abs_active"),
-                tc_level=meta.get("traction_control"),
-            )
-            bal = lap_balance(nat, apex_lap, c.seg_start_m, c.seg_end_m)
+            inputs, bal = lap_corner(an, nat, c, (apex, turn_in, track_out))
             cd = _corner_delta(sa, lid, c.name)
             incident = cd is not None and is_incident(cd)
             line_pts: dict[str, float | None] | None = None
@@ -647,7 +665,8 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
                     for pkey, pos in zip(POINT_KEYS, (turn_in, apex, track_out), strict=True):
                         pv = point_offset(d, off, pos)
                         line_pts[pkey] = None if pv is None else (pv * inside if inside else abs(pv))
-                all_notes = compare_inputs(inputs, ref_inputs, tol, _resolution_m(nat, apex_lap), muted=muted)
+                res = _resolution_m(nat, _apex(an, c, apex))  # this lap's slowest point, as lap_corner placed it
+                all_notes = compare_inputs(inputs, ref_inputs, tol, res, muted=muted)
                 notes = top_notes(all_notes)
             lap_rows.append(
                 LapCornerTechnique(

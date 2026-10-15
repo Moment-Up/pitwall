@@ -43,6 +43,14 @@ point per corner, so braking calls never go later than the driver has braked the
 stored lap the service evaluates an active drill (``CoachRef.after_lap``); while one runs, only the drill corner's
 observations are published live (all are stored) and the lap's coaching is the drill's point. ``AnalysisWorker
 .submit_task`` runs the service's own changes on this thread, so drill and reference state never needs a lock.
+
+Technique knowledge (``pitwall.knowledge``, ``_annotate``): every published observation dict carries a ``knowledge``
+annotation for the driver's Context - whether its fault fits them (``analysis.coaching.applies``: a point that does not
+is never picked, never on the coach card and never a habit), the causes its measured signals name (a corner's inputs
+and balance are computed only when a cause needs them) and advice at their skill and braking style. The style is
+detected from the session's last ``HISTORY_LAPS`` clean laps per corner (``_SessionCache.style_laps``: no incidents,
+no safety car; cleared with the driver). Observations are stored as before, without it; the comparison carries the
+Context and style (``knowledge``). Without a graph, or on an error, the observations are coached as before.
 """
 
 from __future__ import annotations
@@ -62,6 +70,7 @@ from pitwall.analysis.compare import (
     CornerDelta,
     CornerMetrics,
     LapAnalysis,
+    LapComparison,
     analyse_lap,
     check_compatibility,
     compare,
@@ -76,6 +85,11 @@ from pitwall.analysis.track_identity import corner_texts, identify, track_model_
 from pitwall.coach.reference_wording import reword_observations
 from pitwall.core.ai_pace import AiPaceJob, AiPaceProcessor
 from pitwall.core.live import BestsRequest, LiveState
+from pitwall.drivers import Driver
+from pitwall.knowledge.annotate import DriverKnowledge, LapSignals
+from pitwall.knowledge.context import build_context, fuel_saving_of
+from pitwall.knowledge.graph import load_graph
+from pitwall.knowledge.style import detect_style
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter, dumps
 
@@ -119,6 +133,8 @@ class _SessionCache:
     clamp: dict[str, float] | None = None  # the braking clamp of the last comparison (another driver's lap)
     recent: dict[str, list[CornerMetrics]] = field(default_factory=dict)  # last laps per corner, no incidents
     # --- coachref ---
+    # --- knowledge --- the last clean laps per corner (no incidents, no safety car): the driver's detected style
+    style_laps: dict[str, list[CornerMetrics]] = field(default_factory=dict)
 
 
 # --- coachref --- laps kept out of the drill baselines (coach.drills.NON_ATTEMPT_FLAGS: the same laps are no
@@ -210,6 +226,7 @@ class LapProcessor:
             sc.history.clear()  # the session changed hands: the previous owner's habits are not this driver's
             sc.history_ref = None
             sc.recent.clear()  # --- coachref ---
+            sc.style_laps.clear()  # --- knowledge --- another driver's style
             sc.driver_id = driver_id
         sc.last_ctx = {**lap.meta, **ctx}  # --- coachref ---
         ref_changed = ref_id != sc.ref_lap_id
@@ -256,6 +273,10 @@ class LapProcessor:
                 r = sc.recent.setdefault(cd.corner, [])
                 r.append(cd.cmp)
                 del r[:-HISTORY_LAPS]
+            if lap.clean and not under_sc:  # --- knowledge --- style detection: clean laps only
+                st = sc.style_laps.setdefault(cd.corner, [])
+                st.append(cd.cmp)
+                del st[:-HISTORY_LAPS]
         if obs:
             self.writer.submit(
                 lambda c: repo.insert_observations(c, job.session_id, lap_id, ref_id, obs, model.version)
@@ -273,6 +294,9 @@ class LapProcessor:
             comp_dict["brake_clamp_m"] = clamp
         # --- coachref ---
         obs_dicts = [o.to_dict() for o in obs]
+        knowledge = self._annotate(sid, sc, ctx, lap, obs_dicts, comp, cur, ref, model)  # --- knowledge ---
+        if knowledge is not None:
+            comp_dict["knowledge"] = knowledge
         result.update(observations=obs_dicts, comparison=comp_dict)
         drill = self._after_lap(job, lap_id, model, cur, comp)  # --- coachref ---
         live_obs = obs_dicts if drill is None else [o for o in obs_dicts if o.get("corner") == drill.get("corner")]
@@ -480,6 +504,65 @@ class LapProcessor:
             return None
 
     # --- coachref ---
+
+    # ------------------------------------------------------------------ technique knowledge (pitwall.knowledge)
+    def _annotate(
+        self,
+        session_id: str,
+        sc: _SessionCache,
+        ctx: dict[str, Any],
+        lap: LapTrace,
+        obs: list[dict[str, Any]],
+        comp: LapComparison,
+        cur: LapAnalysis,
+        ref: LapAnalysis,
+        model: TrackModel,
+    ) -> dict[str, Any] | None:
+        """Annotate this lap's observation dicts in place with the technique graph (``knowledge.annotate``: applies,
+        measured causes, advice for the driver), for the driver's Context: the session's game, car and weather, this
+        lap's assists, the seated driver's skill (their profile), their style detected from the session's last clean
+        laps (``knowledge.style``) and the live strategy's fuel saving. Returns the Context and style for the
+        comparison (``knowledge``); None without a graph. Never raises into the lap pipeline: a knowledge bug leaves
+        the observations unannotated (coached as before the graph)."""
+        try:
+            graph = load_graph()
+            if not graph.valid:
+                return None
+            style = detect_style(sc.style_laps)
+            live = self.live
+            strategy = live.strategy if live is not None and self._is_live(session_id) else None
+            context = build_context(
+                game=ctx.get("game"),
+                formula=ctx.get("formula"),
+                car_id=ctx.get("car_id"),
+                packet_format=ctx.get("packet_format"),
+                assists=ctx.get("assists"),
+                lap_metas=[lap.meta],
+                weather=ctx.get("weather"),
+                skill=self._skill(sc.driver_id),
+                style=style,
+                fuel_saving=fuel_saving_of(strategy),
+            )
+            dk = DriverKnowledge(graph, context, ctx.get("game"))
+            corners = {c.name: c for c in model.corners}
+            dk.annotate_all(obs, LapSignals({cd.corner: cd for cd in comp.corners}, cur, ref, corners))
+            return {"digest": graph.digest, "context": context.to_dict(), "style": style.to_dict()}
+        except Exception:
+            log.exception("technique knowledge annotation failed (lap %s)", lap.lap_number)
+            for o in obs:
+                o.pop("knowledge", None)
+            return None
+
+    def _skill(self, driver_id: int | None) -> str | None:
+        """The skill level of the driver who owns the session (the seated driver), from their profile."""
+        if driver_id is None:
+            return None
+        with self.db.read() as c:
+            row = repo.get_driver(c, driver_id)
+        if row is None:
+            return None
+        skill = Driver.from_row(row).summary().get("skill_level")
+        return skill if isinstance(skill, str) else None
 
     # ------------------------------------------------------------------ internals
     def _publish_bests(
