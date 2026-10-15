@@ -9,10 +9,20 @@ are identifiers, not measurements, and are excluded. Lap times "1:05.626" are co
 
 Techniques (knowledge spec section 3: answers about technique cite only graph facts): a phrase that names a technique
 or cause of the technique graph (``knowledge.terms.TERMS``: "trail braking", "heel and toe", "over-braking" ...) is
-accepted only when one of the same facts is about it - lists the node in ``data["nodes"]`` (the technique knowledge
-facts) or says it in its own words; a common technique the graph does not hold (``knowledge.terms.OTHER_TERMS``:
-"threshold braking", "a late apex" ...) only when a fact says it. Otherwise it is an invented technique claim
-(``ungrounded_techniques``), and the answer is not grounded.
+accepted only when one of the same facts is about it: a fact that declares its graph nodes (``data["nodes"]``, the
+technique knowledge facts) is about exactly those, and any other fact is about what it says in its own words. A node
+that one of those facts lists as not for this driver (``data["not_for_driver"]``: heel-and-toe for a paddle-shift
+car, straight-line braking for a trail-braking driver) is never grounded, whatever another fact says. A common
+technique the graph does not hold (``knowledge.terms.OTHER_TERMS``: "threshold braking", "a late apex" ...) is
+accepted only when a fact says it. Otherwise it is an invented technique claim (``ungrounded_techniques``), and the
+answer is not grounded.
+
+Coaching rules (CLAUDE.md; the technique graph's constraints, ``knowledge.graph.Constraint``): an answer that tells
+the driver to brake later, brake less, release the brake earlier, carry more speed in or trail-brake more is not
+grounded either (``constraint_breaches``), so the engineer falls back to the deterministic answer. Pitwall's own
+descriptions stay allowed: a match that follows a subject or a determiner in its sentence ("you're braking 9 m later
+than your reference", "the later braking isn't paying off") describes what happened; "Brake later", "Try braking
+later", "You should carry more speed" do not.
 """
 
 from __future__ import annotations
@@ -22,6 +32,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from pitwall.ai.facts import Fact
+from pitwall.knowledge.graph import load_graph
 from pitwall.knowledge.terms import OTHER_TERMS, TERMS
 
 _CITATION = re.compile(r"\[(F\d+)\]")
@@ -75,29 +86,71 @@ class GroundingResult:
     unknown_citations: list[str] = field(default_factory=list)
     ungrounded_numbers: list[str] = field(default_factory=list)
     ungrounded_techniques: list[str] = field(default_factory=list)  # technique phrases no considered fact is about
+    # coaching-rule breaches: "<constraint id>: <the words>" (an instruction to brake later, brake less ...)
+    constraint_breaches: list[str] = field(default_factory=list)
+
+
+def _listed(f: Fact, key: str) -> list[str] | None:
+    v = f.data.get(key)
+    return [x for x in v if isinstance(x, str)] if isinstance(v, list | tuple) else None
 
 
 def _about(node_id: str, patterns: Sequence[re.Pattern[str]], f: Fact) -> bool:
-    """Whether fact ``f`` is about technique-graph node ``node_id``: it lists it, or says it in its own words."""
-    nodes = f.data.get("nodes")
-    if isinstance(nodes, list | tuple) and node_id in nodes:
-        return True
+    """Whether fact ``f`` is about technique-graph node ``node_id``: the nodes it declares when it declares them (the
+    technique knowledge facts), else what it says in its own words."""
+    nodes = _listed(f, "nodes")
+    if nodes is not None:
+        return node_id in nodes
     return any(p.search(f.text) or (f.say is not None and p.search(f.say)) for p in patterns)
 
 
 def technique_claims(answer: str, facts: Sequence[Fact]) -> list[str]:
-    """The technique phrases in ``answer`` that none of ``facts`` is about (module docstring), as written."""
+    """The technique phrases in ``answer`` that none of ``facts`` is about, or that one of them says is not for this
+    driver (module docstring), as written."""
     text = _CITATION.sub(" ", answer)
     bad: list[str] = []
+    not_for_driver = {x for f in facts for x in (_listed(f, "not_for_driver") or ())}
     for node_id, patterns in TERMS.items():
         hit = next((m for p in patterns if (m := p.search(text)) is not None), None)
-        if hit is not None and not any(_about(node_id, patterns, f) for f in facts):
+        if hit is None:
+            continue
+        if node_id in not_for_driver or not any(_about(node_id, patterns, f) for f in facts):
             bad.append(hit.group(0))
     for p in OTHER_TERMS:
         m = p.search(text)
         if m is not None and not any(p.search(f.text) or (f.say is not None and p.search(f.say)) for f in facts):
             bad.append(m.group(0))
     return bad
+
+
+# A coaching-rule match that follows one of these words in its sentence describes what happened ("you're braking 9 m
+# later than your reference", "the later braking isn't paying off"): Pitwall's own observation wording, which an answer
+# may repeat. Bare "you" is left out on purpose ("if you brake later ...").
+_DESCRIBED = re.compile(
+    r"(?:\b(?:you(?:'re|\u2019re| are| were|'ve been|\u2019ve been| have been)|we were|the|your|that|this|those)\s+)$",
+    re.I,
+)
+_SENTENCE_END = re.compile(r"[.!?;:\n]")
+
+
+def _described(text: str, start: int) -> bool:
+    """Whether the words at ``start`` follow a subject or a determiner in their sentence (``_DESCRIBED``)."""
+    before = text[:start]
+    sentence = before[max((m.end() for m in _SENTENCE_END.finditer(before)), default=0) :]
+    return _DESCRIBED.search(sentence) is not None
+
+
+def constraint_breaches(answer: str) -> list[str]:
+    """Instructions in ``answer`` the coaching rules forbid (the technique graph's constraints: brake later, brake less,
+    release earlier, carry more speed, trail-brake more), as "<constraint id>: <words>", one per constraint; a match
+    that describes what happened is not one (module docstring). Empty when the graph did not load."""
+    text = _CITATION.sub(" ", answer)
+    out: list[str] = []
+    for c in load_graph().constraints:
+        hit = next((m for p in c.patterns for m in p.finditer(text) if not _described(text, m.start())), None)
+        if hit is not None:
+            out.append(f"{c.id}: {hit.group(0)}")
+    return out
 
 
 def check_grounding(answer: str, facts: list[Fact]) -> GroundingResult:
@@ -112,12 +165,14 @@ def check_grounding(answer: str, facts: list[Fact]) -> GroundingResult:
         if not _matches(v, dec, pool):
             bad.append(f"{v:.{dec}f}")
     techniques = technique_claims(answer, considered)
+    breaches = constraint_breaches(answer)
     return GroundingResult(
-        ok=not unknown and not bad and not techniques,
+        ok=not unknown and not bad and not techniques and not breaches,
         cited=cited,
         unknown_citations=unknown,
         ungrounded_numbers=bad,
         ungrounded_techniques=techniques,
+        constraint_breaches=breaches,
     )
 
 

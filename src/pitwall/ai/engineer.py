@@ -656,9 +656,11 @@ class RaceEngineer:
             messages.append(
                 {
                     "role": "user",
-                    "content": "That answer used numbers, citations or techniques not present in the FACTS ("
+                    "content": "That answer used numbers, citations or techniques not present in the FACTS, or "
+                    "told the driver to brake later, brake less, release earlier or carry more speed ("
                     + _describe(g)
-                    + "). Answer again using only numbers and techniques that appear in the cited facts.",
+                    + "). Answer again using only numbers and techniques that appear in the cited facts, describing "
+                    "what happened rather than instructing it.",
                 }
             )
         return self._finish(det, intent, facts, None, True, model, t0, attempts, issues)
@@ -775,8 +777,10 @@ def _describe(g: GroundingResult) -> str:
         parts.append("unsupported numbers: " + ", ".join(g.ungrounded_numbers))
     if g.unknown_citations:
         parts.append("unknown citations: " + ", ".join(g.unknown_citations))
-    if g.ungrounded_techniques:  # knowledge: a technique none of the cited facts is about
-        parts.append("techniques not in the cited facts: " + ", ".join(g.ungrounded_techniques))
+    if g.ungrounded_techniques:  # knowledge: a technique none of the cited facts is about, or not for this driver
+        parts.append("techniques not in the cited facts or not for this driver: " + ", ".join(g.ungrounded_techniques))
+    if g.constraint_breaches:  # knowledge: the coaching rules (never brake later, brake less ...)
+        parts.append("instructions the coaching rules forbid: " + ", ".join(g.constraint_breaches))
     return "; ".join(parts) or "ok"
 
 

@@ -31,7 +31,13 @@ _RAW: Mapping[str, tuple[str, ...]] = {
         r"\bprogressive(?:ly)? (?:brake )?releas\w*",
         r"\bbleed\w* (?:off )?the brake",
     ),
-    "rev_match_downshift": (r"\bheel[- ](?:and|&|n)[- ]toe\w*", r"\brev[- ]?match\w*", r"(?<![\w-])blip\w*"),
+    "rev_match_downshift": (
+        r"\bheel[- ](?:and|&|n)[- ]toe\w*",
+        r"\brev[- ]?match\w*",
+        # a blip of the throttle on a downshift; never "a blip of oversteer" or a paddle gearbox's own auto-blip
+        r"(?<![\w-])blip\w* (?:the throttle|on (?:the|each|every|your) downshift\w*)",
+        r"(?<!auto )(?<!auto-)\bthrottle blip\w*",
+    ),
     "straight_line_braking": (r"\bstraight[- ]line brak\w*", r"\bbrak\w* in a straight line"),
     "consistent_brake_marker": (r"\bconsistent brak\w* (?:marker|point)s?",),
     "left_foot_braking": (r"\bleft[- ]foot(?:ed)?[- ]brak\w*",),
@@ -41,7 +47,13 @@ _RAW: Mapping[str, tuple[str, ...]] = {
     "coast_to_apex": (r"\bcoast\w* (?:in)?to the apex",),
     "throttle_at_rotation": (r"\bonce the car (?:has )?rotated\b",),
     "commit_throttle_no_lift": (r"\bcommit\w* to the throttle",),
-    "unwind_with_throttle": (r"\bunwind\w*",),
+    "unwind_with_throttle": (
+        # unwinding the steering together with the throttle; "you unwind the steering" alone is no technique claim
+        r"\bunwind\w*(?: the (?:steering|wheel|lock))? (?:with|as)(?: you)?(?: (?:add|apply|feed in|pick up|open|"
+        r"squeeze)\w*)?(?: the)? throttle",
+        r"\bthrottle as (?:you )?unwind\w*",
+        r"\bopen\w* the steering as (?:you )?add\w* (?:the )?throttle",
+    ),
     "use_track_width_exit": (
         r"\b(?:use|using|used) (?:all|the (?:full|whole) width) of the track",
         r"\b(?:use|using|used) all the track",

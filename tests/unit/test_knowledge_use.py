@@ -313,6 +313,49 @@ def test_an_answer_from_graph_facts_passes_and_an_invented_technique_fails(sheet
     assert not check_grounding("You coasted to the apex at T3 [F1].", [own]).ok
 
 
+def test_a_technique_the_facts_say_is_not_for_this_driver_is_never_grounded(sheet: list[Fact]) -> None:
+    """The braking-phase fault facts of an F1 car (paddles: the game blips) list rev-matching as not for this driver;
+    an uncited answer (every fact considered) that suggests it fails, though a fact names its phase's techniques."""
+    braking = next(f for f in sheet if f.topic == TOPIC and f.data.get("fault") == "brake_early")
+    assert "rev_match_downshift" in braking.data["not_for_driver"]
+    assert "rev_match_downshift" not in braking.data["nodes"] and "Rev-matched" not in braking.text
+    for answer, words in (
+        ("Try heel-and-toe downshifts into T2 to settle the car.", ["heel-and-toe"]),
+        ("Blip the throttle on each downshift.", ["Blip the throttle"]),
+    ):
+        g = check_grounding(answer, sheet)
+        assert not g.ok and g.ungrounded_techniques == words, answer
+    # a fact that declares its nodes grounds only those, not whatever its words name
+    lms = next(f for f in sheet if f.topic == TOPIC and f.data.get("fault") == "low_min_speed")
+    assert not check_grounding(f"Commit to the throttle at T1 [{lms.id}].", sheet).ok
+
+
+def test_answers_that_break_the_coaching_rules_are_not_grounded() -> None:
+    """The graph's constraints run over every answer: an instruction to brake later (or less, or to carry more speed)
+    falls back to the deterministic answer; Pitwall's own descriptions of what happened stay allowed."""
+    obs = Fact(
+        "F1",
+        "observations",
+        "T3: you're braking 9 m later than your reference but exiting 4 km/h slower - the later braking isn't paying "
+        "off.",
+    )
+    for answer in (
+        "You're braking 9 m later than your reference at T3, and the later braking isn't paying off [F1].",
+        "At T3 you braked 9 m later and exited 4 km/h slower [F1].",
+    ):
+        g = check_grounding(answer, [obs])
+        assert g.ok and g.constraint_breaches == [], answer
+    for answer, breach in (
+        ("Brake later into T3 [F1].", "never_brake_later: Brake later"),
+        ("Try braking a bit later at T3 [F1].", "never_brake_later: braking a bit later"),
+        ("Later braking would help at T3 [F1].", "never_brake_later: Later braking"),
+        ("Carry more speed into T3 [F1].", "never_carry_more_speed: Carry more"),
+        ("Be lighter on the brakes at T3 [F1].", "never_brake_less: lighter on the brakes"),
+    ):
+        g = check_grounding(answer, [obs])
+        assert not g.ok and g.constraint_breaches == [breach], answer
+
+
 def test_the_technique_terms_follow_the_graph() -> None:
     """Every technique of the graph has the words answers name it by; every term names a technique or cause."""
     from pitwall.knowledge.graph import Cause, Technique
@@ -321,9 +364,20 @@ def test_the_technique_terms_follow_the_graph() -> None:
     g = load_graph()
     assert {t.id for t in g.techniques} <= set(TERMS)
     assert all(isinstance(g.node(k), Technique | Cause) for k in TERMS)
-    # narrow on purpose: ordinary sentences about the pedals are no technique claim
-    for plain in ("You braked 12 m earlier.", "Full throttle 20 m later.", "The car has paddles with auto-blip."):
+    # narrow on purpose: ordinary sentences about the pedals, the steering or the car are no technique claim
+    for plain in (
+        "You braked 12 m earlier.",
+        "Full throttle 20 m later.",
+        "The car has paddles with auto-blip.",
+        "There was a blip of oversteer at T3.",
+        "The car understeers on the exit while you unwind the steering.",
+    ):
         assert check_grounding(plain, []).ungrounded_techniques == [], plain
+    for claim, words in (
+        ("Blip the throttle on each downshift.", "Blip the throttle"),
+        ("Unwind the steering as you add throttle.", "Unwind the steering as you add throttle"),
+    ):
+        assert check_grounding(claim, []).ungrounded_techniques == [words], claim
 
 
 def test_technique_questions_see_the_knowledge_facts(sheet: list[Fact]) -> None:
@@ -386,3 +440,21 @@ def test_a_lap_pair_comparison_is_annotated(client: tuple[TestClient, str, list[
     observations = r.json()["observations"]
     assert observations and all(o["knowledge"]["fault"] == o["kind"] for o in observations)
     assert all(o["knowledge"]["applies"] for o in observations)
+
+
+def test_knowledge_facts_stay_small(sheet: list[Fact]) -> None:
+    """The prompt goes to a shared local LLM server: the techniques of a fault are named, with their summaries only on
+    the most-seen fault, and techniques for other drivers are left out of the words (on the owner's real Imola
+    session the knowledge facts went from about 9 kB to 3.9 kB: the braking prompt from 2.9 to 1.8 times its size
+    without them)."""
+    from pitwall.knowledge.facts import DETAILED_FAULTS
+
+    know = [f for f in sheet if f.topic == TOPIC]
+    context, faults = know[0], know[1:]
+    assert len(context.text) <= 750, context.text
+    for i, f in enumerate(faults):
+        assert len(f.text) <= (900 if i < DETAILED_FAULTS else 500), f.text
+        assert "For other drivers" not in f.text and "Only for:" not in f.text, f.text
+    summaries = {t.summary for t in load_graph().techniques}
+    with_summaries = [f for f in faults if any(x in f.text for x in summaries)]
+    assert with_summaries in ([], faults[:DETAILED_FAULTS])
