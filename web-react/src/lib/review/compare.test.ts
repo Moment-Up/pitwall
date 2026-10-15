@@ -212,7 +212,7 @@ describe("density (spec 6.10)", () => {
   });
 
   it("chart titles are words, never 'B vs A'; beginners compare with their target lap", () => {
-    for (const c of ["delta", "speed", "pedals", "steering"] as const) {
+    for (const c of ["delta", "speed", "pedals", "steering", "g_forces"] as const) {
       expect(chartWords(c, "the reference").title).not.toMatch(/\bvs\b|\bB\b|\bA\b/);
     }
     expect(chartWords("delta", "your target lap").title).toBe("Time gained or lost: your lap against your target lap");

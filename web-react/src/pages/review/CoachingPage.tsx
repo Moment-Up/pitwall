@@ -15,6 +15,11 @@
 // "Suggested AI difficulty" (AI pace spec 8) when the server has a suggestion for this driver at this track (the same
 // request as Progress's "Against the AI"), first beside the repeats and the radio calls; left out on a server without
 // AI pace.
+//
+// "How corners work" (technique knowledge spec section 4, plan/HowCornersWork.tsx) closes the page: the technique
+// graph's six phases with what fits this driver, the faults Pitwall checks and where the knowledge comes from (Ed
+// credited), judged with the plan session's Context when the server sends it. It also shows under the empty state, so
+// a new driver can read it before their first session.
 
 import { ChartLine, Speedometer } from "@gravity-ui/icons";
 import { Alert, Button, Card, Skeleton } from "@heroui/react";
@@ -38,6 +43,7 @@ import { AiLevelCard } from "./plan/AiLevelCard";
 import { drillsQuery } from "../../lib/review/drills";
 import { DrillsCard } from "./plan/DrillsCard";
 import { HabitsCard } from "./plan/HabitsCard";
+import { HowCornersWork } from "./plan/HowCornersWork";
 import { RadioFocusCard } from "./plan/RadioFocusCard";
 import { WorkingOnCard } from "./plan/WorkingOnCard";
 import { ScopeBar } from "./progress/ScopeBar";
@@ -99,6 +105,8 @@ export function CoachingPage({ route }: PageProps) {
     );
   }
   if (!viewed || !scope || !view) {
+    // No plan yet: "How corners work" still shows, by the profile's level (no session Context).
+    const empty = viewed ? densityFor(viewed.id, drivers) : null;
     return (
       <div className="grid gap-4">
         {viewed && <ScopeBar s={s} />}
@@ -120,6 +128,9 @@ export function CoachingPage({ route }: PageProps) {
             </Button>
           </EmptyState.Content>
         </EmptyState>
+        {viewed && empty && (
+          <HowCornersWork sessionId={null} skill={empty.driverLevel} level={empty.level} name={s.who.self ? null : viewed.name} />
+        )}
       </div>
     );
   }
@@ -222,6 +233,14 @@ export function CoachingPage({ route }: PageProps) {
             model={model}
             gameLengthM={row?.track_length_m ?? null}
             simple={density.simpleWording}
+          />
+
+          {/* --- technique knowledge: how corners work, for this driver --- */}
+          <HowCornersWork
+            sessionId={plan?.sessionId ?? null}
+            skill={density.driverLevel}
+            level={density.level}
+            name={s.who.self ? null : viewed.name}
           />
         </>
       )}

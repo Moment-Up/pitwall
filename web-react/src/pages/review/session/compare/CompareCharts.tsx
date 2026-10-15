@@ -1,8 +1,13 @@
 // Compare's distance charts (spec 6.5, 10.4): the lap ribbon as the distance header, then time gained or lost, speed,
-// throttle and brake (behind "Show pedals" for beginners), and steering (advanced only). One cursor drives every chart,
-// the ribbon, the map and the explainer (lib/viz CursorSync; Pro's chart roots do not forward Recharts' syncId).
-// Titles are words, never "B vs A"; beginners and intermediate drivers get one fixed plain sentence under each title.
-// Every card has the same horizontal padding so the ribbon lines up with the charts' plot area.
+// throttle and brake (behind "Show pedals" for beginners), steering and g-forces (advanced only). One cursor drives
+// every chart, the ribbon, the map and the explainer (lib/viz CursorSync; Pro's chart roots do not forward Recharts'
+// syncId). Titles are words, never "B vs A"; beginners and intermediate drivers get one fixed plain sentence under
+// each title. Every card has the same horizontal padding so the ribbon lines up with the charts' plot area.
+//
+// Technique knowledge spec section 4: the g-force charts (lateral and longitudinal g, Ed's patch) show only the rows a
+// lap has values for, and not at all for a game that sends no g (GT7); the corner in focus gets its phase markers on
+// every chart (brake on, brake off, slowest point, full throttle from the comparison's CornerMetrics; your lap solid,
+// lap A dashed) with their key (PhaseKey) under the ribbon.
 
 import { Button, Card } from "@heroui/react";
 import { memo, useMemo, useState } from "react";
@@ -13,9 +18,12 @@ import type { LapTrace } from "../../../../lib/api";
 import type { ReviewComparison } from "../../../../lib/endpoints/review";
 import { chartWords, type CompareChart } from "../../../../lib/review/compare";
 import type { Density } from "../../../../lib/review/density";
+import { gForceAvailable, phaseTraceMarkers, type PhaseMarkerRow } from "../../../../lib/review/phase-markers";
+import type { CompareCorner } from "../../../../lib/review/compare";
 import { alignTraces, deltaDomain, deltaRows, type RibbonView } from "../../../../lib/viz";
 import type { CursorSync } from "../../../../lib/viz/cursor";
 import { num } from "../../../../lib/format";
+import { PhaseKey } from "./PhaseKey";
 
 const REF_COLOUR = "var(--pw-ref)";
 const CMP_COLOUR = "var(--pw-cmp)";
@@ -46,6 +54,7 @@ const STEER_TICKS = [-1, 0, 1];
 const signedS = (v: number) => (Math.abs(v) < 0.0005 ? "0" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(Math.abs(v) >= 1 ? 1 : 2)}`);
 const pct = (v: number) => num(v);
 const steer = (v: number) => (Math.abs(v) < 0.005 ? "0" : `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}`);
+const gForce = (v: number) => (Math.abs(v) < 0.005 ? "0" : `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}`);
 
 function ChartCard({ chart, refWord, captions, children }: { chart: CompareChart; refWord: string; captions: boolean; children: React.ReactNode }) {
   const w = chartWords(chart, refWord);
@@ -82,6 +91,10 @@ export interface CompareChartsProps {
   refLabel: string;
   /** Phone: only the delta chart until "Show telemetry". */
   phone?: boolean;
+  /** The corner in focus and its phase points (lib/review/phase-markers.ts); null = no markers. Memoise it. */
+  phase?: { corner: CompareCorner; rows: readonly PhaseMarkerRow[] } | null;
+  /** The phase key's "show it": move the cursor to that point. */
+  onShowPhase?: (row: PhaseMarkerRow) => void;
 }
 
 export const CompareCharts = memo(function CompareCharts({
@@ -96,6 +109,8 @@ export const CompareCharts = memo(function CompareCharts({
   refWord,
   refLabel,
   phone = false,
+  phase = null,
+  onShowPhase,
 }: CompareChartsProps) {
   const [showPedals, setShowPedals] = useState(false);
   const [showTelemetry, setShowTelemetry] = useState(false);
@@ -105,12 +120,21 @@ export const CompareCharts = memo(function CompareCharts({
   const throttle = useMemo(() => alignTraces(refTrace, lapTrace, "throttle", 100), [refTrace, lapTrace]);
   const brake = useMemo(() => alignTraces(refTrace, lapTrace, "brake", 100), [refTrace, lapTrace]);
   const steering = useMemo(() => alignTraces(refTrace, lapTrace, "steering"), [refTrace, lapTrace]);
+  const gLat = useMemo(() => alignTraces(refTrace, lapTrace, "g_lat"), [refTrace, lapTrace]);
+  const gLon = useMemo(() => alignTraces(refTrace, lapTrace, "g_lon"), [refTrace, lapTrace]);
+  const gAvail = useMemo(() => gForceAvailable(refTrace, lapTrace), [refTrace, lapTrace]);
   const two = useMemo(() => series(refLabel), [refLabel]);
   const pedals = useMemo(() => pedalSeries(refLabel), [refLabel]);
+  const markers = useMemo(
+    () => (phase ? phaseTraceMarkers(phase.rows, { ref: REF_COLOUR, lap: CMP_COLOUR }, refLabel) : undefined),
+    [phase, refLabel],
+  );
   const captions = density.chartCaptions;
   const charts = density.compareCharts;
   const wantPedals = charts.includes("pedals") || showPedals;
+  const wantG = charts.includes("g_forces") && (gAvail.lat || gAvail.lon);
   const telemetry = !phone || showTelemetry;
+  const hidden = [charts.includes("steering") && "steering", wantG && "g-forces"].filter(Boolean).join(", ");
 
   // Recharts draws reference areas (sector bands) and the zero line above the chart's scrub surface, which then never
   // sees the finger; they are decoration, so they let pointer events through (also reported to lane V).
@@ -119,6 +143,18 @@ export const CompareCharts = memo(function CompareCharts({
       <Card className="px-4 py-2">
         <RibbonWithCursor ribbon={ribbon} sync={sync} lengthM={lengthM} />
       </Card>
+
+      {phase && phase.rows.length > 0 && onShowPhase && (
+        <PhaseKey
+          corner={phase.corner}
+          rows={phase.rows}
+          refLabel={refLabel}
+          refColour={REF_COLOUR}
+          lapColour={CMP_COLOUR}
+          caption={captions}
+          onShow={onShowPhase}
+        />
+      )}
 
       <ChartCard chart="delta" refWord={refWord} captions={captions}>
         {delta.length ? (
@@ -132,6 +168,7 @@ export const CompareCharts = memo(function CompareCharts({
             yFormat={signedS}
             zeroLine
             bands={bands}
+            markers={markers}
             sync={sync}
             unit="s"
             label={chartWords("delta", refWord).title}
@@ -144,13 +181,23 @@ export const CompareCharts = memo(function CompareCharts({
       {!telemetry ? (
         <div>
           <Button variant="secondary" className="min-h-11" onPress={() => setShowTelemetry(true)}>
-            Show telemetry: speed, pedals{charts.includes("steering") ? ", steering" : ""}
+            Show telemetry: speed, pedals{hidden ? `, ${hidden}` : ""}
           </Button>
         </div>
       ) : (
         <>
           <ChartCard chart="speed" refWord={refWord} captions={captions}>
-            <TraceChart rows={speed} series={two} height={170} lengthM={lengthM} bands={bands} sync={sync} unit="km/h" label="Speed" />
+            <TraceChart
+              rows={speed}
+              series={two}
+              height={170}
+              lengthM={lengthM}
+              bands={bands}
+              markers={markers}
+              sync={sync}
+              unit="km/h"
+              label="Speed"
+            />
           </ChartCard>
 
           {wantPedals ? (
@@ -165,6 +212,7 @@ export const CompareCharts = memo(function CompareCharts({
                 yDomain={PCT_DOMAIN}
                 yTicks={PCT_TICKS}
                 yFormat={pct}
+                markers={markers}
                 sync={sync}
                 xAxis={false}
                 unit="% throttle"
@@ -180,6 +228,7 @@ export const CompareCharts = memo(function CompareCharts({
                 yDomain={PCT_DOMAIN}
                 yTicks={PCT_TICKS}
                 yFormat={pct}
+                markers={markers}
                 sync={sync}
                 unit="% brake"
                 label="Brake"
@@ -205,9 +254,50 @@ export const CompareCharts = memo(function CompareCharts({
                 yTicks={STEER_TICKS}
                 yFormat={steer}
                 zeroLine
+                markers={markers}
                 sync={sync}
                 label="Steering"
               />
+            </ChartCard>
+          )}
+
+          {wantG && (
+            <ChartCard chart="g_forces" refWord={refWord} captions={captions}>
+              {gAvail.lat && (
+                <>
+                  <span className="pt-1 text-xs font-semibold text-muted">Lateral g</span>
+                  <TraceChart
+                    rows={gLat}
+                    series={two}
+                    height={96}
+                    lengthM={lengthM}
+                    yFormat={gForce}
+                    zeroLine
+                    markers={markers}
+                    sync={sync}
+                    xAxis={!gAvail.lon}
+                    unit="g lateral"
+                    label="Lateral g"
+                  />
+                </>
+              )}
+              {gAvail.lon && (
+                <>
+                  <span className="pt-1 text-xs font-semibold text-muted">Longitudinal g</span>
+                  <TraceChart
+                    rows={gLon}
+                    series={two}
+                    height={96}
+                    lengthM={lengthM}
+                    yFormat={gForce}
+                    zeroLine
+                    markers={markers}
+                    sync={sync}
+                    unit="g longitudinal"
+                    label="Longitudinal g"
+                  />
+                </>
+              )}
             </ChartCard>
           )}
         </>
