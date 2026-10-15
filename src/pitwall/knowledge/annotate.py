@@ -557,7 +557,9 @@ class DriverKnowledge:
 
 
 def slim(k: object) -> dict[str, Any] | None:
-    """The coach block's copy of an annotation (sent with every snapshot): what the card and the radio read."""
+    """The coach block's copy of an annotation (``coach.selection.slim``; every ``/ws/live`` snapshot carries the coach
+    block): the annotation's shape, with each cause's evidence as its measured values (``{signal, value, unit}``)
+    without the plain-words test, which the full annotation in the lap notification and Review's analysis carry."""
     if not isinstance(k, Mapping):
         return None
     adv = k.get("advice")
@@ -571,14 +573,36 @@ def slim(k: object) -> dict[str, Any] | None:
                 "id": c.get("id"),
                 "name": c.get("name"),
                 "evidence": [
-                    {"test": e.get("test"), "value": e.get("value"), "unit": e.get("unit")}
+                    {"signal": e.get("signal"), "value": e.get("value"), "unit": e.get("unit")}
                     for e in c.get("evidence") or ()
                     if isinstance(e, Mapping)
                 ],
-                "screen": (c.get("advice") or {}).get("screen") if isinstance(c.get("advice"), Mapping) else None,
+                "screen": _cause_screen(c),
             }
             for c in (causes if isinstance(causes, list) else ())
             if isinstance(c, Mapping)
         ],
         "advice": {f: adv.get(f) for f in FORMS} if isinstance(adv, Mapping) else None,
     }
+
+
+def card_slim(k: object) -> dict[str, Any] | None:
+    """The snapshot observations' copy of an annotation (``core.live``; twenty snapshots a second): only what the
+    coach card reads when it falls back to an observation - whether the point fits the driver and the first measured
+    cause's screen line. The coach block carries ``slim``; the lap notification and Review the full annotation."""
+    if not isinstance(k, Mapping):
+        return None
+    causes = k.get("causes")
+    first = next((c for c in (causes if isinstance(causes, list) else ()) if isinstance(c, Mapping)), None)
+    return {
+        "fault": k.get("fault"),
+        "applies": k.get("applies"),
+        "causes": []
+        if first is None
+        else [{"id": first.get("id"), "name": first.get("name"), "screen": _cause_screen(first)}],
+    }
+
+
+def _cause_screen(c: Mapping[str, Any]) -> object:
+    adv = c.get("advice")
+    return adv.get("screen") if isinstance(adv, Mapping) else c.get("screen")

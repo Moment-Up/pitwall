@@ -296,7 +296,7 @@ def test_the_annotation_of_an_observation(g: TechniqueGraph) -> None:
     s = slim(k)
     assert s is not None and set(s) == {"fault", "applies", "why_not", "causes", "advice"}
     assert s["causes"][0]["screen"] == "Slowed more than your reference on the way in"
-    assert set(s["causes"][0]["evidence"][0]) == {"test", "value", "unit"}
+    assert set(s["causes"][0]["evidence"][0]) == {"signal", "value", "unit"}  # no plain-words test at 20 Hz
     assert view.annotate(obs("not_a_kind")) is None and slim(None) is None
     assert view.annotate(obs("exit_gain"))["advice"]["radio"]  # type: ignore[index]
     assert coaching.applies({**obs("low_min_speed"), "knowledge": k})

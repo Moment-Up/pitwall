@@ -84,10 +84,10 @@ describe("annotation helpers", () => {
   });
 
   it("evidence in words: the test and the signed value measured on the lap; a yes/no test is its words", () => {
-    const [brake, entry] = review("over_braking").knowledge!.causes[0]!.evidence;
+    const [brake, entry] = review("over_braking").knowledge!.causes[0]!.evidence!;
     expect(evidenceWords(brake!)).toBe("braked at least 8 m earlier than on the reference lap (measured −8.6 m)");
     expect(evidenceWords(entry!)).toBe("at least 4 km/h slower at the corner entry than on the reference lap (measured −10 km/h)");
-    const grip = review("low_grip").knowledge!.causes[0]!.evidence[0]!;
+    const grip = review("low_grip").knowledge!.causes[0]!.evidence![0]!;
     expect(evidenceWords(grip)).toBe(grip.test);
     expect(evidenceWords({ test: "a wheel locked in the braking zone", value: 2, unit: "count" })).toBe(
       "a wheel locked in the braking zone (measured 2 times)",

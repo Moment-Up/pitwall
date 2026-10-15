@@ -29,7 +29,7 @@ from pitwall.core.lap_processor import LapJob, LapProcessor
 from pitwall.core.live import LiveState
 from pitwall.core.session_analysis import SessionAnalyzer
 from pitwall.drivers import DriverService
-from pitwall.knowledge.annotate import slim
+from pitwall.knowledge.annotate import card_slim, slim
 from pitwall.knowledge.facts import CONTEXT_PREFIX, FAULT_PREFIX, TOPIC
 from pitwall.knowledge.graph import CONTEXT_KEYS, TechniqueGraph, load_graph
 from pitwall.storage.db import Database, DbWriter
@@ -161,13 +161,23 @@ def test_live_snapshots_carry_the_slim_annotation() -> None:
     o = {**pt("T6", "low_min_speed", 2), "knowledge": full}
     live.on_lap_result({"lap_id": 102, "lap_number": 2}, [o, pt("T2", "low_min_speed", 2)], None)
     snap = live.snapshot()["observations"]
+    # the snapshot's observations: only what the card reads from one (fits, the first cause's screen line)
     assert (
-        snap[0]["knowledge"] == slim(full)
-        and snap[0]["knowledge"]["causes"][0]["screen"] == "Slowed more on the way in"
+        snap[0]["knowledge"]
+        == card_slim(full)
+        == {
+            "fault": "low_min_speed",
+            "applies": True,
+            "causes": [{"id": "over_braking", "name": "Over-braking", "screen": "Slowed more on the way in"}],
+        }
     )
     assert "knowledge" not in snap[1]  # an observation without an annotation is sent as it is
     assert live.observations[0]["knowledge"] is full and notes[0]["observations"][0]["knowledge"] is full
-    assert len(orjson.dumps(snap[0]["knowledge"])) < len(orjson.dumps(full))
+    # the coach block's copy keeps the annotation's shape, the evidence as measured values without their sentences
+    s = slim(full)
+    assert s is not None and set(s) == {"fault", "applies", "why_not", "causes", "advice"}
+    assert s["causes"][0]["evidence"] == [{"signal": "brake_point_delta_m", "value": -12.0, "unit": "m"}]
+    assert len(orjson.dumps(snap[0]["knowledge"])) < len(orjson.dumps(s)) < len(orjson.dumps(full))
 
 
 # ---------------------------------------------------------------------------------------------- the live path
@@ -256,6 +266,55 @@ def test_a_knowledge_failure_never_breaks_a_lap(
     results, blocks, _, _ = _process(tmp_path, demo_session, graph=True)
     assert any(r["observations"] for r in results) and blocks
     assert all("knowledge" not in o for r in results for o in r["observations"])
+
+
+def _strip_knowledge(snap: dict[str, Any]) -> dict[str, Any]:
+    """A snapshot as it was before the technique graph: no ``knowledge`` on observations or coach points."""
+
+    def strip(p: dict[str, Any]) -> dict[str, Any]:
+        return {k: v for k, v in p.items() if k != "knowledge"}
+
+    out = {**snap, "observations": [strip(o) for o in snap.get("observations") or []]}
+    coach = snap.get("coach")
+    if isinstance(coach, dict):
+        out["coach"] = {
+            **coach,
+            "picked": [strip(p) for p in coach.get("picked") or []],
+            "by_corner": {c: strip(p) for c, p in (coach.get("by_corner") or {}).items()},
+        }
+    return out
+
+
+def test_live_snapshots_stay_within_the_size_budget(tmp_path: Path, demo_session: DecodedSession) -> None:
+    """/ws/live sends a snapshot up to twenty times a second (P2): the technique knowledge in it is the coach block's
+    slim copy and the card's few bytes per observation, never the evidence sentences (on the owner's real Imola and
+    Melbourne sessions the median snapshot grew 2.5-3.2 kB over integration, down from 5-6 kB)."""
+    db = Database(tmp_path / "size.sqlite3")
+    writer = DbWriter(db)
+    live = LiveState()
+    proc = LapProcessor(db, writer, live)
+    sid = new_session(writer, None, demo_session.info, "s-size")
+    live.reset_session(sid, "test", False)
+    with_k: list[int] = []
+    without: list[int] = []
+    per_obs: list[int] = []
+    try:
+        for lap in demo_session.laps:
+            proc.process(LapJob(sid, copy_lap(lap), lap_ctx(demo_session.info)))
+            snap = live.snapshot(include_strategy=False)
+            with_k.append(len(orjson.dumps(snap)))
+            without.append(len(orjson.dumps(_strip_knowledge(snap))))
+            per_obs += [len(orjson.dumps(o["knowledge"])) for o in snap["observations"] if o.get("knowledge")]
+            coach = snap.get("coach") or {}
+            for pnt in [*(coach.get("picked") or []), *(coach.get("by_corner") or {}).values()]:
+                for c in (pnt.get("knowledge") or {}).get("causes") or []:
+                    assert all("test" not in e for e in c["evidence"]), c  # no evidence sentences at 20 Hz
+    finally:
+        writer.close()
+    assert per_obs and max(per_obs) <= 200, per_obs  # fits + the first cause's screen line
+    grew = sorted(a - b for a, b in zip(with_k, without, strict=True))
+    p95 = grew[int(0.95 * (len(grew) - 1))]
+    assert p95 <= 2500, grew  # bytes per snapshot over the same snapshot without the graph
 
 
 # ---------------------------------------------------------------------------------------------- stored sessions

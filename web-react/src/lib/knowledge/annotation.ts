@@ -2,11 +2,13 @@
 // src/pitwall/knowledge/annotate.py): whether the point fits the driver, the causes its measured signals named (each
 // with the evidence that named it) and the graph's advice at the driver's skill and braking style. Pure.
 //
-// Two shapes reach the dashboard, one type here (fields only one of them has are optional):
-//   - the full annotation (`knowledge` on GET /api/sessions/{id}/analysis and /api/compare observations, and the lap
-//     notification): Review reads it;
-//   - the coach block's slim copy (`knowledge` on every coach point and every /ws/live snapshot observation): the
-//     coach card reads it.
+// Three shapes reach the dashboard, one type here (fields only some of them have are optional):
+//   - the full annotation (`knowledge` on GET /api/sessions/{id}/analysis, /api/compare and /api/coachref/compare
+//     observations, and the lap notification): Review reads it;
+//   - the coach block's slim copy (`knowledge` on every coach point): the annotation's shape, each cause's evidence as
+//     its measured values without the plain-words test;
+//   - the card's copy on every /ws/live snapshot observation: `fault`, `applies` and the first measured cause's id,
+//     name and screen line - all the coach card reads (fitsDriver, cardCause).
 // Absent or null on an older server, without the graph, or for a kind the graph has no fault for: the point is then
 // coached exactly as before the graph (applies), and nothing below adds a word.
 //
@@ -21,7 +23,8 @@ export type AdviceForm = "radio" | "screen" | "review";
 /** One discriminator that held: its plain-words test and the value measured on that lap (null = a yes/no test). */
 export interface KnowledgeEvidence {
   signal?: string;
-  test: string | null;
+  /** Full annotation only: the plain-words test. */
+  test?: string | null;
   value: number | boolean | null;
   unit: string | null;
 }
@@ -40,8 +43,9 @@ export interface PointCause {
   id: string;
   name: string;
   tier?: string;
-  evidence: KnowledgeEvidence[];
-  /** Slim copy: the cause advice's screen line. */
+  /** Absent on a snapshot observation's copy. */
+  evidence?: KnowledgeEvidence[];
+  /** Slim copies: the cause advice's screen line. */
   screen?: string | null;
   /** Full annotation: the cause's advice at the driver's skill and style. */
   advice?: KnowledgeAdvice | null;
@@ -56,9 +60,11 @@ export interface PointKnowledge {
   tier?: string;
   /** False: the fault does not fit this driver or the game cannot measure it (never coaching; Review only). */
   applies: boolean | null;
-  why_not: string | null;
+  /** Absent on a snapshot observation's copy. */
+  why_not?: string | null;
   causes: PointCause[];
-  advice: KnowledgeAdvice | null;
+  /** Absent on a snapshot observation's copy. */
+  advice?: KnowledgeAdvice | null;
   digest?: string;
 }
 
