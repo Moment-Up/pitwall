@@ -210,6 +210,8 @@ export interface LapTrace {
   gear: (number | null)[];
   pos_x_m: (number | null)[];
   pos_z_m: (number | null)[];
+  g_lat: (number | null)[];
+  g_lon: (number | null)[];
 }
 
 export interface CornerDelta {

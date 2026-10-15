@@ -35,7 +35,7 @@ describe("density by the viewed session's driver (spec 6.10)", () => {
     expect(DENSITY.advanced).toMatchObject({ kpiTiles: 6, workOn: 5, glossary: false, chartCaptions: false });
     expect(DENSITY.beginner.compareCharts).toEqual(["delta", "speed"]);
     expect(DENSITY.intermediate.compareCharts).toEqual(["delta", "speed", "pedals"]);
-    expect(DENSITY.advanced.compareCharts).toEqual(["delta", "speed", "pedals", "steering"]);
+    expect(DENSITY.advanced.compareCharts).toEqual(["delta", "speed", "pedals", "steering", "g_forces"]);
   });
 
   it("a session without a known driver (replay, deleted profile) shows the intermediate density", () => {

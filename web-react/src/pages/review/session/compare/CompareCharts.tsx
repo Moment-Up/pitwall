@@ -46,6 +46,7 @@ const STEER_TICKS = [-1, 0, 1];
 const signedS = (v: number) => (Math.abs(v) < 0.0005 ? "0" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(Math.abs(v) >= 1 ? 1 : 2)}`);
 const pct = (v: number) => num(v);
 const steer = (v: number) => (Math.abs(v) < 0.005 ? "0" : `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}`);
+const gForce = (v: number) => (Math.abs(v) < 0.005 ? "0" : `${v < 0 ? "−" : ""}${Math.abs(v).toFixed(1)}`);
 
 function ChartCard({ chart, refWord, captions, children }: { chart: CompareChart; refWord: string; captions: boolean; children: React.ReactNode }) {
   const w = chartWords(chart, refWord);
@@ -105,6 +106,8 @@ export const CompareCharts = memo(function CompareCharts({
   const throttle = useMemo(() => alignTraces(refTrace, lapTrace, "throttle", 100), [refTrace, lapTrace]);
   const brake = useMemo(() => alignTraces(refTrace, lapTrace, "brake", 100), [refTrace, lapTrace]);
   const steering = useMemo(() => alignTraces(refTrace, lapTrace, "steering"), [refTrace, lapTrace]);
+  const gLat = useMemo(() => alignTraces(refTrace, lapTrace, "g_lat"), [refTrace, lapTrace]);
+  const gLon = useMemo(() => alignTraces(refTrace, lapTrace, "g_lon"), [refTrace, lapTrace]);
   const two = useMemo(() => series(refLabel), [refLabel]);
   const pedals = useMemo(() => pedalSeries(refLabel), [refLabel]);
   const captions = density.chartCaptions;
@@ -207,6 +210,36 @@ export const CompareCharts = memo(function CompareCharts({
                 zeroLine
                 sync={sync}
                 label="Steering"
+              />
+            </ChartCard>
+          )}
+
+          {charts.includes("g_forces") && (
+            <ChartCard chart="g_forces" refWord={refWord} captions={captions}>
+              <span className="pt-1 text-xs font-semibold text-muted">Lateral g</span>
+              <TraceChart
+                rows={gLat}
+                series={two}
+                height={96}
+                lengthM={lengthM}
+                yFormat={gForce}
+                zeroLine
+                sync={sync}
+                xAxis={false}
+                unit="g lateral"
+                label="Lateral g"
+              />
+              <span className="pt-1 text-xs font-semibold text-muted">Longitudinal g</span>
+              <TraceChart
+                rows={gLon}
+                series={two}
+                height={96}
+                lengthM={lengthM}
+                yFormat={gForce}
+                zeroLine
+                sync={sync}
+                unit="g longitudinal"
+                label="Longitudinal g"
               />
             </ChartCard>
           )}

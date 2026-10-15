@@ -144,7 +144,7 @@ export function lapPointWords(p: LapPoint, opts: { xName?: string; offScale?: bo
 
 // ---- traces by distance (Compare) --------------------------------------------------------------------------------
 
-export type TraceChannel = "speed_kph" | "throttle" | "brake" | "steering" | "gear";
+export type TraceChannel = "speed_kph" | "throttle" | "brake" | "steering" | "gear" | "g_lat" | "g_lon";
 
 type TraceLike = Pick<LapTrace, "d"> & Partial<Record<TraceChannel, (number | null)[]>>;
 

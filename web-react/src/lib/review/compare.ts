@@ -448,7 +448,7 @@ export function cornerColumns(table: Density["cornerTable"]): CornerColumn[] {
 
 // ---- titles, captions, compatibility -------------------------------------------------------------------------------
 
-export type CompareChart = "delta" | "speed" | "pedals" | "steering";
+export type CompareChart = "delta" | "speed" | "pedals" | "steering" | "g_forces";
 
 export interface ChartWords {
   title: string;
@@ -476,6 +476,12 @@ export function chartWords(chart: CompareChart, refWord: string): ChartWords {
       };
     case "steering":
       return { title: "Steering", caption: null };
+    case "g_forces":
+      return {
+        title: "G-forces",
+        caption:
+          "How hard the car is loaded side to side and fore-aft, as a fraction of standing weight. Shows whether a slower corner was a grip or a technique difference.",
+      };
   }
 }
 

@@ -28,7 +28,7 @@ export interface DensityRules {
   /** Work on text size, px (beginners 18). */
   workOnTextPx: 16 | 18;
   /** Compare (phase 2): which trace charts show. */
-  compareCharts: readonly ("delta" | "speed" | "pedals" | "steering")[];
+  compareCharts: readonly ("delta" | "speed" | "pedals" | "steering" | "g_forces")[];
   /** Compare corner table (phase 2): "plain" = time + sentence; "some" = + braked, slowest speed; "all". */
   cornerTable: "plain" | "some" | "all";
   /** Progress (phase 3): corner trends first for advanced. */
@@ -71,7 +71,7 @@ export const DENSITY: Readonly<Record<SkillLevel, DensityRules>> = {
     chartCaptions: false,
     workOnHeading: "Work on",
     workOnTextPx: 16,
-    compareCharts: ["delta", "speed", "pedals", "steering"],
+    compareCharts: ["delta", "speed", "pedals", "steering", "g_forces"],
     cornerTable: "all",
     progressCornersFirst: true,
   },
