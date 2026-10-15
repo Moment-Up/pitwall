@@ -200,6 +200,10 @@ RecordHistoryCard,useRecords}`, pure logic in `web-react/src/lib/review/records.
   best sectors and their sum for advanced drivers; household drivers with no lap there say so. A column per optional
   row gives each driver's `vs` gap and the band chip (gold / silver / bronze, none when `band` is null) with the band
   rule under the board.
+- **Width**: the cells wrap to their narrowest (the "in the seat" chip under the name, a band chip over its gap), and
+  below the `lg` breakpoint (iPad portrait) an advanced driver's best sectors leave the table for a list under the
+  board, so a Time Trial board with both times to beat fits 820 px without sideways scrolling (measured: 652 px of
+  table in 652 px). From iPad landscape the sectors are a column; on a phone the table scrolls inside the card.
 - **Times to beat**: each optional row with its caveat, always; the real pole with the linked F1DB credit ("Real F1
   times: F1DB, CC BY 4.0"); the EA rival labelled spec-decoded; `real_f1_note` in muted text; a 2025 car / 2026 car
   choice when `real_f1_asks_generation` (sent back as `car_generation`, kept while the page is open).
@@ -212,7 +216,10 @@ RecordHistoryCard,useRecords}`, pure logic in `web-react/src/lib/review/records.
 - **Badge** `family_record:<key>` ("Family record at Austria", `motivation/badges.py`): a board is contested from the
   first lap of its second driver. The driver holding the record then earns it, and so does every driver who sets a
   new record afterwards: one per driver per board, dated by the session of the record lap, kept after the record is
-  lost. Like the other track badges it needs an identified track and a lap of at least 30 s.
+  lost. Like the other track badges it needs an identified track and a lap of at least 30 s. It is listed on
+  Review › Goals with the others; the Session complete card leaves it out when the Best lap tile's REC tag is the same
+  lap (`web-react/src/lib/drive/complete.ts`: each fact once), and shows it when the tile's REC is another lap (the
+  looser game + track + car + layout best) or there is no REC.
 - **Engineer fact** (topic `records`, `leaderboard/facts.py`): the family record of the board the session drives on,
   its holder, the others' gaps, and where the session's driver stands ("The family record here is 1:10.549, by Sam.
   Your best here is 3.067s off it."). Intent `records`: "What's the family record here?", "Who holds the record?",
@@ -221,7 +228,9 @@ RecordHistoryCard,useRecords}`, pure logic in `web-react/src/lib/review/records.
   took it from Sam."; a beginner hears "You did it: the family record at Austria is yours, faster than Sam."). It goes
   through the goal-line path: the motivation worker publishes a `family_record` live note, the hub makes a `GOAL`
   message (speak windows, the per-lap budget, at most two goal or record lines per session), and it never states a lap
-  time. Improving your own record is a personal best, which the lap summary already says.
+  time. Improving your own record is a personal best, which the lap summary already says. The note also reaches
+  `/ws/live` as `{"type": "family_record", "data": {...}}`; the dashboard does not show it (Drive shows no pop-ups on
+  track), and the Records section and the badges refresh after the lap anyway.
 
 ## The lap card (format v1, for a future online board)
 
@@ -245,20 +254,30 @@ The card never names the household driver and never carries traces, setups or ot
 
 ### What an online board needs from the owner first
 
-An online board (step 4 of the leaderboard plan) is a decision for the owner, not something Pitwall does on its own:
+An online board (step 4 of the leaderboard plan) is a decision for the owner, not something Pitwall does on its own.
+Nothing in this branch sends anything; these are the questions to settle before any code is written:
 
-1. **Who runs and moderates it**: removing laps, handling reports and deletion requests.
-2. **UK GDPR and the ICO Children's code**: whoever hosts it is the data controller. A family rig means children may
-   use it, and the Children's code covers services likely to be used by under-18s even when not aimed at them.
-3. **Child profiles never go online by default**: opt-in per profile, per board, with a versioned notice (the pattern
-   of the cloud AI privacy notice).
-4. **Categories**: Time Trial only (fixed conditions, game-validated laps, assists in packet 14) or every session
-   type; which assist classes are separate boards.
-5. **Licence for submitted data** (for example CC0 or CC BY) and a licence for the repository itself (it has none
-   today).
-6. **Hosting**: Lovable (with Supabase) is the owner's likely choice; a static GitHub board or shared lap cards are
-   the alternatives in the research.
-7. **Anti-cheat trust tiers**: UDP is unauthenticated (`pitwall send` already streams a capture over real UDP), so any
+1. **Who runs and moderates it**: removing laps, handling reports, answering access and deletion requests, and
+   what happens to the data if the board is closed.
+2. **UK GDPR and the ICO Children's code**: whoever hosts it is the data controller (a privacy notice, a lawful basis,
+   a retention period, where the data is stored). A family rig means children may use it, and the Children's code
+   covers services likely to be used by under-18s even when they are not aimed at them: high-privacy defaults, no
+   nudging to share, no profiling.
+3. **Child profiles never go online by default**: opt-in per profile and per board by a grown-up, with a versioned
+   notice (the pattern of the cloud AI privacy notice); a profile's online laps can be withdrawn.
+4. **Identity**: the separate `online_name` only (never the household profile name, a PSN / Xbox / Steam id or an
+   e-mail), plus a random install id; whether an install needs an account at all.
+5. **Categories**: Time Trial only (fixed conditions, game-validated laps, assists in packet 14) or every session
+   type; which assist classes are separate boards; F1 25 only at first or GT7 / AC too (their laps can only say
+   "track limits not checked").
+6. **What a lap card carries**: the v1 fields only, or per-corner metrics as well (brake start, trail-braking, minimum
+   speed), which would be the more interesting dataset and the more personal one.
+7. **Licences**: one for submitted data (for example CC0 or CC BY) and one for the repository itself (it has none
+   today). EA rival times and real-F1 times are never submitted as laps: the EA rival is EA's leaderboard data seen
+   in the player's game, and a real-F1 row shown online needs the F1DB credit there too (docs/licences.md).
+8. **Hosting**: Lovable (with its Supabase backend) is the owner's likely choice (below); a static GitHub board or
+   lap cards shared as files are the alternatives in the research.
+9. **Anti-cheat trust tiers**: UDP is unauthenticated (`pitwall send` already streams a capture over real UDP), so any
    lap can be forged and a signature proves only which install sent it. Tiers: self-reported (the card alone), with
    capture (a redacted capture whose hash matches, re-run with `pitwall replay` to recompute the time), reviewed.
    Plausibility checks Pitwall can run: game validity (F1 only), the clean-lap rules, the synthetic flag and
@@ -266,21 +285,109 @@ An online board (step 4 of the leaderboard plan) is a decision for the owner, no
    version, layout length, sectors summing to the lap time, and a lap not far faster than a known benchmark (the EA
    rival, a real-F1 time).
 
+### If the board is hosted on Lovable (design notes, step 4)
+
+Lovable builds a web app (a React front end) with a hosted Supabase backend (Postgres, auth, storage and server-side
+functions). How that would meet Pitwall, if the owner goes ahead; none of it exists yet and the details are to be
+checked against Lovable's and Supabase's terms and current features when the board is built:
+
+- **Pitwall stays local.** The board is a separate app in its own repository; Pitwall only ever sends a lap card
+  when a driver presses "Share this lap" for a lap on a board their profile opted into, and reads the public board
+  with one GET (like the update check) only when that is switched on. No background upload, no telemetry stream.
+- **One write path.** Cards arrive through one server-side function that checks the format and version (it refuses
+  a version it does not know), the evidence flags (`counts` true, not synthetic, not a replay), the plausibility
+  checks above and a rate limit per install id. The database is closed to direct writes by row-level security: a
+  Supabase project's public (anon) key ships in every browser app, so it must not be enough to insert a lap.
+- **What is stored**: the lap card's fields and the install id. No household names, no captures (a capture hash at
+  most), no traces, no other players' data; the EA rival and real-F1 rows are not stored as laps.
+- **Region and deletion**: a project region the owner's privacy notice names (UK or EU), a retention period, and a
+  way for an install to delete its laps (a delete token kept on that machine).
+- **Secrets**: Pitwall would hold only the board's public URL and anon key (public by design); no service-role or
+  admin key ever goes in Pitwall's settings, its repository or a release zip.
+- **The contract is the lap card**: format `pitwall.lapcard` version 1 above. A change that alters a field's meaning
+  bumps the version on both sides.
+
 ## Evaluation on the owner's data (2026-10-15)
 
-A read-only copy of the owner's database (`.backup` of a copy; the original was never opened for writing):
+The final run of the branch on a fresh read-only copy of the owner's database (the database file with its `-wal` and
+`-shm` copied into a scratch folder, then sqlite3's `.backup` of the copy; the original was never opened). The owner
+is "the owner" and the second household profile "the second profile" here.
 
-- 22 boards: 20 F1 25, 2 GT7 (both "Unidentified GT7 circuit", no session type, weather or assists from GT7).
-  All 120 clean laps of real driving are on a board.
-- One contested board: Austria · Haas · Race · Dry (`b2.a?.t?.g3.l2`): the owner 1:10.549, the second profile
-  1:13.616 (+3.067 s, 4.35 %). The owner holds every record and earns one family-record badge.
-- 11 boards have ABS unknown (laps stored before the per-lap assists), 8 ABS on, 1 ABS off (Sakhir, F2): the
-  owner's Sakhir F2 laps split into two boards by ABS, as designed.
-- The whole record index takes about 60 ms on this database (both window-function queries about 11 ms); with the
-  optional rows wired in, about 10-13 ms on a later run of the merged branch (a different load on the machine).
-- Optional rows (merged branch, 2026-10-15): no EA rival (no Time Trial session is recorded). A real-F1 row on 5 of
-  the 20 F1 boards, the ones in a 2025 team's car: Imola · McLaren · Race +8.32 % (bronze), Austria · Haas · Race
-  +10.28 %, Melbourne · McLaren · Race +11.55 % and · Practice +11.37 %, Shanghai · McLaren · Practice +20.96 % (no
-  band). 7 boards in the generic car (UDP format 2025) ask for the car generation instead (with "2025": Miami and
-  Montreal bronze; with "2026": Montreal silver, Miami, Monza and Suzuka bronze); the two reverse layouts have no real
-  layout; the 5 F2 boards and the unknown-car board get no row.
+**Boards.** 22 boards: 20 F1 25, 2 GT7 (both "Unidentified GT7 circuit", no session type, weather or assists from
+GT7). All 120 clean, valid, timed laps of real driving (owned, live UDP sessions at known tracks) are on a board. The
+owner holds all 22 records. One board is contested: Austria · Haas · Race · Dry (`b2.a?.t?.g3.l2`): the owner
+1:10.549 (18 clean laps, best sectors adding up to 1:09.962), the second profile 1:13.616 (+3.067 s, 4.35 %; 5 clean
+laps); its record history is three records by the owner (1:16.577, 1:11.745, 1:10.549), so the record has never
+changed hands and the owner earns one family-record badge. 11 boards have ABS unknown (laps stored before the
+per-lap assists), 8 ABS on, 1 ABS off: the owner's Sakhir F2 laps split into two boards by ABS, as designed. No Time
+Trial session is stored, so no board has an EA rival row. The record index takes about 9 ms (5 runs).
+
+| Board (session type and weather in the key; all dry) | Assists | Record (the owner) | Real F1 row (F1-car boards) |
+|---|---|---|---|
+| Austria · Haas · Race | `b2.a?.t?.g3.l2` | 1:10.549 (contested) | 2025 pole 1:03.971 (Norris): +10.28 %, no band |
+| Austria · F1 Generic · Race | `b0.a?.t?.g3.l2` | 1:18.351 | asks the generation (2025: +22.48 %; 2026: +18.51 %; no band) |
+| Austria (Reverse) · F1 Generic · Race | `b0.a?.t?.g3.l2` | 1:29.483 | none: real F1 has no time on this layout |
+| Imola · McLaren · Race | `b2.a1.t2.g3.l2` | 1:20.886 | 2025 pole 1:14.670 (Piastri): +8.32 %, **bronze** |
+| Jeddah · F2 Art GP '24 · Race | `b3.a1.t2.g3.l2` | 1:45.401 | none (F2) |
+| Las Vegas · F1 Generic · Race | `b2.a?.t?.g3.l2` | 1:36.953 | asks (2025: pole 1:47.934 was slower than the race's fastest lap: -10.17 %, no band; 2026: not raced yet) |
+| Melbourne · F2 Art GP '24 · Qualifying | `b3.a1.t?.g3.l2` | 1:31.525 | none (F2) |
+| Melbourne · F2 Hitech '25 · Race | `b2.a?.t?.g3.l2` | 1:35.588 | none (F2) |
+| Melbourne · McLaren · Race | `b1.a1.t2.g3.l2` | 1:23.772 | 2025 pole 1:15.096 (Norris): +11.55 %, no band |
+| Melbourne · McLaren · Practice | `b1.a1.t2.g3.l2` | 1:23.634 | 2025 pole 1:15.096: +11.37 %, no band |
+| Miami · F1 Generic · Race | `b2.a?.t?.g3.l2` | 1:33.117 | asks (2025: +8.02 % bronze; 2026: +6.06 % bronze) |
+| Montreal · F1 Generic · Race | `b2.a?.t?.g3.l2` | 1:15.523 | asks (2025: +6.52 % bronze; 2026: +4.06 % **silver**) |
+| Monza · F1 Generic · Race | `b0.a?.t?.g3.l2` | 1:28.663 | asks (2025: +12.53 %, no band; 2026: +8.41 % bronze) |
+| Sakhir · F2 Art GP '24 · Race | `b0.a0.t1.g3.l2` (ABS off) | 1:48.897 | none (F2) |
+| Sakhir · F2 Art GP '24 · Race | `b0.a1.t1.g3.l2` (ABS on) | 1:46.540 | none (F2) |
+| Shanghai · McLaren · Practice | `b0.a1.t2.g3.l2` | 1:49.642 | 2025 pole 1:30.641 (Piastri): +20.96 %, no band |
+| Silverstone · F1 Generic · Race | `b1.a?.t?.g3.l2` | 1:43.819 | asks (2025: +22.30 %; 2026: +17.83 %; no band) |
+| Silverstone (Reverse) · F1 Generic · Race | `b2.a?.t?.g3.l2` | 1:34.318 | none: real F1 has no time on this layout |
+| Suzuka · F1 Generic · Race | `b1.a1.t2.g3.l2` | 1:35.707 | asks (2025: +10.03 %, no band; 2026: +7.80 % bronze) |
+| Suzuka · unknown car · Race | `b2.a?.t?.g3.l2` | 1:36.360 | none (car unknown) |
+| GT7 unidentified circuit (0.92 km) · car 919 | `-` | 0:23.055 | - |
+| GT7 unidentified circuit (3.80 km) · car 3353 | `-` | 1:43.358 | - |
+
+So 5 of the 20 F1 boards get a real pole as they are; the 7 generic-car boards (UDP format 2025 cannot say whether
+the generic car is a 2025 or a 2026 car) get one once the driver answers the 2025 / 2026 question on screen.
+
+**F1DB coverage** (`src/pitwall/trackdata/real_f1_benchmarks.json`, F1DB v2026.17.0): 23 of the 37 F1 track ids are
+matched (the game's lap within 3 % of F1DB's current layout).
+
+| F1 25 track (id) | F1DB layout, length vs the game's | 2025 pole | 2026 pole | Fastest race lap on the layout |
+|---|---|---|---|---|
+| Melbourne (0) | melbourne-2, 5278 / 5276 m | 1:15.096 Norris | 1:18.518 Russell | 1:19.813 Leclerc 2024 |
+| Shanghai (2) | shanghai-1, 5451 / 5441 m | 1:30.641 Piastri | 1:32.064 Antonelli | 1:32.238 Schumacher 2004 |
+| Sakhir (3) | bahrain-1, 5412 / 5408 m | 1:29.841 Piastri | - | 1:30.252 Schumacher 2004 |
+| Catalunya (4) | catalunya-6, 4657 / 4664 m | 1:11.546 Piastri | 1:14.679 Russell | 1:15.743 Piastri 2025 |
+| Montreal (6) | montreal-6, 4361 / 4371 m | 1:10.899 Russell | 1:12.578 Russell | 1:13.078 Bottas 2019 |
+| Silverstone (7) | silverstone-8, 5891 / 5890 m | 1:24.892 Verstappen | 1:28.111 Antonelli | 1:27.097 Verstappen 2020 |
+| Hungaroring (9) | hungaroring-3, 4381 / 4378 m | 1:15.372 Leclerc | 1:17.207 Norris | 1:16.627 Hamilton 2020 |
+| Spa (10) | spa-francorchamps-4, 7004 / 7007 m | 1:40.562 Norris | 1:44.361 Antonelli | 1:44.701 Pérez 2024 |
+| Monza (11) | monza-7, 5793 / 5798 m | 1:18.792 Verstappen | 1:21.786 Gasly | 1:20.901 Norris 2025 |
+| Singapore (12) | marina-bay-4, 4927 / 4928 m | 1:29.158 Russell | 1:31.373 Verstappen | 1:33.808 Hamilton 2025 |
+| Suzuka (13) | suzuka-2, 5807 / 5809 m | 1:26.983 Verstappen | 1:28.778 Antonelli | 1:30.965 Antonelli 2025 |
+| Abu Dhabi (14) | yas-marina-2, 5281 / 5280 m | 1:22.207 Verstappen | - | 1:25.637 Magnussen 2024 |
+| Texas (15) | austin-1, 5513 / 5514 m | 1:32.510 Verstappen | - | 1:36.169 Leclerc 2019 |
+| Brazil (16) | interlagos-2, 4309 / 4294 m | 1:09.511 Norris | - | 1:10.540 Bottas 2018 |
+| Austria (17) | spielberg-3, 4326 / 4323 m | 1:03.971 Norris | 1:06.113 Russell | 1:05.619 Sainz 2020 |
+| Baku (20) | baku-1, 6003 / 5994 m | 1:41.117 Verstappen | 1:42.526 Russell | 1:43.009 Leclerc 2019 |
+| Zandvoort (26) | zandvoort-5, 4259 / 4258 m | 1:08.662 Piastri | 1:11.163 Norris | 1:11.097 Hamilton 2021 |
+| Imola (27) | imola-3, 4909 / 4910 m | 1:14.670 Piastri | - | 1:15.484 Hamilton 2020 |
+| Jeddah (29) | jeddah-1, 6174 / 6175 m | 1:27.294 Verstappen | - | 1:30.734 Hamilton 2021 |
+| Miami (30) | miami-1, 5412 / 5410 m | 1:26.204 Verstappen | 1:27.798 Antonelli | 1:29.708 Verstappen 2023 |
+| Las Vegas (31) | las-vegas-1, 6201 / 6200 m | 1:47.934 Norris (slower than the race's fastest lap: gaps, no band) | - | 1:33.365 Verstappen 2025 |
+| Losail (32) | lusail-1, 5419 / 5417 m | 1:19.387 Piastri | - | 1:22.384 Norris 2024 |
+| Madrid (42, 2026 Season Pack) | madring-1, 5416 / 5411 m | - (first raced 2026) | 1:31.824 Norris | 1:35.587 Russell 2026 |
+
+Not matched (no real row, `real_f1_note` says why): **Monaco** (5): the track sheet's 3067 m against F1DB's 3337 m
+(8.1 %; the sheet's length is known to be truncated, a recorded Monaco session will settle it); **Mexico** (19): the
+game's 4525 m against F1DB's 4304 m (4.9 %; the game's lap appears longer than the real circuit, not yet confirmed by
+a recording); the **reverse layouts** Silverstone (39), Austria (40) and Zandvoort (41): real F1 never raced them.
+Not in F1 25 (no game length to check): Paul Ricard (1), Hockenheim (8), Sochi (18), Portimão (28), Hanoi (25: no
+F1DB circuit) and the short layouts of Sakhir, Silverstone, Texas and Suzuka (21-24). A "-" 2026 pole is a race not
+yet run at F1DB v2026.17.0 or not on the 2026 calendar: a 2026 car there gets no real row until a newer F1DB release
+is built in.
+
+Bands against real poles are the [H] GT7 thresholds; the owner's records are 8-21 % off the real pole on the 5 boards
+that get one as they are (4-22 % with the generic car's generation answered), so most boards show gaps without a
+band. Worth the owner's look before release.

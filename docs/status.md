@@ -45,6 +45,8 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Driver profiles and seat changes | yes | yes | no | splitting a live session on a switch | `driver_switch` |
 | Pace against the AI (F1 25) | yes | yes (six PS5 sessions, exact to the millisecond) | no | a real safety car; time trial and the 2026 format; a real "measured" level suggestion | `ai_pace_result` *(new)* |
 | F1 25 Time Trial rival (packet 14: session best, personal best, the EA rival; LapData's ghost car indexes; `pitwall tt-check`) (unreleased) | yes (packets written at the spec's offsets, formats 2025 and 2026; a generated Time Trial stream with a rival ghost, with and without its inputs) | no (**spec-decoded, not yet seen in a recording**: no Time Trial capture exists) | no | everything with the real game: what packet 14 holds (a set with lap time 0 is read as "no lap", an assumption), whether the rival car's slot carries the ghost's inputs, how Participants flags ghost cars | `pitwall tt-check <capture>` on a Time Trial capture with a rival picked (manual) |
+| Family leaderboard: boards per exact key, record index and history, the family-record badge, the engineer's `records` fact, the radio line when a record changes hands, the lap card, Review › Progress Records (unreleased) | yes (unit tests; a generated Time Trial database for the EA rival row on screen) | yes (a read-only copy of the owner's database, 2026-10-15: 22 boards, 120 clean laps, one contested board; the Records screen in a desktop browser at iPad portrait, iPad landscape and phone widths against the service's answers on that copy; [below](#family-leaderboard-unreleased)) | no | the record line heard on track (no record has changed hands in a live session); the Records screen on a real iPad; an EA rival row from a real Time Trial | `goal_line` *(new)* (the record line uses the goal-line path) |
+| Real-F1 benchmarks: F1DB v2026.17.0 per F1 25 track, the pole of the season the car models, gold / silver / bronze bands (unreleased) | yes (unit tests on the committed file; the build script on fixture CSVs) | yes (the owner's boards on the copy: 5 of 20 F1 boards get a real pole, 7 generic-car boards ask for the car generation) | no | Monaco's and Mexico's lap lengths in the game (unmatched until a recorded session settles them); whether the [H] bands help or discourage | - |
 | Technique: racing line, brake and throttle, handling balance, setup suggestions | yes | yes (F1 25 PS5 laps; the line on a GT7 capture; lock-ups on the F2 Bahrain race with ABS off, 2026-10-11) | no | a setup suggestion driven and checked | `technique_balance` *(new)* |
 | Race strategy engineer (F1 25) | yes | yes (Austria and Monza excerpts; a full 71-lap Austria race) | no | safety car, VSC, rain and your own stop (synthetic only) | `strategy_calls` *(new)* |
 | Race radio: flags, penalties, start and countdown, positions and rivals, damage (F1 25, GT7) | yes | yes (F1 25 PS5: yellow, blue, the start, laps to go, the finish, position changes and clean passes, gaps, warnings, time penalties, a drive-through and its service, wing/floor/diffuser damage, retirements, fastest laps; GT7 PS5: the start, lap one, laps to go, the finish and positions; 5 excerpts and 30 of the owner's races, see [below](#race-radio-unreleased)) | no | everything heard on track; the safety car, VSC, red flag, stop-go, disqualification, black flag, reminders, lap invalidations, the car ahead pitting, punctures, minutes left and faults (synthetic only); GT7 positions against the game's screen; Forza (community docs only) | `race_radio` *(new)* |
@@ -363,26 +365,38 @@ badge, the engineer's `records` fact and intent, the radio line when a lap takes
 (through the goal-line path), and the lap card format (`/api/leaderboard/lapcard/{id}`, local only). **Unit tests and
 recorded data (a read-only copy of the owner's database); not live.** Nothing goes online.
 
-On the copy (2026-10-15): 22 boards (20 F1 25, 2 GT7 unidentified circuits); all 120 clean laps of real driving land on
-a board; one contested board (Austria · Haas · Race · Dry: the owner 1:10.549, the second profile +3.067 s, 4.35 %);
-11 boards have ABS and TC unknown (laps stored before the per-lap assists), and the owner's F2 Sakhir laps split by ABS
-(on / off), as designed. The record index takes about 60 ms there. Not yet verified: the radio line heard on track
-(no household record has changed hands in a live session yet).
+On a fresh read-only copy (2026-10-15, the final evaluation of the branch; docs/leaderboard.md has the tables): 22
+boards (20 F1 25, 2 GT7 unidentified circuits); all 120 clean laps of real driving land on a board; the owner holds all
+22 records; one contested board (Austria · Haas · Race · Dry: the owner 1:10.549, the second profile +3.067 s, 4.35 %;
+three record changes, none between drivers); 11 boards have ABS and TC unknown (laps stored before the per-lap
+assists), and the owner's F2 Sakhir laps split by ABS (on / off), as designed. The record index takes about 9 ms there.
+No Time Trial session is stored, so no EA rival row. Not yet verified: the radio line heard on track (no household
+record has changed hands in a live session yet).
 
 The **Records screen** (Review › Progress, the React dashboard): the family board of one exact board key (the any-car
 fallback of the old family board is gone), opened on the newest board where the viewed driver has a lap, pickers for
 the other boards at the track, the times to beat (caveats always, the F1DB credit linked, the EA rival labelled
 spec-decoded, the 2025 / 2026 question for the generic car) and the record history, by density. **vitest on the
 service's real answers over the read-only copy and a generated Time Trial scenario; checked in a desktop browser at
-iPad landscape, iPad portrait and phone widths against a scratch mock serving those answers; not on an iPad, not
-live.** On iPad portrait an advanced driver's board (best sectors, two times to beat) scrolls sideways.
+iPad landscape (1180 x 820), iPad portrait (820 x 1180) and phone (390 x 844) widths against a scratch mock serving
+those answers; not on an iPad, not live.** Below iPad landscape width an advanced driver's best sectors move from a
+column to a list under the board and the cells wrap, so a Time Trial board with both times to beat fits iPad portrait
+(652 px of table, measured; it scrolled sideways before); on a phone the table scrolls inside the card, the page does
+not. The family-record badge is left off the Session complete card when the Best lap tile's REC tag is the same lap.
 
 The optional rows are wired into `/api/leaderboard` and `/api/records`: the **real-F1 pole** (F1DB v2026.17.0, CC BY
 4.0, with its caveat and credit) of the season the car models, on F1-car boards of matched tracks, and the **EA rival**
 on F1 Time Trial boards (**spec-decoded**: no Time Trial recording yet), each with the drivers' gaps and gold / silver /
 bronze bands [H]. **Unit tests; the real-F1 row also on the copy**: 5 of its 20 F1 boards get a real pole (Imola ·
 McLaren +8.32 %, bronze; the others +10.3 to +21 %, no band), 7 generic-car boards ask the driver which car generation
-it was (UDP format 2025 cannot tell), and the EA rival row has not been seen with real data.
+it was (UDP format 2025 cannot tell; answered "2026", Montreal is silver and Miami, Monza and Suzuka bronze), the two
+reverse layouts say real F1 has no time there, and the EA rival row has not been seen with real data. **F1DB coverage**
+(the committed file): 23 of the 37 F1 track ids are matched, every F1 25 circuit but Monaco (the track sheet's 3067 m
+is truncated) and Mexico (the game's lap is 4.9 % longer than F1DB's), plus Madrid (2026 Season Pack); a 2025 pole for
+22 of them (not Madrid), a 2026 pole for 15 (the rest not yet raced in 2026 at F1DB v2026.17.0, or not on the 2026
+calendar); Las Vegas 2025's pole was slower than that race's fastest lap (probably wet), so it gets gaps but no band.
+The 3 reverse layouts have no real layout; the other 9 ids are not in F1 25 (Paul Ricard, Hockenheim, Sochi,
+Portimão, Hanoi and the 4 short layouts).
 
 ## Known gaps
 
@@ -421,7 +435,8 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   generic car or a 2026 car (formula F1 26), so such a board can mix generations and then shows no real-F1 row. The
   EA rival must match the board's "equal car performance" setting exactly (an assumption: EA's Time Trial leaderboards
   may already be split by it); its TC / ABS / gearbox flags are shown, not matched. Real-F1 bands are the [H] GT7
-  thresholds and may feel harsh: the owner's bests are 6-22 % off real poles.
+  thresholds and may feel harsh: the owner's records are 8-21 % off the real pole on the 5 boards that get
+  one as they are, and 4-22 % with the generic car's generation answered, so most boards show gaps without a band.
 - **F1 25 Time Trial (packet 14):** spec-decoded only until a recorded Time Trial capture is checked with
   `pitwall tt-check`. In Time Trial the ghost cars' slots are driving cars to the adapter: if F1 25 flags them as AI in
   Participants, the field model (layer L0b) learns from the ghost's laps as if they were the AI's (not changed here).

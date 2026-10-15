@@ -114,6 +114,17 @@ Real drivers appear by name with the season (public figures, as in any results t
 trademarks of Formula One Licensing B.V.; Pitwall is unofficial and not associated with Formula 1, the FIA or EA.
 Re-run the build for a newer F1DB release (bump `--version`) and review the diff; `--check` reports drift.
 
+## Family leaderboard data (local only: nothing shipped or uploaded)
+
+- **Household laps, names and lap cards** stay in the local database. `GET /api/leaderboard/lapcard/{id}` builds a
+  lap card on this machine and nothing sends it, so no licence for submitted data is chosen yet: an online board needs
+  one first, and the repository itself has no licence today (docs/leaderboard.md, the owner's decisions).
+- **The EA Time Trial rival** (F1 25 packet 14: the lap, sectors and assist flags of the leaderboard entry the player
+  picked in the game) is read from the game's UDP on the player's machine, implemented from EA's published UDP spec,
+  and stored locally (`session_time_trial`). It is EA's leaderboard data: Pitwall never ships, uploads or republishes
+  it, the lap card never carries it, and an online board must not store it. Packet 14 carries no player names.
+- **Real-F1 times** shown anywhere, locally or on a future online board, carry the F1DB credit and the caveat (above).
+
 ## Car setup catalogue (facts with attribution, shipped as data)
 
 `src/pitwall/carsetup/data/f1_25_setups.json` records published F1 25 car setups as numeric facts (setting =

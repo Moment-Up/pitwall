@@ -450,7 +450,8 @@ than one board, pick the session type, weather, assists or car (only the choices
 **Times to beat** (the EA rival in Time Trial, a real F1 pole) with each one's caveat and the F1DB credit, and the
 **Record history**, newest first. Each driver's gap to a time to beat gets a gold, silver or bronze band when it is
 close enough. Beginners see the times, the gaps in words and the bands; intermediate drivers add percentages, dates
-and assists; advanced drivers add best sectors, their sum and the game version.
+and assists; advanced drivers add best sectors, their sum and the game version (a list under the board when the iPad
+is upright, so the board fits without sideways scrolling).
 
 Coaching and Progress are the newest pages and have not been used after a live session yet.
 
