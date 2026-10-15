@@ -24,12 +24,14 @@ import type { SkillLevel } from "../drivers";
 import type {
   ContextKey,
   FaultStatus,
+  KnowledgeChannel,
   KnowledgeCondition,
   KnowledgeContext,
   KnowledgeFault,
   KnowledgeMeasurement,
   KnowledgeNode,
   KnowledgeSource,
+  KnowledgeStyle,
   KnowledgeTechnique,
   KnowledgeTier,
   TechniqueKnowledge,
@@ -574,6 +576,47 @@ export function cornersView(g: TechniqueKnowledge, skill: SkillLevel | null | un
     sources: sourceGroups(g),
     tiers: g.tiers ?? {},
   };
+}
+
+/**
+ * The detected style in words, from what it was detected from (`?session=` `style`): "From 9 clean laps: the brake
+ * still on into the turn at 53 of 56 braking corners, a roll off both pedals at 7." - or that there are not enough
+ * clean laps to tell yet; null without the session variant. Counts only: the shares' thresholds are the server's. With
+ * the F1 braking assist on it adds that some of that braking was the game's (pitwall.knowledge.style).
+ */
+export function styleLine(style: KnowledgeStyle | null | undefined, name?: string | null): string | null {
+  if (!style || typeof style !== "object" || !Number.isFinite(style.braking_corners)) return null;
+  const your = name ? `${name}'s` : "your";
+  if (!style.enough) {
+    return `Not enough clean laps in ${your} last session here to tell ${your} braking style yet.`;
+  }
+  const laps = `${style.laps} clean ${style.laps === 1 ? "lap" : "laps"}`;
+  const trail = `the brake still on into the turn at ${style.trail_corners} of ${style.braking_corners} braking corners`;
+  const coast = Number.isFinite(style.coast_measured) && style.coast_measured > 0 ? `, a roll off both pedals at ${style.coast_corners}` : "";
+  const assist =
+    typeof style.braking_assist === "number" && style.braking_assist >= 1
+      ? " The game's braking assist was on, so some of that braking was the game's."
+      : "";
+  return `From ${laps}: ${trail}${coast}.${assist}`;
+}
+
+/**
+ * What the session's game does not send, from `?session=` `channels`: "This game does not send lateral g or wheel
+ * slip, so checks that need them do not apply here." plus each channel's caveat (GT7's throttle after traction
+ * control); null when every channel is sent or unknown (an unknown channel is never assumed absent).
+ */
+export function channelsLine(channels: Record<string, KnowledgeChannel> | null | undefined): string | null {
+  if (!channels || typeof channels !== "object") return null;
+  const rows = Object.values(channels).filter((c): c is KnowledgeChannel => !!c && typeof c === "object");
+  const missing = rows.filter((c) => c.status === "not_sent").map((c) => c.words);
+  const caveats = [...new Set(rows.map((c) => c.caveat?.trim()).filter((c): c is string => !!c))];
+  const parts: string[] = [];
+  if (missing.length) {
+    const or = missing.length === 1 ? missing[0] : `${missing.slice(0, -1).join(", ")} or ${missing[missing.length - 1]}`;
+    parts.push(`This game does not send ${or}, so checks that need ${missing.length === 1 ? "it" : "them"} do not apply here.`);
+  }
+  parts.push(...caveats);
+  return parts.length ? parts.join(" ") : null;
 }
 
 /** One line on what the tags were judged from; `name` when the page shows another driver's plan. */

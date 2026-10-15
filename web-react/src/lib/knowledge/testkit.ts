@@ -1,8 +1,9 @@
 // Technique knowledge test helpers (tests only; app code never imports this). The fixture in
 // src/test/fixtures/knowledge/ is a BACKEND fixture: the graph payload produced by the server's own code (its
 // `_fixture` block says how), so the screen is tested against the real content, Ed's brief and checklist included.
-// The `?session=` variant (Context, per-node applies / why_not) is being built in parallel: `withSession` adds the
-// documented fields by hand ("edited"), never claiming the server sent them.
+// The `?session=` variant's fields (Context, style, channels, per-node applies / why_not) are added by hand here
+// (`withSession`, "edited"), never claiming the server sent them; real per-point annotations are the backend fixture
+// backend-annotations-melbourne.json (annotation.test.ts).
 
 import type { KnowledgeContext, TechniqueKnowledge } from "../endpoints/knowledge";
 
@@ -11,7 +12,11 @@ interface FixtureFile<T> {
   response: T;
 }
 
-const ALL = import.meta.glob<FixtureFile<unknown>>("../../test/fixtures/knowledge/*.json", { eager: true, import: "default" });
+// the graph payload only (backend-graph.json); the annotation fixture beside it is read by annotation.test.ts
+const ALL = import.meta.glob<FixtureFile<unknown>>("../../test/fixtures/knowledge/backend-graph*.json", {
+  eager: true,
+  import: "default",
+});
 
 function load<T>(name: string): T {
   const f = Object.entries(ALL).find(([p]) => p.endsWith(`/${name}.json`))?.[1];
@@ -20,8 +25,9 @@ function load<T>(name: string): T {
 }
 
 export const knowledgeFixtures = {
-  /** GET /api/technique/knowledge on feat/knowledge 828dcf8: the plain graph, no session Context. */
-  graph: () => load<TechniqueKnowledge>("backend-graph-828dcf8"),
+  /** GET /api/technique/knowledge on feat/knowledge (its `_fixture` block names the commit): the plain graph, no
+   * session Context. */
+  graph: () => load<TechniqueKnowledge>("backend-graph"),
 };
 
 export function knowledgeFixtureBlocks(): { name: string; block: FixtureFile<unknown>["_fixture"] }[] {
@@ -33,13 +39,15 @@ export function withSession(
   g: TechniqueKnowledge,
   context: KnowledgeContext,
   verdicts: Record<string, { applies: boolean; why_not?: string | null }> = {},
+  extra: Pick<TechniqueKnowledge, "style" | "channels"> = {},
 ): TechniqueKnowledge {
   const mark = <N extends { id: string }>(nodes: N[]): N[] =>
     nodes.map((n) => (verdicts[n.id] ? { ...n, applies: verdicts[n.id]!.applies, why_not: verdicts[n.id]!.why_not ?? null } : n));
   return {
     ...g,
     context,
-    style: { braking_style: context.braking_style ?? null, coasting: context.coasting ?? null },
+    style: extra.style ?? null,
+    channels: extra.channels ?? null,
     techniques: mark(g.techniques),
     faults: mark(g.faults),
   };

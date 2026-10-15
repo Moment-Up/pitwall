@@ -23,6 +23,7 @@ import { isReplaySource, timingEligible, type EvidenceTier } from "./kpis";
 import type { LapsRow } from "./laps";
 import { INCIDENT_KIND } from "./coaching";
 import { cornerWords, finite, joinAnd, plural, sentence, whyText } from "./words";
+import { fitsDriver } from "../knowledge/annotation";
 
 // ---- route -------------------------------------------------------------------------------------------------------
 
@@ -413,15 +414,19 @@ export function explainerText(
   );
 }
 
-/** The coach's observations for a corner on the compared lap: technique first, incidents apart (never advice). */
+/** The coach's observations for a corner on the compared lap: technique first, incidents apart (never advice), and
+ * apart too the points the technique graph says do not fit the driver (`notForYou`: shown with the reason, never
+ * coaching; lib/knowledge/annotation.ts). */
 export function cornerObservations(
   observations: readonly ReviewObservation[] | null | undefined,
   corner: string,
-): { coaching: ReviewObservation[]; incidents: ReviewObservation[] } {
+): { coaching: ReviewObservation[]; incidents: ReviewObservation[]; notForYou: ReviewObservation[] } {
   const here = (observations ?? []).filter((o) => o.corner === corner);
+  const technique = here.filter((o) => o.kind !== INCIDENT_KIND);
   return {
-    coaching: here.filter((o) => o.kind !== INCIDENT_KIND).sort((a, b) => b.priority - a.priority),
+    coaching: technique.filter((o) => fitsDriver(o)).sort((a, b) => b.priority - a.priority),
     incidents: here.filter((o) => o.kind === INCIDENT_KIND),
+    notForYou: technique.filter((o) => !fitsDriver(o)),
   };
 }
 

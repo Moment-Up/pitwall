@@ -176,6 +176,38 @@ export interface KnowledgeEdge {
   sources: string[];
 }
 
+/** What a session's braking style was detected from (`?session=` `style`; pitwall.knowledge.style.Style): the
+ * driver's clean laps at the track, counted per braking corner (one corner on one lap with a matched braking event). */
+export interface KnowledgeStyle {
+  braking_style: "trail" | "straight_line" | "mixed" | null;
+  coasting: "rare" | "often" | null;
+  laps: number;
+  braking_corners: number;
+  /** Braking corners with the brake still on into the turn (trail braking). */
+  trail_corners: number;
+  /** Braking corners with a roll off both pedals before the throttle (coasting). */
+  coast_corners: number;
+  /** Braking corners where coasting was measured. */
+  coast_measured: number;
+  trail_share: number | null;
+  coast_share: number | null;
+  /** Enough clean laps and braking corners to tell. */
+  enough: boolean;
+  /** The F1 braking assist level the laps were driven with (1 and above: some of the braking was the game's); null =
+   * off or not reported. Absent on a server before the flag. */
+  braking_assist?: number | null;
+}
+
+/** One input channel for the session's game (`?session=` `channels`; pitwall.knowledge.context.channels_payload). */
+export interface KnowledgeChannel {
+  /** not_sent: the game does not send it, so signals needing it are unavailable; unknown: never assumed absent. */
+  status: "sent" | "not_sent" | "unknown";
+  /** The channel in words ("lateral g"). */
+  words: string;
+  /** A note that does not change availability (GT7's throttle after traction control). */
+  caveat: string | null;
+}
+
 /** The driver and car a session's knowledge is judged for (pitwall.knowledge.context.Context; spec section 2). Every
  * field optional and null = unknown: an unknown trait satisfies no condition. */
 export type KnowledgeContext = Partial<Record<ContextKey, string | boolean | null>>;
@@ -204,10 +236,10 @@ export interface TechniqueKnowledge {
   session_id?: string | null;
   /** `?session=` only: the session's Context. */
   context?: KnowledgeContext | null;
-  /** `?session=` only: what the style was detected from (shape not relied on: the screen reads `context`). */
-  style?: Record<string, unknown> | null;
-  /** `?session=` only: what the session's game sends, per channel (not read by the screen yet). */
-  channels?: Record<string, unknown> | null;
+  /** `?session=` only: what the style was detected from (the context line says it in words). */
+  style?: KnowledgeStyle | null;
+  /** `?session=` only: what the session's game sends, per channel (the context line names what it does not). */
+  channels?: Record<string, KnowledgeChannel> | null;
 }
 
 // ---------------------------------------------------------------------------------------------- transport

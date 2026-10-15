@@ -1,6 +1,8 @@
 // Compare's right column (spec 6.5): the map following the cursor, the corner explainer (the comparison's numbers for
-// the corner at the cursor in neutral words, with the coach's observation for that corner under it) and the corner
-// table in plain words (Pro DataGrid; columns by density, 6.10). Tapping a table row moves the cursor to that corner.
+// the corner at the cursor in neutral words, with the coach's observation for that corner under it, the causes the
+// technique graph named from that lap's measurements, and apart any point the graph says does not fit the driver) and
+// the corner table in plain words (Pro DataGrid; columns by density, 6.10). Tapping a table row moves the cursor to
+// that corner.
 // Phone: the corners as a list of cards instead of the table.
 
 import { ChartLine } from "@gravity-ui/icons";
@@ -30,6 +32,7 @@ import {
 import type { Density } from "../../../../lib/review/density";
 import { focusKeyAt, type PhasePin } from "../../../../lib/review/phase-markers";
 import type { CursorSync } from "../../../../lib/viz/cursor";
+import { causeLines, evidenceSentence, notForYou } from "../../../../lib/knowledge/annotation";
 
 /** The corner at the cursor (re-renders only when it changes), else `fallback`. `pin`: the corner whose phase point
  * the phase key moved the cursor to stays in focus while the cursor rests there (lib/review/phase-markers.ts). */
@@ -113,8 +116,9 @@ export const CornerExplainer = memo(function CornerExplainer({ corner, observati
       </Card>
     );
   }
-  const { coaching, incidents } = cornerObservations(observations, corner.key);
+  const { coaching, incidents, notForYou: others } = cornerObservations(observations, corner.key);
   const coach = coaching[0];
+  const why = coach ? causeLines(coach) : [];
   return (
     <Card className="gap-3 p-5" aria-live="polite">
       <div className="flex flex-wrap items-center gap-2">
@@ -132,8 +136,20 @@ export const CornerExplainer = memo(function CornerExplainer({ corner, observati
             {coach.positive ? " · went well" : ""}
           </span>
           <p className="m-0 text-sm leading-relaxed">{simple && coach.text_simple ? coach.text_simple : coach.text}</p>
+          {why.map((c) => (
+            <p key={c.id} className="m-0 text-xs text-muted">
+              <b className="font-medium text-foreground">Why: {c.line}.</b>
+              {c.evidence.length > 0 && ` ${evidenceSentence(c.evidence)}`}
+            </p>
+          ))}
         </div>
       )}
+      {others.map((o) => (
+        <div key={o.id} className="grid gap-1 rounded-2xl border border-separator px-4 py-3 opacity-70">
+          <span className="text-xs font-medium text-muted">Not coached for you · {notForYou(o)}</span>
+          <p className="m-0 text-sm text-muted">{simple && o.text_simple ? o.text_simple : o.text}</p>
+        </div>
+      ))}
       {incidents.map((o) => (
         <div key={o.id} className="grid gap-1 rounded-2xl border border-separator px-4 py-3 opacity-70">
           <span className="text-xs font-medium text-muted">Incident · not used for technique advice</span>

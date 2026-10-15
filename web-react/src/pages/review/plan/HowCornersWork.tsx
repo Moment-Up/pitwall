@@ -7,6 +7,8 @@
 //   - "What Pitwall checks": the faults coached on their laps today apart from the ones not coached yet (experimental,
 //     planned, background), with the causes Pitwall can tell apart and its own measurements by density;
 //   - "Where this comes from": Ed (Pitwall tester) credited first, then published coaching and Pitwall's own sources.
+// With the session variant the context line also says how the braking style was read (its clean laps and braking
+// corners) and what the game does not send (so the checks that need it do not apply).
 // The pure rules are lib/knowledge/view.ts. Density by the viewed driver's level (lib/review/density.ts): beginners
 // read the narrative (what each phase is, what fits them, in 18 px), advanced drivers get the detail inline; "Show
 // the detail" opens it for anyone, for this section only. Published and brief knowledge is never presented as
@@ -20,12 +22,14 @@ import { useApi } from "../../../hooks/useApi";
 import type { SkillLevel } from "../../../lib/drivers";
 import { isMissingKnowledge, KNOWLEDGE_MAX_AGE_MS, knowledgeApi, knowledgeKeys, type KnowledgeTier } from "../../../lib/endpoints/knowledge";
 import {
+  channelsLine,
   contextNote,
   cornersView,
   creditLine,
   faultFitLabel,
   fitLabel,
   knowledgeDensity,
+  styleLine,
   TIER_LABEL,
   type FaultItem,
   type Fit,
@@ -317,6 +321,9 @@ export function HowCornersWork({ sessionId, skill, level, name }: HowCornersWork
   const kd = knowledgeDensity(detail ? "advanced" : level);
   const view = useMemo(() => (q.data && q.data.valid !== false ? cornersView(q.data, skill) : null), [q.data, skill]);
   const s: Shared = { kd, name, tiers: view?.tiers ?? {} };
+  // the session variant only: how the braking style was read, and what this game cannot measure
+  const style = view ? styleLine(q.data?.style, name) : null;
+  const channels = view ? channelsLine(q.data?.channels) : null;
 
   if (q.error && !q.data && isMissingKnowledge(q.error)) return null; // a server before the technique graph
 
@@ -365,6 +372,8 @@ export function HowCornersWork({ sessionId, skill, level, name }: HowCornersWork
             </div>
           )}
           <p className="m-0 text-sm text-muted">{contextNote(view.context, name)}</p>
+          {style && <p className="m-0 text-sm text-muted">{style}</p>}
+          {channels && <p className="m-0 text-sm text-muted">{channels}</p>}
         </div>
         <div className="grid items-start gap-4 md:grid-cols-2 xl:grid-cols-3">
           {view.phases.map((p) => (

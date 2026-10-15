@@ -2,9 +2,14 @@
 // the session averages (corner_summary: time, brake point mean and spread, slowest speed) and every lap where the
 // coach spoke there (its text verbatim, with an evidence line). Filter Work on · Went well · All; sorted by average
 // time lost (Went well: most time gained first). Incident observations stay on the card, greyed, marked "not used
-// for technique advice" (they are never coaching). Pure; tested in node.
+// for technique advice" (they are never coaching). Technique knowledge (lib/knowledge/annotation.ts): a point the
+// technique graph says does not fit the driver is greyed the same way with the graph's reason ("not coached for you:
+// Only for: H-pattern gearbox") and counts for neither filter; a coached point lists the causes its measured signals
+// named, each with the evidence in words, and the graph's explanation written for the driver's skill or braking style.
+// Pure; tested in node.
 
 import type { CornerSummaryRow, ReviewObservation, ReviewTrackModel, SessionAnalysis } from "../endpoints/review";
+import { causeLines, notForYou, tailoredExplanation, type CauseLine } from "../knowledge/annotation";
 import { INCIDENT_KIND } from "./coaching";
 import { cornerIdentity, type CornerIdentity } from "./corners";
 import { evidenceLine, finite, plural } from "./words";
@@ -28,6 +33,13 @@ export interface CornerCardObservation {
   incident: boolean;
   /** "about 0.11 s a lap · confidence high" (no consistency: each row is one lap). */
   evidence: string;
+  /** The technique graph says this point does not fit the driver: its reason (never coaching; shown greyed). */
+  notForYou: string | null;
+  /** The causes the lap's measured signals named, with their evidence in words. */
+  causes: CauseLine[];
+  /** The graph's explanation written for the driver's skill or braking style; null when only the general wording
+   * exists (the coach's text says it). */
+  explain: string | null;
 }
 
 export interface CornerCard extends CornerIdentity {
@@ -35,7 +47,7 @@ export interface CornerCard extends CornerIdentity {
   /** Mean time vs the reference over the compared laps, s (+ = lost); null when unknown. */
   meanTimeS: number | null;
   observations: CornerCardObservation[];
-  /** Has a correction (not an incident). */
+  /** Has a correction (not an incident, not a point the technique graph says is for another driver). */
   workOn: boolean;
   /** Has a positive observation. */
   wentWell: boolean;
@@ -56,7 +68,15 @@ function cardObservation(lapId: number | null, o: ReviewObservation, simple: boo
     positive: o.positive,
     incident,
     evidence: incident ? "" : evidenceLine({ impactS: o.impact_s, confidence: o.confidence }),
+    notForYou: incident ? null : notForYou(o),
+    causes: incident ? [] : causeLines(o),
+    explain: incident ? null : tailoredExplanation(o),
   };
+}
+
+/** A point the coach used: not an incident, and the technique graph does not say it is for another driver. */
+function coached(o: CornerCardObservation): boolean {
+  return !o.incident && o.notForYou == null;
 }
 
 /** Every corner of the session (the summary's, plus any the coach spoke about), sorted by average time lost. */
@@ -82,9 +102,11 @@ export function cornerCards(
   const focus = new Set(opts.focus ?? []);
   const cards: CornerCard[] = [];
   for (const key of keys) {
-    const obs = (byCorner.get(key) ?? []).sort((a, b) => b.lapNumber - a.lapNumber || Number(a.incident) - Number(b.incident));
+    const obs = (byCorner.get(key) ?? []).sort(
+      (a, b) => b.lapNumber - a.lapNumber || Number(!coached(a)) - Number(!coached(b)),
+    );
     const s = summary.get(key) ?? null;
-    const coaching = obs.filter((o) => !o.incident);
+    const coaching = obs.filter(coached);
     cards.push({
       ...cornerIdentity(model, key, labels.get(key)),
       summary: s,
@@ -178,7 +200,7 @@ export function averageTimeText(s: CornerSummaryRow | null, signed: boolean): st
 
 /** Laps where the coach spoke here, newest first ("Laps 71, 70 and 68"). */
 export function lapsSpokenText(card: Pick<CornerCard, "observations">): string | null {
-  const laps = [...new Set(card.observations.filter((o) => !o.incident).map((o) => o.lapNumber))];
+  const laps = [...new Set(card.observations.filter(coached).map((o) => o.lapNumber))];
   if (!laps.length) return null;
   if (laps.length === 1) return `Lap ${laps[0]}`;
   return `Laps ${laps.slice(0, -1).join(", ")} and ${laps[laps.length - 1]}`;
