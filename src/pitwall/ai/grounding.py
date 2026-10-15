@@ -1,10 +1,18 @@
-"""Grounding validation: every number in an AI answer must be traceable to a supplied fact.
+"""Grounding validation: every number in an AI answer must be traceable to a supplied fact, and every driving
+technique it names to a fact about that technique.
 
 If the answer cites facts, its numbers must come from the *cited* facts; otherwise from any supplied fact.
 A number in the answer is accepted if it is a rounding of some number appearing in those facts (e.g.
 fact "13.4 m" -> answer "13 m"), within 2% relative tolerance, or a trivially small integer (0-2). Sign is
 ignored because facts say "-13 m (earlier)" where speech says "13 m earlier". Corner names ("T3", "Turn 3")
 are identifiers, not measurements, and are excluded. Lap times "1:05.626" are compared in seconds.
+
+Techniques (knowledge spec section 3: answers about technique cite only graph facts): a phrase that names a technique
+or cause of the technique graph (``knowledge.terms.TERMS``: "trail braking", "heel and toe", "over-braking" ...) is
+accepted only when one of the same facts is about it - lists the node in ``data["nodes"]`` (the technique knowledge
+facts) or says it in its own words; a common technique the graph does not hold (``knowledge.terms.OTHER_TERMS``:
+"threshold braking", "a late apex" ...) only when a fact says it. Otherwise it is an invented technique claim
+(``ungrounded_techniques``), and the answer is not grounded.
 """
 
 from __future__ import annotations
@@ -14,6 +22,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 
 from pitwall.ai.facts import Fact
+from pitwall.knowledge.terms import OTHER_TERMS, TERMS
 
 _CITATION = re.compile(r"\[(F\d+)\]")
 _CORNER = re.compile(r"\b(?:T|Turn\s*|turn\s*|corner\s*|Corner\s*)(\d+)\b")
@@ -65,6 +74,30 @@ class GroundingResult:
     cited: list[str] = field(default_factory=list)
     unknown_citations: list[str] = field(default_factory=list)
     ungrounded_numbers: list[str] = field(default_factory=list)
+    ungrounded_techniques: list[str] = field(default_factory=list)  # technique phrases no considered fact is about
+
+
+def _about(node_id: str, patterns: Sequence[re.Pattern[str]], f: Fact) -> bool:
+    """Whether fact ``f`` is about technique-graph node ``node_id``: it lists it, or says it in its own words."""
+    nodes = f.data.get("nodes")
+    if isinstance(nodes, list | tuple) and node_id in nodes:
+        return True
+    return any(p.search(f.text) or (f.say is not None and p.search(f.say)) for p in patterns)
+
+
+def technique_claims(answer: str, facts: Sequence[Fact]) -> list[str]:
+    """The technique phrases in ``answer`` that none of ``facts`` is about (module docstring), as written."""
+    text = _CITATION.sub(" ", answer)
+    bad: list[str] = []
+    for node_id, patterns in TERMS.items():
+        hit = next((m for p in patterns if (m := p.search(text)) is not None), None)
+        if hit is not None and not any(_about(node_id, patterns, f) for f in facts):
+            bad.append(hit.group(0))
+    for p in OTHER_TERMS:
+        m = p.search(text)
+        if m is not None and not any(p.search(f.text) or (f.say is not None and p.search(f.say)) for f in facts):
+            bad.append(m.group(0))
+    return bad
 
 
 def check_grounding(answer: str, facts: list[Fact]) -> GroundingResult:
@@ -72,12 +105,20 @@ def check_grounding(answer: str, facts: list[Fact]) -> GroundingResult:
     cited = list(dict.fromkeys(_CITATION.findall(answer)))
     unknown = [c for c in cited if c not in by_id]
     known_cited = [by_id[c] for c in cited if c in by_id]
-    pool = fact_numbers(known_cited if known_cited else facts)
+    considered = known_cited if known_cited else facts
+    pool = fact_numbers(considered)
     bad = []
     for v, dec in _numbers(answer):
         if not _matches(v, dec, pool):
             bad.append(f"{v:.{dec}f}")
-    return GroundingResult(ok=not unknown and not bad, cited=cited, unknown_citations=unknown, ungrounded_numbers=bad)
+    techniques = technique_claims(answer, considered)
+    return GroundingResult(
+        ok=not unknown and not bad and not techniques,
+        cited=cited,
+        unknown_citations=unknown,
+        ungrounded_numbers=bad,
+        ungrounded_techniques=techniques,
+    )
 
 
 def strip_citations(text: str) -> str:

@@ -1,8 +1,9 @@
 """The technique graph in use (spec: technique knowledge graph, section 3): every observation carries its ``knowledge``
 annotation on the live path and in stored-session analysis; a fault that does not fit the driver is never picked,
 never on the coach card and never a habit (and still makes its corner unclean); coaching on the eight live kinds is
-unchanged on F1; and ``GET /api/technique/knowledge?session=<id>`` adds the session's Context, style and per-node
-fit.
+unchanged on F1; the AI engineer's knowledge facts are grounded, an answer built from them passes and an invented
+technique claim fails; and ``GET /api/technique/knowledge?session=<id>`` adds the session's Context, style and
+per-node fit.
 
 The laps are the SYNTHETIC coaching demo (``demo_session``): results prove the wiring against known answers, never
 game compatibility.
@@ -17,6 +18,9 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from pitwall.ai.engineer import RaceEngineer, detect_intent
+from pitwall.ai.facts import Fact, build_fact_sheet
+from pitwall.ai.grounding import check_grounding
 from pitwall.coach.selection import CoachSelection
 from pitwall.config import Settings
 from pitwall.core import lap_processor as lp
@@ -24,6 +28,7 @@ from pitwall.core.lap_processor import LapJob, LapProcessor
 from pitwall.core.live import LiveState
 from pitwall.core.session_analysis import SessionAnalyzer
 from pitwall.drivers import DriverService
+from pitwall.knowledge.facts import CONTEXT_PREFIX, FAULT_PREFIX, TOPIC
 from pitwall.knowledge.graph import CONTEXT_KEYS, TechniqueGraph, load_graph
 from pitwall.storage.db import Database, DbWriter
 from tests.coachref_support import copy_lap, lap_ctx, new_session
@@ -224,6 +229,70 @@ def test_session_analysis_annotates_observations_for_review(
     assert sa.knowledge.style.enough and sa.knowledge.context.braking_style is not None
     observations = [o for obs in sa.observations.values() for o in obs]
     assert observations and all(o["knowledge"]["fault"] == o["kind"] for o in observations)
+
+
+# ---------------------------------------------------------------------------------------------- AI engineer
+@pytest.fixture(scope="module")
+def sheet(processed: tuple[list[dict[str, Any]], list[dict[str, Any]], Database, str]) -> list[Fact]:
+    _, _, db, sid = processed
+    sa = SessionAnalyzer(db).analyse(sid)
+    assert sa is not None
+    return build_fact_sheet(sa).facts
+
+
+def test_knowledge_facts_are_grounded_and_name_their_nodes(sheet: list[Fact]) -> None:
+    know = [f for f in sheet if f.topic == TOPIC]
+    assert know[0].text.startswith(CONTEXT_PREFIX) and all(f.text.startswith(FAULT_PREFIX) for f in know[1:])
+    assert sheet[-len(know) :] == know  # last on the sheet: never pushes another fact out of a selection
+    seen = {f.data["fault"] for f in know[1:]}
+    assert {"low_min_speed", "brake_early"} <= seen
+    for f in know:
+        assert check_grounding(f"{f.plain} [{f.id}]", sheet).ok, f.plain
+        assert isinstance(f.data["nodes"], list)
+        low = f.text.lower()
+        assert "brake later" not in low and "carry more speed" not in low and "brake less" not in low
+    ctx = know[0]
+    assert "skill beginner" in ctx.text and "Not known: fuel saving" in ctx.text
+    lms = next(f for f in know if f.data.get("fault") == "low_min_speed")
+    assert "Pitwall coaches it" in lms.text and "low_min_speed" in lms.data["nodes"]
+    assert "throttle_at_rotation" in lms.data["nodes"]  # the apex's technique
+    assert "not validated by Pitwall" in lms.text  # expert knowledge is never presented as Pitwall's evidence
+
+
+def test_an_answer_from_graph_facts_passes_and_an_invented_technique_fails(sheet: list[Fact]) -> None:
+    ctx = next(f for f in sheet if f.topic == TOPIC)
+    assert "trail_braking" in ctx.data["nodes"]  # an F1 car (high downforce): trail braking fits this driver
+    assert check_grounding(f"Trail braking fits a car like yours [{ctx.id}].", sheet).ok
+    invented = check_grounding(f"Try heel-and-toe downshifts into Turn 3 [{ctx.id}].", sheet)
+    assert not invented.ok and invented.ungrounded_techniques == ["heel-and-toe"]
+    uncited = check_grounding("Use threshold braking everywhere.", sheet)
+    assert not uncited.ok and uncited.ungrounded_techniques == ["threshold braking"]
+    # a technique fact that says it in its own words grounds it too (no graph node list needed)
+    own = Fact("F1", "technique", "T3: trail braking 0.4 s longer than your reference lap.")
+    assert check_grounding("You trail-braked longer into T3 [F1].", [own]).ok
+    assert not check_grounding("You coasted to the apex at T3 [F1].", [own]).ok
+
+
+def test_the_technique_terms_follow_the_graph() -> None:
+    """Every technique of the graph has the words answers name it by; every term names a technique or cause."""
+    from pitwall.knowledge.graph import Cause, Technique
+    from pitwall.knowledge.terms import TERMS
+
+    g = load_graph()
+    assert {t.id for t in g.techniques} <= set(TERMS)
+    assert all(isinstance(g.node(k), Technique | Cause) for k in TERMS)
+    # narrow on purpose: ordinary sentences about the pedals are no technique claim
+    for plain in ("You braked 12 m earlier.", "Full throttle 20 m later.", "The car has paddles with auto-blip."):
+        assert check_grounding(plain, []).ungrounded_techniques == [], plain
+
+
+def test_technique_questions_see_the_knowledge_facts(sheet: list[Fact]) -> None:
+    from pitwall.ai.facts import FactSheet
+
+    fs = FactSheet(facts=sheet)
+    for q in ("should I trail brake?", "what should I work on?", "how is my braking?"):
+        sel = RaceEngineer._select(detect_intent(q), fs)
+        assert any(f.topic == TOPIC for f in sel), q
 
 
 # ---------------------------------------------------------------------------------------------- API

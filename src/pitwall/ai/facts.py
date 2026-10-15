@@ -30,6 +30,12 @@ metres, and whether DRS is enabled in the race (the strategy view).
 Pace vs AI (topic ``ai``): the session's pace against the typical AI car (``SessionAnalysis.ai_pace``) and, for a
 driver's own real driving, the suggested AI level at this track (``SessionAnalysis.ai_suggestion``). Every number in
 their driver-facing sentences is in the fact's text or data; an unknown AI level or too few AI laps is stated as such.
+
+Technique knowledge (topic ``knowledge``, ``pitwall.knowledge.facts``, last on the sheet): the driver's Context and
+detected braking style, and for each fault seen this session its graph node, the causes Pitwall measured, the
+techniques for that phase that fit this driver (and those for other drivers, with why) and its sources, each with its
+evidence tier. Their ``data["nodes"]`` name the graph nodes they are about: an answer naming a technique is grounded
+only by a fact about it (``ai.grounding``), so the engineer explains the graph and never invents a technique.
 """
 
 from __future__ import annotations
@@ -49,6 +55,7 @@ from pitwall.carhealth.facts import add_car_health_facts  # --- health lane ---
 from pitwall.carsetup.facts import session_setup_facts
 from pitwall.coach.reference_wording import lap_date
 from pitwall.core.session_analysis import SessionAnalysis
+from pitwall.knowledge.facts import knowledge_facts  # technique knowledge graph
 from pitwall.strategy.facts import add_strategy_facts  # race strategy (pitwall.strategy)
 from pitwall.strategy.view import pit_rules
 from pitwall.technique.facts import technique_facts  # feat/technique
@@ -1040,4 +1047,9 @@ def build_fact_sheet(sa: SessionAnalysis, live: dict[str, Any] | None = None) ->
     if entry is not None:
         for _group, cap_text, cap_say, cap_data in games.capability_facts(entry, platform_known):
             fs.add("game", cap_text, cap_data, say=cap_say)
+    # --- technique knowledge (pitwall.knowledge): the driver's Context and style, and each fault seen this session
+    # with its measured causes, the techniques for that phase and sources. After every other fact, so a long sheet's
+    # selection limit (FactSheet.select) never pushes another fact out for them.
+    for topic, text, data, say in knowledge_facts(sa):
+        fs.add(topic, text, data, say=say)
     return fs
