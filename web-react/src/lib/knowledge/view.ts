@@ -205,6 +205,13 @@ export function fitLabel(fit: Fit, name?: string | null): string {
   return fit === "fits" && name ? `Fits ${name}` : FIT_LABEL[fit];
 }
 
+/** A fault's tag: whether Pitwall's check of it applies to this driver and car. Not "for other drivers": the session
+ * variant also rules a fault out when the game does not send a channel it needs ("GT7 does not send ..."). */
+export function faultFitLabel(fit: Fit, name?: string | null): string {
+  if (fit === "fits") return `Applies to ${name ?? "you"}`;
+  return fit === "other" ? "Does not apply here" : FIT_LABEL.unknown;
+}
+
 /** Words for an unknown-trait list: "your braking style and the car's downforce". */
 function andList(items: readonly string[]): string {
   if (items.length <= 1) return items[0] ?? "";

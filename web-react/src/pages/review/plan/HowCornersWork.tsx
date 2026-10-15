@@ -23,6 +23,7 @@ import {
   contextNote,
   cornersView,
   creditLine,
+  faultFitLabel,
   fitLabel,
   knowledgeDensity,
   TIER_LABEL,
@@ -40,10 +41,10 @@ const FIT_COLOUR: Readonly<Record<Fit, "success" | "default" | "warning">> = {
   unknown: "warning",
 };
 
-function FitChip({ fit, name }: { fit: Fit; name: string | null }) {
+function FitChip({ fit, name, fault = false }: { fit: Fit; name: string | null; fault?: boolean }) {
   return (
     <Chip size="sm" variant="soft" color={FIT_COLOUR[fit]} className="shrink-0">
-      <Chip.Label>{fitLabel(fit, name)}</Chip.Label>
+      <Chip.Label>{fault ? faultFitLabel(fit, name) : fitLabel(fit, name)}</Chip.Label>
     </Chip>
   );
 }
@@ -179,7 +180,7 @@ function FaultList({ items, label, s }: { items: readonly FaultItem[]; label: st
                     <Chip.Label>{f.statusLabel}</Chip.Label>
                   </Chip>
                 )}
-                {!(f.fit.universal && f.fit.fit === "fits") && <FitChip fit={f.fit.fit} name={s.name} />}
+                {!(f.fit.universal && f.fit.fit === "fits") && <FitChip fit={f.fit.fit} name={s.name} fault />}
                 {kd.tiers && <TierChip tier={f.tier} meaning={s.tiers[f.tier]} />}
               </span>
               <ListView.Title className="whitespace-normal text-[15px] leading-snug">{f.name}</ListView.Title>

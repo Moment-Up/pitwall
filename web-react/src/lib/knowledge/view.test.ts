@@ -15,6 +15,7 @@ import {
   creditLine,
   faultGroups,
   fitOf,
+  faultFitLabel,
   FIT_LABEL,
   fitLabel,
   knowledgeDensity,
@@ -258,6 +259,9 @@ describe("context chips and the section", () => {
     expect(TIER_LABEL.brief).toBe("Ed's brief");
     expect(Object.values(FIT_LABEL)).toEqual(["Fits you", "For other drivers", "Not known yet"]);
     expect(fitLabel("fits", "Alex")).toBe("Fits Alex");
+    expect(faultFitLabel("other")).toBe("Does not apply here");
+    expect(faultFitLabel("fits", "Alex")).toBe("Applies to Alex");
+    expect(faultFitLabel("unknown")).toBe("Not known yet");
     expect(fitLabel("other", "Alex")).toBe("For other drivers");
     expect(contextNote({ ctx: {}, source: "server" }, "Alex")).toBe("Matched to the driver and car of Alex's last session here.");
   });

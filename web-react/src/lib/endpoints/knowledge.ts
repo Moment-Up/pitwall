@@ -200,10 +200,14 @@ export interface TechniqueKnowledge {
   constraints: KnowledgeConstraint[];
   sources: KnowledgeSource[];
   edges: KnowledgeEdge[];
+  /** `?session=` only: the session it was judged for. */
+  session_id?: string | null;
   /** `?session=` only: the session's Context. */
   context?: KnowledgeContext | null;
-  /** `?session=` only: the detected style, as the server reports it (shape not relied on beyond `context`). */
+  /** `?session=` only: what the style was detected from (shape not relied on: the screen reads `context`). */
   style?: Record<string, unknown> | null;
+  /** `?session=` only: what the session's game sends, per channel (not read by the screen yet). */
+  channels?: Record<string, unknown> | null;
 }
 
 // ---------------------------------------------------------------------------------------------- transport

@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ApiError } from "../../../lib/api";
 import { cache } from "../../../lib/cache";
 import { knowledgeKeys } from "../../../lib/endpoints/knowledge";
-import { knowledgeFixtures, OWNER_F1, withSession } from "../../../lib/knowledge/testkit";
+import { BEGINNER_GT7, knowledgeFixtures, OWNER_F1, withSession } from "../../../lib/knowledge/testkit";
 import { HowCornersWork, type HowCornersWorkProps } from "./HowCornersWork";
 
 afterEach(() => cache.clear());
@@ -74,6 +74,17 @@ describe("How corners work", () => {
     expect(t).toContain("Causes Pitwall can tell apart: Over-braking · Early turn-in · Less grip");
     expect(t).toContain("Fires on corner-laps (Ed's detector): 66.8% (2026-10-14)");
     expect(t).not.toContain("Show the detail");
+  });
+
+  it("a coached fault the server rules out for this session shows why, never as 'for other drivers'", () => {
+    const sid = "gt7session";
+    const why = "This game does not send a channel this check needs.";
+    cache.set(knowledgeKeys.graph(sid), withSession(knowledgeFixtures.graph(), BEGINNER_GT7, { late_throttle: { applies: false, why_not: why } }));
+    const t = text(html({ sessionId: sid, skill: "beginner", level: "beginner", name: null }));
+    const checks = t.slice(t.indexOf("What Pitwall checks"));
+    expect(checks).toContain(`Does not apply here Late to full throttle`);
+    expect(checks).toContain(why);
+    expect(checks).not.toContain("For other drivers");
   });
 
   it("another driver's plan names them", () => {
