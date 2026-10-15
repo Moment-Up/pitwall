@@ -53,7 +53,8 @@ Block contract (JSON; ``coach_block``)::
      focus: [habit + {reminder}]}     # the habits being worked on, with their corner reminder (or None)
 
     point = slim observation + {picked, habit: {status, laps_seen, laps} | None, one_off: bool,
-             knowledge: {fault, applies, why_not, causes: [{id, name, evidence, screen}], advice} | None}
+             knowledge: {fault, applies, why_not, causes: [{id, name, discriminates, evidence, screen}], advice}
+                        | None}  (causes: only those that tell their fault apart, the reasons the card may say)
             (a habit's point carries the tracker's count in consistency / consistency_ratio)
             (+ for a tracker event: habit_event "announce"|"improving"|"fixed"|"still", was_value, clean_laps,
             clean_of)
@@ -234,8 +235,8 @@ def corner_points(
 def slim(o: Mapping[str, Any], picked: bool) -> dict[str, Any]:
     """The coach card's copy of an observation: ``COACH_FIELDS``, the scalar evidence (the per-lap metric dicts
     ``evidence.ref`` / ``evidence.lap`` stay in ``observations[]``), its technique knowledge (``knowledge.annotate
-    .slim``: applies, measured causes with their evidence, advice at the driver's skill and style; None without one)
-    and whether the coach picked it."""
+    .slim``: applies, the measured causes that tell their fault apart with their evidence, advice at the driver's skill
+    and style; None without one) and whether the coach picked it."""
     d = {k: o.get(k) for k in COACH_FIELDS}
     d["knowledge"] = slim_knowledge(o.get("knowledge"))
     ev = o.get("evidence")

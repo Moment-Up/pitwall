@@ -14,7 +14,10 @@ why the others do not, which causes the measured signals name, what to say at th
   ``why_not`` says why not in plain words ("Only for: H-pattern gearbox (gearbox not known)", "GT7 does not send
   lateral g").
 * **Causes** (``causes``): named from measured values only (``graph.Discriminator.holds``: an unmeasured value holds
-  nothing), each with the evidence that named it: the discriminators that held, their plain-words test and the value.
+  nothing), each with the evidence that named it: the discriminators that held, their plain-words test and the value,
+  and ``discriminates``: whether the cause's base-rate check showed it tells its fault apart (``graph.Cause``). Only
+  such a cause is said as the reason (the coach card, any radio form, the AI engineer's driver-facing sentence);
+  Review shows the others as also measured on that lap, never as why.
 * **Advice** (``advice``): per form (radio, screen, review), the first advice for the node that has that form, ranked
   a style match first, then the driver's skill, then ``any`` (file order breaks ties). The live faults' ``any``
   advice is today's wording without the numbers, so the radio and the card read as before; numbers stay in the
@@ -23,12 +26,13 @@ why the others do not, which causes the measured signals name, what to say at th
   work and the AI engineer do: a habit read partly from the game's braking is never presented as all the driver's.
 
 The annotation (``annotate``, an additive ``knowledge`` key on ``Observation.to_dict()`` shapes; never stored):
-``{fault, name, status, tier, applies, why_not, causes: [{id, name, tier, evidence: [{signal, test, value, unit}],
-advice}], advice: {radio, screen, review, ids}, digest}``, or None when the graph did not load or has no fault for the
-observation's kind. ``analysis.coaching.applies`` reads ``applies``: a fault that does not apply is stored and shown
-in Review with ``why_not``, never picked for the radio or the coach card, and never a habit (``coach.selection``,
-``coach.habits``). For the eight live kinds this changes nothing on F1: they have no conditions and every game sends
-their channels. ``slim`` is the coach block's copy (``coach.selection.slim``).
+``{fault, name, status, tier, applies, why_not, causes: [{id, name, tier, discriminates, evidence: [{signal, test,
+value, unit}], advice}], advice: {radio, screen, review, ids}, digest}``, or None when the graph did not load or has no
+fault for the observation's kind. ``analysis.coaching.applies`` reads ``applies``: a fault that does not apply is stored
+and shown in Review with ``why_not``, never picked for the radio or the coach card, and never a habit
+(``coach.selection``, ``coach.habits``). For the eight live kinds this changes nothing on F1: they have no conditions
+and every game sends their channels. ``slim`` is the coach block's copy (``coach.selection.slim``) and ``card_slim`` the
+snapshot observations' copy: both carry only the causes that tell their fault apart, the only ones the coach card says.
 
 Signal values (``LapSignals``): a compared lap's per-corner values, read where each signal's ``code`` says -
 ``CornerDelta.*`` from the corner's delta, ``CornerMetrics.*`` from this lap's metrics, and the technique signals that
@@ -564,6 +568,7 @@ class DriverKnowledge:
                     "id": c.id,
                     "name": c.name,
                     "tier": c.tier,
+                    "discriminates": c.discriminates,
                     "evidence": [
                         {
                             "signal": d.signal,
@@ -613,14 +618,23 @@ class DriverKnowledge:
         return {n.id: self.fit(n) for n in nodes}
 
 
+def reasons(k: object) -> list[Mapping[str, Any]]:
+    """The annotation's causes that tell their fault apart (``discriminates`` true), in order: the only ones said as
+    the reason. A cause without the flag (an older annotation) is not one."""
+    causes = k.get("causes") if isinstance(k, Mapping) else None
+    return [
+        c for c in (causes if isinstance(causes, list) else ()) if isinstance(c, Mapping) and c.get("discriminates")
+    ]
+
+
 def slim(k: object) -> dict[str, Any] | None:
     """The coach block's copy of an annotation (``coach.selection.slim``; every ``/ws/live`` snapshot carries the coach
-    block): the annotation's shape, with each cause's evidence as its measured values (``{signal, value, unit}``)
-    without the plain-words test, which the full annotation in the lap notification and Review's analysis carry."""
+    block): the annotation's shape with only the causes that tell their fault apart (``reasons``: the coach card says
+    no other), each cause's evidence as its measured values (``{signal, value, unit}``) without the plain-words test,
+    which the full annotation in the lap notification and Review's analysis carry with every measured cause."""
     if not isinstance(k, Mapping):
         return None
     adv = k.get("advice")
-    causes = k.get("causes")
     return {
         "fault": k.get("fault"),
         "applies": k.get("applies"),
@@ -629,6 +643,7 @@ def slim(k: object) -> dict[str, Any] | None:
             {
                 "id": c.get("id"),
                 "name": c.get("name"),
+                "discriminates": True,
                 "evidence": [
                     {"signal": e.get("signal"), "value": e.get("value"), "unit": e.get("unit")}
                     for e in c.get("evidence") or ()
@@ -636,8 +651,7 @@ def slim(k: object) -> dict[str, Any] | None:
                 ],
                 "screen": _cause_screen(c),
             }
-            for c in (causes if isinstance(causes, list) else ())
-            if isinstance(c, Mapping)
+            for c in reasons(k)
         ],
         "advice": {f: adv.get(f) for f in FORMS} if isinstance(adv, Mapping) else None,
     }
@@ -645,18 +659,20 @@ def slim(k: object) -> dict[str, Any] | None:
 
 def card_slim(k: object) -> dict[str, Any] | None:
     """The snapshot observations' copy of an annotation (``core.live``; twenty snapshots a second): only what the
-    coach card reads when it falls back to an observation - whether the point fits the driver and the first measured
-    cause's screen line. The coach block carries ``slim``; the lap notification and Review the full annotation."""
+    coach card reads when it falls back to an observation - whether the point fits the driver and the screen line of
+    the first measured cause that tells its fault apart (``reasons``). The coach block carries ``slim``; the lap
+    notification and Review the full annotation."""
     if not isinstance(k, Mapping):
         return None
-    causes = k.get("causes")
-    first = next((c for c in (causes if isinstance(causes, list) else ()) if isinstance(c, Mapping)), None)
+    first = next(iter(reasons(k)), None)
     return {
         "fault": k.get("fault"),
         "applies": k.get("applies"),
         "causes": []
         if first is None
-        else [{"id": first.get("id"), "name": first.get("name"), "screen": _cause_screen(first)}],
+        else [
+            {"id": first.get("id"), "name": first.get("name"), "discriminates": True, "screen": _cause_screen(first)}
+        ],
     }
 
 

@@ -5,6 +5,12 @@
 # Discriminators use computed signals only (signals.toml with a code), so every cause here can be named today where
 # its channels exist: the slip and balance ones on F1 25 only, the others on every game. Thresholds marked [H] are
 # Pitwall's judgement; "named on" counts are from pitwall_signal_spread (six real F1 25 sessions, 2026-10-15).
+# measured = the base-rate check (scripts/cause_base_rates.py, docs/knowledge.md): of the corner-laps where the
+# cause's evidence could be measured, on how many with its fault the evidence held, against those without it.
+# discriminates = true only when that check passes for every live fault it explains (graph.DISCRIMINATES_RATIO, [H]:
+# at least twice the base rate, on 10 or more of the fault's corner-laps): only then is the cause said as the reason
+# (the Drive coach card, any radio form, the AI engineer). Otherwise (the default) Review and the AI engineer show it
+# as also measured on that lap, never as why.
 
 [[cause]]
 id = "over_braking"
@@ -17,6 +23,7 @@ sources = ["ed_corner_brief"]
 notes = """Ed's brief: a lift after the throttle has started means the car arrived too slow, from too much braking or an
 early turn-in; his self-check reads an on-off-on throttle the same way. Thresholds are the coaching rules' own floors.
 Named on 32 of 278 low_min_speed points (12%)."""
+discriminates = false
 
 [[cause.discriminators]]
 signal = "brake_point_delta_m"
@@ -32,6 +39,17 @@ test = "at least 4 km/h slower at the corner entry than on the reference lap"
 op = "le"
 value = -4.0
 note = "4 km/h is analysis.coaching.MIN_SPEED_KPH, the low_min_speed rule's floor."
+
+[[cause.measured]]
+fault = "low_min_speed"
+fault_laps = 387
+fault_held = 69
+other_laps = 485
+other_held = 71
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+note = """18% against 15%: 1.22 times the base rate (one-sided Fisher exact p 0.12). Braking earlier and reaching the
+corner slower is about as common on corner-laps without a low minimum speed, so it is what was also measured, not why."""
 
 [[cause]]
 id = "early_turn_in"
@@ -52,6 +70,7 @@ reference either way: slower is over_braking, and a much faster entry (a Melbour
 sooner and a 32 km/h faster entry, 2026-10-15 review) is a different line or a jump of the slowest point. The id keeps
 Ed's name for the idea. Named on 16 of 278 low_min_speed points (6%) before the entry cap; a 10 m margin would name
 it on 71 (26%), mostly noise."""
+discriminates = false
 
 [[cause.discriminators]]
 signal = "min_speed_pos_delta_m"
@@ -75,6 +94,17 @@ value = 4.0
 note = """A much faster entry moves the slowest point for other reasons (another line, or a jump of the slowest point
 inside a long corner): analysis.coaching.MIN_SPEED_KPH again."""
 
+[[cause.measured]]
+fault = "low_min_speed"
+fault_laps = 558
+fault_held = 16
+other_laps = 615
+other_held = 35
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+note = """3% against 6%: half the base rate. The slowest point came sooner more often on corner-laps without the fault,
+so it tells nothing about why the slowest point was lower."""
+
 [[cause]]
 id = "low_grip"
 name = "Less grip"
@@ -91,6 +121,7 @@ evidence for traction_limited (late_throttle) instead. The slide and the underst
 lap at the same corner (mid_slide_vs_ref, mid_understeer_vs_ref): read from this lap alone, understeer the reference
 lap shared (the car at that corner) named this cause on about half of the owner's low_min_speed points. A lock-up is
 this lap's own (counted only with ABS off)."""
+discriminates = false
 
 [[cause.discriminators]]
 signal = "mid_slide_vs_ref"
@@ -114,6 +145,18 @@ value = 1.0
 need = "any"
 note = "Counted only with ABS off."
 
+[[cause.measured]]
+fault = "low_min_speed"
+fault_laps = 550
+fault_held = 126
+other_laps = 599
+other_held = 84
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+note = """23% against 14%: 1.63 times the base rate (one-sided Fisher exact p 0.0001). More sliding than on the reference
+lap does go with a lower minimum speed, but below twice the base rate it is not shown to be why. F1 25 only (tyre
+slip): GT7 corner-laps are unmeasured."""
+
 [[cause]]
 id = "traction_limited"
 name = "Traction-limited exit"
@@ -130,6 +173,7 @@ wheelspin or exit oversteer. Each piece of evidence is judged against the refere
 corner-laps against 7.9% of the others (the 2026-10-15 review), the car at that corner rather than what held this
 lap's throttle back. Tyre slip and body slip: F1 25 only. With traction control full some wheelspin is normal (car
 health keeps those off the radio)."""
+discriminates = false
 
 [[cause.discriminators]]
 signal = "exit_wheelspin_vs_ref"
@@ -150,6 +194,18 @@ op = "true"
 need = "any"
 note = "Oversteer as technique.balance classes it: front-minus-rear slip at or below technique.thresholds.OS_DIFF_DEG."
 
+[[cause.measured]]
+fault = "late_throttle"
+fault_laps = 241
+fault_held = 21
+other_laps = 908
+other_held = 67
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+note = """9% against 7%: 1.18 times the base rate (one-sided Fisher exact p 0.28), with traction control on in every
+session. Wheelspin, a slide or exit oversteer the reference lap did not have is about as common without a late
+throttle."""
+
 [[cause]]
 id = "ready_earlier"
 name = "No grip loss on the exit"
@@ -165,10 +221,11 @@ steering already unwound and less combined g than the reference: those signals a
 (steering_at_full_throttle_frac, exit_grip_utilization_frac, throttle_acceptance_delta); add them here as discriminators
 when they are. Named only with traction control off and every discriminator measured (James, 2026-10-15): with
 traction control on or unknown the game holds wheelspin back, so "no wheelspin" proves little, and the cause is the
-absence of measured grip loss - which held on 75% of the owner's late_throttle corner-laps and 70% of the others, its
-base rate. F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing. On
+absence of measured grip loss - which holds as often on the owner's corner-laps without a late throttle (the
+base-rate check below). F1 25 only (tyre slip); an exit balance that was not measured (no at-the-limit samples) names nothing. On
 the owner's 30 captures (traction control on in every one) it is never named now; it was named on 105 of 157
 late_throttle points (2026-10-15)."""
+discriminates = false
 
 [[cause.discriminators]]
 signal = "exit_wheelspin_events"
@@ -195,6 +252,18 @@ op = "gt"
 value = -1.0
 note = "-1 degree is technique.thresholds.OS_DIFF_DEG: at or below it technique.balance classes the exit oversteer."
 
+[[cause.measured]]
+fault = "late_throttle"
+fault_laps = 213
+fault_held = 171
+other_laps = 764
+other_held = 618
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+note = """80% against 81%: the base rate. Measured with traction control on (or not reported) in every session, where
+the cause is never named: no grip loss is the usual exit then. Check it again on laps with traction control off before
+it can be anything but also measured."""
+
 [[cause]]
 id = "early_brake_release"
 name = "Early brake release"
@@ -207,6 +276,7 @@ sources = ["ed_fault_checklist", "designjudges_driver_data", "mysimrig_telemetry
 notes = """A longer coast opens at one end or the other: here the brake end moved (waiting_for_rotation: the throttle
 end). Published telemetry guides read a flat gap between the brake and the throttle as time lost; Pitwall only describes
 it. Named on 11 of 24 coasting points."""
+discriminates = true
 
 [[cause.discriminators]]
 signal = "brake_release_delta_m"
@@ -214,6 +284,18 @@ test = "braking ended at least 8 m sooner than on the reference lap"
 op = "le"
 value = -8.0
 note = "[H] 8 m is analysis.coaching.BRAKE_POINT_M, the floor for a braking point difference."
+
+[[cause.measured]]
+fault = "coasting"
+fault_laps = 60
+fault_held = 26
+other_laps = 812
+other_held = 161
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+note = """43% against 20%: 2.19 times the base rate (one-sided Fisher exact p below 0.001), on 19 sessions. Close to the
+line: on the six sessions of the first check alone it was 12 of 33 against 100 of 504 (1.83 times); check it again as
+laps are recorded."""
 
 [[cause]]
 id = "waiting_for_rotation"
@@ -227,6 +309,7 @@ sources = ["ed_corner_brief", "blayze_throttle_exit"]
 notes = """Ed's brief point 9: the throttle comes back at the apex once the car has rotated. Rotation itself is measured
 on F1 25 only (yaw rate), so the evidence is the timing at both ends of the gap. Named on 9 of 24 coasting points; the
 two coasting causes cannot both be named (the brake end separates them)."""
+discriminates = false
 
 [[cause.discriminators]]
 signal = "throttle_pickup_delta_m"
@@ -241,6 +324,17 @@ test = "braking ended no more than 8 m sooner than on the reference lap"
 op = "gt"
 value = -8.0
 
+[[cause.measured]]
+fault = "coasting"
+fault_laps = 55
+fault_held = 24
+other_laps = 801
+other_held = 246
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+note = """44% against 31%: 1.42 times the base rate (one-sided Fisher exact p 0.035). The throttle coming back later
+with the brake end where it was is common on corner-laps without extra coasting too."""
+
 [[cause]]
 id = "carried_too_much_speed"
 name = "Carried too much speed"
@@ -253,6 +347,7 @@ sources = ["beckman_physics_of_racing_17", "pitwall_coaching"]
 notes = """What counts is the time through the corner and down the next straight, not the apex speed; the live
 overspeed_apex rule already says the entry speed compromised the exit. The evidence says how the extra speed arrived:
 a faster entry or braking that began further on. Named on 7 of 14 overspeed_apex points."""
+discriminates = false
 
 [[cause.discriminators]]
 signal = "entry_speed_delta_kph"
@@ -270,6 +365,17 @@ value = 8.0
 need = "any"
 note = "8 m is analysis.coaching.BRAKE_POINT_M."
 
+[[cause.measured]]
+fault = "overspeed_apex"
+fault_laps = 18
+fault_held = 9
+other_laps = 1155
+other_held = 367
+date = "2026-10-15"
+source = "pitwall_cause_base_rate"
+note = """50% against 32%: 1.57 times the base rate on only 9 corner-laps with the fault (one-sided Fisher exact p
+0.085): a faster entry or later braking is common without the fault, and too few points to say more."""
+
 [[cause]]
 id = "released_too_early_for_apex"
 name = "Released too early for the apex"
@@ -282,7 +388,9 @@ sources = ["ed_fault_checklist", "ed_corner_brief"]
 notes = """Ed's checklist row "released too early for the apex: a large coast, an apex undershoot and a stepped throttle
 recovery". His brief's self-check reads the same on-off-on throttle as over-braking (over_braking explains it too);
 the fix he paired with it is an instruction the constraints reject. Here it is a review-only explanation: no radio
-form, tied to the driver's own faster laps."""
+form, tied to the driver's own faster laps. No base-rate check yet: stepped_throttle is planned, so it never fires and
+there is nothing to check against; until then it is never shown as the reason."""
+discriminates = false
 
 [[cause.discriminators]]
 signal = "coast_delta_m"

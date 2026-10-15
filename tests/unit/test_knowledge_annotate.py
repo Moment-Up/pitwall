@@ -21,7 +21,9 @@ from pitwall.knowledge.annotate import (
     TECHNIQUE_READERS,
     CornerTechnique,
     DriverKnowledge,
+    card_slim,
     corner_reader,
+    reasons,
     slim,
 )
 from pitwall.knowledge.context import Context, build_context
@@ -355,14 +357,50 @@ def test_the_annotation_of_an_observation(g: TechniqueGraph) -> None:
         None,
     )
     assert [c["id"] for c in k["causes"]] == ["over_braking"] and k["digest"] == g.digest
+    # over-braking holds about as often without a low minimum speed (its base rate): measured, never the reason
+    assert k["causes"][0]["discriminates"] is False
     assert k["advice"]["screen"] == "Slower in the middle of the corner"  # the beginner's words
     s = slim(k)
     assert s is not None and set(s) == {"fault", "applies", "why_not", "causes", "advice"}
-    assert s["causes"][0]["screen"] == "Slowed more than your reference on the way in"
-    assert set(s["causes"][0]["evidence"][0]) == {"signal", "value", "unit"}  # no plain-words test at 20 Hz
+    assert s["causes"] == []  # the coach card says only a cause shown to tell its fault apart
+    coast = view.annotate(obs("coasting"), corner_reader(delta(brake_end_m=548.0, coast_m=20.0)))
+    assert coast is not None
+    assert [(c["id"], c["discriminates"]) for c in coast["causes"]] == [("early_brake_release", True)]
+    sc = slim(coast)
+    assert sc is not None and sc["causes"][0]["screen"] == "Finished braking sooner, then rolled"  # beginner words
+    assert sc["causes"][0]["discriminates"] is True
+    assert set(sc["causes"][0]["evidence"][0]) == {"signal", "value", "unit"}  # no plain-words test at 20 Hz
     assert view.annotate(obs("not_a_kind")) is None and slim(None) is None
     assert view.annotate(obs("exit_gain"))["advice"]["radio"]  # type: ignore[index]
     assert coaching.applies({**obs("low_min_speed"), "knowledge": k})
+
+
+def test_only_causes_that_tell_their_fault_apart_reach_the_coach_card() -> None:
+    """The full annotation (Review, the lap notification) keeps every measured cause with ``discriminates``; the coach
+    block's copy and the snapshot observations' copy keep only the causes shown to tell their fault apart, the first of
+    which is the card's cause line. A cause without the flag (an older annotation) is never one."""
+    full = {
+        "fault": "low_min_speed",
+        "applies": True,
+        "why_not": None,
+        "causes": [
+            {"id": "low_grip", "name": "Less grip", "discriminates": False, "evidence": [], "screen": "Slid"},
+            {"id": "x", "name": "X", "discriminates": True, "evidence": [], "advice": {"screen": "Shown"}},
+            {"id": "old", "name": "Old", "evidence": [], "screen": "No flag"},
+        ],
+        "advice": None,
+    }
+    assert [c["id"] for c in reasons(full)] == ["x"]
+    s = slim(full)
+    assert s is not None and [(c["id"], c["screen"], c["discriminates"]) for c in s["causes"]] == [("x", "Shown", True)]
+    assert card_slim(full) == {
+        "fault": "low_min_speed",
+        "applies": True,
+        "causes": [{"id": "x", "name": "X", "discriminates": True, "screen": "Shown"}],
+    }
+    only_measured = {**full, "causes": full["causes"][:1]}
+    assert slim(only_measured)["causes"] == [] and card_slim(only_measured)["causes"] == []  # type: ignore[index]
+    assert reasons(None) == [] and reasons({"causes": "x"}) == []
 
 
 def test_a_point_that_does_not_fit_is_marked(g: TechniqueGraph) -> None:

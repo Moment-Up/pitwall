@@ -23,7 +23,11 @@ Node types (``NODE_TYPES``; the TOML table is the type's name):
 * ``fault``      something that goes wrong. ``status`` live = a coaching rule says it today (``kind``, the
                  ``Observation.kind``, equal to the id); experimental / planned / context_only otherwise.
 * ``cause``      why a fault happens, when it can be named (``applies_when`` / ``applies_any``: e.g. only with
-                 traction control off) and the evidence that tells it apart (``discriminators``).
+                 traction control off) and the evidence that tells it apart (``discriminators``). ``discriminates``
+                 (default false) says the base-rate check (``measured``: ``BaseRate``) showed that evidence holds
+                 clearly more often on its fault's corner-laps than on the others (``DISCRIMINATES_RATIO``): only then
+                 is the cause said as the reason (the Drive coach card, any radio form, the AI engineer); otherwise it
+                 is what was also measured on that lap.
 * ``advice``     what to say about a fault or cause: radio, screen and review texts, by skill and braking style.
 * ``constraint`` a rule every text obeys: forbidden phrasings, e.g. no "brake later" outside praise.
 * ``source``     where knowledge came from: a book, a web page, Ed's brief, a Pitwall measurement.
@@ -44,7 +48,10 @@ only, with the right types; every reference resolves to a node of the right type
 phases; condition keys and values from ``CONTEXT_VALUES``, no condition cycles; every signal's ``code`` names a real
 dataclass field (``SIGNAL_CLASSES``) and its channels are known (``CHANNEL_FIELDS``); a live fault's ``kind`` is a
 coaching kind (``analysis.coaching.COACHING_KINDS``) and its signals are computed; thresholds name numeric constants;
-advice length limits; every user-facing text passes every constraint; canonical ids have their type.
+advice length limits; every user-facing text passes every constraint; canonical ids have their type; a cause's
+base-rate checks name faults it explains, once each, with consistent counts and a ``recorded`` source, and
+``discriminates = true`` needs a passing check for every live fault it explains (and for one at least); a cause
+advice with a radio form needs ``discriminates = true``.
 
 A broken graph raises ``GraphError`` (listing every problem) from ``load_graph_dir``. The app's ``load_graph()``
 (cached) logs the problems instead and returns an empty graph (``valid`` False): Pitwall starts and coaches as before
@@ -191,6 +198,18 @@ SIGNAL_CLASSES: Mapping[str, str] = {
 }
 SIGNAL_UNITS: tuple[str, ...] = ("m", "s", "km/h", "m/s", "g", "deg", "rpm", "fraction", "ratio", "count", "bool")
 
+# [H] When a cause tells its fault apart (``Cause.discriminates``, ``BaseRate.passes``): on the corner-laps where its
+# evidence could be measured, the evidence held on at least DISCRIMINATES_RATIO times as large a share of the fault's
+# corner-laps as of the other corner-laps (its base rate), on at least DISCRIMINATES_MIN_HELD of the fault's
+# corner-laps, with at least DISCRIMINATES_MIN_OTHER other corner-laps measured. Below about twice the base rate the
+# evidence changes the odds that it explains the point only a little (the usual reading of a diagnostic likelihood ratio
+# between 1 and 2), so it describes what was measured, not why the fault happened; the counts keep a handful of laps
+# from deciding it. Pitwall's judgement, not a published rule.
+DISCRIMINATES_RATIO = 2.0
+DISCRIMINATES_MIN_HELD = 10
+DISCRIMINATES_MIN_OTHER = 30
+BASE_RATE_TIER: Tier = "recorded"  # a base rate is measured on recorded real laps: generated laps prove no cause
+
 RADIO_MAX_WORDS = 8  # an advice's radio form: a few descriptive words, inside the radio's line budget
 SCREEN_MAX_CHARS = 48  # = analysis.coaching.SHORT_MAX_CHARS: a glance on the Drive screen (a test keeps them equal)
 REVIEW_MAX_CHARS = 320  # one or two plain sentences
@@ -308,6 +327,50 @@ class Measurement:
     date: str  # YYYY-MM-DD or YYYY-MM
     source: str  # source id
     note: str | None = None
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class BaseRate:
+    """A cause's base-rate check against one fault it explains (``[[cause.measured]]``): of the non-incident
+    corner-laps where the cause's evidence could be measured, ``fault_laps`` had the fault and the evidence held on
+    ``fault_held`` of them; ``other_laps`` did not have it and the evidence held on ``other_held``. ``source`` (a
+    ``recorded`` source) says which laps; ``note`` anything else about the sample."""
+
+    fault: str
+    fault_laps: int
+    fault_held: int
+    other_laps: int
+    other_held: int
+    date: str  # YYYY-MM-DD or YYYY-MM
+    source: str
+    note: str | None = None
+
+    @property
+    def fault_share(self) -> float | None:
+        return self.fault_held / self.fault_laps if self.fault_laps else None
+
+    @property
+    def other_share(self) -> float | None:
+        return self.other_held / self.other_laps if self.other_laps else None
+
+    @property
+    def ratio(self) -> float | None:
+        """The fault's share over the base rate (infinite when the evidence never held elsewhere); None unmeasured."""
+        a, b = self.fault_share, self.other_share
+        if a is None or b is None:
+            return None
+        return a / b if b > 0 else (math.inf if a > 0 else None)
+
+    @property
+    def passes(self) -> bool:
+        """The rule for ``discriminates`` (``DISCRIMINATES_RATIO`` and the minimum counts)."""
+        r = self.ratio
+        return (
+            r is not None
+            and r >= DISCRIMINATES_RATIO
+            and self.fault_held >= DISCRIMINATES_MIN_HELD
+            and self.other_laps >= DISCRIMINATES_MIN_OTHER
+        )
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -457,7 +520,10 @@ class Fault(Node):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Cause(Node):
     """``applies_when`` / ``applies_any``: conditions the driver's Context must meet before the cause can be named at
-    all (an unknown trait meets none), e.g. traction control off for "no wheelspin" to mean anything."""
+    all (an unknown trait meets none), e.g. traction control off for "no wheelspin" to mean anything.
+    ``discriminates``: the base-rate checks (``measured``) showed its evidence tells every live fault it explains
+    apart (``BaseRate.passes``), so it may be said as the reason; False (the default: not checked, or it did not
+    pass): it is only what was also measured on that lap."""
 
     node_type: ClassVar[NodeType] = "cause"
     explains: tuple[str, ...]
@@ -465,6 +531,8 @@ class Cause(Node):
     advice: tuple[str, ...] = ()
     applies_when: tuple[str, ...] = ()
     applies_any: tuple[str, ...] = ()
+    discriminates: bool = False
+    measured: tuple[BaseRate, ...] = ()
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -886,6 +954,27 @@ def _measurements(t: _Table, key: str) -> tuple[tuple[Measurement, ...], list[_T
     return tuple(out), subs
 
 
+def _base_rates(t: _Table) -> tuple[tuple[BaseRate, ...], list[_Table]]:
+    """A cause's ``[[cause.measured]]`` base-rate checks (``BaseRate``); references are checked in ``_validate``."""
+    subs = t.tables("measured")
+    out: list[BaseRate] = []
+    for s in subs:
+        fault, date, source = s.text("fault"), s.text("date"), s.text("source")
+        note = s.text("note", required=False)
+        counts = {k: s.integer(k) for k in ("fault_laps", "fault_held", "other_laps", "other_held")}
+        for k, v in counts.items():
+            if v < 0:
+                s.fail(k, "must not be negative")
+        for held, laps in (("fault_held", "fault_laps"), ("other_held", "other_laps")):
+            if counts[held] > counts[laps]:
+                s.fail(held, f"{counts[held]} is more than {laps} ({counts[laps]})")
+        if date is not None and not _MEASURED_DATE.match(date):
+            s.fail("date", f"{date!r} is not YYYY-MM-DD or YYYY-MM")
+        if fault and date and source and s.ok:
+            out.append(BaseRate(fault=fault, date=date, source=source, note=note, **counts))
+    return tuple(out), subs
+
+
 def _base(t: _Table, *, name: bool = True, summary: bool = True, sources: bool = True) -> dict[str, Any]:
     """The fields every node has (``name`` / ``summary`` / ``sources`` False: optional for this type)."""
     node_id = t.text("id") or ""
@@ -1012,6 +1101,8 @@ def _cause(t: _Table) -> Cause | None:
     explains = t.strings("explains", required=True)
     advice = t.strings("advice")
     applies_when, applies_any = t.strings("applies_when"), t.strings("applies_any")
+    discriminates = t.flag("discriminates")
+    measured, rate_subs = _base_rates(t)
     subs = t.tables("discriminators")
     discs: list[Discriminator] = []
     for s in subs:
@@ -1028,7 +1119,7 @@ def _cause(t: _Table) -> Cause | None:
                     signal=signal, test=test, op=cast(TestOp, op), value=value, need=cast(Need, need), note=note
                 )
             )
-    if not t.finish(subs):
+    if not t.finish([*subs, *rate_subs]):
         return None
     return Cause(
         **kw,
@@ -1037,6 +1128,8 @@ def _cause(t: _Table) -> Cause | None:
         advice=advice,
         applies_when=applies_when,
         applies_any=applies_any,
+        discriminates=discriminates,
+        measured=measured,
     )
 
 
@@ -1255,11 +1348,17 @@ def _validate(nodes: Sequence[Node]) -> list[str]:
             mirrored(n, "advice", n.advice, Advice, "for_id", "is not for it")
             for i, d in enumerate(n.discriminators):
                 ref(n, f"discriminators[{i}].signal", [d.signal], Signal)
+            errors += _base_rate_problems(n, by_id)
         elif isinstance(n, Advice):
             ref(n, "for", [n.for_id], Fault, Cause)
             owner = by_id.get(n.for_id)
             if isinstance(owner, Fault | Cause) and n.id not in owner.advice:
                 errors.append(f"{n.where}: for {n.for_id!r}, but {owner.where} does not list it in advice")
+            if isinstance(owner, Cause) and n.radio is not None and not owner.discriminates:
+                errors.append(
+                    f"{n.where}: a radio form for cause {n.for_id!r}, which is not shown to tell its fault apart "
+                    "(discriminates = false): the radio says a cause only as the reason"
+                )
 
     errors += _condition_cycles([n for n in nodes if isinstance(n, Condition)])
 
@@ -1284,6 +1383,47 @@ def _validate(nodes: Sequence[Node]) -> list[str]:
                 want = "a live fault" if live else "a fault that is not live (planned, experimental or context_only)"
                 errors.append(f"{found.where}: {x!r} is canonically {want}")
     return errors
+
+
+def _base_rate_problems(c: Cause, by_id: Mapping[str, Node]) -> list[str]:
+    """A cause's base-rate checks and ``discriminates`` (module docstring, Validation)."""
+    out: list[str] = []
+    seen: set[str] = set()
+    for i, m in enumerate(c.measured):
+        where = f"{c.where}: measured[{i}]"
+        if m.fault not in c.explains:
+            out.append(f"{where}: fault {m.fault!r} is not one it explains ({', '.join(c.explains)})")
+        if m.fault in seen:
+            out.append(f"{where}: a second check for {m.fault!r} (keep one per fault: the latest)")
+        seen.add(m.fault)
+        src = by_id.get(m.source)
+        if src is None:
+            out.append(f"{where}: source: unknown id {m.source!r}")
+        elif not isinstance(src, Source):
+            out.append(f"{where}: source: {m.source!r} is a {src.node_type}, not a source")
+        elif src.tier != BASE_RATE_TIER:
+            out.append(f"{where}: source {m.source!r} is {src.tier!r}; a base rate needs a {BASE_RATE_TIER} source")
+    if not c.discriminates:
+        return out
+    live = [f for f in c.explains if isinstance(fn := by_id.get(f), Fault) and fn.status == "live"]
+    checks = {m.fault: m for m in c.measured}
+    if not live:
+        out.append(f"{c.where}: discriminates = true, but it explains no live fault to check it against")
+    for f in live:
+        check = checks.get(f)
+        if check is None:
+            out.append(f"{c.where}: discriminates = true needs a base-rate check for {f!r} ([[cause.measured]])")
+        elif not check.passes:
+            r = check.ratio
+            share = f"{check.fault_held} of {check.fault_laps} against {check.other_held} of {check.other_laps}" + (
+                f", {r:.2f} times" if r is not None and math.isfinite(r) else ""
+            )
+            out.append(
+                f"{c.where}: discriminates = true, but its check for {f!r} does not pass ({share}; needs "
+                f"{DISCRIMINATES_RATIO:g} times the base rate on {DISCRIMINATES_MIN_HELD} or more of the fault's "
+                f"corner-laps and {DISCRIMINATES_MIN_OTHER} or more others)"
+            )
+    return out
 
 
 def _condition_cycles(conditions: Sequence[Condition]) -> list[str]:

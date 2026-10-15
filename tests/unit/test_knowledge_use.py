@@ -147,9 +147,23 @@ def test_live_snapshots_carry_the_slim_annotation() -> None:
                 "id": "over_braking",
                 "name": "Over-braking",
                 "tier": "brief",
+                "discriminates": False,
                 "evidence": [{"signal": "brake_point_delta_m", "test": "braked earlier", "value": -12.0, "unit": "m"}],
                 "advice": {"radio": None, "screen": "Slowed more on the way in", "review": "...", "ids": {}},
-            }
+            },
+            {
+                "id": "early_brake_release",
+                "name": "Early brake release",
+                "tier": "brief",
+                "discriminates": True,
+                "evidence": [{"signal": "brake_release_delta_m", "test": "ended sooner", "value": -12.0, "unit": "m"}],
+                "advice": {
+                    "radio": None,
+                    "screen": "Braking ended sooner, longer roll after",
+                    "review": "...",
+                    "ids": {},
+                },
+            },
         ],
         "advice": {"radio": "r", "screen": "s", "review": "v", "ids": {}, "tailored": {}},
         "digest": "abc",
@@ -161,14 +175,22 @@ def test_live_snapshots_carry_the_slim_annotation() -> None:
     o = {**pt("T6", "low_min_speed", 2), "knowledge": full}
     live.on_lap_result({"lap_id": 102, "lap_number": 2}, [o, pt("T2", "low_min_speed", 2)], None)
     snap = live.snapshot()["observations"]
-    # the snapshot's observations: only what the card reads from one (fits, the first cause's screen line)
+    # the snapshot's observations: only what the card reads from one (fits, the screen line of the first cause that
+    # tells its fault apart: over-braking was only also measured)
     assert (
         snap[0]["knowledge"]
         == card_slim(full)
         == {
             "fault": "low_min_speed",
             "applies": True,
-            "causes": [{"id": "over_braking", "name": "Over-braking", "screen": "Slowed more on the way in"}],
+            "causes": [
+                {
+                    "id": "early_brake_release",
+                    "name": "Early brake release",
+                    "discriminates": True,
+                    "screen": "Braking ended sooner, longer roll after",
+                }
+            ],
         }
     )
     assert "knowledge" not in snap[1]  # an observation without an annotation is sent as it is
@@ -176,7 +198,8 @@ def test_live_snapshots_carry_the_slim_annotation() -> None:
     # the coach block's copy keeps the annotation's shape, the evidence as measured values without their sentences
     s = slim(full)
     assert s is not None and set(s) == {"fault", "applies", "why_not", "causes", "advice"}
-    assert s["causes"][0]["evidence"] == [{"signal": "brake_point_delta_m", "value": -12.0, "unit": "m"}]
+    assert [c["id"] for c in s["causes"]] == ["early_brake_release"]  # the card says no cause that is only measured
+    assert s["causes"][0]["evidence"] == [{"signal": "brake_release_delta_m", "value": -12.0, "unit": "m"}]
     assert len(orjson.dumps(snap[0]["knowledge"])) < len(orjson.dumps(s)) < len(orjson.dumps(full))
 
 
@@ -389,6 +412,87 @@ def test_a_technique_the_facts_say_is_not_for_this_driver_is_never_grounded(shee
     assert not check_grounding(f"Commit to the throttle at T1 [{lms.id}].", sheet).ok
 
 
+def _graph_with(discriminating: set[str]) -> TechniqueGraph:
+    """The packaged graph with ``discriminates`` set on exactly these causes (the facts' wording for each case)."""
+    from dataclasses import replace
+
+    g = load_graph()
+    causes = tuple(replace(c, discriminates=c.id in discriminating) for c in g.causes)
+    by_id = {**g.by_id, **{c.id: c for c in causes}}
+    return replace(g, causes=causes, by_id=by_id)
+
+
+def _fault_fact_with_causes(graph: TechniqueGraph) -> Fact:
+    from pitwall.knowledge.annotate import DriverKnowledge
+    from pitwall.knowledge.context import Context
+    from pitwall.knowledge.facts import _fault_fact
+    from pitwall.knowledge.graph import Fault
+
+    fault = graph.get("low_min_speed", Fault)
+    assert fault is not None
+    k = {"causes": [{"id": "low_grip"}, {"id": "over_braking"}]}
+    observations = [{"knowledge": k}, {"knowledge": k}, {"knowledge": {"causes": [{"id": "low_grip"}]}}]
+    dk = DriverKnowledge(graph, Context(game="f1", car_family="f1"), "f1_25")
+    topic, text, data, say = _fault_fact(graph, dk, fault, observations)
+    return Fact("F9", topic, text, data, say=say)
+
+
+def test_the_facts_say_only_a_cause_that_tells_its_fault_apart_is_the_reason() -> None:
+    """A measured cause that is not shown to tell its fault apart is listed as also measured, never in the
+    driver-facing sentence; one that is shown is a cause and the sentence names it."""
+    from pitwall.knowledge.facts import ALSO_MEASURED, REASONS
+
+    f = _fault_fact_with_causes(load_graph())  # the packaged graph: neither low_grip nor over_braking discriminates
+    assert f"{ALSO_MEASURED}: Less grip on 3 of them (" in f.text and "; Over-braking on 2 of them (" in f.text
+    assert REASONS not in f.text
+    assert f.say == "Low minimum speed: seen 3 times this session."  # no cause said: none is shown to be why
+    assert f.data["reasons"] == [] and f.data["also_measured"] == ["low_grip", "over_braking"]
+    assert f.data["not_the_reason"] == ["over_braking", "early_turn_in", "low_grip"]
+    assert {"low_grip", "over_braking"} <= set(f.data["nodes"])  # also measured: still a fact to describe
+    shown = _fault_fact_with_causes(_graph_with({"low_grip"}))
+    assert f"{REASONS}: Less grip on 3 of them (" in shown.text
+    assert f"{ALSO_MEASURED}: Over-braking on 2 of them" in shown.text
+    assert (
+        shown.say
+        == "Low minimum speed: seen 3 times this session. On 3 of them: more sliding here than on your reference."
+    )
+    assert shown.data["reasons"] == ["low_grip"] and "low_grip" not in shown.data["not_the_reason"]
+    for fact in (f, shown):
+        assert check_grounding(f"{fact.plain} [{fact.id}]", [fact]).ok
+
+
+def test_an_answer_that_makes_a_measured_cause_the_reason_is_not_grounded() -> None:
+    """The facts list the causes that are not shown to tell the fault apart (``not_the_reason``): an answer that says
+    the fault happened because of one is rejected, whichever fact it cites; describing it as also measured, or saying
+    it is not the reason, is fine."""
+    f = _fault_fact_with_causes(load_graph())
+    obs = Fact("F1", "observations", "T3: minimum speed is 12 km/h lower than your reference.")
+    sheet = [obs, f]
+    for answer in (
+        "Over-braking was also measured on 2 of those laps [F9].",
+        "Your minimum speed at T3 was 12 km/h down [F1]. Less grip was also measured there [F9].",
+        "Less grip is not the reason, Pitwall only measured it [F9].",
+        "Over-braking isn't why the minimum speed was down [F9].",
+    ):
+        g = check_grounding(answer, sheet)
+        assert g.ok and g.reason_claims == [], (answer, g)
+    for answer, claims in (
+        ("Your minimum speed at T3 was down because of over-braking [F1].", ["over_braking: over-braking"]),
+        ("The low minimum speed came from less grip [F9].", ["low_grip: less grip"]),
+        ("Over-braking cost you at T3 [F1].", ["over_braking: Over-braking"]),
+        ("The tyres slid more, which is why T3 was slower [F1].", ["low_grip: slid more"]),
+        ("That's the reason: you braked too much into T3 [F1].", ["over_braking: braked too much"]),
+        ("Not because of the line, but because of less grip [F9].", ["low_grip: less grip"]),
+    ):
+        g = check_grounding(answer, sheet)
+        assert not g.ok and g.reason_claims == claims, (answer, g)
+    # without a fact that lists the cause as not the reason, nothing is checked (another topic's "less grip")
+    assert check_grounding("Cold tyres mean less grip, which is why the rear slid [F1].", [obs]).reason_claims == []
+    # a cause shown to tell its fault apart may be said as the reason
+    shown = _fault_fact_with_causes(_graph_with({"low_grip"}))
+    assert check_grounding("The low minimum speed came from less grip [F9].", [obs, shown]).ok
+
+
 def test_answers_that_break_the_coaching_rules_are_not_grounded() -> None:
     """The graph's constraints run over every answer: an instruction to brake later (or less, or to carry more speed)
     falls back to the deterministic answer; Pitwall's own descriptions of what happened stay allowed."""
@@ -427,11 +531,16 @@ def test_answers_that_break_the_coaching_rules_are_not_grounded() -> None:
 def test_the_technique_terms_follow_the_graph() -> None:
     """Every technique of the graph has the words answers name it by; every term names a technique or cause."""
     from pitwall.knowledge.graph import Cause, Technique
-    from pitwall.knowledge.terms import TERMS
+    from pitwall.knowledge.terms import CAUSE_TERMS, TERMS
 
     g = load_graph()
     assert {t.id for t in g.techniques} <= set(TERMS)
     assert all(isinstance(g.node(k), Technique | Cause) for k in TERMS)
+    # every cause has the words that name it for the reason check, its own name among them
+    assert set(CAUSE_TERMS) == {c.id for c in g.causes}
+    for c in g.causes:
+        assert any(p.search(c.name) for p in CAUSE_TERMS[c.id]), c.name
+        assert all(p in CAUSE_TERMS[c.id] for p in TERMS.get(c.id, ())), c.id
     # narrow on purpose: ordinary sentences about the pedals, the steering or the car are no technique claim
     for plain in (
         "You braked 12 m earlier.",

@@ -7,6 +7,12 @@ evidence tier.
 the sheet. Like every fact, ``text`` is what the LLM reads and ``say`` the driver-facing sentence; every number in
 ``say`` is also in ``text`` or ``data``, so deterministic answers built from it pass ``check_grounding``.
 
+Causes (``graph.Cause.discriminates``): a measured cause whose base-rate check showed it tells the fault apart is listed
+as a cause ("Causes Pitwall measured, shown on recorded laps to tell this fault apart"), and only such a cause is in the
+driver-facing ``say``; the others are listed as "Also measured on these laps (not shown to tell this fault apart, so not
+the reason)", never as why. ``data["not_the_reason"]`` lists every cause of the fault that is not shown to tell it
+apart: ``ai.grounding`` rejects an answer that presents one of them as the reason.
+
 Grounding (``ai.grounding``): ``data["nodes"]`` lists the graph nodes a fact is about - the fault, its measured causes
 and the techniques that fit this driver - and only those ground an answer that names one (``knowledge.terms``).
 ``data["not_for_driver"]`` lists the techniques the graph says do not fit this driver (the fault's phase; for the
@@ -43,6 +49,10 @@ FactTuple = tuple[str, str, dict[str, Any], str | None]
 MAX_FAULT_FACTS = 8  # one per coaching kind at most
 MAX_SOURCES = 2
 DETAILED_FAULTS = 1  # the most-seen fault also carries its summary and its fitting techniques' summaries
+# Measured causes shown on recorded laps to tell their fault apart (``graph.Cause.discriminates``): may be the reason.
+REASONS = "Causes Pitwall measured, shown on recorded laps to tell this fault apart"
+# Measured causes not shown to tell their fault apart (``graph.Cause.discriminates`` false): never the reason.
+ALSO_MEASURED = "Also measured on these laps (not shown to tell this fault apart, so not the reason)"
 
 TIER_WORDS: Mapping[str, str] = {
     "expert": "published coaching, not validated by Pitwall",
@@ -203,6 +213,8 @@ def _fault_fact(
             if isinstance(c, Mapping) and isinstance(c.get("id"), str):
                 counts[c["id"]] += 1
     causes = [(c, k) for cid, k in counts.most_common() if (c := g.get(cid, Cause)) is not None]
+    reasons = [(c, k) for c, k in causes if c.discriminates]  # shown to tell the fault apart: may be said as why
+    also = [(c, k) for c, k in causes if not c.discriminates]  # what was also measured, never the reason
     phase = g.get(fault.phase, Phase)
     techniques = g.techniques_for(fault.phase)
     fits = [t for t in techniques if dk.fit(t).applies]
@@ -215,10 +227,13 @@ def _fault_fact(
         f"Seen {_times(n)} this session"
         + ("" if fit.applies else f"; not coached for this driver: {fit.why_not}")
         + ".",
-        ("Causes Pitwall measured: " + _by_tier([(f"{c.name} on {k} of them", c.tier) for c, k in causes]) + ".")
-        if causes
-        else "No cause measured.",
     ]
+    if reasons:
+        parts.append(f"{REASONS}: " + _by_tier([(f"{c.name} on {k} of them", c.tier) for c, k in reasons]) + ".")
+    if also:
+        parts.append(f"{ALSO_MEASURED}: " + _by_tier([(f"{c.name} on {k} of them", c.tier) for c, k in also]) + ".")
+    if not causes:
+        parts.append("No cause measured.")
     where = phase.name.lower() if phase is not None else fault.phase.replace("_", " ")
     if fits:
         named = [(f"{t.name}: {t.summary}" if detailed else t.name, t.tier) for t in fits]
@@ -227,8 +242,8 @@ def _fault_fact(
     if srcs:
         parts.append("Sources: " + "; ".join(srcs) + ".")
     say = f"{fault.name}: seen {_times(n)} this session."
-    if causes:  # the top cause in the words its screen line uses (what was measured), not a judgement
-        top, k = causes[0]
+    if reasons:  # the top cause shown to tell the fault apart, in the words of its screen line; never another one
+        top, k = reasons[0]
         adv = dk.advice(top.id)
         line = (adv or {}).get("screen") or top.name
         say += f" On {k} of them: {line[0].lower()}{line[1:]}."
@@ -237,6 +252,9 @@ def _fault_fact(
         "count": n,
         "applies": fit.applies,
         "causes": dict(counts),
+        "reasons": [c.id for c, _ in reasons],
+        "also_measured": [c.id for c, _ in also],
+        "not_the_reason": [cid for cid in fault.causes if (c := g.get(cid, Cause)) is not None and not c.discriminates],
         "nodes": [fault.id, *(c.id for c, _ in causes), *(t.id for t in fits)],
         "not_for_driver": [t.id for t in others],
     }

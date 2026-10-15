@@ -17,6 +17,13 @@ technique the graph does not hold (``knowledge.terms.OTHER_TERMS``: "threshold b
 accepted only when a fact says it. Otherwise it is an invented technique claim (``ungrounded_techniques``), and the
 answer is not grounded.
 
+Causes (``knowledge.graph.Cause.discriminates``): a cause whose base-rate check did not show it tells its fault apart
+is what was also measured on a lap, never why the fault happened. A supplied fact lists those causes of its fault in
+``data["not_the_reason"]`` (the technique knowledge facts); an answer that presents one of them as the reason - a
+sentence naming the cause (``knowledge.terms.CAUSE_TERMS``) with a causal word ("because", "due to", "caused", "the
+reason", "why", "led to", "down to" ...) that is not itself negated ("not the reason", "isn't why", "not because") - is
+not grounded (``reason_claims``), whichever facts it cites, and the engineer falls back to the deterministic answer.
+
 Coaching rules (CLAUDE.md; the technique graph's constraints, ``knowledge.graph.Constraint``): an answer that tells
 the driver to brake later, brake less, release the brake earlier, carry more speed in or trail-brake more is not
 grounded either (``constraint_breaches``), so the engineer falls back to the deterministic answer. Pitwall's own
@@ -33,7 +40,7 @@ from dataclasses import dataclass, field
 
 from pitwall.ai.facts import Fact
 from pitwall.knowledge.graph import load_graph
-from pitwall.knowledge.terms import OTHER_TERMS, TERMS
+from pitwall.knowledge.terms import CAUSE_TERMS, OTHER_TERMS, TERMS
 
 _CITATION = re.compile(r"\[(F\d+)\]")
 _CORNER = re.compile(r"\b(?:T|Turn\s*|turn\s*|corner\s*|Corner\s*)(\d+)\b")
@@ -88,6 +95,8 @@ class GroundingResult:
     ungrounded_techniques: list[str] = field(default_factory=list)  # technique phrases no considered fact is about
     # coaching-rule breaches: "<constraint id>: <the words>" (an instruction to brake later, brake less ...)
     constraint_breaches: list[str] = field(default_factory=list)
+    # a cause the facts say is not the reason, presented as one: "<cause id>: <the words naming it>"
+    reason_claims: list[str] = field(default_factory=list)
 
 
 def _listed(f: Fact, key: str) -> list[str] | None:
@@ -153,6 +162,43 @@ def constraint_breaches(answer: str) -> list[str]:
     return out
 
 
+# Words that make a sentence say why something happened. "so" and "from" alone are too common to count.
+_CAUSAL = re.compile(
+    r"\b(?:because|due to|caus(?:e|es|ed|ing)|reasons?|why|owing to|thanks to|down to|blame\w*|"
+    r"result(?:s|ed|ing)? (?:of|from|in)|stem(?:s|med|ming)? from|(?:comes?|came|coming) from|"
+    r"(?:led|leads?|leading) to|explain(?:s|ed|ing)?|responsible for|cost(?:s|ing)? you)\b",
+    re.I,
+)
+# A causal word negated right before it ("not the reason", "isn't why", "not because", "not shown to be the cause"):
+# the sentence says the cause is not the reason.
+_NEGATED = re.compile(
+    r"(?:\bnot|n['’]t|\bnever)\s+(?:(?:been\s+)?(?:shown|proven|known)\s+(?:to\s+be\s+)?)?"
+    r"(?:(?:the|a|what|that)\s+)?(?:main\s+|only\s+|real\s+)?$",
+    re.I,
+)
+# Sentence ends: a full stop that is not a decimal point ("0.3 s"), ! ? ; or a line break.
+_SENTENCES = re.compile(r"(?<!\d)[.!?](?!\d)|[;\n]")
+
+
+def reason_claims(answer: str, facts: Sequence[Fact]) -> list[str]:
+    """Causes that ``facts`` list as not the reason (``data["not_the_reason"]``) presented as one in ``answer``
+    (module docstring), as "<cause id>: <the words naming it>", one per cause."""
+    ids = list(dict.fromkeys(x for f in facts for x in (_listed(f, "not_the_reason") or ())))
+    if not ids:
+        return []
+    text = _CITATION.sub(" ", answer)
+    out: list[str] = []
+    for sentence in _SENTENCES.split(text):
+        causal = [m for m in _CAUSAL.finditer(sentence) if not _NEGATED.search(sentence[: m.start()])]
+        if not causal:
+            continue
+        for cid in ids:
+            hit = next((m for p in CAUSE_TERMS.get(cid, ()) if (m := p.search(sentence)) is not None), None)
+            if hit is not None and not any(o.startswith(f"{cid}: ") for o in out):
+                out.append(f"{cid}: {hit.group(0)}")
+    return out
+
+
 def check_grounding(answer: str, facts: list[Fact]) -> GroundingResult:
     by_id = {f.id: f for f in facts}
     cited = list(dict.fromkeys(_CITATION.findall(answer)))
@@ -166,13 +212,15 @@ def check_grounding(answer: str, facts: list[Fact]) -> GroundingResult:
             bad.append(f"{v:.{dec}f}")
     techniques = technique_claims(answer, considered)
     breaches = constraint_breaches(answer)
+    reasons = reason_claims(answer, facts)  # every supplied fact: a cited one cannot make another cause the reason
     return GroundingResult(
-        ok=not unknown and not bad and not techniques and not breaches,
+        ok=not unknown and not bad and not techniques and not breaches and not reasons,
         cited=cited,
         unknown_citations=unknown,
         ungrounded_numbers=bad,
         ungrounded_techniques=techniques,
         constraint_breaches=breaches,
+        reason_claims=reasons,
     )
 
 

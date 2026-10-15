@@ -554,7 +554,9 @@ Rules (strict):
 - If the facts say the data is SYNTHETIC, mention that briefly.
 - If a fact says the game does not send some data, or that Pitwall does not read it, say so plainly; never
   estimate it.
-- If the session fact says the driver is a beginner, use plain words and give one point at a time."""
+- If the session fact says the driver is a beginner, use plain words and give one point at a time.
+- A cause a fact lists as "also measured ... not the reason" was only measured on those laps: never say the fault
+  happened because of it."""
 
 
 @dataclass(slots=True)
@@ -781,6 +783,8 @@ def _describe(g: GroundingResult) -> str:
         parts.append("techniques not in the cited facts or not for this driver: " + ", ".join(g.ungrounded_techniques))
     if g.constraint_breaches:  # knowledge: the coaching rules (never brake later, brake less ...)
         parts.append("instructions the coaching rules forbid: " + ", ".join(g.constraint_breaches))
+    if g.reason_claims:  # knowledge: a cause the facts say was only also measured, said as the reason
+        parts.append("causes presented as the reason that the facts say are not: " + ", ".join(g.reason_claims))
     return "; ".join(parts) or "ok"
 
 

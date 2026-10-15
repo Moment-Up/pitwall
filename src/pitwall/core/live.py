@@ -267,9 +267,9 @@ def _with_lap(totals: dict[str, Any] | None, lap: dict[str, Any]) -> dict[str, A
 
 def _snapshot_observation(o: dict[str, Any]) -> dict[str, Any]:
     """An observation as every ``/ws/live`` snapshot carries it: its ``knowledge`` annotation cut to what the coach
-    card reads from an observation (``knowledge.annotate.card_slim``: fits the driver, the first measured cause's screen
-    line). The coach block has the slim copy and the lap notification the full one, so twenty snapshots a second stay
-    within the size budget."""
+    card reads from an observation (``knowledge.annotate.card_slim``: fits the driver, the screen line of the first
+    measured cause that tells its fault apart). The coach block has the slim copy and the lap notification the full
+    one, so twenty snapshots a second stay within the size budget."""
     if "knowledge" not in o:
         return o
     return {**o, "knowledge": card_slim(o["knowledge"])}

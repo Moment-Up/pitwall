@@ -12,9 +12,15 @@ own blip, is not the driver's rev-matching).
 ``OTHER_TERMS`` are common coaching techniques the graph does not hold (threshold braking, a late apex ...): naming
 one is accepted only when a supplied fact says it, never from the model's own knowledge.
 
+``CAUSE_TERMS`` are the phrasings that name each cause of the graph - its name and the words an answer would use for it
+("less grip", "wheelspin", "over-braking") - for the reason check only (``ai.grounding.reason_claims``): a cause a
+supplied fact lists as not the reason (``data["not_the_reason"]``) must never be presented as why the fault happened.
+They are broader than ``TERMS`` on purpose and never make a mention ungrounded by themselves.
+
 Phrasings are case-insensitive regular expressions; a test keeps every key a technique or cause of the graph and
-every graph technique listed. Matching is deliberately narrow (distinctive phrases, not single common words), so an
-ordinary sentence about braking or the throttle is never taken for a technique claim.
+every graph technique listed, and every cause in ``CAUSE_TERMS`` with its own name recognised. Matching in ``TERMS`` is
+deliberately narrow (distinctive phrases, not single common words), so an ordinary sentence about braking or the
+throttle is never taken for a technique claim.
 """
 
 from __future__ import annotations
@@ -73,7 +79,42 @@ _OTHER_RAW: tuple[str, ...] = (
     r"\bhandbrake turn",
 )
 
+# Every cause: its TERMS (when it has some) and the other words that name it, for the reason check.
+_CAUSE_RAW: Mapping[str, tuple[str, ...]] = {
+    "over_braking": (r"\bbrak\w* (?:too much|too hard|more than (?:on )?(?:your|the) reference)",),
+    "early_turn_in": (r"\bslowest point came (?:sooner|earlier)",),
+    "low_grip": (
+        r"\b(?:less|low|lower|lack of|short of|losing|lost|loss of) grip\b",
+        r"\bslid\w* more\b",
+        r"\bmore slid\w*",
+        r"\bundersteer\w*",
+        r"\block(?:ed|ing)?[- ]up\b|\block-?ups?\b|\bwheel locked\b",
+    ),
+    "traction_limited": (
+        r"\btraction[- ]limited\b",
+        r"\b(?:lack|short|loss) of traction\b",
+        r"\bwheel ?spin\w*",
+        r"\bwheels? spun\b",
+        r"\boversteer\w*",
+    ),
+    "ready_earlier": (r"\bno grip loss\b", r"\bnothing (?:measured )?held (?:the|your) throttle back\b"),
+    "early_brake_release": (
+        r"\bearly brake release\b",
+        r"\bbrak\w* ended (?:too )?(?:sooner|early|earlier)\b",
+        r"\b(?:released?|releasing|off) the brakes? (?:too )?(?:early|soon|sooner|earlier)\b",
+    ),
+    "waiting_for_rotation": (r"\bwait\w* for (?:the car|it) to (?:rotate|turn)",),
+    "carried_too_much_speed": (
+        r"\bcarr(?:y|ied|ying) too much speed\b",
+        r"\btoo (?:much speed|fast) (?:in|into|at)\b",
+    ),
+    "released_too_early_for_apex": (r"\breleas\w* (?:the brakes? )?too early for the apex\b",),
+}
+
 TERMS: Mapping[str, tuple[re.Pattern[str], ...]] = {
     k: tuple(re.compile(p, re.IGNORECASE) for p in v) for k, v in _RAW.items()
 }
 OTHER_TERMS: tuple[re.Pattern[str], ...] = tuple(re.compile(p, re.IGNORECASE) for p in _OTHER_RAW)
+CAUSE_TERMS: Mapping[str, tuple[re.Pattern[str], ...]] = {
+    k: tuple(re.compile(p, re.IGNORECASE) for p in (*_RAW.get(k, ()), *v)) for k, v in _CAUSE_RAW.items()
+}

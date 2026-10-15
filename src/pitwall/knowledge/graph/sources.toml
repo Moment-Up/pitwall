@@ -56,6 +56,19 @@ and how often each cause that needs only those deltas would be named. The spread
 corners, not sensor noise."""
 
 [[source]]
+id = "pitwall_cause_base_rate"
+title = "Each cause against its base rate on the owner's recorded laps"
+author = "Pitwall project"
+date = "2026-10-15"
+tier = "recorded"
+note = """scripts/cause_base_rates.py over all 30 of the owner's real captures (F1 25 and GT7 on the PS5, 2026-10-10 to
+13), replayed into a scratch database and analysed as Review does (every lap against its session's reference): 30
+sessions with a usable comparison (28 F1 25, 2 GT7), 148 compared laps, 1,173 non-incident corner-laps. For each cause
+and each live fault it explains: on how many of the fault's corner-laps its evidence held, against the corner-laps
+without the fault, counting only corner-laps where the evidence could be measured. Traction control was on (or not
+reported) in every session; ABS was on except in two F2 races."""
+
+[[source]]
 id = "pitwall_technique_review"
 title = "Technique analysis checked on recorded F1 25 and F2 laps"
 author = "Pitwall project"

@@ -31,18 +31,23 @@ from pitwall import carclass, drivers
 from pitwall.analysis import coaching
 from pitwall.knowledge import graph as kg
 from pitwall.knowledge.graph import (
+    BASE_RATE_TIER,
     CANONICAL_CAUSES,
     CANONICAL_LIVE_FAULTS,
     CANONICAL_PLANNED_FAULTS,
     CANONICAL_TECHNIQUES,
     CHANNEL_FIELDS,
     CONTEXT_VALUES,
+    DISCRIMINATES_MIN_HELD,
+    DISCRIMINATES_MIN_OTHER,
+    DISCRIMINATES_RATIO,
     PHASE_IDS,
     RADIO_MAX_WORDS,
     SCREEN_MAX_CHARS,
     SIGNAL_CLASSES,
     TIERS,
     Advice,
+    BaseRate,
     Cause,
     Condition,
     Discriminator,
@@ -686,6 +691,59 @@ def test_causes_are_told_apart_by_computed_signals_only() -> None:
             assert s is not None and s.code is not None, (c.id, d.signal)
 
 
+def test_every_cause_carries_its_base_rate_check() -> None:
+    """Every cause that explains a live fault carries the base-rate check against it (2026-10-15, the owner's 30
+    real captures), from a recorded source; ``discriminates`` is exactly what the checks say (``BaseRate.passes``):
+    only the early brake release tells its fault (coasting) apart. A cause whose only fault is not coached yet
+    (released too early for the apex) has nothing to check against and never discriminates."""
+    g = load_graph_dir()
+    for c in g.causes:
+        live = [f for f in c.explains if (n := g.get(f, Fault)) is not None and n.status == "live"]
+        checks = {m.fault: m for m in c.measured}
+        assert set(checks) == set(live), c.id
+        for m in c.measured:
+            src = g.get(m.source, kg.Source)
+            assert src is not None and src.tier == BASE_RATE_TIER == "recorded", (c.id, m.source)
+            assert 0 <= m.fault_held <= m.fault_laps and 0 <= m.other_held <= m.other_laps
+        assert c.discriminates is (bool(live) and all(checks[f].passes for f in live)), c.id
+    assert {c.id for c in g.causes if c.discriminates} == {"early_brake_release"}
+    ebr = g.get("early_brake_release", Cause)
+    assert ebr is not None
+    (m,) = ebr.measured
+    assert (m.fault, m.fault_held, m.fault_laps, m.other_held, m.other_laps) == ("coasting", 26, 60, 161, 812)
+    assert m.ratio is not None and round(m.ratio, 2) == 2.19
+    tl = g.get("traction_limited", Cause)
+    assert tl is not None and not tl.discriminates and round(tl.measured[0].ratio or 0, 2) == 1.18
+    rel = g.get("released_too_early_for_apex", Cause)
+    assert rel is not None and rel.measured == () and not rel.discriminates
+    # no cause is said on the radio unless it tells its fault apart (none has a radio form today)
+    for a in g.advice:
+        owner = g.get(a.for_id, Cause)
+        assert owner is None or a.radio is None or owner.discriminates, a.id
+
+
+def test_the_base_rate_rule() -> None:
+    """[H] at least twice the base rate, on enough corner-laps; shares and the ratio from the counts."""
+    assert (DISCRIMINATES_RATIO, DISCRIMINATES_MIN_HELD, DISCRIMINATES_MIN_OTHER) == (2.0, 10, 30)
+
+    def rate(fh: int, fl: int, oh: int, ol: int) -> BaseRate:
+        return BaseRate(
+            fault="f", fault_laps=fl, fault_held=fh, other_laps=ol, other_held=oh, date="2026-10", source="s"
+        )
+
+    r = rate(26, 60, 161, 812)
+    assert r.fault_share == pytest.approx(0.4333, abs=1e-4) and r.other_share == pytest.approx(0.1983, abs=1e-4)
+    assert r.passes
+    assert not rate(16, 32, 173, 500).passes  # 1.45 times: describes what was measured
+    assert rate(10, 20, 25, 100).passes  # exactly twice, ten held
+    assert not rate(9, 18, 1, 100).passes  # far above the base rate, but too few of the fault's corner-laps
+    assert not rate(20, 40, 0, 29).passes  # too few other corner-laps for a base rate
+    never = rate(12, 40, 0, 300)
+    assert never.ratio == math.inf and never.passes  # the evidence never held elsewhere
+    assert rate(0, 0, 5, 50).ratio is None and not rate(0, 0, 5, 50).passes  # the fault never fired: no check
+    assert rate(0, 10, 0, 50).ratio is None
+
+
 def test_every_signal_and_source_is_used() -> None:
     g = load_graph_dir()
     used = {s for t in g.techniques for s in t.measured_by} | {s for f in g.faults for s in f.signals}
@@ -693,7 +751,7 @@ def test_every_signal_and_source_is_used() -> None:
     assert {s.id for s in g.signals} == used
     cited = {s for n in g.nodes() for s in n.sources}
     cited |= {m.source for f in g.faults for m in f.measured} | {m.source for s in g.signals for m in s.noise}
-    cited |= {m.source for t in g.techniques for m in t.measured}
+    cited |= {m.source for t in g.techniques for m in t.measured} | {m.source for c in g.causes for m in c.measured}
     assert {s.id for s in g.sources} == cited
 
 
@@ -969,6 +1027,143 @@ def test_discriminators_measurements_and_sources_are_checked(tmp_path: Path) -> 
     assert_problem(
         tmp_path, swap('note = "The rules."', 'note = "The rules."\nsources = ["book"]'), "a source cites nothing"
     )
+
+
+RECORDED = """
+[[source]]
+id = "laps"
+title = "Owner's laps"
+author = "Pitwall project"
+date = "2026-10-15"
+tier = "recorded"
+note = "Recorded laps."
+"""
+
+
+def _checked(discriminates: str = "", **counts: int) -> str:
+    """BASE with a base-rate check on cause 'ob' against low_min_speed (``counts`` override it) and a recorded
+    source; ``discriminates``: the field's line."""
+    c = {"fault_laps": 60, "fault_held": 26, "other_laps": 812, "other_held": 161, **counts}
+    rows = "".join(f"{k} = {v}\n" for k, v in c.items())
+    text = swap('explains = ["low_min_speed"]\n', f'explains = ["low_min_speed"]\n{discriminates}')
+    text = swap(
+        "value = -4.0\n\n[[advice]]",
+        f'value = -4.0\n\n[[cause.measured]]\nfault = "low_min_speed"\n{rows}date = "2026-10-15"\n'
+        'source = "laps"\n\n[[advice]]',
+        text,
+    )
+    return text + RECORDED
+
+
+def test_a_cause_records_its_base_rate_check(tmp_path: Path) -> None:
+    g = build(tmp_path, _checked())
+    ob = g.get("ob", Cause)
+    assert ob is not None and not ob.discriminates  # the default: not shown to be the reason
+    (m,) = ob.measured
+    assert (m.fault, m.fault_laps, m.fault_held, m.other_laps, m.other_held) == ("low_min_speed", 60, 26, 812, 161)
+    assert m.passes
+    assert build(tmp_path, _checked("discriminates = true\n")).get("ob", Cause).discriminates  # type: ignore[union-attr]
+    p = orjson.loads(orjson.dumps(g.to_payload()))
+    (cause,) = p["causes"]
+    assert cause["discriminates"] is False
+    assert cause["measured"] == [
+        {
+            "fault": "low_min_speed",
+            "fault_laps": 60,
+            "fault_held": 26,
+            "other_laps": 812,
+            "other_held": 161,
+            "date": "2026-10-15",
+            "source": "laps",
+            "note": None,
+        }
+    ]
+    # no check at all: a cause is never the reason by default
+    assert not build(tmp_path, BASE).get("ob", Cause).discriminates  # type: ignore[union-attr]
+
+
+def test_discriminates_needs_a_passing_check(tmp_path: Path) -> None:
+    yes = "discriminates = true\n"
+    assert_problem(
+        tmp_path,
+        swap('explains = ["low_min_speed"]\n', f'explains = ["low_min_speed"]\n{yes}'),
+        "cause 'ob'",
+        "needs a base-rate check for 'low_min_speed'",
+    )
+    assert_problem(
+        tmp_path,
+        _checked(yes, fault_held=16, fault_laps=32, other_held=173, other_laps=500),
+        "cause 'ob'",
+        "does not pass",
+        "16 of 32 against 173 of 500, 1.45 times",
+    )
+    assert_problem(tmp_path, _checked(yes, fault_held=9, fault_laps=18, other_held=1, other_laps=500), "does not pass")
+    assert_problem(tmp_path, _checked("discriminates = 1\n"), "discriminates", "must be true or false")
+    # a cause that explains no live fault has nothing to be checked against
+    planned = (
+        BASE + '\n[[fault]]\nid = "early_apex"\nstatus = "planned"\nname = "Early apex"\nsummary = "Sooner."\n'
+        'phase = "apex"\nrelative = "reference"\ncauses = ["eti"]\ntier = "expert"\nsources = ["book"]\n'
+        '\n[[cause]]\nid = "eti"\nname = "Sooner"\nsummary = "Sooner."\nexplains = ["early_apex"]\n'
+        'discriminates = true\ntier = "expert"\nsources = ["book"]\n'
+    )
+    assert_problem(tmp_path, planned, "cause 'eti'", "explains no live fault")
+
+
+def test_base_rate_checks_are_checked(tmp_path: Path) -> None:
+    assert_problem(tmp_path, _checked(fault_held=61), "measured[0]", "fault_held", "61 is more than fault_laps (60)")
+    assert_problem(tmp_path, _checked(other_laps=-1, other_held=0), "measured[0]", "other_laps", "negative")
+    assert_problem(tmp_path, _checked().replace("fault_laps = 60", 'fault_laps = "60"'), "fault_laps", "integer")
+    assert_problem(
+        tmp_path,
+        _checked().replace('date = "2026-10-15"\nsource = "laps"', 'date = "15 Oct"\nsource = "laps"'),
+        "measured[0]",
+        "date",
+        "'15 Oct'",
+    )
+    assert_problem(
+        tmp_path,
+        _checked().replace('fault = "low_min_speed"\nfault_laps', 'fault = "coasting"\nfault_laps'),
+        "measured[0]",
+        "fault 'coasting' is not one it explains",
+    )
+    assert_problem(
+        tmp_path,
+        _checked().replace('source = "laps"\n\n[[advice]]', 'source = "ghost"\n\n[[advice]]'),
+        "measured[0]",
+        "unknown id 'ghost'",
+    )
+    assert_problem(
+        tmp_path,
+        _checked().replace('source = "laps"\n\n[[advice]]', 'source = "book"\n\n[[advice]]'),
+        "measured[0]",
+        "'expert'",
+        "needs a recorded source",
+    )
+    twice = _checked().replace(
+        'source = "laps"\n\n[[advice]]',
+        'source = "laps"\n\n[[cause.measured]]\nfault = "low_min_speed"\nfault_laps = 1\nfault_held = 1\n'
+        'other_laps = 1\nother_held = 0\ndate = "2026-10"\nsource = "laps"\n\n[[advice]]',
+    )
+    assert_problem(tmp_path, twice, "measured[1]", "a second check for 'low_min_speed'")
+    assert_problem(
+        tmp_path,
+        _checked().replace('source = "laps"\n\n[[advice]]', 'source = "laps"\nratio = 2\n\n[[advice]]'),
+        "measured[0]",
+        "unknown field(s)",
+        "ratio",
+    )
+
+
+def test_a_cause_said_on_the_radio_must_tell_its_fault_apart(tmp_path: Path) -> None:
+    radio = (
+        '\n[[advice]]\nid = "ob_say"\nfor = "ob"\nskill = "any"\nkind = "explain"\n'
+        'radio = "Slowed more on the way in"\nreview = "Slowed more than on your reference."\n'
+        'tier = "expert"\nsources = ["book"]\n'
+    )
+    listed = swap('explains = ["low_min_speed"]\n', 'explains = ["low_min_speed"]\nadvice = ["ob_say"]\n')
+    assert_problem(tmp_path, listed + radio, "advice 'ob_say'", "radio form for cause 'ob'", "discriminates = false")
+    shown = _checked('discriminates = true\nadvice = ["ob_say"]\n') + radio
+    assert build(tmp_path, shown).get("ob_say", Advice) is not None
 
 
 def test_canonical_ids_keep_their_type(tmp_path: Path) -> None:
