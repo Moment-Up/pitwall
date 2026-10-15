@@ -471,10 +471,37 @@ class Advice(Node):
     screen: str | None = None
 
 
+# Praise may describe later braking that paid off ("Braking later paid off here"), never ask for it: in praise, a
+# forbidden match is still a breach when it opens its sentence with a bare verb ("Brake later next lap") or follows an
+# instruction word in its sentence ("try braking later", "next lap, move your brake point back").
+_SENTENCE_END = re.compile(r"[.!?;:\n]")
+_INSTRUCTION_BEFORE = re.compile(
+    r"\b(?:try|trying|should|could|can|must|need\s+to|have\s+to|want\s+to|next\s+(?:lap|time)|keep|please|just|"
+    r"let(?:'|\u2019)?s)\b[^.!?;:\n]*$",
+    re.I,
+)
+_BARE_VERB = re.compile(
+    r"(?:brake|move|push|shift|take|wait|stay|carry|delay|release|let|come|get|ease|back|turn|enter|arrive|go|bring|"
+    r"hold|use|be|don|do|never|stop|avoid)\b",
+    re.I,
+)
+
+
+def instructs(text: str, m: re.Match[str]) -> bool:
+    """Whether the forbidden words ``m`` found in ``text`` are an instruction (module comment above): what praise may
+    still not say."""
+    before = text[: m.start()]
+    sentence = before[max((x.end() for x in _SENTENCE_END.finditer(before)), default=0) :]
+    if _INSTRUCTION_BEFORE.search(sentence):
+        return True
+    return not sentence.strip() and _BARE_VERB.match(m.group(0)) is not None
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Constraint(Node):
     """``forbidden`` regexes (case-insensitive) no user-facing text of the ``scope`` node types may match;
-    ``except_praise``: praise (advice for a positive fault, the positive fault itself) is exempt."""
+    ``except_praise``: praise (advice for a positive fault, the positive fault itself) may match them to describe what
+    paid off, never to instruct (``instructs``: "Brake later next lap" is a breach in praise too)."""
 
     node_type: ClassVar[NodeType] = "constraint"
     text: str
@@ -486,6 +513,10 @@ class Constraint(Node):
     def violations(self, text: str) -> list[str]:
         """The forbidden patterns ``text`` matches (empty = it passes)."""
         return [p.pattern for p in self.patterns if p.search(text)]
+
+    def instructions(self, text: str) -> list[str]:
+        """The forbidden patterns ``text`` matches as an instruction (``instructs``): what praise may not say."""
+        return [p.pattern for p in self.patterns if any(instructs(text, m) for m in p.finditer(text))]
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -1193,6 +1224,9 @@ def _validate(nodes: Sequence[Node]) -> list[str]:
                     errors.append(f"{n.where}: positive must be {n.kind in POSITIVE_KINDS} for kind {n.kind!r}")
             elif n.status == "live":
                 errors.append(f"{n.where}: a live fault names its coaching kind (kind = one of {COACHING_KINDS})")
+            if n.kind is None and n.positive:  # praise is exempt from never_brake_later: only a praise coaching kind
+                kinds = ", ".join(sorted(POSITIVE_KINDS))
+                errors.append(f"{n.where}: positive = true is only for a praise coaching kind ({kinds})")
             if n.status == "live":
                 for s in n.signals:
                     sig = by_id.get(s)
@@ -1217,10 +1251,11 @@ def _validate(nodes: Sequence[Node]) -> list[str]:
 
     for c in (n for n in nodes if isinstance(n, Constraint)):
         for n in nodes:
-            if n.node_type not in c.scope or (c.except_praise and _is_praise(n, by_id)):
+            if n.node_type not in c.scope:
                 continue
+            praise = c.except_praise and _is_praise(n, by_id)  # may describe what paid off, never instruct
             for label, text in _texts(n):
-                hits = c.violations(text)
+                hits = c.instructions(text) if praise else c.violations(text)
                 if hits:
                     errors.append(f"{n.where}: {label}: {text!r} breaks constraint {c.id!r} ({c.text}): {hits[0]}")
 

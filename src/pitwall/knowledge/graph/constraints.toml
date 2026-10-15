@@ -3,7 +3,10 @@
 # (write them as 'literal strings' so backslashes stay); scope = the node types whose texts are scanned (advice: radio,
 # screen, review; technique: name, summary, detail; fault, cause, phase, signal, condition: name, summary; a cause's
 # discriminator tests and notes); except_praise = praise (advice for a positive fault such as exit_gain, or the
-# positive fault itself) is exempt. Contributor notes are not scanned.
+# positive fault itself) may use the words to describe what paid off ("Braking later paid off here"), never to instruct
+# ("Brake later next lap", "try braking later": graph.instructs), and only a praise coaching kind may be positive.
+# Contributor notes are not scanned. The AI engineer's answers are checked against the same patterns
+# (ai.grounding.constraint_breaches).
 # The patterns catch instructions and their common variants; describing what happened ("you braked 12 m earlier than
 # on your reference lap", "braked later, slower out") stays allowed. tests/unit/test_knowledge_graph.py lists examples
 # each way: add one there when you change a pattern.
@@ -16,14 +19,21 @@ text = "never tell a driver to brake later (praise only when the corner got fast
 scope = ["phase", "condition", "technique", "signal", "fault", "cause", "advice"]
 except_praise = true
 forbidden = [
-    '\bbrak(?:e|ing)\s+(?:(?:a\s+)?(?:bit|little|touch|fraction|tad)\s+|much\s+|even\s+|slightly\s+|some\s+)?later\b',
+    # "brake later", "brake 10 m later", "brake five metres later": the verb with up to three words before "later";
+    # "try braking a few metres later": the -ing form with a quantity. "Braked later" and "braking started later"
+    # describe what happened and stay allowed.
+    '\bbrake\s+(?:[\w.-]+\s+){0,3}?later\b',
+    '\bbraking\s+(?:(?:a\s+)?(?:bit|little|touch|fraction|tad|few|lot)\s+|much\s+|even\s+|slightly\s+|some\s+|[\d.]+\s*m?\s+|(?:metres?|meters?|feet|yards)\s+)*later\b',
     '\blater\s+(?:on\s+the\s+)?brak(?:e|es|ing)\b',
+    '\bdelay\w*\s+(?:your\s+|the\s+)?brak(?:e|es|ing)\b',
+    '\bbrak(?:e|ing)\s+closer\s+to\s+the\s+(?:corner|apex|turn)\b',
+    '\bbrak(?:e|ing)\s+(?:further|farther)\s+(?:down|along|into)\b',
     '\bbrak(?:e|ing)\s+(?:(?:a\s+)?(?:bit|little|touch)\s+)?deeper\b',
     '\bbrak(?:e|ing)\s+(?:point|marker)s?\s+(?:(?:a\s+)?(?:bit|little|touch)\s+)?(?:later|deeper)\b',
     '\b(?:move|push|shift|take)\s+(?:your\s+|the\s+)?brak(?:e|ing)\s+(?:point|marker|zone)s?\s+(?:back|later|deeper|further)\b',
     '\b(?:don(?:\x27|\u2019)?t|do\s+not|never|stop|avoid)\s+brak(?:e|ing)\s+(?:so\s+|as\s+|too\s+)?(?:early|soon)\b',
     '\bwait\s+(?:a\s+(?:bit|little|touch|moment)\s+)?(?:longer\s+)?(?:before|to)\s+brak(?:e|ing)\b',
-    '\bstay\s+(?:flat|on\s+the\s+(?:throttle|power|gas))\s+(?:out\s+)?(?:(?:a\s+)?(?:bit|little|touch)\s+)?longer\b',
+    '\bstay\s+(?:flat|on\s+the\s+(?:throttle|power|gas))\s+(?:out\s+)?(?:for\s+)?(?:(?:a\s+)?(?:bit|little|touch)\s+)?longer\b',
 ]
 tier = "design"
 sources = ["pitwall_rules"]
@@ -33,8 +43,9 @@ id = "never_brake_less"
 name = "Never ask for less braking"
 summary = "No text tells a driver to brake less, lighter or softer."
 text = "never tell a driver to brake less"
-# Not techniques: a progressive release legitimately describes the pressure coming off as the car slows.
-scope = ["fault", "cause", "advice"]
+# Techniques too: their descriptions of a progressive release ("the pressure bleeds steadily down", "ease the brake
+# pressure off smoothly") say how the pressure comes off as the car slows, which no pattern below matches.
+scope = ["technique", "fault", "cause", "advice"]
 forbidden = [
     '\bbrak(?:e|ing)\s+(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:less|lighter|softer|more\s+(?:gently|lightly|softly))\b',
     '\bless\s+(?:brake|braking)\b',
@@ -43,6 +54,9 @@ forbidden = [
     '\b(?:lighter|softer|gentler|shorter)\s+brak(?:e|es|ing)\b',
     '\b(?:don(?:\x27|\u2019)?t|do\s+not|never|stop)\s+brak(?:e|ing)\s+(?:so|as|too)\s+(?:hard|much|heavily)\b',
     '\b(?:don(?:\x27|\u2019)?t|do\s+not|never|stop|avoid)\s+over-?brak(?:e|ing)\b',
+    '\bbrak(?:e|ing)\s+with\s+less\s+(?:force|pressure)\b',
+    '\bwith\s+less\s+brak(?:e|ing)\s+(?:force|pressure)\b',
+    '\bease\s+up\s+on\s+the\s+brakes?\b',
 ]
 tier = "design"
 sources = ["pitwall_rules"]
@@ -54,7 +68,8 @@ summary = "No text tells a driver to release the brake earlier."
 text = "never tell a driver to release the brake earlier"
 scope = ["phase", "condition", "technique", "signal", "fault", "cause", "advice"]
 forbidden = [
-    '\b(?:release|let\s+off|let\s+go\s+of|come\s+off|get\s+off|ease\s+off|back\s+off)\s+(?:of\s+)?(?:the\s+|your\s+)?(?:brakes?|brake\s+pedal|brake\s+pressure|pressure)\s+(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:earlier|sooner)\b',
+    '\b(?:release|let\s+off|let\s+go\s+of|come\s+off|get\s+off|ease\s+off|back\s+off)\s+(?:of\s+)?(?:the\s+|your\s+)?(?:brakes?|brake\s+pedal|brake\s+pressure|pressure|pedal)\s+(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:earlier|sooner)\b',
+    '\blet\s+(?:the\s+|your\s+)?(?:brakes?|pedal)\s+go\s+(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:earlier|sooner)\b',
     '\brelease\s+(?:it\s+)?(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:earlier|sooner)\b',
     '\bearlier\s+(?:brake\s+)?release\b',
     '\b(?:off|out\s+of)\s+the\s+brakes?\s+(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?(?:earlier|sooner)\b',
@@ -74,6 +89,9 @@ forbidden = [
     '\b(?:take|bring|keep|hold)\s+(?:(?:a\s+)?(?:bit|little|touch)\s+)?more\s+(?:speed|momentum)\s+(?:in|into|to|through)\b',
     '\b(?:enter|go\s+in(?:to)?|turn\s+in|arrive|approach)\s+(?:the\s+corner\s+)?(?:(?:a\s+)?(?:bit|little|touch|tad)\s+)?faster\b',
     '\bmore\s+(?:entry|turn-in|corner)\s+speed\b',
+    '\bcarrying\s+(?:(?:a\s+)?(?:bit|little|touch|tad|lot)\s+)?(?:more|extra)\s+(?:speed|momentum)\b',
+    '\bmore\s+speed\s+(?:in|into|through|to\s+spare)\b',
+    '\b(?:turn\s+in|arrive|enter|go\s+in)\s+(?:[\w-]+\s+){0,3}?with\s+more\s+speed\b',
 ]
 tier = "design"
 sources = ["pitwall_rules"]

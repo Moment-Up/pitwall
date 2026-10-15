@@ -410,6 +410,11 @@ def test_answers_that_break_the_coaching_rules_are_not_grounded() -> None:
         ("Later braking would help at T3 [F1].", "never_brake_later: Later braking"),
         ("Carry more speed into T3 [F1].", "never_carry_more_speed: Carry more"),
         ("Be lighter on the brakes at T3 [F1].", "never_brake_less: lighter on the brakes"),
+        ("Brake 9 m later at T3 [F1].", "never_brake_later: Brake 9 m later"),
+        (
+            "At T3, come off the brake with a little more speed to spare [F1].",
+            "never_carry_more_speed: more speed to spare",
+        ),
     ):
         g = check_grounding(answer, [obs])
         assert not g.ok and g.constraint_breaches == [breach], answer

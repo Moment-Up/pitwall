@@ -357,6 +357,24 @@ CAUGHT = [
     ("never_carry_more_speed", "take more speed into the corner"),
     ("never_carry_more_speed", "turn in faster"),
     ("never_carry_more_speed", "you need more entry speed"),
+    # phrasings the 2026-10-15 review found the first patterns missed
+    ("never_brake_later", "Brake 10 m later."),
+    ("never_brake_later", "Brake 5m later"),
+    ("never_brake_later", "Brake five metres later."),
+    ("never_brake_later", "Try braking a few metres later."),
+    ("never_brake_later", "Delay your braking."),
+    ("never_brake_later", "Brake closer to the corner."),
+    ("never_brake_later", "Brake further down the straight."),
+    ("never_brake_later", "Stay flat for longer."),
+    ("never_carry_more_speed", "Carrying more speed into the apex is faster."),
+    ("never_carry_more_speed", "More speed into the corner."),
+    ("never_carry_more_speed", "Turn in with more speed."),
+    ("never_carry_more_speed", "Arrive at turn-in with more speed."),
+    ("never_carry_more_speed", "come off the brake with a little more speed to spare"),
+    ("never_release_earlier", "Let the brake go earlier."),
+    ("never_release_earlier", "Release the pedal earlier."),
+    ("never_brake_less", "Brake with less force."),
+    ("never_brake_less", "Ease up on the brake."),
 ]
 ALLOWED = [
     "You braked about 12 m earlier than on your reference lap.",
@@ -374,6 +392,8 @@ ALLOWED = [
     "Stay flat out right up to your braking point; don't lift before it.",
     "Come off the brake with a little speed to spare and let the cornering load slow the car to the apex.",
     "Release the brake while the car is still faster than the apex needs.",
+    "Braking started clearly later than on the reference lap, but the car came out of the corner slower.",
+    "Ease the brake pressure off smoothly as the car slows, rather than letting it go all at once.",
 ]
 
 
@@ -853,6 +873,21 @@ def test_tiers_must_be_backed_by_a_source(tmp_path: Path) -> None:
     assert_problem(
         tmp_path, swap('tier = "design"\n\n[[signal]]', 'tier = "guess"\n\n[[signal]]'), "'guess' is not one of"
     )
+
+
+def test_praise_may_describe_later_braking_but_never_ask_for_it(tmp_path: Path) -> None:
+    """The praise exemption covers describing what paid off, never an instruction, and only a praise coaching kind
+    (exit_gain) may be positive: a planned "positive" fault cannot open a door for "brake later"."""
+    assert build(tmp_path, BASE + PRAISE).valid  # "Braking later paid off here: the corner got faster."
+    for said in ("Good exit: brake later next lap.", "Try braking later here, it paid off.", "Brake later again."):
+        text = BASE + PRAISE.replace("Braking later paid off here: the corner got faster.", said)
+        assert_problem(tmp_path, text, "advice 'praise'", "breaks constraint 'no_later'")
+    planned = BASE + (
+        '\n[[fault]]\nid = "late_brake_gain"\nstatus = "planned"\npositive = true\nname = "Later braking paid off"\n'
+        'summary = "The corner got faster."\nphase = "braking"\nrelative = "reference"\ntier = "expert"\n'
+        'sources = ["book"]\n'
+    )
+    assert_problem(tmp_path, planned, "fault 'late_brake_gain'", "positive = true is only for a praise coaching kind")
 
 
 def test_text_that_breaks_a_constraint_is_found(tmp_path: Path) -> None:
