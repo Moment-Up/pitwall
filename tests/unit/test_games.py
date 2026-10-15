@@ -465,6 +465,7 @@ def test_adapter_declarations_added_for_documented_absences() -> None:
             "participants",
             "engine_temp_c",  # health lane: car health
             "field_motion",  # spotter: every car's Motion (recorded-validated on the owner's PS5 races)
+            "time_trial",  # leaderboard: Time Trial packet 14 and LapData's ghost car indexes (spec-decoded only)
         },
         Game.GT7: {
             *("drs_open", "ers_store_j", "track_zones", "field_samples", "damage", "buttons", "engine_temp_c"),
