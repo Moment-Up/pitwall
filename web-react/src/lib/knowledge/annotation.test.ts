@@ -205,6 +205,9 @@ describe("How corners work: the session variant's style and channels", () => {
     expect(styleLine({ ...style, enough: false }, "Alex")).toBe(
       "Not enough clean laps in Alex's last session here to tell Alex's braking style yet.",
     );
+    // a game with no steering (Assetto Corsa, GT7 variant A): the style is unknown, never "straight-line"
+    const unsteered = { ...style, braking_style: null, enough: false, braking_corners: 0, trail_corners: 0, unsteered_corners: 24, no_steering: true };
+    expect(styleLine(unsteered, "Alex")).toBe("This game sends no steering, so Pitwall cannot tell Alex's braking style here.");
     expect(styleLine(null)).toBeNull();
   });
 

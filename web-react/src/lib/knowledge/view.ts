@@ -581,12 +581,16 @@ export function cornersView(g: TechniqueKnowledge, skill: SkillLevel | null | un
 /**
  * The detected style in words, from what it was detected from (`?session=` `style`): "From 9 clean laps: the brake
  * still on into the turn at 53 of 56 braking corners, a roll off both pedals at 7." - or that there are not enough
- * clean laps to tell yet; null without the session variant. Counts only: the shares' thresholds are the server's. With
- * the F1 braking assist on it adds that some of that braking was the game's (pitwall.knowledge.style).
+ * clean laps to tell yet, or that the game sends no steering to tell it from (`no_steering`); null without the session
+ * variant. Counts only: the shares' thresholds are the server's. With the F1 braking assist on it adds that some of
+ * that braking was the game's (pitwall.knowledge.style).
  */
 export function styleLine(style: KnowledgeStyle | null | undefined, name?: string | null): string | null {
   if (!style || typeof style !== "object" || !Number.isFinite(style.braking_corners)) return null;
   const your = name ? `${name}'s` : "your";
+  if (style.no_steering) {
+    return `This game sends no steering, so Pitwall cannot tell ${your} braking style here.`;
+  }
   if (!style.enough) {
     return `Not enough clean laps in ${your} last session here to tell ${your} braking style yet.`;
   }

@@ -7,15 +7,20 @@ when the driver's own laps say which style they drive; until then the style is u
 
 Input: the per-corner ``CornerMetrics`` of the driver's recent clean compared laps (the lap processor keeps them per
 session, ``core.lap_processor``; a stored session's clean laps for ``knowledge.session``), as ``{corner: [metrics of
-each lap]}``. A *braking corner* is one corner on one lap with a matched braking event (``trail_brake_m`` measured);
-the shares count those:
+each lap]}``. A *braking corner* is one corner on one lap with a matched braking event; the shares count those whose
+value was measured:
 
-* braking style: the share with ``trail_brake_m >= TRAIL_BRAKE_M`` - at least ``TRAIL_SHARE`` is ``trail``, at most
+* braking style: of the braking corners with trail braking measured (``trail_brake_m``, which needs the steering), the
+  share with ``trail_brake_m >= TRAIL_BRAKE_M`` - at least ``TRAIL_SHARE`` is ``trail``, at most
   ``STRAIGHT_LINE_SHARE`` ``straight_line``, in between ``mixed``;
-* coasting: the share with ``coast_m >= COAST_M`` - at least ``COASTING_OFTEN_SHARE`` is ``often``, at most
-  ``COASTING_RARE_SHARE`` ``rare``, in between unknown (neither condition holds).
+* coasting: of the braking corners with coasting measured (``coast_m``, the pedals only), the share with
+  ``coast_m >= COAST_M`` - at least ``COASTING_OFTEN_SHARE`` is ``often``, at most ``COASTING_RARE_SHARE`` ``rare``,
+  in between unknown (neither condition holds).
 
-Both need at least ``MIN_LAPS`` laps and ``MIN_BRAKING_CORNERS`` braking corners, else they are unknown (None).
+Each needs at least ``MIN_LAPS`` laps and ``MIN_BRAKING_CORNERS`` measured braking corners, else it is unknown (None).
+A game that sends no steering (Assetto Corsa; GT7 variant A) measures no trail braking (``analysis.braking``: None, not
+0 m), so its braking style stays unknown - never "straight-line" - while its coasting can still be detected
+(``Style.no_steering``).
 
 The F1 games' braking assist (level 1 and above) brakes for the driver, so some of the brake trace these shares read
 is the game's. How much is not known, so the style is kept and flagged, not dropped (``Style.braking_assist``: the
@@ -26,7 +31,7 @@ under the same assist. Pure and deterministic; no LLM.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from pitwall.analysis.compare import CornerMetrics
@@ -54,10 +59,11 @@ class Style:
     braking_style: str | None = None
     coasting: str | None = None
     laps: int = 0
-    braking_corners: int = 0
+    braking_corners: int = 0  # braking corners whose trail braking was measured (the steering was)
     trail_corners: int = 0  # braking corners trail-braked (trail_brake_m >= TRAIL_BRAKE_M)
     coast_corners: int = 0  # braking corners with coasting (coast_m >= COAST_M)
     coast_measured: int = 0  # braking corners whose coasting was measured
+    unsteered_corners: int = 0  # braking corners with no steering measured: trail braking unknown there
     # the F1 braking assist level the laps were driven with (1 and above: some of the braking was the game's); None =
     # off or not reported
     braking_assist: int | None = None
@@ -77,7 +83,14 @@ class Style:
 
     @property
     def enough(self) -> bool:
+        """Enough laps and braking corners with trail braking measured to tell the braking style."""
         return self.laps >= MIN_LAPS and self.braking_corners >= MIN_BRAKING_CORNERS
+
+    @property
+    def no_steering(self) -> bool:
+        """The laps braked but their steering was never measured (the game sends none): the braking style cannot be
+        told, however many laps there are."""
+        return self.braking_corners == 0 and self.unsteered_corners > 0
 
     def to_dict(self) -> dict[str, Any]:
         ts, cs = self.trail_share, self.coast_share
@@ -89,6 +102,8 @@ class Style:
             "trail_corners": self.trail_corners,
             "coast_corners": self.coast_corners,
             "coast_measured": self.coast_measured,
+            "unsteered_corners": self.unsteered_corners,
+            "no_steering": self.no_steering,
             "trail_share": None if ts is None else round(ts, 3),
             "coast_share": None if cs is None else round(cs, 3),
             "enough": self.enough,
@@ -111,41 +126,35 @@ def detect_style(recent: Mapping[str, Sequence[CornerMetrics]], braking_assist: 
     corner has (a lap misses a corner only where it was an incident). ``braking_assist``: the F1 braking assist level
     the laps were driven with (flags the style; ``braking_assist_of``)."""
     laps = max((len(v) for v in recent.values()), default=0)
-    braking = trail = coast = coast_measured = 0
+    braking = trail = coast = coast_measured = unsteered = 0
     for metrics in recent.values():
         for m in metrics:
-            tb = _num(m.trail_brake_m)
-            if tb is None:
-                continue
-            braking += 1
-            trail += tb >= TRAIL_BRAKE_M
-            cm = _num(m.coast_m)
+            tb, cm = _num(m.trail_brake_m), _num(m.coast_m)
+            if tb is not None:
+                braking += 1
+                trail += tb >= TRAIL_BRAKE_M
+            elif cm is not None:  # a braking event, but no steering to tell trail braking: unknown, not 0 m
+                unsteered += 1
             if cm is not None:
                 coast_measured += 1
                 coast += cm >= COAST_M
-    out = Style(
+    counts = Style(
         laps=laps,
         braking_corners=braking,
         trail_corners=trail,
         coast_corners=coast,
         coast_measured=coast_measured,
+        unsteered_corners=unsteered,
         braking_assist=braking_assist,
     )
-    if not out.enough:
-        return out
-    share = trail / braking
-    braking_style = "trail" if share >= TRAIL_SHARE else "straight_line" if share <= STRAIGHT_LINE_SHARE else "mixed"
+    braking_style: str | None = None
+    if counts.enough:
+        share = trail / braking
+        braking_style = (
+            "trail" if share >= TRAIL_SHARE else "straight_line" if share <= STRAIGHT_LINE_SHARE else "mixed"
+        )
     coasting: str | None = None
-    if coast_measured >= MIN_BRAKING_CORNERS:
+    if laps >= MIN_LAPS and coast_measured >= MIN_BRAKING_CORNERS:
         cs = coast / coast_measured
         coasting = "often" if cs >= COASTING_OFTEN_SHARE else "rare" if cs <= COASTING_RARE_SHARE else None
-    return Style(
-        braking_style=braking_style,
-        coasting=coasting,
-        laps=laps,
-        braking_corners=braking,
-        trail_corners=trail,
-        coast_corners=coast,
-        coast_measured=coast_measured,
-        braking_assist=braking_assist,
-    )
+    return replace(counts, braking_style=braking_style, coasting=coasting)

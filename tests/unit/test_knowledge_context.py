@@ -10,9 +10,13 @@ from __future__ import annotations
 from dataclasses import fields
 from typing import Any
 
+import numpy as np
 import pytest
 
+from pitwall.analysis.braking import detect_braking
 from pitwall.analysis.compare import CornerMetrics
+from pitwall.analysis.laps import CHANNELS as LAP_CHANNELS
+from pitwall.analysis.laps import LapTrace
 from pitwall.knowledge.context import (
     CHANNEL_WORDS,
     GAME_KEYS,
@@ -206,6 +210,54 @@ def test_the_braking_assist_flags_the_style_without_changing_it() -> None:
     )
     _, text, _, say = _context_fact(g, build_context(game="f1_25", style=plain), plain, [])
     assert "assist" not in text and say is not None and "assist" not in say
+
+
+def _braking_lap(steering: float) -> LapTrace:
+    """One 1 km lap at 10 m a sample: a stop from 250 to 90 km/h over 300-420 m with the wheel turned (``steering``,
+    NaN = the game sends none), a 30 m roll off both pedals, then full throttle."""
+    d = np.arange(0.0, 1000.0, 10.0)
+    t = np.cumsum(np.full(len(d), 0.12))
+    speed = np.where(d < 300, 250.0, np.where(d < 450, 250.0 - (d - 300) * (160 / 150), 90.0 + (d - 450) * 0.3))
+    brake = np.where((d >= 300) & (d < 420), 0.9, 0.0)
+    throttle = np.where(d >= 450, 1.0, np.where(d < 290, 1.0, 0.0))
+    ch = {k: np.full(len(d), np.nan) for k in LAP_CHANNELS}
+    ch.update(
+        distance_m=d,
+        session_time_s=t,
+        lap_time_ms=t * 1000,
+        speed_kph=speed,
+        brake=brake,
+        throttle=throttle,
+        steering=np.where((d >= 360) & (d < 470), steering, 0.0 if steering == steering else np.nan),
+    )
+    return LapTrace(lap_number=1, channels=ch, lap_time_ms=int(t[-1] * 1000), valid=True)
+
+
+def test_trail_braking_is_unknown_when_the_game_sends_no_steering() -> None:
+    """Assetto Corsa (steering not mapped) and GT7 variant A send no steering: a lap's trail braking is then not
+    measured (None), never a measured 0 m - and the braking style stays unknown instead of "straight-line"."""
+    (with_steering,) = detect_braking(_braking_lap(0.3))
+    (no_steering,) = detect_braking(_braking_lap(float("nan")))
+    assert with_steering.trail_brake_m is not None and with_steering.trail_brake_m >= TRAIL_BRAKE_M
+    assert no_steering.trail_brake_m is None
+    assert no_steering.coast_m == pytest.approx(with_steering.coast_m) and no_steering.coast_m >= COAST_M
+    # an AC-shaped session: every braking corner without steering, a roll off both pedals at each
+    ac = {f"T{i}": [_m(f"T{i}", None, 25.0), _m(f"T{i}", None, 25.0)] for i in range(8)}
+    for laps in ac.values():
+        for m in laps:
+            m.brake_start_m = 100.0
+            m.coast_m = 25.0
+    s = detect_style(ac)
+    assert s.braking_style is None and not s.enough and s.no_steering
+    assert (s.braking_corners, s.unsteered_corners, s.coast_measured) == (0, 16, 16)
+    assert s.coasting == "often"  # coasting needs only the pedals: still detected
+    ctx = build_context(game="ac", style=s)
+    g = load_graph()
+    assert not g.holds("braking_style_straight_line", ctx) and not g.holds("braking_style_trail", ctx)
+    _, text, data, say = _context_fact(g, ctx, s, [])
+    assert "braking style not known" in text and "no steering" in text and "straight-line" not in text
+    assert say == "I can't tell your braking style here: this game sends no steering."
+    assert data["style"]["no_steering"] is True and data["style"]["braking_style"] is None
 
 
 def test_a_detected_style_satisfies_the_graphs_style_conditions() -> None:

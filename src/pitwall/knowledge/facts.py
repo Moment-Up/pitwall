@@ -118,6 +118,12 @@ def _context_fact(g: TechniqueGraph, ctx: Context, style: Style, fits: Sequence[
         if style.assisted:  # the game's braking assist braked too: say so, never present it as all the driver's
             style_txt += "; the game's braking assist was on, so some of that braking was the game's"
             say += " The game's braking assist was on, so some of that braking was the game's, not yours."
+    elif style.no_steering:  # the game sends no steering: braking with the wheel turned is never measured
+        style_txt = (
+            "braking style not known: the laps carry no steering, so braking with the wheel turned cannot be measured "
+            f"(in {style.unsteered_corners} braking corners)"
+        )
+        say = "I can't tell your braking style here: this game sends no steering."
     else:
         style_txt = (
             f"braking style not detected yet (it needs {MIN_LAPS} clean laps with {MIN_BRAKING_CORNERS} braking "

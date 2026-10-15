@@ -182,6 +182,7 @@ export interface KnowledgeStyle {
   braking_style: "trail" | "straight_line" | "mixed" | null;
   coasting: "rare" | "often" | null;
   laps: number;
+  /** Braking corners whose trail braking was measured (it needs the steering). */
   braking_corners: number;
   /** Braking corners with the brake still on into the turn (trail braking). */
   trail_corners: number;
@@ -189,6 +190,11 @@ export interface KnowledgeStyle {
   coast_corners: number;
   /** Braking corners where coasting was measured. */
   coast_measured: number;
+  /** Braking corners whose steering was not measured, so their trail braking is unknown. Absent on an older server. */
+  unsteered_corners?: number;
+  /** The laps braked but the game sent no steering: the braking style cannot be told (never "straight-line").
+   * Absent on an older server. */
+  no_steering?: boolean;
   trail_share: number | null;
   coast_share: number | null;
   /** Enough clean laps and braking corners to tell. */

@@ -2,6 +2,10 @@
 
 Works on the lap's native samples (not the resampled grid) so onset/release points keep the game's
 temporal resolution; crossing points are interpolated between samples for sub-sample precision.
+
+Trail braking (``trail_brake_m``) needs the steering: a lap whose steering has no finite sample over a braking event
+(Assetto Corsa and GT7 variant A send none) leaves it ``None``, not a measured 0 m, so a game without steering never
+reads as a driver who brakes in a straight line (unknown stays unknown). Coasting needs only the pedals.
 """
 
 from __future__ import annotations
@@ -34,7 +38,8 @@ class BrakingEvent:
     time_to_peak_s: float  # onset -> 90% of peak (initial application aggressiveness)
     release_s: float  # last time >= 90% peak -> below BRAKE_OFF (release progressiveness)
     duration_s: float
-    trail_brake_m: float  # distance braking while steering > TRAIL_STEER
+    # distance braking while |steering| > TRAIL_STEER; None = the lap's steering was not measured over the event
+    trail_brake_m: float | None
     throttle_pickup_m: float | None  # first throttle > THROTTLE_PICKUP after min speed
     throttle_full_m: float | None  # first throttle > THROTTLE_FULL after min speed
     coast_m: float  # distance with neither brake nor throttle between release and pickup
@@ -61,7 +66,9 @@ def detect_braking(lap: LapTrace) -> list[BrakingEvent]:
     b = np.nan_to_num(c["brake"][mask], nan=0.0)
     thr = np.nan_to_num(c["throttle"][mask], nan=0.0)
     v = c["speed_kph"][mask]
-    steer = np.nan_to_num(c["steering"][mask], nan=0.0)
+    steer_raw = c["steering"][mask]
+    steered = np.isfinite(steer_raw)  # samples whose steering was measured
+    steer = np.nan_to_num(steer_raw, nan=0.0)
     n = len(d)
     if n < 3:
         return []
@@ -112,9 +119,15 @@ def detect_braking(lap: LapTrace) -> list[BrakingEvent]:
         for j in range(i1, min(coast_end, n - 1)):
             if b[j] < BRAKE_OFF and thr[j] < 0.05:
                 coast += float(d[j + 1] - d[j])
-        trail = float(
-            sum(d[j + 1] - d[j] for j in range(i0, min(i1, n - 1)) if abs(steer[j]) > TRAIL_STEER and b[j] >= BRAKE_OFF)
-        )
+        trail: float | None = None
+        if steered[i0 : i1 + 1].any():
+            trail = float(
+                sum(
+                    d[j + 1] - d[j]
+                    for j in range(i0, min(i1, n - 1))
+                    if abs(steer[j]) > TRAIL_STEER and b[j] >= BRAKE_OFF
+                )
+            )
         events.append(
             BrakingEvent(
                 start_m=_interp_cross(d, b, i0, BRAKE_ON),
