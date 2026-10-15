@@ -3,10 +3,12 @@ the graph did not load (the app itself starts and runs without it). The app runs
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from pitwall.config import Settings
@@ -16,8 +18,7 @@ from pitwall.knowledge.graph import PHASE_IDS, TIERS, load_graph
 NODE_LISTS = ("phases", "conditions", "techniques", "signals", "faults", "causes", "advice", "constraints", "sources")
 
 
-@pytest.fixture
-def client(tmp_path: Path) -> Iterator[TestClient]:
+def _app(tmp_path: Path) -> FastAPI:
     from pitwall.api.app import create_app
 
     s = Settings(
@@ -29,7 +30,12 @@ def client(tmp_path: Path) -> Iterator[TestClient]:
         tailscale_trust_owner=False,
         access_token="tok",
     )
-    with TestClient(create_app(s, start_udp=False)) as c:
+    return create_app(s, start_udp=False)
+
+
+@pytest.fixture
+def client(tmp_path: Path) -> Iterator[TestClient]:
+    with TestClient(_app(tmp_path)) as c:
         yield c
 
 
@@ -89,3 +95,14 @@ def test_a_graph_that_did_not_load_is_503_and_the_app_still_runs(client: TestCli
     assert "did not load" in detail["message"]
     assert any("unknown id 'nowhere'" in e for e in detail["errors"])
     assert client.get("/api/health").status_code == 200
+
+
+@pytest.mark.usefixtures("broken_graph")
+def test_a_broken_graph_is_reported_when_pitwall_starts(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
+    """docs/knowledge.md tells contributors to look for graph problems at startup: the app loads and validates the
+    graph while it starts, before any lap or request needs it, and starts anyway."""
+    load_graph.cache_clear()
+    with caplog.at_level(logging.ERROR, logger="pitwall.knowledge.graph"), TestClient(_app(tmp_path)) as c:
+        assert load_graph.cache_info().currsize == 1  # loaded during startup
+        assert "unknown id 'nowhere'" in caplog.text and "running without technique knowledge" in caplog.text
+        assert c.get("/api/health").status_code == 200

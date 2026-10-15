@@ -207,6 +207,13 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         except Exception:
             log.exception("validation kit unavailable (the rest of pitwall runs as usual)")
         # end validation kit
+        # technique knowledge graph (pitwall.knowledge): loaded and validated now, off the event loop and before any
+        # lap, so a broken graph file is logged at startup (docs/knowledge.md); Pitwall runs without it either way
+        from pitwall.knowledge.graph import load_graph
+
+        graph = await asyncio.to_thread(load_graph)
+        if graph.valid:
+            log.info("technique graph: %d nodes, digest %s", len(graph.by_id), graph.digest)
         if start_udp:
             try:
                 rt.start_udp()
