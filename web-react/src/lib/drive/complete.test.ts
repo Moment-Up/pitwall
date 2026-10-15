@@ -121,6 +121,21 @@ describe("dedupeComplete: each fact once, Went well > Best lap tag > Progress > 
     expect(old.badges).toEqual([]);
   });
 
+  it("a family record: the tile's REC tag says it; the 'Family record at' badge of the same lap is left out", () => {
+    const key = "f1_25~f1:27~4910~f1:team:8~f1~0~race~dry~b2.a1.t2.g3.l2";
+    const rec = badge(`family_record:${key}`, "family_record", "Family record at Imola", { lap_id: BEST_LAP_ID }, `family_record:${key}`);
+    expect(badgeKeys(rec)).toEqual([`family_record:${key}`, `record:${BEST_LAP_ID}`]);
+    const v = dedupe(recap(T3_GOOD, [rec]));
+    expect(v.bestTag).toBe(true);
+    expect(v.badges).toEqual([]);
+    // the tile's REC on another lap (the looser family best, game + track + car + layout): the badge is another fact
+    const other = dedupe(recap(T3_GOOD, [rec]), { tag: "REC", lapId: BEST_LAP_ID + 1 });
+    expect(other.badges.map((b) => b.kind)).toEqual(["family_record"]);
+    // no REC tag (a PB only): the badge says it
+    expect(dedupe(recap(T3_GOOD, [rec]), { tag: "PB", lapId: BEST_LAP_ID }).badges).toHaveLength(1);
+    expect(badgeKeys(badge("family_record:x", "family_record", "Family record at Imola"))).toEqual([]);
+  });
+
   it("without a recap: nothing to de-duplicate; the tag stays", () => {
     expect(dedupeComplete({ things: null, best: { tag: "REC", lapId: 1 }, badges: [] })).toEqual({
       things: null,

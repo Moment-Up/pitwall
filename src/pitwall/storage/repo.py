@@ -2375,8 +2375,6 @@ TT_RIVAL_FLAGS: dict[str, str] = {
     "equal_car_performance": "rival_equal_performance",
     "custom_setup": "rival_custom_setup",
 }
-# A rival "bucket" for ``latest_tt_rivals``: the assists that change how fast a lap can be (custom setup is shown only)
-_TT_BUCKET = ("rival_tc", "rival_gearbox", "rival_abs", "rival_equal_performance")
 _TT_ROW_COLS = """t.session_id, t.packet_format, t.rival_car_id, t.rival_lap_ms, t.rival_s1_ms, t.rival_s2_ms,
     t.rival_s3_ms, t.rival_tc, t.rival_gearbox, t.rival_abs, t.rival_equal_performance, t.rival_custom_setup,
     t.rival_car_index, t.data, t.updated_unix, s.game, s.track_id, s.track_name, s.track_length_m, s.started_unix"""
@@ -2487,25 +2485,3 @@ def latest_tt_rival(
         [*args, *layout_args],
     ).fetchone()
     return None if r is None else _tt_rival_row(r)
-
-
-def latest_tt_rivals(conn: sqlite3.Connection, game: str | None = None) -> list[dict[str, Any]]:
-    """The latest EA rival (as ``latest_tt_rival``) of every game + track + rival car + assist bucket (TC, gearbox,
-    ABS, equal performance) that has one, for an index of boards; ordered by game, track, car, then newest first."""
-    where: list[str] = [_TT_RIVAL_WHERE]
-    args: list[Any] = []
-    if game is not None:
-        where.append("s.game=?")
-        args.append(game)
-    bucket = ", ".join(f"t.{c}" for c in _TT_BUCKET)
-    rows = conn.execute(
-        f"""SELECT * FROM (
-              SELECT {_TT_ROW_COLS}, ROW_NUMBER() OVER (
-                       PARTITION BY s.game, s.track_id, t.rival_car_id, {bucket}
-                       ORDER BY t.updated_unix DESC, s.started_unix DESC, s.rowid DESC) AS rn
-              FROM session_time_trial t JOIN sessions s ON s.id = t.session_id
-              WHERE {" AND ".join(where)})
-           WHERE rn = 1 ORDER BY game, track_id, rival_car_id, updated_unix DESC""",
-        args,
-    ).fetchall()
-    return [_tt_rival_row(r) for r in rows]

@@ -16,7 +16,8 @@
 //                                        goal, the "N clean laps in a row" and "10 clean laps in one session" badges:
 //                                        three ways of saying one session's clean run, shown once - UX review)
 // The card adds what only it shows, and derives keys for an older server that sends none:
-//   record:<lap id>    the Best lap tile's REC tag (a new family record: its own fact)
+//   record:<lap id>    the Best lap tile's REC tag (a new family record: its own fact), and the "Family record at …"
+//                      badge of that lap (the record of its exact family board: the same lap, said once)
 //   pb:<lap id>        the tile's PB tag, and a first-ever best ("first clean lap here" is the best here too)
 //   first_clean, goals_reached, pb_streak   derived from the source when there is no `fact_key` (one session per card,
 //                                           so no scope is needed)
@@ -124,6 +125,9 @@ export function badgeKeys(b: Badge): string[] {
     case "clean_streak":
     case "ten_clean_session":
       derived = ["clean_run"];
+      break;
+    case "family_record": // the lap that holds the board's record: the tile's REC tag when it is that lap
+      derived = b.lap_id != null ? [`record:${b.lap_id}`] : [];
       break;
     default:
       derived = [];

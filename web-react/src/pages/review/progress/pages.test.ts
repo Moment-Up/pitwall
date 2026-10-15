@@ -150,6 +150,11 @@ describe("Progress (6.9) with D5", () => {
     );
     expect(text).toContain("Alex Sun 11 Oct · 5 clean laps 1:13.616 3.067 s behind 4.35 % 9.645 s slower 15.08 %");
     expect(text).toContain("Game version 1.26");
+    // the sectors column only from lg up; below it (iPad portrait) the same in a list under the board, so it fits
+    expect(html).toMatch(/<th[^>]*class="[^"]*hidden lg:table-cell[^"]*"[^>]*>[\s\S]*?Best sectors/);
+    expect(html).toContain("data-records-sectors");
+    expect(text).toContain("Best sectors James 16.662 · 31.149 · 22.151 Added up: 1:09.962, 0.587 s to find Game version 1.26");
+    expect(text).toContain("Alex 17.247 · 31.956 · 23.461");
     // the real pole with its caveat and the linked F1DB credit; no band at +10.28 % (none is drawn)
     expect(text).toContain("Times to beat Real F1 pole 2025 · Lando Norris 1:03.971 Austrian Grand Prix, 28 Jun 2025");
     expect(text).toContain("F1 25 is not the real car");
@@ -207,6 +212,7 @@ describe("Progress (6.9) with D5", () => {
     expect(text).not.toContain("any car");
     // intermediate: percentages and dates, not sectors
     expect(text).not.toContain("16.662 · 31.149 · 22.151");
+    expect(html).not.toContain("data-records-sectors");
   });
 
   it("Records while the board loads, and on a server without boards", async () => {

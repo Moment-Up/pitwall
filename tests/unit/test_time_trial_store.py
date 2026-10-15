@@ -1,5 +1,6 @@
 """F1 25 Time Trial (leaderboard): the session manager keeps packet 14 in live state and stores the latest per session
-(schema v7 ``session_time_trial``); ``repo.latest_tt_rival`` / ``latest_tt_rivals`` give a board its EA rival row.
+(schema v7 ``session_time_trial``); ``repo.latest_tt_rival`` gives a board its EA rival row
+(``leaderboard.service.ea_rival_for``).
 
 Objects are built directly (no game data): this tests storage and routing, not the decoder (test_f1_time_trial.py)."""
 
@@ -292,17 +293,6 @@ def test_an_unknown_flag_matches_only_unknown(tmp_path: Path) -> None:
         assert r is not None and r["assists"]["traction_control"] is None
 
 
-def test_latest_rivals_index_one_per_track_car_and_assist_bucket(boards: sqlite3.Connection) -> None:
-    out = repo.latest_tt_rivals(boards)
-    assert [(r["track_id"], r["car_id"], r["session_id"]) for r in out] == [
-        ("f1:17", "f1:team:3", "e_williams"),
-        ("f1:17", "f1:team:8", "b_abs_off"),
-        ("f1:17", "f1:team:8", "a_abs_on"),
-        ("f1:7", "f1:team:8", "i_other_track"),
-    ]
-    assert repo.latest_tt_rivals(boards, game="gt7") == []
-
-
 def test_row_roundtrip_and_cascade(tmp_path: Path) -> None:
     db = Database(tmp_path / "r.sqlite3")
     with db.read() as c:
@@ -346,4 +336,3 @@ def test_synthetic_time_trial_stream_is_stored_but_never_a_board_rival(store: tu
         assert s is not None and s["synthetic"] and s["session_type"] == "time_trial"
         assert s["track_id"].startswith("synthetic:")
         assert repo.latest_tt_rival(c, "f1_25", s["track_id"], "f1:team:8") is None
-        assert repo.latest_tt_rivals(c) == []

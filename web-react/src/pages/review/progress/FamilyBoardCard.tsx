@@ -6,11 +6,15 @@
 // to it (no band when the server sends none), with the band rule under the rows. Density (6.10): beginners see times,
 // gaps in words and bands; intermediate adds percentages, dates and clean laps (under the name), and the assists in
 // words; advanced adds best sectors, their sum and the game version. Tapping a row opens its session.
+//
+// Width (iPad portrait, 820 px): the cells wrap to their narrowest (the "in the seat" chip under the name, a band chip
+// over its gap), and below the lg breakpoint the best sectors leave the table for a list under it, so a board with
+// both times to beat fits without sideways scrolling; phones (under the table's 560 px minimum) still scroll it.
 
 import { Card, Chip, Skeleton } from "@heroui/react";
 import { DataGrid, Segment, type DataGridColumn } from "@heroui-pro/react";
 import { Medal } from "@gravity-ui/icons";
-import { useMemo, type Key } from "react";
+import { Fragment, useMemo, type Key } from "react";
 import { DriverAvatar } from "../../../components/DriverAvatar";
 import { Glossary, TimingValue, Unknown } from "../../../components/ui";
 import type { Band, BenchmarkKind, LeaderboardBoard } from "../../../lib/endpoints/leaderboard";
@@ -147,6 +151,7 @@ export function FamilyBoardCard({ board, records, scope, seatedId, detail, gloss
               {glossary && <Glossary term="bands" className="-my-2" />}
             </p>
           )}
+          {detail === "all" && <SectorsList rows={board.rows} />}
         </>
       )}
 
@@ -164,20 +169,29 @@ function boardColumns(kinds: readonly BenchmarkKind[], detail: RecordsDetail, se
       isRowHeader: true,
       cell: (r) => {
         // beyond the plain view: when the best was set and how many clean laps count here, under the name
-        const when = detail !== "plain" && r.ms != null ? setLine(r) : null;
+        const when = detail !== "plain" && r.ms != null ? setParts(r) : [];
         return (
           <span className="flex min-w-0 items-center gap-2">
             <DriverAvatar driver={r.driver} size="sm" />
             <span className="grid min-w-0 leading-snug">
-              <span className="flex items-center gap-2">
+              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span className="text-[15px] font-medium whitespace-nowrap">{r.name}</span>
                 {r.driverId === seatedId && (
-                  <Chip size="sm" variant="soft">
+                  <Chip size="sm" variant="soft" className="whitespace-nowrap">
                     <Chip.Label>in the seat</Chip.Label>
                   </Chip>
                 )}
               </span>
-              {when && <span className="text-[13px] whitespace-nowrap text-muted">{when}</span>}
+              {when.length > 0 && (
+                <span className="text-[13px] text-muted">
+                  {when.map((part, i) => (
+                    <Fragment key={part}>
+                      {i > 0 && " · "}
+                      <span className="whitespace-nowrap">{part}</span>
+                    </Fragment>
+                  ))}
+                </span>
+              )}
             </span>
           </span>
         );
@@ -191,7 +205,7 @@ function boardColumns(kinds: readonly BenchmarkKind[], detail: RecordsDetail, se
         r.ms == null ? (
           <span className="text-sm text-muted">no clean lap here yet</span>
         ) : (
-          <span className="inline-flex items-center gap-1.5">
+          <span className="inline-flex flex-wrap items-center justify-end gap-1.5">
             <TimingValue ms={r.ms} kind="lap" status="neutral" size="table" context="table" />
             {r.leader && (
               <Chip size="sm" variant="soft">
@@ -229,7 +243,7 @@ function boardColumns(kinds: readonly BenchmarkKind[], detail: RecordsDetail, se
         const p = pctLine(v.gap_pct, detail);
         return (
           <span className="grid justify-items-end gap-0.5 leading-snug" data-vs={kind}>
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex flex-wrap items-center justify-end gap-x-1.5 gap-y-0.5">
               {v.band && <BandChip band={v.band} />}
               <span className="text-sm whitespace-nowrap">{v.gap_text}</span>
             </span>
@@ -243,28 +257,56 @@ function boardColumns(kinds: readonly BenchmarkKind[], detail: RecordsDetail, se
     cols.push({
       id: "sectors",
       header: "Best sectors",
-      cell: (r) => {
-        if (r.ms == null) return null;
-        const s = sectorsLine(r.sectorsMs);
-        const t = theoreticalLine(r.theoreticalMs, r.theoreticalGainMs);
-        if (!s) return <Unknown />;
-        return (
-          <span className="grid text-sm leading-snug">
-            <span className="whitespace-nowrap tabular-nums">{s}</span>
-            {t && <span className="text-[13px] text-muted">{t}</span>}
-            {r.gameVersion && <span className="text-[13px] whitespace-nowrap text-muted">Game version {r.gameVersion}</span>}
-          </span>
-        );
-      },
+      // from lg up; narrower, SectorsList under the table says the same (hidden cells are not read out)
+      headerClassName: SECTORS_COLUMN,
+      cellClassName: SECTORS_COLUMN,
+      cell: (r) => (r.ms == null ? null : <SectorsDetail row={r} />),
     });
   }
   return cols;
 }
 
-/** "Sat 10 Oct · 18 clean laps": when the best was set, and the clean laps that count on this board. */
-function setLine(r: FamilyRow): string {
+/** The best sectors column is shown from this breakpoint (iPad landscape); below it, SectorsList. */
+const SECTORS_COLUMN = "hidden lg:table-cell";
+
+/** A driver's best sectors, their sum and the game version (advanced). */
+function SectorsDetail({ row }: { row: FamilyRow }) {
+  const s = sectorsLine(row.sectorsMs);
+  const t = theoreticalLine(row.theoreticalMs, row.theoreticalGainMs);
+  if (!s) return <Unknown />;
+  return (
+    <span className="grid text-sm leading-snug">
+      <span className="whitespace-nowrap tabular-nums">{s}</span>
+      {t && <span className="text-[13px] text-muted">{t}</span>}
+      {row.gameVersion && <span className="text-[13px] whitespace-nowrap text-muted">Game version {row.gameVersion}</span>}
+    </span>
+  );
+}
+
+/** Below lg: the best sectors of each driver with a time, under the table instead of a column. */
+function SectorsList({ rows }: { rows: readonly FamilyRow[] }) {
+  const timed = rows.filter((r) => r.ms != null);
+  if (!timed.length) return null;
+  return (
+    <div className="grid gap-1.5 lg:hidden" data-records-sectors>
+      <p className="m-0 text-[13px] font-medium text-muted">Best sectors</p>
+      <ul className="m-0 grid list-none gap-2 p-0" aria-label="Best sectors">
+        {timed.map((r) => (
+          <li key={r.driverId} className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+            <span className="text-[15px] font-medium">{r.name}</span>
+            <SectorsDetail row={r} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** ["Sat 10 Oct", "18 clean laps"]: when the best was set, and the clean laps that count on this board (shown joined
+ * by " · ", each part unbroken). */
+function setParts(r: FamilyRow): string[] {
   const laps = r.cleanLaps != null ? `${r.cleanLaps} clean ${r.cleanLaps === 1 ? "lap" : "laps"}` : null;
-  return [r.dateText, laps].filter(Boolean).join(" · ");
+  return [r.dateText, laps].filter((x): x is string => !!x);
 }
 
 function BandChip({ band }: { band: Band }) {
