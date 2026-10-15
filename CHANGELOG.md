@@ -29,6 +29,33 @@ The release workflow copies a release's bullet points into its GitHub release no
   reminder for the next one. Settings › System lists what to look for. Synthetic.
 - A habit the radio announces gets its corner reminder on the lap you hear it, not one lap later. Tested on synthetic
   laps; not live.
+- Coaching fits who drives what: Ed's corner brief, his fault checklist and published coaching, each saying when it
+  applies (level, braking style, car, gearbox). Recorded laps; not live.
+- Your braking style and how often you coast are read from your own clean laps; unknown stays unknown. With the F1
+  braking assist on, Pitwall says some braking was the game's. Recorded laps.
+- A measured cause is said as why only when it tells its point apart on recorded laps: today just an early brake
+  release when coasting, on the stopped coach card and in Review. Not on the radio.
+- Review shows the other measured causes as "Also measured on this lap", never as why; How corners work lists them
+  apart. Unit tests; not yet seen in a browser.
+- The engineer never says a point happened because of a cause that was only also measured. Unit tests; LLM off.
+- Review › Coaching: How corners work - a corner's six phases, which techniques fit you and why, what Pitwall checks,
+  and where it comes from, Ed credited. Unit tests; not yet seen in a browser.
+- Review › Compare: lateral and longitudinal g for both laps (hidden when the game sends none, as GT7) and markers
+  where each lap braked, released, was slowest and went flat. Unit tests.
+- The engineer explains technique from the knowledge graph for your session and rejects an answer naming a
+  technique it doesn't have. Tested with unit tests; LLM off.
+- On the owner's 30 recorded F1 25 and GT7 captures the radio and the coach card say exactly what they said before:
+  the eight coached points fit every driver and game.
+- A game that sends no steering (Assetto Corsa) no longer makes you a "straight-line braker": your braking style
+  stays unknown there. Unit tests.
+- "No grip loss on the exit" is named only with traction control off; a traction-limited exit only where your
+  reference lap did not spin or slide. Recorded laps.
+- "Slowest point came sooner" replaces "Early turn-in": Pitwall does not measure the turn-in. Recorded laps.
+- The engineer never suggests a technique that does not fit you (heel-and-toe with paddles) or tells you to brake
+  later, brake less or trail-brake more. Unit tests; LLM off.
+- How corners work shows how real drivers brake (2025 F1 qualifying laps from OpenF1, AssettoCorsaGym sim laps), as
+  real-world data, not proof about a game. Unit tests.
+- Review › Compare's corner explainer now shows the causes Pitwall measured. Unit tests.
 
 ## v0.3.0 - 2026-10-13
 

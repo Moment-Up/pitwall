@@ -18,7 +18,9 @@ Design notes:
   laps (``HABIT_MIN_LAPS`` values or more, this lap included); a big one-off is a corrective point that is not a
   habit but cost at least ``BIG_ONE_OFF_S`` with ``BIG_ONE_OFF_CONFIDENCE``. Every other corrective point is a
   small one-off: shown on screen, not said on the radio. A habit is said (and called before its corner) only when
-  its mean cost is at least ``HABIT_MIN_IMPACT_S``.
+  its mean cost is at least ``HABIT_MIN_IMPACT_S``. A point whose technique-graph annotation says it does not fit
+  the driver (``applies`` False, ``knowledge.annotate``) is stored and shown in Review only: the radio, the coach
+  card and the habit tracker skip it.
 * Structural guard (``keeps_point``): a corrective observation is only ever kept when it lost at least
   ``MIN_TIME_LOSS_S`` at its corner, whatever rule produced it.
 * Every observation is written three ways from the same facts (D6, docs/ui/design-spec.md): ``text`` (full, with
@@ -53,6 +55,20 @@ INCIDENT_SPEED_FRAC = 0.5
 INCIDENT_MIN_REF_KPH = 60.0  # below this the reference itself is a hairpin crawl; ratios are meaningless
 SHORT_MAX_CHARS = 48  # ``Observation.short``: readable in a glance on the Drive screen
 INCIDENT_KIND = "incident"
+# Every ``Observation.kind`` the rules below produce, and the ones that are praise (``positive``). The technique graph
+# (``pitwall.knowledge.graph``) names its live faults after these; tests/unit/test_knowledge_graph.py checks this list
+# against the rules in ``observations_for_comparison``.
+COACHING_KINDS: tuple[str, ...] = (
+    "brake_early",
+    "brake_late_overdrive",
+    "low_min_speed",
+    "overspeed_apex",
+    "late_throttle",
+    "coasting",
+    "exit_gain",
+    INCIDENT_KIND,
+)
+POSITIVE_KINDS = frozenset({"exit_gain"})
 
 # --- habits: one definition for the radio, the coach card, the habit tracker (coach.habits) and the cue planner
 HABIT_RATIO = 0.6  # a deviation on at least this share of the recent laps (this one included) is a habit
@@ -184,6 +200,17 @@ def _finite(v: object) -> float | None:
 def is_corrective(o: Mapping[str, Any]) -> bool:
     """A point about something to fix (``Observation.to_dict()`` shape): not praise and not an incident."""
     return not o.get("positive") and o.get("kind") != INCIDENT_KIND
+
+
+def applies(o: Mapping[str, Any]) -> bool:
+    """The technique graph says this point fits the driver (``Observation.to_dict()`` shape annotated by
+    ``knowledge.annotate``): False only when its ``knowledge.applies`` is False - its fault's conditions fail for this
+    driver's Context or the game does not send a channel it needs. Such a point is stored and shown in Review with
+    ``knowledge.why_not``, but never picked for the radio, never on the coach card and never a habit
+    (``coach.selection``, ``coach.habits``). No annotation (no graph, or no graph fault for the kind) applies, as
+    before the graph existed."""
+    k = o.get("knowledge")
+    return not (isinstance(k, Mapping) and k.get("applies") is False)
 
 
 def is_habit(o: Mapping[str, Any]) -> bool:

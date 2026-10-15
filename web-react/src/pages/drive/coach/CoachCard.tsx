@@ -10,7 +10,8 @@
 //
 // Length rule: 30 px up to 60 characters, else 26 px clamped to 3 lines while moving (never smaller); stationary
 // (pit lane) the full text at 22 px with its evidence line under a "Next run · from last lap" chip ("from L6" for
-// an older lap).
+// an older lap); the evidence line leads with the cause the technique graph named from that lap's measurements, when
+// it named one (lib/drive/coach.ts).
 
 import { Card, Chip } from "@heroui/react";
 import { memo } from "react";

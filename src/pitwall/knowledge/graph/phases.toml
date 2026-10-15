@@ -1,0 +1,50 @@
+# The six phases of a corner, in driving order. Every technique and fault names its phase. The ids and their order are
+# fixed (pitwall.knowledge.graph.PHASE_IDS); the words are free to improve.
+
+[[phase]]
+id = "approach"
+order = 1
+name = "Approach"
+summary = "The straight before the corner, up to the moment you start braking."
+tier = "expert"
+sources = ["bentley_speed_secrets", "ed_corner_brief"]
+
+[[phase]]
+id = "braking"
+order = 2
+name = "Braking"
+summary = "From the first press of the brake pedal until most of the speed the corner needs to lose is gone."
+tier = "expert"
+sources = ["bentley_speed_secrets", "ed_corner_brief"]
+
+[[phase]]
+id = "turn_in"
+order = 3
+name = "Turn-in"
+summary = "The moment you start steering into the corner, with or without some brake still on."
+tier = "expert"
+sources = ["bentley_speed_secrets", "ed_corner_brief"]
+
+[[phase]]
+id = "mid_corner"
+order = 4
+name = "Mid-corner"
+summary = "From turn-in to the apex: the car takes its cornering load and rotates towards the exit."
+tier = "expert"
+sources = ["bentley_speed_secrets", "ed_corner_brief"]
+
+[[phase]]
+id = "apex"
+order = 5
+name = "Apex"
+summary = "The point closest to the inside of the corner, usually near the slowest point, where the throttle comes back."
+tier = "expert"
+sources = ["bentley_speed_secrets", "ed_corner_brief"]
+
+[[phase]]
+id = "exit"
+order = 6
+name = "Exit"
+summary = "From the apex out to the edge of the track: unwinding the steering while building to full throttle."
+tier = "expert"
+sources = ["bentley_speed_secrets", "ed_corner_brief"]

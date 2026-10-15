@@ -1,9 +1,9 @@
 # Status
 
-_Last updated: 2026-10-14 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
+_Last updated: 2026-10-15 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
 yet unless the Live column says so. After it: Gran Turismo 7 on the PS5, from the owner's races of 2026-10-11; F2
 cars in F1 25, recorded; v0.3.0's one radio engineer, recorded; habits and corner reminders, synthetic and
-recorded)._
+recorded; the technique knowledge graph, recorded)._
 
 What works, how far each part has been tested, and what is still unverified. Every claim is tied to one evidence
 tier:
@@ -34,6 +34,7 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Coaching from your own reference lap (deterministic) | yes | yes | **yes** (coaching produced in the live races) | the radio and the card saying the same point, live | `ipad_one_message` |
 | Live braking cues | yes | yes | no | timing on track | `cues_timing` |
 | Habits on the radio and Drive, corner reminders, the report's habit rules (unreleased) | yes (unit tests; 5 synthetic scenarios before / after) | yes (30 owner captures replayed before / after: [below](#habits-and-corner-reminders-unreleased)) | no | heard live; a reminder's real audio length and the driver's reaction to it; "sorted" said after a real fix | `cues_timing`, `ipad_one_message` |
+| Technique knowledge graph: coaching fitted to the driver and car, measured causes on screen (a cause as the reason only when its base-rate check passed), How corners work, Compare g-force and phase markers (unreleased) | yes (unit tests; the synthetic demo with and without the graph) | yes (30 owner captures replayed before / after: coaching unchanged, styles and causes [below](#technique-knowledge-graph-unreleased)) | no | the screens in a browser and on an iPad; a driver other than the owner (a beginner, a manual gearbox); the knowledge itself (published and brief tiers are not validated by Pitwall) | - |
 | F1 spotter (cars alongside) | yes (16 scenarios, at 60, 20 and 10 Hz, formats 2025 and 2026: a corner, a spin and a gate closing included) | yes (26 owner PS5 race sessions, 169 min: every overlap of 1 s or more called (121/121), 0 wrong clears, no call while the player slides more than 30 degrees; ground truth from the same positions. The radio simulated at measured clip lengths on the same races: what the driver would hear) | no | heard on track; audio latency to the ear; format 2026; online lobbies beyond one race; the car box against the game's collision shapes; the clear said as a gate closes (synthetic only: it never happened in these races) | a live F1 race with the spotter on (manual) |
 | Radio: push-to-talk, speech recognition, voices | yes | yes | partly (a radio check over an iPad and one AirPod was heard; the F1 25 wheel button is read live) | a driver asking by push-to-talk; the new dashboard's Go live on an iPad; Kokoro and Windows voices on a radio | `radio_ptt`, `radio_kokoro` |
 | Radio: hands-free talking (wake word "Pitwall" / "Radio", stationary unless the driver allows it while driving; Bluetooth button) | yes (the wake word through the real speech engines on 119 macOS `say` clips: "Pitwall" 44/49 clean, 45/49 with an engine drone, "Radio" 26/28, 0 false accepts; the browser VAD rules on the same clips; the hub's rules unit-tested; end to end on an isolated server: `say` clips over `/ws/radio` while a recorded F1 25 race streamed over UDP, docs/research/handsfree.md 3.5) | yes (the stationary gate on 11 owner captures as the hub sees them, incident gaps of 2-4 s no longer counted as stops and the hint only at stops of 8 s or more (review round 2); real F1 25 button presses through the hub with hands-free armed: 38 of 38 UDP Action 1 presses keyed push-to-talk and cut the capture); no recorded voice | no | a real voice and AirPod on the rig (A9 recordings owed); the Bluetooth key and game controller on an iPad; hands-free while driving | `radio_handsfree` *(new)* |
@@ -355,6 +356,214 @@ the habit the focus (with no radio connected the screen-only coach records it wh
 "Once" and its counts disagreed with the evidence line; "braking N m later" followed "better" for a habit of braking
 too late.
 
+## Technique knowledge graph (unreleased)
+
+Driving-technique knowledge is a graph in which every piece says when it fits the driver and car
+([knowledge.md](knowledge.md); docs/features.md "Coaching for every kind of driver"): every point of Ed's corner brief
+and its self-check, every row of his technique-fault checklist and every detector in his patches, published coaching
+knowledge, the eight kinds the coach says today and the causes Pitwall can name from what it measures. 219
+nodes and 246 edges: 16 techniques, 30 faults (8 live, 8 experimental, 13 planned, 1 background), 9 causes, 36
+advice, 55 signals (38 computed by Pitwall), 32 conditions, 5 constraints, 30 sources. **The knowledge itself is mostly
+not validated by Pitwall**: by tier, 47 nodes are published coaching (`expert`) and 58 Ed's material (`brief`); 40
+carry Pitwall's own measurements on the owner's recorded laps (`recorded`); 34 are the live coaching rules and their
+signals and advice (`live`); 38 are Pitwall's own definitions (`design`); 2 sources are real-world or third-party data
+measured by Pitwall's scripts (`external`, below). The screens and the AI engineer say which is which. **Recorded, not
+live.**
+
+**Real-world and third-party evidence** (tier `external`, 2026-10-15; ten measurements on five techniques, aggregates
+only, no raw data or participant names in the repository; **neither is evidence about a game or validated by
+Pitwall**):
+
+- *Real F1 cars* (OpenF1, CC BY-NC-SA 4.0, credited; derived numbers only): the fastest qualifying lap of each of the
+  top four at the 2025 Austrian and Japanese GPs, 58 braking zones. None clearly braked in a straight line; 42 trail
+  braked (72 %; 23 of 24 slow corners); a median 53 % of a corner's entry rotation with the brake on; braking and
+  turning overlap about 44 m (0.9 s); the brake comes off about 0.6 s before the slowest point; in some fast corners
+  drivers only lift. Limits: the brake is an on/off flag at about 4 Hz with no steering, and positions follow one
+  shared line, so this shows braking overlapping the turn, not how the pressure is released. It matches the owner's
+  F1 25 laps (trail braking into 40 of 41 braking corners) as context, not as proof about the game.
+- *Other people's sim laps* (AssettoCorsaGym, CC BY 4.0, arXiv 2407.16680): 11 human drivers from a professional to
+  beginners, Dallara F317 and GT3 at the Red Bull Ring and Monza (the Miata had too few laps), through Pitwall's own
+  braking analysis, grouped into thirds by lap time. Time to peak brake is the most consistent skill marker (fastest
+  third 0.10-0.20 s in three of the four groups, slowest third 0.37-0.46 s; 13 of 13 F317 and 11 of 13 GT3 corners);
+  fast GT3 drivers release over about 1.2 s against 0.5-0.9 s (a two-driver effect); the fastest third of GT3 drivers
+  trail-brake into about 72 % of braking corners against about 25 % (leaning on the two fastest, who also had better
+  pedals; weak and reversing in the F317); slower drivers coast more; **within one driver, laps with more trail braking
+  were not faster**, so trail braking marks long-term skill, not a lap-to-lap lever: a constraint
+  (`never_trail_brake_more`) keeps "trail brake more" out of every text and AI answer.
+
+What a driver sees: every coaching point carries whether it fits them (a point that does not is never said or put on
+the coach card and never becomes a habit; Review shows it with the reason), the causes its lap's measurements named,
+and advice at their level and braking style. A cause is said as the reason (the stopped coach card's evidence line,
+Review's Work on line, "Why: ..." in Review › Corners and the Compare explainer, the AI engineer) only when its
+base-rate check showed it tells its fault apart (below): today only the early brake release, on coasting points.
+Every other measured cause shows in Review as "Also measured on this lap: ...", never on the coach card or the radio,
+and the AI engineer may not present it as why. Review › Coaching gains "How corners work"; Compare gains Ed's g-force
+charts and the corner's phase markers. The screens are
+covered by unit tests (on a backend fixture of real annotations and the real graph); **none has been seen in a
+browser yet**.
+
+How it was measured (2026-10-15, re-run after the review fixes): integration 922b281 (before: an archive of that
+commit run with the main checkout's environment) and feat/knowledge (after) replayed the same 30 owner captures as the
+habits evaluation (F1 25 and GT7 on the PS5, 2026-10-10 to 13; 28 sessions with a compared lap), once with nobody
+seated and once with a beginner profile seated; normal intensity, braking calls in Focus, LLM off, scratch databases.
+Per lap: the radio's coaching lines, the coach card's points (picked and per corner), habits, focus and the cue plan;
+per session, the recap. The review fixes changed no coaching against the first run either: only which causes are
+named (below), and the detected styles are identical (every one of these sessions sends steering).
+
+| Run | Compared laps | Radio coaching lines, before / after | Coach card points (per corner, all laps), before / after | Differences |
+|---|---|---|---|---|
+| Nobody seated | 127 | 73 / 73 | 688 / 688 | 0 |
+| Beginner seated | 127 | 114 / 114 | 586 / 586 | 0 |
+
+- **No coaching changed**: not a radio line, a card point, a habit, a focus corner, a braking call or reminder, or a
+  recap line. All 1,064 coaching points of the live path (nobody seated) were annotated and every one fits: the eight
+  coached kinds have no conditions, and F1 25 and GT7 both send the inputs they need. Spec section 3 expected changes
+  only where a signal is unavailable for a game; none is, for these kinds.
+- **Context** on these sessions: the gearbox reads automatic in every F1 25 session (the owner drives with the game's
+  gearbox assist 3), so `left_foot_braking` fits and the H-pattern nodes (rev-matching, missed blips) do not; ABS on
+  except two F2 races at Sakhir with ABS off (there `brake_lockup` applies; it is experimental, never coached);
+  traction control on throughout. On GT7 only the game is known (car, downforce, gearbox, ABS and traction control
+  unknown) and GT7 sends no lateral g; its tyre slip is not measured, so the slip and balance causes are never named
+  there.
+- **Detected style** (from each session's clean analysed laps, as Review reads it; the live reading at the last lap
+  in the last column):
+
+| Session | Game, car | Compared laps | Braking style (trail-braked of braking corners) | Coasting (coasted of measured) | Clean laps | F1 braking assist | Live, at the last lap |
+|---|---|---|---|---|---|---|---|
+| Austria, 20261010-191501 | F1 25, F1 | 1 | unknown (7/7) | unknown (1/7) | 1 | off or not reported | unknown (0/0) |
+| Austria (Reverse), 20261010-193550 | F1 25, F1 | 1 | trail (10/13) | unknown (5/13) | 2 | off or not reported | unknown (5/8) |
+| Silverstone, 20261010-203637 | F1 25, F1 | 1 | trail (10/12) | rare (1/12) | 2 | 1 | unknown (3/4) |
+| Silverstone (Reverse), 20261010-205449 | F1 25, F1 | 1 | trail (16/16) | rare (1/16) | 2 | 2 | unknown (8/8) |
+| Montreal, 20261010-215916 | F1 25, F1 | 1 | trail (11/12) | rare (1/12) | 2 | 2 | unknown (6/6) |
+| Las Vegas, 20261010-220510 | F1 25, F1 | 1 | trail (12/12) | rare (2/12) | 2 | 2 | unknown (6/6) |
+| Austria, 20261010-221749, 1 | F1 25, F1 | 9 | trail (53/56) | rare (7/56) | 9 | 2 | trail (29/31) |
+| Austria, 20261010-221749, 2 | F1 25, F1 | 10 | trail (53/56) | rare (0/56) | 9 | 2 | trail (32/33) |
+| Suzuka, 20261010-225601 | F1 25, F1 | 2 | trail (21/28) | rare (2/28) | 3 | 2 | trail (14/18) |
+| Miami, 20261011-010607 | F1 25, F1 | 1 | trail (17/18) | rare (2/18) | 2 | 2 | unknown (9/9) |
+| Melbourne, 20261011-011513 | F1 25, F2 | 1 | trail (17/17) | rare (0/17) | 2 | 2 | unknown (7/7) |
+| GT7 circuit (unidentified), 20261011-013533 | GT7, car unknown | 2 | unknown (3/3) | unknown (0/3) | 3 | off or not reported | unknown (3/3) |
+| GT7 circuit (unidentified), 20261011-124608 | GT7, car unknown | 2 | mixed (7/15) | unknown (6/15) | 3 | off or not reported | mixed (4/8) |
+| Austria, 20261011-183245 | F1 25, F1 | 4 | trail (31/31) | unknown (15/31) | 5 | 2 | trail (25/25) |
+| Imola, 20261011-195612 | F1 25, F1 | 30 | trail (176/184) | rare (25/184) | 26 | 2 | trail (34/35) |
+| Sakhir (Bahrain), 20261011-224147, 1 | F1 25, F2 | 1 | trail (9/13) | unknown (6/13) | 2 | off or not reported | unknown (4/7) |
+| Sakhir (Bahrain), 20261011-224147, 2 | F1 25, F2 | 1 | unknown (0/0) | unknown (0/0) | 0 | off or not reported | unknown (0/0) |
+| Sakhir (Bahrain), 20261011-224147, 3 | F1 25, F2 | 5 | trail (13/15) | rare (3/15) | 2 | off or not reported | trail (13/15) |
+| Jeddah, 20261011-224147, 4 | F1 25, F2 | 1 | trail (13/13) | unknown (5/13) | 2 | 3 | unknown (7/7) |
+| Jeddah, 20261011-224147, 5 | F1 25, F2 | 3 | trail (15/16) | rare (3/16) | 3 | 3 | trail (15/16) |
+| Suzuka, 20261012-212137 | F1 25, F1 | 1 | trail (20/21) | rare (2/21) | 2 | 1 | unknown (10/11) |
+| Melbourne, practice, 20261012-215015 | F1 25, F1 | 3 | trail (19/22) | rare (3/22) | 3 | 1 | trail (14/16) |
+| Melbourne, qualifying, 20261012-231555, 1 | F1 25, F1 | 1 | unknown (0/0) | unknown (0/0) | 0 | 1 | unknown (0/0) |
+| Melbourne, 20261012-231555, 2 | F1 25, F1 | 1 | unknown (0/0) | unknown (0/0) | 0 | 1 | unknown (0/0) |
+| Melbourne, 20261012-231555, 3 | F1 25, F1 | 9 | unknown (6/7) | unknown (1/7) | 1 | 1 | unknown (6/7) |
+| Melbourne, 20261012-231555, 4 | F1 25, F1 | 15 | trail (45/50) | rare (3/50) | 8 | 1 | trail (27/31) |
+| Melbourne, 20261013-214947 | F1 25, F1 | 1 | trail (15/15) | often (12/15) | 2 | 1 | unknown (8/8) |
+| Melbourne, 20261013-225521 | F1 25, F1 | 18 | trail (105/116) | rare (22/116) | 15 | 1 | trail (36/38) |
+
+  Trail braking on 21 of the 28 sessions (75 % to 100 % of braking corners), mixed on one GT7 session, unknown on 6
+  (fewer than 2 clean laps or 6 braking corners). A game that sends no steering (Assetto Corsa; GT7 variant A) would
+  leave the braking style unknown, never straight-line (none of these sessions; unit-tested on an AC-shaped lap). Coasting rare on 16, often on 1 (Melbourne 20261013-214947, two
+  laps), unknown on 11 (a share between 0.2 and 0.5, or too few laps). The live reading needs 2 clean compared laps in
+  its window and 6 braking corners: unknown on 17 sessions, all but one of them with 1 or 2 compared laps. **The F1 braking assist was on (level 1 to 3) in 21 of the 26 F1 25
+  sessions**: the screens and the AI engineer then say some of the braking was the game's (the style is kept, not
+  muted: see Known gaps).
+- **Causes named** (nobody seated; the live path compares each lap with the reference of that moment, Review
+  re-analyses every lap against the session's reference, so it holds more points):
+
+| Kind | Points (live) | Fit the driver | Causes named (live) | No cause | Review (stored analysis): points, causes |
+|---|---|---|---|---|---|
+| `low_min_speed` | 374 | 374 | `low_grip` 93 (25%), `over_braking` 41 (11%), `early_turn_in` 16 (4%) | 235 | 558: `low_grip` 126, `over_braking` 69, `early_turn_in` 16 |
+| `late_throttle` | 157 | 157 | `traction_limited` 14 (9%); `ready_earlier` 0 (traction control on) | 143 | 247: `traction_limited` 21 |
+| `coasting` | 31 | 31 | `early_brake_release` 15 (48%), `waiting_for_rotation` 11 (35%) | 5 | 60: `early_brake_release` 26, `waiting_for_rotation` 24 |
+| `overspeed_apex` | 18 | 18 | `carried_too_much_speed` 6 (33%) | 12 | 18: `carried_too_much_speed` 9 |
+| `brake_early` | 105 | 105 | - | 105 | 162: - |
+| `brake_late_overdrive` | 78 | 78 | - | 78 | 105: - |
+| `exit_gain` | 253 | 253 | - | 253 | 169: - |
+| `incident` | 48 | 48 | - | 48 | 82: - |
+
+  `low_grip` now compares the mid-corner slide and understeer with the reference lap at the same corner: read from
+  this lap alone it was named on about half of the low minimum speed points (186 of 378 on the six sessions pickled
+  for the knowledge work), relative to the reference on about a quarter (94 of 393 on the same captures replayed: the
+  replay finds 15 more points). `ready_earlier` (no wheelspin, slide, understeer or oversteer on the way out, yet full
+  throttle later) is named only with traction control off, because with it on "no wheelspin" proves little: traction
+  control was on in every one of these sessions, so it is never named now (before the review fixes: 105 live points,
+  181 in Review). `traction_limited` now judges wheelspin, a slide or exit oversteer against the reference lap at the
+  corner (18 -> 14 live points). `early_turn_in`, shown as "Slowest point came sooner" (Pitwall measures no turn-in),
+  reads the slowest point's position, which can jump within a long corner; it now also needs an entry within 4 km/h
+  of the reference either way (20 -> 16 live points).
+
+  **Base rates: which causes tell their fault apart** (`scripts/cause_base_rates.py`, 2026-10-15; the owner's 30 real
+  captures replayed and analysed as Review does, every lap against its session's reference: 30 sessions with a usable
+  comparison, 28 F1 25 and 2 GT7, 148 compared laps, 1,173 non-incident corner-laps; traction control on or not
+  reported in every session). For every cause and every live fault it explains: on how many of the fault's
+  corner-laps its evidence held, against the corner-laps without the fault (the base rate), counting only corner-laps
+  where the evidence could be measured. The rule (`[H]`, `graph.DISCRIMINATES_RATIO`): at least twice the base rate,
+  on 10 or more of the fault's corner-laps and 30 or more others. Recorded in `causes.toml` (`[[cause.measured]]`,
+  `discriminates`):
+
+| Cause | Fault | Evidence on the fault's corner-laps | On the other corner-laps | Times the base rate | Named (Review) | Tells it apart |
+|---|---|---|---|---|---|---|
+| `over_braking` | `low_min_speed` | 69 / 387 (18%) | 71 / 485 (15%) | 1.22 | 69 | no |
+| `early_turn_in` | `low_min_speed` | 16 / 558 (3%) | 35 / 615 (6%) | 0.50 | 16 | no |
+| `low_grip` | `low_min_speed` | 126 / 550 (23%) | 84 / 599 (14%) | 1.63 | 126 | no |
+| `traction_limited` | `late_throttle` | 21 / 241 (9%) | 67 / 908 (7%) | 1.18 | 21 | no |
+| `ready_earlier` | `late_throttle` | 171 / 213 (80%) | 618 / 764 (81%) | 0.99 | 0 (traction control on) | no |
+| `early_brake_release` | `coasting` | 26 / 60 (43%) | 161 / 812 (20%) | 2.19 | 26 | **yes** |
+| `waiting_for_rotation` | `coasting` | 24 / 55 (44%) | 246 / 801 (31%) | 1.42 | 24 | no |
+| `carried_too_much_speed` | `overspeed_apex` | 9 / 18 (50%) | 367 / 1155 (32%) | 1.57 | 9 | no |
+| `released_too_early_for_apex` | `stepped_throttle` (planned) | - | - | - | 0 | no (nothing to check) |
+
+  Only `early_brake_release` tells its fault apart, and it is close to the line: on the six sessions of the first
+  check alone it was 12 of 33 against 100 of 504 (1.83 times). `low_grip` and `waiting_for_rotation` hold more often
+  with their fault (one-sided Fisher exact p 0.0001 and 0.035) but below twice the base rate; `over_braking`,
+  `traction_limited` and `ready_earlier` hold about as often without it, and `early_turn_in` less often.
+  `released_too_early_for_apex` explains only a planned fault, which never fires. Counting only measurable corner-laps
+  changes the first check's shares (which counted every corner-lap): `early_brake_release`'s base rate was 14% there
+  (100 of 691), but 187 of those 691 corner-laps had no braking to end.
+
+**Coverage of Ed's material** (every point of the brief and every checklist row; the patches' detectors are in
+[knowledge.md](knowledge.md#the-patches-read-as-data-not-applied); `tests/unit/test_knowledge_graph.py` keeps this
+table equal to the checked tables there):
+
+<!-- coverage:ed -->
+| Ed's item | Graph nodes (type, or a fault's status) |
+|---|---|
+| Brief 1: Flat out to the braking point; no early lift | `flat_to_brake_marker` (technique), `fuel_save_lift_and_coast` (technique), `lift_before_braking` (planned), `brake_early` (live) |
+| Brief 2: Peak brake pressure almost at once | `fast_brake_attack` (technique), `slow_brake_attack` (experimental) |
+| Brief 3: Bleed the pressure off as the car slows | `progressive_brake_release` (technique), `abrupt_brake_release` (experimental), `double_hump` (planned), `brake_lockup` (experimental), `entry_understeer_from_release` (planned) |
+| Brief 4: Blip the throttle on each downshift under braking | `rev_match_downshift` (technique), `missed_blip` (planned), `gear_change_while_cornering` (planned), `missed_blips` (signal) |
+| Brief 5: Wheel straight while braking; off the brake before turning | `straight_line_braking` (technique), `trail_braking` (technique), `trail_brake_m` (signal), `brake_at_turn_in` (signal) |
+| Brief 6: Off the brake with speed to spare, on purpose | `release_with_speed_to_spare` (technique), `low_min_speed` (live), `over_braking` (cause) |
+| Brief 7: One smooth turn-in, then hold it; no sawing | `single_smooth_turn_in` (technique), `snatched_turn_in` (planned), `steering_sawing` (planned) |
+| Brief 8: Off both pedals to the apex; cornering scrubs the speed | `coast_to_apex` (technique), `coasting` (live), `early_brake_release` (cause) |
+| Brief 9: Throttle once the car has rotated, one smooth squeeze | `throttle_at_rotation` (technique), `late_throttle` (live), `waiting_for_rotation` (cause), `exit_wheelspin` (experimental) |
+| Brief 10: No lift once on the throttle; a lift points to over-braking or an early turn-in | `commit_throttle_no_lift` (technique), `stepped_throttle` (planned), `throttle_sawtooth` (experimental), `over_braking` (cause), `early_turn_in` (cause) |
+| Brief 11: Unwind the steering as the throttle goes on | `unwind_with_throttle` (technique), `throttle_before_unwind` (planned), `low_throttle_acceptance` (planned) |
+| Brief 12: Change up as normal; use all the track on exit | `use_track_width_exit` (technique), `unused_track_exit` (experimental), `early_apex` (planned) |
+| Brief self-check: An on-off-on throttle means over-braking | `stepped_throttle` (planned), `released_too_early_for_apex` (cause), `over_braking` (cause) |
+| Checklist, brake: Double hump: pressure dips, then a second peak | `double_hump` (planned), `brake_reapplied` (signal) |
+| Checklist, brake: Slow ramp-up to peak | `slow_brake_attack` (experimental), `time_to_peak_s` (signal) |
+| Checklist, brake: Abrupt or stepped release | `abrupt_brake_release` (experimental), `release_time_delta_s` (signal) |
+| Checklist, brake: Brake and throttle together by accident | `pedal_overlap` (planned), `left_foot_braking` (technique) |
+| Checklist, brake: Released too early for the apex | `released_too_early_for_apex` (cause), `stepped_throttle` (planned) |
+| Checklist, throttle: Sawtooth: on, off, on | `throttle_sawtooth` (experimental), `throttle_lifts` (signal) |
+| Checklist, throttle: Throttle acceptance: lateral g at full throttle over the corner's peak | `low_throttle_acceptance` (planned), `throttle_acceptance` (signal) |
+| Checklist, throttle: Throttle before the steering unwinds | `throttle_before_unwind` (planned) |
+| Checklist, throttle: Over-cautious exit: full throttle late with grip to spare | `late_throttle` (live), `ready_earlier` (cause), `traction_limited` (cause) |
+| Checklist, steering: Sawing mid-corner | `steering_sawing` (planned), `steering_reversals` (signal) |
+| Checklist, steering: Snatched turn-in | `snatched_turn_in` (planned), `turn_in_steer_time_s` (signal) |
+| Checklist, steering: Early apex, then a second correction | `early_apex` (planned), `early_turn_in` (cause) |
+| Checklist, steering: Mid-corner unwind rate | `steering_unwind_s` (signal), `throttle_before_unwind` (planned) |
+| Checklist, combined: Unused grip on the G-G diagram | `unused_grip_exit` (planned), `exit_grip_utilization_frac` (signal) |
+| Checklist, combined: Driver or car: understeer and oversteer | `balance_symptom` (experimental), `low_grip` (cause) |
+| Checklist, combined: Entry understeer from the release shape | `entry_understeer_from_release` (planned) |
+| Checklist, consistency: Lap-to-lap scatter at one corner | `lap_scatter` (experimental), `consistent_brake_marker` (technique) |
+| Checklist, consistency: Coasting | `coasting` (live), `coast_to_apex` (technique), `trail_braking` (technique) |
+| Checklist, consistency: Lift and coast before the braking zone | `lift_before_braking` (planned), `fuel_save_lift_and_coast` (technique) |
+| Checklist, consistency: Lock-ups and wheelspin | `brake_lockup` (experimental), `exit_wheelspin` (experimental) |
+| Checklist, consistency: Gear change while cornering | `gear_change_while_cornering` (planned) |
+| Checklist, car: Aero crossover: lateral g against speed | `aero_crossover` (context_only), `aero_crossover_kph` (signal) |
+<!-- /coverage:ed -->
+
 ## Known gaps
 
 Kept open for after v0.2.0 (none of them changes what Pitwall claims):
@@ -397,6 +606,23 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   said twice (not seen in tests). Reminders need a radio connected; without one Drive shows the notes and "Working on". In the
   replays a reminder's length is the planner's estimate; the hub's measured audio length is unit-tested only. Markers
   and braking calls still assume a driver slower than the reference stays slower to the corner (reminders do not).
+- **Technique knowledge:** the published (`expert`) and Ed's (`brief`) knowledge is cited, not checked by Pitwall on
+  laps, except where a node's notes say so; the `external` measurements are real cars and another simulator, not a
+  game Pitwall reads. Style detection is kept, not muted, under the F1 braking assist (some of the braking is the
+  game's; how much is not known): advice chosen for the style says so. `pedal_overlap` and `lift_before_braking` have
+  no conditions, so they fit every driver: the Context has no left-foot-braking key, and fuel saving is known only from
+  a live strategy (an unknown never satisfies `false`), so they cannot be scoped out for left-foot brakers or
+  fuel-saving stints; they stay planned until they can. `ready_earlier` lacks the unwound-steering and combined-g
+  evidence the spec names (not computed) and is never named with traction control on, which every owner session had;
+  its base-rate check was measured with traction control on and needs repeating on laps with it off. Seven of the nine
+  causes do not tell their fault apart on the owner's laps (base rates above), so they are shown only as also
+  measured; the one that does (`early_brake_release`) passed narrowly on 60 coasting corner-laps of one driver, and
+  every check is one driver's F1 25 and GT7 laps, not other drivers or games. The AI engineer's guard against an
+  answer that presents such a cause as the reason is a word match ("because", "why", "due to" ... with the cause's
+  words): it may reject a careful sentence ("Pitwall has not shown that less grip is the reason"), and the engineer
+  then gives its deterministic answer. No cause has a radio form, so the habit announcement never adds one. The AI engineer rejects an answer that breaks a coaching rule
+  (a few descriptive phrasings may be rejected too; the engineer then gives its deterministic answer). The screens have
+  not been seen in a browser or on an iPad.
 - **Race radio:** nothing heard live; F1 25's `gridPosition` is 0-based at a race start on the PS5 (pole = 0), so the
   race radio takes the grid slot from the position before lights out (the strategy engine's grid position is
   one off; not changed here). Online names in "who's ahead?" are opt-in (off) and use the `say` voice.

@@ -29,6 +29,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from pitwall.core.coachref import ChoiceRequest, CoachRef, CoachRefError, DrillRequest
+from pitwall.knowledge.session import SessionKnowledge
 
 router = APIRouter(prefix="/api/coachref", tags=["coachref"])
 
@@ -143,8 +144,15 @@ def candidates(request: Request, lap_id: int) -> dict[str, Any]:
 
 @router.get("/compare")
 def compare(request: Request, ref: int, lap: int) -> dict[str, Any]:
+    analyzer = getattr(request.app.state, "analyzer", None)
+
+    def knowledge(session_id: str) -> SessionKnowledge | None:
+        """Lap B's session's Context and style, from the shared (cached) session analysis."""
+        sa = analyzer.analyse(session_id) if analyzer is not None else None
+        return sa.knowledge if sa is not None else None
+
     try:
-        return _svc(request).compare(ref, lap)
+        return _svc(request).compare(ref, lap, knowledge=knowledge)
     except CoachRefError as e:
         raise _http(e) from e
 

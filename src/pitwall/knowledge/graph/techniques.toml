@@ -1,0 +1,404 @@
+# Techniques: how to drive a phase of a corner, and when that fits the driver and car. applies_when = all of these
+# conditions hold; applies_any = at least one holds; neither = applies to everyone. alternatives = techniques that do
+# the same job another way (list each other both ways). measured_by = signals that show it in telemetry.
+# Ed's idealised-corner brief (ed_corner_brief, points 1 to 12) is the textbook straight-line-braking corner; the
+# techniques below cover every point, each with when it fits, plus trail braking as the alternative for trail-braking
+# drivers and high-downforce cars, and three his checklist implies (a consistent brake marker, left-foot braking, lift
+# and coast for fuel). Universal techniques (no conditions) are measured against the driver's own reference lap.
+# Texts describe the technique; none tells a driver to brake later, brake less, release earlier or carry more speed in.
+
+# --- approach ------------------------------------------------------------------------------------------------------
+
+[[technique]]
+id = "flat_to_brake_marker"
+name = "Flat out to the brake marker"
+phase = "approach"
+summary = "Keep the throttle wide open until the moment you brake, with no lift in the last metres before it."
+detail = """Any distance off the throttle before the brake goes on is spent neither accelerating nor braking hard, so
+the throttle comes off and the brake goes on in one quick movement. When the race strategy asks for fuel saving, lift
+and coast replaces this on purpose."""
+alternatives = ["fuel_save_lift_and_coast"]
+measured_by = ["pre_brake_coast_m"]
+tier = "expert"
+sources = ["ed_corner_brief", "hpa_braking_technique", "pitwall_patch_review"]
+notes = """Ed's brief, point 1, and his checklist row on lift-and-coast before the brake zone. Recorded
+(pitwall_patch_review): Ed's lift-before-braking scan fired on 23.2% of real F1 25 corner-laps, inflated by a scan bug
+that reports hundreds of metres, so pre_brake_coast_m is not trusted yet."""
+
+[[technique]]
+id = "fuel_save_lift_and_coast"
+name = "Lift and coast to save fuel"
+phase = "approach"
+summary = """When the race asks for fuel saving, lift off the throttle a little before the braking zone, let the car
+roll to it, then brake as usual."""
+detail = """Fuel burns fastest at full throttle at top speed, so a short lift at the end of a straight saves the most
+fuel for the least time: the car's drag slows it while the engine idles, and the stop begins from a little less speed,
+which also cools the brakes and the engine. Here a lift before the brake is a strategy choice, not a fault."""
+applies_when = ["fuel_saving"]
+alternatives = ["flat_to_brake_marker"]
+measured_by = ["pre_brake_coast_m"]
+tier = "expert"
+sources = ["racefans_lift_and_coast", "ed_fault_checklist"]
+notes = """The legitimate form of Ed's lift-before-braking row: when the strategy asks for fuel saving, the lift is
+intended, so a lift_before_braking fault should not be said to that driver."""
+
+# --- braking -------------------------------------------------------------------------------------------------------
+
+[[technique]]
+id = "fast_brake_attack"
+name = "Fast brake attack"
+phase = "braking"
+summary = "Get to peak brake pressure almost at once, rather than squeezing up to it."
+detail = """The car can slow hardest at the start of the stop, while the speed - and in a downforce car the aero grip -
+is highest, so the peak pressure belongs right at the beginning of the braking zone. A slow build wastes the first
+metres of the stop. Too sudden a stab can lock a wheel or bounce the car on its suspension: the right rate depends on
+the car and its tyres."""
+measured_by = ["time_to_peak_s"]
+tier = "expert"
+sources = ["ed_corner_brief", "hpa_braking_technique", "mysimrig_telemetry_beginners", "pitwall_patch_review"]
+notes = """Ed's brief, point 2; his checklist row on a slow ramp-up. Recorded (pitwall_patch_review): on real F1 25
+laps the time-to-peak delta against the reference spans p10 -0.16 s to p90 +0.23 s, so a few hundredths are noise."""
+
+[[technique.measured]]
+metric = "time to peak brake, fastest third of drivers (median of the group)"
+value = 0.15
+unit = "s"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """0.10-0.20 s in three of the four car and track groups (0.36 s in the GT3 at Monza), against 0.37-0.46 s for
+the slowest third."""
+
+[[technique.measured]]
+metric = "F317 corners where a quicker brake attack went with a faster driver"
+value = 13
+unit = "of 13 corners"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """11 of 13 in the GT3: the most consistent difference between faster and slower drivers in this data. Across
+drivers, not from one lap to the next."""
+
+[[technique]]
+id = "progressive_brake_release"
+name = "Progressive brake release"
+phase = "braking"
+summary = "Ease the brake pressure off smoothly as the car slows, rather than letting it go all at once."
+detail = """As the speed falls the tyres need less pressure to stay at their limit - in a downforce car because the aero
+grip falls with the speed too - so the pressure bleeds steadily down from its peak. In a low-downforce car it can stay
+near the peak for longer before the smooth release. A pedal let go in one step throws the load off the front tyres at
+once and can leave the car pushing wide at turn-in; lifting and pressing again mid-stop unsettles it the same way."""
+measured_by = ["release_s"]
+tier = "expert"
+sources = ["ed_corner_brief", "hpa_braking_technique", "mysimrig_telemetry_beginners", "pitwall_patch_review"]
+notes = """Ed's brief, point 3; his checklist rows on an abrupt or stepped release and on a double hump. Recorded
+(pitwall_patch_review): the release-time delta against the reference spans p10 -0.48 s to p90 +0.43 s on real F1 25
+laps, so the release shape varies a lot from lap to lap."""
+
+[[technique.measured]]
+metric = "brake release time, fastest third of GT3 drivers (median of the group)"
+value = 1.2
+unit = "s"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """About 0.5-0.9 s for the other GT3 groups; not seen in the F317. A two-driver effect: the third fast driver
+released no more slowly than the rest."""
+
+[[technique]]
+id = "rev_match_downshift"
+name = "Rev-matched downshifts"
+phase = "braking"
+summary = """With a manual gearbox and a clutch, give the throttle a quick stab with each downshift under braking: the
+engine speed then matches the lower gear and the driven wheels are not jolted."""
+detail = """On a downshift the engine has to spin faster to match the wheels in the lower gear. A blip of the throttle
+does that - heel and toe: the right foot on the brake and the throttle at once. Without it the engine briefly drags on
+the driven wheels, which can lock them or unsettle the rear in the braking zone. The downshifts are done while braking,
+before the car turns in, so no gear change lands while it is loaded in the corner. Only for an H-pattern gearbox with a
+clutch: paddle-shift cars blip by themselves, so their throttle trace never shows it."""
+applies_when = ["gearbox_h_pattern"]
+measured_by = ["missed_blips"]
+tier = "expert"
+sources = ["ed_corner_brief", "wikipedia_heel_and_toe", "pitwall_patch_review"]
+notes = """Ed's brief, point 4; his missed-blips count (root-cause patch). Recorded (pitwall_patch_review): 69% of real
+F1 25 downshifts have no driver throttle near them, because the game blips on paddle downshifts; the count means
+nothing there, hence the h_pattern condition (unknown gearbox = does not apply)."""
+
+[[technique]]
+id = "straight_line_braking"
+name = "Straight-line braking"
+phase = "braking"
+summary = "Do all the braking with the wheel straight, and be fully off the brake before you turn in."
+detail = """Braking and turning are kept apart, so each gets all of the tyres' grip and only one input changes at a
+time: the car stays calm and the brake point is easy to repeat. It is how drivers are usually taught first, and it
+suits a car without ABS and with little downforce, where braking hard while turning can lock the front tyres. The cost
+is grip left unused while the car changes from braking to turning; trail braking is the alternative that blends the
+two."""
+applies_any = ["skill_beginner", "braking_style_straight_line", "no_abs_low_downforce"]
+alternatives = ["trail_braking"]
+measured_by = ["trail_brake_m", "brake_at_turn_in", "trail_overlap_s"]
+tier = "expert"
+sources = ["ed_corner_brief", "vrs_traction_circle", "wikipedia_trail_braking", "pitwall_style_review"]
+notes = """Ed's brief, point 5. Recorded (pitwall_style_review, 2026-10-15): the owner's fastest F1 25 laps trail-brake
+into 40 of 41 braking corners (median 33 m of braking with the wheel turned), and within a corner more trail braking
+went with a faster corner in 28 of 45 corners (median r -0.13): a weak effect, against this technique for that driver
+and car - which is why it applies only when one of its conditions holds."""
+
+[[technique.measured]]
+metric = "real F1 qualifying braking zones clearly braked in a straight line"
+value = 0
+unit = "%"
+date = "2026-10-15"
+source = "openf1_2025_qualifying"
+note = """0 of 58 (4 could not rule out a release at turn-in). Real cars, not this game; with a pressed-or-not brake
+flag and no steering, it shows braking that overlaps the turn, not how hard the brake was pressed."""
+
+[[technique]]
+id = "consistent_brake_marker"
+name = "A consistent brake marker"
+phase = "braking"
+summary = "Brake at the same marker, the same way, every lap, so each change you try can be judged."
+detail = """A repeatable brake point, turn-in and apex make each lap a baseline: when one thing changes, the lap time
+and the traces show whether it helped. Brake points that wander from lap to lap are one of the commonest signs of
+inconsistency, and they hide what is really costing time. A fixed visual reference for each braking zone - a board, a
+kerb, a shadow - is what makes it repeatable."""
+measured_by = ["brake_point_std_m"]
+tier = "expert"
+sources = ["ed_fault_checklist", "blayze_consistency", "mysimrig_telemetry_beginners"]
+notes = """Ed's checklist row on lap-to-lap scatter at one corner (and his suggestion to make it a signal of its own).
+Pitwall computes the spread after the session (CornerSummary.brake_point_std_m), not live."""
+
+[[technique]]
+id = "left_foot_braking"
+name = "Left-foot braking"
+phase = "braking"
+summary = """Brake with the left foot while the right stays on the throttle; a short, deliberate overlap of the two
+pedals is part of the technique."""
+detail = """Possible in cars with no clutch pedal to work: paddle shifts or automatic gears. It saves moving one foot
+between the pedals, and a touch of brake with the throttle still on can settle the car or help it rotate, so brake and
+throttle overlapping is intended here, not a fault. The left foot's feel takes practice, and it is optional: many
+drivers stay quicker braking with the right foot."""
+applies_when = ["gearbox_two_pedal"]
+measured_by = ["pedal_overlap_m"]
+tier = "expert"
+sources = ["wikipedia_left_foot_braking", "hpa_braking_technique", "ed_fault_checklist", "pitwall_patch_review"]
+notes = """Makes intentional pedal overlap legitimate (Ed's checklist row on unintentional overlap). Pitwall cannot yet
+tell which foot brakes, so it only knows the car allows it. Recorded (pitwall_patch_review): Ed's pedal-overlap detector
+fires on 66.8% of real F1 25 corner-laps because F1 25 reports about 0.10 throttle under braking - a game artefact,
+not the driver's feet."""
+
+# --- turn-in -------------------------------------------------------------------------------------------------------
+
+[[technique]]
+id = "trail_braking"
+name = "Trail braking"
+phase = "turn_in"
+summary = "Keep some brake on as you start to turn, and ease it off as the steering goes in."
+detail = """The brake pressure left on past turn-in keeps load on the front tyres so the car turns and rotates, and
+the release is blended with the steering - the pressure falling roughly in step as the wheel goes in, gone by the
+apex - so the tyres stay near their grip limit the whole way. It suits high-downforce cars and drivers who already
+brake this way; it asks for a fine feel for the release, and too much brake while turning makes the front tyres
+slide."""
+applies_any = ["braking_style_trail", "downforce_high"]
+alternatives = ["straight_line_braking", "release_with_speed_to_spare", "coast_to_apex"]
+measured_by = ["trail_brake_m", "brake_at_turn_in", "trail_overlap_s"]
+tier = "expert"
+sources = [
+    "bentley_speed_secrets",
+    "wikipedia_trail_braking",
+    "hpa_braking_technique",
+    "nasa_brake_release",
+    "vrs_traction_circle",
+    "pitwall_style_review",
+]
+notes = """The alternative to Ed's points 5, 6 and 8 (straight-line braking, off the brake with speed to spare, coasting
+to the apex) for trail-braking drivers and high-downforce cars. Recorded (pitwall_style_review, 2026-10-15): the
+owner's fastest F1 25 laps trail-brake into 40 of 41 braking corners (median 33 m of braking with |steering| >= 0.08),
+and within a corner across clean laps more trail braking went with a faster corner in 28 of 45 corners (median
+r -0.13): a weak effect, in favour of this technique for that driver and car."""
+
+[[technique.measured]]
+metric = "real F1 qualifying braking zones trail-braked"
+value = 72
+unit = "%"
+date = "2026-10-15"
+source = "openf1_2025_qualifying"
+note = """42 of 58: at least 10 degrees of the line's turn, and a fifth of the corner's entry rotation, with the brake
+on; 23 of 24 in slow corners (under 160 km/h), 19 of 34 in fast ones. Real cars, not this game."""
+
+[[technique.measured]]
+metric = "share of a corner's entry rotation done with the brake on, real F1 qualifying (median)"
+value = 53
+unit = "%"
+date = "2026-10-15"
+source = "openf1_2025_qualifying"
+note = """Middle half 40-67%. Braking and turning overlapped over a median 44 m (about 0.9 s; 36-49 m with the turn-in
+put at 3-10 degrees), and the brake came off a median 0.64 s (about 30 m) before the slowest point. In some fast corners
+drivers only lifted the throttle: two of the four at Suzuka's esses."""
+
+[[technique.measured]]
+metric = "GT3 braking corners trail-braked, fastest third of drivers"
+value = 72
+unit = "%"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """About 25% for the other two thirds. It leans on the two fastest drivers, who also had high-resolution pedals
+(one ran ABS and traction control); in the F317 single-seater the link is weak and reverses at Monza (fastest third 34%,
+slowest third 46%)."""
+
+[[technique.measured]]
+metric = "within one driver, rank correlation of trail-braking distance with corner time, lap to lap (GT3, median)"
+value = 0.0
+unit = "rho"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """0.00 over 61 driver-corner pairs in the GT3, -0.05 over 53 in the F317: a driver's laps with more trail
+braking were not faster. Trail braking marks long-term skill, not a lever to pull from one lap to the next, so Pitwall
+never coaches 'trail brake more' (constraints.toml, never_trail_brake_more)."""
+
+[[technique]]
+id = "release_with_speed_to_spare"
+name = "Off the brake with speed to spare"
+phase = "turn_in"
+summary = "Come off the brake with a little speed to spare and let the cornering load slow the car to the apex."
+detail = """In the straight-line style the brake is fully released just before turn-in, deliberately while the car is
+still a little faster than the apex needs; as the wheel goes in, the tyres' cornering load scrubs off the rest. The
+opposite is reaching the apex already too slow, with nothing left for the corner to take off. A trail-braking driver
+does the same job with the brake still easing off during turn-in."""
+applies_any = ["skill_beginner", "braking_style_straight_line", "no_abs_low_downforce"]
+alternatives = ["trail_braking"]
+measured_by = ["coast_m"]
+tier = "brief"
+sources = ["ed_corner_brief"]
+notes = """Ed's brief, point 6. Tier brief, not expert (2026-10-15 review): no published source in the graph backs a
+full release before turn-in. NASA's release article (nasa_brake_release) supports one part - with the pedal off the
+car is still slowing and the steering scrubs speed - but argues for releasing while turning in (trail braking), not
+before; it is context, not a source for this technique, as for coast_to_apex. Not an instruction to release the brake
+at another point than the driver does: Pitwall never tells a driver to release earlier or carry more speed in
+(constraints.toml); this describes the straight-line technique."""
+
+[[technique]]
+id = "single_smooth_turn_in"
+name = "One smooth turn-in"
+phase = "turn_in"
+summary = "Turn in smoothly to the steering the corner needs in one movement, then hold it; no sawing at the wheel."
+detail = """One clean input lets the tyres build their cornering load progressively and the car settle on its line. A
+snatched turn-in can overload the front tyres or make the rear step out, and corrections back and forth mid-corner
+scrub speed and usually mean the car's balance or the line is not right. In a trail-braking corner the steering still
+goes in once, while the brake eases off."""
+measured_by = ["steering_reversals"]
+tier = "expert"
+sources = [
+    "ed_corner_brief",
+    "designjudges_driver_data",
+    "mysimrig_telemetry_beginners",
+    "hpa_braking_technique",
+    "pitwall_patch_review",
+]
+notes = """Ed's brief, point 7; his checklist rows on sawing mid-corner and a snatched turn-in. Recorded
+(pitwall_patch_review): Ed's steering-reversal count fired on 22.6% of real F1 25 corner-laps, with 3 to 5 reversals
+per corner even on clean laps, so small corrections are normal and the threshold is not validated."""
+
+# --- mid-corner ----------------------------------------------------------------------------------------------------
+
+[[technique]]
+id = "coast_to_apex"
+name = "Coast to the apex"
+phase = "mid_corner"
+summary = """With the brake already released, roll through the turn on neither pedal: the tyres' cornering force takes
+away the speed that is left until the apex."""
+detail = """With the brake fully off before turn-in, the car is still slowing as it turns: the tyres' cornering load
+takes off the remaining speed with no pedal to unsettle it, and the driver can feel the balance before picking up the
+throttle. It belongs with straight-line braking. Telemetry guides usually read a long gap off both pedals as time
+lost; for a trail-braking driver the brake easing off to the apex does this job instead."""
+applies_any = ["skill_beginner", "braking_style_straight_line", "no_abs_low_downforce"]
+alternatives = ["trail_braking"]
+measured_by = ["coast_m"]
+tier = "brief"
+sources = ["ed_corner_brief", "nasa_brake_release", "pitwall_style_review"]
+notes = """Ed's brief, point 8. Tier brief, not expert: published telemetry guides mostly read a long coast as braking
+that finished too soon (mysimrig_telemetry_beginners, hpa_braking_technique); NASA's release article only notes that
+the car keeps slowing with the brake off. Recorded (pitwall_style_review, 2026-10-15): on the owner's fastest F1 25
+laps the car coasts 10 m or more at 15% of corners (median 0 m), and within a corner more coasting went with a slower
+corner in 22 of 35 corners (median r +0.12): weak, against this technique for that driver and car."""
+
+[[technique.measured]]
+metric = "braking corners with 10 m or more of coasting, slowest third of drivers (lowest of the four groups)"
+value = 77
+unit = "%"
+date = "2026-10-15"
+source = "acgym_human_laps"
+note = """77-93% across the four car and track groups. Across drivers, more coasting went with a slower corner in 11 of
+13 GT3 corners and 10 of 13 F317 corners (not significant), but not in step with skill: the middle third of GT3 drivers
+coasted least (28-44%)."""
+
+[[technique.measured]]
+metric = "real F1 slow corners with 0.4 s or more off the brake flag and under 10% throttle before the slowest point"
+value = 54
+unit = "%"
+date = "2026-10-15"
+source = "openf1_2025_qualifying"
+note = """13 of 24 slow corners, 7 of 34 fast ones. That is about two samples at OpenF1's rate, and the flag misses
+light braking, so real coasting was at most this."""
+
+# --- apex ----------------------------------------------------------------------------------------------------------
+
+[[technique]]
+id = "throttle_at_rotation"
+name = "Throttle once the car has rotated"
+phase = "apex"
+summary = """Wait until the car faces the exit at the apex, then bring the throttle in with a single steady,
+building squeeze."""
+detail = """At the apex the tyres are giving all their grip to cornering, with little or no pedal. Once the car has
+turned enough, the throttle comes in progressively, and the tyres take more drive as the steering unwinds. Picking it
+up before the car has rotated tends to make it push wide and keeps the steering on longer, which delays full
+throttle."""
+measured_by = ["pickup_vs_apex_m", "throttle_ramp_s"]
+tier = "expert"
+sources = ["ed_corner_brief", "vrs_traction_circle", "blayze_throttle_exit"]
+notes = "Ed's brief, point 9."
+
+# --- exit ----------------------------------------------------------------------------------------------------------
+
+[[technique]]
+id = "commit_throttle_no_lift"
+name = "Commit to the throttle"
+phase = "exit"
+summary = "Once the throttle is on, keep it rising to full; no lift part-way through."
+detail = """Each lift after the pick-up delays full throttle and unsettles the car as the load moves forward again. A
+lift part-way through the exit usually points back to the entry: the car reached the apex slower than it could have,
+or was turned in too early and ran short of road - the driver's own faster laps at that corner show which. An
+on-off-on throttle trace is the signature."""
+measured_by = ["throttle_lifts", "throttle_dip_after_pickup"]
+tier = "expert"
+sources = ["ed_corner_brief", "blayze_throttle_exit", "mysimrig_telemetry_beginners", "pitwall_patch_review"]
+notes = """Ed's brief, point 10, and his self-check (an on-off-on throttle means over-braking), which the causes keep as
+a review-only explanation tied to the driver's own faster laps, never an instruction. His checklist rows on a sawtooth
+throttle and his throttle_modulation detector. Recorded (pitwall_patch_review): the throttle-dip detector fired on 5.1%
+of real F1 25 corner-laps."""
+
+[[technique]]
+id = "unwind_with_throttle"
+name = "Unwind as the throttle goes on"
+phase = "exit"
+summary = "Take steering off in step with the throttle going on: by full throttle the front wheels point straight."
+detail = """The tyres' grip is shared between cornering and drive: as the steering comes off, the grip it frees goes to
+acceleration. Full throttle with a lot of steering still on asks more than the tyres have - the car pushes wide or the
+rear steps out - while a wheel straightened long before full throttle leaves exit speed unused."""
+measured_by = ["throttle_full_m", "throttle_acceptance"]
+tier = "expert"
+sources = ["ed_corner_brief", "vrs_traction_circle", "blayze_throttle_exit", "pitwall_patch_review"]
+notes = """Ed's brief, point 11; his checklist rows on throttle before the steering unwinds (power understeer), the
+throttle acceptance KPI (lateral g at full throttle over the corner's peak) and the mid-corner unwind rate. Recorded
+(pitwall_patch_review): the low-throttle-acceptance detector fired on 6.0% of real F1 25 corner-laps, with its wording
+inverted."""
+
+[[technique]]
+id = "use_track_width_exit"
+name = "Use all the track on exit"
+phase = "exit"
+summary = "Let the car run out to the edge of the track on exit, and change up as normal."
+detail = """Using the whole width opens the corner's radius, so the steering can come off and the throttle reach full
+sooner. A car that finishes the exit well inside the edge has turned tighter than it needed to. Pitwall does not know
+where the track edges are, so it cannot measure this directly yet."""
+tier = "expert"
+sources = ["ed_corner_brief", "wikipedia_racing_line"]
+notes = """Ed's brief, point 12. No measured_by: track width needs the track edges, which no game sends; exit speed
+and full-throttle point show the effect, not the cause."""

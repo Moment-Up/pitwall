@@ -23,6 +23,7 @@ import { isReplaySource, timingEligible, type EvidenceTier } from "./kpis";
 import type { LapsRow } from "./laps";
 import { INCIDENT_KIND } from "./coaching";
 import { cornerWords, finite, joinAnd, plural, sentence, whyText } from "./words";
+import { fitsDriver } from "../knowledge/annotation";
 
 // ---- route -------------------------------------------------------------------------------------------------------
 
@@ -413,15 +414,19 @@ export function explainerText(
   );
 }
 
-/** The coach's observations for a corner on the compared lap: technique first, incidents apart (never advice). */
+/** The coach's observations for a corner on the compared lap: technique first, incidents apart (never advice), and
+ * apart too the points the technique graph says do not fit the driver (`notForYou`: shown with the reason, never
+ * coaching; lib/knowledge/annotation.ts). */
 export function cornerObservations(
   observations: readonly ReviewObservation[] | null | undefined,
   corner: string,
-): { coaching: ReviewObservation[]; incidents: ReviewObservation[] } {
+): { coaching: ReviewObservation[]; incidents: ReviewObservation[]; notForYou: ReviewObservation[] } {
   const here = (observations ?? []).filter((o) => o.corner === corner);
+  const technique = here.filter((o) => o.kind !== INCIDENT_KIND);
   return {
-    coaching: here.filter((o) => o.kind !== INCIDENT_KIND).sort((a, b) => b.priority - a.priority),
+    coaching: technique.filter((o) => fitsDriver(o)).sort((a, b) => b.priority - a.priority),
     incidents: here.filter((o) => o.kind === INCIDENT_KIND),
+    notForYou: technique.filter((o) => !fitsDriver(o)),
   };
 }
 
@@ -448,7 +453,7 @@ export function cornerColumns(table: Density["cornerTable"]): CornerColumn[] {
 
 // ---- titles, captions, compatibility -------------------------------------------------------------------------------
 
-export type CompareChart = "delta" | "speed" | "pedals" | "steering";
+export type CompareChart = "delta" | "speed" | "pedals" | "steering" | "g_forces";
 
 export interface ChartWords {
   title: string;
@@ -476,6 +481,12 @@ export function chartWords(chart: CompareChart, refWord: string): ChartWords {
       };
     case "steering":
       return { title: "Steering", caption: null };
+    case "g_forces":
+      return {
+        title: "G-forces",
+        caption:
+          "How hard the car is loaded side to side and fore-aft, as a fraction of standing weight. Shows whether a slower corner was a grip or a technique difference.",
+      };
   }
 }
 

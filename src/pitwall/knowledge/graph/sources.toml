@@ -1,0 +1,365 @@
+# Sources: where each piece of knowledge comes from. Every other node cites at least one of these by id, and its
+# tier must be one of its sources' tiers (docs/knowledge.md, "Sources and tiers").
+# Notes say what we took, in our own words. Never copy text from a source.
+
+# --- Pitwall's own rules and evidence --------------------------------------------------------------------------------
+
+[[source]]
+id = "pitwall_rules"
+title = "Pitwall's non-negotiable coaching rules (CLAUDE.md)"
+author = "Pitwall project"
+tier = "design"
+note = """Coaching is deterministic and never recommends braking later on its own: later braking is praised only when
+the corner got faster. For the technique graph this means no text tells a driver to brake later, brake less, release
+the brake earlier or carry more speed in, and unknown driver or car traits satisfy no condition."""
+
+[[source]]
+id = "pitwall_coaching"
+title = "Pitwall's coaching rules (src/pitwall/analysis/coaching.py)"
+author = "Pitwall project"
+tier = "live"
+note = """The eight coaching kinds Pitwall says today, each a deterministic rule over the lap's corner deltas against
+the driver's reference lap, with its thresholds and wording. Coaching from the driver's own reference lap was seen
+working in the owner's live races (docs/status.md)."""
+
+[[source]]
+id = "pitwall_style_review"
+title = "Braking and coasting style on the owner's recorded F1 25 laps"
+author = "Pitwall project"
+date = "2026-10-15"
+tier = "recorded"
+note = """Measured on six real F1 25 sessions: the fastest laps trail-brake into 40 of 41 braking corners (median
+33 m of braking with the wheel turned) and coast 10 m or more at 15% of corners. Within a corner across clean laps,
+more coasting went with a slower corner in 22 of 35 corners and more trail braking with a faster one in 28 of 45:
+weak effects, against straight-line braking and coasting to the apex for this driver and car."""
+
+[[source]]
+id = "pitwall_patch_review"
+title = "Review of Ed's detector patches on the owner's recorded F1 25 laps"
+author = "Pitwall project"
+date = "2026-10"
+tier = "recorded"
+note = """Ed's draft detectors run over 667 to 681 real F1 25 corner-laps: how often each fires and why some fire on
+almost every corner (F1 25 reports a little throttle under braking; the game blips on paddle downshifts; an apex
+search that jumps; a lift-before-braking scan that overruns). Firing rates and spreads are kept on each fault."""
+
+[[source]]
+id = "pitwall_signal_spread"
+title = "Live coaching kinds and corner deltas on the owner's recorded F1 25 laps"
+author = "Pitwall project"
+date = "2026-10-15"
+tier = "recorded"
+note = """Six real F1 25 sessions (Austria three times, Imola, Melbourne twice; 681 corner-laps, 667 without an
+incident), every lap compared with the fastest earlier clean lap as the live processor does: how often each of the
+eight coaching rules fires per corner-lap, the spread (10th to 90th percentile) of each corner delta on clean laps,
+and how often each cause that needs only those deltas would be named. The spread is lap-to-reference variation across
+corners, not sensor noise."""
+
+[[source]]
+id = "pitwall_cause_base_rate"
+title = "Each cause against its base rate on the owner's recorded laps"
+author = "Pitwall project"
+date = "2026-10-15"
+tier = "recorded"
+note = """scripts/cause_base_rates.py over all 30 of the owner's real captures (F1 25 and GT7 on the PS5, 2026-10-10 to
+13), replayed into a scratch database and analysed as Review does (every lap against its session's reference): 30
+sessions with a usable comparison (28 F1 25, 2 GT7), 148 compared laps, 1,173 non-incident corner-laps. For each cause
+and each live fault it explains: on how many of the fault's corner-laps its evidence held, against the corner-laps
+without the fault, counting only corner-laps where the evidence could be measured. Traction control was on (or not
+reported) in every session; ABS was on except in two F2 races."""
+
+[[source]]
+id = "pitwall_technique_review"
+title = "Technique analysis checked on recorded F1 25 and F2 laps"
+author = "Pitwall project"
+date = "2026-10-11"
+tier = "recorded"
+note = """The technique analysis (brake and throttle inputs per corner, handling balance from tyre slip, lock-ups and
+wheelspin, racing line) run on the owner's PS5 captures: neutral F1 and F2 corners read a front-minus-rear slip angle
+of about +0.4 to +2.9 degrees, below the understeer threshold; an F2 race at Bahrain with ABS off had 50 lock-ups in
+9 laps, and wheelspin counts follow the traction-control level. Tyre slip is sent by F1 25 only; the racing line was
+also read on a GT7 capture (docs/status.md, technique/thresholds.py)."""
+
+# --- Ed (Pitwall tester) ---------------------------------------------------------------------------------------------
+
+[[source]]
+id = "ed_corner_brief"
+title = "Idealised corner brief and self-check"
+author = "Ed (Pitwall tester)"
+date = "2026-10-14"
+tier = "brief"
+note = """Twelve points on driving one corner the textbook way, phase by phase: flat to the brake marker, a fast brake
+attack, a progressive release, blipped downshifts, braking with the wheel straight, coming off the brake with speed to
+spare, one smooth turn-in, coasting to the apex, one smooth throttle application from the apex, no lift once on the
+throttle, unwinding the wheel as the throttle goes on, and using the whole track on exit. Plus a self-check that reads
+an on-off-on throttle trace as a sign of over-braking. Illustrated with a synthetic telemetry chart."""
+
+[[source]]
+id = "ed_fault_checklist"
+title = "Technique-fault checklist"
+author = "Ed (Pitwall tester)"
+date = "2026-10-13"
+tier = "brief"
+note = """Telemetry signatures of common technique faults in the brake, throttle and steering traces, the combined
+(G-G) view and lap-to-lap consistency, with which ones Pitwall already detected and his researched sources."""
+
+[[source]]
+id = "ed_patches"
+title = "Detector patches: technique faults, body slip and cadence, root cause and overlay, ACC adapter"
+author = "Ed (Pitwall tester)"
+date = "2026-10"
+tier = "brief"
+note = """Draft detectors (double hump, pedal overlap, lift before braking, throttle dips, throttle acceptance,
+steering reversals, early apex, gear change while turning, exit grip use, slow brake attack, abrupt release, missed
+blips), an aero crossover fit and g-force charts for Compare. Thresholds marked not validated by Ed. Read as data;
+not applied as written."""
+
+# --- Published coaching knowledge ------------------------------------------------------------------------------------
+
+[[source]]
+id = "bentley_speed_secrets"
+title = "Speed Secrets: Professional Race Driving Techniques"
+author = "Ross Bentley"
+date = "1998"
+tier = "expert"
+note = """General race-driving technique: a corner taken in phases (braking, turn-in, apex, exit), the tyres' limited
+grip shared between braking and cornering, and trail braking - keeping some brake on into the turn and easing it off
+as the steering goes in, so the front tyres keep their load."""
+
+[[source]]
+id = "beckman_physics_of_racing_17"
+title = "The Physics of Racing, Part 17: slow-in, fast-out, or advanced analysis of the racing line"
+author = "Brian Beckman"
+url = "https://www.miata.net/sport/Physics/Part17.html"
+date = "2000-08"
+tier = "expert"
+note = """A worked analysis of lines through one corner: what counts is the total time through the corner and down the
+straight after it, not the highest speed at the apex, so taking the corner a little slower can win when it lets the
+car accelerate sooner; on its baseline example the widest line comes out ahead, mostly through the corner's
+geometry."""
+
+[[source]]
+id = "hpa_braking_technique"
+title = "Professional Motorsport Data Analysis: braking performance - braking technique"
+author = "High Performance Academy (HP Academy)"
+url = "https://www.hpacademy.com/courses/professional-motorsport-data-analysis/braking-performance-braking-technique"
+tier = "expert"
+note = """A data-analysis lesson on reading the brake trace. The gap between lifting off the throttle and braking should
+be short. Pressure builds quickly, and the peak belongs at the start of the stop; then it bleeds off smoothly: steadily
+in a downforce car as the aero grip falls with speed, while a low-downforce car tends to hold nearer its peak for part
+of the stop. When trail braking, the pressure falls roughly in step with the steering going in. Peaking, backing off
+and pressing again near turn-in is a common error. Smooth inputs throughout; left-foot braking is optional, and many
+amateur drivers keep a better feel braking with the right foot. Read 2026-10-15."""
+
+[[source]]
+id = "nasa_brake_release"
+title = "The art of releasing the brakes"
+author = "Bryan Van Noy (NASA Speed News, driver instruction column)"
+url = "https://nasaspeed.news/columns/driver-instruction/the-art-of-releasing-the-brakes/"
+date = "2025-09-23"
+tier = "expert"
+note = """Argues that how the brake comes off matters more for corner speed than how hard the stop is: a hard first
+application, then a release that begins before the car has lost too much speed and keeps load on the front tyres as
+the car turns in, which helps it rotate. With the pedal fully off the car is still slowing, and the steering itself
+scrubs speed. How long the brake stays on depends on the corner: deeper into hairpins, a quicker hand-over to the
+throttle in medium corners. Read 2026-10-15."""
+
+[[source]]
+id = "wikipedia_trail_braking"
+title = "Trail braking"
+author = "Wikipedia contributors"
+url = "https://en.wikipedia.org/wiki/Trail_braking"
+tier = "expert"
+note = """Trail braking keeps the brake on past the start of the turn and eases it off, fully released somewhere between
+turn-in and the apex, so weight stays on the front tyres and the car turns in and rotates; it is used most in slow
+corners and takes finesse, and too much of it can make the front tyres slide or lock the rears. The conventional
+alternative finishes all braking before the steering goes in, and beginner training (motorcycles) teaches all the
+slowing before the turn. Read 2026-10-15."""
+
+[[source]]
+id = "wikipedia_heel_and_toe"
+title = "Heel-and-toe shifting"
+author = "Wikipedia contributors"
+url = "https://en.wikipedia.org/wiki/Heel-and-toe_shifting"
+tier = "expert"
+note = """With a manual gearbox and a clutch, a downshift while braking needs the engine speeded up to match the wheels
+in the lower gear: the right foot brakes and blips the throttle at the same time. Without the blip the engine drags on
+the wheels for a moment, a jolt that can unsettle the car in a turn. Some cars blip for the driver on downshifts.
+Read 2026-10-15."""
+
+[[source]]
+id = "wikipedia_left_foot_braking"
+title = "Left-foot braking"
+author = "Wikipedia contributors"
+url = "https://en.wikipedia.org/wiki/Left-foot_braking"
+tier = "expert"
+note = """Braking with the left foot while the right stays on the throttle: less time moving between pedals, revs (and
+turbo boost) kept up, and a way to adjust load transfer and help the car rotate. Cars with no clutch pedal - paddle
+shifts, automatic gears, karts, many single-seaters - make it possible; brake and throttle overlap on purpose in this
+technique. Read 2026-10-15."""
+
+[[source]]
+id = "wikipedia_racing_line"
+title = "Racing line"
+author = "Wikipedia contributors"
+url = "https://en.wikipedia.org/wiki/Racing_line"
+tier = "expert"
+note = """The racing line uses the full width of the track - in from the outside edge, the inside at the apex, back out
+to the outside on exit - to open the corner's radius; a later apex suits slower corners and gives a faster exit, while
+an early apex gives a quicker entry but a slower exit and is a common beginner error. Read 2026-10-15."""
+
+[[source]]
+id = "blayze_throttle_exit"
+title = "Does an earlier throttle application mean a better corner exit?"
+author = "Dion von Moltke (Blayze)"
+url = "https://blayze.io/blog/car-racing/does-an-earlier-throttle-application-mean-a-better-exit"
+date = "2022-11-16"
+tier = "expert"
+note = """Argues that an early throttle pick-up often costs time: it makes the car push and keeps steering on at the
+exit. Picking up once the car has rotated, then one smooth, steady application all the way to full with no easing off,
+and opening the steering as it goes on, reaches full throttle sooner. Read 2026-10-15."""
+
+[[source]]
+id = "blayze_consistency"
+title = "What should you be working on? A high-level guide for experienced racers"
+author = "Ken Hill (Blayze)"
+url = "https://blayze.io/blog/car-racing/what-to-work-on-next-for-on-track-improvement"
+date = "2025-02-13"
+tier = "expert"
+note = """Consistency before speed: lap times repeating within a few tenths, the brake point at the same marker within a
+few feet every lap, the same turn-in and apex. List the visual reference used for each braking zone, turn-in and
+exit, and check the brake and throttle traces for variation. Read 2026-10-15."""
+
+[[source]]
+id = "racefans_lift_and_coast"
+title = "'Lift and coast': why F1 drivers are told to save fuel"
+author = "Keith Collantine (RaceFans)"
+url = "https://www.racefans.net/2015/06/11/lift-and-coast-why-f1-drivers-are-told-to-save-fuel/"
+date = "2015-06-11"
+tier = "expert"
+note = """Lift and coast: when the race needs fuel saved, the driver lifts off the throttle a little before the braking
+zone, rolls, then brakes at the usual point. Fuel burns fastest at full throttle at top speed and the car's drag slows
+it anyway, so it saves the most fuel for the least time, and it eases engine and brake temperatures too.
+Read 2026-10-15."""
+
+# The sources Ed cited for his checklist, read by Pitwall on 2026-10-15: each note says what the graph takes from it.
+
+[[source]]
+id = "speedwaymedia_vector_analysis"
+title = "Driver telemetry: data-driven vector analysis, the hidden language of race car engineering"
+author = "Speedway Media"
+url = "https://speedwaymedia.com/2026/06/14/driver-telemetry-data-driven-vector-analysis-the-hidden-language-of-race-car-engineering/"
+date = "2026-06-14"
+tier = "expert"
+note = """Reads braking, cornering and acceleration as longitudinal and lateral g, combined in a g-g plot (the traction
+circle): when the combined demand goes past the circle's edge the car loses grip, as understeer or oversteer, and the
+best drivers keep working along that edge without crossing it. Little on individual pedal or steering traces. Cited by
+Ed for his checklist; read 2026-10-15."""
+
+[[source]]
+id = "mysimrig_telemetry_beginners"
+title = "Sim racing telemetry for beginners: turn data into faster laps"
+author = "Patrick Kalkman (MySimRig)"
+url = "https://mysimrig.nl/en/blog/simracing/sim-racing-telemetry-for-beginners/"
+date = "2025-11-24"
+tier = "expert"
+note = """A beginner's guide to the traces: a firm brake application then a smooth release; a slow build loses
+deceleration, and a sudden drop can leave the car pushing at the apex; a throttle that saws up and down points to an
+overdriven exit fighting wheelspin; steering zig-zags inside one corner point to a balance struggle; a long gap off
+both pedals usually means the braking finished too soon. Advises a baseline of clean laps, a reference-lap overlay
+and one change at a time. Cited by Ed for his checklist; read 2026-10-15."""
+
+[[source]]
+id = "srt_racing_lines"
+title = "Analyzing racing lines in telemetry data"
+author = "Sim Racing Telemetry (knowledge base)"
+url = "https://docs.simracingtelemetry.com/kb/how-to-analyze-racing-lines"
+date = "2025-01-11"
+tier = "expert"
+note = """Splits a line into entry, apex and exit; frequent large steering corrections suggest the line needs work; an
+overlay and a delta chart against a reference lap show where time goes, and comparing laps shows how consistent the
+line is. It does not discuss early apexes or track width. Cited by Ed for his checklist; read 2026-10-15 (date: last
+edit)."""
+
+[[source]]
+id = "designjudges_driver_data"
+title = "Analyzing driver data"
+author = "Skitter Yaeger (Design Judges)"
+url = "https://www.designjudges.com/articles/analyzing-driver-data"
+tier = "expert"
+note = """Driver data analysis, comparing drivers and cars: channels plotted over distance and against each other
+(lateral and longitudinal g, steering or body slip against speed or longitudinal g). Combined g over distance dips
+where braking does not carry into cornering - a confident driver's stays up from the brake into the turn, the
+trailing brake. A jerky steering rate made the car slide, and more steering went with more understeer. A map of the
+driver's combined pedal and steering work finds unintended brake and throttle overlap, and inputs that all drop to
+zero after braking. It shows no g-g plot and does not compare one driver's laps for consistency. Cited by Ed for his
+checklist; read 2026-10-15."""
+
+[[source]]
+id = "vrs_traction_circle"
+title = "Fundamentals: the traction circle (iRacing career guide, second season)"
+author = "David Williams (Virtual Racing School)"
+url = "https://virtualracingschool.com/academy/iracing-career-guide/second-season/the-traction-circle/"
+date = "2016-10-26"
+tier = "expert"
+note = """A tyre has one budget of grip shared between braking, cornering and acceleration. Novices are taught to brake,
+steer and accelerate one at a time, which is safe but leaves grip unused; braking at the limit and then steering asks
+too much, so the front tyres lock or push wide, and the brake eases off as the steering goes in. At the apex the car is
+on its full cornering grip with little or no pedal, then the throttle builds as the steering unwinds. Cited by Ed for
+his checklist; read 2026-10-15."""
+
+[[source]]
+id = "coilovers_data_acquisition"
+title = "Race data acquisition and telemetry analysis for suspension tuning"
+author = "Coilovers.ca (guides)"
+url = "https://coilovers.ca/blogs/guides/race-data-acquisition-telemetry-analysis-suspension-tuning"
+date = "2026-04-20"
+tier = "expert"
+note = """Reads handling through g and damper data for setup work: entry understeer shows as lateral g that stops
+building at turn-in while braking g falls away; exit oversteer as lateral g dropping suddenly; the same complaint can
+come from the driver's entry or from the car, which the data is meant to separate. Little on reading the pedals. Cited
+by Ed for his checklist; read 2026-10-15."""
+
+[[source]]
+id = "wikipedia_understeer_oversteer"
+title = "Understeer and oversteer"
+author = "Wikipedia contributors"
+url = "https://en.wikipedia.org/wiki/Understeer_and_oversteer"
+tier = "expert"
+note = """Understeer: the car turns less than the steering asks and runs wide at the limit; oversteer: it turns more and
+tends to spin. Braking that puts too much load on the front tyres can make them slide, and enough power at the rear
+wheels can start oversteer. Cited by Ed for his checklist; read 2026-10-15."""
+
+# --- Real-world and third-party data, measured by Pitwall's scripts (tier external) ----------------------------------
+# Not Pitwall's own recorded laps and not evidence about a game: how real or other sim drivers drive, measured with
+# Pitwall's scripts and kept as aggregate numbers (no raw data in the repository, no participant named).
+
+[[source]]
+id = "openf1_2025_qualifying"
+title = "Car data of real 2025 Formula 1 qualifying laps (OpenF1)"
+author = "OpenF1 (openf1.org), measured by Pitwall's scripts"
+url = "https://openf1.org"
+date = "2026-10-15"
+tier = "external"
+note = """Real cars, not a game: the fastest qualifying lap of each of the top four at the 2025 Austrian and Japanese
+Grands Prix (Spielberg and Suzuka), 58 braking zones, read from OpenF1's public historical data on 2026-10-15 and
+measured with Pitwall's scripts. OpenF1 is unofficial and licensed CC BY-NC-SA 4.0 (F1 trademarks belong to Formula
+One Licensing B.V.): Pitwall keeps none of its raw data, only the derived numbers on the techniques, credited here.
+Limits: the brake is a pressed or not-pressed flag sampled about four times a second, there is no steering, and the
+positions follow one shared line, so turning means the heading of that line: it shows braking that overlaps the turn,
+not how the pressure comes off or each driver's own line. Aggregates only."""
+
+[[source]]
+id = "acgym_human_laps"
+title = "AssettoCorsaGym: human laps in Assetto Corsa at the Red Bull Ring and Monza"
+author = "Remonda et al. (AssettoCorsaGym dataset, CC BY 4.0), measured by Pitwall's scripts"
+url = "https://huggingface.co/datasets/dasgringuen/assettoCorsaGym"
+date = "2026-10-15"
+tier = "external"
+note = """Another simulator's human laps, not Pitwall's recordings: the open dataset of the paper "A Simulation Benchmark
+for Autonomous Racing with Large-Scale Human Data" (NeurIPS 2024, arXiv 2407.16680), whose drivers range from a
+professional sim racer to first-time beginners. Pitwall's scripts read 11 drivers' laps in the Dallara F317 and a GT3
+car (142 representative laps; the Miata had too few) through Pitwall's own braking and corner analysis, with the
+drivers grouped into thirds by lap time (the paper does not say who is which level). Aggregates only: no participant
+is named. Limits: few drivers per group; the GT3 results lean on the two fastest drivers, who also had high-resolution
+pedals (one ran ABS and traction control); the steering scale differs from F1 25's."""

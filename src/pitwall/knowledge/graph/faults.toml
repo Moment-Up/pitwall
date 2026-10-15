@@ -1,0 +1,819 @@
+# Faults: what goes wrong, and whether Pitwall coaches it. status live = a coaching rule says it today: kind is the
+# rule's kind (analysis.coaching.COACHING_KINDS) and the id equals it. experimental = computed, not coached;
+# planned = not computed yet; context_only = shown as background, never as a fault of the driver. relative = reference
+# (measured against the driver's own reference lap) or absolute. thresholds name the code constants the rule uses.
+# causes and advice are mirrored: each cause lists the fault in explains, each advice names it in for.
+# measured = how often a rule or a draft detector fires on the owner's real laps (pitwall_signal_spread for the live
+# rules, pitwall_patch_review for Ed's draft detectors): a high rate on clean laps means the detector, not the driver,
+# needs work before it can coach.
+
+# --- live: the eight coaching kinds (analysis/coaching.py observations_for_comparison), wording mirrored in advice ---
+# No live fault has conditions: they are measured against the driver's own reference lap, so they fit every driver,
+# and coaching on them stays exactly as it is today.
+
+[[fault]]
+id = "brake_early"
+kind = "brake_early"
+status = "live"
+name = "Braking early"
+summary = "Braking started clearly earlier than on the reference lap, and the corner cost time."
+phase = "braking"
+relative = "reference"
+signals = ["brake_point_delta_m"]
+thresholds = ["pitwall.analysis.coaching.BRAKE_POINT_M", "pitwall.analysis.coaching.MIN_TIME_LOSS_S"]
+violates = ["flat_to_brake_marker", "consistent_brake_marker"]
+advice = ["brake_early_describe", "brake_early_describe_beginner"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Rule: braking point at least BRAKE_POINT_M before the reference's and at least MIN_TIME_LOSS_S lost. Today's
+texts: "you're braking about N m earlier than your reference (lap R), losing X s", simple "you braked about N m earlier
+than on your reference lap", short "braked N m earlier", radio "braking N m earlier than your reference". It is in
+LATER_BRAKING_FIXES: its "sorted" (which praises the later braking) is said only when the corner also got faster."""
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 11.1
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "74 of 667 corner-laps of six real F1 25 sessions, each lap against the fastest earlier clean lap."
+
+[[fault]]
+id = "brake_late_overdrive"
+kind = "brake_late_overdrive"
+status = "live"
+name = "Overdriving the entry"
+summary = """Braking started clearly later than on the reference lap, but the car came out of the corner slower and the
+corner cost time."""
+phase = "braking"
+relative = "reference"
+signals = ["brake_point_delta_m", "exit_speed_delta_kph"]
+thresholds = [
+    "pitwall.analysis.coaching.BRAKE_POINT_M",
+    "pitwall.analysis.coaching.EXIT_SPEED_KPH",
+    "pitwall.analysis.coaching.MIN_TIME_LOSS_S",
+]
+violates = ["consistent_brake_marker"]
+advice = ["brake_late_overdrive_describe", "brake_late_overdrive_describe_beginner"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Rule: braking point at least BRAKE_POINT_M after the reference's, exit at least EXIT_SPEED_KPH slower and at
+least MIN_TIME_LOSS_S lost (only when brake_early did not fire). Today's texts: "you're braking N m later than your
+reference but exiting N km/h slower - the later braking isn't paying off", simple "the later braking did not pay off -
+you came out N km/h slower", short "braked later, N km/h slower out", radio "braking N m later but exiting N km/h
+slower". The rule's own texts are older than the graph's constraints; the graph's advice says the same without the
+phrasings the constraints catch."""
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 8.8
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "59 of 667 corner-laps of six real F1 25 sessions."
+
+[[fault]]
+id = "overspeed_apex"
+kind = "overspeed_apex"
+status = "live"
+name = "Too fast at the apex"
+summary = """The slowest point of the corner was clearly faster than on the reference lap, but the exit was slower and
+the corner cost time."""
+phase = "apex"
+relative = "reference"
+signals = ["min_speed_delta_kph", "exit_speed_delta_kph"]
+thresholds = [
+    "pitwall.analysis.coaching.MIN_SPEED_KPH",
+    "pitwall.analysis.coaching.EXIT_SPEED_KPH",
+    "pitwall.analysis.coaching.MIN_TIME_LOSS_S",
+]
+violates = ["throttle_at_rotation"]
+causes = ["carried_too_much_speed"]
+advice = ["overspeed_apex_describe", "overspeed_apex_describe_beginner"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Rule: minimum speed at least MIN_SPEED_KPH above the reference's, exit at least EXIT_SPEED_KPH slower and at
+least MIN_TIME_LOSS_S lost (only when low_min_speed did not fire). Today's texts: "you're carrying N km/h more into the
+apex but exiting N km/h slower - too much entry speed is compromising the exit", simple "the extra speed into the
+corner cost you on the way out: N km/h slower", short "faster in, N km/h slower out", radio "N km/h too much into the
+apex, exit N km/h down"."""
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 2.1
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "14 of 667 corner-laps of six real F1 25 sessions."
+
+[[fault]]
+id = "low_min_speed"
+kind = "low_min_speed"
+status = "live"
+name = "Low minimum speed"
+summary = "The slowest point of the corner was clearly slower than on the reference lap, and the corner cost time."
+phase = "apex"
+relative = "reference"
+signals = ["min_speed_delta_kph"]
+thresholds = ["pitwall.analysis.coaching.MIN_SPEED_KPH", "pitwall.analysis.coaching.MIN_TIME_LOSS_S"]
+violates = ["release_with_speed_to_spare"]
+causes = ["over_braking", "early_turn_in", "low_grip"]
+advice = ["low_min_speed_describe", "low_min_speed_describe_beginner"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Rule (observations_for_comparison): minimum speed at least MIN_SPEED_KPH below the reference and at least
+MIN_TIME_LOSS_S lost through the corner. Today's texts: "minimum speed is N km/h lower than your reference", simple
+"you were N km/h slower at the slowest point of the corner", short "N km/h slower mid-corner"."""
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 41.7
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = """278 of 667 corner-laps of six real F1 25 sessions: the most common point by far. Of those, over_braking was
+named on 32 (12%) and early_turn_in on 16 (6%)."""
+
+[[fault]]
+id = "late_throttle"
+kind = "late_throttle"
+status = "live"
+name = "Late to full throttle"
+summary = "Full throttle came clearly later on the way out than on the reference lap, and the corner cost time."
+phase = "exit"
+relative = "reference"
+signals = ["throttle_full_delta_m"]
+thresholds = ["pitwall.analysis.coaching.THROTTLE_M", "pitwall.analysis.coaching.MIN_TIME_LOSS_S"]
+violates = ["throttle_at_rotation", "commit_throttle_no_lift", "unwind_with_throttle"]
+causes = ["traction_limited", "ready_earlier"]
+advice = ["late_throttle_describe", "late_throttle_describe_beginner"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Rule: full throttle at least THROTTLE_M later than the reference's and at least MIN_TIME_LOSS_S lost. Today's
+texts: "you're reaching full throttle N m later than your reference", simple "you got back to full throttle about N m
+later than on your reference lap", short "full throttle N m later", radio "full throttle N m later than your
+reference". Ed's checklist: the rule alone cannot tell an exit short of grip from grip left unused; the causes
+traction_limited and ready_earlier do, on F1 25 (tyre slip). On GT7 variants A and B the throttle is after traction
+control."""
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 18.6
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "124 of 667 corner-laps of six real F1 25 sessions."
+
+[[fault]]
+id = "coasting"
+kind = "coasting"
+status = "live"
+name = "Coasting"
+summary = """Clearly more distance off both pedals between the brake and the throttle than on the reference lap, and the
+corner cost time."""
+phase = "mid_corner"
+relative = "reference"
+signals = ["coast_delta_m"]
+thresholds = ["pitwall.analysis.coaching.COAST_M", "pitwall.analysis.coaching.MIN_TIME_LOSS_S"]
+violates = ["trail_braking", "throttle_at_rotation"]
+causes = ["early_brake_release", "waiting_for_rotation"]
+advice = ["coasting_describe", "coasting_describe_beginner", "coasting_explain_trail", "coasting_explain_straight_line"]
+tier = "live"
+sources = ["pitwall_coaching", "pitwall_style_review"]
+notes = """Rule: at least COAST_M more coasting than the reference and at least MIN_TIME_LOSS_S lost. Today's texts:
+"about N m more coasting (no brake, no throttle) than your reference between brake release and throttle", simple "you
+spent about N m more off both pedals than on your reference lap", short "N m more coasting", radio "N m more coasting
+than your reference". Style-aware without changing who gets it: the rule compares with the driver's own reference, so a
+driver who coasts to the apex on purpose (coast_to_apex, Ed's brief point 8) is told only when this lap coasted clearly
+more than their own faster lap. The advice differs by detected braking style (trail / straight_line); the owner's
+fastest F1 25 laps coast at only 15% of corners (pitwall_style_review)."""
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 3.6
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = """24 of 667 corner-laps of six real F1 25 sessions (a driver who rarely coasts). Of those, early_brake_release
+was named on 11 and waiting_for_rotation on 9."""
+
+[[fault]]
+id = "exit_gain"
+kind = "exit_gain"
+status = "live"
+positive = true
+name = "Good exit"
+summary = "The car came out of the corner clearly faster than on the reference lap, and the corner gained time."
+phase = "exit"
+relative = "reference"
+signals = ["exit_speed_delta_kph"]
+thresholds = ["pitwall.analysis.coaching.EXIT_SPEED_KPH", "pitwall.analysis.coaching.MIN_TIME_LOSS_S"]
+advice = ["exit_gain_describe", "exit_gain_describe_beginner"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Praise. Rule: exit at least EXIT_SPEED_KPH faster than the reference and at least MIN_TIME_LOSS_S gained.
+Today's texts: "good - exit speed is up N km/h on your reference and you gained X s there", simple "good exit - you came
+out N km/h faster than on your reference lap", short "good exit, N km/h faster", radio "good exit, N km/h up"."""
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 22.0
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "147 of 667 corner-laps of six real F1 25 sessions."
+
+[[fault]]
+id = "incident"
+kind = "incident"
+status = "live"
+name = "Incident"
+summary = """The corner lost far more time than a technique difference could (a spin, contact, a trip off the track or a
+slow-down), so it gives no technique advice."""
+phase = "mid_corner"
+relative = "reference"
+signals = ["corner_time_delta_s", "min_speed_kph"]
+thresholds = [
+    "pitwall.analysis.coaching.INCIDENT_LOSS_S",
+    "pitwall.analysis.coaching.INCIDENT_SPEED_FRAC",
+    "pitwall.analysis.coaching.INCIDENT_MIN_REF_KPH",
+]
+advice = ["incident_describe", "incident_describe_beginner"]
+tier = "live"
+sources = ["pitwall_coaching"]
+notes = """Rule (is_incident): at least INCIDENT_LOSS_S lost at the corner, or a slowest point below INCIDENT_SPEED_FRAC
+of a reference of at least INCIDENT_MIN_REF_KPH. Reported once, kept out of averages, habits and technique advice, and
+never said on the radio (the driver knows). Filed under mid-corner because it reads the whole corner and its slowest
+point. Today's texts: "lost N s - that looks like an incident (spin, contact, off-track or a slow-down), so no technique
+advice from this corner on this lap", short "incident, no advice this lap"."""
+
+[[fault.measured]]
+metric = "fires on corner-laps"
+value = 2.1
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_signal_spread"
+note = "14 of 681 corner-laps of six real F1 25 sessions."
+
+# --- computed, not coached (experimental) ----------------------------------------------------------------------------
+
+[[fault]]
+id = "slow_brake_attack"
+status = "experimental"
+name = "Slow brake attack"
+summary = """The brake took longer to reach its peak pressure than on the reference lap: a squeeze up to the pedal
+rather than a quick, firm press."""
+phase = "braking"
+relative = "reference"
+signals = ["time_to_peak_s", "time_to_peak_delta_s"]
+thresholds = ["pitwall.technique.thresholds.PEAK_FRAC"]
+violates = ["fast_brake_attack"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "ed_corner_brief",
+    "ed_patches",
+    "mysimrig_telemetry_beginners",
+    "pitwall_patch_review",
+    "hpa_braking_technique",
+]
+notes = """Ed's brief point 2 and checklist row "slow ramp-up". Ed marked it not covered; the review found the attack
+time (time_to_peak_s) already measured and compared with the reference in the technique notes after the session. Ed's
+root-cause patch would coach it at 0.05 s slower than the reference and losing (SLOW_BRAKE_ATTACK_S, not validated):
+that sits well inside the lap-to-reference spread (time_to_peak_delta_s), so it is not coached. With the game's braking
+assist on, brake notes are muted."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's rule)"
+value = 19.0
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+note = "667 corner-laps of real F1 25 laps, attack 0.05 s slower than the reference and the corner losing time."
+
+[[fault.measured]]
+metric = "corner-laps 0.05 s or more off the reference"
+value = 68.0
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+note = "Either way: the attack time varies that much from lap to lap on its own."
+
+[[fault]]
+id = "abrupt_brake_release"
+status = "experimental"
+name = "Abrupt brake release"
+summary = """The brake pressure came off in one quick drop, quicker than on the reference lap, instead of easing away as
+the car slowed."""
+phase = "braking"
+relative = "reference"
+signals = ["release_time_delta_s"]
+thresholds = ["pitwall.technique.thresholds.STEP_RELEASE_S", "pitwall.technique.thresholds.RELEASE_NOTE_FRAC"]
+violates = ["progressive_brake_release"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "ed_corner_brief",
+    "ed_patches",
+    "mysimrig_telemetry_beginners",
+    "pitwall_patch_review",
+    "hpa_braking_technique",
+    "nasa_brake_release",
+]
+notes = """Ed's brief point 3 and checklist row "abrupt / stepped release" (he marked it built: the technique notes
+describe the release time and shape - in one go, steadily, dropped then trailed, held then dropped late - after the
+session). His root-cause patch would coach a release 0.05 s quicker than the reference and losing
+(ABRUPT_BRAKE_RELEASE_S, not validated): inside the spread (release_time_delta_s), so it is not coached."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's rule)"
+value = 17.0
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+note = "667 corner-laps of real F1 25 laps, release 0.05 s quicker than the reference and the corner losing time."
+
+[[fault.measured]]
+metric = "corner-laps 0.05 s or more off the reference"
+value = 77.0
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+
+[[fault]]
+id = "throttle_sawtooth"
+status = "experimental"
+name = "Throttle sawtooth"
+summary = "The throttle went on and off repeatedly on the way out instead of rising to full in one go."
+phase = "exit"
+relative = "absolute"
+signals = ["throttle_lifts"]
+thresholds = ["pitwall.technique.thresholds.LIFT_DROP"]
+violates = ["commit_throttle_no_lift"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "ed_corner_brief",
+    "mysimrig_telemetry_beginners",
+    "vrs_traction_circle",
+    "pitwall_patch_review",
+    "blayze_throttle_exit",
+]
+notes = """Ed's checklist row "sawtooth (repeated on / off)" and brief point 10. Ed marked it not covered; the review
+found throttle_lifts counting it after the session (a technique note and a habit), up to the first full throttle only.
+On GT7 variants A and B the throttle is after traction control, so the car's own cuts would count: no game gating
+yet."""
+
+[[fault]]
+id = "lap_scatter"
+status = "experimental"
+name = "Lap-to-lap scatter"
+summary = "The braking point or the slowest speed at a corner moved around a lot from one lap to the next."
+phase = "braking"
+relative = "absolute"
+signals = ["brake_point_std_m", "min_speed_std_kph"]
+violates = ["consistent_brake_marker"]
+tier = "brief"
+sources = ["ed_fault_checklist", "mysimrig_telemetry_beginners", "pitwall_patch_review", "blayze_consistency"]
+notes = """Ed's checklist row and one of his suggested next steps. The review: the spread per corner exists after the
+session (report, AI engineer facts, corner cards), not live; the live consistency_ratio is the share of laps past a
+rule's threshold, not a spread. No threshold yet."""
+
+[[fault]]
+id = "brake_lockup"
+status = "experimental"
+name = "Lock-up"
+summary = "A wheel stopped turning under braking, so the tyre slid instead of gripping and the car slowed less well."
+phase = "braking"
+relative = "absolute"
+signals = ["lockup_events"]
+thresholds = ["pitwall.technique.thresholds.LOCKUP_SLIP", "pitwall.technique.thresholds.LOCKUP_MIN_S"]
+applies_when = ["abs_off"]
+violates = ["progressive_brake_release"]
+tier = "recorded"
+sources = ["pitwall_technique_review", "ed_fault_checklist", "vrs_traction_circle"]
+notes = """Ed's checklist row "lockups / wheelspin" (built). Counted per corner (technique.inputs) and per lap by car
+health (carhealth/slip.py), which says lock-ups on the radio; not a coaching kind. With ABS on there is no lock-up to
+count (abs_on), hence abs_off. Tyre slip: F1 25 only. Linked to the progressive release: as the car slows it has less
+downforce, so the same pressure late in the stop locks a wheel (Ed's brief point 3)."""
+
+[[fault]]
+id = "exit_wheelspin"
+status = "experimental"
+name = "Wheelspin on the exit"
+summary = """A rear wheel spun under throttle on the way out of the corner, so the car accelerated less than the
+throttle asked."""
+phase = "exit"
+relative = "absolute"
+signals = ["exit_wheelspin_events"]
+thresholds = [
+    "pitwall.technique.thresholds.SPIN_SLIP",
+    "pitwall.technique.thresholds.SPIN_MIN_S",
+    "pitwall.technique.thresholds.SPIN_THROTTLE",
+]
+violates = ["throttle_at_rotation", "unwind_with_throttle"]
+tier = "recorded"
+sources = ["pitwall_technique_review", "ed_fault_checklist", "wikipedia_understeer_oversteer"]
+notes = """Ed's checklist row "lockups / wheelspin" (built). Per corner (technique.inputs) and per lap
+(carhealth/slip.py, said on the radio only with traction control off or medium: with it full, about one a lap is
+normal). Tyre slip: F1 25 only. Evidence for the cause traction_limited."""
+
+[[fault]]
+id = "balance_symptom"
+status = "experimental"
+name = "Understeer or oversteer at a corner"
+summary = """The front tyres (understeer) or the rear tyres (oversteer) reached their limit first at this corner, lap
+after lap."""
+phase = "mid_corner"
+relative = "absolute"
+signals = ["entry_balance_deg", "mid_balance_deg", "exit_balance_deg", "mid_slide", "exit_slide"]
+thresholds = [
+    "pitwall.technique.thresholds.US_DIFF_DEG",
+    "pitwall.technique.thresholds.OS_DIFF_DEG",
+    "pitwall.technique.thresholds.SLIDE_BODY_SLIP_DEG",
+]
+tier = "recorded"
+sources = ["pitwall_technique_review", "ed_fault_checklist", "wikipedia_understeer_oversteer"]
+notes = """Ed's checklist row "driver vs car under / oversteer" (built: technique/balance.py, F1 25 only). A symptom
+must recur (2 or more laps, half the laps with data); one the session's best lap also had is the car's (setup
+suggestions), one it did not have points at how the corner was driven (entry speed or line). Shown on the Technique
+page, not coached."""
+
+[[fault]]
+id = "unused_track_exit"
+status = "experimental"
+name = "Track left unused on the exit"
+summary = """The car ran out of the corner tighter than on the reference lap, leaving part of the track's width unused
+on the way out."""
+phase = "exit"
+relative = "reference"
+signals = ["exit_line_offset_m"]
+thresholds = ["pitwall.technique.thresholds.LINE_NOTABLE_M"]
+violates = ["use_track_width_exit"]
+tier = "recorded"
+sources = ["pitwall_technique_review", "ed_corner_brief", "beckman_physics_of_racing_17", "wikipedia_racing_line"]
+notes = """Ed's brief point 12. The racing line analysis compares each lap's line with the reference at turn-in, apex
+and track-out (wider / tighter beyond LINE_NOTABLE_M) after the session; it is shown, not coached. Relative to the
+driver's own reference lap, never to the track's edges, which no game sends. Needs a position channel (read on F1 25
+and a GT7 capture)."""
+
+# --- planned: Ed's checklist rows and draft detectors, not computed by Pitwall yet ----------------------------------
+
+[[fault]]
+id = "double_hump"
+status = "planned"
+name = "Brake pressed twice"
+summary = "In one stop the brake pressure dipped and then rose again to a second peak, instead of one clean release."
+phase = "braking"
+relative = "absolute"
+signals = ["brake_reapplied"]
+thresholds = ["pitwall.analysis.braking.MERGE_GAP_S"]
+violates = ["progressive_brake_release"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "ed_patches",
+    "designjudges_driver_data",
+    "pitwall_patch_review",
+    "hpa_braking_technique",
+]
+notes = """Ed's checklist row "double hump (lift, re-apply)". He marked it not covered because braking.py merges stabs
+closer than MERGE_GAP_S into one event; the review rated that half right: the rig check counts re-applications per lap
+(not per corner, no peak or duration floor), and a decoded Austria lap shows one event peaking at 0.95, dipping to 0.42
+and back to 0.89. Ed's detector: his HUMP_DIP_FRAC and HUMP_MIN_FRAC (not validated)."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's detector)"
+value = 11.7
+unit = "%"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "667 to 681 corner-laps of real F1 25 laps."
+
+[[fault]]
+id = "pedal_overlap"
+status = "planned"
+name = "Brake and throttle overlap"
+summary = "The brake and the throttle were pressed at the same time when only one of them was meant to be."
+phase = "braking"
+relative = "absolute"
+signals = ["pedal_overlap_m"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "ed_patches",
+    "designjudges_driver_data",
+    "pitwall_patch_review",
+    "wikipedia_left_foot_braking",
+    "wikipedia_heel_and_toe",
+]
+notes = """Ed's checklist row "unintentional brake / throttle overlap" (he marked it partly covered: lock-up gating
+only). Not a fault for a left-foot braker, whose overlap is the technique (left_foot_braking): the driver's Context has
+no left-foot braking trait yet, so the fault cannot say so with a condition; it must not coach until it can. On F1 25 it
+fired on two thirds of corner-laps because the game reports a steady 0.10 throttle under braking (Ed's floor is 0.10): a
+game artefact, not the driver."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's detector)"
+value = 66.8
+unit = "%"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "455 of 681 corner-laps of real F1 25 laps; F1 25 reports throttle 0.10 under braking (3 to 110 samples a lap)."
+
+[[fault]]
+id = "lift_before_braking"
+status = "planned"
+name = "Lift before braking"
+summary = """The throttle came off well before the braking point and the car rolled with no pedal pressed before braking
+began."""
+phase = "approach"
+relative = "absolute"
+signals = ["pre_brake_coast_m"]
+violates = ["flat_to_brake_marker"]
+tier = "brief"
+sources = [
+    "ed_corner_brief",
+    "ed_fault_checklist",
+    "ed_patches",
+    "pitwall_patch_review",
+    "hpa_braking_technique",
+    "racefans_lift_and_coast",
+]
+notes = """Ed's brief point 1 and checklist row "lift-and-coast before the brake zone" (his patch adds it as
+pre_brake_coast_m). Not a fault when the race strategy asks for lift and coast to save fuel (fuel_save_lift_and_coast,
+Context fuel_saving; the strategy already knows it: strategy/engine.py lift_coast): it needs a "not fuel saving"
+condition before it can coach. The review found the scan reporting hundreds of metres (it runs back past the lift)."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's detector)"
+value = 23.2
+unit = "%"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "667 to 681 corner-laps of real F1 25 laps; inflated by the scan bug."
+
+[[fault]]
+id = "steering_sawing"
+status = "planned"
+name = "Sawing at the wheel"
+summary = """More steering corrections back and forth through the corner than on the reference lap, as if fighting the
+car's balance."""
+phase = "mid_corner"
+relative = "reference"
+signals = ["steering_reversals"]
+violates = ["single_smooth_turn_in"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "ed_corner_brief",
+    "ed_patches",
+    "mysimrig_telemetry_beginners",
+    "designjudges_driver_data",
+    "srt_racing_lines",
+    "pitwall_patch_review",
+]
+notes = """Ed's brief point 7 and checklist row "sawing mid-corner (multiple sign changes)". His counter finds 3 to 5
+reversals per corner on clean laps; the rig check's filtered, gap-based counter (per lap) is the better base.
+AC's steering is not mapped; GT7's is approximate."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's detector)"
+value = 22.6
+unit = "%"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "667 to 681 corner-laps of real F1 25 laps: one more reversal than the reference is within the noise."
+
+[[fault]]
+id = "snatched_turn_in"
+status = "planned"
+name = "Snatched turn-in"
+summary = "The steering went in with a sudden jerk instead of one smooth movement to the corner's angle."
+phase = "turn_in"
+relative = "reference"
+signals = ["turn_in_steer_time_s"]
+violates = ["single_smooth_turn_in"]
+tier = "brief"
+sources = ["ed_fault_checklist", "ed_corner_brief", "mysimrig_telemetry_beginners", "designjudges_driver_data"]
+notes = """Ed's brief point 7 and checklist row "snatched / aggressive turn-in (steering rate)". Nothing measures a
+steering rate per corner yet (the review); compared with the driver's own reference because a hairpin and a kink need
+very different rates."""
+
+[[fault]]
+id = "early_apex"
+status = "planned"
+name = "Early apex"
+summary = """The car reached the tightest part of the corner sooner than on the reference lap, which tends to push it
+wide on the exit or force a second correction."""
+phase = "apex"
+relative = "reference"
+signals = ["steering_peak_offset_delta_m", "min_speed_pos_delta_m"]
+violates = ["single_smooth_turn_in", "use_track_width_exit"]
+causes = ["early_turn_in"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "ed_patches",
+    "speedwaymedia_vector_analysis",
+    "pitwall_patch_review",
+    "wikipedia_racing_line",
+]
+notes = """Ed's checklist row "early apex (steering peak before the geometric apex, second correction)"; he marked it
+partly covered (the line thresholds measure offset, not apex timing). His checklist also lists the Sim Racing
+Telemetry racing-lines page here; it does not discuss early apexes, so it is cited for steering corrections
+(steering_sawing) instead. His detector takes the argmax of the steering,
+which jumps between peaks (values like -289 m). The slowest point's position (min_speed_pos_delta_m) is computed but
+noisy; the cause early_turn_in uses it with a wide margin."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's detector)"
+value = 32.6
+unit = "%"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "667 to 681 corner-laps of real F1 25 laps; many from argmax jumps."
+
+[[fault]]
+id = "stepped_throttle"
+status = "planned"
+name = "Stepped throttle after a slow apex"
+summary = "After a slow middle of the corner the throttle went on, off and on again instead of one smooth application."
+phase = "exit"
+relative = "absolute"
+signals = ["throttle_dip_after_pickup", "min_speed_delta_kph"]
+violates = ["commit_throttle_no_lift"]
+causes = ["over_braking", "early_turn_in", "released_too_early_for_apex"]
+tier = "brief"
+sources = ["ed_corner_brief", "ed_fault_checklist", "ed_patches", "pitwall_patch_review", "blayze_throttle_exit"]
+notes = """Ed's brief point 10 and self-check (an on-off-on throttle means the car arrived too slow), his checklist row
+"released too early for the apex" and his throttle_modulation detector (a dip of THROTTLE_DIP_FRAC after pick-up with a
+slow apex; the root-cause patch splits it into over-braking and early turn-in). The self-check stays a review-only
+explanation in the causes' advice, tied to the driver's own faster laps; the fix Ed suggested with it is an
+instruction the constraints reject, so it is not in the graph."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's detector)"
+value = 5.1
+unit = "%"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "667 to 681 corner-laps of real F1 25 laps."
+
+[[fault]]
+id = "low_throttle_acceptance"
+status = "planned"
+name = "Low throttle acceptance"
+summary = """Full throttle arrived with the car cornering much less hard than on the reference lap, as if the throttle
+waited for the car to straighten."""
+phase = "exit"
+relative = "reference"
+signals = ["throttle_acceptance", "throttle_acceptance_delta"]
+violates = ["throttle_at_rotation", "unwind_with_throttle"]
+tier = "brief"
+sources = ["ed_fault_checklist", "ed_patches", "vrs_traction_circle", "pitwall_patch_review"]
+notes = """Ed's checklist KPI "throttle acceptance" (lateral g at the first full throttle over the corner's peak lateral
+g). His patch's wording is inverted: it says the throttle went in before the car was ready, but a lower acceptance means
+full throttle came with the car straighter. Read from one sample. GT7 sends no lateral g."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's detector)"
+value = 6.0
+unit = "%"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "667 to 681 corner-laps of real F1 25 laps."
+
+[[fault]]
+id = "throttle_before_unwind"
+status = "planned"
+name = "Throttle before the steering unwinds"
+summary = """Full throttle came with most of the steering still on, which pushes the car wide on the way out (power
+understeer)."""
+phase = "exit"
+relative = "absolute"
+signals = ["steering_at_full_throttle_frac", "steering_unwind_s", "exit_balance_deg"]
+violates = ["unwind_with_throttle"]
+tier = "brief"
+sources = ["ed_corner_brief", "ed_fault_checklist", "blayze_throttle_exit"]
+notes = """Ed's brief point 11 and checklist rows "early throttle before steering unwinds (power understeer)" and
+"mid-corner unwind rate". Ed's checklist also lists the coilovers data-acquisition guide here; it covers entry
+understeer and exit snap oversteer, not power understeer, so it is not cited for this. Nothing reads the steering at pick-up or full throttle yet (the review); the confirming
+signal exists on F1 25: exit understeer (technique/balance.py)."""
+
+[[fault]]
+id = "unused_grip_exit"
+status = "planned"
+name = "Unused grip on the exit"
+summary = """Between the apex and full throttle the tyres worked well below their limit: the cornering load fell away
+before the acceleration built up."""
+phase = "exit"
+relative = "absolute"
+signals = ["exit_grip_utilization_frac"]
+violates = ["throttle_at_rotation", "unwind_with_throttle"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "ed_patches",
+    "vrs_traction_circle",
+    "speedwaymedia_vector_analysis",
+    "pitwall_patch_review",
+]
+notes = """Ed's checklist row "unused grip: G-G points near the centre, transitions not overlapped" and his suggested
+G-G diagram (Pitwall has none; Compare gains his g-force charts). Combined g needs lateral and longitudinal g: GT7 sends
+no lateral g. His patch skips it when late_throttle already fired at the corner."""
+
+[[fault.measured]]
+metric = "fires on corner-laps (Ed's detector)"
+value = 9.5
+unit = "%"
+date = "2026-10-14"
+source = "pitwall_patch_review"
+note = "667 to 681 corner-laps of real F1 25 laps."
+
+[[fault]]
+id = "missed_blip"
+status = "planned"
+name = "Missed rev-match blip"
+summary = """A downshift under braking with no throttle blip to match the engine speed, which can unsettle the rear of
+the car."""
+phase = "braking"
+relative = "absolute"
+signals = ["missed_blips", "downshifts"]
+applies_when = ["gearbox_h_pattern"]
+violates = ["rev_match_downshift"]
+tier = "brief"
+sources = ["ed_corner_brief", "ed_patches", "pitwall_patch_review", "wikipedia_heel_and_toe"]
+notes = """Ed's brief point 4 and his root-cause patch (downshifts and missed blips, computed, not a rule). With paddles
+and auto-blip the game blips for the driver and the pedal never shows it, so it applies to an H-pattern gearbox only
+(unknown gearbox = does not apply). Ed's synthetic generator never blips, so on synthetic laps it reads every downshift
+as missed."""
+
+[[fault.measured]]
+metric = "real downshifts with no driver blip"
+value = 69.0
+unit = "%"
+date = "2026-10-15"
+source = "pitwall_patch_review"
+note = "Real F1 25 laps with paddle shifts: the game blips, so this measures the game, not the driver."
+
+[[fault]]
+id = "gear_change_while_cornering"
+status = "planned"
+name = "Gear change while cornering"
+summary = """A gear change made with the steering well wound on, which can upset the car's balance in the middle of the
+corner."""
+phase = "mid_corner"
+relative = "absolute"
+signals = ["gear_change_while_turning"]
+applies_when = ["gearbox_h_pattern"]
+violates = ["rev_match_downshift"]
+tier = "brief"
+sources = ["ed_fault_checklist", "ed_patches"]
+notes = """Ed's checklist row; his patch computes it but leaves it out of coaching because on his generated F1 data it
+fired on nearly every corner (paddle-shift drivers routinely change gear while still turning). Pitwall's judgement [H]:
+with paddles a mid-corner shift is routine, with an H-pattern gearbox it takes a hand off the wheel and a clutch while
+the car is loaded, so it applies to an H-pattern gearbox only. Upshifts on the exit are normal (Ed's brief point 12)."""
+
+[[fault]]
+id = "entry_understeer_from_release"
+status = "planned"
+name = "Entry understeer from the brake release"
+summary = """The car pushed wide on the way in after the brake pressure came off sharply, taking load off the front
+tyres just as they began to turn."""
+phase = "turn_in"
+relative = "absolute"
+signals = ["entry_balance_deg", "entry_brake_share", "release_time_delta_s"]
+thresholds = ["pitwall.technique.thresholds.US_DIFF_DEG", "pitwall.technique.thresholds.WITH_BRAKING_FRAC"]
+violates = ["progressive_brake_release"]
+tier = "brief"
+sources = [
+    "ed_fault_checklist",
+    "mysimrig_telemetry_beginners",
+    "coilovers_data_acquisition",
+    "wikipedia_understeer_oversteer",
+    "pitwall_technique_review",
+    "nasa_brake_release",
+]
+notes = """Ed's checklist row "entry understeer from release shape" (he marked it partly covered). The balance's
+with_braking flag only qualifies setup suggestions; the release shape is never compared between understeer and neutral
+laps yet. F1 25 only (tyre slip)."""
+
+# --- context only: background, never a fault of the driver ----------------------------------------------------------
+
+[[fault]]
+id = "aero_crossover"
+status = "context_only"
+name = "Aero crossover"
+summary = """Below a certain speed the car's grip comes from its tyres and suspension alone; above it, downforce adds
+grip that grows with speed. A property of the car, not a fault of the driver."""
+phase = "mid_corner"
+relative = "absolute"
+signals = ["aero_crossover_kph"]
+applies_any = ["downforce_high", "downforce_medium"]
+tier = "brief"
+sources = ["ed_fault_checklist", "ed_patches"]
+notes = """Ed's checklist: the most lateral g a car can hold is flat at low speed (mechanical grip) and rises with the
+square of the speed once aero adds load; the crossover is lower for an F1 car than a GT3 car. His
+technique/aero_crossover.py fits it (not wired). Background for which corners are grip-limited by the tyres and which
+by downforce; context_only rather than planned because it describes the car, not how it was driven."""

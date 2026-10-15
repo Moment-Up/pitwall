@@ -89,6 +89,7 @@ if TYPE_CHECKING:
     from pitwall.core.lap_processor import LapJob, LapProcessor
     from pitwall.core.live import LiveState
     from pitwall.drivers import Driver, DriverService
+    from pitwall.knowledge.session import SessionKnowledge
     from pitwall.storage.db import Database, DbWriter
 
 log = logging.getLogger(__name__)
@@ -1147,9 +1148,13 @@ class CoachRef:
             ],
         }
 
-    def compare(self, ref: int, lap: int) -> dict[str, Any]:
+    def compare(
+        self, ref: int, lap: int, knowledge: Callable[[str], SessionKnowledge | None] | None = None
+    ) -> dict[str, Any]:
         """``/api/compare`` plus ``reference`` (a descriptor of lap ``ref`` relative to lap ``lap``'s driver); the
-        observations name the other driver when ``ref`` is theirs."""
+        observations name the other driver when ``ref`` is theirs. Each observation carries its technique-knowledge
+        annotation (``knowledge.session.annotate_pair``) for lap ``lap``'s driver: ``knowledge`` gives that session's
+        Context and style (the shared ``SessionAnalyzer``'s; None or a failure = nothing known about the driver)."""
         from pitwall.core.session_analysis import session_ctx
 
         with self.db.read() as c:
@@ -1198,9 +1203,21 @@ class CoachRef:
             obs = reword_observations(obs, desc.ref_name, texts)
         out = desc.to_dict()
         out["brake_clamped"] = False  # Review compares; it calls no braking points
+        obs_dicts = [o.to_dict() for o in obs]
+        # technique knowledge for lap B's driver (Review > Compare's explainer: causes, "not coached for you"); the
+        # annotation does not depend on the wording, so the reworded observations are annotated as they are
+        from pitwall.knowledge.session import annotate_pair
+
+        sk: SessionKnowledge | None = None
+        if knowledge is not None:
+            try:
+                sk = knowledge(str(sb["id"]))
+            except Exception:  # the comparison stands without it
+                log.exception("technique knowledge for session %s failed", sb.get("id"))
+        annotate_pair(obs_dicts, comp, rb, ra, model, sk)
         return {
             "comparison": comp.to_dict(),
-            "observations": [o.to_dict() for o in obs],
+            "observations": obs_dicts,
             "track_model": track_model_payload(model, fam),
             "reference": out,
         }

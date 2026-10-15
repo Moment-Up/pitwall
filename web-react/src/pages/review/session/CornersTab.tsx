@@ -2,12 +2,17 @@
 // name), sorted by average time lost: the session averages from corner_summary in plain words (time, brake point mean
 // and spread, slowest speed), a FOCUS chip when the corner is in the live cue focus at this track, and every lap where
 // the coach spoke there (its text verbatim, with an evidence line). Filter: a Pro Segment Work on · Went well · All.
-// Incident observations are greyed, "not used for technique advice". "See it on the lap" opens Compare at the corner.
+// Incident observations are greyed, "not used for technique advice"; so is a point the technique graph says does not
+// fit the driver, with its reason. A coached point lists the causes its measured signals named, with the evidence:
+// "Why: ..." only for a cause shown to tell its fault apart, "Also measured on this lap: ..." for the others
+// (lib/knowledge/annotation.ts causeHeading), and the graph's explanation for the driver's skill or braking style.
+// "See it on the lap" opens Compare at the corner.
 
 import { Button, Card, Chip, Disclosure } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import { useMemo, useState, type Key } from "react";
 import { CornerTag } from "../../../components/ui";
+import { causeHeading, evidenceSentence } from "../../../lib/knowledge/annotation";
 import { useLive } from "../../../hooks/stores";
 import type { SessionAnalysis, SessionDetail } from "../../../lib/endpoints/review";
 import { router } from "../../../lib/router";
@@ -35,11 +40,14 @@ import { CornerTechnique, useCornerTechnique, type CornerTechniqueCtx } from "./
 
 
 function ObservationRow({ o }: { o: CornerCardObservation }) {
-  if (o.incident) {
+  if (o.incident || o.notForYou) {
     return (
       <li className="grid gap-0.5 rounded-2xl border border-separator px-3 py-2 opacity-70">
-        <span className="text-xs font-medium text-muted">Lap {o.lapNumber} · incident · not used for technique advice</span>
+        <span className="text-xs font-medium text-muted">
+          Lap {o.lapNumber} · {o.incident ? "incident · not used for technique advice" : "not coached for you"}
+        </span>
         <span className="text-sm text-muted">{o.text}</span>
+        {o.notForYou && <span className="text-xs text-muted">{o.notForYou}</span>}
       </li>
     );
   }
@@ -52,6 +60,13 @@ function ObservationRow({ o }: { o: CornerCardObservation }) {
         </Chip>
       </span>
       <span className="text-sm leading-relaxed">{o.text}</span>
+      {o.explain && <span className="text-sm leading-relaxed text-muted">{o.explain}</span>}
+      {o.causes.map((c) => (
+        <span key={c.id} className="text-xs text-muted">
+          <b className={c.reason ? "font-medium text-foreground" : "font-medium"}>{causeHeading(c)}</b>
+          {c.evidence.length > 0 && ` ${evidenceSentence(c.evidence)}`}
+        </span>
+      ))}
       {o.evidence && <span className="text-xs text-muted">{o.evidence}</span>}
     </li>
   );
@@ -208,7 +223,7 @@ export function CornersTab({ session, analysis, density }: CornersTabProps) {
       {shown.length ? null : (
         <p className="m-0 text-sm text-muted">{EMPTY[filter]}</p>
       )}
-      {cards.some((c) => c.observations.some((o) => o.incident)) && (
+      {cards.some((c) => c.observations.some((o) => o.incident || o.notForYou)) && (
         <Disclosure>
           <Disclosure.Heading className="m-0">
             <Disclosure.Trigger className="flex min-h-11 items-center gap-2 text-sm text-muted">
@@ -217,9 +232,15 @@ export function CornersTab({ session, analysis, density }: CornersTabProps) {
             </Disclosure.Trigger>
           </Disclosure.Heading>
           <Disclosure.Content>
-            <Disclosure.Body style={{ padding: 0 }} className="text-sm text-muted">
-              A lap that lost several seconds at one corner looks like an incident (a spin, contact, going off or a
-              slow-down). The coach never turns those into technique advice, so they are shown for the record only.
+            <Disclosure.Body style={{ padding: 0 }} className="grid gap-2 text-sm text-muted">
+              <p className="m-0">
+                A lap that lost several seconds at one corner looks like an incident (a spin, contact, going off or a
+                slow-down). The coach never turns those into technique advice, so they are shown for the record only.
+              </p>
+              <p className="m-0">
+                A note marked "not coached for you" is about technique that does not fit this driver or car, or that
+                this game cannot measure: the radio and the coach card leave it out, and the line under it says why.
+              </p>
             </Disclosure.Body>
           </Disclosure.Content>
         </Disclosure>

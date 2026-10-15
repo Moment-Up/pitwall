@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -129,6 +130,17 @@ def _shell_pitwall_env_hidden(request: pytest.FixtureRequest, monkeypatch: pytes
     for name in list(os.environ):
         if name.upper().startswith("PITWALL_") and name.upper() != "PITWALL_DATA_DIR":
             monkeypatch.delenv(name)
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _knowledge_graph_strict() -> Iterator[None]:
+    """The technique graph raises on a validation problem in tests (``pitwall.knowledge.graph.set_strict``); at
+    runtime the problems are logged and Pitwall runs without the graph."""
+    from pitwall.knowledge import graph
+
+    graph.set_strict(True)
+    yield
+    graph.set_strict(False)
 
 
 @pytest.fixture

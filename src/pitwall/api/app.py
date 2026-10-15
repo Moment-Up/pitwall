@@ -207,6 +207,13 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
         except Exception:
             log.exception("validation kit unavailable (the rest of pitwall runs as usual)")
         # end validation kit
+        # technique knowledge graph (pitwall.knowledge): loaded and validated now, off the event loop and before any
+        # lap, so a broken graph file is logged at startup (docs/knowledge.md); Pitwall runs without it either way
+        from pitwall.knowledge.graph import load_graph
+
+        graph = await asyncio.to_thread(load_graph)
+        if graph.valid:
+            log.info("technique graph: %d nodes, digest %s", len(graph.by_id), graph.digest)
         if start_udp:
             try:
                 rt.start_udp()
@@ -476,10 +483,15 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
             model = identify(model, zones=TrackZones.from_dict((sb.get("info") or {}).get("track_zones")))[0]
             ra, rb = analyse_lap(a, model), analyse_lap(b, model)
             comp = compare(ra, rb, compat)
-            obs = observations_for_comparison(comp, corner_text=corner_texts(model))
+            obs = [o.to_dict() for o in observations_for_comparison(comp, corner_text=corner_texts(model))]
+            # technique knowledge for the compared lap's driver (their session's Context and style, cached analysis)
+            from pitwall.knowledge.session import annotate_pair
+
+            sa_b = request.app.state.analyzer.analyse(sb["id"])
+            annotate_pair(obs, comp, rb, ra, model, sa_b.knowledge if sa_b is not None else None)
             return {
                 "comparison": comp.to_dict(),
-                "observations": [o.to_dict() for o in obs],
+                "observations": obs,
                 "track_model": track_model_payload(model, fam),
             }
 
@@ -861,6 +873,9 @@ def create_app(settings: Settings | None = None, start_udp: bool = True) -> Fast
     from pitwall.api.routes_technique import router as technique_router  # feat/technique
 
     app.include_router(technique_router)  # feat/technique
+    from pitwall.api.routes_knowledge import router as knowledge_router  # technique knowledge graph
+
+    app.include_router(knowledge_router)
 
     from pitwall.api.routes_motivation import router as motivation_router  # lane motivation
 

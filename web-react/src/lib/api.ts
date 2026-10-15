@@ -4,6 +4,7 @@
 
 import { authFetch } from "./auth";
 import type { SnapshotGame } from "./endpoints/game";
+import type { PointKnowledge } from "./knowledge/annotation";
 import type { TrackSkeleton } from "./skeleton";
 
 /** Payloads the Svelte client left untyped (`any`). Typed per screen as each screen is ported. */
@@ -103,6 +104,9 @@ export interface Observation {
   positive: boolean;
   priority: number;
   evidence?: Record<string, unknown>;
+  /** Technique knowledge (lib/knowledge/annotation.ts): the full annotation in Review, the slim copy in live
+   * snapshots and coach points; absent on older servers and without the graph. */
+  knowledge?: PointKnowledge | null;
 }
 
 export interface LapSummary {
@@ -210,6 +214,8 @@ export interface LapTrace {
   gear: (number | null)[];
   pos_x_m: (number | null)[];
   pos_z_m: (number | null)[];
+  g_lat: (number | null)[];
+  g_lon: (number | null)[];
 }
 
 export interface CornerDelta {

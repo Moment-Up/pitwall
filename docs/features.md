@@ -84,6 +84,14 @@ apex speed, 12 down"). In the cue band a corner reminder shows as FOCUS, in neut
 A "Sorted" line counts as went well on the Ready and Session complete cards. Tested with unit tests and a desktop
 browser at 1180 x 820 and 1133 x 744 against a mock live socket; not yet seen in a live session.
 
+**Why, on the card.** When the car is stopped (pit lane, Ready, Session complete), the card's evidence line leads with
+the cause Pitwall measured for the point, but only a cause shown on recorded laps to tell that point apart (today the
+early brake release on coasting points): "Braking ended sooner, longer roll after · Seen on 3 of the last 5 laps ·
+about 0.12 s". A cause that holds about as often without the point is left to Review. At speed the card stays one
+line, as before. A point that does not fit you or your
+car (see [Coaching for every kind of driver](#coaching-for-every-kind-of-driver)) is never the card's point. Unit
+tests on recorded annotations; not yet seen in a browser.
+
 **Session complete** (stopped only): four tiles (best lap with its REC or PB tag, clean laps, gained today, and the
 gap to the family record, or "Laps compared" when this session set it), one line of pace against the AI in an F1 race,
 [Today's 3 things](#todays-3-things) and at most two new badges. Each fact shows once: a personal best named in Went
@@ -421,6 +429,15 @@ track edges, so the maps show where each lap went.
 - `uv run pitwall technique [SESSION_ID|latest] [--ref LAP_ID] [--car-format f1_2025|f1_2026] [--json]` prints the
   same analysis in the terminal.
 
+- **Compare** also draws the lateral and longitudinal g of both laps (Ed's g-force charts; a row shows only when a lap
+  has values for it, so GT7, which sends none, shows no g-force card) and, for the corner in focus, vertical markers
+  on every chart where each lap started braking, came off the brake, reached its slowest point and reached full
+  throttle (your lap solid, lap A dashed; no turn-in marker: it is not measured). The key under the lap ribbon says
+  each point in words against lap A and moves the cursor to it.
+- The explainer beside the map shows the coach's point for the corner with the causes Pitwall measured and their
+  evidence ("Why: ..." for a cause shown to tell the point apart, "Also measured on this lap: ..." for the others),
+  and apart, greyed, any point that does not fit you, with the reason.
+
 Evidence: racing line and brake/throttle are tested on recorded F1 (PS5) laps, and the line on a GT7 capture;
 balance and wheelspin on recorded F1 tyre slip data; lock-ups on synthetic data only (every real capture had ABS
 on). Nothing has been checked during a live session yet.
@@ -434,6 +451,25 @@ The coaching plan for a driver, track and car: **This session's focus** (led by 
 session)" corner as the session's Summary, with its trend over sessions), **Repeats lap after lap** (habits), **Radio
 calls next run** (the live cue plan), the suggested AI difficulty, and the **Drills** list: each drill's corner,
 skill, hits, best attempt, trend and the reference it was measured against.
+
+**How corners work** closes the page (and shows before a first session too): a corner in six phases (approach,
+braking, turn-in, mid-corner, apex, exit), each with its techniques tagged "Fits you", "For other drivers" or "Not
+known yet" and a one-line reason ("For: H-pattern gearbox."), the alternatives side by side (trail braking against
+braking in a straight line), what Pitwall checks (the eight points it coaches today, with the causes it can tell
+apart and, apart, the ones it only also measures, and the checks it does not coach yet, with Pitwall's own
+measurements of them), and where it all comes from,
+Ed (Pitwall tester) credited first. It is matched to the driver and car of your last session here: how your braking
+style was read ("From 8 clean laps: the brake still on into the turn at 57 of 62 braking corners ..."; with the F1
+braking assist on it says some of that braking was the game's) and what the game does not send. Beginners read the
+plain story; advanced drivers see the detail, the evidence tiers and every source; "Show the detail" opens it for
+anyone. Published coaching and Ed's brief are marked as not validated by Pitwall. Unit tests on the real graph; not yet
+seen in a browser.
+
+The session's **Corners** tab shows the same knowledge per note: the causes Pitwall measured, each with its evidence
+("Also measured on this lap: Braked earlier, reached the corner slower. Braked at least 8 m earlier than on the
+reference lap (measured −9.6 m); ..."; "Why: ..." only for a cause shown to tell the point apart), the explanation
+written for your level or braking style when there is one, and, greyed with the reason, a
+note that does not fit you ("not coached for you").
 
 ### Progress
 
@@ -795,6 +831,10 @@ Everything here is fixed rules applied to your telemetry. No language model is i
    many points a lap: quiet gives none (the screen still shows them), normal one, detailed up to three.
 9. **One message, two channels.** The point the radio says about a corner is the point the Coach screen shows for
    it. This is tested on synthetic and recorded data; it has not yet been seen in a live session.
+10. **Fitted to the driver and the car.** Every point is checked against the technique knowledge for who is driving
+    what ([below](#coaching-for-every-kind-of-driver)): a point that does not fit is never said or put on the card and
+    never becomes a habit; Review still shows it, with the reason. The eight kinds the coach says today fit every driver
+    and every game, so they are said exactly as before.
 
 ### Habits: what the radio works on
 
@@ -842,6 +882,51 @@ now coaches habits, with fixed rules (`analysis/coaching.py`, `coach/habits.py`)
 
 Evidence: unit tests, synthetic sessions and replays of recorded F1 25 races (synthetic and recorded tiers); **not
 yet heard in a live session**.
+
+### Coaching for every kind of driver
+
+Good technique depends on the driver and the car. A tester, Ed, shared an idealised corner (brake hard in a straight
+line, off the brake before turning, roll to the apex, one smooth squeeze of throttle), a checklist of technique faults
+with his sources, and detectors he wrote. The owner's fastest F1 25 laps do something else: they keep the brake on into
+the turn at almost every braking corner and rarely coast. Both are right for someone. So Pitwall keeps all of it, plus
+published coaching knowledge, in a **technique knowledge graph** in which every piece says when it applies
+([docs/knowledge.md](knowledge.md)):
+
+- **Who and what.** Pitwall knows your level from your profile, reads your braking style and how often you coast from
+  your own clean laps at the track (2 laps and 6 braking corners at least), and takes the game, the car family, its
+  downforce, the gearbox, ABS and traction control when the game reports them, a fuel-saving strategy and the weather
+  from the session. Anything it does not know stays unknown and fits nothing: braking in a straight line fits a
+  beginner, a straight-line braker or a car with no ABS and little downforce; trail braking fits a trail-braker or a
+  high-downforce car; rev-matching blips fit only an H-pattern gearbox (with paddles the game blips for you). A game
+  that sends no steering (Assetto Corsa, GT7 variant A) cannot show braking with the wheel turned, so your braking
+  style stays unknown there rather than being read as straight-line.
+- **What the game sends.** A check that needs an input the game does not send does not apply there (GT7 sends no
+  lateral g); an input Pitwall is not sure about is never assumed missing.
+- **Why it happened.** For four of the eight points it coaches, Pitwall can name a cause when the lap's own
+  measurements show it, and only then: a slow apex from braking earlier and arriving slower, from the slowest point
+  coming much sooner (as an early turn-in can; Pitwall does not measure the turn-in itself), or from more sliding than
+  on your reference lap (F1 25: tyre slip); a late throttle from wheelspin, a slide or oversteer on the way out that
+  your reference lap did not have, or - with traction control off only, where "no wheelspin" means something - with
+  no grip loss measured and the throttle still late; coasting from braking ending early, or from waiting for the car to
+  rotate; too much speed into the apex from arriving faster or braking later. A cause is said as **why** only when it
+  was shown to tell its point apart: on the owner's 30 recorded captures its evidence had to hold at least twice as
+  often on that point's corner-laps as elsewhere, and only the early brake release did (43% against 20%). The others
+  hold about as often without the point, so Review shows them as "also measured on this lap", the card leaves them
+  out and the AI engineer may not call them the reason. Causes are never on the radio, which stays as short as
+  before.
+- **Words for you.** Beginners read plain explanations; a trail-braker who coasts more than usual reads why that is
+  unusual for them (and, with the game's braking assist on, that some of that braking was the game's). Nothing tells
+  you to brake later, brake less, come off the brake earlier, carry more speed or trail-brake more: every text the
+  graph shows you is checked for it when Pitwall starts, and so is every answer of the AI engineer.
+- **Honest about evidence.** Each piece carries where it comes from: published coaching knowledge and Ed's brief are
+  shown as not validated by Pitwall; Pitwall's own measurements on recorded laps say so; real-world data (real 2025 F1
+  qualifying laps from OpenF1, other people's laps from the AssettoCorsaGym dataset) is shown as how real drivers
+  drive, never as proof about a game; only the eight coached points are live rules. The AI engineer can explain the
+  graph's techniques and causes for your session; an answer that names a technique the graph does not have, or one it
+  says is not for you (heel-and-toe with paddles), is rejected.
+
+Evidence: unit tests and replays of the owner's recorded F1 25 and GT7 sessions: coaching identical to before on all
+of them, styles and causes in [docs/status.md](status.md#technique-knowledge-graph-unreleased). Not yet used live.
 
 ## Pace against the AI
 

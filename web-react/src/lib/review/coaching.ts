@@ -6,7 +6,11 @@
 // summed over the laps it fired on and divided by the laps compared, so a habit seen on most laps outranks a big
 // one-off; ties go to the point seen on more laps, then to the larger mean time impact. One card per corner: the
 // best-ranked point at a corner represents it (the Corners tab shows the rest).
-// Incident observations (spin, contact, a slow-down) are never coaching (6.6) and are left out.
+// Incident observations (spin, contact, a slow-down) are never coaching (6.6) and are left out, and so is a point the
+// technique graph says does not fit the driver (recap.py rank_points, analysis/coaching.py `applies`; the Corners tab
+// shows it greyed with the reason) - though it still makes its corner unclean on its lap, as the habit tracker counts.
+// The evidence line leads with the cause the newest occurrence's measured signals named, when that cause is shown to
+// tell its fault apart (lib/knowledge/annotation.ts cardCause); a cause only also measured is left to the Corners tab.
 //
 // The card text is the coach's, verbatim: the newest lap's occurrence (it carries the longest consistency
 // history), `text_simple` (D6) for simple-wording profiles when the backend sends it.
@@ -21,6 +25,7 @@
 // incident there (an incident observation); a lap with an observation at the corner counts too.
 
 import type { ReviewObservation, SessionAnalysis } from "../endpoints/review";
+import { cardCause, fitsDriver, joinLine } from "../knowledge/annotation";
 import { evidenceLine, finite } from "./words";
 
 export const INCIDENT_KIND = "incident";
@@ -171,6 +176,7 @@ export function groupObservations(
       if (on) on.push(e.o);
       else byLap.set(e.lapId, [e.o]);
     }
+    if (!fitsDriver(e.o)) continue; // not this driver's point: no item, but its lap stays unclean at the corner
     const key = `${e.o.positive ? "+" : "-"}${e.o.corner}:${e.o.kind}`;
     const g = groups.get(key);
     if (g) g.push(e);
@@ -286,16 +292,19 @@ export function itemText(item: Pick<CoachingItem, "latest">, simple: boolean): s
 /**
  * The card's evidence line from the shown observation's own fields (spec 9.6: `consistency`, `impact_s`,
  * `confidence`), so its amount matches the coach's text above it: "Seen on 3 of your last 5 laps · about 0.11 s a
- * lap · confidence high". Without the coach's consistency it says how many of this session's laps showed it.
+ * lap · confidence high". Without the coach's consistency it says how many of this session's laps showed it. When the
+ * technique graph named a cause on that lap that tells its fault apart, its screen line leads ("Braking ended sooner,
+ * longer roll after · Seen on ...").
  */
 export function itemEvidence(item: CoachingItem): string {
-  return evidenceLine({
+  const line = evidenceLine({
     consistency: item.latest.consistency,
     seen: item.seen,
     compared: item.compared,
     impactS: item.latest.impact_s,
     confidence: item.latest.confidence,
   });
+  return joinLine(cardCause(item.latest), line) ?? line;
 }
 
 /** Counts for the "Last session" card: corrections and positives (grouped, one per corner). */

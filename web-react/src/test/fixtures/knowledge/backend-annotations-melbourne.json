@@ -1,0 +1,1064 @@
+{
+ "_fixture": {
+  "source": "backend fixture: pitwall.core.session_analysis.SessionAnalyzer.analyse (full annotations, as GET /api/sessions/{id}/analysis sends them) and the live LapProcessor's coach block (slim copy) called directly in Python on feat/knowledge 7f6d5ce, over the owner's recorded F1 25 laps of capture 20261013-225521 (Melbourne) replayed into a scratch database. Not an HTTP answer; regenerate by running them again.",
+  "recorded": "2026-10-15",
+  "tier": "backend",
+  "what": "Observations with their technique-knowledge annotation, one per cause named on that session (keys: the cause id; 'none': a point with no cause; 'tailored': a point whose review advice is written for the driver's style), each cause with discriminates (its base-rate check: only early_brake_release tells its fault apart), and one coach block point whose slim copy carries a cause (only a cause that tells its fault apart reaches it). Recorded laps: evidence of the wiring on real data, not of driving advice quality."
+ },
+ "response": {
+  "review": {
+   "over_braking": {
+    "id": "L3:T1:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T1",
+    "lap_number": 3,
+    "ref_lap_number": 5,
+    "metric": "min_speed_delta_kph",
+    "value": -8.0,
+    "unit": "km/h",
+    "impact_s": 0.492,
+    "confidence": 1.0,
+    "text": "T1: minimum speed is 8 km/h lower than your reference (149 vs 157 km/h), losing 0.49 s through the corner.",
+    "evidence": {
+     "time_delta_s": 0.492,
+     "brake_point_delta_m": -9.632,
+     "min_speed_delta_kph": -8.0,
+     "exit_speed_delta_kph": -10.0,
+     "entry_speed_delta_kph": -17.552,
+     "throttle_full_delta_m": -0.685,
+     "coast_delta_m": 0.0,
+     "ref": {
+      "corner": "T1",
+      "segment_time_s": 11.02,
+      "brake_start_m": 253.95,
+      "brake_end_m": 389.99,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.25,
+      "release_s": 1.05,
+      "trail_brake_m": 65.7,
+      "coast_m": 0.0,
+      "entry_speed_kph": 174.0,
+      "min_speed_kph": 157.0,
+      "min_speed_m": 393.0,
+      "exit_speed_kph": 159.0,
+      "throttle_pickup_m": 391.41,
+      "throttle_full_m": 396.89
+     },
+     "lap": {
+      "corner": "T1",
+      "segment_time_s": 11.51,
+      "brake_start_m": 244.32,
+      "brake_end_m": 365.73,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.12,
+      "release_s": 0.78,
+      "trail_brake_m": 34.63,
+      "coast_m": 0.0,
+      "entry_speed_kph": 156.45,
+      "min_speed_kph": 149.0,
+      "min_speed_m": 397.0,
+      "exit_speed_kph": 149.0,
+      "throttle_pickup_m": 396.2,
+      "throttle_full_m": 396.2
+     }
+    },
+    "consistency": null,
+    "consistency_ratio": null,
+    "positive": false,
+    "corner_label": "T1",
+    "corner_voice": "T1",
+    "text_simple": "T1: you were 8 km/h slower at the slowest point of the corner.",
+    "short": "T1: 8 km/h slower mid-corner",
+    "ref_name": null,
+    "priority": 0.492,
+    "knowledge": {
+     "fault": "low_min_speed",
+     "name": "Low minimum speed",
+     "status": "live",
+     "tier": "live",
+     "applies": true,
+     "why_not": null,
+     "causes": [
+      {
+       "id": "over_braking",
+       "name": "Over-braking",
+       "tier": "brief",
+       "discriminates": false,
+       "evidence": [
+        {
+         "signal": "brake_point_delta_m",
+         "test": "braked at least 8 m earlier than on the reference lap",
+         "value": -9.63,
+         "unit": "m"
+        },
+        {
+         "signal": "entry_speed_delta_kph",
+         "test": "at least 4 km/h slower at the corner entry than on the reference lap",
+         "value": -17.55,
+         "unit": "km/h"
+        }
+       ],
+       "advice": {
+        "radio": null,
+        "screen": "Braked earlier, reached the corner slower",
+        "review": "On this lap you braked more than on your reference on the way in and reached the corner slower, so its slowest point was lower too.",
+        "ids": {
+         "radio": null,
+         "screen": "over_braking_explain",
+         "review": "over_braking_explain"
+        },
+        "tailored": {
+         "radio": false,
+         "screen": false,
+         "review": false
+        }
+       }
+      }
+     ],
+     "advice": {
+      "radio": "Minimum speed down on your reference",
+      "screen": "Slower at the slowest point",
+      "review": "The slowest point of this corner was lower than on your reference lap, and the corner was slower for it.",
+      "ids": {
+       "radio": "low_min_speed_describe",
+       "screen": "low_min_speed_describe",
+       "review": "low_min_speed_describe"
+      },
+      "tailored": {
+       "radio": false,
+       "screen": false,
+       "review": false
+      }
+     },
+     "digest": "4c8a1cb00d509eca"
+    }
+   },
+   "low_grip": {
+    "id": "L1:T9:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T9",
+    "lap_number": 1,
+    "ref_lap_number": 5,
+    "metric": "min_speed_delta_kph",
+    "value": -71.0,
+    "unit": "km/h",
+    "impact_s": 1.551,
+    "confidence": 1.0,
+    "text": "T9: minimum speed is 71 km/h lower than your reference (105 vs 176 km/h), losing 1.55 s through the corner.",
+    "evidence": {
+     "time_delta_s": 1.551,
+     "brake_point_delta_m": 18.568,
+     "min_speed_delta_kph": -71.0,
+     "exit_speed_delta_kph": -17.736,
+     "entry_speed_delta_kph": -8.0,
+     "throttle_full_delta_m": 64.283,
+     "coast_delta_m": 0.0,
+     "ref": {
+      "corner": "T9",
+      "segment_time_s": 4.71,
+      "brake_start_m": 4345.77,
+      "brake_end_m": 4383.33,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.12,
+      "release_s": 0.15,
+      "trail_brake_m": 21.09,
+      "coast_m": 0.0,
+      "entry_speed_kph": 228.0,
+      "min_speed_kph": 176.0,
+      "min_speed_m": 4384.0,
+      "exit_speed_kph": 191.0,
+      "throttle_pickup_m": 4382.54,
+      "throttle_full_m": 4388.58
+     },
+     "lap": {
+      "corner": "T9",
+      "segment_time_s": 6.27,
+      "brake_start_m": 4364.34,
+      "brake_end_m": 4417.11,
+      "brake_peak": 0.31,
+      "time_to_peak_s": 0.0,
+      "release_s": 0.65,
+      "trail_brake_m": 21.92,
+      "coast_m": 0.0,
+      "entry_speed_kph": 220.0,
+      "min_speed_kph": 105.0,
+      "min_speed_m": 4539.0,
+      "exit_speed_kph": 173.26,
+      "throttle_pickup_m": 4452.87,
+      "throttle_full_m": 4452.87
+     }
+    },
+    "consistency": null,
+    "consistency_ratio": null,
+    "positive": false,
+    "corner_label": "T9",
+    "corner_voice": "T9",
+    "text_simple": "T9: you were 71 km/h slower at the slowest point of the corner.",
+    "short": "T9: 71 km/h slower mid-corner",
+    "ref_name": null,
+    "priority": 1.551,
+    "knowledge": {
+     "fault": "low_min_speed",
+     "name": "Low minimum speed",
+     "status": "live",
+     "tier": "live",
+     "applies": true,
+     "why_not": null,
+     "causes": [
+      {
+       "id": "low_grip",
+       "name": "Less grip",
+       "tier": "expert",
+       "discriminates": false,
+       "evidence": [
+        {
+         "signal": "mid_slide_vs_ref",
+         "test": "the back of the car slid or needed a counter-steer around the slowest point, and not on the reference lap",
+         "value": true,
+         "unit": "bool"
+        }
+       ],
+       "advice": {
+        "radio": null,
+        "screen": "More sliding here than on your reference",
+        "review": "The tyres were past their grip at this corner on this lap, more than on your reference lap (a slide, understeer or a locked wheel), so the car could not hold the speed of your reference lap through the middle.",
+        "ids": {
+         "radio": null,
+         "screen": "low_grip_explain",
+         "review": "low_grip_explain"
+        },
+        "tailored": {
+         "radio": false,
+         "screen": false,
+         "review": false
+        }
+       }
+      }
+     ],
+     "advice": {
+      "radio": "Minimum speed down on your reference",
+      "screen": "Slower at the slowest point",
+      "review": "The slowest point of this corner was lower than on your reference lap, and the corner was slower for it.",
+      "ids": {
+       "radio": "low_min_speed_describe",
+       "screen": "low_min_speed_describe",
+       "review": "low_min_speed_describe"
+      },
+      "tailored": {
+       "radio": false,
+       "screen": false,
+       "review": false
+      }
+     },
+     "digest": "4c8a1cb00d509eca"
+    }
+   },
+   "early_turn_in": {
+    "id": "L14:T6:low_min_speed",
+    "kind": "low_min_speed",
+    "corner": "T6",
+    "lap_number": 14,
+    "ref_lap_number": 5,
+    "metric": "min_speed_delta_kph",
+    "value": -15.0,
+    "unit": "km/h",
+    "impact_s": 0.411,
+    "confidence": 1.0,
+    "text": "T6: minimum speed is 15 km/h lower than your reference (183 vs 198 km/h), losing 0.41 s through the corner.",
+    "evidence": {
+     "time_delta_s": 0.411,
+     "brake_point_delta_m": -53.045,
+     "min_speed_delta_kph": -15.0,
+     "exit_speed_delta_kph": 5.0,
+     "entry_speed_delta_kph": -1.0,
+     "coast_delta_m": 0.0,
+     "ref": {
+      "corner": "T6",
+      "segment_time_s": 9.5,
+      "brake_start_m": 3228.1,
+      "brake_end_m": 3305.04,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.08,
+      "release_s": 0.15,
+      "trail_brake_m": 42.2,
+      "coast_m": 0.0,
+      "entry_speed_kph": 202.0,
+      "min_speed_kph": 198.0,
+      "min_speed_m": 3336.0,
+      "exit_speed_kph": 198.0,
+      "throttle_pickup_m": 3335.17,
+      "throttle_full_m": 3336.89
+     },
+     "lap": {
+      "corner": "T6",
+      "segment_time_s": 9.91,
+      "brake_start_m": 3175.05,
+      "brake_end_m": 3261.73,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.27,
+      "release_s": 0.18,
+      "trail_brake_m": 1.7,
+      "coast_m": 0.0,
+      "entry_speed_kph": 201.0,
+      "min_speed_kph": 183.0,
+      "min_speed_m": 3260.0,
+      "exit_speed_kph": 203.0,
+      "throttle_pickup_m": 3258.2,
+      "throttle_full_m": null
+     }
+    },
+    "consistency": "3 of the last 6 laps",
+    "consistency_ratio": 0.5,
+    "positive": false,
+    "corner_label": "T6",
+    "corner_voice": "T6",
+    "text_simple": "T6: you were 15 km/h slower at the slowest point of the corner.",
+    "short": "T6: 15 km/h slower mid-corner",
+    "ref_name": null,
+    "priority": 0.3288,
+    "knowledge": {
+     "fault": "low_min_speed",
+     "name": "Low minimum speed",
+     "status": "live",
+     "tier": "live",
+     "applies": true,
+     "why_not": null,
+     "causes": [
+      {
+       "id": "early_turn_in",
+       "name": "Slowest point came sooner",
+       "tier": "brief",
+       "discriminates": false,
+       "evidence": [
+        {
+         "signal": "min_speed_pos_delta_m",
+         "test": "the slowest point came at least 20 m sooner than on the reference lap",
+         "value": -76.0,
+         "unit": "m"
+        },
+        {
+         "signal": "entry_speed_delta_kph",
+         "test": "reached the corner entry no more than 4 km/h slower than on the reference lap",
+         "value": -1.0,
+         "unit": "km/h"
+        },
+        {
+         "signal": "entry_speed_delta_kph",
+         "test": "reached the corner entry no more than 4 km/h faster than on the reference lap",
+         "value": -1.0,
+         "unit": "km/h"
+        }
+       ],
+       "advice": {
+        "radio": null,
+        "screen": "Slowest point sooner than your reference",
+        "review": "The slowest point of the corner came well before where it was on your reference lap, with a similar entry speed, and the speed through the middle was lower. An earlier turn-in can do this.",
+        "ids": {
+         "radio": null,
+         "screen": "early_turn_in_explain",
+         "review": "early_turn_in_explain"
+        },
+        "tailored": {
+         "radio": false,
+         "screen": false,
+         "review": false
+        }
+       }
+      }
+     ],
+     "advice": {
+      "radio": "Minimum speed down on your reference",
+      "screen": "Slower at the slowest point",
+      "review": "The slowest point of this corner was lower than on your reference lap, and the corner was slower for it.",
+      "ids": {
+       "radio": "low_min_speed_describe",
+       "screen": "low_min_speed_describe",
+       "review": "low_min_speed_describe"
+      },
+      "tailored": {
+       "radio": false,
+       "screen": false,
+       "review": false
+      }
+     },
+     "digest": "4c8a1cb00d509eca"
+    }
+   },
+   "waiting_for_rotation": {
+    "id": "L1:T5:coasting",
+    "kind": "coasting",
+    "corner": "T5",
+    "lap_number": 1,
+    "ref_lap_number": 5,
+    "metric": "coast_delta_m",
+    "value": 18.126,
+    "unit": "m",
+    "impact_s": 1.183,
+    "confidence": 0.6,
+    "text": "T5: about 18 m more coasting (no brake, no throttle) than your reference between brake release and throttle.",
+    "evidence": {
+     "time_delta_s": 1.183,
+     "brake_point_delta_m": 16.372,
+     "min_speed_delta_kph": -29.0,
+     "exit_speed_delta_kph": -32.0,
+     "entry_speed_delta_kph": -6.608,
+     "throttle_full_delta_m": 78.342,
+     "coast_delta_m": 18.126,
+     "ref": {
+      "corner": "T5",
+      "segment_time_s": 12.63,
+      "brake_start_m": 1782.36,
+      "brake_end_m": 1855.05,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.13,
+      "release_s": 0.13,
+      "trail_brake_m": 11.61,
+      "coast_m": 0.0,
+      "entry_speed_kph": 183.24,
+      "min_speed_kph": 174.0,
+      "min_speed_m": 1853.0,
+      "exit_speed_kph": 184.0,
+      "throttle_pickup_m": 1852.08,
+      "throttle_full_m": 1856.91
+     },
+     "lap": {
+      "corner": "T5",
+      "segment_time_s": 13.82,
+      "brake_start_m": 1798.73,
+      "brake_end_m": 1880.73,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.03,
+      "release_s": 0.1,
+      "trail_brake_m": 12.29,
+      "coast_m": 18.13,
+      "entry_speed_kph": 176.63,
+      "min_speed_kph": 145.0,
+      "min_speed_m": 1934.0,
+      "exit_speed_kph": 152.0,
+      "throttle_pickup_m": 1932.3,
+      "throttle_full_m": 1935.25
+     }
+    },
+    "consistency": null,
+    "consistency_ratio": null,
+    "positive": false,
+    "corner_label": "T5",
+    "corner_voice": "T5",
+    "text_simple": "T5: you spent about 18 m more off both pedals than on your reference lap.",
+    "short": "T5: 18 m more coasting",
+    "ref_name": null,
+    "priority": 0.7098,
+    "knowledge": {
+     "fault": "coasting",
+     "name": "Coasting",
+     "status": "live",
+     "tier": "live",
+     "applies": true,
+     "why_not": null,
+     "causes": [
+      {
+       "id": "waiting_for_rotation",
+       "name": "Waiting for the car to rotate",
+       "tier": "brief",
+       "discriminates": false,
+       "evidence": [
+        {
+         "signal": "throttle_pickup_delta_m",
+         "test": "the throttle first came back at least 8 m later than on the reference lap",
+         "value": 80.22,
+         "unit": "m"
+        },
+        {
+         "signal": "brake_release_delta_m",
+         "test": "braking ended no more than 8 m sooner than on the reference lap",
+         "value": 25.68,
+         "unit": "m"
+        }
+       ],
+       "advice": {
+        "radio": null,
+        "screen": "Throttle back later while the car turned",
+        "review": "Braking ended about where it did on your reference lap, but the throttle came back later: the gap opened while waiting for the car to turn towards the exit.",
+        "ids": {
+         "radio": null,
+         "screen": "waiting_for_rotation_explain",
+         "review": "waiting_for_rotation_explain"
+        },
+        "tailored": {
+         "radio": false,
+         "screen": false,
+         "review": false
+        }
+       }
+      }
+     ],
+     "advice": {
+      "radio": "More coasting than your reference",
+      "screen": "More coasting than your reference",
+      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower. The game's braking assist was on, so some of that braking was the game's.",
+      "ids": {
+       "radio": "coasting_describe",
+       "screen": "coasting_describe",
+       "review": "coasting_explain_trail"
+      },
+      "tailored": {
+       "radio": false,
+       "screen": false,
+       "review": true
+      }
+     },
+     "digest": "4c8a1cb00d509eca"
+    }
+   },
+   "early_brake_release": {
+    "id": "L13:T9:coasting",
+    "kind": "coasting",
+    "corner": "T9",
+    "lap_number": 13,
+    "ref_lap_number": 5,
+    "metric": "coast_delta_m",
+    "value": 33.695,
+    "unit": "m",
+    "impact_s": 1.139,
+    "confidence": 1.0,
+    "text": "T9: about 34 m more coasting (no brake, no throttle) than your reference between brake release and throttle.",
+    "evidence": {
+     "time_delta_s": 1.139,
+     "brake_point_delta_m": 10.024,
+     "min_speed_delta_kph": -53.0,
+     "exit_speed_delta_kph": -25.537,
+     "entry_speed_delta_kph": -14.101,
+     "coast_delta_m": 33.695,
+     "ref": {
+      "corner": "T9",
+      "segment_time_s": 4.71,
+      "brake_start_m": 4345.77,
+      "brake_end_m": 4383.33,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.12,
+      "release_s": 0.15,
+      "trail_brake_m": 21.09,
+      "coast_m": 0.0,
+      "entry_speed_kph": 228.0,
+      "min_speed_kph": 176.0,
+      "min_speed_m": 4384.0,
+      "exit_speed_kph": 191.0,
+      "throttle_pickup_m": 4382.54,
+      "throttle_full_m": 4388.58
+     },
+     "lap": {
+      "corner": "T9",
+      "segment_time_s": 5.85,
+      "brake_start_m": 4355.8,
+      "brake_end_m": 4370.73,
+      "brake_peak": 0.66,
+      "time_to_peak_s": 0.12,
+      "release_s": 0.08,
+      "trail_brake_m": 2.65,
+      "coast_m": 33.7,
+      "entry_speed_kph": 213.9,
+      "min_speed_kph": 123.0,
+      "min_speed_m": 4530.0,
+      "exit_speed_kph": 165.46,
+      "throttle_pickup_m": null,
+      "throttle_full_m": null
+     }
+    },
+    "consistency": "1 of the last 4 laps",
+    "consistency_ratio": 0.25,
+    "positive": false,
+    "corner_label": "T9",
+    "corner_voice": "T9",
+    "text_simple": "T9: you spent about 34 m more off both pedals than on your reference lap.",
+    "short": "T9: 34 m more coasting",
+    "ref_name": null,
+    "priority": 0.7973,
+    "knowledge": {
+     "fault": "coasting",
+     "name": "Coasting",
+     "status": "live",
+     "tier": "live",
+     "applies": true,
+     "why_not": null,
+     "causes": [
+      {
+       "id": "early_brake_release",
+       "name": "Early brake release",
+       "tier": "brief",
+       "discriminates": true,
+       "evidence": [
+        {
+         "signal": "brake_release_delta_m",
+         "test": "braking ended at least 8 m sooner than on the reference lap",
+         "value": -12.6,
+         "unit": "m"
+        }
+       ],
+       "advice": {
+        "radio": null,
+        "screen": "Braking ended sooner, longer roll after",
+        "review": "Braking ended sooner than on your reference lap, which left a longer gap with neither brake nor throttle before the apex.",
+        "ids": {
+         "radio": null,
+         "screen": "early_brake_release_explain",
+         "review": "early_brake_release_explain"
+        },
+        "tailored": {
+         "radio": false,
+         "screen": false,
+         "review": false
+        }
+       }
+      }
+     ],
+     "advice": {
+      "radio": "More coasting than your reference",
+      "screen": "More coasting than your reference",
+      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower. The game's braking assist was on, so some of that braking was the game's.",
+      "ids": {
+       "radio": "coasting_describe",
+       "screen": "coasting_describe",
+       "review": "coasting_explain_trail"
+      },
+      "tailored": {
+       "radio": false,
+       "screen": false,
+       "review": true
+      }
+     },
+     "digest": "4c8a1cb00d509eca"
+    }
+   },
+   "traction_limited": {
+    "id": "L1:T9:late_throttle",
+    "kind": "late_throttle",
+    "corner": "T9",
+    "lap_number": 1,
+    "ref_lap_number": 5,
+    "metric": "throttle_full_delta_m",
+    "value": 64.283,
+    "unit": "m",
+    "impact_s": 1.551,
+    "confidence": 1.0,
+    "text": "T9: you're reaching full throttle 64 m later than your reference, losing 1.55 s through the corner.",
+    "evidence": {
+     "time_delta_s": 1.551,
+     "brake_point_delta_m": 18.568,
+     "min_speed_delta_kph": -71.0,
+     "exit_speed_delta_kph": -17.736,
+     "entry_speed_delta_kph": -8.0,
+     "throttle_full_delta_m": 64.283,
+     "coast_delta_m": 0.0,
+     "ref": {
+      "corner": "T9",
+      "segment_time_s": 4.71,
+      "brake_start_m": 4345.77,
+      "brake_end_m": 4383.33,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.12,
+      "release_s": 0.15,
+      "trail_brake_m": 21.09,
+      "coast_m": 0.0,
+      "entry_speed_kph": 228.0,
+      "min_speed_kph": 176.0,
+      "min_speed_m": 4384.0,
+      "exit_speed_kph": 191.0,
+      "throttle_pickup_m": 4382.54,
+      "throttle_full_m": 4388.58
+     },
+     "lap": {
+      "corner": "T9",
+      "segment_time_s": 6.27,
+      "brake_start_m": 4364.34,
+      "brake_end_m": 4417.11,
+      "brake_peak": 0.31,
+      "time_to_peak_s": 0.0,
+      "release_s": 0.65,
+      "trail_brake_m": 21.92,
+      "coast_m": 0.0,
+      "entry_speed_kph": 220.0,
+      "min_speed_kph": 105.0,
+      "min_speed_m": 4539.0,
+      "exit_speed_kph": 173.26,
+      "throttle_pickup_m": 4452.87,
+      "throttle_full_m": 4452.87
+     }
+    },
+    "consistency": null,
+    "consistency_ratio": null,
+    "positive": false,
+    "corner_label": "T9",
+    "corner_voice": "T9",
+    "text_simple": "T9: you got back to full throttle about 64 m later than on your reference lap.",
+    "short": "T9: full throttle 64 m later",
+    "ref_name": null,
+    "priority": 1.551,
+    "knowledge": {
+     "fault": "late_throttle",
+     "name": "Late to full throttle",
+     "status": "live",
+     "tier": "live",
+     "applies": true,
+     "why_not": null,
+     "causes": [
+      {
+       "id": "traction_limited",
+       "name": "Traction-limited exit",
+       "tier": "expert",
+       "discriminates": false,
+       "evidence": [
+        {
+         "signal": "exit_slide_vs_ref",
+         "test": "the back of the car slid or needed a counter-steer on the way out, and not on the reference lap",
+         "value": true,
+         "unit": "bool"
+        }
+       ],
+       "advice": {
+        "radio": null,
+        "screen": "More wheelspin or sliding than your reference",
+        "review": "The rear tyres spun, or the car slid or oversteered, on the way out of this corner where it did not on your reference lap, which held full throttle back compared with that lap.",
+        "ids": {
+         "radio": null,
+         "screen": "traction_limited_explain",
+         "review": "traction_limited_explain"
+        },
+        "tailored": {
+         "radio": false,
+         "screen": false,
+         "review": false
+        }
+       }
+      }
+     ],
+     "advice": {
+      "radio": "Full throttle later than your reference",
+      "screen": "Full throttle later",
+      "review": "You reached full throttle later than on your reference lap on the way out of this corner, and lost time there.",
+      "ids": {
+       "radio": "late_throttle_describe",
+       "screen": "late_throttle_describe",
+       "review": "late_throttle_describe"
+      },
+      "tailored": {
+       "radio": false,
+       "screen": false,
+       "review": false
+      }
+     },
+     "digest": "4c8a1cb00d509eca"
+    }
+   },
+   "none": {
+    "id": "L1:T9:brake_late_overdrive",
+    "kind": "brake_late_overdrive",
+    "corner": "T9",
+    "lap_number": 1,
+    "ref_lap_number": 5,
+    "metric": "brake_point_delta_m",
+    "value": 18.568,
+    "unit": "m",
+    "impact_s": 1.551,
+    "confidence": 1.0,
+    "text": "T9: you're braking 19 m later than your reference but exiting 18 km/h slower - the later braking isn't paying off, losing 1.55 s through the corner.",
+    "evidence": {
+     "time_delta_s": 1.551,
+     "brake_point_delta_m": 18.568,
+     "min_speed_delta_kph": -71.0,
+     "exit_speed_delta_kph": -17.736,
+     "entry_speed_delta_kph": -8.0,
+     "throttle_full_delta_m": 64.283,
+     "coast_delta_m": 0.0,
+     "ref": {
+      "corner": "T9",
+      "segment_time_s": 4.71,
+      "brake_start_m": 4345.77,
+      "brake_end_m": 4383.33,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.12,
+      "release_s": 0.15,
+      "trail_brake_m": 21.09,
+      "coast_m": 0.0,
+      "entry_speed_kph": 228.0,
+      "min_speed_kph": 176.0,
+      "min_speed_m": 4384.0,
+      "exit_speed_kph": 191.0,
+      "throttle_pickup_m": 4382.54,
+      "throttle_full_m": 4388.58
+     },
+     "lap": {
+      "corner": "T9",
+      "segment_time_s": 6.27,
+      "brake_start_m": 4364.34,
+      "brake_end_m": 4417.11,
+      "brake_peak": 0.31,
+      "time_to_peak_s": 0.0,
+      "release_s": 0.65,
+      "trail_brake_m": 21.92,
+      "coast_m": 0.0,
+      "entry_speed_kph": 220.0,
+      "min_speed_kph": 105.0,
+      "min_speed_m": 4539.0,
+      "exit_speed_kph": 173.26,
+      "throttle_pickup_m": 4452.87,
+      "throttle_full_m": 4452.87
+     }
+    },
+    "consistency": null,
+    "consistency_ratio": null,
+    "positive": false,
+    "corner_label": "T9",
+    "corner_voice": "T9",
+    "text_simple": "T9: the later braking did not pay off - you came out 18 km/h slower.",
+    "short": "T9: braked later, 18 km/h slower out",
+    "ref_name": null,
+    "priority": 1.551,
+    "knowledge": {
+     "fault": "brake_late_overdrive",
+     "name": "Overdriving the entry",
+     "status": "live",
+     "tier": "live",
+     "applies": true,
+     "why_not": null,
+     "causes": [],
+     "advice": {
+      "radio": "Braked later, but exited slower",
+      "screen": "Braked later, slower out",
+      "review": "You braked later than on your reference lap but came out of the corner slower: the time gained on the way in was lost on the way out.",
+      "ids": {
+       "radio": "brake_late_overdrive_describe",
+       "screen": "brake_late_overdrive_describe",
+       "review": "brake_late_overdrive_describe"
+      },
+      "tailored": {
+       "radio": false,
+       "screen": false,
+       "review": false
+      }
+     },
+     "digest": "4c8a1cb00d509eca"
+    }
+   },
+   "tailored": {
+    "id": "L1:T5:coasting",
+    "kind": "coasting",
+    "corner": "T5",
+    "lap_number": 1,
+    "ref_lap_number": 5,
+    "metric": "coast_delta_m",
+    "value": 18.126,
+    "unit": "m",
+    "impact_s": 1.183,
+    "confidence": 0.6,
+    "text": "T5: about 18 m more coasting (no brake, no throttle) than your reference between brake release and throttle.",
+    "evidence": {
+     "time_delta_s": 1.183,
+     "brake_point_delta_m": 16.372,
+     "min_speed_delta_kph": -29.0,
+     "exit_speed_delta_kph": -32.0,
+     "entry_speed_delta_kph": -6.608,
+     "throttle_full_delta_m": 78.342,
+     "coast_delta_m": 18.126,
+     "ref": {
+      "corner": "T5",
+      "segment_time_s": 12.63,
+      "brake_start_m": 1782.36,
+      "brake_end_m": 1855.05,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.13,
+      "release_s": 0.13,
+      "trail_brake_m": 11.61,
+      "coast_m": 0.0,
+      "entry_speed_kph": 183.24,
+      "min_speed_kph": 174.0,
+      "min_speed_m": 1853.0,
+      "exit_speed_kph": 184.0,
+      "throttle_pickup_m": 1852.08,
+      "throttle_full_m": 1856.91
+     },
+     "lap": {
+      "corner": "T5",
+      "segment_time_s": 13.82,
+      "brake_start_m": 1798.73,
+      "brake_end_m": 1880.73,
+      "brake_peak": 1.0,
+      "time_to_peak_s": 0.03,
+      "release_s": 0.1,
+      "trail_brake_m": 12.29,
+      "coast_m": 18.13,
+      "entry_speed_kph": 176.63,
+      "min_speed_kph": 145.0,
+      "min_speed_m": 1934.0,
+      "exit_speed_kph": 152.0,
+      "throttle_pickup_m": 1932.3,
+      "throttle_full_m": 1935.25
+     }
+    },
+    "consistency": null,
+    "consistency_ratio": null,
+    "positive": false,
+    "corner_label": "T5",
+    "corner_voice": "T5",
+    "text_simple": "T5: you spent about 18 m more off both pedals than on your reference lap.",
+    "short": "T5: 18 m more coasting",
+    "ref_name": null,
+    "priority": 0.7098,
+    "knowledge": {
+     "fault": "coasting",
+     "name": "Coasting",
+     "status": "live",
+     "tier": "live",
+     "applies": true,
+     "why_not": null,
+     "causes": [
+      {
+       "id": "waiting_for_rotation",
+       "name": "Waiting for the car to rotate",
+       "tier": "brief",
+       "discriminates": false,
+       "evidence": [
+        {
+         "signal": "throttle_pickup_delta_m",
+         "test": "the throttle first came back at least 8 m later than on the reference lap",
+         "value": 80.22,
+         "unit": "m"
+        },
+        {
+         "signal": "brake_release_delta_m",
+         "test": "braking ended no more than 8 m sooner than on the reference lap",
+         "value": 25.68,
+         "unit": "m"
+        }
+       ],
+       "advice": {
+        "radio": null,
+        "screen": "Throttle back later while the car turned",
+        "review": "Braking ended about where it did on your reference lap, but the throttle came back later: the gap opened while waiting for the car to turn towards the exit.",
+        "ids": {
+         "radio": null,
+         "screen": "waiting_for_rotation_explain",
+         "review": "waiting_for_rotation_explain"
+        },
+        "tailored": {
+         "radio": false,
+         "screen": false,
+         "review": false
+        }
+       }
+      }
+     ],
+     "advice": {
+      "radio": "More coasting than your reference",
+      "screen": "More coasting than your reference",
+      "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower. The game's braking assist was on, so some of that braking was the game's.",
+      "ids": {
+       "radio": "coasting_describe",
+       "screen": "coasting_describe",
+       "review": "coasting_explain_trail"
+      },
+      "tailored": {
+       "radio": false,
+       "screen": false,
+       "review": true
+      }
+     },
+     "digest": "4c8a1cb00d509eca"
+    }
+   }
+  },
+  "coach_point": {
+   "id": "L18:T1:coasting",
+   "kind": "coasting",
+   "corner": "T1",
+   "corner_label": "T1",
+   "lap_number": 18,
+   "ref_lap_number": 5,
+   "metric": "coast_delta_m",
+   "value": 30.547,
+   "unit": "m",
+   "impact_s": 1.701,
+   "confidence": 1.0,
+   "priority": 1.2451,
+   "positive": false,
+   "consistency": "2 of the last 6 laps",
+   "consistency_ratio": 0.33,
+   "text": "T1: about 31 m more coasting (no brake, no throttle) than your reference between brake release and throttle.",
+   "text_simple": "T1: you spent about 31 m more off both pedals than on your reference lap.",
+   "short": "T1: 31 m more coasting",
+   "corner_voice": "T1",
+   "ref_name": null,
+   "habit_event": null,
+   "was_value": null,
+   "clean_laps": null,
+   "clean_of": null,
+   "knowledge": {
+    "fault": "coasting",
+    "applies": true,
+    "why_not": null,
+    "causes": [
+     {
+      "id": "early_brake_release",
+      "name": "Early brake release",
+      "discriminates": true,
+      "evidence": [
+       {
+        "signal": "brake_release_delta_m",
+        "value": -16.85,
+        "unit": "m"
+       }
+      ],
+      "screen": "Braking ended sooner, longer roll after"
+     }
+    ],
+    "advice": {
+     "radio": "More coasting than your reference",
+     "screen": "More coasting than your reference",
+     "review": "You usually keep some brake on into the turn, so a long gap off both pedals is unusual for you: on this lap the gap between the brake and the throttle was clearly longer than on your reference lap here, and the corner was slower. The game's braking assist was on, so some of that braking was the game's."
+    }
+   },
+   "evidence": {
+    "time_delta_s": 1.701,
+    "brake_point_delta_m": 11.918,
+    "min_speed_delta_kph": -47.0,
+    "exit_speed_delta_kph": -43.0,
+    "entry_speed_delta_kph": -13.3,
+    "throttle_full_delta_m": 27.854,
+    "coast_delta_m": 30.547
+   },
+   "picked": true,
+   "habit": null,
+   "one_off": false
+  },
+  "context": {
+   "context": {
+    "skill": null,
+    "braking_style": "trail",
+    "coasting": "rare",
+    "game": "f1",
+    "car_family": "f1",
+    "downforce": "high",
+    "abs": true,
+    "traction_control": true,
+    "gearbox": "auto",
+    "fuel_saving": null,
+    "wet": false
+   },
+   "style": {
+    "braking_style": "trail",
+    "coasting": "rare",
+    "laps": 15,
+    "braking_corners": 116,
+    "trail_corners": 105,
+    "coast_corners": 22,
+    "coast_measured": 116,
+    "unsteered_corners": 0,
+    "no_steering": false,
+    "trail_share": 0.905,
+    "coast_share": 0.19,
+    "enough": true,
+    "braking_assist": 1
+   },
+   "game": "f1_25"
+  }
+ }
+}

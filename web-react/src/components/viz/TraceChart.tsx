@@ -6,6 +6,8 @@
 //
 // Touch: drag along a chart to scrub (vertical swipes still scroll the page: touch-action pan-y); the cursor stays
 // where it was left. Keyboard: the plot is a slider (arrows move 10 m, shift 100 m). Mouse: hover follows.
+// `markers`: thin vertical lines at given distances (Compare's corner phase markers, lib/review/phase-markers.ts);
+// decoration like the sector bands, so the scrub surface still gets every pointer event.
 // Lazy pages only: this module imports Recharts (never import it from Drive).
 
 import { AreaChart } from "@heroui-pro/react/area-chart";
@@ -14,7 +16,7 @@ import { memo, useCallback, useMemo, type KeyboardEvent, type PointerEvent, type
 import { ReferenceArea, ReferenceLine, usePlotArea, useXAxisInverseScale, useXAxisScale } from "recharts";
 import { metres, num } from "../../lib/format";
 import { SECTOR_COLOUR_VARS } from "../../lib/skeleton";
-import { distanceTick, distanceTicks, niceDomain, valuesAt } from "../../lib/viz/charts";
+import { distanceTick, distanceTicks, niceDomain, valuesAt, type TraceMarker } from "../../lib/viz/charts";
 import { createCursorSync, type CursorSync } from "../../lib/viz/cursor";
 import { clamp, finite } from "../../lib/viz/scale";
 import { useCursor } from "./useCursor";
@@ -53,6 +55,8 @@ export interface TraceChartProps {
   zeroLine?: boolean;
   /** Neutral sector bands in game metres (skeleton sectors). */
   bands?: readonly { a: number; b: number }[];
+  /** Vertical lines at game metres (corner phase markers); memoise the array, like `series`. */
+  markers?: readonly TraceMarker[];
   /** The shared cursor; a private one when absent. */
   sync?: CursorSync;
   /** Distance ticks under the plot (default true; hide on all but the last chart). */
@@ -183,6 +187,7 @@ export const TraceChart = memo(function TraceChart({
   yFormat = plainNumber,
   zeroLine = false,
   bands,
+  markers,
   sync: shared,
   xAxis = true,
   readout = true,
@@ -240,6 +245,20 @@ export const TraceChart = memo(function TraceChart({
       ),
     );
     if (zeroLine) out.push(<ReferenceLine key="zero" y={0} stroke="var(--pw-line-strong)" strokeWidth={1} />);
+    for (const m of markers ?? []) {
+      out.push(
+        <ReferenceLine
+          key={`marker:${m.id}`}
+          x={m.d}
+          stroke={m.colour}
+          strokeWidth={1.25}
+          strokeDasharray={m.dash}
+          strokeOpacity={0.9}
+          ifOverflow="hidden"
+          aria-label={m.label}
+        />,
+      );
+    }
     for (const s of series) {
       if (kind === "area") {
         out.push(
@@ -276,7 +295,7 @@ export const TraceChart = memo(function TraceChart({
       }
     }
     return out;
-  }, [kind, L, ticks, xAxis, yDom, yTk, yFormat, bands, zeroLine, series]);
+  }, [kind, L, ticks, xAxis, yDom, yTk, yFormat, bands, markers, zeroLine, series]);
 
   const Root = kind === "area" ? AreaChart : LineChart;
   return (

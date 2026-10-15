@@ -15,13 +15,18 @@ Pace vs AI: ``ai_pace`` is the session's stored ``session_ai_pace`` row (``repo.
 ``ai_suggestion`` the suggested AI level at this session's track, car class, category and weather
 (``analysis.ai_level``) from the owner's own real driving. The suggestion exists only for driven (not replayed),
 non-synthetic sessions that have a driver.
+
+Technique knowledge (``knowledge.session.annotate_session``, cached with the analysis): ``knowledge`` holds the
+driver's Context and the style detected from the session's clean laps, and every observation dict carries its
+``knowledge`` annotation (whether its fault fits the driver, measured causes, advice at their skill and style), as the
+live lap processor gives it. The owner's profile is in the cache key, so a new skill level re-annotates.
 """
 
 from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
@@ -45,6 +50,9 @@ from pitwall.drivers import Driver
 from pitwall.model.telemetry import TrackZones
 from pitwall.storage import repo
 from pitwall.storage.db import Database
+
+if TYPE_CHECKING:
+    from pitwall.knowledge.session import SessionKnowledge
 
 CACHE_ENTRIES = 32
 _CacheKey = tuple[str, int, int | None, int | None, tuple[tuple[str, Any], ...], int | None, float | None]
@@ -89,6 +97,9 @@ class SessionAnalysis:
     # (``analysis.ai_level``); None when not applicable / not recorded
     ai_pace: dict[str, Any] | None = None
     ai_suggestion: dict[str, Any] | None = None
+    # technique knowledge (``knowledge.session``): the driver's Context and detected style; every observation dict
+    # carries its ``knowledge`` annotation. None without the technique graph.
+    knowledge: SessionKnowledge | None = None
 
     @property
     def latest_compared_lap_id(self) -> int | None:
@@ -209,6 +220,9 @@ class SessionAnalyzer:
                     history.setdefault(cd.corner, []).append(cd)
                     del history[cd.corner][:-5]
         out.corner_summary = self._corner_summary(out)
+        from pitwall.knowledge.session import annotate_session  # lazy: knowledge reads technique, which reads this
+
+        out.knowledge = annotate_session(out)
         with self._lock:
             self._cache[key] = out
             while len(self._cache) > CACHE_ENTRIES:
