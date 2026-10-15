@@ -34,6 +34,10 @@ Schema history:
   database: v2 gains goals, AI pace, strategy and coachref; v3 (the 0.1.0 database) AI pace, strategy and coachref;
   v4 strategy and coachref; v5 coachref only. Developed as "v3" on its lane and renumbered when it landed last; such
   a lane database (coachref tables only) gains the rest.
+* v7 - leaderboard: ``session_time_trial`` (one row per session: the latest F1 25 Time Trial data, packet 14 - the EA
+  rival's lap, sectors and assists in columns, the three datasets as JSON). A new table only, so ``SCHEMA`` creates it
+  on any older database and every state above gains it (v6 that table only). No backfill: no Time Trial session has
+  been recorded yet, and packet 14 was never stored.
 """
 
 from __future__ import annotations
@@ -55,7 +59,7 @@ from pitwall.compat import is_windows
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
@@ -331,6 +335,24 @@ CREATE TABLE IF NOT EXISTS drills (
 );
 CREATE INDEX IF NOT EXISTS ix_drills_driver ON drills(driver_id, started_unix);
 -- end v6 coachref
+-- v7 leaderboard: F1 25 Time Trial (packet 14, model.telemetry.TimeTrialInfo), the latest per session. The rival's
+-- columns are the board's key and row (repo.latest_tt_rival); 0/1 flags, NULL = unknown or no rival lap.
+CREATE TABLE IF NOT EXISTS session_time_trial (
+    session_id TEXT PRIMARY KEY REFERENCES sessions(id) ON DELETE CASCADE,
+    packet_format INTEGER,
+    rival_car_id TEXT,                      -- 'f1:team:<teamId>' of the rival's set; NULL = no rival lap / no team
+    rival_lap_ms INTEGER,                   -- NULL = no rival lap (m_lapTimeInMS 0)
+    rival_s1_ms INTEGER, rival_s2_ms INTEGER, rival_s3_ms INTEGER,
+    rival_tc INTEGER, rival_gearbox INTEGER, rival_abs INTEGER,   -- 0 off | 1 on
+    rival_equal_performance INTEGER,        -- 0 realistic | 1 equal
+    rival_custom_setup INTEGER,             -- 0 | 1
+    rival_valid INTEGER,                    -- 0 | 1
+    rival_car_index INTEGER,                -- LapData m_timeTrialRivalCarIdx (NULL: 255 or not seen)
+    pb_car_index INTEGER,                   -- LapData m_timeTrialPBCarIdx
+    data TEXT NOT NULL DEFAULT '{}',        -- TimeTrialInfo.to_dict(): the three datasets as decoded
+    updated_unix REAL NOT NULL
+);
+-- end v7 leaderboard
 """
 
 # Columns added after v1: (table, column, declaration). ADD COLUMN with a REFERENCES clause is allowed because the
@@ -418,9 +440,9 @@ class Database:
             try:
                 with closing(self.connect()) as conn:
                     # One write transaction taken up front: creating a table that an older database lacks (v3: goals,
-                    # v4: session_ai_pace, v5: strategy, v6: coachref) is a write, and as autocommit statements
-                    # concurrent openers could get "database is locked" at once (a read upgraded to a write is not
-                    # retried); BEGIN IMMEDIATE waits.
+                    # v4: session_ai_pace, v5: strategy, v6: coachref, v7: time trial) is a write, and as autocommit
+                    # statements concurrent openers could get "database is locked" at once (a read upgraded to a write
+                    # is not retried); BEGIN IMMEDIATE waits.
                     conn.executescript(f"BEGIN IMMEDIATE;\n{SCHEMA}\nCOMMIT;")
                     _migrate(conn)
                 return
