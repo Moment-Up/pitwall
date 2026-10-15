@@ -448,6 +448,23 @@ F1 races with a safety car, or with a chequered flag but no stored last lap (a l
 times from the lap meta (`t_recv_start_ns`, `t_recv_end_ns`, the events' clock) to judge the finish and leave laps
 behind the safety car out of steady laps.
 
+## Family leaderboard (`leaderboard/`)
+Local boards of the household's laps (docs/leaderboard.md). `keys.py` (pure) turns a lap's raw columns into an exact
+board key (game, track, layout within 3 %, car with the F1 class family and equal performance, session category,
+dry / wet, assist class; an unknown value is its own bucket) and its string form; `board.py` (pure) merges the repo
+rows into boards, the record index, the record history and the family-record takes; `service.py` is the database side
+(read-only) shared by `api/routes_leaderboard.py` (`/api/leaderboard`, `/api/records`, `/api/leaderboard/lapcard/{id}`),
+the motivation badges and worker, and `facts.py` (the engineer's topic `records`). Two SQL reads in `storage/repo.py`
+use window functions over raw key columns (`board_bests`: each driver's best per partition with the clean-lap count,
+best sectors, first and latest lap; `board_record_laps`: laps faster than every earlier lap of their partition);
+Python merges the partitions of one key (lengths within 3 %, "clear" and "overcast" both dry) and runs the record
+again over the merged rows. Nothing is stored: no schema change. After each live lap the motivation worker asks
+whether the lap took its board's record from another driver and publishes `live.notify("family_record", note)`; the
+radio hub turns it into one `GOAL` line (`motivation.radio.record_message`, the goal lines' gate and topic rules).
+Two optional rows plug in through `service.ea_rival_for` (F1 25 Time Trial packet 14) and `service.real_f1_for`
+(F1DB benchmarks); `board.with_benchmarks` adds them and each driver's gap and band. `lapcard.py` builds the
+versioned lap card locally; nothing goes online.
+
 ## Dashboard (`web-react/`)
 React 19 + TypeScript (strict) + Vite + Tailwind v4 + HeroUI v3 / HeroUI Pro, built to `docs/ui/design-spec.md` (v2,
 coach-first). FastAPI serves the built `web-react/dist` as static files at `/` and, for a week after the switch-over,

@@ -355,6 +355,20 @@ the habit the focus (with no radio connected the screen-only coach records it wh
 "Once" and its counts disagreed with the evidence line; "braking N m later" followed "better" for a habit of braking
 too late.
 
+## Family leaderboard (unreleased)
+
+Local family boards (docs/leaderboard.md): `/api/leaderboard`, `/api/records`, the record history, the family-record
+badge, the engineer's `records` fact and intent, the radio line when a lap takes the record from another driver
+(through the goal-line path), and the lap card format (`/api/leaderboard/lapcard/{id}`, local only). **Unit tests and
+recorded data (a read-only copy of the owner's database); not live.** Nothing goes online.
+
+On the copy (2026-10-15): 22 boards (20 F1 25, 2 GT7 unidentified circuits); all 120 clean laps of real driving land on
+a board; one contested board (Austria · Haas · Race · Dry: the owner 1:10.549, the second profile +3.067 s, 4.35 %);
+11 boards have ABS and TC unknown (laps stored before the per-lap assists), and the owner's F2 Sakhir laps split by ABS
+(on / off), as designed. The record index takes about 60 ms there. Not yet verified: the radio line heard on track
+(no household record has changed hands in a live session yet); the Records screen (Review › Progress) and the EA rival
+and real-F1 rows, which plug into these boards.
+
 ## Known gaps
 
 Kept open for after v0.2.0 (none of them changes what Pitwall claims):
@@ -363,6 +377,11 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   reports "live" while GT7 streams in its menus, so `scripts/pitwall-service.sh restart-when-idle` waits as long as
   GT7 is open; a race whose every lap had a reset leaves its circuit unrecognised (no complete lap to measure).
 
+- **Family leaderboard:** the dashboard's purple REC (D2 `repo.lap_bests`: game + track + car + layout) is looser than a
+  family board (which also splits session type, conditions and assists), so a lap can show REC while its board's
+  record, and the radio's record line, belong to another lap. A layout's name is its shortest stored length: a new,
+  shorter length within 3 % renames the board key; the API still finds the board by the older key, but the badge key
+  changes with it.
 - **Goals and recaps:** a lapped finisher's race is worded as finished but judged by the chequered-flag rule only
   later; incomplete laps; safety-car laps are judged by the live safety-car state, not stored per lap yet.
 - **Game selection:** the owner's seven open questions from the game selection review.
