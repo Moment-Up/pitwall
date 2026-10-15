@@ -97,6 +97,23 @@ only hand-verified turns are shown or spoken. Facts used in hand review (FIA cir
 Wikipedia) were read by a person and are cited by name in the sheets; no FIA, F1 or Wikipedia text, drawing or
 table is copied or shipped (FIA T&C section 3.7; Wikipedia CC BY-SA text).
 
+## Real Formula 1 benchmarks (F1DB, CC BY 4.0; derived data shipped with attribution)
+
+`src/pitwall/trackdata/real_f1_benchmarks.json` holds, for every F1 25 track id, the F1DB circuit and its current
+layout id and length, and on that layout: the latest pole (qualifying P1's deciding lap), the latest race fastest lap,
+the fastest race lap ever on the layout, and the pole and race fastest lap of the 2025 and 2026 seasons (time, year,
+date, the real driver's name, the grand prix and the F1DB race id). A track whose layout cannot be checked against the
+game's own lap length stays unknown, with the reason in the file. It is read at runtime by
+`pitwall.trackdata.real_f1`; nothing is fetched at runtime.
+
+| Data | Upstream / version | Licence | Class | How it is made | Obligations / how we credit |
+|---|---|---|---|---|---|
+| Circuit layouts (id, length), races, qualifying results, race fastest laps, driver and grand prix names | F1DB by Marcel Overdijk and contributors, github.com/f1db/f1db, release **v2026.17.0** (2026-10-11): the `f1db-csv.zip` release asset (SHA-256 checked against the release's `checksums_sha256.txt`; the SHA-256 of each of the 7 CSV files read is recorded in the JSON) | CC BY 4.0 (F1DB README) | P (attribution) | `scripts/build_f1db_benchmarks.py <csv dir> --version ... --released ...` (dev-only, run by hand; the CSV files are parsed as untrusted input with the `csv` module and type-checked). No F1DB file is vendored; values are selected, times kept in milliseconds, lengths converted from km to m. F1DB's circuit SVG assets are never used (`docs/research/track-knowledge-sources.md` section 9) | CC BY 4.0 section 3(a): the JSON's `source` block carries the credit (creator, version, link), the licence name and URI, and `changes` (what Pitwall selected and converted); `real_f1.source()` exposes it. Any screen that shows a real F1 time shows a short credit ("Real F1 times: F1DB, CC BY 4.0", linked) and the caveat that F1 25 is not the real car. No added terms or technical restrictions. |
+
+Real drivers appear by name with the season (public figures, as in any results table). F1 and related marks are
+trademarks of Formula One Licensing B.V.; Pitwall is unofficial and not associated with Formula 1, the FIA or EA.
+Re-run the build for a newer F1DB release (bump `--version`) and review the diff; `--check` reports drift.
+
 ## Car setup catalogue (facts with attribution, shipped as data)
 
 `src/pitwall/carsetup/data/f1_25_setups.json` records published F1 25 car setups as numeric facts (setting =
@@ -136,7 +153,7 @@ users, database-right limits.
 | f1livedata.com | site terms: personal, non-commercial; no API; robots blocks /api/ | - | Not usable as a data source |
 | FastF1 (python package) | MIT code; **downloaded data remains under F1's terms** | P / restricted data | Candidate *optional, user-side* add-on for official turn numbers; never ship derived data |
 | OpenF1 | CC BY-NC-SA 4.0 | non-commercial | Adds nothing over FastF1 |
-| F1DB | CC BY 4.0 | P (attribution) | Official lap length / turn count per layout, for layout matching |
+| F1DB | CC BY 4.0 | P (attribution) | Data only, never its circuit SVG assets: official lap length / turn count per layout for layout matching, and the shipped real-F1 benchmarks (pole, race fastest lap, lap record per F1 25 track; see "Real Formula 1 benchmarks" above) |
 
 Details: `docs/research/track-reference-sources.md`.
 
