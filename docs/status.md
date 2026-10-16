@@ -657,7 +657,8 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
 - **Assetto Corsa Competizione:** no Pitwall recording of ACC yet, so nothing is upgraded beyond partial; the tyre
   core temperatures are decoded but no screen or call shows them; sector times, fuel, flags, penalties, damage and the
   other cars are not read; the session type has no results; Ed's track-length table is checked for 3 of 25 circuits;
-  the classic dashboard (`web/`) shows ACC's Connect card with the generic words, as it is frozen.
+  the classic dashboard (`web/`) shows ACC's Connect card with the reader's own sentence (a fix in the frozen
+  dashboard) but not its page counters, which only the React dashboard shows.
 - **Family leaderboard:** the dashboard's purple REC (D2 `repo.lap_bests`: game + track + car + layout) is looser than a
   family board (which also splits session type, conditions and assists), so a lap can show REC while its board's
   record, and the radio's record line, belong to another lap. A layout's name is its shortest stored length: a new,

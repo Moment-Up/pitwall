@@ -413,6 +413,72 @@ def test_connect_page_lists_acc_with_its_guide(client: TestClient) -> None:
     assert one["integration"] == "acc" and one["guide"]["id"] == "acc" and one["transport"]["kind"] == "shared_memory"
 
 
+def _node_with_type_stripping() -> str | None:
+    """``node`` when it can import a ``.ts`` file by itself (type stripping: 22.18+ / 23.6+), else None."""
+    import shutil
+    import subprocess
+
+    node = shutil.which("node")
+    if node is None:
+        return None
+    out = subprocess.run([node, "--version"], capture_output=True, text=True, timeout=10).stdout.strip()
+    try:
+        major, minor = (int(x) for x in out.lstrip("v").split(".")[:2])
+    except ValueError:
+        return None
+    return node if (major, minor) >= (23, 6) or (major == 22 and minor >= 18) else None
+
+
+def classic_card(node: str, rows: list[dict[str, Any]], tmp_path: Path) -> list[dict[str, Any]]:
+    """The classic dashboard's ACC card (``web/src/lib/connect.ts``) for ``input_status`` rows, run by Node."""
+    import subprocess
+
+    lib = (Path(__file__).resolve().parents[2] / "web" / "src" / "lib" / "connect.ts").as_uri()
+    script = tmp_path / "card.mjs"
+    script.write_text(
+        f"import {{ accSummary, accLive, accOn, accStatusLine }} from {json.dumps(lib)};\n"
+        "const rows = JSON.parse(process.argv[2]);\n"
+        "const out = rows.map((g) => ({ summary: accSummary(g), live: accLive(g), on: accOn(g) }));\n"
+        "console.log(JSON.stringify([...out, { status: accStatusLine(59.6) }]));\n",
+        encoding="utf-8",
+    )
+    r = subprocess.run([node, str(script), json.dumps(rows)], capture_output=True, text=True, timeout=30)
+    assert r.returncode == 0, r.stderr
+    return list(json.loads(r.stdout))
+
+
+@pytest.mark.synthetic
+def test_the_classic_connect_card_says_what_the_acc_reader_says(
+    rt: Runtime, mem: FakeAccMemory, tmp_path: Path
+) -> None:
+    """The frozen Svelte dashboard (served while web-react is not built: a Windows git clone without a HeroUI Pro
+    licence) shows ACC's own sentence - never "listening on UDP 0" or "N packets so far · idle" while reading - and
+    treats ACC as on while it is the selected game."""
+    node = _node_with_type_stripping()
+    if node is None:
+        pytest.skip("needs Node 22.18+ (type stripping) to run web/src/lib/connect.ts")
+    select(rt, "acc:pc")
+    hurry(rt)
+    wait_for(lambda: acc_row(rt)["reader"]["state"] == "not_running")
+    waiting = json.loads(json.dumps(acc_row(rt)))
+    mem.start_game()
+    mem.write(physics(1), graphics(1, OFF), static())
+    assert rt.acc is not None
+    reader = rt.acc.reader
+    wait_for(lambda: reader.pages_open and reader.polls > 2)
+    drive(reader, mem, range(2, 20))
+    reading = json.loads(json.dumps(acc_row(rt)))
+    assert reading["reader"]["state"] == "reading" and reading["received"] > 0 and reading["port"] == 0
+    off = {**waiting, "selected": False, "active": False, "enabled": False, "reader": None}
+    a, b, c, status = classic_card(node, [waiting, reading, off], tmp_path)
+    assert status == {"status": "Reading ACC's shared memory on this PC · 60 pages/s"}  # not "from ?"
+    assert a == {"summary": waiting["reader"]["message"], "live": False, "on": True}
+    assert "not running" in a["summary"] and "UDP" not in a["summary"]
+    assert b["summary"] == reading["reader"]["message"] and b["summary"].startswith("Reading ACC") and b["live"]
+    assert "packets so far" not in b["summary"] and b["on"]
+    assert c == {"summary": "off", "live": False, "on": False}
+
+
 # ============================================================================================== games / CLI
 def test_transport_and_game_input() -> None:
     t = games.transport("acc")

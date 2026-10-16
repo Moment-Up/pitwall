@@ -1,5 +1,6 @@
 <script lang="ts">
   import { copyText } from "../lib/copy";
+  import { ACC_SOURCE, accLive, accOn, accStatusLine, accSummary, type AccReader } from "../lib/connect";
 
   interface Step { label: string; value: string; copy: boolean; note: string }
   interface Guide {
@@ -16,7 +17,7 @@
       status: "live" | "stale" | "no_data"; last_packet_age_s: number | null; packets: number; packets_per_s: number;
       rejected: number; unrecognised: number; synthetic: boolean; decode: Record<string, any>;
       game: string | null; track: string | null; session_type: string | null; platform: string | null;
-      packet_format: number | null; game_version: string | null; hint: string | null;
+      packet_format: number | null; game_version: string | null; hint: string | null; source?: string | null;
     };
     radio: { name: string; mic_live: boolean; device_tts: boolean; dropped: number }[];
     radio_enabled: boolean;
@@ -29,6 +30,8 @@
     listening: boolean; received: number; sources: Source[]; capture: string | null; error: string | null;
     heartbeat?: { sent?: number; errors?: number; last_error?: string | null } | null;
     platform?: string | null; listens?: boolean; client?: AcClient | null;
+    // ACC (shared memory on this PC): no port, no IP; on while switched on or selected; the reader's own sentence
+    selected?: boolean; active?: boolean; reader?: AccReader | null;
   }
   // Assetto Corsa: pitwall registers with the game (no port to set), so the card shows the client's state.
   interface AcClient {
@@ -98,6 +101,7 @@
 
   function senderSummary(g: Integration): string {
     if (g.key === "ac") return acSummary(g);
+    if (g.key === "acc") return accSummary(g);
     const live = g.sources.filter((s) => s.last_seen_s < 2);
     if (live.length) return `receiving from ${live.map((s) => s.ip).join(", ")} · ${Math.round(live.reduce((a, s) => a + s.packets_per_s, 0))}/s`;
     if (g.received) return `${g.received.toLocaleString()} packets so far · idle`;
@@ -158,6 +162,7 @@
     // The freshest sender on any input (F1's port, GT7, Forza, or the AC client), not only the F1 listener.
     const src = [...info.udp.sources, ...info.integrations.flatMap((g) => g.sources)]
       .sort((a, b) => a.last_seen_s - b.last_seen_s)[0];
+    if (t.status === "live" && t.source === ACC_SOURCE) return accStatusLine(t.packets_per_s);
     if (t.status === "live") {
       const what = t.game ? `${t.game.replace("_", " ").toUpperCase()}${t.packet_format ? ` (format ${t.packet_format})` : ""}` : "telemetry";
       return `Receiving ${what} from ${src ? src.ip : "?"} · ${Math.round(t.packets_per_s)} packets/s`;
@@ -188,7 +193,7 @@
       <h3>Games</h3>
       <div class="games">
         {#each info.integrations as g (g.key)}
-          <div class="game-card" class:on={g.enabled}>
+          <div class="game-card" class:on={g.key === "acc" ? accOn(g) : g.enabled}>
             <div class="game-top">
               <div>
                 <div class="game">{g.name}</div>
@@ -201,7 +206,10 @@
                   onclick={() => saveIntegration(g.key, { enabled: !g.enabled })}>{g.enabled ? "On" : "Off"}</button>
               {/if}
             </div>
-            <div class="small" class:muted={!g.listening} class:live-text={g.sources.some((s) => s.last_seen_s < 2)}>{senderSummary(g)}</div>
+            <div class="small" class:muted={!g.listening} class:live-text={g.key === "acc" ? accLive(g) : g.sources.some((s) => s.last_seen_s < 2)}>{senderSummary(g)}</div>
+            {#if g.key === "acc" && g.selected && !g.enabled}
+              <div class="faint small">On because ACC is the selected game (Setup › Game).</div>
+            {/if}
             {#if (g.needs_console_ip || g.port_editable) && drafts[g.key]}
               <div class="fields">
                 {#if g.needs_console_ip}
