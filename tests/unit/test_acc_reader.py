@@ -13,7 +13,7 @@ import math
 import sys
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -729,9 +729,49 @@ def test_scrub_capture_replaces_acc_player_names(tmp_path: Path, capsys: pytest.
 
 
 # ============================================================================================== Windows only
+# The Windows-only test below plays ACC under ACC's real mapping names. On a gaming PC a Pitwall started at logon may
+# be looking for those pages right now: its pages are SYNTHETIC (the generator's car), so should that reader catch
+# them they become a session flagged synthetic (``synthetic:`` track id), never a real ACC session in the user's
+# data; and off CI the test does not run at all while a local Pitwall server is listening.
+WINDOWS_TEST_STATIC = {"track": "pitwall_mapping_test", "car": P.SYNTHETIC_CAR_MODEL}
+
+
+def real_mappings_skip_reason(environ: Mapping[str, str], server_listening: Callable[[], bool]) -> str | None:
+    """Why the real-mapping test must not run here (None: it may). CI always may: no Pitwall runs there."""
+    if environ.get("CI"):
+        return None
+    if server_listening():
+        return "a Pitwall server runs on this PC: its ACC reader could open the test's pages"
+    return None
+
+
+def _pitwall_listening() -> bool:
+    """Something accepts connections on this PC's Pitwall port (a connect only; nothing is sent)."""
+    import socket
+
+    from pitwall.config import Settings
+
+    try:
+        with socket.create_connection(("127.0.0.1", Settings().http_port), timeout=0.5):
+            return True
+    except OSError:
+        return False
+
+
+def test_the_windows_mapping_test_writes_only_synthetic_pages() -> None:
+    a = AccAdapter()
+    a.decode(P.snapshot(P.STATIC_PAGE, static(**WINDOWS_TEST_STATIC)), 1)
+    info = next(e for e in a.decode(P.snapshot(P.GRAPHICS_PAGE, graphics(2)), 2) if isinstance(e, SessionInfo))
+    assert info.session_uid == str(SYNTHETIC_SESSION_UID)
+    assert real_mappings_skip_reason({"CI": "true"}, lambda: True) is None
+    assert real_mappings_skip_reason({}, lambda: False) is None
+    assert "Pitwall server" in (real_mappings_skip_reason({}, lambda: True) or "")
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="real named mappings exist only on Windows")
 def test_windows_real_mappings_are_read_and_never_created() -> None:  # pragma: no cover - Windows CI
     import ctypes
+    import os
     from ctypes import wintypes
 
     k32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -753,6 +793,9 @@ def test_windows_real_mappings_are_read_and_never_created() -> None:  # pragma: 
 
     if probe_pages() != "absent":
         pytest.skip("ACC (or another app) has its pages open on this PC: never touch them")
+    why = real_mappings_skip_reason(os.environ, _pitwall_listening)
+    if why is not None:
+        pytest.skip(why)
     # 1. absent: the real opener answers None and the reader leaves no mapping behind
     assert R.open_windows_page(P.PHYSICS_MAPPING, P.PHYSICS_PAGE.size) is None
     clock = Clock()
@@ -783,7 +826,7 @@ def test_windows_real_mappings_are_read_and_never_created() -> None:  # pragma: 
         def write(page: P.Page, body: bytes) -> None:
             ctypes.memmove(views[page.kind], body, len(body))
 
-        write(P.STATIC_PAGE, static(playerName=P.encode_wstring("Edward", 33)))
+        write(P.STATIC_PAGE, static(**WINDOWS_TEST_STATIC, playerName=P.encode_wstring("Edward", 33)))
         write(P.GRAPHICS_PAGE, graphics(1, OFF))
         write(P.PHYSICS_PAGE, physics(1))
         assert probe_pages() == "present"
@@ -807,7 +850,8 @@ def test_windows_real_mappings_are_read_and_never_created() -> None:  # pragma: 
         for h, addr in handles:
             k32.UnmapViewOfFile(addr)
             k32.CloseHandle(h)
-    # 3. the test's handles are closed: the mappings are gone, and opening never re-creates them
-    assert probe_pages() == "absent"
+    # 3. the test's handles are closed: the mappings are gone, and opening never re-creates them (a reader elsewhere
+    # that opened them meanwhile holds them until its release probe, at most RELEASE_AFTER_S)
+    _wait(lambda: probe_pages() == "absent", timeout_s=R.RELEASE_AFTER_S + 3.0)
     assert R.open_windows_page(P.GRAPHICS_MAPPING, P.GRAPHICS_PAGE.size) is None
     assert probe_pages() == "absent"
