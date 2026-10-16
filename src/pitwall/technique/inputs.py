@@ -49,7 +49,19 @@ SHAPE_WORDS: dict[str, str] = {
     "drop_then_trail": "dropped most of it, then trailed the rest",
     "late_drop": "held it, then let go late",
 }
-TC_WORDS = {0: "off", 1: "medium", 2: "full"}
+TC_WORDS = {0: "off", 1: "medium", 2: "full"}  # F1's CarStatus.tractionControl scale
+
+
+def tc_scale_is_f1(game: object) -> bool:
+    """Whether ``game``'s traction control value is on F1's CarStatus scale (0 off, 1 medium, 2 full; ``TC_WORDS``).
+    Other games have a scale of their own (ACC's TC level runs to about 11 on a GT3, and ACC documents no "off"), so
+    F1's words and thresholds never describe them; an unknown game is not F1."""
+    return str(game or "").startswith("f1")
+
+
+def tc_words(game: object, level: int) -> str:
+    """Traction control ``level`` in words: F1's off / medium / full for an F1 game, else "level N"."""
+    return TC_WORDS.get(level, str(level)) if tc_scale_is_f1(game) else f"level {level}"
 
 
 @dataclass(slots=True)
@@ -398,9 +410,16 @@ def _wheels_words(ws: list[str]) -> str:
 
 
 def compare_inputs(
-    lap: CornerInputs, ref: CornerInputs, tol: Tolerances, resolution_m: float = 1.5, *, muted: bool = False
+    lap: CornerInputs,
+    ref: CornerInputs,
+    tol: Tolerances,
+    resolution_m: float = 1.5,
+    *,
+    muted: bool = False,
+    game: object = None,
 ) -> list[TechniqueNote]:
-    """Every metric both laps have, as a note (``notable`` says whether it is called out). Fixed metric order."""
+    """Every metric both laps have, as a note (``notable`` says whether it is called out). Fixed metric order.
+    ``game`` words the traction control level (``tc_words``: F1's off / medium / full only for an F1 game)."""
     notes: list[TechniqueNote] = []
 
     # release
@@ -580,7 +599,7 @@ def compare_inputs(
     ls, rs = lap.wheelspin, ref.wheelspin
     if ls.status == "measured" and rs.status == "measured" and ls.total_s is not None and rs.total_s is not None:
         d = ls.total_s - rs.total_s
-        tc = f" (traction control {TC_WORDS.get(ls.tc_level, str(ls.tc_level))})" if ls.tc_level else ""
+        tc = f" (traction control {tc_words(game, ls.tc_level)})" if ls.tc_level else ""
         notes.append(
             _note(
                 "wheelspin",

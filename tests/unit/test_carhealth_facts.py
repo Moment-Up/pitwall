@@ -408,6 +408,26 @@ def test_unknown_abs_is_never_said_as_abs_on() -> None:
     assert "ABS setting is not known yet" in f.text and "ABS on" not in f.text
 
 
+def test_traction_control_is_worded_on_f1_s_scale_for_f1_only() -> None:
+    """The slip block's ``tc`` is F1's CarStatus scale (0 off, 1 medium, 2 full): an ACC session's level (its own
+    scale) is never said as "full" or "medium"."""
+    from pitwall.ai.facts import FactSheet
+    from pitwall.carhealth.facts import add_car_health_facts
+
+    last = {"lap": 3, "lockups": 0, "wheelspin": 1, "wheelspin_s": 0.4, "corners": []}
+    slip = {"available": True, "abs": True, "tc": 2, "lockups_applicable": False, "last_lap": last, "session": {}}
+
+    def text(game: str) -> str:
+        fs = FactSheet()
+        add_car_health_facts(fs, {"session_id": SID, "car_health": {"session_id": SID, "game": game, "slip": slip}})
+        (f,) = fs.facts
+        return f.text
+
+    assert ", traction control full;" in text("f1_25")
+    acc = text("acc")
+    assert "traction control" not in acc and "full" not in acc and "medium" not in acc, acc
+
+
 async def test_rejoin_words_for_the_leader_a_missing_gap_and_beginners() -> None:
     from pitwall.ai.facts import FactSheet
     from pitwall.strategy.facts import add_strategy_facts

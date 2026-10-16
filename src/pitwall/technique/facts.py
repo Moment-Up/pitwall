@@ -34,7 +34,7 @@ from pitwall.carsetup.recommend import CAVEAT
 from pitwall.core.session_analysis import SessionAnalysis
 from pitwall.technique import thresholds as T
 from pitwall.technique.balance import PHASE_SIMPLE, BalanceSymptom
-from pitwall.technique.inputs import TechniqueNote
+from pitwall.technique.inputs import TechniqueNote, tc_words
 from pitwall.technique.session import (
     F1_GAMES,
     POINT_KEYS,
@@ -413,7 +413,7 @@ def _slip_facts(st: SessionTechnique) -> list[FactTuple]:
         tot = sum(lc.inputs.wheelspin.total_s or 0.0 for lc in c.laps if lc.inputs and lc.inputs.wheelspin.events)
         if laps:
             spins.append((c.long_name, tot, laps))
-    tc = f" (traction control {'full' if a.traction_control == 2 else 'medium'})" if a.traction_control else ""
+    tc = f" (traction control {tc_words(st.session.get('game'), a.traction_control)})" if a.traction_control else ""
     if spins:
         spins.sort(key=lambda x: -x[1])
         parts = [

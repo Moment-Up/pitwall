@@ -666,7 +666,7 @@ def _analyse(sa: SessionAnalysis, pedals: PedalInfo, extra: Mapping[int, LapAnal
                         pv = point_offset(d, off, pos)
                         line_pts[pkey] = None if pv is None else (pv * inside if inside else abs(pv))
                 res = _resolution_m(nat, _apex(an, c, apex))  # this lap's slowest point, as lap_corner placed it
-                all_notes = compare_inputs(inputs, ref_inputs, tol, res, muted=muted)
+                all_notes = compare_inputs(inputs, ref_inputs, tol, res, muted=muted, game=s.get("game"))
                 notes = top_notes(all_notes)
             lap_rows.append(
                 LapCornerTechnique(
@@ -1116,7 +1116,11 @@ def compare_pair(
                 wv = np.interp(wd, d, off, left=np.nan, right=np.nan)
                 wv = wv * inside if inside else np.abs(wv)
                 window = {"d_m": [round(float(x), 2) for x in wd], "offset_m": [m2(float(x)) for x in wv]}
-        notes = [] if incident else compare_inputs(l_in, r_in, tol, _resolution_m(nb, apex_lap), muted=muted)
+        notes = (
+            []
+            if incident
+            else compare_inputs(l_in, r_in, tol, _resolution_m(nb, apex_lap), muted=muted, game=sess_b.get("game"))
+        )
         label, name = _corner_label(c)
         cname = ct.long if ct else c.name
         cshort = ct.short if ct else c.name

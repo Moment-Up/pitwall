@@ -26,6 +26,7 @@ from pitwall.carhealth.racecraft import (
     REASON_NOT_RACE,
     REASON_THEIR_LAPS,
 )
+from pitwall.technique.inputs import tc_scale_is_f1
 
 if TYPE_CHECKING:
     from pitwall.ai.facts import FactSheet
@@ -252,7 +253,7 @@ def _slip(fs: FactSheet, ch: Mapping[str, Any], added: set[str]) -> None:
     text += f"; wheelspin {spin} time(s) ({_n(_num(last.get('wheelspin_s')), 1)} s)"
     if top_spin is not None:
         text += f", most at {top_spin['text']}"
-    if tc in TC_WORDS:
+    if tc in TC_WORDS and tc_scale_is_f1(ch.get("game")):  # the block's tc is F1's scale (carhealth.slip)
         text += f", traction control {TC_WORDS[tc]}"
     text += (
         f"; session {sess.get('lockups')} lock-up(s) and {sess.get('wheelspin')} wheelspin(s) in "

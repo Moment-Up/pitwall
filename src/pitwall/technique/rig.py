@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pitwall.technique import thresholds as T
-from pitwall.technique.inputs import TC_WORDS, Tolerances
+from pitwall.technique.inputs import TC_WORDS, Tolerances, tc_scale_is_f1
 
 PEDAL_LABELS = {"csl": "Fanatec CSL Pedals (stock brake)", "csl_load_cell": "Fanatec CSL Pedals + Load Cell Kit"}
 BRAKE_SENSORS = {"csl": "hall_position", "csl_load_cell": "load_cell"}
@@ -150,8 +150,10 @@ def assist_info(
         )
     if abs_on:
         notes.append(NOTE_ABS)
-    if tc:
+    if tc and tc_scale_is_f1(game):
         notes.append(f"Traction control on ({TC_WORDS.get(tc, str(tc))}): it limits wheelspin on the exit.")
+    elif tc:  # the game's own scale (ACC's level): never F1's medium / full, and no level is claimed to be "off"
+        notes.append(f"Traction control at level {tc} (the game's own scale): it limits wheelspin on the exit.")
     if game == "gt7":
         notes.append("GT7 may report throttle and brake after its own assists, so inputs may not be exactly yours.")
     return AssistInfo(

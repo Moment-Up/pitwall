@@ -19,7 +19,7 @@ from pitwall.core.session_analysis import SessionAnalysis, SessionAnalyzer
 from pitwall.sim.scenarios import technique_demo
 from pitwall.storage.db import Database
 from pitwall.technique.facts import _line_facts, _slip_facts, technique_facts
-from pitwall.technique.rig import ABS_OFF_OR_UNKNOWN
+from pitwall.technique.rig import ABS_OFF_OR_UNKNOWN, assist_info
 from pitwall.technique.session import NO_SLIP_GAME, Availability, analyse_session, clear_cache
 from pitwall.voice.hub import FAST_INTENTS
 from tests.technique_fixtures import design_to_learned, f1_writer, replay_into
@@ -280,6 +280,24 @@ def test_abs_off_is_claimed_only_when_every_lap_had_it_off(sa: SessionAnalysis) 
     unknown = replace(st, assists=replace(st.assists, abs_unknown_laps=1))
     lock = next(t for _, t, *_ in _slip_facts(unknown) if t.startswith("Lock-ups"))
     assert ABS_OFF_OR_UNKNOWN in lock and "ABS off)" not in lock
+
+
+def test_traction_control_words_follow_the_game_s_scale(sa: SessionAnalysis) -> None:
+    """F1's CarStatus scale is 0 off / 1 medium / 2 full; ACC's TC (Graphics.TC) is a level of its own, up to about 11
+    on a GT3, so an ACC lap at TC 2 (a low setting) is never "full", TC 1 never "medium", TC 5 never "medium" - not on
+    Review › Technique (the assists' note) and not in the engineer's wheelspin fact."""
+    f1_note = "Traction control on (full): it limits wheelspin on the exit."
+    assert assist_info("f1_25", None, [{"traction_control": 2}] * 3).notes == [f1_note]
+    st = analyse_session(sa)
+    f1 = replace(st, assists=replace(st.assists, traction_control=2))
+    assert "(traction control full):" in next(t for _, t, *_ in _slip_facts(f1) if t.startswith("Wheelspin"))
+    for level in (1, 2, 5):
+        (note,) = assist_info("acc", None, [{"traction_control": level}] * 3).notes
+        assert note == f"Traction control at level {level} (the game's own scale): it limits wheelspin on the exit."
+        acc = replace(st, assists=replace(st.assists, traction_control=level), session={**st.session, "game": "acc"})
+        spin = next(t for _, t, *_ in _slip_facts(acc) if t.startswith("Wheelspin"))
+        assert f"(traction control level {level}):" in spin and "full" not in spin and "medium" not in spin, spin
+    assert assist_info("acc", None, [{"traction_control": 0}] * 3).notes == []  # ACC documents no "off" level
 
 
 def test_no_slip_from_the_game_is_said_on_the_radio(sa: SessionAnalysis) -> None:

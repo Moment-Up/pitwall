@@ -91,7 +91,7 @@ export interface SlipHealth {
   available: true;
   /** ABS on (per frame); null = unknown. */
   abs: boolean | null;
-  /** Traction control level at the latest frame: 0 off, 1 medium, 2 full; null = unknown. */
+  /** Traction control at the latest frame on F1's scale: 0 off, 1 medium, 2 full; null = unknown or another game (ACC's level is its own scale). */
   tc: number | null;
   /** false while ABS is on: lock-ups are not counted ("not applicable"), never "0". */
   lockups_applicable: boolean;

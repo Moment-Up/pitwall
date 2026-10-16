@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from pitwall.carhealth.engine import CarHealthEngine
 from pitwall.carhealth.slip import SlipCounter
+from pitwall.model.telemetry import Game
 from pitwall.technique.thresholds import LOCKUP_MIN_S, LOCKUP_SLIP, SPIN_MIN_S, SPIN_SLIP
 from tests.unit.carhealth_helpers import frame, info, model
 
@@ -26,12 +27,22 @@ def _run(
     abs_on: bool | None = False,
     tc: int | None = 1,
     pit: int = 0,
+    game: Game = Game.F1_25,
 ) -> float:
     n = round(seconds * 60)
     for k in range(n):
         c.on_frame(
             frame(
-                t + k / 60, lap=lap, d=d + k, slip=slip, brake=brake, throttle=throttle, abs_on=abs_on, tc=tc, pit=pit
+                t + k / 60,
+                lap=lap,
+                d=d + k,
+                slip=slip,
+                brake=brake,
+                throttle=throttle,
+                abs_on=abs_on,
+                tc=tc,
+                pit=pit,
+                game=game,
             )
         )
     return t + n / 60
@@ -76,6 +87,19 @@ def test_wheelspin_keeps_the_traction_control_of_its_first_frame() -> None:
     last = c.on_line(2, 3)
     assert last is not None and last["wheelspin"] == 2 and last["wheelspin_spoken"] == 1
     assert [e.tc for e in c.last_events] == [2, 1]
+
+
+def test_a_tc_level_on_another_game_s_scale_is_never_read_as_f1_s() -> None:
+    """ACC's TC (Graphics.TC) is a level of its own, up to about 11 on a GT3, not F1's 0 off / 1 medium / 2 full: the
+    counter keeps no level for it (the view's ``tc`` is F1's scale), so ACC wheelspin is shown and never spoken, as
+    with an unknown level - TC 1 is not "medium, speak it"."""
+    for level in (0, 1, 2, 5):
+        c = SlipCounter()
+        t = _run(c, 0.0, SPIN_MIN_S + 0.1, SPIN, throttle=0.9, tc=level, game=Game.ACC)
+        _run(c, t, 0.5, CLEAN, throttle=0.9, tc=level, game=Game.ACC)
+        last = c.on_line(2, 3)
+        assert last is not None and last["wheelspin"] == 1 and last["wheelspin_spoken"] == 0, level
+        assert c.tc is None and [e.tc for e in c.last_events] == [None]
 
 
 def test_pit_lane_frames_never_count_nor_set_the_level() -> None:

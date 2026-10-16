@@ -9,7 +9,9 @@ Per frame with a slip ratio (``technique.thresholds``, never copies):
 * **wheelspin**: a rear wheel at or over ``SPIN_SLIP`` with the throttle at ``SPIN_THROTTLE`` or more for at least
   ``SPIN_MIN_S``. Each event keeps the traction-control level of its first frame: with full traction control
   (``TC_FULL``) the counts are shown, never spoken (recorded: a median of 1 a lap with TC full, 5 with TC medium).
-  The frame's own level is used: the game reports TC 0 in the pit lane.
+  The frame's own level is used: the game reports TC 0 in the pit lane. The level is kept only from an F1 game
+  (``technique.inputs.tc_scale_is_f1``): another game's TC is a scale of its own (ACC's level runs to about 11), so it
+  stays unknown here and its wheelspin is shown, never spoken.
 
 Unlike ``technique.inputs`` (corner exits only), this is the whole lap. Each event is attributed to the learned corner
 segment it started in (``seg_start_m``..``seg_end_m``). A flashback drops the lap's counts. Frames slower than
@@ -27,6 +29,7 @@ from typing import Any
 from pitwall.carhealth import thresholds as T
 from pitwall.carhealth.tyres import racing
 from pitwall.model.telemetry import CarFrame
+from pitwall.technique.inputs import tc_scale_is_f1
 from pitwall.technique.thresholds import (
     LOCKUP_MIN_S,
     LOCKUP_SLIP,
@@ -69,7 +72,7 @@ class SlipCounter:
         self.corner_of = corner_of
         self.seen = False  # a frame carried a slip ratio
         self.abs_on: bool | None = None  # the latest on-track frame's ABS setting
-        self.tc: int | None = None  # the latest on-track frame's traction control
+        self.tc: int | None = None  # the latest on-track frame's traction control (F1's scale; None for other games)
         self.lap: int | None = None
         self._events: list[SlipEvent] = []  # the lap in progress
         self._runs: dict[str, _Run | None] = {"lockup": None, "wheelspin": None}
@@ -100,8 +103,9 @@ class SlipCounter:
             return
         if f.abs_active is not None:
             self.abs_on = f.abs_active
-        if f.traction_control is not None:
-            self.tc = f.traction_control
+        tc = f.traction_control if tc_scale_is_f1(f.game) else None  # another game's level is not F1's 0-2
+        if tc is not None:
+            self.tc = tc
         if prev is not None and t < prev:
             self._close_all()  # the clock went back
         dt = 0.0 if prev is None else min(T.SLIP_MAX_DT_S, max(0.0, t - prev))
@@ -123,7 +127,8 @@ class SlipCounter:
     def _extend(self, kind: str, wheels: list[str], dt: float, f: CarFrame) -> None:
         run = self._runs[kind]
         if run is None:
-            run = self._runs[kind] = _Run(kind, f.lap_distance_m, f.traction_control)
+            tc = f.traction_control if tc_scale_is_f1(f.game) else None
+            run = self._runs[kind] = _Run(kind, f.lap_distance_m, tc)
         run.duration += dt
         run.wheels.update(wheels)
 

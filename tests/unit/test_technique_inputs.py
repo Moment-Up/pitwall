@@ -134,6 +134,24 @@ def test_wheelspin_on_the_exit_carries_the_traction_control_level() -> None:
     assert ci.wheelspin.total_s == pytest.approx(0.4, abs=0.03) and ci.wheelspin.wheels == ["rl", "rr"]
 
 
+def test_the_wheelspin_note_says_the_tc_level_on_the_game_s_own_scale() -> None:
+    """F1's CarStatus scale is 0 off / 1 medium / 2 full. ACC's TC is a level of its own (up to about 11 on a GT3), so
+    ACC's level 2 (a low setting) is never "full" and level 5 never "medium"; an unknown game says the level too."""
+    ref = _inputs(_lap(step), tc=2)
+
+    def spin_note(tc: int, game: str | None) -> str:
+        lap = _inputs(_lap(step, slip={"rl": _pulse(6.2, 6.9, 0.3)}), tc=tc)
+        notes = compare_inputs(lap, ref, Tolerances(0.08, 0.10), game=game)
+        return next(n.text for n in notes if n.metric == "wheelspin")
+
+    assert spin_note(2, "f1_25").endswith("on your reference (traction control full).")
+    assert spin_note(1, "f1_24").endswith("on your reference (traction control medium).")
+    for tc in (1, 2, 5):
+        for game in ("acc", None):
+            text = spin_note(tc, game)
+            assert text.endswith(f"(traction control level {tc}).") and "full" not in text and "medium" not in text
+
+
 def test_missing_slip_channels_are_no_data() -> None:
     ci = _inputs(_lap(step, with_slip=False))
     assert ci.lockup.status == "no_data" and ci.wheelspin.status == "no_data"
