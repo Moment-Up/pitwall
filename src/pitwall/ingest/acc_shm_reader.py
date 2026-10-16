@@ -46,7 +46,9 @@ Other decisions
   ``TORN_RETRIES`` times) when it moved meanwhile; a page that keeps moving is skipped for that poll
   (``torn_reads``). Best effort only: if ACC writes ``packetId`` first, a torn copy cannot be detected this way.
 * **Rate.** ``POLL_S`` = 1/60 s: Kunos rewrites Physics and Graphics once per graphics frame, so the reader samples
-  a 60 Hz stream - enough for braking cues - and each poll costs three ``memcpy`` of < 2 KB.
+  a 60 Hz stream - enough for braking cues - and each poll costs three ``memcpy`` of < 2 KB. The loop keeps its own
+  deadline and sleeps with ``time.sleep`` (high resolution on Windows since Python 3.11; ``Event.wait`` there ends on
+  the 15.6 ms timer tick and would sample at about 32 Hz).
 * **Release probe.** A held view keeps a mapping alive after ACC quits (Windows deletes it with its last handle).
   After ``RELEASE_AFTER_S`` without any change the reader closes its views and opens them again at once: if ACC
   has gone (and no other app holds the pages) they are gone and the state says "ACC not running".
@@ -544,10 +546,21 @@ class AccSharedMemoryReader:
 
     # ------------------------------------------------------------------ thread
     def _run(self) -> None:
+        """Poll on a deadline of its own, sleeping with ``time.sleep``: on Windows that has a high-resolution timer
+        (Python 3.11+) while ``Event.wait`` ends on the 15.6 ms timer tick, which would turn 1/60 s into two ticks
+        (about 32 Hz). A stop is therefore seen within one poll; ``Event.wait`` is kept for the waits without pages."""
         try:
+            due = time.monotonic()
             while not self._stop.is_set():
                 self.poll()
-                self._stop.wait(self.poll_s if self._views is not None else min(self.retry_s, 0.25))
+                if self._views is None:  # no pages (or an error): look again soon, wake at once on stop
+                    self._stop.wait(min(self.retry_s, 0.25))
+                    due = time.monotonic()
+                    continue
+                now = time.monotonic()
+                due = max(due + self.poll_s, now)  # fell behind (a slow handler): no burst to catch up
+                if due > now:
+                    time.sleep(due - now)
         except Exception:  # pragma: no cover - a bug here must not kill the process silently
             log.exception("ACC shared-memory reader crashed")
             self.last_error = "reader thread crashed (see server log)"

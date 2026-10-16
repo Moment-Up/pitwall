@@ -9,6 +9,7 @@ mappings runs only on Windows (bottom of the file).
 from __future__ import annotations
 
 import importlib.util
+import math
 import sys
 import threading
 import time
@@ -506,6 +507,50 @@ def _wait(cond: Callable[[], bool], timeout_s: float = 5.0) -> None:
     while not cond():
         assert time.monotonic() < deadline, "timed out"
         time.sleep(0.002)
+
+
+class _CoarseEvent(threading.Event):
+    """``Event.wait`` as on Windows: CPython waits on a lock with a millisecond kernel timeout that ends on the
+    default 15.625 ms timer tick, so 1/60 s (17 ms) lasts two ticks (31.25 ms). ``time.sleep`` uses a
+    high-resolution timer there since Python 3.11."""
+
+    TICK_S = 1 / 64
+
+    def wait(self, timeout: float | None = None) -> bool:
+        if timeout is None or self.is_set():
+            return super().wait(timeout)
+        return super().wait(math.ceil(timeout / self.TICK_S - 1e-9) * self.TICK_S)
+
+
+def _poll_rate(reader: AccSharedMemoryReader, seconds: float = 1.5) -> float:
+    reader.start()
+    try:
+        _wait(lambda: reader.pages_open)
+        p0, t0 = reader.polls, time.monotonic()
+        time.sleep(seconds)
+        return (reader.polls - p0) / (time.monotonic() - t0)
+    finally:
+        reader.stop()
+
+
+def test_the_reader_samples_at_60_hz_even_where_event_wait_is_coarse() -> None:
+    """The poll loop keeps its own deadline and sleeps with ``time.sleep``, so a Windows-like ``Event.wait`` (the
+    stop signal) cannot halve the documented 60 Hz to about 32 Hz."""
+    mem = FakeAccMemory()
+    mem.start_game()
+    reader = AccSharedMemoryReader(lambda _p: None, opener=mem.opener)
+    reader._stop = _CoarseEvent()
+    rate = _poll_rate(reader)
+    assert 48.0 <= rate <= 66.0, rate
+    assert not reader.running and mem.views_open == 0  # stop still ends the thread and closes the views
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="the real Windows timer: Windows CI only")
+def test_windows_poll_rate_is_about_60_hz() -> None:  # pragma: no cover - Windows CI
+    mem = FakeAccMemory()
+    mem.start_game()
+    rate = _poll_rate(AccSharedMemoryReader(lambda _p: None, opener=mem.opener), seconds=3.0)
+    assert rate >= 50.0, rate
 
 
 def test_bad_arguments_and_pages() -> None:
