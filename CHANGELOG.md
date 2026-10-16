@@ -9,6 +9,8 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
+## v0.5.0 - 2026-10-16
+
 - Assetto Corsa Competizione on PC: Pitwall reads ACC on the gaming PC itself (install it there; nothing to set in
   the game). Partial: generated data and a tester's live checks, no recording yet.
 - ACC gives lap times, the live delta, braking cues, corner coaching, the track map, tyre pressures, brake
