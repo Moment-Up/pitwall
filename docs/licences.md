@@ -157,6 +157,11 @@ users, database-right limits.
 | neW1-/GT7Eng | GPL-3.0-or-later | C | Voice-loop ideas only. **Do not copy.** |
 | mantazzo/F1TV-HUD-Reworked | GPL | C | Consulted for one fact only, during the F2 design (2026-10-12): which 2025 F2 team names belong to the F1 25 team ids 209-219 that EA's document does not list. No code or data was used; Pitwall's names rest on the owner's recording and EA's own order for ids 465-475 (`docs/research/f1-udp-spec.md` section 10, item 19). **Do not copy.** |
 | snipem/gt7dashboard | GPL-3.0-only | C | Lap comparison ideas only. **Do not copy.** |
+| rrennoir/PyAccSharedMemory | MIT | P | ACC: the copy of Kunos' ACC Shared Memory v1.8.12 PDF in it is the one read (Kunos' document, not MIT); its reader was a cross-check of the page sizes only (`docs/research/acc-shared-memory-spec.md` §1) |
+| IkoRein/ACC_ShmemUDP_Relay | none | U | ACC: holds a copy of Kunos' sample header `SharedFileOut.h`; read for two facts only (`#pragma pack(4)`, `trackConfiguration[33]`). **Do not copy.** |
+| alexanderzobnin/grafana-simracing-telemetry | MIT | P | ACC: Ed's starting point for his Physics / Graphics field order (`pkg/acc/sharedmemory`); no code from it remains: Pitwall's layouts are transcribed from Kunos' PDF under Kunos' own field names (machine-checked by `tests/unit/test_acc_protocol.py`) |
+| Dekadee/accshm | MIT | P | ACC: Ed's starting point for his Static field order (`ACCStatic`); no code from it remains, as above |
+| devology-uk/sim-racing-sdk | MIT | P | ACC: offsets in Pitwall's earlier relay research (`docs/research/protocols/windows-shm-relay.md` §4.3); a cross-check only |
 | zetetos/gt-telemetry | MIT | P | Has a decrypted GT7 demo capture + track centrelines (candidate fixture data; check per-file licence before use) |
 | ddm999/gt7info | MIT-0 | P | Car/track ID tables (usable) |
 | SudeshnaPathak/F1_Visualizer | MIT | P | Thin FastF1 wrapper; UI ideas only (turn labels on traces, rotated maps) |
@@ -173,7 +178,9 @@ Details: `docs/research/track-reference-sources.md`.
 | Source | Use | Terms |
 |---|---|---|
 | EA SPORTS F1 25 UDP Specification + 2026 Season Pack spec (forums.ea.com) | F1 packet layouts (formats 2025, 2026) | Published by EA for third-party telemetry apps |
-| Community GT7 / Forza / AC / ACC / iRacing protocol docs | Phase 7 adapters (planned) | See `docs/research/*.md` |
+| Kunos ACC Shared Memory v1.8.12 (official PDF, KUNOS, 2022-03-23; https://www.assettocorsa.net/forum/index.php?threads/acc-shared-memory-documentation.59965/) | ACC page layouts (`adapters/acc/packets.py`), field meanings, enums, car tables | Published by Kunos for third-party apps; no licence stated: the declarations are the interface's facts, the descriptions are paraphrased (`docs/research/acc-shared-memory-spec.md`) |
+| Ed (Pitwall tester): his ACC adapter, reader and track table (`acc-adapter-for-james.patch`, `body-slip-and-cadence-for-james.patch`, 2026-10-14) | The starting point of `adapters/acc/` and `ingest/acc_shm_reader.py`, rebuilt on Kunos' document; his live checks are quoted as a tester's report | Given to the owner for Pitwall; credited in the module docstrings, `docs/status.md` and the changelog |
+| Community GT7 / Forza / AC protocol docs | The GT7, Forza and AC adapters (iRacing: not implemented) | See `docs/research/*.md` |
 
 ## Controls research (Setup › Controls; names and facts only, no code)
 

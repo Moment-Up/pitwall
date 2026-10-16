@@ -306,3 +306,26 @@ def test_generated_page_tests_are_in_the_synthetic_tier() -> None:
             assert "synthetic" in _marks(fn), name
             checked += 1
     assert checked >= 8
+
+
+def test_the_licence_register_records_every_acc_source() -> None:
+    """docs/licences.md (CLAUDE.md: keep it current) names what the ACC adapter was built from and on what terms:
+    Kunos' document, the PDF copy and the reader cross-checked, the unlicensed header copy (facts only), the two
+    community ports Ed started from (none of their code remains), and Ed's own contribution."""
+    register = (ROOT / "docs" / "licences.md").read_text(encoding="utf-8")
+    rows = {line.split("|")[1].strip(): line for line in register.splitlines() if line.startswith("| ")}
+    kunos = next(v for k, v in rows.items() if k.startswith("Kunos ACC Shared Memory v1.8.12"))
+    assert "no licence stated" in kunos and THREAD.split("?")[0] in kunos
+    assert "Phase 7" not in register and not any("ACC" in k and "planned" in v for k, v in rows.items())
+    assert "| MIT | P |" in rows["rrennoir/PyAccSharedMemory"]
+    relay = rows["IkoRein/ACC_ShmemUDP_Relay"]
+    assert "| none | U |" in relay and "Do not copy" in relay
+    for port in ("alexanderzobnin/grafana-simracing-telemetry", "Dekadee/accshm"):
+        assert "| MIT | P |" in rows[port] and "no code from it remains" in rows[port], port
+    ed = next(v for k, v in rows.items() if k.startswith("Ed (Pitwall tester)"))
+    assert "Given to the owner for Pitwall" in ed
+    # what that confirmation rests on: packets.py uses Kunos' own field names (the PDF's), field by field
+    doc = DOC.read_text(encoding="utf-8")
+    for sd in (P.PHYSICS, P.GRAPHICS, P.STATIC):
+        for name, _fmt in sd.fields:
+            assert name.startswith(P.PAD_PREFIX) or f"| {name} |" in doc, name
