@@ -176,9 +176,18 @@ def outputs() -> dict[Path, bytes]:
     }
 
 
+def _same(path: Path, data: bytes) -> bool:
+    """The file holds ``data``; the SVG is text, so a checkout that turned its line ends into CRLF (git on Windows)
+    still matches."""
+    have = path.read_bytes()
+    if path.suffix == ".svg":
+        return have.replace(b"\r\n", b"\n") == data.replace(b"\r\n", b"\n")
+    return have == data
+
+
 def main(argv: list[str]) -> int:
     check = "--check" in argv
-    stale = [p for p, data in outputs().items() if not p.exists() or p.read_bytes() != data]
+    stale = [p for p, data in outputs().items() if not p.exists() or not _same(p, data)]
     html = (ROOT / "web-react" / "index.html").read_text()
     uri = favicon_data_uri()
     if uri not in html:
