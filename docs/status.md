@@ -105,7 +105,10 @@ that **Ed (Pitwall tester)** wrote and sent. **Synthetic only, plus a tester's r
 - **Never "live" when nobody drives.** The reader only opens ACC's pages (it never creates them) and passes on a page
   only when the game moved it on track, plus one page when ACC's state changes: a closed game, the menus, a pause or
   a replay send nothing more, so `/api/health` cannot report a live session and `restart-when-idle` is never held up
-  by an idle ACC (unit-tested on five states with generated pages).
+  by an idle ACC (unit-tested on five states with generated pages). A pause or a replay from the pause menu longer
+  than the idle timeout keeps the session (up to 30 minutes); the menus, quitting or a frozen game still end it.
+- **A selection never stops a drive.** While ACC is being driven, choosing another game (or clearing the choice)
+  leaves the reader reading until the session ends; switching the ACC input off on Connect stops it at once.
 - **Off Windows** ACC can be selected (so the household says what it plays), and Setup › Game, Connect and Drive say
   that Pitwall must run on the gaming PC; no reader starts and nothing is logged as an error.
 - ACC on PS5 and Xbox has no telemetry output.

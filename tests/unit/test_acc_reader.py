@@ -391,8 +391,8 @@ def test_idle_ends_the_session_closes_the_capture_and_rearms(tmp_path: Path) -> 
     rig.drive(30, 2)
     cap = rig.reader.capture
     assert cap is not None and rig.reader.snapshot()["capture"] == str(cap.path)
-    for pid in range(40, 400):  # paused for 6 s: the session ends after idle_timeout_s
-        rig.mem.write(graphics=graphics(pid, PAUSE))
+    for pid in range(40, 400):  # back in the menus for 6 s: the session ends after idle_timeout_s
+        rig.mem.write(graphics=graphics(pid, OFF))
         rig.poll()
     assert rig.idle == 1 and rig.reader.capture is None
     (path,) = tmp_path.glob("*_acc.pwcap")  # closed with the session
@@ -400,13 +400,63 @@ def test_idle_ends_the_session_closes_the_capture_and_rearms(tmp_path: Path) -> 
     assert first.meta.game_hint == R.CAPTURE_GAME_HINT == "acc-shm" and first.meta.source == "acc-shm"
     assert first.meta.extra["protocol"] == R.PROTOCOL and first.meta.extra["layout"].startswith("Kunos")
     data = [p.data for p in first]
-    assert len(data) == 62 and data == [p.data for p in rig.got]  # Static + 30 x (Graphics, Physics) + the pause
+    assert len(data) == 62 and data == [p.data for p in rig.got]  # Static + 30 x (Graphics, Physics) + the menus
     assert "Edward".encode("utf-16-le") not in b"".join(data)  # the player's name never reaches a capture
     rig.drive(3, 500)  # back on track: Static again (the adapter was reset by on_idle), a new capture file
     assert [p.data[: P.TAG_SIZE] for p in rig.got[62:]] == [P.TAG_STATIC] + [P.TAG_GRAPHICS, P.TAG_PHYSICS] * 3
     assert rig.reader.capture is not None
     rig.reader.stop()
     assert rig.reader.capture is None
+
+
+@pytest.mark.parametrize("held", [PAUSE, REPLAY])
+@pytest.mark.parametrize("stepping", [True, False])
+def test_a_pause_or_replay_longer_than_the_idle_timeout_keeps_the_session(held: int, stepping: bool) -> None:
+    """A paused single-player race (or a replay from the pause menu) for minutes is one session: the game is still
+    running, so ``on_idle`` waits while the pages are open and say PAUSE / REPLAY (whether or not ACC keeps stepping
+    ``packetId``). Back on track, the stream goes on without a new Static page or a new capture file."""
+    rig = Rig(idle_timeout_s=5.0)
+    rig.mem.start_game()
+    rig.mem.write(physics(1), graphics(1, OFF), static())
+    rig.poll()
+    rig.drive(30, 2)
+    rig.mem.write(graphics=graphics(40, held))
+    rig.poll()
+    for pid in range(41, 41 + 60 * 120):  # two minutes
+        if stepping:
+            rig.mem.write(graphics=graphics(pid, held))
+        rig.poll()
+    assert rig.idle == 0 and rig.reader.state is AccReaderState.WAITING
+    n = len(rig.got)
+    rig.drive(3, 9000)
+    assert tags([p.data for p in rig.got[n:]]) == [P.TAG_GRAPHICS, P.TAG_PHYSICS] * 3  # same session, no Static
+
+
+def test_a_paused_game_still_ends_its_session_when_it_quits_or_after_the_ceiling() -> None:
+    rig = Rig(idle_timeout_s=5.0)
+    rig.mem.start_game()
+    rig.mem.write(physics(1), graphics(1, OFF), static())
+    rig.poll()
+    rig.drive(10, 2)
+    rig.mem.write(graphics=graphics(20, PAUSE))
+    rig.poll(60 * 8)
+    assert rig.idle == 0
+    rig.mem.quit_game()  # quits while paused: the release probe finds the pages gone, then the session ends
+    rig.poll(round(R.RELEASE_AFTER_S * 60) + 5)
+    assert rig.reader.state is AccReaderState.NOT_RUNNING and rig.idle == 1
+    # left paused and forgotten (or another app keeps the pages, still saying PAUSE): the ceiling ends it
+    rig = Rig(idle_timeout_s=5.0)
+    rig.mem.start_game()
+    rig.mem.write(physics(1), graphics(1, OFF), static())
+    rig.poll()
+    rig.drive(10, 2)
+    rig.mem.write(graphics=graphics(20, PAUSE))
+    rig.poll()
+    rig.poll(1, dt=R.PAUSED_IDLE_S - 10.0)
+    rig.poll()
+    assert rig.idle == 0
+    rig.poll(2, dt=20.0)
+    assert rig.idle == 1
 
 
 def test_stop_closes_every_view_and_the_thread() -> None:

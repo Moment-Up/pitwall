@@ -52,7 +52,12 @@ Other decisions
   has gone (and no other app holds the pages) they are gone and the state says "ACC not running".
 * **Session end.** ``on_idle`` (the runtime: flush the adapter, end the session) runs ``idle_timeout_s`` after
   the last snapshot, exactly like ``UdpListener``; the capture file closes with it (a new file per driving
-  session) and the gate re-arms so the next session gets its Static page again.
+  session) and the gate re-arms so the next session gets its Static page again. Except while the game is paused or
+  showing a replay: a paused game sends nothing (the gate), but it is still running and the race goes on when the
+  driver resumes, so while the pages are open and the latest Graphics status is PAUSE or REPLAY the session waits
+  for ``PAUSED_IDLE_S`` (30 min) instead. ACC going back to its menus (OFF: the adapter ends the session itself),
+  quitting (the release probe finds the pages gone) or freezing on track (status LIVE) still ends it after
+  ``idle_timeout_s``.
 * **Never blocks, never raises.** Copies, capture submit (non-blocking queue) and the handler run on the reader
   thread; handler exceptions are counted (``handler_errors``) and logged, read errors become state ``error`` and
   a retry.
@@ -90,6 +95,7 @@ POLL_S = 1.0 / 60.0  # sample rate of the pages (ACC rewrites them once per grap
 RETRY_S = 2.0  # look for ACC's pages again this often while they do not exist
 RELEASE_AFTER_S = 10.0  # no change for this long: close the views and reopen them (has ACC quit?)
 READING_S = 2.0  # a snapshot younger than this: state "reading" (live.LIVE_S)
+PAUSED_IDLE_S = 1800.0  # paused / in a replay with the pages open: the session ends after this long without a snapshot
 TORN_RETRIES = 2  # extra copies of a page whose packetId moved during the copy
 CAPTURE_GAME_HINT = "acc-shm"  # CaptureMeta.game_hint of every ACC capture (reader and synthetic generator)
 SOURCE = "acc-shm"  # CaptureMeta.source of live ACC captures (and sessions.source, core.runtime.ACC_SOURCE)
@@ -113,6 +119,7 @@ _PRIVATE_SPANS: tuple[tuple[int, int], ...] = tuple(
 _ZERO_STATIC = bytes(P.STATIC_PAGE.size)
 _ID_PAGES = frozenset({"physics", "graphics"})
 _STATUS_WORDS = {int(s): s.name.lower() for s in P.AccStatus}  # 0 off, 1 replay, 2 live, 3 pause
+_HELD = frozenset({int(P.AccStatus.PAUSE), int(P.AccStatus.REPLAY)})  # the game runs on, the session waits
 
 
 def not_windows_text() -> str:
@@ -650,6 +657,8 @@ class AccSharedMemoryReader:
         last = self._last_rx
         if self._idle_notified or last is None or now - last <= self.idle_timeout_s:
             return
+        if self._views is not None and self.gate.status in _HELD and now - last <= PAUSED_IDLE_S:
+            return  # paused or in a replay, the game still running: the race goes on when the driver resumes
         self._idle_notified = True
         self._close_capture()  # a fresh file per driving session
         self.gate.rearm()  # the next session needs Static again (the adapter is reset by on_idle)

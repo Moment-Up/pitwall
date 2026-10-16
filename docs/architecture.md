@@ -127,7 +127,9 @@ ACC has no network telemetry with inputs: Kunos publishes three shared-memory pa
 running", looked for again every 2 s. `AccPageGate` turns page copies into tagged snapshots (`PHYS` / `GRPH` /
 `STAT` + the whole page): Physics on a new `packetId` while ACC is LIVE, Graphics on a change of `packetId` or
 status, Static when its bytes change (player names zeroed first). A closed, frozen, paused or replaying game therefore
-sends nothing new, so `/api/health` never reports a live session for an idle ACC. Snapshots go to their own
+sends nothing new, so `/api/health` never reports a live session for an idle ACC. The session idle timeout waits while
+the pages are open and ACC says PAUSE or REPLAY (up to `PAUSED_IDLE_S`, 30 min), so a long pause is one session; the
+menus (OFF), quitting (the release probe) or a frozen game still end it. Snapshots go to their own
 `PacketRouter` (only `AccAdapter`) and into the session's `.pwcap` like datagrams (game hint `acc-shm`, replayed by
 `pitwall replay`). `core/runtime.py` starts the reader only on Windows and only while the `acc` integration is enabled
 or `acc:pc` is the selected game; elsewhere `input_status` reports `not_windows` with a sentence, and nothing starts.

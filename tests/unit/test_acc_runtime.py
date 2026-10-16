@@ -251,6 +251,30 @@ def test_switching_acc_off_while_it_is_driven_stops_it_at_once(quick: Runtime, m
     assert rt.acc is None and not reader.running
 
 
+@pytest.mark.parametrize("held", [PAUSE, REPLAY])
+def test_a_pause_longer_than_the_idle_timeout_is_one_session(quick: Runtime, mem: FakeAccMemory, held: int) -> None:
+    """A pause (or a replay from the pause menu) longer than ``session_idle_timeout_s`` never splits the race into
+    two sessions; ACC quitting during the pause still ends it."""
+    rt = quick
+    reader = start_driving(rt, mem)
+    assert rt.acc is not None
+    sessions = rt.acc.router.sessions
+    sid = sessions.session_id
+    t_end = time.monotonic() + 1.6  # idle timeout: 1 s
+    pid = 100
+    while time.monotonic() < t_end:
+        mem.write(graphics=graphics(pid, held))
+        pid += 1
+        time.sleep(0.01)
+    assert sessions.session_id == sid
+    drive(reader, mem, range(pid, pid + 10))
+    assert sessions.session_id == sid and rt.live.session_id == sid
+    mem.write(graphics=graphics(pid + 20, held))
+    reader.release_after_s = 0.3  # test speed: look for the pages again sooner (the default is 10 s)
+    mem.quit_game()
+    wait_for(lambda: sessions.session_id is None, timeout_s=5.0)
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="off Windows only")
 def test_off_windows_nothing_starts_and_the_row_says_why(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     r = Runtime(settings_for(tmp_path))  # no test opener: the real platform decides
