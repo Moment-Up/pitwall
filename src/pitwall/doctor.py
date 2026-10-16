@@ -332,10 +332,11 @@ def _tailscale_cli() -> str | None:
 
 
 def _acc_pages() -> str:
-    """Whether ACC's shared-memory pages exist right now (``acc_shm_reader.probe_pages``: open-only, never creates)."""
+    """Whether ACC's shared-memory pages exist right now, and whether ACC is writing them (Graphics' ``packetId``
+    read twice 0.1 s apart): ``acc_shm_reader.probe_pages``, open-only, never creates."""
     from pitwall.ingest.acc_shm_reader import probe_pages
 
-    return probe_pages()
+    return probe_pages(activity_s=0.1)
 
 
 @dataclass(slots=True)
@@ -349,7 +350,7 @@ class Probes:
     has_module: Callable[[str], bool] = _has_module
     lan_ip: Callable[[], str | None] = _lan_ip
     tailscale_cli: Callable[[], str | None] = _tailscale_cli
-    acc_pages: Callable[[], str] = _acc_pages  # present | absent | partial | denied: ... | error: ... | unsupported
+    acc_pages: Callable[[], str] = _acc_pages  # running | present | absent | partial | denied | error | unsupported
 
 
 @dataclass(frozen=True, slots=True)
@@ -965,8 +966,13 @@ def check_acc(ctx: _Ctx) -> Check:
             f"ACC's shared memory exists but cannot be read ({pages}): ACC is probably running as administrator",
             "start Pitwall the same way, or ACC normally",
         )
-    if pages == "present":
-        seen = "ACC is running (its shared memory pages are there)"
+    if pages == "running":
+        seen = "ACC is running (its shared memory pages are changing)"
+    elif pages == "present":  # pages alone are no proof: another app can keep them alive after ACC quit
+        seen = (
+            "ACC's shared memory pages exist but are not changing (ACC in its menus, paused or frozen, or closed "
+            "while another app such as SimHub keeps them open)"
+        )
     elif pages == "absent":
         seen = "ACC is not running (no shared memory pages)"
     else:

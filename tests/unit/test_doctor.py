@@ -998,9 +998,11 @@ def test_acc_is_info_off_windows_and_never_probed(repo: Path) -> None:
     ("sections", "pages", "status", "detail", "fix"),
     [
         ({}, "absent", "info", "ACC input is off; ACC is not running", "uv run pitwall game set acc"),
-        ({}, "present", "info", "ACC input is off; ACC is running", "uv run pitwall game set acc"),
+        ({}, "running", "info", "ACC input is off; ACC is running", "uv run pitwall game set acc"),
+        ({}, "present", "info", "ACC input is off; ACC's shared memory pages exist but are not changing", "game set"),
         (_selected("acc:pc"), "absent", "info", "ACC input is on; ACC is not running", "uv run pitwall serve"),
-        ({"integrations": {"acc": {"enabled": True}}}, "present", "info", "ACC input is on; ACC is running", "serve"),
+        ({"integrations": {"acc": {"enabled": True}}}, "running", "info", "ACC input is on; ACC is running", "serve"),
+        (_selected("acc:pc"), "present", "info", "or closed while another app such as SimHub keeps them", "serve"),
         (_selected("acc:pc"), "denied: [Errno 5] access denied", "warn", "running as administrator", "same way"),
         (_selected("acc:pc"), "error: boom", "info", "could not be checked (error: boom)", "serve"),
     ],
@@ -1013,6 +1015,8 @@ def test_acc_on_windows_without_a_server(
     fake.acc_pages = pages
     c = by_id(run(repo, fake, host=host(repo, "Windows", "AMD64")))["acc"]
     assert (c.status, c.detail.startswith(detail) or detail in c.detail, fix in c.fix) == (status, True, True), c
+    if pages == "present":  # pages alone never prove that ACC runs (another app may keep them after it quit)
+        assert "ACC is running" not in c.detail, c
 
 
 @pytest.mark.parametrize(

@@ -357,27 +357,53 @@ def open_windows_page(name: str, size: int) -> WindowsPageView | None:
     return WindowsPageView(k32, int(handle), int(address), size)
 
 
-def probe_pages(opener: PageOpener | None = None, pages: Sequence[P.Page] = P.PAGES) -> str:
-    """Are ACC's pages there right now (``pitwall doctor``)? Opens each read-only and closes it at once.
+def probe_pages(
+    opener: PageOpener | None = None,
+    pages: Sequence[P.Page] = P.PAGES,
+    *,
+    activity_s: float = 0.0,
+    sleep: Callable[[float], None] = time.sleep,
+) -> str:
+    """Are ACC's pages there right now (``pitwall doctor``)? Opens each read-only and closes them again.
 
     ``present`` (all three), ``absent`` (none), ``partial``, ``denied: <error>``, ``error: <error>``, or
-    ``unsupported`` off Windows. Creates nothing."""
+    ``unsupported`` off Windows. Creates nothing. Pages that exist do not prove that ACC runs: another app (SimHub,
+    Crew Chief...) can keep them alive after it quit. With ``activity_s`` > 0 and all three there, Graphics'
+    ``packetId`` is read twice ``activity_s`` apart: ``running`` when it moved (ACC is writing), else ``present``
+    (in a menu or pause that does not step it, frozen, or closed while another app holds the pages)."""
     if opener is None:
         if not reader_supported():
             return "unsupported"
         opener = open_windows_page
-    found = 0
-    for page in pages:
+    views: dict[str, PageView] = {}
+    try:
+        for page in pages:
+            try:
+                view = opener(page.mapping, page.size)
+            except PermissionError as e:
+                return f"denied: {e}"
+            except (OSError, AccUnavailable) as e:
+                return f"error: {e}"
+            if view is not None:
+                views[page.kind] = view
+        if len(views) != len(pages):
+            return "absent" if not views else "partial"
+        g = views.get("graphics")
+        if activity_s <= 0 or g is None:
+            return "present"
         try:
-            view = opener(page.mapping, page.size)
-        except PermissionError as e:
-            return f"denied: {e}"
-        except (OSError, AccUnavailable) as e:
+            first = g.read(PACKET_ID_OFFSET, 4)
+            sleep(activity_s)
+            moved = g.read(PACKET_ID_OFFSET, 4) != first
+        except (OSError, ValueError) as e:
             return f"error: {e}"
-        if view is not None:
-            found += 1
-            view.close()
-    return "present" if found == len(pages) else "absent" if found == 0 else "partial"
+        return "running" if moved else "present"
+    finally:
+        for view in views.values():
+            try:
+                view.close()
+            except OSError:  # pragma: no cover - closing a view is best effort
+                log.debug("closing an ACC page view failed", exc_info=True)
 
 
 # ---------------------------------------------------------------------------------------------- reader

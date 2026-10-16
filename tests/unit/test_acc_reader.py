@@ -589,6 +589,25 @@ def test_probe_pages_opens_read_only_and_closes() -> None:
     assert probe_pages(mem.opener) == "absent" and not mem.exists(P.STATIC_MAPPING)
 
 
+def test_probe_pages_says_running_only_when_acc_writes() -> None:
+    """Pages that exist are not proof that ACC runs (SimHub or Crew Chief can keep them alive after it quits): with
+    ``activity_s`` the probe reads Graphics' ``packetId`` twice and says ``running`` only when it moved."""
+    mem = FakeAccMemory()
+    mem.start_game()
+    mem.write(physics(1), graphics(1, OFF), static())
+    waits: list[float] = []
+    assert probe_pages(mem.opener, activity_s=0.1, sleep=waits.append) == "present" and waits == [0.1]
+    assert mem.views_open == 0
+
+    def acc_writes(_s: float) -> None:
+        mem.write(graphics=graphics(2, OFF))
+
+    assert probe_pages(mem.opener, activity_s=0.1, sleep=acc_writes) == "running" and mem.views_open == 0
+    assert probe_pages(mem.opener, sleep=acc_writes) == "present"  # no activity check asked for
+    mem.quit_game()
+    assert probe_pages(mem.opener, activity_s=0.1, sleep=acc_writes) == "absent"
+
+
 # ============================================================================================== generator
 def test_generated_stream_is_exactly_what_the_reader_forwards() -> None:
     """The synthetic generator and the reader share the gate: the reader polling the generator's page timeline
