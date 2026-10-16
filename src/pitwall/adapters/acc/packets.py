@@ -25,8 +25,9 @@ Layout rules (from the PDF and Kunos' C sample header ``SharedFileOut.h``, which
 
 Sizes: Physics **800** B, Graphics **1588** B, Static **820** B. The PDF prints no array length for
 ``trackConfiguration`` (a field it marks "Not used in ACC"); Kunos' sample header declares ``wchar_t
-trackConfiguration[33]``, which gives 820. Only fields after it depend on that (``ersMaxJ`` .. ``wetTyresName``), and
-pitwall reads none of them.
+trackConfiguration[33]``, which gives 820. Only fields after it depend on that (``ersMaxJ`` .. ``wetTyresName``). Of
+those pitwall decodes one, ``isOnline`` (684), and trusts it only when ``dryTyresName`` and ``wetTyresName`` (688,
+754) read as names (the adapter's ``static_tail_check``): a different length would move all three.
 
 Pitwall-internal framing (not anything ACC sends): the shared-memory reader copies one whole page per snapshot and
 prefixes a 4-byte ASCII tag - ``PHYS``, ``GRPH`` or ``STAT`` - so a snapshot can travel through the packet router,
@@ -367,7 +368,8 @@ STATIC = StructDef(
         ("engineBrakeSettingsCount", "i"),  # 512 - not used by ACC
         ("ersPowerControllerCount", "i"),  # 516 - not used by ACC
         ("trackSplineLength", "f"),  # 520 - not used by ACC
-        _ws("trackConfiguration", 33),  # 524 - not used by ACC; [33] from the sample header (PDF: no length)
+        _ws("trackConfiguration", 33),  # 524 - not used by ACC; [33] from the sample header (PDF: no length): it moves
+        # every field below; the adapter trusts isOnline only when the tyre names read as names (static_tail_check)
         ("_pad_590", "2s"),  # 590 - alignment
         ("ersMaxJ", "f"),  # 592 - not used by ACC
         ("isTimedRace", "i"),  # 596 - not used by ACC

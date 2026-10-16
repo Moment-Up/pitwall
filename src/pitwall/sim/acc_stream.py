@@ -162,6 +162,8 @@ def static_body(sc: AccScenario, track: TrackGeometry) -> bytes:
             "maxFuel": 120.0,
             "trackSplineLength": track.length_m,
             "isOnline": 0,
+            "dryTyresName": P.encode_wstring("synthetic_dry", 33),  # made up: lets the adapter trust isOnline
+            "wetTyresName": P.encode_wstring("synthetic_wet", 33),
         }
     )
 

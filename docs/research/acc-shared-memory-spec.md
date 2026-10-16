@@ -326,9 +326,9 @@ descriptions here are paraphrased.
 | 40 | 672 | int | reversedGridPositions |  | unused | Reversed-grid positions | - |
 | 41 | 676 | int | PitWindowStart |  | used | Pit window opens | - |
 | 42 | 680 | int | PitWindowEnd |  | used | Pit window closes | - |
-| 43 | 684 | int | isOnline |  | used | Multiplayer session | `SessionInfo.network_game` |
-| 44 | 688 | wchar_t | dryTyresName | [33] | used | Name of the dry tyres | - |
-| 45 | 754 | wchar_t | wetTyresName | [33] | used | Name of the wet tyres | - |
+| 43 | 684 | int | isOnline |  | used | Multiplayer session | `SessionInfo.network_game`, only when 44 and 45 read as names (§6.10) |
+| 44 | 688 | wchar_t | dryTyresName | [33] | used | Name of the dry tyres | check of `isOnline`'s offset (§6.10) |
+| 45 | 754 | wchar_t | wetTyresName | [33] | used | Name of the wet tyres | check of `isOnline`'s offset (§6.10) |
 
 ---
 
@@ -443,7 +443,13 @@ recording confirms them, and `SessionInfo.extra['acc_evidence']` shows the count
    fill it with a value within 3 % of the table (or 1-30 km for an unlisted track). Unlisted tracks: no distance.
 10. **`trackConfiguration` length.** The PDF prints `wchar_t trackConfiguration` with no array length; Kunos' header
     declares `[33]` ([P] reads 33 too). That fixes the Static size at 820 and the offsets of `ersMaxJ` ..
-    `wetTyresName`; pitwall reads none of those, so a different length would not change anything pitwall decodes.
+    `wetTyresName`. One field pitwall decodes sits there: `isOnline` (684, `SessionInfo.network_game`). A different
+    length would move it (two wide characters longer and 684 holds `PitWindowEnd`, which `_flag` would happily read
+    as "offline"), and the `maxRpm` check (§6.12, offset 412) cannot see that because it sits before the field. So
+    pitwall also reads the two tyre names right after it (`dryTyresName` 688, `wetTyresName` 754) and trusts
+    `isOnline` only when both read as plain names (text up to their NUL, nothing undecodable, not empty):
+    `SessionInfo.extra['static_tail_check']` = `tyre_names_read`; otherwise `tyre_names_not_read` and
+    `network_game` stays `None`. Whether ACC fills both names is not known yet (§8).
 11. **Flags and penalties.** `flag` and `penalty` are green in the PDF, but a comment in Kunos' sample header says
     "flag and penalty currently not working". Not mapped until a recording shows them changing.
 12. **Ed's layouts** (superseded): his Static had no padding after `playerNick` and one `tyreRadius` float where
@@ -490,6 +496,8 @@ pit stop; a stretch of straight-line full throttle and hard braking; fast left a
 with a slide and opposite lock. Then compare:
 
 - `SessionInfo.extra['static_layout_check']` = `max_rpm_matches_appendix_7` (the Static layout, §6.12);
+- `SessionInfo.extra['static_tail_check']` = `tyre_names_read` (the tyre names hold text, so `trackConfiguration`
+  is [33] and `isOnline` is read where it sits, §6.10), and `network_game` right for an offline and an online session;
 - `fuel` against the HUD (kg or litres, §6.3);
 - `SessionInfo.extra['acc_evidence']`: every check settled (`verdict` +1/-1), with few `bad` counts (§6.4-6.6);
 - the track map's corner directions and the lap distance at the line against the circuit's length (§6.2, §6.9);

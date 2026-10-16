@@ -105,6 +105,8 @@ def static_page(track: str = "spa", car: str = "mclaren_720s_gt3", **kw: Any) ->
         "sectorCount": 3,
         "maxRpm": 7700,
         "isOnline": 0,
+        "dryTyresName": P.encode_wstring("test_dry", 33),  # made-up names (no real ACC value is known here)
+        "wetTyresName": P.encode_wstring("test_wet", 33),
     }
     values.update(kw)
     return P.encode(P.STATIC_PAGE, values)
@@ -373,6 +375,32 @@ def test_static_layout_is_checked_against_appendix_7() -> None:
     assert info.extra["static_layout_check"] == "max_rpm_differs_from_appendix_7"
     assert sim.a.stats.by_type["max_rpm_differs_from_appendix_7"] == 1
     assert infos(Sim().start(car="ford_mustang_gt3"))[0].extra["static_layout_check"] is None  # not in the PDF
+
+
+def test_is_online_is_trusted_only_when_the_fields_after_it_read_as_names() -> None:
+    """``isOnline`` (684) sits after ``trackConfiguration``, whose [33] comes from Kunos' sample header (the PDF prints
+    no length): it is the one decoded field that length moves, and maxRpm (412, before it) cannot check it. So
+    ``network_game`` follows ``isOnline`` only when the two tyre names after it (688, 754) read as plain names."""
+    for online in (0, 1):
+        info = infos(Sim().start(isOnline=online))[0]
+        assert info.network_game is bool(online) and info.extra["static_tail_check"] == "tyre_names_read"
+    for kw in (
+        {"dryTyresName": bytes(66)},  # no dry tyre name
+        {"wetTyresName": bytes(66)},
+        {"wetTyresName": "\x01\x02".encode("utf-16-le") + bytes(62)},  # not text
+    ):
+        info = infos(Sim().start(isOnline=1, **kw))[0]
+        assert info.network_game is None and info.extra["static_tail_check"] == "tyre_names_not_read", kw
+    # a real page whose trackConfiguration were 2 wchars longer: everything from ersMaxJ on sits 4 bytes later, so
+    # 684 holds PitWindowEnd (0 here) for an online session - never read as "offline"
+    page = static_page(isOnline=1, PitWindowEnd=0)
+    body = page[P.TAG_SIZE :]
+    at = P.field_offsets(P.STATIC)["ersMaxJ"][0]
+    shifted = page[: P.TAG_SIZE] + body[:at] + bytes(4) + body[at:-4]
+    sim = Sim()
+    sim.feed(shifted)
+    info = infos(sim.graphics())[0]
+    assert info.network_game is None and info.extra["static_tail_check"] == "tyre_names_not_read"
 
 
 def test_a_zeroed_static_page_is_ignored() -> None:

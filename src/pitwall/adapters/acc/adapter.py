@@ -241,7 +241,18 @@ FIELDS_READ: dict[str, frozenset[str]] = {
         }
     ),
     "SPageFileStatic": frozenset(
-        {"smVersion", "acVersion", "carModel", "track", "sectorCount", "maxRpm", "trackSplineLength", "isOnline"}
+        {
+            "smVersion",
+            "acVersion",
+            "carModel",
+            "track",
+            "sectorCount",
+            "maxRpm",
+            "trackSplineLength",
+            "isOnline",
+            "dryTyresName",  # only to check isOnline's offset (``_Static.tail_check``)
+            "wetTyresName",
+        }
     ),
 }
 READ_DESPITE_UNUSED: frozenset[tuple[str, str]] = frozenset({("SPageFileStatic", "trackSplineLength")})
@@ -449,7 +460,8 @@ class _Static:
     sector_count: int | None
     max_rpm: int | None
     spline_length_m: float | None  # trackSplineLength when finite and > 0 (Kunos: not used in ACC)
-    is_online: bool | None
+    is_online: bool | None  # isOnline as read; ``network_game`` says whether it can be trusted
+    tyre_names_read: bool  # dryTyresName and wetTyresName both read as plain names (``tail_check``)
 
     @classmethod
     def parse(cls, d: dict[str, Any]) -> _Static:
@@ -463,6 +475,7 @@ class _Static:
             max_rpm=int(d["maxRpm"]) if int(d["maxRpm"]) > 0 else None,
             spline_length_m=spline if spline is not None and spline > 0 else None,
             is_online=_flag(int(d["isOnline"])),
+            tyre_names_read=_plain_name(d["dryTyresName"]) and _plain_name(d["wetTyresName"]),
         )
 
     @property
@@ -490,6 +503,19 @@ class _Static:
         if not self.car_model:
             return None
         return P.CAR_MODELS.get(self.car_model.lower(), self.car_model)
+
+    @property
+    def tail_check(self) -> str:
+        """``isOnline`` (684) is the one decoded field after ``trackConfiguration``, whose [33] comes from Kunos' sample
+        header (the PDF prints no length), and maxRpm (412) sits before it, so ``layout_check`` cannot vouch for it.
+        The two tyre names right after it (688, 754) reading as plain names can: a different length would put
+        ``PitWindowEnd`` or a name's characters at 684 and leave 688 / 754 starting mid-field."""
+        return "tyre_names_read" if self.tyre_names_read else "tyre_names_not_read"
+
+    @property
+    def network_game(self) -> bool | None:
+        """``isOnline`` when the fields after it read as documented (``tail_check``), else unknown."""
+        return self.is_online if self.tyre_names_read else None
 
     @property
     def layout_check(self) -> str | None:
@@ -663,6 +689,16 @@ def slug(text: str) -> str:
 def _finite(v: Any) -> float | None:
     f = float(v)
     return f if math.isfinite(f) else None
+
+
+def _plain_name(raw: bytes) -> bool:
+    """A ``wchar_t[N]`` field that reads as a name: text up to its NUL, nothing in it undecodable or a control
+    character (``decode_wstring`` would drop those), and not empty."""
+    text = P.decode_wstring(raw)
+    if text is None or "\ufffd" in text:
+        return False
+    end = next((i for i in range(0, len(raw) - 1, 2) if raw[i] == 0 and raw[i + 1] == 0), len(raw))
+    return raw[:end].decode("utf-16-le", errors="replace").strip() == text
 
 
 def _flag(raw: int) -> bool | None:
@@ -1245,6 +1281,7 @@ class AccAdapter:
                 sector_count=st.sector_count,
                 track_spline_length_m=st.spline_length_m,
                 static_layout_check=st.layout_check,
+                static_tail_check=st.tail_check,
             )
         stype, sname = session_type_of(s.session_raw)
         condition = None
@@ -1272,7 +1309,7 @@ class AccAdapter:
                 if road is not None and AMBIENT_RANGE_C[0] <= road <= AMBIENT_RANGE_C[1]
                 else None,
             ),
-            network_game=None if st is None else st.is_online,
+            network_game=None if st is None else st.network_game,
             session_time_s=s.clock_s(t),
             extra=extra,
         )
