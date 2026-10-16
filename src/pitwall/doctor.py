@@ -42,6 +42,11 @@ from a running server's ``/api/game``, the detected live game and a mismatch kin
 ``variant``). A server older than game selection answers 404 there: the doctor then reads the selection from
 ``settings.json`` with no detection. The ``game`` check says whether the selected game's input is on.
 
+``acc`` (a check, not a report key): Assetto Corsa Competizione is read from its shared memory on the Windows PC that
+runs it. On Windows the check reports a running Pitwall's ACC reader (reading / waiting / not running / error, and the
+last snapshot), or without a server whether ACC's pages exist right now (opened read-only and closed at once, never
+created); elsewhere it is ``info`` (not available on this computer).
+
 ``server.synthetic`` is true while the packets a running server last received came from the SYNTHETIC demo
 (``pitwall send`` of a simulated capture): that proves the install, not a game, so the ``telemetry`` check is
 ``info`` then, never ``ok``.
@@ -99,7 +104,14 @@ FIREWALL_FIX = (
     rf"powershell -NoProfile -ExecutionPolicy Bypass -File {FIREWALL_PS1} add"
 )
 TAILSCALE_SERVE_FIRST_PORT = 8443  # first port the fix suggests; 443 is often taken: never assume it
-SHORT_NAMES = {"f1": "F1 25", "gt7": "GT7", "forza": "Forza", "ac": "Assetto Corsa", "record": "Recorder"}
+SHORT_NAMES = {
+    "f1": "F1 25",
+    "gt7": "GT7",
+    "forza": "Forza",
+    "ac": "Assetto Corsa",
+    "acc": "ACC",
+    "record": "Recorder",
+}
 NO_GAME: dict[str, Any] = {
     "selected": None,
     "label": None,
@@ -319,6 +331,13 @@ def _tailscale_cli() -> str | None:
     return tailscale_cli()
 
 
+def _acc_pages() -> str:
+    """Whether ACC's shared-memory pages exist right now (``acc_shm_reader.probe_pages``: open-only, never creates)."""
+    from pitwall.ingest.acc_shm_reader import probe_pages
+
+    return probe_pages()
+
+
 @dataclass(slots=True)
 class Probes:
     """Everything the doctor observes about the machine (replaced by fakes in tests)."""
@@ -330,6 +349,7 @@ class Probes:
     has_module: Callable[[str], bool] = _has_module
     lan_ip: Callable[[], str | None] = _lan_ip
     tailscale_cli: Callable[[], str | None] = _tailscale_cli
+    acc_pages: Callable[[], str] = _acc_pages  # present | absent | partial | denied: ... | error: ... | unsupported
 
 
 @dataclass(frozen=True, slots=True)
@@ -747,6 +767,8 @@ def check_udp(ctx: _Ctx) -> list[Check]:
             continue
         cid, title = f"udp_{key}", f"UDP {SHORT_NAMES.get(key, key)}"
         name = SPECS[key].name if key in SPECS else key
+        if key == "acc":  # shared memory on this PC: no port, no IP (the "acc" check reports it)
+            continue
         if not listens(key):  # Assetto Corsa: pitwall contacts the console, nothing to bind here
             ip = row.get("console_ip") if row is not None else configs[key].console_ip if key in configs else None
             if ip:
@@ -844,8 +866,16 @@ def check_game(ctx: _Ctx) -> Check:
     if row is None:
         cfg = resolve_configs(ctx.settings, ctx.store.get("integrations") or {})[key]
         row = cfg.to_dict()
-    enabled = bool(row.get("enabled"))
+    enabled = bool(row.get("enabled")) or key == "acc"  # ACC: the reader runs while ACC is the selected game
     ip = row.get("console_ip") if isinstance(row.get("console_ip"), str) else None
+    if key == "acc" and not ctx.host.is_windows:
+        return _check(
+            "game",
+            title,
+            "warn",
+            f"{label} is selected, but ACC shares its telemetry only on the Windows PC that runs it",
+            "install Pitwall on that PC and start both there (docs/install.md)",
+        )
     if not enabled:
         fix = f"uv run pitwall game set {entry.id}"
         if key == "gt7":  # without an IP the input searches the network: only on an explicit request
@@ -878,8 +908,78 @@ def check_game(ctx: _Ctx) -> Check:
             f"set it if no telemetry arrives: uv run pitwall game set {entry.id} --console-ip <PS5 IP>",
         )
     port = _int(row.get("port"))
-    how = f"contacts {ip}" if key == "ac" else f"UDP {port if port is not None else SPECS[key].default_port}"
+    if key == "ac":
+        how = f"contacts {ip}"
+    elif key == "acc":
+        how = "reads ACC's shared memory on this PC"
+    else:
+        how = f"UDP {port if port is not None else SPECS[key].default_port}"
     return _check("game", title, "ok", f"{label} - {entry.support_words}; input on ({how})")
+
+
+def check_acc(ctx: _Ctx) -> Check:
+    """ACC on this PC: a running Pitwall's reader, else whether ACC's pages exist right now. Never ``fail``: Pitwall
+    works without ACC; ``warn`` only when the pages exist but cannot be read (ACC run as administrator)."""
+    from pitwall.integrations import resolve_configs
+
+    title = "ACC"
+    on_fix = "only if you drive ACC on this PC: uv run pitwall game set acc"
+    if not ctx.host.is_windows:
+        return _check(
+            "acc",
+            title,
+            "info",
+            "Assetto Corsa Competizione is read from its shared memory on the Windows PC that runs it: not available "
+            f"on {'this Mac' if ctx.host.is_mac else 'this computer'}",
+            "only if you drive ACC: run Pitwall on that PC (docs/install.md)",
+        )
+    row: dict[str, Any] | None = None
+    if ctx.server is not None and ctx.server_integrations is not None:
+        row = next((r for r in ctx.server_integrations if r.get("key") == "acc"), None)
+    if row is not None:
+        active = bool(row.get("active", row.get("enabled")))
+        got = row.get("reader")
+        reader: dict[str, Any] = got if isinstance(got, dict) else {}
+        state = reader.get("state")
+        message = _ascii_menu(str(reader.get("message") or state or "unknown")).rstrip(".")
+        if not active:
+            return _check("acc", title, "info", "ACC input is off", on_fix)
+        if row.get("error"):
+            return _check("acc", title, "warn", str(row.get("error")), "see the server log")
+        ago = reader.get("last_rx_s_ago")
+        last = f"; last snapshot {ago:.0f} s ago" if isinstance(ago, int | float) and not isinstance(ago, bool) else ""
+        if state == "reading":
+            return _check("acc", title, "ok", message)
+        if state == "error":
+            return _check("acc", title, "warn", message, "start Pitwall and ACC the same way (both normally)")
+        return _check("acc", title, "info", message + last, "start ACC on this PC and get on track")
+    entry, _state = selected_game(ctx)
+    cfg = resolve_configs(ctx.settings, ctx.store.get("integrations") or {})["acc"]
+    active = cfg.enabled or (entry is not None and entry.integration == "acc")
+    pages = ctx.probes.acc_pages()
+    if pages.startswith("denied"):
+        return _check(
+            "acc",
+            title,
+            "warn",
+            f"ACC's shared memory exists but cannot be read ({pages}): ACC is probably running as administrator",
+            "start Pitwall the same way, or ACC normally",
+        )
+    if pages == "present":
+        seen = "ACC is running (its shared memory pages are there)"
+    elif pages == "absent":
+        seen = "ACC is not running (no shared memory pages)"
+    else:
+        seen = f"ACC's shared memory could not be checked ({pages})"
+    if not active:
+        return _check("acc", title, "info", f"ACC input is off; {seen}", on_fix)
+    return _check(
+        "acc",
+        title,
+        "info",
+        f"ACC input is on; {seen}; no Pitwall running to read it",
+        "start it with: uv run pitwall serve",
+    )
 
 
 def game_report(ctx: _Ctx) -> dict[str, Any]:
@@ -1644,6 +1744,7 @@ def run_doctor(
     checks.append(check_http(ctx))
     checks.extend(check_udp(ctx))
     checks.append(check_game(ctx))
+    checks.append(check_acc(ctx))
     facts: _WinFacts | None = None
     if h.is_windows:
         facts = _windows_facts(ctx, firewall_rule_names(settings.http_port, ctx.udp_ports))

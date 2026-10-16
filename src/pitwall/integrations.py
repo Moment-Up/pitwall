@@ -13,9 +13,13 @@ Integrations sharing a port share one listener whose router auto-detects the pro
 ``can_decode`` must be mutually exclusive - F1 checks its packet-format header, GT7 its decrypted magic, Forza
 its exact datagram sizes, AC its exact sizes 208/212/328/408).
 
-Assetto Corsa is the one integration that does not listen on a fixed port (``IntegrationSpec.listens=False``):
-pitwall registers with the game (``ingest.ac_client.AcRemoteClient``, ephemeral local port, handshake to the
-console's UDP 9996), so its ``port`` is the *game's* port, never bound here and never part of a port conflict.
+Two integrations do not listen on a port (``IntegrationSpec.listens=False``). Assetto Corsa: pitwall registers with
+the game (``ingest.ac_client.AcRemoteClient``, ephemeral local port, handshake to the console's UDP 9996), so its
+``port`` is the *game's* port, never bound here and never part of a port conflict. Assetto Corsa Competizione: no
+network at all - pitwall reads the game's shared memory on the PC that runs both
+(``ingest.acc_shm_reader.AccSharedMemoryReader``, Windows only); its ``port`` is ``ACC_NO_PORT`` (0). The ACC reader
+runs when the integration is enabled *or* ACC is the selected game (``games.SECTION``), and only on Windows
+(``core.runtime.Runtime._apply_acc``).
 """
 
 from __future__ import annotations
@@ -46,6 +50,7 @@ RECORD_DEFAULT_PORT = 7576  # Project Motor Racing's default UDP port
 AC_GAME_PORT = 9996  # AC's in-session telemetry server (the client sends here; nothing binds it on this Mac)
 AC_PLATFORMS = ("ps5", "ps4", "pc")  # what runs the game: the wire cannot tell (see adapters/ac)
 AC_DEFAULT_PLATFORM = "ps5"
+ACC_NO_PORT = 0  # ACC: shared memory on this PC, no port at all (IntegrationConfig.port is an int)
 CAPTURE_ONLY = frozenset({"record"})  # integrations without a decoder
 # Common local-dev ports (LM Studio, postgres, llama.cpp, ...): refused for every user so a game listener never
 # takes a port another local service is likely to use.
@@ -106,6 +111,18 @@ SPECS: dict[str, IntegrationSpec] = {
         "community_documented (PS4, PC)",
         listens=False,
     ),
+    # Kunos' shared memory, read on the gaming PC (Windows): nothing to set in the game, no IP, no port. Built from
+    # Kunos' official document and tested with generated pages; Ed (Pitwall tester)'s live checks are a tester's report.
+    "acc": IntegrationSpec(
+        "acc",
+        "Assetto Corsa Competizione (PC, shared memory)",
+        ("PC",),
+        ACC_NO_PORT,
+        False,
+        False,
+        "partial (PC)",
+        listens=False,
+    ),
     # No decoder: records every datagram to a .pwcap so a new game's real output can be studied and a decoder
     # written and tested against it (Project Motor Racing on PS5 sends to 7576 by default).
     "record": IntegrationSpec(
@@ -148,6 +165,7 @@ def _defaults(settings: Settings) -> dict[str, IntegrationConfig]:
         "gt7": IntegrationConfig("gt7", gt7_enabled, GT7_RECEIVE_PORT, gt7_ip, settings.gt7_variant),
         "forza": IntegrationConfig("forza", settings.forza_enabled, settings.forza_udp_port),
         "ac": IntegrationConfig("ac", False, AC_GAME_PORT, platform=AC_DEFAULT_PLATFORM),
+        "acc": IntegrationConfig("acc", False, ACC_NO_PORT),
         "record": IntegrationConfig("record", False, RECORD_DEFAULT_PORT),
     }
 
@@ -182,6 +200,8 @@ def validate_update(key: str, values: Mapping[str, Any]) -> dict[str, Any]:
                 raise ValueError("F1 is the primary integration and cannot be switched off here")
             clean[k] = v
         elif k == "port":
+            if key == "acc":
+                raise ValueError(f"{spec.name}: no port - Pitwall reads ACC's shared memory on this PC; nothing to set")
             if not spec.listens:
                 raise ValueError(f"{spec.name}: pitwall talks to the game's port {spec.default_port}; nothing to set")
             if not spec.port_editable:
@@ -265,7 +285,8 @@ def ac_platform(cfg: IntegrationConfig) -> Platform:
 
 
 def listens(key: str) -> bool:
-    """Whether this integration binds its ``port`` on this Mac (AC does not: its client uses an ephemeral port)."""
+    """Whether this integration binds its ``port`` on this machine (AC does not: its client uses an ephemeral port;
+    ACC does not either: it reads shared memory)."""
     spec = SPECS.get(key)
     return spec is not None and spec.listens
 
@@ -295,6 +316,7 @@ def adapters_for(
     ``ac_platform`` is what runs AC (the wire cannot tell PS4/PS5 from PC).
     """
     from pitwall.adapters.ac.adapter import AcAdapter
+    from pitwall.adapters.acc.adapter import AccAdapter
     from pitwall.adapters.f1.adapter import F1Adapter
     from pitwall.adapters.forza.adapter import ForzaAdapter
     from pitwall.adapters.gt7.adapter import GT7Adapter
@@ -308,7 +330,9 @@ def adapters_for(
         out.append(GT7Adapter(known_track_ids=known.get("gt7", ())))
     if "forza" in wanted:
         out.append(ForzaAdapter(known_track_ids=known.get("forza", ())))
-    if "ac" in wanted:  # last: exact-size detection only, so every header/magic check runs first
+    if "acc" in wanted:  # a 4-byte tag (PHYS/GRPH/STAT) + an exact page size: shared-memory snapshots, never UDP
+        out.append(AccAdapter())
+    if "ac" in wanted:  # last: exact-size detection only, so every header/magic/tag check runs first
         out.append(AcAdapter(platform=ac_platform, known_tracks=ac_tracks))
     return out
 

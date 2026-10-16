@@ -16,6 +16,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from pitwall.adapters.ac.adapter import AC_INFO
+from pitwall.adapters.acc.adapter import ACC_INFO
 from pitwall.adapters.base import AdapterInfo, SupportLevel
 from pitwall.adapters.f1.adapter import F1_25_INFO
 from pitwall.adapters.forza.adapter import FORZA_HORIZON_INFO, FORZA_MOTORSPORT_INFO
@@ -31,6 +32,7 @@ ADAPTER_INFOS: dict[Game, AdapterInfo] = {
     Game.FORZA_MOTORSPORT: FORZA_MOTORSPORT_INFO,
     Game.FORZA_HORIZON: FORZA_HORIZON_INFO,
     Game.AC: AC_INFO,
+    Game.ACC: ACC_INFO,
 }
 
 
@@ -218,17 +220,23 @@ PLANNED: list[CapabilityRow] = [
         adapter_game=None,
         no_output=True,
     ),
+    # Implemented (feat/acc): the reader and adapter exist; the row stays PARTIAL until a recorded ACC capture
+    # (tests/fixtures/recorded) confirms them. Ed (Pitwall tester)'s live checks are a tester's report.
     CapabilityRow(
         "acc_pc",
         "Assetto Corsa Competizione",
         "PC",
-        "Shared memory + Broadcasting API (UDP 9000)",
+        "Windows shared memory, read on the gaming PC (Pitwall runs there)",
         S.PARTIAL,
-        False,
-        "Shared memory is local to the gaming PC: needs a reader there (Pitwall on that PC, or a relay to a Mac); "
-        "not implemented. Broadcasting API lacks inputs.",
+        True,
+        "Pitwall reads ACC's shared memory on the PC that runs the game (it opens Kunos' three pages read-only and "
+        "never creates them), decoded from Kunos' official ACC Shared Memory v1.8.12 and tested with generated "
+        "pages only. Ed (Pitwall tester) checked pedals, steering and speed live at Spa (2026-10-09) and the track "
+        "and car names, gear and steering sign at Brands Hatch (2026-10-13) with his own build: a tester's report, "
+        "not a Pitwall recording. No recorded ACC session yet. The Broadcasting API (UDP 9000) is not used: it "
+        "lacks inputs.",
         platform_ids=("pc",),
-        adapter_game=None,
+        adapter_game=Game.ACC,
     ),
     CapabilityRow(
         "acc_console",

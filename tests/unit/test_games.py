@@ -137,7 +137,8 @@ def test_short_labels_and_entry_words() -> None:
     assert words["ac:ps5"] == "Tested on a recording"
     assert words["gt7:ps4"] == words["ac:pc"] == "Built from community docs"
     assert words["forza_horizon:ps5"] == "Unverified"
-    assert words["acc:pc"] == words["iracing:pc"] == "Not in Pitwall yet"
+    assert words["iracing:pc"] == "Not in Pitwall yet"
+    assert words["acc:pc"] == "Partial"  # a reader exists; the row stays partial until a recorded ACC session
     assert words["acc:ps5"] == words["ac:xbox"] == words["f1_24:any"] == "Not supported"
     assert words["other:any"] == "Records packets only"
     readme = (Path(__file__).resolve().parents[2] / "README.md").read_text(encoding="utf-8")
@@ -148,6 +149,8 @@ def test_short_labels_and_entry_words() -> None:
     assert summaries["gt7:ps5"].startswith("Checked end to end with the real game")
     assert summaries["gt7:ps4"].startswith("Built from community documentation")  # no PS4 tested
     assert summaries["acc:ps5"] == "ACC on PS5 has no telemetry output."
+    assert summaries["acc:pc"] == games.PARTIAL_IMPLEMENTED_SUMMARY  # never the "no reader yet" sentence
+    assert "no reader" not in summaries["acc:pc"] and "generated data" in summaries["acc:pc"]
     assert summaries["other:any"].startswith("Pitwall doesn't know what this game sends")
     assert all("Connect page" not in v for v in summaries.values())
 
@@ -157,12 +160,12 @@ def test_integrations_guides_and_rig() -> None:
     assert {e.id for e in games.entries() if e.integration is None} == {
         "f1_24:any",
         "ac:xbox",
-        "acc:pc",
         "acc:ps5",
         "acc:xbox",
         "iracing:pc",
     }
     assert by["other:any"].integration == "record" and by["other:any"].guide_id == "record"
+    assert by["acc:pc"].integration == "acc" and by["acc:pc"].guide_id == "acc"  # shared memory on the gaming PC
     assert by["f1_25_2026:xbox"].integration == "f1" and by["f1_25_2026:xbox"].guide_id == "f1_25"
     assert by["f1_25:ps5"].rig() == {"game": "f1_25", "platform": "ps5"}
     assert by["f1_25:xbox"].rig() == {"game": "f1_25", "platform": None}
@@ -275,8 +278,13 @@ def test_platform_and_variant_profiles() -> None:
     }
     for eid in ("acc:ps5", "acc:xbox", "ac:xbox"):
         assert set(profile(eid).values()) == {"NS"}, eid
-    for eid in ("acc:pc", "iracing:pc", "f1_24:any"):
+    for eid in ("iracing:pc", "f1_24:any"):
         assert set(profile(eid).values()) == {"NI"}, eid
+    acc = profile("acc:pc")  # implemented, but no feature is claimed stronger than the row's "partial"
+    assert all(v in ("NS", "NI", "U") or v.endswith("·part") for v in acc.values()), acc
+    assert acc["lap_timing"] == acc["tyre_pressures"] == "S·part"
+    assert acc["braking_cues"] == "P·part"  # lap distance from a track length Pitwall has to know
+    assert acc["fuel"] == "U"  # Kunos says kg, the game shows litres: unknown, not "sent"
     assert set(profile("other:any").values()) == {"U"}
 
 
@@ -436,6 +444,7 @@ def _old_key(r: Any) -> tuple[str, str]:
     return (r.game, GT7_OLD_PLATFORM if r.key in GT7_ROWS else r.platform)
 
 
+ACC_ROW = "acc_pc"  # feat/acc: implemented with Kunos' shared memory (ingest/acc_shm_reader.py, adapters/acc/)
 RACE_RADIO_ABSENT = ("fia_flags", "penalties", "participants")  # race radio: declared "not sent" for every other game
 
 
@@ -520,6 +529,13 @@ def test_capability_matrix_golden() -> None:
         assert n.pop("key") == r.key and isinstance(n.pop("platform_ids"), list)
         classes = n.pop("car_classes", None)  # F2 support: the car class rows ride the F1 rows (an addition)
         assert (classes is not None) is (r.adapter_game is Game.F1_25), r.key
+        if r.key == ACC_ROW:  # feat/acc: the reader and adapter exist; the status stays partial (no recording yet)
+            assert (o["implemented"], n["implemented"], o["fields"]) == (False, True, None)
+            assert set(n["fields"]) == set(ADAPTER_INFOS[Game.ACC].fields)
+            assert (o["status"], n["status"]) == ("partial", "partial")
+            assert "not implemented" in o["notes"] and "tester's report" in n["notes"]
+            assert "Broadcasting" in o["transport"] and "shared memory" in n["transport"]
+            n.update(implemented=False, fields=None, notes=o["notes"], transport=o["transport"])
         if n["fields"] is not None:  # section 2.2 declarations are the only additions (levels: the test above)
             n["fields"] = {k: v for k, v in n["fields"].items() if k in o["fields"]}
         o = {**o, "notes": o["notes"].replace(" Enable on the Connect page.", "")}  # stale since game selection
@@ -557,7 +573,9 @@ def test_capability_matrix_golden() -> None:
         (("ac", None, None, "ac:ps5", "pc"), "ac:pc"),  # the input is set to PC: that is the entry in use
         (("forza_horizon", None, None, None), "forza_horizon:xbox"),  # FH on PS5 is in "more": never a guess
         (("forza_horizon", "unknown", None, None), "forza_horizon:xbox"),
-        (("acc", "pc", None, None), None),  # not implemented: never a detection
+        (("acc", "pc", None, None), "acc:pc"),  # the shared-memory reader: PC only
+        (("acc", None, None, None), "acc:pc"),
+        (("iracing", "pc", None, None), None),  # not implemented: never a detection
         (("synthetic", None, None, None), None),
         ((None, None, None, None), None),
     ],

@@ -12,6 +12,9 @@ source port is copied unchanged, so decoders see the same packets as before.
 - **Assetto Corsa remote UDP** (``docs/research/protocols/ac-remote-udp.md``; captures with
   ``game_hint == "ac-remote"``): ``driverName`` in the handshake reply (408 B ``wchar_t[50]`` or 208 B
   ``char[50]``) and in RTLap (212 B ``wchar_t[50]``) becomes ``Player``.
+- **Assetto Corsa Competizione** (``docs/research/acc-shared-memory-spec.md``; captures with
+  ``game_hint == "acc-shm"``): ``playerName``, ``playerSurname`` and ``playerNick`` (``wchar_t[33]``) in the Static
+  snapshots (``STAT``) become ``Player``. Pitwall's reader already zeroes them, so its own captures have none.
 - **Gran Turismo 7** (``docs/research/gt7-protocol.md``; any datagram that decrypts with a GT7 magic): nothing to
   rewrite - GT7 sends no names. Every field is a number except, on variant C, the four surface letters (0x158) and
   the car category (0x16C); a packet whose text fields hold anything but those documented values is reported and
@@ -53,10 +56,13 @@ from typing import Any
 import zstandard
 
 from pitwall.adapters.ac import packets as ac
+from pitwall.adapters.acc import packets as acc
 from pitwall.adapters.f1 import packets as f1
 from pitwall.adapters.gt7 import packets as gt7
 from pitwall.adapters.structdef import StructDef
 from pitwall.ingest.ac_client import CAPTURE_GAME_HINT as AC_GAME_HINT
+from pitwall.ingest.acc_shm_reader import CAPTURE_GAME_HINT as ACC_GAME_HINT
+from pitwall.ingest.acc_shm_reader import PRIVATE_STATIC_FIELDS as ACC_NAME_FIELDS
 from pitwall.ingest.capture import MAGIC, CapturedPacket, CaptureMeta, CaptureReader, CaptureWriter
 
 PLAYER = "Player"
@@ -173,6 +179,26 @@ def scrub_ac(data: bytes, stats: Stats, index: int) -> bytes | None:
     return bytes(buf)
 
 
+def scrub_acc(data: bytes, stats: Stats, index: int) -> bytes | None:
+    """Scrub one ACC shared-memory snapshot; ``None`` if ``data`` is not one (tag + exact page size)."""
+    page = acc.page_of(data)
+    if page is None:
+        return None
+    if page is not acc.STATIC_PAGE:
+        return data  # Physics / Graphics: no names
+    buf = bytearray(data)
+    for name in ACC_NAME_FIELDS:
+        off, width = _field(acc.STATIC, name)
+        start = acc.TAG_SIZE + off
+        old = _rewrite(buf, start, width, PLAYER, 2, "utf-16-le", (0,))
+        if old is not None:
+            stats.fields[f"acc_static_{name}"] += 1
+            stats.regions.append((index, start, start + width))
+            if not NEUTRAL.match(old.decode("utf-16-le", errors="replace")):
+                stats.originals.add(old)
+    return bytes(buf)
+
+
 # GT7 variant C text (docs/research/gt7-protocol.md section 7): surface letters T, C, D, G, S, s per wheel; car
 # category GR1..GR4, GRB, GRN, GRX. NUL bytes: not set (menus, loading).
 _GT7_SURFACE = re.compile(rb"[TCDGSs\x00]{4}")
@@ -282,13 +308,17 @@ def scrub(source: Path, dest: Path | None, *, level: int, write: bool) -> Stats:
     reader = CaptureReader(source)
     stats = Stats()
     is_ac = reader.meta.game_hint == AC_GAME_HINT
+    is_acc = reader.meta.game_hint == ACC_GAME_HINT
     src_packets = list(reader)
     if reader.truncated:
         raise SystemExit(f"{source} is truncated; refusing to rewrite it")
     scrubbed: list[CapturedPacket] = []
     for i, pk in enumerate(src_packets):
-        new = scrub_ac(pk.data, stats, i) if is_ac else scrub_f1(pk.data, stats, i)
-        if new is None and not is_ac:
+        if is_acc:
+            new = scrub_acc(pk.data, stats, i)
+        else:
+            new = scrub_ac(pk.data, stats, i) if is_ac else scrub_f1(pk.data, stats, i)
+        if new is None and not is_ac and not is_acc:
             new = scrub_gt7(pk.data, stats)
         if new is None:
             stats.not_inspected += 1

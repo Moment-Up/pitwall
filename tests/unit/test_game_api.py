@@ -27,8 +27,8 @@ LEVELS = {
 PLATFORMS = {"ps5", "ps4", "xbox", "pc", "any"}
 STATUSES = {"supported", "partial", "not_sent", "not_implemented", "unknown"}
 GROUPS = {"timing", "coaching", "track", "car", "session", "setup_radio"}
-INTEGRATIONS = {"f1", "gt7", "forza", "ac", "record"}
-KINDS = {"udp_listen", "udp_heartbeat", "udp_client", "none"}
+INTEGRATIONS = {"f1", "gt7", "forza", "ac", "acc", "record"}
+KINDS = {"udp_listen", "udp_heartbeat", "udp_client", "shared_memory", "none"}
 ACTIONS = {
     "enabled",
     "already_enabled",

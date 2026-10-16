@@ -105,6 +105,11 @@ SUPPORT_SUMMARY: dict[SupportLevel, str] = {
     S.UNVERIFIED: "Nobody has confirmed that this version sends telemetry.",
     S.UNSUPPORTED: "Pitwall can't read this game's telemetry.",
 }
+# PARTIAL with a reader (ACC on PC): SUPPORT_SUMMARY[PARTIAL] describes a game Pitwall cannot read yet.
+PARTIAL_IMPLEMENTED_SUMMARY = (
+    "Pitwall reads part of what this game sends, built from the game's official documentation and tested with "
+    "generated data; not yet checked with the real game on this platform."
+)
 OTHER_SUMMARY = (
     "Pitwall doesn't know what this game sends. It can record its packets so a decoder can be written later."
 )
@@ -130,7 +135,7 @@ _GAMES: dict[str, _GameText] = {
     "forza_motorsport": _GameText("Forza Motorsport (2023)", "Forza M", "Forza Motorsport", "forza", "forza"),
     "forza_horizon": _GameText("Forza Horizon 4 / 5", "Forza H", "Forza Horizon", "forza", "forza"),
     "ac": _GameText("Assetto Corsa", "AC", "Assetto Corsa", "ac", "ac"),
-    "acc": _GameText("Assetto Corsa Competizione", "ACC", "ACC", None, None),
+    "acc": _GameText("Assetto Corsa Competizione", "ACC", "ACC", "acc", "acc"),
     "iracing": _GameText("iRacing", "iRacing", "iRacing", None, None),
     "other": _GameText("Another game", "Other", "this game", "record", "record"),
 }
@@ -492,6 +497,8 @@ class GameEntry:
             return OTHER_SUMMARY
         if not self.implemented:
             return self.feature("lap_timing").reason
+        if lvl is S.PARTIAL:
+            return PARTIAL_IMPLEMENTED_SUMMARY
         return SUPPORT_SUMMARY[lvl]
 
     @property
@@ -903,6 +910,16 @@ def transport(integration: str | None, configs: Mapping[str, IntegrationConfig] 
             "required",
             False,
         )
+    if integration == "acc":
+        return _transport(
+            "shared_memory",
+            "Pitwall reads ACC's shared memory on the Windows PC that runs the game: nothing to set in the game. "
+            "Start Pitwall and ACC on the same PC.",
+            None,
+            None,
+            "no",
+            False,
+        )
     if integration == "record":
         p = port("record")
         return _transport(
@@ -1201,16 +1218,18 @@ def snapshot_block(
 
 # ---------------------------------------------------------------------------------------------- inputs
 def busy(row: Mapping[str, Any] | None) -> bool:
-    """The input received a packet in the last ``BUSY_S`` seconds (a source, or the AC client)."""
+    """The input received a packet in the last ``BUSY_S`` seconds (a source, the AC client or the ACC reader)."""
     if not row:
         return False
     for src in row.get("sources") or ():
         age = src.get("last_seen_s") if isinstance(src, Mapping) else None
         if isinstance(age, int | float) and age < BUSY_S:
             return True
-    client = row.get("client")
-    age = client.get("last_rx_s_ago") if isinstance(client, Mapping) else None
-    return isinstance(age, int | float) and age < BUSY_S
+    for block in (row.get("client"), row.get("reader")):  # AC client / ACC shared-memory reader
+        age = block.get("last_rx_s_ago") if isinstance(block, Mapping) else None
+        if isinstance(age, int | float) and not isinstance(age, bool) and age < BUSY_S:
+            return True
+    return False
 
 
 def receiving(row: Mapping[str, Any] | None) -> bool:
@@ -1235,7 +1254,7 @@ def game_input(e: GameEntry | None, rows: Sequence[Mapping[str, Any]] | None) ->
     ip = row.get("console_ip")
     platform = row.get("platform") if key == "ac" else None
     port = row.get("port") if listens(key) else None
-    return {
+    out: dict[str, Any] = {
         "key": key,
         "name": SPECS[key].name,
         "enabled": bool(row.get("enabled")),
@@ -1248,6 +1267,11 @@ def game_input(e: GameEntry | None, rows: Sequence[Mapping[str, Any]] | None) ->
         "error": row.get("error") if isinstance(row.get("error"), str) else None,
         "in_use": receiving(row),  # "Receiving" only for decoded telemetry
     }
+    if key == "acc":  # the shared-memory reader: active (enabled or selected), state and sentence (not_windows ...)
+        out["active"] = bool(row.get("active"))
+        reader = row.get("reader")
+        out["reader"] = dict(reader) if isinstance(reader, Mapping) else None
+    return out
 
 
 def other_inputs(e: GameEntry | None, rows: Sequence[Mapping[str, Any]] | None) -> list[dict[str, Any]]:
@@ -1302,7 +1326,22 @@ def game_state(
 
 
 # ---------------------------------------------------------------------------------------------- selecting a game
-SHORT_INPUT = {"f1": "F1 25", "gt7": "GT7", "forza": "Forza", "ac": "Assetto Corsa", "record": "Recorder"}
+SHORT_INPUT = {
+    "f1": "F1 25",
+    "gt7": "GT7",
+    "forza": "Forza",
+    "ac": "Assetto Corsa",
+    "acc": "ACC",
+    "record": "Recorder",
+}
+ACC_HOW = (
+    "Pitwall reads ACC's shared memory on the PC that runs the game: nothing to set in the game. Start ACC and get "
+    "on track."
+)
+ACC_NEEDS_WINDOWS = (
+    "ACC shares its telemetry only on the Windows PC that runs it: install Pitwall on that PC and start both there "
+    "({machine} can't read it)."
+)
 GT7_NEEDS_IP = (
     "Enter the {platform}'s IP address to switch the GT7 input on. Without one, Pitwall can search the network for "
     "the console instead: Search the network on Setup › Game, or switch GT7 on at Setup › Connect."
@@ -1352,6 +1391,8 @@ def ensure_input(
     cfg = resolve_configs(settings, store.get(INTEGRATIONS_SECTION))[key]
     name = SHORT_INPUT[key]
     row = next((r for r in rows or () if r.get("key") == key), None)
+    if key == "acc":
+        return _ensure_acc(settings, store, cfg.enabled)
     if key == "f1":
         msg = f"The F1 25 input is always on (UDP {cfg.port})."
         if e.variant == "2026":
@@ -1407,6 +1448,38 @@ def ensure_input(
             )
         )
     return actions
+
+
+def _ensure_acc(settings: Settings, store: SettingsStore, enabled: bool) -> list[dict[str, Any]]:
+    """ACC: switch the shared-memory input on (no IP, no port, nothing in the game); off Windows say why it can't
+    work here. Switching it on never touches a running input: the reader starts with the selection anyway."""
+    from pitwall.compat import is_windows
+    from pitwall.integrations import PortConflict, apply_update
+
+    actions: list[dict[str, Any]] = []
+    if enabled:
+        actions.append(_action("acc", "already_enabled", f"The ACC input is on. {ACC_HOW}"))
+    else:
+        try:
+            apply_update(settings, store, "acc", {"enabled": True})
+        except (PortConflict, ValueError) as err:
+            return [_action("acc", "error", str(err))]
+        actions.append(_action("acc", "enabled", f"ACC input switched on. {ACC_HOW}"))
+    if not is_windows():
+        actions.append(_action("acc", "needs_windows", ACC_NEEDS_WINDOWS.format(machine=this_machine())))
+    return actions
+
+
+def entry_for_game_key(key: str) -> GameEntry | None:
+    """The one implemented entry of a game key (``acc`` -> ``acc:pc``: consoles have no ACC telemetry); None when the
+    key has none or several (``gt7``: PS5 or PS4, the platform must be chosen)."""
+    found = [e for e in entries() if e.game_key == key and e.implemented]
+    return found[0] if len(found) == 1 else None
+
+
+def entries_for_game_key(key: str) -> list[GameEntry]:
+    """Every entry of a game key, in catalogue order (``pitwall game set gt7``: "did you mean gt7:ps5 or ...")."""
+    return [e for e in entries() if e.game_key == key]
 
 
 # ---------------------------------------------------------------------------------------------- engineer / radio

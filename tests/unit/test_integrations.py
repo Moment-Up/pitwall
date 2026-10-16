@@ -148,6 +148,7 @@ _INTEGRATION_GAMES = {
     "gt7": {Game.GT7},
     "forza": {Game.FORZA_MOTORSPORT, Game.FORZA_HORIZON},
     "ac": {Game.AC},
+    "acc": {Game.ACC},
 }
 
 
@@ -269,7 +270,7 @@ def test_integrations_api(settings: Settings, monkeypatch: pytest.MonkeyPatch) -
         clash = c.put("/api/integrations/forza", json={"enabled": True, "port": s.f1_udp_port})
         assert clash.status_code == 409
         info = c.get("/api/connect").json()
-        assert {r["key"] for r in info["integrations"]} == {"f1", "gt7", "forza", "ac", "record"}
+        assert {r["key"] for r in info["integrations"]} == {"f1", "gt7", "forza", "ac", "acc", "record"}
         assert next(g for g in info["guides"] if g["id"] == "gt7")["supported"]
         # Assetto Corsa: only private LAN addresses are accepted; the guide's probe command uses the saved IP
         for bad in ("8.8.8.8", "100.100.1.1", "127.0.0.1", "192.168.1.255"):

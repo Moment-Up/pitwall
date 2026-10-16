@@ -147,9 +147,16 @@ def send(
     speed: Annotated[float, typer.Option(help="Playback speed; 1.0 = original timing")] = 1.0,
 ) -> None:
     """Stream a capture over real UDP (emulates a console sending telemetry; exercises the live path)."""
+    from pitwall.ingest.acc_shm_reader import CAPTURE_GAME_HINT as ACC_HINT
     from pitwall.ingest.capture import CaptureReader
 
     reader = CaptureReader(path)
+    if reader.meta.game_hint == ACC_HINT:
+        typer.echo(
+            "this is an ACC capture (shared-memory snapshots, not UDP packets): replay it with uv run pitwall replay",
+            err=True,
+        )
+        raise typer.Exit(2)
     if reader.meta.synthetic:
         typer.echo("note: this capture is SYNTHETIC")
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -538,11 +545,14 @@ def _older_server(version: str) -> typer.Exit:
 
 
 def _entry_or_bad(entry_id: str) -> Any:
+    """A catalogue id, or a game key with a single readable entry (``acc`` -> ``acc:pc``)."""
     from pitwall import games
 
-    e = games.entry(entry_id)
+    e = games.entry(entry_id) or games.entry_for_game_key(entry_id.strip().lower())
     if e is None:
-        raise typer.BadParameter(f"unknown game {entry_id!r}: see uv run pitwall game list --all", param_hint="ID")
+        options = [x.id for x in games.entries_for_game_key(entry_id.strip().lower()) if x.implemented]
+        hint = f"did you mean {' or '.join(options)}?" if options else "see uv run pitwall game list --all"
+        raise typer.BadParameter(f"unknown game {entry_id!r}: {hint}", param_hint="ID")
     return e
 
 
@@ -642,7 +652,9 @@ def game_show(
 
 @game_app.command("set")
 def game_set(
-    entry_id: Annotated[str, typer.Argument(metavar="ID", help="A catalogue id, e.g. gt7:ps5 (pitwall game list)")],
+    entry_id: Annotated[
+        str, typer.Argument(metavar="ID", help="A catalogue id, e.g. gt7:ps5, or acc for ACC on PC (pitwall game list)")
+    ],
     console_ip: Annotated[
         str | None, typer.Option("--console-ip", help="The console's LAN IP (Assetto Corsa: required; GT7: optional)")
     ] = None,

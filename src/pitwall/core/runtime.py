@@ -1,9 +1,10 @@
 """Application runtime: owns the database, workers, live state and packet sources.
 
 Packet sources are per integration (``integrations.py``): one ``UdpListener`` per bound port (F1, GT7, Forza,
-raw recording) and, for Assetto Corsa, one ``AcRemoteClient`` that registers with the game and receives its stream
-on an ephemeral port. Each source has its own ``PacketRouter`` + ``SessionManager``, all feeding the same
-``LiveState``, database writer and analysis worker.
+raw recording), for Assetto Corsa one ``AcRemoteClient`` that registers with the game and receives its stream
+on an ephemeral port, and for Assetto Corsa Competizione one ``AccSharedMemoryReader`` that reads the game's
+shared memory on this PC (Windows only; running while ACC is enabled or is the selected game). Each source has its
+own ``PacketRouter`` + ``SessionManager``, all feeding the same ``LiveState``, database writer and analysis worker.
 """
 
 from __future__ import annotations
@@ -34,6 +35,16 @@ from pitwall.core.track_knowledge import FieldWorker, PhysicsPrior, TrackKnowled
 from pitwall.drivers import Driver, DriverService
 from pitwall.ingest.ac_client import CAPTURE_GAME_HINT as AC_CAPTURE_HINT
 from pitwall.ingest.ac_client import AcRemoteClient
+from pitwall.ingest.acc_shm_reader import CAPTURE_GAME_HINT as ACC_CAPTURE_HINT
+from pitwall.ingest.acc_shm_reader import SOURCE as ACC_SHM_SOURCE
+from pitwall.ingest.acc_shm_reader import (
+    AccReaderState,
+    AccSharedMemoryReader,
+    AccUnavailable,
+    PageOpener,
+    describe,
+    reader_supported,
+)
 from pitwall.ingest.gt7_heartbeat import GT7Heartbeat
 from pitwall.ingest.router import PacketRouter
 from pitwall.ingest.sources import ReplaySource, UdpListener
@@ -68,6 +79,7 @@ INTEGRATIONS_SECTION = INTEGRATIONS_STORE_SECTION
 BOOT_BIND_ATTEMPTS = 20  # at start-up a previous instance may still be releasing the port (launchd restart)
 APPLY_BIND_ATTEMPTS = 3  # from the dashboard: fail fast and report instead of blocking the request
 AC_SOURCE = "ac-remote"  # sessions.source of live Assetto Corsa sessions
+ACC_SOURCE = ACC_SHM_SOURCE  # sessions.source of live ACC sessions ("acc-shm")
 AC_GEOMETRY_SCAN_SESSIONS = 1000  # most recent sessions searched for AC track geometry (an existing repo read)
 
 
@@ -98,6 +110,14 @@ class _AcInput:
     client: AcRemoteClient
     router: PacketRouter
     platform: str | None  # the configured platform this client's adapter was built with
+
+
+@dataclass(slots=True)
+class _AccInput:
+    """The ACC shared-memory reader (no port, Windows only): it copies the game's pages and feeds its own router."""
+
+    reader: AccSharedMemoryReader
+    router: PacketRouter
 
 
 def ac_known_tracks(sessions: list[dict[str, Any]]) -> dict[str, AcTrackGeometry]:
@@ -239,6 +259,10 @@ class Runtime:
         self.worker.submit_task(self._run_repairs)
         self.inputs: dict[int, _Input] = {}
         self.ac: _AcInput | None = None  # Assetto Corsa client (when enabled with a console IP)
+        self.acc: _AccInput | None = None  # ACC shared-memory reader (Windows; enabled or the selected game)
+        # Test seam: the page opener the ACC reader uses (None = the Windows one). Setting it also lets the reader run
+        # off Windows - only ever with a fake (pitwall.sim.acc_stream.FakeAccMemory).
+        self.acc_opener: PageOpener | None = None
         self.input_errors: dict[str, str] = {}  # integration key -> last bind/start error (Connect page)
         self.gt7_heartbeat: GT7Heartbeat | None = None
         self.replay: ReplaySource | None = None
@@ -248,9 +272,7 @@ class Runtime:
         self._unsubscribe = self.store.subscribe(INTEGRATIONS_SECTION, lambda _s, _v: self._on_integrations_changed())
         # What the household plays (games.py): survives restarts and replays; the live snapshot reports it.
         self.live.set_game_selection(games.parse_selection(self.store.get(games.SECTION)))
-        self._unsubscribe_game = self.store.subscribe(
-            games.SECTION, lambda _s, v: self.live.set_game_selection(games.parse_selection(v))
-        )
+        self._unsubscribe_game = self.store.subscribe(games.SECTION, lambda _s, v: self._on_game_selection(v))
         self._seated = self.drivers.active_id
         self.drivers.subscribe(self._on_driver)
         # Setup › Controls: the F1 button probe (ingest thread, O(1)), the button test and push-to-talk that follows
@@ -258,6 +280,14 @@ class Runtime:
         self.controls = ControlsService(self.store, self.live, self.drivers, settings.voice_ptt_button)
         self.controls.senders = self._f1_senders
         self.controls.last_sender_ip = self._f1_last_ip
+
+    def _on_game_selection(self, section: dict[str, Any]) -> None:
+        """The household's game changed (any thread): the live snapshot follows, and selecting ACC (or another game
+        while the ACC input is off) starts or stops the ACC reader."""
+        self.live.set_game_selection(games.parse_selection(section))
+        if self._live_ingest:
+            with self._ilock:
+                self._apply_acc(self.integration_configs()["acc"])
 
     def _f1_last_ip(self) -> str | None:
         """The F1 listener's last sender (ingest thread, O(1)): the controls probe tags presses from this computer."""
@@ -315,6 +345,7 @@ class Runtime:
                     self._start_input(port, keys, bind_attempts)
             self._apply_gt7_heartbeat(configs["gt7"])
             self._apply_ac(configs["ac"])
+            self._apply_acc(configs["acc"])
 
     def _known_tracks(self) -> dict[str, list[str]]:
         try:
@@ -503,6 +534,102 @@ class Runtime:
         finish_router(cur.router)
         log.info("Assetto Corsa client stopped")
 
+    # ------------------------------------------------------------------ ACC (shared memory on this PC, Windows)
+    def acc_selected(self) -> bool:
+        """ACC is the household's selected game (``acc:pc``; a console entry has no integration)."""
+        sel = self.live.game_selection
+        e = games.entry(sel.id) if sel is not None else None
+        return e is not None and e.integration == "acc"
+
+    def acc_supported(self) -> bool:
+        """ACC's pages can exist here: Windows, or a test opener."""
+        return reader_supported() or self.acc_opener is not None
+
+    def _apply_acc(self, cfg: IntegrationConfig) -> None:
+        """Start or stop the ACC reader (caller holds ``_ilock``): it runs on Windows while the ACC integration is
+        enabled or ACC is the selected game. Elsewhere nothing starts and nothing is logged as an error: the status
+        row says why (``not_windows``)."""
+        want = (cfg.enabled or self.acc_selected()) and self.acc_supported()
+        if not want:
+            self._stop_acc()
+            self.input_errors.pop("acc", None)
+            return
+        if self.acc is None:
+            self._start_acc()
+
+    def _start_acc(self) -> None:
+        sessions = SessionManager(
+            self.writer,
+            self.live,
+            self.worker,
+            source=ACC_SOURCE,
+            drivers=self.drivers,
+            resume_candidate=self._resume_candidate(ACC_SOURCE),  # a restart mid-session continues it
+            race=self.race,  # race radio: every game
+            health=self.health,  # --- health lane --- every game
+        )
+        router = PacketRouter(adapters_for(("acc",)), sessions, self.live)
+        try:
+            reader = AccSharedMemoryReader(
+                router.handle,
+                opener=self.acc_opener,
+                capture_dir=self.settings.capture_dir if self.settings.record_raw else None,
+                on_idle=lambda: finish_router(router),
+                idle_timeout_s=self.settings.session_idle_timeout_s,
+            )
+        except (AccUnavailable, ValueError) as e:
+            self.input_errors["acc"] = f"could not start the ACC reader: {e}"
+            log.error("%s", self.input_errors["acc"])
+            return
+        reader.start()
+        self.acc = _AccInput(reader, router)
+        self.input_errors.pop("acc", None)
+
+    def _stop_acc(self) -> None:
+        cur, self.acc = self.acc, None
+        if cur is None:
+            return
+        cur.reader.stop()  # closes the views (the pages stay ACC's) and the capture
+        finish_router(cur.router)
+        log.info("ACC shared-memory reader stopped")
+
+    def _acc_status(self, cfg: IntegrationConfig) -> dict[str, Any]:
+        spec = SPECS["acc"]
+        selected = self.acc_selected()
+        active = cfg.enabled or selected
+        cur = self.acc
+        reader = cur.reader if cur is not None else None
+        snap: dict[str, Any]
+        if reader is not None:
+            snap = reader.snapshot()
+        else:
+            if not self.acc_supported():
+                state = AccReaderState.NOT_WINDOWS  # whatever the switch says: ACC's pages cannot exist here
+            elif not active:
+                state = AccReaderState.OFF
+            else:
+                state = AccReaderState.STOPPED  # wanted but not running (not started yet, or input_errors says why)
+            snap = {"state": state.value, "message": describe(state.value), "last_rx_s_ago": None}
+        return {
+            **cfg.to_dict(),
+            "name": spec.name,
+            "platforms": list(spec.platforms),
+            "status": spec.status,
+            "port_editable": spec.port_editable,
+            "needs_console_ip": spec.needs_console_ip,
+            "listens": False,  # shared memory on this PC: no port, no IP
+            "selected": selected,  # ACC is the selected game: the reader runs even with the switch off
+            "active": active,
+            "supported": self.acc_supported(),  # False off Windows: ACC's pages cannot exist here
+            "listening": reader is not None and reader.running,
+            "received": reader.received if reader is not None else 0,
+            "sources": [],
+            "capture": str(reader.capture.path) if reader is not None and reader.capture else None,
+            "error": self.input_errors.get("acc"),
+            "reader": snap,  # state, message (the Connect page's sentence), rate, last snapshot, counters
+            "decoded_s_ago": _age_s(cur.router.last_accepted_mono) if cur is not None else None,
+        }
+
     def input_status(self) -> list[dict[str, Any]]:
         """Per integration: configuration and what is actually happening (Connect page)."""
         configs = self.integration_configs()
@@ -510,7 +637,12 @@ class Runtime:
         for key, cfg in configs.items():
             spec = SPECS[key]
             if not spec.listens:
-                out.append(self._ac_status(cfg) if key == "ac" else {**cfg.to_dict(), "listens": False})
+                if key == "ac":
+                    out.append(self._ac_status(cfg))
+                elif key == "acc":
+                    out.append(self._acc_status(cfg))
+                else:
+                    out.append({**cfg.to_dict(), "listens": False})
                 continue
             inp = self.inputs.get(cfg.port) if cfg.enabled else None
             row: dict[str, Any] = {
@@ -616,6 +748,9 @@ class Runtime:
                 # AC is detected by datagram size alone, so only AC's own captures (client, probe, synthetic writer:
                 # game_hint 'ac-remote') are decoded as AC; a raw recording of another game never is.
                 adapters = [a for a in adapters if a.info.game is not Game.AC]
+            if meta.game_hint != ACC_CAPTURE_HINT:
+                # ACC snapshots exist only in the ACC reader's own captures (and the synthetic writer's: 'acc-shm')
+                adapters = [a for a in adapters if a.info.game is not Game.ACC]
             router = PacketRouter(adapters, sessions, self.live)
 
             def done() -> None:
@@ -724,6 +859,7 @@ class Runtime:
                 self.gt7_heartbeat.stop()
                 self.gt7_heartbeat = None
             self._stop_ac()
+            self._stop_acc()
             for inp in self.inputs.values():
                 self._stop_input(inp)
             self.inputs.clear()

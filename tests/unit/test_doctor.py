@@ -57,6 +57,7 @@ class Fake:
         }
         self.modules = {"parakeet_mlx": True, "mlx": True}
         self.lan: str | None = "192.168.1.20"
+        self.acc_pages = "absent"  # ACC's shared memory: present | absent | denied: ... (never the real machine's)
         self.tailscale: str | None = None
         self.http_calls: list[str] = []
         self.bind_calls: list[tuple[str, str, int]] = []
@@ -85,6 +86,7 @@ class Fake:
             has_module=lambda name: self.modules.get(name, False),
             lan_ip=lambda: self.lan,
             tailscale_cli=lambda: self.tailscale,
+            acc_pages=lambda: self.acc_pages,
         )
 
 
@@ -979,3 +981,90 @@ def test_handsfree_check_follows_the_switch_and_speech_input(repo: Path) -> None
     fake.modules = {}
     sherpa = by_id(run(repo, fake, settings(repo, stt_engine="sherpa")))["voice_stt"]
     assert sherpa.status == "warn" and sherpa.fix == "uv sync --all-extras"  # asked for, not installed
+
+
+# --------------------------------------------------------------------------------------------- ACC (shared memory)
+def test_acc_is_info_off_windows_and_never_probed(repo: Path) -> None:
+    fake = Fake()
+    fake.acc_pages = "present"  # would be wrong on a Mac: the check must not even look
+    report = run(repo, fake)
+    c = by_id(report)["acc"]
+    assert (c.status, c.title) == ("info", "ACC")
+    assert "Windows PC that runs it" in c.detail and "this Mac" in c.detail and "run Pitwall on that PC" in c.fix
+    assert "udp_acc" not in by_id(report)  # no port, no IP: never a UDP check
+
+
+@pytest.mark.parametrize(
+    ("sections", "pages", "status", "detail", "fix"),
+    [
+        ({}, "absent", "info", "ACC input is off; ACC is not running", "uv run pitwall game set acc"),
+        ({}, "present", "info", "ACC input is off; ACC is running", "uv run pitwall game set acc"),
+        (_selected("acc:pc"), "absent", "info", "ACC input is on; ACC is not running", "uv run pitwall serve"),
+        ({"integrations": {"acc": {"enabled": True}}}, "present", "info", "ACC input is on; ACC is running", "serve"),
+        (_selected("acc:pc"), "denied: [Errno 5] access denied", "warn", "running as administrator", "same way"),
+        (_selected("acc:pc"), "error: boom", "info", "could not be checked (error: boom)", "serve"),
+    ],
+)
+def test_acc_on_windows_without_a_server(
+    repo: Path, sections: dict[str, Any], pages: str, status: str, detail: str, fix: str
+) -> None:
+    _store(repo, sections)
+    fake = Fake()
+    fake.acc_pages = pages
+    c = by_id(run(repo, fake, host=host(repo, "Windows", "AMD64")))["acc"]
+    assert (c.status, c.detail.startswith(detail) or detail in c.detail, fix in c.fix) == (status, True, True), c
+
+
+@pytest.mark.parametrize(
+    ("reader", "extra", "status", "detail"),
+    [
+        (
+            {"state": "reading", "message": "Reading ACC on this PC \u00b7 60 pages/s."},
+            {},
+            "ok",
+            "Reading ACC on this PC - 60",
+        ),
+        (
+            {
+                "state": "waiting",
+                "message": "ACC is paused: Pitwall reads it again when you drive on.",
+                "last_rx_s_ago": 42,
+            },
+            {},
+            "info",
+            "ACC is paused: Pitwall reads it again when you drive on; last snapshot 42 s ago",
+        ),
+        (
+            {"state": "not_running", "message": "ACC is not running on this PC (Pitwall looks for it every 2 s)."},
+            {},
+            "info",
+            "not running",
+        ),
+        ({"state": "error", "message": "Can't read ACC's shared memory: access denied."}, {}, "warn", "access denied"),
+        ({"state": "off", "message": "Off"}, {"active": False, "enabled": False}, "info", "ACC input is off"),
+    ],
+)
+def test_acc_on_windows_from_a_running_server(
+    repo: Path, reader: dict[str, Any], extra: dict[str, Any], status: str, detail: str
+) -> None:
+    fake = Fake()
+    fake.acc_pages = "present"
+    fake.http["/api/health"] = _health("no_data")
+    row = {"key": "acc", "enabled": True, "active": True, "listens": False, "error": None, "reader": reader, **extra}
+    rows = [{"key": "f1", "enabled": True, "port": UDP_PORT, "listening": True, "listens": True}, row]
+    fake.http["/api/integrations"] = HttpReply(200, json.dumps(rows).encode())
+    report = run(repo, fake, host=host(repo, "Windows", "AMD64"))
+    c = by_id(report)["acc"]
+    assert (c.status, detail in c.detail) == (status, True), c
+    assert "udp_acc" not in by_id(report)
+    format_text(report).encode("ascii")
+
+
+def test_acc_game_check(repo: Path) -> None:
+    _store(repo, _selected("acc:pc"))
+    mac = by_id(run(repo, Fake()))["game"]
+    assert mac.status == "warn" and "only on the Windows PC that runs it" in mac.detail
+    assert "install Pitwall on that PC" in mac.fix
+    pc = by_id(run(repo, Fake(), host=host(repo, "Windows", "AMD64")))["game"]
+    assert pc.status == "ok", pc  # selected = on: the reader runs for the selected game
+    assert pc.detail.endswith("input on (reads ACC's shared memory on this PC)") and "Partial" in pc.detail

@@ -256,6 +256,47 @@ def ac_guide(ac_console_ip: str | None = None, ac_platform: str | None = None) -
     )
 
 
+def acc_guide() -> GameGuide:
+    """ACC on PC: nothing to set in the game; Pitwall has to run on the gaming PC (shared memory is local to it)."""
+    return GameGuide(
+        id="acc",
+        game="Assetto Corsa Competizione (PC)",
+        platforms=["PC"],
+        supported=True,
+        menu_path="No in-game setting: Pitwall reads ACC's shared memory on the PC that runs the game",
+        steps=[
+            GuideStep(
+                "Where",
+                "Run Pitwall on the gaming PC",
+                note="ACC shares its telemetry only on its own Windows PC (shared memory): a Mac or another computer "
+                "can't read it",
+            ),
+            GuideStep(
+                "Setup > Game",
+                "Assetto Corsa Competizione · PC",
+                note="or switch Assetto Corsa Competizione on here; there is no IP address or port to enter",
+            ),
+            GuideStep(
+                "In the game",
+                "Get on track",
+                note="Pitwall reads ACC while you drive; the menus, a pause and replays send nothing",
+            ),
+        ],
+        notes=[
+            "Start ACC and Pitwall on the same PC as the same Windows user: the pages exist only in that user's "
+            "session. Pitwall started at logon (scripts\\windows\\service.ps1 install) runs that way.",
+            "If the card says access denied, ACC is running as administrator: start Pitwall the same way, or ACC "
+            "normally.",
+            "Built from Kunos' official ACC Shared Memory documentation (v1.8.12) and tested with generated data. "
+            "Ed (Pitwall tester) checked pedals, steering, speed, gear and the track and car names live with his own "
+            "build; no Pitwall recording of ACC exists yet.",
+            "Lap distance (delta, braking cues, track map) needs the track's length: three circuits are checked, the "
+            "others come from a table; a track Pitwall doesn't know gets lap times but no distance.",
+            "ACC on PS5 or Xbox has no telemetry output.",
+        ],
+    )
+
+
 # F1 25: inferred from EA's controls hub (its groups are official; the console screen names are not checked) [A]
 PTT_MENU_PATH = "Controls, then your wheel's entry, then UDP Custom Actions"
 
@@ -375,7 +416,7 @@ def game_guides(
             "privately.",
         ],
     )
-    return [f1, gt7, forza, ac_guide(ac_console_ip, ac_platform), record]
+    return [f1, gt7, forza, ac_guide(ac_console_ip, ac_platform), acc_guide(), record]
 
 
 def connect_info(
