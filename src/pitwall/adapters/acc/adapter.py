@@ -38,9 +38,9 @@ Laps
 
 Lap distance
     ``normalizedCarPosition`` (0 at the start, 1 at the finish, per Kunos) x the track length. The length is Static's
-    ``trackSplineLength`` only when it is plausible - within ``TRACK_LENGTH_TOLERANCE`` of ``tracks.py``'s length for
-    the track, or inside ``MIN/MAX_TRACK_LENGTH_M`` for a track the table does not list (Kunos marks the field "not
-    used in ACC", so expect the table); else the table; else ``None``. Within a lap the spline position is unwrapped
+    ``trackSplineLength`` only when ``tracks.py``'s length for the track corroborates it (within
+    ``TRACK_LENGTH_TOLERANCE``; Kunos marks the field "not used in ACC", so expect the table); else the table; else
+    ``None``: a track the table does not list gets no distance. Within a lap the spline position is unwrapped
     for continuity, so a spline that wraps a frame before (or after) ``completedLaps`` increments gives a distance a
     little above the length (or below 0) instead of a jump. A lap first seen away from a crossing with the spline at
     ``GRID_FRACTION`` or more is on a grid behind the line (negative distance). A teleport (a step of more than a
@@ -124,7 +124,7 @@ GRID_FRACTION = 0.9  # a lap first seen (not at a crossing) at a spline position
 LAP_FRACTION_RANGE = (-0.25, 1.05)  # an unwrapped position outside this: the lap's trace stops (a wrap with no lap)
 MAX_GEAR_RAW = 11
 TRACK_LENGTH_TOLERANCE = 0.03  # Static.trackSplineLength is used only within 3 % of tracks.py's length
-MIN_TRACK_LENGTH_M = 1000.0  # ... or, for a track the table does not list, inside this range
+MIN_TRACK_LENGTH_M = 1000.0  # ... and inside this range (a synthetic stream's unlisted track: only this range)
 MAX_TRACK_LENGTH_M = 30_000.0  # Nordschleife + GP is ~25.4 km
 TYRE_PSI_RANGE = (5.0, 60.0)  # wheelPressure is psi only if every wheel is in here (bar < 5, kPa > 100)
 TYRE_CORE_RANGE_C = (-40.0, 250.0)
@@ -392,7 +392,7 @@ ACC_INFO = AdapterInfo(
         "track_length_m": FieldSupport(
             _PART,
             "tracks.py (Ed's table; a tester's report: Spa, Monza, Brands Hatch checked against public sources, others "
-            "approximate), or Static.trackSplineLength when within 3 % of it",
+            "approximate), or Static.trackSplineLength when within 3 % of it; None for a track the table does not list",
         ),
         "total_distance_m": FieldSupport(_V, "Graphics.distanceTraveled is per stint and has no unit: not mapped"),
         "pos_x_m": FieldSupport(
@@ -733,13 +733,21 @@ def _wheels(raw: Any, lo: float, hi: float, *, zero_is_unknown: bool = False) ->
     return Wheels.from_fl_fr_rl_rr([float(v) for v in vals if v is not None])
 
 
-def resolve_track_length(track: str | None, spline_length_m: float | None) -> tuple[float | None, str]:
-    """``(length, source)``: a plausible ``trackSplineLength``, else ``tracks.py``'s length, else unknown."""
+def resolve_track_length(
+    track: str | None, spline_length_m: float | None, *, synthetic: bool = False
+) -> tuple[float | None, str]:
+    """``(length, source)``: ``trackSplineLength`` when ``tracks.py``'s length corroborates it, else the table's
+    length, else unknown. A track the table does not list gets no length whatever the field holds: Kunos marks it
+    "not used in ACC", and with nothing to check it against it stays unknown. The one exception is a ``synthetic``
+    stream (Static names ``SYNTHETIC_CAR_MODEL``): Pitwall's own generator writes its track's length there."""
     table = tracks.track_length_m(track)
     s = spline_length_m
     plausible = s is not None and MIN_TRACK_LENGTH_M <= s <= MAX_TRACK_LENGTH_M
-    if plausible and s is not None and (table is None or abs(s / table - 1.0) <= TRACK_LENGTH_TOLERANCE):
-        return s, LENGTH_SPLINE
+    if plausible and s is not None:
+        if table is None and synthetic:
+            return s, LENGTH_SPLINE
+        if table is not None and abs(s / table - 1.0) <= TRACK_LENGTH_TOLERANCE:
+            return s, LENGTH_SPLINE
     if table is not None:
         return table, LENGTH_TABLE
     return None, LENGTH_UNKNOWN
@@ -851,7 +859,7 @@ class AccAdapter:
                 self._open(g, t, out)
             return True
         s.static_key = st.key
-        s.length_m, s.length_source = resolve_track_length(st.track, st.spline_length_m)
+        s.length_m, s.length_source = resolve_track_length(st.track, st.spline_length_m, synthetic=st.synthetic)
         self._maybe_info(s, t, out)
         return True
 
@@ -1189,7 +1197,7 @@ class AccAdapter:
             synthetic=synthetic,
         )
         if st is not None:
-            s.length_m, s.length_source = resolve_track_length(st.track, st.spline_length_m)
+            s.length_m, s.length_source = resolve_track_length(st.track, st.spline_length_m, synthetic=st.synthetic)
         self._s = s
         self.stats.count("sessions")
         info = self._session_info(s, t)

@@ -440,7 +440,7 @@ recording confirms them, and `SessionInfo.extra['acc_evidence']` shows the count
 9. **Track length / lap distance.** `trackSplineLength` is "not used in ACC" (Ed's report: no float in a real Static
    page held a plausible length). Lap distance = `normalizedCarPosition` (0.0 at the start, 1.0 at the finish) x a
    length from `tracks.py` (Ed's table of 25 circuits, three checked), or `trackSplineLength` should the game ever
-   fill it with a value within 3 % of the table (or 1-30 km for an unlisted track). Unlisted tracks: no distance.
+   fill it with a value within 3 % of the table. Unlisted tracks: no distance, whatever the field holds.
 10. **`trackConfiguration` length.** The PDF prints `wchar_t trackConfiguration` with no array length; Kunos' header
     declares `[33]` ([P] reads 33 too). That fixes the Static size at 820 and the offsets of `ersMaxJ` ..
     `wetTyresName`. One field pitwall decodes sits there: `isOnline` (684, `SessionInfo.network_game`). A different

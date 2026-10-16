@@ -16,7 +16,8 @@ generator and decoder cannot drift apart:
 Every Static page names ``SYNTHETIC_CAR_MODEL`` as the car, which the adapter maps to the synthetic session uid
 (the session manager then gives the session a ``synthetic:<scenario>`` track id): generated telemetry is flagged
 synthetic wherever it travels. The track is not in ``adapters/acc/tracks.py``, so the lap distance comes from
-Static's ``trackSplineLength`` (the generator writes the track's length there).
+Static's ``trackSplineLength`` (the generator writes the track's length there; the adapter trusts that field for an
+unlisted track only in a synthetic stream - real ACC marks it "not used").
 
 What the generator had to choose, because ACC's behaviour is undocumented (these test Pitwall's logic, not the
 game): Graphics and Physics get a new ``packetId`` every tick on track; in the menus and while paused Graphics keeps

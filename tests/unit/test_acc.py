@@ -665,9 +665,24 @@ def test_track_length_resolution() -> None:
     assert resolve_track_length("Spa", 7010.0) == (7010.0, LENGTH_SPLINE)  # within 3 % of the table
     assert resolve_track_length("spa", 9000.0) == (SPA, LENGTH_TABLE)  # implausible for Spa
     assert resolve_track_length("some_dlc_track", None) == (None, LENGTH_UNKNOWN)
-    assert resolve_track_length("some_dlc_track", 4200.0) == (4200.0, LENGTH_SPLINE)
+    # a track tracks.py does not list: no distance, whatever trackSplineLength holds (Kunos: "not used in ACC"; with
+    # nothing to check it against, a 1-30 km value is still undocumented)
+    assert resolve_track_length("some_dlc_track", 4200.0) == (None, LENGTH_UNKNOWN)
     assert resolve_track_length("some_dlc_track", 50.0) == (None, LENGTH_UNKNOWN)
+    assert resolve_track_length(None, 4200.0) == (None, LENGTH_UNKNOWN)
     assert resolve_track_length(None, None) == (None, LENGTH_UNKNOWN)
+    # Pitwall's own generator (Static names SYNTHETIC_CAR_MODEL) writes its track's length there
+    assert resolve_track_length("synthetic-x", 4200.0, synthetic=True) == (4200.0, LENGTH_SPLINE)
+    assert resolve_track_length("synthetic-x", 50.0, synthetic=True) == (None, LENGTH_UNKNOWN)
+
+
+def test_an_unlisted_track_gets_no_lap_distance_even_with_a_spline_length() -> None:
+    """What every screen and doc says (DISTANCE_REASON, ACC_INFO): an unlisted circuit has lap times, no distance."""
+    sim = Sim()
+    info = infos(sim.start("some_dlc_track", trackSplineLength=4200.0))[0]
+    assert info.track_length_m is None and info.extra["track_length_source"] == LENGTH_UNKNOWN
+    assert frame(sim.tick()).lap_distance_m is None
+    assert "does not list" in ACC_INFO.fields["lap_distance_m"].source
 
 
 def test_spline_length_from_static_when_plausible() -> None:
