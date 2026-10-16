@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -52,7 +53,7 @@ def client(tmp_path: Path, mode: str) -> TestClient:
 
 
 def wait_checked(c: TestClient) -> dict[str, Any]:
-    for _ in range(100):
+    for _ in range(250):  # 5 s: generous for a busy CI runner
         st = c.get("/api/update").json()
         if not st["checking"] and st["checked_unix"] is not None:
             return st
@@ -60,12 +61,37 @@ def wait_checked(c: TestClient) -> dict[str, Any]:
     raise AssertionError("the background check never finished")
 
 
-def test_auto_mode_refreshes_in_the_background(tmp_path: Path, calls: list[int]) -> None:
+@pytest.fixture
+def gated(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> tuple[list[int], threading.Event]:
+    """Like ``calls``, but the fake GitHub check blocks until the test opens the gate."""
+    made: list[int] = []
+    gate = threading.Event()
+
+    def fetcher() -> list[ReleaseInfo]:
+        made.append(1)
+        gate.wait(10)
+        return [_release("v99.0.0"), _release("v0.1.0")]
+
+    original = UpdateChecker.__init__
+
+    def init(self: UpdateChecker, data_dir: Path, mode: str, root: Path, **kw: Any) -> None:
+        original(self, data_dir, mode, root, fetcher=fetcher)
+
+    monkeypatch.setattr(UpdateChecker, "__init__", init)
+    monkeypatch.setattr(app_module, "WEB_REACT_DIST", tmp_path / "no-react")
+    monkeypatch.setattr(app_module, "WEB_DIST", tmp_path / "no-svelte")
+    return made, gate
+
+
+def test_auto_mode_refreshes_in_the_background(tmp_path: Path, gated: tuple[list[int], threading.Event]) -> None:
+    """The first request is answered while the check is still blocked: it never waits for GitHub. (Proved with a
+    gate, not a time bound, which a busy CI runner missed: 1.27 s for a cold first request.)"""
+    calls, gate = gated
     with client(tmp_path, "auto") as c:
-        t0 = time.perf_counter()
         first = c.get("/api/update")
-        assert (time.perf_counter() - t0) < 0.5
         assert first.status_code == 200 and first.json()["mode"] == "auto"
+        assert first.json()["checked_unix"] is None  # answered before the (blocked) check finished
+        gate.set()
         st = wait_checked(c)
         assert st["update_available"] is True and st["latest"]["version"] == "v99.0.0"
         assert calls == [1]
