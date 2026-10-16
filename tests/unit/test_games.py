@@ -672,6 +672,11 @@ def test_acc_evidence_is_never_stronger_than_a_tester_report_and_generated_pages
     assert named and all("tester's report" in ACC_INFO.fields[k].source for k in named), named
     cited = {k for k, fs in ACC_INFO.fields.items() if "tester's report" in fs.source}
     assert {"throttle", "brake", "speed_kph", "steering", "gear", "track_id", "car_id"} <= cited
+    # a sign from a tester's report, a unit by convention or inferred from a range is not the official spec's
+    unspecified = re.compile(r"by convention|no unit printed|no sign")
+    weak = {k for k, fs in ACC_INFO.fields.items() if unspecified.search(fs.source)}
+    assert {"steering", "tyre_pressure_psi", "weather", "tyre_core_temp_c", "brake_temp_c"} <= weak
+    assert not {k for k in weak if ACC_INFO.fields[k].level is S.SPEC_IMPLEMENTED}, weak
     e = games.entry("acc:pc")
     assert e is not None and e.level is S.PARTIAL and e.support_words == "Partial"
     assert all(v["level"] not in {lvl.value for lvl in strong} for v in e.fields_dict().values())

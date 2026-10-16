@@ -284,7 +284,7 @@ ACC_INFO = AdapterInfo(
         "brake": FieldSupport(_S, f"Physics.brake 0..1 ({_DOC}); {_TESTER_SPA}"),
         "clutch": FieldSupport(_S, f"Physics.clutch, 'clutch pedal input' 0..1 ({_DOC}); not live-checked"),
         "steering": FieldSupport(
-            _S,
+            _C,
             f"-Physics.steerAngle: Kunos documents a normalised input -1..1 but no sign; negated so + = right "
             f"({_TESTER_BRANDS}: unnegated, a right-hander was labelled left)",
         ),
@@ -344,7 +344,7 @@ ACC_INFO = AdapterInfo(
         "tyre_surface_temp_c": FieldSupport(_U, "Physics.tyreTempI/M/O: 'not shown in ACC' (Kunos)"),
         "tyre_inner_temp_c": FieldSupport(_U, "not in ACC's pages (the core temperature is tyre_core_temp_c)"),
         "tyre_pressure_psi": FieldSupport(
-            _S, f"Physics.wheelPressure[4] FL..RR ({_DOC}, no unit printed): psi only when all four are 5-60"
+            _C, f"Physics.wheelPressure[4] FL..RR ({_DOC}, no unit printed): psi only when all four are 5-60"
         ),
         "tyre_wear_pct": FieldSupport(_U, "Physics.tyreWear: 'not used by ACC' (Kunos)"),
         "brake_temp_c": FieldSupport(_C, f"Physics.brakeTemp[4] FL..RR ({_DOC}, no unit printed; degrees C)"),
@@ -415,7 +415,7 @@ ACC_INFO = AdapterInfo(
         "session_type": FieldSupport(_S, "Graphics.session (ACC_SESSION_TYPE; hotlap / time attack -> time trial)"),
         "session_uid": FieldSupport(_PART, "derived: no session id (status / session / sessionIndex / laps / Static)"),
         "weather": FieldSupport(
-            _S,
+            _C,
             "Physics.airTemp / roadTemp (degrees C by convention); Graphics.rainIntensity: drizzle / light -> "
             "light_rain, medium / heavy -> heavy_rain, thunderstorm -> storm, no rain -> None (cloud not sent)",
         ),
