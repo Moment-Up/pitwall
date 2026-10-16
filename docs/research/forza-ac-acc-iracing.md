@@ -226,6 +226,7 @@ Official spec: Kunos "Assetto Corsa Remote Telemetry: UDP Specification" (Google
 
 ### 3.1 Shared memory (Windows only)
 - Same mapping names as AC (`Local\acpmf_physics`/`graphics`/`static`) with ACC-specific layouts. Official reference: Kunos "ACC Shared Memory Documentation" v1.8.12 PDF (forum thread 59965, login required), plus `SharedMemoryACCS.zip` sample.
+- Field-by-field layouts, offsets and what pitwall maps: `docs/research/acc-shared-memory-spec.md` (machine-checked against `adapters/acc/packets.py`).
 - **Player car only**, except `carCoordinates[60][3]` and `carID[60]` (graphics), which cover every car.
 - Highlights:
   - physics: gas, brake, clutch, steerAngle, gear, rpms, speedKmh, velocities, accG, wheel slip, wheelPressure, wheelAngularSpeed, **tyreCoreTemperature**, brakeTemp, padLife/discLife, suspension travel, TC/ABS levels.

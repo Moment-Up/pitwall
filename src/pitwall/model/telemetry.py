@@ -151,6 +151,7 @@ class CarFrame:
     # --- tyres / brakes ----------------------------------------------------------------------------
     tyre_surface_temp_c: Wheels[float] | None = None
     tyre_inner_temp_c: Wheels[float] | None = None
+    tyre_core_temp_c: Wheels[float] | None = None  # rubber core (ACC's TyreCoreTemp); a quantity of its own
     tyre_pressure_psi: Wheels[float] | None = None
     brake_temp_c: Wheels[float] | None = None
     tyre_wear_pct: Wheels[float] | None = None  # 0 = new, 100 = fully worn

@@ -904,6 +904,9 @@ The REST API on :6397 [C2] is out of scope; [P2] says it may be localhost-only.
 
 ### 4.3 Assetto Corsa Competizione (shared memory, game 3)
 
+Pitwall now reads ACC directly on the gaming PC (no relay): the authoritative field-by-field layout is
+`docs/research/acc-shared-memory-spec.md` (from Kunos' PDF; machine-checked). The offsets below agree with it.
+
 #### 4.3.1 Facts
 
 - **Mappings.** `Local\acpmf_physics`, `Local\acpmf_graphics`, `Local\acpmf_static` [P1][C1].
