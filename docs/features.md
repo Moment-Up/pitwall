@@ -422,11 +422,12 @@ track edges, so the maps show where each lap went.
 - Brake differences take your pedals into account: a stock CSL brake measures pedal travel, so only bigger
   differences are called out; a load cell shows finer ones. With the game's braking assist on, brake notes are
   greyed out (the game adds its own braking); with ABS on, lock-ups are not analysed.
-- Handling balance (F1 25 only: it needs the game's tyre slip data) compares the front and rear tyres' slip angles
-  at the limit. A problem must recur, and it counts as the car's only if it also shows on your best lap that
-  session; otherwise it points at how the corner was driven. Standing starts and laps more than 7 % off your best
-  clean lap (a safety car, a cool-down) are left out: they are not driven at the limit. The thresholds are
-  Pitwall's heuristics and the "How this is measured" sheet lists them by topic.
+- Handling balance (it needs the game's tyre slip data: F1 25, and ACC once checks while you drive settle its slip
+  channels) compares the front and rear tyres' slip angles at the limit. A problem must recur, and it counts as the
+  car's only if it also shows on your best lap that session; otherwise it points at how the corner was driven.
+  Standing starts and laps more than 7 % off your best clean lap (a safety car, a cool-down) are left out: they are
+  not driven at the limit. The thresholds are Pitwall's heuristics and the "How this is measured" sheet lists them by
+  topic.
 - `uv run pitwall technique [SESSION_ID|latest] [--ref LAP_ID] [--car-format f1_2025|f1_2026] [--json]` prints the
   same analysis in the terminal.
 

@@ -650,6 +650,18 @@ def test_capability_matrix_golden() -> None:
     assert keys == [r.key for r in PLANNED] and len(set(keys)) == len(keys)
 
 
+def test_readme_handling_row_never_names_f1_25_as_the_only_slip_source() -> None:
+    """The README's "Handling balance, lock-ups and wheelspin" row: ACC's slip channels are read (after checks while
+    the car is driven), so the GT7 cell - which Forza and AC repeat with "No (same)" - says Pitwall does not read slip
+    from that game, never that F1 25 is the only game it reads slip from (Forza and AC send slip it does not read)."""
+    readme = (Path(__file__).resolve().parents[2] / "README.md").read_text(encoding="utf-8")
+    row = next(line for line in readme.splitlines() if line.startswith("| Handling balance, lock-ups and wheelspin |"))
+    cells = [c.strip() for c in row.strip().strip("|").split("|")]
+    assert "F1 25 only" not in row
+    assert cells[2] == "No: Pitwall does not read tyre slip from this game yet" and cells[3] == cells[4] == "No (same)"
+    assert "slip" in cells[5] and "Synthetic only" in cells[5]
+
+
 def test_acc_evidence_is_never_stronger_than_a_tester_report_and_generated_pages() -> None:
     """ACC on PC (feat/acc): no field or platform claims recorded or live evidence until a recorded ACC capture exists;
     Ed's live checks are named as a tester's report wherever a field cites them; CI on Windows is not live."""

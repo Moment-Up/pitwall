@@ -329,7 +329,7 @@ The newer analyses need data only some games send:
 | Feature | F1 25 | Gran Turismo 7 | Forza | Assetto Corsa | ACC (PC) |
 |---|---|---|---|---|---|
 | Racing line (Compare, Corners) | Recorded (PS5) | Recorded (a PS5 capture) | Synthetic only | Position decoded on the PS5 recording; no lap stored end to end yet | Synthetic only |
-| Handling balance, lock-ups and wheelspin | Recorded (PS5); lock-ups synthetic only | No: Pitwall reads tyre slip from F1 25 only | No (same) | No (same) | Synthetic only, and only after checks while you drive settle ACC's slip and yaw channels (no documented units) |
+| Handling balance, lock-ups and wheelspin | Recorded (PS5); lock-ups synthetic only | No: Pitwall does not read tyre slip from this game yet | No (same) | No (same) | Synthetic only, and only after checks while you drive settle ACC's slip and yaw channels (no documented units) |
 | Race strategy engineer | Recorded (PS5 races) | No (F1 25 only) | No | No | No |
 | Pace against the AI | Recorded (PS5) | No (F1 25 only) | No | No | No |
 
