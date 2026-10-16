@@ -2,6 +2,8 @@
 // platform; PUT /api/integrations/{key}, applied at once) with what is actually happening, how far its support is
 // proven, and the game's own telemetry settings as a vertical Pro Stepper with a copy button on every value the
 // driver types. Behaviour reference: web/src/views/ConnectView.svelte (drafts survive the refresh; F1 is always on).
+// ACC (PC) has no IP or port: its card shows the shared-memory reader's sentence and counters, and says when it runs
+// because ACC is the selected game even with the switch off.
 
 import { Button, Card, Chip, Disclosure, Input, Label, Link, ListBox, Select, Switch, TextField } from "@heroui/react";
 import { useEffect, useState } from "react";
@@ -63,6 +65,24 @@ function applyIntegrations(list: Integration[]): void {
   cache.invalidate(CONNECT_KEYS.connect);
 }
 
+/** ACC's reader in numbers (only while it exists), and why it runs with the switch off. */
+function AccDetails({ g }: { g: Integration }) {
+  const r = g.reader;
+  const pages = r?.by_page;
+  return (
+    <div className="grid gap-0.5 text-sm text-muted">
+      {g.selected && !g.enabled ? <p className="m-0">On because ACC is the selected game (Setup › Game).</p> : null}
+      {pages ? (
+        <p className="m-0">
+          Pages read: {pages.physics.toLocaleString("en-GB")} physics · {pages.graphics.toLocaleString("en-GB")} graphics ·{" "}
+          {pages.static.toLocaleString("en-GB")} static
+          {r?.last_rx_s_ago != null ? ` · last ${ago(r.last_rx_s_ago)}` : ""}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function GameCard({ g, guide }: { g: Integration; guide: GameGuide | null }) {
   const [draft, setDraft] = useState<Draft>(() => draftFrom(g));
   const [saving, setSaving] = useState(false);
@@ -104,7 +124,7 @@ export function GameCard({ g, guide }: { g: Integration; guide: GameGuide | null
   const state = cardState(g);
   const ev = evidenceOfStatus(g.status);
   const showFields = g.needs_console_ip || g.port_editable || g.key === "gt7" || g.key === "ac";
-  const guideOpen = g.enabled;
+  const guideOpen = g.key === "acc" ? (g.active ?? g.enabled) : g.enabled;
 
   return (
     <Card className="gap-4 p-5" aria-label={g.name}>
@@ -170,6 +190,7 @@ export function GameCard({ g, guide }: { g: Integration; guide: GameGuide | null
               {g.client.last_error && g.client.state !== "streaming" ? <p className="m-0">{g.client.last_error}</p> : null}
             </div>
           ) : null}
+          {g.key === "acc" ? <AccDetails g={g} /> : null}
           {g.error ? <p className="m-0 text-sm text-danger">{g.error}</p> : null}
         </div>
 

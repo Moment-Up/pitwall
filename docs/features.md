@@ -23,6 +23,7 @@ Where a feature has less evidence than that, this page says so. [status.md](stat
 - [Car health: tyres, brakes, engine, fuel](#car-health-tyres-brakes-engine-fuel)
 - [The AI engineer](#the-ai-engineer)
 - [F2 cars in F1 25](#f2-cars-in-f1-25)
+- [Assetto Corsa Competizione on PC](#assetto-corsa-competizione-on-pc)
 - [The classic dashboard](#the-classic-dashboard)
 
 ## Drive
@@ -610,12 +611,14 @@ the facts used). `uv run pitwall report` prints a Markdown report of the latest 
 
 Tell Pitwall what you play: pick the game, then the platform (PS5, PS4, Xbox or PC). The main list has F1 25 (with
 a switch for the 2026 Season Pack cars), Gran Turismo 7, Assetto Corsa, Forza Motorsport, Forza Horizon and
-"Another game". Assetto Corsa Competizione, iRacing and F1 24 or older are under *More games*, so you can say you
-play them even though Pitwall cannot read them. Each platform shows its support in the words of the
+"Another game". Assetto Corsa Competizione, iRacing and F1 24 or older are under *More games*: ACC on PC is read
+(partly, see [below](#assetto-corsa-competizione-on-pc)), the others are there so you can say you play them even
+though Pitwall cannot read them. Each platform shows its support in the words of the
 [supported games](../README.md#supported-games) table.
 
 Choosing a game switches on its telemetry input and asks for the console's IP address where the game needs one
-(required for Assetto Corsa). Gran Turismo 7's input is switched on once you enter the console's IP; without one it
+(required for Assetto Corsa). ACC needs no address and nothing in the game: its card says what the reader is doing
+(ACC not running, waiting for you to drive, reading) and, on a Mac, that Pitwall must run on the PC that runs ACC. Gran Turismo 7's input is switched on once you enter the console's IP; without one it
 would search your whole network for the console, so that happens only when you press *Search the network* (and
 confirm). It never switches another game's input off, and it leaves alone an
 input that is receiving packets at that moment. The choice is kept for the whole rig and survives restarts. A
@@ -650,7 +653,9 @@ tried with a live console, and the page has not been used on an iPad.
 
 The exact in-game telemetry settings for each game, with copy buttons and this computer's address. It confirms when
 packets arrive: who is sending, packets per second, decoded and rejected counts, and the capture being recorded.
-This is also where Gran Turismo 7, Forza, Assetto Corsa and raw recording are switched on. The screenshot shows a
+This is also where Gran Turismo 7, Forza, Assetto Corsa, ACC and raw recording are switched on. ACC's card has no
+address or port: it shows the shared-memory reader's sentence and the pages read, and runs while ACC is the selected
+game even with its switch off. The screenshot shows a
 recorded capture streamed from the Mac itself to test port 20790 (in the game, use 20777), and is cropped above
 the IP address row.
 
@@ -1211,6 +1216,27 @@ check `f2_ps5`). See [status.md](status.md#f2-in-f1-25-ps5-recorded).
 
 Not covered yet: the 2026 F2 cars (recognised as F2, but no setups and no recording), whether F2 teams differ in the
 game, and the rules of longer F2 races.
+
+## Assetto Corsa Competizione on PC
+
+ACC shares its telemetry only on the Windows PC that runs it, in shared memory, so Pitwall has to run on that same
+PC (install it there, [install.md](install.md#assetto-corsa-competizione-on-a-windows-pc)). There is nothing to set
+in the game and no address to enter: choose *Assetto Corsa Competizione · PC* on Setup › Game (or
+`uv run pitwall game set acc`), start ACC and drive. Pitwall reads the game while you are on track; the menus, a
+pause and a replay don't count as driving, so an idle ACC never looks like someone driving.
+
+What works: lap times and lap validity, the live delta, braking cues and corner coaching, the track map, tyre
+pressures, brake temperatures, weather, the session type and your race position. Lap distance is estimated: ACC
+does not send the track's length, so Pitwall takes it from a table of circuits (Spa, Monza and Brands Hatch checked)
+and a circuit it does not know gets lap times but no distance, delta or cues. Not read yet, and said so on Setup ›
+Game and by the engineer: sector times, fuel, tyre temperatures (ACC sends the core, not the tread), flags,
+penalties, damage and the other cars. Setup recommendations, the race strategy engineer and pace against the AI are
+F1 25 only. g-forces, yaw and slip are used only after checks while you drive settle their units.
+
+Evidence: built from Kunos' official shared-memory document and tested with generated data. Ed (Pitwall tester)
+wrote the first ACC adapter and checked pedals, steering, speed, gear and the track and car names live with his own
+build: a tester's report, not a Pitwall recording. Nothing about ACC has been recorded or run live through Pitwall
+yet.
 
 ## The classic dashboard
 

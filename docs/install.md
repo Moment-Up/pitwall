@@ -400,7 +400,8 @@ Pitwall running the change applies at once; otherwise at the next start. Choosin
 
 - switches on its telemetry input (F1 25's is always on), so the game's Enable switch on the Connect page is
   already done;
-- asks for the console's IP address where Pitwall needs it: required for Assetto Corsa. Gran Turismo 7's input is
+- asks for the console's IP address where Pitwall needs it: required for Assetto Corsa (ACC needs none: Pitwall reads
+  it on the PC that runs it). Gran Turismo 7's input is
   switched on only with its IP (`--console-ip <console-ip>` on `game set`, or the IP field on Setup › Game): without
   one it would search the whole network for the console, so that is a separate, explicit choice (Setup › Game ›
   *Search the network*, or Enable on the Connect page);
@@ -423,8 +424,9 @@ Pitwall running the change applies at once; otherwise at the next start. Choosin
 | Another game | any | `other:any` |
 
 `uv run pitwall game list --all` prints the current list with each one's support. Some entries exist only so you can
-say what you play although Pitwall cannot read it (Assetto Corsa Competizione, iRacing, F1 24, Assetto Corsa on
-Xbox One). For another game, Pitwall offers to record its packets (see [Other games](#other-games)).
+say what you play although Pitwall cannot read it (Assetto Corsa Competizione on PS5 or Xbox, iRacing, F1 24,
+Assetto Corsa on Xbox One). `uv run pitwall game set acc` is short for `acc:pc`, the one ACC Pitwall can read. For
+another game, Pitwall offers to record its packets (see [Other games](#other-games)).
 
 If a different game than the one you chose is sending, Pitwall says so (an alert outside Drive; on Drive, the status
 line while the car is stationary) and offers to switch. It still decodes whatever arrives: the choice never filters
@@ -492,12 +494,39 @@ uv run python scripts/probe_ac.py --ip <console-ip> --platform ps5 --seconds 60 
 
 It sends at most 5 handshakes and records what comes back; exit code 0 means the game streams.
 
+### Assetto Corsa Competizione on a Windows PC
+
+(Partial: built from Kunos' official shared-memory document and tested with generated data; a tester's live checks,
+no Pitwall recording yet.)
+
+ACC shares its telemetry only on the Windows PC that runs it (shared memory), not over the network. So:
+
+1. **Install Pitwall on the gaming PC**, the same PC that runs ACC ([Windows](#windows) above). A Mac or another
+   computer cannot read ACC; the iPad or phone still opens the dashboard over the network as usual.
+2. **Choose it**: Setup › Game › More games › *Assetto Corsa Competizione* › PC, or
+   `uv run pitwall game set acc`. That switches the ACC input on; there is no IP address or port to enter and nothing
+   to set in the game.
+3. **Start ACC as the same Windows user** as Pitwall (the shared memory belongs to that user's session). Pitwall
+   started at logon by `scripts\windows\service.ps1 install` runs that way. If ACC runs as administrator, start
+   Pitwall as administrator too, or ACC normally: the Connect card says "access denied" otherwise.
+4. **Get on track.** Setup › Game and the Connect card say what the reader sees: ACC not running (Pitwall looks
+   every 2 s), running but not on track, paused, or reading. The menus, a pause and replays don't count as driving.
+
+`uv run pitwall doctor` on the gaming PC has an **ACC** line: whether ACC's pages exist right now, or what the
+running server's reader sees. Lap distance (live delta, braking cues, track map) needs the circuit's length, which
+ACC does not send: Pitwall knows 25 circuits (Spa, Monza and Brands Hatch checked); on another one you get lap times
+but no distance. Sector times, fuel, tyre temperatures, flags and the other cars are not read yet. Pitwall only
+reads ACC's memory (it never creates or changes it), so it can't block ACC or apps like SimHub and Crew Chief (not
+yet tried alongside them).
+The UDP firewall rules are not needed for ACC itself, only for the dashboard on other devices (TCP 8770).
+
+ACC on PS5 and Xbox sends no telemetry.
+
 ### Other games
 
 **Record another game** on the Connect page saves every packet sent to a port (7576 by default, Project Motor
-Racing's default) without analysing it, so a decoder can be written later. Assetto Corsa Competizione and iRacing
-are not supported yet: on PC their telemetry can only be read on the gaming PC itself (no reader yet), and ACC on
-consoles sends no telemetry.
+Racing's default) without analysing it, so a decoder can be written later. iRacing is not supported yet: on PC its
+telemetry can only be read on the gaming PC itself (no reader yet).
 
 ## Open it on an iPad or phone
 
@@ -717,7 +746,9 @@ scripts in `scripts\windows` (guide: [scripts/windows/README.md](../scripts/wind
 Windows' built-in voices; spoken questions use Parakeet on the CPU via sherpa-onnx (installed by `install.ps1`'s
 `uv sync --all-extras`; its model downloads the first time a radio connects; not yet tried on a Windows PC).
 `smoke.ps1` checks an install end to end
-without a game. The Connect page lists the address of the default network connection.
+without a game. The Connect page lists the address of the default network connection. Assetto Corsa Competizione
+can be read only on Windows, on the PC that runs it ([ACC](#assetto-corsa-competizione-on-a-windows-pc)): its reader
+starts there once ACC is selected or switched on, and stays off on macOS and Linux.
 
 ## Updating
 

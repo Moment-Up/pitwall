@@ -251,7 +251,7 @@ descriptions here are paraphrased.
 | 57 | 1400 | int | isDeltaPositive |  | used | Delta is positive (1) or negative (0) | - |
 | 58 | 1404 | int | iSplit |  | used | Last split, ms | - |
 | 59 | 1408 | int | isValidLap |  | used | The current lap still counts for timing | `lap_invalid`, completion validity |
-| 60 | 1412 | float | fuelEstimatedLaps |  | used | Laps the fuel on board lasts | `fuel_remaining_laps_game` |
+| 60 | 1412 | float | fuelEstimatedLaps |  | used | Laps the fuel on board lasts | - |
 | 61 | 1416 | wchar_t | trackStatus | [33] | used | Track state as text | - |
 | 62 | 1484 | int | missingMandatoryPits |  | used | Mandatory stops still to make | - |
 | 63 | 1488 | float | Clock |  | used | Time of day, seconds | - |
@@ -407,7 +407,9 @@ recording confirms them, and `SessionInfo.extra['acc_evidence']` shows the count
    (Ed's range at Spa, -0.58 .. +0.77, fits a normalised input.)
 3. **Fuel unit.** The PDF gives `fuel` in kilograms, but its own `fuelXLap` is in litres, `maxFuel` / `usedFuel` /
    `mfdFuelToAdd` have no unit, and the game shows litres. Not mapped (`fuel_kg` / `fuel_litres` = `None`) until one
-   recording compares `fuel` with the HUD. `fuelEstimatedLaps` (laps, unambiguous) is mapped.
+   recording compares `fuel` with the HUD. `fuelEstimatedLaps` (laps the fuel on board lasts) is not mapped either:
+   Pitwall's `fuel_remaining_laps_game` is F1's MFD figure, the fuel margin at the finish in laps, and the race
+   strategy reads it so; ACC's figure is another quantity, so mapping it there would show a wrong margin.
 4. **`accG` axes.** The PDF says "acceleration vector in global coordinates" with no unit or axis order; Ed's
    adapter (after a community port) read it as the car's own axes in g (x lateral, y vertical, z longitudinal),
    and Kunos' AC EVO document lists `[lateral, longitudinal, vertical]` for that game (`windows-shm-relay.md`

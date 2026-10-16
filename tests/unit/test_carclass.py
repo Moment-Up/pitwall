@@ -56,8 +56,27 @@ def test_formula_table_and_team_fallback(
 def test_unknown_stays_unknown() -> None:
     assert C.classify("f1_25", None, None, 2025) is None  # neither a formula nor a team
     assert C.classify("f1_25", None, "f1:team:300", 2025) is None  # a team id the spec does not list
-    for game in ("gt7", "forza_motorsport", "ac", None):
+    for game in ("gt7", "forza_motorsport", "ac", "acc", None):
         assert C.classify(game, "F2", "f1:team:158", 2025) is None  # other games never get a class
+
+
+def test_acc_cars_have_no_class_and_keep_their_names() -> None:
+    """ACC (feat/acc): Kunos' car ids say GT3 / GT4 / Cup ..., but Pitwall has no class for them (the classes, their
+    track models and the brake prior are F1's): no class, no chip, no family; the car's Appendix 2 name is the label
+    and the session's own name (the adapter's words) is the session label."""
+    row = {
+        "game": "acc",
+        "car_id": "acc:car:mclaren_720s_gt3",
+        "car_name": "McLaren 720S GT3 2019",
+        "session_type": "race",
+        "session_type_raw": "Race",
+        "info": {"acc_status": "live"},
+    }
+    assert C.classify_row(row) is None and C.family_of_row(row) is None
+    assert C.session_fields(row) == {"car_class": None, "car_label": "McLaren 720S GT3 2019", "session_label": "Race"}
+    unknown = {**row, "car_name": "ford_mustang_gt3", "session_type_raw": "unknown_42", "session_type": "unknown"}
+    assert C.session_fields(unknown)["car_label"] == "ford_mustang_gt3"  # a car after v1.8.12: the game's own id
+    assert C.session_fields(unknown)["session_label"] is None  # never "unknown_42"
 
 
 def test_class_dict_and_evidence() -> None:

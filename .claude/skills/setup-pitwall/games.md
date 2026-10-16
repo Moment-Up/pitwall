@@ -106,6 +106,24 @@ tyre temperatures, fuel and sectors are not in the remote telemetry Pitwall read
 on PC the game has them in its shared memory, which Pitwall can't read yet (so say "not in Pitwall yet", not "not
 sent"). A diagnostic probe command is on Setup > Connect.
 
+## Assetto Corsa Competizione - PC only (partial)
+
+Id: `acc:pc` (`uv run pitwall game set acc` is short for it). Status: partial - built from Kunos' official shared-memory
+document, generated data only; a tester's live checks (Ed), no Pitwall recording yet. Say exactly that.
+
+ACC shares its telemetry only on the Windows PC that runs it (shared memory), never over the network:
+
+1. Pitwall must be installed and run **on the gaming PC** (windows.md). On a Mac, `game set` answers `needs_windows`:
+   say plainly that this computer can't read ACC and the install belongs on the PC that runs it.
+2. `uv run pitwall game set acc --json` switches the ACC input on. No IP, no port, no firewall rule for ACC itself
+   (the dashboard on other devices still needs `firewall.ps1 add`), nothing to set in the game.
+3. Start ACC as the same Windows user as Pitwall (the service from `service.ps1 install` runs that way) and get on
+   track. Doctor's `acc` line and Setup > Connect say what the reader sees: not running, menus, paused, reading, or
+   "access denied" (ACC runs as administrator: run Pitwall the same way, or ACC normally).
+
+Lap distance (delta, braking cues, track map) needs the circuit in Pitwall's table (25 circuits, 3 checked); sector
+times, fuel, tyre temperatures, flags and the other cars are "not in Pitwall yet", not "not sent".
+
 ## Record another game (raw packets, no analysis) - e.g. Project Motor Racing
 
 Id: `other:any`. Selecting it does not switch recording on (it listens on a port and writes every packet to disk):
@@ -122,8 +140,7 @@ These ids exist so the user can say what they play; Pitwall cannot read them (`g
 and the reason).
 
 - **Assetto Corsa Competizione** PS5 / Xbox Series (`acc:ps5`, `acc:xbox`): unsupported - no external telemetry on
-  consoles (PS5 tested 2026-10-11: nothing). PC (`acc:pc`): partial, not implemented (shared memory / broadcasting
-  API).
+  consoles (PS5 tested 2026-10-11: nothing). PC (`acc:pc`): see the ACC section above.
 - **iRacing** (PC, `iracing:pc`): partial, not implemented (irsdk).
 - **F1 24 and older** (`f1_24:any`): unsupported (UDP format 2024).
 - **Assetto Corsa on Xbox One** (`ac:xbox`): unsupported (no telemetry interface).

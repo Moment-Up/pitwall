@@ -35,7 +35,7 @@ export function snapGame(name: string): SnapshotGame {
   return load<SnapshotGame>(`snapshot-game-${name}`);
 }
 
-/** GET /api/game: "first-run" | "gt7" | "ac" | "mismatch" | "acc" | "forza". */
+/** GET /api/game: "first-run" | "gt7" | "ac" | "mismatch" | "acc" (ACC on PS5) | "acc-pc" (on a Mac) | "forza". */
 export function gameState(name: string): GameState {
   return load<GameState>(`state-${name}`);
 }

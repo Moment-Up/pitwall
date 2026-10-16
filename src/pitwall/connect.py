@@ -279,7 +279,7 @@ def acc_guide() -> GameGuide:
             GuideStep(
                 "In the game",
                 "Get on track",
-                note="Pitwall reads ACC while you drive; the menus, a pause and replays send nothing",
+                note="Pitwall reads ACC while you drive; the menus, a pause and replays don't count as driving",
             ),
         ],
         notes=[

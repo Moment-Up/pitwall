@@ -78,6 +78,7 @@ NOTES = {
     Game.GT7: "From GT7's race position; not yet checked against the game's screen.",
     Game.FORZA_MOTORSPORT: "From Forza's race position (community docs); not checked on a real recording.",
     Game.FORZA_HORIZON: "From Forza's race position (community docs); not checked on a real recording.",
+    Game.ACC: "From ACC's race position (Kunos' shared-memory document); not checked on a real recording.",
 }
 
 

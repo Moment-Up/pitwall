@@ -12,6 +12,8 @@
 // Pitwall cannot read gets a "Pitwall can't read ... telemetry" card with Change game instead. A game that cannot
 // send anything until its console IP is entered (Assetto Corsa; GT7 with its input off) leads with that:
 //   Assetto Corsa needs the console's IP address              [ Enter console IP ]  -> Setup › Game
+// ACC (PC) has no address at all: Pitwall reads the game's shared memory on the PC that runs both. Off that PC (a Mac)
+// nothing can ever arrive, so the card says that first, in the server's words.
 //
 // The demo writes the synthetic coaching demo anew (POST /api/simulate, as Settings › System does: always this
 // version's ten-lap habits story, never a capture an older version left) and replays it at real time (POST
@@ -124,23 +126,28 @@ export function NoTelemetryCard({ entry = null }: { entry?: GameEntry | null }) 
   if (entry && !readable(entry)) return <UnreadableCard entry={entry} />;
   const view = noTelemetryView(connect, noTelemetryGame(entry));
   const ipEntry = entry && view.needsIp ? entry : null; // nothing can arrive before the console IP is entered
+  const pcEntry = entry && view.needsGamingPc ? entry : null; // ACC, and this server is not on the gaming PC
   return (
     <Card className="pwc-nodata pwc-span3">
       <EmptyState size="lg">
         <EmptyState.Header>
           <EmptyState.Title>
-            {ipEntry
-              ? `${ipEntry.text_name} needs the console's IP address`
-              : entry
-                ? `Waiting for ${entry.text_name} telemetry`
-                : "Waiting for telemetry"}
+            {pcEntry
+              ? `${pcEntry.text_name} needs Pitwall on its own PC`
+              : ipEntry
+                ? `${ipEntry.text_name} needs the console's IP address`
+                : entry
+                  ? `Waiting for ${entry.text_name} telemetry`
+                  : "Waiting for telemetry"}
           </EmptyState.Title>
           <EmptyState.Description>
-            {ipEntry
-              ? ipEntry.transport.console_ip === "required"
-                ? "Pitwall contacts the console itself, so nothing arrives until it knows the console's address."
-                : "Enter it on Setup › Game, or let Pitwall search the network for the console there."
-              : "No packet has arrived yet. Check these three things."}
+            {pcEntry
+              ? view.steps[0].description
+              : ipEntry
+                ? ipEntry.transport.console_ip === "required"
+                  ? "Pitwall contacts the console itself, so nothing arrives until it knows the console's address."
+                  : "Enter it on Setup › Game, or let Pitwall search the network for the console there."
+                : "No packet has arrived yet. Check these three things."}
           </EmptyState.Description>
         </EmptyState.Header>
         <EmptyState.Content>

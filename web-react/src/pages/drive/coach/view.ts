@@ -120,6 +120,8 @@ export interface ConnectInfo {
         console_ip?: string | null;
         sources?: ConnectSource[] | null;
         client?: { last_rx_s_ago?: number | null } | null;
+        /** ACC only: the shared-memory reader's state and the server's sentence for it. */
+        reader?: { state?: string | null; message?: string | null; last_rx_s_ago?: number | null } | null;
       }[]
     | null;
 }
@@ -132,7 +134,8 @@ export interface NoTelemetryGame {
   guideId: string | null;
   /** How telemetry gets here (transport.kind). */
   kind: TransportKind;
-  /** The port it arrives on (transport.port); null for Assetto Corsa (Pitwall contacts the console). */
+  /** The port it arrives on (transport.port); null for Assetto Corsa (Pitwall contacts the console) and ACC (shared
+   * memory on the PC that runs it). */
   port: number | null;
   /** The input's key on /api/connect ("f1", "gt7", ...). */
   integration: string | null;
@@ -175,6 +178,9 @@ export interface NoTelemetryView {
   /** Nothing can arrive until the console's IP is entered (Assetto Corsa without one; GT7 with its input off and
    * no IP): the card leads with that, not with "Waiting for telemetry". */
   needsIp: boolean;
+  /** Nothing can ever arrive here: ACC shares its telemetry only on the Windows PC that runs it, and this server is
+   * not on it. The server's sentence says so (steps[0].description). */
+  needsGamingPc: boolean;
 }
 
 const IP_PLACEHOLDER = "<this Mac's IP>";
@@ -223,7 +229,7 @@ export function noTelemetryView(c: ConnectInfo | undefined, game: NoTelemetryGam
   const port = game ? (game.port ?? null) : portOf(c);
   const sources = input?.sources ?? (game && game.integration !== "f1" ? [] : (c?.udp?.sources ?? []));
   const last = lastSender(sources);
-  const rxAgo = input?.client?.last_rx_s_ago;
+  const rxAgo = input?.client?.last_rx_s_ago ?? input?.reader?.last_rx_s_ago;
   const hint = c?.telemetry?.hint;
   const hintText = typeof hint === "string" && hint ? hint : null;
   const listeningOn = input ? input.listening !== false : c?.udp?.listening !== false;
@@ -234,6 +240,38 @@ export function noTelemetryView(c: ConnectInfo | undefined, game: NoTelemetryGam
       ? `Last packet: ${age(rxAgo)}`
       : "Last sender seen: none";
   const seen = last !== null || (typeof rxAgo === "number" && Number.isFinite(rxAgo));
+
+  if (game && game.kind === "shared_memory") {
+    // ACC on PC: nothing to set in the game and no address; Pitwall reads the game's memory on the PC that runs both.
+    // The steps are where Pitwall runs, the game running, getting on track; the reader's sentence (the server's)
+    // fills the step it is about.
+    const reader = input?.reader ?? null;
+    const state = reader?.state ?? null;
+    const said = typeof reader?.message === "string" && reader.message ? reader.message : null;
+    const where = guide?.steps[0]?.note ? sentenceCase(guide.steps[0].note) : "Nothing to set in the game";
+    const needsGamingPc = state === "not_windows";
+    const blocked = state === "not_running" || state === "error" || state === "stopped";
+    return {
+      steps: [
+        {
+          title: needsGamingPc ? `Run Pitwall on the PC that runs ${game.name}` : `Pitwall on the PC that runs ${game.name}`,
+          description: needsGamingPc && said ? said : where,
+          mono: false,
+        },
+        {
+          title: state === "error" ? `Pitwall can't read ${game.name}` : `Start ${game.name}`,
+          description: blocked && said ? said : "Same PC, same Windows user as Pitwall",
+          mono: false,
+        },
+        { title: "Get on track", description: state === "waiting" && said ? said : lastText, mono: false },
+      ],
+      current: needsGamingPc || state === "off" ? 0 : blocked ? 1 : 2,
+      hint: hintText,
+      listening: null,
+      needsIp: false,
+      needsGamingPc,
+    };
+  }
 
   if (game && (game.kind === "udp_heartbeat" || game.kind === "udp_client")) {
     const enable = guide?.steps[0] ?? null;
@@ -279,6 +317,7 @@ export function noTelemetryView(c: ConnectInfo | undefined, game: NoTelemetryGam
       hint: hintText,
       listening,
       needsIp,
+      needsGamingPc: false,
     };
   }
 
@@ -298,6 +337,7 @@ export function noTelemetryView(c: ConnectInfo | undefined, game: NoTelemetryGam
     hint: hintText,
     listening,
     needsIp: false,
+    needsGamingPc: false,
   };
 }
 

@@ -231,10 +231,12 @@ PLANNED: list[CapabilityRow] = [
         True,
         "Pitwall reads ACC's shared memory on the PC that runs the game (it opens Kunos' three pages read-only and "
         "never creates them), decoded from Kunos' official ACC Shared Memory v1.8.12 and tested with generated "
-        "pages only. Ed (Pitwall tester) checked pedals, steering and speed live at Spa (2026-10-09) and the track "
-        "and car names, gear and steering sign at Brands Hatch (2026-10-13) with his own build: a tester's report, "
-        "not a Pitwall recording. No recorded ACC session yet. The Broadcasting API (UDP 9000) is not used: it "
-        "lacks inputs.",
+        "pages only (on Windows CI the reader also reads pages the test itself creates under ACC's names: "
+        "CI-tested, not live-validated). Ed (Pitwall tester) checked pedals, steering and speed live at Spa "
+        "(2026-10-09) and the track and car names, gear and steering sign at Brands Hatch (2026-10-13) with his own "
+        "build: a tester's report, not a Pitwall recording. No recorded ACC session yet. Not read: sector times, "
+        "fuel, tyre tread temperatures, flags, penalties, damage, the other cars. The Broadcasting API (UDP 9000) "
+        "is not used: it lacks inputs.",
         platform_ids=("pc",),
         adapter_game=Game.ACC,
     ),

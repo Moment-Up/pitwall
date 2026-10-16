@@ -9,6 +9,19 @@ The release workflow copies a release's bullet points into its GitHub release no
 
 ## Unreleased
 
+- Assetto Corsa Competizione on PC: Pitwall reads ACC on the gaming PC itself (install it there; nothing to set in
+  the game). Partial: generated data and a tester's live checks, no recording yet.
+- ACC gives lap times, the live delta, braking cues, corner coaching, the track map, tyre pressures, brake
+  temperatures and weather. Sector times, fuel, tyre temps, flags and other cars: not yet.
+- ACC's lap distance comes from Pitwall's table of 25 circuits (Spa, Monza and Brands Hatch checked); on a circuit
+  it doesn't list you get lap times but no delta or cues.
+- A closed, paused or idle ACC never looks like someone driving. Pitwall only reads ACC's shared memory and never
+  creates it, so it can't block ACC or apps like SimHub.
+- Choose ACC on Setup › Game or with `pitwall game set acc`. On a Mac it says Pitwall must run on the gaming PC;
+  `pitwall doctor` checks ACC on Windows.
+- Thanks to Ed (Pitwall tester), who wrote the first ACC adapter and checked pedals, steering, speed, gear and the
+  track and car names live in ACC.
+
 ## v0.4.0 - 2026-10-15
 
 - A new logo: the pit wall stand, on the app icon, the browser tab, the dashboard and the README.

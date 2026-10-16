@@ -4,7 +4,7 @@
 //
 // /api/connect carries this Mac's addresses, the per-game setup guides (data, not prose, so every value the driver
 // types into a game menu can be copied), the UDP listener and its senders, the telemetry status, radio devices and
-// the integrations (one per telemetry protocol: F1, GT7, Forza, Assetto Corsa, record-only). PUT
+// the integrations (one per telemetry protocol: F1, GT7, Forza, Assetto Corsa, ACC's shared memory, record-only). PUT
 // /api/integrations/{key} switches a game on or off and sets its console IP, port, GT7 variant or AC platform; it is
 // applied at once and answers with the new integration list. Errors: 422 (invalid value, the detail says why in
 // words), 409 (two enabled games would share a port).
@@ -63,6 +63,31 @@ export interface AcClient {
   platform: string | null;
 }
 
+/** ACC (PC): Pitwall reads the game's shared memory on the PC that runs both, so its card shows the reader's state
+ * (src/pitwall/ingest/acc_shm_reader.py AccReaderState; "not_windows" / "off" / "stopped" come from the runtime). */
+export type AccReaderState = "not_windows" | "off" | "not_running" | "waiting" | "reading" | "error" | "stopped";
+
+export interface AccReader {
+  state: AccReaderState;
+  /** The sentence to show for this state, verbatim (the backend writes it: what is happening and what to do). */
+  message: string;
+  /** Seconds since the last page Pitwall used; null before the first (or without a reader). */
+  last_rx_s_ago: number | null;
+  /** Only while a reader exists (Windows, ACC enabled or selected). */
+  pages_open?: number;
+  /** ACC's own status from its Graphics page: "off" | "replay" | "live" | "pause"; null before one is read. */
+  acc_status?: string | null;
+  received?: number;
+  by_page?: { physics: number; graphics: number; static: number };
+  rate?: number;
+  opens?: number;
+  releases?: number;
+  torn_reads?: number;
+  last_error?: string | null;
+  capture?: string | null;
+  handler_errors?: number;
+}
+
 export interface Gt7Heartbeat {
   console_ip?: string | null;
   target?: string | null;
@@ -75,7 +100,7 @@ export interface Gt7Heartbeat {
   last_sent_s_ago?: number | null;
 }
 
-export type IntegrationKey = "f1" | "gt7" | "forza" | "ac" | "record" | (string & {});
+export type IntegrationKey = "f1" | "gt7" | "forza" | "ac" | "acc" | "record" | (string & {});
 
 export interface Integration {
   key: IntegrationKey;
@@ -102,6 +127,16 @@ export interface Integration {
   error: string | null;
   heartbeat?: Gt7Heartbeat | null;
   client?: AcClient | null;
+  /** ACC only: the shared-memory reader (no port, no IP: `port` is 0). */
+  reader?: AccReader | null;
+  /** ACC only: it is the selected game, so its reader runs even with the switch off. */
+  selected?: boolean;
+  /** ACC only: switched on or selected (the reader is wanted). */
+  active?: boolean;
+  /** ACC only: false off Windows (ACC's pages exist only on the PC that runs it). */
+  supported?: boolean;
+  /** Seconds since the input's decoder accepted a packet (absent for record-only). */
+  decoded_s_ago?: number | null;
 }
 
 export type TelemetryStatus = "live" | "stale" | "no_data";

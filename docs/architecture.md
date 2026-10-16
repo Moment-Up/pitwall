@@ -62,6 +62,7 @@
 | Thread | Work | Never does |
 |---|---|---|
 | `udp-<port>` | `recvfrom` -> monotonic timestamp -> capture queue -> decode -> session state | disk I/O, DB, analysis, LLM |
+| `acc-shm` | Windows only, while ACC is enabled or selected: copies ACC's three shared-memory pages at 60 Hz, gates them (`AccPageGate`), then the same path as a UDP listener (capture queue -> decode -> session state) | create a mapping, write to one, disk I/O, DB, analysis, LLM |
 | `capture-writer` | zstd-compress raw packets to `.pwcap` (flush every 1 s) | - |
 | `lap-analysis` | per-lap: persist, track model, reference, compare, coaching. Its one queue also takes bests refreshes (`BestsRequest`), AI pace summaries (`AiPaceJob`, `core/ai_pace.py`) and coachref tasks (`_Task`: reference choice, drill start / stop), in order with the laps | touch live sockets |
 | `db-writer` | all SQLite writes, one transaction per job | - |
@@ -117,13 +118,34 @@ for a mismatch; an ambiguous platform resolves to the weakest-evidence main entr
 packets or changes an adapter. Selecting GT7 switches its input on only with a console IP: without one the input
 broadcasts its heartbeat to the whole LAN, so that is an explicit choice (Setup › Game "Search the network").
 
+## Assetto Corsa Competizione on PC (shared memory)
+ACC has no network telemetry with inputs: Kunos publishes three shared-memory pages (`Local\acpmf_physics`,
+`_graphics`, `_static`; layouts in docs/research/acc-shared-memory-spec.md, machine-checked by
+`tests/unit/test_acc_protocol.py`) that exist only on the Windows PC running the game, so Pitwall has to run there.
+`ingest/acc_shm_reader.py` (started from the reader Ed, a Pitwall tester, wrote) **opens** the pages read-only
+(`OpenFileMappingW` + `MapViewOfFile`, `FILE_MAP_READ`, ctypes) and never creates them: a missing page is "ACC not
+running", looked for again every 2 s. `AccPageGate` turns page copies into tagged snapshots (`PHYS` / `GRPH` /
+`STAT` + the whole page): Physics on a new `packetId` while ACC is LIVE, Graphics on a change of `packetId` or
+status, Static when its bytes change (player names zeroed first). A closed, frozen, paused or replaying game therefore
+sends nothing new, so `/api/health` never reports a live session for an idle ACC. Snapshots go to their own
+`PacketRouter` (only `AccAdapter`) and into the session's `.pwcap` like datagrams (game hint `acc-shm`, replayed by
+`pitwall replay`). `core/runtime.py` starts the reader only on Windows and only while the `acc` integration is enabled
+or `acc:pc` is the selected game; elsewhere `input_status` reports `not_windows` with a sentence, and nothing starts.
+`adapters/acc/` decodes the pages (pure); channels Kunos documents without units or axes (g-forces, yaw rate, body
+slip, tyre slip) are mapped only after runtime evidence settles them, and the track length comes from a table
+(`adapters/acc/tracks.py`) because Kunos marks `trackSplineLength` unused. The catalogue entry `acc:pc` (transport
+`shared_memory`, no IP, no port) says "not in Pitwall yet" for what the pages hold but the adapter does not map
+(`games.NOT_IMPLEMENTED`); ACC sessions get no car class, their own track ids (`acc:<track>`, never F1's sheets,
+outlines or real-F1 benchmarks) and the knowledge graph's `game` value `acc`.
+
 ## Car classes (`carclass.py`)
 One module decides which kind of car a session was driven in, so no other module keeps its own formula or team
 tables: `classify(game, formula, car_id, packet_format)` (and `classify_row` / `classify_info`) returns a `CarClass`
 (`f1_2025`, `f1_2026`, `f1`, `f2`, `f1_classic`, `other`) with its family (`f1`, `f2`, `other`), label, whether it has
 ERS, a chip flag and the capability status (`capabilities.CAR_CLASSES`, looked up lazily). The class is worked out at
 read time from `SessionInfo.formula` (EA spec 8.12; `F2` = formula 2), else from the spec's team ids for rows stored
-without a formula, never stored itself (schema 6 unchanged); non-F1 games get no class. `car_label` names the car
+without a formula, never stored itself (schema 6 unchanged); non-F1 games get no class (ACC's GT3 / GT4 cars
+included: Pitwall has no class, track-model family or brake prior for them). `car_label` names the car
 ("F2 · Art GP '24", "F2 car", never a raw id; ids 209-219 in format 2025 are named after EA's 465-475, the observed
 F2 2025 teams) and `session_label` the session ("Feature race" for F2's "Race 2", "Sprint race" for its "Race" only
 when the game's weekend structure, stored as `extra["weekend_structure"]`, also has a "Race 2"; the F1 games' own

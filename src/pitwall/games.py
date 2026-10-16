@@ -257,6 +257,8 @@ DISTANCE_REASON: dict[str, str] = {
     "forza_horizon": "Forza sends no lap distance: Pitwall measures the distance you drive from the start line.",
     "ac": "Assetto Corsa sends no lap distance: Pitwall works it out from the track position once the track length "
     "is known (your first full lap measures it).",
+    "acc": "ACC sends where you are along the lap but not the track's length: Pitwall takes the length from its own "
+    "table of circuits (three checked), so distances are estimated, and a circuit it doesn't list has none.",
 }
 # --- health lane: Forza fuel is laps of fuel from how fast the tank level falls (carhealth.fuel); GT7 stays off until
 # a recording shows its level falling (all four owner captures read 100 / 100: no fuel used)
@@ -272,16 +274,73 @@ GT7_FUEL_REASON = (
     "GT7 sends a fuel level, but Pitwall hasn't yet seen a recording where it goes down, so it doesn't estimate fuel."
 )
 # --- end health lane ---
+# --- ACC (feat/acc): data ACC's shared memory has (Kunos' document, docs/research/acc-shared-memory-spec.md) that the
+# adapter does not map, each for the reason its AdapterInfo field gives; said as "not in Pitwall yet", never "not sent"
+ACC_SECTORS_REASON = (
+    "ACC sends which sector you are in and the last sector's time, but Pitwall doesn't build sector times from them "
+    "yet."
+)
+ACC_FLAGS_REASON = (
+    "ACC has flag fields, but Kunos' own sample code calls them not working, so Pitwall doesn't read them until a "
+    "recording shows them."
+)
+ACC_PENALTIES_REASON = (
+    "ACC has a penalty field, but Kunos' own sample code calls it not working, so Pitwall doesn't read it until a "
+    "recording shows it."
+)
+ACC_FUEL_REASON = (
+    "ACC sends a fuel level, but Kunos' document says kilos where the game shows litres, so Pitwall doesn't read it "
+    "until a recording settles the unit."
+)
+ACC_TYRE_TEMPS_REASON = (
+    "ACC sends each tyre's core temperature, not the tread temperatures Pitwall's tyre screens and calls use, so "
+    "Pitwall doesn't show them yet."
+)
+ACC_ENGINE_REASON = (
+    "ACC sends a coolant temperature with no documented unit; Pitwall doesn't read it as the engine temperature."
+)
+ACC_DAMAGE_REASON = "ACC sends damage per body zone, which Pitwall's damage view doesn't read yet."
+ACC_FIELD_REASON = (
+    "ACC sends where the other cars are and the gaps to the cars just ahead and behind, but no lap times for them; "
+    "Pitwall doesn't read them yet."
+)
+ACC_SPOTTER_REASON = (
+    "ACC sends where the other cars are but not which way they point, and Pitwall's spotter needs both, so it isn't "
+    "available for ACC yet."
+)
 NOT_IMPLEMENTED: dict[tuple[str, str], str] = {
     ("gt7", "fuel"): GT7_FUEL_REASON,  # health lane (carhealth.thresholds.GT7_FUEL_ENABLED)
     ("gt7", "ers"): "GT7 may send an energy-recovery value of unknown units; Pitwall doesn't read it.",
     ("gt7", "setup_telemetry"): "GT7 sends only its gear ratios, not the rest of its car setup, and Pitwall doesn't "
     "read them as a setup.",
+    ("acc", "sectors"): ACC_SECTORS_REASON,  # LapCompletion.sector_times_ms stays empty (adapters/acc)
+    ("acc", "flags"): ACC_FLAGS_REASON,
+    ("acc", "penalties"): ACC_PENALTIES_REASON,
+    ("acc", "fuel"): ACC_FUEL_REASON,
+    ("acc", "tyre_temps"): ACC_TYRE_TEMPS_REASON,  # CarFrame.tyre_core_temp_c: decoded, not shown (carhealth: no model)
+    ("acc", "engine_temp"): ACC_ENGINE_REASON,
+    ("acc", "damage"): ACC_DAMAGE_REASON,
+    ("acc", "field_data"): ACC_FIELD_REASON,
+    ("acc", "spotter"): ACC_SPOTTER_REASON,
 }
 NOT_IMPLEMENTED_FIELD: dict[tuple[str, str], str] = {  # (adapter_game, feature) -> the field whose source is the detail
     ("gt7", "fuel"): "fuel_litres",
     ("gt7", "ers"): "ers_store_j",
     ("gt7", "setup_telemetry"): "setup",
+    ("acc", "sectors"): "sector",
+    ("acc", "flags"): "fia_flags",
+    ("acc", "penalties"): "penalties",
+    ("acc", "fuel"): "fuel_kg",
+    ("acc", "tyre_temps"): "tyre_core_temp_c",
+    ("acc", "engine_temp"): "engine_temp_c",
+    ("acc", "damage"): "damage",
+    ("acc", "field_data"): "field_samples",
+    ("acc", "spotter"): "field_motion",
+}
+# A "not sent" feature whose usual sentence would be wrong for one game: (adapter_game, feature) -> the sentence.
+NOT_SENT_REASON: dict[tuple[str, str], str] = {
+    ("acc", "ai_field"): "ACC sends only where the other cars are, not their speed or braking, so there is no AI "
+    "field braking model.",
 }
 # A car class of the game that differs from the rest for a feature (pitwall.carclass, capabilities.CAR_CLASSES).
 CLASS_NOTES: dict[tuple[str, str], str] = {
@@ -289,6 +348,7 @@ CLASS_NOTES: dict[tuple[str, str], str] = {
 }
 PARTIAL_FACTS: dict[tuple[str, str], str] = {
     ("f1_25", "session_info"): "The session type comes from the game; the final classification isn't read yet.",
+    ("acc", "session_info"): "The session type comes from ACC; its results aren't read.",
     ("forza_horizon", "lap_timing"): "Free roam and sprints have no laps; circuit races are timed.",
 }
 PARTIAL_REASON: dict[str, str] = {  # a partial field behind a feature (not distance, not a PARTIAL_FACTS entry)
@@ -783,10 +843,11 @@ def _feature(e: GameEntry, fd: FeatureDef, level: SupportLevel | None) -> GameFe
                     local_only_reason(e, [local]),
                     f"{LOCAL_ONLY_INTERFACE[row.key]}; UDP remote telemetry: {fs.source}{_row_tag(e)}",
                 )
-            reason = (
+            reason = NOT_SENT_REASON.get(
+                (ag, fd.id),
                 f"{name} doesn't send the other cars' positions, so there is no AI field braking model."
                 if fd.id == "ai_field"
-                else f"{name} doesn't send {fd.noun}."
+                else f"{name} doesn't send {fd.noun}.",
             )
             return make("not_sent", not_sent_short, reason, f"{fs.source}{_row_tag(e)}")
     if level is S.UNVERIFIED:

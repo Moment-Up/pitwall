@@ -52,9 +52,15 @@ export function gameText(game: string | null | undefined): string {
   return game.replace(/_/g, " ").toUpperCase();
 }
 
+/** sessions.source of a live ACC session: read from shared memory on this PC, not sent over the network. */
+export const ACC_SOURCE = "acc-shm";
+
 /** The status card's line (Svelte statusLine): what arrives from where, or why nothing does. */
 export function statusLine(info: ConnectInfo): string {
   const t = info.telemetry;
+  if (t.status === "live" && t.source === ACC_SOURCE) {
+    return `Reading ACC's shared memory on this PC · ${Math.round(t.packets_per_s)} pages/s`;
+  }
   // The freshest sender on any input (F1's port, GT7, Forza, or the AC client), not only the F1 listener.
   const src = [...info.udp.sources, ...info.integrations.flatMap((g) => g.sources)].sort((a, b) => a.last_seen_s - b.last_seen_s)[0];
   if (t.status === "live") {
@@ -99,9 +105,22 @@ export function acSummary(g: Integration): string {
   }
 }
 
+/** ACC is wanted when it is switched on or is the selected game (its reader runs either way, on Windows). */
+export function accActive(g: Pick<Integration, "enabled" | "active">): boolean {
+  return g.active ?? g.enabled;
+}
+
+/** ACC's card line: the reader's sentence, verbatim (the server writes what is happening and what to do). */
+export function accSummary(g: Integration): string {
+  const r = g.reader;
+  if (r?.message) return r.message;
+  return accActive(g) ? "Waiting for ACC" : "Off";
+}
+
 /** One line per game card: who is sending and how fast, or what it is waiting for. */
 export function senderSummary(g: Integration): string {
   if (g.key === "ac") return acSummary(g);
+  if (g.key === "acc") return accSummary(g);
   if (!g.enabled) return "Off";
   const live = g.sources.filter(isLiveSource);
   if (live.length) {
@@ -116,6 +135,14 @@ export type CardState = "receiving" | "waiting" | "off" | "problem";
 
 /** The card's state chip: Receiving (live packets), Waiting (on, nothing arriving), Off, Problem (an error). */
 export function cardState(g: Integration): CardState {
+  if (g.key === "acc") {
+    // shared memory: on while switched on or selected; off Windows a wanted ACC input can never read anything
+    if (!accActive(g)) return "off";
+    const st = g.reader?.state;
+    if (g.error || st === "error" || st === "not_windows") return "problem";
+    const age = g.reader?.last_rx_s_ago;
+    return st === "reading" && typeof age === "number" && age < LIVE_SOURCE_S ? "receiving" : "waiting";
+  }
   if (!g.enabled) return "off";
   if (g.error) return "problem";
   if (g.key === "ac") {

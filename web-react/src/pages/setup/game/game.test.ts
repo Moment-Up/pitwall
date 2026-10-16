@@ -241,6 +241,28 @@ describe("the input card", () => {
     expect(inputWords({ ...input, error: "port in use" }, gt7).text).toBe("Problem");
   });
 
+  it("ACC on PC: no IP field, the reader's sentence, words that follow the reader (feat/acc)", () => {
+    const acc = entry("acc:pc", CAT);
+    const state = gameState("acc-pc");
+    const t = text(renderToStaticMarkup(createElement(InputCard, { entry: acc, state, onConsoleIp: async () => null })));
+    expect(t).toContain("Needs the gaming PC");
+    expect(t).toContain("this Mac can't read it"); // the server's sentence, verbatim
+    expect(t).toContain("nothing to set in the game"); // transport summary
+    expect(t).not.toContain("Console IP");
+    expect(t).not.toContain("IP address");
+    const input = state.input!;
+    const reader = (st: string, message = "") => ({ ...input, reader: { state: st as "reading", message, last_rx_s_ago: null } });
+    expect(inputWords(reader("not_running"), acc).text).toBe("On · ACC not running");
+    expect(inputWords(reader("waiting"), acc).text).toBe("On · waiting for you to drive");
+    expect(inputWords(reader("reading"), acc).text).toBe("On · reading ACC");
+    expect(inputWords({ ...reader("reading"), in_use: true }, acc)).toEqual({ text: "Receiving", tone: "success" });
+    expect(inputWords(reader("error"), acc).tone).toBe("danger");
+    // selected but switched off: the reader still runs (active), so the words follow it, not the switch
+    expect(inputWords({ ...reader("not_running"), enabled: false, active: true }, acc).text).toBe("On · ACC not running");
+    expect(inputWords({ ...reader("off"), enabled: false, active: false }, acc).text).toBe("Off");
+    expect(inputWords({ ...reader("not_windows"), enabled: false, active: false }, acc).text).toBe("Needs the gaming PC");
+  });
+
   it("a game Pitwall cannot read says why in the server's words; another game can record its packets", () => {
     const acc = text(renderToStaticMarkup(createElement(UnreadableCard, { entry: entry("acc:ps5", CAT), recordOn: null })));
     expect(acc).toContain("Pitwall can't read Assetto Corsa Competizione telemetry");

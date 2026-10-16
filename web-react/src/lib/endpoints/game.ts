@@ -12,7 +12,7 @@
 
 import { authFetch } from "../auth";
 import type { CarClassId } from "../carclass";
-import type { GameGuide } from "./connect";
+import type { AccReader, GameGuide } from "./connect";
 
 export type SupportLevel =
   | "live_validated"
@@ -55,9 +55,10 @@ export type FeatureId =
   | "setup_telemetry"
   | "setup_recommendations"
   | "wheel_ptt";
-export type GameIntegrationKey = "f1" | "gt7" | "forza" | "ac" | "record";
+export type GameIntegrationKey = "f1" | "gt7" | "forza" | "ac" | "acc" | "record";
 export type ConsoleIpNeed = "required" | "optional" | "no";
-export type TransportKind = "udp_listen" | "udp_heartbeat" | "udp_client" | "none";
+/** "shared_memory": ACC on PC - Pitwall reads the game's memory on the PC that runs both (no IP, no port). */
+export type TransportKind = "udp_listen" | "udp_heartbeat" | "udp_client" | "shared_memory" | "none";
 
 /** Every feature id, in the order the server lists them (section 2.4). */
 export const FEATURE_IDS: readonly FeatureId[] = [
@@ -131,7 +132,7 @@ export interface GameEntry {
   /** "PS5", "PS5 (PS4 version)" */
   platform_label: string;
   group: "main" | "more";
-  /** "f1_25" | "gt7" | "forza_motorsport" | "forza_horizon" | "ac" | null */
+  /** "f1_25" | "gt7" | "forza_motorsport" | "forza_horizon" | "ac" | "acc" | null */
   adapter_game: string | null;
   /** F1 UDP format "2025" | "2026" | null */
   variant: string | null;
@@ -154,7 +155,7 @@ export interface GameEntry {
     console_ip: ConsoleIpNeed;
     in_game_setting: boolean;
   };
-  /** connect.py GameGuide.id: "f1_25" | "gt7" | "forza" | "ac" | "record" */
+  /** connect.py GameGuide.id: "f1_25" | "gt7" | "forza" | "ac" | "acc" | "record" */
   guide_id: string | null;
   rig: { game: "f1_25" | "gt7"; platform: "ps5" | "pc" | null } | null;
   /** All 27, in FEATURE_IDS order. */
@@ -232,6 +233,10 @@ export interface GameInput {
   platform: string | null;
   error: string | null;
   in_use: boolean;
+  /** ACC only: switched on or selected (the shared-memory reader is wanted). */
+  active?: boolean;
+  /** ACC only: the reader's state and the sentence to show (null when the server has none). */
+  reader?: AccReader | null;
 }
 export interface OtherInput {
   key: GameIntegrationKey;
@@ -269,6 +274,7 @@ export type GameActionKind =
   | "set_platform"
   | "set_console_ip"
   | "needs_console_ip"
+  | "needs_windows" // ACC off Windows: its shared memory exists only on the PC that runs the game
   | "skipped_live"
   | "error"
   | "none";

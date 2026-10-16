@@ -147,6 +147,8 @@ installs and runs there, not that a game works.
 
 - **[uv](https://docs.astral.sh/uv/)**. It installs Python 3.12 for you.
 - **A game that sends UDP telemetry** ([supported games](#supported-games)), on the same network as the computer.
+  Assetto Corsa Competizione is the exception: it shares its telemetry only on the Windows PC that runs it, so
+  Pitwall must run on that PC.
 - About 0.7 GB of disk for the Python environment. Speech recognition downloads a model of about 2.5 GB the first
   time the radio is used, and the optional natural voice needs about 1 GB. Raw captures of real F1 25 sessions need
   about 400 MB per hour of driving (`PITWALL_RECORD_RAW=false` turns them off).
@@ -284,7 +286,8 @@ live session; the live PS5 tests so far used the classic dashboard.
 - F1 25 and Gran Turismo 7 are tested live on PS5 (GT7: races on 2026-10-11; its session and lap handling was
   fixed since and re-checked on the recordings of those races). Assetto Corsa's telemetry has been confirmed from a
   PS5, but its laps and coaching have not yet been run through Pitwall end to end. Forza is implemented but not yet
-  tested with the real games. See [Supported games](#supported-games).
+  tested with the real games. Assetto Corsa Competizione is read on its Windows PC (partial; generated data and a
+  tester's live checks, no Pitwall recording yet). See [Supported games](#supported-games).
 
 **Private and local**
 - Telemetry, sessions and captures stay in a SQLite database and a folder on your computer.
@@ -313,7 +316,7 @@ for the full list with notes.
 | Assetto Corsa | PS4 | Built from community docs | Others have confirmed the protocol on PS4. Not tested by Pitwall on a PS4. |
 | Assetto Corsa | PC | Built from community docs | Not yet tested against the PC game. |
 | Assetto Corsa | Xbox One | Not supported | The Xbox One version has no telemetry. |
-| Assetto Corsa Competizione | PC | Not in Pitwall yet | Its shared memory can only be read on the gaming PC itself; no reader yet. |
+| Assetto Corsa Competizione | PC (Pitwall on the same Windows PC) | Partial | Read from ACC's shared memory on the gaming PC, built from Kunos' official document and tested with generated data only. A tester (Ed) checked pedals, steering, speed, gear and the track and car names live with his own build; no Pitwall recording of ACC exists yet. Sector times, fuel, tyre temperatures, flags and the other cars are not read yet. |
 | Assetto Corsa Competizione | PS5, Xbox Series | Not supported | No telemetry on consoles. Checked on a PS5 on 2026-10-11: nothing listens on its telemetry ports. |
 | iRacing | PC | Not in Pitwall yet | Its SDK can only be read on the gaming PC itself; no reader yet. |
 | Other games (for example Project Motor Racing) | Any | Records packets only | Raw packets are saved so a decoder can be written later. No analysis. |
@@ -323,19 +326,20 @@ What one game and platform sends, feature by feature (sector times, tyre wear, f
 
 The newer analyses need data only some games send:
 
-| Feature | F1 25 | Gran Turismo 7 | Forza | Assetto Corsa |
-|---|---|---|---|---|
-| Racing line (Compare, Corners) | Recorded (PS5) | Recorded (a PS5 capture) | Synthetic only | Position decoded on the PS5 recording; no lap stored end to end yet |
-| Handling balance, lock-ups and wheelspin | Recorded (PS5); lock-ups synthetic only | No: Pitwall reads tyre slip from F1 25 only | No (same) | No (same) |
-| Race strategy engineer | Recorded (PS5 races) | No (F1 25 only) | No | No |
-| Pace against the AI | Recorded (PS5) | No (F1 25 only) | No | No |
+| Feature | F1 25 | Gran Turismo 7 | Forza | Assetto Corsa | ACC (PC) |
+|---|---|---|---|---|---|
+| Racing line (Compare, Corners) | Recorded (PS5) | Recorded (a PS5 capture) | Synthetic only | Position decoded on the PS5 recording; no lap stored end to end yet | Synthetic only |
+| Handling balance, lock-ups and wheelspin | Recorded (PS5); lock-ups synthetic only | No: Pitwall reads tyre slip from F1 25 only | No (same) | No (same) | Synthetic only, and only after checks while you drive settle ACC's slip and yaw channels (no documented units) |
+| Race strategy engineer | Recorded (PS5 races) | No (F1 25 only) | No | No | No |
+| Pace against the AI | Recorded (PS5) | No (F1 25 only) | No | No | No |
 
 None of these has been run live yet.
 
 **Status words.** *Tested live*: checked end to end with the real game on that platform. *Tested on a recording*:
 checked against real game output that was recorded. *Built from the official spec* or *community docs*: written
-from the protocol documentation and tested with generated (synthetic) data only. Synthetic tests prove the
-algorithms, not that a game works. The platform in this table is where the game runs; Pitwall itself runs on the
+from the protocol documentation and tested with generated (synthetic) data only. *Partial*: Pitwall reads part of
+what the game sends, tested with generated data only. Synthetic tests prove the algorithms, not that a game works. A
+tester's own live check is reported as such, never as Pitwall evidence. The platform in this table is where the game runs; Pitwall itself runs on the
 computer that receives its telemetry (see [Platforms](#platforms)).
 
 ## Screenshots
@@ -521,6 +525,11 @@ Third-party work Pitwall uses or relies on:
   in `docs/research/f1-udp-spec.md` so the decoder can be checked against them; that text belongs to EA and is not
   covered by any Pitwall licence. Other games' protocols are implemented from community documentation listed in
   `docs/research/`.
+- **ACC Shared Memory documentation** (v1.8.12) by Kunos Simulazioni, published for third-party apps on the
+  assettocorsa.net forum. Pitwall's ACC decoder is written from it, restated in our own words in
+  `docs/research/acc-shared-memory-spec.md`; the document remains Kunos'.
+- **Ed (Pitwall tester)** wrote the first ACC adapter, reader and track-length table, which Pitwall's ACC support
+  started from, and checked them live in ACC on his PC.
 - **Car setup values** published by F1Laps community members, RacingGames.gg, PPE.pl, Last Word On Gaming,
   Gamosaurus and a public Google Sheet, each attributed and linked in `src/pitwall/carsetup/data/f1_25_setups.json`.
   Only the values are recorded; the sources' content remains theirs and is not covered by any Pitwall licence.

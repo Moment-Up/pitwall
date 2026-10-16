@@ -563,7 +563,7 @@ export function actionLines(actions: readonly GameAction[]): { text: string; ton
           ? "success"
           : a.action === "error"
             ? "danger"
-            : a.action === "needs_console_ip" || a.action === "skipped_live"
+            : a.action === "needs_console_ip" || a.action === "skipped_live" || a.action === "needs_windows"
               ? "warning"
               : "default",
     }));

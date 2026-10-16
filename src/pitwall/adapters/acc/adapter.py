@@ -55,9 +55,11 @@ Units and conventions (Kunos' names)
     so the surface and inner fields stay ``None``); ``wheelPressure`` is taken as psi only when every value is in
     the psi range (bar and kPa values cannot fall there). Temperatures are taken as degrees C (Kunos prints no unit;
     AC/ACC convention). Not mapped, with the reason in ``ACC_INFO``: ``fuel`` (Kunos: kg; its own ``fuelXLap`` and the
-    game's HUD: litres), ``brakeBias`` (the dash value needs Kunos' per-car offset), ``abs`` / ``tc`` (intervention:
-    Pitwall's ``abs_active`` means the ABS assist is on), ``velocity`` (world axes, no unit), ``heading`` /
-    ``pitch`` / ``roll`` (no unit), the player's names (personal data: never decoded).
+    game's HUD: litres), ``fuelEstimatedLaps`` (laps the fuel on board lasts: another quantity than Pitwall's
+    ``fuel_remaining_laps_game``, F1's margin at the finish), ``brakeBias`` (the dash value needs Kunos' per-car
+    offset), ``abs`` / ``tc`` (intervention: Pitwall's ``abs_active`` means the ABS assist is on), ``velocity``
+    (world axes, no unit), ``heading`` / ``pitch`` / ``roll`` (no unit), the player's names (personal data: never
+    decoded).
 
 Checked-at-runtime channels (UNVERIFIED until a recording confirms them)
     Kunos says ``accG`` is "in global coordinates" and gives no unit or axis order for it, ``localAngularVel``,
@@ -167,6 +169,19 @@ _SESSION_TYPES = {
     P.AccSessionType.HOTLAP: SessionType.TIME_TRIAL,
     P.AccSessionType.TIMEATTACK: SessionType.TIME_TRIAL,
 }
+# ACC_SESSION_TYPE in words for SessionInfo.session_type_raw (the session's own name on the dashboard, the report and
+# the leaderboard, as F1's names are): Kunos' enum names, spelled out. Any other value is "unknown_<n>" (no name).
+SESSION_NAMES: dict[P.AccSessionType, str] = {
+    P.AccSessionType.PRACTICE: "Practice",
+    P.AccSessionType.QUALIFY: "Qualifying",
+    P.AccSessionType.RACE: "Race",
+    P.AccSessionType.HOTLAP: "Hotlap",
+    P.AccSessionType.TIMEATTACK: "Time attack",
+    P.AccSessionType.DRIFT: "Drift",
+    P.AccSessionType.DRAG: "Drag",
+    P.AccSessionType.HOTSTINT: "Hotstint",
+    P.AccSessionType.HOTSTINTSUPERPOLE: "Hotstint superpole",
+}
 _RAIN = {  # ACC_RAIN_INTENSITY -> Weather.condition (no rain says nothing about cloud: None)
     P.AccRainIntensity.DRIZZLE: "light_rain",
     P.AccRainIntensity.LIGHT_RAIN: "light_rain",
@@ -222,7 +237,6 @@ FIELDS_READ: dict[str, frozenset[str]] = {
             "rainTyres",
             "sessionIndex",
             "isValidLap",
-            "fuelEstimatedLaps",
             "rainIntensity",
         }
     ),
@@ -331,7 +345,11 @@ ACC_INFO = AdapterInfo(
             "recording settles the unit",
         ),
         "fuel_litres": FieldSupport(_V, "see fuel_kg"),
-        "fuel_remaining_laps_game": FieldSupport(_S, f"Graphics.fuelEstimatedLaps ({_DOC})"),
+        "fuel_remaining_laps_game": FieldSupport(
+            _V,
+            "not mapped: Graphics.fuelEstimatedLaps is how many laps the fuel on board lasts, while Pitwall's field is "
+            "F1's MFD figure, the fuel margin at the finish in laps (the race strategy reads it so)",
+        ),
         "brake_bias_front_pct": FieldSupport(
             _V, "Physics.brakeBias needs Kunos' per-car dash offset (Appendix 4) to mean the shown %: not mapped"
         ),
@@ -362,8 +380,8 @@ ACC_INFO = AdapterInfo(
         ),
         "track_length_m": FieldSupport(
             _PART,
-            "tracks.py (Ed's table: Spa, Monza, Brands Hatch checked, others approximate), or Static.trackSplineLength "
-            "when within 3 % of it",
+            "tracks.py (Ed's table; a tester's report: Spa, Monza, Brands Hatch checked against public sources, others "
+            "approximate), or Static.trackSplineLength when within 3 % of it",
         ),
         "total_distance_m": FieldSupport(_V, "Graphics.distanceTraveled is per stint and has no unit: not mapped"),
         "pos_x_m": FieldSupport(
@@ -372,11 +390,15 @@ ACC_INFO = AdapterInfo(
         "pos_y_m": FieldSupport(_C, "carCoordinates[k][1] (up axis, AC convention)"),
         "pos_z_m": FieldSupport(_C, "carCoordinates[k][2]"),
         "vel_x_mps": FieldSupport(
-            _V, "Physics.velocity: world axes, no unit (Ed saw it behave like local axes): not mapped"
+            _V, "Physics.velocity: world axes, no unit (tester's report: Ed saw it behave like local axes): not mapped"
         ),
         "yaw_rad": FieldSupport(_V, "Physics.heading: no unit or zero direction documented: not mapped"),
         "track_id": FieldSupport(_S, f"'acc:<Static.track>' ({_TESTER_BRANDS}: the name decodes)"),
-        "track_name": FieldSupport(_S, f"Static.track ({_TESTER_BRANDS})"),
+        "track_name": FieldSupport(
+            _S,
+            f"Static.track ({_TESTER_BRANDS}), shown as the circuit's name for the tracks tracks.py lists, else as "
+            "the game sends it",
+        ),
         "car_id": FieldSupport(_S, f"'acc:car:<Static.carModel>' (Kunos id, Appendix 2; {_TESTER_BRANDS})"),
         "car_name": FieldSupport(_S, "Appendix 2 name for Static.carModel; the raw id for cars after v1.8.12"),
         "session_type": FieldSupport(_S, "Graphics.session (ACC_SESSION_TYPE; hotlap / time attack -> time trial)"),
@@ -411,7 +433,8 @@ ACC_INFO = AdapterInfo(
         "(three tracks checked); unlisted tracks get lap times but no distance.",
         "g-forces, yaw rate, body slip and wheel slip have no documented unit or axes: each is mapped only after the "
         "car has been driven enough for runtime checks to settle it (SessionInfo.extra['acc_evidence']).",
-        "Not mapped: fuel (unit conflict), brake bias (per-car offset), ABS on/off, flags and penalties.",
+        "Not mapped: fuel (unit conflict; the game's laps-of-fuel figure is not F1's margin at the finish), brake bias "
+        "(per-car offset), ABS on/off, flags and penalties.",
     ),
 )
 
@@ -495,7 +518,6 @@ class _Graphics:
     pos: tuple[float, float, float] | None
     tc: int | None
     valid: bool | None
-    fuel_laps: float | None
     rain_tyres: bool | None
     rain: int
 
@@ -504,7 +526,6 @@ class _Graphics:
         npos = _finite(d["normalizedCarPosition"])
         if npos is not None and not -NORM_TOLERANCE <= npos <= 1.0 + NORM_TOLERANCE:
             npos = None
-        fuel_laps = _finite(d["fuelEstimatedLaps"])
         return cls(
             t_ns=t,
             status=int(d["status"]),
@@ -522,7 +543,6 @@ class _Graphics:
             pos=_player_position(d),
             tc=int(d["TC"]) if int(d["TC"]) >= 0 else None,
             valid=_flag(int(d["isValidLap"])),
-            fuel_laps=fuel_laps if fuel_laps is not None and fuel_laps >= 0 else None,
             rain_tyres=_flag(int(d["rainTyres"])),
             rain=int(d["rainIntensity"]),
         )
@@ -623,6 +643,18 @@ class _Session:
 
 
 # ---------------------------------------------------------------------------------------------- helpers
+def session_type_of(raw: int) -> tuple[SessionType, str]:
+    """Pitwall's session type and the session's name in words (``SESSION_NAMES``) for a Graphics ``session`` value;
+    ``unknown_<n>`` for a value Kunos does not list (``carclass.session_label`` shows no name for it)."""
+    try:
+        kind = P.AccSessionType(raw)
+    except ValueError:
+        return SessionType.UNKNOWN, f"unknown_{raw}"
+    if kind is P.AccSessionType.UNKNOWN:
+        return SessionType.UNKNOWN, f"unknown_{raw}"
+    return _SESSION_TYPES.get(kind, SessionType.UNKNOWN), SESSION_NAMES[kind]
+
+
 def slug(text: str) -> str:
     """Id component: lower-case, whitespace and ':' replaced so ``acc:<track>`` always parses back."""
     return "_".join(text.lower().replace(":", "_").split())
@@ -922,7 +954,6 @@ class AccAdapter:
             tyre_pressure_psi=_wheels(d["wheelPressure"], *TYRE_PSI_RANGE),
             brake_temp_c=_wheels(d["brakeTemp"], *BRAKE_TEMP_RANGE_C, zero_is_unknown=True),
             tyre_compound=None if g.rain_tyres is None else ("wet" if g.rain_tyres else "dry"),
-            fuel_remaining_laps_game=g.fuel_laps,
             traction_control=g.tc,
         )
         self._emit(s, frame, out)
@@ -1215,10 +1246,7 @@ class AccAdapter:
                 track_spline_length_m=st.spline_length_m,
                 static_layout_check=st.layout_check,
             )
-        try:
-            stype = _SESSION_TYPES.get(P.AccSessionType(s.session_raw), SessionType.UNKNOWN)
-        except ValueError:
-            stype = SessionType.UNKNOWN
+        stype, sname = session_type_of(s.session_raw)
         condition = None
         if rain is not None:
             try:
@@ -1231,10 +1259,10 @@ class AccAdapter:
             platform=Platform.PC,
             session_uid=s.uid,
             track_id=None if st is None else st.track_id,
-            track_name=None if st is None else st.track,
+            track_name=None if st is None else tracks.track_label(st.track),
             track_length_m=s.length_m,
             session_type=stype,
-            session_type_raw=str(s.session_raw),
+            session_type_raw=sname,
             car_id=None if st is None else st.car_id,
             car_name=None if st is None else st.car_name,
             weather=Weather(

@@ -219,7 +219,8 @@ with copy buttons and the live connections.
    addresses are accepted.
 4. **Select:** `uv run pitwall game set <id> [--console-ip <ip>] --json`. Tell the user each `actions[].message` in
    plain words: `enabled`, `already_enabled`, `set_platform`, `set_console_ip` = done; `needs_console_ip` = AC still
-   needs it (back to 3); GT7 with the input off: no IP was given (back to 3), with the input on: optional (it
+   needs it (back to 3); `needs_windows` = ACC chosen on a computer that is not its gaming PC (games.md "Assetto
+   Corsa Competizione"); GT7 with the input off: no IP was given (back to 3), with the input on: optional (it
    searches the network); `skipped_live` = that input is receiving packets right now, change it on
    Setup > Connect after the session; `error` = usually a port conflict (troubleshooting.md "Port in use");
    `none` = Pitwall cannot read this game (the message says why), or for `other:any`: offer Setup > Connect >

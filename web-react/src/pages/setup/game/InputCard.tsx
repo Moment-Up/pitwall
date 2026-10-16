@@ -6,6 +6,9 @@
 // /api/integrations/{key} {enabled: false}); F1 cannot be switched off, an input receiving packets right now is
 // never offered, and the confirm re-checks that with a fresh GET /api/game before it switches anything off.
 //
+// ACC (PC) has no IP or port: Pitwall reads its shared memory on the PC that runs both, so the card shows the
+// reader's state and its sentence (not running / on track? / reading; off Windows: why it can't work here).
+//
 // A game Pitwall cannot read gets the server's reason instead; "Another game" can record its packets (after a
 // confirm, PUT /api/integrations/record {enabled: true}: it binds a port and writes captures, so never automatic).
 
@@ -117,8 +120,28 @@ export function TurnOffDialog({ input, onClose }: { input: OtherInput | null; on
 
 type InputWord = { text: string; tone: "success" | "warning" | "default" | "danger" };
 
+/** ACC's reader state in words (the chip; the server's sentence is shown under it). */
+const ACC_WORDS: Record<string, InputWord> = {
+  not_windows: { text: "Needs the gaming PC", tone: "warning" },
+  off: { text: "Off", tone: "default" },
+  not_running: { text: "On · ACC not running", tone: "default" },
+  waiting: { text: "On · waiting for you to drive", tone: "default" },
+  reading: { text: "On · reading ACC", tone: "default" },
+  error: { text: "Problem", tone: "danger" },
+  stopped: { text: "On · not reading", tone: "warning" },
+};
+
 /** The input's state in words (never "receiving" unless packets are arriving now). */
 export function inputWords(input: GameInput, entry: Pick<GameEntry, "transport">): InputWord {
+  if (entry.transport.kind === "shared_memory") {
+    // ACC: on while switched on or selected; off Windows nothing can be read whatever the switch says
+    const state = input.reader?.state;
+    if (state === "not_windows") return ACC_WORDS.not_windows!;
+    if (!(input.active ?? input.enabled)) return { text: "Off", tone: "default" };
+    if (input.error) return { text: "Problem", tone: "danger" };
+    if (input.in_use) return { text: "Receiving", tone: "success" };
+    return (state && ACC_WORDS[state]) || { text: "On", tone: "default" };
+  }
   if (!input.enabled) return { text: "Off", tone: "default" };
   if (input.error) return { text: "Problem", tone: "danger" };
   if (input.in_use) return { text: "Receiving", tone: "success" };
@@ -209,8 +232,16 @@ export function InputCard({ entry, state, onConsoleIp }: InputCardProps) {
           {input.error}
         </p>
       )}
+      {input?.reader?.message && (
+        <p className={`m-0 text-sm ${input.reader.state === "not_windows" || input.reader.state === "error" ? "text-warning" : "text-muted"}`}>
+          {input.reader.message}
+        </p>
+      )}
       {input && input.received > 0 && (
-        <p className="m-0 text-sm text-muted">{input.received.toLocaleString("en-GB")} packets received since Pitwall started.</p>
+        <p className="m-0 text-sm text-muted">
+          {input.received.toLocaleString("en-GB")} {entry.transport.kind === "shared_memory" ? "pages read" : "packets received"} since Pitwall
+          started.
+        </p>
       )}
       {need !== "no" && (
         <form

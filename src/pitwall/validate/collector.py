@@ -67,8 +67,15 @@ GAME_INTEGRATION = {
     "ac": "ac",
     "forza_motorsport": "forza",
     "forza_horizon": "forza",
+    "acc": "acc",
 }
-GAME_NAMES = {"f1_25": "F1 25", "f1_24": "F1 24", "gt7": "Gran Turismo 7", "ac": "Assetto Corsa"}
+GAME_NAMES = {
+    "f1_25": "F1 25",
+    "f1_24": "F1 24",
+    "gt7": "Gran Turismo 7",
+    "ac": "Assetto Corsa",
+    "acc": "Assetto Corsa Competizione",
+}
 SAMPLE_S = 0.5
 LAP_QUEUE = 20
 DB_REFRESH_S = 10.0

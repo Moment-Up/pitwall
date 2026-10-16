@@ -1,4 +1,4 @@
-"""ACC circuit lengths by Static ``track`` string - the fallback that turns ``normalizedCarPosition`` into metres.
+"""ACC circuit lengths and names by Static ``track`` string - the lengths turn ``normalizedCarPosition`` into metres.
 
 Why a table: Kunos' "ACC Shared Memory v1.8.12" marks ``SPageFileStatic.trackSplineLength`` as **not used in ACC**,
 and no other field of the three pages carries a track length. Ed (Pitwall tester) confirmed it on his PC (Brands
@@ -13,6 +13,10 @@ but metres shown to the driver are off by the same fraction. The adapter uses ``
 the game does fill it with a value within ``adapter.TRACK_LENGTH_TOLERANCE`` of this table (see ``adapter.py``), and a
 recorded lap should confirm or correct each entry. A track not listed here (a DLC circuit, a renamed one) has no
 length: ``lap_distance_m`` stays ``None`` - unknown stays unknown.
+
+``TRACK_NAMES`` gives each listed track the circuit's name for people (``SessionInfo.track_name``: the dashboard, the
+session report, the boards). It is a label only: the session's ``track_id`` stays ``acc:<the game's string>``, and a
+track the table does not list keeps the string the game sends.
 """
 
 from __future__ import annotations
@@ -47,9 +51,46 @@ TRACK_LENGTH_M: dict[str, float] = {
 }
 CHECKED: frozenset[str] = frozenset({"spa", "monza", "brands_hatch"})
 
+# The circuit each listed key stands for, as people name it (a label: never used to identify a track).
+TRACK_NAMES: dict[str, str] = {
+    "spa": "Spa-Francorchamps",
+    "monza": "Monza",
+    "brands_hatch": "Brands Hatch",
+    "silverstone": "Silverstone",
+    "nurburgring": "Nürburgring",
+    "misano": "Misano",
+    "zandvoort": "Zandvoort",
+    "paul_ricard": "Paul Ricard",
+    "hungaroring": "Hungaroring",
+    "barcelona": "Barcelona-Catalunya",
+    "zolder": "Zolder",
+    "kyalami": "Kyalami",
+    "mount_panorama": "Mount Panorama (Bathurst)",
+    "laguna_seca": "Laguna Seca",
+    "suzuka": "Suzuka",
+    "cota": "Circuit of the Americas",
+    "imola": "Imola",
+    "donington": "Donington Park",
+    "oulton_park": "Oulton Park",
+    "snetterton": "Snetterton",
+    "oschersleben": "Oschersleben",
+    "red_bull_ring": "Red Bull Ring",
+    "watkins_glen": "Watkins Glen",
+    "indianapolis": "Indianapolis",
+    "valencia": "Valencia (Ricardo Tormo)",
+}
+
 
 def track_length_m(track_name: str | None) -> float | None:
     """Table length for an ACC ``track`` string (case-insensitive), or ``None`` if the track is not listed."""
     if not track_name:
         return None
     return TRACK_LENGTH_M.get(track_name.strip().lower())
+
+
+def track_label(track_name: str | None) -> str | None:
+    """The circuit's name for an ACC ``track`` string the table lists (case-insensitive), else the string as sent;
+    ``None`` for no string."""
+    if not track_name:
+        return None
+    return TRACK_NAMES.get(track_name.strip().lower(), track_name)

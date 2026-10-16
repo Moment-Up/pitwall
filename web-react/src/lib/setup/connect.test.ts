@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { Integration } from "../endpoints/connect";
 import {
+  accActive,
+  accSummary,
   acSummary,
   ago,
   captureName,
@@ -171,6 +173,86 @@ describe("game cards", () => {
     expect(guideById(guides, "gt7")?.id).toBe("gt7");
     expect(guideById(guides, null)).toBeNull();
     expect(guideById(guides, "nope")).toBeNull();
+  });
+});
+
+describe("ACC (PC, shared memory; feat/acc)", () => {
+  // Runtime.input_status's ACC row (src/pitwall/core/runtime.py _acc_status), hand-built: no port, no IP
+  const acc = (over: Partial<Integration> = {}, reader: Partial<NonNullable<Integration["reader"]>> = {}): Integration => ({
+    key: "acc",
+    name: "Assetto Corsa Competizione (PC, shared memory)",
+    enabled: true,
+    port: 0,
+    console_ip: null,
+    variant: "C",
+    platform: null,
+    platforms: ["PC"],
+    status: "partial (PC)",
+    port_editable: false,
+    needs_console_ip: false,
+    listens: false,
+    listening: true,
+    received: 0,
+    sources: [],
+    capture: null,
+    error: null,
+    selected: false,
+    active: true,
+    supported: true,
+    reader: { state: "not_running", message: "ACC is not running on this PC (Pitwall looks for it every 2 s).", last_rx_s_ago: null, ...reader },
+    ...over,
+  });
+
+  it("the card line is the reader's sentence, never a UDP port", () => {
+    expect(senderSummary(acc())).toBe("ACC is not running on this PC (Pitwall looks for it every 2 s).");
+    expect(senderSummary(acc({}, { state: "reading", message: "Reading ACC on this PC · 120 pages/s." }))).toBe(
+      "Reading ACC on this PC · 120 pages/s.",
+    );
+    expect(senderSummary(acc({ reader: null }))).toBe("Waiting for ACC");
+    expect(accSummary(acc({ enabled: false, active: false, reader: null }))).toBe("Off");
+    expect(senderSummary(acc())).not.toMatch(/UDP|port/);
+  });
+
+  it("on while switched on or selected; receiving only while pages arrive", () => {
+    expect(accActive({ enabled: false, active: true })).toBe(true); // selected: the reader runs with the switch off
+    expect(accActive({ enabled: true })).toBe(true); // an older server: the switch
+    expect(cardState(acc({ enabled: false, active: false }, { state: "off" }))).toBe("off");
+    expect(cardState(acc())).toBe("waiting");
+    expect(cardState(acc({}, { state: "waiting" }))).toBe("waiting");
+    expect(cardState(acc({}, { state: "reading", last_rx_s_ago: 0.2 }))).toBe("receiving");
+    expect(cardState(acc({}, { state: "reading", last_rx_s_ago: 9 }))).toBe("waiting");
+    expect(cardState(acc({}, { state: "error", message: "Can't read ACC's shared memory: access denied." }))).toBe("problem");
+    // chosen on a Mac: wanted, but nothing can ever arrive here
+    expect(cardState(acc({ supported: false, listening: false }, { state: "not_windows" }))).toBe("problem");
+    expect(cardState(acc({ enabled: false, active: false, supported: false }, { state: "not_windows" }))).toBe("off");
+  });
+
+  it("evidence says partial, never tested; the status line names the shared memory, not a sender", () => {
+    expect(evidenceOfStatus(acc().status)).toMatchObject({ label: "Partial" });
+    const info = fixtures.connectNoData();
+    const live = { ...info, telemetry: { ...info.telemetry, status: "live" as const, source: "acc-shm", packets_per_s: 119.6 } };
+    expect(statusLine(live)).toBe("Reading ACC's shared memory on this PC · 120 pages/s");
+  });
+
+  it("the guide is ACC's own and already ends on track", () => {
+    const guide = {
+      id: "acc",
+      game: "Assetto Corsa Competizione (PC)",
+      platforms: ["PC"],
+      supported: true,
+      menu_path: "No in-game setting: Pitwall reads ACC's shared memory on the PC that runs the game",
+      steps: [
+        { label: "Where", value: "Run Pitwall on the gaming PC", copy: false, note: "" },
+        { label: "Setup > Game", value: "Assetto Corsa Competizione · PC", copy: false, note: "" },
+        { label: "In the game", value: "Get on track", copy: false, note: "" },
+      ],
+      extras: [],
+      notes: [],
+    };
+    expect(guideFor([guide], "acc")?.id).toBe("acc");
+    expect(guideSteps(guide)).toEqual(guide.steps);
+    expect(guideStep(acc({}, { state: "reading", last_rx_s_ago: 0.1 }), guide)).toBe(3);
+    expect(guideStep(acc(), guide)).toBe(-1);
   });
 });
 

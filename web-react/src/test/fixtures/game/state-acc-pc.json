@@ -1,0 +1,472 @@
+{
+ "selected": {
+  "id": "acc:pc",
+  "since_unix": 1760180000.0,
+  "source": "dashboard",
+  "by_driver_id": null
+ },
+ "entry": {
+  "id": "acc:pc",
+  "game_key": "acc",
+  "label": "Assetto Corsa Competizione",
+  "short_label": "ACC",
+  "text_name": "ACC",
+  "platform": "pc",
+  "platform_label": "PC",
+  "group": "more",
+  "adapter_game": "acc",
+  "variant": null,
+  "implemented": true,
+  "integration": "acc",
+  "support": {
+   "level": "partial",
+   "words": "Partial",
+   "summary": "Pitwall reads part of what this game sends, built from the game's official documentation and tested with generated data; not yet checked with the real game on this platform.",
+   "note": "Pitwall reads ACC's shared memory on the PC that runs the game (it opens Kunos' three pages read-only and never creates them), decoded from Kunos' official ACC Shared Memory v1.8.12 and tested with generated pages only (on Windows CI the reader also reads pages the test itself creates under ACC's names: CI-tested, not live-validated). Ed (Pitwall tester) checked pedals, steering and speed live at Spa (2026-10-09) and the track and car names, gear and steering sign at Brands Hatch (2026-10-13) with his own build: a tester's report, not a Pitwall recording. No recorded ACC session yet. Not read: sector times, fuel, tyre tread temperatures, flags, penalties, damage, the other cars. The Broadcasting API (UDP 9000) is not used: it lacks inputs.",
+   "capability_row": "acc_pc"
+  },
+  "transport": {
+   "kind": "shared_memory",
+   "summary": "Pitwall reads ACC's shared memory on the Windows PC that runs the game: nothing to set in the game. Start Pitwall and ACC on the same PC.",
+   "port": null,
+   "console_port": null,
+   "console_ip": "no",
+   "in_game_setting": false
+  },
+  "guide_id": "acc",
+  "rig": null,
+  "features": [
+   {
+    "id": "lap_timing",
+    "label": "Lap times",
+    "group": "timing",
+    "status": "supported",
+    "evidence": "partial",
+    "short": "",
+    "reason": "ACC sends lap times.",
+    "detail": "lap_number: Graphics.completedLaps + 1 (Kunos ACC Shared Memory v1.8.12); current_lap_time_ms: Graphics.iCurrentTime (ms; INT32_MAX -> None); last_lap_time_ms: Graphics.iLastTime (ms; INT32_MAX -> None); lap_completion: derived: completedLaps increment; time = iLastTime when it changed in that page (else held up to 0.5 s); valid = isValidLap of the page before the increment (row acc_pc)",
+    "note": null,
+    "fields": [
+     "lap_number",
+     "current_lap_time_ms",
+     "last_lap_time_ms",
+     "lap_completion"
+    ]
+   },
+   {
+    "id": "sectors",
+    "label": "Sector times",
+    "group": "timing",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC sends which sector you are in and the last sector's time, but Pitwall doesn't build sector times from them yet.",
+    "detail": "sector: Graphics.currentSectorIndex, 0-based (AC convention; Kunos gives no base): None unless < sectorCount (row acc_pc)",
+    "note": null,
+    "fields": [
+     "sector"
+    ]
+   },
+   {
+    "id": "delta",
+    "label": "Live delta",
+    "group": "timing",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "ACC sends where you are along the lap but not the track's length: Pitwall takes the length from its own table of circuits (three checked), so distances are estimated, and a circuit it doesn't list has none.",
+    "detail": "lap_distance_m: derived: Graphics.normalizedCarPosition (0 start .. 1 finish) x track length, unwrapped within a lap; None for a track tracks.py does not list (Static.trackSplineLength is 'not used in ACC'); current_lap_time_ms: Graphics.iCurrentTime (ms; INT32_MAX -> None) (row acc_pc)",
+    "note": null,
+    "fields": [
+     "lap_distance_m",
+     "current_lap_time_ms"
+    ]
+   },
+   {
+    "id": "braking_cues",
+    "label": "Braking cues",
+    "group": "coaching",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "ACC sends where you are along the lap but not the track's length: Pitwall takes the length from its own table of circuits (three checked), so distances are estimated, and a circuit it doesn't list has none.",
+    "detail": "brake: Physics.brake 0..1 (Kunos ACC Shared Memory v1.8.12); tester's report (Ed, his own build, live ACC at Spa 2026-10-09): checked in 8 braking zones; speed_kph: Physics.speedKmh (Kunos ACC Shared Memory v1.8.12); tester's report (Ed, his own build, live ACC at Spa 2026-10-09): checked in 8 braking zones; lap_distance_m: derived: Graphics.normalizedCarPosition (0 start .. 1 finish) x track length, unwrapped within a lap; None for a track tracks.py does not list (Static.trackSplineLength is 'not used in ACC') (row acc_pc)",
+    "note": null,
+    "fields": [
+     "brake",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "corner_coaching",
+    "label": "Corner coaching",
+    "group": "coaching",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "ACC sends where you are along the lap but not the track's length: Pitwall takes the length from its own table of circuits (three checked), so distances are estimated, and a circuit it doesn't list has none.",
+    "detail": "brake: Physics.brake 0..1 (Kunos ACC Shared Memory v1.8.12); tester's report (Ed, his own build, live ACC at Spa 2026-10-09): checked in 8 braking zones; throttle: Physics.gas 0..1 (Kunos ACC Shared Memory v1.8.12); tester's report (Ed, his own build, live ACC at Spa 2026-10-09): checked in 8 braking zones; speed_kph: Physics.speedKmh (Kunos ACC Shared Memory v1.8.12); tester's report (Ed, his own build, live ACC at Spa 2026-10-09): checked in 8 braking zones; lap_distance_m: derived: Graphics.normalizedCarPosition (0 start .. 1 finish) x track length, unwrapped within a lap; None for a track tracks.py does not list (Static.trackSplineLength is 'not used in ACC') (row acc_pc)",
+    "note": null,
+    "fields": [
+     "brake",
+     "throttle",
+     "speed_kph",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "track_map",
+    "label": "Track map",
+    "group": "track",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Estimated",
+    "reason": "ACC sends where you are along the lap but not the track's length: Pitwall takes the length from its own table of circuits (three checked), so distances are estimated, and a circuit it doesn't list has none.",
+    "detail": "pos_x_m: Graphics.carCoordinates[k][0] where carID[k] == playerCarID (metres by AC convention); pos_z_m: carCoordinates[k][2]; lap_distance_m: derived: Graphics.normalizedCarPosition (0 start .. 1 finish) x track length, unwrapped within a lap; None for a track tracks.py does not list (Static.trackSplineLength is 'not used in ACC') (row acc_pc)",
+    "note": null,
+    "fields": [
+     "pos_x_m",
+     "pos_z_m",
+     "lap_distance_m"
+    ]
+   },
+   {
+    "id": "official_corner_names",
+    "label": "Official corner names",
+    "group": "track",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Pitwall's official corner names cover F1 25 only; ACC corners are numbered from your laps.",
+    "detail": "no hand-checked track sheet for this game (analysis.track_identity.load_sheets) (row acc_pc)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "ai_field",
+    "label": "AI field braking model",
+    "group": "track",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC sends only where the other cars are, not their speed or braking, so there is no AI field braking model.",
+    "detail": "only the other cars' world positions (carCoordinates), no laps or inputs (row acc_pc)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "flags",
+    "label": "Flags & marshal zones",
+    "group": "track",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC has flag fields, but Kunos' own sample code calls them not working, so Pitwall doesn't read them until a recording shows them.",
+    "detail": "fia_flags: Graphics.flag is documented, but Kunos' sample header calls flag and penalty 'not working': not mapped (row acc_pc)",
+    "note": null,
+    "fields": [
+     "track_zones"
+    ]
+   },
+   {
+    "id": "fuel",
+    "label": "Fuel",
+    "group": "car",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC sends a fuel level, but Kunos' document says kilos where the game shows litres, so Pitwall doesn't read it until a recording settles the unit.",
+    "detail": "fuel_kg: Physics.fuel: Kunos says kg, but its own fuelXLap and the game's HUD use litres: not mapped until a recording settles the unit (row acc_pc)",
+    "note": null,
+    "fields": [
+     "fuel_kg"
+    ]
+   },
+   {
+    "id": "tyre_temps",
+    "label": "Tyre temperatures",
+    "group": "car",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC sends each tyre's core temperature, not the tread temperatures Pitwall's tyre screens and calls use, so Pitwall doesn't show them yet.",
+    "detail": "tyre_core_temp_c: Physics.TyreCoreTemp[4] FL..RR (Kunos ACC Shared Memory v1.8.12: core temperature, no unit printed; degrees C by convention) (row acc_pc)",
+    "note": null,
+    "fields": [
+     "tyre_surface_temp_c"
+    ]
+   },
+   {
+    "id": "tyre_wear",
+    "label": "Tyre wear",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC doesn't send tyre wear.",
+    "detail": "Physics.tyreWear: 'not used by ACC' (Kunos) (row acc_pc)",
+    "note": null,
+    "fields": [
+     "tyre_wear_pct"
+    ]
+   },
+   {
+    "id": "tyre_pressures",
+    "label": "Tyre pressures",
+    "group": "car",
+    "status": "supported",
+    "evidence": "partial",
+    "short": "",
+    "reason": "ACC sends tyre pressures.",
+    "detail": "tyre_pressure_psi: Physics.wheelPressure[4] FL..RR (Kunos ACC Shared Memory v1.8.12, no unit printed): psi only when all four are 5-60 (row acc_pc)",
+    "note": null,
+    "fields": [
+     "tyre_pressure_psi"
+    ]
+   },
+   {
+    "id": "brake_temps",
+    "label": "Brake temperatures",
+    "group": "car",
+    "status": "supported",
+    "evidence": "partial",
+    "short": "",
+    "reason": "ACC sends brake temperatures.",
+    "detail": "brake_temp_c: Physics.brakeTemp[4] FL..RR (Kunos ACC Shared Memory v1.8.12, no unit printed; degrees C) (row acc_pc)",
+    "note": null,
+    "fields": [
+     "brake_temp_c"
+    ]
+   },
+   {
+    "id": "engine_temp",
+    "label": "Engine temperature",
+    "group": "car",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC sends a coolant temperature with no documented unit; Pitwall doesn't read it as the engine temperature.",
+    "detail": "engine_temp_c: Physics.waterTemp is coolant, not engine temperature; no unit: not mapped (row acc_pc)",
+    "note": null,
+    "fields": [
+     "engine_temp_c"
+    ]
+   },
+   {
+    "id": "damage",
+    "label": "Car damage",
+    "group": "car",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC sends damage per body zone, which Pitwall's damage view doesn't read yet.",
+    "detail": "damage: Physics.carDamage[5] is per zone; Pitwall's damage model is F1's: not mapped (row acc_pc)",
+    "note": null,
+    "fields": [
+     "damage"
+    ]
+   },
+   {
+    "id": "ers",
+    "label": "ERS / hybrid",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC doesn't send ERS.",
+    "detail": "ERS fields: 'not used by ACC' (row acc_pc)",
+    "note": null,
+    "fields": [
+     "ers_store_j"
+    ]
+   },
+   {
+    "id": "drs",
+    "label": "DRS",
+    "group": "car",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC doesn't send DRS.",
+    "detail": "Physics.drs: 'not used by ACC' (GT cars have no DRS) (row acc_pc)",
+    "note": null,
+    "fields": [
+     "drs_open"
+    ]
+   },
+   {
+    "id": "weather",
+    "label": "Weather",
+    "group": "session",
+    "status": "supported",
+    "evidence": "partial",
+    "short": "",
+    "reason": "ACC sends weather.",
+    "detail": "weather: Physics.airTemp / roadTemp (degrees C by convention); Graphics.rainIntensity: drizzle / light -> light_rain, medium / heavy -> heavy_rain, thunderstorm -> storm, no rain -> None (cloud not sent) (row acc_pc)",
+    "note": null,
+    "fields": [
+     "weather"
+    ]
+   },
+   {
+    "id": "session_info",
+    "label": "Session type & results",
+    "group": "session",
+    "status": "partial",
+    "evidence": "partial",
+    "short": "Partial",
+    "reason": "The session type comes from ACC; its results aren't read.",
+    "detail": "session_type: Graphics.session (ACC_SESSION_TYPE; hotlap / time attack -> time trial) (row acc_pc)",
+    "note": null,
+    "fields": [
+     "session_type"
+    ]
+   },
+   {
+    "id": "field_data",
+    "label": "Other cars' data",
+    "group": "session",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC sends where the other cars are and the gaps to the cars just ahead and behind, but no lap times for them; Pitwall doesn't read them yet.",
+    "detail": "field_samples: only the other cars' world positions (carCoordinates), no laps or inputs (row acc_pc)",
+    "note": null,
+    "fields": [
+     "field_samples"
+    ]
+   },
+   {
+    "id": "race_position",
+    "label": "Race position",
+    "group": "session",
+    "status": "supported",
+    "evidence": "partial",
+    "short": "",
+    "reason": "ACC sends your race position.",
+    "detail": "race_position: Graphics.position (row acc_pc)",
+    "note": null,
+    "fields": [
+     "race_position"
+    ]
+   },
+   {
+    "id": "penalties",
+    "label": "Penalties & warnings",
+    "group": "session",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC has a penalty field, but Kunos' own sample code calls it not working, so Pitwall doesn't read it until a recording shows it.",
+    "detail": "penalties: Graphics.penalty: see fia_flags; not mapped (row acc_pc)",
+    "note": null,
+    "fields": [
+     "penalties"
+    ]
+   },
+   {
+    "id": "spotter",
+    "label": "Spotter (cars alongside)",
+    "group": "session",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "ACC sends where the other cars are but not which way they point, and Pitwall's spotter needs both, so it isn't available for ACC yet.",
+    "detail": "field_motion: no other-car motion data (row acc_pc)",
+    "note": null,
+    "fields": [
+     "field_motion"
+    ]
+   },
+   {
+    "id": "setup_telemetry",
+    "label": "Car setup from the game",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC doesn't send its car setup.",
+    "detail": "not in shared memory (setups are JSON files on the PC) (row acc_pc)",
+    "note": null,
+    "fields": [
+     "setup"
+    ]
+   },
+   {
+    "id": "setup_recommendations",
+    "label": "Car setup recommendations",
+    "group": "setup_radio",
+    "status": "not_implemented",
+    "evidence": null,
+    "short": "Not in Pitwall yet",
+    "reason": "Pitwall's car setup recommendations exist for F1 25 only.",
+    "detail": "carsetup.context.F1_GAMES (row acc_pc)",
+    "note": null,
+    "fields": []
+   },
+   {
+    "id": "wheel_ptt",
+    "label": "Push-to-talk on a wheel button",
+    "group": "setup_radio",
+    "status": "not_sent",
+    "evidence": null,
+    "short": "Not sent by ACC",
+    "reason": "ACC doesn't send wheel button presses.",
+    "detail": "no wheel-button data (row acc_pc)",
+    "note": null,
+    "fields": [
+     "buttons"
+    ]
+   }
+  ],
+  "notes": [
+   "Built from Kunos' official ACC Shared Memory v1.8.12 (docs/research/acc-shared-memory-spec.md); synthetic tests only. Started from the adapter Ed (Pitwall tester) wrote: his live checks at Spa and Brands Hatch are a tester's report, not Pitwall-recorded evidence.",
+   "Windows only: the pages exist only on the PC running ACC, so Pitwall must run on that PC. Console ACC has no telemetry.",
+   "Lap distance needs a track length: Kunos marks trackSplineLength 'not used in ACC', so it comes from a table (three tracks checked); unlisted tracks get lap times but no distance.",
+   "g-forces, yaw rate, body slip and wheel slip have no documented unit or axes: each is mapped only after the car has been driven enough for runtime checks to settle it (SessionInfo.extra['acc_evidence']).",
+   "Not mapped: fuel (unit conflict; the game's laps-of-fuel figure is not F1's margin at the finish), brake bias (per-car offset), ABS on/off, flags and penalties."
+  ]
+ },
+ "effective_id": "acc:pc",
+ "first_run": false,
+ "detected": null,
+ "mismatch": null,
+ "suggestion": null,
+ "input": {
+  "key": "acc",
+  "name": "Assetto Corsa Competizione (PC, shared memory)",
+  "enabled": true,
+  "listening": false,
+  "received": 0,
+  "console_ip": null,
+  "console_ip_need": "no",
+  "port": null,
+  "platform": null,
+  "error": null,
+  "in_use": false,
+  "active": true,
+  "reader": {
+   "state": "not_windows",
+   "message": "Assetto Corsa Competizione shares its telemetry only on the Windows PC that runs it (shared memory): Pitwall must run on that PC, this Mac can't read it.",
+   "last_rx_s_ago": null
+  }
+ },
+ "other_inputs": [
+  {
+   "key": "f1",
+   "name": "EA SPORTS F1 25",
+   "enabled": true,
+   "in_use": false,
+   "can_disable": false
+  }
+ ],
+ "driver_defaults": true,
+ "_fixture": {
+  "tier": "edited",
+  "source": "feat/acc: emitted by src/pitwall/games.py game_state from a hand-built Runtime.input_status ACC row (core/runtime.py _acc_status off Windows): no game data, no running server",
+  "moment": "GET /api/game on a Mac after PUT acc:pc (the ACC input switched on; its reader can't exist here)"
+ }
+}

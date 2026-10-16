@@ -15,6 +15,7 @@ from typing import Any, cast
 
 import pytest
 
+from pitwall.adapters.acc import adapter as A
 from pitwall.adapters.acc import packets as P
 from pitwall.adapters.acc import tracks
 from pitwall.adapters.acc.adapter import (
@@ -236,9 +237,10 @@ def test_live_graphics_opens_a_session_with_info_first() -> None:
     info = out[0]
     assert info.session_uid == f"acc:{sim.t}"
     assert info.platform is Platform.PC
-    assert info.track_id == "acc:spa" and info.track_name == "spa" and info.track_length_m == SPA
+    assert info.track_id == "acc:spa" and info.track_length_m == SPA
+    assert info.track_name == "Spa-Francorchamps"  # a label for people (tracks.TRACK_NAMES); the id keeps "spa"
     assert info.car_id == "acc:car:mclaren_720s_gt3" and info.car_name == "McLaren 720S GT3 2019"
-    assert info.session_type is SessionType.PRACTICE and info.session_type_raw == "0"
+    assert info.session_type is SessionType.PRACTICE and info.session_type_raw == "Practice"
     assert info.network_game is False
     assert info.extra["sm_version"] == "1.9" and info.extra["sector_count"] == 3
     assert info.extra["track_length_source"] == LENGTH_TABLE
@@ -260,22 +262,47 @@ def test_unknown_car_keeps_its_id_as_name_and_player_names_are_never_decoded() -
 
 
 @pytest.mark.parametrize(
-    ("raw", "expected"),
+    ("raw", "expected", "name"),
     [
-        (P.AccSessionType.PRACTICE, SessionType.PRACTICE),
-        (P.AccSessionType.QUALIFY, SessionType.QUALIFYING),
-        (P.AccSessionType.RACE, SessionType.RACE),
-        (P.AccSessionType.HOTLAP, SessionType.TIME_TRIAL),
-        (P.AccSessionType.TIMEATTACK, SessionType.TIME_TRIAL),
-        (P.AccSessionType.HOTSTINT, SessionType.UNKNOWN),
-        (P.AccSessionType.UNKNOWN, SessionType.UNKNOWN),
+        (P.AccSessionType.PRACTICE, SessionType.PRACTICE, "Practice"),
+        (P.AccSessionType.QUALIFY, SessionType.QUALIFYING, "Qualifying"),
+        (P.AccSessionType.RACE, SessionType.RACE, "Race"),
+        (P.AccSessionType.HOTLAP, SessionType.TIME_TRIAL, "Hotlap"),
+        (P.AccSessionType.TIMEATTACK, SessionType.TIME_TRIAL, "Time attack"),
+        (P.AccSessionType.HOTSTINT, SessionType.UNKNOWN, "Hotstint"),
+        (P.AccSessionType.UNKNOWN, SessionType.UNKNOWN, "unknown_-1"),
+        (42, SessionType.UNKNOWN, "unknown_42"),  # not in Kunos' enum: no name
     ],
 )
-def test_session_types(raw: P.AccSessionType, expected: SessionType) -> None:
+def test_session_types(raw: int, expected: SessionType, name: str) -> None:
+    """The session's name in words, as F1's are (the dashboard, the report and the boards show it); never a number."""
     sim = Sim()
     sim.static()
     info = infos(sim.graphics(session=int(raw)))[0]
-    assert info.session_type is expected and info.session_type_raw == str(int(raw))
+    assert info.session_type is expected and info.session_type_raw == name
+    assert set(A.SESSION_NAMES) == set(P.AccSessionType) - {P.AccSessionType.UNKNOWN}
+
+
+def test_session_labels_follow_the_names() -> None:
+    """carclass shows the game's own session name; an unknown session type has none (never "unknown_42")."""
+    from pitwall import carclass
+
+    assert carclass.session_label(None, "Qualifying") == "Qualifying"
+    assert carclass.session_label(None, "unknown_42", SessionType.UNKNOWN.value) is None
+    assert carclass.session_label(None, "Hotlap", SessionType.TIME_TRIAL.value) == "Hotlap"
+
+
+def test_track_names_are_labels_and_the_id_keeps_the_games_string() -> None:
+    sim = Sim()
+    sim.static("brands_hatch")
+    info = infos(sim.graphics())[0]
+    assert (info.track_id, info.track_name) == ("acc:brands_hatch", "Brands Hatch")
+    other = Sim()
+    other.static("some_dlc_track")
+    info2 = infos(other.graphics())[0]
+    assert (info2.track_id, info2.track_name, info2.track_length_m) == ("acc:some_dlc_track", "some_dlc_track", None)
+    assert set(tracks.TRACK_NAMES) == set(tracks.TRACK_LENGTH_M)  # one name per listed circuit, no more
+    assert tracks.track_label("SPA") == "Spa-Francorchamps" and tracks.track_label(None) is None
 
 
 def test_status_off_ends_the_session() -> None:
@@ -388,7 +415,9 @@ def test_every_mapped_physics_and_graphics_field_round_trips() -> None:
     assert f.rpm == 7200.0 and f.max_rpm == 7700.0
     assert f.lap_number == 1 and f.current_lap_time_ms == 61_234 and f.last_lap_time_ms == 98_765
     assert f.race_position == 4 and f.lap_invalid is False and f.sector == 1 and f.pit_status == 0
-    assert f.traction_control == 3 and f.fuel_remaining_laps_game == pytest.approx(7.5)
+    assert f.traction_control == 3
+    # fuelEstimatedLaps is laps of fuel on board, not F1's margin at the finish that this field means: never mapped
+    assert f.fuel_remaining_laps_game is None
     assert f.tyre_compound == "dry"
     assert (f.pos_x_m, f.pos_y_m, f.pos_z_m) == (111.0, 4.5, -333.0)  # the player's row, not row 0
     assert f.lap_distance_m == pytest.approx(0.25 * SPA)

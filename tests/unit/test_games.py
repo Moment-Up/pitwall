@@ -74,6 +74,38 @@ wheel_ptt              S·spec  NS      NS      NS      NS
 """
 
 
+# ACC on PC (feat/acc): Kunos' shared memory read on the gaming PC; the row stays "partial" until a recorded session.
+ACC_GOLDEN = {
+    "lap_timing": "S·part",
+    "sectors": "NI",  # sector index and lastSectorTime are sent; no sector times built from them yet
+    "delta": "P·part",  # lap distance from a track-length table (Kunos: trackSplineLength "not used in ACC")
+    "braking_cues": "P·part",
+    "corner_coaching": "P·part",
+    "track_map": "P·part",
+    "official_corner_names": "NI",
+    "ai_field": "NS",  # only the other cars' positions: no speed or braking
+    "flags": "NI",  # documented, but Kunos' sample header calls flag and penalty "not working"
+    "fuel": "NI",  # kg in the document, litres in the game
+    "tyre_temps": "NI",  # core temperatures (tyre_core_temp_c), not the tread temperatures Pitwall uses
+    "tyre_wear": "NS",
+    "tyre_pressures": "S·part",
+    "brake_temps": "S·part",
+    "engine_temp": "NI",  # coolant, no unit
+    "damage": "NI",  # per body zone
+    "ers": "NS",
+    "drs": "NS",
+    "weather": "S·part",
+    "session_info": "P·part",  # the session type; no results
+    "field_data": "NI",  # positions and the gaps ahead / behind, not read
+    "race_position": "S·part",
+    "penalties": "NI",
+    "spotter": "NI",  # positions without headings
+    "setup_telemetry": "NS",
+    "setup_recommendations": "NI",
+    "wheel_ptt": "NS",
+}
+
+
 def golden() -> dict[str, dict[str, str]]:
     out: dict[str, dict[str, str]] = {c: {} for c in GOLDEN_COLUMNS}
     for line in GOLDEN.strip().splitlines():
@@ -280,11 +312,9 @@ def test_platform_and_variant_profiles() -> None:
         assert set(profile(eid).values()) == {"NS"}, eid
     for eid in ("iracing:pc", "f1_24:any"):
         assert set(profile(eid).values()) == {"NI"}, eid
-    acc = profile("acc:pc")  # implemented, but no feature is claimed stronger than the row's "partial"
-    assert all(v in ("NS", "NI", "U") or v.endswith("·part") for v in acc.values()), acc
-    assert acc["lap_timing"] == acc["tyre_pressures"] == "S·part"
-    assert acc["braking_cues"] == "P·part"  # lap distance from a track length Pitwall has to know
-    assert acc["fuel"] == "U"  # Kunos says kg, the game shows litres: unknown, not "sent"
+    # implemented, but no feature is claimed stronger than the row's "partial"; what ACC has and Pitwall does not map
+    # is "not in Pitwall yet", never "not sent" (test_code_fact_acc pins each one to the adapter)
+    assert profile("acc:pc") == ACC_GOLDEN
     assert set(profile("other:any").values()) == {"U"}
 
 
@@ -340,6 +370,7 @@ def test_code_fact_estimated_gt7_distance() -> None:
             "forza_motorsport",
             "forza_horizon",
             "ac",
+            "acc",
         }
     )
 
@@ -366,7 +397,9 @@ def test_code_fact_not_implemented() -> None:
         ("gt7", "fuel"),  # health lane: until a recording shows the level falling (carhealth.thresholds)
         ("gt7", "ers"),
         ("gt7", "setup_telemetry"),
+        *ACC_NOT_IMPLEMENTED,  # test_code_fact_acc
     }
+    assert set(games.NOT_IMPLEMENTED_FIELD) == set(games.NOT_IMPLEMENTED)
     # health lane: Forza fuel is laps from how fast the tank level falls (carhealth.fuel), never litres or kilos
     for eid in ("forza_motorsport:pc", "forza_horizon:xbox"):
         e = games.entry(eid)
@@ -374,6 +407,68 @@ def test_code_fact_not_implemented() -> None:
         assert e.feature("fuel").reason == games.FORZA_FUEL_REASON
     gt7 = games.entry("gt7:ps5")
     assert gt7 is not None and gt7.feature("fuel").reason == games.GT7_FUEL_REASON
+
+
+ACC_NOT_IMPLEMENTED = {
+    ("acc", f)
+    for f in ("sectors", "flags", "penalties", "fuel", "tyre_temps", "engine_temp", "damage", "field_data", "spotter")
+}
+
+
+def test_code_fact_acc() -> None:
+    """Each ACC "not in Pitwall yet" restates the adapter: the data is in Kunos' pages (FIELDS_READ / the layouts) and
+    the adapter does not map it, for the reason its field declares; the "not sent" ones are absent from the pages."""
+    from pitwall.adapters.acc import adapter as acc
+    from pitwall.adapters.acc import packets as AP
+    from pitwall.adapters.acc import tracks
+    from pitwall.carhealth.engine import CarHealthEngine
+    from pitwall.core.live import frame_to_dict
+
+    fields = acc.ACC_INFO.fields
+    graphics = {name for name, _ in AP.GRAPHICS.fields}
+    physics = {name for name, _ in AP.PHYSICS.fields}
+    source = Path(acc.__file__).read_text(encoding="utf-8")
+    # sectors: the index is mapped, lastSectorTime is in the page, but no completion carries sector times
+    assert fields["sector"].level is S.COMMUNITY_DOCUMENTED and "lastSectorTime" in graphics
+    assert "sector_times_ms" not in source and "lastSectorTime" not in acc.FIELDS_READ["SPageFileGraphic"]
+    # flags and penalties: documented, Kunos' sample header says "not working"
+    for k in ("fia_flags", "penalties"):
+        assert fields[k].level is S.UNVERIFIED, k
+    assert "not working" in fields["fia_flags"].source and {"flag", "penalty", "GlobalYellow"} <= graphics
+    # fuel: the unit conflict; the game's laps-of-fuel figure is not F1's margin (fuel_remaining_laps_game)
+    assert fields["fuel_kg"].level is S.UNVERIFIED and "litres" in fields["fuel_kg"].source
+    laps = fields["fuel_remaining_laps_game"]
+    assert laps.level is S.UNVERIFIED and "margin" in laps.source
+    # tyre temperatures: core decoded, tread "not shown in ACC"; nothing shows the core (no live key, no health model)
+    assert fields["tyre_core_temp_c"].level is S.COMMUNITY_DOCUMENTED
+    assert fields["tyre_surface_temp_c"].level is S.UNSUPPORTED
+    assert "tyre_core_temp_c" not in frame_to_dict(CarFrame(game=Game.ACC, t_recv_ns=0))
+    health = CarHealthEngine("acc-test")
+    health.game = Game.ACC
+    assert health.tyre_model() is None
+    # engine: coolant with no unit; damage: per zone
+    assert fields["engine_temp_c"].level is S.UNVERIFIED and "coolant" in fields["engine_temp_c"].source
+    assert fields["damage"].level is S.UNSUPPORTED and {"carDamage"} <= physics
+    # the other cars: positions and the gaps ahead / behind are in the page, unread; no headings, speed or inputs
+    assert {"carCoordinates", "gapAhead", "gapBehind"} <= graphics
+    assert not {"gapAhead", "gapBehind"} & acc.FIELDS_READ["SPageFileGraphic"]
+    for k in ("field_samples", "field_motion"):
+        assert fields[k].level is S.UNSUPPORTED, k
+    e = games.entry("acc:pc")
+    assert e is not None
+    for _, fid in ACC_NOT_IMPLEMENTED:
+        f = e.feature(fid)
+        assert f.status == "not_implemented" and f.reason == games.NOT_IMPLEMENTED[("acc", fid)], fid
+        assert fields[games.NOT_IMPLEMENTED_FIELD[("acc", fid)]].source in f.detail, fid
+    assert e.feature("ai_field").reason == games.NOT_SENT_REASON[("acc", "ai_field")]
+    assert "positions" not in games.NOT_SENT_REASON[("acc", "ai_field")].split("only where")[0]
+    # distance: the table, three circuits checked (the reason says so)
+    assert fields["lap_distance_m"].level is S.PARTIAL and len(tracks.CHECKED) == 3
+    assert "three checked" in games.DISTANCE_REASON["acc"]
+    # the engineer says it as a known fact, not "no data yet"
+    assert games.capability_only("flags", e) and games.capability_only("damage", e)
+    assert not games.capability_only("gaps", e)  # the race position is read
+    assert games.capability_sentence(e, ("fuel",)) == games.ACC_FUEL_REASON
 
 
 def test_code_fact_partial() -> None:
@@ -553,6 +648,33 @@ def test_capability_matrix_golden() -> None:
         assert o == n, o["game"]
     keys = [r["key"] for r in new]
     assert keys == [r.key for r in PLANNED] and len(set(keys)) == len(keys)
+
+
+def test_acc_evidence_is_never_stronger_than_a_tester_report_and_generated_pages() -> None:
+    """ACC on PC (feat/acc): no field or platform claims recorded or live evidence until a recorded ACC capture exists;
+    Ed's live checks are named as a tester's report wherever a field cites them; CI on Windows is not live."""
+    from pitwall.adapters.acc.adapter import ACC_INFO
+    from pitwall.capabilities import row
+    from pitwall.integrations import SPECS
+
+    recorded = Path(__file__).resolve().parents[1] / "fixtures" / "recorded"
+    acc_recordings = [p.name for p in recorded.iterdir() if p.name.lower().startswith("acc")]
+    assert acc_recordings == []  # when one lands, upgrade only the fields it confirms (and this test)
+    r = row(ACC_ROW)
+    assert (r.status, r.implemented, r.adapter_game, r.platform_ids) == (S.PARTIAL, True, Game.ACC, ("pc",))
+    assert "tester's report" in r.notes and "generated pages only" in r.notes and "not live-validated" in r.notes
+    assert SPECS["acc"].status == "partial (PC)"
+    strong = {S.LIVE_VALIDATED, S.RECORDED_VALIDATED}
+    assert not {k for k, fs in ACC_INFO.fields.items() if fs.level in strong}
+    assert ACC_INFO.platforms[Platform.PC] is S.SPEC_IMPLEMENTED
+    assert {ACC_INFO.platforms[p] for p in (Platform.PS5, Platform.PS4, Platform.XBOX)} == {S.UNSUPPORTED}
+    named = {k for k, fs in ACC_INFO.fields.items() if re.search(r"\bEd\b", fs.source)}
+    assert named and all("tester's report" in ACC_INFO.fields[k].source for k in named), named
+    cited = {k for k, fs in ACC_INFO.fields.items() if "tester's report" in fs.source}
+    assert {"throttle", "brake", "speed_kph", "steering", "gear", "track_id", "car_id"} <= cited
+    e = games.entry("acc:pc")
+    assert e is not None and e.level is S.PARTIAL and e.support_words == "Partial"
+    assert all(v["level"] not in {lvl.value for lvl in strong} for v in e.fields_dict().values())
 
 
 # ---------------------------------------------------------------------------------------------- resolve

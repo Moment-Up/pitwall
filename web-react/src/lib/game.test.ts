@@ -96,7 +96,16 @@ describe("the catalogue fixture is the spec's contract", () => {
     expect(st(FM, "spotter")).toBe("not_sent");
     expect(st(AC, "spotter")).toBe("not_sent");
     expect(ACC_PS5.features.every((f) => f.status === "not_sent")).toBe(true);
-    expect(ACC_PC.features.every((f) => f.status === "not_implemented")).toBe(true);
+    // ACC on PC (feat/acc): read from its shared memory, every claim "partial" at most; what ACC has and Pitwall does
+    // not map is "not in Pitwall yet" (fuel, flags, sectors...), never "not sent"
+    expect(ACC_PC.implemented).toBe(true);
+    expect(ACC_PC.support.level).toBe("partial");
+    expect(st(ACC_PC, "lap_timing")).toBe("supported");
+    expect(featureOf(ACC_PC, "lap_timing")?.evidence).toBe("partial");
+    expect(featureOf(ACC_PC, "delta")?.short).toBe("Estimated");
+    for (const id of ["sectors", "fuel", "flags", "tyre_temps", "damage", "spotter"] as const) expect(st(ACC_PC, id)).toBe("not_implemented");
+    expect(st(ACC_PC, "tyre_wear")).toBe("not_sent");
+    expect(ACC_PC.features.every((f) => f.evidence === null || f.evidence === "partial")).toBe(true);
     expect(OTHER.features.every((f) => f.status === "unknown")).toBe(true);
     expect(FH_PS5.features.filter((f) => f.status !== "not_sent" && f.status !== "not_implemented").every((f) => f.status === "unknown")).toBe(true);
   });
@@ -286,7 +295,7 @@ describe("the picker", () => {
     expect(plat("acc")).toEqual(["pc", "ps5", "xbox"]);
   });
 
-  it("support words come from the server, never stronger (Xbox One AC is not supported, ACC on PC not implemented)", () => {
+  it("support words come from the server, never stronger (Xbox One AC is not supported, ACC on PC partial)", () => {
     const ac = cards.main.find((c) => c.key === "ac")!;
     expect(ac.platforms.map((p) => p.words)).toEqual([
       "Tested on a recording",
@@ -294,7 +303,7 @@ describe("the picker", () => {
       "Built from community docs",
       "Not supported",
     ]);
-    expect(cards.more.find((c) => c.key === "acc")!.platforms[0]!.words).toBe("Not in Pitwall yet");
+    expect(cards.more.find((c) => c.key === "acc")!.platforms[0]!.words).toBe("Partial");
     expect(cards.main.find((c) => c.key === "other")!.platforms[0]!.words).toBe("Records packets only");
     expect(cards.main.find((c) => c.key === "f1_25")!.platforms[0]!.words).toBe("Tested live");
   });
@@ -374,7 +383,10 @@ describe("the feature list (Setup › Game)", () => {
     expect(readable(OTHER)).toBe(false);
     expect(readable(ACC_PS5)).toBe(false);
     expect(unreadableReason(ACC_PS5)).toBe("ACC on PS5 has no telemetry output.");
-    expect(unreadableReason(ACC_PC)).toBe("Pitwall can't read ACC telemetry yet.");
+    expect(readable(ACC_PC)).toBe(true); // shared memory on the gaming PC (feat/acc)
+    expect(ACC_PC.transport).toMatchObject({ kind: "shared_memory", port: null, console_ip: "no", in_game_setting: false });
+    expect(ACC_PC.integration).toBe("acc");
+    expect(ACC_PC.guide_id).toBe("acc");
   });
 
   it("PUT actions are the server's messages, toned by kind", () => {
@@ -388,6 +400,10 @@ describe("the feature list (Setup › Game)", () => {
     ]);
     expect(actionLines([{ key: "gt7", action: "enabled", message: "GT7 input switched on (UDP 33740)." }])[0]!.tone).toBe("success");
     expect(actionLines([{ key: "forza", action: "error", message: "Port 33740 is GT7's" }])[0]!.tone).toBe("danger");
+    // ACC chosen on a Mac: switched on, but it can only be read on the PC that runs the game
+    expect(actionLines([{ key: "acc", action: "needs_windows", message: "ACC shares its telemetry only on ..." }])[0]!.tone).toBe(
+      "warning",
+    );
   });
 });
 
@@ -508,8 +524,13 @@ describe("GET /api/game fixtures match the contract", () => {
     for (const name of ["first-run", "gt7", "ac", "mismatch", "acc", "forza"]) {
       for (const o of gameState(name).other_inputs) if (o.key === "f1") expect(o.can_disable).toBe(false);
     }
-    expect(gameState("acc").input).toBeNull();
+    expect(gameState("acc").input).toBeNull(); // ACC on PS5: no telemetry at all
     expect(gameState("ac").input?.console_ip_need).toBe("required");
+    // ACC on PC chosen on a Mac (feat/acc): the input is on, no IP, no port, and the reader says why nothing comes
+    const accPc = gameState("acc-pc").input!;
+    expect(accPc).toMatchObject({ key: "acc", enabled: true, active: true, console_ip_need: "no", port: null, in_use: false });
+    expect(accPc.reader?.state).toBe("not_windows");
+    expect(accPc.reader?.message).toContain("this Mac can't read it");
   });
 });
 

@@ -271,6 +271,60 @@ describe("noTelemetryView with a selected game (game selection 5.3 #2)", () => {
     expect(rx.current).toBe(2);
   });
 
+  it("ACC (PC): no address at all; where Pitwall runs, the game, getting on track, in the reader's words", () => {
+    const accGuide = {
+      id: "acc",
+      game: "Assetto Corsa Competizione (PC)",
+      supported: true,
+      menu_path: "No in-game setting: Pitwall reads ACC's shared memory on the PC that runs the game",
+      steps: [
+        {
+          label: "Where",
+          value: "Run Pitwall on the gaming PC",
+          note: "ACC shares its telemetry only on its own Windows PC (shared memory): a Mac or another computer can't read it",
+        },
+        { label: "Setup > Game", value: "Assetto Corsa Competizione · PC" },
+        { label: "In the game", value: "Get on track" },
+      ],
+    };
+    const game = noTelemetryGame(entry("acc:pc", CAT));
+    expect(game).toMatchObject({ name: "ACC", guideId: "acc", kind: "shared_memory", port: null, integration: "acc" });
+    const at = (state: string, message: string, last: number | null = null) =>
+      noTelemetryView(
+        {
+          ...base,
+          guides: [...guides, accGuide],
+          integrations: [{ key: "acc", enabled: true, listening: state !== "not_windows", sources: [], reader: { state, message, last_rx_s_ago: last } }],
+        },
+        game,
+      );
+    const mac = at("not_windows", "Assetto Corsa Competizione shares its telemetry only on the Windows PC that runs it.");
+    expect(mac.needsGamingPc).toBe(true);
+    expect(mac.steps[0]).toEqual({
+      title: "Run Pitwall on the PC that runs ACC",
+      description: "Assetto Corsa Competizione shares its telemetry only on the Windows PC that runs it.",
+      mono: false,
+    });
+    expect(mac.current).toBe(0);
+    expect(mac.listening).toBeNull(); // nothing listens: no UDP at all
+    expect(mac.needsIp).toBe(false);
+    expect(JSON.stringify(mac.steps)).not.toMatch(/IP |port|UDP/);
+    const closed = at("not_running", "ACC is not running on this PC (Pitwall looks for it every 2 s).");
+    expect(closed.needsGamingPc).toBe(false);
+    expect(closed.steps.map((x) => x.title)).toEqual(["Pitwall on the PC that runs ACC", "Start ACC", "Get on track"]);
+    expect(closed.steps[0].description).toBe("ACC shares its telemetry only on its own Windows PC (shared memory): a Mac or another computer can't read it");
+    expect(closed.steps[1].description).toBe("ACC is not running on this PC (Pitwall looks for it every 2 s).");
+    expect(closed.current).toBe(1);
+    const menus = at("waiting", "ACC is running but you are not on track (menus or loading): get on track.");
+    expect(menus.current).toBe(2);
+    expect(menus.steps[2].description).toBe("ACC is running but you are not on track (menus or loading): get on track.");
+    const denied = at("error", "Can't read ACC's shared memory: access denied.");
+    expect(denied.steps[1]).toMatchObject({ title: "Pitwall can't read ACC", description: "Can't read ACC's shared memory: access denied." });
+    expect(denied.current).toBe(1);
+    const read = at("reading", "Reading ACC on this PC · 120 pages/s.", 4);
+    expect(read.steps[2].description).toBe("Last packet: 4 s ago");
+  });
+
   it("Forza: Data Out in the game, its own port, its own senders", () => {
     const v = noTelemetryView(
       { ...base, integrations: [{ key: "forza", enabled: true, listening: true, sources: [] }] },

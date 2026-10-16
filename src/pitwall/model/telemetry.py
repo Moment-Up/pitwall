@@ -165,7 +165,7 @@ class CarFrame:
     fuel_litres: float | None = None
     fuel_capacity_kg: float | None = None
     fuel_capacity_litres: float | None = None
-    fuel_remaining_laps_game: float | None = None  # the game's own estimate, if provided
+    fuel_remaining_laps_game: float | None = None  # the game's fuel margin at the finish, laps (F1's MFD figure)
 
     # --- assists / setup snapshot --------------------------------------------------------------------
     brake_bias_front_pct: float | None = None

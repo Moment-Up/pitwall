@@ -3,7 +3,8 @@
 _Last updated: 2026-10-15 (v0.2.0: the nine features merged; nothing in this release has been run live on the rig
 yet unless the Live column says so. After it: Gran Turismo 7 on the PS5, from the owner's races of 2026-10-11; F2
 cars in F1 25, recorded; v0.3.0's one radio engineer, recorded; habits and corner reminders, synthetic and
-recorded; the technique knowledge graph, recorded)._
+recorded; the technique knowledge graph, recorded; Assetto Corsa Competizione on a Windows PC, synthetic only with a
+tester's live report)._
 
 What works, how far each part has been tested, and what is still unverified. Every claim is tied to one evidence
 tier:
@@ -69,10 +70,45 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Gran Turismo 7 (PS5) | yes | yes (3 excerpts of the owner's 2026-10-11 races; the 4 captures replayed: 4 sessions, all 11 timed laps exact) | **yes** (races on 2026-10-11: 277,467 packets, 0 rejected, every lap time equal to the game's) | the session and lap fixes made after that run, live; race position against the game's HUD; the steering scale; fuel units; PS4 | `gt7_ps5` |
 | Forza Motorsport, Forza Horizon | yes | no | no | everything with the real games | - |
 | Assetto Corsa (PS4 build on PS5) | yes | yes (probe excerpt, 2026-10-11) | protocol only (the probe script) | a lap stored, timed and coached end to end | `ac_ps5` |
+| Assetto Corsa Competizione (PC, shared memory; unreleased) | yes (generated pages through the reader's own gate; replay into a database) | no (no ACC capture recorded by Pitwall yet) | no (**a tester's report**, not Pitwall evidence: Ed checked pedals, steering and speed at Spa on 2026-10-09 and the track and car names, gear and steering sign at Brands Hatch on 2026-10-13, with his own build; Windows CI reads pages the test itself creates: CI-tested) | everything with the real game through Pitwall; the units of g-force, yaw and slip; fuel units; flags; track lengths beyond Spa, Monza and Brands Hatch; the tester's reports with this build | `pitwall doctor` on the gaming PC, then a recorded session (manual) |
 | Cloud AI providers | mock servers only | n/a | no | a live cloud call | - |
 | Dashboard v2 (React, HeroUI) | yes | yes (desktop browser at iPad and phone sizes) | no | on a real iPad in a live session | `ipad_endurance` |
 | Windows | CI | CI | no | a game on a Windows PC | - |
 | Windows speech recognition (Parakeet via sherpa-onnx) | synthetic audio on macOS (the same engine and model: "Pitwall" 43/49, "Radio" 27/28, 0 false accepts, median 95 ms with 2 threads) | CI install (the `windows` job: `uv sync --all-extras --locked`, an import test, the doctor's sherpa-onnx line) | no | run on a Windows PC: download, latency (expect 2-4x the Mac's CPU figures), a spoken question | - |
+
+## Assetto Corsa Competizione on a Windows PC (unreleased)
+
+ACC shares its telemetry only on the Windows PC that runs it (Kunos' shared memory), so Pitwall has to run on that
+PC. Built from Kunos' official "ACC Shared Memory v1.8.12" (docs/research/acc-shared-memory-spec.md; the layouts are
+machine-checked against it by `tests/unit/test_acc_protocol.py`), starting from the adapter, reader and track table
+that **Ed (Pitwall tester)** wrote and sent. **Synthetic only, plus a tester's report; not recorded, not live.**
+
+- **Evidence.** Ed's live checks with his own build are a tester's report, not Pitwall evidence: Spa, 2026-10-09
+  (gas, brake, steering and speed coherent in 8 braking zones) and Brands Hatch, 2026-10-13/14 (track and car names
+  decode, the raw gear reads one high, the raw steering sign is the opposite of Pitwall's). Every other field is as
+  Kunos documents it and tested with generated pages. On Windows CI the reader opens real named pages that the test
+  creates under ACC's names: that is "CI-tested on Windows", not "validated with ACC". The capability row
+  (`acc_pc`) stays **partial** until a recorded ACC session confirms the fields it covers.
+- **What Pitwall reads.** Inputs, speed, gear, rpm, lap number and times, lap validity (from the page before the
+  line), race position, pit status, tyre pressures, tyre core and brake temperatures, the TC level, weather, the
+  session type and the car's position. Lap distance is the car's place on the lap times the track's length, which
+  ACC does not send: it comes from a table of 25 circuits (Spa, Monza and Brands Hatch checked against public sources;
+  the others approximate), and a circuit the table does not list gets lap times but no distance.
+- **Not read yet** (said as "not in Pitwall yet" on Setup › Game and by the engineer, never "not sent"): sector times
+  (ACC sends the sector and the last sector's time), fuel (Kunos' document says kilos, the game litres; ACC's
+  laps-of-fuel figure is another quantity than the F1 margin Pitwall's race strategy reads), tyre tread
+  temperatures (ACC sends the core, which no Pitwall screen shows yet), flags and penalties (Kunos' own sample code
+  calls them not working), damage per body zone, the other cars' positions and gaps, the coolant temperature. ABS
+  on/off and the brake bias (it needs a per-car offset) are not mapped. g-forces, yaw rate, body slip and tyre slip
+  are used only after checks while the car is driven settle their axes and units (`SessionInfo.extra['acc_evidence']`),
+  never guessed.
+- **Never "live" when nobody drives.** The reader only opens ACC's pages (it never creates them) and passes on a page
+  only when the game moved it on track, plus one page when ACC's state changes: a closed game, the menus, a pause or
+  a replay send nothing more, so `/api/health` cannot report a live session and `restart-when-idle` is never held up
+  by an idle ACC (unit-tested on five states with generated pages).
+- **Off Windows** ACC can be selected (so the household says what it plays), and Setup › Game, Connect and Drive say
+  that Pitwall must run on the gaming PC; no reader starts and nothing is logged as an error.
+- ACC on PS5 and Xbox has no telemetry output.
 
 ## Gran Turismo 7 on the PS5 (2026-10-11)
 
@@ -615,6 +651,10 @@ Kept open for after v0.2.0 (none of them changes what Pitwall claims):
   reports "live" while GT7 streams in its menus, so `scripts/pitwall-service.sh restart-when-idle` waits as long as
   GT7 is open; a race whose every lap had a reset leaves its circuit unrecognised (no complete lap to measure).
 
+- **Assetto Corsa Competizione:** no Pitwall recording of ACC yet, so nothing is upgraded beyond partial; the tyre
+  core temperatures are decoded but no screen or call shows them; sector times, fuel, flags, penalties, damage and the
+  other cars are not read; the session type has no results; Ed's track-length table is checked for 3 of 25 circuits;
+  the classic dashboard (`web/`) shows ACC's Connect card with the generic words, as it is frozen.
 - **Family leaderboard:** the dashboard's purple REC (D2 `repo.lap_bests`: game + track + car + layout) is looser than a
   family board (which also splits session type, conditions and assists), so a lap can show REC while its board's
   record, and the radio's record line, belong to another lap. A layout's name is its shortest stored length: a new,

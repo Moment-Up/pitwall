@@ -125,7 +125,25 @@ def test_channels_come_from_the_adapters_declared_fields() -> None:
     assert "traction control" in (payload["throttle"]["caveat"] or "")  # variants A/B: throttle after TCS
 
 
-@pytest.mark.parametrize("game", [g.value for g in (Game.F1_25, Game.GT7, Game.FORZA_MOTORSPORT, Game.AC)])
+def test_acc_channels_and_context_come_from_its_adapter() -> None:
+    """ACC (feat/acc): the graph's game value is "acc"; inputs, speed, position and lap distance are sent; g-forces,
+    yaw, body slip and tyre slip stay unknown (mapped only after runtime checks, UNVERIFIED), never "not sent"; no
+    class, downforce, gearbox or assists are claimed (the TC level setting is not "TC on")."""
+    st = channel_status(Game.ACC.value)
+    sent = {"brake", "throttle", "steering", "clutch", "gear", "rpm", "speed", "position", "lap_distance"}
+    assert {ch for ch, v in st.items() if v == "sent"} == sent
+    assert {ch for ch, v in st.items() if v == "unknown"} == {"g_lat", "g_lon", "wheel_slip", "yaw_rate", "body_slip"}
+    assert "not_sent" not in st.values()
+    assert channels_payload("acc")["yaw_rate"] == {"status": "unknown", "words": "yaw rate", "caveat": None}
+    laps = [{"meta": {"traction_control": 3, "abs_active": None}} for _ in range(3)]
+    ctx = build_context(
+        game="acc", car_id="acc:car:mclaren_720s_gt3", lap_metas=laps, weather={"condition": "light_rain"}
+    )
+    assert ctx.game == "acc" and ctx.wet is True
+    assert (ctx.car_family, ctx.downforce, ctx.gearbox, ctx.abs, ctx.traction_control) == (None,) * 5
+
+
+@pytest.mark.parametrize("game", [g.value for g in (Game.F1_25, Game.GT7, Game.FORZA_MOTORSPORT, Game.AC, Game.ACC)])
 def test_every_game_sends_the_live_coaching_channels(game: str) -> None:
     """The eight live coaching kinds read brake, throttle, speed and lap distance: every adapter sends them, so no
     game loses coaching to the graph."""
