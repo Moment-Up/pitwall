@@ -163,6 +163,94 @@ def test_a_session_is_stored_from_the_shared_memory(rt: Runtime, mem: FakeAccMem
     assert stored is not None and stored["game"] == "acc" and stored["source"] == "acc-shm" and not stored["synthetic"]
 
 
+def drive(reader: R.AccSharedMemoryReader, mem: FakeAccMemory, pids: range, status: int = LIVE) -> None:
+    """Write one Physics + Graphics page per id and wait until the reader has polled it."""
+    for pid in pids:
+        mem.write(physics(pid), graphics(pid, status))
+        n = reader.polls
+        wait_for(lambda n=n: reader.polls > n + 1)
+
+
+@pytest.fixture
+def quick(tmp_path: Path, mem: FakeAccMemory) -> Iterator[Runtime]:
+    """A runtime whose sessions end after 1 s without a snapshot (the default is 60 s)."""
+    r = Runtime(settings_for(tmp_path, session_idle_timeout_s=1.0))
+    r.acc_opener = mem.opener
+    r.start_udp()
+    try:
+        yield r
+    finally:
+        r.close()
+
+
+def start_driving(rt: Runtime, mem: FakeAccMemory) -> R.AccSharedMemoryReader:
+    """ACC selected the way a driver's usual game selects it (the selection only: the switch stays as it is), then
+    driven until a session runs."""
+    mem.start_game()
+    mem.write(physics(1), graphics(1, OFF), static())
+    rt.store.replace(games.SECTION, games.new_selection("acc:pc", "driver_default", by_driver_id=1).section())
+    hurry(rt)
+    assert rt.acc is not None
+    reader = rt.acc.reader
+    wait_for(lambda: reader.pages_open and reader.polls > 2)
+    drive(reader, mem, range(2, 40))
+    wait_for(lambda: rt.live.session_id is not None)
+    return reader
+
+
+def test_selecting_another_game_never_stops_acc_while_it_is_driven(quick: Runtime, mem: FakeAccMemory) -> None:
+    """Someone picks GT7 on Setup › Game (or a driver's usual game) while ACC is being driven with its switch off: the
+    reader keeps reading and the session goes on (a selection never stops an input that is receiving); it stops once
+    the session has ended (idle). With nothing driving, the switch-over stops it at once (the test above)."""
+    rt = quick
+    reader = start_driving(rt, mem)
+    assert not rt.integration_configs()["acc"].enabled and rt.acc is not None  # it runs only because it is selected
+    sessions = rt.acc.router.sessions
+    sid = rt.live.session_id
+    select(rt, "gt7:ps5")
+    assert rt.acc is not None and rt.acc.reader is reader and reader.running
+    drive(reader, mem, range(40, 60))
+    assert rt.live.session_id == sid and reader.state is R.AccReaderState.READING
+    row = acc_row(rt)  # the Connect card: still on (receiving), and says it stops when the session ends
+    assert row["active"] and row["stops_when_idle"] and not row["selected"] and not row["enabled"]
+    select(rt, "acc:pc")  # selected again before the session ended: nothing is pending any more
+    select(rt, "f1_25:ps5")
+    drive(reader, mem, range(60, 70))
+    assert rt.acc is not None and rt.acc.reader is reader and rt.live.session_id == sid
+    # the driver stops: the session ends after the idle timeout, and then the reader stops
+    wait_for(lambda: rt.acc is None, timeout_s=6.0)
+    wait_for(lambda: not reader.running)
+    assert sessions.session_id is None and mem.views_open == 0
+    row = acc_row(rt)
+    assert row["reader"]["state"] == "off" and not row["active"] and not row["stops_when_idle"]
+
+
+def test_clearing_the_game_never_stops_acc_while_it_is_driven(quick: Runtime, mem: FakeAccMemory) -> None:
+    """``pitwall game clear`` / DELETE /api/game ("inputs stay as they are") while ACC is driven: same rule."""
+    rt = quick
+    reader = start_driving(rt, mem)
+    assert not rt.integration_configs()["acc"].enabled
+    sid = rt.live.session_id
+    rt.store.replace(games.SECTION, {})  # what DELETE /api/game and `pitwall game clear` do
+    drive(reader, mem, range(40, 50))
+    assert rt.acc is not None and rt.acc.reader is reader and rt.live.session_id == sid
+    I.apply_update(rt.settings, rt.store, "gt7", {"enabled": True})  # another input changes meanwhile: still runs
+    drive(reader, mem, range(50, 55))
+    assert rt.acc is not None and rt.acc.reader is reader and rt.live.session_id == sid
+    wait_for(lambda: rt.acc is None, timeout_s=6.0)
+
+
+def test_switching_acc_off_while_it_is_driven_stops_it_at_once(quick: Runtime, mem: FakeAccMemory) -> None:
+    """Switching the ACC input itself off on Connect is the owner's decision about that input: it stops at once."""
+    rt = quick
+    I.apply_update(rt.settings, rt.store, "acc", {"enabled": True})
+    reader = start_driving(rt, mem)
+    select(rt, "gt7:ps5")
+    assert rt.acc is not None  # still enabled
+    I.apply_update(rt.settings, rt.store, "acc", {"enabled": False})
+    assert rt.acc is None and not reader.running
+
+
 @pytest.mark.skipif(sys.platform == "win32", reason="off Windows only")
 def test_off_windows_nothing_starts_and_the_row_says_why(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
     r = Runtime(settings_for(tmp_path))  # no test opener: the real platform decides

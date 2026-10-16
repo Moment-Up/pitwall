@@ -514,6 +514,8 @@ class AccSharedMemoryReader:
         now = self._clock()
         self.polls += 1
         self._check_idle(now)
+        if self._stop.is_set():  # on_idle may have stopped this reader (the runtime's deferred stop): send nothing
+            return 0
         if self._views is None and (now < self._next_open or not self._open(now)):
             return 0
         try:

@@ -131,6 +131,8 @@ sends nothing new, so `/api/health` never reports a live session for an idle ACC
 `PacketRouter` (only `AccAdapter`) and into the session's `.pwcap` like datagrams (game hint `acc-shm`, replayed by
 `pitwall replay`). `core/runtime.py` starts the reader only on Windows and only while the `acc` integration is enabled
 or `acc:pc` is the selected game; elsewhere `input_status` reports `not_windows` with a sentence, and nothing starts.
+A selection never stops it while ACC is being driven (snapshots arriving or a session open): selecting another game
+then leaves it reading until the session ends (`stops_when_idle` on its row); switching the ACC input off stops it.
 `adapters/acc/` decodes the pages (pure); channels Kunos documents without units or axes (g-forces, yaw rate, body
 slip, tyre slip) are mapped only after runtime evidence settles them, and the track length comes from a table
 (`adapters/acc/tracks.py`) because Kunos marks `trackSplineLength` unused. The catalogue entry `acc:pc` (transport

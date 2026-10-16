@@ -263,6 +263,10 @@ class Runtime:
         # Test seam: the page opener the ACC reader uses (None = the Windows one). Setting it also lets the reader run
         # off Windows - only ever with a fake (pitwall.sim.acc_stream.FakeAccMemory).
         self.acc_opener: PageOpener | None = None
+        # The ACC reader is no longer wanted (another game selected) but ACC is being driven: it stops when the
+        # session ends (``_acc_idle``), never mid-lap. ``_acc_enabled`` is the switch at the last ``_apply_acc``.
+        self._acc_stop_when_idle = False
+        self._acc_enabled: bool | None = None
         self.input_errors: dict[str, str] = {}  # integration key -> last bind/start error (Connect page)
         self.gt7_heartbeat: GT7Heartbeat | None = None
         self.replay: ReplaySource | None = None
@@ -545,17 +549,50 @@ class Runtime:
         """ACC's pages can exist here: Windows, or a test opener."""
         return reader_supported() or self.acc_opener is not None
 
-    def _apply_acc(self, cfg: IntegrationConfig) -> None:
+    def _apply_acc(self, cfg: IntegrationConfig, *, session_ended: bool = False) -> None:
         """Start or stop the ACC reader (caller holds ``_ilock``): it runs on Windows while the ACC integration is
         enabled or ACC is the selected game. Elsewhere nothing starts and nothing is logged as an error: the status
-        row says why (``not_windows``)."""
+        row says why (``not_windows``).
+
+        A selection never stops an input that is receiving (``games.ensure_input``'s rule): when the reader is no
+        longer wanted only because another game was selected (or the selection cleared, or another input changed)
+        while ACC is being driven, it keeps reading and stops once the session has ended (``_acc_idle`` passes
+        ``session_ended``). Switching the ACC input itself off stops it at once."""
+        switched_off = self._acc_enabled is True and not cfg.enabled
+        self._acc_enabled = cfg.enabled
         want = (cfg.enabled or self.acc_selected()) and self.acc_supported()
-        if not want:
-            self._stop_acc()
-            self.input_errors.pop("acc", None)
+        if want:
+            self._acc_stop_when_idle = False
+            if self.acc is None:
+                self._start_acc()
             return
-        if self.acc is None:
-            self._start_acc()
+        cur = self.acc
+        if cur is not None and not switched_off and not session_ended and self._acc_driving(cur):
+            if not self._acc_stop_when_idle:
+                log.info("ACC is no longer selected but is being driven: its reader stops when the session ends")
+            self._acc_stop_when_idle = True
+            return
+        self._acc_stop_when_idle = False
+        self._stop_acc()
+        self.input_errors.pop("acc", None)
+
+    @staticmethod
+    def _acc_driving(cur: _AccInput) -> bool:
+        """ACC is being driven: snapshots are arriving, or a session is open (a pause keeps it open)."""
+        return cur.reader.state is AccReaderState.READING or cur.router.sessions.session_id is not None
+
+    def _acc_idle(self, router: PacketRouter) -> None:
+        """The reader's ``on_idle`` (its own thread): end the session, then stop a reader that was kept only for it.
+        The lock is taken with a timeout: a thread holding it may be stopping this very reader (joining this thread)."""
+        finish_router(router)
+        if not self._acc_stop_when_idle or not self._ilock.acquire(timeout=1.0):
+            return
+        try:
+            cur = self.acc
+            if self._acc_stop_when_idle and self._live_ingest and cur is not None and cur.router is router:
+                self._apply_acc(self.integration_configs()["acc"], session_ended=True)
+        finally:
+            self._ilock.release()
 
     def _start_acc(self) -> None:
         sessions = SessionManager(
@@ -574,7 +611,7 @@ class Runtime:
                 router.handle,
                 opener=self.acc_opener,
                 capture_dir=self.settings.capture_dir if self.settings.record_raw else None,
-                on_idle=lambda: finish_router(router),
+                on_idle=lambda: self._acc_idle(router),
                 idle_timeout_s=self.settings.session_idle_timeout_s,
             )
         except (AccUnavailable, ValueError) as e:
@@ -596,8 +633,9 @@ class Runtime:
     def _acc_status(self, cfg: IntegrationConfig) -> dict[str, Any]:
         spec = SPECS["acc"]
         selected = self.acc_selected()
-        active = cfg.enabled or selected
         cur = self.acc
+        pending_stop = self._acc_stop_when_idle and cur is not None  # driven while no longer wanted (``_apply_acc``)
+        active = cfg.enabled or selected or pending_stop
         reader = cur.reader if cur is not None else None
         snap: dict[str, Any]
         if reader is not None:
@@ -620,6 +658,7 @@ class Runtime:
             "listens": False,  # shared memory on this PC: no port, no IP
             "selected": selected,  # ACC is the selected game: the reader runs even with the switch off
             "active": active,
+            "stops_when_idle": pending_stop,  # another game was selected while ACC is driven: stops when it ends
             "supported": self.acc_supported(),  # False off Windows: ACC's pages cannot exist here
             "listening": reader is not None and reader.running,
             "received": reader.received if reader is not None else 0,
