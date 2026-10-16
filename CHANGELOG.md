@@ -17,6 +17,10 @@ The release workflow copies a release's bullet points into its GitHub release no
   it doesn't list you get lap times but no delta or cues.
 - A closed, paused or idle ACC never looks like someone driving. Pitwall only reads ACC's shared memory and never
   creates it, so it can't block ACC or apps like SimHub.
+- A long pause or replay in ACC stays one session, and picking another game while ACC is being driven never stops
+  it mid-lap.
+- ACC's traction control is said as its level (never F1's medium or full), and ACC records keep laps at different
+  TC levels on separate boards.
 - Choose ACC on Setup › Game or with `pitwall game set acc`. On a Mac it says Pitwall must run on the gaming PC;
   `pitwall doctor` checks ACC on Windows.
 - Thanks to Ed (Pitwall tester), who wrote the first ACC adapter and checked pedals, steering, speed, gear and the
