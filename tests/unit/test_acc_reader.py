@@ -47,6 +47,8 @@ from pitwall.sim.acc_stream import (
 )
 from pitwall.sim.track import pitwall_park
 
+pytestmark = pytest.mark.synthetic  # generated pages only, the Windows test's too (module docstring)
+
 ROOT = Path(__file__).resolve().parents[2]
 LIVE = int(P.AccStatus.LIVE)
 OFF = int(P.AccStatus.OFF)

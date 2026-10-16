@@ -52,6 +52,8 @@ from pitwall.model.telemetry import (
 from pitwall.storage import repo
 from pitwall.storage.db import Database, DbWriter
 
+pytestmark = pytest.mark.synthetic  # generated pages only (module docstring)
+
 G = 9.80665
 DT = 1 / 60
 PLAYER_ID = 1001

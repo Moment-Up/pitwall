@@ -278,3 +278,31 @@ def test_car_model_table_is_appendix_2_ids() -> None:
     assert set(P.CAR_MAX_RPM) == set(P.CAR_MODELS)  # Appendix 7 lists the same cars
     assert P.CAR_MAX_RPM["mclaren_720s_gt3"] == 7700 and P.CAR_MAX_RPM["porsche_992_gt3_cup"] == 8750
     assert all(re.fullmatch(r"[a-z0-9_]+", k) for k in P.CAR_MODELS)
+
+
+# ============================================================================================== evidence tiers
+def _marks(obj: object) -> set[str]:
+    marks = getattr(obj, "pytestmark", [])
+    return {m.name for m in (marks if isinstance(marks, list) else [marks])}
+
+
+def test_generated_page_tests_are_in_the_synthetic_tier() -> None:
+    """docs/status.md's Synthetic tier is ``pytest -m synthetic`` (CLAUDE.md's evidence tiers): every ACC test driven
+    by generated pages (the adapter's, the reader's, and the runtime's on ``FakeAccMemory`` or a generated capture) is
+    in it, so no selection can count them as anything else. The layout checks here compare two documents: not in it."""
+    import inspect
+    import sys
+
+    from tests.unit import test_acc, test_acc_reader, test_acc_runtime
+
+    assert "synthetic" in _marks(test_acc) and "synthetic" in _marks(test_acc_reader)
+    assert "synthetic" not in _marks(sys.modules[__name__])
+    generated = {"mem", "quick", "client", "rt"}
+    checked = 0
+    for name, fn in vars(test_acc_runtime).items():
+        if not name.startswith("test_") or not callable(fn):
+            continue
+        if generated & set(inspect.signature(fn).parameters) or "write_acc_capture" in inspect.getsource(fn):
+            assert "synthetic" in _marks(fn), name
+            checked += 1
+    assert checked >= 8

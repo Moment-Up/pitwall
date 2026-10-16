@@ -112,6 +112,7 @@ def select(rt: Runtime, entry_id: str) -> None:
 
 
 # ============================================================================================== runtime
+@pytest.mark.synthetic
 def test_reader_runs_while_acc_is_selected_or_enabled(rt: Runtime, mem: FakeAccMemory) -> None:
     row = acc_row(rt)
     assert rt.acc is None and row["reader"]["state"] == "off" and not row["active"] and not row["selected"]
@@ -136,6 +137,7 @@ def test_reader_runs_while_acc_is_selected_or_enabled(rt: Runtime, mem: FakeAccM
     assert mem.exists(P.PHYSICS_MAPPING)
 
 
+@pytest.mark.synthetic
 def test_a_session_is_stored_from_the_shared_memory(rt: Runtime, mem: FakeAccMemory) -> None:
     from pitwall.storage import repo
 
@@ -198,6 +200,7 @@ def start_driving(rt: Runtime, mem: FakeAccMemory) -> R.AccSharedMemoryReader:
     return reader
 
 
+@pytest.mark.synthetic
 def test_selecting_another_game_never_stops_acc_while_it_is_driven(quick: Runtime, mem: FakeAccMemory) -> None:
     """Someone picks GT7 on Setup › Game (or a driver's usual game) while ACC is being driven with its switch off: the
     reader keeps reading and the session goes on (a selection never stops an input that is receiving); it stops once
@@ -225,6 +228,7 @@ def test_selecting_another_game_never_stops_acc_while_it_is_driven(quick: Runtim
     assert row["reader"]["state"] == "off" and not row["active"] and not row["stops_when_idle"]
 
 
+@pytest.mark.synthetic
 def test_clearing_the_game_never_stops_acc_while_it_is_driven(quick: Runtime, mem: FakeAccMemory) -> None:
     """``pitwall game clear`` / DELETE /api/game ("inputs stay as they are") while ACC is driven: same rule."""
     rt = quick
@@ -240,6 +244,7 @@ def test_clearing_the_game_never_stops_acc_while_it_is_driven(quick: Runtime, me
     wait_for(lambda: rt.acc is None, timeout_s=6.0)
 
 
+@pytest.mark.synthetic
 def test_switching_acc_off_while_it_is_driven_stops_it_at_once(quick: Runtime, mem: FakeAccMemory) -> None:
     """Switching the ACC input itself off on Connect is the owner's decision about that input: it stops at once."""
     rt = quick
@@ -251,6 +256,7 @@ def test_switching_acc_off_while_it_is_driven_stops_it_at_once(quick: Runtime, m
     assert rt.acc is None and not reader.running
 
 
+@pytest.mark.synthetic
 @pytest.mark.parametrize("held", [PAUSE, REPLAY])
 def test_a_pause_longer_than_the_idle_timeout_is_one_session(quick: Runtime, mem: FakeAccMemory, held: int) -> None:
     """A pause (or a replay from the pause menu) longer than ``session_idle_timeout_s`` never splits the race into
@@ -292,6 +298,7 @@ def test_off_windows_nothing_starts_and_the_row_says_why(tmp_path: Path, caplog:
         r.close()
 
 
+@pytest.mark.synthetic
 def test_replay_of_a_synthetic_acc_capture(tmp_path: Path) -> None:
     from pitwall.storage import repo
 
@@ -325,6 +332,7 @@ def client(tmp_path: Path, mem: FakeAccMemory, monkeypatch: pytest.MonkeyPatch) 
         yield c
 
 
+@pytest.mark.synthetic
 def test_health_is_never_live_from_a_closed_idle_or_paused_acc(client: TestClient, mem: FakeAccMemory) -> None:
     """ACC closed, ACC frozen on track (crashed, or closed while another app keeps its pages), in its menus, paused
     or in a replay: no snapshot reaches the router, so ``/api/health`` never says "live" and the
@@ -390,6 +398,7 @@ def test_health_is_never_live_from_a_closed_idle_or_paused_acc(client: TestClien
     assert health() == "stale"
 
 
+@pytest.mark.synthetic
 def test_connect_page_lists_acc_with_its_guide(client: TestClient) -> None:
     info = client.get("/api/connect").json()
     row = next(r for r in info["integrations"] if r["key"] == "acc")
@@ -476,6 +485,7 @@ def test_cli_game_set_acc(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     assert runner.invoke(cli.app, ["game", "set", "acc:ps5", "--console-ip", "192.168.1.5"]).exit_code == 1
 
 
+@pytest.mark.synthetic
 def test_cli_send_refuses_an_acc_capture(tmp_path: Path) -> None:
     path = tmp_path / "acc.pwcap"
     write_acc_capture(path, AccScenario(flying_laps=1, menu_s=0.1, cooldown_s=0.2))
