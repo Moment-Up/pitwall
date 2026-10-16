@@ -35,8 +35,9 @@ def test_acc_circuits_never_borrow_f1_track_identity() -> None:
 
 
 def test_an_acc_lap_has_its_own_board() -> None:
-    """The board key keeps the game and ACC's track id (never F1's Spa board); ACC reports no assists Pitwall reads
-    (the TC level is a setting, not on/off), so one "not reported" class; the session category comes from the type."""
+    """The board key keeps the game and ACC's track id (never F1's Spa board); the assist class is the lap's TC level
+    on ACC's own scale (a number, never on / off or F1's words: ACC documents no "off" level); the session category
+    comes from the type."""
     session = {
         "game": "acc",
         "track_id": ACC_SPA,
@@ -53,10 +54,36 @@ def test_an_acc_lap_has_its_own_board() -> None:
     raw = keys.raw_of_session(session, {"traction_control": 3, "abs_active": None})
     k = keys.key_of(raw, 7004)
     assert (k.game, k.track_id, k.car_class, k.equal_performance) == ("acc", ACC_SPA, None, None)
-    assert (k.category, k.conditions, k.assists) == ("race", "unknown", ())
+    assert (k.category, k.conditions, k.assists) == ("race", "unknown", (("tc", 3),))
     text = keys.encode(k)
-    assert text.startswith("acc~acc:spa~7004~acc:car:mclaren_720s_gt3~") and keys.decode(text) == k
+    assert text == "acc~acc:spa~7004~acc:car:mclaren_720s_gt3~-~-~race~unknown~t3" and keys.decode(text) == k
     assert keys.key_of({**raw, "game": "f1_25", "track_id": F1_SPA}, 7004) != k
+
+
+def test_acc_boards_never_rank_laps_at_different_tc_levels_together() -> None:
+    """ACC laps carry their TC level (Graphics.TC) in the lap meta: a lap at TC 0 is never on a TC 3 board, an unknown
+    level is its own board, and the chip says the level (never "not reported by this game", never full / medium)."""
+    base = {"game": "acc", "track_id": ACC_SPA, "car_id": "acc:car:x", "session_type": "race"}
+    k0, k3, unk = (keys.key_of({**base, "lap_tc": v}, 7004) for v in (0, 3, None))
+    assert len({k0, k3, unk}) == 3
+    assert [keys.assists_code(k) for k in (k0, k3, unk)] == ["t0", "t3", "t?"]
+    assert [keys.assists_text(k) for k in (k0, k3, unk)] == [
+        "Traction control level 0",
+        "Traction control level 3",
+        "Traction control unknown",
+    ]
+    assert keys.assist_chips(k3) == [{"key": "tc", "value": 3, "known": True, "label": "Traction control level 3"}]
+    assert k3.assists_reported and k3.fields()["assists"] == {"tc": 3}
+    for k in (k0, k3, unk):
+        assert keys.decode(keys.encode(k)) == k
+    assert keys.key_of({**base, "lap_tc": -1}, 7004).assists == (("tc", None),)  # not a level: unknown
+    for bad in ("-", "a1.t3", "t3.t3", "tx"):
+        try:
+            keys.parse_assists("acc", bad)
+        except keys.BadKey:
+            continue
+        raise AssertionError(bad)
+    assert keys.parse_assists("acc", "t11") == (("tc", 11),)
 
 
 def test_stored_acc_sessions_read_as_acc() -> None:

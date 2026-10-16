@@ -36,7 +36,7 @@ sent is on the "ABS unknown" board, never on the "ABS on" one. (Picking a refere
 | car | the exact car id; unknown is its own board. F1 games add the car class family (F1 / F2 / other, from `carclass`) and the "equal car performance" setting, each unknown until the game sent it |
 | category | `time_trial`, `qualifying`, `race`, `practice`, else `unknown` (GT7 and AC send no session type) |
 | conditions | `dry` or `wet` (light rain, heavy rain and storm are wet), else `unknown` |
-| assists | F1: braking assist, ABS, traction control, gearbox, racing line. Braking, gearbox and line come from the Session packet and count only once its tail is filled (F1 25 sends gearbox 0 for the first ~1.5 s of a session); ABS and TC come from the lap itself (the value on 90 % of its moving frames). AC: ABS and TC on / off. GT7, Forza and the other games report no assists: one "not reported" class |
+| assists | F1: braking assist, ABS, traction control, gearbox, racing line. Braking, gearbox and line come from the Session packet and count only once its tail is filled (F1 25 sends gearbox 0 for the first ~1.5 s of a session); ABS and TC come from the lap itself (the value on 90 % of its moving frames). AC: ABS and TC on / off. ACC: the lap's TC level as a number on ACC's own scale (about 0-11 on a GT3; never on / off, ACC documents no "off" level), so laps at different levels never share a board. GT7, Forza and the other games report no assists: one "not reported" class |
 
 The game version is shown on each row, not part of the key.
 

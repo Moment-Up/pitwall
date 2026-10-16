@@ -58,6 +58,10 @@ export interface AcBoardAssists {
   abs: number | null;
   tc: number | null;
 }
+/** ACC: the lap's TC level on ACC's own scale (never on / off). */
+export interface AccBoardAssists {
+  tc: number | null;
+}
 
 /** A board key as JSON: every part, null for unknown. */
 export interface BoardFields {
@@ -69,7 +73,7 @@ export interface BoardFields {
   equal_performance: 0 | 1 | null;
   category: BoardCategory;
   conditions: BoardConditions;
-  assists: F1BoardAssists | AcBoardAssists | null;
+  assists: F1BoardAssists | AcBoardAssists | AccBoardAssists | null;
   assists_code: string;
 }
 

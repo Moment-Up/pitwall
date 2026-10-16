@@ -14,14 +14,15 @@ anything, because a lap to drive against is better than none; a ranking must not
   ``analysis.compare.check_compatibility``), else ``unknown``.
 * assist class - F1: braking assist, gearbox and racing line from the Session packet, trusted only once its tail is
   filled (gearbox 1-3: F1 25 sends an unfilled tail for the first ~1.5 s of a session), and ABS and traction control
-  from the lap itself (``LapTrace.meta``: the value on 90 % of the moving frames). AC: ABS and TC on / off. GT7,
-  Forza and the other games report no assists: one "not reported" class.
+  from the lap itself (``LapTrace.meta``: the value on 90 % of the moving frames). AC: ABS and TC on / off. ACC: the
+  lap's TC level (Graphics.TC, ACC's own scale, about 0-11 on a GT3; a number, never on / off: ACC documents no "off"
+  level). GT7, Forza and the other games report no assists: one "not reported" class.
 
 String form (``encode`` / ``decode``: the API's ``key``, the badge key, the lap card's ``board.key``): nine
 ``~``-separated parts ``game~track~layout~car~class~equal~category~conditions~assists``. ``?`` is unknown and ``-``
 "this game has no such setting"; ids are percent-escaped (``%``, ``~`` and ``?`` only). Assists: F1 ``b2.a1.t2.g3.l2``
-(braking, ABS, TC, gearbox, racing line), AC ``a1.t0``, other games ``-``. Example (Austria in the Haas, a race in
-the dry, braking assist medium, ABS and TC not sent, automatic gears, full racing line):
+(braking, ABS, TC, gearbox, racing line), AC ``a1.t0``, ACC ``t3`` (TC level), other games ``-``. Example (Austria in
+the Haas, a race in the dry, braking assist medium, ABS and TC not sent, automatic gears, full racing line):
 ``f1_25~f1:17~4318~f1:team:7~f1~0~race~dry~b2.a?.t?.g3.l2``.
 """
 
@@ -43,8 +44,10 @@ SEP = "~"
 UNKNOWN_MARK = "?"
 NOT_APPLICABLE = "-"
 AC_GAMES = frozenset({"ac"})
+ACC_GAMES = frozenset({"acc"})
 F1_ASSISTS = ("braking", "abs", "tc", "gearbox", "racing_line")  # display order
 AC_ASSISTS = ("abs", "tc")
+ACC_ASSISTS = ("tc",)
 _ASSIST_CODES = {"braking": "b", "abs": "a", "tc": "t", "gearbox": "g", "racing_line": "l"}
 _CODE_ASSISTS = {v: k for k, v in _ASSIST_CODES.items()}
 _GEARBOX_DEFINED = frozenset({1, 2, 3})  # F1 Session.gearboxAssist; 0 = the unfilled tail
@@ -56,6 +59,7 @@ _RANGES: dict[str, range] = {
     "racing_line": range(3),
 }
 _AC_RANGES: dict[str, range] = {"abs": range(2), "tc": range(2)}
+_ACC_RANGES: dict[str, range] = {"tc": range(100)}  # ACC's TC level: about 0-11 on a GT3; 100 or more is not a level
 
 CATEGORY_LABELS = {
     "time_trial": "Time trial",
@@ -107,7 +111,7 @@ class BoardKey:
     equal_performance: int | None  # F1 games: 0 realistic / 1 equal, None unknown; other games: always None
     category: str  # CATEGORIES or "unknown"
     conditions: str  # "dry" | "wet" | "unknown"
-    assists: tuple[tuple[str, int | None], ...]  # F1 / AC: every setting in display order; other games: ()
+    assists: tuple[tuple[str, int | None], ...]  # F1 / AC / ACC: every setting in display order; other games: ()
 
     @property
     def f1(self) -> bool:
@@ -152,7 +156,7 @@ def conditions_of(weather_condition: object) -> str:
 
 def assists_of(game: str, raw: Mapping[str, Any]) -> tuple[tuple[str, int | None], ...]:
     """The assist class from the raw columns (``repo._BOARD_COLUMNS``: ``a_braking``, ``a_gearbox``, ``a_line``,
-    ``a_abs``, ``a_tc`` from the session, ``lap_abs``, ``lap_tc`` from the lap)."""
+    ``a_abs``, ``a_tc`` from the session, ``lap_abs``, ``lap_tc`` from the lap; ACC's ``lap_tc`` is its own level)."""
     if is_f1_game(game):
         tail_ok = _int(raw.get("a_gearbox")) in _GEARBOX_DEFINED
         values = {
@@ -165,6 +169,8 @@ def assists_of(game: str, raw: Mapping[str, Any]) -> tuple[tuple[str, int | None
         return tuple((name, values[name]) for name in F1_ASSISTS)
     if game in AC_GAMES:
         return (("abs", _in(raw.get("a_abs"), _AC_RANGES["abs"])), ("tc", _in(raw.get("a_tc"), _AC_RANGES["tc"])))
+    if game in ACC_GAMES:
+        return (("tc", _in(raw.get("lap_tc"), _ACC_RANGES["tc"])),)
     return ()
 
 
@@ -312,13 +318,15 @@ def _parse_int(v: str, what: str, allowed: range | None = None) -> int | None:
 
 
 def parse_assists(game: str, code: str) -> tuple[tuple[str, int | None], ...]:
-    """An assist code (``b2.a1.t2.g3.l2`` / ``a1.t0`` / ``-``) for ``game``; every setting the game has, in display
-    order. Raises ``BadKey`` when it does not fit the game."""
+    """An assist code (``b2.a1.t2.g3.l2`` / ``a1.t0`` / ``t3`` / ``-``) for ``game``; every setting the game has, in
+    display order. Raises ``BadKey`` when it does not fit the game."""
     names: tuple[str, ...]
     if is_f1_game(game):
         names, ranges = F1_ASSISTS, _RANGES
     elif game in AC_GAMES:
         names, ranges = AC_ASSISTS, _AC_RANGES
+    elif game in ACC_GAMES:
+        names, ranges = ACC_ASSISTS, _ACC_RANGES
     else:
         if code != NOT_APPLICABLE:
             raise BadKey("this game reports no assists: the assist class is '-'")
@@ -378,18 +386,22 @@ def assist_chips(k: BoardKey) -> list[dict[str, Any]]:
         return [{"key": "assists", "value": None, "known": False, "label": NOT_REPORTED_LABEL}]
     out = []
     for name, v in k.assists:
-        out.append({"key": name, "value": v, "known": v is not None, "label": _assist_label(name, v, k.f1)})
+        out.append({"key": name, "value": v, "known": v is not None, "label": _assist_label(name, v, k.game)})
     return out
 
 
-def _assist_label(name: str, v: int | None, f1: bool) -> str:
+def _assist_label(name: str, v: int | None, game: str) -> str:
     if name == "braking":
         return f"Braking assist {_BRAKING_WORDS.get(v, 'unknown') if v is not None else 'unknown'}"
     if name == "abs":
         return f"ABS {_ON_OFF.get(v, 'unknown') if v is not None else 'unknown'}"
     if name == "tc":
-        words = _TC_F1_WORDS if f1 else _ON_OFF
-        return f"Traction control {words.get(v, 'unknown') if v is not None else 'unknown'}"
+        if v is None:
+            return "Traction control unknown"
+        if game in ACC_GAMES:
+            return f"Traction control level {v}"  # ACC's own scale: no level is said to be "off"
+        words = _TC_F1_WORDS if is_f1_game(game) else _ON_OFF
+        return f"Traction control {words.get(v, 'unknown')}"
     if name == "gearbox":
         return _GEARBOX_LABELS.get(v, "Gears unknown") if v is not None else "Gears unknown"
     if name == "racing_line":
