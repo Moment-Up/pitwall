@@ -110,7 +110,10 @@ def test_radio_question_over_websocket(app_with_session: Any) -> None:
         _, pong = _recv_until(ws, lambda m: m.get("type") == "pong")
         assert pong["t"] == 1.5
     status = client.get("/api/voice/status").json()
-    assert status["enabled"] and status["latency"][0]["stt_ms"] == 3
+    # latency[0] is the newest spoken message: a proactive one (lap summary, coaching) spoken after the answer can
+    # come first, so check the question's own record
+    question = next(r for r in status["latency"] if r["kind"] == "question")
+    assert status["enabled"] and question["stt_ms"] == 3
 
 
 def test_radio_typed_question_and_quiet_command(app_with_session: Any) -> None:
