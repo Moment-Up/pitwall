@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import math
+import os
 import sys
 import threading
 import time
@@ -543,7 +544,14 @@ def test_the_reader_samples_at_60_hz_even_where_event_wait_is_coarse() -> None:
     reader = AccSharedMemoryReader(lambda _p: None, opener=mem.opener)
     reader._stop = _CoarseEvent()
     rate = _poll_rate(reader)
-    assert 48.0 <= rate <= 66.0, rate
+    assert rate <= 66.0, rate
+    if os.environ.get("CI"):
+        # a busy shared runner can't hold 60 Hz (Linux CI measured 21): compare with the same loop under a normal
+        # Event on the same runner, so a coarse stop-wait still must not halve the rate
+        normal = _poll_rate(AccSharedMemoryReader(lambda _p: None, opener=mem.opener))
+        assert rate >= 0.7 * min(normal, 60.0), (rate, normal)
+    else:
+        assert rate >= 48.0, rate
     assert not reader.running and mem.views_open == 0  # stop still ends the thread and closes the views
 
 

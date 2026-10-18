@@ -442,7 +442,9 @@ def classic_card(node: str, rows: list[dict[str, Any]], tmp_path: Path) -> list[
         "console.log(JSON.stringify([...out, { status: accStatusLine(59.6) }]));\n",
         encoding="utf-8",
     )
-    r = subprocess.run([node, str(script), json.dumps(rows)], capture_output=True, text=True, timeout=30)
+    r = subprocess.run(
+        [node, str(script), json.dumps(rows)], capture_output=True, text=True, encoding="utf-8", timeout=30
+    )
     assert r.returncode == 0, r.stderr
     return list(json.loads(r.stdout))
 
@@ -502,13 +504,14 @@ def test_transport_and_game_input() -> None:
     assert "reader" not in (games.game_input(games.entry("gt7:ps5"), []) or {})  # only ACC's input has one
 
 
-@pytest.mark.parametrize(("platform", "needs_windows"), [("darwin", True), ("win32", False)])
-def test_ensure_input_switches_acc_on(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, platform: str, needs_windows: bool
-) -> None:
+@pytest.mark.parametrize("needs_windows", [True, False])
+def test_ensure_input_switches_acc_on(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, needs_windows: bool) -> None:
     from pitwall import compat
 
-    monkeypatch.setattr(compat.sys, "platform", platform)
+    # fake only the platform question the ACC setup asks: setting sys.platform for the whole process made the settings
+    # store call os.fchmod on a Windows runner, where it does not exist
+    monkeypatch.setattr(compat, "is_windows", lambda: not needs_windows)
+    monkeypatch.setattr(games, "this_machine", lambda: "this Mac" if needs_windows else "this PC")
     s = settings_for(tmp_path)
     store = SettingsStore(tmp_path / "settings.json")
     e = games.entry("acc:pc")
