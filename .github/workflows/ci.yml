@@ -78,7 +78,7 @@ jobs:
     # has); install, service and firewall under 5.1. The runner is an administrator, and it never shows Windows'
     # "allow access" firewall prompt, so neither a non-admin task registration nor that prompt is covered here.
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         shell: pwsh
@@ -104,7 +104,7 @@ jobs:
           Write-Output 'scripts/install/install.ps1 parses'
       # --- end lane install ---
       - name: pytest (default tiers, as on macOS; real-voice tests skip themselves off macOS)
-        timeout-minutes: 20  # normally ~7 min; a hang fails this step and the script steps below still run
+        timeout-minutes: 40  # ~20 min on a GitHub Windows runner (6,000+ tests); a hang still fails this step and the script steps below still run
         env:
           PYTHONUNBUFFERED: "1"
         # -rs: list every skip and its reason; faulthandler: dump every thread's stack if one test runs > 4 min
