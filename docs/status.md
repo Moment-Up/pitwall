@@ -74,7 +74,7 @@ One row per feature. "Next check" names the validation kit item that would give 
 | Cloud AI providers | mock servers only | n/a | no | a live cloud call | - |
 | Dashboard v2 (React, HeroUI) | yes | yes (desktop browser at iPad and phone sizes) | no | on a real iPad in a live session | `ipad_endurance` |
 | Windows | CI | CI | no | a game on a Windows PC | - |
-| Windows speech recognition (Parakeet via sherpa-onnx) | synthetic audio on macOS (the same engine and model: "Pitwall" 43/49, "Radio" 27/28, 0 false accepts, median 95 ms with 2 threads) | CI install (the `windows` job: `uv sync --all-extras --locked`, an import test, the doctor's sherpa-onnx line) | no | run on a Windows PC: download, latency (expect 2-4x the Mac's CPU figures), a spoken question | - |
+| Windows speech recognition (Parakeet via sherpa-onnx) | synthetic audio on macOS (the same engine and model: "Pitwall" 43/49, "Radio" 27/28, 0 false accepts, median 95 ms with 2 threads) | CI install (the weekly `windows` job: `uv sync --all-extras --locked`, an import test, the doctor's sherpa-onnx line) | no | run on a Windows PC: download, latency (expect 2-4x the Mac's CPU figures), a spoken question | - |
 
 ## Assetto Corsa Competizione on a Windows PC (unreleased)
 

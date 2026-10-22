@@ -1,8 +1,9 @@
 # Windows details for /setup-pitwall
 
 Status to tell the user: Windows support is new. It is CI-tested on Windows (GitHub runners: the `windows` job in
-`.github/workflows/ci.yml` runs the tests and these scripts on windows-latest, and the release workflow installs and
-runs each release zip there) but **not yet validated live with a game on a Windows PC**. Consoles (PS5/Xbox) send
+`.github/workflows/platform.yml` runs the tests and these scripts on windows-latest once a week and when started by
+hand, and the release workflow installs and runs each release zip there) but **not yet validated live with a game
+on a Windows PC**. Consoles (PS5/Xbox) send
 telemetry over the network exactly as they do to a Mac, so the same in-game settings apply. `scripts/windows/README.md`
 is the user-facing guide to the scripts.
 

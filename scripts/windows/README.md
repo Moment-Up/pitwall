@@ -1,7 +1,8 @@
 # Pitwall on Windows
 
 Status: Windows support is new. It is **CI-tested on Windows (GitHub runners), not yet validated live with a game on
-a Windows PC.** The `windows` CI job (GitHub's `windows-latest` runner) runs the test suite and these scripts:
+a Windows PC.** The `windows` job (`.github/workflows/platform.yml`, GitHub's `windows-latest` runner) runs the
+test suite and these scripts once a week and when that workflow is started by hand:
 `install.ps1`, `smoke.ps1` (a recorded F1 25 capture and a synthetic one streamed over UDP), the background service
 (`service.ps1`: start, restart after the server dies, refusal while telemetry is live, stop) and the firewall rules.
 CI runs them from a git checkout; a release folder has the same scripts. Consoles send telemetry over the network
