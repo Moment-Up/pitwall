@@ -1,0 +1,281 @@
+# macOS and Windows checks. Not on every push: those runners dominate Actions cost.
+#
+# python-macos: the Python suite on macOS, where the real-voice tests can run.
+# windows: the test suite plus install.ps1, smoke.ps1, the scheduled task and firewall rules.
+# windows-web-react: the React dashboard build through cmd.exe.
+#
+# When: every Monday at 06:15 UTC, or Actions > platform > Run workflow.
+# A release tag does not run this file. release.yml still verifies the packaged zip on
+# Windows, macOS and Ubuntu, and it publishes only after those verify jobs pass.
+name: platform
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Monday 06:15 UTC. Off the hour so it does not share a minute with every other weekly job.
+    - cron: "15 6 * * 1"
+
+concurrency:
+  group: platform-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python-macos:
+    runs-on: macos-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --all-extras
+      - run: uv run ruff check src tests
+      - run: uv run ruff format --check src tests
+      - run: uv run mypy
+      - run: uv run pytest -q # synthetic + unit; live/llm tiers are opt-in
+  windows:
+    # Windows support. Evidence tier: "CI-tested on Windows" (this runner), NOT live-validated with a game on a Windows
+    # PC. Python tests + mypy, then the Windows scripts end to end: install.ps1 (Svelte dashboard: no HeroUI Pro token
+    # is exposed to this job; private data-folder ACL), smoke.ps1 (server + a recorded F1 25 capture and a synthetic
+    # one over loopback UDP, sessions and lap analysis asserted via the API), the background service (Task Scheduler
+    # task, hidden supervisor, keep-alive restart, refusal to stop while telemetry is live, stop) and firewall rules.
+    # smoke.ps1 runs under both PowerShell 7 (`pwsh`) and Windows PowerShell 5.1 (`powershell`, what every Windows PC
+    # has); install, service and firewall under 5.1. The runner is an administrator, and it never shows Windows'
+    # "allow access" firewall prompt, so neither a non-admin task registration nor that prompt is covered here.
+    runs-on: windows-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: uv sync
+        run: uv sync --all-extras --locked # --locked: lane handsfree (A7), as the one-line installer runs it
+      # --- lane install ---
+      - name: install.ps1 parses (Windows PowerShell 5.1)
+        shell: powershell
+        run: |
+          $errors = $null
+          $null = [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path scripts/install/install.ps1).Path, [ref]$null, [ref]$errors)
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { $_.ToString() }; exit 1 }
+          Write-Output 'scripts/install/install.ps1 parses'
+      # --- end lane install ---
+      - name: pytest (default tiers, as on macOS; real-voice tests skip themselves off macOS)
+        timeout-minutes: 40 # ~20 min on a GitHub Windows runner (6,000+ tests); a hang still fails this step and the script steps below still run
+        env:
+          PYTHONUNBUFFERED: "1"
+        # -rs: list every skip and its reason; faulthandler: dump every thread's stack if one test runs > 4 min
+        run: uv run pytest -q -rs --durations=15 -o faulthandler_timeout=240
+      - name: mypy
+        if: ${{ !cancelled() }}
+        run: uv run mypy
+      # The script steps run even when tests failed: the installer and the smoke test are separate evidence.
+      - name: install.ps1 -NonInteractive (Windows PowerShell 5.1)
+        if: ${{ !cancelled() }}
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/install.ps1 -NonInteractive
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Test-Path web/dist/index.html)) { throw 'install.ps1 did not build web/dist' }
+          if (Test-Path web-react/dist) { throw 'install.ps1 built web-react without a HeroUI Pro token' }
+      - name: pitwall doctor on the runner (real netsh, network-profile and SAPI voice probes)
+        if: ${{ !cancelled() }}
+        run: |
+          uv run pitwall doctor --no-llm
+          $r = (uv run pitwall doctor --no-llm --json | Out-String) | ConvertFrom-Json
+          $by = @{}
+          foreach ($c in $r.checks) { $by[[string]$c.id] = $c }
+          foreach ($want in 'system', 'python_env', 'dashboard', 'http_port', 'udp_f1', 'firewall', 'network_profile', 'data_private', 'voice_tts') {
+            if (-not $by.ContainsKey($want)) { throw "doctor has no '$want' check (has: $(@($by.Keys) -join ', '))" }
+          }
+          if ($by['dashboard'].status -ne 'ok') { throw "dashboard: $($by['dashboard'].status) - $($by['dashboard'].detail)" }
+          # install.ps1 made the data folder private (the checkout is on D:\, whose root lets every user read)
+          if ($by['data_private'].status -ne 'ok') { throw "data_private: $($by['data_private'].status) - $($by['data_private'].detail)" }
+          icacls data
+          if ($by['network_profile'].detail -match 'could not read') { throw 'doctor could not read the network profile through PowerShell' }
+          if ($by['firewall'].status -ne 'warn') { throw "firewall before any rule exists: $($by['firewall'].status) - $($by['firewall'].detail)" }
+          # --- lane handsfree (A7): the voice extra installed sherpa-onnx, so spoken questions use Parakeet on the CPU ---
+          if ($by['voice_stt'].status -ne 'ok' -or $by['voice_stt'].detail -notmatch 'sherpa-onnx') { throw "voice_stt: $($by['voice_stt'].status) - $($by['voice_stt'].detail)" }
+          if (-not $by.ContainsKey('voice_handsfree')) { throw "doctor has no 'voice_handsfree' check" }
+          Write-Output "voice_stt: $($by['voice_stt'].detail)"
+          # --- end lane handsfree ---
+          Write-Output "doctor summary: $($r.summary | ConvertTo-Json -Compress)"
+          exit 0
+      - name: smoke.ps1 - server, recorded + synthetic F1 streams over UDP (PowerShell 7)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        run: |
+          pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/windows/smoke.ps1 -HttpPort 8770 -UdpPort 20777 -Speed 20 -RequireDashboard
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: smoke.ps1 - recorded stream only (Windows PowerShell 5.1)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 10
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows/smoke.ps1 -HttpPort 8771 -UdpPort 20778 -SkipSynthetic -RequireDashboard
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: service.ps1 - task, start, keep-alive restart, refusal while live, stop (Windows PowerShell 5.1)
+        if: ${{ !cancelled() }}
+        timeout-minutes: 15
+        run: |
+          $svc = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'scripts/windows/service.ps1')
+          $port = 8770
+          $log = Join-Path $env:LOCALAPPDATA 'pitwall\logs\server.log'
+          function Get-Health { try { Invoke-RestMethod "http://127.0.0.1:$port/api/health" -TimeoutSec 3 } catch { $null } }
+          function Wait-Until([scriptblock]$Condition, [int]$Seconds, [string]$What) {
+            $deadline = (Get-Date).AddSeconds($Seconds)
+            while ((Get-Date) -lt $deadline) { if (& $Condition) { return }; Start-Sleep -Milliseconds 500 }
+            throw "timed out after $Seconds s waiting for: $What"
+          }
+          function Get-PitwallProcs {
+            $venv = (Resolve-Path .venv).Path
+            @(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and (
+              ($_.CommandLine -like "*$venv*" -and $_.CommandLine -match '\sserve(\s|"|$)') -or
+              $_.CommandLine -like '*scripts\windows\pitwall.ps1*') })
+          }
+          if (Get-Health) { throw "something already answers on port $port" }
+
+          # 1. register the at-logon task (no start) and check its definition
+          powershell @svc install -NoStart
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $task = Get-ScheduledTask -TaskName Pitwall -TaskPath '\'
+          $task.Actions | Format-List Execute, Arguments, WorkingDirectory
+          $task.Settings | Format-List ExecutionTimeLimit, MultipleInstances, Priority, DisallowStartIfOnBatteries
+          if ($task.Actions[0].Arguments -notmatch '-WindowStyle Hidden -File ".+pitwall\.ps1" -LogFile ".+server\.log" -KeepAlive') { throw 'unexpected task arguments' }
+          if ($task.Settings.ExecutionTimeLimit -ne 'PT0S') { throw "ExecutionTimeLimit is '$($task.Settings.ExecutionTimeLimit)', expected PT0S (no limit)" }
+          if (@($task.Triggers).Count -ne 1 -or $task.Triggers[0].CimClass.CimClassName -ne 'MSFT_TaskLogonTrigger') { throw 'expected one at-logon trigger' }
+
+          # 2. start it (what a logon does): hidden PowerShell supervisor -> cmd.exe (log redirect) -> server
+          powershell @svc start
+          if ($LASTEXITCODE -eq 0) {
+            $sup = @(Get-PitwallProcs | Where-Object { $_.Name -eq 'powershell.exe' -and $_.CommandLine -match 'WindowStyle Hidden' })
+            if ($sup.Count -eq 0) { throw 'the task runs, but no hidden PowerShell supervisor was found' }
+            Write-Output 'the at-logon task started the hidden supervisor and the server'
+          } else {
+            Write-Output '::warning::The Interactive-logon task did not start on this runner (no interactive logon session?): testing its supervisor (pitwall.ps1 -LogFile -KeepAlive) started directly instead.'
+            Start-Process -WindowStyle Hidden powershell -ArgumentList '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', "$PWD\scripts\windows\pitwall.ps1", '-LogFile', $log, '-KeepAlive'
+            Wait-Until { Get-Health } 90 'the server started by the supervisor'
+          }
+          Get-PitwallProcs | Format-Table ProcessId, ParentProcessId, Name -AutoSize
+
+          # 3. keep-alive: kill the Python server; the supervisor starts it again (10 s later)
+          $listener = @(Get-NetTCPConnection -LocalPort $port -State Listen)[0]
+          Write-Output "killing the server (pid $($listener.OwningProcess), $((Get-Process -Id $listener.OwningProcess).ProcessName))"
+          Stop-Process -Id $listener.OwningProcess -Force
+          Wait-Until { -not (Get-Health) } 20 'the server to go down after it was killed'
+          Wait-Until { Get-Health } 90 'the supervisor to restart the server'
+          Write-Output 'the supervisor restarted the server'
+
+          # 4. stop refuses while telemetry is live (exit code 3)
+          $send = Start-Process -PassThru -WindowStyle Hidden "$PWD\.venv\Scripts\pitwall.exe" -ArgumentList 'send', 'tests/fixtures/recorded/f1_25_2025_ps5_austria_race-excerpt.pwcap', '--port', '20777', '--speed', '1'
+          Wait-Until { (Get-Health).connection.status -eq 'live' } 45 'telemetry to be live'
+          powershell @svc stop
+          $code = $LASTEXITCODE
+          & taskkill.exe /PID $send.Id /T /F | Out-Null
+          if ($code -ne 3) { throw "service.ps1 stop while telemetry was live exited $code, expected 3 (refused)" }
+          if (-not (Get-Health)) { throw 'the server stopped although stop refused' }
+          Write-Output 'stop refused while telemetry was live (exit code 3)'
+          Wait-Until { (Get-Health).connection.status -ne 'live' } 20 'telemetry to stop being live'
+
+          # 5. stop: health down, no Pitwall process left, nothing restarts it
+          powershell @svc stop
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Wait-Until { -not (Get-Health) } 20 'the server to stop'
+          Start-Sleep -Seconds 75 # longer than the supervisor's 10 s restart delay and the task's 1 min restart interval
+          if (Get-Health) { throw 'the server came back after stop' }
+          $left = @(Get-PitwallProcs)
+          if ($left.Count -gt 0) { $left | Format-List ProcessId, Name, CommandLine; throw 'Pitwall processes left after stop' }
+          Write-Output 'stopped: no Pitwall process left'
+
+          # 6. status, uninstall; the service log (token lines left out)
+          powershell @svc status
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          powershell @svc uninstall
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (Get-ScheduledTask -TaskName Pitwall -ErrorAction SilentlyContinue) { throw 'task still registered after uninstall' }
+          Get-Content -LiteralPath $log -Tail 40 -Encoding UTF8 | Where-Object { $_ -notmatch 'token=' }
+          exit 0
+      - name: firewall.ps1 add / status / remove (Windows PowerShell 5.1; the runner is an administrator)
+        if: ${{ !cancelled() }}
+        run: |
+          $fw = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', 'scripts/windows/firewall.ps1')
+          foreach ($round in 1, 2) {  # twice: add must be idempotent
+            powershell @fw add -Games all
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            $names = @(Get-NetFirewallRule -Group Pitwall | ForEach-Object { $_.DisplayName } | Sort-Object)
+            $expected = @('Pitwall HTTP 8770', 'Pitwall UDP 20777', 'Pitwall UDP 33740', 'Pitwall UDP 5301', 'Pitwall UDP 7576') | Sort-Object
+            if (($names -join '|') -ne ($expected -join '|')) { throw "round ${round}: rules are '$($names -join ', ')'" }
+          }
+          # pitwall doctor reads the rules firewall.ps1 made (PowerShell: enabled, Allow, Private, local subnet) ...
+          $doc = (uv run pitwall doctor --no-llm --json | Out-String) | ConvertFrom-Json
+          $fwc = @($doc.checks | Where-Object { $_.id -eq 'firewall' })[0]
+          if ($fwc.status -ne 'ok' -or $fwc.detail -notmatch 'enabled \(Private, local subnet\)') { throw "doctor firewall check after add: $($fwc.status) - $($fwc.detail)" }
+          # ... and notices a rule that exists but is disabled
+          Disable-NetFirewallRule -DisplayName 'Pitwall UDP 20777'
+          $doc = (uv run pitwall doctor --no-llm --json | Out-String) | ConvertFrom-Json
+          $fwc = @($doc.checks | Where-Object { $_.id -eq 'firewall' })[0]
+          Enable-NetFirewallRule -DisplayName 'Pitwall UDP 20777'
+          if ($fwc.status -ne 'warn' -or $fwc.detail -notmatch '"Pitwall UDP 20777" is disabled') { throw "doctor with a disabled rule: $($fwc.status) - $($fwc.detail)" }
+          Write-Output "doctor with a disabled rule: $($fwc.detail)"
+          $r = Get-NetFirewallRule -DisplayName 'Pitwall UDP 20777'
+          if ([string]$r.Profile -ne 'Private' -or [string]$r.Direction -ne 'Inbound' -or [string]$r.Action -ne 'Allow') { throw 'wrong rule scope' }
+          if ((($r | Get-NetFirewallAddressFilter).RemoteAddress) -ne 'LocalSubnet') { throw 'rule is not limited to LocalSubnet' }
+          powershell @fw status
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          powershell @fw remove
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (@(Get-NetFirewallRule -Group Pitwall -ErrorAction SilentlyContinue).Count -ne 0) { throw 'rules left after remove' }
+  windows-web-react:
+    # `npm run build` / `npm run build:root` must work where npm runs scripts through cmd.exe (Windows): build:root is
+    # `vite build --mode root`, no POSIX `VAR=value` prefix. Same HeroUI Pro gate as the web-react job.
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      HEROUI_AUTH_TOKEN: ${{ secrets.HEROUI_AUTH_TOKEN }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check for the HeroUI Pro CI token
+        id: pro
+        run: |
+          if ([string]::IsNullOrEmpty($env:HEROUI_AUTH_TOKEN)) {
+            Write-Output '::notice::HEROUI_AUTH_TOKEN secret not set - skipping the Windows web-react build (HeroUI Pro needs it).'
+            'ok=false' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          } else {
+            'ok=true' | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          }
+      - uses: actions/checkout@v4
+        if: steps.pro.outputs.ok == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.pro.outputs.ok == 'true'
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web-react/package-lock.json
+      - run: npm ci
+        if: steps.pro.outputs.ok == 'true'
+        working-directory: web-react
+      - name: npm run build from cmd.exe -> /next/ base
+        if: steps.pro.outputs.ok == 'true'
+        working-directory: web-react
+        shell: cmd
+        run: |
+          call npm run build || exit /b 1
+          findstr /c:"/next/assets/" dist\index.html || exit /b 1
+      - name: npm run build:root from PowerShell -> / base
+        if: steps.pro.outputs.ok == 'true'
+        working-directory: web-react
+        run: |
+          npm run build:root
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $html = Get-Content -Raw dist/index.html
+          if ($html -notmatch 'src="/assets/' -or $html -match '/next/') { Write-Output $html; throw 'build:root did not build for the / base' }

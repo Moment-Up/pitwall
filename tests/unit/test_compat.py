@@ -203,8 +203,13 @@ def test_bind_udp_exclusive_binds_and_keeps_a_second_listener_out() -> None:
         port = a.getsockname()[1]
         with pytest.raises(OSError):  # a second pitwall (or another app) cannot share the telemetry port
             compat.bind_udp_exclusive(b, ("127.0.0.1", port))
-        if sys.platform != "win32":
-            assert a.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) != 0  # POSIX: as before
+        if sys.platform == "darwin":
+            assert a.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) != 0  # macOS: restart can rebind at once
+        elif sys.platform != "win32":
+            # Linux SO_REUSEADDR would let the second bind above succeed.
+            assert a.getsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR) == 0
+        a.close()
+        compat.bind_udp_exclusive(b, ("127.0.0.1", port))  # UDP has no TIME_WAIT: the port is free after close
     finally:
         a.close()
         b.close()

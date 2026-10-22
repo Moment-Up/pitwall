@@ -86,7 +86,7 @@ class UdpListener:
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, RCVBUF_BYTES)
-            bind_udp_exclusive(self._sock, (bind, port))  # SO_REUSEADDR on POSIX; exclusive on Windows
+            bind_udp_exclusive(self._sock, (bind, port))  # SO_REUSEADDR on macOS; exclusive on Windows and Linux
         except OSError:
             self._sock.close()  # a port in use is retried by the runtime: never leak a socket per attempt
             raise

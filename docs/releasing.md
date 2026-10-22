@@ -54,10 +54,12 @@ Then, before the first tag:
 2. **Who sees the secret.** It is only ever an environment variable, in two places. In the release workflow, three
    steps of the `build` job read it: the token check, `npm ci` plus `npm run build:root` in `web-react/`, and the
    packaging step (which only scans the zip for the token's value); the `verify` and `publish` jobs never see it. In
-   CI (`ci.yml`), the `web-react` and `windows-web-react` jobs set it for the whole job, so every step of those two
-   jobs can read it (the token check, `npm ci`, the type check and the build). GitHub does not pass secrets to
-   workflows run for pull requests from forks, so on those the two web-react CI jobs print a notice and skip. The
-   release workflow runs only for tags pushed to this repository and when started by hand.
+   CI, two jobs set it for the whole job, so every step of those jobs can read it (the token check, `npm ci`, the
+   type check and the build): `web-react` in `ci.yml` (pushes and pull requests) and `windows-web-react` in
+   `platform.yml` (the Monday run, or when that workflow is started by hand). GitHub does not pass secrets to
+   workflows run for pull requests from forks, so on those the `web-react` job prints a notice and skips.
+   `windows-web-react` does not run on pull requests. The release workflow runs only for tags pushed to this
+   repository and when started by hand.
 3. **Optional:** a tag ruleset (Settings › Rules) that lets only the owner create `v*` tags, so nobody else can start
    a release.
 4. **Turn on private vulnerability reporting** (Settings › Code security › Private vulnerability reporting), so the
@@ -65,8 +67,9 @@ Then, before the first tag:
 
 ## Before you release
 
-1. CI is green on the commit you will tag. The release workflow builds, packages and verifies the zip, but does not
-   run the test suite.
+1. CI is green on the commit you will tag (`ci.yml`, Ubuntu). The release workflow builds, packages and verifies
+   the zip, but does not run the test suite. The Windows and macOS test runs are the `platform` workflow (every
+   Monday, or Actions › platform › Run workflow), not part of every push.
 2. Your HeroUI Pro licence is active. Its terms allow distributing applications built with it only while the licence
    is active at the time of development and distribution (see [HeroUI Pro conditions](#heroui-pro-conditions)).
 3. The `HEROUI_AUTH_TOKEN` repository secret is set (above). Without it the workflow stops at its first step with

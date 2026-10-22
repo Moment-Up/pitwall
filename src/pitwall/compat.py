@@ -2,7 +2,8 @@
 
 macOS is the reference platform: there, every helper below does exactly what the code did before Windows support
 existed (same paths, same clock, same socket options, same file modes). Windows support is additive and guarded by
-``sys.platform``; other POSIX systems (Linux) follow the macOS behaviour except for the per-user data folder.
+``sys.platform``; other POSIX systems (Linux) follow the macOS behaviour except for the per-user data folder
+and UDP ``SO_REUSEADDR`` (on Linux that option lets a second process share the port, so it is not set).
 
 - ``app_support_dir`` / ``venv_python``: per-user folders for pitwall's own tools (TTS worker venv, model caches):
   ``~/Library/Application Support/pitwall`` on macOS, ``%LOCALAPPDATA%\\pitwall`` on Windows, the XDG data home
@@ -175,16 +176,18 @@ _SIO_UDP_CONNRESET = 0x9800000C  # _WSAIOW(IOC_VENDOR, 12), mswsock.h
 def bind_udp_exclusive(sock: socket.socket, address: tuple[str, int]) -> None:
     """Bind a telemetry listener so that no other process can bind the same port as well.
 
-    POSIX: ``SO_REUSEADDR`` as before (a restarted pitwall can rebind at once; a second process still gets
-    ``EADDRINUSE`` for the same unicast address and port). Windows: ``SO_REUSEADDR`` would let any other process
-    bind the *same* port and receive the game's packets in our place, so it is never set there; instead
-    ``SO_EXCLUSIVEADDRUSE`` stops even a ``SO_REUSEADDR`` socket from sharing it (Windows has no
-    ``TIME_WAIT`` for UDP, so a restart does not need address reuse).
+    macOS: ``SO_REUSEADDR`` as before (a restarted pitwall can rebind at once; a second process still gets
+    ``EADDRINUSE`` for the same unicast address and port). Linux: do not set ``SO_REUSEADDR``. There it lets
+    another process bind the same UDP port and take the game's packets; UDP has no ``TIME_WAIT``, so a restart
+    can rebind without it. Windows: ``SO_REUSEADDR`` would let any other process bind the *same* port and
+    receive the game's packets in our place, so it is never set there; instead ``SO_EXCLUSIVEADDRUSE`` stops
+    even a ``SO_REUSEADDR`` socket from sharing it (Windows has no ``TIME_WAIT`` for UDP, so a restart does not
+    need address reuse).
     """
     if sys.platform == "win32":
         with contextlib.suppress(OSError):
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
-    else:
+    elif sys.platform == "darwin":
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(address)
 
