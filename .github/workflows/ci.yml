@@ -27,8 +27,12 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# A pull request from a branch in this repository also pushes that branch, so the
+# push workflow already runs that commit. Jobs run on the push only. A fork has no
+# push event here, so its pull request still runs the jobs.
 jobs:
   python:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -45,6 +49,7 @@ jobs:
   # --- lane install ---
   installers:
     # The one-line installers: shellcheck (POSIX sh) and install.sh's tests under Ubuntu's /bin/sh (dash) and bash.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -61,6 +66,7 @@ jobs:
       - run: uv run pytest -q tests/unit/test_install_sh.py tests/unit/test_install_stage.py tests/unit/test_install_activate.py
   # --- end lane install ---
   web:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -75,6 +81,7 @@ jobs:
     # React + HeroUI (+ licensed HeroUI Pro) dashboard. @heroui-pro/react's postinstall downloads the licensed
     # components during `npm ci` using the HEROUI_AUTH_TOKEN repository secret (HeroUI Pro CI/CD token). Until that
     # secret exists the job only reports that it was skipped, instead of failing the run.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
